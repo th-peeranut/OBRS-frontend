@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import SignupWithGoogle from './SignupWithGoogle.vue'
 
 const signup = ref({
   firstName: null,
@@ -13,7 +14,6 @@ const signup = ref({
 })
 
 const username = ref<string | number | null>(null)
-
 </script>
 
 <template>
@@ -26,16 +26,37 @@ const username = ref<string | number | null>(null)
       <form>
         <div>
           <div>
-          <input id="firstName" type="text" class="form-control" placeholder="First name" v-model="signup.firstName" required />
+            <input
+              id="firstName"
+              type="text"
+              class="form-control"
+              placeholder="First name"
+              v-model="signup.firstName"
+              required
+            />
           </div>
 
           <div>
-          <input id="lastName" type="text" class="form-control" placeholder="Last name" v-model="signup.lastName" required />
+            <input
+              id="lastName"
+              type="text"
+              class="form-control"
+              placeholder="Last name"
+              v-model="signup.lastName"
+              required
+            />
           </div>
         </div>
-        
+
         <div class="form-group">
-          <input id="username" type="text" class="form-control" placeholder="Mobile number or email address" v-model="username" required />
+          <input
+            id="username"
+            type="text"
+            class="form-control"
+            placeholder="Mobile number or email address"
+            v-model="username"
+            required
+          />
         </div>
 
         <div class="form-group">
@@ -51,13 +72,16 @@ const username = ref<string | number | null>(null)
 
         <div>
           <label for="birthDate">Date of birth</label>
-          
         </div>
 
         <div class="my-3">
           <button type="submit" class="btn btn-primary">Sign Up</button>
         </div>
       </form>
+
+      <div>
+        <!-- <SignupWithGoogle /> -->
+      </div>
 
       <div>
         <p>

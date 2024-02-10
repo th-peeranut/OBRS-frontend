@@ -6,38 +6,55 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: CustomerLayoutVue,
-      redirect: '/',
+      // component: CustomerLayoutVue,
       children: [
         {
           path: '/',
-          component: () => import('@/views/CustomerView/BookingView/FindScheduleView.vue')
-        }
-      ]
-    },
-    {
-      path: '/officer',
-      component: () => import('@/layouts/OfficerLayout.vue'),
-      redirect: 'officer',
-      children: [
+          component: () => import('@/views/CustomerView/BookingView/Step01_FindScheduleView.vue')
+        },
         {
-          path: 'vehicle',
-          component: () => import('../views/OfficerView/SalesPersonView/VehicleView.vue')
-        }
+          path: 'search?',
+          component: () => import('@/views/CustomerView/BookingView/Step02_ShowScheduleView.vue')
+        },
+        {
+          path: 'signup',
+          component: () => import('../views/Signup.vue')
+        },
+        {
+          path: 'login',
+          component: () => import('../views/Login.vue')
+        },
+        {
+          path: 'officer',
+          component: () => import('@/layouts/OfficerLayout.vue'),
+          children: [
+            {
+              path: 'vehicle',
+              component: () => import('../views/OfficerView/SalesPersonView/VehicleView/ListVehicleView.vue')
+            },
+            {
+              path: 'vehicle/create',
+              component: () => import('../views/OfficerView/SalesPersonView/VehicleView/CreateVehicleView.vue')
+            }
+          ]
+        },
       ]
     },
     {
-      path: '/signup',
-      component: () => import('../views/Signup.vue')
-    },
-    {
-      path: '/login',
-      component: () => import('../views/Login.vue')
+      path: '/en',
+      component: () => import('@/views/CustomerView/BookingView/Step01_FindScheduleView.vue'),
+      children: [
+
+      ]
     },
     {
       path: '/about',
       component: () => import('../views/AboutView.vue')
     },
+    {
+      path: '/:catchAll(.*)',
+      component: () => import('../views/NotFoundView.vue')
+    }
   ]
 })
 

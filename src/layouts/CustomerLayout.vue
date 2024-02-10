@@ -8,6 +8,7 @@
         <div>
           <router-view />
         </div>
+        <div>hello world</div>
       </div>
     </div>
   </div>
