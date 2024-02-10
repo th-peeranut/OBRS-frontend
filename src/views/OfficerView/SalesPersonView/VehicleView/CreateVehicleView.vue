@@ -15,8 +15,8 @@ interface Vehicle {
   numberPlate: string
   type: string
   totalSeating: number
-  status: string,
-  requestedBy: string,
+  status: string
+  requestedBy: string
   requestedDate: string | null
 }
 
@@ -29,12 +29,11 @@ const newVehicle = ref<Vehicle>({
   requestedDate: null
 })
 
-function createVehicle() {
-  newVehicle.value.requestedDate = "20210301000000+0700"
-  console.log(newVehicle)
+const createVehicle = () => {
+  newVehicle.value.requestedDate = '20210301000000+0700'
 
   axios
-    .post('http://localhost:8001/officer/vehicle/create', newVehicle)
+    .post('/vehicle', newVehicle.value)
     .then((resp) => router.push('/officer/vehicle'))
     .catch((err) => swal('Oops!', "Seems like we couldn't fetch the info", 'error'))
 }

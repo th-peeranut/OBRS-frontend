@@ -24,20 +24,32 @@ const router = createRouter({
           path: 'login',
           component: () => import('../views/Login.vue')
         },
+        
+      ]
+    },
+    {
+      path: '/officer',
+      component: () => import('@/layouts/OfficerLayout.vue'),
+      children: [
         {
-          path: 'officer',
-          component: () => import('@/layouts/OfficerLayout.vue'),
-          children: [
-            {
-              path: 'vehicle',
-              component: () => import('../views/OfficerView/SalesPersonView/VehicleView/ListVehicleView.vue')
-            },
-            {
-              path: 'vehicle/create',
-              component: () => import('../views/OfficerView/SalesPersonView/VehicleView/CreateVehicleView.vue')
-            }
-          ]
+          path: 'vehicle',
+          component: () => import('../views/OfficerView/SalesPersonView/VehicleView/ListVehicleView.vue')
         },
+        {
+          path: 'vehicle/create',
+          component: () => import('../views/OfficerView/SalesPersonView/VehicleView/CreateVehicleView.vue'),
+          name: 'Create Vehicle'
+        },
+        {
+          path: 'vehicle/:id',
+          component: () => import('../views/OfficerView/SalesPersonView/VehicleView/ShowVehicleView.vue'),
+          name: 'View Vehicle'
+        },
+        {
+          path: 'vehicle/:id/edit',
+          component: () => import('../views/OfficerView/SalesPersonView/VehicleView/EditVehicleView.vue'),
+          name: 'Edit Vehicle'
+        }
       ]
     },
     {
