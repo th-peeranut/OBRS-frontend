@@ -1,5 +1,5 @@
 export default interface Vehicle {
-    id: string,
+    id: null,
     numberPlate: string
     type: string
     totalSeating: number

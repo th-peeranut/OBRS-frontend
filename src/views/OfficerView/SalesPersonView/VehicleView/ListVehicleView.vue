@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import swal from 'sweetalert'
+import Swal from 'sweetalert2'
 
 import type Vehicle from '@/interfaces/Vehicle'
 import { getAllVehicles, deleteVehicleByNumberPlate } from '@/services/VehicleService'
@@ -16,18 +16,37 @@ const fetchAllVehicles = async () => {
     vehicles.value = await getAllVehicles()
     loading.value = false
   } catch (error) {
-    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+    Swal.fire('Oops!', "Seems like we couldn't fetch the info", 'error')
   }
 }
 
-const deleteVehicle = async (numberPlate: string) => {
+const deleteVehicle = (numberPlate: string) => {
   try {
-    await deleteVehicleByNumberPlate(numberPlate)
-    vehicles.value = vehicles.value.filter((vehicle) => vehicle.numberPlate !== numberPlate)
-
-    swal('Delete Vehicle successfully', 'success')
+    Swal.fire({
+      title: 'Are you sure ?',
+      text: 'You will not be able to recover this environment !',
+      icon: 'warning',
+      showCancelButton: true,
+      // confirmButtonColor: '#DD6B55',
+      confirmButtonText: 'Yes, delete it !',
+      cancelButtonText: 'No, cancel !'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await deleteVehicleByNumberPlate(numberPlate)
+        vehicles.value = vehicles.value.filter((vehicle) => vehicle.numberPlate !== numberPlate)
+        Swal.fire({
+          title: 'Deleted!',
+          text: 'Delete Vehicle successfully',
+          icon: 'success'
+        })
+      }
+    })
   } catch (error) {
-    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+    Swal.fire({
+      title: 'Oops!',
+      text: "Seems like we couldn't fetch the info",
+      icon: 'error'
+    })
   }
 }
 
@@ -48,7 +67,7 @@ onMounted(() => {
   <div style="text-align: center">
     <h2>รถโดยสาร</h2>
   </div>
-  
+
   <div v-if="loading">Loading...</div>
   <div v-else>
     <div style="float: right">

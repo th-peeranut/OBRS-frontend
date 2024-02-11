@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import swal from 'sweetalert'
+import Swal from 'sweetalert2'
 
 import type Vehicle from '@/interfaces/Vehicle'
 import { getVehicleByNumberPlate, editVehicleById } from '@/services/VehicleService'
@@ -11,7 +11,7 @@ const router = useRouter()
 
 const loading = ref<boolean>(true)
 const vehicle = ref<Vehicle>({
-  id: '',
+  id: null,
   numberPlate: '',
   type: '',
   totalSeating: 0,
@@ -27,7 +27,7 @@ const fetchVehicle = async () => {
     vehicle.value = await getVehicleByNumberPlate(numberPlate)
     loading.value = false
   } catch (error) {
-    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+    Swal.fire('Oops!', "Seems like we couldn't fetch the info", 'error')
   }
 }
 
@@ -37,7 +37,7 @@ const updateVehicle = () => {
     editVehicleById(vehicle.value)
     router.push('/officer/vehicle')
   } catch (error) {
-    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+    Swal.fire('Oops!', "Seems like we couldn't fetch the info", 'error')
   }
 }
 

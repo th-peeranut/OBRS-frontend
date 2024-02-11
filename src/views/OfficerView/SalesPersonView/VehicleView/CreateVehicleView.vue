@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Toggle from '@vueform/toggle'
 import Multiselect from '@vueform/multiselect'
-import swal from 'sweetalert'
+import Swal from 'sweetalert2'
 
 import type Vehicle from '@/interfaces/Vehicle'
 import { createVehicle } from '@/services/VehicleService'
@@ -11,7 +11,7 @@ import { createVehicle } from '@/services/VehicleService'
 const router = useRouter()
 
 const newVehicle = ref<Vehicle>({
-  id: '',
+  id: null,
   numberPlate: '',
   type: '',
   totalSeating: 0,
@@ -26,7 +26,7 @@ const createNewVehicle = () => {
     createVehicle(newVehicle.value)
     router.push('/officer/vehicle')
   } catch (error) {
-    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+    Swal.fire('Oops!', "Seems like we couldn't fetch the info", 'error')
   }
 }
 
