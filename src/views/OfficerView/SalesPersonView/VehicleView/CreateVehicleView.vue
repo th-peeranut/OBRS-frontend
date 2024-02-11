@@ -5,38 +5,32 @@ import Toggle from '@vueform/toggle'
 import Multiselect from '@vueform/multiselect'
 import swal from 'sweetalert'
 
-import axios from '@/AxiosInstance'
+import type Vehicle from '@/interfaces/Vehicle'
+import { createVehicle } from '@/services/VehicleService'
 
 const router = useRouter()
 
-const goBack = () => router.push('/officer/vehicle')
-
-interface Vehicle {
-  numberPlate: string
-  type: string
-  totalSeating: number
-  status: string
-  requestedBy: string
-  requestedDate: string | null
-}
-
 const newVehicle = ref<Vehicle>({
+  id: '',
   numberPlate: '',
   type: '',
   totalSeating: 0,
   status: 'Active',
   requestedBy: '',
-  requestedDate: null
+  requestedDate: ''
 })
 
-const createVehicle = () => {
-  newVehicle.value.requestedDate = '20210301000000+0700'
-
-  axios
-    .post('/vehicle', newVehicle.value)
-    .then((resp) => router.push('/officer/vehicle'))
-    .catch((err) => swal('Oops!', "Seems like we couldn't fetch the info", 'error'))
+const createNewVehicle = () => {
+  try {
+    newVehicle.value.requestedDate = '20210301000000+0700'
+    createVehicle(newVehicle.value)
+    router.push('/officer/vehicle')
+  } catch (error) {
+    swal('Oops!', "Seems like we couldn't fetch the info", 'error')
+  }
 }
+
+const goBack = () => router.push('/officer/vehicle')
 </script>
 
 <template>
@@ -78,7 +72,7 @@ const createVehicle = () => {
   </div>
   <div style="float: right">
     <button @click="goBack" class="btn btn-danger">ยกเลิก</button>
-    <button @click="createVehicle" class="btn btn-success">ยืนยัน</button>
+    <button @click="createNewVehicle" class="btn btn-success">ยืนยัน</button>
   </div>
 </template>
 

@@ -38,17 +38,14 @@ const router = createRouter({
         {
           path: 'vehicle/create',
           component: () => import('../views/OfficerView/SalesPersonView/VehicleView/CreateVehicleView.vue'),
-          name: 'Create Vehicle'
         },
         {
           path: 'vehicle/:id',
           component: () => import('../views/OfficerView/SalesPersonView/VehicleView/ShowVehicleView.vue'),
-          name: 'View Vehicle'
         },
         {
           path: 'vehicle/:id/edit',
           component: () => import('../views/OfficerView/SalesPersonView/VehicleView/EditVehicleView.vue'),
-          name: 'Edit Vehicle'
         }
       ]
     },
