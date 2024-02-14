@@ -7,10 +7,13 @@ import type Vehicle from '@/interfaces/Vehicle'
 import { getVehicleByNumberPlate, editVehicleById } from '@/services/VehicleService'
 import { generateCurrentTime } from '@/utils/dateUtils'
 
+const items = ['Van', 'Minibus']
+
 const route = useRoute()
 const router = useRouter()
 
 const loading = ref<boolean>(true)
+const isActive = ref(true)
 const vehicle = ref<Vehicle>({
   id: null,
   numberPlate: '',
@@ -36,13 +39,22 @@ const updateVehicle = () => {
   try {
     vehicle.value.requestedDate = generateCurrentTime()
     editVehicleById(vehicle.value)
-    router.push('/officer/vehicle')
+    goBack()
   } catch (error) {
     Swal.fire('Oops!', "Seems like we couldn't fetch the info", 'error')
   }
 }
 
 const goBack = () => router.push('/officer/vehicle')
+
+const selectItem = (item: string) => {
+  vehicle.value.type = item
+}
+
+const toggleActive = () => {
+  isActive.value = !isActive.value
+  vehicle.value.status = isActive.value ? 'Active' : 'Inactive'
+}
 
 onMounted(() => {
   fetchVehicle()
@@ -60,16 +72,43 @@ onMounted(() => {
       <input type="text" v-model="vehicle.numberPlate" />
     </div>
     <div>
-      <span>ประเภท</span>
-      <input type="text" v-model="vehicle.type" />
+    <label for="type">ประเภทรถโดยสาร</label>
+    <div class="dropdown">
+      <button
+        id="type"
+        class="btn btn-secondary dropdown-toggle"
+        type="button"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        {{ vehicle.type }}
+      </button>
+      <ul class="dropdown-menu">
+        <li v-for="(item, index) in items" :key="index">
+          <span class="dropdown-item" @click="selectItem(item)">{{ item }}</span>
+        </li>
+      </ul>
     </div>
+  </div>
+
     <div>
-      <span>ขนาด (ที่นั่ง)</span>
+      <span>ความจุที่นั่ง</span>
       <input type="text" v-model="vehicle.totalSeating" />
     </div>
     <div>
-      <span>สถานะ</span>
-      <input type="text" v-model="vehicle.status" />
+      <label class="form-check-label" for="status">สถานะ</label>
+      <div class="form-check form-switch">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="status"
+          v-model="isActive"
+          @click="toggleActive"
+        />
+        <label class="form-check-label">
+          {{ isActive ? 'Active' : 'Inactive' }}
+        </label>
+      </div>
     </div>
   </div>
   <div>

@@ -54,11 +54,11 @@ onMounted(() => {
       <input type="text" disabled :value="vehicle?.numberPlate" />
     </div>
     <div>
-      <span>ประเภท</span>
+      <span>ประเภทรถโดยสาร</span>
       <input type="text" disabled :value="vehicle?.type" />
     </div>
     <div>
-      <span>ขนาด (ที่นั่ง)</span>
+      <span>ความจุที่นั่ง</span>
       <input type="text" disabled :value="vehicle?.totalSeating" />
     </div>
     <div>
