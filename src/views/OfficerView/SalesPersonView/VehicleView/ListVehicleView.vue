@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
 
@@ -10,6 +10,14 @@ const loading = ref<boolean>(true)
 const vehicles = ref<Vehicle[]>([])
 
 const router = useRouter()
+
+watch(vehicles, async () => {
+  await fetchAllVehicles()
+})
+
+onMounted(() => {
+  fetchAllVehicles()
+})
 
 const fetchAllVehicles = async () => {
   try {
@@ -57,10 +65,6 @@ const goToVehicleViewPage = (numberPlate: string) => {
 const goToVehicleEditPage = (numberPlate: string) => {
   router.push({ path: `/officer/vehicle/${numberPlate}/edit`, params: { id: numberPlate } })
 }
-
-onMounted(() => {
-  fetchAllVehicles()
-})
 </script>
 
 <template>

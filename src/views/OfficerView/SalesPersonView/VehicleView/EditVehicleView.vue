@@ -5,6 +5,7 @@ import Swal from 'sweetalert2'
 
 import type Vehicle from '@/interfaces/Vehicle'
 import { getVehicleByNumberPlate, editVehicleById } from '@/services/VehicleService'
+import { generateCurrentTime } from '@/utils/dateUtils'
 
 const route = useRoute()
 const router = useRouter()
@@ -33,7 +34,7 @@ const fetchVehicle = async () => {
 
 const updateVehicle = () => {
   try {
-    vehicle.value.requestedDate = '20210301000000+0700'
+    vehicle.value.requestedDate = generateCurrentTime()
     editVehicleById(vehicle.value)
     router.push('/officer/vehicle')
   } catch (error) {

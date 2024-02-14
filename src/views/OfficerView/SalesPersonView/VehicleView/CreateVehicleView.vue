@@ -7,6 +7,7 @@ import Swal from 'sweetalert2'
 
 import type Vehicle from '@/interfaces/Vehicle'
 import { createVehicle } from '@/services/VehicleService'
+import { generateCurrentTime } from '@/utils/dateUtils'
 
 const router = useRouter()
 
@@ -22,7 +23,7 @@ const newVehicle = ref<Vehicle>({
 
 const createNewVehicle = () => {
   try {
-    newVehicle.value.requestedDate = '20210301000000+0700'
+    newVehicle.value.requestedDate = generateCurrentTime()
     createVehicle(newVehicle.value)
     router.push('/officer/vehicle')
   } catch (error) {
