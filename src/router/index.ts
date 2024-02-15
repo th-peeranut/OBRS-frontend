@@ -29,13 +29,11 @@ const router = createRouter({
 
       ]
     },
+    ...vehicleRoutes,
+    ...routeRoutes,
     {
       path: '/officer',
-      component: () => import('@/layouts/OfficerLayout.vue'),
-      children: [
-        ...vehicleRoutes,
-        ...routeRoutes
-      ]
+      component: () => import('@/layouts/OfficerLayout.vue')
     },
     {
       path: '/en',

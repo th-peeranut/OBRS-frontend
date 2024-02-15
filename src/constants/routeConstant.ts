@@ -1,6 +1,11 @@
-export const Route = {
-    ROUTE: 'route',
-    VEHICLE: 'vehicle',
+export const RouteConstant = {
+    Layout: {
+        CUSTOMER: '/customer',
+        OFFICER: '/officer'
+    },
+
+    ROUTE: '/route',
+    VEHICLE: '/vehicle',
 
     Action: {
         CREATE: '/create',

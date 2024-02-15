@@ -1,20 +1,22 @@
-import { Route } from '@/constants/routeConstant'
+import { RouteConstant } from '@/constants/routeConstant'
+
+const vehiclePage = RouteConstant.Layout.OFFICER + RouteConstant.VEHICLE
 
 const vehicleRoutes = [
     {
-        path: Route.VEHICLE,
+        path: vehiclePage,
         component: () => import('../views/OfficerPage/SalesPersonPage/VehiclePage/ListVehiclePage.vue'),
     },
     {
-        path: Route.VEHICLE + Route.Action.CREATE,
+        path: vehiclePage + RouteConstant.Action.CREATE,
         component: () => import('../views/OfficerPage/SalesPersonPage/VehiclePage/CreateVehiclePage.vue'),
     },
     {
-        path: Route.VEHICLE + Route.Action.VIEW,
+        path: vehiclePage + RouteConstant.Action.VIEW,
         component: () => import('../views/OfficerPage/SalesPersonPage/VehiclePage/ViewVehiclePage.vue'),
     },
     {
-        path: Route.VEHICLE + Route.Action.EDIT,
+        path: vehiclePage + RouteConstant.Action.EDIT,
         component: () => import('../views/OfficerPage/SalesPersonPage/VehiclePage/EditVehiclePage.vue'),
     },
 ]

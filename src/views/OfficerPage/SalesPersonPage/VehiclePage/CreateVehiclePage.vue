@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import Swal from 'sweetalert2'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Swal from 'sweetalert2'
 
+import { RouteConstant } from '@/constants/routeConstant'
 import type Vehicle from '@/interfaces/Vehicle'
 import { createVehicle } from '@/services/VehicleService'
 import { generateCurrentTime } from '@/utils/dateUtils'
@@ -22,7 +23,9 @@ const newVehicle = ref<Vehicle>({
   requestedDate: ''
 })
 
-const goBack = () => router.push('/officer/vehicle')
+const vehiclePage = RouteConstant.Layout.OFFICER + RouteConstant.VEHICLE
+
+const goBack = () => router.push(vehiclePage)
 
 const createNewVehicle = () => {
   try {
@@ -45,6 +48,9 @@ const toggleActive = () => {
 </script>
 
 <template>
+  <div>
+    <h2>เพิ่มรถโดยสาร</h2>
+  </div>
   <div>
     <label for="numberPlate">หมายเลขทะเบียน</label>
     <input

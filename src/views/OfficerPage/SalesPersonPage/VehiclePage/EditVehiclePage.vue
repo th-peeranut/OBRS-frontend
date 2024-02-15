@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 
+import { RouteConstant } from '@/constants/routeConstant'
 import type Vehicle from '@/interfaces/Vehicle'
-import { getVehicleByNumberPlate, editVehicleById } from '@/services/VehicleService'
+import { editVehicleById, getVehicleByNumberPlate } from '@/services/VehicleService'
 import { generateCurrentTime } from '@/utils/dateUtils'
 
 const items = ['Van', 'Minibus']
@@ -12,7 +13,7 @@ const items = ['Van', 'Minibus']
 const route = useRoute()
 const router = useRouter()
 
-const loading = ref<boolean>(true)
+const loading = ref(true)
 const isActive = ref(true)
 const vehicle = ref<Vehicle>({
   id: null,
@@ -45,7 +46,9 @@ const updateVehicle = () => {
   }
 }
 
-const goBack = () => router.push('/officer/vehicle')
+const vehiclePage = RouteConstant.Layout.OFFICER + RouteConstant.VEHICLE
+
+const goBack = () => router.push(vehiclePage)
 
 const selectItem = (item: string) => {
   vehicle.value.type = item
@@ -72,24 +75,24 @@ onMounted(() => {
       <input type="text" v-model="vehicle.numberPlate" />
     </div>
     <div>
-    <label for="type">ประเภทรถโดยสาร</label>
-    <div class="dropdown">
-      <button
-        id="type"
-        class="btn btn-secondary dropdown-toggle"
-        type="button"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
-      >
-        {{ vehicle.type }}
-      </button>
-      <ul class="dropdown-menu">
-        <li v-for="(item, index) in items" :key="index">
-          <span class="dropdown-item" @click="selectItem(item)">{{ item }}</span>
-        </li>
-      </ul>
+      <label for="type">ประเภทรถโดยสาร</label>
+      <div class="dropdown">
+        <button
+          id="type"
+          class="btn btn-secondary dropdown-toggle"
+          type="button"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+        >
+          {{ vehicle.type }}
+        </button>
+        <ul class="dropdown-menu">
+          <li v-for="(item, index) in items" :key="index">
+            <span class="dropdown-item" @click="selectItem(item)">{{ item }}</span>
+          </li>
+        </ul>
+      </div>
     </div>
-  </div>
 
     <div>
       <span>ความจุที่นั่ง</span>

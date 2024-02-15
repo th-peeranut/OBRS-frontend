@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
 import Swal from 'sweetalert2'
+import { onMounted, ref } from 'vue'
+import { useRoute } from 'vue-router'
 
+import { RouteConstant } from '@/constants/routeConstant'
 import type Vehicle from '@/interfaces/Vehicle'
 import { getVehicleByNumberPlate } from '@/services/VehicleService'
 
 const route = useRoute()
 
-const loading = ref<boolean>(true)
+const loading = ref(true)
 const vehicle = ref<Vehicle>({
   id: null,
   numberPlate: '',
@@ -18,6 +19,10 @@ const vehicle = ref<Vehicle>({
   requestedBy: '',
   requestedDate: ''
 })
+
+const vehiclePage = RouteConstant.Layout.OFFICER + RouteConstant.VEHICLE
+const formattedURL = (originalURL: string, numberPlate: string) =>
+  originalURL.replace(':id', numberPlate)
 
 const fetchVehicle = async () => {
   try {
@@ -42,9 +47,11 @@ onMounted(() => {
       <h2>{{ vehicle?.numberPlate }}</h2>
     </div>
     <div>
-      <router-link to="/officer/vehicle" class="btn btn-primary">ย้อนกลับ</router-link>
+      <router-link :to="{ path: `${vehiclePage}` }" class="btn btn-primary">ย้อนกลับ</router-link>
       <router-link
-        :to="{ path: `/officer/vehicle/${vehicle?.numberPlate}/edit` }"
+        :to="{
+          path: `${formattedURL(vehiclePage + RouteConstant.Action.EDIT, vehicle.numberPlate)}`
+        }"
         class="btn btn-primary"
         >แก้ไข</router-link
       >

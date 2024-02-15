@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import Swal from 'sweetalert2'
+import { onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
+import { RouteConstant } from '@/constants/routeConstant'
 import type Vehicle from '@/interfaces/Vehicle'
-import { getAllVehicles, deleteVehicleByNumberPlate } from '@/services/VehicleService'
-
-const loading = ref<boolean>(true)
-const vehicles = ref<Vehicle[]>([])
+import { deleteVehicleByNumberPlate, getAllVehicles } from '@/services/VehicleService'
 
 const router = useRouter()
+
+const loading = ref(true)
+const vehicles = ref<Vehicle[]>([])
+
+const vehiclePage = RouteConstant.Layout.OFFICER + RouteConstant.VEHICLE
+const formattedURL = (originalURL: string, numberPlate: string) =>
+  originalURL.replace(':id', numberPlate)
 
 watch(vehicles, async () => {
   await fetchAllVehicles()
@@ -59,11 +64,11 @@ const deleteVehicle = (numberPlate: string) => {
 }
 
 const goToVehicleViewPage = (numberPlate: string) => {
-  router.push({ path: `/officer/vehicle/${numberPlate}`, params: { id: numberPlate } })
+  router.push({ path: formattedURL(vehiclePage + RouteConstant.Action.VIEW, numberPlate) })
 }
 
 const goToVehicleEditPage = (numberPlate: string) => {
-  router.push({ path: `/officer/vehicle/${numberPlate}/edit`, params: { id: numberPlate } })
+  router.push({ path: formattedURL(vehiclePage + RouteConstant.Action.EDIT, numberPlate) })
 }
 </script>
 
@@ -75,7 +80,12 @@ const goToVehicleEditPage = (numberPlate: string) => {
   <div v-if="loading">Loading...</div>
   <div v-else>
     <div style="float: right">
-      <router-link to="/officer/vehicle/create" class="btn btn-primary">เพิ่ม</router-link>
+      <router-link
+        :to="{ path: `${vehiclePage + RouteConstant.Action.CREATE}` }"
+        class="btn btn-primary"
+      >
+        เพิ่ม
+      </router-link>
     </div>
 
     <table class="table">
@@ -84,7 +94,7 @@ const goToVehicleEditPage = (numberPlate: string) => {
           <th scope="col">#</th>
           <th scope="col">ป้ายทะเบียน</th>
           <th scope="col">ประเภท</th>
-          <th scope="col">ขนาด (ที่นั่ง)</th>
+          <th scope="col">ความจุที่นั่ง</th>
           <th scope="col">สถานะ</th>
           <th scope="col">Action</th>
         </tr>
