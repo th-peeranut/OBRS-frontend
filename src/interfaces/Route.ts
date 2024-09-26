@@ -1,5 +1,5 @@
 export default interface Route {
-    id: null,
+    id: string,
     name: string
     stations: Array<string>
     status: string

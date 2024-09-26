@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { defineComponent, ref, computed, watch, watchEffect } from 'vue'
-import type { PropType } from 'vue'
+import { ref, computed } from 'vue'
 import draggable from 'vuedraggable'
 
 const props = defineProps({

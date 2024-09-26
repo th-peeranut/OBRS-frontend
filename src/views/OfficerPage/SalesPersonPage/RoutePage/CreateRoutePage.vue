@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import Swal from 'sweetalert2'
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { RouteConstant } from '@/constants/routeConstant'
@@ -17,7 +17,7 @@ const newStationName = ref('')
 const newRoute = ref<Route>({
   id: null,
   name: '',
-  stations: ['sample', '2'],
+  stations: [],
   status: 'Active',
   requestedBy: '',
   requestedDate: ''
