@@ -1,0 +1,107 @@
+// Define primary, secondary, and font colors
+$primary-color: #4bc2f7;
+$secondary-color: #4069b8;
+$menu-font-color: #353c44; // Menu font color
+
+.navbar {
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px;
+  border-bottom: 1px solid #e0e0e0;
+
+  .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+
+    .logo-img {
+      height: 50px; /* Adjust as needed */
+      margin-right: 10px;
+    }
+
+    .logo-text {
+      font-size: 24px;
+      font-weight: bold;
+      color: $primary-color; /* Primary color */
+      letter-spacing: 2px;
+    }
+  }
+
+  .nav-links {
+    display: flex;
+    list-style: none;
+    padding-left: 0;
+
+    li {
+      margin: 0 15px;
+
+      a {
+        text-decoration: none;
+        color: $menu-font-color; /* Menu font color */
+        font-size: 16px;
+        font-weight: 500;
+
+        &:hover {
+          color: $primary-color; /* Primary color on hover */
+        }
+      }
+    }
+
+    .dropdown {
+      position: relative;
+
+      a {
+        display: inline-block;
+        color: $menu-font-color; /* Menu font color */
+      }
+
+      &:hover a {
+        color: $primary-color; /* Primary color on hover */
+      }
+    }
+  }
+
+  .auth-buttons {
+    display: flex;
+    align-items: center;
+
+    .login-btn {
+      border: 2px solid $primary-color; /* Primary color border */
+      background-color: transparent;
+      color: $primary-color; /* Primary color text */
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background-color: #f0f8ff;
+      }
+    }
+
+    .signup-btn {
+      background-color: $primary-color; /* Primary color background */
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      margin-left: 10px;
+      border-radius: 50px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+
+      &:hover {
+        background-color: $secondary-color; /* Secondary color on hover */
+      }
+    }
+  }
+}
