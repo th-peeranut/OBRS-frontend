@@ -105,3 +105,29 @@ $menu-font-color: #353c44; // Menu font color
     }
   }
 }
+
+.btn.dropdown-toggle {
+  border: transparent !important;
+  background-color: transparent !important;
+}
+
+.btn-lang {
+  &:hover {
+    color: $primary-color !important;
+  }
+}
+
+.menu-lang {
+  cursor: pointer;
+
+  text-decoration: none;
+  color: $menu-font-color !important; 
+  font-size: 16px;
+  font-weight: 500;
+
+  background-color: transparent !important;
+
+  &:hover {
+    color: $primary-color !important;
+  }
+}

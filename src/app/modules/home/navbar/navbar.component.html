@@ -4,17 +4,50 @@
       <img src="logo.svg" alt="Logo" class="logo-img" />
     </div>
     <ul class="nav-links mt-3">
-      <li><a href="#">หน้าแรก</a></li>
-      <li><a href="#">ตารางเดินรถ</a></li>
-      <li><a href="#">วิธีจองและชำระเงิน</a></li>
-      <li><a href="#">ติดต่อเรา</a></li>
-      <li class="dropdown">
-        <a href="#">ภาษาไทย &#x25BC;</a>
+      <li>
+        <a href="#">{{ "NAVBAR.HOME" | translate }}</a>
+      </li>
+      <li>
+        <a href="#">{{ "NAVBAR.SCHEDULE" | translate }}</a>
+      </li>
+      <li>
+        <a href="#">{{ "NAVBAR.BOOKING" | translate }}</a>
+      </li>
+      <li>
+        <a href="#">{{ "NAVBAR.CONTACT" | translate }}</a>
+      </li>
+      <li>
+        <div class="d-flex dropdown">
+          <button
+            class="btn btn-lang dropdown-toggle p-0"
+            type="button"
+            id="dropdownMenuButton"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
+          </button>
+          <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <li>
+              <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
+                ภาษาไทย
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
+                English
+              </a>
+            </li>
+          </ul>
+        </div>
       </li>
     </ul>
     <div class="auth-buttons">
-      <button class="login-btn">เข้าสู่ระบบ</button>
-      <button class="signup-btn">สมัครสมาชิก</button>
+      <a class="login-btn btn" [routerLink]="'/login'">
+        {{ "NAVBAR.SIGNIN" | translate }}
+      </a>
+      <a class="signup-btn btn">{{ "NAVBAR.SIGNUP" | translate }}</a>
+      
     </div>
   </div>
 </nav>

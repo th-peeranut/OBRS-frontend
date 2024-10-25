@@ -1,14 +1,13 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HomeComponent } from './home.component';
-import { NavbarComponent } from './navbar/navbar.component';
-import { TranslateModule } from '@ngx-translate/core';
+import { LoginComponent } from './login.component';
 import { RouterModule } from '@angular/router';
+import { TranslateModule } from '@ngx-translate/core';
+
 
 @NgModule({
   declarations: [
-    HomeComponent,
-    NavbarComponent
+    LoginComponent
   ],
   imports: [
     CommonModule,
@@ -16,7 +15,7 @@ import { RouterModule } from '@angular/router';
     TranslateModule.forChild()
   ],
   exports: [
-    HomeComponent
+    LoginComponent
   ]
 })
-export class HomeModule { }
+export class LoginModule { }

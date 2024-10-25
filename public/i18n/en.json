@@ -1,0 +1,10 @@
+{
+  "NAVBAR": {
+    "HOME": "Home",
+    "SCHEDULE": "Schedule",
+    "BOOKING": "How to book and pay",
+    "CONTACT": "Contact us",
+    "SIGNIN": "Log in",
+    "SIGNUP": "Register"
+  }
+}

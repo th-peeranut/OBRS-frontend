@@ -1,0 +1,70 @@
+<div class="login-container">
+  <!-- Left Section with Image -->
+  <div class="left-section">
+    <img src="login.svg" alt="Tickets" class="illustration" />
+  </div>
+
+  <!-- Right Section with Login Form -->
+  <div class="right-section">
+    <div class="d-flex justify-content-end dropdown mb-3">
+      <button
+        class="btn btn-lang dropdown-toggle p-0"
+        type="button"
+        id="dropdownMenuButton"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+      >
+        {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
+      </button>
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
+            <img src="th.svg" alt="th" />
+
+            ภาษาไทย
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
+            <img src="en.svg" alt="en" />
+
+            English
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="logo">
+      <img src="logo.svg" alt="Phuyaipu Logo" />
+    </div>
+
+    <h1>ยินดีต้อนรับเข้าสู่ระบบ</h1>
+
+    <p class="subtext">
+      กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการจองตั๋วของคุณ
+    </p>
+
+    <form class="login-form">
+      <label for="username">ชื่อผู้ใช้งาน</label>
+      <input type="text" id="username" placeholder="กรุณากรอกชื่อผู้ใช้งาน" />
+
+      <label for="password">รหัสผ่าน</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="กรุณากรอกรหัสผ่าน" />
+        <i class="icon-eye"></i>
+      </div>
+
+      <div class="options">
+        <label> <input type="checkbox" /> จดจำรหัสผ่าน </label>
+        <a href="#" class="forgot-password">ลืมรหัสผ่านใช่หรือไม่?</a>
+      </div>
+
+      <button type="submit" class="login-button">เข้าสู่ระบบ</button>
+      <p class="register-link">
+        คุณยังไม่มีบัญชี? <a href="#">ลงทะเบียนที่นี้</a>
+      </p>
+    </form>
+
+    <footer>© NJ Phuyaipu 2024. all rights reserved</footer>
+  </div>
+</div>
