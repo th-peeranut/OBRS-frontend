@@ -6,5 +6,21 @@
     "CONTACT": "Contact us",
     "SIGNIN": "Log in",
     "SIGNUP": "Register"
+  },
+  "LOGIN": {
+    "WELCOME": "Welcome to login",
+    "HINT": "Please fill in the information below to facilitate your ticket booking",
+    "USERNAME": "Username",
+    "USERNAME_PLACEHOLDER": "Please enter your username",
+    "PASSWORD": "Password",
+    "PASSWORD_PLACEHOLDER": "Please enter your password",
+    "REMEMBER": "Remember your password",
+    "FORGETPASSWORD": "Forgot your password?",
+    "LOGIN": "Login",
+    "OR": "Or",
+    "LOGINMOBILE": "Log in with your phone number",
+    "NOACCOUNT": "Don't have an account?",
+    "REGISTERLINK": "Don't have an account?",
+    "REGISTERLINK_CLICK": "Register here"
   }
 }
