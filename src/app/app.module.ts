@@ -4,13 +4,16 @@ import {
   provideHttpClient,
   HttpClient,
   HTTP_INTERCEPTORS,
+  withInterceptors,
 } from '@angular/common/http';
 import { AppRoutingModule } from './app-routing.module';
 import { RouterModule } from '@angular/router';
+import { ToastrModule } from 'ngx-toastr';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 // auth
 import { AuthGuard } from './auth/auth.guard';
-import { AuthInterceptor } from './auth/auth.interceptor';
+import { authInterceptor } from './auth/auth.interceptor';
 import { AuthService } from './auth/auth.service';
 
 // i18n
@@ -21,7 +24,7 @@ import { AppComponent } from './app.component';
 
 import { HomeModule } from './modules/home/home.module';
 import { LoginModule } from './modules/login/login.module';
-
+import { SharedModule } from './shared/shared.module';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/i18n/', '.json');
@@ -31,8 +34,11 @@ export function HttpLoaderFactory(http: HttpClient) {
   declarations: [AppComponent],
   imports: [
     BrowserModule,
+    BrowserAnimationsModule,
+
     RouterModule,
     AppRoutingModule,
+
     TranslateModule.forRoot({
       loader: {
         provide: TranslateLoader,
@@ -40,18 +46,17 @@ export function HttpLoaderFactory(http: HttpClient) {
         deps: [HttpClient],
       },
     }),
+
+    ToastrModule.forRoot(),
+
+    SharedModule,
     HomeModule,
     LoginModule,
   ],
   providers: [
     AuthService,
     AuthGuard,
-    {
-      provide: HTTP_INTERCEPTORS,
-      useClass: AuthInterceptor,
-      multi: true,
-    },
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([authInterceptor]))
   ],
   bootstrap: [AppComponent],
 })

@@ -58,15 +58,16 @@
       {{ "LOGIN.HINT" | translate }}
     </p>
 
-    <form class="login-form mt-3">
+    <form class="login-form mt-3" [formGroup]="loginForm">
       <!-- ชื่อผู้ใช้งาน -->
-      <label for="username">
+      <label for="email">
         {{ "LOGIN.USERNAME" | translate }}
       </label>
       <input
         class="form-control mt-1"
         type="text"
-        id="username"
+        id="email"
+        formControlName="email"
         [placeholder]="'LOGIN.USERNAME_PLACEHOLDER' | translate"
       />
 
@@ -79,6 +80,7 @@
           class="form-control"
           type="password"
           id="password"
+          formControlName="password"
           [placeholder]="'LOGIN.PASSWORD_PLACEHOLDER' | translate"
         />
         <i class="icon-eye"></i>
@@ -91,10 +93,10 @@
           <input
             class="form-check-input col-2"
             type="checkbox"
-            value=""
-            id="flexCheckDefault"
+            formControlName="rememberMe"
+            id="rememberMe"
           />
-          <label class="form-check-label" for="flexCheckDefault">
+          <label class="form-check-label" for="rememberMe">
             {{ "LOGIN.REMEMBER" | translate }}
           </label>
         </div>
@@ -106,7 +108,7 @@
       </div>
 
       <!-- เข้าสู่ระบบ -->
-      <button type="submit" class="login-button">
+      <button type="submit" class="login-button" (click)="login()">
         {{ "LOGIN.LOGIN" | translate }}  
       </button>
 
