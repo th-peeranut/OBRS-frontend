@@ -12,8 +12,10 @@
     "HINT": "Please fill in the information below to facilitate your ticket booking",
     "USERNAME": "Username",
     "USERNAME_PLACEHOLDER": "Please enter your username",
+    "USERNAME_REQUIRED": "Please enter your username",
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
+    "PASSWORD_REQUIRED": "Please enter your password",
     "REMEMBER": "Remember your password",
     "FORGETPASSWORD": "Forgot your password?",
     "LOGIN": "Login",
@@ -22,5 +24,46 @@
     "NOACCOUNT": "Don't have an account?",
     "REGISTERLINK": "Don't have an account?",
     "REGISTERLINK_CLICK": "Register here"
+  },
+  "REGISTER": {
+    "WELCOME": "Register",
+    "HINT": "Please fill in the information below For ease of registration",
+
+    "FIRSTNAME": "First name",
+    "FIRSTNAME_PLACEHOLDER": "Please enter your first name",
+    "FIRSTNAME_REQUIRED": "Please enter your first name",
+
+    "MIDDLENAME": "Middle name (if any)",
+    "MIDDLENAME_PLACEHOLDER": "Please enter your middle name",
+    "MIDDLENAME_REQUIRED": "Please enter your middle name",
+
+    "LASTNAME": "Last name",
+    "LASTNAME_PLACEHOLDER": "Please enter your last name",
+    "LASTNAMEE_REQUIRED": "Please enter your last name",
+
+    "USERNAME": "Username",
+    "USERNAME_PLACEHOLDER": "Please enter your user name",
+    "USERNAME_REQUIRED": "Please enter your user name",
+
+    "EMAIL": "Email",
+    "EMAIL_PLACEHOLDER": "Please enter your email",
+    "EMAIL_REQUIRED": "Please enter your email",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
+    "PHONE_NO_REQUIRED": "Please enter your phone number",
+
+    "PASSWORD": "Password",
+    "PASSWORD_PLACEHOLDER": "Please enter your password",
+    "PASSWORD_REQUIRED": "Please enter your password",
+
+    "CONFIRM_PASSWORD": "Confirm your password",
+    "CONFIRM_PASSWORD_PLACEHOLDER": "Please enter your password confirmation",
+    "CONFIRM_PASSWORD_REQUIRED": "Please enter your password confirmation",
+
+    "SAVE": "Confirm",
+
+    "LOGIN_LINK": "Do you have an account?",
+    "LOGIN_LINK_CLICK": "Log in here"
   }
 }

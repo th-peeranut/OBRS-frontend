@@ -10,17 +10,64 @@
   "LOGIN": {
     "WELCOME": "ยินดีต้อนรับเข้าสู่ระบบ",
     "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการจองตั๋วของคุณ",
+
     "USERNAME": "ชื่อผู้ใช้งาน",
     "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งาน",
+    "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งาน",
+
     "PASSWORD": "รหัสผ่าน",
     "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
+    "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
+
     "REMEMBER": "จดจำรหัสผ่าน",
     "FORGETPASSWORD": "ลืมรหัสผ่านใช่หรือไม่?",
+
     "LOGIN": "เข้าสู่ระบบ",
     "OR": "หรือ",
     "LOGINMOBILE": "เข้าสู่ระบบด้วยเบอร์โทรศัพท์",
+
     "NOACCOUNT": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้"
+  },
+  "REGISTER": {
+    "WELCOME": "สมัครสมาชิก",
+    "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการลงทะเบียนสมัครสมาชิก",
+
+    "FIRSTNAME": "ชื่อจริง",
+    "FIRSTNAME_PLACEHOLDER": "กรุณากรอกชื่อจริง",
+    "FIRSTNAME_REQUIRED": "กรุณากรอกชื่อจริง",
+
+    "MIDDLENAME": "ชื่อกลาง (ถ้ามี)",
+    "MIDDLENAME_PLACEHOLDER": "กรุณากรอกชื่อกลาง",
+    "MIDDLENAME_REQUIRED": "กรุณากรอกชื่อกลาง",
+
+    "LASTNAME": "นามสกุล",
+    "LASTNAME_PLACEHOLDER": "กรุณากรอกนามสกุล",
+    "LASTNAME_REQUIRED": "กรุณากรอกนามสกุล",
+
+    "USERNAME": "ชื่อผู้ใช้งาน",
+    "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งาน",
+    "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งาน",
+
+    "EMAIL": "อีเมล",
+    "EMAIL_PLACEHOLDER": "กรุณากรอกอีเมล",
+    "EMAIL_REQUIRED": "กรุณากรอกอีเมล",
+
+    "PHONE_NO": "หมายเลขโทรศัพท์",
+    "PHONE_NO_PLACEHOLDER": "กรุณากรอกหมายเลขโทรศัพท์",
+    "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+
+    "PASSWORD": "รหัสผ่าน",
+    "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
+    "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
+
+    "CONFIRM_PASSWORD": "ยืนยันรหัสผ่าน",
+    "CONFIRM_PASSWORD_PLACEHOLDER": "กรุณากรอกยืนยันรหัสผ่าน",
+    "CONFIRM_PASSWORD_REQUIRED": "กรุณากรอกยืนยันรหัสผ่าน",
+
+    "SAVE": "ยืนยัน",
+    "LOGIN_LINK": "คุณมีบัญชีเเล้ว?",
+    "LOGIN_LINK_CLICK": "เข้าสู่ระบบที่นี้"
   }
 }

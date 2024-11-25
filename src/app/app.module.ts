@@ -2,14 +2,13 @@ import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import {
   provideHttpClient,
-  HttpClient,
   HTTP_INTERCEPTORS,
+  HttpClient,
   withInterceptors,
 } from '@angular/common/http';
-import { AppRoutingModule } from './app-routing.module';
-import { RouterModule } from '@angular/router';
-import { ToastrModule } from 'ngx-toastr';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { AppRoutingModule } from './app-routing.module';
+import { ToastrModule } from 'ngx-toastr';
 
 // auth
 import { AuthGuard } from './auth/auth.guard';
@@ -21,9 +20,6 @@ import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
 import { AppComponent } from './app.component';
-
-import { HomeModule } from './modules/home/home.module';
-import { LoginModule } from './modules/login/login.module';
 import { SharedModule } from './shared/shared.module';
 
 export function HttpLoaderFactory(http: HttpClient) {
@@ -36,7 +32,6 @@ export function HttpLoaderFactory(http: HttpClient) {
     BrowserModule,
     BrowserAnimationsModule,
 
-    RouterModule,
     AppRoutingModule,
 
     TranslateModule.forRoot({
@@ -47,16 +42,18 @@ export function HttpLoaderFactory(http: HttpClient) {
       },
     }),
 
-    ToastrModule.forRoot(),
+    ToastrModule.forRoot({
+      timeOut: 3000,
+      positionClass: 'toast-top-right',
+      preventDuplicates: true,
+    }),
 
     SharedModule,
-    HomeModule,
-    LoginModule,
   ],
   providers: [
     AuthService,
     AuthGuard,
-    provideHttpClient(withInterceptors([authInterceptor]))
+    provideHttpClient(withInterceptors([authInterceptor])),
   ],
   bootstrap: [AppComponent],
 })

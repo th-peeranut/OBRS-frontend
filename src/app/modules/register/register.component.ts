@@ -1,28 +1,23 @@
-import {
-  Component,
-  ElementRef,
-  Renderer2,
-  ViewChild,
-} from '@angular/core';
+import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { Location } from '@angular/common';
 import { RolesService } from '../../services/roles/roles.service';
 
 @Component({
-  selector: 'app-login',
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+  selector: 'app-register',
+  templateUrl: './register.component.html',
+  styleUrl: './register.component.scss',
 })
-export class LoginComponent {
+export class RegisterComponent {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
+  isShowConfirmPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
-  loginForm: FormGroup;
+  registerForm: FormGroup;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -42,23 +37,30 @@ export class LoginComponent {
   }
 
   creatForm() {
-    this.loginForm = this.fb.group({
+    this.registerForm = this.fb.group({
+      firstName: ['', Validators.required],
+      middleName: [''],
+      lastName: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      phoneNumber: ['', [Validators.required]],
       username: ['', Validators.required],
       password: ['', Validators.required],
-      rememberMe: [false, Validators.required],
+      confirmPassword: ['', Validators.required],
+      isPhoneNumberVerify: false,
+      roles: ['CUSTOMER'],
     });
   }
 
   getForm(controlName: string) {
-    return this.loginForm.get(controlName);
+    return this.registerForm.get(controlName);
   }
 
   getFormValue(controlName: string) {
-    return this.loginForm.getRawValue()[controlName];
+    return this.registerForm.getRawValue()[controlName];
   }
 
   getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.loginForm.get(controlName)?.errors;
+    const errors = this.registerForm.get(controlName)?.errors;
 
     if (!errors) {
       return false;
@@ -107,12 +109,16 @@ export class LoginComponent {
     this.isShowPassword = !this.isShowPassword;
   }
 
-  async login() {
-    this.loginForm.markAllAsTouched();
+  toggleShowConfirmPassword() {
+    this.isShowConfirmPassword = !this.isShowConfirmPassword;
+  }
 
-    if (this.loginForm.valid) {
-      const payload = this.loginForm.value;
-      const res = await this.service.login(payload);
+  async register() {
+    this.registerForm.markAllAsTouched();
+
+    if (this.registerForm.valid) {
+      const payload = this.registerForm.value;
+      const res = await this.service.register(payload);
 
       if (res) {
         this.toastr.success('เข้าสู่ระบบสำเร็จ');

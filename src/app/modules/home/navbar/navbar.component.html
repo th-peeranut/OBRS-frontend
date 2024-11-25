@@ -46,8 +46,9 @@
       <a class="login-btn btn" [routerLink]="'/login'">
         {{ "NAVBAR.SIGNIN" | translate }}
       </a>
-      <a class="signup-btn btn">{{ "NAVBAR.SIGNUP" | translate }}</a>
-      
+      <a class="signup-btn btn" [routerLink]="'/register'">{{
+        "NAVBAR.SIGNUP" | translate
+      }}</a>
     </div>
   </div>
 </nav>

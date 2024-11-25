@@ -1,36 +1,48 @@
-/* You can add global styles to this file, and also import other style files */
-
 @import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@200;300;400;500;600;700;800&display=swap");
+@import "./styles/variables.scss";
 
 * {
   font-family: "Sarabun", sans-serif;
 }
 
+hr {
+  border: 0;
+  border-top: 1px solid $primary-grey;
+  width: 100%;
+}
+
 .form-control {
-  background-color: #fff !important;
-  border: 1px solid #dddee1 !important;
+  background-color: $primary-white !important;
+  border: 1px solid $primary-lightgrey !important;
   border-radius: 12px !important;
 }
 
 .form-check-input:checked {
-  background-color: #4bc2f7 !important;
-  border-color: #4bc2f7 !important;
+  background-color: $primary-blue !important;
+  border-color: $primary-blue !important;
 }
 
-a {
+.obrs-link {
   font-size: 16px !important;
-  color: #4bc2f7 !important;
+  color: $primary-blue !important;
 }
 
 label,
 input {
   font-size: 16px !important;
-  color: #353c44 !important;
+  color: $text-black !important;
   width: 100%;
 }
 
-hr {
-  border: 0;
-  border-top: 1px solid #babdc3;
-  width: 100%;
+.label-error,
+.text-error {
+  color: $text-red !important;
+}
+
+.form-error {
+  border: 1px solid $text-red !important;
+}
+
+.form-row {
+  margin-top: 24px;
 }

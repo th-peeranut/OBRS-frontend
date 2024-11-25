@@ -1,4 +1,4 @@
-@import '../../../styles/variables.scss';
+@import "../../../styles/variables.scss";
 
 // Container for the login page
 .login-container {
@@ -92,6 +92,7 @@
 
       .login-button {
         width: 100%;
+        margin-top: 32px;
         padding: 12px;
         background-color: $primary-blue;
         color: #fff;
@@ -100,6 +101,12 @@
         font-size: 16px;
         font-weight: bold;
         cursor: pointer;
+      }
+
+      .login-button:disabled,
+      .login-button[disabled]{
+        background-color: $primary-lightgrey;
+        color: $text-white;
       }
 
       .login-mobile-button {

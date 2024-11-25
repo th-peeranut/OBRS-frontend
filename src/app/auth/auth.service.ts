@@ -2,27 +2,48 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { environment } from '../../environments/environment';
+import { Register } from '../interfaces/auth.interface';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
-  private readonly loginUrl = `${environment.apiUrl}/auth/login`;
 
   constructor(private http: HttpClient, private router: Router) {}
 
-  login(payload: {email: string, password: string, rememberMe: boolean}): Promise<boolean> {
-    return this.http.post<{ token: string }>(this.loginUrl, { email: payload.email, password: payload.password }).toPromise()
-      .then(response => {
+  login(payload: {
+    username: string;
+    password: string;
+    rememberMe: boolean;
+  }): Promise<boolean> {
+    return this.callLogin(payload);
+  }
+
+  callLogin(payload: {
+    username: string;
+    password: string;
+    rememberMe: boolean;
+  }): Promise<boolean> {
+    return this.http
+      .post<{ token: string }>(`${environment.apiUrl}/auth/login`, {
+        username: payload.username,
+        password: payload.password,
+      })
+      .toPromise()
+      .then((response) => {
         if (response && response.token) {
           this.storeToken(response.token, payload.rememberMe);
           return true;
         }
         return false;
       })
-      .catch(error => {
-        console.error('Login failed', error);
+      .catch((err) => {
+        if (err?.error.includes('JWT expired')) {
+          this.clearToken();
+          this.callLogin(payload);
+        }
+        console.error('Login failed', err);
         return false;
       });
   }
@@ -35,8 +56,16 @@ export class AuthService {
     }
   }
 
+  clearToken() {
+    localStorage.removeItem(this.TOKEN_KEY);
+    sessionStorage.removeItem(this.TOKEN_KEY);
+  }
+
   getToken(): string | null {
-    return localStorage.getItem(this.TOKEN_KEY) || sessionStorage.getItem(this.TOKEN_KEY);
+    return (
+      localStorage.getItem(this.TOKEN_KEY) ||
+      sessionStorage.getItem(this.TOKEN_KEY)
+    );
   }
 
   logout(): void {
@@ -47,5 +76,21 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     return !!this.getToken();
+  }
+
+  register(payload: Register) {
+    return this.http
+      .post<{ token: string }>(`${environment.apiUrl}/auth/signup`, payload)
+      .toPromise()
+      .then((response) => {
+        if (response && response.token) {
+          return true;
+        }
+        return false;
+      })
+      .catch((err) => {
+        console.error('Login failed', err);
+        return false;
+      });
   }
 }
