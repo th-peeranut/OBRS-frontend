@@ -35,7 +35,8 @@ input {
 }
 
 .label-error,
-.text-error {
+.text-error,
+.form-required {
   color: $text-red !important;
 }
 

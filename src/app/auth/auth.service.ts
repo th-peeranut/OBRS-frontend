@@ -83,7 +83,7 @@ export class AuthService {
       .post<{ token: string }>(`${environment.apiUrl}/auth/signup`, payload)
       .toPromise()
       .then((response) => {
-        if (response && response.token) {
+        if (response) {
           return true;
         }
         return false;

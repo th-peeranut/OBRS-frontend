@@ -104,7 +104,7 @@
       }
 
       .login-button:disabled,
-      .login-button[disabled]{
+      .login-button[disabled] {
         background-color: $primary-lightgrey;
         color: $text-white;
       }
@@ -183,4 +183,36 @@
 
 .dropdown-toggle::after {
   content: none !important;
+}
+
+.label-with-icon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  .tooltip-icon {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    position: relative;
+  }
+}
+
+.tooltip-box {
+  display: none;
+  position: absolute;
+  transform: translateX(-50%) translateY(-10px);
+  width: 320px;
+  background: #f9f9ff;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.tooltip-icon:hover + .tooltip-box {
+  display: block;
 }

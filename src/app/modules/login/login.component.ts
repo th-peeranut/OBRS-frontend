@@ -10,6 +10,7 @@ import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { Location } from '@angular/common';
 import { RolesService } from '../../services/roles/roles.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -33,7 +34,8 @@ export class LoginComponent {
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
-    private roleService: RolesService
+    private roleService: RolesService,
+    private router: Router
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
@@ -116,9 +118,7 @@ export class LoginComponent {
 
       if (res) {
         this.toastr.success('เข้าสู่ระบบสำเร็จ');
-
-        this.roleService.getRoles();
-        // this.location.back();
+        this.router.navigateByUrl('/home');
       } else {
         this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
       }

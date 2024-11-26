@@ -61,6 +61,8 @@
     "CONFIRM_PASSWORD_PLACEHOLDER": "Please enter your password confirmation",
     "CONFIRM_PASSWORD_REQUIRED": "Please enter your password confirmation",
 
+    "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
+
     "SAVE": "Confirm",
 
     "LOGIN_LINK": "Do you have an account?",

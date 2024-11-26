@@ -66,7 +66,10 @@
     "CONFIRM_PASSWORD_PLACEHOLDER": "กรุณากรอกยืนยันรหัสผ่าน",
     "CONFIRM_PASSWORD_REQUIRED": "กรุณากรอกยืนยันรหัสผ่าน",
 
+    "SAME_PASSWORD_VALIDATE": "กรุณากรอกรหัสผ่านให้ตรงกัน",
+
     "SAVE": "ยืนยัน",
+    
     "LOGIN_LINK": "คุณมีบัญชีเเล้ว?",
     "LOGIN_LINK_CLICK": "เข้าสู่ระบบที่นี้"
   }

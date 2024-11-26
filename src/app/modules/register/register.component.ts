@@ -4,6 +4,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { RolesService } from '../../services/roles/roles.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-register',
@@ -28,7 +29,8 @@ export class RegisterComponent {
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
-    private roleService: RolesService
+    private roleService: RolesService,
+    private router: Router
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
@@ -47,7 +49,7 @@ export class RegisterComponent {
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
-      roles: ['CUSTOMER'],
+      roles: [['CUSTOMER']],
     });
   }
 
@@ -113,20 +115,27 @@ export class RegisterComponent {
     this.isShowConfirmPassword = !this.isShowConfirmPassword;
   }
 
+  checkSamePassword() {
+    const formValue = this.registerForm.getRawValue();
+    const password = formValue.password;
+    const confirmPassword = formValue.confirmPassword;
+
+    return password && confirmPassword && password === confirmPassword;
+  }
+
   async register() {
     this.registerForm.markAllAsTouched();
 
-    if (this.registerForm.valid) {
+    if (this.registerForm.valid && this.checkSamePassword()) {
       const payload = this.registerForm.value;
       const res = await this.service.register(payload);
+      console.log(res);
 
       if (res) {
-        this.toastr.success('เข้าสู่ระบบสำเร็จ');
-
-        this.roleService.getRoles();
-        // this.location.back();
+        this.toastr.success('สมัครสมาชิกสำเร็จ');
+        this.router.navigateByUrl('/login');
       } else {
-        this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
+        this.toastr.error('พบข้อผิดพลาด สมัครสมาชิกไม่สำเร็จ');
       }
     }
   }
