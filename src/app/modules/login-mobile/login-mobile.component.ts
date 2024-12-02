@@ -1,24 +1,23 @@
 import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { RolesService } from '../../services/roles/roles.service';
-import { Router } from '@angular/router';
 
 @Component({
-  selector: 'app-register',
-  templateUrl: './register.component.html',
-  styleUrl: './register.component.scss',
+  selector: 'app-login-mobile',
+  templateUrl: './login-mobile.component.html',
+  styleUrl: './login-mobile.component.scss'
 })
-export class RegisterComponent {
+export class LoginMobileComponent {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
-  isShowConfirmPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
-  registerForm: FormGroup;
+  loginForm: FormGroup;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -39,30 +38,22 @@ export class RegisterComponent {
   }
 
   creatForm() {
-    this.registerForm = this.fb.group({
-      firstName: ['', Validators.required],
-      middleName: [''],
-      lastName: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      phoneNumber: ['', [Validators.required]],
-      username: ['', Validators.required],
-      password: ['', Validators.required],
-      confirmPassword: ['', Validators.required],
-      isPhoneNumberVerify: false,
-      roles: [['CUSTOMER']],
+    this.loginForm = this.fb.group({
+      phoneCode: ['', Validators.required],
+      phoneNo: ['', Validators.required],
     });
   }
 
   getForm(controlName: string) {
-    return this.registerForm.get(controlName);
+    return this.loginForm.get(controlName);
   }
 
   getFormValue(controlName: string) {
-    return this.registerForm.getRawValue()[controlName];
+    return this.loginForm.getRawValue()[controlName];
   }
 
   getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.registerForm.get(controlName)?.errors;
+    const errors = this.loginForm.get(controlName)?.errors;
 
     if (!errors) {
       return false;
@@ -81,8 +72,6 @@ export class RegisterComponent {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
-
-    console.log(lang, this.translate.currentLang)
   }
 
   toggleDropdown() {
@@ -113,32 +102,20 @@ export class RegisterComponent {
     this.isShowPassword = !this.isShowPassword;
   }
 
-  toggleShowConfirmPassword() {
-    this.isShowConfirmPassword = !this.isShowConfirmPassword;
-  }
+  async login() {
+    this.loginForm.markAllAsTouched();
 
-  checkSamePassword() {
-    const formValue = this.registerForm.getRawValue();
-    const password = formValue.password;
-    const confirmPassword = formValue.confirmPassword;
-
-    return password && confirmPassword && password === confirmPassword;
-  }
-
-  async register() {
-    this.registerForm.markAllAsTouched();
-
-    if (this.registerForm.valid && this.checkSamePassword()) {
-      const payload = this.registerForm.value;
-      const res = await this.service.register(payload);
-      console.log(res);
+    if (this.loginForm.valid) {
+      const payload = this.loginForm.value;
+      const res = await this.service.login(payload);
 
       if (res) {
-        this.toastr.success('สมัครสมาชิกสำเร็จ');
-        this.router.navigateByUrl('/login');
+        this.toastr.success('เข้าสู่ระบบสำเร็จ');
+        this.router.navigateByUrl('/home');
       } else {
-        this.toastr.error('พบข้อผิดพลาด สมัครสมาชิกไม่สำเร็จ');
+        this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
       }
     }
   }
 }
+

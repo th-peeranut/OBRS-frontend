@@ -28,7 +28,14 @@
 
     "NOACCOUNT": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK": "คุณยังไม่มีบัญชี?",
-    "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้"
+    "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้",
+
+    "PHONE_NO": "หมายเลขโทรศัพท์",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+
+    "LOGIN_USERNAME": "เข้าสู่ระบบด้วยชื่อผู้ใช้งานหรืออีเมล",
+    "SEND_OTP": "ส่ง OTP"
   },
   "REGISTER": {
     "WELCOME": "สมัครสมาชิก",

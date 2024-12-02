@@ -11,19 +11,31 @@
     "WELCOME": "Welcome to login",
     "HINT": "Please fill in the information below to facilitate your ticket booking",
     "USERNAME": "Username",
+
     "USERNAME_PLACEHOLDER": "Please enter your username",
     "USERNAME_REQUIRED": "Please enter your username",
+
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
     "PASSWORD_REQUIRED": "Please enter your password",
+
     "REMEMBER": "Remember your password",
     "FORGETPASSWORD": "Forgot your password?",
+
     "LOGIN": "Login",
     "OR": "Or",
     "LOGINMOBILE": "Log in with your phone number",
+    
     "NOACCOUNT": "Don't have an account?",
     "REGISTERLINK": "Don't have an account?",
-    "REGISTERLINK_CLICK": "Register here"
+    "REGISTERLINK_CLICK": "Register here",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "Please enter your phone number",
+
+    "LOGIN_USERNAME": "Log in with your username or email",
+    "SEND_OTP": "Send OTP"
   },
   "REGISTER": {
     "WELCOME": "Register",
