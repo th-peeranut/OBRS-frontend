@@ -63,6 +63,21 @@
 
     "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
 
+    "USERNAME_GUIDELINES_TITLE": "Username setting requirements",
+    "USERNAME_GUIDELINES_DESCRIPTION": "Username must contain",
+    "USERNAME_MINIMUM_REQUIREMENT": "At least 4 characters",
+    "USERNAME_RULES": "Which can only contain English letters (A-Z, a-z) and numbers (0-1)",
+
+    "PASSWORD_GUIDELINES_TITLE": "Password setting requirements",
+    "PASSWORD_GUIDELINES_DESCRIPTION": "Password must contain",
+    "PASSWORD_MINIMUM_REQUIREMENT": "At least 8 characters",
+    "PASSWORD_RULES": {
+      "RULE_1": "At least 1 uppercase letter (A-Z)",
+      "RULE_2": "At least 1 lowercase letter (a-z)",
+      "RULE_3": "At least 1 number (0-1)",
+      "RULE_4": "Special characters (optional)"
+    },
+
     "SAVE": "Confirm",
 
     "LOGIN_LINK": "Do you have an account?",

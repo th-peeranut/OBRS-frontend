@@ -68,8 +68,23 @@
 
     "SAME_PASSWORD_VALIDATE": "กรุณากรอกรหัสผ่านให้ตรงกัน",
 
+    "USERNAME_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่าชื่อผู้ใช้งาน",
+    "USERNAME_GUIDELINES_DESCRIPTION": "ในการตั้งชื่อผู้ใช้งานต้องมี",
+    "USERNAME_MINIMUM_REQUIREMENT": "อย่างน้อย 4 ตัวขึ้นไป",
+    "USERNAME_RULES": "ซึ่งสามารถใช้ได้ด้วยตัวอักษรภาษาอังกฤษ (A-Z, a-z) และหมายเลข (0-1) เท่านั้น",
+
+    "PASSWORD_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่ารหัสผ่าน",
+    "PASSWORD_GUIDELINES_DESCRIPTION": "ในการตั้งรหัสผ่านต้อง",
+    "PASSWORD_MINIMUM_REQUIREMENT": "อย่างน้อย 8 ตัวขึ้นไป",
+    "PASSWORD_RULES": {
+      "RULE_1": "ตัวอักษรพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว",
+      "RULE_2": "ตัวอักษรพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว",
+      "RULE_3": "หมายเลข (0-1) อย่างน้อย 1 ตัว",
+      "RULE_4": "ตัวอักษรพิเศษ (ไม่บังคับ)"
+    },
+
     "SAVE": "ยืนยัน",
-    
+
     "LOGIN_LINK": "คุณมีบัญชีเเล้ว?",
     "LOGIN_LINK_CLICK": "เข้าสู่ระบบที่นี้"
   }

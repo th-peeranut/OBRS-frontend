@@ -166,15 +166,16 @@
                 <img class="tooltip-icon" src="icons/info.svg" alt="info" />
                 <div class="tooltip-box">
                   <strong>
-                    ข้อกำหนดในการตั้งค่าชื่อผู้ใช้งาน
+                    {{ "REGISTER.USERNAME_GUIDELINES_TITLE" | translate }} 
                   </strong>
                   <br />
-                  ในการตั้งชื่อผู้ใช้งานต้องมี
+                  {{ "REGISTER.USERNAME_GUIDELINES_DESCRIPTION" | translate }} 
                   <strong>
-                    <u>อย่างน้อย 4 ตัวขึ้นไป</u>
+                    <u>
+                      {{ "REGISTER.USERNAME_MINIMUM_REQUIREMENT" | translate }} 
+                    </u>
                   </strong>
-                  ซึ่งสามารถใช้ได้ด้วยตัวอักษรภาษาอังกฤษ (A-Z, a-z) และหมายเลข
-                  (0-1) เท่านั้น
+                  {{ "REGISTER.USERNAME_RULES" | translate }} 
                 </div>
               </div>
             </div>
@@ -299,18 +300,20 @@
                 <img class="tooltip-icon" src="icons/info.svg" alt="info" />
                 <div class="tooltip-box">
                   <strong> 
-                    ข้อกำหนดในการตั้งค่ารหัสผ่าน 
+                    {{ "REGISTER.PASSWORD_GUIDELINES_TITLE" | translate }} 
                   </strong>
                   <br />
-                  ในการตั้งรหัสผ่านต้อง
+                  {{ "REGISTER.PASSWORD_GUIDELINES_DESCRIPTION" | translate }}
                   <strong>
-                    <u>อย่างน้อย 4 ตัวขึ้นไป</u>
+                    <u>
+                      {{ "REGISTER.PASSWORD_MINIMUM_REQUIREMENT" | translate }}
+                    </u>
                   </strong>
                   <ul class="mb-0">
-                    <li>ตัวอักษรพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว</li>
-                    <li>ตัวอักษรพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว</li>
-                    <li>หมายเลข (0-1) อย่างน้อย 1 ตัว</li>
-                    <li>ตัวอักษรพิเศษ (ไม่บังคับ)</li>
+                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_1" | translate }}</li>
+                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_2" | translate }}</li>
+                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_3" | translate }}</li>
+                    <li>{{ "REGISTER.PASSWORD_RULES.RULE_4" | translate }}</li>
                   </ul>
                 </div>
               </div>
