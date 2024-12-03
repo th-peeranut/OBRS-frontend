@@ -4,12 +4,13 @@ import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { RolesService } from '../../services/roles/roles.service';
+import { PhoneCodeService } from '../../services/phone-code/phone-code.service';
+import { PhoneCode } from '../../interfaces/phone-code.interface';
 
 @Component({
   selector: 'app-login-mobile',
   templateUrl: './login-mobile.component.html',
-  styleUrl: './login-mobile.component.scss'
+  styleUrl: './login-mobile.component.scss',
 })
 export class LoginMobileComponent {
   isDropdownOpen: boolean = false;
@@ -18,6 +19,8 @@ export class LoginMobileComponent {
   currentLanguage: string = 'th';
 
   loginForm: FormGroup;
+
+  phoneCodeDropdown: PhoneCode[] = [];
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -28,13 +31,19 @@ export class LoginMobileComponent {
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
-    private roleService: RolesService,
-    private router: Router
+    private router: Router,
+    private phoneCodeService: PhoneCodeService
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
 
+    this.getMasterData();
+
     this.creatForm();
+  }
+
+  async getMasterData() {
+    this.phoneCodeDropdown = this.phoneCodeService.getPhoneCode();
   }
 
   creatForm() {
@@ -117,5 +126,21 @@ export class LoginMobileComponent {
       }
     }
   }
-}
 
+  getFlagImage(phoneCode?: PhoneCode) {
+    return phoneCode ? `https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/${phoneCode.code}.svg` : "";
+  }
+
+  selectPhoneCode(phoneCode: PhoneCode) {
+    this.loginForm.patchValue({
+      phoneCode: phoneCode.dialCode,
+    });
+  }
+
+  getCurrentPhoneCode() {
+    const formValue = this.loginForm.getRawValue();
+    return this.phoneCodeDropdown.find(
+      (item) => item.dialCode === formValue.phoneCode
+    );
+  }
+}

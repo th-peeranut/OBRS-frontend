@@ -11,14 +11,14 @@ export interface Role {
   providedIn: 'root',
 })
 export class RolesService {
-  private readonly rolesUrl = `${environment.apiUrl}/api/roles`;
+  private readonly url = `${environment.apiUrl}/api/roles`;
 
   constructor(private http: HttpClient) {}
 
   createRole(role: Role): Promise<Role> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http
-      .post<Role>(this.rolesUrl, role, { headers })
+      .post<Role>(this.url, role, { headers })
       .toPromise()
       .then((response) => {
         if (!response) throw new Error('Failed to create role');
@@ -28,7 +28,7 @@ export class RolesService {
 
   getRoles(): Promise<Role[]> {
     return this.http
-      .get<Role[]>(this.rolesUrl)
+      .get<Role[]>(this.url)
       .toPromise()
       .then((response) => {
         if (!response) throw new Error('Failed to fetch roles');
@@ -38,7 +38,7 @@ export class RolesService {
 
   getRoleById(id: number): Promise<Role> {
     return this.http
-      .get<Role>(`${this.rolesUrl}/${id}`)
+      .get<Role>(`${this.url}/${id}`)
       .toPromise()
       .then((response) => {
         if (!response) throw new Error(`Role with ID ${id} not found`);
@@ -49,7 +49,7 @@ export class RolesService {
   updateRole(id: number, role: Role): Promise<Role> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http
-      .put<Role>(`${this.rolesUrl}/${id}`, role, { headers })
+      .put<Role>(`${this.url}/${id}`, role, { headers })
       .toPromise()
       .then((response) => {
         if (!response) throw new Error(`Failed to update role with ID ${id}`);
@@ -59,7 +59,7 @@ export class RolesService {
 
   deleteRole(id: number): Promise<void> {
     return this.http
-      .delete<void>(`${this.rolesUrl}/${id}`)
+      .delete<void>(`${this.url}/${id}`)
       .toPromise()
       .then((response) => {
         if (response === undefined) return;
