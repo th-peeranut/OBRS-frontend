@@ -1,18 +1,24 @@
-import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  OnInit,
+  Renderer2,
+  ViewChild,
+} from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { PhoneCodeService } from '../../services/phone-code/phone-code.service';
-import { PhoneCode } from '../../interfaces/phone-code.interface';
+import { Subscription } from 'rxjs';
 
 @Component({
-  selector: 'app-login-mobile',
-  templateUrl: './login-mobile.component.html',
-  styleUrl: './login-mobile.component.scss',
+  selector: 'app-otp-validate',
+  templateUrl: './otp-validate.component.html',
+  styleUrl: './otp-validate.component.scss',
 })
-export class LoginMobileComponent {
+export class OtpValidateComponent implements OnInit, OnDestroy {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
 
@@ -20,7 +26,9 @@ export class LoginMobileComponent {
 
   loginForm: FormGroup;
 
-  phoneCodeDropdown: PhoneCode[] = [];
+  router$: Subscription;
+
+  phoneNo: string = "";
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -32,23 +40,27 @@ export class LoginMobileComponent {
     private service: AuthService,
     private toastr: ToastrService,
     private router: Router,
-    private phoneCodeService: PhoneCodeService
+    private route: ActivatedRoute,
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
 
-    this.getMasterData();
-
     this.creatForm();
   }
 
-  async getMasterData() {
-    this.phoneCodeDropdown = this.phoneCodeService.getPhoneCode();
+  ngOnInit() {
+    this.router$ = this.route.params.subscribe((params) => {
+      this.phoneNo = params['phoneno'];
+    });
+  }
+
+  ngOnDestroy() {
+    this.router$.unsubscribe();
   }
 
   creatForm() {
     this.loginForm = this.fb.group({
-      phoneCode: ['+66', Validators.required],
+      phoneCode: ['', Validators.required],
       phoneNo: ['', Validators.required],
     });
   }
@@ -111,43 +123,19 @@ export class LoginMobileComponent {
     this.isShowPassword = !this.isShowPassword;
   }
 
-  async goToOTP() {
+  async login() {
     this.loginForm.markAllAsTouched();
 
     if (this.loginForm.valid) {
-      const formValue = this.loginForm.value;
-      this.router.navigate(['/otp', this.formatPhoneNumber(formValue.phoneCode, formValue.phoneNo)]);
+      const payload = this.loginForm.value;
+      const res = await this.service.login(payload);
+
+      if (res) {
+        this.toastr.success('เข้าสู่ระบบสำเร็จ');
+        this.router.navigateByUrl('/home');
+      } else {
+        this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
+      }
     }
-  }
-
-  getFlagImage(phoneCode?: PhoneCode) {
-    return phoneCode
-      ? `https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/${phoneCode.code}.svg`
-      : '';
-  }
-
-  selectPhoneCode(phoneCode: PhoneCode) {
-    this.loginForm.patchValue({
-      phoneCode: phoneCode.dialCode,
-    });
-  }
-
-  getCurrentPhoneCode() {
-    const formValue = this.loginForm.getRawValue();
-    return this.phoneCodeDropdown.find(
-      (item) => item.dialCode === formValue.phoneCode
-    );
-  }
-
-  formatPhoneNumber(dialCode: string, phoneNo: string): string {
-    if (!dialCode || !phoneNo) {
-      throw new Error('Invalid phone number format: Missing "+" at the start');
-    }
-
-    if (phoneNo.startsWith('0')) {
-      return dialCode + phoneNo.substring(1);
-    }
-
-    return dialCode + phoneNo;
   }
 }

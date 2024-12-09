@@ -53,94 +53,19 @@
       {{ "LOGIN.WELCOME" | translate }}
     </h1>
 
-    <!-- กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการจองตั๋วของคุณ -->
+    <!-- กรุณากรอกหมายเลข OTP จาก SMS ที่ส่งไปยังหมายเลข +66812345xxx -->
     <p class="text-center subtext mt-1">
-      {{ "LOGIN.HINT" | translate }}
+      กรุณากรอกหมายเลข OTP จาก SMS ที่ส่งไปยังหมายเลข {{ phoneNo }}
     </p>
 
     <form class="login-form mt-3" [formGroup]="loginForm">
-      <!-- หมายเลขโทรศัพท์ -->
-      <label
-        for="email"
-        [class.label-error]="
-          getForm('phoneNo')?.errors &&
-          (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
-        "
-      >
-        {{ "LOGIN.PHONE_NO" | translate }}
-      </label>
-
-      <!-- dropdown -->
-      <div class="d-flex align-items-center gap-1">
-        <div
-          class="dropdown mt-1"
-          [class.dropdown-error]="
-            getForm('phoneCode')?.errors &&
-            (getForm('phoneCode')?.touched || getForm('phoneCode')?.dirty)
-          "
-        >
-          <button
-            #phoneCodeDropdownButton
-            class="btn btn-lang dropdown-phone-code p-0"
-            type="button"
-            id="phoneCodeDropdownButton"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            [class.active]="isDropdownOpen"
-            (click)="toggleDropdown()"
-          >
-            <ng-container *ngIf="getCurrentPhoneCode()">
-              {{ getCurrentPhoneCode()?.dialCode }}
-            </ng-container>
-          </button>
-
-          <ul
-            class="dropdown-menu dropdown-menu-phone-code"
-            aria-labelledby="phoneCodeDropdownButton"
-          >
-            <li *ngFor="let phoneCode of phoneCodeDropdown">
-              <a
-                class="dropdown-item menu-lang"
-                (click)="selectPhoneCode(phoneCode)"
-              >
-                <img
-                  class="flag-img mx-2"
-                  [src]="getFlagImage(phoneCode)"
-                  alt="th"
-                />
-
-                {{ phoneCode.name }}
-                ({{ phoneCode.dialCode }})
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <!-- input field -->
-        <input
-          class="form-control mt-1"
-          type="text"
-          id="phoneNo"
-          formControlName="phoneNo"
-          [class.form-error]="
-            getForm('phoneNo')?.errors &&
-            (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
-          "
-        />
+      <!-- OTP -->
+      <div class="d-flex justify-content-center align-items-center">
+        <app-otp></app-otp>
       </div>
-
-      <div
-        class="text-error"
-        *ngIf="
-          getForm('phoneNo')?.errors &&
-          (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)
-        "
-      >
-        {{ "LOGIN.PHONE_NO_REQUIRED" | translate }}
-      </div>
-
+      
       <!-- ส่ง OTP -->
-      <button type="submit" class="login-button" (click)="goToOTP()">
+      <button type="submit" class="login-button" (click)="login()">
         {{ "LOGIN.SEND_OTP" | translate }}
       </button>
 

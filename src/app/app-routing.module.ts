@@ -24,6 +24,13 @@ const routes: Routes = [
         (m) => m.RegisterModule
       ),
   },
+  {
+    path: 'otp/:phoneno',
+    loadChildren: () =>
+      import('./modules/otp-validate/otp-validate.module').then(
+        (m) => m.OtpValidateModule
+      ),
+  },
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
 ];

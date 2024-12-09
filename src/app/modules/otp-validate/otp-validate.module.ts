@@ -1,15 +1,16 @@
 import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { LoginMobileComponent } from './login-mobile.component';
+import { OtpValidateComponent } from './otp-validate.component';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { RouterModule, Routes } from '@angular/router';
+import { Routes, RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
-
-const routes: Routes = [{ path: '', component: LoginMobileComponent }];
+import { OtpComponent } from '../../shared/components/otp/otp.component';
+ 
+const routes: Routes = [{ path: '', component: OtpValidateComponent }];
 
 @NgModule({
   declarations: [
-    LoginMobileComponent,
+    OtpValidateComponent,
   ],
   imports: [
     CommonModule,
@@ -18,6 +19,8 @@ const routes: Routes = [{ path: '', component: LoginMobileComponent }];
 
     FormsModule,
     ReactiveFormsModule,
-  ]
+
+    OtpComponent
+  ],
 })
-export class LoginMobileModule { }
+export class OtpValidateModule { }
