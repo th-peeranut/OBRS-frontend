@@ -11,7 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { Subscription } from 'rxjs';
+import { interval, Subscription, takeWhile } from 'rxjs';
 
 @Component({
   selector: 'app-otp-validate',
@@ -28,7 +28,13 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   router$: Subscription;
 
-  phoneNo: string = "";
+  phoneNo: string = '';
+  otpCode: string = '';
+  otpRef: string = '';
+
+  remainingTime: number = 5 * 60; // 5 minutes in seconds
+  displayTime: string = '05:00';
+  timerSubscription$: Subscription;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -40,7 +46,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private service: AuthService,
     private toastr: ToastrService,
     private router: Router,
-    private route: ActivatedRoute,
+    private route: ActivatedRoute
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
@@ -52,10 +58,13 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.router$ = this.route.params.subscribe((params) => {
       this.phoneNo = params['phoneno'];
     });
+
+    this.startTimer();
   }
 
   ngOnDestroy() {
-    this.router$.unsubscribe();
+    if (this.router$) this.router$.unsubscribe();
+    if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
   }
 
   creatForm() {
@@ -123,19 +132,53 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.isShowPassword = !this.isShowPassword;
   }
 
+  startTimer(): void {
+    this.timerSubscription$ = interval(1000)
+      .pipe(takeWhile(() => this.remainingTime > 0))
+      .subscribe(() => {
+        this.remainingTime--;
+        this.updateDisplayTime();
+      });
+  }
+
+  updateDisplayTime(): void {
+    const minutes = Math.floor(this.remainingTime / 60);
+    const seconds = this.remainingTime % 60;
+    this.displayTime = `${this.padZero(minutes)}:${this.padZero(seconds)}`;
+  }
+
+  padZero(value: number): string {
+    return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  setOTPCode(otpCode: string) {
+    this.otpCode = otpCode;
+  }
+
   async login() {
     this.loginForm.markAllAsTouched();
 
     if (this.loginForm.valid) {
       const payload = this.loginForm.value;
-      const res = await this.service.login(payload);
+      const res = await this.service.loginByPhoneNo(payload);
 
-      if (res) {
-        this.toastr.success('เข้าสู่ระบบสำเร็จ');
-        this.router.navigateByUrl('/home');
-      } else {
-        this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
-      }
+      // if (res?.code === "200") {
+      //   this.toastr.success('เข้าสู่ระบบสำเร็จ');
+      //   this.router.navigateByUrl('/home');
+      // } else {
+      //   this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
+      // }
     }
+  }
+
+  async resendOTP() {
+    if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
+
+    this.remainingTime = 5 * 60;
+    this.displayTime = '05:00';
+    this.startTimer();
+
+    const payload = this.loginForm.value;
+    const res = await this.service.resendOTP(payload);
   }
 }

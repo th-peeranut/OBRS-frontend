@@ -1,1 +1,5 @@
-<ngx-otp-input [options]="otpOptions"></ngx-otp-input>
+<ngx-otp-input
+  [options]="otpOptions"
+  [disabled]="disabled"
+  (otpComplete)="otpCode.emit($event)"
+></ngx-otp-input>

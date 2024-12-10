@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import {
   NgxOtpInputComponent,
   NgxOtpInputComponentOptions,
@@ -11,7 +11,10 @@ import {
   standalone: true,
   imports: [NgxOtpInputComponent],
 })
-export class OtpComponent {
+export class OtpComponent implements OnChanges {
+  @Input() disabled: boolean = false;
+  @Output() otpCode = new EventEmitter<string>();
+
   otpOptions: NgxOtpInputComponentOptions = {
     otpLength: 6,
     autoFocus: true,
@@ -20,4 +23,6 @@ export class OtpComponent {
     inputMode: 'numeric',
     regexp: /^[0-9]+$/,
   };
+
+  ngOnChanges(changes: SimpleChanges) {}
 }

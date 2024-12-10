@@ -25,7 +25,7 @@
     "LOGIN": "Login",
     "OR": "Or",
     "LOGINMOBILE": "Log in with your phone number",
-    
+
     "NOACCOUNT": "Don't have an account?",
     "REGISTERLINK": "Don't have an account?",
     "REGISTERLINK_CLICK": "Register here",
@@ -94,5 +94,17 @@
 
     "LOGIN_LINK": "Do you have an account?",
     "LOGIN_LINK_CLICK": "Log in here"
+  },
+  "LOGIN_BY_PHONE_NO": {
+    "WELCOME": "Welcome to login",
+    "HINT": "Please enter the OTP number from the SMS sent to the number",
+
+    "OTP_TIME": "OTP number expired. Please enter it again",
+    "OTP_REF": "Please enter your username",
+
+    "OTP_LOGIN": "Resend OTP",
+
+    "NO_OTP": "Have you not received the OPT number?",
+    "NO_OTP_LINK": "Resend"
   }
 }

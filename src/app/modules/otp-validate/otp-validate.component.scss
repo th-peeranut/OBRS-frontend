@@ -54,9 +54,9 @@
     }
 
     .subtext {
-      font-size: 16px;
-      color: lighten($text-black, 20%);
-      margin-bottom: 30px;
+      font-size: 18px;
+      color: $text-black;
+      margin-top: 32px;
     }
 
     .login-form {
@@ -200,4 +200,16 @@
 .dropdown-error {
   border: 1px solid $text-red !important;
   border-radius: 24px !important;
+}
+
+.otp-time {
+  font-size: 16px;
+  color: $text-blue;
+  margin-bottom: 24px;
+}
+
+.otp-ref-text {
+  font-size: 16px;
+  color: $text-lightblack;
+  margin-top: 24px;
 }
