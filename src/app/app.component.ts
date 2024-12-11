@@ -10,7 +10,6 @@ export class AppComponent {
   title = 'OBRS';
   
   constructor(private translate: TranslateService){
-    this.translate.setDefaultLang('th');
     this.translate.use('th'); 
   }
 }

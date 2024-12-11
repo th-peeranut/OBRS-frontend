@@ -32,7 +32,6 @@ export class RegisterComponent {
     private roleService: RolesService,
     private router: Router
   ) {
-    this.translate.setDefaultLang('th');
     this.translate.use('th');
 
     this.creatForm();

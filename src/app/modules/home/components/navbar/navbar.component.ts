@@ -1,20 +1,16 @@
 import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-login-mobile',
-  templateUrl: './login-mobile.component.html',
-  styleUrl: './login-mobile.component.scss',
+  selector: 'app-navbar',
+  templateUrl: './navbar.component.html',
+  styleUrl: './navbar.component.scss',
 })
-export class LoginMobileComponent {
+export class NavbarComponent {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
 
   currentLanguage: string = 'th';
-
-  loginForm: FormGroup;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -22,42 +18,8 @@ export class LoginMobileComponent {
     private translate: TranslateService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
-    private fb: FormBuilder,
-    private router: Router
   ) {
     this.translate.use('th');
-
-    this.creatForm();
-  }
-
-  creatForm() {
-    this.loginForm = this.fb.group({
-      phoneNo: ['', Validators.required],
-    });
-  }
-
-  getForm(controlName: string) {
-    return this.loginForm.get(controlName);
-  }
-
-  getFormValue(controlName: string) {
-    return this.loginForm.getRawValue()[controlName];
-  }
-
-  getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.loginForm.get(controlName)?.errors;
-
-    if (!errors) {
-      return false;
-    }
-
-    if (errorName === 'maxLength' && errors['maxlength']) {
-      const maxLength = errors['maxlength'].requiredLength;
-      const actualLength = errors['maxlength'].actualLength;
-      return actualLength > maxLength;
-    }
-
-    return !!errors[errorName];
   }
 
   switchLanguage(lang: string) {
@@ -92,14 +54,5 @@ export class LoginMobileComponent {
 
   toggleShowPassword() {
     this.isShowPassword = !this.isShowPassword;
-  }
-
-  async goToOTP() {
-    this.loginForm.markAllAsTouched();
-
-    if (this.loginForm.valid) {
-      const formValue = this.loginForm.value;
-      this.router.navigate(['/otp', formValue.phoneNo]);
-    }
   }
 }

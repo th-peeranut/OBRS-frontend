@@ -1,0 +1,17 @@
+@import "../../../../../styles/variables.scss";
+
+.booking-container {
+  width: 100%;
+
+  .home-bg {
+    width: -webkit-fill-available;
+    height: 640px;
+    object-fit: cover;
+  }
+}
+
+.booking-card {
+  width: 1200px;
+  height: 200px;
+  padding: 24px 32px;
+}
