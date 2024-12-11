@@ -2,10 +2,6 @@ import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { ToastrService } from 'ngx-toastr';
-import { AuthService } from '../../auth/auth.service';
-import { PhoneCodeService } from '../../services/phone-code/phone-code.service';
-import { PhoneCode } from '../../interfaces/phone-code.interface';
 
 @Component({
   selector: 'app-login-mobile',
@@ -20,8 +16,6 @@ export class LoginMobileComponent {
 
   loginForm: FormGroup;
 
-  phoneCodeDropdown: PhoneCode[] = [];
-
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   constructor(
@@ -29,26 +23,16 @@ export class LoginMobileComponent {
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
-    private service: AuthService,
-    private toastr: ToastrService,
-    private router: Router,
-    private phoneCodeService: PhoneCodeService
+    private router: Router
   ) {
     this.translate.setDefaultLang('th');
     this.translate.use('th');
 
-    this.getMasterData();
-
     this.creatForm();
-  }
-
-  async getMasterData() {
-    this.phoneCodeDropdown = this.phoneCodeService.getPhoneCode();
   }
 
   creatForm() {
     this.loginForm = this.fb.group({
-      phoneCode: ['+66', Validators.required],
       phoneNo: ['', Validators.required],
     });
   }
@@ -116,38 +100,7 @@ export class LoginMobileComponent {
 
     if (this.loginForm.valid) {
       const formValue = this.loginForm.value;
-      this.router.navigate(['/otp', this.formatPhoneNumber(formValue.phoneCode, formValue.phoneNo)]);
+      this.router.navigate(['/otp', formValue.phoneNo]);
     }
-  }
-
-  getFlagImage(phoneCode?: PhoneCode) {
-    return phoneCode
-      ? `https://cdn.jsdelivr.net/npm/country-flag-emoji-json@2.0.0/dist/images/${phoneCode.code}.svg`
-      : '';
-  }
-
-  selectPhoneCode(phoneCode: PhoneCode) {
-    this.loginForm.patchValue({
-      phoneCode: phoneCode.dialCode,
-    });
-  }
-
-  getCurrentPhoneCode() {
-    const formValue = this.loginForm.getRawValue();
-    return this.phoneCodeDropdown.find(
-      (item) => item.dialCode === formValue.phoneCode
-    );
-  }
-
-  formatPhoneNumber(dialCode: string, phoneNo: string): string {
-    if (!dialCode || !phoneNo) {
-      throw new Error('Invalid phone number format: Missing "+" at the start');
-    }
-
-    if (phoneNo.startsWith('0')) {
-      return dialCode + phoneNo.substring(1);
-    }
-
-    return dialCode + phoneNo;
   }
 }

@@ -69,53 +69,8 @@
       >
         {{ "LOGIN.PHONE_NO" | translate }}
       </label>
-
-      <!-- dropdown -->
+      
       <div class="d-flex align-items-center gap-1">
-        <div
-          class="dropdown mt-1"
-          [class.dropdown-error]="
-            getForm('phoneCode')?.errors &&
-            (getForm('phoneCode')?.touched || getForm('phoneCode')?.dirty)
-          "
-        >
-          <button
-            #phoneCodeDropdownButton
-            class="btn btn-lang dropdown-phone-code p-0"
-            type="button"
-            id="phoneCodeDropdownButton"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            [class.active]="isDropdownOpen"
-            (click)="toggleDropdown()"
-          >
-            <ng-container *ngIf="getCurrentPhoneCode()">
-              {{ getCurrentPhoneCode()?.dialCode }}
-            </ng-container>
-          </button>
-
-          <ul
-            class="dropdown-menu dropdown-menu-phone-code"
-            aria-labelledby="phoneCodeDropdownButton"
-          >
-            <li *ngFor="let phoneCode of phoneCodeDropdown">
-              <a
-                class="dropdown-item menu-lang"
-                (click)="selectPhoneCode(phoneCode)"
-              >
-                <img
-                  class="flag-img mx-2"
-                  [src]="getFlagImage(phoneCode)"
-                  alt="th"
-                />
-
-                {{ phoneCode.name }}
-                ({{ phoneCode.dialCode }})
-              </a>
-            </li>
-          </ul>
-        </div>
-
         <!-- input field -->
         <input
           class="form-control mt-1"
