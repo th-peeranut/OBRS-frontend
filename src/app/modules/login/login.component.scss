@@ -1,49 +1,87 @@
 @import "../../../styles/variables.scss";
 
-// Container for the login page
 .login-container {
   display: flex;
+  width: 100%;
   height: 100vh;
   padding: 20px;
-
+  margin: auto;
   background: $primary-white;
 
-  // Left Section
-  .left-section {
-    width: 60%;
+  // CHANGE LANGUAGE SWITCH
+  .change-language {
+    display: flex;
+    justify-content: flex-end;
 
-    .logo-section {
-      width: 100%;
-      border-radius: 24px;
+    .btn.dropdown-toggle {
+      width: 180px;
+      padding: 8px !important;
+      border: 1px solid #dddee1 !important;
+      border-radius: 24px !important;
+      background-color: transparent !important;
+    }
 
-      img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
+    .btn-lang {
+      &:hover {
+        color: $primary-blue !important;
+        border: 1px solid $primary-blue !important;
       }
+    }
+
+    .menu-lang {
+      cursor: pointer;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: 500;
+      color: $text-black !important;
+      background-color: transparent !important;
+      text-decoration: none;
+
+      &:hover {
+        color: $primary-blue !important;
+      }
+    }
+
+    .dropdown-toggle::after {
+      content: none !important;
+    }
+
+    .arrow-icon {
+      width: 24px;
+      height: 24px;
+      margin-left: 0.5rem;
     }
   }
 
-  // Right Section
+  // LEFT SECTION
+  .left-section {
+    width: 60%;
+
+    .bg-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 24px;
+      object-fit: cover;
+    }
+  }
+
+  // RIGHT SECTION
   .right-section {
-    width: 40%;
-
-    flex: 1;
-    padding: 128px 80px;
-    padding-top: 0px;
-
     display: flex;
     flex-direction: column;
+    flex: 1;
+    width: 40%;
+    padding-left: 80px;
+    padding-right: 80px;
 
     .language-switch {
       display: flex;
       justify-content: flex-end;
       width: 100%;
-      margin-bottom: 20px;
 
       span {
-        font-size: 16px;
         margin-right: 10px;
+        font-size: 16px;
         color: $text-black;
       }
     }
@@ -51,86 +89,60 @@
     .logo-section {
       display: flex;
       justify-content: center;
-      margin-top: 80px;
-      margin-bottom: 20px;
+
+      .logo-img {
+        width: 200px;
+        height: 87px;
+      }
     }
 
-    .logo {
-      width: 150px;
-    }
-
-    h1 {
-      font-size: 24px;
-      margin-bottom: 10px;
+    .welcome-text {
+      text-align: center;
+      font-size: 28px;
       color: $text-black;
     }
 
-    .subtext {
+    .hint-text {
+      text-align: center;
       font-size: 18px;
       color: $text-black;
-      margin-bottom: 30px;
+    }
+
+    .option-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
     }
 
     .login-form {
-      .password-container {
-        display: flex;
-        align-items: center;
-        position: relative;
-
-        .icon-eye {
-          position: absolute;
-          right: 10px;
-          cursor: pointer;
-          color: #aaa;
-        }
-      }
-
-      .options {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-
-        .forgot-password {
-          font-size: 16px;
-          color: $secondary-blue;
-          text-decoration: none;
-
-          &:hover {
-            text-decoration: underline;
-          }
-        }
-      }
-
-      .login-button {
+      .login-btn {
         width: 100%;
-        margin-top: 32px;
         padding: 12px;
-        background-color: $primary-blue;
-        color: #fff;
         border: none;
         border-radius: 24px;
         font-size: 16px;
         font-weight: bold;
         cursor: pointer;
+        background-color: $primary-blue;
+        color: #fff;
       }
 
-      .login-mobile-button {
+      .login-by-phone-no-btn {
         width: 100%;
         padding: 12px;
-        background-color: #f6fcff;
-        color: $primary-blue;
         border: 1px solid #3c9bc6;
         border-radius: 24px;
         font-size: 16px;
         font-weight: bold;
         cursor: pointer;
+        background-color: #f6fcff;
+        color: $primary-blue;
       }
 
       .register-link {
+        text-align: center;
         font-size: 16px;
         color: $text-black;
-        margin-top: 10px;
 
         a {
           color: $secondary-blue;
@@ -140,53 +152,11 @@
           }
         }
       }
+
+      .or-section {
+        display: flex;
+        align-items: center;
+      }
     }
-
-    .footer {
-      font-size: 16px;
-      color: #babdc3;
-      text-align: center;
-    }
   }
-}
-
-.btn.dropdown-toggle {
-  border: 1px solid #dddee1 !important;
-  border-radius: 24px !important;
-  background-color: transparent !important;
-  padding: 8px !important;
-  width: 180px;
-}
-
-.btn-lang {
-  &:hover {
-    color: $primary-blue !important;
-    border: 1px solid $primary-blue !important;
-  }
-}
-
-.menu-lang {
-  cursor: pointer;
-  padding: 10px;
-
-  text-decoration: none;
-  color: $text-black !important;
-  font-size: 16px;
-  font-weight: 500;
-
-  background-color: transparent !important;
-
-  &:hover {
-    color: $primary-blue !important;
-  }
-}
-
-.arrow-icon {
-  width: 24px;
-  height: 24px;
-  margin-left: 0.5rem;
-}
-
-.dropdown-toggle::after {
-  content: none !important;
 }
