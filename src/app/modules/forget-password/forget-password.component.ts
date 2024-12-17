@@ -4,11 +4,11 @@ import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 
 @Component({
-  selector: 'app-login-mobile',
-  templateUrl: './login-mobile.component.html',
-  styleUrl: './login-mobile.component.scss',
+  selector: 'app-forget-password',
+  templateUrl: './forget-password.component.html',
+  styleUrl: './forget-password.component.scss',
 })
-export class LoginMobileComponent {
+export class ForgetPasswordComponent {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
 
@@ -99,7 +99,7 @@ export class LoginMobileComponent {
 
     if (this.loginForm.valid) {
       const formValue = this.loginForm.value;
-      this.router.navigate(['/otp', 'login', formValue.phoneNo]);
+      this.router.navigate(['/otp', 'forget-password', formValue.phoneNo]);
     }
   }
 }

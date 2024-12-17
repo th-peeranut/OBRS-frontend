@@ -101,9 +101,23 @@
     "OTP_TIME": "OTP number expired. Please enter it again",
     "OTP_REF": "Please enter your username",
 
-    "OTP_LOGIN": "Resend OTP",
+    "OTP_LOGIN": "Confirm",
 
     "NO_OTP": "You have not received the OPT number?",
     "NO_OTP_LINK": "Resend"
+  },
+  "FORGET_PASSWORD": {
+    "WELCOME": "Forgot your password?",
+    "HINT": "Please fill in the information below to proceed with the password reset",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "Please fill in the phone number to proceed with the password reset",
+
+    "SEND_OTP": "Send OTP",
+
+    "NOACCOUNT": "Do you not have an account?",
+    "REGISTERLINK": "Do you not have an account?",
+    "REGISTERLINK_CLICK": "Register here"
   }
 }

@@ -25,12 +25,20 @@ const routes: Routes = [
       ),
   },
   {
-    path: 'otp/:phoneno',
+    path: 'otp/:option/:phoneno',
     loadChildren: () =>
       import('./modules/otp-validate/otp-validate.module').then(
         (m) => m.OtpValidateModule
       ),
   },
+  {
+    path: 'forget-password',
+    loadChildren: () =>
+      import('./modules/forget-password/forget-password.module').then(
+        (m) => m.ForgetPasswordModule
+      ),
+  },
+
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
 ];

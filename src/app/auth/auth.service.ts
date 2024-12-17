@@ -107,6 +107,18 @@ export class AuthService {
       });
   }
 
+  forgetPassword(payload: { phoneNo: string }): Promise<ResponseAPI<any> | undefined> {
+    return this.http
+      .post<ResponseAPI<any>>(
+        `${environment.apiUrl}/auth/forgetpassword`,
+        payload
+      )
+      .toPromise()
+      .then((response) => {
+        return response;
+      });
+  }
+
   resendOTP(payload: { otpCode: string }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/resendOTP`, payload)

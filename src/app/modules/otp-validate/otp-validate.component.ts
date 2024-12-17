@@ -26,9 +26,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   loginForm: FormGroup;
 
-  router$: Subscription;
-
-  phoneNo: string = '';
+  option: string | undefined = 'login';
+  phoneNo: string | undefined = '';
   otpCode: string = '';
   otpRef: string = '';
 
@@ -36,6 +35,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
+  
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   constructor(
@@ -54,15 +54,18 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.router$ = this.route.params.subscribe((params) => {
-      this.phoneNo = params['phoneno'];
-    });
+    this.option = this.route.snapshot.paramMap.get('option')?.toString();
+    this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
+    
+    if (this.validateRouteError()) {
+      this.toastr.error('พบข้อผิดพลาด');
+      this.router.navigateByUrl('/home');
+    }
 
     this.startTimer();
   }
 
   ngOnDestroy() {
-    if (this.router$) this.router$.unsubscribe();
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
   }
 
@@ -159,7 +162,12 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
     if (this.loginForm.valid) {
       const payload = this.loginForm.value;
-      const res = await this.service.loginByPhoneNo(payload);
+      
+      if(this.option === "login"){
+        const res = await this.service.loginByPhoneNo(payload);
+      }else{
+        const res = await this.service.forgetPassword(payload);
+      }
 
       // if (res?.code === "200") {
       //   this.toastr.success('เข้าสู่ระบบสำเร็จ');
@@ -179,5 +187,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
     const payload = this.loginForm.value;
     const res = await this.service.resendOTP(payload);
+  }
+
+  validateRouteError() {
+    return !this.phoneNo || !this.option || (this.option !== "login" && this.option !== "forget-password")
   }
 }
