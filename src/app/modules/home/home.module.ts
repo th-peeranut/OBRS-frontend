@@ -5,6 +5,7 @@ import { NavbarComponent } from './components/navbar/navbar.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeBookingComponent } from './components/home-booking/home-booking.component';
+import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -14,6 +15,9 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     CommonModule,
     RouterModule.forChild(routes),
     TranslateModule.forChild(),
+
+    // Components
+    DropdownObrsComponent
   ],
 })
 export class HomeModule {}

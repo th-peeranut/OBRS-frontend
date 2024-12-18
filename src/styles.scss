@@ -78,3 +78,12 @@ label {
   color: $secondary-blue;
   text-decoration: none;
 }
+
+.btn-check:checked + .btn,
+.btn.active,
+.btn.show,
+.btn:first-child:active,
+:not(.btn-check) + .btn:active,
+.btn:after {
+  border: none !important;
+}

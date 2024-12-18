@@ -1,12 +1,4 @@
 {
-  "NAVBAR": {
-    "HOME": "Home",
-    "SCHEDULE": "Train Schedule",
-    "BOOKING": "How to book and pay",
-    "CONTACT": "Contact us",
-    "SIGNIN": "Log in",
-    "SIGNUP": "Register"
-  },
   "LOGIN": {
     "WELCOME": "Welcome to login",
     "HINT": "Please fill in the information below For your convenience in booking tickets",
@@ -119,5 +111,19 @@
     "NOACCOUNT": "Do you not have an account?",
     "REGISTERLINK": "Do you not have an account?",
     "REGISTERLINK_CLICK": "Register here"
+  },
+  "HOME": {
+    "NAVBAR": {
+      "HOME": "Home",
+      "SCHEDULE": "Train Schedule",
+      "BOOKING": "How to book and pay",
+      "CONTACT": "Contact us",
+      "SIGNIN": "Log in",
+      "SIGNUP": "Register"
+    },
+    "HOME_BOOKING": {
+      "ROUNDTRIP_1": "One-way",
+      "ROUNDTRIP_2": "Round-trip"
+    }
   }
 }

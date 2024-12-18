@@ -1,3 +1,15 @@
 <div class="booking-container">
+  <!-- MAIN BACKGROUND -->
   <img class="home-bg" src="images/home-bg.svg" />
+
+  <div class="booking-card">
+    <app-dropdown-obrs
+      [isBorder]="false"
+      [label]="'roundTrip'"
+      [options]="roundTripDropdowns"
+    ></app-dropdown-obrs>
+  </div>
+
+  <!-- LIGHTGREY BACKGROUND -->
+  <div class="secondary-lightgrey-bg"></div>
 </div>
