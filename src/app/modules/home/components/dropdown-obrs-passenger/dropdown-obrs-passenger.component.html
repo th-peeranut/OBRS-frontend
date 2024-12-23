@@ -1,0 +1,101 @@
+<div class="dropdown">
+  <button
+    #dropdownButton
+    class="btn dropdown-btn dropdown-toggle p-0"
+    type="button"
+    id="dropdownObrsPassenger"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+    [class.active]="isDropdownOpen"
+    (click)="toggleDropdown()"
+  >
+    <!-- CURRENT VALUE -->
+    <div class="value-text">
+      <div class="current-passenger gap-2">
+        <img
+          class="passenger-icon"
+          src="icons/passenger.svg"
+          alt="Passenger Icon"
+        />
+        {{ sumPassenger }}
+        {{ "HOME.HOME_BOOKING.PASSENGER_COUNT" | translate }}
+      </div>
+    </div>
+
+    <!-- ARROW ICON -->
+    <img
+      class="arrow-icon"
+      [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+      alt="Arrow Icon"
+    />
+  </button>
+  <!-- DROPDOWN LIST -->
+  <ul class="dropdown-menu" aria-labelledby="dropdownObrs">
+    <!-- DROPDOWN OPTION ADULT -->
+    <li>
+      <a class="dropdown-item dropdown-option">
+        <!-- DROPDOWN OPTION DETAIL -->
+        <div class="dropdown-passenger">
+          <!-- TEXT -->
+          <div class="text-section">
+            {{ "HOME.HOME_BOOKING.PASSENGER_1" | translate }}
+            <div class="option-hint-text mt-1">
+              {{ "HOME.HOME_BOOKING.PASSENGER_1_HINT" | translate }}
+            </div>
+          </div>
+          <!-- COUNT CONTROL -->
+          <div class="count-section gap-2">
+            <img
+              class="passenger-icon"
+              src="icons/passenger-minus.svg"
+              alt="Passenger Minus Icon"
+              (click)="updatePassengerCount('ADULT', 'MINUS')"
+            />
+
+            {{ sumAdultPassenger }}
+
+            <img
+              class="passenger-icon"
+              src="icons/passenger-add.svg"
+              alt="Passenger Add Icon"
+              (click)="updatePassengerCount('ADULT', 'ADD')"
+            />
+          </div>
+        </div>
+      </a>
+    </li>
+    <!-- DROPDOWN OPTION KID -->
+    <li>
+      <a class="dropdown-item dropdown-option">
+        <!-- DROPDOWN OPTION DETAIL -->
+        <div class="dropdown-passenger">
+          <!-- TEXT -->
+          <div class="text-section">
+            {{ "HOME.HOME_BOOKING.PASSENGER_2" | translate }}
+            <div class="option-hint-text mt-1">
+              {{ "HOME.HOME_BOOKING.PASSENGER_2_HINT" | translate }}
+            </div>
+          </div>
+          <!-- COUNT CONTROL -->
+          <div class="count-section gap-2">
+            <img
+              class="passenger-icon"
+              src="icons/passenger-minus.svg"
+              alt="Passenger Minus Icon"
+              (click)="updatePassengerCount('KIDS', 'MINUS')"
+            />
+
+            {{ sumKidsPassenger }}
+
+            <img
+              class="passenger-icon"
+              src="icons/passenger-add.svg"
+              alt="Passenger Add Icon"
+              (click)="updatePassengerCount('KIDS', 'ADD')"
+            />
+          </div>
+        </div>
+      </a>
+    </li>
+  </ul>
+</div>

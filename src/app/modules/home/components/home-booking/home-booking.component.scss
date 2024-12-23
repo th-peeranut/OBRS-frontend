@@ -20,9 +20,10 @@
 .booking-card {
   position: absolute;
   display: flex;
+  flex-direction: column;
 
   width: 1200px;
-  height: 200px;
+  height: max-content;
   padding: 24px 32px;
 
   background-color: $primary-white;

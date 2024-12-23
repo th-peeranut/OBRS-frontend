@@ -23,7 +23,11 @@
     />
   </button>
   <!-- DROPDOWN LIST -->
-  <ul class="dropdown-menu" aria-labelledby="dropdownObrs">
+  <ul
+    class="dropdown-menu"
+    [class.dropdown-menu-border]="isBorder"
+    aria-labelledby="dropdownObrs"
+  >
     <!-- DROPDOWN OPTION -->
     <ng-container *ngFor="let option of options; let optionIndex = index">
       <li>
@@ -33,6 +37,12 @@
         >
           {{ option ? (option.value | translate) : "" }}
         </a>
+      </li>
+    </ng-container>
+
+    <ng-container *ngIf="options.length === 0">
+      <li class="px-3">
+        {{ "SHARED.NO_CONTENT" | translate }}
       </li>
     </ng-container>
   </ul>

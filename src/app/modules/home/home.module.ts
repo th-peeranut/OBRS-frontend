@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { RouterModule, Routes } from '@angular/router';
 import { HomeBookingComponent } from './components/home-booking/home-booking.component';
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -17,7 +18,8 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     TranslateModule.forChild(),
 
     // Components
-    DropdownObrsComponent
+    DropdownObrsComponent,
+    DropdownObrsPassengerComponent
   ],
 })
 export class HomeModule {}

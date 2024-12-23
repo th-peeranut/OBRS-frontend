@@ -1,4 +1,7 @@
 {
+  "SHARED": {
+    "NO_CONTENT": "No data found"
+  },
   "LOGIN": {
     "WELCOME": "Welcome to login",
     "HINT": "Please fill in the information below For your convenience in booking tickets",
@@ -123,7 +126,12 @@
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
-      "ROUNDTRIP_2": "Round-trip"
+      "ROUNDTRIP_2": "Round-trip",
+      "PASSENGER_COUNT": "Passenger",
+      "PASSENGER_1": "Adult",
+      "PASSENGER_1_HINT": "12 years old and above",
+      "PASSENGER_2": "Child",
+      "PASSENGER_2_HINT": "2-11 years old"
     }
   }
 }

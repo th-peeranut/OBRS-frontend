@@ -1,5 +1,10 @@
 export interface Dropdown {
   id: number;
   value: string;
-  isDefault?: boolean; 
+  isDefault?: boolean;
+}
+
+export interface DropdownPassenger {
+  type: string;
+  count: number;
 }

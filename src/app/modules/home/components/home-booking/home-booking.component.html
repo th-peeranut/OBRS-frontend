@@ -3,11 +3,29 @@
   <img class="home-bg" src="images/home-bg.svg" />
 
   <div class="booking-card">
-    <app-dropdown-obrs
-      [isBorder]="false"
-      [label]="'roundTrip'"
-      [options]="roundTripDropdowns"
-    ></app-dropdown-obrs>
+    <div class="d-flex gap-5">
+      <app-dropdown-obrs
+        [isBorder]="false"
+        [label]="'roundTrip'"
+        [options]="roundTripDropdowns"
+      ></app-dropdown-obrs>
+
+      <app-dropdown-obrs-passenger></app-dropdown-obrs-passenger>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <app-dropdown-obrs
+        [isBorder]="true"
+        [label]="'startStation'"
+        [options]="[]"
+      ></app-dropdown-obrs>
+
+      <app-dropdown-obrs
+        [isBorder]="true"
+        [label]="'endStation'"
+        [options]="[]"
+      ></app-dropdown-obrs>
+    </div>
   </div>
 
   <!-- LIGHTGREY BACKGROUND -->
