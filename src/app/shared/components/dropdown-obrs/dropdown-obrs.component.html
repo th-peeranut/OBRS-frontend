@@ -1,49 +1,57 @@
-<div class="dropdown">
-  <button
-    #dropdownButton
-    class="btn dropdown-btn dropdown-toggle p-0"
-    type="button"
-    [id]="'dropdownObrs' + label"
-    data-bs-toggle="dropdown"
-    aria-expanded="false"
-    [class.active]="isDropdownOpen"
-    [class.dropdown-toggle-border]="isBorder"
-    (click)="toggleDropdown()"
-  >
-    <!-- CURRENT VALUE -->
-    <div class="value-text">
-      {{ selectedValue ? (selectedValue.value | translate) : "" }}
-    </div>
+<div class="form-group-obrs">
+  <label *ngIf="isLabel">
+    {{ label | translate }} :
+  </label>
 
-    <!-- ARROW ICON -->
-    <img
-      class="arrow-icon"
-      [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
-      alt="Arrow Icon"
-    />
-  </button>
-  <!-- DROPDOWN LIST -->
-  <ul
-    class="dropdown-menu"
-    [class.dropdown-menu-border]="isBorder"
-    aria-labelledby="dropdownObrs"
-  >
-    <!-- DROPDOWN OPTION -->
-    <ng-container *ngFor="let option of options; let optionIndex = index">
-      <li>
-        <a
-          class="dropdown-item dropdown-option"
-          (click)="setCurrentValue(option)"
-        >
-          {{ option ? (option.value | translate) : "" }}
-        </a>
-      </li>
-    </ng-container>
-
-    <ng-container *ngIf="options.length === 0">
-      <li class="px-3">
-        {{ "SHARED.NO_CONTENT" | translate }}
-      </li>
-    </ng-container>
-  </ul>
+  <div class="dropdown">
+    <button
+      #dropdownButton
+      class="btn dropdown-btn dropdown-toggle p-0"
+      type="button"
+      [id]="'dropdownObrs' + label"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+      [class.active]="isDropdownOpen"
+      [class.dropdown-toggle-border]="isBorder"
+      (click)="toggleDropdown()"
+    >
+      <!-- CURRENT VALUE -->
+      <div class="value-text">
+        {{ selectedValue ? (selectedValue.value | translate) : "" }}
+      </div>
+  
+      <!-- ARROW ICON -->
+      <img
+        class="arrow-icon"
+        [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+        alt="Arrow Icon"
+      />
+    </button>
+    <!-- DROPDOWN LIST -->
+    <ul
+      class="dropdown-menu"
+      [class.dropdown-menu-border]="isBorder"
+      aria-labelledby="dropdownObrs"
+    >
+      <!-- DROPDOWN OPTION -->
+      <ng-container *ngFor="let option of options; let optionIndex = index">
+        <li>
+          <a
+            class="dropdown-item dropdown-option"
+            (click)="setCurrentValue(option)"
+          >
+            {{ option ? (option.value | translate) : "" }}
+          </a>
+        </li>
+      </ng-container>
+  
+      <ng-container *ngIf="options.length === 0">
+        <li class="px-3">
+          {{ "SHARED.NO_CONTENT" | translate }}
+        </li>
+      </ng-container>
+    </ul>
+  </div>
 </div>
+
+

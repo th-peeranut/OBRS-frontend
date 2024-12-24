@@ -131,7 +131,10 @@
       "PASSENGER_1": "Adult",
       "PASSENGER_1_HINT": "12 years old and above",
       "PASSENGER_2": "Child",
-      "PASSENGER_2_HINT": "2-11 years old"
+      "PASSENGER_2_HINT": "2-11 years old",
+
+      "START_STATION": "Source",
+      "END_STATION": "Destination"
     }
   }
 }

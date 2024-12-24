@@ -132,7 +132,10 @@
       "PASSENGER_1": "ผู้ใหญ่",
       "PASSENGER_1_HINT": "อายุ 12 ปีขึ้นไป",
       "PASSENGER_2": "เด็ก",
-      "PASSENGER_2_HINT": "อายุ 2-11 ปี"
+      "PASSENGER_2_HINT": "อายุ 2-11 ปี",
+
+      "START_STATION": "ต้นทาง",
+      "END_STATION": "ปลายทาง"
     }
   }
 }

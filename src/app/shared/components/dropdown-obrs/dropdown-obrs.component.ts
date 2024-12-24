@@ -21,6 +21,7 @@ import { Dropdown } from '../../../interfaces/dropdown.interface';
   imports: [CommonModule, TranslateModule],
 })
 export class DropdownObrsComponent implements OnChanges {
+  @Input() isLabel: boolean = false;
   @Input() label: string = '';
   @Input() options: Dropdown[] = [];
   @Input() isBorder: boolean = false;

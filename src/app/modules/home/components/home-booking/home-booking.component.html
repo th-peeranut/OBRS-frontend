@@ -6,6 +6,7 @@
     <div class="d-flex gap-5">
       <app-dropdown-obrs
         [isBorder]="false"
+        [isLabel]="false"
         [label]="'roundTrip'"
         [options]="roundTripDropdowns"
       ></app-dropdown-obrs>
@@ -13,16 +14,24 @@
       <app-dropdown-obrs-passenger></app-dropdown-obrs-passenger>
     </div>
 
-    <div class="d-flex gap-2 mt-3">
+    <div class="station-section mt-4">
       <app-dropdown-obrs
         [isBorder]="true"
-        [label]="'startStation'"
+        [isLabel]="true"
+        [label]="'HOME.HOME_BOOKING.START_STATION'"
         [options]="[]"
       ></app-dropdown-obrs>
 
+      <img
+        class="mt-4"
+        src="icons/passenger-station-gap.svg"
+        alt="Passenger Station Gap Icon"
+      />
+
       <app-dropdown-obrs
         [isBorder]="true"
-        [label]="'endStation'"
+        [isLabel]="true"
+        [label]="'HOME.HOME_BOOKING.END_STATION'"
         [options]="[]"
       ></app-dropdown-obrs>
     </div>

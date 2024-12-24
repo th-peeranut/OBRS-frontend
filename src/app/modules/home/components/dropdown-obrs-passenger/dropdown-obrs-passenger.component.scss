@@ -17,6 +17,9 @@
 
   .value-text {
     margin-right: auto;
+
+    font-size: 18px;
+    color: $text-black;
   }
 
   .arrow-icon {
@@ -41,8 +44,7 @@
   cursor: pointer;
   padding: 10px;
 
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 18px;
   color: $text-black;
   text-decoration: none;
 
@@ -80,4 +82,9 @@
 
 .dropdown-menu {
   min-width: 300px;
+}
+
+li {
+  font-size: 18px;
+  color: $text-black;
 }
