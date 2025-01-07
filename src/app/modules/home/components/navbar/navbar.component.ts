@@ -1,5 +1,6 @@
 import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { PrimeNGConfig } from 'primeng/api';
 
 @Component({
   selector: 'app-navbar',
@@ -16,16 +17,18 @@ export class NavbarComponent {
 
   constructor(
     private translate: TranslateService,
+    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
   ) {
-    this.translate.use('th');
+    this.switchLanguage("th");
   }
 
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
+    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

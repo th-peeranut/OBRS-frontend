@@ -15,7 +15,9 @@ const routes: Routes = [{ path: '', component: OtpValidateComponent }];
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslateModule.forChild({
+      isolate: false,
+    }),
 
     FormsModule,
     ReactiveFormsModule,

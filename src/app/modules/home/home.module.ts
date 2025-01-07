@@ -7,6 +7,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { HomeBookingComponent } from './components/home-booking/home-booking.component';
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
+import { CalendarModule } from 'primeng/calendar';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -15,11 +16,14 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslateModule.forChild({
+      isolate: false,
+    }),
+    CalendarModule,
 
     // Components
     DropdownObrsComponent,
-    DropdownObrsPassengerComponent
+    DropdownObrsPassengerComponent,
   ],
 })
 export class HomeModule {}

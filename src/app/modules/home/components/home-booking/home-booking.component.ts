@@ -18,4 +18,11 @@ export class HomeBookingComponent {
       value: 'HOME.HOME_BOOKING.ROUNDTRIP_2',
     },
   ];
+
+  minDate: Date;
+  calendarLocale: string;
+
+  constructor() {
+    this.minDate = new Date();
+  }
 }

@@ -2,6 +2,7 @@ import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
+import { PrimeNGConfig } from 'primeng/api';
 
 @Component({
   selector: 'app-login-mobile',
@@ -20,12 +21,13 @@ export class LoginMobileComponent {
 
   constructor(
     private translate: TranslateService,
+    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
     private router: Router
   ) {
-    this.translate.use('th');
+    this.switchLanguage("th");
 
     this.creatForm();
   }
@@ -64,6 +66,7 @@ export class LoginMobileComponent {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
+    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

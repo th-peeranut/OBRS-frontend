@@ -12,6 +12,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
+import { PrimeNGConfig } from 'primeng/api';
 
 @Component({
   selector: 'app-otp-validate',
@@ -40,6 +41,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   constructor(
     private translate: TranslateService,
+    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -48,7 +50,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    this.translate.use('th');
+    this.switchLanguage("th");
 
     this.creatForm();
   }
@@ -104,6 +106,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
+    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

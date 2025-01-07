@@ -12,7 +12,9 @@ const routes: Routes = [{ path: '', component: ForgetPasswordComponent }];
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslateModule.forChild({
+      isolate: false,
+    }),
 
     FormsModule,
     ReactiveFormsModule,

@@ -4,36 +4,43 @@
 
   <div class="booking-card">
     <div class="d-flex gap-5">
+      <!-- DROPDOWN ROUNDTRIP TYPE -->
       <app-dropdown-obrs
         [isBorder]="false"
         [isLabel]="false"
         [label]="'roundTrip'"
         [options]="roundTripDropdowns"
       ></app-dropdown-obrs>
-
+      <!-- DROPDOWN PASSENGER COUNT -->
       <app-dropdown-obrs-passenger></app-dropdown-obrs-passenger>
     </div>
 
     <div class="station-section mt-4">
+      <!-- DROPDOWN START STATION -->
       <app-dropdown-obrs
         [isBorder]="true"
         [isLabel]="true"
         [label]="'HOME.HOME_BOOKING.START_STATION'"
         [options]="[]"
       ></app-dropdown-obrs>
-
+      <!-- STATION ICON -->
       <img
-        class="mt-4"
+        class="station-icon"
         src="icons/passenger-station-gap.svg"
         alt="Passenger Station Gap Icon"
       />
-
+      <!-- DROPDOWN STOP STATION -->
       <app-dropdown-obrs
         [isBorder]="true"
         [isLabel]="true"
         [label]="'HOME.HOME_BOOKING.END_STATION'"
         [options]="[]"
       ></app-dropdown-obrs>
+
+      <div class="form-group-obrs mx-3">
+        <label> {{ 'HOME.HOME_BOOKING.BOOKING_DATE' | translate }} : </label>
+        <p-calendar dateFormat="dd/mm/yy" [minDate]="minDate" />
+      </div>
     </div>
   </div>
 

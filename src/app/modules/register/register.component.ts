@@ -5,6 +5,7 @@ import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { RolesService } from '../../services/roles/roles.service';
 import { Router } from '@angular/router';
+import { PrimeNGConfig } from 'primeng/api';
 
 @Component({
   selector: 'app-register',
@@ -24,6 +25,7 @@ export class RegisterComponent {
 
   constructor(
     private translate: TranslateService,
+    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -32,7 +34,7 @@ export class RegisterComponent {
     private roleService: RolesService,
     private router: Router
   ) {
-    this.translate.use('th');
+    this.switchLanguage("th");
 
     this.creatForm();
   }
@@ -80,8 +82,7 @@ export class RegisterComponent {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
-
-    console.log(lang, this.translate.currentLang)
+    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

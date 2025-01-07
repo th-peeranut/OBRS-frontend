@@ -14,7 +14,9 @@ const routes: Routes = [{ path: '', component: LoginMobileComponent }];
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild(),
+    TranslateModule.forChild({
+      isolate: false,
+    }),
 
     FormsModule,
     ReactiveFormsModule,

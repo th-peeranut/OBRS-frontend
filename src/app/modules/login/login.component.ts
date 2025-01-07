@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   Renderer2,
@@ -11,6 +12,7 @@ import { AuthService } from '../../auth/auth.service';
 import { Location } from '@angular/common';
 import { RolesService } from '../../services/roles/roles.service';
 import { Router } from '@angular/router';
+import { PrimeNGConfig } from 'primeng/api';
 
 @Component({
   selector: 'app-login',
@@ -29,15 +31,17 @@ export class LoginComponent {
 
   constructor(
     private translate: TranslateService,
+    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
     private roleService: RolesService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef 
   ) {
-    this.translate.use('th');
+    this.switchLanguage("th");
 
     this.creatForm();
   }
@@ -78,6 +82,13 @@ export class LoginComponent {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
+    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
+
+    console.log('A:', lang);
+    this.translate.onLangChange.subscribe(() => {
+      console.log('Language changed to:', lang);
+      this.cdr.detectChanges(); 
+    });
   }
 
   toggleDropdown() {

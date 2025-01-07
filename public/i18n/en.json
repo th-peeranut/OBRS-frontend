@@ -1,4 +1,28 @@
 {
+  "CALENDAR": {
+    "dayNames": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "dayNamesShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "dayNamesMin": ["S", "M", "T", "W", "T", "F", "S"],
+    "monthNames": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "monthNamesShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "today": "Today",
+    "clear": "Clear",
+    "weekHeader": "Wk",
+    "dateFormat": "mm/dd/yy"
+  },
   "SHARED": {
     "NO_CONTENT": "No data found"
   },
@@ -134,7 +158,9 @@
       "PASSENGER_2_HINT": "2-11 years old",
 
       "START_STATION": "Source",
-      "END_STATION": "Destination"
+      "END_STATION": "Destination",
+      "BOOKING_DATE": "Booking Date"
+      
     }
   }
 }
