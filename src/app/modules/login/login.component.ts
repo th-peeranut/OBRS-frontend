@@ -83,12 +83,6 @@ export class LoginComponent {
     this.currentLanguage = lang;
     this.translate.use(lang);
     this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
-
-    console.log('A:', lang);
-    this.translate.onLangChange.subscribe(() => {
-      console.log('Language changed to:', lang);
-      this.cdr.detectChanges(); 
-    });
   }
 
   toggleDropdown() {
