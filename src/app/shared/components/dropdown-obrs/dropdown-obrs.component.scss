@@ -1,15 +1,5 @@
 @import "../../../../styles/variables.scss";
 
-.form-group-obrs {
-  display: flex;
-  flex-direction: column;
-
-  label {
-    font-size: 18px;
-    color: $text-black;
-  }
-}
-
 .btn.dropdown-toggle {
   display: flex;
   justify-content: center;

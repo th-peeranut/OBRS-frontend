@@ -88,8 +88,25 @@ label {
   border: none !important;
 }
 
+.form-group-obrs {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    font-size: 18px;
+    color: $text-black;
+  }
+}
+
 .p-calendar .p-inputtext {
   height: 40px;
   border-radius: 24px;
-  padding: 0px 18px;
+  padding-left: 50px;
+}
+
+.p-input-icon-left > i,
+.p-input-icon-left > .p-icon-wrapper,
+.p-input-icon-right > i,
+.p-input-icon-right > .p-icon-wrapper {
+  left: 8%;
 }

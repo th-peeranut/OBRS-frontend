@@ -8,6 +8,7 @@ import { HomeBookingComponent } from './components/home-booking/home-booking.com
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { CalendarModule } from 'primeng/calendar';
+import { ReactiveFormsModule } from '@angular/forms';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -15,6 +16,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
   declarations: [HomeComponent, NavbarComponent, HomeBookingComponent],
   imports: [
     CommonModule,
+    ReactiveFormsModule,
     RouterModule.forChild(routes),
     TranslateModule.forChild({
       isolate: false,

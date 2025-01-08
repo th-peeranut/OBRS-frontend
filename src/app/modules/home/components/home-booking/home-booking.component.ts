@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { Dropdown } from '../../../../interfaces/dropdown.interface';
+import { FormBuilder, FormGroup } from '@angular/forms';
 
 @Component({
   selector: 'app-home-booking',
@@ -22,7 +23,25 @@ export class HomeBookingComponent {
   minDate: Date;
   calendarLocale: string;
 
-  constructor() {
+  bookingForm: FormGroup;
+
+  constructor(private fb: FormBuilder) {
     this.minDate = new Date();
+
+    this.createForm();
+  }
+
+  createForm() {
+    this.bookingForm = this.fb.group({
+      roundTrip: [2],
+      passengerInfo: [null],
+      startStation: [''],
+      endStation: [''],
+      departureDate: [this.minDate],
+    });
+  }
+
+  onSearch() {
+    console.log(this.bookingForm.value);
   }
 }

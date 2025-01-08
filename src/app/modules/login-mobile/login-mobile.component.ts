@@ -1,15 +1,16 @@
-import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, Renderer2, ViewChild } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-login-mobile',
   templateUrl: './login-mobile.component.html',
   styleUrl: './login-mobile.component.scss',
 })
-export class LoginMobileComponent {
+export class LoginMobileComponent implements OnDestroy  {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
 
@@ -18,6 +19,8 @@ export class LoginMobileComponent {
   loginForm: FormGroup;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
+
+  languageOnChange$: Subscription;
 
   constructor(
     private translate: TranslateService,
@@ -30,6 +33,10 @@ export class LoginMobileComponent {
     this.switchLanguage("th");
 
     this.creatForm();
+  }
+
+  ngOnDestroy(): void {
+    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
   }
 
   creatForm() {
@@ -66,7 +73,9 @@ export class LoginMobileComponent {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
-    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
+    this.languageOnChange$ = this.translate
+      .get('CALENDAR')
+      .subscribe((res) => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

@@ -33,13 +33,6 @@
   content: none;
 }
 
-.dropdown-btn {
-  &:hover {
-    color: $primary-blue;
-    border: 1px solid $primary-blue;
-  }
-}
-
 .dropdown-option {
   cursor: pointer;
   padding: 10px;
@@ -49,15 +42,13 @@
   text-decoration: none;
 
   background-color: transparent;
-
-  &:hover {
-    color: $primary-blue;
-  }
 }
 
 .current-passenger {
   display: flex;
   align-items: center;
+  flex-direction: row;
+  column-gap: 10px;
 }
 
 .dropdown-passenger {

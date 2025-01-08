@@ -159,8 +159,8 @@
 
       "START_STATION": "Source",
       "END_STATION": "Destination",
-      "BOOKING_DATE": "Booking Date"
-      
+      "DEPARTURE_DATE": "Departure date",
+      "SEARCH": "Search"
     }
   }
 }

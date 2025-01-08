@@ -5,20 +5,21 @@
     type="button"
     id="dropdownObrsPassenger"
     data-bs-toggle="dropdown"
+    data-bs-auto-close="outside"
     aria-expanded="false"
     [class.active]="isDropdownOpen"
     (click)="toggleDropdown()"
   >
     <!-- CURRENT VALUE -->
     <div class="value-text">
-      <div class="current-passenger gap-2">
+      <div class="current-passenger">
         <img
           class="passenger-icon"
           src="icons/passenger.svg"
           alt="Passenger Icon"
         />
-        {{ sumPassenger }}
-        {{ "HOME.HOME_BOOKING.PASSENGER_COUNT" | translate }}
+        <span class="current">{{ sumPassenger }}</span>
+        <span>{{ "HOME.HOME_BOOKING.PASSENGER_COUNT" | translate }}</span>
       </div>
     </div>
 
@@ -46,8 +47,8 @@
           <!-- COUNT CONTROL -->
           <div class="count-section gap-2">
             <img
-              class="passenger-icon"
-              src="icons/passenger-minus.svg"
+              class="passenger-icon passenger-minus"
+              [src]="sumAdultPassenger === 0 ? 'icons/passenger-minus-disable.svg' : 'icons/passenger-minus.svg'"
               alt="Passenger Minus Icon"
               (click)="updatePassengerCount('ADULT', 'MINUS')"
             />
@@ -55,7 +56,7 @@
             {{ sumAdultPassenger }}
 
             <img
-              class="passenger-icon"
+              class="passenger-icon passenger-add"
               src="icons/passenger-add.svg"
               alt="Passenger Add Icon"
               (click)="updatePassengerCount('ADULT', 'ADD')"
@@ -79,8 +80,8 @@
           <!-- COUNT CONTROL -->
           <div class="count-section gap-2">
             <img
-              class="passenger-icon"
-              src="icons/passenger-minus.svg"
+              class="passenger-icon passenger-minus"
+              [src]="sumKidsPassenger === 0 ? 'icons/passenger-minus-disable.svg' : 'icons/passenger-minus.svg'"
               alt="Passenger Minus Icon"
               (click)="updatePassengerCount('KIDS', 'MINUS')"
             />
@@ -88,7 +89,7 @@
             {{ sumKidsPassenger }}
 
             <img
-              class="passenger-icon"
+              class="passenger-icon passenger-add"
               src="icons/passenger-add.svg"
               alt="Passenger Add Icon"
               (click)="updatePassengerCount('KIDS', 'ADD')"

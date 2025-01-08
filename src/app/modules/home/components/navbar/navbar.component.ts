@@ -1,19 +1,22 @@
-import { Component, ElementRef, Renderer2, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, Renderer2, ViewChild } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-navbar',
   templateUrl: './navbar.component.html',
   styleUrl: './navbar.component.scss',
 })
-export class NavbarComponent {
+export class NavbarComponent implements OnDestroy  {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
+
+  languageOnChange$: Subscription;
 
   constructor(
     private translate: TranslateService,
@@ -24,11 +27,17 @@ export class NavbarComponent {
     this.switchLanguage("th");
   }
 
+  ngOnDestroy(): void {
+    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
+  }
+
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
-    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
+    this.languageOnChange$ = this.translate
+      .get('CALENDAR')
+      .subscribe((res) => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {

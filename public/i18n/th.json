@@ -173,7 +173,8 @@
 
       "START_STATION": "ต้นทาง",
       "END_STATION": "ปลายทาง",
-      "BOOKING_DATE": "วันที่เดินทาง"
+      "DEPARTURE_DATE": "วันออกเดินทาง",
+      "SEARCH": "ค้นหา"
     }
   }
 }

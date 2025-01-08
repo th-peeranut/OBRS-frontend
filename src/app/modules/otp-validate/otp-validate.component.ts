@@ -39,6 +39,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
+  languageOnChange$: Subscription;
+
   constructor(
     private translate: TranslateService,
     private primengConfig: PrimeNGConfig,
@@ -69,6 +71,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
+    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
   }
 
   creatForm() {
@@ -106,7 +109,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
-    this.translate.get('CALENDAR').subscribe(res => this.primengConfig.setTranslation(res));
+    this.languageOnChange$ = this.translate
+      .get('CALENDAR')
+      .subscribe((res) => this.primengConfig.setTranslation(res));
   }
 
   toggleDropdown() {
