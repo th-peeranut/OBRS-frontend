@@ -9,11 +9,12 @@ import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dro
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { CalendarModule } from 'primeng/calendar';
 import { ReactiveFormsModule } from '@angular/forms';
+import { StationHomeComponent } from './components/station-home/station-home.component';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
 @NgModule({
-  declarations: [HomeComponent, NavbarComponent, HomeBookingComponent],
+  declarations: [HomeComponent, NavbarComponent, HomeBookingComponent, StationHomeComponent],
   imports: [
     CommonModule,
     ReactiveFormsModule,

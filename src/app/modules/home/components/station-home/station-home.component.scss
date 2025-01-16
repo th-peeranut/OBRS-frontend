@@ -1,0 +1,20 @@
+@import "../../../../../styles/variables.scss";
+
+.station-bg {
+  background-color: $secondary-lightgrey;
+
+  display: flex;
+  justify-content: center;
+
+  .map-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
+      $secondary-lightgrey;
+    border-radius: 24px;
+
+    .map-logo {
+      max-width: 100%;
+      object-fit: cover;
+      border-radius: 24px;
+    }
+  }
+}
