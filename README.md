@@ -1,60 +1,89 @@
-# vue-project
+# Angular Project Setup
 
-This template should help get you started developing with Vue 3 in Vite.
+This guide provides a comprehensive walkthrough for setting up and running the Angular project, even if you do not have Node.js and Angular CLI installed on your machine.
 
-## Recommended IDE Setup
+## Prerequisites
 
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
+Ensure you have the following tools installed before running the project:
 
-## Type Support for `.vue` Imports in TS
+1. **Node.js** (Version 16 or higher)
+2. **Angular CLI**
 
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin) to make the TypeScript language service aware of `.vue` types.
+If these are not installed, follow the steps below to set them up.
 
-If the standalone TypeScript plugin doesn't feel fast enough to you, Volar has also implemented a [Take Over Mode](https://github.com/johnsoncodehk/volar/discussions/471#discussioncomment-1361669) that is more performant. You can enable it by the following steps:
+---
 
-1. Disable the built-in TypeScript Extension
-    1) Run `Extensions: Show Built-in Extensions` from VSCode's command palette
-    2) Find `TypeScript and JavaScript Language Features`, right click and select `Disable (Workspace)`
-2. Reload the VSCode window by running `Developer: Reload Window` from the command palette.
+## Step 1: Install Node.js
 
-## Customize configuration
+1. Visit the [Node.js official website](https://nodejs.org).
+2. Download and install the LTS version (recommended).
+3. Follow the installation instructions for your operating system.
 
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+Once the installation is complete, verify the installation by opening a terminal or command prompt and running:
 
-## Project Setup
+```bash
+node -v
+```
 
-```sh
+## Step 2: Install Angular CLI
+After installing Node.js, you can install the Angular CLI globally using npm, the Node Package Manager. Run the following command in your terminal or command prompt:
+
+```bash
+npm install -g @angular/cli
+```
+To verify that Angular CLI has been installed successfully, run:
+
+```bash
+ng version
+```
+You should see information about the Angular CLI version.
+
+## Step 3: Clone the Project Repository
+If you have access to the project repository, you can clone it using Git. Run the following command, replacing <repository-url> with the actual URL of your project repository:
+
+```bash
+git clone <repository-url>
+```
+Once the repository is cloned, navigate to the project directory:
+
+```bash
+cd <project-directory>
+```
+Replace <project-directory> with the name of your project folder.
+
+## Step 4: Install Project Dependencies
+Once inside the project directory, you need to install the necessary dependencies listed in the package.json file. Run the following command:
+
+```bash
 npm install
 ```
+This will install all the project dependencies locally in the node_modules folder.
 
-### Compile and Hot-Reload for Development
+## Step 5: Running the Angular Application
+Now that the dependencies are installed, you can run the Angular project locally using the Angular CLI. Start the development server by running:
 
-```sh
-npm run dev
+```bash
+ng serve
 ```
+By default, the application will be available at http://localhost:4200. Open a browser and navigate to this URL to view your application.
 
-### Type-Check, Compile and Minify for Production
+To serve the application on a different port, run:
 
-```sh
-npm run build
+```bash
+ng serve --port <port-number>
 ```
+Replace <port-number> with the desired port number.
 
-### Run Unit Tests with [Vitest](https://vitest.dev/)
+## Step 6: Building the Application for Production
+To build the project for production, use the following command:
 
-```sh
-npm run test:unit
+```bash
+ng build --prod
 ```
+This will compile the project into a dist/ folder with all the assets and files needed for production deployment.
 
-### Lint with [ESLint](https://eslint.org/)
+## Step 7: Troubleshooting
+- Node.js Version Issues: If you encounter errors related to the Node.js version, make sure you are using a version that is compatible with Angular (Node.js v16.x.x or higher).
+- Angular CLI Issues: If ng commands are not working, confirm that the Angular CLI is installed globally by running ng version.
+- Dependency Issues: If errors occur during npm install, delete the node_modules folder and package-lock.json, then rerun npm install.
 
-```sh
-npm run lint
-```
-
-### Reference
-
-expedia
-skyscanner
-Tripadvisor
-Google Flights
-Southwest

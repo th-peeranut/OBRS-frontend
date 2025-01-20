@@ -1,0 +1,112 @@
+@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@200;300;400;500;600;700;800&display=swap");
+@import "./styles/variables.scss";
+
+* {
+  font-family: "Sarabun", sans-serif;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid $primary-grey;
+  width: 100%;
+}
+
+.form-control {
+  background-color: $primary-white !important;
+  border: 1px solid $primary-lightgrey !important;
+  border-radius: 24px !important;
+}
+
+.form-check-input:checked {
+  background-color: $primary-blue !important;
+  border-color: $primary-blue !important;
+}
+
+label,
+input {
+  font-size: 18px !important;
+  color: $text-black !important;
+  width: 100%;
+}
+
+.label-error,
+.text-error,
+.form-required {
+  color: $text-red !important;
+}
+
+.form-error {
+  border: 1px solid $text-red !important;
+}
+
+.form-row {
+  margin-top: 24px;
+}
+
+label {
+  margin-bottom: 4px;
+}
+
+.text-error {
+  margin-top: 4px;
+}
+
+.ngx-otp-input-box {
+  width: 50px !important;
+  height: 60px !important;
+  padding: 18px !important;
+  font-size: 18px !important;
+  border: 1px solid $primary-lightgrey !important;
+  border-radius: 24px !important;
+}
+
+.password-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  .icon-eye {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+    color: #aaa;
+  }
+}
+
+.obrs-link {
+  font-size: 16px;
+  color: $secondary-blue;
+  text-decoration: none;
+}
+
+.btn-check:checked + .btn,
+.btn.active,
+.btn.show,
+.btn:first-child:active,
+:not(.btn-check) + .btn:active,
+.btn:after {
+  border: none !important;
+}
+
+.form-group-obrs {
+  display: flex;
+  flex-direction: column;
+
+  label {
+    font-size: 18px;
+    color: $text-black;
+  }
+}
+
+.p-calendar .p-inputtext {
+  height: 40px;
+  border-radius: 24px;
+  padding-left: 50px;
+}
+
+.p-input-icon-left > i,
+.p-input-icon-left > .p-icon-wrapper,
+.p-input-icon-right > i,
+.p-input-icon-right > .p-icon-wrapper {
+  left: 8%;
+}

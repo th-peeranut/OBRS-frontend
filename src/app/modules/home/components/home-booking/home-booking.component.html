@@ -1,0 +1,84 @@
+<div class="booking-container">
+  <!-- MAIN BACKGROUND -->
+  <img class="home-bg" src="images/home-bg.svg" />
+
+  <div class="booking-section">
+    <div class="booking-card" [formGroup]="bookingForm" *ngIf="bookingForm">
+      <div class="d-flex gap-5">
+        <!-- DROPDOWN ROUNDTRIP TYPE -->
+        <app-dropdown-obrs
+          [isBorder]="false"
+          [isLabel]="false"
+          [label]="'roundTrip'"
+          [options]="roundTripDropdowns"
+          formControlName="roundTrip"
+        ></app-dropdown-obrs>
+
+        <!-- DROPDOWN PASSENGER COUNT -->
+        <app-dropdown-obrs-passenger
+          formControlName="passengerInfo"
+        ></app-dropdown-obrs-passenger>
+      </div>
+
+      <div class="station-section mt-4">
+        <div class="station-group">
+          <!-- DROPDOWN START STATION -->
+          <app-dropdown-obrs
+            [isBorder]="true"
+            [isLabel]="true"
+            [label]="'HOME.HOME_BOOKING.START_STATION'"
+            [options]="[]"
+          ></app-dropdown-obrs>
+          <!-- STATION ICON -->
+          <img
+            class="station-icon"
+            src="icons/passenger-station-gap.svg"
+            alt="Passenger Station Gap Icon"
+          />
+          <!-- DROPDOWN STOP STATION -->
+          <app-dropdown-obrs
+            [isBorder]="true"
+            [isLabel]="true"
+            [label]="'HOME.HOME_BOOKING.END_STATION'"
+            [options]="[]"
+          ></app-dropdown-obrs>
+        </div>
+
+        <!-- DEPARTURE DATE -->
+        <div class="form-group-obrs">
+          <!-- LABEL -->
+          <label>
+            {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+          </label>
+          <!-- CALENDAR MAIN ELEMENT -->
+          <p-calendar
+            dateFormat="dd/mm/yy"
+            [minDate]="minDate"
+            [iconDisplay]="'input'"
+            [showIcon]="true"
+            inputId="templatedisplay"
+            formControlName="departureDate"
+          >
+            <!-- CUSTOM CALENDAR ICON -->
+            <ng-template pTemplate="inputicon">
+              <img
+                class="calendar-icon"
+                src="icons/calendar.svg"
+                alt="Calendar Icon"
+              />
+            </ng-template>
+          </p-calendar>
+        </div>
+
+        <!-- SEARCH BUTTON -->
+        <button class="btn btn-search" (click)="onSearch()">
+          <img src="icons/search.svg" alt="Search Icon" />
+          {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIGHTGREY BACKGROUND -->
+  <div class="secondary-lightgrey-bg"></div>
+</div>

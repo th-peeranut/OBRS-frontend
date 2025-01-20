@@ -1,0 +1,72 @@
+<div class="navbar-container">
+  <!-- logo -->
+  <div class="logo">
+    <img class="logo" src="images/logo.svg" alt="Logo" />
+  </div>
+
+  <!-- หน้าแรก -->
+  <a class="menu-font menu-font-active" href="#">
+    {{ "HOME.NAVBAR.HOME" | translate }}
+  </a>
+  <!-- วิธีจองและชำระเงิน -->
+  <a class="menu-font" href="#">
+    {{ "HOME.NAVBAR.BOOKING" | translate }}
+  </a>
+  <!-- ติดต่อเรา -->
+  <a class="menu-font" href="#">
+    {{ "HOME.NAVBAR.CONTACT" | translate }}
+  </a>
+
+  <div class="button-container">
+    <!-- Change Language Dropdown -->
+    <div class="dropdown mb-3">
+      <button
+        #dropdownButton
+        class="btn btn-lang dropdown-toggle p-0"
+        type="button"
+        id="dropdownMenuButton"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        [class.active]="isDropdownOpen"
+        (click)="toggleDropdown()"
+      >
+        <img class="mx-2" [src]="currentLanguage + '.svg'" alt="th" />
+        {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
+        <img
+          class="arrow-icon"
+          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+          alt="Arrow Icon"
+        />
+      </button>
+
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
+            <img class="mx-2" src="th.svg" alt="th" />
+
+            ภาษาไทย
+          </a>
+        </li>
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
+            <img class="mx-2" src="en.svg" alt="en" />
+
+            English
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="divide-line"></div>
+
+    <!-- เข้าสู่ระบบ -->
+    <button class="btn btn-signin" type="button" [routerLink]="'/login'">
+      {{ "HOME.NAVBAR.SIGNIN" | translate }}
+    </button>
+
+    <!-- สมัครสมาชิก -->
+    <button class="btn btn-signup" type="button" [routerLink]="'/register'">
+      {{ "HOME.NAVBAR.SIGNUP" | translate }}
+    </button>
+  </div>
+</div>

@@ -1,0 +1,166 @@
+{
+  "CALENDAR": {
+    "dayNames": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "dayNamesShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    "dayNamesMin": ["S", "M", "T", "W", "T", "F", "S"],
+    "monthNames": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "monthNamesShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "today": "Today",
+    "clear": "Clear",
+    "weekHeader": "Wk",
+    "dateFormat": "mm/dd/yy"
+  },
+  "SHARED": {
+    "NO_CONTENT": "No data found"
+  },
+  "LOGIN": {
+    "WELCOME": "Welcome to login",
+    "HINT": "Please fill in the information below For your convenience in booking tickets",
+
+    "USERNAME": "Username or Email",
+    "USERNAME_PLACEHOLDER": "Please enter your username or email",
+    "USERNAME_REQUIRED": "Please enter your username or email",
+
+    "PASSWORD": "Password",
+    "PASSWORD_PLACEHOLDER": "Please enter your password",
+    "PASSWORD_REQUIRED": "Please enter your password",
+
+    "REMEMBER": "Remember your password",
+    "FORGETPASSWORD": "Forgot your password?",
+
+    "LOGIN": "Log in",
+    "OR": "Or",
+    "LOGINMOBILE": "Log in with your phone number",
+
+    "NOACCOUNT": "Don't have an account?",
+    "REGISTERLINK": "Don't have an account?",
+    "REGISTERLINK_CLICK": "Register here",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "Please enter your phone number",
+
+    "LOGIN_USERNAME": "Log in with your username or email",
+    "SEND_OTP": "Send OTP"
+  },
+  "REGISTER": {
+    "WELCOME": "Register",
+    "HINT": "Please enter the information below For ease of registration",
+
+    "FIRSTNAME": "First name",
+    "FIRSTNAME_PLACEHOLDER": "Please enter your first name",
+    "FIRSTNAME_REQUIRED": "Please enter your first name",
+
+    "MIDDLENAME": "Middle name (if any)",
+    "MIDDLENAME_PLACEHOLDER": "Please enter your middle name",
+    "MIDDLENAME_REQUIRED": "Please enter your middle name",
+
+    "LASTNAME": "Last name",
+    "LASTNAME_PLACEHOLDER": "Please enter your last name",
+    "LASTNAME_REQUIRED": "Please enter your last name",
+
+    "USERNAME": "Username",
+    "USERNAME_PLACEHOLDER": "Please enter your user name",
+    "USERNAME_REQUIRED": "Please enter your user name",
+
+    "EMAIL": "Email",
+    "EMAIL_PLACEHOLDER": "Please enter your email",
+    "EMAIL_REQUIRED": "Please enter your email",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
+
+    "PASSWORD": "Password",
+    "PASSWORD_PLACEHOLDER": "Please enter your password",
+    "PASSWORD_REQUIRED": "Please enter your password",
+
+    "CONFIRM_PASSWORD": "Confirm your password",
+    "CONFIRM_PASSWORD_PLACEHOLDER": "Please enter your password confirmation",
+    "CONFIRM_PASSWORD_REQUIRED": "Please enter your password confirmation",
+
+    "SAME_PASSWORD_VALIDATE": "Please enter the same password",
+
+    "USERNAME_GUIDELINES_TITLE": "Username setting requirements",
+    "USERNAME_GUIDELINES_DESCRIPTION": "Username must contain",
+    "USERNAME_MINIMUM_REQUIREMENT": "At least 4 characters",
+    "USERNAME_RULES": "Which can only contain English letters (A-Z, a-z) and numbers (0-1)",
+
+    "PASSWORD_GUIDELINES_TITLE": "Password setting requirements",
+    "PASSWORD_GUIDELINES_DESCRIPTION": "Password must contain",
+    "PASSWORD_MINIMUM_REQUIREMENT": "At least 8 characters",
+    "PASSWORD_RULES": {
+      "RULE_1": "At least 1 uppercase letter (A-Z)",
+      "RULE_2": "At least 1 lowercase letter (a-z)",
+      "RULE_3": "At least 1 number (0-1)",
+      "RULE_4": "Special characters (optional)"
+    },
+
+    "SAVE": "Confirm",
+
+    "LOGIN_LINK": "Do you have an account?",
+    "LOGIN_LINK_CLICK": "Login here"
+  },
+  "LOGIN_BY_PHONE_NO": {
+    "WELCOME": "Welcome to login",
+    "HINT": "Please enter the OTP number from the SMS sent to the number",
+
+    "OTP_TIME": "OTP number expired. Please enter it again",
+    "OTP_REF": "Please enter your username",
+
+    "OTP_LOGIN": "Confirm",
+
+    "NO_OTP": "You have not received the OPT number?",
+    "NO_OTP_LINK": "Resend"
+  },
+  "FORGET_PASSWORD": {
+    "WELCOME": "Forgot your password?",
+    "HINT": "Please fill in the information below to proceed with the password reset",
+
+    "PHONE_NO": "Phone number",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "Please fill in the phone number to proceed with the password reset",
+
+    "SEND_OTP": "Send OTP",
+
+    "NOACCOUNT": "Do you not have an account?",
+    "REGISTERLINK": "Do you not have an account?",
+    "REGISTERLINK_CLICK": "Register here"
+  },
+  "HOME": {
+    "NAVBAR": {
+      "HOME": "Home",
+      "SCHEDULE": "Train Schedule",
+      "BOOKING": "How to book and pay",
+      "CONTACT": "Contact us",
+      "SIGNIN": "Log in",
+      "SIGNUP": "Register"
+    },
+    "HOME_BOOKING": {
+      "ROUNDTRIP_1": "One-way",
+      "ROUNDTRIP_2": "Round-trip",
+      "PASSENGER_COUNT": "Passenger",
+      "PASSENGER_1": "Adult",
+      "PASSENGER_1_HINT": "12 years old and above",
+      "PASSENGER_2": "Child",
+      "PASSENGER_2_HINT": "2-11 years old",
+
+      "START_STATION": "Source",
+      "END_STATION": "Destination",
+      "DEPARTURE_DATE": "Departure date",
+      "SEARCH": "Search"
+    }
+  }
+}

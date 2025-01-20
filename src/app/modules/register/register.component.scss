@@ -1,0 +1,61 @@
+@import "../../../styles/variables.scss";
+@import "../login/login.component.scss";
+
+.label-with-icon {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+}
+
+.tooltip-icon {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  position: relative;
+}
+
+.tooltip-box {
+  display: none;
+  position: absolute;
+  bottom: 140%;
+  left: 95%;
+  transform: translateX(-95%);
+  background-color: $secondary-grey;
+  color: $text-black;
+  padding: 20px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  z-index: 999;
+  font-size: 14px;
+  line-height: 1.8;
+  width: 320px;
+  text-align: justify;
+  text-justify: inter-word;
+
+  strong {
+    line-height: 2.2 !important;
+  }
+}
+
+.tooltip-box::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 95%;
+  transform: translateX(-95%);
+  border-width: 8px;
+  border-style: solid;
+  border-color: $secondary-grey transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip-box {
+  display: block;
+}

@@ -1,0 +1,108 @@
+<div class="login-container">
+  <!-- LEFT SECTION -->
+  <div class="left-section">
+    <!-- BACKGROUND IMAGE -->
+    <img class="bg-img" src="images/login.svg" alt="Tickets" />
+  </div>
+  <!-- RIGHT SECTION -->
+  <div class="right-section">
+    <!-- CHANGE LANGUAGE SWITCH -->
+    <div class="change-language dropdown">
+      <button
+        #dropdownButton
+        class="btn btn-lang dropdown-toggle p-0"
+        type="button"
+        id="dropdownMenuButton"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        [class.active]="isDropdownOpen"
+        (click)="toggleDropdown()"
+      >
+        <!-- FLAG IMAGE -->
+        <img class="mx-2" [src]="currentLanguage + '.svg'" alt="th" />
+        <!-- LANGUAGE TEXT -->
+        {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
+        <!-- ARROW ICON -->
+        <img
+          class="arrow-icon"
+          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+          alt="Arrow Icon"
+        />
+      </button>
+      <!-- LANGUAGE LIST -->
+      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+        <!-- THAI LANGUAGE -->
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
+            <img class="mx-2" src="th.svg" alt="th" />
+            ภาษาไทย
+          </a>
+        </li>
+        <!-- ENGLISH LANGUAGE -->
+        <li>
+          <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
+            <img class="mx-2" src="en.svg" alt="en" />
+            English
+          </a>
+        </li>
+      </ul>
+    </div>
+    <!-- LOGO WEBSITE -->
+    <div class="logo-section mt-5">
+      <img
+        *ngIf="option === 'login'"
+        class="logo-img"
+        src="images/logo.svg"
+        alt="Phuyaipu Logo"
+      />
+      <img
+        *ngIf="option === 'forget-password'"
+        class="logo-img"
+        src="images/forget-password-logo.svg"
+        alt="Forget Password Logo"
+      />
+    </div>
+    <!-- HEADER TITLE -->
+    <div class="welcome-text mt-3">
+      <ng-container *ngIf="option === 'login'">
+        {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
+      </ng-container>
+      <ng-container *ngIf="option === 'forget-password'">
+        {{ "FORGET_PASSWORD.WELCOME" | translate }}
+      </ng-container>
+    </div>
+    <!-- SUB HEADER TITLE -->
+    <div class="hint-text mt-3">
+      {{ "LOGIN_BY_PHONE_NO.HINT" | translate }} {{ phoneNo }}
+    </div>
+    <!-- FORM SECTION -->
+    <form class="login-form mt-3" [formGroup]="loginForm">
+      <!-- OTP REMAINING TIMES -->
+      <p class="text-center otp-time">
+        {{ "LOGIN_BY_PHONE_NO.OTP_TIME" | translate }} {{ displayTime }})
+      </p>
+      <!-- OTP INPUT -->
+      <div class="d-flex justify-content-center align-items-center">
+        <app-otp
+          [disabled]="remainingTime === 0"
+          (otpCode)="setOTPCode($event)"
+        ></app-otp>
+      </div>
+      <!-- อ้OTP REFERENCE -->
+      <div class="otp-ref-text">
+        {{ "LOGIN_BY_PHONE_NO.OTP_REF" | translate }} : {{ otpRef }}
+      </div>
+      <!-- SUBMIT OTP -->
+      <button type="submit" class="login-btn mt-3" (click)="login()">
+        {{ "LOGIN_BY_PHONE_NO.OTP_LOGIN" | translate }}
+      </button>
+      <!-- RESENT OTP -->
+      <p class="register-link text-center mt-4">
+        {{ "LOGIN_BY_PHONE_NO.NO_OTP" | translate }}
+        <a class="obrs-link" (click)="resendOTP()">
+          {{ "LOGIN_BY_PHONE_NO.NO_OTP_LINK" | translate }}
+        </a>
+      </p>
+    </form>
+  </div>
+</div>

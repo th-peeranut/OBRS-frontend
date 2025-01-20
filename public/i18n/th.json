@@ -1,0 +1,180 @@
+{
+ "CALENDAR": {
+    "dayNames": ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัส", "ศุกร์", "เสาร์"],
+    "dayNamesShort": ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."],
+    "dayNamesMin": ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"],
+    "monthNames": [
+      "มกราคม",
+      "กุมภาพันธ์",
+      "มีนาคม",
+      "เมษายน",
+      "พฤษภาคม",
+      "มิถุนายน",
+      "กรกฎาคม",
+      "สิงหาคม",
+      "กันยายน",
+      "ตุลาคม",
+      "พฤศจิกายน",
+      "ธันวาคม"
+    ],
+    "monthNamesShort": [
+      "ม.ค.",
+      "ก.พ.",
+      "มี.ค.",
+      "เม.ย.",
+      "พ.ค.",
+      "มิ.ย.",
+      "ก.ค.",
+      "ส.ค.",
+      "ก.ย.",
+      "ต.ค.",
+      "พ.ย.",
+      "ธ.ค."
+    ],
+    "today": "วันนี้",
+    "clear": "ล้าง",
+    "weekHeader": "สัปดาห์",
+    "dateFormat": "dd/mm/yy"
+  },
+  "SHARED": {
+    "NO_CONTENT": "ไม่พบข้อมูล"
+  },
+  "LOGIN": {
+    "WELCOME": "ยินดีต้อนรับเข้าสู่ระบบ",
+    "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการจองตั๋วของคุณ",
+
+    "USERNAME": "ชื่อผู้ใช้งานหรืออีเมล",
+    "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งานหรืออีเมล",
+    "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งานหรืออีเมล",
+
+    "PASSWORD": "รหัสผ่าน",
+    "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
+    "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
+
+    "REMEMBER": "จดจำรหัสผ่าน",
+    "FORGETPASSWORD": "ลืมรหัสผ่านใช่หรือไม่?",
+
+    "LOGIN": "เข้าสู่ระบบ",
+    "OR": "หรือ",
+    "LOGINMOBILE": "เข้าสู่ระบบด้วยเบอร์โทรศัพท์",
+
+    "NOACCOUNT": "คุณยังไม่มีบัญชี?",
+    "REGISTERLINK": "คุณยังไม่มีบัญชี?",
+    "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้",
+
+    "PHONE_NO": "หมายเลขโทรศัพท์",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+
+    "LOGIN_USERNAME": "เข้าสู่ระบบด้วยชื่อผู้ใช้งานหรืออีเมล",
+    "SEND_OTP": "ส่ง OTP"
+  },
+  "REGISTER": {
+    "WELCOME": "สมัครสมาชิก",
+    "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการลงทะเบียนสมัครสมาชิก",
+
+    "FIRSTNAME": "ชื่อจริง",
+    "FIRSTNAME_PLACEHOLDER": "กรุณากรอกชื่อจริง",
+    "FIRSTNAME_REQUIRED": "กรุณากรอกชื่อจริง",
+
+    "MIDDLENAME": "ชื่อกลาง (ถ้ามี)",
+    "MIDDLENAME_PLACEHOLDER": "กรุณากรอกชื่อกลาง",
+    "MIDDLENAME_REQUIRED": "กรุณากรอกชื่อกลาง",
+
+    "LASTNAME": "นามสกุล",
+    "LASTNAME_PLACEHOLDER": "กรุณากรอกนามสกุล",
+    "LASTNAME_REQUIRED": "กรุณากรอกนามสกุล",
+
+    "USERNAME": "ชื่อผู้ใช้งาน",
+    "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งาน",
+    "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งาน",
+
+    "EMAIL": "อีเมล",
+    "EMAIL_PLACEHOLDER": "กรุณากรอกอีเมล",
+    "EMAIL_REQUIRED": "กรุณากรอกอีเมล",
+
+    "PHONE_NO": "หมายเลขโทรศัพท์",
+    "PHONE_NO_PLACEHOLDER": "กรุณากรอกหมายเลขโทรศัพท์",
+    "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+
+    "PASSWORD": "รหัสผ่าน",
+    "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
+    "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
+
+    "CONFIRM_PASSWORD": "ยืนยันรหัสผ่าน",
+    "CONFIRM_PASSWORD_PLACEHOLDER": "กรุณากรอกยืนยันรหัสผ่าน",
+    "CONFIRM_PASSWORD_REQUIRED": "กรุณากรอกยืนยันรหัสผ่าน",
+
+    "SAME_PASSWORD_VALIDATE": "กรุณากรอกรหัสผ่านให้ตรงกัน",
+
+    "USERNAME_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่าชื่อผู้ใช้งาน",
+    "USERNAME_GUIDELINES_DESCRIPTION": "ในการตั้งชื่อผู้ใช้งานต้องมี",
+    "USERNAME_MINIMUM_REQUIREMENT": "อย่างน้อย 4 ตัวขึ้นไป",
+    "USERNAME_RULES": "ซึ่งสามารถใช้ได้ด้วยตัวอักษรภาษาอังกฤษ (A-Z, a-z) และหมายเลข (0-1) เท่านั้น",
+
+    "PASSWORD_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่ารหัสผ่าน",
+    "PASSWORD_GUIDELINES_DESCRIPTION": "ในการตั้งรหัสผ่านต้อง",
+    "PASSWORD_MINIMUM_REQUIREMENT": "อย่างน้อย 8 ตัวขึ้นไป",
+    "PASSWORD_RULES": {
+      "RULE_1": "ตัวอักษรพิมพ์ใหญ่ (A-Z) อย่างน้อย 1 ตัว",
+      "RULE_2": "ตัวอักษรพิมพ์เล็ก (a-z) อย่างน้อย 1 ตัว",
+      "RULE_3": "หมายเลข (0-1) อย่างน้อย 1 ตัว",
+      "RULE_4": "ตัวอักษรพิเศษ (ไม่บังคับ)"
+    },
+
+    "SAVE": "ยืนยัน",
+
+    "LOGIN_LINK": "คุณมีบัญชีเเล้ว?",
+    "LOGIN_LINK_CLICK": "เข้าสู่ระบบที่นี้"
+  },
+  "LOGIN_BY_PHONE_NO": {
+    "WELCOME": "ยินดีต้อนรับเข้าสู่ระบบ",
+    "HINT": "กรุณากรอกหมายเลข OTP จาก SMS ที่ส่งไปยังหมายเลข",
+
+    "OTP_TIME": "หมายเลข OTP หมดอายุ กรุณากรอกใหม่อีกครั้ง",
+    "OTP_REF": "กรุณากรอกชื่อผู้ใช้งาน",
+
+    "OTP_LOGIN": "ยืนยัน",
+
+    "NO_OTP": "คุณยังไม่ได้รับหมายเลข OPT?",
+    "NO_OTP_LINK": "ส่งอีกครั้ง"
+  },
+  "FORGET_PASSWORD": {
+    "WELCOME": "ลืมรหัสผ่าน",
+    "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อดำเนินการในการเปลี่ยนรหัสผ่านใหม่",
+
+    "PHONE_NO": "หมายเลขโทรศัพท์",
+    "PHONE_NO_PLACEHOLDER": "",
+    "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์เพื่อดำเนินการเปลี่ยนรหัสผ่านใหม่",
+
+    "SEND_OTP": "ส่ง OTP",
+
+    "NOACCOUNT": "คุณยังไม่มีบัญชี?",
+    "REGISTERLINK": "คุณยังไม่มีบัญชี?",
+    "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้"
+  },
+  "HOME": {
+    "NAVBAR": {
+      "HOME": "หน้าแรก",
+      "SCHEDULE": "ตารางเดินรถ",
+      "BOOKING": "วิธีจองและชำระเงิน",
+      "CONTACT": "ติดต่อเรา",
+      "SIGNIN": "เข้าสู่ระบบ",
+      "SIGNUP": "สมัครสมาชิก"
+    },
+    "HOME_BOOKING": {
+      "ROUNDTRIP_1": "เที่ยวเดียว",
+      "ROUNDTRIP_2": "เที่ยวไป-กลับ",
+      "PASSENGER_COUNT": "ผู้โดยสาร",
+      "PASSENGER_1": "ผู้ใหญ่",
+      "PASSENGER_1_HINT": "อายุ 12 ปีขึ้นไป",
+      "PASSENGER_2": "เด็ก",
+      "PASSENGER_2_HINT": "อายุ 2-11 ปี",
+
+      "START_STATION": "ต้นทาง",
+      "END_STATION": "ปลายทาง",
+      "DEPARTURE_DATE": "วันออกเดินทาง",
+      "SEARCH": "ค้นหา"
+    }
+  }
+}
