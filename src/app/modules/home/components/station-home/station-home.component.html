@@ -1,9 +1,64 @@
 <div class="station-bg">
   <div class="map-section">
-    <img
-      class="map-logo"
-      src="images/station-bg.svg"
-      alt="Station Background Icon"
-    />
+    <div class="map-logo">
+      <div class="station-section">
+        <!-- HEADER -->
+        <div class="station-section-header">แผนที่เส้นทางจุดรับบริการ</div>
+        <!-- BODY -->
+        <div class="station-section-body">
+          <!-- TOGGLE SWITCH -->
+          <div class="station-toggle-switch">
+            <div
+              class="obrs-switch text-center"
+              [class.left]="currentDirection === 'left'"
+              [class.right]="currentDirection === 'right'"
+            >
+              <div
+                class="obrs"
+                [class.active]="currentDirection === 'left'"
+                (click)="onObrsClick('left')"
+              >
+                หนองซาก - บ้านบึง - กรุงเทพฯ
+              </div>
+              <div
+                class="obrs"
+                [class.active]="currentDirection === 'right'"
+                (click)="onObrsClick('right')"
+              >
+                กรุงเทพฯ - บ้านบึง - หนองซาก
+              </div>
+            </div>
+          </div>
+          <!-- DETAIL -->
+          <div class="station-section-body-detail">
+            <div class="station-list">
+              <img
+                class="station-node-image"
+                src="images/station-node.svg"
+                alt="Station Node Image"
+              />
+
+              <img
+                class="station-point-image"
+                src="images/station-point.svg"
+                alt="Station Point Image"
+              />
+
+              <img
+                class="station-point-image"
+                src="images/station-point.svg"
+                alt="Station Point Image"
+              />
+
+              <img
+                class="station-node-image"
+                src="images/station-node.svg"
+                alt="Station Node Image"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

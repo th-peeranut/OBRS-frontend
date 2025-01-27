@@ -5,16 +5,133 @@
 
   display: flex;
   justify-content: center;
+  width: 100%;
+  height: max-content;
 
   .map-section {
     background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)),
       $secondary-lightgrey;
     border-radius: 24px;
+    width: 100%;
 
     .map-logo {
-      max-width: 100%;
-      object-fit: cover;
-      border-radius: 24px; 
+      background-image: url("/images/station-bg.svg");
+      background-size: cover;
+      background-position: center;
+
+      width: 100%;
+      border-radius: 24px;
     }
   }
+}
+
+.station-section {
+  width: 100%;
+  height: max-content;
+
+  padding-top: 72px;
+  padding-bottom: 72px;
+
+  &-header {
+    text-align: center;
+
+    color: $text-white;
+    font-size: 32px;
+    font-weight: 500;
+  }
+
+  &-body {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+
+    margin-top: 30px;
+
+    &-detail {
+      background-color: $primary-lightblue;
+
+      width: 1200px;
+      height: 1000px;
+
+      margin-top: -30px;
+      margin-left: auto;
+      margin-right: auto;
+
+      padding-top: 60px;
+      padding-bottom: 60px;
+
+      border-radius: 24px;
+
+      z-index: 1;
+    }
+  }
+}
+
+.station-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  row-gap: 24px;
+
+  img {
+    width: 43px;
+    height: 43px;
+  }
+}
+
+.station-toggle-switch {
+  border-radius: 37px;
+  background-color: $primary-white;
+  padding: 8px;
+  max-width: max-content;
+  margin-left: auto;
+  margin-right: auto;
+
+  color: $text-softblack;
+
+  z-index: 2;
+}
+
+.obrs-switch {
+  position: relative;
+}
+
+.obrs-switch:after {
+  content: "";
+  position: absolute;
+  width: 50%;
+  top: 0;
+  transition: left cubic-bezier(0.88, -0.35, 0.565, 1.35) 0.4s;
+  border-radius: 27.5px;
+  box-shadow: 0 2px 15px 0 rgba(0, 0, 0, 0.1);
+  background-color: $primary-blue;
+  height: 100%;
+  z-index: 0;
+}
+
+.obrs-switch.left:after {
+  left: 0;
+}
+
+.obrs-switch.right:after {
+  left: 50%;
+}
+
+.obrs-switch .obrs {
+  display: inline-block;
+  width: 50%;
+  padding: 12px 20px;
+  z-index: 1;
+  position: relative;
+  cursor: pointer;
+  transition: color 200ms;
+  font-size: 16px;
+  font-weight: bold;
+  line-height: normal;
+  user-select: none;
+}
+
+.obrs-switch .obrs.active {
+  color: $text-white;
 }
