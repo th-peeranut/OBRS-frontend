@@ -31,30 +31,74 @@
           </div>
           <!-- DETAIL -->
           <div class="station-section-body-detail">
-            <div class="station-list">
-              <img
-                class="station-node-image"
-                src="images/station-node.svg"
-                alt="Station Node Image"
-              />
+            <div class="station-list-container">
+              <ng-container
+                *ngFor="let station of stationList; let stationIndex = index"
+              >
+                <div class="station-list-item" *ngIf="stationIndex % 2 === 0">
+                  <div class="station-bullet">
+                    <img
+                      *ngIf="
+                        stationIndex === 0 ||
+                        stationIndex === stationList.length - 1
+                      "
+                      class="station-node-image"
+                      src="images/station-node.svg"
+                      alt="Station Node Image"
+                    />
 
-              <img
-                class="station-point-image"
-                src="images/station-point.svg"
-                alt="Station Point Image"
-              />
+                    <img
+                      *ngIf="
+                        stationIndex !== 0 &&
+                        stationIndex !== stationList.length - 1
+                      "
+                      class="station-point-image"
+                      src="images/station-point.svg"
+                      alt="Station Point Image"
+                    />
+                  </div>
 
-              <img
-                class="station-point-image"
-                src="images/station-point.svg"
-                alt="Station Point Image"
-              />
+                  <div class="station-line"></div>
 
-              <img
-                class="station-node-image"
-                src="images/station-node.svg"
-                alt="Station Node Image"
-              />
+                  <div class="station-content">
+                    <div class="station-card ml-5">
+                      {{ station.nameThai }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="station-list-item" *ngIf="stationIndex % 2 !== 0">
+                  <div class="station-bullet">
+                    <img
+                      *ngIf="
+                        stationIndex === 0 ||
+                        stationIndex === stationList.length - 1
+                      "
+                      class="station-node-image"
+                      src="images/station-node.svg"
+                      alt="Station Node Image"
+                    />
+
+                    <img
+                      *ngIf="
+                        stationIndex !== 0 &&
+                        stationIndex !== stationList.length - 1
+                      "
+                      class="station-point-image"
+                      src="images/station-point.svg"
+                      alt="Station Point Image"
+                    />
+                  </div>
+
+                  <div class="station-content">
+                    <div class="station-card">
+                      {{ station.nameThai }}
+                    </div>
+                  </div>
+
+                  <div class="station-line"></div>
+                </div>
+              </ng-container>
             </div>
           </div>
         </div>
