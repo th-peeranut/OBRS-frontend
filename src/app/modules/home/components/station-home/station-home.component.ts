@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { Station } from '../../../../interfaces/station.interface';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-station-home',
@@ -114,9 +115,17 @@ export class StationHomeComponent {
     },
   ];
 
+  constructor(private router: Router){}
+
   onObrsClick(direction: 'left' | 'right'): void {
     if (this.currentDirection !== direction) {
       this.currentDirection = direction;
     }
+
+    this.stationList.reverse();
+  }
+
+  navMap(url: string){
+    window.open(url, '_blank');
   }
 }

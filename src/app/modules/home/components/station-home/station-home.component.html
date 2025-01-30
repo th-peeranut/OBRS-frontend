@@ -42,7 +42,6 @@
                         stationIndex === 0 ||
                         stationIndex === stationList.length - 1
                       "
-                      class="station-node-image"
                       src="images/station-node.svg"
                       alt="Station Node Image"
                     />
@@ -52,7 +51,6 @@
                         stationIndex !== 0 &&
                         stationIndex !== stationList.length - 1
                       "
-                      class="station-point-image"
                       src="images/station-point.svg"
                       alt="Station Point Image"
                     />
@@ -61,8 +59,13 @@
                   <div class="station-line"></div>
 
                   <div class="station-content">
-                    <div class="station-card ml-5">
-                      {{ station.nameThai }}
+                    <div
+                      class="station-card ml-5"
+                      (click)="navMap(station.url)"
+                    >
+                      <div class="station-card-content">
+                        {{ station.nameThai }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -74,7 +77,6 @@
                         stationIndex === 0 ||
                         stationIndex === stationList.length - 1
                       "
-                      class="station-node-image"
                       src="images/station-node.svg"
                       alt="Station Node Image"
                     />
@@ -84,15 +86,16 @@
                         stationIndex !== 0 &&
                         stationIndex !== stationList.length - 1
                       "
-                      class="station-point-image"
-                      src="images/station-point.svg"
+                      src="images/station-point-odd.svg"
                       alt="Station Point Image"
                     />
                   </div>
 
                   <div class="station-content">
-                    <div class="station-card">
-                      {{ station.nameThai }}
+                    <div class="station-card" (click)="navMap(station.url)">
+                      <div class="station-card-content">
+                        {{ station.nameThai }}
+                      </div>
                     </div>
                   </div>
 
