@@ -1,6 +1,14 @@
 {
   "CALENDAR": {
-    "dayNames": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    "dayNames": [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday"
+    ],
     "dayNamesShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
     "dayNamesMin": ["S", "M", "T", "W", "T", "F", "S"],
     "monthNames": [
@@ -17,7 +25,20 @@
       "November",
       "December"
     ],
-    "monthNamesShort": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "monthNamesShort": [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
+    ],
     "today": "Today",
     "clear": "Clear",
     "weekHeader": "Wk",
@@ -161,6 +182,31 @@
       "END_STATION": "Destination",
       "DEPARTURE_DATE": "Departure date",
       "SEARCH": "Search"
+    },
+    "STATION": {
+      "HEADER": "Service point route map",
+      "START": "Nong Sak - Ban Bueng - Bangkok",
+      "STOP": "Bangkok - Ban Bueng - Nong Sak"
+    },
+    "FOOTER": {
+      "HEADER": "Head office location",
+      "TITLE": "NJ van service, Pu",
+      "ADDRESS": "3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chonburi 20170",
+
+      "MENU_TITLE": "Menu",
+      "MENU_TEXT_1": "How to book and pay",
+      "MENU_TEXT_2": "Contact us",
+
+      "MAIN_CONTACT_TITLE": "Head Office Contact Channel",
+      "MAIN_CONTACT_ADDRESS_1": "NJ Van Queue Pu,",
+      "MAIN_CONTACT_ADDRESS_2": "Nong Chak-Ban Bueng-Mo Chit",
+      "MAIN_CONTACT_PHONE_NUMBER": "090-562-2019",
+
+      "MOCHIT_CONTACT_TITLE": "Head Office Contact Channel",
+      "MOCHIT_CONTACT_ADDRESS_1": "Small Passenger Transport Station",
+      "MOCHIT_CONTACT_ADDRESS_2": "(Chatuchak) Building C, Counter C5",
+
+      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved"
     }
   }
 }

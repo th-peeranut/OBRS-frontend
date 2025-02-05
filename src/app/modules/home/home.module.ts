@@ -15,11 +15,12 @@ import { HomeBookingComponent } from './components/home-booking/home-booking.com
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { StationHomeComponent } from './components/station-home/station-home.component';
+import { FooterComponent } from './components/footer/footer.component';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
 @NgModule({
-  declarations: [HomeComponent, NavbarComponent, HomeBookingComponent, StationHomeComponent],
+  declarations: [HomeComponent, NavbarComponent, HomeBookingComponent, StationHomeComponent, FooterComponent],
   imports: [
     CommonModule,
     FormsModule,

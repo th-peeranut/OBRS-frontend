@@ -3,7 +3,9 @@
     <div class="map-logo">
       <div class="station-section">
         <!-- HEADER -->
-        <div class="station-section-header">แผนที่เส้นทางจุดรับบริการ</div>
+        <div class="station-section-header">
+          {{ "HOME.STATION.HEADER" | translate }}
+        </div>
         <!-- BODY -->
         <div class="station-section-body">
           <!-- TOGGLE SWITCH -->
@@ -18,14 +20,14 @@
                 [class.active]="currentDirection === 'left'"
                 (click)="onObrsClick('left')"
               >
-                หนองซาก - บ้านบึง - กรุงเทพฯ
+                {{ "HOME.STATION.START" | translate }}
               </div>
               <div
                 class="obrs"
                 [class.active]="currentDirection === 'right'"
                 (click)="onObrsClick('right')"
               >
-                กรุงเทพฯ - บ้านบึง - หนองซาก
+                {{ "HOME.STATION.STOP" | translate }}
               </div>
             </div>
           </div>
@@ -36,7 +38,10 @@
                 *ngFor="let station of stationList; let stationIndex = index"
               >
                 <div class="station-list-item" *ngIf="stationIndex % 2 === 0">
-                  <div class="station-bullet">
+                  <div
+                    class="station-bullet"
+                    [class.no-before]="stationIndex === stationList.length - 1"
+                  >
                     <img
                       *ngIf="
                         stationIndex === 0 ||
@@ -71,7 +76,10 @@
                 </div>
 
                 <div class="station-list-item" *ngIf="stationIndex % 2 !== 0">
-                  <div class="station-bullet">
+                  <div
+                    class="station-bullet"
+                    [class.no-before]="stationIndex === stationList.length - 1"
+                  >
                     <img
                       *ngIf="
                         stationIndex === 0 ||

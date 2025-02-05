@@ -137,6 +137,23 @@
   transform: translateX(-50%);
 }
 
+.station-bullet::before {
+  content: "";
+  position: absolute;
+  top: 65%;
+  left: 50%;
+  width: 5px;
+  height: 80px;
+  background-color: transparent;
+  transform: translate(-50%, -50%);
+  z-index: -1;
+  border-left: 5px dashed $primary-white;
+}
+
+.station-bullet.no-before::before {
+  content: none;
+}
+
 .station-content {
   width: 200px;
 }
