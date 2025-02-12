@@ -141,7 +141,6 @@ export class RegisterComponent implements OnDestroy  {
     if (this.registerForm.valid && this.checkSamePassword()) {
       const payload = this.registerForm.value;
       const res = await this.service.register(payload);
-      console.log(res);
 
       if (res) {
         this.toastr.success('สมัครสมาชิกสำเร็จ');

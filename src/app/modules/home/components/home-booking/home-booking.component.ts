@@ -42,9 +42,7 @@ export class HomeBookingComponent {
     });
   }
 
-  onSearch() {
-    console.log(this.getPayload());
-  }
+  onSearch() {}
 
   getPayload() {
     const formValue = { ...this.bookingForm.getRawValue() };
