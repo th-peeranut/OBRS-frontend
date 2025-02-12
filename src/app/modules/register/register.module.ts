@@ -12,9 +12,7 @@ const routes: Routes = [{ path: '', component: RegisterComponent }];
   imports: [
     CommonModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild({
-      isolate: false,
-    }),
+    TranslateModule,
 
     FormsModule,
     ReactiveFormsModule,

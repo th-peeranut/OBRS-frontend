@@ -30,8 +30,9 @@ export class LoginMobileComponent implements OnDestroy  {
     private fb: FormBuilder,
     private router: Router
   ) {
-    this.switchLanguage("th");
-
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
+    
     this.creatForm();
   }
 

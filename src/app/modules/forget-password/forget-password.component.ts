@@ -1,4 +1,10 @@
-import { Component, ElementRef, OnDestroy, Renderer2, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  Renderer2,
+  ViewChild,
+} from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
@@ -21,7 +27,7 @@ export class ForgetPasswordComponent implements OnDestroy {
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   languageOnChange$: Subscription;
-  
+
   constructor(
     private translate: TranslateService,
     private primengConfig: PrimeNGConfig,
@@ -30,7 +36,8 @@ export class ForgetPasswordComponent implements OnDestroy {
     private fb: FormBuilder,
     private router: Router
   ) {
-    this.switchLanguage('th');
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
 
     this.creatForm();
   }

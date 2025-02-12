@@ -26,9 +26,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     FormsModule,
     ReactiveFormsModule,
     RouterModule.forChild(routes),
-    TranslateModule.forChild({
-      isolate: false,
-    }),
+    TranslateModule,
     CalendarModule,
 
     // Components

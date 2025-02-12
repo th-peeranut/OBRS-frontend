@@ -24,7 +24,8 @@ export class NavbarComponent implements OnDestroy  {
     private renderer: Renderer2,
     private elementRef: ElementRef,
   ) {
-    this.switchLanguage("th");
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
   }
 
   ngOnDestroy(): void {

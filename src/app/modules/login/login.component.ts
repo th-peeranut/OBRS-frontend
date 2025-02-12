@@ -45,8 +45,9 @@ export class LoginComponent implements OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
-    this.switchLanguage('th');
-
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
+    
     this.creatForm();
   }
 

@@ -40,7 +40,7 @@ export function HttpLoaderFactory(http: HttpClient) {
         useFactory: HttpLoaderFactory,
         deps: [HttpClient],
       },
-      isolate: false,
+      defaultLanguage: 'th',
     }),
 
     ToastrModule.forRoot({

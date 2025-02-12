@@ -52,8 +52,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute
   ) {
-    this.switchLanguage("th");
-
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
+    
     this.creatForm();
   }
 

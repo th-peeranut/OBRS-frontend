@@ -37,8 +37,9 @@ export class RegisterComponent implements OnDestroy  {
     private roleService: RolesService,
     private router: Router
   ) {
-    this.switchLanguage("th");
-
+    const currentLanguage = this.translate.currentLang;
+    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
+    
     this.creatForm();
   }
 

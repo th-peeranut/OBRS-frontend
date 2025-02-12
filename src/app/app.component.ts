@@ -14,7 +14,9 @@ export class AppComponent {
     private translate: TranslateService,
     private primengConfig: PrimeNGConfig
   ) {
-    this.translate.use('th');
+    translate.addLangs(['en', 'th']);
+    translate.setDefaultLang('th');
+
     this.translate.get('CALENDAR').subscribe((res) => {
       this.primengConfig.setTranslation(res);
     });
