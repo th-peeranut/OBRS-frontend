@@ -17,7 +17,7 @@ export class AuthService {
     username: string;
     password: string;
     rememberMe: boolean;
-  }): Promise<boolean> {
+  }): Promise<ResponseAPI<{ token: string }>> {
     return this.callLogin(payload);
   }
 
@@ -25,27 +25,29 @@ export class AuthService {
     username: string;
     password: string;
     rememberMe: boolean;
-  }): Promise<boolean> {
+  }): Promise<ResponseAPI<{ token: string }>> {
     return this.http
-      .post<{ token: string }>(`${environment.apiUrl}/auth/login`, {
-        username: payload.username,
-        password: payload.password,
-      })
+      .post<ResponseAPI<{ token: string }>>(
+        `${environment.apiUrl}/auth/login`,
+        {
+          username: payload.username,
+          password: payload.password,
+        }
+      )
       .toPromise()
       .then((response) => {
-        if (response && response.token) {
-          this.storeToken(response.token, payload.rememberMe);
-          return true;
+        if (response?.code === 200) {
+          this.storeToken(response.data.token, payload.rememberMe);
         }
-        return false;
+        return response;
       })
       .catch((err) => {
         if (err?.error.includes('JWT expired')) {
           this.clearToken();
           this.callLogin(payload);
         }
-        console.error('Login failed', err);
-        return false;
+
+        return err;
       });
   }
 
@@ -79,23 +81,21 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  register(payload: Register) {
+  register(payload: Register): Promise<ResponseAPI<any>> {
     return this.http
-      .post<{ token: string }>(`${environment.apiUrl}/auth/signup`, payload)
+      .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/signup`, payload)
       .toPromise()
       .then((response) => {
-        if (response) {
-          return true;
-        }
-        return false;
+        return response;
       })
       .catch((err) => {
-        console.error('Login failed', err);
-        return false;
+        return err;
       });
   }
 
-  loginByPhoneNo(payload: { phoneNo: string }): Promise<ResponseAPI<any> | undefined> {
+  loginByPhoneNo(payload: {
+    phoneNo: string;
+  }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(
         `${environment.apiUrl}/auth/loginByPhoneNo`,
@@ -107,7 +107,9 @@ export class AuthService {
       });
   }
 
-  forgetPassword(payload: { phoneNo: string }): Promise<ResponseAPI<any> | undefined> {
+  forgetPassword(payload: {
+    phoneNo: string;
+  }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(
         `${environment.apiUrl}/auth/forgetpassword`,
@@ -119,7 +121,9 @@ export class AuthService {
       });
   }
 
-  resendOTP(payload: { otpCode: string }): Promise<ResponseAPI<any> | undefined> {
+  resendOTP(payload: {
+    otpCode: string;
+  }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/resendOTP`, payload)
       .toPromise()

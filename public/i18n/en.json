@@ -75,7 +75,10 @@
     "PHONE_NO_REQUIRED": "Please enter your phone number",
 
     "LOGIN_USERNAME": "Log in with your username or email",
-    "SEND_OTP": "Send OTP"
+    "SEND_OTP": "Send OTP",
+
+    "LOGIN_SUCCESS": "Login successful",
+    "LOGIN_FAIL": "Error encountered. Login failed"
   },
   "REGISTER": {
     "WELCOME": "Register",
@@ -132,7 +135,10 @@
     "SAVE": "Confirm",
 
     "LOGIN_LINK": "Do you have an account?",
-    "LOGIN_LINK_CLICK": "Login here"
+    "LOGIN_LINK_CLICK": "Login here",
+
+    "REGISTER_SUCCESS": "Successful registration",
+    "REGISTER_FAIL": "Error found. Registration failed."
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "Welcome to login",

@@ -1,4 +1,10 @@
-import { Component, ElementRef, OnDestroy, Renderer2, ViewChild } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnDestroy,
+  Renderer2,
+  ViewChild,
+} from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
@@ -13,7 +19,7 @@ import { Subscription } from 'rxjs';
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
 })
-export class RegisterComponent implements OnDestroy  {
+export class RegisterComponent implements OnDestroy {
   isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
   isShowConfirmPassword: boolean = false;
@@ -39,7 +45,7 @@ export class RegisterComponent implements OnDestroy  {
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-    
+
     this.creatForm();
   }
 
@@ -58,7 +64,8 @@ export class RegisterComponent implements OnDestroy  {
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
-      roles: [['CUSTOMER']],
+      // 5 = CUSTOMER ROLE
+      roles: [[5]],
     });
   }
 
@@ -138,15 +145,19 @@ export class RegisterComponent implements OnDestroy  {
   async register() {
     this.registerForm.markAllAsTouched();
 
+    if (!this.checkSamePassword()) {
+      this.toastr.error('พบข้อผิดพลาด กรุณากรอกรหัสผ่านให้เหมือนกัน');
+    }
+
     if (this.registerForm.valid && this.checkSamePassword()) {
       const payload = this.registerForm.value;
       const res = await this.service.register(payload);
 
-      if (res) {
-        this.toastr.success('สมัครสมาชิกสำเร็จ');
+      if (res.code === 201) {
+        this.toastr.success(this.translate.instant('REGISTER.REGISTER_SUCCESS'));
         this.router.navigateByUrl('/login');
       } else {
-        this.toastr.error('พบข้อผิดพลาด สมัครสมาชิกไม่สำเร็จ');
+        this.toastr.error(this.translate.instant('REGISTER.REGISTER_FAIL'));
       }
     }
   }

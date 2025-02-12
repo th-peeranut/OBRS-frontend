@@ -1,5 +1,5 @@
 export interface ResponseAPI<T> {
-  code: string;
+  code: number;
   message: string;
-  result: T;
+  data: T;
 }
