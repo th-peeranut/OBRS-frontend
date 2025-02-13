@@ -40,7 +40,7 @@ export class AuthService {
       .toPromise()
       .then((response) => {
         if (response?.code === 200) {
-          this.storeAuthData(response.data.token, payload.username);
+          this.storeAuthData(response?.data.token, payload.username);
         }
         return response;
       })
