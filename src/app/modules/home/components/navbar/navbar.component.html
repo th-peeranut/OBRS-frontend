@@ -59,14 +59,27 @@
 
     <div class="divide-line"></div>
 
-    <!-- เข้าสู่ระบบ -->
-    <button class="btn btn-signin" type="button" [routerLink]="'/login'">
-      {{ "HOME.NAVBAR.SIGNIN" | translate }}
-    </button>
+    <ng-container *ngIf="!isLogin">
+      <!-- เข้าสู่ระบบ -->
+      <button class="btn btn-signin" type="button" [routerLink]="'/login'">
+        {{ "HOME.NAVBAR.SIGNIN" | translate }}
+      </button>
 
-    <!-- สมัครสมาชิก -->
-    <button class="btn btn-signup" type="button" [routerLink]="'/register'">
-      {{ "HOME.NAVBAR.SIGNUP" | translate }}
-    </button>
+      <!-- สมัครสมาชิก -->
+      <button class="btn btn-signup" type="button" [routerLink]="'/register'">
+        {{ "HOME.NAVBAR.SIGNUP" | translate }}
+      </button>
+    </ng-container>
+
+    <ng-container *ngIf="isLogin">
+      <!-- USERNAME -->
+      <div class="profile-border">
+        {{ userName }}
+      </div>
+      <!-- ออกจากระบบ -->
+      <button class="btn btn-signout" type="button" (click)="onLogout()">
+        {{ "HOME.NAVBAR.SIGNOUT" | translate }}
+      </button>
+    </ng-container>
   </div>
 </div>

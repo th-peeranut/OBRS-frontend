@@ -48,7 +48,7 @@
     "NO_CONTENT": "No data found"
   },
   "LOGIN": {
-    "WELCOME": "Welcome to login",
+    "WELCOME": "Welcome to sign in",
     "HINT": "Please fill in the information below For your convenience in booking tickets",
 
     "USERNAME": "Username or Email",
@@ -62,9 +62,9 @@
     "REMEMBER": "Remember your password",
     "FORGETPASSWORD": "Forgot your password?",
 
-    "LOGIN": "Log in",
+    "LOGIN": "Sign in",
     "OR": "Or",
-    "LOGINMOBILE": "Log in with your phone number",
+    "LOGINMOBILE": "Sign in with your phone number",
 
     "NOACCOUNT": "Don't have an account?",
     "REGISTERLINK": "Don't have an account?",
@@ -74,8 +74,11 @@
     "PHONE_NO_PLACEHOLDER": "",
     "PHONE_NO_REQUIRED": "Please enter your phone number",
 
-    "LOGIN_USERNAME": "Log in with your username or email",
-    "SEND_OTP": "Send OTP"
+    "LOGIN_USERNAME": "Sign in with your username or email",
+    "SEND_OTP": "Send OTP",
+
+    "LOGIN_SUCCESS": "Signin successful",
+    "LOGIN_FAIL": "Error encountered. Signin failed"
   },
   "REGISTER": {
     "WELCOME": "Register",
@@ -132,10 +135,13 @@
     "SAVE": "Confirm",
 
     "LOGIN_LINK": "Do you have an account?",
-    "LOGIN_LINK_CLICK": "Login here"
+    "LOGIN_LINK_CLICK": "Signin here",
+
+    "REGISTER_SUCCESS": "Successful registration",
+    "REGISTER_FAIL": "Error found. Registration failed."
   },
   "LOGIN_BY_PHONE_NO": {
-    "WELCOME": "Welcome to login",
+    "WELCOME": "Welcome to signin",
     "HINT": "Please enter the OTP number from the SMS sent to the number",
 
     "OTP_TIME": "OTP number expired. Please enter it again",
@@ -166,8 +172,11 @@
       "SCHEDULE": "Train Schedule",
       "BOOKING": "How to book and pay",
       "CONTACT": "Contact us",
-      "SIGNIN": "Log in",
-      "SIGNUP": "Register"
+      "SIGNIN": "Sign in",
+      "SIGNUP": "Register",
+      "SIGNOUT": "Sign out",
+      "SIGNOUT_SUCCESS": "Successfully signed out",
+      "SIGNOUT_FAIL": "Failed to sign out"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",

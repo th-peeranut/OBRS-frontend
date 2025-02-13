@@ -99,7 +99,7 @@
   display: inline-block;
   min-width: 140px;
   height: 52px;
-  padding: 12px 30px;
+  padding: 8px 30px;
 
   font-size: 18px;
   font-weight: 500;
@@ -115,7 +115,7 @@
   display: inline-block;
   min-width: 160px;
   height: 52px;
-  padding: 12px 30px;
+  padding: 8px 30px;
 
   font-size: 18px;
   font-weight: 500;
@@ -123,5 +123,34 @@
 
   border-radius: 24px;
 
-  background-color: $primary-lightgrey;
+  background-color: $primary-blue;
+}
+
+.profile-border {
+  display: inline-block;
+  min-width: 140px;
+  height: 52px;
+  padding: 8px 30px;
+
+  font-size: 20px;
+  font-weight: 700;
+  color: $text-blue;
+
+  background-color: transparent;
+}
+
+.btn-signout {
+  display: inline-block;
+  min-width: 140px;
+  height: 52px;
+  padding: 8px 30px;
+
+  font-size: 18px;
+  font-weight: 500;
+  color: $text-black;
+
+  border: 1px solid $primary-lightgrey;
+  border-radius: 24px;
+
+  background-color: transparent;
 }
