@@ -138,14 +138,16 @@
     "LOGIN_LINK_CLICK": "Signin here",
 
     "REGISTER_SUCCESS": "Successful registration",
-    "REGISTER_FAIL": "Error found. Registration failed."
+    "REGISTER_FAIL": "Error found. Registration failed.",
+    
+    "VERIFY OTP": "Please verify your subscription via your phone number."
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "Welcome to signin",
     "HINT": "Please enter the OTP number from the SMS sent to the number",
 
     "OTP_TIME": "OTP number expired. Please enter it again",
-    "OTP_REF": "Please enter your username",
+    "OTP_REF": "Ref",
 
     "OTP_LOGIN": "Confirm",
 

@@ -150,15 +150,10 @@ export class RegisterComponent implements OnDestroy {
     }
 
     if (this.registerForm.valid && this.checkSamePassword()) {
-      const payload = this.registerForm.value;
-      const res = await this.service.register(payload);
+      const formValue = this.registerForm.getRawValue();
 
-      if (res.code === 201) {
-        this.toastr.success(this.translate.instant('REGISTER.REGISTER_SUCCESS'));
-        this.router.navigateByUrl('/login');
-      } else {
-        this.toastr.error(this.translate.instant('REGISTER.REGISTER_FAIL'));
-      }
+      this.service.setRegisterValue(formValue);
+      this.router.navigate(['/otp', 'register', formValue.phoneNumber]);
     }
   }
 }

@@ -70,13 +70,16 @@
       <ng-container *ngIf="option === 'forget-password'">
         {{ "FORGET_PASSWORD.WELCOME" | translate }}
       </ng-container>
+      <ng-container *ngIf="option === 'register'">
+        {{ "REGISTER.VERIFY_OTP" | translate }}
+      </ng-container>
     </div>
     <!-- SUB HEADER TITLE -->
     <div class="hint-text mt-3">
       {{ "LOGIN_BY_PHONE_NO.HINT" | translate }} {{ phoneNo }}
     </div>
     <!-- FORM SECTION -->
-    <form class="login-form mt-3" [formGroup]="loginForm">
+    <form class="login-form mt-3">
       <!-- OTP REMAINING TIMES -->
       <p class="text-center otp-time">
         {{ "LOGIN_BY_PHONE_NO.OTP_TIME" | translate }} {{ displayTime }})
@@ -88,18 +91,18 @@
           (otpCode)="setOTPCode($event)"
         ></app-otp>
       </div>
-      <!-- อ้OTP REFERENCE -->
+      <!-- OTP REFERENCE -->
       <div class="otp-ref-text">
-        {{ "LOGIN_BY_PHONE_NO.OTP_REF" | translate }} : {{ otpRef }}
+        {{ "LOGIN_BY_PHONE_NO.OTP_REF" | translate }} : {{ token }}
       </div>
       <!-- SUBMIT OTP -->
-      <button type="submit" class="login-btn mt-3" (click)="login()">
+      <button type="submit" class="login-btn mt-3" (click)="verifyOtp()">
         {{ "LOGIN_BY_PHONE_NO.OTP_LOGIN" | translate }}
       </button>
       <!-- RESENT OTP -->
       <p class="register-link text-center mt-4">
         {{ "LOGIN_BY_PHONE_NO.NO_OTP" | translate }}
-        <a class="obrs-link" (click)="resendOTP()">
+        <a class="obrs-link" (click)="sendOtp()">
           {{ "LOGIN_BY_PHONE_NO.NO_OTP_LINK" | translate }}
         </a>
       </p>

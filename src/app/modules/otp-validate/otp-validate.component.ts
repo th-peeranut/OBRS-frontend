@@ -13,6 +13,8 @@ import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
 import { PrimeNGConfig } from 'primeng/api';
+import { OtpService } from '../../services/otp/otp.service';
+import { OtpRequest, OtpVerify } from '../../interfaces/otp.interface';
 
 @Component({
   selector: 'app-otp-validate',
@@ -25,18 +27,16 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   currentLanguage: string = 'th';
 
-  loginForm: FormGroup;
-
   option: string | undefined = 'login';
+
   phoneNo: string | undefined = '';
   otpCode: string = '';
-  otpRef: string = '';
+  token: string = '';
 
-  remainingTime: number = 5 * 60; // 5 minutes in seconds
+  remainingTime: number = 5 * 60;
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
-  
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   languageOnChange$: Subscription;
@@ -50,60 +50,28 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private service: AuthService,
     private toastr: ToastrService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private otpService: OtpService
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-    
-    this.creatForm();
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.option = this.route.snapshot.paramMap.get('option')?.toString();
     this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
-    
+
     if (this.validateRouteError()) {
       this.toastr.error('พบข้อผิดพลาด');
       this.router.navigateByUrl('/home');
     }
 
-    this.startTimer();
+    this.sendOtp();
   }
 
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
-  }
-
-  creatForm() {
-    this.loginForm = this.fb.group({
-      phoneCode: ['', Validators.required],
-      phoneNo: ['', Validators.required],
-    });
-  }
-
-  getForm(controlName: string) {
-    return this.loginForm.get(controlName);
-  }
-
-  getFormValue(controlName: string) {
-    return this.loginForm.getRawValue()[controlName];
-  }
-
-  getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.loginForm.get(controlName)?.errors;
-
-    if (!errors) {
-      return false;
-    }
-
-    if (errorName === 'maxLength' && errors['maxlength']) {
-      const maxLength = errors['maxlength'].requiredLength;
-      const actualLength = errors['maxlength'].actualLength;
-      return actualLength > maxLength;
-    }
-
-    return !!errors[errorName];
   }
 
   switchLanguage(lang: string) {
@@ -144,6 +112,11 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   }
 
   startTimer(): void {
+    if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
+
+    this.remainingTime = 5 * 60;
+    this.displayTime = '05:00';
+
     this.timerSubscription$ = interval(1000)
       .pipe(takeWhile(() => this.remainingTime > 0))
       .subscribe(() => {
@@ -166,39 +139,66 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.otpCode = otpCode;
   }
 
-  async login() {
-    this.loginForm.markAllAsTouched();
+  async sendOtp() {
+    this.token = '';
 
-    if (this.loginForm.valid) {
-      const payload = this.loginForm.value;
-      
-      if(this.option === "login"){
-        const res = await this.service.loginByPhoneNo(payload);
-      }else{
-        const res = await this.service.forgetPassword(payload);
-      }
+    let payload: OtpRequest = { msisdn: this.phoneNo };
 
-      // if (res?.code === "200") {
-      //   this.toastr.success('เข้าสู่ระบบสำเร็จ');
-      //   this.router.navigateByUrl('/home');
-      // } else {
-      //   this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
-      // }
+    const res = await this.otpService.requestOTP(payload);
+
+    if (res?.code === 200) {
+      this.startTimer();
+      this.token = res?.data?.token;
+    } else {
+      this.toastr.error('error');
     }
   }
 
-  async resendOTP() {
-    if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
+  async verifyOtp() {
+    if (this.otpCode) {
+      let payload: OtpVerify = { pin: this.otpCode, token: this.token };
 
-    this.remainingTime = 5 * 60;
-    this.displayTime = '05:00';
-    this.startTimer();
+      const resVerify = await this.otpService.verifyOTP(payload);
 
-    const payload = this.loginForm.value;
-    const res = await this.service.resendOTP(payload);
+      if (resVerify?.code === 200) {
+        this.toastr.success('succ');
+        this.router.navigateByUrl('/home');
+
+        if (this.option === 'login') {
+          // const res = await this.service.loginByPhoneNo(payload);
+        } else if (this.option === 'register') {
+          const registerValue = this.service.getRegisterValue();
+
+          if (registerValue) {
+            const resRegister = await this.service.register(registerValue);
+
+            if (resRegister.code === 201) {
+              this.toastr.success(
+                this.translate.instant('REGISTER.REGISTER_SUCCESS')
+              );
+              this.router.navigateByUrl('/login');
+            } else {
+              this.toastr.error(
+                this.translate.instant('REGISTER.REGISTER_FAIL')
+              );
+            }
+          }
+        } else {
+          // const res = await this.service.forgetPassword(payload);
+        }
+      } else {
+        this.toastr.error('error');
+      }
+    }
   }
 
   validateRouteError() {
-    return !this.phoneNo || !this.option || (this.option !== "login" && this.option !== "forget-password")
+    return (
+      !this.phoneNo ||
+      !this.option ||
+      (this.option !== 'login' &&
+        this.option !== 'forget-password' &&
+        this.option !== 'register')
+    );
   }
 }

@@ -19,6 +19,8 @@ export class AuthService {
   );
   authStatus$ = this.authStatusSubject.asObservable();
 
+  registerValue?: Register;
+
   constructor(private http: HttpClient, private router: Router) {}
 
   login(payload: {
@@ -82,6 +84,28 @@ export class AuthService {
     return !!this.getToken();
   }
 
+  setRegisterValue(payload: Register) {
+    this.registerValue = payload;
+  }
+
+  getRegisterValue(): Register | undefined {
+    return this.registerValue;
+  }
+
+  clearRegisterValue() {
+    this.registerValue = {
+      email: '',
+      firstName: '',
+      isPhoneNumberVerify: false,
+      lastName: '',
+      middleName: '',
+      password: '',
+      phoneNumber: '',
+      roles: [],
+      username: '',
+    };
+  }
+
   register(payload: Register): Promise<ResponseAPI<any>> {
     return this.http
       .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/signup`, payload)
@@ -110,15 +134,6 @@ export class AuthService {
         `${environment.apiUrl}/auth/forgetpassword`,
         payload
       )
-      .toPromise()
-      .then((response) => response);
-  }
-
-  resendOTP(payload: {
-    otpCode: string;
-  }): Promise<ResponseAPI<any> | undefined> {
-    return this.http
-      .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/resendOTP`, payload)
       .toPromise()
       .then((response) => response);
   }
