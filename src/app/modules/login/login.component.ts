@@ -47,7 +47,7 @@ export class LoginComponent implements OnDestroy {
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-    
+
     this.creatForm();
   }
 
@@ -130,11 +130,11 @@ export class LoginComponent implements OnDestroy {
       const payload = this.loginForm.value;
       const res = await this.service.login(payload);
 
-      if (res) {
-        this.toastr.success('เข้าสู่ระบบสำเร็จ');
+      if (res.code === 200) {
+        this.toastr.success(this.translate.instant('LOGIN.LOGIN_SUCCESS'));
         this.router.navigateByUrl('/home');
       } else {
-        this.toastr.error('พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ');
+        this.toastr.error(this.translate.instant('LOGIN.LOGIN_FAIL'));
       }
     }
   }
