@@ -153,7 +153,7 @@
             <label
               for="username"
               [class.label-error]="
-                getForm('username')?.errors &&
+                (getForm('username')?.errors || usernameIsExist) &&
                 (getForm('username')?.touched || getForm('username')?.dirty)
               "
             >
@@ -167,16 +167,16 @@
                 <img class="tooltip-icon" src="icons/info.svg" alt="info" />
                 <div class="tooltip-box">
                   <strong>
-                    {{ "REGISTER.USERNAME_GUIDELINES_TITLE" | translate }} 
+                    {{ "REGISTER.USERNAME_GUIDELINES_TITLE" | translate }}
                   </strong>
                   <br />
-                  {{ "REGISTER.USERNAME_GUIDELINES_DESCRIPTION" | translate }} 
+                  {{ "REGISTER.USERNAME_GUIDELINES_DESCRIPTION" | translate }}
                   <strong>
                     <u>
-                      {{ "REGISTER.USERNAME_MINIMUM_REQUIREMENT" | translate }} 
+                      {{ "REGISTER.USERNAME_MINIMUM_REQUIREMENT" | translate }}
                     </u>
                   </strong>
-                  {{ "REGISTER.USERNAME_RULES" | translate }} 
+                  {{ "REGISTER.USERNAME_RULES" | translate }}
                 </div>
               </div>
             </div>
@@ -189,10 +189,11 @@
             formControlName="username"
             [placeholder]="'REGISTER.USERNAME_PLACEHOLDER' | translate"
             [class.form-error]="
-              getForm('username')?.errors &&
+              (getForm('username')?.errors || usernameIsExist) &&
               (getForm('username')?.touched || getForm('username')?.dirty)
             "
           />
+
           <div
             class="text-error"
             *ngIf="
@@ -202,6 +203,17 @@
           >
             {{ "REGISTER.USERNAME_REQUIRED" | translate }}
           </div>
+
+          <div
+            class="text-error"
+            *ngIf="
+              getForm('username')?.value &&
+              usernameIsExist &&
+              (getForm('username')?.touched || getForm('username')?.dirty)
+            "
+          >
+            {{ "REGISTER.USERNAME_EXIST" | translate }}
+          </div>
         </div>
       </div>
       <div class="row form-row">
@@ -210,7 +222,7 @@
           <label
             for="email"
             [class.label-error]="
-              getForm('email')?.errors &&
+              (getForm('email')?.errors || emailIsExist) &&
               (getForm('email')?.touched || getForm('email')?.dirty)
             "
           >
@@ -225,7 +237,7 @@
             formControlName="email"
             [placeholder]="'REGISTER.EMAIL_PLACEHOLDER' | translate"
             [class.form-error]="
-              getForm('email')?.errors &&
+              (getForm('email')?.errors || emailIsExist) &&
               (getForm('email')?.touched || getForm('email')?.dirty)
             "
           />
@@ -240,6 +252,17 @@
 
             <span class="form-required">*</span>
           </div>
+
+          <div
+            class="text-error"
+            *ngIf="
+              getForm('email')?.value &&
+              emailIsExist &&
+              (getForm('email')?.touched || getForm('email')?.dirty)
+            "
+          >
+            {{ "REGISTER.EMAIL_EXIST" | translate }}
+          </div>
         </div>
 
         <div class="col-6">
@@ -247,7 +270,7 @@
           <label
             for="phoneNumber"
             [class.label-error]="
-              getForm('phoneNumber')?.errors &&
+              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
               (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
             "
           >
@@ -262,7 +285,7 @@
             formControlName="phoneNumber"
             [placeholder]="'REGISTER.PHONE_NO_PLACEHOLDER' | translate"
             [class.form-error]="
-              getForm('phoneNumber')?.errors &&
+              (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&
               (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
             "
           />
@@ -274,6 +297,17 @@
             "
           >
             {{ "REGISTER.PHONE_NO_REQUIRED" | translate }}
+          </div>
+
+          <div
+            class="text-error"
+            *ngIf="
+              getForm('phoneNumber')?.value &&
+              phoneNumberIsExist &&
+              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+            "
+          >
+            {{ "REGISTER.PHONE_NO_EXIST" | translate }}
           </div>
         </div>
       </div>
@@ -298,8 +332,8 @@
               <div class="tooltip-container">
                 <img class="tooltip-icon" src="icons/info.svg" alt="info" />
                 <div class="tooltip-box">
-                  <strong> 
-                    {{ "REGISTER.PASSWORD_GUIDELINES_TITLE" | translate }} 
+                  <strong>
+                    {{ "REGISTER.PASSWORD_GUIDELINES_TITLE" | translate }}
                   </strong>
                   <br />
                   {{ "REGISTER.PASSWORD_GUIDELINES_DESCRIPTION" | translate }}

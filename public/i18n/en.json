@@ -99,13 +99,16 @@
     "USERNAME": "Username",
     "USERNAME_PLACEHOLDER": "Please enter your user name",
     "USERNAME_REQUIRED": "Please enter your user name",
+    "USERNAME_EXIST": "This username is already in use",
 
     "EMAIL": "Email",
     "EMAIL_PLACEHOLDER": "Please enter your email",
     "EMAIL_REQUIRED": "Please enter your email",
+    "EMAIL_EXIST": "This email is already in use",
 
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
+    "PHONE_NO_EXIST": "This phone number is already in use",
 
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",

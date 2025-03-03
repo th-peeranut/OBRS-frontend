@@ -9,10 +9,16 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { RolesService } from '../../services/roles/roles.service';
 import { Router } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
-import { Subscription } from 'rxjs';
+import {
+  debounceTime,
+  distinctUntilChanged,
+  Subscription,
+  switchMap,
+} from 'rxjs';
+import { UserService } from '../../services/user/user.service';
+import { REGISTER_OPTION } from '../../enum/register-option.enum';
 
 @Component({
   selector: 'app-register',
@@ -32,6 +38,14 @@ export class RegisterComponent implements OnDestroy {
 
   languageOnChange$: Subscription;
 
+  usernameSubscription$?: Subscription;
+  emailSubscription$?: Subscription;
+  phoneNumberSubscription$?: Subscription;
+
+  usernameIsExist: boolean = false;
+  emailIsExist: boolean = false;
+  phoneNumberIsExist: boolean = false;
+
   constructor(
     private translate: TranslateService,
     private primengConfig: PrimeNGConfig,
@@ -40,7 +54,7 @@ export class RegisterComponent implements OnDestroy {
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
-    private roleService: RolesService,
+    private usersService: UserService,
     private router: Router
   ) {
     const currentLanguage = this.translate.currentLang;
@@ -51,6 +65,11 @@ export class RegisterComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
+
+    if (this.usernameSubscription$) this.usernameSubscription$.unsubscribe();
+    if (this.emailSubscription$) this.emailSubscription$.unsubscribe();
+    if (this.phoneNumberSubscription$)
+      this.phoneNumberSubscription$.unsubscribe();
   }
 
   creatForm() {
@@ -64,9 +83,32 @@ export class RegisterComponent implements OnDestroy {
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
-      // 5 = CUSTOMER ROLE
-      roles: [[5]],
+      roles: [[5]], // 5 = CUSTOMER ROLE
     });
+
+    this.emailSubscription$ = this.registerForm.get('email')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap(value => this.checkDuplicateData(value, REGISTER_OPTION.EMAIL))
+      )
+      .subscribe();
+
+    this.phoneNumberSubscription$ = this.registerForm.get('phoneNumber')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap(value => this.checkDuplicateData(value, REGISTER_OPTION.PHONENUMBER))
+      )
+      .subscribe();
+
+    this.usernameSubscription$ = this.registerForm.get('username')?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap(value => this.checkDuplicateData(value, REGISTER_OPTION.USERNAME))
+      )
+      .subscribe();
   }
 
   getForm(controlName: string) {
@@ -149,11 +191,48 @@ export class RegisterComponent implements OnDestroy {
       this.toastr.error('พบข้อผิดพลาด กรุณากรอกรหัสผ่านให้เหมือนกัน');
     }
 
-    if (this.registerForm.valid && this.checkSamePassword()) {
+    if (
+      this.registerForm.valid &&
+      this.checkSamePassword() &&
+      !this.usernameIsExist &&
+      !this.emailIsExist &&
+      !this.phoneNumberIsExist
+    ) {
       const formValue = this.registerForm.getRawValue();
 
       this.service.setRegisterValue(formValue);
       this.router.navigate(['/otp', 'register', formValue.phoneNumber]);
+    }
+  }
+
+  async checkDuplicateData(value: string, option: number) {
+    console.log(
+      option,
+      option === REGISTER_OPTION.USERNAME,
+      option === REGISTER_OPTION.EMAIL,
+      option === REGISTER_OPTION.PHONENUMBER
+    );
+
+    if (!value) return;
+
+    let res: any = null;
+
+    if (option === REGISTER_OPTION.USERNAME) {
+      res = await this.usersService.checkExistUsername(value);
+    } else if (option === REGISTER_OPTION.EMAIL) {
+      res = await this.usersService.checkExistEmail(value);
+    } else if (option === REGISTER_OPTION.PHONENUMBER) {
+      res = await this.usersService.checkExistPhoneNumber(value);
+    }
+
+    if (res?.code === 200) {
+      if (option === REGISTER_OPTION.USERNAME) {
+        this.usernameIsExist = res?.data;
+      } else if (option === REGISTER_OPTION.EMAIL) {
+        this.emailIsExist = res?.data;
+      } else if (option === REGISTER_OPTION.PHONENUMBER) {
+        this.phoneNumberIsExist = res?.data;
+      }
     }
   }
 }

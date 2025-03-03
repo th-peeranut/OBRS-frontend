@@ -99,14 +99,17 @@
     "USERNAME": "ชื่อผู้ใช้งาน",
     "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งาน",
     "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งาน",
+    "USERNAME_EXIST": "ชื่อผู้ใช้งานนี้ถูกใช้งานแล้ว",
 
     "EMAIL": "อีเมล",
     "EMAIL_PLACEHOLDER": "กรุณากรอกอีเมล",
     "EMAIL_REQUIRED": "กรุณากรอกอีเมล",
+    "EMAIL_EXIST": "อีเมลนี้ถูกใช้งานแล้ว",
 
     "PHONE_NO": "หมายเลขโทรศัพท์",
     "PHONE_NO_PLACEHOLDER": "กรุณากรอกหมายเลขโทรศัพท์",
     "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+    "PHONE_NO_EXIST": "หมายเลขโทรศัพท์นี้ถูกใช้งานแล้ว",
 
     "PASSWORD": "รหัสผ่าน",
     "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",

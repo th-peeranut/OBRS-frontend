@@ -97,7 +97,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   async onLogout() {
     // const res = await this.authService.logout(payload);
 
-    // if (res.code === 200) {
+    // if (res?.code === 200) {
     //   this.toastr.success(this.translate.instant('HOME.SIGNOUT_SUCCESS'));
     // } else {
     //   this.toastr.error(this.translate.instant('HOME.SIGNOUT_FAIL'));

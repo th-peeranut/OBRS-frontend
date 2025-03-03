@@ -130,7 +130,7 @@ export class LoginComponent implements OnDestroy {
       const payload = this.loginForm.value;
       const res = await this.service.login(payload);
 
-      if (res.code === 200) {
+      if (res?.code === 200) {
         this.toastr.success(this.translate.instant('LOGIN.LOGIN_SUCCESS'));
         this.router.navigateByUrl('/home');
       } else {
