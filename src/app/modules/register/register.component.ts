@@ -206,13 +206,6 @@ export class RegisterComponent implements OnDestroy {
   }
 
   async checkDuplicateData(value: string, option: number) {
-    console.log(
-      option,
-      option === REGISTER_OPTION.USERNAME,
-      option === REGISTER_OPTION.EMAIL,
-      option === REGISTER_OPTION.PHONENUMBER
-    );
-
     if (!value) return;
 
     let res: any = null;

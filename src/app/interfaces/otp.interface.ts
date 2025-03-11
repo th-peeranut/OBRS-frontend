@@ -12,3 +12,9 @@ export interface OtpVerify {
   token: string;
   pin: string;
 }
+
+export interface LoginOtpVerify {
+  token: string;
+  pin: string;
+  phoneNumber: string;
+}

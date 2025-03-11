@@ -14,7 +14,11 @@ import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
 import { PrimeNGConfig } from 'primeng/api';
 import { OtpService } from '../../services/otp/otp.service';
-import { OtpRequest, OtpVerify } from '../../interfaces/otp.interface';
+import {
+  LoginOtpVerify,
+  OtpRequest,
+  OtpVerify,
+} from '../../interfaces/otp.interface';
 
 @Component({
   selector: 'app-otp-validate',
@@ -51,7 +55,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private toastr: ToastrService,
     private router: Router,
     private route: ActivatedRoute,
-    private otpService: OtpService
+    private otpService: OtpService,
+    private authService: AuthService
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
@@ -158,7 +163,18 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     if (this.otpCode) {
       let payload: OtpVerify = { pin: this.otpCode, token: this.token };
 
-      const resVerify = await this.otpService.verifyOTP(payload);
+      let resVerify;
+
+      if (this.option === 'login') {
+        const loginPayload: LoginOtpVerify = {
+          ...payload,
+          phoneNumber: this.phoneNo ? this.phoneNo : '',
+        };
+
+        resVerify = await this.authService.loginWithOtp(loginPayload);
+      } else {
+        resVerify = await this.otpService.verifyOTP(payload);
+      }
 
       if (resVerify?.code === 200) {
         this.toastr.success('succ');

@@ -5,6 +5,7 @@ import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Register } from '../interfaces/auth.interface';
 import { ResponseAPI } from '../interfaces/response.interface';
+import { LoginOtpVerify } from '../interfaces/otp.interface';
 
 @Injectable({
   providedIn: 'root',
@@ -114,16 +115,20 @@ export class AuthService {
       .catch((err) => err);
   }
 
-  loginByPhoneNo(payload: {
-    phoneNo: string;
-  }): Promise<ResponseAPI<any> | undefined> {
-    return this.http
-      .post<ResponseAPI<any>>(
-        `${environment.apiUrl}/auth/loginByPhoneNo`,
-        payload
-      )
-      .toPromise()
-      .then((response) => response);
+  loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<any> | undefined> {
+    return (
+      this.http
+        .post<ResponseAPI<any>>(
+          `${environment.apiUrl}/auth/login/otp/test`,
+          payload
+        )
+        // .post<ResponseAPI<any>>(
+        //   `${environment.apiUrl}/auth/login/otp`,
+        //   payload
+        // )
+        .toPromise()
+        .then((response) => response)
+    );
   }
 
   forgetPassword(payload: {

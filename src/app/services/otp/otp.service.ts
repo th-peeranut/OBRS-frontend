@@ -18,6 +18,9 @@ export class OtpService {
       .post<ResponseAPI<OtpResponse>>(this.url + '/request/test', payload, {
         headers,
       })
+      // .post<ResponseAPI<OtpResponse>>(this.url + '/request', payload, {
+      //   headers,
+      // })
       .toPromise()
       .then((response) => {
         if (!response) throw new Error('Failed to request otp');
@@ -31,6 +34,9 @@ export class OtpService {
       .post<ResponseAPI<OtpResponse>>(this.url + '/verify/test', payload, {
         headers,
       })
+      // .post<ResponseAPI<OtpResponse>>(this.url + '/verify', payload, {
+      //   headers,
+      // })
       .toPromise()
       .then((response) => {
         if (!response) throw new Error('Failed to verify otp');
