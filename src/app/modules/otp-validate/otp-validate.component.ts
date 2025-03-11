@@ -177,11 +177,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
       }
 
       if (resVerify?.code === 200) {
-        this.toastr.success('succ');
-        this.router.navigateByUrl('/home');
-
-        if (this.option === 'login') {
-          // const res = await this.service.loginByPhoneNo(payload);
+        if (this.option === 'forget-password') {
+          // const res = await this.service.forgetPassword(payload);
         } else if (this.option === 'register') {
           const registerValue = this.service.getRegisterValue();
 
@@ -199,8 +196,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               );
             }
           }
-        } else {
-          // const res = await this.service.forgetPassword(payload);
+        } else if (this.option === 'login') {
+          this.toastr.success('succ');
+          this.router.navigateByUrl('/home');
         }
       } else {
         this.toastr.error('error');
