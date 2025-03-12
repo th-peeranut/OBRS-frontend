@@ -19,12 +19,16 @@ import { ToastrService } from 'ngx-toastr';
   styleUrl: './navbar.component.scss',
 })
 export class NavbarComponent implements OnInit, OnDestroy {
-  isDropdownOpen: boolean = false;
+  isLanguageDropdownOpen: boolean = false;
+  isProfileDropdownOpen: boolean = false;
+
   isShowPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
-  @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
+  @ViewChild('languageDropdown', { static: true })
+  languageDropdown!: ElementRef;
+  @ViewChild('profileDropdown', { static: true }) profileDropdown!: ElementRef;
 
   isLogin: boolean = false;
   userName: string | null = '';
@@ -39,17 +43,19 @@ export class NavbarComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef,
     private authService: AuthService,
     private router: Router,
-    private toastr: ToastrService,
+    private toastr: ToastrService
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
   }
 
   ngOnInit(): void {
-    this.authSubscription$ = this.authService.authStatus$.subscribe((status) => {
-      this.isLogin = status;
-      this.userName = this.authService.getUsername();
-    });
+    this.authSubscription$ = this.authService.authStatus$.subscribe(
+      (status) => {
+        this.isLogin = status;
+        this.userName = this.authService.getUsername();
+      }
+    );
   }
 
   ngOnDestroy(): void {
@@ -58,7 +64,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   switchLanguage(lang: string) {
-    this.isDropdownOpen = false;
+    this.isLanguageDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
     this.languageOnChange$ = this.translate
@@ -67,26 +73,50 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   toggleDropdown() {
-    this.isDropdownOpen = !this.isDropdownOpen;
+    this.isLanguageDropdownOpen = !this.isLanguageDropdownOpen;
 
-    if (this.isDropdownOpen) {
+    if (this.isLanguageDropdownOpen) {
       this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleOutsideClick(event)
+        this.handleLanguageDropdownOutsideClick(event)
       );
     }
   }
 
-  handleOutsideClick(event: Event) {
+  handleLanguageDropdownOutsideClick(event: Event) {
     const targetElement = event.target as HTMLElement;
     const clickedInsideDropdown =
       this.elementRef.nativeElement.contains(targetElement);
     const clickedDropdownButton =
-      this.dropdownButton.nativeElement.contains(targetElement);
+      this.languageDropdown.nativeElement.contains(targetElement);
 
     if (clickedInsideDropdown && clickedDropdownButton) {
-      this.isDropdownOpen = true;
+      this.isLanguageDropdownOpen = true;
     } else {
-      this.isDropdownOpen = false;
+      this.isLanguageDropdownOpen = false;
+    }
+  }
+
+  toggleProfileDropdown() {
+    this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
+
+    if (this.isProfileDropdownOpen) {
+      this.renderer.listen('document', 'click', (event: Event) =>
+        this.handleProfileDropdownOutsideClick(event)
+      );
+    }
+  }
+
+  handleProfileDropdownOutsideClick(event: Event) {
+    const targetElement = event.target as HTMLElement;
+    const clickedInsideDropdown =
+      this.elementRef.nativeElement.contains(targetElement);
+    const clickedDropdownButton =
+      this.profileDropdown.nativeElement.contains(targetElement);
+
+    if (clickedInsideDropdown && clickedDropdownButton) {
+      this.isProfileDropdownOpen = true;
+    } else {
+      this.isProfileDropdownOpen = false;
     }
   }
 
@@ -102,6 +132,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // } else {
     //   this.toastr.error(this.translate.instant('HOME.SIGNOUT_FAIL'));
     // }
+
+    this.isProfileDropdownOpen = false;
 
     this.authService.clearAuthData();
     this.toastr.success(this.translate.instant('HOME.NAVBAR.SIGNOUT_SUCCESS'));

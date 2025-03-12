@@ -21,25 +21,25 @@
     <!-- Change Language Dropdown -->
     <div class="dropdown mb-3">
       <button
-        #dropdownButton
+        #languageDropdown
         class="btn btn-lang dropdown-toggle p-0"
         type="button"
-        id="dropdownMenuButton"
+        id="languageDropdown"
         data-bs-toggle="dropdown"
         aria-expanded="false"
-        [class.active]="isDropdownOpen"
+        [class.active]="isLanguageDropdownOpen"
         (click)="toggleDropdown()"
       >
         <img class="mx-2" [src]="currentLanguage + '.svg'" alt="th" />
         {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
         <img
           class="arrow-icon"
-          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+          [src]="isLanguageDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
           alt="Arrow Icon"
         />
       </button>
 
-      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+      <ul class="dropdown-menu" aria-labelledby="languageDropdown">
         <li>
           <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
             <img class="mx-2" src="th.svg" alt="th" />
@@ -72,14 +72,35 @@
     </ng-container>
 
     <ng-container *ngIf="isLogin">
-      <!-- USERNAME -->
-      <div class="profile-border">
-        {{ userName }}
+      <!-- PROFILE DROPDOWN -->
+      <div class="dropdown mb-3">
+        <button
+          #profileDropdown
+          class="btn btn-lang dropdown-toggle-no-border p-0"
+          type="button"
+          id="profileDropdown"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          [class.active]="isProfileDropdownOpen"
+          (click)="toggleDropdown()"
+        >
+          <img class="mx-2" src="images/profile.svg" alt="Profile Image" />
+          {{ userName }}
+          <img
+            class="arrow-icon"
+            [src]="isProfileDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+            alt="Arrow Icon"
+          />
+        </button>
+  
+        <ul class="dropdown-menu" aria-labelledby="profileDropdown">
+          <li>
+            <a class="dropdown-item menu-lang" (click)="onLogout()">
+              {{ "HOME.NAVBAR.SIGNOUT" | translate }}
+            </a>
+          </li>
+        </ul>
       </div>
-      <!-- ออกจากระบบ -->
-      <button class="btn btn-signout" type="button" (click)="onLogout()">
-        {{ "HOME.NAVBAR.SIGNOUT" | translate }}
-      </button>
     </ng-container>
   </div>
 </div>
