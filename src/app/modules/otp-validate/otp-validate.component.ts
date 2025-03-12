@@ -182,6 +182,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         } else if (this.option === 'register') {
           const registerValue = this.service.getRegisterValue();
 
+          console.log(registerValue);
+          
           if (registerValue) {
             const resRegister = await this.service.register(registerValue);
 

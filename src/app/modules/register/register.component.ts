@@ -83,7 +83,7 @@ export class RegisterComponent implements OnDestroy {
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
-      roles: [[5]], // 5 = CUSTOMER ROLE
+      roles: [[4]], // 4 = CUSTOMER ROLE
     });
 
     this.emailSubscription$ = this.registerForm.get('email')?.valueChanges
@@ -201,6 +201,7 @@ export class RegisterComponent implements OnDestroy {
       const formValue = this.registerForm.getRawValue();
 
       this.service.setRegisterValue(formValue);
+      console.log(this.service.getRegisterValue())
       this.router.navigate(['/otp', 'register', formValue.phoneNumber]);
     }
   }
