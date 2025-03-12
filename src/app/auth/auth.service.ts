@@ -127,7 +127,18 @@ export class AuthService {
         //   payload
         // )
         .toPromise()
-        .then((response) => response)
+        .then((response) => {
+          if (response?.code === 200) {
+            this.storeAuthData(response?.data.token, response?.data?.username);
+          }
+          return response;
+        })
+        .catch((err) => {
+          if (err?.error.includes('JWT expired')) {
+            this.clearAuthData();
+          }
+          return err;
+        })
     );
   }
 
