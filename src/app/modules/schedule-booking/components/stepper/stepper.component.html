@@ -1,0 +1,37 @@
+<div class="station-bg">
+  <div class="map-section">
+    <div class="map-logo">
+      <div class="station-section">
+        <div class="stepper-container">
+          <!-- STEP 1 -->
+          <div class="step" [class.active]="step === 1" (click)="goToStep(1)">
+            <div class="circle"></div>
+            <p class="title mt-3">ขั้นตอนที่ 1</p>
+            <p class="desc mt-3">รอบการเดินทาง</p>
+          </div>
+          <div class="line"></div>
+          <!-- STEP 2 -->
+          <div class="step" [class.active]="step === 2" (click)="goToStep(2)">
+            <div class="circle"></div>
+            <p class="title mt-3">ขั้นตอนที่ 2</p>
+            <p class="desc mt-3">ตรวจสอบข้อมูล</p>
+          </div>
+          <div class="line"></div>
+          <!-- STEP 3 -->
+          <div class="step" [class.active]="step === 3" (click)="goToStep(3)">
+            <div class="circle"></div>
+            <p class="title mt-3">ขั้นตอนที่ 3</p>
+            <p class="desc mt-3">ข้อมูลส่วนตัว</p>
+          </div>
+          <div class="line"></div>
+          <!-- STEP 4 -->
+          <div class="step" [class.active]="step === 4" (click)="goToStep(4)">
+            <div class="circle"></div>
+            <p class="title mt-3">ขั้นตอนที่ 4</p>
+            <p class="desc mt-3">ชำระเงิน</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

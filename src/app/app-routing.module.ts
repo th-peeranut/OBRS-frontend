@@ -15,7 +15,9 @@ const routes: Routes = [
   {
     path: 'login-mobile',
     loadChildren: () =>
-      import('./modules/login-mobile/login-mobile.module').then((m) => m.LoginMobileModule),
+      import('./modules/login-mobile/login-mobile.module').then(
+        (m) => m.LoginMobileModule
+      ),
   },
   {
     path: 'register',
@@ -36,6 +38,13 @@ const routes: Routes = [
     loadChildren: () =>
       import('./modules/forget-password/forget-password.module').then(
         (m) => m.ForgetPasswordModule
+      ),
+  },
+  {
+    path: 'schedule-booking',
+    loadChildren: () =>
+      import('./modules/schedule-booking/schedule-booking.module').then(
+        (m) => m.ScheduleBookingModule
       ),
   },
 

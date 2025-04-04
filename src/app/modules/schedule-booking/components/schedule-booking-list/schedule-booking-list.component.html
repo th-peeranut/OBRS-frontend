@@ -1,0 +1,50 @@
+<div class="booking-container">
+  <h3 class="title">รอบการเดินทาง</h3>
+
+  <div class="schedule-item mb-3" *ngFor="let schedule of schedules">
+    <!-- LEFT -->
+    <div class="left">
+      <div class="icon">
+        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+      </div>
+
+      <div class="time">{{ schedule.departure }}</div>
+
+      <div class="time-info">
+        <div class="route">
+          {{ schedule.duration }}
+        </div>
+
+        <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+
+        <div class="route">
+          {{ schedule.route }}
+        </div>
+      </div>
+
+      <div class="time">
+        {{ schedule.arrival }}
+      </div>
+    </div>
+    <!-- RIGHT -->
+    <div class="right">
+      <div class="text-container">
+        <div class="price">{{ schedule.price }} บาท</div>
+
+        <div class="availability">
+          <span>เหลือ {{ schedule.available }} ที่นั่ง</span>
+          <span>|</span>
+          <span>ราคาคนละ</span>
+        </div>
+      </div>
+
+      <button
+        class="select-btn"
+        (click)="selectSchedule(schedule)"
+        [class.select-btn-diabled]="schedule.available === 0"
+      >
+        เลือก
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,73 @@
+@import "../../../../../styles/variables.scss";
+@import "../../../home/components/station-home/station-home.component.scss";
+
+.station-bg {
+  height: 300px;
+
+  .map-section {
+    border-radius: 0;
+
+    .map-logo {
+      border-radius: 0;
+    }
+  }
+}
+
+.station-section {
+  height: 300px;
+
+  text-align: center;
+}
+
+
+.stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  padding: 40px 360px;
+}
+
+.step {
+  text-align: center;
+  color: #b0d4e8;
+  position: relative;
+
+  .circle {
+    width: 16px;
+    height: 16px;
+    background: #b0d4e8;
+    border-radius: 50%;
+    margin: 0 auto 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .title {
+    font-size: 12px;
+    margin: 0;
+  }
+
+  .desc {
+    font-size: 14px;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  &.active {
+    .circle {
+      background: #00aaff;
+      box-shadow: 0 0 4px 2px #00aaff;
+    }
+    .desc {
+      color: #ffffff;
+    }
+  }
+}
+
+.line {
+  flex: 1;
+  height: 2px;
+  background: #b0d4e8;
+  margin: 0 8px;
+}

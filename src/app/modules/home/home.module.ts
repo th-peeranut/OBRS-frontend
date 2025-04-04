@@ -1,37 +1,31 @@
-// Angular Modules
+// Modules
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterModule, Routes } from '@angular/router';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-
-// Third-Party Libraries
-import { TranslateModule } from '@ngx-translate/core';
+import { SharedModule } from '../../shared/shared.module';
 import { CalendarModule } from 'primeng/calendar';
 
-// Application Components
+// Components
 import { HomeComponent } from './home.component';
-import { NavbarComponent } from './components/navbar/navbar.component';
 import { HomeBookingComponent } from './components/home-booking/home-booking.component';
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { StationHomeComponent } from './components/station-home/station-home.component';
-import { FooterComponent } from './components/footer/footer.component';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
 @NgModule({
-  declarations: [HomeComponent, NavbarComponent, HomeBookingComponent, StationHomeComponent, FooterComponent],
+  declarations: [HomeComponent, HomeBookingComponent, StationHomeComponent],
   imports: [
-    CommonModule,
-    FormsModule,
-    ReactiveFormsModule,
+    SharedModule,
     RouterModule.forChild(routes),
-    TranslateModule,
+
+    // Add-ons
     CalendarModule,
 
     // Components
     DropdownObrsComponent,
     DropdownObrsPassengerComponent,
   ],
+  exports: [HomeBookingComponent, DropdownObrsComponent, DropdownObrsPassengerComponent],
 })
 export class HomeModule {}

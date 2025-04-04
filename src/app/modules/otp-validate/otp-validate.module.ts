@@ -1,26 +1,22 @@
+// Modules
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { OtpValidateComponent } from './otp-validate.component';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Routes, RouterModule } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { SharedModule } from '../../shared/shared.module';
+
+// Components
+import { OtpValidateComponent } from './otp-validate.component';
 import { OtpComponent } from '../../shared/components/otp/otp.component';
- 
+
 const routes: Routes = [{ path: '', component: OtpValidateComponent }];
 
 @NgModule({
-  declarations: [
-    OtpValidateComponent,
-  ],
+  declarations: [OtpValidateComponent],
   imports: [
-    CommonModule,
+    SharedModule,
     RouterModule.forChild(routes),
-    TranslateModule,
 
-    FormsModule,
-    ReactiveFormsModule,
-
-    OtpComponent
+    // Add-ons
+    OtpComponent,
   ],
 })
-export class OtpValidateModule { }
+export class OtpValidateModule {}

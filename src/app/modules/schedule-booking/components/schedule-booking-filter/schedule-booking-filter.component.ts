@@ -1,16 +1,16 @@
 import { Component } from '@angular/core';
-import { Dropdown } from '../../../../interfaces/dropdown.interface';
-import { FormBuilder, FormGroup } from '@angular/forms';
-import dayjs from 'dayjs';
+import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
+import dayjs from 'dayjs';
+import { Dropdown } from '../../../../interfaces/dropdown.interface';
 
 @Component({
-  selector: 'app-home-booking',
-  templateUrl: './home-booking.component.html',
-  styleUrl: './home-booking.component.scss',
+  selector: 'app-schedule-booking-filter',
+  templateUrl: './schedule-booking-filter.component.html',
+  styleUrl: './schedule-booking-filter.component.scss'
 })
-export class HomeBookingComponent {
-  roundTripDropdowns: Dropdown[] = [
+export class ScheduleBookingFilterComponent {
+roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
       value: 'HOME.HOME_BOOKING.ROUNDTRIP_1',
@@ -46,8 +46,6 @@ export class HomeBookingComponent {
   onSearch() {
     const payload = this.getPayload();
     console.log('Search payload:', payload);
-
-    this.router.navigate(['/schedule-booking']);
   }
 
   getPayload() {

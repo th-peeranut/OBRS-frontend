@@ -9,7 +9,7 @@ import {
 import { TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
-import { AuthService } from '../../../../auth/auth.service';
+import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { ToastrService } from 'ngx-toastr';
 

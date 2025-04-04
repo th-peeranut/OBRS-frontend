@@ -1,23 +1,15 @@
+// Modules
 import { NgModule } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { LoginMobileComponent } from './login-mobile.component';
-import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule, Routes } from '@angular/router';
-import { TranslateModule } from '@ngx-translate/core';
+import { SharedModule } from '../../shared/shared.module';
+
+// Components
+import { LoginMobileComponent } from './login-mobile.component';
 
 const routes: Routes = [{ path: '', component: LoginMobileComponent }];
 
 @NgModule({
-  declarations: [
-    LoginMobileComponent,
-  ],
-  imports: [
-    CommonModule,
-    RouterModule.forChild(routes),
-    TranslateModule,
-
-    FormsModule,
-    ReactiveFormsModule,
-  ]
+  declarations: [LoginMobileComponent],
+  imports: [SharedModule, RouterModule.forChild(routes)],
 })
-export class LoginMobileModule { }
+export class LoginMobileModule {}
