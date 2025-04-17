@@ -60,5 +60,7 @@ export class ScheduleBookingListComponent {
   selectSchedule(schedule: any) {
     console.log('Schedule selected:', schedule);
     // Implement logic to save selection
+
+    
   }
 }

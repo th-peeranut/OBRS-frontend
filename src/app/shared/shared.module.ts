@@ -7,9 +7,10 @@ import { TranslateModule } from '@ngx-translate/core';
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { FooterComponent } from './components/footer/footer.component';
+import { StepperComponent } from './components/stepper/stepper.component';
 
 @NgModule({
-  declarations: [FooterComponent, NavbarComponent],
+  declarations: [FooterComponent, NavbarComponent, StepperComponent],
   imports: [
     CommonModule,
     RouterModule,
@@ -28,6 +29,7 @@ import { FooterComponent } from './components/footer/footer.component';
     // Components
     FooterComponent,
     NavbarComponent,
+    StepperComponent
   ],
 })
 export class SharedModule {}
