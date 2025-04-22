@@ -1,0 +1,16 @@
+.content-container {
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  column-gap: 24px;
+  padding: 0 360px;
+}
+
+.summary-container {
+  width: 70%;
+}
+
+.total-container {
+  width: 30%;
+}
+

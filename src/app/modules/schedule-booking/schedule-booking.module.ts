@@ -10,7 +10,6 @@ import { ScheduleBookingFilterComponent } from './components/schedule-booking-fi
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { ScheduleBookingListComponent } from './components/schedule-booking-list/schedule-booking-list.component';
-import { StepperComponent } from '../../shared/components/stepper/stepper.component';
 
 const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 

@@ -1,6 +1,7 @@
 @import "../../../home/components/home-booking/home-booking.component.scss";
 
 .booking-section {
+  background: #f6fcff;
   padding: 0 360px;
 
   .booking-card {
@@ -8,5 +9,7 @@
 
     margin-top: 32px;
     margin-bottom: 32px;
+
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   }
 }
