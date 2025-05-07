@@ -1,5 +1,7 @@
 <div class="booking-container">
-  <h3 class="title">รอบการเดินทาง</h3>
+  <h3 class="title">
+    {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+  </h3>
 
   <div class="schedule-item mb-3" *ngFor="let schedule of schedules">
     <!-- LEFT -->
@@ -8,11 +10,15 @@
         <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
       </div>
 
-      <div class="time">{{ schedule.departure }}</div>
+      <div class="time">
+        {{ schedule.departure }} 
+        {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+      </div>
 
       <div class="time-info">
         <div class="route">
-          {{ schedule.duration }}
+          {{ schedule.hour }} {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }} 
+          {{ schedule.minute }} {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }} 
         </div>
 
         <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
@@ -23,18 +29,26 @@
       </div>
 
       <div class="time">
-        {{ schedule.arrival }}
+        {{ schedule.arrival }} 
+        {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
       </div>
     </div>
     <!-- RIGHT -->
     <div class="right">
       <div class="text-container">
-        <div class="price">{{ schedule.price }} บาท</div>
+        <div class="price">
+          {{ schedule.price }}
+          {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+        </div>
 
         <div class="availability">
-          <span>เหลือ {{ schedule.available }} ที่นั่ง</span>
+          <span>
+            {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
+            {{ schedule.available }}
+            {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
+          </span>
           <span>|</span>
-          <span>ราคาคนละ</span>
+          <span>{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
         </div>
       </div>
 
@@ -43,7 +57,7 @@
         (click)="selectSchedule(schedule)"
         [class.select-btn-diabled]="schedule.available === 0"
       >
-        เลือก
+        {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
       </button>
     </div>
   </div>

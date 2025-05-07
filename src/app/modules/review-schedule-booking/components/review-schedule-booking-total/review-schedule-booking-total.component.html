@@ -1,26 +1,45 @@
 <div class="card-container">
-  <div class="card-header">รายละเอียดราคา</div>
+  <div class="card-header">
+    {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
+  </div>
 
   <hr />
 
   <div class="card-body">
     <div class="card-body-content">
-      <span>ผู้ใหญ่</span>
-      <span>2 คน</span>
+      <span>
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
+      </span>
+      <span>
+        2 
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+      </span>
     </div>
 
     <div class="card-body-content">
-      <span>ราคาตั๋ว</span>
-      <span>150.00 บาท/คน</span>
+      <span>
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
+      </span>
+      <span>
+        150.00 
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+      </span>
     </div>
   </div>
 
   <hr class="dotted-line" />
 
   <div class="card-footer">
-    <span>ราคารวม</span>
-    <span>300.00 บาท</span>
+    <span>
+      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
+    </span>
+    <span>
+      300.00 
+      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+    </span>
   </div>
 </div>
 
-<div class="btn-confirm">ยืนยันข้อมูล</div>
+<div class="btn-confirm">
+  {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.CONFIRM" | translate }}
+</div>

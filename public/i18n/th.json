@@ -223,5 +223,47 @@
 
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved"
     }
+  },
+  "STEPPER": {
+    "NO": "ขั้นตอนที่",
+    "STEP_1": "รอบการเดินทาง",
+    "STEP_2": "ตรวจสอบข้อมูล",
+    "STEP_3": "ข้อมูลส่วนตัว",
+    "STEP_4": "ชำระเงิน"
+  },
+  "SCHEDULE_BOOKING": {
+    "HEADER": "รอบการเดินทาง",
+    "TIME_UNIT": "น.",
+    "HOUR_UNIT": "ชั่วโมง",
+    "MINITE_UNIT": "นาที",
+    "BAHT_UNIT": "บาท",
+    "SEAT_REMAIN": "เหลือ",
+    "SEAT_UNIT": "ที่นั่ง",
+    "SEAT_PER_PASSENGER": "ราคาคนละ",
+    "CHOOSE": "เลือก"
+  },
+  "REVIEW_SCHEDULE_BOOKING": {
+    "SUMMARY": {
+      "HEADER": "สรุปการเดินทาง",
+      "ROUND_TRIP": "รอบการเดินทาง",
+      "ROUND_TRIP_ONEWAY": "เที่ยวเดียว",
+      "ROUND_TRIP_TWOWAY": "ไป-กลับ",
+      "CHANGE_DATA": "เปลี่ยนข้อมูล",
+      "DATE_UNIT": "วันที่",
+      "TIME_UNIT": "น.",
+      "HOUR_UNIT": "ชั่วโมง",
+      "MINITE_UNIT": "นาที"
+    },
+    "TOTAL": {
+      "HEADER": "รายละเอียดราคา",
+      "ADULT_UNIT": "ผู้ใหญ่",
+      "KID_UNIT": "เด็ก",
+      "PASSENGER_UNIT": "คน",
+      "TICKET_PRICE": "ราคาตั๋ว",
+      "TICKET_UNIT": "บาท/คน",
+      "TOTAL": "ราคารวม",
+      "TOTAL_UNIT": "บาท",
+      "CONFIRM": "ยืนยันข้อมูล"
+    }
   }
 }
