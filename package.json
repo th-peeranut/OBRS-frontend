@@ -26,7 +26,6 @@
     "bootstrap-icons": "~1.11.3",
     "dayjs": "~1.11.13",
     "jquery": "~3.7.1",
-    "ngx-modal-dialog": "~4.0.0",
     "ngx-otp-input": "~1.1.2",
     "ngx-toastr": "~19.0.0",
     "primeicons": "~7.0.0",
