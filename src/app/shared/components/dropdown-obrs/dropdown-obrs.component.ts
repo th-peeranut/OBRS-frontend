@@ -11,8 +11,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
-import { Dropdown } from '../../../interfaces/dropdown.interface';
-import { TranslateModule } from '@ngx-translate/core';
+
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -32,13 +32,13 @@ import { CommonModule } from '@angular/common';
 export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   @Input() isLabel: boolean = false;
   @Input() label: string = '';
-  @Input() options: Dropdown[] = [];
+  @Input() options: any = [];
   @Input() isBorder: boolean = false;
 
-  @Output() currentValue = new EventEmitter<number>();
+  @Output() currentValue = new EventEmitter<any>();
 
   isDropdownOpen: boolean = false;
-  selectedValue!: Dropdown;
+  selectedValue!: any;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -46,10 +46,14 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   private onChange: (value: number) => void = () => {};
   private onTouched: () => void = () => {};
 
-  constructor(private renderer: Renderer2, private elementRef: ElementRef) {}
+  constructor(
+    private renderer: Renderer2,
+    private elementRef: ElementRef,
+    private translate: TranslateService
+  ) {}
 
   ngOnChanges(changes: SimpleChanges) {
-    const defaultData = this.options.find((value) => value.isDefault);
+    const defaultData = this.options.find((value: any) => value.isDefault);
     if (defaultData) {
       this.setCurrentValue(defaultData);
     }
@@ -79,14 +83,16 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
     }
   }
 
-  setCurrentValue(data: Dropdown) {
+  setCurrentValue(data: any) {
     this.selectedValue = data;
-    this.currentValue.emit(data.id);
-    this.onChange(data.id);
+    this.currentValue.emit(data);
+    this.onChange(data);
   }
 
   writeValue(value: number): void {
-    this.selectedValue = this.options.find((option) => option.id === value)!;
+    this.selectedValue = this.options.find(
+      (option: any) => option.id === value
+    )!;
   }
 
   registerOnChange(fn: (value: number) => void): void {
@@ -98,4 +104,12 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   }
 
   setDisabledState?(isDisabled: boolean): void {}
+
+  getValue(option: any) {
+    if(!option) return '';
+    
+    return this.translate.currentLang === 'th'
+      ? option.nameThai
+      : option.nameEnglish;
+  }
 }

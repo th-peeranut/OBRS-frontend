@@ -10,8 +10,6 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
-import { Location } from '@angular/common';
-import { RolesService } from '../../services/roles/roles.service';
 import { Router } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
@@ -41,7 +39,6 @@ export class LoginComponent implements OnDestroy {
     private fb: FormBuilder,
     private service: AuthService,
     private toastr: ToastrService,
-    private roleService: RolesService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {

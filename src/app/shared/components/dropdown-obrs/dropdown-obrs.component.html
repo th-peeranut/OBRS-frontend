@@ -1,7 +1,5 @@
 <div class="form-group-obrs">
-  <label *ngIf="isLabel">
-    {{ label | translate }} :
-  </label>
+  <label *ngIf="isLabel"> {{ label | translate }} : </label>
 
   <div class="dropdown">
     <button
@@ -17,9 +15,9 @@
     >
       <!-- CURRENT VALUE -->
       <div class="value-text">
-        {{ selectedValue ? (selectedValue.value | translate) : "" }}
+        {{ getValue(selectedValue) }}
       </div>
-  
+
       <!-- ARROW ICON -->
       <img
         class="arrow-icon"
@@ -40,11 +38,11 @@
             class="dropdown-item dropdown-option"
             (click)="setCurrentValue(option)"
           >
-            {{ option ? (option.value | translate) : "" }}
+            {{ getValue(option) }}
           </a>
         </li>
       </ng-container>
-  
+
       <ng-container *ngIf="options.length === 0">
         <li class="px-3">
           {{ "SHARED.NO_CONTENT" | translate }}
@@ -53,5 +51,3 @@
     </ul>
   </div>
 </div>
-
-

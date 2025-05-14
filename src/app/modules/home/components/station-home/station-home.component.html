@@ -69,7 +69,7 @@
                       (click)="navMap(station.url)"
                     >
                       <div class="station-card-content">
-                        {{ station.nameThai }}
+                        {{ getStationName(station) }}
                       </div>
                     </div>
                   </div>
@@ -102,7 +102,7 @@
                   <div class="station-content">
                     <div class="station-card" (click)="navMap(station.url)">
                       <div class="station-card-content">
-                        {{ station.nameThai }}
+                        {{ getStationName(station) }}
                       </div>
                     </div>
                   </div>

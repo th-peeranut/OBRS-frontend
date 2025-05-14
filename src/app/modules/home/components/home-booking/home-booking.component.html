@@ -27,7 +27,8 @@
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.START_STATION'"
-            [options]="[]"
+            [options]="startStationList"
+            (currentValue)="onStartStationChange($event)"
           ></app-dropdown-obrs>
           <!-- STATION ICON -->
           <img
@@ -40,7 +41,8 @@
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.END_STATION'"
-            [options]="[]"
+            [options]="endStationList"
+            (currentValue)="onendStationChange($event)"
           ></app-dropdown-obrs>
         </div>
 

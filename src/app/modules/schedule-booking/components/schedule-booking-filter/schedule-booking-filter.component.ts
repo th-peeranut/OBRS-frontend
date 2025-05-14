@@ -7,18 +7,20 @@ import { Dropdown } from '../../../../interfaces/dropdown.interface';
 @Component({
   selector: 'app-schedule-booking-filter',
   templateUrl: './schedule-booking-filter.component.html',
-  styleUrl: './schedule-booking-filter.component.scss'
+  styleUrl: './schedule-booking-filter.component.scss',
 })
 export class ScheduleBookingFilterComponent {
-roundTripDropdowns: Dropdown[] = [
+  roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
-      value: 'HOME.HOME_BOOKING.ROUNDTRIP_1',
+      nameThai: 'เที่ยวเดียว',
+      nameEnglish: 'One-way',
       isDefault: true,
     },
     {
       id: 2,
-      value: 'HOME.HOME_BOOKING.ROUNDTRIP_2',
+      nameThai: 'เที่ยวไป-กลับ',
+      nameEnglish: 'Round-trip',
     },
   ];
 
@@ -45,7 +47,6 @@ roundTripDropdowns: Dropdown[] = [
 
   onSearch() {
     const payload = this.getPayload();
-    console.log('Search payload:', payload);
   }
 
   getPayload() {
