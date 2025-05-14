@@ -142,7 +142,7 @@
 
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    
+
     "VERIFY OTP": "Please verify your subscription via your phone number."
   },
   "LOGIN_BY_PHONE_NO": {
@@ -221,6 +221,48 @@
       "MOCHIT_CONTACT_ADDRESS_2": "(Chatuchak) Building C, Counter C5",
 
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved"
+    }
+  },
+  "STEPPER": {
+    "NO": "Step",
+    "STEP_1": "Trip",
+    "STEP_2": "Check information",
+    "STEP_3": "Personal information",
+    "STEP_4": "Pay"
+  },
+  "SCHEDULE_BOOKING": {
+    "HEADER": "Trip type",
+    "TIME_UNIT": "",
+    "HOUR_UNIT": "hour",
+    "MINITE_UNIT": "minute",
+    "BAHT_UNIT": "baht",
+    "SEAT_REMAIN": "remaining",
+    "SEAT_UNIT": "seats",
+    "SEAT_PER_PASSENGER": "price per person",
+    "CHOOSE": "select"
+  },
+  "REVIEW_SCHEDULE_BOOKING": {
+    "SUMMARY": {
+      "HEADER": "Trip Summary",
+      "ROUND_TRIP": "Trip Type",
+      "ROUND_TRIP_ONEWAY": "One Way",
+      "ROUND_TRIP_TWOWAY": "Round-Trip",
+      "CHANGE_DATA": "Change Data",
+      "DATE_UNIT": "Date",
+      "TIME_UNIT": "",
+      "HOUR_UNIT": "Hours",
+      "MINITE_UNIT": "Minutes"
+    },
+    "TOTAL": {
+      "HEADER": "Price Details",
+      "ADULT_UNIT": "Adult",
+      "KID_UNIT": "Child",
+      "PASSENGER_UNIT": "Person",
+      "TICKET_PRICE": "Ticket Price",
+      "TICKET_UNIT": "baht/person",
+      "TOTAL": "Total price",
+      "TOTAL_UNIT": "baht",
+      "CONFIRM": "Confirm information"
     }
   }
 }
