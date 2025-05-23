@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import dayjs from 'dayjs';
-import { Dropdown } from '../../../../interfaces/dropdown.interface';
+import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 
 @Component({
   selector: 'app-schedule-booking-filter',

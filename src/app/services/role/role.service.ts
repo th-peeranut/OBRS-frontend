@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { ResponseAPI } from '../../interfaces/response.interface';
-import { Role } from '../../interfaces/role.interface';
+import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import { Role } from '../../shared/interfaces/role.interface';
 
 @Injectable({
   providedIn: 'root',

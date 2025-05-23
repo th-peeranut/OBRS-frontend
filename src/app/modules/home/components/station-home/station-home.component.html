@@ -8,8 +8,14 @@
         </div>
         <!-- BODY -->
         <div class="station-section-body">
+          <div class="station-full-switch" *ngIf="routeList.length === 1">
+            <div class="obrs-full-switch text-center">
+              {{ getRoutesName(routeList[0]) }}
+            </div>
+          </div>
+
           <!-- TOGGLE SWITCH -->
-          <div class="station-toggle-switch">
+          <div class="station-toggle-switch" *ngIf="routeList.length === 2">
             <div
               class="obrs-switch text-center"
               [class.left]="currentDirection === 'left'"
@@ -20,95 +26,95 @@
                 [class.active]="currentDirection === 'left'"
                 (click)="onObrsClick('left')"
               >
-                {{ "HOME.STATION.START" | translate }}
+                {{ getRoutesName(routeList[0]) }}
               </div>
               <div
                 class="obrs"
                 [class.active]="currentDirection === 'right'"
                 (click)="onObrsClick('right')"
               >
-                {{ "HOME.STATION.STOP" | translate }}
+                {{ getRoutesName(routeList[1]) }}
               </div>
             </div>
           </div>
           <!-- DETAIL -->
           <div class="station-section-body-detail">
             <div class="station-list-container">
-              <ng-container
-                *ngFor="let station of stationList; let stationIndex = index"
-              >
-                <div class="station-list-item" *ngIf="stationIndex % 2 === 0">
-                  <div
-                    class="station-bullet"
-                    [class.no-before]="stationIndex === stationList.length - 1"
-                  >
-                    <img
-                      *ngIf="
-                        stationIndex === 0 ||
-                        stationIndex === stationList.length - 1
-                      "
-                      src="images/station-node.svg"
-                      alt="Station Node Image"
-                    />
-
-                    <img
-                      *ngIf="
-                        stationIndex !== 0 &&
-                        stationIndex !== stationList.length - 1
-                      "
-                      src="images/station-point.svg"
-                      alt="Station Point Image"
-                    />
-                  </div>
-
-                  <div class="station-line"></div>
-
-                  <div class="station-content">
+              <ng-container *ngIf="stationList | async as stations">
+                <ng-container
+                  *ngFor="let station of stations; let stationIndex = index"
+                >
+                  <div class="station-list-item" *ngIf="stationIndex % 2 === 0">
                     <div
-                      class="station-card ml-5"
-                      (click)="navMap(station.url)"
+                      class="station-bullet"
+                      [class.no-before]="stationIndex === stations.length - 1"
                     >
-                      <div class="station-card-content">
-                        {{ getStationName(station) }}
-                      </div>
+                      <img
+                        *ngIf="
+                          stationIndex === 0 ||
+                          stationIndex === stations.length - 1
+                        "
+                        src="images/station-node.svg"
+                        alt="Station Node Image"
+                      />
+                      <img
+                        *ngIf="
+                          stationIndex !== 0 &&
+                          stationIndex !== stations.length - 1
+                        "
+                        src="images/station-point.svg"
+                        alt="Station Point Image"
+                      />
                     </div>
-                  </div>
-                </div>
 
-                <div class="station-list-item" *ngIf="stationIndex % 2 !== 0">
-                  <div
-                    class="station-bullet"
-                    [class.no-before]="stationIndex === stationList.length - 1"
-                  >
-                    <img
-                      *ngIf="
-                        stationIndex === 0 ||
-                        stationIndex === stationList.length - 1
-                      "
-                      src="images/station-node.svg"
-                      alt="Station Node Image"
-                    />
+                    <div class="station-line"></div>
 
-                    <img
-                      *ngIf="
-                        stationIndex !== 0 &&
-                        stationIndex !== stationList.length - 1
-                      "
-                      src="images/station-point-odd.svg"
-                      alt="Station Point Image"
-                    />
-                  </div>
-
-                  <div class="station-content">
-                    <div class="station-card" (click)="navMap(station.url)">
-                      <div class="station-card-content">
-                        {{ getStationName(station) }}
+                    <div class="station-content">
+                      <div
+                        class="station-card ml-5"
+                        (click)="navMap(station.url)"
+                      >
+                        <div class="station-card-content">
+                          {{ getStationName(station) }}
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div class="station-line"></div>
-                </div>
+                  <div class="station-list-item" *ngIf="stationIndex % 2 !== 0">
+                    <div
+                      class="station-bullet"
+                      [class.no-before]="stationIndex === stations.length - 1"
+                    >
+                      <img
+                        *ngIf="
+                          stationIndex === 0 ||
+                          stationIndex === stations.length - 1
+                        "
+                        src="images/station-node.svg"
+                        alt="Station Node Image"
+                      />
+                      <img
+                        *ngIf="
+                          stationIndex !== 0 &&
+                          stationIndex !== stations.length - 1
+                        "
+                        src="images/station-point-odd.svg"
+                        alt="Station Point Image"
+                      />
+                    </div>
+
+                    <div class="station-content">
+                      <div class="station-card" (click)="navMap(station.url)">
+                        <div class="station-card-content">
+                          {{ getStationName(station) }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="station-line"></div>
+                  </div>
+                </ng-container>
               </ng-container>
             </div>
           </div>

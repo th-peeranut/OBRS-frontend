@@ -10,6 +10,11 @@ import { HomeBookingComponent } from './components/home-booking/home-booking.com
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { StationHomeComponent } from './components/station-home/station-home.component';
+import { EffectsModule } from '@ngrx/effects';
+
+import { StoreModule } from '@ngrx/store';
+import { StationReducer } from '../../shared/stores/station/station.reducer';
+import { StationsEffect } from '../../shared/stores/station/station.effect';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -18,6 +23,10 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
   imports: [
     SharedModule,
     RouterModule.forChild(routes),
+
+    // Store
+    StoreModule.forFeature('stationList', StationReducer), 
+    EffectsModule.forFeature([StationsEffect]),
 
     // Add-ons
     CalendarModule,

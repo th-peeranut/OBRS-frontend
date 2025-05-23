@@ -3,9 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Register } from '../interfaces/auth.interface';
-import { ResponseAPI } from '../interfaces/response.interface';
-import { LoginOtpVerify } from '../interfaces/otp.interface';
+import { Register } from '../shared/interfaces/auth.interface';
+import { ResponseAPI } from '../shared/interfaces/response.interface';
+import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 
 @Injectable({
   providedIn: 'root',

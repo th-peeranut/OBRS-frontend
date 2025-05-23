@@ -2,7 +2,6 @@ import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import {
   provideHttpClient,
-  HTTP_INTERCEPTORS,
   HttpClient,
   withInterceptors,
 } from '@angular/common/http';
@@ -19,8 +18,15 @@ import { AuthService } from './auth/auth.service';
 import { TranslateLoader, TranslateModule } from '@ngx-translate/core';
 import { TranslateHttpLoader } from '@ngx-translate/http-loader';
 
+// STORE IMPORT
+import { StoreModule } from '@ngrx/store';
+import { EffectsModule } from '@ngrx/effects';
+import { StoreDevtoolsModule } from '@ngrx/store-devtools';
+import { appReducer } from './shared/stores/app.reducer';
+
 import { AppComponent } from './app.component';
 import { SharedModule } from './shared/shared.module';
+import { environment } from '../environments/environment';
 
 export function HttpLoaderFactory(http: HttpClient) {
   return new TranslateHttpLoader(http, '/i18n/', '.json');
@@ -48,6 +54,11 @@ export function HttpLoaderFactory(http: HttpClient) {
       positionClass: 'toast-top-right',
       preventDuplicates: true,
     }),
+    
+    // STORE IMPORT
+    EffectsModule.forRoot([]),
+    StoreModule.forRoot({ appState: appReducer }),
+    StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
 
     SharedModule,
   ],

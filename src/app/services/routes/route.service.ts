@@ -1,14 +1,14 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { ResponseAPI } from '../../interfaces/response.interface';
-import { Route } from '../../interfaces/route.interface';
+import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import { Route } from '../../shared/interfaces/route.interface';
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class RouteService {
-constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {}
 
   getAll(): Promise<ResponseAPI<Route[]>> {
     return this.http
@@ -33,7 +33,11 @@ constructor(private http: HttpClient) {}
   create(role: Route): Promise<ResponseAPI<Route>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http
-      .post<ResponseAPI<Route>>(`${environment.apiUrl}/api/private/routes`, role, { headers })
+      .post<ResponseAPI<Route>>(
+        `${environment.apiUrl}/api/private/routes`,
+        role,
+        { headers }
+      )
       .toPromise()
       .then((response) => {
         if (!response) throw new Error('Failed to create route');
@@ -44,7 +48,11 @@ constructor(private http: HttpClient) {}
   update(id: number, role: Route): Promise<ResponseAPI<Route>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http
-      .put<ResponseAPI<Route>>(`${environment.apiUrl}/api/private/routes/${id}`, role, { headers })
+      .put<ResponseAPI<Route>>(
+        `${environment.apiUrl}/api/private/routes/${id}`,
+        role,
+        { headers }
+      )
       .toPromise()
       .then((response) => {
         if (!response) throw new Error(`Failed to update route with ID ${id}`);
@@ -54,7 +62,9 @@ constructor(private http: HttpClient) {}
 
   delete(id: number): Promise<ResponseAPI<any> | undefined> {
     return this.http
-      .delete<ResponseAPI<any>>(`${environment.apiUrl}/api/private/routes/${id}`)
+      .delete<ResponseAPI<any>>(
+        `${environment.apiUrl}/api/private/routes/${id}`
+      )
       .toPromise()
       .then((response) => {
         if (response === undefined) return;

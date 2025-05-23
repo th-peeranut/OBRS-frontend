@@ -21,7 +21,7 @@
       </div>
 
       <div class="station-section mt-4">
-        <div class="station-group">
+        <div class="station-group" *ngIf="rawStationList | async">
           <!-- DROPDOWN START STATION -->
           <app-dropdown-obrs
             [isBorder]="true"

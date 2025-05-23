@@ -18,7 +18,7 @@ import {
   LoginOtpVerify,
   OtpRequest,
   OtpVerify,
-} from '../../interfaces/otp.interface';
+} from '../../shared/interfaces/otp.interface';
 
 @Component({
   selector: 'app-otp-validate',

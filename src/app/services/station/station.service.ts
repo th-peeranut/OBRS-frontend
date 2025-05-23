@@ -1,8 +1,9 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { Station } from '../../interfaces/station.interface';
-import { ResponseAPI } from '../../interfaces/response.interface';
+import { Station } from '../../shared/interfaces/station.interface';
+import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -10,55 +11,39 @@ import { ResponseAPI } from '../../interfaces/response.interface';
 export class StationService {
   constructor(private http: HttpClient) {}
 
-  getAll(): Promise<ResponseAPI<Station[]>> {
-    return this.http
-      .get<ResponseAPI<Station[]>>(`${environment.apiUrl}/api/stations`)
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to fetch stations');
-        return response;
-      });
+  getAll(): Observable<ResponseAPI<Station[]>> {
+    return this.http.get<ResponseAPI<Station[]>>(
+      `${environment.apiUrl}/api/stations`
+    );
   }
 
-  getById(id: number): Promise<ResponseAPI<Station>> {
-    return this.http
-      .get<ResponseAPI<Station>>(`${environment.apiUrl}/api/private/stations/${id}`)
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error(`Station with ID ${id} not found`);
-        return response;
-      });
+  getById(id: number): Observable<ResponseAPI<Station>> {
+    return this.http.get<ResponseAPI<Station>>(
+      `${environment.apiUrl}/api/private/stations/${id}`
+    );
   }
 
-  create(role: Station): Promise<ResponseAPI<Station>> {
+  create(role: Station): Observable<ResponseAPI<Station>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .post<ResponseAPI<Station>>(`${environment.apiUrl}/api/private/stations`, role, { headers })
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to create station');
-        return response;
-      });
+    return this.http.post<ResponseAPI<Station>>(
+      `${environment.apiUrl}/api/private/stations`,
+      role,
+      { headers }
+    );
   }
 
-  update(id: number, role: Station): Promise<ResponseAPI<Station>> {
+  update(id: number, role: Station): Observable<ResponseAPI<Station>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .put<ResponseAPI<Station>>(`${environment.apiUrl}/api/private/stations/${id}`, role, { headers })
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error(`Failed to update station with ID ${id}`);
-        return response;
-      });
+    return this.http.put<ResponseAPI<Station>>(
+      `${environment.apiUrl}/api/private/stations/${id}`,
+      role,
+      { headers }
+    );
   }
 
-  delete(id: number): Promise<ResponseAPI<any> | undefined> {
-    return this.http
-      .delete<ResponseAPI<any>>(`${environment.apiUrl}/api/private/stations/${id}`)
-      .toPromise()
-      .then((response) => {
-        if (response === undefined) return;
-        return response;
-      });
+  delete(id: number): Observable<ResponseAPI<any>> {
+    return this.http.delete<ResponseAPI<any>>(
+      `${environment.apiUrl}/api/private/stations/${id}`
+    );
   }
 }

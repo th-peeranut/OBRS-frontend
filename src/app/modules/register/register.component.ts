@@ -18,7 +18,7 @@ import {
   switchMap,
 } from 'rxjs';
 import { UserService } from '../../services/user/user.service';
-import { REGISTER_OPTION } from '../../enum/register-option.enum';
+import { REGISTER_OPTION } from '../../shared/enum/register-option.enum';
 
 @Component({
   selector: 'app-register',

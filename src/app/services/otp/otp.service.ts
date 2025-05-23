@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { OtpRequest, OtpResponse, OtpVerify } from '../../interfaces/otp.interface';
+import { OtpRequest, OtpResponse, OtpVerify } from '../../shared/interfaces/otp.interface';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { ResponseAPI } from '../../interfaces/response.interface';
+import { ResponseAPI } from '../../shared/interfaces/response.interface';
 
 @Injectable({
   providedIn: 'root',

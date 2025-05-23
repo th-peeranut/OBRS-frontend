@@ -1,17 +1,22 @@
-import { Component, OnInit } from '@angular/core';
-import { Dropdown } from '../../../../interfaces/dropdown.interface';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import dayjs from 'dayjs';
 import { Router } from '@angular/router';
-import { StationService } from '../../../../services/station/station.service';
-import { Station } from '../../../../interfaces/station.interface';
+
+import { Station } from '../../../../shared/interfaces/station.interface';
+import { Appstate } from '../../../../shared/stores/appstate';
+import { select, Store } from '@ngrx/store';
+import { map, Observable, Subject, takeUntil } from 'rxjs';
+import { selectStation } from '../../../../shared/stores/station/station.selector';
+import { invokeGetAllStationApi } from '../../../../shared/stores/station/station.action';
 
 @Component({
   selector: 'app-home-booking',
   templateUrl: './home-booking.component.html',
   styleUrl: './home-booking.component.scss',
 })
-export class HomeBookingComponent implements OnInit {
+export class HomeBookingComponent implements OnInit, OnDestroy {
   roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
@@ -31,31 +36,42 @@ export class HomeBookingComponent implements OnInit {
 
   bookingForm: FormGroup;
 
-  rawStationList: Station[] = [];
+  rawStationList: Observable<Station[]>;
   startStationList: Station[] = [];
   endStationList: Station[] = [];
+
+  private destroy$ = new Subject<void>();
 
   constructor(
     private fb: FormBuilder,
     private router: Router,
-    private stationService: StationService
+    private store: Store,
+    private appStore: Store<Appstate>
   ) {
     this.minDate = new Date();
+
+    this.rawStationList = this.store.pipe(select(selectStation));
 
     this.createForm();
   }
 
-  async ngOnInit() {
-    let resStation = await this.stationService.getAll();
+  ngOnInit() {
+    this.store.dispatch(invokeGetAllStationApi());
 
-    if (resStation?.code === 200) {
-      this.rawStationList = resStation.data;
+    this.rawStationList
+      .pipe(
+        map((stations: Station[]) => stations),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((filteredStations) => {
+        this.startStationList = filteredStations;
+        this.endStationList = filteredStations;
+      });
+  }
 
-      this.startStationList = this.rawStationList;
-      this.endStationList = this.rawStationList;
-    } else {
-      this.rawStationList = [];
-    }
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   createForm() {
@@ -99,9 +115,16 @@ export class HomeBookingComponent implements OnInit {
       startStation: station.id,
     });
 
-    this.endStationList = this.rawStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.rawStationList
+      .pipe(
+        map((stations: Station[]) =>
+          stations.filter((item) => item.id !== station.id)
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((filteredStations) => {
+        this.endStationList = filteredStations;
+      });
   }
 
   onendStationChange(station: Station) {
@@ -109,8 +132,15 @@ export class HomeBookingComponent implements OnInit {
       endStation: station.id,
     });
 
-    this.startStationList = this.rawStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.rawStationList
+      .pipe(
+        map((stations: Station[]) =>
+          stations.filter((item) => item.id !== station.id)
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((filteredStations) => {
+        this.startStationList = filteredStations;
+      });
   }
 }

@@ -260,3 +260,27 @@
   width: 20px;
   height: 20px;
 }
+
+.station-full-switch {
+  border-radius: 37px;
+  background-color: $primary-white;
+  padding: 8px;
+  max-width: max-content;
+  margin-left: auto;
+  margin-right: auto;
+
+  color: $text-softblack;
+
+  z-index: 2;
+}
+
+.obrs-full-switch {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 24px;
+  box-shadow: 0 2px 15px 0 rgba(0, 0, 0, 0.1);
+  background-color: $primary-blue;
+  color: $text-white;
+  height: 100%;
+  z-index: 0;
+}

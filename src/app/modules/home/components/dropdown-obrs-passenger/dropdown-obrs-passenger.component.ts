@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { DropdownPassenger } from '../../../../interfaces/dropdown.interface';
+import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interface';
 
 @Component({
   selector: 'app-dropdown-obrs-passenger',
