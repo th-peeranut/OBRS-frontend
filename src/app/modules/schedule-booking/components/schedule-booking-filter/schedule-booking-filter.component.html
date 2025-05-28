@@ -18,13 +18,15 @@
       </div>
 
       <div class="station-section mt-4">
-        <div class="station-group">
+        <div class="station-group" *ngIf="rawStationList | async">
           <!-- DROPDOWN START STATION -->
           <app-dropdown-obrs
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.START_STATION'"
-            [options]="[]"
+            [value]="getFormValue('startStation')"
+            [options]="startStationList"
+            (currentValue)="onStartStationChange($event)"
           ></app-dropdown-obrs>
           <!-- STATION ICON -->
           <img
@@ -37,7 +39,9 @@
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.END_STATION'"
-            [options]="[]"
+            [value]="getFormValue('endStation')"
+            [options]="endStationList"
+            (currentValue)="onEndStationChange($event)"
           ></app-dropdown-obrs>
         </div>
 

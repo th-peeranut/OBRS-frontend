@@ -4,8 +4,11 @@ import {
   ElementRef,
   EventEmitter,
   forwardRef,
+  Input,
+  OnChanges,
   Output,
   Renderer2,
+  SimpleChanges,
   ViewChild,
 } from '@angular/core';
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
@@ -26,7 +29,8 @@ import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interf
   ],
   imports: [CommonModule, TranslateModule],
 })
-export class DropdownObrsPassengerComponent implements ControlValueAccessor {
+export class DropdownObrsPassengerComponent implements ControlValueAccessor, OnChanges {
+  @Input() data?: DropdownPassenger;
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();
 
   isDropdownOpen: boolean = false;
@@ -49,6 +53,10 @@ export class DropdownObrsPassengerComponent implements ControlValueAccessor {
   private onTouched: () => void = () => {};
 
   constructor(private renderer: Renderer2, private elementRef: ElementRef) {}
+
+  ngOnChanges(changes: SimpleChanges): void {
+      
+  }
 
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;

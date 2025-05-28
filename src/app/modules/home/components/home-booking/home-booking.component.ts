@@ -9,7 +9,7 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
 import { map, Observable, Subject, takeUntil } from 'rxjs';
 import { selectStation } from '../../../../shared/stores/station/station.selector';
-import { invokeGetAllStationApi } from '../../../../shared/stores/station/station.action';
+import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 
 @Component({
   selector: 'app-home-booking',
@@ -56,8 +56,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.store.dispatch(invokeGetAllStationApi());
-
     this.rawStationList
       .pipe(
         map((stations: Station[]) => stations),
@@ -85,29 +83,15 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   }
 
   onSearch() {
-    const payload = this.getPayload();
-    this.router.navigate(['/schedule-booking']);
-  }
+     const formValue = { ...this.bookingForm.getRawValue() };
 
-  getPayload() {
-    const formValue = { ...this.bookingForm.getRawValue() };
-
-    // Format departure date
-    formValue.departureDate = dayjs(formValue.departureDate).format(
-      'YYYY-MM-DD'
+    this.store.dispatch(
+      invokeSetScheduleFilterApi({
+        schedule_filter: formValue,
+      })
     );
 
-    // Set passenger counts
-    const getPassengerCount = (type: string) =>
-      formValue.passengerInfo?.find((item: any) => item.type === type)?.count ||
-      0;
-
-    formValue.adultCount = getPassengerCount('ADULT');
-    formValue.kidsCount = getPassengerCount('KIDS');
-
-    const { passengerInfo, ...payload } = formValue;
-
-    return payload;
+    this.router.navigate(['/schedule-booking']);
   }
 
   onStartStationChange(station: Station) {
@@ -127,7 +111,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       });
   }
 
-  onendStationChange(station: Station) {
+  onEndStationChange(station: Station) {
     this.bookingForm.patchValue({
       endStation: station.id,
     });

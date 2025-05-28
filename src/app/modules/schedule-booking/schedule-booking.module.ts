@@ -11,6 +11,18 @@ import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dro
 import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { ScheduleBookingListComponent } from './components/schedule-booking-list/schedule-booking-list.component';
 
+// Store
+import { EffectsModule } from '@ngrx/effects';
+import { StoreModule } from '@ngrx/store';
+import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
+import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
+import { RouteEffect } from '../../shared/stores/route/route.effect';
+import { RouteReducer } from '../../shared/stores/route/route.reducer';
+import { ScheduleFiltersEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
+import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+import { StationsEffect } from '../../shared/stores/station/station.effect';
+import { StationReducer } from '../../shared/stores/station/station.reducer';
+
 const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 
 @NgModule({
@@ -22,6 +34,18 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
   imports: [
     SharedModule,
     RouterModule.forChild(routes),
+
+    // Store
+    StoreModule.forFeature('stationList', StationReducer),
+    StoreModule.forFeature('routeList', RouteReducer),
+    StoreModule.forFeature('routeMapList', RouteMapReducer),
+    StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    EffectsModule.forFeature([
+      StationsEffect,
+      RouteEffect,
+      RouteMapEffect,
+      ScheduleFiltersEffect,
+    ]),
 
     // Add-ons
     CalendarModule,

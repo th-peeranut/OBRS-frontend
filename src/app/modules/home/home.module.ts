@@ -15,6 +15,12 @@ import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { StationReducer } from '../../shared/stores/station/station.reducer';
 import { StationsEffect } from '../../shared/stores/station/station.effect';
+import { RouteReducer } from '../../shared/stores/route/route.reducer';
+import { RouteEffect } from '../../shared/stores/route/route.effect';
+import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
+import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
+import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+import { ScheduleFiltersEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -25,8 +31,16 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     RouterModule.forChild(routes),
 
     // Store
-    StoreModule.forFeature('stationList', StationReducer), 
-    EffectsModule.forFeature([StationsEffect]),
+    StoreModule.forFeature('stationList', StationReducer),
+    StoreModule.forFeature('routeList', RouteReducer),
+    StoreModule.forFeature('routeMapList', RouteMapReducer),
+    StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    EffectsModule.forFeature([
+      StationsEffect,
+      RouteEffect,
+      RouteMapEffect,
+      ScheduleFiltersEffect,
+    ]),
 
     // Add-ons
     CalendarModule,
@@ -35,6 +49,10 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     DropdownObrsComponent,
     DropdownObrsPassengerComponent,
   ],
-  exports: [HomeBookingComponent, DropdownObrsComponent, DropdownObrsPassengerComponent],
+  exports: [
+    HomeBookingComponent,
+    DropdownObrsComponent,
+    DropdownObrsPassengerComponent,
+  ],
 })
 export class HomeModule {}

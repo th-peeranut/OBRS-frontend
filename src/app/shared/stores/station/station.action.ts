@@ -13,7 +13,7 @@ export const invokeGetAllStationApiSuccess = createAction(
 
 // START INSERT
 export const invokeCreateStationApi = createAction(
-  '[Station API] Inovke save new station api',
+  '[Station API] Invoke save new station api',
   props<{ new_station: Station }>()
 );
 
@@ -25,7 +25,7 @@ export const invokeCreateStationApiSuccess = createAction(
 
 // START UPDATE
 export const invokeUpdateStationApi = createAction(
-  '[Station API] Inovke update station api',
+  '[Station API] Invoke update station api',
   props<{ update_id: number; update_station: Station }>()
 );
 
@@ -37,7 +37,7 @@ export const invokeUpdateStationApiSuccess = createAction(
 
 // START DELETE
 export const invokeDeleteStationApi = createAction(
-  '[Station API] Inovke delete station api',
+  '[Station API] Invoke delete station api',
   props<{ delete_id: number }>()
 );
 

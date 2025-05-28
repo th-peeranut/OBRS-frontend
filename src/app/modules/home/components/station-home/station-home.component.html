@@ -8,35 +8,38 @@
         </div>
         <!-- BODY -->
         <div class="station-section-body">
-          <div class="station-full-switch" *ngIf="routeList.length === 1">
-            <div class="obrs-full-switch text-center">
-              {{ getRoutesName(routeList[0]) }}
+          <ng-container *ngIf="routeList | async as routes">
+            <div class="station-full-switch" *ngIf="routes.length === 1">
+              <div class="obrs-full-switch text-center">
+                {{ getRoutesName(routes[0]) }}
+              </div>
             </div>
-          </div>
 
-          <!-- TOGGLE SWITCH -->
-          <div class="station-toggle-switch" *ngIf="routeList.length === 2">
-            <div
-              class="obrs-switch text-center"
-              [class.left]="currentDirection === 'left'"
-              [class.right]="currentDirection === 'right'"
-            >
+            <!-- TOGGLE SWITCH -->
+            <div class="station-toggle-switch" *ngIf="routes.length === 2">
               <div
-                class="obrs"
-                [class.active]="currentDirection === 'left'"
-                (click)="onObrsClick('left')"
+                class="obrs-switch text-center"
+                [class.left]="currentDirection === 'left'"
+                [class.right]="currentDirection === 'right'"
               >
-                {{ getRoutesName(routeList[0]) }}
-              </div>
-              <div
-                class="obrs"
-                [class.active]="currentDirection === 'right'"
-                (click)="onObrsClick('right')"
-              >
-                {{ getRoutesName(routeList[1]) }}
+                <div
+                  class="obrs"
+                  [class.active]="currentDirection === 'left'"
+                  (click)="onObrsClick('left')"
+                >
+                  {{ getRoutesName(routes[0]) }}
+                </div>
+                <div
+                  class="obrs"
+                  [class.active]="currentDirection === 'right'"
+                  (click)="onObrsClick('right')"
+                >
+                  {{ getRoutesName(routes[1]) }}
+                </div>
               </div>
             </div>
-          </div>
+          </ng-container>
+
           <!-- DETAIL -->
           <div class="station-section-body-detail">
             <div class="station-list-container">

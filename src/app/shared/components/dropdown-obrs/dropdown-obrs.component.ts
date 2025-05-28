@@ -34,6 +34,7 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   @Input() label: string = '';
   @Input() options: any = [];
   @Input() isBorder: boolean = false;
+  @Input() value: any = null;
 
   @Output() currentValue = new EventEmitter<any>();
 
@@ -56,6 +57,18 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
     const defaultData = this.options.find((value: any) => value.isDefault);
     if (defaultData) {
       this.setCurrentValue(defaultData);
+    }
+
+    if (this.value) {
+      let selectedOption = this.options.find(
+        (option: any) => option.id === this.value
+      );
+
+      if (selectedOption) {
+        this.selectedValue = selectedOption;
+        this.currentValue.emit(selectedOption);
+        this.onChange(selectedOption);
+      }
     }
   }
 
@@ -106,8 +119,8 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   setDisabledState?(isDisabled: boolean): void {}
 
   getValue(option: any) {
-    if(!option) return '';
-    
+    if (!option) return '';
+
     return this.translate.currentLang === 'th'
       ? option.nameThai
       : option.nameEnglish;

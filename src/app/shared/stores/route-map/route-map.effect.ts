@@ -3,44 +3,44 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { Store, select } from '@ngrx/store';
 import { EMPTY } from 'rxjs';
 import { map, mergeMap, switchMap, withLatestFrom } from 'rxjs/operators';
-import { StationService } from '../../../services/station/station.service';
 import { setAPIStatus } from '../app.action';
 import { Appstate } from '../appstate';
 import {
-  invokeGetAllStationApi,
-  invokeGetAllStationApiSuccess,
-  invokeCreateStationApi,
-  invokeCreateStationApiSuccess,
-  invokeUpdateStationApi,
-  invokeUpdateStationApiSuccess,
-  invokeDeleteStationApi,
-  invokeDeleteStationApiSuccess,
-} from './station.action';
-import { selectStation } from './station.selector';
+  invokeGetAllRouteMapApi,
+  invokeGetAllRouteMapApiSuccess,
+  invokeCreateRouteMapApi,
+  invokeCreateRouteMapApiSuccess,
+  invokeUpdateRouteMapApi,
+  invokeUpdateRouteMapApiSuccess,
+  invokeDeleteRouteMapApi,
+  invokeDeleteRouteMapApiSuccess,
+} from './route-map.action';
+import { selectRouteMap } from './route-map.selector';
+import { RouteMapService } from '../../../services/route-map/route-map.service';
 
 @Injectable()
-export class StationsEffect {
+export class RouteMapEffect {
   private actions$ = inject(Actions);
   private store = inject(Store<Appstate>);
-  private service = inject(StationService);
+  private service = inject(RouteMapService);
 
   constructor() {
     // console.log('✅ Store in effect:', this.store); // should now log correctly
   }
 
-  loadAllStations$ = createEffect(() =>
+  loadAllRouteMaps$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(invokeGetAllStationApi),
-      withLatestFrom(this.store.pipe(select(selectStation))),
-      mergeMap(([, stationList]) => {
-        if (stationList.length > 0) return EMPTY;
+      ofType(invokeGetAllRouteMapApi),
+      withLatestFrom(this.store.pipe(select(selectRouteMap))),
+      mergeMap(([, routeMapList]) => {
+        if (routeMapList.length > 0) return EMPTY;
 
         return this.service.getAll().pipe(
           map((response) => {
             if (response?.code === 200) {
-              return invokeGetAllStationApiSuccess({ stations: response.data });
+              return invokeGetAllRouteMapApiSuccess({ route_map: response.data });
             } else {
-              return invokeGetAllStationApiSuccess({ stations: [] });
+              return invokeGetAllRouteMapApiSuccess({ route_map: [] });
             }
           })
         );
@@ -48,19 +48,19 @@ export class StationsEffect {
     )
   );
 
-  saveNewStation$ = createEffect(() =>
+  saveNewRouteMap$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(invokeCreateStationApi),
+      ofType(invokeCreateRouteMapApi),
       switchMap((action) => {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
               apiStatus: 'creating...',
-              apiResponseMessage: 'creating new station',
+              apiResponseMessage: 'creating new routeMap',
             },
           })
         );
-        return this.service.create(action.new_station).pipe(
+        return this.service.create(action.new_route_map).pipe(
           map((response) => {
             this.store.dispatch(
               setAPIStatus({
@@ -68,19 +68,19 @@ export class StationsEffect {
                   apiStatus: response?.code === 200 ? 'success' : 'fail',
                   apiResponseMessage:
                     response?.code === 200
-                      ? 'station is created'
-                      : 'fail to create new station',
+                      ? 'routeMap is created'
+                      : 'fail to create new routeMap',
                 },
               })
             );
 
             if (response?.code === 200) {
-              return invokeCreateStationApiSuccess({
-                response_new_station: response?.data,
+              return invokeCreateRouteMapApiSuccess({
+                response_new_route_map: response?.data,
               });
             } else {
-              return invokeCreateStationApiSuccess({
-                response_new_station: null,
+              return invokeCreateRouteMapApiSuccess({
+                response_new_route_map: null,
               });
             }
           })
@@ -89,20 +89,20 @@ export class StationsEffect {
     )
   );
 
-  updateStation$ = createEffect(() =>
+  updateRouteMap$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(invokeUpdateStationApi),
+      ofType(invokeUpdateRouteMapApi),
       switchMap((action) => {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
               apiStatus: 'updating...',
-              apiResponseMessage: 'updating station',
+              apiResponseMessage: 'updating routeMap',
             },
           })
         );
         return this.service
-          .update(action.update_id, action.update_station)
+          .update(action.update_id, action.update_route_map)
           .pipe(
             map((response) => {
               this.store.dispatch(
@@ -111,19 +111,19 @@ export class StationsEffect {
                     apiStatus: response?.code === 200 ? 'success' : 'fail',
                     apiResponseMessage:
                       response?.code === 200
-                        ? 'station is updated'
-                        : 'fail to update station',
+                        ? 'routeMap is updated'
+                        : 'fail to update routeMap',
                   },
                 })
               );
 
               if (response?.code === 200) {
-                return invokeUpdateStationApiSuccess({
-                  response_update_station: response?.data,
+                return invokeUpdateRouteMapApiSuccess({
+                  response_update_route_map: response?.data,
                 });
               } else {
-                return invokeUpdateStationApiSuccess({
-                  response_update_station: null,
+                return invokeUpdateRouteMapApiSuccess({
+                  response_update_route_map: null,
                 });
               }
             })
@@ -132,15 +132,15 @@ export class StationsEffect {
     )
   );
 
-  deleteStation$ = createEffect(() =>
+  deleteRouteMap$ = createEffect(() =>
     this.actions$.pipe(
-      ofType(invokeDeleteStationApi),
+      ofType(invokeDeleteRouteMapApi),
       switchMap((action) => {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
               apiStatus: 'deleting...',
-              apiResponseMessage: 'deleting station',
+              apiResponseMessage: 'deleting routeMap',
             },
           })
         );
@@ -152,19 +152,19 @@ export class StationsEffect {
                   apiStatus: response?.code === 200 ? 'success' : 'fail',
                   apiResponseMessage:
                     response?.code === 200
-                      ? 'station is deleted'
-                      : 'fail to delete station',
+                      ? 'routeMap is deleted'
+                      : 'fail to delete routeMap',
                 },
               })
             );
 
             if (response?.code === 200) {
-              return invokeDeleteStationApiSuccess({
-                response_delete_station: response,
+              return invokeDeleteRouteMapApiSuccess({
+                response_delete_route_map: response,
               });
             } else {
-              return invokeDeleteStationApiSuccess({
-                response_delete_station: null,
+              return invokeDeleteRouteMapApiSuccess({
+                response_delete_route_map: null,
               });
             }
           })
