@@ -18,10 +18,12 @@ import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
 import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
 import { RouteEffect } from '../../shared/stores/route/route.effect';
 import { RouteReducer } from '../../shared/stores/route/route.reducer';
-import { ScheduleFiltersEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
+import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
 import { StationsEffect } from '../../shared/stores/station/station.effect';
 import { StationReducer } from '../../shared/stores/station/station.reducer';
+import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-list.effect';
+import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
 
 const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 
@@ -40,11 +42,13 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     StoreModule.forFeature('routeList', RouteReducer),
     StoreModule.forFeature('routeMapList', RouteMapReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    StoreModule.forFeature('scheduleList', ScheduleListReducer),
     EffectsModule.forFeature([
       StationsEffect,
       RouteEffect,
       RouteMapEffect,
-      ScheduleFiltersEffect,
+      ScheduleFilterEffect,
+      ScheduleListEffect,
     ]),
 
     // Add-ons

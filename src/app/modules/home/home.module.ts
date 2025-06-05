@@ -20,7 +20,7 @@ import { RouteEffect } from '../../shared/stores/route/route.effect';
 import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
 import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
-import { ScheduleFiltersEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
+import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -39,7 +39,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
       StationsEffect,
       RouteEffect,
       RouteMapEffect,
-      ScheduleFiltersEffect,
+      ScheduleFilterEffect,
     ]),
 
     // Add-ons

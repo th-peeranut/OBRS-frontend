@@ -7,9 +7,12 @@ import { Router } from '@angular/router';
 import { Station } from '../../../../shared/interfaces/station.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
-import { map, Observable, Subject, takeUntil } from 'rxjs';
+import { map, Observable, Subject, take, takeUntil } from 'rxjs';
 import { selectStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
+import { ScheduleFilterPayload } from '../../../../shared/interfaces/schedule.interface';
+import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
+import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 
 @Component({
   selector: 'app-home-booking',
@@ -74,7 +77,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
 
   createForm() {
     this.bookingForm = this.fb.group({
-      roundTrip: [2],
+      roundTrip: [1],
       passengerInfo: [null],
       startStation: [''],
       endStation: [''],
@@ -83,7 +86,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   }
 
   onSearch() {
-     const formValue = { ...this.bookingForm.getRawValue() };
+    const formValue = { ...this.bookingForm.getRawValue() };
 
     this.store.dispatch(
       invokeSetScheduleFilterApi({
@@ -91,7 +94,39 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.router.navigate(['/schedule-booking']);
+    this.store.pipe(select(selectScheduleList), take(1)).subscribe(() => {
+      this.router.navigate(['/schedule-booking']);
+    });
+  }
+
+  getPayload() {
+    const formValue = { ...this.bookingForm.getRawValue() };
+
+    // Set passenger counts
+    const getPassengerCount = (type: string) =>
+      formValue.passengerInfo?.find((item: any) => item.type === type)?.count ||
+      0;
+
+    formValue.adultCount = getPassengerCount('ADULT');
+    formValue.kidsCount = getPassengerCount('KIDS');
+
+    let payload: ScheduleFilterPayload = {
+      bookingType: formValue.roundTrip === 1 ? 'One way' : 'Return',
+      departureDate: formValue.departureDate
+        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
+        : '',
+      departureRouteId: formValue.startStation || null,
+      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
+
+      // returnDate: formValue.departureDate
+      //   ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
+      //   : '',
+      returnDate: '',
+
+      returnRouteId: formValue.endStation || null,
+    };
+
+    return payload;
   }
 
   onStartStationChange(station: Station) {

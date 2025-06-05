@@ -1,64 +1,73 @@
-<div class="booking-container">
-  <h3 class="title">
-    {{ "SCHEDULE_BOOKING.HEADER" | translate }}
-  </h3>
+<ng-container *ngIf="scheduleList | async as schedules">
+  <div class="booking-container">
+    <h3 class="title">
+      {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+    </h3>
 
-  <div class="schedule-item mb-3" *ngFor="let schedule of schedules">
-    <!-- LEFT -->
-    <div class="left">
-      <div class="icon">
-        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
-      </div>
+    <!-- ขาไป -->
+    <ng-container *ngIf="schedules.departureSchedules as departureList">
+      <div class="schedule-item mb-3" *ngFor="let departure of departureList">
+        <!-- LEFT -->
+        <div class="left">
+          <div class="icon">
+            <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+          </div>
 
-      <div class="time">
-        {{ schedule.departure }} 
-        {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
-      </div>
+          <div class="time">
+            {{ departure.departureTime }}
+            {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+          </div>
 
-      <div class="time-info">
-        <div class="route">
-          {{ schedule.hour }} {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }} 
-          {{ schedule.minute }} {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }} 
+          <div class="time-info">
+            <div class="route">
+              {{ getHour(departure.travelTime) }}
+              {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
+              {{ getMinute(departure.travelTime) }}
+              {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
+            </div>
+
+            <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+
+            <div class="route">
+              {{ getRoutesName(departure.route) }}
+            </div>
+          </div>
+
+          <div class="time">
+            {{ departure.arrivalTime }}
+            {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+          </div>
         </div>
+        <!-- RIGHT -->
+        <div class="right">
+          <div class="text-container">
+            <div class="price">
+              {{ departure.price }}
+              {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+            </div>
 
-        <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+            <div class="availability">
+              <span>
+                {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
+                {{ departure.availableSeat }}
+                {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
+              </span>
+              <span>|</span>
+              <span>
+                {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
+              </span>
+            </div>
+          </div>
 
-        <div class="route">
-          {{ schedule.route }}
+          <button
+            class="select-btn"
+            (click)="selectSchedule(departure)"
+            [class.select-btn-diabled]="departureList.length === 0"
+          >
+            {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+          </button>
         </div>
       </div>
-
-      <div class="time">
-        {{ schedule.arrival }} 
-        {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
-      </div>
-    </div>
-    <!-- RIGHT -->
-    <div class="right">
-      <div class="text-container">
-        <div class="price">
-          {{ schedule.price }}
-          {{ "SCHEDULE_BOOKING.HEADER" | translate }}
-        </div>
-
-        <div class="availability">
-          <span>
-            {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
-            {{ schedule.available }}
-            {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
-          </span>
-          <span>|</span>
-          <span>{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
-        </div>
-      </div>
-
-      <button
-        class="select-btn"
-        (click)="selectSchedule(schedule)"
-        [class.select-btn-diabled]="schedule.available === 0"
-      >
-        {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
-      </button>
-    </div>
+    </ng-container>
   </div>
-</div>
+</ng-container>

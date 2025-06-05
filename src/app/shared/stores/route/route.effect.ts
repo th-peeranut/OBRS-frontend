@@ -55,7 +55,7 @@ export class RouteEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'creating...',
+              apiStatus: null,
               apiResponseMessage: 'creating new route',
             },
           })
@@ -65,7 +65,7 @@ export class RouteEffect {
             this.store.dispatch(
               setAPIStatus({
                 apiStatus: {
-                  apiStatus: response?.code === 200 ? 'success' : 'fail',
+                  apiStatus: response?.code,
                   apiResponseMessage:
                     response?.code === 200
                       ? 'route is created'
@@ -96,7 +96,7 @@ export class RouteEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'updating...',
+              apiStatus: null,
               apiResponseMessage: 'updating route',
             },
           })
@@ -108,7 +108,7 @@ export class RouteEffect {
               this.store.dispatch(
                 setAPIStatus({
                   apiStatus: {
-                    apiStatus: response?.code === 200 ? 'success' : 'fail',
+                    apiStatus: response?.code,
                     apiResponseMessage:
                       response?.code === 200
                         ? 'route is updated'
@@ -139,7 +139,7 @@ export class RouteEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'deleting...',
+              apiStatus: null,
               apiResponseMessage: 'deleting route',
             },
           })
@@ -149,7 +149,7 @@ export class RouteEffect {
             this.store.dispatch(
               setAPIStatus({
                 apiStatus: {
-                  apiStatus: response?.code === 200 ? 'success' : 'fail',
+                  apiStatus: response?.code,
                   apiResponseMessage:
                     response?.code === 200
                       ? 'route is deleted'

@@ -14,7 +14,7 @@ import {
 import { selectScheduleFilter } from './schedule-filter.selector';
 
 @Injectable()
-export class ScheduleFiltersEffect {
+export class ScheduleFilterEffect {
   private actions$ = inject(Actions);
   private store = inject(Store<Appstate>);
 

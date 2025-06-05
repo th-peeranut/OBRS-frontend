@@ -1,11 +1,10 @@
-export interface Station {
+export interface VehicleType {
   id: number;
-  nameThai: string;
-  nameEnglish: string;
+  name: string;
+  totalSeat: number;
+  seatingMap: number;
   createdBy: string;
   createdDate: string;
   lastUpdatedBy: string;
   lastUpdatedDate: string;
-
-  url: string;
 }

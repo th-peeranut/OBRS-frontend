@@ -1,10 +1,19 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  OnDestroy,
+  OnInit,
+  Output,
+} from '@angular/core';
 import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import dayjs from 'dayjs';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { map, Observable, Subject, takeUntil } from 'rxjs';
-import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
+import {
+  ScheduleFilter,
+  ScheduleFilterPayload,
+} from '../../../../shared/interfaces/schedule.interface';
 import { Station } from '../../../../shared/interfaces/station.interface';
 
 import { select, Store } from '@ngrx/store';
@@ -12,6 +21,7 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
+import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
 
 @Component({
   selector: 'app-schedule-booking-filter',
@@ -19,6 +29,8 @@ import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-f
   styleUrl: './schedule-booking-filter.component.scss',
 })
 export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
+  @Output() filterData = new EventEmitter<ScheduleFilter>();
+
   roundTripDropdowns: Dropdown[] = [
     {
       id: 1,
@@ -90,15 +102,21 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           departureDate = this.minDate;
         }
 
-        console.log('departureDate', departureDate);
-
         this.bookingForm.patchValue({
-          roundTrip: scheduleFilter?.roundTrip?.id ?? 2,
+          roundTrip: scheduleFilter?.roundTrip?.id ?? 1,
           passengerInfo: passengerInfo,
           startStation: scheduleFilter?.startStation ?? '',
           endStation: scheduleFilter?.endStation ?? '',
           departureDate: departureDate,
         });
+
+        if (scheduleFilter) {
+          this.store.dispatch(
+            invokeGetScheduleListApi({
+              schedule_filter: this.getPayload(),
+            })
+          );
+        }
       });
   }
 
@@ -109,7 +127,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   createForm() {
     this.bookingForm = this.fb.group({
-      roundTrip: [2],
+      roundTrip: [1],
       passengerInfo: [null],
       startStation: [''],
       endStation: [''],
@@ -126,16 +144,15 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       })
     );
 
-    // call api
+    this.store.dispatch(
+      invokeGetScheduleListApi({
+        schedule_filter: this.getPayload(),
+      })
+    );
   }
 
   getPayload() {
     const formValue = { ...this.bookingForm.getRawValue() };
-
-    // Format departure date
-    formValue.departureDate = dayjs(formValue.departureDate).format(
-      'YYYY-MM-DD'
-    );
 
     // Set passenger counts
     const getPassengerCount = (type: string) =>
@@ -145,7 +162,21 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     formValue.adultCount = getPassengerCount('ADULT');
     formValue.kidsCount = getPassengerCount('KIDS');
 
-    const { passengerInfo, ...payload } = formValue;
+    let payload: ScheduleFilterPayload = {
+      bookingType: formValue.roundTrip === 1 ? 'One way' : 'Return',
+      departureDate: formValue.departureDate
+        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
+        : '',
+      departureRouteId: formValue.startStation || null,
+      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
+
+      // returnDate: formValue.departureDate
+      //   ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
+      //   : '',
+      returnDate: '',
+
+      returnRouteId: formValue.endStation || null,
+    };
 
     return payload;
   }

@@ -4,7 +4,7 @@ import { Appstate } from './appstate';
 
 export const initialState: Readonly<Appstate> = {
     apiResponseMessage: '',
-    apiStatus: '',
+    apiStatus: null,
 };
 
 export const appReducer = createReducer(

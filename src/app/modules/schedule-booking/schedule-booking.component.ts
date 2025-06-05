@@ -5,6 +5,11 @@ import { invokeGetAllRouteMapApi } from '../../shared/stores/route-map/route-map
 import { invokeGetAllRouteApi } from '../../shared/stores/route/route.action';
 import { invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetAllStationApi } from '../../shared/stores/station/station.action';
+import { ScheduleFilter } from '../../shared/interfaces/schedule.interface';
+import {
+  invokeGetScheduleListApi,
+  invokeSetScheduleListApi,
+} from '../../shared/stores/schedule-list/schedule-list.action';
 
 @Component({
   selector: 'app-schedule-booking',

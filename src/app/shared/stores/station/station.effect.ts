@@ -55,7 +55,7 @@ export class StationsEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'creating...',
+              apiStatus: null,
               apiResponseMessage: 'creating new station',
             },
           })
@@ -65,7 +65,7 @@ export class StationsEffect {
             this.store.dispatch(
               setAPIStatus({
                 apiStatus: {
-                  apiStatus: response?.code === 200 ? 'success' : 'fail',
+                  apiStatus: response?.code,
                   apiResponseMessage:
                     response?.code === 200
                       ? 'station is created'
@@ -96,7 +96,7 @@ export class StationsEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'updating...',
+              apiStatus: null,
               apiResponseMessage: 'updating station',
             },
           })
@@ -108,7 +108,7 @@ export class StationsEffect {
               this.store.dispatch(
                 setAPIStatus({
                   apiStatus: {
-                    apiStatus: response?.code === 200 ? 'success' : 'fail',
+                    apiStatus: response?.code,
                     apiResponseMessage:
                       response?.code === 200
                         ? 'station is updated'
@@ -139,7 +139,7 @@ export class StationsEffect {
         this.store.dispatch(
           setAPIStatus({
             apiStatus: {
-              apiStatus: 'deleting...',
+              apiStatus: null,
               apiResponseMessage: 'deleting station',
             },
           })
@@ -149,7 +149,7 @@ export class StationsEffect {
             this.store.dispatch(
               setAPIStatus({
                 apiStatus: {
-                  apiStatus: response?.code === 200 ? 'success' : 'fail',
+                  apiStatus: response?.code,
                   apiResponseMessage:
                     response?.code === 200
                       ? 'station is deleted'
