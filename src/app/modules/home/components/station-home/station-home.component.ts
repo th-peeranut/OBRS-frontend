@@ -3,28 +3,24 @@ import { Station } from '../../../../shared/interfaces/station.interface';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { Route } from '../../../../shared/interfaces/route.interface';
-import { RouteMap } from '../../../../shared/interfaces/route-map.interface';
 import { Observable, Subject } from 'rxjs';
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
-import { selectStation } from '../../../../shared/stores/station/station.selector';
-import { selectRoute } from '../../../../shared/stores/route/route.selector';
-import { selectRouteMap } from '../../../../shared/stores/route-map/route-map.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
+import { ProvinceStation } from '../../../../shared/interfaces/province.interface';
 @Component({
   selector: 'app-station-home',
   templateUrl: './station-home.component.html',
   styleUrl: './station-home.component.scss',
 })
 export class StationHomeComponent implements OnInit, OnDestroy {
-  isOn: boolean = false;
-
   currentDirection: 'left' | 'right' = 'left'; // Default direction is 'left'
 
-  stationList: Observable<Station[]>;
-  routeList: Observable<Route[]>;
-  routeMapList: Observable<RouteMap[]>;
+  routeList: Observable<ProvinceStation[]>;
 
   private destroy$ = new Subject<void>();
+
+  isClickSwitchToggle: boolean = false;
 
   constructor(
     private router: Router,
@@ -34,9 +30,7 @@ export class StationHomeComponent implements OnInit, OnDestroy {
   ) {}
 
   async ngOnInit() {
-    this.stationList = this.store.pipe(select(selectStation));
-    this.routeList = this.store.pipe(select(selectRoute));
-    this.routeMapList = this.store.pipe(select(selectRouteMap));
+    this.routeList = this.store.pipe(select(selectProvinceWithStation));
   }
 
   ngOnDestroy(): void {
@@ -45,15 +39,35 @@ export class StationHomeComponent implements OnInit, OnDestroy {
   }
 
   onObrsClick(direction: 'left' | 'right'): void {
+    this.isClickSwitchToggle = direction === 'right';
+
     if (this.currentDirection !== direction) {
       this.currentDirection = direction;
     }
   }
 
-  getRoutesName(route: Route): string {
+  getRouteName(route: ProvinceStation): string {
     return this.translateService.currentLang === 'th'
       ? route.nameThai
       : route.nameEnglish;
+  }
+
+  getRoutesName(route: ProvinceStation[], isReverse: boolean): string {
+    if (isReverse) {
+      route = route.slice().reverse();
+    }
+
+    return this.translateService.currentLang === 'th'
+      ? route[0].nameThai + ' - ' + route[1].nameThai
+      : route[0].nameEnglish + ' - ' + route[1].nameEnglish;
+  }
+
+  getRoute(route: ProvinceStation[]) {
+    if (this.isClickSwitchToggle) {
+      return (route = route.slice().reverse());
+    }
+
+    return route;
   }
 
   getStationName(station: Station): string {

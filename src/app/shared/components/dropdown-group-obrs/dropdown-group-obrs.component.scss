@@ -43,9 +43,13 @@
   }
 }
 
+.dropdown-header {
+  font-size: 12px;
+  color: #989ba4;
+}
+
 .dropdown-option {
   cursor: pointer;
-  padding: 10px;
 
   font-size: 16px;
   color: $text-black;
@@ -62,7 +66,13 @@
   min-width: 200px;
 }
 
-li {
-  font-size: 18px;
+li.option-items {
+  font-size: 16px;
   color: $text-black;
+  height: 40px;
+  line-height: 40px;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid #f6f7f7;
+  }
 }

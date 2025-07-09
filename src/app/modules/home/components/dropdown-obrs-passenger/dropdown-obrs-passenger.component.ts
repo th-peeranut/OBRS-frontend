@@ -29,7 +29,9 @@ import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interf
   ],
   imports: [CommonModule, TranslateModule],
 })
-export class DropdownObrsPassengerComponent implements ControlValueAccessor, OnChanges {
+export class DropdownObrsPassengerComponent
+  implements ControlValueAccessor, OnChanges
+{
   @Input() data?: DropdownPassenger;
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();
 
@@ -54,9 +56,7 @@ export class DropdownObrsPassengerComponent implements ControlValueAccessor, OnC
 
   constructor(private renderer: Renderer2, private elementRef: ElementRef) {}
 
-  ngOnChanges(changes: SimpleChanges): void {
-      
-  }
+  ngOnChanges(changes: SimpleChanges): void {}
 
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;
@@ -107,7 +107,12 @@ export class DropdownObrsPassengerComponent implements ControlValueAccessor, OnC
   }
 
   updatePassengerCount(type: string, action: string) {
-    this.selectedValue.forEach((passenger) => {
+    // Create a shallow clone of the array and its objects
+    const updatedPassengers = this.selectedValue.map((passenger) => ({
+      ...passenger,
+    }));
+
+    updatedPassengers.forEach((passenger) => {
       if (passenger.type === type) {
         if (action === 'ADD') {
           passenger.count += 1;
@@ -117,6 +122,7 @@ export class DropdownObrsPassengerComponent implements ControlValueAccessor, OnC
       }
     });
 
+    this.selectedValue = updatedPassengers;
     this.currentValue.emit(this.selectedValue);
     this.onChange(this.selectedValue);
   }

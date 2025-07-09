@@ -12,12 +12,16 @@ export interface ScheduleFilter {
 }
 
 export interface ScheduleFilterPayload {
-  departureRouteId: number;
+  departureRouteId: number | null;
   departureDate: string;
   returnRouteId: number | null;
   returnDate: string;
   numberOfPassengers: number;
-  bookingType: string;
+
+  startStationId: number;
+  stopStationId: number;
+
+  bookingType: string; // 'One way' | 'Return'
 }
 
 export interface Schedule {
@@ -27,7 +31,7 @@ export interface Schedule {
   availableSeat: number;
   travelTime: string;
   arrivalTime: string;
-  price: number;
+  fare: number;
   status: string;
   createdBy: string;
   createdDate: string;

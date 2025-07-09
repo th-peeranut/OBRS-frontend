@@ -14,7 +14,7 @@
           </div>
 
           <div class="time">
-            {{ departure.departureTime }}
+            {{ formatTimeToHHMM(departure.departureTime) }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
           </div>
 
@@ -34,7 +34,7 @@
           </div>
 
           <div class="time">
-            {{ departure.arrivalTime }}
+            {{ formatTimeToHHMM(departure.arrivalTime) }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
           </div>
         </div>
@@ -42,8 +42,8 @@
         <div class="right">
           <div class="text-container">
             <div class="price">
-              {{ departure.price }}
-              {{ "SCHEDULE_BOOKING.HEADER" | translate }}
+              {{ departure.fare }}
+              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
             </div>
 
             <div class="availability">

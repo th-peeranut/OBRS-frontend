@@ -1,0 +1,52 @@
+<div class="form-group-obrs">
+  <label *ngIf="isLabel"> {{ label | translate }} : </label>
+
+  <div class="dropdown">
+    <button
+      #dropdownButton
+      class="btn dropdown-btn dropdown-toggle p-0"
+      type="button"
+      [id]="'dropdownObrs' + label"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+      [class.active]="isDropdownOpen"
+      [class.dropdown-toggle-border]="isBorder"
+      (click)="toggleDropdown()"
+    >
+      <div class="value-text">
+        {{ getValue(selectedValue) }}
+      </div>
+      <img
+        class="arrow-icon"
+        [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
+        alt="Arrow Icon"
+      />
+    </button>
+
+    <ul
+      class="dropdown-menu"
+      [class.dropdown-menu-border]="isBorder"
+      aria-labelledby="dropdownObrs"
+    >
+      <ng-container *ngFor="let group of options">
+        <li class="dropdown-header">
+          {{ getValue(group) }}
+        </li>
+        <li class="option-items" *ngFor="let station of group.stations">
+          <a
+            class="dropdown-item dropdown-option"
+            (click)="setCurrentValue(station)"
+          >
+            {{ getValue(station) }}
+          </a>
+        </li>
+      </ng-container>
+
+      <ng-container *ngIf="options.length === 0">
+        <li class="px-3">
+          {{ "SHARED.NO_CONTENT" | translate }}
+        </li>
+      </ng-container>
+    </ul>
+  </div>
+</div>

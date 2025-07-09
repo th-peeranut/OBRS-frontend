@@ -18,16 +18,16 @@
       </div>
 
       <div class="station-section mt-4">
-        <div class="station-group" *ngIf="rawStationList | async">
+        <div class="station-group" *ngIf="rawProvinceStationList | async">
           <!-- DROPDOWN START STATION -->
-          <app-dropdown-obrs
+          <app-dropdown-group-obrs
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.START_STATION'"
             [value]="getFormValue('startStation')"
-            [options]="startStationList"
+            [options]="startProvinceStationList"
             (currentValue)="onStartStationChange($event)"
-          ></app-dropdown-obrs>
+          ></app-dropdown-group-obrs>
           <!-- STATION ICON -->
           <img
             class="station-icon"
@@ -35,14 +35,14 @@
             alt="Passenger Station Gap Icon"
           />
           <!-- DROPDOWN STOP STATION -->
-          <app-dropdown-obrs
+          <app-dropdown-group-obrs
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.END_STATION'"
             [value]="getFormValue('endStation')"
-            [options]="endStationList"
+            [options]="endProvinceStationList"
             (currentValue)="onEndStationChange($event)"
-          ></app-dropdown-obrs>
+          ></app-dropdown-group-obrs>
         </div>
 
         <!-- DEPARTURE DATE -->

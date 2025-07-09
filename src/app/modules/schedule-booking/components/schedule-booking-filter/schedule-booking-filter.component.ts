@@ -14,14 +14,15 @@ import {
   ScheduleFilter,
   ScheduleFilterPayload,
 } from '../../../../shared/interfaces/schedule.interface';
-import { Station } from '../../../../shared/interfaces/station.interface';
 
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
-import { selectStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-list/schedule-list.action';
+import { ProvinceStation } from '../../../../shared/interfaces/province.interface';
+import { Station } from '../../../../shared/interfaces/station.interface';
+import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
 
 @Component({
   selector: 'app-schedule-booking-filter',
@@ -50,9 +51,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   bookingForm: FormGroup;
 
-  rawStationList: Observable<Station[]>;
-  startStationList: Station[] = [];
-  endStationList: Station[] = [];
+  rawProvinceStationList: Observable<ProvinceStation[]>;
+  startProvinceStationList: ProvinceStation[] = [];
+  endProvinceStationList: ProvinceStation[] = [];
   scheduleFilter: Observable<ScheduleFilter>;
 
   private destroy$ = new Subject<void>();
@@ -64,23 +65,19 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     private appStore: Store<Appstate>
   ) {
     this.minDate = new Date();
-    console.log('minDate', this.minDate);
 
-    this.rawStationList = this.store.pipe(select(selectStation));
+    this.rawProvinceStationList = this.store.pipe(select(selectProvinceWithStation));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
 
     this.createForm();
   }
 
   ngOnInit() {
-    this.rawStationList
-      .pipe(
-        map((stations: Station[]) => stations),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filteredStations) => {
-        this.startStationList = filteredStations;
-        this.endStationList = filteredStations;
+    this.rawProvinceStationList
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((provinceList) => {
+        this.startProvinceStationList = provinceList;
+        this.endProvinceStationList = provinceList;
       });
 
     this.scheduleFilter
@@ -164,18 +161,22 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
     let payload: ScheduleFilterPayload = {
       bookingType: formValue.roundTrip === 1 ? 'One way' : 'Return',
+
       departureDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
         : '',
-      departureRouteId: formValue.startStation || null,
+
+      returnDate: formValue.departureDate
+        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
+        : '',
+
       numberOfPassengers: formValue.adultCount + formValue.kidsCount,
 
-      // returnDate: formValue.departureDate
-      //   ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
-      //   : '',
-      returnDate: '',
+      startStationId: formValue.startStation,
+      stopStationId: formValue.endStation,
 
-      returnRouteId: formValue.endStation || null,
+      departureRouteId: null,
+      returnRouteId: null,
     };
 
     return payload;
@@ -186,15 +187,18 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       startStation: station.id,
     });
 
-    this.rawStationList
+    this.rawProvinceStationList
       .pipe(
-        map((stations: Station[]) =>
-          stations.filter((item) => item.id !== station.id)
+        map((provinces) =>
+          provinces.map((province) => ({
+            ...province,
+            stations: province.stations.filter((s) => s.id !== station.id),
+          }))
         ),
         takeUntil(this.destroy$)
       )
-      .subscribe((filteredStations) => {
-        this.endStationList = filteredStations;
+      .subscribe((filtered) => {
+        this.endProvinceStationList = filtered;
       });
   }
 
@@ -203,15 +207,18 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       endStation: station.id,
     });
 
-    this.rawStationList
+    this.rawProvinceStationList
       .pipe(
-        map((stations: Station[]) =>
-          stations.filter((item) => item.id !== station.id)
+        map((provinces) =>
+          provinces.map((province) => ({
+            ...province,
+            stations: province.stations.filter((s) => s.id !== station.id),
+          }))
         ),
         takeUntil(this.destroy$)
       )
-      .subscribe((filteredStations) => {
-        this.startStationList = filteredStations;
+      .subscribe((filtered) => {
+        this.startProvinceStationList = filtered;
       });
   }
 

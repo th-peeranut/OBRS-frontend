@@ -16,23 +16,6 @@ import { Route } from '../../../../shared/interfaces/route.interface';
   styleUrl: './schedule-booking-list.component.scss',
 })
 export class ScheduleBookingListComponent {
-  schedulesMock = [
-    {
-      departureTime: '07:00', // string HH:mm format
-      route: [
-        {
-          routeNameTh: 'หนองชาก-บ้านบึง-กรุงเทพฯ', // string
-          routeNameEng: 'Nong Chak-Ban Bueng-Bangkok', // string
-        },
-      ],
-      availableSeat: 5, // number
-
-      traveTime: '01:00', // string HH:mm format
-      arrivalTime: '08:05', // string HH:mm format
-      price: 150, // number
-    },
-  ];
-
   scheduleList: Observable<ScheduleList>;
 
   constructor(
@@ -44,7 +27,6 @@ export class ScheduleBookingListComponent {
   }
 
   selectSchedule(schedule: Schedule) {
-    console.log('Schedule selected:', schedule);
     // Implement logic to save selection
   }
 
@@ -68,5 +50,11 @@ export class ScheduleBookingListComponent {
     return this.translateService.currentLang === 'th'
       ? route.nameThai
       : route.nameEnglish;
+  }
+
+  formatTimeToHHMM(time: string): string {
+    if (!time) return '';
+    const parts = time.split(':');
+    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
   }
 }

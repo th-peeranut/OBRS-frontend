@@ -10,20 +10,17 @@ import { ScheduleBookingFilterComponent } from './components/schedule-booking-fi
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { ScheduleBookingListComponent } from './components/schedule-booking-list/schedule-booking-list.component';
+import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 
 // Store
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
-import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
-import { RouteEffect } from '../../shared/stores/route/route.effect';
-import { RouteReducer } from '../../shared/stores/route/route.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
-import { StationsEffect } from '../../shared/stores/station/station.effect';
-import { StationReducer } from '../../shared/stores/station/station.reducer';
 import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-list.effect';
 import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
+import { ProvinceEffect } from '../../shared/stores/province/province.effect';
+import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
 
 const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 
@@ -38,15 +35,12 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     RouterModule.forChild(routes),
 
     // Store
-    StoreModule.forFeature('stationList', StationReducer),
-    StoreModule.forFeature('routeList', RouteReducer),
-    StoreModule.forFeature('routeMapList', RouteMapReducer),
+    StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     StoreModule.forFeature('scheduleList', ScheduleListReducer),
+
     EffectsModule.forFeature([
-      StationsEffect,
-      RouteEffect,
-      RouteMapEffect,
+      ProvinceEffect,
       ScheduleFilterEffect,
       ScheduleListEffect,
     ]),
@@ -56,6 +50,7 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 
     // Components
     DropdownObrsComponent,
+    DropdownGroupObrsComponent,
     DropdownObrsPassengerComponent,
   ],
 })

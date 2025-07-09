@@ -239,7 +239,7 @@
     "BAHT_UNIT": "บาท",
     "SEAT_REMAIN": "เหลือ",
     "SEAT_UNIT": "ที่นั่ง",
-    "SEAT_PER_PASSENGER": "ราคาคนละ",
+    "SEAT_PER_PASSENGER": "ราคา/คน",
     "CHOOSE": "เลือก"
   },
   "REVIEW_SCHEDULE_BOOKING": {

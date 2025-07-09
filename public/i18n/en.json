@@ -238,7 +238,7 @@
     "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
-    "SEAT_PER_PASSENGER": "price per person",
+    "SEAT_PER_PASSENGER": "price/person",
     "CHOOSE": "select"
   },
   "REVIEW_SCHEDULE_BOOKING": {

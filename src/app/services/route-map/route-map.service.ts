@@ -13,20 +13,20 @@ export class RouteMapService {
 
   getAll(): Observable<ResponseAPI<RouteMap[]>> {
     return this.http.get<ResponseAPI<RouteMap[]>>(
-      `${environment.apiUrl}/api/route-maps`
+      `${environment.apiUrl}/api/route-legs`
     );
   }
 
   getById(id: number): Observable<ResponseAPI<RouteMap>> {
     return this.http.get<ResponseAPI<RouteMap>>(
-      `${environment.apiUrl}/api/private/route-maps/${id}`
+      `${environment.apiUrl}/api/private/route-legs/${id}`
     );
   }
 
   create(role: RouteMap): Observable<ResponseAPI<RouteMap>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http.post<ResponseAPI<RouteMap>>(
-      `${environment.apiUrl}/api/private/route-maps`,
+      `${environment.apiUrl}/api/private/route-legs`,
       role,
       { headers }
     );
@@ -35,7 +35,7 @@ export class RouteMapService {
   update(id: number, role: RouteMap): Observable<ResponseAPI<RouteMap>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
     return this.http.put<ResponseAPI<RouteMap>>(
-      `${environment.apiUrl}/api/private/route-maps/${id}`,
+      `${environment.apiUrl}/api/private/route-legs/${id}`,
       role,
       { headers }
     );
@@ -43,7 +43,7 @@ export class RouteMapService {
 
   delete(id: number): Observable<ResponseAPI<any> | undefined> {
     return this.http.delete<ResponseAPI<any>>(
-      `${environment.apiUrl}/api/private/route-maps/${id}`
+      `${environment.apiUrl}/api/private/route-legs/${id}`
     );
   }
 }

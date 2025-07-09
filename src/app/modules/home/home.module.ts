@@ -10,17 +10,13 @@ import { HomeBookingComponent } from './components/home-booking/home-booking.com
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from './components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { StationHomeComponent } from './components/station-home/station-home.component';
-import { EffectsModule } from '@ngrx/effects';
+import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 
+import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { StationReducer } from '../../shared/stores/station/station.reducer';
-import { StationsEffect } from '../../shared/stores/station/station.effect';
-import { RouteReducer } from '../../shared/stores/route/route.reducer';
-import { RouteEffect } from '../../shared/stores/route/route.effect';
-import { RouteMapReducer } from '../../shared/stores/route-map/route-map.reducer';
-import { RouteMapEffect } from '../../shared/stores/route-map/route-map.effect';
-import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
-import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
+import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
+import { ProvinceEffect } from '../../shared/stores/province/province.effect';
+
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
 
@@ -31,15 +27,9 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     RouterModule.forChild(routes),
 
     // Store
-    StoreModule.forFeature('stationList', StationReducer),
-    StoreModule.forFeature('routeList', RouteReducer),
-    StoreModule.forFeature('routeMapList', RouteMapReducer),
-    StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
     EffectsModule.forFeature([
-      StationsEffect,
-      RouteEffect,
-      RouteMapEffect,
-      ScheduleFilterEffect,
+      ProvinceEffect,
     ]),
 
     // Add-ons
@@ -47,6 +37,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
 
     // Components
     DropdownObrsComponent,
+    DropdownGroupObrsComponent,
     DropdownObrsPassengerComponent,
   ],
   exports: [

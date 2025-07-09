@@ -200,7 +200,7 @@ export class RegisterComponent implements OnDestroy {
       const formValue = this.registerForm.getRawValue();
 
       this.service.setRegisterValue(formValue);
-      console.log(this.service.getRegisterValue())
+
       this.router.navigate(['/otp', 'register', formValue.phoneNumber]);
     }
   }
