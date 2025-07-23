@@ -9,7 +9,7 @@ import { FormGroup, FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
 import dayjs from 'dayjs';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
-import { map, Observable, Subject, takeUntil } from 'rxjs';
+import { map, Observable, Subject, Subscription, takeUntil } from 'rxjs';
 import {
   ScheduleFilter,
   ScheduleFilterPayload,
@@ -41,7 +41,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     },
     {
       id: 2,
-      nameThai: 'เที่ยวไป-กลับ',
+      nameThai: 'ไป-กลับ',
       nameEnglish: 'Round-trip',
     },
   ];
@@ -52,11 +52,20 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   bookingForm: FormGroup;
 
   rawProvinceStationList: Observable<ProvinceStation[]>;
+
   startProvinceStationList: ProvinceStation[] = [];
   endProvinceStationList: ProvinceStation[] = [];
+
+  startReturnProvinceStationList: ProvinceStation[] = [];
+  endReturnProvinceStationList: ProvinceStation[] = [];
+
   scheduleFilter: Observable<ScheduleFilter>;
 
   private destroy$ = new Subject<void>();
+
+  roundTripOnChange$: Subscription;
+
+  isRoundTripReturn: boolean = false;
 
   constructor(
     private fb: FormBuilder,
@@ -66,7 +75,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   ) {
     this.minDate = new Date();
 
-    this.rawProvinceStationList = this.store.pipe(select(selectProvinceWithStation));
+    this.rawProvinceStationList = this.store.pipe(
+      select(selectProvinceWithStation)
+    );
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
 
     this.createForm();
@@ -76,8 +87,13 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     this.rawProvinceStationList
       .pipe(takeUntil(this.destroy$))
       .subscribe((provinceList) => {
+        // ขาไป
         this.startProvinceStationList = provinceList;
         this.endProvinceStationList = provinceList;
+
+        // ขากลับ
+        this.startReturnProvinceStationList = provinceList;
+        this.endReturnProvinceStationList = provinceList;
       });
 
     this.scheduleFilter
@@ -86,6 +102,8 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((scheduleFilter) => {
+        this.isRoundTripReturn = scheduleFilter?.roundTrip?.id === 2;
+
         let passengerInfo = scheduleFilter?.passengerInfo || [
           { type: 'ADULT', count: 0 },
           { type: 'KIDS', count: 0 },
@@ -99,12 +117,27 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           departureDate = this.minDate;
         }
 
+        let returnDate = scheduleFilter?.returnDate
+          ? new Date(scheduleFilter?.returnDate)
+          : this.minDate;
+
+        if (returnDate < this.minDate) {
+          returnDate = this.minDate;
+        }
+
         this.bookingForm.patchValue({
           roundTrip: scheduleFilter?.roundTrip?.id ?? 1,
           passengerInfo: passengerInfo,
-          startStation: scheduleFilter?.startStation ?? '',
-          endStation: scheduleFilter?.endStation ?? '',
+
+          // ขาไป
+          startStationId: scheduleFilter?.startStationId ?? '',
+          stopStationId: scheduleFilter?.stopStationId ?? '',
           departureDate: departureDate,
+
+          // ขากลับ
+          startReturnStationId: scheduleFilter?.startReturnStationId ?? '',
+          stopReturnStationId: scheduleFilter?.stopReturnStationId ?? '',
+          returnDate: returnDate,
         });
 
         if (scheduleFilter) {
@@ -126,9 +159,23 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     this.bookingForm = this.fb.group({
       roundTrip: [1],
       passengerInfo: [null],
-      startStation: [''],
-      endStation: [''],
+
+      // ขาไป
+      startStationId: [''],
+      stopStationId: [''],
       departureDate: [this.minDate],
+
+      // ขากลับ
+      startReturnStationId: [''],
+      stopReturnStationId: [''],
+      returnDate: [this.minDate],
+    });
+
+    this.roundTripOnChange$ = this.bookingForm.controls[
+      'roundTrip'
+    ].valueChanges.subscribe((value) => {
+      const roundTripId = typeof value === 'object' ? value?.id : value;
+      this.isRoundTripReturn = roundTripId === 2;
     });
   }
 
@@ -162,19 +209,23 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     let payload: ScheduleFilterPayload = {
       bookingType: formValue.roundTrip === 1 ? 'One way' : 'Return',
 
+      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
+
+      // ขาไป
+      startStationId: formValue.startStationId || null,
+      stopStationId: formValue.stopStationId || null,
       departureDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
         : '',
 
+      // ขากลับ
+      startReturnStationId: formValue.startReturnStationId || null,
+      stopReturnStationId: formValue.stopReturnStationId || null,
       returnDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
         : '',
 
-      numberOfPassengers: formValue.adultCount + formValue.kidsCount,
-
-      startStationId: formValue.startStation,
-      stopStationId: formValue.endStation,
-
+      // unused in frontend
       departureRouteId: null,
       returnRouteId: null,
     };
@@ -184,7 +235,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   onStartStationChange(station: Station) {
     this.bookingForm.patchValue({
-      startStation: station.id,
+      startStationId: station.id,
     });
 
     this.rawProvinceStationList
@@ -204,7 +255,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   onEndStationChange(station: Station) {
     this.bookingForm.patchValue({
-      endStation: station.id,
+      stopStationId: station.id,
     });
 
     this.rawProvinceStationList
@@ -222,7 +273,51 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       });
   }
 
+  onStartReturnStationChange(station: Station) {
+    this.bookingForm.patchValue({
+      startReturnStationId: station.id,
+    });
+
+    this.rawProvinceStationList
+      .pipe(
+        map((provinces) =>
+          provinces.map((province) => ({
+            ...province,
+            stations: province.stations.filter((s) => s.id !== station.id),
+          }))
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((filtered) => {
+        this.endReturnProvinceStationList = filtered;
+      });
+  }
+
+  onEndReturnStationChange(station: Station) {
+    this.bookingForm.patchValue({
+      stopReturnStationId: station.id,
+    });
+
+    this.rawProvinceStationList
+      .pipe(
+        map((provinces) =>
+          provinces.map((province) => ({
+            ...province,
+            stations: province.stations.filter((s) => s.id !== station.id),
+          }))
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((filtered) => {
+        this.startReturnProvinceStationList = filtered;
+      });
+  }
+
   getFormValue(controlName: string) {
     return this.bookingForm.get(controlName)?.value;
+  }
+
+  getIsRoundTripReturn() {
+    return this.isRoundTripReturn;
   }
 }

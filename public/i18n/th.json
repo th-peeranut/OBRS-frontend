@@ -186,7 +186,7 @@
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "เที่ยวเดียว",
-      "ROUNDTRIP_2": "เที่ยวไป-กลับ",
+      "ROUNDTRIP_2": "ไป-กลับ",
       "PASSENGER_COUNT": "ผู้โดยสาร",
       "PASSENGER_1": "ผู้ใหญ่",
       "PASSENGER_1_HINT": "อายุ 12 ปีขึ้นไป",
@@ -196,6 +196,10 @@
       "START_STATION": "ต้นทาง",
       "END_STATION": "ปลายทาง",
       "DEPARTURE_DATE": "วันออกเดินทาง",
+
+      "ROUND_DEPARTURE": "รอบวันไป",
+      "ROUND_RETURN": "รอบวันกลับ",
+
       "SEARCH": "ค้นหา"
     },
     "STATION": {

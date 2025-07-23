@@ -11,6 +11,6 @@ export interface RouteMap {
   lastUpdatedBy: string;
   lastUpdatedDate: string;
   route: Route;
-  startStation: Station;
+  startStationId: Station;
   stopStation: Station;
 }

@@ -195,6 +195,10 @@
       "START_STATION": "Source",
       "END_STATION": "Destination",
       "DEPARTURE_DATE": "Departure date",
+
+      "ROUND_DEPARTURE": "Round day to go",
+      "ROUND_RETURN": "Round day to return",
+
       "SEARCH": "Search"
     },
     "STATION": {

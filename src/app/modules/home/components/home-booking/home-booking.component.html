@@ -20,6 +20,13 @@
         ></app-dropdown-obrs-passenger>
       </div>
 
+      <!-- ROUND TRIP RETURN -->
+      <ng-container *ngIf="isRoundTripReturn">
+        <div class="label-return mt-3">
+          {{ "HOME.HOME_BOOKING.ROUND_DEPARTURE" | translate }}
+        </div>
+      </ng-container>
+
       <div class="station-section mt-4">
         <div class="station-group" *ngIf="rawProvinceStationList | async">
           <!-- DROPDOWN START STATION -->
@@ -71,8 +78,72 @@
             </ng-template>
           </p-calendar>
         </div>
+      </div>
 
-        <!-- SEARCH BUTTON -->
+      <!-- ROUND TRIP RETURN -->
+      <ng-container *ngIf="isRoundTripReturn">
+        <div class="horizontal-dotted-line my-5"></div>
+        
+        <div class="label-return">
+          {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }}
+        </div>
+
+        <div class="station-section mt-4">
+          <div class="station-group" *ngIf="rawProvinceStationList | async">
+            <!-- DROPDOWN START STATION -->
+            <app-dropdown-group-obrs
+              [isBorder]="true"
+              [isLabel]="true"
+              [label]="'HOME.HOME_BOOKING.START_STATION'"
+              [options]="startReturnProvinceStationList"
+              (currentValue)="onStartReturnStationChange($event)"
+            ></app-dropdown-group-obrs>
+            <!-- STATION ICON -->
+            <img
+              class="station-icon"
+              src="icons/passenger-station-gap.svg"
+              alt="Passenger ProvinceStation Gap Icon"
+            />
+            <!-- DROPDOWN STOP STATION -->
+            <app-dropdown-group-obrs
+              [isBorder]="true"
+              [isLabel]="true"
+              [label]="'HOME.HOME_BOOKING.END_STATION'"
+              [options]="endReturnProvinceStationList"
+              (currentValue)="onEndReturnStationChange($event)"
+            ></app-dropdown-group-obrs>
+          </div>
+
+          <!-- DEPARTURE DATE -->
+          <div class="form-group-obrs">
+            <!-- LABEL -->
+            <label>
+              {{ "HOME.HOME_BOOKING.DEPARTURE_DATE" | translate }} :
+            </label>
+            <!-- CALENDAR MAIN ELEMENT -->
+            <p-calendar
+              dateFormat="dd/mm/yy"
+              [minDate]="minDate"
+              [iconDisplay]="'input'"
+              [showIcon]="true"
+              inputId="templatedisplay"
+              formControlName="returnDate"
+            >
+              <!-- CUSTOM CALENDAR ICON -->
+              <ng-template pTemplate="inputicon">
+                <img
+                  class="calendar-icon"
+                  src="icons/calendar.svg"
+                  alt="Calendar Icon"
+                />
+              </ng-template>
+            </p-calendar>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- SEARCH BUTTON -->
+      <div class="d-flex justify-content-end w-100">
         <button class="btn btn-search" (click)="onSearch()">
           <img src="icons/search.svg" alt="Search Icon" />
           {{ "HOME.HOME_BOOKING.SEARCH" | translate }}

@@ -4,24 +4,36 @@ import { VehicleType } from './vehicle-type.interface';
 export interface ScheduleFilter {
   roundTrip: Dropdown;
   passengerInfo: { type: string; count: number }[];
-  startStation: string | number;
-  endStation: string | number;
+
+  startStationId: string | number;
+  stopStationId: string | number;
   departureDate: string;
+
+  startReturnStationId: string | number;
+  stopReturnStationId: string | number;
+  returnDate: string;
+
   adultCount?: number;
   kidsCount?: number;
 }
 
 export interface ScheduleFilterPayload {
-  departureRouteId: number | null;
-  departureDate: string;
-  returnRouteId: number | null;
-  returnDate: string;
+  bookingType: string; // 'One way' | 'Return'
   numberOfPassengers: number;
 
+  // ขาไป
   startStationId: number;
   stopStationId: number;
+  departureDate: string;
 
-  bookingType: string; // 'One way' | 'Return'
+  // ขากลับ
+  returnDate: string;
+  startReturnStationId: number;
+  stopReturnStationId: number;
+
+  // unused in frontend
+  departureRouteId: number | null;
+  returnRouteId: number | null;
 }
 
 export interface Schedule {
