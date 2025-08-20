@@ -1,43 +1,80 @@
-<div class="card-container">
-  <div class="card-header">
-    {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
-  </div>
-
-  <hr />
-
-  <div class="card-body">
-    <div class="card-body-content">
-      <span>
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
-      </span>
-      <span>
-        2 
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
-      </span>
+<div
+  class="card-container"
+  *ngIf="this.scheduleBooking | async as scheduleBooking"
+>
+  <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
+    <!-- รายละเอียดราคา -->
+    <div class="card-header">
+      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
     </div>
 
-    <div class="card-body-content">
+    <hr />
+
+    <div class="card-body">
+      <!-- ADULT -->
+      <div
+        class="card-body-content"
+        *ngIf="getAdultCount(scheduleFilter?.passengerInfo) > 0"
+      >
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.ADULT_UNIT" | translate }}
+        </span>
+        <span>
+          {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+        </span>
+      </div>
+
+      <!-- KIDS -->
+      <div
+        class="card-body-content"
+        *ngIf="getKidCount(scheduleFilter?.passengerInfo) > 0"
+      >
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.KID_UNIT" | translate }}
+        </span>
+        <span>
+          {{ getKidCount(scheduleFilter?.passengerInfo) }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PASSENGER_UNIT" | translate }}
+        </span>
+      </div>
+
+      <!-- ราคาตั๋ว -->
+      <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
+        </span>
+        <span>
+          {{ getScheduleBooking(scheduleBooking?.schedule)[0].fare }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+        </span>
+      </div>
+
+      <!-- ราคาตั๋วไป-กลับ -->
+      <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
+        </span>
+        <span>
+          {{ getScheduleBooking(scheduleBooking?.schedule)[0].fare + getScheduleBooking(scheduleBooking?.schedule)[1].fare }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+        </span>
+      </div>
+    </div>
+
+    <hr class="dotted-line" />
+
+    <!-- ราคารวม -->
+    <div class="card-footer">
       <span>
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
       </span>
       <span>
-        150.00 
-        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
+        {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+        {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
       </span>
     </div>
-  </div>
-
-  <hr class="dotted-line" />
-
-  <div class="card-footer">
-    <span>
-      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
-    </span>
-    <span>
-      300.00 
-      {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
-    </span>
-  </div>
+  </ng-container>
 </div>
 
 <div class="btn-confirm">

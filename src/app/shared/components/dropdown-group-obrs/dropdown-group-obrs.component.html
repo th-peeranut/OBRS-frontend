@@ -11,7 +11,9 @@
       aria-expanded="false"
       [class.active]="isDropdownOpen"
       [class.dropdown-toggle-border]="isBorder"
-      (click)="toggleDropdown()"
+      [class.disabled]="isDisabled"
+      [disabled]="isDisabled"
+      (click)="!isDisabled && toggleDropdown()"
     >
       <div class="value-text">
         {{ getValue(selectedValue) }}
@@ -26,6 +28,8 @@
     <ul
       class="dropdown-menu"
       [class.dropdown-menu-border]="isBorder"
+      [class.disabled]="isDisabled"
+      [attr.aria-disabled]="isDisabled ? 'true' : null"
       aria-labelledby="dropdownObrs"
     >
       <ng-container *ngFor="let group of options">
@@ -35,7 +39,8 @@
         <li class="option-items" *ngFor="let station of group.stations">
           <a
             class="dropdown-item dropdown-option"
-            (click)="setCurrentValue(station)"
+            [class.disabled]="isDisabled"
+            (click)="!isDisabled && setCurrentValue(station)"
           >
             {{ getValue(station) }}
           </a>

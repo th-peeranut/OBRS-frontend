@@ -1,6 +1,7 @@
 import { Dropdown } from './dropdown.interface';
 import { Route } from './route.interface';
 import { VehicleType } from './vehicle-type.interface';
+import { Vehicle } from './vehicle.interface';
 export interface ScheduleFilter {
   roundTrip: Dropdown;
   passengerInfo: { type: string; count: number }[];
@@ -9,8 +10,6 @@ export interface ScheduleFilter {
   stopStationId: string | number;
   departureDate: string;
 
-  startReturnStationId: string | number;
-  stopReturnStationId: string | number;
   returnDate: string;
 
   adultCount?: number;
@@ -28,12 +27,6 @@ export interface ScheduleFilterPayload {
 
   // ขากลับ
   returnDate: string;
-  startReturnStationId: number;
-  stopReturnStationId: number;
-
-  // unused in frontend
-  departureRouteId: number | null;
-  returnRouteId: number | null;
 }
 
 export interface Schedule {
@@ -52,8 +45,7 @@ export interface Schedule {
 
   route: Route | null;
 
-  // change when have data <T> | null
-  vehicle: null;
+  vehicle: Vehicle;
 
   vehicleType: VehicleType | null;
 

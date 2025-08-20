@@ -23,6 +23,7 @@ import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-lis
 import { ProvinceStation } from '../../../../shared/interfaces/province.interface';
 import { Station } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
+import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
 
 @Component({
   selector: 'app-schedule-booking-filter',
@@ -56,9 +57,6 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   startProvinceStationList: ProvinceStation[] = [];
   endProvinceStationList: ProvinceStation[] = [];
 
-  startReturnProvinceStationList: ProvinceStation[] = [];
-  endReturnProvinceStationList: ProvinceStation[] = [];
-
   scheduleFilter: Observable<ScheduleFilter>;
 
   private destroy$ = new Subject<void>();
@@ -90,10 +88,6 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         // ขาไป
         this.startProvinceStationList = provinceList;
         this.endProvinceStationList = provinceList;
-
-        // ขากลับ
-        this.startReturnProvinceStationList = provinceList;
-        this.endReturnProvinceStationList = provinceList;
       });
 
     this.scheduleFilter
@@ -102,7 +96,11 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe((scheduleFilter) => {
-        this.isRoundTripReturn = scheduleFilter?.roundTrip?.id === 2;
+        const roundTripId = scheduleFilter?.roundTrip?.id
+          ? scheduleFilter?.roundTrip?.id
+          : scheduleFilter?.roundTrip;
+
+        this.isRoundTripReturn = roundTripId === 2;
 
         let passengerInfo = scheduleFilter?.passengerInfo || [
           { type: 'ADULT', count: 0 },
@@ -126,7 +124,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         }
 
         this.bookingForm.patchValue({
-          roundTrip: scheduleFilter?.roundTrip?.id ?? 1,
+          roundTrip: roundTripId ?? 1,
           passengerInfo: passengerInfo,
 
           // ขาไป
@@ -135,8 +133,6 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           departureDate: departureDate,
 
           // ขากลับ
-          startReturnStationId: scheduleFilter?.startReturnStationId ?? '',
-          stopReturnStationId: scheduleFilter?.stopReturnStationId ?? '',
           returnDate: returnDate,
         });
 
@@ -153,6 +149,8 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+
+    this.roundTripOnChange$?.unsubscribe();
   }
 
   createForm() {
@@ -176,6 +174,14 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     ].valueChanges.subscribe((value) => {
       const roundTripId = typeof value === 'object' ? value?.id : value;
       this.isRoundTripReturn = roundTripId === 2;
+
+      this.store.dispatch(
+        invokeSetScheduleBookingApi({
+          schedule_booking: {
+            schedule: null,
+          },
+        })
+      );
     });
   }
 
@@ -219,15 +225,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         : '',
 
       // ขากลับ
-      startReturnStationId: formValue.startReturnStationId || null,
-      stopReturnStationId: formValue.stopReturnStationId || null,
       returnDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
         : '',
-
-      // unused in frontend
-      departureRouteId: null,
-      returnRouteId: null,
     };
 
     return payload;
@@ -270,46 +270,6 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       )
       .subscribe((filtered) => {
         this.startProvinceStationList = filtered;
-      });
-  }
-
-  onStartReturnStationChange(station: Station) {
-    this.bookingForm.patchValue({
-      startReturnStationId: station.id,
-    });
-
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.endReturnProvinceStationList = filtered;
-      });
-  }
-
-  onEndReturnStationChange(station: Station) {
-    this.bookingForm.patchValue({
-      stopReturnStationId: station.id,
-    });
-
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.startReturnProvinceStationList = filtered;
       });
   }
 

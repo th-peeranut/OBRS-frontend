@@ -1,11 +1,15 @@
 <ng-container *ngIf="scheduleList | async as schedules">
   <div class="booking-container">
-    <h3 class="title">
+    <h3 class="title" *ngIf="!schedules.returnSchedules?.length">
       {{ "SCHEDULE_BOOKING.HEADER" | translate }}
     </h3>
 
     <!-- ขาไป -->
     <ng-container *ngIf="schedules.departureSchedules as departureList">
+      <h3 class="title" *ngIf="schedules.returnSchedules?.length">
+        {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
+      </h3>
+
       <div class="schedule-item mb-3" *ngFor="let departure of departureList">
         <!-- LEFT -->
         <div class="left">
@@ -60,14 +64,97 @@
           </div>
 
           <button
+            *ngIf="!isSelectFirst"
             class="select-btn"
-            (click)="selectSchedule(departure)"
+            type="button"
+            (click)="selectSchedule(departure, true)"
             [class.select-btn-diabled]="departureList.length === 0"
           >
             {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
           </button>
+
+          <button
+            *ngIf="isSelectFirst"
+            class="change-btn"
+            type="button"
+            (click)="clearSchedule()"
+          >
+            {{ "SCHEDULE_BOOKING.CHANGE" | translate }}
+          </button>
         </div>
       </div>
+    </ng-container>
+
+    <ng-container *ngIf="schedules.returnSchedules as returnList">
+      <h3 class="title" *ngIf="isSelectFirst">
+        {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
+      </h3>
+
+      <ng-container *ngIf="isSelectFirst">
+        <div class="schedule-item mb-3" *ngFor="let return of returnList">
+          <!-- LEFT -->
+          <div class="left">
+            <div class="icon">
+              <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+            </div>
+
+            <div class="time">
+              {{ formatTimeToHHMM(return.departureTime) }}
+              {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+            </div>
+
+            <div class="time-info">
+              <div class="route">
+                {{ getHour(return.travelTime) }}
+                {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
+                {{ getMinute(return.travelTime) }}
+                {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
+              </div>
+
+              <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+
+              <div class="route">
+                {{ getRoutesName(return.route) }}
+              </div>
+            </div>
+
+            <div class="time">
+              {{ formatTimeToHHMM(return.arrivalTime) }}
+              {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+            </div>
+          </div>
+          <!-- RIGHT -->
+          <div class="right">
+            <div class="text-container">
+              <div class="price">
+                {{ return.fare }}
+                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
+              </div>
+
+              <div class="availability">
+                <span>
+                  {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
+                  {{ return.availableSeat }}
+                  {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
+                </span>
+                <span>|</span>
+                <span>
+                  {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
+                </span>
+              </div>
+            </div>
+
+            <button
+              class="select-btn"
+              (click)="selectSchedule(return, false)"
+              type="button"
+              [class.select-btn-diabled]="returnList.length === 0"
+            >
+              {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
+            </button>
+          </div>
+        </div>
+      </ng-container>
     </ng-container>
   </div>
 </ng-container>

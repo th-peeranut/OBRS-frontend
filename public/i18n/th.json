@@ -237,6 +237,8 @@
   },
   "SCHEDULE_BOOKING": {
     "HEADER": "รอบการเดินทาง",
+    "SUBHEADER_DEPARTURE": "รอบการเดินทาง : ขาไป",
+    "SUBHEADER_RETURN": "รอบการเดินทาง : ขากลับ",
     "TIME_UNIT": "น.",
     "HOUR_UNIT": "ชั่วโมง",
     "MINITE_UNIT": "นาที",
@@ -244,7 +246,8 @@
     "SEAT_REMAIN": "เหลือ",
     "SEAT_UNIT": "ที่นั่ง",
     "SEAT_PER_PASSENGER": "ราคา/คน",
-    "CHOOSE": "เลือก"
+    "CHOOSE": "เลือก",
+    "CHANGE": "เปลี่ยนข้อมูล"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -252,6 +255,8 @@
       "ROUND_TRIP": "รอบการเดินทาง",
       "ROUND_TRIP_ONEWAY": "เที่ยวเดียว",
       "ROUND_TRIP_TWOWAY": "ไป-กลับ",
+      "ROUND_TRIP_BEGIN": "รอบการเดินทาง: ขาไป",
+      "ROUND_TRIP_RETURN": "รอบการเดินทาง: ขากลับ",
       "CHANGE_DATA": "เปลี่ยนข้อมูล",
       "DATE_UNIT": "วันที่",
       "TIME_UNIT": "น.",
@@ -264,6 +269,7 @@
       "KID_UNIT": "เด็ก",
       "PASSENGER_UNIT": "คน",
       "TICKET_PRICE": "ราคาตั๋ว",
+      "TICKET_PRICE_RETURN": "ราคาตั๋วไป-กลับ",
       "TICKET_UNIT": "บาท/คน",
       "TOTAL": "ราคารวม",
       "TOTAL_UNIT": "บาท",

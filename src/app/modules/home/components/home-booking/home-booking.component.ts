@@ -42,9 +42,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   rawProvinceStationList: Observable<ProvinceStation[]>;
   startProvinceStationList: ProvinceStation[] = [];
   endProvinceStationList: ProvinceStation[] = [];
-  
-  startReturnProvinceStationList: ProvinceStation[] = [];
-  endReturnProvinceStationList: ProvinceStation[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -74,10 +71,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
         // ขาไป
         this.startProvinceStationList = provinceList;
         this.endProvinceStationList = provinceList;
-
-        // ขากลับ
-        this.startReturnProvinceStationList = provinceList;
-        this.endReturnProvinceStationList = provinceList;
       });
   }
 
@@ -99,8 +92,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       departureDate: [this.minDate],
 
       // ขากลับ
-      startReturnStationId: [''],
-      stopReturnStationId: [''],
       returnDate: [this.minDate],
     });
 
@@ -120,7 +111,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.store.pipe(select(selectScheduleList), take(1)).subscribe(() => {
+    this.store.pipe(select(selectScheduleList), take(1)).subscribe((value) => {
       this.router.navigate(['/schedule-booking']);
     });
   }
@@ -149,15 +140,9 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
         : '',
 
       // ขากลับ
-      startReturnStationId: formValue.startReturnStationId || null,
-      stopReturnStationId: formValue.stopReturnStationId || null,
       returnDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
-        : '',
-
-      // unused in frontend
-      departureRouteId: null,
-      returnRouteId: null,
+        : ''
     };
 
     return payload;
@@ -203,43 +188,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       });
   }
 
-  onStartReturnStationChange(station: Station) {
-    this.bookingForm.patchValue({
-      startReturnStationId: station.id,
-    });
-
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.endReturnProvinceStationList = filtered;
-      });
-  }
-
-  onEndReturnStationChange(station: Station) {
-    this.bookingForm.patchValue({
-      stopReturnStationId: station.id,
-    });
-
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.startReturnProvinceStationList = filtered;
-      });
+  getFormValue(controlName: string) {
+    return this.bookingForm.get(controlName)?.value;
   }
 }

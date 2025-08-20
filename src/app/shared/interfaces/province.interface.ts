@@ -13,3 +13,7 @@ export interface Province {
 export interface ProvinceStation extends Province {
   stations: Station[];
 }
+
+export interface ProvinceStationReview extends Province  {
+  station: Station;
+}

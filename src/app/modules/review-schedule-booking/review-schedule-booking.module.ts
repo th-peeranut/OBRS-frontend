@@ -10,6 +10,15 @@ import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs
 import { ReviewScheduleBookingSummaryComponent } from './components/review-schedule-booking-summary/review-schedule-booking-summary.component';
 import { ReviewScheduleBookingTotalComponent } from './components/review-schedule-booking-total/review-schedule-booking-total.component';
 
+/// store
+import { EffectsModule } from '@ngrx/effects';
+import { StoreModule } from '@ngrx/store';
+import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/schedule-booking.effect';
+import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
+import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
+import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
+import { ProvinceEffect } from '../../shared/stores/province/province.effect';
 
 const routes: Routes = [
   { path: '', component: ReviewScheduleBookingComponent },
@@ -27,6 +36,17 @@ const routes: Routes = [
 
     // Add-ons
     CalendarModule,
+
+    // Store
+    StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
+    StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
+    StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+
+    EffectsModule.forFeature([
+      ProvinceEffect,
+      ScheduleFilterEffect,
+      ScheduleBookingEffect,
+    ]),
 
     // Components
     DropdownObrsComponent,

@@ -236,6 +236,8 @@
   },
   "SCHEDULE_BOOKING": {
     "HEADER": "Trip type",
+    "SUBHEADER_DEPARTURE": "Travel itinerary: Outbound",
+    "SUBHEADER_RETURN": "Travel itinerary: Return",
     "TIME_UNIT": "",
     "HOUR_UNIT": "hour",
     "MINITE_UNIT": "minute",
@@ -243,7 +245,8 @@
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "price/person",
-    "CHOOSE": "select"
+    "CHOOSE": "select",
+    "CHANGE": "change data"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -251,6 +254,8 @@
       "ROUND_TRIP": "Trip Type",
       "ROUND_TRIP_ONEWAY": "One Way",
       "ROUND_TRIP_TWOWAY": "Round-Trip",
+      "ROUND_TRIP_BEGIN": "Round Trip: Outbound",
+      "ROUND_TRIP_RETURN": "Round Trip: Return",
       "CHANGE_DATA": "Change Data",
       "DATE_UNIT": "Date",
       "TIME_UNIT": "",
@@ -263,6 +268,7 @@
       "KID_UNIT": "Child",
       "PASSENGER_UNIT": "Person",
       "TICKET_PRICE": "Ticket Price",
+      "TICKET_PRICE_RETURN": "Round-trip ticket price",
       "TICKET_UNIT": "baht/person",
       "TOTAL": "Total price",
       "TOTAL_UNIT": "baht",

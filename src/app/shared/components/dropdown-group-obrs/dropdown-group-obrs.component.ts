@@ -36,6 +36,7 @@ export class DropdownGroupObrsComponent
   @Input() options: any[] = []; 
   @Input() isBorder: boolean = false;
   @Input() value: any = null;
+  @Input() isDisabled: boolean = false;
 
   @Output() currentValue = new EventEmitter<any>();
 

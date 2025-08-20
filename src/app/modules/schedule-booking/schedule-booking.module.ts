@@ -21,6 +21,8 @@ import { ScheduleListEffect } from '../../shared/stores/schedule-list/schedule-l
 import { ScheduleListReducer } from '../../shared/stores/schedule-list/schedule-list.reducer';
 import { ProvinceEffect } from '../../shared/stores/province/province.effect';
 import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
+import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
+import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/schedule-booking.effect';
 
 const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
 
@@ -38,11 +40,13 @@ const routes: Routes = [{ path: '', component: ScheduleBookingComponent }];
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     StoreModule.forFeature('scheduleList', ScheduleListReducer),
+    StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
       ScheduleFilterEffect,
       ScheduleListEffect,
+      ScheduleBookingEffect,
     ]),
 
     // Add-ons

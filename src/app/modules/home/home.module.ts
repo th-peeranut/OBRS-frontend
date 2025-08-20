@@ -16,6 +16,8 @@ import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
 import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
 import { ProvinceEffect } from '../../shared/stores/province/province.effect';
+import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
+import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 
 
 const routes: Routes = [{ path: '', component: HomeComponent }];
@@ -28,8 +30,11 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
 
     // Store
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
+    StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    
     EffectsModule.forFeature([
       ProvinceEffect,
+      ScheduleFilterEffect
     ]),
 
     // Add-ons

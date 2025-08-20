@@ -76,3 +76,10 @@ li.option-items {
     border-bottom: 1px solid #f6f7f7;
   }
 }
+
+button.disabled,
+.dropdown-menu.disabled .dropdown-item {
+  pointer-events: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -83,7 +83,7 @@
       <!-- ROUND TRIP RETURN -->
       <ng-container *ngIf="isRoundTripReturn">
         <div class="horizontal-dotted-line my-5"></div>
-        
+
         <div class="label-return">
           {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }}
         </div>
@@ -94,9 +94,10 @@
             <app-dropdown-group-obrs
               [isBorder]="true"
               [isLabel]="true"
+              [isDisabled]="true"
               [label]="'HOME.HOME_BOOKING.START_STATION'"
-              [options]="startReturnProvinceStationList"
-              (currentValue)="onStartReturnStationChange($event)"
+              [options]="startProvinceStationList"
+              [value]="getFormValue('startStationId')"
             ></app-dropdown-group-obrs>
             <!-- STATION ICON -->
             <img
@@ -108,9 +109,10 @@
             <app-dropdown-group-obrs
               [isBorder]="true"
               [isLabel]="true"
+              [isDisabled]="true"
               [label]="'HOME.HOME_BOOKING.END_STATION'"
-              [options]="endReturnProvinceStationList"
-              (currentValue)="onEndReturnStationChange($event)"
+              [options]="endProvinceStationList"
+              [value]="getFormValue('stopStationId')"
             ></app-dropdown-group-obrs>
           </div>
 
@@ -144,7 +146,7 @@
 
       <!-- SEARCH BUTTON -->
       <div class="d-flex justify-content-end w-100">
-        <button class="btn btn-search" (click)="onSearch()">
+        <button class="btn btn-search" type="button" (click)="onSearch()">
           <img src="icons/search.svg" alt="Search Icon" />
           {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
         </button>

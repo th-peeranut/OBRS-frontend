@@ -93,10 +93,10 @@
             <app-dropdown-group-obrs
               [isBorder]="true"
               [isLabel]="true"
+              [isDisabled]="true"
               [label]="'HOME.HOME_BOOKING.START_STATION'"
-              [options]="startReturnProvinceStationList"
-              [value]="getFormValue('startReturnStationId')"
-              (currentValue)="onStartReturnStationChange($event)"
+              [options]="startProvinceStationList"
+              [value]="getFormValue('startStationId')"
             ></app-dropdown-group-obrs>
             <!-- STATION ICON -->
             <img
@@ -108,10 +108,10 @@
             <app-dropdown-group-obrs
               [isBorder]="true"
               [isLabel]="true"
+              [isDisabled]="true"
               [label]="'HOME.HOME_BOOKING.END_STATION'"
-              [options]="endReturnProvinceStationList"
-              [value]="getFormValue('stopReturnStationId')"
-              (currentValue)="onEndReturnStationChange($event)"
+              [options]="endProvinceStationList"
+              [value]="getFormValue('stopStationId')"
             ></app-dropdown-group-obrs>
           </div>
 
@@ -145,7 +145,7 @@
 
       <!-- SEARCH BUTTON -->
       <div class="d-flex justify-content-end w-100">
-        <button class="btn btn-search" (click)="onSearch()">
+        <button class="btn btn-search" type="button" (click)="onSearch()">
           <img src="icons/search.svg" alt="Search Icon" />
           {{ "HOME.HOME_BOOKING.SEARCH" | translate }}
         </button>
