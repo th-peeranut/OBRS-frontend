@@ -20,13 +20,6 @@
         ></app-dropdown-obrs-passenger>
       </div>
 
-      <!-- ROUND TRIP RETURN -->
-      <ng-container *ngIf="isRoundTripReturn">
-        <div class="label-return mt-3">
-          {{ "HOME.HOME_BOOKING.ROUND_DEPARTURE" | translate }}
-        </div>
-      </ng-container>
-
       <div class="station-section mt-4">
         <div class="station-group" *ngIf="rawProvinceStationList | async">
           <!-- DROPDOWN START STATION -->
@@ -78,44 +71,9 @@
             </ng-template>
           </p-calendar>
         </div>
-      </div>
 
-      <!-- ROUND TRIP RETURN -->
-      <ng-container *ngIf="isRoundTripReturn">
-        <div class="horizontal-dotted-line my-5"></div>
-
-        <div class="label-return">
-          {{ "HOME.HOME_BOOKING.ROUND_RETURN" | translate }}
-        </div>
-
-        <div class="station-section mt-4">
-          <div class="station-group" *ngIf="rawProvinceStationList | async">
-            <!-- DROPDOWN START STATION -->
-            <app-dropdown-group-obrs
-              [isBorder]="true"
-              [isLabel]="true"
-              [isDisabled]="true"
-              [label]="'HOME.HOME_BOOKING.START_STATION'"
-              [options]="startProvinceStationList"
-              [value]="getFormValue('startStationId')"
-            ></app-dropdown-group-obrs>
-            <!-- STATION ICON -->
-            <img
-              class="station-icon"
-              src="icons/passenger-station-gap.svg"
-              alt="Passenger ProvinceStation Gap Icon"
-            />
-            <!-- DROPDOWN STOP STATION -->
-            <app-dropdown-group-obrs
-              [isBorder]="true"
-              [isLabel]="true"
-              [isDisabled]="true"
-              [label]="'HOME.HOME_BOOKING.END_STATION'"
-              [options]="endProvinceStationList"
-              [value]="getFormValue('stopStationId')"
-            ></app-dropdown-group-obrs>
-          </div>
-
+        <!-- ROUND TRIP RETURN -->
+        <ng-container *ngIf="isRoundTripReturn">
           <!-- DEPARTURE DATE -->
           <div class="form-group-obrs">
             <!-- LABEL -->
@@ -141,8 +99,8 @@
               </ng-template>
             </p-calendar>
           </div>
-        </div>
-      </ng-container>
+        </ng-container>
+      </div>
 
       <!-- SEARCH BUTTON -->
       <div class="d-flex justify-content-end w-100">
