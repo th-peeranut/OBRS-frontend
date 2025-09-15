@@ -1,0 +1,54 @@
+@import "../../../../../styles/variables.scss";
+
+.card-container {
+  background: $primary-white;
+  padding: 24px;
+  padding-top: 0px;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+
+  border: 1px solid $primary-lightgrey;
+}
+
+.card-body {
+  padding: 8px;
+}
+
+.subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #757a86;
+}
+
+.passenget-badge {
+  background: $secondary-light-blue;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+
+  width: 70px;
+  height: 30px;
+
+  text-align: center;
+}
+
+.form-row {
+  display: flex;
+  row-gap: 8px;
+}
+
+.form-control {
+  height: 48px;
+}
+
+.line {
+  flex: 1;
+  height: 1px;
+  background: #dddee1;
+  margin: 0 8px;
+}

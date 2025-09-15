@@ -1,0 +1,24 @@
+@import "../../../styles/variables.scss";
+
+.content-container {
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+  column-gap: 24px;
+  padding: 0 360px;
+}
+
+.title {
+  margin-top: 32px;
+  margin-bottom: 32px;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.form-container {
+  width: 70%;
+}
+
+.summary-container {
+  width: 30%;
+}

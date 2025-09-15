@@ -1,0 +1,300 @@
+<ng-container *ngIf="passengerForm">
+  <!-- FORM SECTION -->
+  <form class="login-form" [formGroup]="passengerForm" novalidate>
+    <div formArrayName="passengerData">
+      <div
+        class="card-container mt-3"
+        *ngFor="let group of passengerData.controls; let i = index"
+        [formGroupName]="i"
+      >
+        <!-- BODY -->
+        <div class="card-body">
+          <div class="row form-row">
+            <!-- ผู้ใหญ่/เด็ก -->
+            <div class="col-12">
+              <div class="passenget-badge">
+                {{ group.get("isAdult")?.value ? "ผู้ใหญ่" : "เด็ก" }}
+                <!-- {{ i + 1 }} -->
+              </div>
+            </div>
+
+            <!-- ข้อมูลส่วนตัว -->
+            <div class="col-12 my-3">
+              <div class="subtitle">ข้อมูลส่วนตัว</div>
+            </div>
+
+            <!-- ใช้ข้อมูลที่ลงทะเบียน -->
+            <div class="col-12 mb-3" *ngIf="i == 0">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="isUseAddressInfo-{{ i }}"
+                  formControlName="isUseAddressInfo"
+                />
+                <label class="form-check-label" for="isUseAddressInfo-{{ i }}">
+                  ใช้ข้อมูลที่ลงทะเบียน
+                </label>
+              </div>
+            </div>
+
+            <!-- คำนำหน้า -->
+            <div class="col-6">
+              <label
+                for="title-{{ i }}"
+                [class.label-error]="
+                  group.get('title')?.errors &&
+                  (group.get('title')?.touched || group.get('title')?.dirty)
+                "
+              >
+                คำนำหน้า
+                <span class="form-required">*</span>
+              </label>
+              <app-dropdown-obrs
+                [isBorder]="true"
+                [isLabel]="false"
+                [options]="titleOptions"
+                formControlName="title"
+                id="title-{{ i }}"
+              ></app-dropdown-obrs>
+              <div
+                class="text-error"
+                *ngIf="
+                  group.get('title')?.errors &&
+                  (group.get('title')?.touched || group.get('title')?.dirty)
+                "
+              >
+                กรุณากรอกคำนำหน้า
+              </div>
+            </div>
+
+            <!-- ชื่อจริง -->
+            <div class="col-6">
+              <label
+                for="firstName-{{ i }}"
+                [class.label-error]="
+                  group.get('firstName')?.errors &&
+                  (group.get('firstName')?.touched ||
+                    group.get('firstName')?.dirty)
+                "
+              >
+                ชื่อจริง
+                <span class="form-required">*</span>
+              </label>
+              <input
+                class="form-control mt-1"
+                id="firstName-{{ i }}"
+                formControlName="firstName"
+                [class.form-error]="
+                  group.get('firstName')?.errors &&
+                  (group.get('firstName')?.touched ||
+                    group.get('firstName')?.dirty)
+                "
+              />
+              <div
+                class="text-error"
+                *ngIf="
+                  group.get('firstName')?.errors &&
+                  (group.get('firstName')?.touched ||
+                    group.get('firstName')?.dirty)
+                "
+              >
+                กรุณากรอกชื่อจริง
+              </div>
+            </div>
+
+            <!-- ชื่อกลาง (ถ้ามี) -->
+            <div class="col-6">
+              <label for="middleName-{{ i }}"> ชื่อกลาง (ถ้ามี) </label>
+              <input
+                class="form-control mt-1"
+                id="middleName-{{ i }}"
+                formControlName="middleName"
+              />
+            </div>
+
+            <!-- นามสกุล -->
+            <div class="col-6">
+              <label
+                for="lastName-{{ i }}"
+                [class.label-error]="
+                  group.get('lastName')?.errors &&
+                  (group.get('lastName')?.touched ||
+                    group.get('lastName')?.dirty)
+                "
+              >
+                นามสกุล
+                <span class="form-required">*</span>
+              </label>
+              <input
+                class="form-control mt-1"
+                id="lastName-{{ i }}"
+                formControlName="lastName"
+                [class.form-error]="
+                  group.get('lastName')?.errors &&
+                  (group.get('lastName')?.touched ||
+                    group.get('lastName')?.dirty)
+                "
+              />
+              <div
+                class="text-error"
+                *ngIf="
+                  group.get('lastName')?.errors &&
+                  (group.get('lastName')?.touched ||
+                    group.get('lastName')?.dirty)
+                "
+              >
+                กรุณากรอกนามสกุล
+              </div>
+            </div>
+
+            <div class="col-6">
+              <!-- หมายเลขโทรศัพท์ -->
+              <label
+                for="phoneNumber-{{ i }}"
+                [class.label-error]="
+                  group.get('phoneNumber')?.errors &&
+                  (group.get('phoneNumber')?.touched ||
+                    group.get('phoneNumber')?.dirty)
+                "
+              >
+                หมายเลขโทรศัพท์
+
+                <span class="form-required">*</span>
+              </label>
+              <input
+                class="form-control mt-1"
+                type="text"
+                id="phoneNumber-{{ i }}"
+                formControlName="phoneNumber"
+                [placeholder]="'กรุณากรอกหมายเลขโทรศัพท์'"
+                [class.form-error]="
+                  group.get('phoneNumber')?.errors &&
+                  (group.get('phoneNumber')?.touched ||
+                    group.get('phoneNumber')?.dirty)
+                "
+              />
+              <div
+                class="text-error"
+                *ngIf="
+                  group.get('phoneNumber')?.errors &&
+                  (group.get('phoneNumber')?.touched ||
+                    group.get('phoneNumber')?.dirty)
+                "
+              >
+                กรุณากรอกหมายเลขโทรศัพท์
+              </div>
+            </div>
+
+            <!-- เพศ/สถานะสภาพ -->
+            <div class="col-6">
+              <label
+                [class.label-error]="
+                  group.get('gender')?.errors &&
+                  (group.get('gender')?.touched || group.get('gender')?.dirty)
+                "
+              >
+                เพศ/สถานะสภาพ
+                <span class="form-required">*</span>
+              </label>
+
+              <!-- ชาย -->
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="gender_male-{{ i }}"
+                  formControlName="gender"
+                  value="MALE"
+                />
+                <label class="form-check-label" for="gender_male-{{ i }}">
+                  <img
+                    class="passenger-male-icon"
+                    src="icons/passenger-male.svg"
+                    alt="Passenger male Icon"
+                  />
+                  ชาย
+                </label>
+              </div>
+
+              <!-- หญิง -->
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="gender_female-{{ i }}"
+                  formControlName="gender"
+                  value="FEMALE"
+                />
+                <label class="form-check-label" for="gender_female-{{ i }}">
+                  <img
+                    class="passenger-female-icon"
+                    src="icons/passenger-female.svg"
+                    alt="Passenger Female Icon"
+                  />
+                  หญิง
+                </label>
+              </div>
+
+              <!-- พระ -->
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="gender_monk-{{ i }}"
+                  formControlName="gender"
+                  value="MONK"
+                />
+                <label class="form-check-label" for="gender_monk-{{ i }}">
+                  <img
+                    class="passenger-monk-icon"
+                    src="icons/passenger-monk.svg"
+                    alt="Passenger Monk Icon"
+                  />
+                  พระ
+                </label>
+              </div>
+
+              <div
+                class="text-error"
+                *ngIf="
+                  group.get('gender')?.errors &&
+                  (group.get('gender')?.touched || group.get('gender')?.dirty)
+                "
+              >
+                กรุณากรอกเพศ/สถานะสภาพ
+              </div>
+            </div>
+
+            <!-- ต้องการเลือกที่นั่ง (ไม่บังคับ) -->
+            <div class="col-12 mt-3">
+              <div class="form-check">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="isSelectSeat-{{ i }}"
+                  formControlName="isSelectSeat"
+                />
+                <label class="form-check-label" for="isSelectSeat-{{ i }}">
+                  ต้องการเลือกที่นั่ง (ไม่บังคับ)
+                </label>
+              </div>
+            </div>
+
+            <div
+              class="d-flex justify-content-center w-100 mt-3"
+              *ngIf="group.get('isSelectSeat')?.value"
+            >
+              <div class="w-50">
+                <app-passenger-seat-van
+                  [gender]="group.get('gender')?.value"
+                  (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                ></app-passenger-seat-van>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</ng-container>

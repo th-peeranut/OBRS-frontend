@@ -60,7 +60,7 @@ export class RegisterComponent implements OnDestroy {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
 
-    this.creatForm();
+    this.createForm();
   }
 
   ngOnDestroy(): void {
@@ -72,7 +72,7 @@ export class RegisterComponent implements OnDestroy {
       this.phoneNumberSubscription$.unsubscribe();
   }
 
-  creatForm() {
+  createForm() {
     this.registerForm = this.fb.group({
       firstName: ['', Validators.required],
       middleName: [''],

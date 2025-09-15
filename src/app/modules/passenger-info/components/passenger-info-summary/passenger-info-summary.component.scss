@@ -1,0 +1,183 @@
+@import "../../../../../styles/variables.scss";
+
+.card-container {
+  background: $primary-white;
+  padding: 24px;
+  border-radius: 10px;
+
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+
+  margin-top: 90px;
+  padding: 24px;
+
+  border: 1px solid $primary-lightgrey;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+
+  &-text {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    align-content: center;
+
+    &-details {
+      display: flex;
+      flex-direction: column;
+      row-gap: 4px;
+    }
+  }
+}
+
+.card-body {
+  display: flex;
+  align-items: center;
+
+  &-detail {
+    display: flex;
+    flex-direction: column;
+    padding: 0px 16px;
+    gap: 28px;
+
+    &-station {
+      display: flex;
+      flex-direction: row;
+      gap: 80px;
+
+      &-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+  }
+}
+
+.card-body-summary {
+  font-size: 18px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  &-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.card-footer {
+  font-size: 18px;
+  font-weight: bold;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+hr {
+  margin: 0;
+}
+
+.dotted-line {
+  border: none;
+  border-top: 3px dotted $primary-lightgrey;
+  margin: 0;
+}
+
+.header-text {
+  font-size: 18px;
+  color: $text-lightblack;
+}
+
+.subheader-text {
+  font-size: 14px;
+  color: $text-lightblack;
+
+  display: flex;
+  flex-direction: row;
+  column-gap: 8px;
+}
+
+.body-header-text {
+  font-size: 18px;
+  font-weight: bold;
+  color: $text-lightblack;
+}
+
+.body-subheader-text {
+  font-size: 14px;
+  color: $text-lightblack;
+}
+
+.btn-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.btn-next {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  min-width: 100%;
+  height: 52px;
+
+  background: $primary-blue;
+  border-radius: 24px;
+
+  margin-top: 24px;
+  padding: 25.5px 8px;
+
+  color: $text-white;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+
+  cursor: pointer;
+
+  &:hover {
+    transition: all 0.3s ease-in-out;
+  }
+
+  &:disabled {
+    background: #dddee1;
+    border: none;
+    color: $text-white;
+    cursor: not-allowed;
+  }
+}
+
+.btn-back {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  min-width: 100%;
+  height: 52px;
+
+  background: $primary-white;
+
+  border: 1px solid #dddee1;
+  border-radius: 24px;
+
+  margin-top: 24px;
+  padding: 25.5px 8px;
+
+  color: $text-softblack;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+
+  cursor: pointer;
+
+  &:hover {
+    transition: all 0.3s ease-in-out;
+  }
+}

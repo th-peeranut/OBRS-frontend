@@ -54,6 +54,13 @@ const routes: Routes = [
         (m) => m.ReviewScheduleBookingModule
       ),
   },
+  {
+    path: 'passenger-info',
+    loadChildren: () =>
+      import('./modules/passenger-info/passenger-info.module').then(
+        (m) => m.PassengerInfoModule
+      ),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
