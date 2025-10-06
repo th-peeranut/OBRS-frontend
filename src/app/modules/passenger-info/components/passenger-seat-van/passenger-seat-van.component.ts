@@ -10,13 +10,26 @@ export class PassengerSeatVanComponent {
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
 
-  isSelected: string = "";
-  isDisableSeat: boolean;
+  isSelected: string = '';
+  isDisableSeat: boolean = false;
 
   setPassengerSeatPosition(passengerSeatPosition: string) {
-    this.isDisableSeat = !this.isDisableSeat;
+    if (this.gender == '') {
+      return;
+    }
+
+    if (this.isSelected == passengerSeatPosition) {
+      this.isDisableSeat = false;
+      this.isSelected = '';
+      this.passengerSeatPositionOnChange.emit(this.isSelected);
+
+      return;
+    } else if (this.isDisableSeat) {
+      return;
+    }
+
+    this.isDisableSeat = true;
     this.isSelected = passengerSeatPosition;
-    
-    this.passengerSeatPositionOnChange.emit(this.isDisableSeat ? passengerSeatPosition : "");
+    this.passengerSeatPositionOnChange.emit(this.isSelected);
   }
 }

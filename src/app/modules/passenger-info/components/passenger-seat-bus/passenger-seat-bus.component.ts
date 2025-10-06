@@ -1,10 +1,35 @@
-import { Component } from '@angular/core';
+import { Component, EventEmitter, Input, Output } from '@angular/core';
 
 @Component({
   selector: 'app-passenger-seat-bus',
   templateUrl: './passenger-seat-bus.component.html',
-  styleUrl: './passenger-seat-bus.component.scss'
+  styleUrl: './passenger-seat-bus.component.scss',
 })
 export class PassengerSeatBusComponent {
+  @Input() gender: string = '';
 
+  @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
+
+  isSelected: string = '';
+  isDisableSeat: boolean = false;
+
+  setPassengerSeatPosition(passengerSeatPosition: string) {
+    if (this.gender == '') {
+      return;
+    }
+
+    if (this.isSelected == passengerSeatPosition) {
+      this.isDisableSeat = false;
+      this.isSelected = '';
+      this.passengerSeatPositionOnChange.emit(this.isSelected);
+
+      return;
+    } else if (this.isDisableSeat) {
+      return;
+    }
+
+    this.isDisableSeat = true;
+    this.isSelected = passengerSeatPosition;
+    this.passengerSeatPositionOnChange.emit(this.isSelected);
+  }
 }

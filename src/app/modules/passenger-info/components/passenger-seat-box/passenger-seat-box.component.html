@@ -8,7 +8,7 @@
 
   <!-- ชาย -->
   <img
-    *ngIf="(isSelectPassenger || isDisabled) && gender == 'MALE'"
+    *ngIf="!isDisabled && gender == 'MALE'"
     class="passenger-male-icon"
     src="icons/passenger-male.svg"
     alt="Passenger Male Icon"
@@ -16,7 +16,7 @@
 
   <!-- หญิง -->
   <img
-    *ngIf="(isSelectPassenger || isDisabled) && gender == 'FEMALE'"
+    *ngIf="!isDisabled && gender == 'FEMALE'"
     class="passenger-female-icon"
     src="icons/passenger-female.svg"
     alt="Passenger Female Icon"
@@ -24,7 +24,7 @@
 
   <!-- พระ -->
   <img
-    *ngIf="(isSelectPassenger || isDisabled) && gender == 'MONK'"
+    *ngIf="!isDisabled && gender == 'MONK'"
     class="passenger-monk-icon"
     src="icons/passenger-monk.svg"
     alt="Passenger Monk Icon"

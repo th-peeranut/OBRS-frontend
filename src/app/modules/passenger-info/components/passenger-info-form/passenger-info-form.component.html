@@ -286,10 +286,16 @@
               *ngIf="group.get('isSelectSeat')?.value"
             >
               <div class="w-50">
+                <!-- *** NOTED now should check by some flag * default van -->
                 <app-passenger-seat-van
                   [gender]="group.get('gender')?.value"
                   (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
                 ></app-passenger-seat-van>
+
+                <!-- <app-passenger-seat-bus
+                  [gender]="group.get('gender')?.value"
+                  (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                ></app-passenger-seat-bus> -->
               </div>
             </div>
           </div>
