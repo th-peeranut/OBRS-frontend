@@ -9,8 +9,24 @@
       "Friday",
       "Saturday"
     ],
-    "dayNamesShort": ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-    "dayNamesMin": ["S", "M", "T", "W", "T", "F", "S"],
+    "dayNamesShort": [
+      "Sun",
+      "Mon",
+      "Tue",
+      "Wed",
+      "Thu",
+      "Fri",
+      "Sat"
+    ],
+    "dayNamesMin": [
+      "S",
+      "M",
+      "T",
+      "W",
+      "T",
+      "F",
+      "S"
+    ],
     "monthNames": [
       "January",
       "February",
@@ -50,81 +66,62 @@
   "LOGIN": {
     "WELCOME": "Welcome to sign in",
     "HINT": "Please fill in the information below For your convenience in booking tickets",
-
     "USERNAME": "Username or Email",
     "USERNAME_PLACEHOLDER": "Please enter your username or email",
     "USERNAME_REQUIRED": "Please enter your username or email",
-
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
     "PASSWORD_REQUIRED": "Please enter your password",
-
     "REMEMBER": "Remember your password",
     "FORGETPASSWORD": "Forgot your password?",
-
     "LOGIN": "Sign in",
     "OR": "Or",
     "LOGINMOBILE": "Sign in with your phone number",
-
     "NOACCOUNT": "Don't have an account?",
     "REGISTERLINK": "Don't have an account?",
     "REGISTERLINK_CLICK": "Register here",
-
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "",
     "PHONE_NO_REQUIRED": "Please enter your phone number",
-
     "LOGIN_USERNAME": "Sign in with your username or email",
     "SEND_OTP": "Send OTP",
-
     "LOGIN_SUCCESS": "Signin successful",
     "LOGIN_FAIL": "Error encountered. Signin failed"
   },
   "REGISTER": {
     "WELCOME": "Register",
     "HINT": "Please enter the information below For ease of registration",
-
     "FIRSTNAME": "First name",
     "FIRSTNAME_PLACEHOLDER": "Please enter your first name",
     "FIRSTNAME_REQUIRED": "Please enter your first name",
-
     "MIDDLENAME": "Middle name (if any)",
     "MIDDLENAME_PLACEHOLDER": "Please enter your middle name",
     "MIDDLENAME_REQUIRED": "Please enter your middle name",
-
     "LASTNAME": "Last name",
     "LASTNAME_PLACEHOLDER": "Please enter your last name",
     "LASTNAME_REQUIRED": "Please enter your last name",
-
     "USERNAME": "Username",
     "USERNAME_PLACEHOLDER": "Please enter your user name",
     "USERNAME_REQUIRED": "Please enter your user name",
     "USERNAME_EXIST": "This username is already in use",
-
     "EMAIL": "Email",
     "EMAIL_PLACEHOLDER": "Please enter your email",
     "EMAIL_REQUIRED": "Please enter your email",
     "EMAIL_EXIST": "This email is already in use",
-
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
     "PHONE_NO_EXIST": "This phone number is already in use",
-
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
     "PASSWORD_REQUIRED": "Please enter your password",
-
     "CONFIRM_PASSWORD": "Confirm your password",
     "CONFIRM_PASSWORD_PLACEHOLDER": "Please enter your password confirmation",
     "CONFIRM_PASSWORD_REQUIRED": "Please enter your password confirmation",
-
     "SAME_PASSWORD_VALIDATE": "Please enter the same password",
-
     "USERNAME_GUIDELINES_TITLE": "Username setting requirements",
     "USERNAME_GUIDELINES_DESCRIPTION": "Username must contain",
     "USERNAME_MINIMUM_REQUIREMENT": "At least 4 characters",
     "USERNAME_RULES": "Which can only contain English letters (A-Z, a-z) and numbers (0-1)",
-
     "PASSWORD_GUIDELINES_TITLE": "Password setting requirements",
     "PASSWORD_GUIDELINES_DESCRIPTION": "Password must contain",
     "PASSWORD_MINIMUM_REQUIREMENT": "At least 8 characters",
@@ -134,39 +131,29 @@
       "RULE_3": "At least 1 number (0-1)",
       "RULE_4": "Special characters (optional)"
     },
-
     "SAVE": "Confirm",
-
     "LOGIN_LINK": "Do you have an account?",
     "LOGIN_LINK_CLICK": "Signin here",
-
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-
     "VERIFY OTP": "Please verify your subscription via your phone number."
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "Welcome to signin",
     "HINT": "Please enter the OTP number from the SMS sent to the number",
-
     "OTP_TIME": "OTP number expired. Please enter it again",
     "OTP_REF": "Ref",
-
     "OTP_LOGIN": "Confirm",
-
     "NO_OTP": "You have not received the OPT number?",
     "NO_OTP_LINK": "Resend"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",
     "HINT": "Please fill in the information below to proceed with the password reset",
-
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "",
     "PHONE_NO_REQUIRED": "Please fill in the phone number to proceed with the password reset",
-
     "SEND_OTP": "Send OTP",
-
     "NOACCOUNT": "Do you not have an account?",
     "REGISTERLINK": "Do you not have an account?",
     "REGISTERLINK_CLICK": "Register here"
@@ -191,14 +178,11 @@
       "PASSENGER_1_HINT": "12 years old and above",
       "PASSENGER_2": "Child",
       "PASSENGER_2_HINT": "2-11 years old",
-
       "START_STATION": "Source",
       "END_STATION": "Destination",
       "DEPARTURE_DATE": "Departure date",
-
       "ROUND_DEPARTURE": "Round day to go",
       "ROUND_RETURN": "Round day to return",
-
       "SEARCH": "Search"
     },
     "STATION": {
@@ -210,20 +194,16 @@
       "HEADER": "Head office location",
       "TITLE": "NJ van service, Pu",
       "ADDRESS": "3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chonburi 20170",
-
       "MENU_TITLE": "Menu",
       "MENU_TEXT_1": "How to book and pay",
       "MENU_TEXT_2": "Contact us",
-
       "MAIN_CONTACT_TITLE": "Head Office Contact Channel",
       "MAIN_CONTACT_ADDRESS_1": "NJ Van Queue Pu,",
       "MAIN_CONTACT_ADDRESS_2": "Nong Chak-Ban Bueng-Mo Chit",
       "MAIN_CONTACT_PHONE_NUMBER": "090-562-2019",
-
       "MOCHIT_CONTACT_TITLE": "Head Office Contact Channel",
       "MOCHIT_CONTACT_ADDRESS_1": "Small Passenger Transport Station",
       "MOCHIT_CONTACT_ADDRESS_2": "(Chatuchak) Building C, Counter C5",
-
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved"
     }
   },
@@ -273,6 +253,40 @@
       "TOTAL": "Total price",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
+    }
+  },
+  "PASSENGER_INFO": {
+    "PAGE": {
+      "FORM_TITLE": "Passenger information",
+      "SUMMARY_TITLE": "Passenger summary"
+    },
+    "BADGE": {
+      "ADULT": "Adult",
+      "CHILD": "Child"
+    },
+    "FORM": {
+      "SECTION_TITLE": "Personal information",
+      "USE_REGISTERED_INFO": "Use registered information",
+      "TITLE": "Title",
+      "TITLE_REQUIRED": "Please enter a title",
+      "FIRST_NAME": "First name",
+      "FIRST_NAME_REQUIRED": "Please enter your first name",
+      "MIDDLE_NAME_OPTIONAL": "Middle name (optional)",
+      "LAST_NAME": "Last name",
+      "LAST_NAME_REQUIRED": "Please enter your last name",
+      "PHONE_NUMBER": "Phone number",
+      "PHONE_NUMBER_PLACEHOLDER": "Please enter your phone number",
+      "PHONE_NUMBER_REQUIRED": "Please enter your phone number",
+      "GENDER_STATUS": "Gender/Status",
+      "GENDER_STATUS_REQUIRED": "Please select a gender/status",
+      "SELECT_SEAT_OPTIONAL": "Select seat (optional)",
+      "SEAT_SECTION_TITLE": "Seat selection",
+      "SEAT_SECTION_HINT": "Tick the box if you want to choose a specific seat now."
+    },
+    "GENDER": {
+      "MALE": "Male",
+      "FEMALE": "Female",
+      "MONK": "Monk"
     }
   }
 }

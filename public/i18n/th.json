@@ -9,8 +9,24 @@
       "ศุกร์",
       "เสาร์"
     ],
-    "dayNamesShort": ["อา.", "จ.", "อ.", "พ.", "พฤ.", "ศ.", "ส."],
-    "dayNamesMin": ["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"],
+    "dayNamesShort": [
+      "อา.",
+      "จ.",
+      "อ.",
+      "พ.",
+      "พฤ.",
+      "ศ.",
+      "ส."
+    ],
+    "dayNamesMin": [
+      "อา",
+      "จ",
+      "อ",
+      "พ",
+      "พฤ",
+      "ศ",
+      "ส"
+    ],
     "monthNames": [
       "มกราคม",
       "กุมภาพันธ์",
@@ -50,82 +66,63 @@
   "LOGIN": {
     "WELCOME": "ยินดีต้อนรับเข้าสู่ระบบ",
     "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการจองตั๋วของคุณ",
-
     "USERNAME": "ชื่อผู้ใช้งานหรืออีเมล",
     "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งานหรืออีเมล",
     "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งานหรืออีเมล",
-
     "PASSWORD": "รหัสผ่าน",
     "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
     "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
-
     "REMEMBER": "จดจำรหัสผ่าน",
     "FORGETPASSWORD": "ลืมรหัสผ่านใช่หรือไม่?",
-
     "LOGIN": "เข้าสู่ระบบ",
     "OR": "หรือ",
     "LOGINMOBILE": "เข้าสู่ระบบด้วยเบอร์โทรศัพท์",
-
     "NOACCOUNT": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้",
-
     "PHONE_NO": "หมายเลขโทรศัพท์",
     "PHONE_NO_PLACEHOLDER": "",
     "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
-
     "LOGIN_USERNAME": "เข้าสู่ระบบด้วยชื่อผู้ใช้งานหรืออีเมล",
     "SEND_OTP": "ส่ง OTP",
-
     "LOGIN_SUCCESS": "เข้าสู่ระบบสำเร็จ",
     "LOGIN_FAIL": "พบข้อผิดพลาด เข้าสู่ระบบไม่สำเร็จ"
   },
   "REGISTER": {
     "WELCOME": "สมัครสมาชิก",
     "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อความสะดวกในการลงทะเบียนสมัครสมาชิก",
-
     "FIRSTNAME": "ชื่อจริง",
     "FIRSTNAME_PLACEHOLDER": "กรุณากรอกชื่อจริง",
     "FIRSTNAME_REQUIRED": "กรุณากรอกชื่อจริง",
-
     "MIDDLENAME": "ชื่อกลาง (ถ้ามี)",
     "MIDDLENAME_PLACEHOLDER": "กรุณากรอกชื่อกลาง",
     "MIDDLENAME_REQUIRED": "กรุณากรอกชื่อกลาง",
-
     "LASTNAME": "นามสกุล",
     "LASTNAME_PLACEHOLDER": "กรุณากรอกนามสกุล",
     "LASTNAME_REQUIRED": "กรุณากรอกนามสกุล",
-
     "USERNAME": "ชื่อผู้ใช้งาน",
     "USERNAME_PLACEHOLDER": "กรุณากรอกชื่อผู้ใช้งาน",
     "USERNAME_REQUIRED": "กรุณากรอกชื่อผู้ใช้งาน",
     "USERNAME_EXIST": "ชื่อผู้ใช้งานนี้ถูกใช้งานแล้ว",
-
     "EMAIL": "อีเมล",
     "EMAIL_PLACEHOLDER": "กรุณากรอกอีเมล",
     "EMAIL_REQUIRED": "กรุณากรอกอีเมล",
     "EMAIL_EXIST": "อีเมลนี้ถูกใช้งานแล้ว",
-
     "PHONE_NO": "หมายเลขโทรศัพท์",
     "PHONE_NO_PLACEHOLDER": "กรุณากรอกหมายเลขโทรศัพท์",
     "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
     "PHONE_NO_EXIST": "หมายเลขโทรศัพท์นี้ถูกใช้งานแล้ว",
-
     "PASSWORD": "รหัสผ่าน",
     "PASSWORD_PLACEHOLDER": "กรุณากรอกรหัสผ่าน",
     "PASSWORD_REQUIRED": "กรุณากรอกรหัสผ่าน",
-
     "CONFIRM_PASSWORD": "ยืนยันรหัสผ่าน",
     "CONFIRM_PASSWORD_PLACEHOLDER": "กรุณากรอกยืนยันรหัสผ่าน",
     "CONFIRM_PASSWORD_REQUIRED": "กรุณากรอกยืนยันรหัสผ่าน",
-
     "SAME_PASSWORD_VALIDATE": "กรุณากรอกรหัสผ่านให้ตรงกัน",
-
     "USERNAME_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่าชื่อผู้ใช้งาน",
     "USERNAME_GUIDELINES_DESCRIPTION": "ในการตั้งชื่อผู้ใช้งานต้องมี",
     "USERNAME_MINIMUM_REQUIREMENT": "อย่างน้อย 4 ตัวขึ้นไป",
     "USERNAME_RULES": "ซึ่งสามารถใช้ได้ด้วยตัวอักษรภาษาอังกฤษ (A-Z, a-z) และหมายเลข (0-1) เท่านั้น",
-
     "PASSWORD_GUIDELINES_TITLE": "ข้อกำหนดในการตั้งค่ารหัสผ่าน",
     "PASSWORD_GUIDELINES_DESCRIPTION": "ในการตั้งรหัสผ่านต้อง",
     "PASSWORD_MINIMUM_REQUIREMENT": "อย่างน้อย 8 ตัวขึ้นไป",
@@ -135,39 +132,29 @@
       "RULE_3": "หมายเลข (0-1) อย่างน้อย 1 ตัว",
       "RULE_4": "ตัวอักษรพิเศษ (ไม่บังคับ)"
     },
-
     "SAVE": "ยืนยัน",
-
     "LOGIN_LINK": "คุณมีบัญชีเเล้ว?",
     "LOGIN_LINK_CLICK": "เข้าสู่ระบบที่นี้",
-
     "REGISTER_SUCCESS": "สมัครสมาชิกสำเร็จ",
     "REGISTER_FAIL": "พบข้อผิดพลาด สมัครสมาชิกไม่สำเร็จ",
-
     "VERIFY_OTP": "โปรดยืนยันการสมัครสมาชิกผ่านหมายเลขโทรศัพท์"
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "ยินดีต้อนรับเข้าสู่ระบบ",
     "HINT": "กรุณากรอกหมายเลข OTP จาก SMS ที่ส่งไปยังหมายเลข",
-
     "OTP_TIME": "หมายเลข OTP หมดอายุ กรุณากรอกใหม่อีกครั้ง",
     "OTP_REF": "อ้างอิงจาก",
-
     "OTP_LOGIN": "ยืนยัน",
-
     "NO_OTP": "คุณยังไม่ได้รับหมายเลข OPT?",
     "NO_OTP_LINK": "ส่งอีกครั้ง"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "ลืมรหัสผ่าน",
     "HINT": "กรุณากรอกข้อมูลด้านล่าง เพื่อดำเนินการในการเปลี่ยนรหัสผ่านใหม่",
-
     "PHONE_NO": "หมายเลขโทรศัพท์",
     "PHONE_NO_PLACEHOLDER": "",
     "PHONE_NO_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์เพื่อดำเนินการเปลี่ยนรหัสผ่านใหม่",
-
     "SEND_OTP": "ส่ง OTP",
-
     "NOACCOUNT": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK": "คุณยังไม่มีบัญชี?",
     "REGISTERLINK_CLICK": "ลงทะเบียนที่นี้"
@@ -192,14 +179,11 @@
       "PASSENGER_1_HINT": "อายุ 12 ปีขึ้นไป",
       "PASSENGER_2": "เด็ก",
       "PASSENGER_2_HINT": "อายุ 2-11 ปี",
-
       "START_STATION": "ต้นทาง",
       "END_STATION": "ปลายทาง",
       "DEPARTURE_DATE": "วันออกเดินทาง",
-
       "ROUND_DEPARTURE": "รอบวันไป",
       "ROUND_RETURN": "รอบวันกลับ",
-
       "SEARCH": "ค้นหา"
     },
     "STATION": {
@@ -211,20 +195,16 @@
       "HEADER": "ที่ตั้งสำนักงานใหญ่",
       "TITLE": "วินรถตู้ NJ ผู้ใหญ่ปู",
       "ADDRESS": "3/5 หมู่ 3 ตำบลหนองชาก อำเภอบ้านบึง ชลบุรี 20170",
-
       "MENU_TITLE": "เมนู",
       "MENU_TEXT_1": "วิธีจองและชำระเงิน",
       "MENU_TEXT_2": "ติดต่อเรา",
-
       "MAIN_CONTACT_TITLE": "ช่องทางติดต่อสำนักงานใหญ่",
       "MAIN_CONTACT_ADDRESS_1": "คิวรถตู้ NJ ผู้ใหญ่ปู",
       "MAIN_CONTACT_ADDRESS_2": "หนองชาก-บ้านบึง-หมอชิต",
       "MAIN_CONTACT_PHONE_NUMBER": "090-562-2019",
-
       "MOCHIT_CONTACT_TITLE": "ช่องทางติดต่อสำนักงานใหญ่",
       "MOCHIT_CONTACT_ADDRESS_1": "สถานีขนส่งผู้โดยสารขนาดเล็ก",
       "MOCHIT_CONTACT_ADDRESS_2": "(จตุจักร) อาคาร C ช่อง C5",
-
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved"
     }
   },
@@ -274,6 +254,40 @@
       "TOTAL": "ราคารวม",
       "TOTAL_UNIT": "บาท",
       "CONFIRM": "ยืนยันข้อมูล"
+    }
+  },
+  "PASSENGER_INFO": {
+    "PAGE": {
+      "FORM_TITLE": "ข้อมูลผู้โดยสาร",
+      "SUMMARY_TITLE": "สรุปข้อมูลผู้โดยสาร"
+    },
+    "BADGE": {
+      "ADULT": "ผู้ใหญ่",
+      "CHILD": "เด็ก"
+    },
+    "FORM": {
+      "SECTION_TITLE": "ข้อมูลส่วนตัว",
+      "USE_REGISTERED_INFO": "ใช้ข้อมูลที่ลงทะเบียน",
+      "TITLE": "คำนำหน้า",
+      "TITLE_REQUIRED": "กรุณากรอกคำนำหน้า",
+      "FIRST_NAME": "ชื่อจริง",
+      "FIRST_NAME_REQUIRED": "กรุณากรอกชื่อจริง",
+      "MIDDLE_NAME_OPTIONAL": "ชื่อกลาง (ถ้ามี)",
+      "LAST_NAME": "นามสกุล",
+      "LAST_NAME_REQUIRED": "กรุณากรอกนามสกุล",
+      "PHONE_NUMBER": "หมายเลขโทรศัพท์",
+      "PHONE_NUMBER_PLACEHOLDER": "กรุณากรอกหมายเลขโทรศัพท์",
+      "PHONE_NUMBER_REQUIRED": "กรุณากรอกหมายเลขโทรศัพท์",
+      "GENDER_STATUS": "เพศ/สถานะสภาพ",
+      "GENDER_STATUS_REQUIRED": "กรุณากรอกเพศ/สถานะสภาพ",
+      "SELECT_SEAT_OPTIONAL": "ต้องการเลือกที่นั่ง (ไม่บังคับ)",
+      "SEAT_SECTION_TITLE": "การเลือกที่นั่ง",
+      "SEAT_SECTION_HINT": "เลือกตัวเลือกนี้หากต้องการกำหนดที่นั่งให้ผู้โดยสารทันที"
+    },
+    "GENDER": {
+      "MALE": "ชาย",
+      "FEMALE": "หญิง",
+      "MONK": "พระ"
     }
   }
 }

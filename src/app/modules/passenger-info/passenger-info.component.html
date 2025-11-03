@@ -5,13 +5,17 @@
 <div class="content-container">
   <div class="form-container">
     <h3 class="title">
-        รายละเอียดข้อมูลส่วนตัว
+      {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
     </h3>
 
     <app-passenger-info-form></app-passenger-info-form>
   </div>
 
   <div class="summary-container">
+    <h3 class="title">
+      {{ "PASSENGER_INFO.PAGE.SUMMARY_TITLE" | translate }}
+    </h3>
+
     <app-passenger-info-summary></app-passenger-info-summary>
   </div>
 </div>

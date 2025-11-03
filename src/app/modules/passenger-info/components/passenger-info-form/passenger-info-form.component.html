@@ -13,14 +13,20 @@
             <!-- ผู้ใหญ่/เด็ก -->
             <div class="col-12">
               <div class="passenget-badge">
-                {{ group.get("isAdult")?.value ? "ผู้ใหญ่" : "เด็ก" }}
+                {{
+                  group.get("isAdult")?.value
+                    ? ("PASSENGER_INFO.BADGE.ADULT" | translate)
+                    : ("PASSENGER_INFO.BADGE.CHILD" | translate)
+                }}
                 <!-- {{ i + 1 }} -->
               </div>
             </div>
 
             <!-- ข้อมูลส่วนตัว -->
             <div class="col-12 my-3">
-              <div class="subtitle">ข้อมูลส่วนตัว</div>
+              <div class="subtitle">
+                {{ "PASSENGER_INFO.FORM.SECTION_TITLE" | translate }}
+              </div>
             </div>
 
             <!-- ใช้ข้อมูลที่ลงทะเบียน -->
@@ -33,7 +39,9 @@
                   formControlName="isUseAddressInfo"
                 />
                 <label class="form-check-label" for="isUseAddressInfo-{{ i }}">
-                  ใช้ข้อมูลที่ลงทะเบียน
+                  {{
+                    "PASSENGER_INFO.FORM.USE_REGISTERED_INFO" | translate
+                  }}
                 </label>
               </div>
             </div>
@@ -47,7 +55,7 @@
                   (group.get('title')?.touched || group.get('title')?.dirty)
                 "
               >
-                คำนำหน้า
+                {{ "PASSENGER_INFO.FORM.TITLE" | translate }}
                 <span class="form-required">*</span>
               </label>
               <app-dropdown-obrs
@@ -64,7 +72,7 @@
                   (group.get('title')?.touched || group.get('title')?.dirty)
                 "
               >
-                กรุณากรอกคำนำหน้า
+                {{ "PASSENGER_INFO.FORM.TITLE_REQUIRED" | translate }}
               </div>
             </div>
 
@@ -78,7 +86,7 @@
                     group.get('firstName')?.dirty)
                 "
               >
-                ชื่อจริง
+                {{ "PASSENGER_INFO.FORM.FIRST_NAME" | translate }}
                 <span class="form-required">*</span>
               </label>
               <input
@@ -99,13 +107,15 @@
                     group.get('firstName')?.dirty)
                 "
               >
-                กรุณากรอกชื่อจริง
+                {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
               </div>
             </div>
 
             <!-- ชื่อกลาง (ถ้ามี) -->
             <div class="col-6">
-              <label for="middleName-{{ i }}"> ชื่อกลาง (ถ้ามี) </label>
+              <label for="middleName-{{ i }}">
+                {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
+              </label>
               <input
                 class="form-control mt-1"
                 id="middleName-{{ i }}"
@@ -123,7 +133,7 @@
                     group.get('lastName')?.dirty)
                 "
               >
-                นามสกุล
+                {{ "PASSENGER_INFO.FORM.LAST_NAME" | translate }}
                 <span class="form-required">*</span>
               </label>
               <input
@@ -144,7 +154,7 @@
                     group.get('lastName')?.dirty)
                 "
               >
-                กรุณากรอกนามสกุล
+                {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
               </div>
             </div>
 
@@ -158,7 +168,7 @@
                     group.get('phoneNumber')?.dirty)
                 "
               >
-                หมายเลขโทรศัพท์
+                {{ "PASSENGER_INFO.FORM.PHONE_NUMBER" | translate }}
 
                 <span class="form-required">*</span>
               </label>
@@ -167,7 +177,9 @@
                 type="text"
                 id="phoneNumber-{{ i }}"
                 formControlName="phoneNumber"
-                [placeholder]="'กรุณากรอกหมายเลขโทรศัพท์'"
+                [placeholder]="
+                  'PASSENGER_INFO.FORM.PHONE_NUMBER_PLACEHOLDER' | translate
+                "
                 [class.form-error]="
                   group.get('phoneNumber')?.errors &&
                   (group.get('phoneNumber')?.touched ||
@@ -182,7 +194,9 @@
                     group.get('phoneNumber')?.dirty)
                 "
               >
-                กรุณากรอกหมายเลขโทรศัพท์
+                {{
+                  "PASSENGER_INFO.FORM.PHONE_NUMBER_REQUIRED" | translate
+                }}
               </div>
             </div>
 
@@ -194,7 +208,7 @@
                   (group.get('gender')?.touched || group.get('gender')?.dirty)
                 "
               >
-                เพศ/สถานะสภาพ
+                {{ "PASSENGER_INFO.FORM.GENDER_STATUS" | translate }}
                 <span class="form-required">*</span>
               </label>
 
@@ -210,12 +224,12 @@
                 <label class="form-check-label" for="gender_male-{{ i }}">
                   <img
                     class="passenger-male-icon"
-                    src="icons/passenger-male.svg"
-                    alt="Passenger male Icon"
-                  />
-                  ชาย
-                </label>
-              </div>
+                  src="icons/passenger-male.svg"
+                  alt="Passenger male Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.MALE" | translate }}
+              </label>
+            </div>
 
               <!-- หญิง -->
               <div class="form-check form-check-inline">
@@ -229,12 +243,12 @@
                 <label class="form-check-label" for="gender_female-{{ i }}">
                   <img
                     class="passenger-female-icon"
-                    src="icons/passenger-female.svg"
-                    alt="Passenger Female Icon"
-                  />
-                  หญิง
-                </label>
-              </div>
+                  src="icons/passenger-female.svg"
+                  alt="Passenger Female Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.FEMALE" | translate }}
+              </label>
+            </div>
 
               <!-- พระ -->
               <div class="form-check form-check-inline">
@@ -248,12 +262,12 @@
                 <label class="form-check-label" for="gender_monk-{{ i }}">
                   <img
                     class="passenger-monk-icon"
-                    src="icons/passenger-monk.svg"
-                    alt="Passenger Monk Icon"
-                  />
-                  พระ
-                </label>
-              </div>
+                  src="icons/passenger-monk.svg"
+                  alt="Passenger Monk Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.MONK" | translate }}
+              </label>
+            </div>
 
               <div
                 class="text-error"
@@ -262,11 +276,20 @@
                   (group.get('gender')?.touched || group.get('gender')?.dirty)
                 "
               >
-                กรุณากรอกเพศ/สถานะสภาพ
+                {{ "PASSENGER_INFO.FORM.GENDER_STATUS_REQUIRED" | translate }}
               </div>
             </div>
 
             <!-- ต้องการเลือกที่นั่ง (ไม่บังคับ) -->
+            <div class="col-12 mt-4">
+              <div class="subtitle">
+                {{ "PASSENGER_INFO.FORM.SEAT_SECTION_TITLE" | translate }}
+              </div>
+            </div>
+            <div class="col-12 text-muted">
+              {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
+            </div>
+
             <div class="col-12 mt-3">
               <div class="form-check">
                 <input
@@ -276,7 +299,9 @@
                   formControlName="isSelectSeat"
                 />
                 <label class="form-check-label" for="isSelectSeat-{{ i }}">
-                  ต้องการเลือกที่นั่ง (ไม่บังคับ)
+                  {{
+                    "PASSENGER_INFO.FORM.SELECT_SEAT_OPTIONAL" | translate
+                  }}
                 </label>
               </div>
             </div>
