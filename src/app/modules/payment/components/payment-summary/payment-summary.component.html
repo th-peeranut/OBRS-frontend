@@ -1,0 +1,84 @@
+<div
+  class="card-container"
+  [ngClass]="{ inline: variant === 'inline' }"
+  *ngIf="this.scheduleBooking | async as scheduleBooking"
+>
+  <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
+    <div class="card-body">
+      <div class="card-body-header">
+        {{ "PAYMENT.SUMMARY.HEADER" | translate }}
+      </div>
+
+      <div
+        class="card-body-content"
+        *ngIf="getAdultCount(scheduleFilter?.passengerInfo) > 0"
+      >
+        <span>
+          {{ "PAYMENT.SUMMARY.ADULT_LABEL" | translate }}
+        </span>
+        <span>
+          {{ getAdultCount(scheduleFilter?.passengerInfo) }}
+          {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+        </span>
+      </div>
+
+      <div
+        class="card-body-content"
+        *ngIf="getKidCount(scheduleFilter?.passengerInfo) > 0"
+      >
+        <span>
+          {{ "PAYMENT.SUMMARY.CHILD_LABEL" | translate }}
+        </span>
+        <span>
+          {{ getKidCount(scheduleFilter?.passengerInfo) }}
+          {{ "PAYMENT.SUMMARY.PASSENGER_UNIT" | translate }}
+        </span>
+      </div>
+
+      <div
+        class="card-body-content"
+        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
+      >
+        <span>
+          {{ "PAYMENT.SUMMARY.TICKET_PRICE_ONEWAY" | translate }}
+        </span>
+        <span>
+          {{ getScheduleBooking(scheduleBooking?.schedule)[0].fare }}
+          {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+        </span>
+      </div>
+
+      <div
+        class="card-body-content"
+        *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
+      >
+        <span>
+          {{ "PAYMENT.SUMMARY.TICKET_PRICE_ROUNDTRIP" | translate }}
+        </span>
+        <span>
+          {{
+            getScheduleBooking(scheduleBooking?.schedule)[0].fare +
+              getScheduleBooking(scheduleBooking?.schedule)[1].fare
+          }}
+          {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
+        </span>
+      </div>
+    </div>
+
+    <hr class="dotted-line" />
+
+    <div class="card-footer">
+      <span>
+        {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+      </span>
+      <span>
+        {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+        {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+      </span>
+    </div>
+  </ng-container>
+</div>
+
+<div class="btn-confirm" *ngIf="variant === 'default'">
+  {{ "PAYMENT.SUMMARY.CONFIRM" | translate }}
+</div>

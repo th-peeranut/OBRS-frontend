@@ -1,37 +1,37 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
-import {
-  Schedule,
-  ScheduleFilter,
-} from '../../../../shared/interfaces/schedule.interface';
+import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
-import { map, Observable, take } from 'rxjs';
+import { Observable, take, map } from 'rxjs';
+import {
+  ProvinceStation,
+  ProvinceStationReview,
+  Province,
+} from '../../../../shared/interfaces/province.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
+import {
+  ScheduleFilter,
+  Schedule,
+} from '../../../../shared/interfaces/schedule.interface';
+import { Station } from '../../../../shared/interfaces/station.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
+import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { Route } from '../../../../shared/interfaces/route.interface';
-import {
-  Province,
-  ProvinceStation,
-  ProvinceStationReview,
-} from '../../../../shared/interfaces/province.interface';
-import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
-import { Station } from '../../../../shared/interfaces/station.interface';
+import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
 
 @Component({
-  selector: 'app-passenger-info-summary',
-  templateUrl: './passenger-info-summary.component.html',
-  styleUrl: './passenger-info-summary.component.scss',
+  selector: 'app-payment-info',
+  templateUrl: './payment-info.component.html',
+  styleUrl: './payment-info.component.scss',
 })
-export class PassengerInfoSummaryComponent {
-  @Input() isNextDisabled = true;
-  @Output() next = new EventEmitter<void>();
-  @Output() back = new EventEmitter<void>();
+export class PaymentInfoComponent {
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
   rawProvinceStationList: Observable<ProvinceStation[]>;
+   passengerInfo: Observable<PassengerInfo[] | null>;
 
   constructor(
     private store: Store,
@@ -39,45 +39,16 @@ export class PassengerInfoSummaryComponent {
     private appStore: Store<Appstate>,
     private translateService: TranslateService
   ) {
-    this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
-    this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
     );
+    this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
+    this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.passengerInfo = this.store.pipe(select(selectPassengerInfo));
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {
     return schedule ?? [];
-  }
-
-  getAdultCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'ADULT')?.count ?? 0;
-  }
-
-  getKidCount(passengers?: { type: string; count: number }[]): number {
-    return passengers?.find((p) => p.type === 'KIDS')?.count ?? 0;
-  }
-
-  sumPassengers(items?: { type: string; count: number }[]): number {
-    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
-  }
-
-  sumFare(
-    items?: Schedule[] | null,
-    passengers?: { type: string; count: number }[]
-  ): number {
-    const sumPassengers = this.sumPassengers(passengers) ?? 0;
-    const sumFare =
-      items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
-    return sumFare * sumPassengers;
-  }
-
-  getRoutesName(route: Route | null): string {
-    if (!route) return '';
-
-    return this.translateService.currentLang === 'th'
-      ? route.nameThai
-      : route.nameEnglish;
   }
 
   formatTimeToHHMM(time: string): string {
@@ -146,6 +117,14 @@ export class PassengerInfoSummaryComponent {
     return parseInt(minute, 10);
   }
 
+  getRoutesName(route: Route | null): string {
+    if (!route) return '';
+
+    return this.translateService.currentLang === 'th'
+      ? route.nameThai
+      : route.nameEnglish;
+  }
+
   findStationById(
     stationId: number | string
   ): Observable<ProvinceStationReview | null> {
@@ -184,11 +163,12 @@ export class PassengerInfoSummaryComponent {
       : station.nameEnglish;
   }
 
-  onNext(): void {
-    this.next.emit();
+  getPassengerFullName(passenger: PassengerInfo): string {
+    const middle = passenger.middleName ? ` ${passenger.middleName}` : '';
+    return `${passenger.firstName}${middle} ${passenger.lastName}`.trim();
   }
 
-  onBack(): void {
-    this.back.emit();
+  onChangeData() {
+    this.router.navigate(['/schedule-booking']);
   }
 }

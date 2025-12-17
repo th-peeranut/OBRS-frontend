@@ -241,7 +241,9 @@
       "DATE_UNIT": "วันที่",
       "TIME_UNIT": "น.",
       "HOUR_UNIT": "ชั่วโมง",
-      "MINITE_UNIT": "นาที"
+      "MINITE_UNIT": "นาที",
+      "BTN_BACK": "ย้อนกลับ",
+      "BTN_NEXT": "ถัดไป"
     },
     "TOTAL": {
       "HEADER": "รายละเอียดราคา",
@@ -288,6 +290,53 @@
       "MALE": "ชาย",
       "FEMALE": "หญิง",
       "MONK": "พระ"
+    }
+  },
+  "PAYMENT": {
+    "INFO": {
+      "TITLE": "เลือกช่องทางการชำระเงิน"
+    },
+    "TAB": {
+      "CREDIT": "บัตรเครดิต / เดบิต",
+      "QR": "ชำระเงินด้วย QR"
+    },
+    "SUMMARY": {
+      "HEADER": "สรุปการชำระเงิน",
+      "ADULT_LABEL": "ผู้ใหญ่",
+      "CHILD_LABEL": "เด็ก",
+      "PASSENGER_UNIT": "คน",
+      "TICKET_PRICE_ONEWAY": "ราคาตั๋วเที่ยวเดียว",
+      "TICKET_PRICE_ROUNDTRIP": "ราคาตั๋วไป-กลับ",
+      "TICKET_UNIT": "บาท/คน",
+      "TOTAL": "รวมทั้งหมด",
+      "TOTAL_UNIT": "บาท",
+      "CONFIRM": "ยืนยันการชำระเงิน"
+    },
+    "CREDIT_CARD": {
+      "CARD_NUMBER": "หมายเลขบัตร",
+      "CARD_NUMBER_PLACEHOLDER": "1234 1234 1234 1234",
+      "CARD_NUMBER_REQUIRED": "กรุณากรอกหมายเลขบัตร",
+      "CARD_NUMBER_MIN": "หมายเลขบัตรต้องมีอย่างน้อย 13 หลัก",
+      "CARD_NUMBER_MAX": "หมายเลขบัตรต้องมีไม่เกิน 19 หลัก",
+      "EXPIRY_DATE": "วันหมดอายุ",
+      "EXPIRY_DATE_REQUIRED": "กรุณาเลือกวันหมดอายุ",
+      "CVV": "CVV",
+      "CVV_PLACEHOLDER": "123",
+      "CVV_REQUIRED": "กรุณากรอก CVV",
+      "CVV_MIN": "CVV ต้องมีอย่างน้อย 3 หลัก",
+      "CVV_MAX": "CVV ต้องมีไม่เกิน 4 หลัก",
+      "BACK": "ย้อนกลับ",
+      "PAY_NOW": "ชำระเงิน",
+      "COUNTDOWN_LABEL": "เวลาที่เหลือ"
+    },
+    "QR": {
+      "REFRESH": "รีเฟรช QR",
+      "REFRESH_HINT": "กดได้อีกครั้งใน {{seconds}} วินาที",
+      "DOWNLOAD": "ดาวน์โหลด QR",
+      "BACK": "ย้อนกลับ",
+      "PAY_NOW": "ชำระเงิน",
+      "MERCHANT_NAME": "ชื่อร้านค้า",
+      "MERCHANT_REF": "รหัสอ้างอิง: RQ1234567890123"
     }
   }
 }

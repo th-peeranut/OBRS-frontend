@@ -1,0 +1,178 @@
+<div class="card-container payment-card">
+  <div class="tab-group">
+    <button
+      type="button"
+      class="tab"
+      [class.is-active]="activeTab === 'creditcard'"
+      (click)="selectTab('creditcard')"
+    >
+      <img src="icons/payment-creditcard.svg" alt="Credit card icon" />
+      <span>{{ "PAYMENT.TAB.CREDIT" | translate }}</span>
+    </button>
+    <button
+      type="button"
+      class="tab"
+      [class.is-active]="activeTab === 'qrcode'"
+      (click)="selectTab('qrcode')"
+    >
+      <img src="icons/payment-qrcode.svg" alt="QR payment icon" />
+      <span>{{ "PAYMENT.TAB.QR" | translate }}</span>
+    </button>
+  </div>
+
+  <form class="login-form mt-3" [formGroup]="creditCardForm">
+    <div class="row form-row">
+      <div class="col-12">
+        <label
+          for="creditCardNo"
+          [class.label-error]="
+            getForm('creditCardNo')?.errors &&
+            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
+          "
+        >
+          {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER" | translate }}
+          <span class="is-required">*</span>
+        </label>
+        <input
+          class="form-control"
+          type="text"
+          id="creditCardNo"
+          formControlName="creditCardNo"
+          [placeholder]="'PAYMENT.CREDIT_CARD.CARD_NUMBER_PLACEHOLDER' | translate"
+          maxlength="19"
+          [class.form-error]="
+            getForm('creditCardNo')?.errors &&
+            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
+          "
+        />
+        <div
+          class="text-error"
+          *ngIf="
+            getForm('creditCardNo')?.errors &&
+            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
+          "
+        >
+          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['required']">
+            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_REQUIRED" | translate }}
+          </ng-container>
+          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['minlength']">
+            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_MIN" | translate }}
+          </ng-container>
+          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['maxlength']">
+            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_MAX" | translate }}
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <div class="row form-row">
+      <div class="col-6">
+        <label
+          [class.label-error]="
+            getForm('expireDate')?.errors &&
+            (getForm('expireDate')?.touched || getForm('expireDate')?.dirty)
+          "
+        >
+          {{ "PAYMENT.CREDIT_CARD.EXPIRY_DATE" | translate }}
+          <span class="is-required">*</span>
+        </label>
+        <p-calendar
+          dateFormat="mm/yy"
+          view="month"
+          [minDate]="minDate"
+          [iconDisplay]="'input'"
+          [showIcon]="true"
+          inputId="templatedisplay"
+          formControlName="expireDate"
+        >
+          <ng-template pTemplate="inputicon">
+            <img
+              class="calendar-icon"
+              src="icons/calendar.svg"
+              alt="Calendar Icon"
+            />
+          </ng-template>
+        </p-calendar>
+        <div
+          class="text-error"
+          *ngIf="
+            getForm('expireDate')?.errors &&
+            (getForm('expireDate')?.touched || getForm('expireDate')?.dirty)
+          "
+        >
+          {{ "PAYMENT.CREDIT_CARD.EXPIRY_DATE_REQUIRED" | translate }}
+        </div>
+      </div>
+
+      <div class="col-6">
+        <label
+          for="cvv"
+          [class.label-error]="
+            getForm('cvv')?.errors &&
+            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
+          "
+        >
+          {{ "PAYMENT.CREDIT_CARD.CVV" | translate }}
+          <span class="is-required">*</span>
+        </label>
+        <input
+          class="form-control"
+          type="text"
+          id="cvv"
+          formControlName="cvv"
+          [placeholder]="'PAYMENT.CREDIT_CARD.CVV_PLACEHOLDER' | translate"
+          maxlength="4"
+          [class.form-error]="
+            getForm('cvv')?.errors &&
+            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
+          "
+        />
+        <div
+          class="text-error"
+          *ngIf="
+            getForm('cvv')?.errors &&
+            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
+          "
+        >
+          <ng-container *ngIf="getForm('cvv')?.errors?.['required']">
+            {{ "PAYMENT.CREDIT_CARD.CVV_REQUIRED" | translate }}
+          </ng-container>
+          <ng-container *ngIf="getForm('cvv')?.errors?.['minlength']">
+            {{ "PAYMENT.CREDIT_CARD.CVV_MIN" | translate }}
+          </ng-container>
+          <ng-container *ngIf="getForm('cvv')?.errors?.['maxlength']">
+            {{ "PAYMENT.CREDIT_CARD.CVV_MAX" | translate }}
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <div class="countdown" aria-live="polite">
+    {{ "PAYMENT.CREDIT_CARD.COUNTDOWN_LABEL" | translate }}
+    <span class="countdown-value">{{ countdown }}</span>
+  </div>
+
+  <div class="summary-wrapper">
+    <app-payment-summary variant="inline"></app-payment-summary>
+  </div>
+</div>
+
+<div class="d-flex justify-content-center w-100 gap-2 mt-3">
+  <div class="w-50">
+    <button class="back-btn" type="button">
+      {{ "PAYMENT.CREDIT_CARD.BACK" | translate }}
+    </button>
+  </div>
+
+  <div class="w-50 d-flex justify-content-end">
+    <button
+      class="payment-btn"
+      type="button"
+      (click)="submitPayment()"
+      [class.select-btn-diabled]="creditCardForm.invalid"
+    >
+      {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}
+    </button>
+  </div>
+</div>

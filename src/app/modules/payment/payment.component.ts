@@ -1,22 +1,27 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component } from '@angular/core';
+
+// store
 import { Store } from '@ngrx/store';
-import { Router } from '@angular/router';
+import {
+  invokeGetScheduleBookingApi,
+  invokeSetScheduleBookingApi,
+} from '../../shared/stores/schedule-booking/schedule-booking.action';
+import {
+  invokeGetScheduleFilterApi,
+  invokeSetScheduleFilterApi,
+} from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/province/province.action';
-import { invokeSetScheduleBookingApi, invokeGetScheduleBookingApi } from '../../shared/stores/schedule-booking/schedule-booking.action';
-import { invokeSetScheduleFilterApi, invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/schedule-filter.action';
-import { invokeSetPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.action';
-import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
+
+type PaymentTab = 'creditcard' | 'qrcode';
 
 @Component({
-  selector: 'app-passenger-info',
-  templateUrl: './passenger-info.component.html',
-  styleUrl: './passenger-info.component.scss'
+  selector: 'app-payment',
+  templateUrl: './payment.component.html',
+  styleUrl: './payment.component.scss'
 })
-export class PassengerInfoComponent {
-  @ViewChild(PassengerInfoFormComponent)
-  passengerInfoFormComponent?: PassengerInfoFormComponent;
-  isPassengerFormValid = false;
- mockData = [
+export class PaymentComponent {
+  activePaymentTab: PaymentTab = 'creditcard';
+  mockData = [
     {
       id: 1,
       departureDate: '2025-12-20',
@@ -151,7 +156,7 @@ export class PassengerInfoComponent {
     returnDate: '2025-12-19T17:00:00.000Z',
   };
 
-  constructor(private store: Store, private router: Router) {
+  constructor(private store: Store) {
     this.store.dispatch(
       invokeSetScheduleBookingApi({
         schedule_booking: {
@@ -173,24 +178,7 @@ export class PassengerInfoComponent {
     this.store.dispatch(invokeGetScheduleFilterApi());
   }
 
-  onPassengerFormValidityChange(isValid: boolean): void {
-    this.isPassengerFormValid = isValid;
-  }
-
-  onSubmitPassengerInfo(): void {
-    const passengerInfo =
-      this.passengerInfoFormComponent?.validateAndGetPassengerInfo();
-
-    if (!passengerInfo) {
-      return;
-    }
-
-    this.store.dispatch(invokeSetPassengerInfo({ passengerInfo }));
-    this.router.navigate(['/payment']);
-  }
-
-  onBack(): void {
-    this.router.navigate(['/review-schedule-booking']);
+  onSelectPaymentTab(tab: PaymentTab): void {
+    this.activePaymentTab = tab;
   }
 }
-

@@ -1,0 +1,27 @@
+<app-navbar></app-navbar>
+
+<app-stepper></app-stepper>
+
+<div class="content-container">
+  <div class="summary-container">
+    <app-payment-info></app-payment-info>
+  </div>
+
+  <div class="total-container">
+    <ng-container [ngSwitch]="activePaymentTab">
+      <app-payment-creditcard
+        *ngSwitchCase="'creditcard'"
+        [activeTab]="activePaymentTab"
+        (tabChange)="onSelectPaymentTab($event)"
+      ></app-payment-creditcard>
+
+      <app-payment-qrcode
+        *ngSwitchCase="'qrcode'"
+        [activeTab]="activePaymentTab"
+        (tabChange)="onSelectPaymentTab($event)"
+      ></app-payment-qrcode>
+    </ng-container>
+  </div>
+</div>
+
+<app-footer></app-footer>

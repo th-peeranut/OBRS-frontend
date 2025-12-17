@@ -1,23 +1,21 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
-import {
-  Schedule,
-  ScheduleFilter,
-} from '../../../../shared/interfaces/schedule.interface';
+import { ScheduleFilter, Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 
 @Component({
-  selector: 'app-review-schedule-booking-total',
-  templateUrl: './review-schedule-booking-total.component.html',
-  styleUrl: './review-schedule-booking-total.component.scss',
+  selector: 'app-payment-summary',
+  templateUrl: './payment-summary.component.html',
+  styleUrl: './payment-summary.component.scss',
 })
-export class ReviewScheduleBookingTotalComponent {
+export class PaymentSummaryComponent {
+  @Input() variant: 'default' | 'inline' = 'default';
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
 
@@ -47,13 +45,13 @@ export class ReviewScheduleBookingTotalComponent {
     return items?.reduce((total, item) => total + item.count, 0) ?? 0;
   }
 
-  sumFare(items?: Schedule[] | null, passengers?: { type: string; count: number }[]): number {
+  sumFare(
+    items?: Schedule[] | null,
+    passengers?: { type: string; count: number }[]
+  ): number {
     const sumPassengers = this.sumPassengers(passengers) ?? 0;
-    const sumFare = items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
+    const sumFare =
+      items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
     return sumFare * sumPassengers;
-  }
-
-  onConfirm(): void {
-    this.router.navigate(['/passenger-info']);
   }
 }

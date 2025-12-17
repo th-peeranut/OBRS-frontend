@@ -8,7 +8,9 @@
       {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
     </h3>
 
-    <app-passenger-info-form></app-passenger-info-form>
+    <app-passenger-info-form
+      (validityChange)="onPassengerFormValidityChange($event)"
+    ></app-passenger-info-form>
   </div>
 
   <div class="summary-container">
@@ -16,7 +18,11 @@
       {{ "PASSENGER_INFO.PAGE.SUMMARY_TITLE" | translate }}
     </h3>
 
-    <app-passenger-info-summary></app-passenger-info-summary>
+    <app-passenger-info-summary
+      [isNextDisabled]="!isPassengerFormValid"
+      (next)="onSubmitPassengerInfo()"
+      (back)="onBack()"
+    ></app-passenger-info-summary>
   </div>
 </div>
 

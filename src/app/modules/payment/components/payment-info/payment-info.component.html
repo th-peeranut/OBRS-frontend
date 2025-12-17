@@ -1,0 +1,259 @@
+<!-- เลือกช่องทางการชำระเงิน -->
+<h3 class="title">
+   {{ "PAYMENT.INFO.TITLE" | translate }}
+</h3>
+
+<ng-container *ngIf="scheduleBooking | async as bookingData">
+  <div class="card-container" *ngIf="bookingData">
+    <div class="card-header">
+      <div class="card-header-text">
+        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+
+        <div class="card-header-text-details">
+          <ng-container
+            *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
+          >
+            <div class="header-text">
+              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+            </div>
+          </ng-container>
+          <ng-container
+            *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
+          >
+            <div class="header-text">
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate
+              }}
+            </div>
+          </ng-container>
+          <div class="subheader-text">
+            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
+            {{
+              formatDate(
+                getScheduleBooking(bookingData?.schedule)[0].departureDate
+              )
+            }}
+            |
+            {{
+              getRoutesName(getScheduleBooking(bookingData?.schedule)[0].route)
+            }}
+            |
+            <ng-container
+              *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
+            >
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
+              }}
+            </ng-container>
+            <ng-container
+              *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
+            >
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
+              }}
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body mb-3">
+      <div class="schedule-info">
+        <div class="time">
+          {{
+            formatTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[0].departureTime
+            )
+          }}
+          {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+        </div>
+
+        <div class="time-info">
+          <div class="route">
+            {{
+              getHour(getScheduleBooking(bookingData?.schedule)[0].travelTime)
+            }}
+            {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
+            {{
+              getMinute(getScheduleBooking(bookingData?.schedule)[0].travelTime)
+            }}
+            {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
+          </div>
+
+          <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+
+          <div class="route">
+            {{
+              getRoutesName(getScheduleBooking(bookingData?.schedule)[0].route)
+            }}
+          </div>
+        </div>
+
+        <div class="time">
+          {{
+            formatTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[0].arrivalTime
+            )
+          }}
+          {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="passengerInfo | async as passengers">
+      <hr />
+
+      <div class="passenger-header">
+        {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
+      </div>
+
+      <div
+        class="passenger-section"
+        *ngFor="let passenger of passengers; let i = index"
+      >
+        <div class="w-50">
+          <div class="passenger-info">
+            {{ i + 1 }}. {{ "PASSENGER_INFO.FORM.FIRST_NAME" | translate }} -
+            {{ "PASSENGER_INFO.FORM.LAST_NAME" | translate }} :
+            {{ getPassengerFullName(passenger) }}
+          </div>
+        </div>
+
+        <div class="w-50">
+          <div class="passenger-info">
+            {{ "PASSENGER_INFO.FORM.PHONE_NUMBER" | translate }} :
+            {{ passenger.phoneNumber }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <div
+    class="card-container mt-3"
+    *ngIf="bookingData && getScheduleBooking(bookingData?.schedule).length == 2"
+  >
+    <div class="card-header">
+      <div class="card-header-text">
+        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+
+        <div class="card-header-text-details">
+          <ng-container
+            *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
+          >
+            <div class="header-text">
+              {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
+            </div>
+          </ng-container>
+          <ng-container
+            *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
+          >
+            <div class="header-text">
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
+              }}
+            </div>
+          </ng-container>
+          <div class="subheader-text">
+            {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
+            {{
+              formatDate(
+                getScheduleBooking(bookingData?.schedule)[1].departureDate
+              )
+            }}
+            |
+            {{
+              getRoutesName(getScheduleBooking(bookingData?.schedule)[1].route)
+            }}
+            |
+            <ng-container
+              *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
+            >
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
+              }}
+            </ng-container>
+            <ng-container
+              *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
+            >
+              {{
+                "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY" | translate
+              }}
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body mb-3">
+      <div class="schedule-info">
+        <div class="time">
+          {{
+            formatTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[1].departureTime
+            )
+          }}
+          {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+        </div>
+
+        <div class="time-info">
+          <div class="route">
+            {{
+              getHour(getScheduleBooking(bookingData?.schedule)[1].travelTime)
+            }}
+            {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
+            {{
+              getMinute(getScheduleBooking(bookingData?.schedule)[1].travelTime)
+            }}
+            {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
+          </div>
+
+          <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
+
+          <div class="route">
+            {{
+              getRoutesName(getScheduleBooking(bookingData?.schedule)[1].route)
+            }}
+          </div>
+        </div>
+
+        <div class="time">
+          {{
+            formatTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[1].arrivalTime
+            )
+          }}
+          {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
+        </div>
+      </div>
+    </div>
+
+    <ng-container *ngIf="passengerInfo | async as passengers">
+      <hr />
+
+      <div class="passenger-header">
+        {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
+      </div>
+
+      <div
+        class="passenger-section"
+        *ngFor="let passenger of passengers; let i = index"
+      >
+        <div class="w-50">
+          <div class="passenger-info">
+            {{ i + 1 }}. {{ "PASSENGER_INFO.FORM.FIRST_NAME" | translate }} -
+            {{ "PASSENGER_INFO.FORM.LAST_NAME" | translate }} :
+            {{ getPassengerFullName(passenger) }}
+          </div>
+        </div>
+
+        <div class="w-50">
+          <div class="passenger-info">
+            {{ "PASSENGER_INFO.FORM.PHONE_NUMBER" | translate }} :
+            {{ passenger.phoneNumber }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</ng-container>

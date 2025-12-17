@@ -22,6 +22,8 @@ import { PassengerInfoSummaryComponent } from './components/passenger-info-summa
 import { PassengerSeatBusComponent } from './components/passenger-seat-bus/passenger-seat-bus.component';
 import { PassengerSeatVanComponent } from './components/passenger-seat-van/passenger-seat-van.component';
 import { PassengerSeatBoxComponent } from './components/passenger-seat-box/passenger-seat-box.component';
+import { PassengerInfoReducer } from '../../shared/stores/passenger-info/passenger-info.reducer';
+import { PassengerInfoEffect } from '../../shared/stores/passenger-info/passenger-info.effect';
 
 
 const routes: Routes = [
@@ -41,11 +43,13 @@ const routes: Routes = [
     StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
     StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
+    StoreModule.forFeature('passengerInfo', PassengerInfoReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
       ScheduleFilterEffect,
       ScheduleBookingEffect,
+      PassengerInfoEffect,
     ]),
 
     // Components

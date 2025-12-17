@@ -9,7 +9,6 @@
   flex-direction: column;
   row-gap: 24px;
 
-  margin-top: 90px;
   padding: 24px;
 
   border: 1px solid $primary-lightgrey;
@@ -131,6 +130,7 @@ hr {
 
   background: $primary-blue;
   border-radius: 24px;
+  border: transparent;
 
   margin-top: 24px;
   padding: 25.5px 8px;
@@ -148,7 +148,6 @@ hr {
 
   &:disabled {
     background: #dddee1;
-    border: none;
     color: $text-white;
     cursor: not-allowed;
   }

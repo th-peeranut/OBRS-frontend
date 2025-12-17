@@ -1,24 +1,24 @@
-<div
+﻿<div
   class="card-container"
   *ngIf="this.scheduleBooking | async as scheduleBooking"
 >
   <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
-    <!-- HEADER (ขาไป) -->
+    <!-- HEADER (Outbound) -->
     <div class="card-header">
       <div class="card-header-text">
-        <!-- BUS ICON -->
+        
         <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
 
-        <!-- HEADER TEXT -->
+        
         <div class="card-header-text-details">
-          <!-- รอบการเดินทาง -->
+          
           <div
             class="header-text"
             *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
           >
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
           </div>
-          <!-- รอบการเดินทาง: ขาไป -->
+          
           <div
             class="header-text"
             *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
@@ -26,12 +26,12 @@
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate }}
           </div>
 
-          <!-- วันที่ xx x.x. 20xx | roundTrip -->
+          
           <div class="subheader-text">
             <div>
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             </div>
-            <!-- วันที่ xx x.x. 20xx -->
+            
             <div>
               {{
                 formatDate(
@@ -39,10 +39,10 @@
                 )
               }}
             </div>
-            <!-- DIVIDER LINE -->
+            
             <div>|</div>
 
-            <!-- เที่ยวเดียว -->
+            
             <div
               *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
             >
@@ -51,7 +51,7 @@
               }}
             </div>
 
-            <!-- ไป-กลับ -->
+            
             <div
               *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
             >
@@ -64,17 +64,17 @@
       </div>
     </div>
 
-    <!-- BODY (ขาไป) -->
+    <!-- BODY (Outbound) -->
     <div class="card-body">
-      <!-- BUS ICON -->
+      
       <img
         src="images/schedule-booking-line-vertical.svg"
         alt="Bus Line Vertical Icon"
       />
-      <!-- BODY DETAIL -->
+      
       <div class="card-body-detail">
         <div class="card-body-detail-station">
-          <!-- xx:xx น. -->
+          
           <div class="body-header-text">
             {{
               formatTimeToHHMM(
@@ -83,7 +83,7 @@
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
           </div>
-          <!-- Province/Station Name -->
+          
           <div
             class="card-body-detail-station-info"
             *ngIf="
@@ -91,17 +91,17 @@
                 | async as povinceStation
             "
           >
-            <!-- Station Name -->
+            
             <div class="body-header-text">
               {{ getStationName(povinceStation?.station) }}
             </div>
-            <!-- Province Name -->
+            
             <div class="body-subheader-text">
               {{ getProvinceName(povinceStation) }}
             </div>
           </div>
         </div>
-        <!-- xx ชั่วโมง xx นาที -->
+        
         <div class="body-subheader-text">
           {{
             getHour(getScheduleBooking(scheduleBooking?.schedule)[0].travelTime)
@@ -114,7 +114,7 @@
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
         </div>
-        <!-- xx:xx น. -->
+        
         <div class="card-body-detail-station mt-2">
           <div class="body-header-text">
             {{
@@ -124,7 +124,7 @@
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
           </div>
-          <!-- Province/Station Name -->
+          
           <div
             class="card-body-detail-station-info"
             *ngIf="
@@ -132,11 +132,11 @@
                 | async as povinceStation
             "
           >
-            <!-- Station -->
+            
             <div class="body-header-text">
               {{ getStationName(povinceStation?.station) }}
             </div>
-            <!-- Province Name -->
+            
             <div class="body-subheader-text">
               {{ getProvinceName(povinceStation) }}
             </div>
@@ -147,29 +147,29 @@
 
     <hr />
 
-    <!-- ขากลับ -->
+    <!-- Return trip -->
     <ng-container *ngIf="scheduleBooking?.schedule?.length == 2">
-      <!-- HEADER (ขากลับ) -->
+      
       <div class="card-header">
         <div class="card-header-text">
-          <!-- BUS ICON -->
+          
           <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
 
-          <!-- HEADER TEXT -->
+          
           <div class="card-header-text-details">
-            <!-- รอบการเดินทาง: ขากลับ -->
+            
             <div class="header-text">
               {{
                 "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
               }}
             </div>
 
-            <!-- วันที่ xx x.x. 20xx | roundTrip -->
+            
             <div class="subheader-text">
               <div>
                 {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
               </div>
-              <!-- วันที่ xx x.x. 20xx -->
+              
               <div>
                 {{
                   formatDate(
@@ -178,10 +178,10 @@
                   )
                 }}
               </div>
-              <!-- DIVIDER LINE -->
+              
               <div>|</div>
 
-              <!-- ไป-กลับ -->
+              
               <div>
                 {{
                   "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_TWOWAY"
@@ -193,17 +193,18 @@
         </div>
       </div>
 
-      <!-- BODY (ขากลับ) -->
+      
+      <!-- BODY (Return) -->
       <div class="card-body">
-        <!-- BUS ICON -->
+        
         <img
           src="images/schedule-booking-line-vertical.svg"
           alt="Bus Line Vertical Icon"
         />
-        <!-- BODY DETAIL -->
+        
         <div class="card-body-detail">
           <div class="card-body-detail-station">
-            <!-- xx:xx น. -->
+            
             <div class="body-header-text">
               {{
                 formatTimeToHHMM(
@@ -212,7 +213,7 @@
               }}
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
             </div>
-            <!-- Province/Station Name -->
+            
             <div
               class="card-body-detail-station-info"
               *ngIf="
@@ -220,17 +221,17 @@
                   | async as povinceStation
               "
             >
-              <!-- Station Name -->
+              
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
               </div>
-              <!-- Province Name -->
+              
               <div class="body-subheader-text">
                 {{ getProvinceName(povinceStation) }}
               </div>
             </div>
           </div>
-          <!-- xx ชั่วโมง xx นาที -->
+          
           <div class="body-subheader-text">
             {{
               getHour(
@@ -245,7 +246,7 @@
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
           </div>
-          <!-- xx:xx น. -->
+          
           <div class="card-body-detail-station mt-2">
             <div class="body-header-text">
               {{
@@ -255,7 +256,7 @@
               }}
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
             </div>
-            <!-- Province/Station Name -->
+            
             <div
               class="card-body-detail-station-info"
               *ngIf="
@@ -263,11 +264,11 @@
                   | async as povinceStation
               "
             >
-              <!-- Station -->
+              
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
               </div>
-              <!-- Province Name -->
+              
               <div class="body-subheader-text">
                 {{ getProvinceName(povinceStation) }}
               </div>
@@ -308,7 +309,7 @@
         </span>
       </div>
 
-      <!-- ราคาตั๋ว -->
+      <!-- One-way price -->
       <div
         class="card-body-summary-content"
         *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1"
@@ -322,7 +323,7 @@
         </span>
       </div>
 
-      <!-- ราคาตั๋วไป-กลับ -->
+      <!-- Round-trip price -->
       <div
         class="card-body-summary-content"
         *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2"
@@ -342,7 +343,8 @@
 
     <hr class="dotted-line" />
 
-    <!-- ราคารวม -->
+    
+    <!-- Total price -->
     <div class="card-footer">
       <span>
         {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
@@ -355,14 +357,27 @@
   </ng-container>
 </div>
 
-<!-- BUTTON SECTION -->
+
 <div class="btn-container">
-  <!-- ย้อนกลับ -->
+  <!-- Back -->
   <div class="w-50">
-    <button type="button" class="btn-back">ย้อนกลับ</button>
+    <button type="button" class="btn-back" (click)="onBack()">
+      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_BACK" | translate }}
+    </button>
   </div>
-  <!-- ถัดไป -->
+  <!-- Next -->
   <div class="w-50">
-    <button type="button" class="btn-next" [disabled]="true">ถัดไป</button>
+    <button
+      type="button"
+      class="btn-next"
+      [disabled]="isNextDisabled"
+      (click)="onNext()"
+    >
+      {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.BTN_NEXT" | translate }}
+    </button>
   </div>
 </div>
+
+
+
+

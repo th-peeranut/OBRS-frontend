@@ -1,0 +1,266 @@
+@import "../../../../../styles/variables.scss";
+
+.card-container {
+  width: 100%;
+  max-width: 540px;
+  padding: 32px;
+  border-radius: 18px;
+  border: 1px solid $primary-lightgrey;
+  background: $primary-white;
+  box-shadow: 0 16px 40px rgba(64, 105, 184, 0.08);
+}
+
+.payment-card {
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+
+  margin-top: 19%;
+}
+
+.tab-group {
+  display: flex;
+
+  flex-direction: row;
+  gap: 12px;
+
+  button {
+    width: 50%;
+  }
+
+  img {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  
+  gap: 4px;
+  height: 54px;
+  border-radius: 14px;
+  border: 1px solid $primary-lightblue;
+  background: $primary-white;
+  color: $text-lightblack;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+
+  &.is-active {
+    background: $primary-lightblue;
+    color: $primary-blue;
+    font-weight: 600;
+    border-color: $primary-blue;
+    box-shadow: inset 0 0 0 1px rgba(64, 105, 184, 0.2);
+  }
+}
+
+.qr-panel {
+  border-radius: 16px;
+  border: 1px solid $secondary-light-blue;
+  background: $secondary-grey;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  row-gap: 16px;
+}
+
+.qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .qr-header-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .qr-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: $primary-black;
+  }
+
+  .qr-subtitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: $text-blue;
+  }
+
+  .qr-logo {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.qr-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  row-gap: 12px;
+}
+
+.qr-placeholder {
+  width: 240px;
+  height: 240px;
+  border-radius: 16px;
+  background-image: linear-gradient(
+      90deg,
+      rgba(13, 21, 37, 0.08) 50%,
+      transparent 50%
+    ),
+    linear-gradient(rgba(13, 21, 37, 0.08) 50%, transparent 50%);
+  background-size: 24px 24px;
+  border: 10px solid $primary-white;
+  box-shadow: inset 0 0 0 1px rgba(13, 21, 37, 0.08);
+}
+
+.qr-amount {
+  font-size: 32px;
+  font-weight: 700;
+  color: $primary-black;
+}
+
+.qr-countdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: $text-blue;
+
+  img {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.qr-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 12px;
+}
+
+.btn-refresh {
+  border: 1px solid $primary-lightblue;
+  background: $primary-white;
+  color: $primary-blue;
+  border-radius: 24px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover:not(:disabled) {
+    background: $primary-lightblue;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    color: $text-lightgrey;
+    border-color: $primary-lightgrey;
+    background: $secondary-grey;
+  }
+}
+
+.refresh-hint {
+  font-size: 12px;
+  color: $text-lightgrey;
+}
+
+.qr-footer {
+  display: flex;
+  flex-direction: column;
+  row-gap: 4px;
+  font-size: 14px;
+  color: $text-softblack;
+
+  .merchant-name {
+    font-weight: 600;
+    color: $primary-black;
+  }
+}
+
+.btn-download {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px;
+  border-radius: 24px;
+  background: $primary-blue;
+  color: $text-white;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease-in-out;
+
+  img {
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.summary-wrapper {
+  app-payment-summary {
+    display: block;
+  }
+}
+
+.payment-btn {
+  background: #4bc2f7;
+  color: white;
+  border: none;
+  border-radius: 26px;
+  padding: 6px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+
+  width: 100%;
+  height: 52px;
+
+  &:hover {
+    background: #0090d0;
+  }
+
+  &-diabled {
+    background: #dddee1;
+    cursor: not-allowed;
+
+    &:hover {
+      background: #dddee1;
+    }
+  }
+}
+
+.back-btn {
+  background: transparent;
+  color: $text-softblack;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 26px;
+  padding: 6px 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s ease;
+
+  width: 100%;
+  height: 52px;
+}

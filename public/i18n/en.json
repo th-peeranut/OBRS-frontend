@@ -240,7 +240,9 @@
       "DATE_UNIT": "Date",
       "TIME_UNIT": "",
       "HOUR_UNIT": "Hours",
-      "MINITE_UNIT": "Minutes"
+      "MINITE_UNIT": "Minutes",
+      "BTN_BACK": "Back",
+      "BTN_NEXT": "Next"
     },
     "TOTAL": {
       "HEADER": "Price Details",
@@ -287,6 +289,53 @@
       "MALE": "Male",
       "FEMALE": "Female",
       "MONK": "Monk"
+    }
+  },
+  "PAYMENT": {
+    "INFO": {
+      "TITLE": "Select payment method"
+    },
+    "TAB": {
+      "CREDIT": "Credit / Debit Card",
+      "QR": "QR Payment"
+    },
+    "SUMMARY": {
+      "HEADER": "Payment Summary",
+      "ADULT_LABEL": "Adult",
+      "CHILD_LABEL": "Child",
+      "PASSENGER_UNIT": "Person",
+      "TICKET_PRICE_ONEWAY": "Ticket price",
+      "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
+      "TICKET_UNIT": "baht/person",
+      "TOTAL": "Total",
+      "TOTAL_UNIT": "baht",
+      "CONFIRM": "Confirm payment"
+    },
+    "CREDIT_CARD": {
+      "CARD_NUMBER": "Card number",
+      "CARD_NUMBER_PLACEHOLDER": "1234 1234 1234 1234",
+      "CARD_NUMBER_REQUIRED": "Please enter your card number",
+      "CARD_NUMBER_MIN": "Card number must be at least 13 digits",
+      "CARD_NUMBER_MAX": "Card number must be at most 19 digits",
+      "EXPIRY_DATE": "Expiry date",
+      "EXPIRY_DATE_REQUIRED": "Please select an expiry date",
+      "CVV": "CVV",
+      "CVV_PLACEHOLDER": "123",
+      "CVV_REQUIRED": "Please enter your CVV",
+      "CVV_MIN": "CVV must be at least 3 digits",
+      "CVV_MAX": "CVV must be at most 4 digits",
+      "BACK": "Back",
+      "PAY_NOW": "Pay now",
+      "COUNTDOWN_LABEL": "Time remaining"
+    },
+    "QR": {
+      "REFRESH": "Refresh QR",
+      "REFRESH_HINT": "Available in {{seconds}}s",
+      "DOWNLOAD": "Download QR",
+      "BACK": "Back",
+      "PAY_NOW": "Pay now",
+      "MERCHANT_NAME": "Merchant name",
+      "MERCHANT_REF": "Reference: RQ1234567890123"
     }
   }
 }

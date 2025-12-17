@@ -61,6 +61,13 @@ const routes: Routes = [
         (m) => m.PassengerInfoModule
       ),
   },
+  {
+    path: 'payment',
+    loadChildren: () =>
+      import('./modules/payment/payment.module').then(
+        (m) => m.PaymentModule
+      ),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
