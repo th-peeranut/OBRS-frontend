@@ -22,7 +22,9 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { invokeGetPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.action';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
-import { takeUntil } from 'rxjs/operators';
+import { map, takeUntil } from 'rxjs/operators';
+import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
+import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 
 @Component({
   selector: 'app-passenger-info-form',
@@ -32,6 +34,8 @@ import { takeUntil } from 'rxjs/operators';
 export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   passengerForm: FormGroup;
   passengerInfo: Observable<PassengerInfo[] | null>;
+  scheduleBooking$: Observable<ScheduleBooking | null>;
+  isVanVehicle$: Observable<boolean>;
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
@@ -95,6 +99,18 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   ) {
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.passengerInfo = this.store.pipe(select(selectPassengerInfo));
+    this.scheduleBooking$ = this.store.pipe(
+      select(selectScheduleBooking)
+    ) as Observable<ScheduleBooking | null>;
+    this.isVanVehicle$ = this.scheduleBooking$.pipe(
+      map((booking) => {
+        const scheduleData = Array.isArray(booking?.schedule)
+          ? booking?.schedule?.[0]
+          : booking?.schedule ?? null;
+        const vehicleTypeName = scheduleData?.vehicleType?.name ?? '';
+        return vehicleTypeName.toLowerCase() === 'van';
+      })
+    );
 
     this.createForm();
   }
