@@ -59,3 +59,16 @@
 .tooltip-container:hover .tooltip-box {
   display: block;
 }
+
+@media (max-width: 576px) {
+  .tooltip-box {
+    width: min(280px, 90vw);
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .tooltip-box::after {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}

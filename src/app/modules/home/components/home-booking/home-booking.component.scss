@@ -25,13 +25,19 @@
   .booking-card {
     display: flex;
     flex-direction: column;
-    width: max-content;
+    width: min(100%, 1200px);
+    box-sizing: border-box;
 
     padding: 24px 32px;
     margin-top: -80px;
 
     background-color: $primary-white;
     border-radius: 24px;
+
+    > .d-flex {
+      flex-wrap: wrap;
+      gap: 16px 24px;
+    }
   }
 }
 
@@ -39,11 +45,15 @@
   display: flex;
   align-items: center;
   flex-direction: row;
+  flex-wrap: wrap;
   column-gap: 20px;
+  row-gap: 12px;
 
   .station-group {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
 
     .station-icon {
       margin-top: 30px;
@@ -102,4 +112,48 @@
   border-top: 2px dotted #edeef0;
   width: 100%;
   margin: 10px 0;
+}
+
+@media (max-width: 992px) {
+  .booking-section {
+    padding: 0 16px;
+  }
+
+  .booking-section .booking-card {
+    margin-top: -40px;
+    padding: 20px;
+  }
+
+  .station-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .station-section .station-group {
+    width: 100%;
+    justify-content: space-between;
+
+    .station-icon {
+      margin: 12px auto 0;
+    }
+  }
+
+  .btn-search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .booking-section .booking-card {
+    padding: 16px;
+  }
+
+  .booking-container .home-bg {
+    min-height: 200px;
+    object-fit: cover;
+  }
+
+  .btn-search {
+    margin-top: 20px;
+  }
 }

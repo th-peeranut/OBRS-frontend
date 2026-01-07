@@ -5,7 +5,7 @@
     <app-passenger-seat-box
       [label]="'A1'"
       [gender]="isSelected == 'A1' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A1'"
+      [isDisabled]="isSeatTakenByOther('A1') && isSelected != 'A1'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -31,7 +31,7 @@
     <app-passenger-seat-box
       [label]="'A2'"
       [gender]="isSelected == 'A2' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A2'"
+      [isDisabled]="isSeatTakenByOther('A2') && isSelected != 'A2'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -40,7 +40,7 @@
     <app-passenger-seat-box
       [label]="'A3'"
       [gender]="isSelected == 'A3' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A3'"
+      [isDisabled]="isSeatTakenByOther('A3') && isSelected != 'A3'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -49,7 +49,7 @@
     <app-passenger-seat-box
       [label]="'A4'"
       [gender]="isSelected == 'A4' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A4'"
+      [isDisabled]="isSeatTakenByOther('A4') && isSelected != 'A4'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -61,7 +61,7 @@
     <app-passenger-seat-box
       [label]="'A5'"
       [gender]="isSelected == 'A5' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A5'"
+      [isDisabled]="isSeatTakenByOther('A5') && isSelected != 'A5'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -73,7 +73,7 @@
     <app-passenger-seat-box
       [label]="'A6'"
       [gender]="isSelected == 'A6' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A6'"
+      [isDisabled]="isSeatTakenByOther('A6') && isSelected != 'A6'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -82,7 +82,7 @@
     <app-passenger-seat-box
       [label]="'A7'"
       [gender]="isSelected == 'A7' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A7'"
+      [isDisabled]="isSeatTakenByOther('A7') && isSelected != 'A7'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -94,7 +94,7 @@
     <app-passenger-seat-box
       [label]="'A8'"
      [gender]="isSelected == 'A8' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A8'"
+      [isDisabled]="isSeatTakenByOther('A8') && isSelected != 'A8'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -106,7 +106,7 @@
     <app-passenger-seat-box
       [label]="'A9'"
       [gender]="isSelected == 'A9' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A9'"
+      [isDisabled]="isSeatTakenByOther('A9') && isSelected != 'A9'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -115,7 +115,7 @@
     <app-passenger-seat-box
       [label]="'A10'"
       [gender]="isSelected == 'A10' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A10'"
+      [isDisabled]="isSeatTakenByOther('A10') && isSelected != 'A10'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -127,7 +127,7 @@
     <app-passenger-seat-box
       [label]="'A11'"
       [gender]="isSelected == 'A11' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A11'"
+      [isDisabled]="isSeatTakenByOther('A11') && isSelected != 'A11'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -139,7 +139,7 @@
     <app-passenger-seat-box
       [label]="'A12'"
       [gender]="isSelected == 'A12' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A12'"
+      [isDisabled]="isSeatTakenByOther('A12') && isSelected != 'A12'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -148,7 +148,7 @@
     <app-passenger-seat-box
       [label]="'A13'"
       [gender]="isSelected == 'A13' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'A13'"
+      [isDisabled]="isSeatTakenByOther('A13') && isSelected != 'A13'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>

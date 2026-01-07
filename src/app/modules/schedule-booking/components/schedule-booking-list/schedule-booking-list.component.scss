@@ -2,14 +2,13 @@
 
 .booking-container {
   background: #f6fcff;
-  padding: 20px;
+  padding: 20px clamp(16px, 8vw, 360px);
   border-radius: 12px;
 
   display: flex;
   justify-content: center;
   flex-direction: column;
   gap: 12px;
-  padding: 0 360px;
 
   margin-bottom: 72px;
 
@@ -148,5 +147,57 @@
         }
       }
     }
+  }
+}
+
+@media (max-width: 1024px) {
+  .booking-container {
+    padding: 16px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .booking-container {
+    padding: 16px;
+  }
+
+  .booking-container .schedule-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .booking-container .schedule-item .left {
+    column-gap: 16px;
+  }
+
+  .booking-container .schedule-item .left .icon img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .booking-container .schedule-item .right {
+    width: 100%;
+    justify-content: flex-start;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .booking-container .schedule-item .right .select-btn,
+  .booking-container .schedule-item .right .change-btn {
+    width: 100%;
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 576px) {
+  .booking-container .schedule-item {
+    padding: 14px;
+  }
+
+  .booking-container .schedule-item .right {
+    column-gap: 8px;
   }
 }

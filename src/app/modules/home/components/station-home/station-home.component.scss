@@ -50,15 +50,15 @@
     &-detail {
       background-color: $primary-lightblue;
 
-      width: 1200px;
+      width: calc(100% - 32px);
+      max-width: 1200px;
       height: max-content;
 
       margin-top: -30px;
       margin-left: auto;
       margin-right: auto;
 
-      padding-top: 60px;
-      padding-bottom: 60px;
+      padding: 60px clamp(16px, 6vw, 48px);
 
       border-radius: 24px;
 
@@ -107,8 +107,8 @@
   align-items: center;
   position: relative;
 
-  padding-left: 300px;
-  padding-right: 300px;
+  padding-left: clamp(16px, 10vw, 160px);
+  padding-right: clamp(16px, 10vw, 160px);
 }
 
 .station-list-item {
@@ -283,4 +283,40 @@
   color: $text-white;
   height: 100%;
   z-index: 0;
+}
+
+@media (max-width: 1024px) {
+  .station-section {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .station-section-body-detail {
+    width: calc(100% - 24px);
+    padding: 40px 20px;
+  }
+
+  .station-list-container {
+    padding-left: clamp(12px, 8vw, 80px);
+    padding-right: clamp(12px, 8vw, 80px);
+  }
+}
+
+@media (max-width: 768px) {
+  .station-section-body-detail {
+    padding: 32px 16px;
+  }
+
+  .station-list-container {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .station-line {
+    max-width: 64px;
+  }
+
+  .station-bullet::before {
+    height: 60px;
+  }
 }

@@ -314,12 +314,16 @@
                 <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
                   <app-passenger-seat-van
                     [gender]="group.get('gender')?.value"
+                    [currentSeat]="getFormValue(i, 'passengerSeat')"
+                    [takenSeats]="getTakenSeats(i)"
                     (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
                   ></app-passenger-seat-van>
                 </ng-container>
                 <ng-template #busSeatMap>
                   <app-passenger-seat-bus
                     [gender]="group.get('gender')?.value"
+                    [currentSeat]="getFormValue(i, 'passengerSeat')"
+                    [takenSeats]="getTakenSeats(i)"
                     (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
                   ></app-passenger-seat-bus>
                 </ng-template>

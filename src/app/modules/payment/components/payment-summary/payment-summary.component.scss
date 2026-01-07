@@ -102,3 +102,49 @@ hr {
     display: none;
   }
 }
+
+@media (max-width: 1024px) {
+  .card-container {
+    margin-top: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-container {
+    margin-top: 16px;
+    padding: 20px;
+  }
+
+  .card-header {
+    font-size: 18px;
+  }
+
+  .card-body {
+    font-size: 16px;
+  }
+
+  .card-footer {
+    font-size: 16px;
+  }
+
+  .btn-confirm {
+    height: 52px;
+    padding: 16px 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-container {
+    padding: 16px;
+  }
+
+  .card-body {
+    gap: 10px;
+  }
+
+  .card-body-content,
+  .card-footer {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}

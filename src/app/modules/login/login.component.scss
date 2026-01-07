@@ -15,6 +15,7 @@
 
     .btn.dropdown-toggle {
       width: 180px;
+      max-width: 100%;
       padding: 8px !important;
       border: 1px solid #dddee1 !important;
       border-radius: 24px !important;
@@ -158,5 +159,52 @@
         align-items: center;
       }
     }
+  }
+}
+
+@media (max-width: 992px) {
+  .login-container {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    padding: 16px;
+    gap: 24px;
+  }
+
+  .login-container .left-section {
+    width: 100%;
+
+    .bg-img {
+      height: 240px;
+      object-fit: cover;
+    }
+  }
+
+  .login-container .right-section {
+    width: 100%;
+    padding: 0 16px 24px;
+  }
+
+  .login-container .change-language {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-container {
+    padding: 12px;
+  }
+
+  .login-container .change-language .btn.dropdown-toggle {
+    width: 100%;
+  }
+
+  .login-container .right-section {
+    padding: 0 8px 20px;
+  }
+
+  .login-container .logo-section .logo-img {
+    width: 160px;
+    height: auto;
   }
 }

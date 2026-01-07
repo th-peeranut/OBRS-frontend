@@ -213,8 +213,25 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   }
 
   setPassengerSeat(index: number, passengerSeat: string) {
+    if (passengerSeat && this.isSeatAlreadyTaken(index, passengerSeat)) {
+      return;
+    }
+
     this.passengerData.at(index).get('passengerSeat')?.setValue(passengerSeat);
     this.emitValidity();
+  }
+
+  getTakenSeats(currentIndex: number): string[] {
+    return this.passengerData.controls
+      .map((ctrl, idx) => (idx === currentIndex ? null : ctrl.get('passengerSeat')?.value || null))
+      .filter((seat): seat is string => !!seat);
+  }
+
+  private isSeatAlreadyTaken(currentIndex: number, seat: string): boolean {
+    return this.passengerData.controls.some(
+      (ctrl, idx) =>
+        idx !== currentIndex && (ctrl.get('passengerSeat')?.value || '') === seat
+    );
   }
 
   validateAndGetPassengerInfo(): PassengerInfo[] | null {

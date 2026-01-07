@@ -24,6 +24,9 @@ export class PassengerSeatBoxComponent implements OnChanges {
   ngOnChanges(changes: SimpleChanges): void {}
 
   setPassengerSeatOuput(passengerSeat: string) {
+    if (this.isDisabled) {
+      return;
+    }
     this.passengerSeatOutput.emit(passengerSeat);
   }
 }

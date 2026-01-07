@@ -5,7 +5,7 @@
     <app-passenger-seat-box
       [label]="'B1'"
       [gender]="isSelected == 'B1' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B1'"
+      [isDisabled]="isSeatTakenByOther('B1') && isSelected != 'B1'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -34,7 +34,7 @@
     <app-passenger-seat-box
       [label]="'B2'"
       [gender]="isSelected == 'B2' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B2'"
+      [isDisabled]="isSeatTakenByOther('B2') && isSelected != 'B2'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -43,7 +43,7 @@
     <app-passenger-seat-box
       [label]="'B3'"
       [gender]="isSelected == 'B3' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B3'"
+      [isDisabled]="isSeatTakenByOther('B3') && isSelected != 'B3'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -55,7 +55,7 @@
     <app-passenger-seat-box
       [label]="'B4'"
       [gender]="isSelected == 'B4' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B4'"
+      [isDisabled]="isSeatTakenByOther('B4') && isSelected != 'B4'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -67,7 +67,7 @@
     <app-passenger-seat-box
       [label]="'B5'"
       [gender]="isSelected == 'B5' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B5'"
+      [isDisabled]="isSeatTakenByOther('B5') && isSelected != 'B5'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -76,7 +76,7 @@
     <app-passenger-seat-box
       [label]="'B6'"
       [gender]="isSelected == 'B6' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B6'"
+      [isDisabled]="isSeatTakenByOther('B6') && isSelected != 'B6'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -88,7 +88,7 @@
     <app-passenger-seat-box
       [label]="'B7'"
       [gender]="isSelected == 'B7' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B7'"
+      [isDisabled]="isSeatTakenByOther('B7') && isSelected != 'B7'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -100,7 +100,7 @@
     <app-passenger-seat-box
       [label]="'B8'"
       [gender]="isSelected == 'B8' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B8'"
+      [isDisabled]="isSeatTakenByOther('B8') && isSelected != 'B8'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -109,7 +109,7 @@
     <app-passenger-seat-box
       [label]="'B9'"
       [gender]="isSelected == 'B9' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B9'"
+      [isDisabled]="isSeatTakenByOther('B9') && isSelected != 'B9'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -121,7 +121,7 @@
     <app-passenger-seat-box
       [label]="'B10'"
       [gender]="isSelected == 'B10' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B10'"
+      [isDisabled]="isSeatTakenByOther('B10') && isSelected != 'B10'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -130,7 +130,7 @@
     <app-passenger-seat-box
       [label]="'B11'"
       [gender]="isSelected == 'B11' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B11'"
+      [isDisabled]="isSeatTakenByOther('B11') && isSelected != 'B11'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -139,7 +139,7 @@
     <app-passenger-seat-box
       [label]="'B12'"
       [gender]="isSelected == 'B12' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B12'"
+      [isDisabled]="isSeatTakenByOther('B12') && isSelected != 'B12'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -148,7 +148,7 @@
     <app-passenger-seat-box
       [label]="'B13'"
       [gender]="isSelected == 'B13' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B13'"
+      [isDisabled]="isSeatTakenByOther('B13') && isSelected != 'B13'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -160,7 +160,7 @@
     <app-passenger-seat-box
       [label]="'B14'"
       [gender]="isSelected == 'B14' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B14'"
+      [isDisabled]="isSeatTakenByOther('B14') && isSelected != 'B14'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -169,7 +169,7 @@
     <app-passenger-seat-box
       [label]="'B15'"
       [gender]="isSelected == 'B15' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B15'"
+      [isDisabled]="isSeatTakenByOther('B15') && isSelected != 'B15'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -178,7 +178,7 @@
     <app-passenger-seat-box
       [label]="'B16'"
       [gender]="isSelected == 'B16' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B16'"
+      [isDisabled]="isSeatTakenByOther('B16') && isSelected != 'B16'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -187,7 +187,7 @@
     <app-passenger-seat-box
       [label]="'B17'"
       [gender]="isSelected == 'B17' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B17'"
+      [isDisabled]="isSeatTakenByOther('B17') && isSelected != 'B17'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -199,7 +199,7 @@
     <app-passenger-seat-box
       [label]="'B18'"
       [gender]="isSelected == 'B18' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B18'"
+      [isDisabled]="isSeatTakenByOther('B18') && isSelected != 'B18'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -208,7 +208,7 @@
     <app-passenger-seat-box
       [label]="'B19'"
       [gender]="isSelected == 'B19' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B19'"
+      [isDisabled]="isSeatTakenByOther('B19') && isSelected != 'B19'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -217,7 +217,7 @@
     <app-passenger-seat-box
       [label]="'B20'"
       [gender]="isSelected == 'B20' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B20'"
+      [isDisabled]="isSeatTakenByOther('B20') && isSelected != 'B20'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>
@@ -226,7 +226,7 @@
     <app-passenger-seat-box
       [label]="'B21'"
       [gender]="isSelected == 'B21' ? gender : ''"
-      [isDisabled]="isDisableSeat && isSelected != 'B21'"
+      [isDisabled]="isSeatTakenByOther('B21') && isSelected != 'B21'"
       (passengerSeatOutput)="setPassengerSeatPosition($event)"
     >
     </app-passenger-seat-box>

@@ -37,7 +37,7 @@ export class AuthService {
   }): Promise<ResponseAPI<{ token: string }>> {
     return this.http
       .post<ResponseAPI<{ token: string }>>(
-        `${environment.apiUrl}/auth/login`,
+        `${environment.apiUrl}/api/auth/login`,
         payload
       )
       .toPromise()
@@ -109,7 +109,7 @@ export class AuthService {
 
   register(payload: Register): Promise<ResponseAPI<any>> {
     return this.http
-      .post<ResponseAPI<any>>(`${environment.apiUrl}/auth/signup`, payload)
+      .post<ResponseAPI<any>>(`${environment.apiUrl}/api/auth/signup`, payload)
       .toPromise()
       .then((response) => response)
       .catch((err) => err);
@@ -119,11 +119,11 @@ export class AuthService {
     return (
       this.http
         .post<ResponseAPI<any>>(
-          `${environment.apiUrl}/auth/login/otp/test`,
+          `${environment.apiUrl}/api/auth/login/otp/test`,
           payload
         )
         // .post<ResponseAPI<any>>(
-        //   `${environment.apiUrl}/auth/login/otp`,
+        //   `${environment.apiUrl}/api/auth/login/otp`,
         //   payload
         // )
         .toPromise()
@@ -147,7 +147,7 @@ export class AuthService {
   }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(
-        `${environment.apiUrl}/auth/forgetpassword`,
+        `${environment.apiUrl}/api/auth/forgetpassword`,
         payload
       )
       .toPromise()
