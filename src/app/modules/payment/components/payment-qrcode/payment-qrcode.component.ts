@@ -6,6 +6,15 @@ import {
   OnInit,
   Output,
 } from '@angular/core';
+import { Store, select } from '@ngrx/store';
+import { combineLatest, Subject } from 'rxjs';
+import { distinctUntilChanged, map, takeUntil } from 'rxjs/operators';
+import { environment } from '../../../../../environments/environment';
+import { Schedule } from '../../../../shared/interfaces/schedule.interface';
+import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
+import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
+import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
+import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -18,21 +27,32 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';
   @Output() tabChange = new EventEmitter<PaymentTab>();
 
-  readonly amountDisplay = '300.00';
+  amountDisplay = '0.00';
+  readonly qrImageAlt = 'PromptPay QR code';
+  qrImageUrl = '';
   countdown = '10 : 00';
   refreshCooldownSeconds = 0;
+  private readonly promptPayId = environment.promptpay?.id ?? '';
+  private readonly promptPayBaseUrl =
+    environment.promptpay?.baseUrl ?? 'https://promptpay.io';
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private refreshCooldownIntervalId?: ReturnType<typeof setInterval>;
   private readonly refreshCooldownTotalSeconds = 10;
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(private store: Store) {}
 
   ngOnInit(): void {
     this.startCountdown();
+    this.watchAmount();
   }
 
   ngOnDestroy(): void {
     this.clearCountdown();
     this.clearRefreshCooldown();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   selectTab(tab: PaymentTab): void {
@@ -49,8 +69,66 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
 
     this.startCountdown();
-    // Hook real QR recreate call here if available.
+    this.loadQrCode();
     this.startRefreshCooldown();
+  }
+
+  onQrError(): void {
+    this.qrImageUrl = '';
+  }
+
+  private loadQrCode(): void {
+    if (!this.promptPayId) {
+      this.qrImageUrl = '';
+      return;
+    }
+
+    const baseUrl = this.promptPayBaseUrl.replace(/\/+$/, '');
+    const amount = this.amountDisplay;
+    const url = `${baseUrl}/${encodeURIComponent(
+      this.promptPayId
+    )}/${encodeURIComponent(amount)}.png`;
+    this.qrImageUrl = `${url}?t=${Date.now()}`;
+  }
+
+  private watchAmount(): void {
+    combineLatest([
+      this.store.pipe(select(selectScheduleBooking)),
+      this.store.pipe(select(selectScheduleFilter)),
+    ])
+      .pipe(
+        map(([booking, filter]) =>
+          this.calculateAmount(booking, filter)
+        ),
+        distinctUntilChanged(),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((total) => {
+        this.amountDisplay = this.formatAmount(total);
+        this.loadQrCode();
+      });
+  }
+
+  private calculateAmount(
+    booking: ScheduleBooking | null,
+    filter: ScheduleFilter | null
+  ): number {
+    const scheduleTotal = this.sumScheduleFare(booking?.schedule);
+    const passengerTotal = this.sumPassengers(filter?.passengerInfo);
+    const total = scheduleTotal * passengerTotal;
+    return Number.isFinite(total) ? total : 0;
+  }
+
+  private sumScheduleFare(items?: Schedule[] | null): number {
+    return items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
+  }
+
+  private sumPassengers(items?: { type: string; count: number }[]): number {
+    return items?.reduce((total, item) => total + item.count, 0) ?? 0;
+  }
+
+  private formatAmount(value: number): string {
+    return Number.isFinite(value) ? value.toFixed(2) : '0.00';
   }
 
   private startCountdown(): void {

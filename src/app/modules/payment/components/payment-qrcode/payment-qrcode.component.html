@@ -35,7 +35,18 @@
     </div>
 
     <div class="qr-body">
-      <div class="qr-placeholder" role="img" aria-label="QR code preview"></div>
+      <div class="qr-frame">
+        <img
+          *ngIf="qrImageUrl; else qrFallback"
+          [src]="qrImageUrl"
+          [alt]="qrImageAlt"
+          class="qr-image"
+          (error)="onQrError()"
+        />
+        <ng-template #qrFallback>
+          <div class="qr-placeholder" role="img" aria-label="QR code preview"></div>
+        </ng-template>
+      </div>
       <div class="qr-amount">{{ amountDisplay }}</div>
       <div class="qr-countdown">
         <img src="icons/payment-timer.svg" alt="" aria-hidden="true" />
