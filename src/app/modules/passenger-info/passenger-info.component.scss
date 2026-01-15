@@ -3,10 +3,8 @@
 .content-container {
   display: flex;
   justify-content: center;
-  flex-direction: row;
   column-gap: 24px;
-  padding: 0 clamp(16px, 8vw, 120px);
-  flex-wrap: wrap;
+  padding: 0 360px;
 }
 
 .title {
@@ -26,15 +24,7 @@
 
 @media (max-width: 1024px) {
   .content-container {
-    padding: 0 clamp(12px, 6vw, 64px);
-  }
-
-  .form-container {
-    width: 65%;
-  }
-
-  .summary-container {
-    width: 35%;
+    padding: 0 24px;
   }
 }
 

@@ -3,6 +3,6 @@ export const environment = {
   apiUrl: 'http://localhost:8000',
   promptpay: {
     baseUrl: 'https://promptpay.io',
-    id: '0000000000',
+    id: '0850951898',
   },
 };

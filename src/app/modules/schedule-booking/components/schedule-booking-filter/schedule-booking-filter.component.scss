@@ -2,10 +2,12 @@
 
 .booking-section {
   background: #f6fcff;
-  padding: 0 360px;
+  display: flex;
+  justify-content: center;
 
   .booking-card {
-    width: 100%;
+    width: min(100%, 1200px);
+    box-sizing: border-box;
 
     margin-top: 32px;
     margin-bottom: 32px;

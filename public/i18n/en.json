@@ -335,7 +335,7 @@
       "BACK": "Back",
       "PAY_NOW": "Pay now",
       "MERCHANT_NAME": "Merchant name",
-      "MERCHANT_REF": "Reference: RQ1234567890123"
+        "MERCHANT_REF": "Reference:"
+      }
     }
   }
-}

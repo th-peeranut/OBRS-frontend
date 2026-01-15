@@ -2,15 +2,17 @@
 
 .booking-container {
   background: #f6fcff;
-  padding: 20px clamp(16px, 8vw, 360px);
+  padding: 24px 32px;
   border-radius: 12px;
+  box-sizing: border-box;
+  width: min(100%, 1200px);
 
   display: flex;
   justify-content: center;
   flex-direction: column;
   gap: 12px;
 
-  margin-bottom: 72px;
+  margin: 0 auto 72px;
 
   .title {
     margin-bottom: 16px;
@@ -150,8 +152,10 @@
   }
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 992px) {
   .booking-container {
+    width: calc(100% - 32px);
+    margin: 0 16px 72px;
     padding: 16px 24px;
   }
 }

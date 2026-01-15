@@ -30,6 +30,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   amountDisplay = '0.00';
   readonly qrImageAlt = 'PromptPay QR code';
   qrImageUrl = '';
+  referenceNo = '';
   countdown = '10 : 00';
   refreshCooldownSeconds = 0;
   private readonly promptPayId = environment.promptpay?.id ?? '';
@@ -80,6 +81,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   private loadQrCode(): void {
     if (!this.promptPayId) {
       this.qrImageUrl = '';
+      this.referenceNo = '';
       return;
     }
 
@@ -89,6 +91,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       this.promptPayId
     )}/${encodeURIComponent(amount)}.png`;
     this.qrImageUrl = `${url}?t=${Date.now()}`;
+    this.referenceNo = this.generateReferenceNo();
   }
 
   private watchAmount(): void {
@@ -155,6 +158,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   private padTime(value: number): string {
     return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  private generateReferenceNo(): string {
+    const timestamp = Date.now().toString();
+    const randomSuffix = Math.floor(10 + Math.random() * 90).toString();
+    return `RQ${timestamp}${randomSuffix}`;
   }
 
   private clearCountdown(): void {
