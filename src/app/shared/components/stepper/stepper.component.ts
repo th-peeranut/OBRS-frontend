@@ -15,6 +15,7 @@ export class StepperComponent implements OnInit, OnDestroy {
     { step: 2, path: '/review-schedule-booking' },
     { step: 3, path: '/passenger-info' },
     { step: 4, path: '/payment' },
+    { step: 4, path: '/e-ticket' },
   ];
 
   constructor(private router: Router) {}

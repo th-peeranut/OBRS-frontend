@@ -338,5 +338,32 @@
       "MERCHANT_NAME": "ชื่อร้านค้า",
       "MERCHANT_REF": "รหัสอ้างอิง:"
     }
+  },
+      "E_TICKET": {
+    "TITLE": "อีทิกเก็ต",
+    "SUBTITLE": "ตั๋วเดินทางออนไลน์ NJ ผู้ใหญ่ปู",
+    "LABEL": {
+      "BOOKING_REF": "รหัสจอง",
+      "TICKET_NO": "เลขที่ตั๋ว",
+      "TRAVEL_DATE": "วันเดินทาง",
+      "TRAVEL_TIME": "เวลาเดินทาง",
+      "ROUTE": "เส้นทาง",
+      "ORIGIN": "ต้นทาง",
+      "DESTINATION": "ปลายทาง",
+      "VEHICLE_TYPE": "ประเภทรถ",
+      "VEHICLE_PLATE": "หมายเลขรถ/ทะเบียน",
+      "SEAT": "ที่นั่ง",
+      "PASSENGERS": "ผู้โดยสาร",
+      "PASSENGER_NAME": "ชื่อ-นามสกุล",
+      "PASSENGER_PHONE": "หมายเลขโทรศัพท์",
+      "PAYMENT_DATE": "วันเวลาที่ชำระ",
+      "TOTAL": "รวมทั้งสิ้น",
+      "TOTAL_UNIT": "บาท"
+    },
+    "QR_HINT": "QR-code ใช้สำหรับสแกนยืนยันตัวตนก่อนขึ้นรถเท่านั้น",
+    "DOWNLOAD": "ดาวน์โหลด",
+    "NOTE_LABEL": "หมายเหตุ:",
+    "QR_ARIA_LABEL": "คิวอาร์โค้ด",
+    "LOGO_ALT": "โลโก้ NJ Phuyaipu"
   }
 }

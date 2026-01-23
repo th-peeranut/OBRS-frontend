@@ -1,0 +1,171 @@
+<app-navbar></app-navbar>
+
+<app-stepper></app-stepper>
+
+<section class="ticket-page">
+  <div class="ticket-stage">
+    <div class="ticket-shell">
+      <div class="ticket-slot" aria-hidden="true">
+        <img
+          class="ticket-slot-image"
+          src="images/ticket-slot.svg"
+          alt=""
+          aria-hidden="true"
+        />
+      </div>
+
+      <article class="ticket-paper">
+        <div class="ticket-header">
+          <img
+            class="ticket-logo"
+            src="images/logo.svg"
+            [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
+          />
+          <div class="ticket-subtitle">
+            {{ "E_TICKET.SUBTITLE" | translate }}
+          </div>
+        </div>
+
+        <div class="ticket-divider"></div>
+
+        <div class="ticket-grid">
+          <div class="ticket-item">
+            <span class="label">
+              {{ "E_TICKET.LABEL.BOOKING_REF" | translate }}
+            </span>
+            <span class="value">{{ bookingReference }}</span>
+          </div>
+          <div class="ticket-item">
+            <span class="label">
+              {{ "E_TICKET.LABEL.TICKET_NO" | translate }}
+            </span>
+            <span class="value">{{ ticketNumber }}</span>
+          </div>
+          <div class="ticket-item">
+            <span class="label">
+              {{ "E_TICKET.LABEL.TRAVEL_DATE" | translate }}
+            </span>
+            <span class="value">{{ travelDate }}</span>
+          </div>
+          <div class="ticket-item">
+            <span class="label">
+              {{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}
+            </span>
+            <span class="value">{{ travelTime }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-route">
+          <div class="ticket-item full">
+            <span class="label">
+              {{ "E_TICKET.LABEL.ROUTE" | translate }}
+            </span>
+            <span class="value">{{ route }}</span>
+          </div>
+          <div class="ticket-grid">
+            <div class="ticket-item">
+              <span class="label">
+                {{ "E_TICKET.LABEL.ORIGIN" | translate }}
+              </span>
+              <span class="value">{{ origin }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">
+                {{ "E_TICKET.LABEL.DESTINATION" | translate }}
+              </span>
+              <span class="value">{{ destination }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">
+                {{ "E_TICKET.LABEL.VEHICLE_TYPE" | translate }}
+              </span>
+              <span class="value">{{ vehicleType }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">
+                {{ "E_TICKET.LABEL.VEHICLE_PLATE" | translate }}
+              </span>
+              <span class="value">{{ vehiclePlate }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">
+                {{ "E_TICKET.LABEL.SEAT" | translate }}
+              </span>
+              <span class="value">{{ seats }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ticket-divider dotted"></div>
+
+        <div class="ticket-passengers">
+          <div class="ticket-item full">
+            <span class="label">
+              {{ "E_TICKET.LABEL.PASSENGERS" | translate }}
+            </span>
+            <span class="value">{{ passengerSummary }}</span>
+          </div>
+
+          <div class="passenger-list">
+            <div
+              class="passenger-row"
+              *ngFor="let passenger of passengers; let i = index"
+            >
+              <div class="passenger-index">{{ i + 1 }}.</div>
+              <div class="passenger-detail">
+                <div class="passenger-field">
+                  <span class="label">
+                    {{ "E_TICKET.LABEL.PASSENGER_NAME" | translate }}
+                  </span>
+                  <span class="value">{{ passenger.name }}</span>
+                </div>
+                <div class="passenger-field">
+                  <span class="label">
+                    {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
+                  </span>
+                  <span class="value">{{ passenger.phone }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ticket-footer">
+          <div class="ticket-item">
+            <span class="label">
+              {{ "E_TICKET.LABEL.PAYMENT_DATE" | translate }}
+            </span>
+            <span class="value">{{ paymentDate }}</span>
+          </div>
+          <div class="ticket-total">
+            <span class="label">
+              {{ "E_TICKET.LABEL.TOTAL" | translate }}
+            </span>
+            <span class="value">
+              {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
+            </span>
+          </div>
+        </div>
+
+        <div class="ticket-qr">
+          <div
+            class="qr-code"
+            role="img"
+            [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+          ></div>
+          <div class="qr-hint">
+            {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
+            {{ "E_TICKET.QR_HINT" | translate }}
+          </div>
+        </div>
+
+        <button type="button" class="download-btn">
+          <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
+          {{ "E_TICKET.DOWNLOAD" | translate }}
+        </button>
+      </article>
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>

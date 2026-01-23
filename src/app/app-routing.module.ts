@@ -68,6 +68,13 @@ const routes: Routes = [
         (m) => m.PaymentModule
       ),
   },
+  {
+    path: 'e-ticket',
+    loadChildren: () =>
+      import('./modules/e-ticket/e-ticket.module').then(
+        (m) => m.ETicketModule
+      ),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },

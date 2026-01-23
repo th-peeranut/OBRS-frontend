@@ -337,5 +337,32 @@
       "MERCHANT_NAME": "Merchant name",
         "MERCHANT_REF": "Reference:"
       }
-    }
+    },
+  "E_TICKET": {
+    "TITLE": "E-Ticket",
+    "SUBTITLE": "NJ Phuyaipu online travel ticket",
+    "LABEL": {
+      "BOOKING_REF": "Booking ref",
+      "TICKET_NO": "Ticket no.",
+      "TRAVEL_DATE": "Travel date",
+      "TRAVEL_TIME": "Travel time",
+      "ROUTE": "Route",
+      "ORIGIN": "Origin",
+      "DESTINATION": "Destination",
+      "VEHICLE_TYPE": "Vehicle type",
+      "VEHICLE_PLATE": "Vehicle no.",
+      "SEAT": "Seat",
+      "PASSENGERS": "Passengers",
+      "PASSENGER_NAME": "Passenger name",
+      "PASSENGER_PHONE": "Phone number",
+      "PAYMENT_DATE": "Payment date/time",
+      "TOTAL": "Total",
+      "TOTAL_UNIT": "baht"
+    },
+    "QR_HINT": "QR code is used for identity verification before boarding only.",
+    "DOWNLOAD": "Download e-ticket",
+    "NOTE_LABEL": "Note:",
+    "QR_ARIA_LABEL": "QR code",
+    "LOGO_ALT": "NJ Phuyaipu logo"
   }
+}
