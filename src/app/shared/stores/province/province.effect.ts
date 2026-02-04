@@ -19,6 +19,8 @@ import {
 } from './province.action';
 import { selectProvince, selectProvinceWithStation } from './province.selector';
 import { ProvinceService } from '../../../services/province/province.service';
+import { ProvinceStation, Stop } from '../../interfaces/province.interface';
+import { Station } from '../../interfaces/station.interface';
 
 @Injectable()
 export class ProvinceEffect {
@@ -175,7 +177,7 @@ export class ProvinceEffect {
     )
   );
 
-    loadAllProvinceWithStations$ = createEffect(() =>
+  loadAllProvinceWithStations$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeGetAllProvinceWithStationApi),
       withLatestFrom(this.store.pipe(select(selectProvinceWithStation))),
@@ -185,13 +187,85 @@ export class ProvinceEffect {
         return this.service.getWithStation().pipe(
           map((response) => {
             if (response?.code === 200) {
-              return invokeGetAllProvinceWithStationApiSuccess({ provinceWithStations: response.data });
+              return invokeGetAllProvinceWithStationApiSuccess({
+                provinceWithStations: this.mapStopsToProvinceStations(
+                  response.data || []
+                ),
+              });
             } else {
-              return invokeGetAllProvinceWithStationApiSuccess({ provinceWithStations: [] });
+              return invokeGetAllProvinceWithStationApiSuccess({
+                provinceWithStations: [],
+              });
             }
           })
         );
       })
     )
   );
+
+  private mapStopsToProvinceStations(stops: Stop[]): ProvinceStation[] {
+    if (!stops || stops.length === 0) return [];
+
+    const groupedStations = new Map<string, Station[]>();
+
+    for (const stop of stops) {
+      const nameEnglish = this.getStopLabel(stop, 'en') || stop.code;
+      const nameThai = this.getStopLabel(stop, 'th') || nameEnglish;
+      const station: Station = {
+        id: stop.id,
+        code: stop.code,
+        nameThai,
+        nameEnglish,
+        createdBy: stop.createdBy,
+        createdDate: stop.createdDate,
+        lastUpdatedBy: stop.lastUpdatedBy,
+        lastUpdatedDate: stop.lastUpdatedDate,
+        url: '',
+      };
+
+      const key = stop.stopType || 'stop';
+      if (!groupedStations.has(key)) {
+        groupedStations.set(key, []);
+      }
+      groupedStations.get(key)?.push(station);
+    }
+
+    const order = ['station', 'stop'];
+    const keys = Array.from(groupedStations.keys()).sort((a, b) => {
+      const ai = order.indexOf(a);
+      const bi = order.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+
+    return keys.map((key, index) => ({
+      id: index + 1,
+      nameThai: this.getStopTypeLabel(key, 'th'),
+      nameEnglish: this.getStopTypeLabel(key, 'en'),
+      createdBy: 'system',
+      createdDate: '',
+      lastUpdatedBy: 'system',
+      lastUpdatedDate: '',
+      stations: groupedStations.get(key) || [],
+    }));
+  }
+
+  private getStopLabel(stop: Stop, locale: string): string | undefined {
+    const match = stop.translations?.find((item) => item.locale === locale);
+    if (match?.label) return match.label;
+    return stop.translations?.[0]?.label;
+  }
+
+  private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
+    const normalized = (type || '').toLowerCase();
+    if (normalized === 'station') {
+      return locale === 'th' ? 'สถานี' : 'Stations';
+    }
+    if (normalized === 'stop') {
+      return locale === 'th' ? 'จุดจอด' : 'Stops';
+    }
+    return locale === 'th' ? type : type;
+  }
 }

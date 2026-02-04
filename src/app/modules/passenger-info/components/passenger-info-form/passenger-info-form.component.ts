@@ -25,6 +25,7 @@ import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.inte
 import { map, takeUntil } from 'rxjs/operators';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
+import { shareReplay } from 'rxjs/operators';
 
 @Component({
   selector: 'app-passenger-info-form',
@@ -36,6 +37,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   passengerInfo: Observable<PassengerInfo[] | null>;
   scheduleBooking$: Observable<ScheduleBooking | null>;
   isVanVehicle$: Observable<boolean>;
+  availableSeatNumbers$: Observable<string[]>;
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
@@ -107,9 +109,20 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
         const scheduleData = Array.isArray(booking?.schedule)
           ? booking?.schedule?.[0]
           : booking?.schedule ?? null;
-        const vehicleTypeName = scheduleData?.vehicleType?.name ?? '';
-        return vehicleTypeName.toLowerCase() === 'van';
-      })
+        const vehicleTypeName = scheduleData?.vehicleType ?? '';
+        const normalized = vehicleTypeName.toLowerCase();
+        return normalized === 'van' || normalized === 'minibus';
+      }),
+      shareReplay(1)
+    );
+    this.availableSeatNumbers$ = this.scheduleBooking$.pipe(
+      map((booking) => {
+        const scheduleData = Array.isArray(booking?.schedule)
+          ? booking?.schedule?.[0]
+          : booking?.schedule ?? null;
+        return scheduleData?.availableSeatNumbers ?? [];
+      }),
+      shareReplay(1)
     );
 
     this.createForm();

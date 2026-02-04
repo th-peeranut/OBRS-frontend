@@ -8,7 +8,7 @@ import { ResponseAPI } from '../../shared/interfaces/response.interface';
   providedIn: 'root',
 })
 export class OtpService {
-  private readonly url = `${environment.apiUrl}/api/otp`;
+  private readonly url = `${environment.apiUrl}/api/external/otp`;
 
   constructor(private http: HttpClient) {}
 

@@ -18,9 +18,9 @@ import { Appstate } from '../../../../shared/stores/appstate';
 import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
-import { Route } from '../../../../shared/interfaces/route.interface';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import dayjs from 'dayjs';
 
 @Component({
   selector: 'app-payment-info',
@@ -51,10 +51,20 @@ export class PaymentInfoComponent {
     return schedule ?? [];
   }
 
-  formatTimeToHHMM(time: string): string {
-    if (!time) return '';
-    const parts = time.split(':');
-    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+  formatDateTimeToHHMM(dateTime: string): string {
+    if (!dateTime) return '';
+    const parsed = dayjs(dateTime);
+    return parsed.isValid() ? parsed.format('HH:mm') : '';
+  }
+
+  formatDateFromDateTime(dateTime: string): string {
+    if (!dateTime) return '';
+    const parsed = dayjs(dateTime);
+    if (parsed.isValid()) {
+      return this.formatDate(parsed.format('YYYY-MM-DD'));
+    }
+    const datePart = dateTime.split(' ')[0] ?? dateTime;
+    return this.formatDate(datePart);
   }
 
   formatDate(dateStr: string): string {
@@ -103,26 +113,19 @@ export class PaymentInfoComponent {
     return `${day} ${month} ${year}`;
   }
 
-  getHour(time: string): number | string {
-    if (!time) return '';
-
-    const [hour] = time.split(':');
-    return parseInt(hour, 10);
+  getDurationHours(startDateTime: string, endDateTime: string): number {
+    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
+    return Math.floor(totalMinutes / 60);
   }
 
-  getMinute(time: string): number | string {
-    if (!time) return '';
-
-    const [, minute] = time.split(':');
-    return parseInt(minute, 10);
+  getDurationMinutes(startDateTime: string, endDateTime: string): number {
+    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
+    return totalMinutes % 60;
   }
 
-  getRoutesName(route: Route | null): string {
-    if (!route) return '';
-
-    return this.translateService.currentLang === 'th'
-      ? route.nameThai
-      : route.nameEnglish;
+  formatVehicleType(type: string | null | undefined): string {
+    if (!type) return '';
+    return type.charAt(0).toUpperCase() + type.slice(1);
   }
 
   findStationById(
@@ -170,5 +173,14 @@ export class PaymentInfoComponent {
 
   onChangeData() {
     this.router.navigate(['/schedule-booking']);
+  }
+
+  private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {
+    if (!startDateTime || !endDateTime) return 0;
+    const start = dayjs(startDateTime);
+    const end = dayjs(endDateTime);
+    if (!start.isValid() || !end.isValid()) return 0;
+    const diff = end.diff(start, 'minute');
+    return diff >= 0 ? diff : 0;
   }
 }

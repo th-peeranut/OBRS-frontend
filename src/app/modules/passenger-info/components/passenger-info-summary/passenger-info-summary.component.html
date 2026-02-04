@@ -34,8 +34,8 @@
             
             <div>
               {{
-                formatDate(
-                  getScheduleBooking(scheduleBooking?.schedule)[0].departureDate
+                formatDateFromDateTime(
+                  getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
                 )
               }}
             </div>
@@ -77,8 +77,8 @@
           
           <div class="body-header-text">
             {{
-              formatTimeToHHMM(
-                getScheduleBooking(scheduleBooking?.schedule)[0].departureTime
+              formatDateTimeToHHMM(
+                getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -104,12 +104,16 @@
         
         <div class="body-subheader-text">
           {{
-            getHour(getScheduleBooking(scheduleBooking?.schedule)[0].travelTime)
+            getDurationHours(
+              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
+              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
+            )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
           {{
-            getMinute(
-              getScheduleBooking(scheduleBooking?.schedule)[0].travelTime
+            getDurationMinutes(
+              getScheduleBooking(scheduleBooking?.schedule)[0].departureDateTime,
+              getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
             )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
@@ -118,8 +122,8 @@
         <div class="card-body-detail-station mt-2">
           <div class="body-header-text">
             {{
-              formatTimeToHHMM(
-                getScheduleBooking(scheduleBooking?.schedule)[0].arrivalTime
+              formatDateTimeToHHMM(
+                getScheduleBooking(scheduleBooking?.schedule)[0].arrivalDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -172,9 +176,9 @@
               
               <div>
                 {{
-                  formatDate(
+                  formatDateFromDateTime(
                     getScheduleBooking(scheduleBooking?.schedule)[1]
-                      .departureDate
+                      .departureDateTime
                   )
                 }}
               </div>
@@ -207,8 +211,8 @@
             
             <div class="body-header-text">
               {{
-                formatTimeToHHMM(
-                  getScheduleBooking(scheduleBooking?.schedule)[1].departureTime
+                formatDateTimeToHHMM(
+                  getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime
                 )
               }}
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -234,14 +238,16 @@
           
           <div class="body-subheader-text">
             {{
-              getHour(
-                getScheduleBooking(scheduleBooking?.schedule)[1].travelTime
+              getDurationHours(
+                getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
+                getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
             {{
-              getMinute(
-                getScheduleBooking(scheduleBooking?.schedule)[1].travelTime
+              getDurationMinutes(
+                getScheduleBooking(scheduleBooking?.schedule)[1].departureDateTime,
+                getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
@@ -250,8 +256,8 @@
           <div class="card-body-detail-station mt-2">
             <div class="body-header-text">
               {{
-                formatTimeToHHMM(
-                  getScheduleBooking(scheduleBooking?.schedule)[1].arrivalTime
+                formatDateTimeToHHMM(
+                  getScheduleBooking(scheduleBooking?.schedule)[1].arrivalDateTime
                 )
               }}
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -318,7 +324,7 @@
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
         </span>
         <span>
-          {{ getScheduleBooking(scheduleBooking?.schedule)[0].fare }}
+          {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
         </span>
       </div>
@@ -333,8 +339,8 @@
         </span>
         <span>
           {{
-            getScheduleBooking(scheduleBooking?.schedule)[0].fare +
-              getScheduleBooking(scheduleBooking?.schedule)[1].fare
+            getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
+              getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_UNIT" | translate }}
         </span>

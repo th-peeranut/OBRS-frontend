@@ -2,7 +2,11 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { Province, ProvinceStation } from '../../shared/interfaces/province.interface';
+import {
+  Province,
+  ProvinceStation,
+  Stop,
+} from '../../shared/interfaces/province.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 
 @Injectable({
@@ -47,9 +51,9 @@ export class ProvinceService {
     );
   }
 
-  getWithStation(): Observable<ResponseAPI<ProvinceStation[]>> {
-    return this.http.get<ResponseAPI<ProvinceStation[]>>(
-      `${environment.apiUrl}/api/provinces/stations`
+  getWithStation(): Observable<ResponseAPI<Stop[]>> {
+    return this.http.get<ResponseAPI<Stop[]>>(
+      `${environment.apiUrl}/api/stops`
     );
   }
 }

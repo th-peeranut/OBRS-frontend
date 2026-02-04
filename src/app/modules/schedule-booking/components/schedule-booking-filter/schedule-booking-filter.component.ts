@@ -53,6 +53,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   bookingForm: FormGroup;
 
   rawProvinceStationList: Observable<ProvinceStation[]>;
+  allProvinceStationList: ProvinceStation[] = [];
 
   startProvinceStationList: ProvinceStation[] = [];
   endProvinceStationList: ProvinceStation[] = [];
@@ -86,6 +87,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((provinceList) => {
         // ขาไป
+        this.allProvinceStationList = provinceList;
         this.startProvinceStationList = provinceList;
         this.endProvinceStationList = provinceList;
       });
@@ -212,25 +214,47 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     formValue.adultCount = getPassengerCount('ADULT');
     formValue.kidsCount = getPassengerCount('KIDS');
 
+    const roundTripId =
+      typeof formValue.roundTrip === 'object' ? formValue.roundTrip?.id : formValue.roundTrip;
+
     let payload: ScheduleFilterPayload = {
-      bookingType: formValue.roundTrip === 1 ? 'One way' : 'Return',
+      bookingType: roundTripId === 1 ? 'one_way' : 'return',
 
       numberOfPassengers: formValue.adultCount + formValue.kidsCount,
 
-      // ขาไป
-      startStationId: formValue.startStationId || null,
-      stopStationId: formValue.stopStationId || null,
+      // ????????????
+      fromStop: this.getStationCodeById(formValue.startStationId),
+      toStop: this.getStationCodeById(formValue.stopStationId),
       departureDate: formValue.departureDate
         ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
         : '',
-
-      // ขากลับ
-      returnDate: formValue.departureDate
-        ? dayjs(formValue.departureDate).format('YYYY-MM-DD')
-        : '',
+      ...(roundTripId === 1
+        ? {}
+        : {
+            // ??????????????????
+            returnDate: formValue.returnDate
+              ? dayjs(formValue.returnDate).format('YYYY-MM-DD')
+              : null,
+          }),
     };
 
     return payload;
+  }
+
+  private getStationCodeById(stationId: string | number | null | undefined): string | null {
+    if (stationId === null || stationId === undefined || stationId === '') {
+      return null;
+    }
+
+    const id = Number(stationId);
+    for (const province of this.allProvinceStationList) {
+      const match = province.stations.find((station) => station.id === id);
+      if (match) {
+        return match.code || null;
+      }
+    }
+
+    return null;
   }
 
   onStartStationChange(station: Station) {

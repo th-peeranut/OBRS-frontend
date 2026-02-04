@@ -51,7 +51,12 @@ export class PaymentSummaryComponent {
   ): number {
     const sumPassengers = this.sumPassengers(passengers) ?? 0;
     const sumFare =
-      items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
+      items?.reduce((total, item) => total + this.getPricePerSeat(item?.pricePerSeat), 0) ?? 0;
     return sumFare * sumPassengers;
+  }
+
+  getPricePerSeat(value: string | number | null | undefined): number {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 }

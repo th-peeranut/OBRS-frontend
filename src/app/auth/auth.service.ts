@@ -13,6 +13,7 @@ import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'auth_username';
+  private readonly REGISTER_VALUE_KEY = 'register_value';
 
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
@@ -87,10 +88,19 @@ export class AuthService {
 
   setRegisterValue(payload: Register) {
     this.registerValue = payload;
+    sessionStorage.setItem(this.REGISTER_VALUE_KEY, JSON.stringify(payload));
   }
 
   getRegisterValue(): Register | undefined {
-    return this.registerValue;
+    if (this.registerValue) return this.registerValue;
+    const raw = sessionStorage.getItem(this.REGISTER_VALUE_KEY);
+    if (!raw) return undefined;
+    try {
+      this.registerValue = JSON.parse(raw) as Register;
+      return this.registerValue;
+    } catch {
+      return undefined;
+    }
   }
 
   clearRegisterValue() {
@@ -103,8 +113,10 @@ export class AuthService {
       password: '',
       phoneNumber: '',
       roles: [],
+      preferredLocale: '',
       username: '',
     };
+    sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
   }
 
   register(payload: Register): Promise<ResponseAPI<any>> {

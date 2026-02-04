@@ -16,6 +16,7 @@ export class PassengerSeatVanComponent implements OnChanges {
   @Input() gender: string = '';
   @Input() takenSeats: string[] = [];
   @Input() currentSeat: string = '';
+  @Input() availableSeatNumbers: string[] | null = null;
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
 
@@ -25,7 +26,7 @@ export class PassengerSeatVanComponent implements OnChanges {
     if (changes['currentSeat'] && changes['currentSeat'].currentValue !== undefined) {
       const seat = changes['currentSeat'].currentValue || '';
       this.isSelected = seat;
-      if (seat && this.isSeatTakenByOther(seat)) {
+      if (seat && (this.isSeatTakenByOther(seat) || !this.isSeatAvailable(seat))) {
         this.isSelected = '';
       }
     }
@@ -57,5 +58,31 @@ export class PassengerSeatVanComponent implements OnChanges {
     const taken = this.takenSeats || [];
     const isSameAsCurrent = normalizedSeat === this.currentSeat;
     return taken.includes(normalizedSeat) && !isSameAsCurrent;
+  }
+
+  isSeatDisabled(seat: string): boolean {
+    if (this.isSeatTakenByOther(seat)) {
+      return true;
+    }
+
+    return !this.isSeatAvailable(seat);
+  }
+
+  private isSeatAvailable(seat: string): boolean {
+    const available = this.availableSeatNumbers ?? [];
+    if (available.length === 0) {
+      return true;
+    }
+
+    const normalized = this.normalizeSeatNumber(seat);
+    if (!normalized) {
+      return true;
+    }
+
+    return available.includes(normalized);
+  }
+
+  private normalizeSeatNumber(seat: string): string {
+    return (seat || '').replace(/\D/g, '');
   }
 }

@@ -13,7 +13,7 @@ export class ScheduleService {
 
   getByFilter(scheduleFilter: ScheduleFilterPayload): Observable<ResponseAPI<ScheduleList>> {
     return this.http.post<ResponseAPI<ScheduleList>>(
-      `${environment.apiUrl}/api/schedules`,
+      `${environment.apiUrl}/api/schedules/search`,
       scheduleFilter
     );
   }

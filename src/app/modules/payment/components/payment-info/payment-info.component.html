@@ -29,13 +29,15 @@
           <div class="subheader-text">
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
-              formatDate(
-                getScheduleBooking(bookingData?.schedule)[0].departureDate
+              formatDateFromDateTime(
+                getScheduleBooking(bookingData?.schedule)[0].departureDateTime
               )
             }}
             |
             {{
-              getRoutesName(getScheduleBooking(bookingData?.schedule)[0].route)
+              formatVehicleType(
+                getScheduleBooking(bookingData?.schedule)[0].vehicleType
+              )
             }}
             |
             <ng-container
@@ -61,8 +63,8 @@
       <div class="schedule-info">
         <div class="time">
           {{
-            formatTimeToHHMM(
-              getScheduleBooking(bookingData?.schedule)[0].departureTime
+            formatDateTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[0].departureDateTime
             )
           }}
           {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
@@ -71,11 +73,17 @@
         <div class="time-info">
           <div class="route">
             {{
-              getHour(getScheduleBooking(bookingData?.schedule)[0].travelTime)
+              getDurationHours(
+                getScheduleBooking(bookingData?.schedule)[0].departureDateTime,
+                getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
+              )
             }}
             {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
             {{
-              getMinute(getScheduleBooking(bookingData?.schedule)[0].travelTime)
+              getDurationMinutes(
+                getScheduleBooking(bookingData?.schedule)[0].departureDateTime,
+                getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
+              )
             }}
             {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
           </div>
@@ -84,15 +92,17 @@
 
           <div class="route">
             {{
-              getRoutesName(getScheduleBooking(bookingData?.schedule)[0].route)
+              formatVehicleType(
+                getScheduleBooking(bookingData?.schedule)[0].vehicleType
+              )
             }}
           </div>
         </div>
 
         <div class="time">
           {{
-            formatTimeToHHMM(
-              getScheduleBooking(bookingData?.schedule)[0].arrivalTime
+            formatDateTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
             )
           }}
           {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
@@ -157,13 +167,15 @@
           <div class="subheader-text">
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
-              formatDate(
-                getScheduleBooking(bookingData?.schedule)[1].departureDate
+              formatDateFromDateTime(
+                getScheduleBooking(bookingData?.schedule)[1].departureDateTime
               )
             }}
             |
             {{
-              getRoutesName(getScheduleBooking(bookingData?.schedule)[1].route)
+              formatVehicleType(
+                getScheduleBooking(bookingData?.schedule)[1].vehicleType
+              )
             }}
             |
             <ng-container
@@ -189,8 +201,8 @@
       <div class="schedule-info">
         <div class="time">
           {{
-            formatTimeToHHMM(
-              getScheduleBooking(bookingData?.schedule)[1].departureTime
+            formatDateTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[1].departureDateTime
             )
           }}
           {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
@@ -199,11 +211,17 @@
         <div class="time-info">
           <div class="route">
             {{
-              getHour(getScheduleBooking(bookingData?.schedule)[1].travelTime)
+              getDurationHours(
+                getScheduleBooking(bookingData?.schedule)[1].departureDateTime,
+                getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
+              )
             }}
             {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
             {{
-              getMinute(getScheduleBooking(bookingData?.schedule)[1].travelTime)
+              getDurationMinutes(
+                getScheduleBooking(bookingData?.schedule)[1].departureDateTime,
+                getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
+              )
             }}
             {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
           </div>
@@ -212,15 +230,17 @@
 
           <div class="route">
             {{
-              getRoutesName(getScheduleBooking(bookingData?.schedule)[1].route)
+              formatVehicleType(
+                getScheduleBooking(bookingData?.schedule)[1].vehicleType
+              )
             }}
           </div>
         </div>
 
         <div class="time">
           {{
-            formatTimeToHHMM(
-              getScheduleBooking(bookingData?.schedule)[1].arrivalTime
+            formatDateTimeToHHMM(
+              getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
             )
           }}
           {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}

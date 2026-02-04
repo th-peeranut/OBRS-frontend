@@ -123,7 +123,15 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   }
 
   private sumScheduleFare(items?: Schedule[] | null): number {
-    return items?.reduce((total, item) => total + (item.fare ?? 0), 0) ?? 0;
+    return (
+      items?.reduce((total, item) => total + this.getPricePerSeat(item?.pricePerSeat), 0) ??
+      0
+    );
+  }
+
+  private getPricePerSeat(value: string | number | null | undefined): number {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private sumPassengers(items?: { type: string; count: number }[]): number {

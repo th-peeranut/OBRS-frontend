@@ -1,12 +1,12 @@
 <ng-container *ngIf="scheduleList | async as schedules">
   <div class="booking-container">
-    <h3 class="title" *ngIf="!schedules.returnSchedules?.length">
+    <h3 class="title" *ngIf="!schedules.arrivalSchedules?.length">
       {{ "SCHEDULE_BOOKING.HEADER" | translate }}
     </h3>
 
     <!-- ขาไป -->
     <ng-container *ngIf="schedules.departureSchedules as departureList">
-      <h3 class="title" *ngIf="schedules.returnSchedules?.length">
+      <h3 class="title" *ngIf="schedules.arrivalSchedules?.length">
         {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
       </h3>
 
@@ -18,27 +18,27 @@
           </div>
 
           <div class="time">
-            {{ formatTimeToHHMM(departure.departureTime) }}
+            {{ formatDateTimeToHHMM(departure.departureDateTime) }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
           </div>
 
           <div class="time-info">
             <div class="route">
-              {{ getHour(departure.travelTime) }}
+              {{ getDurationHours(departure.departureDateTime, departure.arrivalDateTime) }}
               {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
-              {{ getMinute(departure.travelTime) }}
+              {{ getDurationMinutes(departure.departureDateTime, departure.arrivalDateTime) }}
               {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
             </div>
 
             <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
             <div class="route">
-              {{ getRoutesName(departure.route) }}
+              {{ formatVehicleType(departure.vehicleType) }}
             </div>
           </div>
 
           <div class="time">
-            {{ formatTimeToHHMM(departure.arrivalTime) }}
+            {{ formatDateTimeToHHMM(departure.arrivalDateTime) }}
             {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
           </div>
         </div>
@@ -46,14 +46,14 @@
         <div class="right">
           <div class="text-container">
             <div class="price">
-              {{ departure.fare }}
+              {{ getPricePerSeat(departure.pricePerSeat) }}
               {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
             </div>
 
             <div class="availability">
               <span>
                 {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
-                {{ departure.availableSeat }}
+                {{ departure.availableSeats }}
                 {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
               </span>
               <span>|</span>
@@ -86,7 +86,7 @@
     </ng-container>
 
     <!-- ขาไป-ขากลับ -->
-    <ng-container *ngIf="schedules.returnSchedules as returnList">
+    <ng-container *ngIf="schedules.arrivalSchedules as returnList">
       <h3 class="title" *ngIf="isSelectFirst">
         {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
       </h3>
@@ -100,27 +100,27 @@
             </div>
 
             <div class="time">
-              {{ formatTimeToHHMM(return.departureTime) }}
+              {{ formatDateTimeToHHMM(return.departureDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
             </div>
 
             <div class="time-info">
               <div class="route">
-                {{ getHour(return.travelTime) }}
+                {{ getDurationHours(return.departureDateTime, return.arrivalDateTime) }}
                 {{ "SCHEDULE_BOOKING.HOUR_UNIT" | translate }}
-                {{ getMinute(return.travelTime) }}
+                {{ getDurationMinutes(return.departureDateTime, return.arrivalDateTime) }}
                 {{ "SCHEDULE_BOOKING.MINITE_UNIT" | translate }}
               </div>
 
               <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
               <div class="route">
-                {{ getRoutesName(return.route) }}
+                {{ formatVehicleType(return.vehicleType) }}
               </div>
             </div>
 
             <div class="time">
-              {{ formatTimeToHHMM(return.arrivalTime) }}
+              {{ formatDateTimeToHHMM(return.arrivalDateTime) }}
               {{ "SCHEDULE_BOOKING.TIME_UNIT" | translate }}
             </div>
           </div>
@@ -128,14 +128,14 @@
           <div class="right">
             <div class="text-container">
               <div class="price">
-                {{ return.fare }}
+                {{ getPricePerSeat(return.pricePerSeat) }}
                 {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
               </div>
 
               <div class="availability">
                 <span>
                   {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
-                  {{ return.availableSeat }}
+                  {{ return.availableSeats }}
                   {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
                 </span>
                 <span>|</span>

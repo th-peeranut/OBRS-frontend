@@ -8,19 +8,9 @@
   </div>
 
   <div class="total-container">
-    <ng-container [ngSwitch]="activePaymentTab">
-      <app-payment-creditcard
-        *ngSwitchCase="'creditcard'"
-        [activeTab]="activePaymentTab"
-        (tabChange)="onSelectPaymentTab($event)"
-      ></app-payment-creditcard>
-
-      <app-payment-qrcode
-        *ngSwitchCase="'qrcode'"
-        [activeTab]="activePaymentTab"
-        (tabChange)="onSelectPaymentTab($event)"
-      ></app-payment-qrcode>
-    </ng-container>
+    <app-payment-qrcode
+      [activeTab]="activePaymentTab"
+    ></app-payment-qrcode>
   </div>
 </div>
 

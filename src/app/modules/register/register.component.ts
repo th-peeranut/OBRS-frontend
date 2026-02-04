@@ -83,6 +83,7 @@ export class RegisterComponent implements OnDestroy {
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
+      preferredLocale: [''],
     });
 
     this.emailSubscription$ = this.registerForm.get('email')?.valueChanges
@@ -198,6 +199,8 @@ export class RegisterComponent implements OnDestroy {
       !this.phoneNumberIsExist
     ) {
       const formValue = this.registerForm.getRawValue();
+      formValue.preferredLocale =
+        this.translate.currentLang || this.currentLanguage;
 
       this.service.setRegisterValue(formValue);
 

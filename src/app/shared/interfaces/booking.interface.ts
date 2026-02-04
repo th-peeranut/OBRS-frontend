@@ -9,8 +9,8 @@ export interface BookingPassenger {
 
 export interface BookingSchedulePayload {
   scheduleId: number;
-  pickupStationId: number;
-  dropOffStationId: number;
+  pickupStation: string;
+  dropOffStation: string;
   departureDateTime: string;
   arrivalDateTime: string;
   passengers: BookingPassenger[];

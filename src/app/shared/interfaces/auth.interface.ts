@@ -13,4 +13,5 @@ export interface Register {
   password: string;
   isPhoneNumberVerify: boolean;
   roles: string[];
+  preferredLocale: string;
 }

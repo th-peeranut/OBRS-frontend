@@ -316,6 +316,7 @@
                     [gender]="group.get('gender')?.value"
                     [currentSeat]="getFormValue(i, 'passengerSeat')"
                     [takenSeats]="getTakenSeats(i)"
+                    [availableSeatNumbers]="availableSeatNumbers$ | async"
                     (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
                   ></app-passenger-seat-van>
                 </ng-container>

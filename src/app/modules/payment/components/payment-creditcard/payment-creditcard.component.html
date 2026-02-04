@@ -2,21 +2,12 @@
   <div class="tab-group">
     <button
       type="button"
-      class="tab"
-      [class.is-active]="activeTab === 'creditcard'"
+      class="tab is-active"
+      aria-current="true"
       (click)="selectTab('creditcard')"
     >
       <img src="icons/payment-creditcard.svg" alt="Credit card icon" />
       <span>{{ "PAYMENT.TAB.CREDIT" | translate }}</span>
-    </button>
-    <button
-      type="button"
-      class="tab"
-      [class.is-active]="activeTab === 'qrcode'"
-      (click)="selectTab('qrcode')"
-    >
-      <img src="icons/payment-qrcode.svg" alt="QR payment icon" />
-      <span>{{ "PAYMENT.TAB.QR" | translate }}</span>
     </button>
   </div>
 

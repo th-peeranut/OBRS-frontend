@@ -24,6 +24,9 @@ import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface'
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
+import { selectProvinceWithStation } from '../../shared/stores/province/province.selector';
+import { ProvinceStation } from '../../shared/interfaces/province.interface';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-passenger-info',
@@ -34,12 +37,17 @@ export class PassengerInfoComponent {
   @ViewChild(PassengerInfoFormComponent)
   passengerInfoFormComponent?: PassengerInfoFormComponent;
   isPassengerFormValid = false;
+  rawProvinceStationList: Observable<ProvinceStation[]>;
 
   constructor(
     private store: Store,
     private router: Router,
     private bookingService: BookingService
-  ) {}
+  ) {
+    this.rawProvinceStationList = this.store.pipe(
+      select(selectProvinceWithStation)
+    );
+  }
 
   ngOnInit(): void {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
@@ -96,16 +104,22 @@ export class PassengerInfoComponent {
     }
 
     const isReturnTrip = this.isReturnTrip(scheduleFilter?.roundTrip);
+    const startStationCode = await this.getStationCodeById(
+      scheduleFilter?.startStationId
+    );
+    const stopStationCode = await this.getStationCodeById(
+      scheduleFilter?.stopStationId
+    );
     const departureSchedule = schedules[0];
     const arrivalSchedule = isReturnTrip ? schedules[1] : null;
 
     const departurePassengers = this.buildPassengersPayload(
       passengerInfo,
-      departureSchedule?.fare
+      departureSchedule?.pricePerSeat
     );
     const arrivalPassengers =
       isReturnTrip && arrivalSchedule
-        ? this.buildPassengersPayload(passengerInfo, arrivalSchedule.fare)
+        ? this.buildPassengersPayload(passengerInfo, arrivalSchedule.pricePerSeat)
         : [];
 
     const totalCost =
@@ -113,12 +127,12 @@ export class PassengerInfoComponent {
       this.sumPassengerCost(arrivalPassengers);
 
     const payload: BookingPayload = {
-      bookingType: isReturnTrip ? 'Return' : 'One way',
+      bookingType: isReturnTrip ? 'return' : 'one_way',
       totalCost,
       departureSchedule: this.buildSchedulePayload(
         departureSchedule,
-        this.toNumber(scheduleFilter?.startStationId),
-        this.toNumber(scheduleFilter?.stopStationId),
+        startStationCode,
+        stopStationCode,
         departurePassengers
       ),
     };
@@ -126,8 +140,8 @@ export class PassengerInfoComponent {
     if (arrivalPassengers.length && arrivalSchedule) {
       payload.arrivalSchedule = this.buildSchedulePayload(
         arrivalSchedule,
-        this.toNumber(scheduleFilter?.stopStationId),
-        this.toNumber(scheduleFilter?.startStationId),
+        stopStationCode,
+        startStationCode,
         arrivalPassengers
       );
     }
@@ -151,9 +165,9 @@ export class PassengerInfoComponent {
 
   private buildPassengersPayload(
     passengers: PassengerInfo[],
-    fare?: number
+    pricePerSeat?: string | number | null
   ): BookingSchedulePayload['passengers'] {
-    const costPerPassenger = Number(fare) || 0;
+    const costPerPassenger = this.getPricePerSeat(pricePerSeat);
     return passengers.map((passenger) => ({
       passengerType: passenger.isAdult ? 'General public' : 'Child',
       seatNumber: passenger.passengerSeat || null,
@@ -166,22 +180,16 @@ export class PassengerInfoComponent {
 
   private buildSchedulePayload(
     schedule: Schedule,
-    pickupStationId: number,
-    dropOffStationId: number,
+    pickupStation: string,
+    dropOffStation: string,
     passengers: BookingSchedulePayload['passengers']
   ): BookingSchedulePayload {
     return {
       scheduleId: schedule?.id ?? 0,
-      pickupStationId,
-      dropOffStationId,
-      departureDateTime: this.toDateTime(
-        schedule?.departureDate,
-        schedule?.departureTime
-      ),
-      arrivalDateTime: this.toDateTime(
-        schedule?.departureDate,
-        schedule?.arrivalTime
-      ),
+      pickupStation,
+      dropOffStation,
+      departureDateTime: this.normalizeDateTime(schedule?.departureDateTime),
+      arrivalDateTime: this.normalizeDateTime(schedule?.arrivalDateTime),
       passengers,
     };
   }
@@ -192,22 +200,49 @@ export class PassengerInfoComponent {
     return passengers.reduce((sum, passenger) => sum + (Number(passenger.cost) || 0), 0);
   }
 
-  private toNumber(value: string | number | null | undefined): number {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-
-  private toDateTime(dateStr?: string, timeStr?: string): string {
-    if (!dateStr || !timeStr) {
+  private async getStationCodeById(
+    stationId: string | number | null | undefined
+  ): Promise<string> {
+    if (stationId === null || stationId === undefined || stationId === '') {
       return '';
     }
 
-    const normalizedTime =
-      timeStr.length === 5 ? `${timeStr}:00` : timeStr || '00:00:00';
-    const datetime = dayjs(`${dateStr}T${normalizedTime}`);
+    const raw = stationId;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) {
+      return String(raw);
+    }
+
+    const provinceList = await firstValueFrom(
+      this.rawProvinceStationList.pipe(take(1))
+    );
+    for (const province of provinceList ?? []) {
+      const match = province.stations.find((station) => station.id === parsed);
+      if (match) {
+        return match.code || String(raw);
+      }
+    }
+
+    return String(raw);
+  }
+
+  private getPricePerSeat(value: string | number | null | undefined): number {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private normalizeDateTime(dateTime?: string): string {
+    if (!dateTime) {
+      return '';
+    }
+
+    const normalized = dateTime.includes('T')
+      ? dateTime
+      : dateTime.replace(' ', 'T');
+    const datetime = dayjs(normalized);
 
     return datetime.isValid()
       ? datetime.format('YYYY-MM-DDTHH:mm:ss')
-      : `${dateStr}T${normalizedTime}`;
+      : normalized;
   }
 }

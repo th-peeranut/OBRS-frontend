@@ -176,12 +176,13 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         resVerify = await this.otpService.verifyOTP(payload);
       }
 
+      console.log(resVerify);
       if (resVerify?.code === 200) {
         if (this.option === 'forget-password') {
           // const res = await this.service.forgetPassword(payload);
         } else if (this.option === 'register') {
           const registerValue = this.service.getRegisterValue();
-          
+          console.log(registerValue);
           if (registerValue) {
             const resRegister = await this.service.register(registerValue);
 
@@ -189,6 +190,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               this.toastr.success(
                 this.translate.instant('REGISTER.REGISTER_SUCCESS')
               );
+              this.service.clearRegisterValue();
               this.router.navigateByUrl('/login');
             } else {
               this.toastr.error(

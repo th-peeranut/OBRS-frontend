@@ -43,7 +43,7 @@
           {{ "PAYMENT.SUMMARY.TICKET_PRICE_ONEWAY" | translate }}
         </span>
         <span>
-          {{ getScheduleBooking(scheduleBooking?.schedule)[0].fare }}
+          {{ getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) }}
           {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
         </span>
       </div>
@@ -57,8 +57,8 @@
         </span>
         <span>
           {{
-            getScheduleBooking(scheduleBooking?.schedule)[0].fare +
-              getScheduleBooking(scheduleBooking?.schedule)[1].fare
+            getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[0].pricePerSeat) +
+              getPricePerSeat(getScheduleBooking(scheduleBooking?.schedule)[1].pricePerSeat)
           }}
           {{ "PAYMENT.SUMMARY.TICKET_UNIT" | translate }}
         </span>

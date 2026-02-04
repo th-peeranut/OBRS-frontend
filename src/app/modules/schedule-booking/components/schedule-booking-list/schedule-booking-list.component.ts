@@ -7,10 +7,9 @@ import { Observable, Subscription } from 'rxjs';
 import { Store, select } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
-import { TranslateService } from '@ngx-translate/core';
-import { Route } from '../../../../shared/interfaces/route.interface';
 import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
 import { Router } from '@angular/router';
+import dayjs from 'dayjs';
 
 @Component({
   selector: 'app-schedule-booking-list',
@@ -29,8 +28,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store,
     private router: Router,
-    private appStore: Store<Appstate>,
-    private translateService: TranslateService
+    private appStore: Store<Appstate>
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
   }
@@ -69,8 +67,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     );
 
     this.scheduleList$ = this.scheduleList.subscribe((schedules) => {
-      console.log('Selected schedules:', schedules);
-      if ((!schedules?.returnSchedules || !isFirst)) {
+      const hasArrivalSchedules = (schedules?.arrivalSchedules?.length ?? 0) > 0;
+      if (!hasArrivalSchedules || !isFirst) {
         this.router.navigate(['/review-schedule-booking']);
       }
     });
@@ -89,31 +87,38 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     );
   }
 
-  getHour(time: string): number | string {
-    if (!time) return '';
-
-    const [hour] = time.split(':');
-    return parseInt(hour, 10);
+  formatDateTimeToHHMM(dateTime: string): string {
+    if (!dateTime) return '';
+    const parsed = dayjs(dateTime);
+    return parsed.isValid() ? parsed.format('HH:mm') : '';
   }
 
-  getMinute(time: string): number | string {
-    if (!time) return '';
-
-    const [, minute] = time.split(':');
-    return parseInt(minute, 10);
+  getDurationHours(startDateTime: string, endDateTime: string): number {
+    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
+    return Math.floor(totalMinutes / 60);
   }
 
-  getRoutesName(route: Route | null): string {
-    if (!route) return '';
-
-    return this.translateService.currentLang === 'th'
-      ? route.nameThai
-      : route.nameEnglish;
+  getDurationMinutes(startDateTime: string, endDateTime: string): number {
+    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
+    return totalMinutes % 60;
   }
 
-  formatTimeToHHMM(time: string): string {
-    if (!time) return '';
-    const parts = time.split(':');
-    return parts.length >= 2 ? `${parts[0]}:${parts[1]}` : time;
+  formatVehicleType(type: string | null | undefined): string {
+    if (!type) return '';
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  getPricePerSeat(value: string | number | null | undefined): number {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {
+    if (!startDateTime || !endDateTime) return 0;
+    const start = dayjs(startDateTime);
+    const end = dayjs(endDateTime);
+    if (!start.isValid() || !end.isValid()) return 0;
+    const diff = end.diff(start, 'minute');
+    return diff >= 0 ? diff : 0;
   }
 }

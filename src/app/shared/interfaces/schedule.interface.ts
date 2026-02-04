@@ -1,7 +1,4 @@
 import { Dropdown } from './dropdown.interface';
-import { Route } from './route.interface';
-import { VehicleType } from './vehicle-type.interface';
-import { Vehicle } from './vehicle.interface';
 export interface ScheduleFilter {
   roundTrip: Dropdown;
   passengerInfo: { type: string; count: number }[];
@@ -10,50 +7,36 @@ export interface ScheduleFilter {
   stopStationId: string | number;
   departureDate: string;
 
-  returnDate: string;
+  returnDate?: string | null;
 
   adultCount?: number;
   kidsCount?: number;
 }
 
 export interface ScheduleFilterPayload {
-  bookingType: string; // 'One way' | 'Return'
+  bookingType: string; // 'one_way' | 'return'
   numberOfPassengers: number;
 
-  // ขาไป
-  startStationId: number;
-  stopStationId: number;
+  // ????????????
+  fromStop: string | null;
+  toStop: string | null;
   departureDate: string;
 
-  // ขากลับ
-  returnDate: string;
+  // ??????????????????
+  returnDate?: string | null;
 }
 
 export interface Schedule {
   id: number;
-  departureDate: string;
-  departureTime: string;
-  availableSeat: number;
-  travelTime: string;
-  arrivalTime: string;
-  fare: number;
-  status: string;
-  createdBy: string;
-  createdDate: string;
-  lastUpdatedBy: string;
-  lastUpdatedDate: string;
-
-  route: Route | null;
-
-  vehicle: Vehicle;
-
-  vehicleType: VehicleType | null;
-
-  // change when have data <T> | null
-  driver: any | null;
+  vehicleType: string | null;
+  departureDateTime: string;
+  arrivalDateTime: string;
+  pricePerSeat: string | number;
+  availableSeats: number;
+  availableSeatNumbers: string[];
 }
 
 export interface ScheduleList {
   departureSchedules: Schedule[] | null;
-  returnSchedules: Schedule[] | null;
+  arrivalSchedules: Schedule[] | null;
 }

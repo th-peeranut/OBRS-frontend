@@ -7,7 +7,7 @@ import { ResponseAPI } from '../../shared/interfaces/response.interface';
   providedIn: 'root',
 })
 export class UserService {
-  private readonly url = `${environment.apiUrl}/api/users`;
+  private readonly url = `${environment.apiUrl}/api/users/check-duplicate`;
 
   constructor(private http: HttpClient) {}
 
