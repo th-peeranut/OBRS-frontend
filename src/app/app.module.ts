@@ -7,7 +7,7 @@ import {
 } from '@angular/common/http';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app-routing.module';
-import { ToastrModule } from 'ngx-toastr';
+import { errorInterceptor } from './shared/interceptors/error.interceptor';
 
 // auth
 import { AuthGuard } from './auth/auth.guard';
@@ -48,12 +48,6 @@ export function HttpLoaderFactory(http: HttpClient) {
       },
       defaultLanguage: 'th',
     }),
-
-    ToastrModule.forRoot({
-      timeOut: 3000,
-      positionClass: 'toast-top-right',
-      preventDuplicates: true,
-    }),
     
     // STORE IMPORT
     EffectsModule.forRoot([]),
@@ -65,7 +59,7 @@ export function HttpLoaderFactory(http: HttpClient) {
   providers: [
     AuthService,
     AuthGuard,
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, errorInterceptor])),
   ],
   bootstrap: [AppComponent],
 })

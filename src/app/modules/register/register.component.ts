@@ -7,7 +7,6 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { Router } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
@@ -19,6 +18,7 @@ import {
 } from 'rxjs';
 import { UserService } from '../../services/user/user.service';
 import { REGISTER_OPTION } from '../../shared/enum/register-option.enum';
+import { AlertService } from '../../shared/services/alert.service';
 
 @Component({
   selector: 'app-register',
@@ -53,7 +53,7 @@ export class RegisterComponent implements OnDestroy {
     private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
-    private toastr: ToastrService,
+    private alertService: AlertService,
     private usersService: UserService,
     private router: Router
   ) {
@@ -188,7 +188,7 @@ export class RegisterComponent implements OnDestroy {
     this.registerForm.markAllAsTouched();
 
     if (!this.checkSamePassword()) {
-      this.toastr.error('พบข้อผิดพลาด กรุณากรอกรหัสผ่านให้เหมือนกัน');
+      this.alertService.error('พบข้อผิดพลาด กรุณากรอกรหัสผ่านให้เหมือนกัน');
     }
 
     if (

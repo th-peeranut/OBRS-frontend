@@ -8,11 +8,11 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { Router } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
+import { AlertService } from '../../shared/services/alert.service';
 
 @Component({
   selector: 'app-login',
@@ -38,7 +38,7 @@ export class LoginComponent implements OnDestroy {
     private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
-    private toastr: ToastrService,
+    private alertService: AlertService,
     private router: Router,
     private cdr: ChangeDetectorRef
   ) {
@@ -128,10 +128,12 @@ export class LoginComponent implements OnDestroy {
       const res = await this.service.login(payload);
 
       if (res?.code === 200) {
-        this.toastr.success(this.translate.instant('LOGIN.LOGIN_SUCCESS'));
+        this.alertService.success(
+          this.translate.instant('LOGIN.LOGIN_SUCCESS')
+        );
         this.router.navigateByUrl('/home');
-      } else {
-        this.toastr.error(this.translate.instant('LOGIN.LOGIN_FAIL'));
+      } else if (typeof res?.code === 'number') {
+        this.alertService.error(this.translate.instant('LOGIN.LOGIN_FAIL'));
       }
     }
   }

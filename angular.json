@@ -41,7 +41,6 @@
               "node_modules/bootstrap-icons/font/bootstrap-icons.css",
               "node_modules/primeng/resources/themes/lara-light-blue/theme.css",
               "node_modules/primeng/resources/primeng.min.css",
-              "node_modules/ngx-toastr/toastr.css",
               "src/styles/variables.scss",
               "src/styles.scss"
             ],
@@ -107,7 +106,6 @@
               "node_modules/bootstrap-icons/font/bootstrap-icons.css",
               "node_modules/primeng/resources/themes/lara-light-blue/theme.css",
               "node_modules/primeng/resources/primeng.min.css",
-              "node_modules/ngx-toastr/toastr.css",
               "src/styles/variables.scss",
               "src/styles.scss"
             ],

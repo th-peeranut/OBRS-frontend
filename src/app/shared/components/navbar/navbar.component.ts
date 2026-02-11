@@ -11,7 +11,7 @@ import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
+import { AlertService } from '../../services/alert.service';
 
 @Component({
   selector: 'app-navbar',
@@ -43,7 +43,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef,
     private authService: AuthService,
     private router: Router,
-    private toastr: ToastrService
+    private alertService: AlertService
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
@@ -128,14 +128,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
     // const res = await this.authService.logout(payload);
 
     // if (res?.code === 200) {
-    //   this.toastr.success(this.translate.instant('HOME.SIGNOUT_SUCCESS'));
+    //   this.alertService.success(this.translate.instant('HOME.SIGNOUT_SUCCESS'));
     // } else {
-    //   this.toastr.error(this.translate.instant('HOME.SIGNOUT_FAIL'));
+    //   this.alertService.error(this.translate.instant('HOME.SIGNOUT_FAIL'));
     // }
 
     this.isProfileDropdownOpen = false;
 
     this.authService.clearAuthData();
-    this.toastr.success(this.translate.instant('HOME.NAVBAR.SIGNOUT_SUCCESS'));
+    this.alertService.success(
+      this.translate.instant('HOME.NAVBAR.SIGNOUT_SUCCESS')
+    );
   }
 }

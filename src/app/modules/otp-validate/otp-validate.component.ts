@@ -9,7 +9,6 @@ import {
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { ToastrService } from 'ngx-toastr';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
 import { PrimeNGConfig } from 'primeng/api';
@@ -19,6 +18,7 @@ import {
   OtpRequest,
   OtpVerify,
 } from '../../shared/interfaces/otp.interface';
+import { AlertService } from '../../shared/services/alert.service';
 
 @Component({
   selector: 'app-otp-validate',
@@ -52,7 +52,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
-    private toastr: ToastrService,
+    private alertService: AlertService,
     private router: Router,
     private route: ActivatedRoute,
     private otpService: OtpService,
@@ -67,7 +67,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
 
     if (this.validateRouteError()) {
-      this.toastr.error('พบข้อผิดพลาด');
+      this.alertService.error('พบข้อผิดพลาด');
       this.router.navigateByUrl('/home');
     }
 
@@ -147,63 +147,71 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   async sendOtp() {
     this.token = '';
 
-    let payload: OtpRequest = { msisdn: this.phoneNo };
+    const payload: OtpRequest = { msisdn: this.phoneNo };
 
-    const res = await this.otpService.requestOTP(payload);
+    try {
+      const res = await this.otpService.requestOTP(payload);
 
-    if (res?.code === 200) {
-      this.startTimer();
-      this.token = res?.data?.token;
-    } else {
-      this.toastr.error('error');
+      if (res?.code === 200) {
+        this.startTimer();
+        this.token = res?.data?.token;
+      } else if (typeof res?.code === 'number') {
+        this.alertService.error('error');
+      }
+    } catch {
+      // Error alert is handled by the global interceptor.
     }
   }
 
   async verifyOtp() {
     if (this.otpCode) {
-      let payload: OtpVerify = { pin: this.otpCode, token: this.token };
+      const payload: OtpVerify = { pin: this.otpCode, token: this.token };
 
       let resVerify;
 
-      if (this.option === 'login') {
-        const loginPayload: LoginOtpVerify = {
-          ...payload,
-          phoneNumber: this.phoneNo ? this.phoneNo : '',
-        };
+      try {
+        if (this.option === 'login') {
+          const loginPayload: LoginOtpVerify = {
+            ...payload,
+            phoneNumber: this.phoneNo ? this.phoneNo : '',
+          };
 
-        resVerify = await this.authService.loginWithOtp(loginPayload);
-      } else {
-        resVerify = await this.otpService.verifyOTP(payload);
-      }
-
-      console.log(resVerify);
-      if (resVerify?.code === 200) {
-        if (this.option === 'forget-password') {
-          // const res = await this.service.forgetPassword(payload);
-        } else if (this.option === 'register') {
-          const registerValue = this.service.getRegisterValue();
-          console.log(registerValue);
-          if (registerValue) {
-            const resRegister = await this.service.register(registerValue);
-
-            if (resRegister.code === 201) {
-              this.toastr.success(
-                this.translate.instant('REGISTER.REGISTER_SUCCESS')
-              );
-              this.service.clearRegisterValue();
-              this.router.navigateByUrl('/login');
-            } else {
-              this.toastr.error(
-                this.translate.instant('REGISTER.REGISTER_FAIL')
-              );
-            }
-          }
-        } else if (this.option === 'login') {
-          this.toastr.success('succ');
-          this.router.navigateByUrl('/home');
+          resVerify = await this.authService.loginWithOtp(loginPayload);
+        } else {
+          resVerify = await this.otpService.verifyOTP(payload);
         }
-      } else {
-        this.toastr.error('error');
+
+        console.log(resVerify);
+        if (resVerify?.code === 200) {
+          if (this.option === 'forget-password') {
+            // const res = await this.service.forgetPassword(payload);
+          } else if (this.option === 'register') {
+            const registerValue = this.service.getRegisterValue();
+            console.log(registerValue);
+            if (registerValue) {
+              const resRegister = await this.service.register(registerValue);
+
+              if (resRegister?.code === 201) {
+                this.alertService.success(
+                  this.translate.instant('REGISTER.REGISTER_SUCCESS')
+                );
+                this.service.clearRegisterValue();
+                this.router.navigateByUrl('/login');
+              } else if (typeof resRegister?.code === 'number') {
+                this.alertService.error(
+                  this.translate.instant('REGISTER.REGISTER_FAIL')
+                );
+              }
+            }
+          } else if (this.option === 'login') {
+            this.alertService.success('succ');
+            this.router.navigateByUrl('/home');
+          }
+        } else if (typeof resVerify?.code === 'number') {
+          this.alertService.error('error');
+        }
+      } catch {
+        // Error alert is handled by the global interceptor.
       }
     }
   }
