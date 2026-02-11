@@ -289,6 +289,9 @@
       "MALE": "Male",
       "FEMALE": "Female",
       "MONK": "Monk"
+    },
+    "ALERT": {
+      "CREATE_SUCCESS": "Booking saved successfully"
     }
   },
   "PAYMENT": {

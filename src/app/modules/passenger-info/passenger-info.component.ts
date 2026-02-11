@@ -27,6 +27,8 @@ import dayjs from 'dayjs';
 import { selectProvinceWithStation } from '../../shared/stores/province/province.selector';
 import { ProvinceStation } from '../../shared/interfaces/province.interface';
 import { Observable } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { AlertService } from '../../shared/services/alert.service';
 
 @Component({
   selector: 'app-passenger-info',
@@ -42,7 +44,9 @@ export class PassengerInfoComponent {
   constructor(
     private store: Store,
     private router: Router,
-    private bookingService: BookingService
+    private bookingService: BookingService,
+    private translateService: TranslateService,
+    private alertService: AlertService
   ) {
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -73,9 +77,16 @@ export class PassengerInfoComponent {
 
     if (bookingPayload) {
       try {
-        await firstValueFrom(
+        const response = await firstValueFrom(
           this.bookingService.createBooking(bookingPayload).pipe(take(1))
         );
+        if (response?.code === 200 || response?.code === 201) {
+          this.alertService.success(
+            this.translateService.instant(
+              'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
+            )
+          );
+        }
       } catch (error) {
         console.error('Booking creation failed', error);
       }
@@ -113,22 +124,25 @@ export class PassengerInfoComponent {
     const departureSchedule = schedules[0];
     const arrivalSchedule = isReturnTrip ? schedules[1] : null;
 
-    const departurePassengers = this.buildPassengersPayload(
-      passengerInfo,
-      departureSchedule?.pricePerSeat
-    );
+    const departurePassengers = this.buildPassengersPayload(passengerInfo);
     const arrivalPassengers =
       isReturnTrip && arrivalSchedule
-        ? this.buildPassengersPayload(passengerInfo, arrivalSchedule.pricePerSeat)
+        ? this.buildPassengersPayload(passengerInfo)
         : [];
 
-    const totalCost =
-      this.sumPassengerCost(departurePassengers) +
-      this.sumPassengerCost(arrivalPassengers);
+    const totalAmount =
+      this.calculateTotalAmount(passengerInfo, departureSchedule?.pricePerSeat) +
+      (isReturnTrip
+        ? this.calculateTotalAmount(passengerInfo, arrivalSchedule?.pricePerSeat)
+        : 0);
+
+    const contact = this.buildContactPayload(passengerInfo);
 
     const payload: BookingPayload = {
       bookingType: isReturnTrip ? 'return' : 'one_way',
-      totalCost,
+      totalAmount,
+      bookingChannel: 'online',
+      contact,
       departureSchedule: this.buildSchedulePayload(
         departureSchedule,
         startStationCode,
@@ -164,14 +178,11 @@ export class PassengerInfoComponent {
   }
 
   private buildPassengersPayload(
-    passengers: PassengerInfo[],
-    pricePerSeat?: string | number | null
+    passengers: PassengerInfo[]
   ): BookingSchedulePayload['passengers'] {
-    const costPerPassenger = this.getPricePerSeat(pricePerSeat);
     return passengers.map((passenger) => ({
-      passengerType: passenger.isAdult ? 'General public' : 'Child',
-      seatNumber: passenger.passengerSeat || null,
-      cost: costPerPassenger,
+      passengerType: this.normalizePassengerType(passenger.gender),
+      seatNumber: this.normalizeSeatNumber(passenger.passengerSeat),
       firstName: passenger.firstName,
       middleName: passenger.middleName || null,
       lastName: passenger.lastName,
@@ -186,18 +197,21 @@ export class PassengerInfoComponent {
   ): BookingSchedulePayload {
     return {
       scheduleId: schedule?.id ?? 0,
-      pickupStation,
-      dropOffStation,
+      fromStop: pickupStation,
+      toStop: dropOffStation,
       departureDateTime: this.normalizeDateTime(schedule?.departureDateTime),
       arrivalDateTime: this.normalizeDateTime(schedule?.arrivalDateTime),
       passengers,
     };
   }
 
-  private sumPassengerCost(
-    passengers: BookingSchedulePayload['passengers']
+  private calculateTotalAmount(
+    passengers: PassengerInfo[],
+    pricePerSeat?: string | number | null
   ): number {
-    return passengers.reduce((sum, passenger) => sum + (Number(passenger.cost) || 0), 0);
+    const costPerPassenger = this.getPricePerSeat(pricePerSeat);
+    const passengerCount = passengers.length;
+    return passengerCount * costPerPassenger;
   }
 
   private async getStationCodeById(
@@ -231,6 +245,51 @@ export class PassengerInfoComponent {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
+  private buildContactPayload(passengers: PassengerInfo[]): BookingPayload['contact'] {
+    const primary = passengers[0];
+    const fullName = this.buildFullName(primary);
+    const phoneNumber = primary?.phoneNumber ?? '';
+    const preferredLocale = this.getPreferredLocale();
+
+    return {
+      fullName,
+      phoneNumber,
+      preferredLocale,
+    };
+  }
+
+  private buildFullName(passenger?: PassengerInfo | null): string {
+    if (!passenger) {
+      return '';
+    }
+
+    const parts = [
+      passenger.firstName,
+      passenger.middleName,
+      passenger.lastName,
+    ]
+      .map((value) => (value ?? '').trim())
+      .filter((value) => value.length > 0);
+
+    return parts.join(' ');
+  }
+
+  private getPreferredLocale(): string {
+    const current =
+      this.translateService.currentLang ||
+      this.translateService.getDefaultLang?.() ||
+      '';
+    const normalized = current.toLowerCase();
+
+    if (normalized.startsWith('th')) {
+      return 'th';
+    }
+    if (normalized.startsWith('zh')) {
+      return 'zh';
+    }
+    return 'en';
+  }
+
   private normalizeDateTime(dateTime?: string): string {
     if (!dateTime) {
       return '';
@@ -244,5 +303,28 @@ export class PassengerInfoComponent {
     return datetime.isValid()
       ? datetime.format('YYYY-MM-DDTHH:mm:ss')
       : normalized;
+  }
+
+  private normalizeSeatNumber(seatNumber?: string | null): string | null {
+    if (!seatNumber) {
+      return null;
+    }
+
+    const digits = seatNumber.match(/\d+/g)?.join('') ?? '';
+    return digits.length > 0 ? digits : null;
+  }
+
+  private normalizePassengerType(gender?: string | null): string {
+    const normalized = (gender ?? '').toString().trim().toLowerCase();
+    if (
+      normalized === 'male' ||
+      normalized === 'female' ||
+      normalized === 'monk' ||
+      normalized === 'nun'
+    ) {
+      return normalized;
+    }
+
+    return normalized || 'male';
   }
 }

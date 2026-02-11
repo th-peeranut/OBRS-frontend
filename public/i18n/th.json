@@ -290,6 +290,9 @@
       "MALE": "ชาย",
       "FEMALE": "หญิง",
       "MONK": "พระ"
+    },
+    "ALERT": {
+      "CREATE_SUCCESS": "บันทึกข้อมูลการจองรอบสำเร็จ"
     }
   },
   "PAYMENT": {
@@ -367,3 +370,4 @@
     "LOGO_ALT": "โลโก้ NJ Phuyaipu"
   }
 }
+

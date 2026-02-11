@@ -1,16 +1,21 @@
 export interface BookingPassenger {
   passengerType: string;
   seatNumber: string | null;
-  cost: number;
   firstName: string;
   middleName: string | null;
   lastName: string;
 }
 
+export interface BookingContact {
+  fullName: string;
+  phoneNumber: string;
+  preferredLocale: string;
+}
+
 export interface BookingSchedulePayload {
   scheduleId: number;
-  pickupStation: string;
-  dropOffStation: string;
+  fromStop: string;
+  toStop: string;
   departureDateTime: string;
   arrivalDateTime: string;
   passengers: BookingPassenger[];
@@ -18,7 +23,9 @@ export interface BookingSchedulePayload {
 
 export interface BookingPayload {
   bookingType: string;
-  totalCost: number;
+  totalAmount: number;
+  bookingChannel: string;
+  contact: BookingContact;
   departureSchedule: BookingSchedulePayload;
   arrivalSchedule?: BookingSchedulePayload | null;
 }
