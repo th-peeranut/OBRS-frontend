@@ -5,11 +5,9 @@ import {
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
-import { TimeoutError, throwError } from 'rxjs';
-import { catchError, timeout } from 'rxjs/operators';
+import { throwError } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 import { AlertService } from '../services/alert.service';
-
-const API_TIMEOUT_MS = 120_000;
 
 export const errorInterceptor: HttpInterceptorFn = (
   req: HttpRequest<any>,
@@ -17,26 +15,27 @@ export const errorInterceptor: HttpInterceptorFn = (
 ) => {
   const alertService = inject(AlertService);
   const shouldAlert = req.url.includes('/api/');
-  const request$ = shouldAlert
-    ? next(req).pipe(timeout(API_TIMEOUT_MS))
-    : next(req);
+  if (shouldAlert) {
+    alertService.showLoading();
+  }
 
-  return request$.pipe(
+  return next(req).pipe(
     catchError((error: unknown) => {
       if (shouldAlert) {
         const message = getErrorMessage(error) || 'Request failed.';
         alertService.error(message);
       }
       return throwError(() => error);
+    }),
+    finalize(() => {
+      if (shouldAlert) {
+        alertService.hideLoading();
+      }
     })
   );
 };
 
 function getErrorMessage(error: unknown): string {
-  if (error instanceof TimeoutError) {
-    return 'Request timed out after 1 minute.';
-  }
-
   if (error instanceof HttpErrorResponse) {
     if (error.error == null) {
       return '';
