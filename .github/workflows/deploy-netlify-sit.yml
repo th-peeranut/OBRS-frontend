@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN || secrets.NETLIFY_TOKEN || vars.NETLIFY_AUTH_TOKEN || vars.NETLIFY_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID || secrets.NETLIFY_SITEID || vars.NETLIFY_SITE_ID || vars.NETLIFY_SITEID }}
 
     steps:
       - name: Checkout
@@ -30,13 +33,12 @@ jobs:
         run: npm ci
 
       - name: Validate Netlify secrets
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
-            echo "Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID secret."
-            echo "Add them in: GitHub repo -> Settings -> Secrets and variables -> Actions."
+            echo "Missing Netlify credentials."
+            echo "Set one of these for token: NETLIFY_AUTH_TOKEN (or NETLIFY_TOKEN)."
+            echo "Set one of these for site id: NETLIFY_SITE_ID (or NETLIFY_SITEID)."
+            echo "Location: GitHub repo -> Settings -> Secrets and variables -> Actions."
             exit 1
           fi
 
@@ -45,9 +47,6 @@ jobs:
 
       - name: Deploy SIT build to Netlify
         id: deploy_netlify
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         run: |
           DEPLOY_JSON=$(npx netlify deploy --dir=dist/obrs --prod --json)
           echo "$DEPLOY_JSON" > netlify-deploy.json
