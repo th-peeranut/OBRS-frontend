@@ -5,9 +5,11 @@ import {
   HttpInterceptorFn,
   HttpRequest,
 } from '@angular/common/http';
-import { catchError } from 'rxjs/operators';
-import { throwError } from 'rxjs';
+import { TimeoutError, throwError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
 import { AlertService } from '../services/alert.service';
+
+const API_TIMEOUT_MS = 120_000;
 
 export const errorInterceptor: HttpInterceptorFn = (
   req: HttpRequest<any>,
@@ -15,9 +17,12 @@ export const errorInterceptor: HttpInterceptorFn = (
 ) => {
   const alertService = inject(AlertService);
   const shouldAlert = req.url.includes('/api/');
+  const request$ = shouldAlert
+    ? next(req).pipe(timeout(API_TIMEOUT_MS))
+    : next(req);
 
-  return next(req).pipe(
-    catchError((error: HttpErrorResponse) => {
+  return request$.pipe(
+    catchError((error: unknown) => {
       if (shouldAlert) {
         const message = getErrorMessage(error) || 'Request failed.';
         alertService.error(message);
@@ -27,20 +32,32 @@ export const errorInterceptor: HttpInterceptorFn = (
   );
 };
 
-function getErrorMessage(error: HttpErrorResponse): string {
-  if (!error || error.error == null) {
+function getErrorMessage(error: unknown): string {
+  if (error instanceof TimeoutError) {
+    return 'Request timed out after 1 minute.';
+  }
+
+  if (error instanceof HttpErrorResponse) {
+    if (error.error == null) {
+      return '';
+    }
+
+    if (typeof error.error === 'string') {
+      return error.error;
+    }
+
+    if (typeof error.error?.message === 'string') {
+      return error.error.message;
+    }
+
+    if (typeof error.message === 'string') {
+      return error.message;
+    }
+
     return '';
   }
 
-  if (typeof error.error === 'string') {
-    return error.error;
-  }
-
-  if (typeof error.error?.message === 'string') {
-    return error.error.message;
-  }
-
-  if (typeof error.message === 'string') {
+  if (error instanceof Error) {
     return error.message;
   }
 

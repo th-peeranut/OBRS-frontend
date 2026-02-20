@@ -36,11 +36,39 @@ jobs:
         run: |
           if [ -z "$NETLIFY_AUTH_TOKEN" ] || [ -z "$NETLIFY_SITE_ID" ]; then
             echo "Missing NETLIFY_AUTH_TOKEN or NETLIFY_SITE_ID secret."
+            echo "Add them in: GitHub repo -> Settings -> Secrets and variables -> Actions."
             exit 1
           fi
 
+      - name: Build SIT
+        run: npm run build:sit
+
       - name: Deploy SIT build to Netlify
+        id: deploy_netlify
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-        run: npm run deploy:netlify:sit
+        run: |
+          DEPLOY_JSON=$(npx netlify deploy --dir=dist/obrs --prod --json)
+          echo "$DEPLOY_JSON" > netlify-deploy.json
+
+          DEPLOY_URL=$(node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('netlify-deploy.json','utf8')); console.log(j.deploy_url || j.url || '');")
+          SITE_URL=$(node -e "const fs=require('fs'); const j=JSON.parse(fs.readFileSync('netlify-deploy.json','utf8')); console.log(j.url || j.ssl_url || j.site_url || '');")
+
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "Could not parse deploy URL from Netlify response."
+            cat netlify-deploy.json
+            exit 1
+          fi
+
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "site_url=$SITE_URL" >> "$GITHUB_OUTPUT"
+
+      - name: Publish deploy URL
+        run: |
+          echo "Netlify deploy completed." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Deploy URL: ${{ steps.deploy_netlify.outputs.deploy_url }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "${{ steps.deploy_netlify.outputs.site_url }}" ]; then
+            echo "Site URL: ${{ steps.deploy_netlify.outputs.site_url }}" >> "$GITHUB_STEP_SUMMARY"
+          fi
