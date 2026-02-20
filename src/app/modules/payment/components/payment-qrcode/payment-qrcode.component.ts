@@ -35,7 +35,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   refreshCooldownSeconds = 0;
   private readonly promptPayId = environment.promptpay?.id ?? '';
   private readonly promptPayBaseUrl =
-    environment.promptpay?.baseUrl ?? 'https://promptpay.io';
+    environment.promptpay?.baseUrl ?? '';
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private refreshCooldownIntervalId?: ReturnType<typeof setInterval>;
@@ -79,7 +79,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   }
 
   private loadQrCode(): void {
-    if (!this.promptPayId) {
+    if (!this.promptPayId || !this.promptPayBaseUrl) {
       this.qrImageUrl = '';
       this.referenceNo = '';
       return;
