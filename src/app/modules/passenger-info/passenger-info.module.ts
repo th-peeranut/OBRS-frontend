@@ -11,8 +11,8 @@ import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs
 // Store
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { ProvinceEffect } from '../../shared/stores/province/province.effect';
-import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
+import { ProvinceEffect } from '../../shared/stores/station/station.effect';
+import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
 import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/schedule-booking.effect';
 import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
@@ -58,3 +58,5 @@ const routes: Routes = [
   ],
 })
 export class PassengerInfoModule {}
+
+

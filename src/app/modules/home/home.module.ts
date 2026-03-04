@@ -14,8 +14,8 @@ import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-gro
 
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
-import { ProvinceEffect } from '../../shared/stores/province/province.effect';
+import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
+import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 
@@ -52,3 +52,5 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
   ],
 })
 export class HomeModule {}
+
+

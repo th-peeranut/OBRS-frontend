@@ -10,7 +10,7 @@ import {
   invokeGetScheduleFilterApi,
   invokeSetScheduleFilterApi,
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
-import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/province/province.action';
+import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
 type PaymentTab = 'qrcode';
 
@@ -30,3 +30,5 @@ export class PaymentComponent {
     this.store.dispatch(invokeGetScheduleFilterApi());
   }
 }
+
+

@@ -17,12 +17,12 @@ export interface ScheduleFilterPayload {
   bookingType: string; // 'one_way' | 'return'
   numberOfPassengers: number;
 
-  // ????????????
+  // ขาไป
   fromStop: string | null;
   toStop: string | null;
   departureDate: string;
 
-  // ??????????????????
+  // ขากลับ (ถ้ามี)
   returnDate?: string | null;
 }
 

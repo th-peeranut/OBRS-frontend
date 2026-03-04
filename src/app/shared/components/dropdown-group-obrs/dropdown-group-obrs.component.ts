@@ -56,15 +56,24 @@ export class DropdownGroupObrsComponent
 
   ngOnChanges(changes: SimpleChanges): void {
     if (this.value) {
-      for (const group of this.options) {
-        const match = group.stations.find(
-          (station: any) => station.id === this.value
-        );
-        if (match) {
-          this.selectedValue = match;
-          this.currentValue.emit(match);
-          this.onChange(match);
-          break;
+      if (this.isGroupedOptions()) {
+        for (const group of this.options) {
+          const match = (group.stations || []).find(
+            (station: any) => station.id === this.value
+          );
+          if (match) {
+            this.selectedValue = match;
+            this.currentValue.emit(match);
+            this.onChange(match);
+            break;
+          }
+        }
+      } else {
+        const selected = this.options.find((option: any) => option.id === this.value);
+        if (selected) {
+          this.selectedValue = selected;
+          this.currentValue.emit(selected);
+          this.onChange(selected);
         }
       }
     }
@@ -112,8 +121,18 @@ export class DropdownGroupObrsComponent
 
   getValue(option: any): string {
     if (!option) return '';
-    return this.translate.currentLang === 'th'
-      ? option.nameThai
-      : option.nameEnglish;
+    const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
+    const fromName = locale === 'th' ? option.nameThai : option.nameEnglish;
+    if (fromName) return fromName;
+
+    const translations = option.translations || [];
+    const match = translations.find((item: any) => item.locale === locale);
+    if (match?.label) return match.label;
+    return translations[0]?.label || option.slug || '';
+  }
+
+  isGroupedOptions(): boolean {
+    if (!this.options || this.options.length === 0) return false;
+    return Array.isArray(this.options[0]?.stations);
   }
 }

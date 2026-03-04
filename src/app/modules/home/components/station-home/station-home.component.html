@@ -2,140 +2,80 @@
   <div class="map-section">
     <div class="map-logo">
       <div class="station-section">
-        <!-- HEADER -->
         <div class="station-section-header">
           {{ "HOME.STATION.HEADER" | translate }}
         </div>
-        <!-- BODY -->
-        <div class="station-section-body">
-          <ng-container *ngIf="routeList | async as routes">
-            <div class="station-full-switch" *ngIf="routes.length === 1">
-              <div class="obrs-full-switch text-center">
-                {{ getRouteName(routes[0]) }}
-              </div>
-            </div>
 
-            <!-- TOGGLE SWITCH -->
-            <div class="station-toggle-switch" *ngIf="routes.length === 2">
-              <div
-                class="obrs-switch text-center"
-                [class.left]="currentDirection === 'left'"
-                [class.right]="currentDirection === 'right'"
+        <ng-container *ngIf="stationList$ | async as stations">
+          <div class="route-switch-wrap" *ngIf="stations.length > 0">
+            <div class="route-switch">
+              <button
+                type="button"
+                class="route-chip"
+                [class.active]="currentDirection === 'forward'"
+                (click)="onDirectionClick('forward')"
               >
-                <div
-                  class="obrs"
-                  [class.active]="currentDirection === 'left'"
-                  (click)="onObrsClick('left')"
-                >
-                  {{ getRoutesName(routes, false) }}
-                </div>
-                <div
-                  class="obrs"
-                  [class.active]="currentDirection === 'right'"
-                  (click)="onObrsClick('right')"
-                >
-                  {{ getRoutesName(routes, true) }}
-                </div>
-              </div>
-            </div>
-          </ng-container>
-
-          <!-- DETAIL -->
-          <div class="station-section-body-detail">
-            <div class="station-list-container">
-              <ng-container *ngIf="routeList | async as routes">
-                <ng-container
-                  *ngFor="let route of getRoute(routes); let routeIndex = index"
-                >
-                  <ng-container
-                    *ngFor="
-                      let station of route.stations;
-                      let stationIndex = index
-                    "
-                  >
-                    <div
-                      class="station-list-item"
-                      *ngIf="stationIndex % 2 === 0"
-                    >
-                      <div
-                        class="station-bullet"
-                        [class.no-before]="stationIndex === route.stations.length - 1"
-                      >
-                        <img
-                          *ngIf="
-                            stationIndex === 0 ||
-                            stationIndex === route.stations.length - 1
-                          "
-                          src="images/station-node.svg"
-                          alt="Station Node Image"
-                        />
-                        <img
-                          *ngIf="
-                            stationIndex !== 0 &&
-                            stationIndex !== route.stations.length - 1
-                          "
-                          src="images/station-point.svg"
-                          alt="Station Point Image"
-                        />
-                      </div>
-
-                      <div class="station-line"></div>
-
-                      <div class="station-content">
-                        <div
-                          class="station-card ml-5"
-                          (click)="navMap(station.url)"
-                        >
-                          <div class="station-card-content">
-                            {{ getStationName(station) }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      class="station-list-item"
-                      *ngIf="stationIndex % 2 !== 0"
-                    >
-                      <div
-                        class="station-bullet"
-                        [class.no-before]="stationIndex === route.stations.length - 1"
-                      >
-                        <img
-                          *ngIf="
-                            stationIndex === 0 ||
-                            stationIndex === route.stations.length - 1
-                          "
-                          src="images/station-node.svg"
-                          alt="Station Node Image"
-                        />
-                        <img
-                          *ngIf="
-                            stationIndex !== 0 &&
-                            stationIndex !== route.stations.length - 1
-                          "
-                          src="images/station-point-odd.svg"
-                          alt="Station Point Image"
-                        />
-                      </div>
-
-                      <div class="station-content">
-                        <div class="station-card" (click)="navMap(station.url)">
-                          <div class="station-card-content">
-                            {{ getStationName(station) }}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="station-line"></div>
-                    </div>
-                  </ng-container>
-                </ng-container>
-              </ng-container>
+                {{ getRouteTitle(stations, false) }}
+              </button>
+              <button
+                type="button"
+                class="route-chip"
+                [class.active]="currentDirection === 'reverse'"
+                (click)="onDirectionClick('reverse')"
+              >
+                {{ getRouteTitle(stations, true) }}
+              </button>
             </div>
           </div>
-        </div>
+
+          <div class="station-map-card">
+            <div class="timeline" *ngIf="getDisplayedStations(stations) as orderedStations">
+              <div
+                class="timeline-row"
+                *ngFor="let station of orderedStations; let i = index"
+              >
+                <div class="side side-left">
+                  <button
+                    type="button"
+                    class="station-pill"
+                    *ngIf="isLeft(i)"
+                    (click)="navMap(station.url)"
+                  >
+                    {{ getStationName(station) }}
+                  </button>
+                </div>
+
+                <div class="axis-cell">
+                  <span
+                    class="connector connector-left"
+                    *ngIf="isLeft(i)"
+                  ></span>
+                  <span
+                    class="connector connector-right"
+                    *ngIf="!isLeft(i)"
+                  ></span>
+                  <span
+                    class="axis-node"
+                    [class.axis-node-end]="isEndPoint(i, orderedStations.length)"
+                  ></span>
+                </div>
+
+                <div class="side side-right">
+                  <button
+                    type="button"
+                    class="station-pill"
+                    *ngIf="!isLeft(i)"
+                    (click)="navMap(station.url)"
+                  >
+                    {{ getStationName(station) }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
       </div>
     </div>
   </div>
 </div>
+

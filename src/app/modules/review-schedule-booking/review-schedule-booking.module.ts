@@ -17,8 +17,8 @@ import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/sche
 import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
 import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
-import { ProvinceReducer } from '../../shared/stores/province/province.reducer';
-import { ProvinceEffect } from '../../shared/stores/province/province.effect';
+import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
+import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 
 const routes: Routes = [
   { path: '', component: ReviewScheduleBookingComponent },
@@ -54,3 +54,5 @@ const routes: Routes = [
   ],
 })
 export class ReviewScheduleBookingModule {}
+
+

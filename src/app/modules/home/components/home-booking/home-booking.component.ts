@@ -3,16 +3,14 @@ import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { FormBuilder, FormGroup } from '@angular/forms';
 import dayjs from 'dayjs';
 import { Router } from '@angular/router';
-
-import { Station } from '../../../../shared/interfaces/station.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { select, Store } from '@ngrx/store';
-import { map, Observable, Subject, Subscription, take, takeUntil } from 'rxjs';
+import { Observable, Subject, Subscription, take, takeUntil } from 'rxjs';
 import { invokeSetScheduleFilterApi } from '../../../../shared/stores/schedule-filter/schedule-filter.action';
 import { ScheduleFilterPayload } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
-import { ProvinceStation } from '../../../../shared/interfaces/province.interface';
-import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
+import { StationApi } from '../../../../shared/interfaces/station.interface';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 
 @Component({
   selector: 'app-home-booking',
@@ -39,10 +37,10 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
 
   bookingForm: FormGroup;
 
-  rawProvinceStationList: Observable<ProvinceStation[]>;
-  allProvinceStationList: ProvinceStation[] = [];
-  startProvinceStationList: ProvinceStation[] = [];
-  endProvinceStationList: ProvinceStation[] = [];
+  rawProvinceStationList: Observable<StationApi[]>;
+  allProvinceStationList: StationApi[] = [];
+  startProvinceStationList: StationApi[] = [];
+  endProvinceStationList: StationApi[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -66,14 +64,11 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.rawProvinceStationList
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((provinceList) => {
-        // ขาไป
-        this.allProvinceStationList = provinceList;
-        this.startProvinceStationList = provinceList;
-        this.endProvinceStationList = provinceList;
-      });
+    this.rawProvinceStationList.pipe(takeUntil(this.destroy$)).subscribe((stationList) => {
+      this.allProvinceStationList = stationList || [];
+      this.startProvinceStationList = stationList || [];
+      this.endProvinceStationList = stationList || [];
+    });
   }
 
   ngOnDestroy(): void {
@@ -88,12 +83,10 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       roundTrip: [1],
       passengerInfo: [null],
 
-      // ขาไป
       startStationId: [''],
       stopStationId: [''],
       departureDate: [this.minDate],
 
-      // ขากลับ
       returnDate: [this.minDate],
     });
 
@@ -113,7 +106,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.store.pipe(select(selectScheduleList), take(1)).subscribe((value) => {
+    this.store.pipe(select(selectScheduleList), take(1)).subscribe(() => {
       this.router.navigate(['/schedule-booking']);
     });
   }
@@ -121,7 +114,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   getPayload() {
     const formValue = { ...this.bookingForm.getRawValue() };
 
-    // Set passenger counts
     const getPassengerCount = (type: string) =>
       formValue.passengerInfo?.find((item: any) => item.type === type)?.count ||
       0;
@@ -132,12 +124,9 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     const roundTripId =
       typeof formValue.roundTrip === 'object' ? formValue.roundTrip?.id : formValue.roundTrip;
 
-    let payload: ScheduleFilterPayload = {
+    const payload: ScheduleFilterPayload = {
       bookingType: roundTripId === 1 ? 'One way' : 'Return',
-
       numberOfPassengers: formValue.adultCount + formValue.kidsCount,
-
-      // ????????????
       fromStop: this.getStationCodeById(formValue.startStationId),
       toStop: this.getStationCodeById(formValue.stopStationId),
       departureDate: formValue.departureDate
@@ -146,7 +135,6 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       ...(roundTripId === 1
         ? {}
         : {
-            // ??????????????????
             returnDate: formValue.returnDate
               ? dayjs(formValue.returnDate).format('YYYY-MM-DD')
               : null,
@@ -162,54 +150,28 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     }
 
     const id = Number(stationId);
-    for (const province of this.allProvinceStationList) {
-      const match = province.stations.find((station) => station.id === id);
-      if (match) {
-        return match.code || null;
-      }
-    }
-
-    return null;
+    const match = this.allProvinceStationList.find((station) => station.id === id);
+    return match?.slug || null;
   }
 
-  onStartStationChange(station: Station) {
+  onStartStationChange(station: StationApi) {
     this.bookingForm.patchValue({
       startStationId: station.id,
     });
 
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.endProvinceStationList = filtered;
-      });
+    this.endProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== station.id
+    );
   }
 
-  onEndStationChange(station: Station) {
+  onEndStationChange(station: StationApi) {
     this.bookingForm.patchValue({
       stopStationId: station.id,
     });
 
-    this.rawProvinceStationList
-      .pipe(
-        map((provinces) =>
-          provinces.map((province) => ({
-            ...province,
-            stations: province.stations.filter((s) => s.id !== station.id),
-          }))
-        ),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((filtered) => {
-        this.startProvinceStationList = filtered;
-      });
+    this.startProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== station.id
+    );
   }
 
   getFormValue(controlName: string) {

@@ -4,10 +4,10 @@ import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable, take, map } from 'rxjs';
 import {
-  ProvinceStation,
   ProvinceStationReview,
   Province,
-} from '../../../../shared/interfaces/province.interface';
+  StationApi,
+} from '../../../../shared/interfaces/station.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import {
   ScheduleFilter,
@@ -15,7 +15,7 @@ import {
 } from '../../../../shared/interfaces/schedule.interface';
 import { Station } from '../../../../shared/interfaces/station.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
-import { selectProvinceWithStation } from '../../../../shared/stores/province/province.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
@@ -30,7 +30,7 @@ import dayjs from 'dayjs';
 export class PaymentInfoComponent {
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
-  rawProvinceStationList: Observable<ProvinceStation[]>;
+  rawProvinceStationList: Observable<StationApi[]>;
    passengerInfo: Observable<PassengerInfo[] | null>;
 
   constructor(
@@ -134,16 +134,14 @@ export class PaymentInfoComponent {
     return this.rawProvinceStationList.pipe(
       take(1),
       map((stations) => {
-        for (const province of stations ?? []) {
-          const station = province.stations?.find((s) => s.id === stationId);
-          if (station) {
-            return {
-              id: province?.id,
-              nameThai: province?.nameThai,
-              nameEnglish: province?.nameEnglish,
-              station: station,
-            } as ProvinceStationReview;
-          }
+        const stationApi = (stations ?? []).find((s) => s.id === stationId);
+        if (stationApi) {
+          return {
+            id: stationApi.id,
+            nameThai: this.getStopTypeLabel(stationApi.stopType, 'th'),
+            nameEnglish: this.getStopTypeLabel(stationApi.stopType, 'en'),
+            station: this.toStation(stationApi),
+          } as ProvinceStationReview;
         }
         return null;
       })
@@ -171,6 +169,35 @@ export class PaymentInfoComponent {
     return `${passenger.firstName}${middle} ${passenger.lastName}`.trim();
   }
 
+  private toStation(stationApi: StationApi): Station {
+    const nameEnglish = this.getTranslationLabel(stationApi, 'en') || stationApi.slug;
+    const nameThai = this.getTranslationLabel(stationApi, 'th') || nameEnglish;
+    return {
+      id: stationApi.id,
+      code: stationApi.slug,
+      nameThai,
+      nameEnglish,
+      createdBy: stationApi.createdBy,
+      createdDate: stationApi.createdDate,
+      lastUpdatedBy: stationApi.lastUpdatedBy,
+      lastUpdatedDate: stationApi.lastUpdatedDate,
+      url: '',
+    };
+  }
+
+  private getTranslationLabel(stationApi: StationApi, locale: string): string | undefined {
+    const match = stationApi.translations?.find((item) => item.locale === locale);
+    if (match?.label) return match.label;
+    return stationApi.translations?.[0]?.label;
+  }
+
+  private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
+    const normalized = (type || '').toLowerCase();
+    if (normalized === 'station') return locale === 'th' ? 'Station' : 'Station';
+    if (normalized === 'stop') return locale === 'th' ? 'Stop' : 'Stop';
+    return type || '';
+  }
+
   onChangeData() {
     this.router.navigate(['/schedule-booking']);
   }
@@ -184,3 +211,5 @@ export class PaymentInfoComponent {
     return diff >= 0 ? diff : 0;
   }
 }
+
+

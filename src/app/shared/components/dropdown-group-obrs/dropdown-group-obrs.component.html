@@ -32,20 +32,33 @@
       [attr.aria-disabled]="isDisabled ? 'true' : null"
       aria-labelledby="dropdownObrs"
     >
-      <ng-container *ngFor="let group of options">
-        <li class="dropdown-header">
-          {{ getValue(group) }}
-        </li>
-        <li class="option-items" *ngFor="let station of group.stations">
+      <ng-container *ngIf="isGroupedOptions(); else flatOptions">
+        <ng-container *ngFor="let group of options">
+          <li class="dropdown-header">
+            {{ getValue(group) }}
+          </li>
+          <li class="option-items" *ngFor="let station of group.stations">
+            <a
+              class="dropdown-item dropdown-option"
+              [class.disabled]="isDisabled"
+              (click)="!isDisabled && setCurrentValue(station)"
+            >
+              {{ getValue(station) }}
+            </a>
+          </li>
+        </ng-container>
+      </ng-container>
+      <ng-template #flatOptions>
+        <li class="option-items" *ngFor="let option of options">
           <a
             class="dropdown-item dropdown-option"
             [class.disabled]="isDisabled"
-            (click)="!isDisabled && setCurrentValue(station)"
+            (click)="!isDisabled && setCurrentValue(option)"
           >
-            {{ getValue(station) }}
+            {{ getValue(option) }}
           </a>
         </li>
-      </ng-container>
+      </ng-template>
 
       <ng-container *ngIf="options.length === 0">
         <li class="px-3">

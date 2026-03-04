@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 
 import { Store } from '@ngrx/store';
 import { invokeGetScheduleFilterApi } from '../../shared/stores/schedule-filter/schedule-filter.action';
-import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/province/province.action';
+import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
 @Component({
   selector: 'app-schedule-booking',
@@ -17,3 +17,5 @@ export class ScheduleBookingComponent {
     this.store.dispatch(invokeGetScheduleFilterApi());
   }
 }
+
+

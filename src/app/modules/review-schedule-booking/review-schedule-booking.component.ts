@@ -10,7 +10,7 @@ import {
   invokeGetScheduleFilterApi,
   invokeSetScheduleFilterApi,
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
-import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/province/province.action';
+import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
 @Component({
   selector: 'app-review-schedule-booking',
@@ -26,3 +26,5 @@ export class ReviewScheduleBookingComponent {
     this.store.dispatch(invokeGetScheduleFilterApi());
   }
 }
+
+

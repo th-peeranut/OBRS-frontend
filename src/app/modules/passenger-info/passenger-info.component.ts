@@ -1,7 +1,7 @@
 import { Component, ViewChild } from '@angular/core';
 import { Store, select } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/province/province.action';
+import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import {
   invokeSetScheduleBookingApi,
   invokeGetScheduleBookingApi,
@@ -24,8 +24,8 @@ import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface'
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
-import { selectProvinceWithStation } from '../../shared/stores/province/province.selector';
-import { ProvinceStation } from '../../shared/interfaces/province.interface';
+import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
+import { StationApi } from '../../shared/interfaces/station.interface';
 import { Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../shared/services/alert.service';
@@ -39,7 +39,7 @@ export class PassengerInfoComponent {
   @ViewChild(PassengerInfoFormComponent)
   passengerInfoFormComponent?: PassengerInfoFormComponent;
   isPassengerFormValid = false;
-  rawProvinceStationList: Observable<ProvinceStation[]>;
+  rawProvinceStationList: Observable<StationApi[]>;
 
   constructor(
     private store: Store,
@@ -227,15 +227,11 @@ export class PassengerInfoComponent {
       return String(raw);
     }
 
-    const provinceList = await firstValueFrom(
+    const stationList = await firstValueFrom(
       this.rawProvinceStationList.pipe(take(1))
     );
-    for (const province of provinceList ?? []) {
-      const match = province.stations.find((station) => station.id === parsed);
-      if (match) {
-        return match.code || String(raw);
-      }
-    }
+    const match = (stationList ?? []).find((station) => station.id === parsed);
+    if (match) return match.slug || String(raw);
 
     return String(raw);
   }
@@ -328,3 +324,5 @@ export class PassengerInfoComponent {
     return normalized || 'male';
   }
 }
+
+
