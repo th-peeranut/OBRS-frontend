@@ -3,6 +3,23 @@ export interface Login {
   password: string;
 }
 
+export interface LoginUser {
+  id: number;
+  fullName: string;
+  email: string;
+  username: string;
+  preferredLocale: string;
+  status: string;
+  roles: string[];
+}
+
+export interface LoginResponseData {
+  accessToken: string;
+  tokenType: string;
+  expiresIn: number;
+  user: LoginUser;
+}
+
 export interface Register {
   firstName: string;
   middleName: string;

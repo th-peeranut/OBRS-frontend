@@ -161,7 +161,8 @@
       class="payment-btn"
       type="button"
       (click)="submitPayment()"
-      [class.select-btn-diabled]="creditCardForm.invalid"
+      [class.select-btn-diabled]="creditCardForm.invalid || isSubmittingPayment"
+      [disabled]="creditCardForm.invalid || isSubmittingPayment"
     >
       {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}
     </button>

@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { Register } from '../shared/interfaces/auth.interface';
+import { LoginResponseData, Register } from '../shared/interfaces/auth.interface';
 import { ResponseAPI } from '../shared/interfaces/response.interface';
 import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 
@@ -28,28 +28,30 @@ export class AuthService {
   login(payload: {
     username: string;
     password: string;
-  }): Promise<ResponseAPI<{ token: string }>> {
+  }): Promise<ResponseAPI<LoginResponseData>> {
     return this.callLogin(payload);
   }
 
   private callLogin(payload: {
     username: string;
     password: string;
-  }): Promise<ResponseAPI<{ token: string }>> {
+  }): Promise<ResponseAPI<LoginResponseData>> {
     return this.http
-      .post<ResponseAPI<{ token: string }>>(
+      .post<ResponseAPI<LoginResponseData>>(
         `${environment.apiUrl}/api/auth/login`,
         payload
       )
       .toPromise()
       .then((response) => {
         if (response?.code === 200) {
-          this.storeAuthData(response?.data.token, payload.username);
+          const token = response?.data?.accessToken;
+          const username = response?.data?.user?.username ?? payload.username;
+          this.storeAuthData(token, username);
         }
         return response;
       })
       .catch((err) => {
-        if (err?.error.includes('JWT expired')) {
+        if (typeof err?.error === 'string' && err.error.includes('JWT expired')) {
           this.clearAuthData();
           return this.callLogin(payload);
         }
@@ -57,9 +59,14 @@ export class AuthService {
       });
   }
 
-  private storeAuthData(token: string, username: string): void {
+  private storeAuthData(token: string | null | undefined, username: string | null | undefined): void {
+    if (!token) return;
     localStorage.setItem(this.TOKEN_KEY, token);
-    localStorage.setItem(this.USERNAME_KEY, username);
+    if (username) {
+      localStorage.setItem(this.USERNAME_KEY, username);
+    } else {
+      localStorage.removeItem(this.USERNAME_KEY);
+    }
     this.authStatusSubject.next(true);
   }
 
@@ -141,12 +148,14 @@ export class AuthService {
         .toPromise()
         .then((response) => {
           if (response?.code === 200) {
-            this.storeAuthData(response?.data.token, response?.data?.username);
+            const token = response?.data?.accessToken ?? response?.data?.token;
+            const username = response?.data?.user?.username ?? response?.data?.username;
+            this.storeAuthData(token, username);
           }
           return response;
         })
         .catch((err) => {
-          if (err?.error.includes('JWT expired')) {
+          if (typeof err?.error === 'string' && err.error.includes('JWT expired')) {
             this.clearAuthData();
           }
           return err;

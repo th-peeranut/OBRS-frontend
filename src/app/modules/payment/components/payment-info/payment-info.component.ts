@@ -1,8 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
-import { TranslateService } from '@ngx-translate/core';
-import { Observable, take, map } from 'rxjs';
+import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { combineLatest, Observable, take, map, startWith } from 'rxjs';
 import {
   ProvinceStationReview,
   Province,
@@ -29,9 +29,12 @@ import dayjs from 'dayjs';
 })
 export class PaymentInfoComponent {
   scheduleBooking: Observable<ScheduleBooking>;
-  scheduleFilter: Observable<ScheduleFilter>;
+  scheduleFilter: Observable<ScheduleFilter | null>;
   rawProvinceStationList: Observable<StationApi[]>;
-   passengerInfo: Observable<PassengerInfo[] | null>;
+  passengerInfo: Observable<PassengerInfo[] | null>;
+  currentLocale$: Observable<'en' | 'th'>;
+  departureRouteLabel$: Observable<string>;
+  returnRouteLabel$: Observable<string>;
 
   constructor(
     private store: Store,
@@ -45,6 +48,28 @@ export class PaymentInfoComponent {
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
     this.passengerInfo = this.store.pipe(select(selectPassengerInfo));
+    this.currentLocale$ = this.translateService.onLangChange.pipe(
+      map((event: LangChangeEvent) => this.normalizeLocale(event.lang)),
+      startWith(this.normalizeLocale(this.translateService.currentLang))
+    );
+    this.departureRouteLabel$ = combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLocale$,
+    ]).pipe(
+      map(([scheduleFilter, stationList, locale]) =>
+        this.getRouteFromFilter(scheduleFilter, stationList, locale, false)
+      )
+    );
+    this.returnRouteLabel$ = combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLocale$,
+    ]).pipe(
+      map(([scheduleFilter, stationList, locale]) =>
+        this.getRouteFromFilter(scheduleFilter, stationList, locale, true)
+      )
+    );
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {
@@ -169,6 +194,48 @@ export class PaymentInfoComponent {
     return `${passenger.firstName}${middle} ${passenger.lastName}`.trim();
   }
 
+  private getRouteFromFilter(
+    scheduleFilter: ScheduleFilter | null | undefined,
+    stationList: StationApi[] | null | undefined,
+    locale: 'en' | 'th',
+    isReturn: boolean = false
+  ): string {
+    if (!scheduleFilter) return '';
+
+    const fromId = isReturn ? scheduleFilter.stopStationId : scheduleFilter.startStationId;
+    const toId = isReturn ? scheduleFilter.startStationId : scheduleFilter.stopStationId;
+
+    const fromName = this.getStationLabelById(fromId, stationList, locale);
+    const toName = this.getStationLabelById(toId, stationList, locale);
+
+    if (fromName && toName) {
+      return `${fromName} - ${toName}`;
+    }
+
+    return fromName || toName || '';
+  }
+
+  private getStationLabelById(
+    stationId: string | number | null | undefined,
+    stationList: StationApi[] | null | undefined,
+    locale: 'en' | 'th'
+  ): string {
+    if (stationId === null || stationId === undefined || stationId === '') {
+      return '';
+    }
+
+    const parsed = Number(stationId);
+    const match = (stationList ?? []).find((station) => station.id === parsed);
+    if (!match) return '';
+
+    const byLocale = match.translations?.find((item) =>
+      item.locale?.toLowerCase().startsWith(locale)
+    );
+    if (byLocale?.label) return byLocale.label;
+
+    return match.translations?.[0]?.label || match.slug || '';
+  }
+
   private toStation(stationApi: StationApi): Station {
     const nameEnglish = this.getTranslationLabel(stationApi, 'en') || stationApi.slug;
     const nameThai = this.getTranslationLabel(stationApi, 'th') || nameEnglish;
@@ -196,6 +263,10 @@ export class PaymentInfoComponent {
     if (normalized === 'station') return locale === 'th' ? 'Station' : 'Station';
     if (normalized === 'stop') return locale === 'th' ? 'Stop' : 'Stop';
     return type || '';
+  }
+
+  private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {
+    return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
   }
 
   onChangeData() {

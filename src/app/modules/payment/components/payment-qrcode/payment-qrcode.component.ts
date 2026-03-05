@@ -6,15 +6,20 @@ import {
   OnInit,
   Output,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
-import { combineLatest, Subject } from 'rxjs';
-import { distinctUntilChanged, map, takeUntil } from 'rxjs/operators';
+import { combineLatest, firstValueFrom, Subject } from 'rxjs';
+import { distinctUntilChanged, map, take, takeUntil } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { BookingService } from '../../../../services/booking/booking.service';
+import { PaymentService } from '../../../../services/payment/payment.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { PaymentPayload } from '../../../../shared/interfaces/payment.interface';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -33,6 +38,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   referenceNo = '';
   countdown = '10 : 00';
   refreshCooldownSeconds = 0;
+  isSubmittingPayment = false;
   private readonly promptPayId = environment.promptpay?.id ?? '';
   private readonly promptPayBaseUrl =
     environment.promptpay?.baseUrl ?? '';
@@ -42,7 +48,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   private readonly refreshCooldownTotalSeconds = 10;
   private readonly destroy$ = new Subject<void>();
 
-  constructor(private store: Store) {}
+  constructor(
+    private store: Store,
+    private router: Router,
+    private bookingService: BookingService,
+    private paymentService: PaymentService,
+    private alertService: AlertService
+  ) {}
 
   ngOnInit(): void {
     this.startCountdown();
@@ -76,6 +88,46 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   onQrError(): void {
     this.qrImageUrl = '';
+  }
+
+  async submitPayment(): Promise<void> {
+    if (this.isSubmittingPayment) {
+      return;
+    }
+
+    const bookingId = this.bookingService.getActiveBookingId();
+    if (!bookingId) {
+      this.alertService.error('Booking ID not found');
+      return;
+    }
+
+    const payload: PaymentPayload = {
+      bookingId,
+      paymentMethod: 'qr_promptpay',
+      cardToken: '',
+      bankReferenceNumber: '',
+      qrReferenceNumber: this.referenceNo || this.generateReferenceNo(),
+    };
+
+    this.isSubmittingPayment = true;
+
+    try {
+      const response = await firstValueFrom(
+        this.paymentService.createPayment(payload).pipe(take(1))
+      );
+
+      if (response?.code === 200 || response?.code === 201) {
+        this.alertService.success('Payment success');
+        this.router.navigate(['/e-ticket']);
+      } else {
+        this.alertService.error('Payment failed');
+      }
+    } catch (error) {
+      this.alertService.error('Payment failed');
+      console.error('Payment request failed', error);
+    } finally {
+      this.isSubmittingPayment = false;
+    }
   }
 
   private loadQrCode(): void {

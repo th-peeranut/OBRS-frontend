@@ -1,15 +1,20 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import {
   Schedule,
+  ScheduleFilter,
   ScheduleList,
 } from '../../../../shared/interfaces/schedule.interface';
-import { Observable, Subscription } from 'rxjs';
+import { combineLatest, map, Observable, startWith, Subscription } from 'rxjs';
 import { Store, select } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
 import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
 import { Router } from '@angular/router';
 import dayjs from 'dayjs';
+import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
+import { StationApi } from '../../../../shared/interfaces/station.interface';
+import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-schedule-booking-list',
@@ -18,6 +23,11 @@ import dayjs from 'dayjs';
 })
 export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   scheduleList: Observable<ScheduleList>;
+  scheduleFilter: Observable<ScheduleFilter | null>;
+  rawProvinceStationList: Observable<StationApi[]>;
+  currentLocale$: Observable<'en' | 'th'>;
+  departureRouteLabel$: Observable<string>;
+  returnRouteLabel$: Observable<string>;
 
   selectedSchedule: Schedule[] = [];
 
@@ -28,9 +38,34 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store,
     private router: Router,
-    private appStore: Store<Appstate>
+    private appStore: Store<Appstate>,
+    private translateService: TranslateService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
+    this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.rawProvinceStationList = this.store.pipe(select(selectProvinceWithStation));
+    this.currentLocale$ = this.translateService.onLangChange.pipe(
+      map((event: LangChangeEvent) => this.normalizeLocale(event.lang)),
+      startWith(this.normalizeLocale(this.translateService.currentLang))
+    );
+    this.departureRouteLabel$ = combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLocale$,
+    ]).pipe(
+      map(([scheduleFilter, stationList, locale]) =>
+        this.getRouteFromFilter(scheduleFilter, stationList, locale, false)
+      )
+    );
+    this.returnRouteLabel$ = combineLatest([
+      this.scheduleFilter,
+      this.rawProvinceStationList,
+      this.currentLocale$,
+    ]).pipe(
+      map(([scheduleFilter, stationList, locale]) =>
+        this.getRouteFromFilter(scheduleFilter, stationList, locale, true)
+      )
+    );
   }
 
   ngOnInit(): void {
@@ -111,6 +146,52 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   getPricePerSeat(value: string | number | null | undefined): number {
     const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private getRouteFromFilter(
+    scheduleFilter: ScheduleFilter | null | undefined,
+    stationList: StationApi[] | null | undefined,
+    locale: 'en' | 'th',
+    isReturn: boolean = false
+  ): string {
+    if (!scheduleFilter) return '';
+
+    const fromId = isReturn ? scheduleFilter.stopStationId : scheduleFilter.startStationId;
+    const toId = isReturn ? scheduleFilter.startStationId : scheduleFilter.stopStationId;
+
+    const fromName = this.getStationLabelById(fromId, stationList, locale);
+    const toName = this.getStationLabelById(toId, stationList, locale);
+
+    if (fromName && toName) {
+      return `${fromName} - ${toName}`;
+    }
+
+    return fromName || toName || '';
+  }
+
+  private getStationLabelById(
+    stationId: string | number | null | undefined,
+    stationList: StationApi[] | null | undefined,
+    locale: 'en' | 'th'
+  ): string {
+    if (stationId === null || stationId === undefined || stationId === '') {
+      return '';
+    }
+
+    const parsed = Number(stationId);
+    const match = (stationList ?? []).find((station) => station.id === parsed);
+    if (!match) return '';
+
+    const byLocale = match.translations?.find((item) =>
+      item.locale?.toLowerCase().startsWith(locale)
+    );
+    if (byLocale?.label) return byLocale.label;
+
+    return match.translations?.[0]?.label || match.slug || '';
+  }
+
+  private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {
+    return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
   }
 
   private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {

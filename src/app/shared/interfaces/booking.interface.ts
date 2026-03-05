@@ -1,13 +1,17 @@
 export interface BookingPassenger {
   passengerType: string;
   seatNumber: string | null;
+  title: string;
   firstName: string;
   middleName: string | null;
   lastName: string;
 }
 
 export interface BookingContact {
-  fullName: string;
+  title: string;
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
   phoneNumber: string;
   preferredLocale: string;
 }

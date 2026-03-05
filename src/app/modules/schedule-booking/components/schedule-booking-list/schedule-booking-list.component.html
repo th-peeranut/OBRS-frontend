@@ -14,7 +14,7 @@
         <!-- LEFT -->
         <div class="left">
           <div class="icon">
-            <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+            <img [src]="'icons/schedule-booking-' + departure.vehicleType + '.svg'" alt="Bus Icon" />
           </div>
 
           <div class="time">
@@ -33,7 +33,7 @@
             <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
             <div class="route">
-              {{ formatVehicleType(departure.vehicleType) }}
+              {{ departureRouteLabel$ | async }}
             </div>
           </div>
 
@@ -96,7 +96,7 @@
           <!-- LEFT -->
           <div class="left">
             <div class="icon">
-              <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+              <img [src]="'icons/schedule-booking-' + return.vehicleType + '.svg'" alt="Bus Icon" />
             </div>
 
             <div class="time">
@@ -115,7 +115,7 @@
               <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
               <div class="route">
-                {{ formatVehicleType(return.vehicleType) }}
+                {{ returnRouteLabel$ | async }}
               </div>
             </div>
 

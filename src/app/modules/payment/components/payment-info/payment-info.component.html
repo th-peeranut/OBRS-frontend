@@ -7,7 +7,7 @@
   <div class="card-container" *ngIf="bookingData">
     <div class="card-header">
       <div class="card-header-text">
-        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[0].vehicleType + '.svg'" alt="Bus Icon" />
 
         <div class="card-header-text-details">
           <ng-container
@@ -91,11 +91,7 @@
           <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
           <div class="route">
-            {{
-              formatVehicleType(
-                getScheduleBooking(bookingData?.schedule)[0].vehicleType
-              )
-            }}
+            {{ departureRouteLabel$ | async }}
           </div>
         </div>
 
@@ -145,7 +141,7 @@
   >
     <div class="card-header">
       <div class="card-header-text">
-        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[1].vehicleType + '.svg'" alt="Bus Icon" />
 
         <div class="card-header-text-details">
           <ng-container
@@ -229,11 +225,7 @@
           <img src="images/schedule-booking-line.svg" alt="Bus Line Icon" />
 
           <div class="route">
-            {{
-              formatVehicleType(
-                getScheduleBooking(bookingData?.schedule)[1].vehicleType
-              )
-            }}
+            {{ returnRouteLabel$ | async }}
           </div>
         </div>
 

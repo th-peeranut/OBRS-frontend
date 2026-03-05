@@ -40,6 +40,17 @@ export class PassengerInfoComponent {
   passengerInfoFormComponent?: PassengerInfoFormComponent;
   isPassengerFormValid = false;
   rawProvinceStationList: Observable<StationApi[]>;
+  private readonly titleMap: Record<number, string> = {
+    1: 'Mr.',
+    2: 'Miss',
+    3: 'Mrs.',
+    4: 'Master',
+    5: 'Miss (Child)',
+    6: 'Dr.',
+    7: 'Professor',
+    8: 'Associate Professor',
+    9: 'Assistant Professor',
+  };
 
   constructor(
     private store: Store,
@@ -81,6 +92,8 @@ export class PassengerInfoComponent {
           this.bookingService.createBooking(bookingPayload).pipe(take(1))
         );
         if (response?.code === 200 || response?.code === 201) {
+          const bookingId = this.extractBookingId(response?.data);
+          this.bookingService.setActiveBookingId(bookingId);
           this.alertService.success(
             this.translateService.instant(
               'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
@@ -183,6 +196,7 @@ export class PassengerInfoComponent {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
       seatNumber: this.normalizeSeatNumber(passenger.passengerSeat),
+      title: this.normalizeTitle(passenger.title),
       firstName: passenger.firstName,
       middleName: passenger.middleName || null,
       lastName: passenger.lastName,
@@ -243,31 +257,17 @@ export class PassengerInfoComponent {
 
   private buildContactPayload(passengers: PassengerInfo[]): BookingPayload['contact'] {
     const primary = passengers[0];
-    const fullName = this.buildFullName(primary);
-    const phoneNumber = primary?.phoneNumber ?? '';
+    const phoneNumber = this.normalizePhoneNumber(primary?.phoneNumber ?? '');
     const preferredLocale = this.getPreferredLocale();
 
     return {
-      fullName,
+      title: this.normalizeTitle(primary?.title),
+      firstName: (primary?.firstName ?? '').trim(),
+      middleName: (primary?.middleName ?? '').trim() || null,
+      lastName: (primary?.lastName ?? '').trim(),
       phoneNumber,
       preferredLocale,
     };
-  }
-
-  private buildFullName(passenger?: PassengerInfo | null): string {
-    if (!passenger) {
-      return '';
-    }
-
-    const parts = [
-      passenger.firstName,
-      passenger.middleName,
-      passenger.lastName,
-    ]
-      .map((value) => (value ?? '').trim())
-      .filter((value) => value.length > 0);
-
-    return parts.join(' ');
   }
 
   private getPreferredLocale(): string {
@@ -310,6 +310,23 @@ export class PassengerInfoComponent {
     return digits.length > 0 ? digits : null;
   }
 
+  private normalizeTitle(title: number | string | null | undefined): string {
+    if (typeof title === 'string') {
+      const normalized = title.trim();
+      return normalized.length > 0 ? normalized : 'Mr.';
+    }
+
+    if (typeof title === 'number') {
+      return this.titleMap[title] || 'Mr.';
+    }
+
+    return 'Mr.';
+  }
+
+  private normalizePhoneNumber(phoneNumber: string): string {
+    return (phoneNumber || '').replace(/\D+/g, '').slice(0, 15);
+  }
+
   private normalizePassengerType(gender?: string | null): string {
     const normalized = (gender ?? '').toString().trim().toLowerCase();
     if (
@@ -322,6 +339,12 @@ export class PassengerInfoComponent {
     }
 
     return normalized || 'male';
+  }
+
+  private extractBookingId(data: any): number | null {
+    const candidate = data?.bookingId ?? data?.id ?? data?.booking?.id;
+    const bookingId = Number(candidate);
+    return Number.isFinite(bookingId) && bookingId > 0 ? bookingId : null;
   }
 }
 

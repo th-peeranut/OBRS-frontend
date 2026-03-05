@@ -90,7 +90,12 @@
   </div>
 
   <div class="w-50 d-flex justify-content-end">
-    <button class="payment-btn" type="button">
+    <button
+      class="payment-btn"
+      type="button"
+      (click)="submitPayment()"
+      [disabled]="isSubmittingPayment"
+    >
       {{ "PAYMENT.QR.PAY_NOW" | translate }}
     </button>
   </div>

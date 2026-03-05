@@ -8,7 +8,7 @@
     <div class="card-header">
       <div class="card-header-text">
         <!-- BUS ICON -->
-        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[0].vehicleType + '.svg'" alt="Bus Icon" />
 
         <!-- HEADER TEXT -->
         <div class="card-header-text-details">
@@ -104,10 +104,6 @@
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
               </div>
-              <!-- Province Name -->
-              <div class="body-subheader-text">
-                {{ getProvinceName(povinceStation) }}
-              </div>
             </ng-container>
           </div>
         </div>
@@ -153,10 +149,6 @@
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
               </div>
-              <!-- Province Name -->
-              <div class="body-subheader-text">
-                {{ getProvinceName(povinceStation) }}
-              </div>
             </ng-container>
           </div>
         </div>
@@ -169,7 +161,7 @@
     <div class="card-header">
       <div class="card-header-text">
         <!-- BUS ICON -->
-        <img src="icons/schedule-booking-bus.svg" alt="Bus Icon" />
+        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[1].vehicleType + '.svg'" alt="Bus Icon" />
 
         <!-- HEADER TEXT -->
         <div class="card-header-text-details">
@@ -265,10 +257,6 @@
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
               </div>
-              <!-- Province Name -->
-              <div class="body-subheader-text">
-                {{ getProvinceName(povinceStation) }}
-              </div>
             </ng-container>
           </div>
         </div>
@@ -313,10 +301,6 @@
               <!-- Station -->
               <div class="body-header-text">
                 {{ getStationName(povinceStation?.station) }}
-              </div>
-              <!-- Province Name -->
-              <div class="body-subheader-text">
-                {{ getProvinceName(povinceStation) }}
               </div>
             </ng-container>
           </div>

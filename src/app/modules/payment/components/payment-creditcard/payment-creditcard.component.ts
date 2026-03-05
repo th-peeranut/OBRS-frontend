@@ -1,5 +1,4 @@
 import {
-  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -7,9 +6,15 @@ import {
   OnInit,
   Output,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
-import { AuthService } from '../../../../auth/auth.service';
+import { firstValueFrom } from 'rxjs';
+import { take } from 'rxjs/operators';
+import { BookingService } from '../../../../services/booking/booking.service';
+import { PaymentService } from '../../../../services/payment/payment.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { PaymentPayload } from '../../../../shared/interfaces/payment.interface';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -28,6 +33,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     { name: 'UnionPay', icon: 'icons/payment-brand-unionpay.svg' },
   ];
   countdown = '10 : 00';
+  isSubmittingPayment = false;
 
   creditCardForm: FormGroup;
 
@@ -38,8 +44,10 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   constructor(
     private translate: TranslateService,
     private fb: FormBuilder,
-    private service: AuthService,
-    private cdr: ChangeDetectorRef
+    private router: Router,
+    private bookingService: BookingService,
+    private paymentService: PaymentService,
+    private alertService: AlertService
   ) {
     this.creatForm();
   }
@@ -98,13 +106,55 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     return !!errors[errorName];
   }
 
-  submitPayment() {
+  async submitPayment(): Promise<void> {
     if (this.creditCardForm.invalid) {
       this.creditCardForm.markAllAsTouched();
       return;
     }
 
-    // Submit payment logic here
+    if (this.isSubmittingPayment) {
+      return;
+    }
+
+    const bookingId = this.bookingService.getActiveBookingId();
+    if (!bookingId) {
+      this.alertService.error('Booking ID not found');
+      return;
+    }
+
+    const cardToken = this.getCardToken();
+    const payload: PaymentPayload = {
+      bookingId,
+      paymentMethod: 'card',
+      cardToken,
+      bankReferenceNumber: '',
+      qrReferenceNumber: '',
+    };
+
+    this.isSubmittingPayment = true;
+    try {
+      const response = await firstValueFrom(
+        this.paymentService.createPayment(payload).pipe(take(1))
+      );
+
+      if (response?.code === 200 || response?.code === 201) {
+        this.alertService.success('Payment success');
+        this.router.navigate(['/e-ticket']);
+      } else {
+        this.alertService.error('Payment failed');
+      }
+    } catch (error) {
+      this.alertService.error('Payment failed');
+      console.error('Payment request failed', error);
+    } finally {
+      this.isSubmittingPayment = false;
+    }
+  }
+
+  private getCardToken(): string {
+    const raw = String(this.getFormValue('creditCardNo') ?? '');
+    const digits = raw.replace(/\D+/g, '');
+    return digits || 'abc';
   }
 
   private startCountdown(): void {
