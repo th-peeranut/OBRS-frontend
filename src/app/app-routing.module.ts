@@ -75,6 +75,27 @@ const routes: Routes = [
         (m) => m.ETicketModule
       ),
   },
+  {
+    path: 'refund-policy',
+    loadChildren: () =>
+      import('./modules/refund-policy/refund-policy.module').then(
+        (m) => m.RefundPolicyModule
+      ),
+  },
+  {
+    path: 'privacy-policy',
+    loadChildren: () =>
+      import('./modules/privacy-policy/privacy-policy.module').then(
+        (m) => m.PrivacyPolicyModule
+      ),
+  },
+  {
+    path: 'business-policy',
+    loadChildren: () =>
+      import('./modules/business-policy/business-policy.module').then(
+        (m) => m.BusinessPolicyModule
+      ),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
