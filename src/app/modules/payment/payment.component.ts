@@ -12,7 +12,7 @@ import {
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 
-type PaymentTab = 'qrcode';
+type PaymentTab = 'creditcard';
 
 @Component({
   selector: 'app-payment',
@@ -20,7 +20,7 @@ type PaymentTab = 'qrcode';
   styleUrl: './payment.component.scss',
 })
 export class PaymentComponent {
-  activePaymentTab: PaymentTab = 'qrcode';
+  activePaymentTab: PaymentTab = 'creditcard';
 
   constructor(private store: Store) {}
 

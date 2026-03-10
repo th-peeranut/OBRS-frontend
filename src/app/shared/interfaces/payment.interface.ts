@@ -7,7 +7,7 @@ export type PaymentMethod =
 export interface PaymentPayload {
   bookingId: number;
   paymentMethod: PaymentMethod;
-  cardToken: string;
-  bankReferenceNumber: string;
-  qrReferenceNumber: string;
+  cardToken?: string;
+  bankReferenceNumber?: string;
+  qrReferenceNumber?: string;
 }

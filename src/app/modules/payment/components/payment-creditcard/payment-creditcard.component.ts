@@ -15,6 +15,7 @@ import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { PaymentPayload } from '../../../../shared/interfaces/payment.interface';
+import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -34,6 +35,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   ];
   countdown = '10 : 00';
   isSubmittingPayment = false;
+  private paymentIdempotencyKey = '';
 
   creditCardForm: FormGroup;
 
@@ -47,7 +49,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
-    private alertService: AlertService
+    private alertService: AlertService,
   ) {
     this.creatForm();
   }
@@ -64,7 +66,11 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.creditCardForm = this.fb.group({
       creditCardNo: [
         '',
-        [Validators.required, Validators.minLength(13), Validators.maxLength(19)],
+        [
+          Validators.required,
+          Validators.minLength(13),
+          Validators.maxLength(19),
+        ],
       ],
       expireDate: ['', Validators.required],
       cvv: [
@@ -126,18 +132,22 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     const payload: PaymentPayload = {
       bookingId,
       paymentMethod: 'card',
-      cardToken,
-      bankReferenceNumber: '',
-      qrReferenceNumber: '',
+      cardToken: '1234567890123456'
     };
+    const idempotencyKey =
+      this.paymentIdempotencyKey || generateIdempotencyKey();
+    this.paymentIdempotencyKey = idempotencyKey;
 
     this.isSubmittingPayment = true;
     try {
       const response = await firstValueFrom(
-        this.paymentService.createPayment(payload).pipe(take(1))
+        this.paymentService
+          .createPayment(payload, idempotencyKey)
+          .pipe(take(1)),
       );
 
       if (response?.code === 200 || response?.code === 201) {
+        this.paymentIdempotencyKey = '';
         this.alertService.success('Payment success');
         this.router.navigate(['/e-ticket']);
       } else {
