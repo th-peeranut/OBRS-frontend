@@ -6,9 +6,12 @@
   justify-content: center;
   align-items: center;
   column-gap: 40px;
+  row-gap: 10px;
 
   width: 100%;
   height: 80px;
+  padding: 0 clamp(16px, 5vw, 48px);
+  box-sizing: border-box;
 
   background-color: $primary-white;
 }
@@ -18,6 +21,7 @@
   height: 35px;
 
   margin-right: 209px;
+  flex-shrink: 0;
 }
 
 .menu-font {
@@ -25,6 +29,7 @@
   font-weight: 400;
   color: $text-black;
   text-decoration: none;
+  white-space: nowrap;
 
   &-active {
     color: $primary-blue;
@@ -95,6 +100,7 @@
   flex-direction: row;
   align-items: center;
   column-gap: 16px;
+  flex-wrap: nowrap;
 
   height: 80px;
 }
@@ -136,4 +142,106 @@
   border-radius: 24px;
 
   background-color: $primary-blue;
+}
+
+@media (max-width: 1200px) {
+  .navbar-container {
+    column-gap: 24px;
+    padding: 0 20px;
+  }
+
+  .logo {
+    margin-right: 72px;
+  }
+
+  .menu-font,
+  .menu-lang {
+    font-size: 16px;
+  }
+
+  .btn.dropdown-toggle,
+  .btn.dropdown-toggle-no-border {
+    width: 152px;
+  }
+}
+
+@media (max-width: 992px) {
+  .navbar-container {
+    height: auto;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    column-gap: 16px;
+    padding: 12px 16px;
+  }
+
+  .logo {
+    margin-right: 0;
+    width: 72px;
+    height: 32px;
+  }
+
+  .menu-font {
+    font-size: 15px;
+  }
+
+  .button-container {
+    width: 100%;
+    height: auto;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    column-gap: 10px;
+    row-gap: 8px;
+  }
+
+  .btn.dropdown-toggle,
+  .btn.dropdown-toggle-no-border {
+    width: auto;
+    min-width: 132px;
+    height: 42px;
+    margin-top: 0;
+    padding: 6px 10px;
+  }
+
+  .menu-lang {
+    font-size: 15px;
+  }
+
+  .divide-line {
+    display: none;
+  }
+
+  .btn-signin,
+  .btn-signup {
+    min-width: 120px;
+    height: 44px;
+    padding: 8px 16px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar-container {
+    justify-content: center;
+    column-gap: 12px;
+  }
+
+  .menu-font {
+    font-size: 14px;
+  }
+
+  .button-container {
+    justify-content: center;
+  }
+
+  .btn.dropdown-toggle,
+  .btn.dropdown-toggle-no-border {
+    min-width: 118px;
+    font-size: 14px;
+  }
+
+  .btn-signin,
+  .btn-signup {
+    min-width: calc(50% - 6px);
+    font-size: 14px;
+  }
 }

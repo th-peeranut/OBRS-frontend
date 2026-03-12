@@ -4,58 +4,70 @@
   background: $primary-white;
   padding: 24px;
   border-radius: 10px;
-
+  border: 1px solid $primary-lightgrey;
   display: flex;
   flex-direction: column;
   row-gap: 24px;
-
-  border: 1px solid $primary-lightgrey;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-header {
   display: flex;
   justify-content: space-between;
+  gap: 12px;
 
   &-text {
     display: flex;
     flex-direction: row;
     gap: 16px;
     align-content: center;
+    min-width: 0;
+
+    img {
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+    }
 
     &-details {
       display: flex;
       flex-direction: column;
       row-gap: 4px;
+      min-width: 0;
     }
   }
 
   &-button {
     display: flex;
     justify-content: flex-end;
+    flex-shrink: 0;
   }
 }
 
 .card-body {
   display: flex;
   align-items: center;
-
-  padding: 24px 100px;
+  width: 100%;
+  padding: 24px clamp(16px, 4vw, 100px);
 
   &-detail {
     display: flex;
     flex-direction: column;
-    padding: 0px 16px;
+    padding: 0 16px;
     gap: 28px;
+    min-width: 0;
 
     &-station {
       display: flex;
       flex-direction: row;
-      gap: 80px;
+      gap: clamp(16px, 6vw, 80px);
 
       &-info {
         display: flex;
         flex-direction: column;
         gap: 4px;
+        min-width: 0;
       }
     }
   }
@@ -76,12 +88,14 @@
 .subheader-text {
   font-size: 14px;
   color: $text-lightblack;
+  overflow-wrap: anywhere;
 }
 
 .body-header-text {
   font-size: 18px;
   font-weight: bold;
   color: $text-lightblack;
+  overflow-wrap: anywhere;
 }
 
 .body-subheader-text {
@@ -93,24 +107,86 @@
   display: flex;
   justify-content: center;
   align-items: center;
-
   min-width: 136px;
   height: 41px;
-
   background: $primary-white;
   border: 1px solid $primary-lightgrey;
   border-radius: 24px;
-
-  padding: 25.5px 8px;
-
+  padding: 8px 12px;
   color: $text-softblack;
   font-size: 16px;
   font-weight: bold;
   text-align: center;
-
   cursor: pointer;
 
   &:hover {
     transition: all 0.3s ease-in-out;
+  }
+}
+
+@media (max-width: 992px) {
+  .card-container {
+    padding: 20px;
+  }
+
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-body {
+    padding: 16px;
+  }
+
+  .card-body-detail-station {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-body {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .card-body > img {
+    display: none;
+  }
+
+  .card-body-detail {
+    width: 100%;
+    padding: 0;
+    gap: 14px;
+  }
+
+  .btn-change-info {
+    min-width: 0;
+    width: 100%;
+    height: 44px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .title {
+    margin-top: 24px;
+    margin-bottom: 20px;
+    font-size: 18px;
+  }
+
+  .card-container {
+    padding: 16px;
+  }
+
+  .header-text,
+  .body-header-text {
+    font-size: 16px;
+  }
+
+  .subheader-text,
+  .body-subheader-text {
+    font-size: 13px;
   }
 }

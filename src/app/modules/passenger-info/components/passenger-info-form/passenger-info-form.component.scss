@@ -11,6 +11,8 @@
   row-gap: 24px;
 
   border: 1px solid $primary-lightgrey;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .card-body {
@@ -51,4 +53,38 @@
   height: 1px;
   background: #dddee1;
   margin: 0 8px;
+}
+
+.seat-map-wrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.seat-map-inner {
+  width: 50%;
+}
+
+@media (max-width: 992px) {
+  .card-container {
+    padding: 20px;
+    padding-top: 0;
+  }
+
+  .seat-map-inner {
+    width: 100%;
+    max-width: 560px;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-container {
+    padding: 16px;
+    padding-top: 0;
+  }
+
+  .form-check-inline {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
 }

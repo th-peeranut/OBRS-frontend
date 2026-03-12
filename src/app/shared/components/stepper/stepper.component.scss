@@ -25,7 +25,8 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  padding: 40px 360px;
+  padding: 40px clamp(16px, 8vw, 360px);
+  box-sizing: border-box;
 }
 
 .step {
@@ -72,4 +73,60 @@
   height: 2px;
   background: #b0d4e8;
   margin: 0 8px;
+}
+
+@media (max-width: 992px) {
+  .station-bg,
+  .station-section {
+    height: auto;
+    min-height: 260px;
+  }
+
+  .stepper-container {
+    padding: 28px 24px;
+  }
+
+  .step {
+    .title {
+      font-size: 11px;
+    }
+
+    .desc {
+      font-size: 13px;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .stepper-container {
+    justify-content: flex-start;
+    padding: 20px 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .step {
+    min-width: 112px;
+
+    .desc {
+      font-size: 12px;
+      line-height: 1.2;
+    }
+  }
+
+  .line {
+    flex: 0 0 28px;
+    min-width: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .step {
+    min-width: 98px;
+
+    .circle {
+      width: 14px;
+      height: 14px;
+    }
+  }
 }

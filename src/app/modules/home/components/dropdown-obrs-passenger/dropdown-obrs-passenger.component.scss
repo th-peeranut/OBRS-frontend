@@ -79,3 +79,34 @@ li {
   font-size: 18px;
   color: $text-black;
 }
+
+@media (max-width: 576px) {
+  .dropdown {
+    width: 100%;
+  }
+
+  .btn.dropdown-toggle {
+    width: 100%;
+    min-width: 0;
+
+    .value-text {
+      font-size: 16px;
+    }
+  }
+
+  .dropdown-menu {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .dropdown-passenger {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .current-passenger {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}

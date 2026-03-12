@@ -11,6 +11,7 @@
   border: 1px solid $primary-lightgrey;
   background: $primary-white;
   box-shadow: 0 16px 40px rgba(64, 105, 184, 0.08);
+  box-sizing: border-box;
 }
 
 .payment-card {
@@ -18,7 +19,7 @@
   flex-direction: column;
   row-gap: 24px;
 
-  margin-top: 19%;
+  margin-top: 96px;
 }
 
 .tab-group {
@@ -176,13 +177,30 @@
   height: 52px;
 }
 
+.payment-actions {
+  display: flex;
+  width: 100%;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.payment-action-item {
+  flex: 1 1 50%;
+  min-width: 0;
+}
+
+.payment-action-item.action-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
 @media (max-width: 1024px) {
   .card-container {
     max-width: 100%;
   }
 
   .payment-card {
-    margin-top: 8%;
+    margin-top: 56px;
   }
 }
 
@@ -193,7 +211,7 @@
   }
 
   .payment-card {
-    margin-top: 16px;
+    margin-top: 0;
   }
 }
 
@@ -208,5 +226,16 @@
 
   .tab-group button {
     width: 100%;
+  }
+
+  .payment-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .payment-action-item,
+  .payment-action-item.action-end {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

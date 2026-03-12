@@ -5,6 +5,7 @@
   padding: 24px;
 
   min-width: fit-content;
+  width: fit-content;
 
   display: flex;
   flex-direction: column;
@@ -59,17 +60,36 @@
 }
 
 .empty-box {
-  min-width: 80px;
-  min-height: 80px;
+  min-width: var(--seat-size, 80px);
+  min-height: var(--seat-size, 80px);
 }
 
 .driver-box {
-  width: 80px;
-  height: 80px;
+  width: var(--seat-size, 80px);
+  height: var(--seat-size, 80px);
 
   img {
-    width: 80px;
-    height: 80px;
+    width: var(--seat-size, 80px);
+    height: var(--seat-size, 80px);
     object-fit: contain;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-container {
+    --seat-size: 68px;
+    padding: 16px;
+    row-gap: 12px;
+  }
+
+  .seat-row {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 576px) {
+  .card-container {
+    --seat-size: 56px;
+    padding: 12px;
   }
 }

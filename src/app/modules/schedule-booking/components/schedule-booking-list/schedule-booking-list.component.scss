@@ -37,6 +37,7 @@
       align-items: center;
       flex-direction: row;
       column-gap: 32px;
+      min-width: 0;
 
       .icon {
         margin-right: 16px;
@@ -58,12 +59,16 @@
         align-items: center;
         flex-direction: column;
         gap: 2px;
+        min-width: 0;
 
         .route {
           font-size: 14px;
           color: $text-softblack;
           text-align: center;
           white-space: nowrap;
+          max-width: 240px;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     }
@@ -97,6 +102,8 @@
         flex-direction: row;
         align-items: center;
         column-gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
       }
 
       .select-btn {
@@ -172,7 +179,21 @@
   }
 
   .booking-container .schedule-item .left {
-    column-gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    column-gap: 0;
+    row-gap: 8px;
+  }
+
+  .booking-container .schedule-item .left .time-info {
+    align-items: flex-start;
+  }
+
+  .booking-container .schedule-item .left .time-info .route {
+    white-space: normal;
+    max-width: 100%;
+    text-align: left;
+    overflow: visible;
   }
 
   .booking-container .schedule-item .left .icon img {
