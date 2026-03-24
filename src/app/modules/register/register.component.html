@@ -62,6 +62,38 @@
     <!-- FORM SECTION -->
     <form class="login-form mt-3" [formGroup]="registerForm">
       <div class="row form-row">
+        <!-- คำนำหน้า -->
+        <div class="col-12">
+          <label
+            for="title"
+            [class.label-error]="
+              getForm('title')?.errors &&
+              (getForm('title')?.touched || getForm('title')?.dirty)
+            "
+          >
+            {{ "REGISTER.TITLE" | translate }}
+
+            <span class="form-required">*</span>
+          </label>
+          <app-dropdown-obrs
+            [isBorder]="true"
+            [isLabel]="false"
+            [options]="titleOptions"
+            formControlName="title"
+            id="title"
+          ></app-dropdown-obrs>
+          <div
+            class="text-error"
+            *ngIf="
+              getForm('title')?.errors &&
+              (getForm('title')?.touched || getForm('title')?.dirty)
+            "
+          >
+            {{ "REGISTER.TITLE_REQUIRED" | translate }}
+          </div>
+        </div>
+      </div>
+      <div class="row form-row">
         <div class="col-12 col-md-4">
           <!-- ชื่อจริง -->
           <label
@@ -479,4 +511,3 @@
     </form>
   </div>
 </div>
-

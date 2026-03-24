@@ -29,6 +29,7 @@ import { StationApi } from '../../shared/interfaces/station.interface';
 import { Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../shared/services/alert.service';
+import { HttpErrorResponse } from '@angular/common/http';
 
 @Component({
   selector: 'app-passenger-info',
@@ -86,6 +87,8 @@ export class PassengerInfoComponent {
 
     const bookingPayload = await this.buildBookingPayload(passengerInfo);
 
+    let isBookingCreated = false;
+
     if (bookingPayload) {
       try {
         const response = await firstValueFrom(
@@ -99,13 +102,20 @@ export class PassengerInfoComponent {
               'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
             )
           );
+          isBookingCreated = true;
         }
       } catch (error) {
         console.error('Booking creation failed', error);
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          return;
+        }
+        return;
       }
     }
 
-    this.router.navigate(['/payment']);
+    if (isBookingCreated) {
+      this.router.navigate(['/payment']);
+    }
   }
 
   onBack(): void {

@@ -91,6 +91,8 @@
   "REGISTER": {
     "WELCOME": "Register",
     "HINT": "Please enter the information below For ease of registration",
+    "TITLE": "Title",
+    "TITLE_REQUIRED": "Please enter a title",
     "FIRSTNAME": "First name",
     "FIRSTNAME_PLACEHOLDER": "Please enter your first name",
     "FIRSTNAME_REQUIRED": "Please enter your first name",

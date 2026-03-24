@@ -86,8 +86,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe((stationList) => {
         this.allProvinceStationList = stationList || [];
-        this.startProvinceStationList = stationList || [];
-        this.endProvinceStationList = stationList || [];
+        this.syncStationOptions();
       });
 
     this.scheduleFilter
@@ -133,6 +132,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
           returnDate,
         });
+        this.syncStationOptions();
 
         if (scheduleFilter) {
           this.store.dispatch(
@@ -245,9 +245,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       startStationId: station.id,
     });
 
-    this.endProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.syncStationOptions(station.id, this.getFormValue('stopStationId'));
   }
 
   onEndStationChange(station: StationApi) {
@@ -255,9 +253,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
       stopStationId: station.id,
     });
 
-    this.startProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.syncStationOptions(this.getFormValue('startStationId'), station.id);
   }
 
   getFormValue(controlName: string) {
@@ -266,5 +262,22 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   getIsRoundTripReturn() {
     return this.isRoundTripReturn;
+  }
+
+  private syncStationOptions(
+    selectedStartId?: string | number | null,
+    selectedStopId?: string | number | null
+  ): void {
+    const currentStartId =
+      selectedStartId ?? this.bookingForm.get('startStationId')?.value;
+    const currentStopId =
+      selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
+
+    this.startProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== Number(currentStopId)
+    );
+    this.endProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== Number(currentStartId)
+    );
   }
 }

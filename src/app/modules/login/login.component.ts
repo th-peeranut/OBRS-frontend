@@ -1,5 +1,4 @@
 import {
-  ChangeDetectorRef,
   Component,
   ElementRef,
   OnDestroy,
@@ -9,7 +8,6 @@ import {
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
-import { Router } from '@angular/router';
 import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { AlertService } from '../../shared/services/alert.service';
@@ -39,8 +37,6 @@ export class LoginComponent implements OnDestroy {
     private fb: FormBuilder,
     private service: AuthService,
     private alertService: AlertService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
@@ -131,7 +127,7 @@ export class LoginComponent implements OnDestroy {
         this.alertService.success(
           this.translate.instant('LOGIN.LOGIN_SUCCESS')
         );
-        this.router.navigateByUrl('/home');
+        await this.service.navigateAfterLogin('/home');
       } else if (typeof res?.code === 'number') {
         this.alertService.error(this.translate.instant('LOGIN.LOGIN_FAIL'));
       }

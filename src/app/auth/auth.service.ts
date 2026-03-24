@@ -14,6 +14,7 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly REGISTER_VALUE_KEY = 'register_value';
+  private readonly RETURN_URL_KEY = 'auth_return_url';
 
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
@@ -76,6 +77,30 @@ export class AuthService {
     this.authStatusSubject.next(false);
   }
 
+  setPostLoginRedirectUrl(url: string | null | undefined): void {
+    if (!url || this.isAuthPage(url)) {
+      return;
+    }
+
+    sessionStorage.setItem(this.RETURN_URL_KEY, url);
+  }
+
+  consumePostLoginRedirectUrl(defaultUrl: string = '/home'): string {
+    const url = sessionStorage.getItem(this.RETURN_URL_KEY);
+    sessionStorage.removeItem(this.RETURN_URL_KEY);
+
+    if (!url || this.isAuthPage(url)) {
+      return defaultUrl;
+    }
+
+    return url;
+  }
+
+  navigateAfterLogin(defaultUrl: string = '/home'): Promise<boolean> {
+    const targetUrl = this.consumePostLoginRedirectUrl(defaultUrl);
+    return this.router.navigateByUrl(targetUrl);
+  }
+
   getToken(): string | null {
     return localStorage.getItem(this.TOKEN_KEY);
   }
@@ -112,6 +137,7 @@ export class AuthService {
 
   clearRegisterValue() {
     this.registerValue = {
+      title: null,
       email: '',
       firstName: '',
       isPhoneNumberVerify: false,
@@ -173,5 +199,17 @@ export class AuthService {
       )
       .toPromise()
       .then((response) => response);
+  }
+
+  private isAuthPage(url: string): boolean {
+    const path = url.split('?')[0].split('#')[0];
+
+    return (
+      path.startsWith('/login') ||
+      path.startsWith('/login-mobile') ||
+      path.startsWith('/register') ||
+      path.startsWith('/otp') ||
+      path.startsWith('/forget-password')
+    );
   }
 }

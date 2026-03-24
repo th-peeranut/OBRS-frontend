@@ -55,28 +55,25 @@ export class DropdownGroupObrsComponent
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (this.value) {
-      if (this.isGroupedOptions()) {
-        for (const group of this.options) {
-          const match = (group.stations || []).find(
-            (station: any) => station.id === this.value
-          );
-          if (match) {
-            this.selectedValue = match;
-            this.currentValue.emit(match);
-            this.onChange(match);
-            break;
-          }
-        }
-      } else {
-        const selected = this.options.find((option: any) => option.id === this.value);
-        if (selected) {
-          this.selectedValue = selected;
-          this.currentValue.emit(selected);
-          this.onChange(selected);
+    if (!this.value) {
+      this.selectedValue = null;
+      return;
+    }
+
+    if (this.isGroupedOptions()) {
+      for (const group of this.options) {
+        const match = (group.stations || []).find(
+          (station: any) => station.id === this.value
+        );
+        if (match) {
+          this.selectedValue = match;
+          return;
         }
       }
     }
+
+    const selected = this.options.find((option: any) => option.id === this.value);
+    this.selectedValue = selected ?? null;
   }
 
   toggleDropdown(): void {

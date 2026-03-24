@@ -5,10 +5,11 @@ import {
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
+  HttpResponse,
 } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, mergeMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 
 let isHandlingAuthError = false;
@@ -29,19 +30,27 @@ export const authInterceptor: HttpInterceptorFn = (
     : req;
 
   return next(requestWithAuth).pipe(
-    catchError((error: HttpErrorResponse) => {
-      if (token && !isAuthEndpoint && error?.status === 401) {
-        const message = getErrorMessage(error);
-        const isJwtExpired = message.includes('JWT expired');
-
-        if (isJwtExpired && !isHandlingAuthError) {
-          isHandlingAuthError = true;
-          authService.clearAuthData();
-
-          void router.navigate(['/login']).finally(() => {
-            isHandlingAuthError = false;
-          });
+    mergeMap((event: HttpEvent<unknown>) => {
+      if (!isAuthEndpoint && event instanceof HttpResponse) {
+        if (isUnauthorizedPayload(event.body)) {
+          handleUnauthorized(authService, router);
+          return throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 401,
+                statusText: 'Unauthorized',
+                url: req.url,
+                error: event.body,
+              })
+          );
         }
+      }
+
+      return of(event);
+    }),
+    catchError((error: HttpErrorResponse) => {
+      if (!isAuthEndpoint && error?.status === 401) {
+        handleUnauthorized(authService, router);
       }
 
       return throwError(() => error);
@@ -49,22 +58,40 @@ export const authInterceptor: HttpInterceptorFn = (
   );
 };
 
-function getErrorMessage(error: HttpErrorResponse): string {
-  if (!error || error.error == null) {
-    return '';
+function handleUnauthorized(authService: AuthService, router: Router): void {
+  if (isHandlingAuthError) {
+    return;
   }
 
-  if (typeof error.error === 'string') {
-    return error.error;
+  isHandlingAuthError = true;
+  authService.setPostLoginRedirectUrl(router.url);
+  authService.clearAuthData();
+
+  setTimeout(() => {
+    void router.navigate(['/login']).finally(() => {
+      isHandlingAuthError = false;
+    });
+  });
+}
+
+function isUnauthorizedPayload(payload: unknown): boolean {
+  if (payload == null || typeof payload !== 'object') {
+    return false;
   }
 
-  if (typeof error.error?.message === 'string') {
-    return error.error.message;
+  const body = payload as { status?: unknown; message?: unknown };
+
+  if (body.status !== 401) {
+    return false;
   }
 
-  if (typeof error.message === 'string') {
-    return error.message;
+  if (typeof body.message !== 'string') {
+    return true;
   }
 
-  return '';
+  const normalized = body.message.toLowerCase();
+  return (
+    normalized.includes('authentication is required') ||
+    normalized.includes('unauthorized')
+  );
 }

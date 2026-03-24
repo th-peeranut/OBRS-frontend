@@ -21,6 +21,7 @@ export interface LoginResponseData {
 }
 
 export interface Register {
+  title?: string | null;
   firstName: string;
   middleName: string;
   lastName: string;

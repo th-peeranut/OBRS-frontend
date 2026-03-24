@@ -19,6 +19,7 @@ import {
 import { UserService } from '../../services/user/user.service';
 import { REGISTER_OPTION } from '../../shared/enum/register-option.enum';
 import { AlertService } from '../../shared/services/alert.service';
+import { Dropdown } from '../../shared/interfaces/dropdown.interface';
 
 @Component({
   selector: 'app-register',
@@ -45,6 +46,55 @@ export class RegisterComponent implements OnDestroy {
   usernameIsExist: boolean = false;
   emailIsExist: boolean = false;
   phoneNumberIsExist: boolean = false;
+
+  titleOptions: Dropdown[] = [
+    {
+      id: 1,
+      nameThai: 'นาย',
+      nameEnglish: 'Mr.',
+      isDefault: true,
+    },
+    {
+      id: 2,
+      nameThai: 'นางสาว',
+      nameEnglish: 'Miss',
+    },
+    {
+      id: 3,
+      nameThai: 'นาง',
+      nameEnglish: 'Mrs.',
+    },
+    {
+      id: 4,
+      nameThai: 'เด็กชาย',
+      nameEnglish: 'Master',
+    },
+    {
+      id: 5,
+      nameThai: 'เด็กหญิง',
+      nameEnglish: 'Miss (Child)',
+    },
+    {
+      id: 6,
+      nameThai: 'ดร.',
+      nameEnglish: 'Dr.',
+    },
+    {
+      id: 7,
+      nameThai: 'ศ.',
+      nameEnglish: 'Professor',
+    },
+    {
+      id: 8,
+      nameThai: 'รศ.',
+      nameEnglish: 'Associate Professor',
+    },
+    {
+      id: 9,
+      nameThai: 'ผศ.',
+      nameEnglish: 'Assistant Professor',
+    },
+  ];
 
   constructor(
     private translate: TranslateService,
@@ -74,6 +124,7 @@ export class RegisterComponent implements OnDestroy {
 
   createForm() {
     this.registerForm = this.fb.group({
+      title: [null, Validators.required],
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],
@@ -199,13 +250,46 @@ export class RegisterComponent implements OnDestroy {
       !this.phoneNumberIsExist
     ) {
       const formValue = this.registerForm.getRawValue();
-      formValue.preferredLocale =
-        this.translate.currentLang || this.currentLanguage;
+      const titleName = this.resolveTitleName(formValue.title);
 
-      this.service.setRegisterValue(formValue);
+      const registerPayload = {
+        ...formValue,
+        title: titleName,
+        preferredLocale: this.translate.currentLang || this.currentLanguage,
+      };
 
-      this.router.navigate(['/otp', 'register', formValue.phoneNumber]);
+      this.service.setRegisterValue(registerPayload);
+
+      this.router.navigate(['/otp', 'register', registerPayload.phoneNumber]);
     }
+  }
+
+  private resolveTitleName(title: unknown): string | null {
+    if (typeof title === 'string') {
+      const normalized = title.trim();
+      return normalized.length > 0 ? normalized : null;
+    }
+
+    if (typeof title === 'object' && title !== null) {
+      const option = title as Dropdown;
+      const englishName = option.nameEnglish?.trim();
+      const thaiName = option.nameThai?.trim();
+      return englishName || thaiName || null;
+    }
+
+    const titleId = Number(title);
+    if (!Number.isFinite(titleId)) {
+      return null;
+    }
+
+    const option = this.titleOptions.find((item) => item.id === titleId);
+    if (!option) {
+      return null;
+    }
+
+    const englishName = option.nameEnglish?.trim();
+    const thaiName = option.nameThai?.trim();
+    return englishName || thaiName || null;
   }
 
   async checkDuplicateData(value: string, option: number) {
