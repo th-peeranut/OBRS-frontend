@@ -11,6 +11,7 @@ import {
   invokeSetScheduleFilterApi,
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
+import { Router } from '@angular/router';
 
 type PaymentTab = 'creditcard';
 
@@ -22,12 +23,16 @@ type PaymentTab = 'creditcard';
 export class PaymentComponent {
   activePaymentTab: PaymentTab = 'creditcard';
 
-  constructor(private store: Store) {}
+  constructor(private store: Store, private router: Router) {}
 
   ngOnInit(): void {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+  }
+
+  onBack(): void {
+    this.router.navigate(['/passenger-info']);
   }
 }
 

@@ -27,6 +27,7 @@ type PaymentTab = 'creditcard' | 'qrcode';
 export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'creditcard';
   @Output() tabChange = new EventEmitter<PaymentTab>();
+  @Output() back = new EventEmitter<void>();
 
   readonly cardBrands = [
     { name: 'Visa', icon: 'icons/payment-brand-visa.svg' },
@@ -198,5 +199,9 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       clearInterval(this.countdownIntervalId);
       this.countdownIntervalId = undefined;
     }
+  }
+
+  onBack(): void {
+    this.back.emit();
   }
 }

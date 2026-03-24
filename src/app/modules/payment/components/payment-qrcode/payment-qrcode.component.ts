@@ -32,6 +32,7 @@ type PaymentTab = 'creditcard' | 'qrcode';
 export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'qrcode';
   @Output() tabChange = new EventEmitter<PaymentTab>();
+  @Output() back = new EventEmitter<void>();
 
   amountDisplay = '0.00';
   readonly qrImageAlt = 'PromptPay QR code';
@@ -260,5 +261,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       this.refreshCooldownIntervalId = undefined;
     }
     this.refreshCooldownSeconds = 0;
+  }
+
+  onBack(): void {
+    this.back.emit();
   }
 }
