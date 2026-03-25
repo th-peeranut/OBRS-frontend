@@ -3,6 +3,7 @@ import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { combineLatest, map, Observable, startWith, Subject, takeUntil } from 'rxjs';
 import dayjs from 'dayjs';
+import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { ScheduleBooking } from '../../shared/interfaces/schedule-booking.interface';
@@ -43,8 +44,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
+  qrCodeDataUrl = '';
 
   passengers: TicketPassenger[] = [];
+  private latestQrPayload = '';
 
   private readonly destroy$ = new Subject<void>();
   private readonly titleMap: Record<number, { en: string; th: string }> = {
@@ -142,6 +145,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     this.bookingReference = bookingId ? String(bookingId) : '-';
     this.ticketNumber = this.buildTicketNumber(bookingId, departureSchedule);
+    void this.updateQrCode(this.ticketNumber);
     this.travelDate = this.buildTravelDate(
       departureSchedule?.departureDateTime,
       returnSchedule?.departureDateTime,
@@ -394,5 +398,31 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   private normalizeLocale(locale: string | null | undefined): Locale {
     return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+  }
+
+  private async updateQrCode(ticketNumber: string): Promise<void> {
+    const normalizedTicketNumber = ticketNumber?.trim();
+    this.latestQrPayload = normalizedTicketNumber;
+
+    if (!normalizedTicketNumber || normalizedTicketNumber === '-') {
+      this.qrCodeDataUrl = '';
+      return;
+    }
+
+    try {
+      const qrDataUrl = await QRCode.toDataURL(normalizedTicketNumber, {
+        width: 140,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+
+      if (this.latestQrPayload === normalizedTicketNumber) {
+        this.qrCodeDataUrl = qrDataUrl;
+      }
+    } catch {
+      if (this.latestQrPayload === normalizedTicketNumber) {
+        this.qrCodeDataUrl = '';
+      }
+    }
   }
 }

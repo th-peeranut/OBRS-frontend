@@ -148,11 +148,20 @@
         </div>
 
         <div class="ticket-qr">
-          <div
-            class="qr-code"
-            role="img"
-            [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
-          ></div>
+          <ng-container *ngIf="qrCodeDataUrl; else qrPlaceholder">
+            <img
+              class="qr-code"
+              [src]="qrCodeDataUrl"
+              [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
+            />
+          </ng-container>
+          <ng-template #qrPlaceholder>
+            <div
+              class="qr-code qr-code-placeholder"
+              role="img"
+              [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+            ></div>
+          </ng-template>
           <div class="qr-hint">
             {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
             {{ "E_TICKET.QR_HINT" | translate }}

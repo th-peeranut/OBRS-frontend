@@ -219,6 +219,12 @@
   height: 140px;
   border-radius: 12px;
   border: 8px solid $primary-white;
+  display: block;
+  object-fit: contain;
+  background-color: $primary-white;
+}
+
+.qr-code-placeholder {
   box-shadow: inset 0 0 0 1px rgba(13, 21, 37, 0.1);
   background-image: linear-gradient(
       90deg,
