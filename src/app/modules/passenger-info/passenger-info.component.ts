@@ -3,7 +3,6 @@ import { Store, select } from '@ngrx/store';
 import { Router } from '@angular/router';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import {
-  invokeSetScheduleBookingApi,
   invokeGetScheduleBookingApi,
 } from '../../shared/stores/schedule-booking/schedule-booking.action';
 import {
@@ -11,6 +10,7 @@ import {
   invokeGetScheduleFilterApi,
 } from '../../shared/stores/schedule-filter/schedule-filter.action';
 import { invokeSetPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.action';
+import { invokeSetBookingApi } from '../../shared/stores/booking/booking.action';
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
 import { selectScheduleBooking } from '../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
@@ -96,7 +96,9 @@ export class PassengerInfoComponent {
         );
         if (response?.code === 200 || response?.code === 201) {
           const bookingId = this.extractBookingId(response?.data);
+          const bookingNumber = this.extractBookingNumber(response?.data);
           this.bookingService.setActiveBookingId(bookingId);
+          this.setBookingStore(bookingId, bookingNumber);
           this.alertService.success(
             this.translateService.instant(
               'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
@@ -355,6 +357,30 @@ export class PassengerInfoComponent {
     const candidate = data?.bookingId ?? data?.id ?? data?.booking?.id;
     const bookingId = Number(candidate);
     return Number.isFinite(bookingId) && bookingId > 0 ? bookingId : null;
+  }
+
+  private extractBookingNumber(data: any): string | null {
+    const candidate =
+      data?.bookingNumber ??
+      data?.bookingNo ??
+      data?.number ??
+      data?.booking?.bookingNumber;
+    const bookingNumber = String(candidate ?? '').trim();
+    return bookingNumber.length > 0 ? bookingNumber : null;
+  }
+
+  private setBookingStore(
+    bookingId: number | null,
+    bookingNumber: string | null
+  ): void {
+    this.store.dispatch(
+      invokeSetBookingApi({
+        booking: {
+          bookingId,
+          bookingNumber,
+        },
+      })
+    );
   }
 }
 

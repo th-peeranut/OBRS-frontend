@@ -20,6 +20,12 @@ export class BookingService {
     );
   }
 
+  getBookingTickets(bookingId: number): Observable<ResponseAPI<unknown>> {
+    return this.http.get<ResponseAPI<unknown>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/tickets`
+    );
+  }
+
   setActiveBookingId(bookingId: number | null | undefined): void {
     const normalized = Number(bookingId);
     if (!Number.isFinite(normalized) || normalized <= 0) {

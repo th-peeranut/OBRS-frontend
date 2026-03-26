@@ -24,6 +24,8 @@ import { PassengerSeatVanComponent } from './components/passenger-seat-van/passe
 import { PassengerSeatBoxComponent } from './components/passenger-seat-box/passenger-seat-box.component';
 import { PassengerInfoReducer } from '../../shared/stores/passenger-info/passenger-info.reducer';
 import { PassengerInfoEffect } from '../../shared/stores/passenger-info/passenger-info.effect';
+import { BookingReducer } from '../../shared/stores/booking/booking.reducer';
+import { BookingEffect } from '../../shared/stores/booking/booking.effect';
 
 
 const routes: Routes = [
@@ -44,12 +46,14 @@ const routes: Routes = [
     StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
     StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
     StoreModule.forFeature('passengerInfo', PassengerInfoReducer),
+    StoreModule.forFeature('booking', BookingReducer),
 
     EffectsModule.forFeature([
       ProvinceEffect,
       ScheduleFilterEffect,
       ScheduleBookingEffect,
       PassengerInfoEffect,
+      BookingEffect,
     ]),
 
     // Components

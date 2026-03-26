@@ -1,14 +1,25 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
-import { combineLatest, map, Observable, startWith, Subject, takeUntil } from 'rxjs';
+import {
+  combineLatest,
+  firstValueFrom,
+  map,
+  Observable,
+  startWith,
+  Subject,
+  takeUntil,
+} from 'rxjs';
 import dayjs from 'dayjs';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
+import { BookingState } from '../../shared/interfaces/booking.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { ScheduleBooking } from '../../shared/interfaces/schedule-booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { StationApi } from '../../shared/interfaces/station.interface';
+import { invokeGetBookingApi } from '../../shared/stores/booking/booking.action';
+import { selectBooking } from '../../shared/stores/booking/booking.selector';
 import { invokeGetPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.action';
 import { selectPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.selector';
 import { invokeGetScheduleBookingApi } from '../../shared/stores/schedule-booking/schedule-booking.action';
@@ -31,7 +42,7 @@ type Locale = 'en' | 'th';
   styleUrl: './e-ticket.component.scss',
 })
 export class ETicketComponent implements OnInit, OnDestroy {
-  bookingReference = '-';
+  bookingNumber = '-';
   ticketNumber = '-';
   travelDate = '-';
   travelTime = '-';
@@ -48,6 +59,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   passengers: TicketPassenger[] = [];
   private latestQrPayload = '';
+  private ticketApiBookingNumber = '';
+  private ticketApiTicketNumber = '';
+  private ticketApiPaymentDateTime = '';
+  private ticketApiVehicleType = '';
+  private ticketApiVehiclePlate = '';
+  private lastTicketRequestBookingId: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
   private readonly titleMap: Record<number, { en: string; th: string }> = {
@@ -63,6 +80,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   };
 
   private readonly scheduleBooking$: Observable<ScheduleBooking | null>;
+  private readonly booking$: Observable<BookingState | null>;
   private readonly scheduleFilter$: Observable<ScheduleFilter | null>;
   private readonly passengerInfo$: Observable<PassengerInfo[] | null>;
   private readonly stationList$: Observable<StationApi[]>;
@@ -75,6 +93,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.scheduleBooking$ = this.store.pipe(
       select(selectScheduleBooking)
     ) as Observable<ScheduleBooking | null>;
+    this.booking$ = this.store.pipe(
+      select(selectBooking)
+    ) as Observable<BookingState | null>;
     this.scheduleFilter$ = this.store.pipe(
       select(selectScheduleFilter)
     ) as Observable<ScheduleFilter | null>;
@@ -87,6 +108,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
+    this.store.dispatch(invokeGetBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
     this.store.dispatch(invokeGetPassengerInfo());
 
@@ -97,15 +119,17 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     combineLatest([
       this.scheduleBooking$,
+      this.booking$,
       this.scheduleFilter$,
       this.passengerInfo$,
       this.stationList$,
       locale$,
     ])
       .pipe(takeUntil(this.destroy$))
-      .subscribe(([scheduleBooking, scheduleFilter, passengerInfo, stationList, locale]) => {
+      .subscribe(([scheduleBooking, booking, scheduleFilter, passengerInfo, stationList, locale]) => {
         this.mapTicketFields(
           scheduleBooking,
+          booking,
           scheduleFilter,
           passengerInfo,
           stationList,
@@ -121,6 +145,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   private mapTicketFields(
     scheduleBooking: ScheduleBooking | null,
+    booking: BookingState | null,
     scheduleFilter: ScheduleFilter | null,
     passengerInfo: PassengerInfo[] | null,
     stationList: StationApi[],
@@ -129,7 +154,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const schedules = this.getSchedules(scheduleBooking?.schedule);
     const departureSchedule = schedules[0] ?? null;
     const returnSchedule = schedules[1] ?? null;
-    const bookingId = this.bookingService.getActiveBookingId();
+    const bookingId = this.getBookingId(booking?.bookingId);
+    const bookingNumber =
+      this.ticketApiBookingNumber ||
+      this.normalizeBookingNumber(booking?.bookingNumber);
     const ticketPassengers = this.buildPassengerRows(passengerInfo, locale);
 
     const fromName = this.getStationLabelById(
@@ -143,8 +171,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
       locale
     );
 
-    this.bookingReference = bookingId ? String(bookingId) : '-';
-    this.ticketNumber = this.buildTicketNumber(bookingId, departureSchedule);
+    this.bookingNumber = bookingNumber || '-';
+    this.ticketNumber =
+      this.ticketApiTicketNumber ||
+      (this.bookingNumber !== '-'
+        ? this.bookingNumber
+        : this.buildTicketNumber(bookingId, departureSchedule));
     void this.updateQrCode(this.ticketNumber);
     this.travelDate = this.buildTravelDate(
       departureSchedule?.departureDateTime,
@@ -155,17 +187,25 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.route = this.buildRouteLabel(fromName, toName, !!returnSchedule);
     this.origin = fromName || '-';
     this.destination = toName || '-';
-    this.vehicleType = this.formatVehicleType(departureSchedule?.vehicleType) || '-';
-    this.vehiclePlate = '-';
+    this.vehicleType =
+      this.ticketApiVehicleType ||
+      this.formatVehicleType(departureSchedule?.vehicleType) ||
+      '-';
+    this.vehiclePlate = this.ticketApiVehiclePlate || '-';
     this.seats = this.buildSeatList(ticketPassengers);
     this.passengers = ticketPassengers;
     this.passengerSummary = this.buildPassengerSummary(scheduleFilter?.passengerInfo);
-    this.paymentDate = this.formatDateTime(dayjs().toISOString(), locale);
+    this.paymentDate = this.formatDateTime(
+      this.ticketApiPaymentDateTime || dayjs().toISOString(),
+      locale
+    );
     this.totalAmount = this.calculateTotalAmount(
       schedules,
       scheduleFilter?.passengerInfo,
       ticketPassengers.length
     ).toFixed(2);
+
+    void this.loadTicketFromApi(bookingId, locale);
   }
 
   private getSchedules(schedule?: Schedule[] | null): Schedule[] {
@@ -398,6 +438,214 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   private normalizeLocale(locale: string | null | undefined): Locale {
     return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+  }
+
+  private normalizeBookingNumber(value: string | null | undefined): string {
+    const bookingNumber = String(value ?? '').trim();
+    return bookingNumber.length > 0 ? bookingNumber : '';
+  }
+
+  private getBookingId(value: number | null | undefined): number | null {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+
+    return this.bookingService.getActiveBookingId();
+  }
+
+  private async loadTicketFromApi(
+    bookingId: number | null,
+    locale: Locale
+  ): Promise<void> {
+    if (!bookingId) {
+      return;
+    }
+
+    if (this.lastTicketRequestBookingId === bookingId) {
+      return;
+    }
+    this.lastTicketRequestBookingId = bookingId;
+
+    try {
+      const response = await firstValueFrom(
+        this.bookingService.getBookingTickets(bookingId)
+      );
+      if (response?.code === 200 || response?.code === 201) {
+        this.applyTicketApiResponse(response?.data);
+        this.refreshTicketFieldsFromApi(locale);
+      }
+    } catch (error) {
+      console.error('Get booking tickets failed', error);
+    }
+  }
+
+  private refreshTicketFieldsFromApi(locale: Locale): void {
+    if (this.ticketApiBookingNumber) {
+      this.bookingNumber = this.ticketApiBookingNumber;
+    }
+
+    if (this.ticketApiTicketNumber) {
+      this.ticketNumber = this.ticketApiTicketNumber;
+      void this.updateQrCode(this.ticketNumber);
+    }
+
+    if (this.ticketApiPaymentDateTime) {
+      this.paymentDate = this.formatDateTime(this.ticketApiPaymentDateTime, locale);
+    }
+
+    if (this.ticketApiVehicleType) {
+      this.vehicleType = this.ticketApiVehicleType;
+    }
+
+    if (this.ticketApiVehiclePlate) {
+      this.vehiclePlate = this.ticketApiVehiclePlate;
+    }
+  }
+
+  private applyTicketApiResponse(data: unknown): void {
+    const rootPayload = this.extractRootPayload(data);
+    const primaryJourney = rootPayload
+      ? this.extractPrimaryJourney(rootPayload)
+      : null;
+    const vehicle = primaryJourney ? this.asRecord(primaryJourney['vehicle']) : null;
+    if (vehicle) {
+      const vehicleType = this.pickFirstString(vehicle, ['vehicleType']);
+      if (vehicleType) {
+        this.ticketApiVehicleType = this.formatVehicleType(vehicleType);
+      }
+
+      const vehicleNumber = this.pickFirstString(vehicle, ['vehicleNumber']);
+      const numberPlate = this.pickFirstString(vehicle, ['numberPlate']);
+      const vehiclePlate = this.buildVehiclePlate(vehicleNumber, numberPlate);
+      if (vehiclePlate) {
+        this.ticketApiVehiclePlate = vehiclePlate;
+      }
+    }
+
+    const ticketPayload = this.extractTicketPayload(data);
+    if (!ticketPayload) {
+      return;
+    }
+
+    const bookingNumber = this.pickFirstString(ticketPayload, [
+      'bookingNumber',
+      'bookingNo',
+    ]);
+    if (bookingNumber) {
+      this.ticketApiBookingNumber = bookingNumber;
+    }
+
+    const ticketNumber = this.pickFirstString(ticketPayload, [
+      'ticketNumber',
+      'ticketNo',
+      'ticketCode',
+      'number',
+    ]);
+    if (ticketNumber) {
+      this.ticketApiTicketNumber = ticketNumber;
+    }
+
+    const paymentDateTime = this.pickFirstString(ticketPayload, [
+      'paymentDateTime',
+      'paymentDate',
+      'paidAt',
+      'createdAt',
+    ]);
+    if (paymentDateTime) {
+      this.ticketApiPaymentDateTime = paymentDateTime;
+    }
+  }
+
+  private extractTicketPayload(data: unknown): Record<string, unknown> | null {
+    if (Array.isArray(data)) {
+      return this.asRecord(data[0]);
+    }
+
+    const root = this.asRecord(data);
+    if (!root) {
+      return null;
+    }
+
+    const tickets = root['tickets'];
+    if (Array.isArray(tickets) && tickets.length > 0) {
+      const primaryTicket = this.asRecord(tickets[0]);
+      if (primaryTicket) {
+        return {
+          ...root,
+          ...primaryTicket,
+        };
+      }
+    }
+
+    const ticket = this.asRecord(root['ticket']);
+    if (ticket) {
+      return {
+        ...root,
+        ...ticket,
+      };
+    }
+
+    return root;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | null {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      return null;
+    }
+
+    return value as Record<string, unknown>;
+  }
+
+  private pickFirstString(
+    source: Record<string, unknown>,
+    keys: string[]
+  ): string {
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    return '';
+  }
+
+  private extractRootPayload(data: unknown): Record<string, unknown> | null {
+    if (Array.isArray(data)) {
+      return this.asRecord(data[0]);
+    }
+
+    return this.asRecord(data);
+  }
+
+  private extractPrimaryJourney(
+    source: Record<string, unknown>
+  ): Record<string, unknown> | null {
+    const journeys = source['journeys'];
+    if (!Array.isArray(journeys) || journeys.length === 0) {
+      return null;
+    }
+
+    const outbound =
+      journeys.find((item) => {
+        const candidate = this.asRecord(item);
+        const legType = candidate?.['legType'];
+        return (
+          typeof legType === 'string' &&
+          legType.trim().toLowerCase() === 'outbound'
+        );
+      }) ?? journeys[0];
+
+    return this.asRecord(outbound);
+  }
+
+  private buildVehiclePlate(vehicleNumber: string, numberPlate: string): string {
+    if (vehicleNumber && numberPlate) {
+      return `${vehicleNumber}/${numberPlate}`;
+    }
+
+    return vehicleNumber || numberPlate || '';
   }
 
   private async updateQrCode(ticketNumber: string): Promise<void> {
