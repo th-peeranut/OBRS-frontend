@@ -567,26 +567,38 @@ export class ETicketComponent implements OnInit, OnDestroy {
       return null;
     }
 
-    const tickets = root['tickets'];
-    if (Array.isArray(tickets) && tickets.length > 0) {
-      const primaryTicket = this.asRecord(tickets[0]);
-      if (primaryTicket) {
-        return {
-          ...root,
-          ...primaryTicket,
-        };
-      }
-    }
-
-    const ticket = this.asRecord(root['ticket']);
-    if (ticket) {
+    const topLevelTicket = this.extractPrimaryTicket(root);
+    if (topLevelTicket) {
       return {
         ...root,
-        ...ticket,
+        ...topLevelTicket,
+      };
+    }
+
+    const primaryJourney = this.extractPrimaryJourney(root);
+    const journeyTicket = primaryJourney
+      ? this.extractPrimaryTicket(primaryJourney)
+      : null;
+    if (primaryJourney && journeyTicket) {
+      return {
+        ...root,
+        ...primaryJourney,
+        ...journeyTicket,
       };
     }
 
     return root;
+  }
+
+  private extractPrimaryTicket(
+    source: Record<string, unknown>
+  ): Record<string, unknown> | null {
+    const tickets = source['tickets'];
+    if (Array.isArray(tickets) && tickets.length > 0) {
+      return this.asRecord(tickets[0]);
+    }
+
+    return this.asRecord(source['ticket']);
   }
 
   private asRecord(value: unknown): Record<string, unknown> | null {

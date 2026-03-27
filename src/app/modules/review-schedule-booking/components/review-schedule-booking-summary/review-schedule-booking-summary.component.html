@@ -3,12 +3,18 @@
 </h3>
 
 <ng-container *ngIf="scheduleBooking | async as bookingData">
-  <div class="card-container" *ngIf="bookingData">
+  <div
+    class="card-container"
+    *ngIf="getFirstSchedule(bookingData?.schedule) as departureSchedule"
+  >
     <!-- HEADER -->
     <div class="card-header">
       <div class="card-header-text">
         <!-- BUS ICON -->
-        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[0].vehicleType + '.svg'" alt="Bus Icon" />
+        <img
+          [src]="'icons/schedule-booking-' + departureSchedule.vehicleType + '.svg'"
+          alt="Bus Icon"
+        />
 
         <!-- HEADER TEXT -->
         <div class="card-header-text-details">
@@ -35,14 +41,12 @@
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
               formatDateFromDateTime(
-                getScheduleBooking(bookingData?.schedule)[0].departureDateTime
+                departureSchedule.departureDateTime
               )
             }}
             |
             {{
-              formatVehicleType(
-                getScheduleBooking(bookingData?.schedule)[0].vehicleType
-              )
+              formatVehicleType(departureSchedule.vehicleType)
             }}
             |
             <!-- เที่ยวเดียว -->
@@ -84,7 +88,7 @@
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
-                getScheduleBooking(bookingData?.schedule)[0].departureDateTime
+                departureSchedule.departureDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -111,15 +115,15 @@
         <div class="body-subheader-text">
           {{
             getDurationHours(
-              getScheduleBooking(bookingData?.schedule)[0].departureDateTime,
-              getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
+              departureSchedule.departureDateTime,
+              departureSchedule.arrivalDateTime
             )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
           {{
             getDurationMinutes(
-              getScheduleBooking(bookingData?.schedule)[0].departureDateTime,
-              getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
+              departureSchedule.departureDateTime,
+              departureSchedule.arrivalDateTime
             )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
@@ -129,7 +133,7 @@
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
-                getScheduleBooking(bookingData?.schedule)[0].arrivalDateTime
+                departureSchedule.arrivalDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -156,12 +160,18 @@
     </div>
   </div>
 
-  <div class="card-container mt-3" *ngIf="bookingData && getScheduleBooking(bookingData?.schedule).length == 2">
+  <div
+    class="card-container mt-3"
+    *ngIf="getSecondSchedule(bookingData?.schedule) as returnSchedule"
+  >
     <!-- HEADER -->
     <div class="card-header">
       <div class="card-header-text">
         <!-- BUS ICON -->
-        <img [src]="'icons/schedule-booking-' + getScheduleBooking(bookingData?.schedule)[1].vehicleType + '.svg'" alt="Bus Icon" />
+        <img
+          [src]="'icons/schedule-booking-' + returnSchedule.vehicleType + '.svg'"
+          alt="Bus Icon"
+        />
 
         <!-- HEADER TEXT -->
         <div class="card-header-text-details">
@@ -188,14 +198,12 @@
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
               formatDateFromDateTime(
-                getScheduleBooking(bookingData?.schedule)[1].departureDateTime
+                returnSchedule.departureDateTime
               )
             }}
             |
             {{
-              formatVehicleType(
-                getScheduleBooking(bookingData?.schedule)[1].vehicleType
-              )
+              formatVehicleType(returnSchedule.vehicleType)
             }}
             |
             <!-- เที่ยวเดียว -->
@@ -237,7 +245,7 @@
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
-                getScheduleBooking(bookingData?.schedule)[1].departureDateTime
+                returnSchedule.departureDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}
@@ -264,15 +272,15 @@
         <div class="body-subheader-text">
           {{
             getDurationHours(
-              getScheduleBooking(bookingData?.schedule)[1].departureDateTime,
-              getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
+              returnSchedule.departureDateTime,
+              returnSchedule.arrivalDateTime
             )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.HOUR_UNIT" | translate }}
           {{
             getDurationMinutes(
-              getScheduleBooking(bookingData?.schedule)[1].departureDateTime,
-              getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
+              returnSchedule.departureDateTime,
+              returnSchedule.arrivalDateTime
             )
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
@@ -282,7 +290,7 @@
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
-                getScheduleBooking(bookingData?.schedule)[1].arrivalDateTime
+                returnSchedule.arrivalDateTime
               )
             }}
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.TIME_UNIT" | translate }}

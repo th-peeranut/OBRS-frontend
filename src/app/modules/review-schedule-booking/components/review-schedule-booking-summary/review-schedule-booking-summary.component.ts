@@ -42,6 +42,14 @@ export class ReviewScheduleBookingSummaryComponent {
     return schedule ?? [];
   }
 
+  getFirstSchedule(schedule?: Schedule[] | null): Schedule | null {
+    return schedule?.[0] ?? null;
+  }
+
+  getSecondSchedule(schedule?: Schedule[] | null): Schedule | null {
+    return schedule?.[1] ?? null;
+  }
+
   formatDateTimeToHHMM(dateTime: string): string {
     if (!dateTime) return '';
     const parsed = dayjs(dateTime);

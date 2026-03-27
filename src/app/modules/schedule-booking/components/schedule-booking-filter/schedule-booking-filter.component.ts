@@ -131,7 +131,7 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
           departureDate,
 
           returnDate,
-        });
+        }, { emitEvent: false });
         this.syncStationOptions();
 
         if (scheduleFilter) {
