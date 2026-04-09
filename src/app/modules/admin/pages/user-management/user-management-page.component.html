@@ -1,0 +1,234 @@
+<section class="admin-page-intro">
+  <div>
+    <h3>{{ 'ADMIN.USERS.TITLE' | translate }}</h3>
+    <p>{{ 'ADMIN.USERS.SUBTITLE' | translate }}</p>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">person_add</span>
+    <span>{{ 'ADMIN.USERS.INVITE' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <button type="button" class="admin-filter-btn">
+    <span class="material-symbols-outlined">filter_list</span>
+    <span>{{ 'ADMIN.USERS.FILTER_ROLE' | translate }}</span>
+  </button>
+  <button type="button" class="admin-filter-btn">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span>{{ 'ADMIN.USERS.FILTER_STATUS' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.USERS.FULL_NAME' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.USERNAME' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.EMAIL_PHONE' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.ROLES' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let user of users; let i = index" [class.zebra]="i % 2 === 1">
+          <td>
+            <div class="admin-cell-stack">
+              <span class="admin-emphasis">{{ user.fullName }}</span>
+              <span>{{ user.lastActive }}</span>
+            </div>
+          </td>
+          <td>{{ user.username }}</td>
+          <td>
+            <div class="admin-cell-stack">
+              <span>{{ user.email }}</span>
+              <span>{{ user.phone }}</span>
+            </div>
+          </td>
+          <td>
+            <div class="admin-tags">
+              <span class="admin-chip" *ngFor="let role of user.roles">{{ role }}</span>
+            </div>
+          </td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
+          </td>
+          <td class="text-right">
+            <div class="admin-inline-actions">
+              <button type="button" class="admin-icon-btn" (click)="openEditModal(user)">
+                <span class="material-symbols-outlined">edit_square</span>
+              </button>
+              <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(user)">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-table-footer">
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ users.length }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ users.length }} {{ 'ADMIN.USERS.USER_COUNT' | translate }}
+    </span>
+  </div>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{ isEditMode ? ('ADMIN.USERS.EDIT_TITLE' | translate) : ('ADMIN.USERS.ADD_TITLE' | translate) }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.USERS.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="userForm" class="admin-form-grid" (ngSubmit)="submitUser()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.FORM_TITLE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="title" />
+        <small class="admin-error" *ngIf="isFieldInvalid('title')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.FIRST_NAME' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="firstName" />
+        <small class="admin-error" *ngIf="isFieldInvalid('firstName')">
+          {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.USERS.MIDDLE_NAME' | translate }}</label>
+        <input class="admin-field" formControlName="middleName" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.LAST_NAME' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="lastName" />
+        <small class="admin-error" *ngIf="isFieldInvalid('lastName')">
+          {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.EMAIL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="email" />
+        <small class="admin-error" *ngIf="isFieldInvalid('email')">
+          {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="phoneNumber" />
+        <small class="admin-error" *ngIf="isFieldInvalid('phoneNumber')">
+          {{ 'ADMIN.VALIDATION.PHONE' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.USERNAME' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="username" />
+        <small class="admin-error" *ngIf="isFieldInvalid('username')">
+          {{ 'ADMIN.VALIDATION.USERNAME' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="password" type="password" />
+        <small class="admin-error" *ngIf="isFieldInvalid('password')">
+          {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.LOCALE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <select class="admin-field" formControlName="preferredLocale">
+          <option value="th">th</option>
+          <option value="en">en</option>
+        </select>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <select class="admin-field" formControlName="status">
+          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+      </div>
+
+      <div class="admin-form-field full">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span>
+        </label>
+        <div class="admin-tags">
+          <label class="admin-chip" *ngFor="let role of roleOptions">
+            <input
+              type="checkbox"
+              [checked]="isRoleChecked(role.slug)"
+              (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
+            />
+            {{ role.label }}
+          </label>
+        </div>
+        <small class="admin-error" *ngIf="isFieldInvalid('roles')">
+          {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
+        </small>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitUser()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedUser">{{ selectedUser.fullName }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

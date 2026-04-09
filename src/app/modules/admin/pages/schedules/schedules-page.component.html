@@ -1,0 +1,96 @@
+<section class="admin-page-intro">
+  <div>
+    <h3>Schedules</h3>
+    <p>Managing 142 active trip instances across Thailand.</p>
+    <p class="admin-muted" *ngIf="isLoading">Loading schedule data...</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <div class="admin-inline-actions">
+    <button type="button" class="admin-btn">
+      <span class="material-symbols-outlined">download</span>
+      <span>Export Manifest</span>
+    </button>
+    <button type="button" class="admin-btn admin-btn-primary">
+      <span class="material-symbols-outlined">bolt</span>
+      <span>Manual Dispatch</span>
+    </button>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <label class="admin-search">
+    <span class="material-symbols-outlined">search</span>
+    <input type="text" placeholder="Search by trip ID, driver, or plate..." />
+  </label>
+  <label class="admin-input">
+    <span class="material-symbols-outlined">calendar_month</span>
+    <input type="date" />
+  </label>
+  <select class="admin-select">
+    <option>All Routes</option>
+  </select>
+  <select class="admin-select">
+    <option>All Status</option>
+  </select>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Trip ID</th>
+          <th>Departure</th>
+          <th>Route</th>
+          <th>Vehicle</th>
+          <th>Driver</th>
+          <th>Occupancy</th>
+          <th>Status</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let schedule of schedules; let i = index" [class.zebra]="i % 2 === 1">
+          <td><code>{{ schedule.tripId }}</code></td>
+          <td>{{ schedule.departure }}</td>
+          <td>{{ schedule.route }}</td>
+          <td>{{ schedule.vehicle }}</td>
+          <td>{{ schedule.driver }}</td>
+          <td>
+            <div class="admin-progress">
+              <span [style.width.%]="schedule.occupancy"></span>
+            </div>
+            <small>{{ schedule.occupancy }}%</small>
+          </td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(schedule.status)">{{ schedule.status }}</span>
+          </td>
+          <td class="text-right">
+            <div class="admin-inline-actions">
+              <button type="button" class="admin-icon-btn">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+              <button type="button" class="admin-icon-btn">
+                <span class="material-symbols-outlined">visibility</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="admin-table-footer">
+    <span>Showing 1 - {{ schedules.length }} of {{ schedules.length }} trips</span>
+    <div class="admin-inline-actions">
+      <button type="button" class="admin-icon-btn">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <button type="button" class="admin-btn admin-btn-small admin-btn-primary">1</button>
+      <button type="button" class="admin-btn admin-btn-small">2</button>
+      <button type="button" class="admin-btn admin-btn-small">3</button>
+      <button type="button" class="admin-icon-btn">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  </div>
+</section>

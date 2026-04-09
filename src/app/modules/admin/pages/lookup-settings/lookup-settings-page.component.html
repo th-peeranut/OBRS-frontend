@@ -1,0 +1,169 @@
+<section class="admin-page-intro">
+  <div>
+    <h3>{{ 'ADMIN.LOOKUP.TITLE' | translate }}</h3>
+    <p>{{ 'ADMIN.LOOKUP.SUBTITLE' | translate }}</p>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.LOOKUP.ADD' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-grid admin-grid--layout mt-3">
+  <article class="admin-card">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.LOOKUP.STATS' | translate }}</h4>
+      <span class="admin-pill">+12%</span>
+    </div>
+    <p class="admin-big-number">{{ totalEntries }}</p>
+    <p class="admin-muted">{{ 'ADMIN.LOOKUP.TOTAL_ENTRIES' | translate }}</p>
+    <div class="admin-progress">
+      <span style="width: 72%"></span>
+    </div>
+    <p class="admin-muted">{{ 'ADMIN.LOOKUP.UPDATED_HINT' | translate }}</p>
+  </article>
+
+  <article class="admin-card">
+    <h4>{{ 'ADMIN.LOOKUP.CATEGORIES' | translate }}</h4>
+    <ul class="admin-list">
+      <li *ngFor="let category of categories">
+        <span>{{ category.name }}</span>
+        <strong>{{ category.count }}</strong>
+      </li>
+    </ul>
+  </article>
+
+  <article class="admin-card admin-grid-span-2">
+    <div class="admin-card-head">
+      <h4>{{ 'ADMIN.LOOKUP.TABLE_TITLE' | translate }}</h4>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>{{ 'ADMIN.LOOKUP.CATEGORY' | translate }}</th>
+            <th>{{ 'ADMIN.LOOKUP.SLUG' | translate }}</th>
+            <th>{{ 'ADMIN.LOOKUP.TRANSLATIONS' | translate }}</th>
+            <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let entry of entries; let i = index" [class.zebra]="i % 2 === 1">
+            <td>
+              <span class="admin-chip">{{ entry.category }}</span>
+            </td>
+            <td><code>{{ entry.slug }}</code></td>
+            <td>
+              <div class="admin-cell-stack">
+                <span><strong>EN:</strong> {{ entry.enLabel }}</span>
+                <span><strong>TH:</strong> {{ entry.thLabel }}</span>
+              </div>
+            </td>
+            <td class="text-right">
+              <div class="admin-inline-actions">
+                <button type="button" class="admin-icon-btn" (click)="openEditModal(entry)">
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(entry)">
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </article>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{
+        isEditMode
+          ? ('ADMIN.LOOKUP.EDIT_TITLE' | translate)
+          : ('ADMIN.LOOKUP.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.LOOKUP.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="lookupForm" class="admin-form-grid" (ngSubmit)="submitLookup()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.LOOKUP.CATEGORY' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="category" />
+        <small class="admin-error" *ngIf="isFieldInvalid('category')">
+          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.LOOKUP.SLUG' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="slug" />
+        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
+          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.LOOKUP.EN_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="enLabel" />
+        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_LABEL' | translate }}</label>
+        <input class="admin-field" formControlName="thLabel" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.EN_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="enDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.LOOKUP.TH_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="thDescription"></textarea>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitLookup()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedEntry">{{ selectedEntry.slug }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+

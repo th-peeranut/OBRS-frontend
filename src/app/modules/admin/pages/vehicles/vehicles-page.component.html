@@ -1,0 +1,166 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted">{{ 'ADMIN.VEHICLES.MONITORING' | translate }}</p>
+    <h3>{{ 'ADMIN.VEHICLES.TITLE' | translate }}</h3>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.VEHICLES.ADD' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-grid admin-grid--3 mt-3">
+  <article class="admin-card">
+    <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL_CAPACITY' | translate }}</p>
+    <p class="admin-big-number">{{ totalVehicles }} {{ 'ADMIN.VEHICLES.UNITS' | translate }}</p>
+    <p class="admin-emphasis admin-success">+4.2%</p>
+  </article>
+  <article class="admin-card admin-grid-span-2">
+    <div class="admin-split">
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
+        <p class="admin-emphasis">{{ activeVehicles }}</p>
+      </div>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
+        <p class="admin-emphasis">{{ pendingVehicles }}</p>
+      </div>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.VEHICLES.EFFICIENCY' | translate }}</p>
+        <p class="admin-emphasis">94.8%</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.CURRENT_ROUTE' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.STATUS' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let vehicle of vehicles; let i = index" [class.zebra]="i % 2 === 1">
+          <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
+          <td><code>{{ vehicle.plate }}</code></td>
+          <td>{{ vehicle.vehicleType }}</td>
+          <td>{{ vehicle.route }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(vehicle.status)">{{ vehicle.status }}</span>
+          </td>
+          <td class="text-right">
+            <div class="admin-inline-actions">
+              <button type="button" class="admin-icon-btn" (click)="openEditModal(vehicle)">
+                <span class="material-symbols-outlined">edit_square</span>
+              </button>
+              <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(vehicle)">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="admin-table-footer">
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ vehicles.length }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ vehicles.length }} {{ 'ADMIN.VEHICLES.UNITS' | translate }}
+    </span>
+  </div>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{
+        isEditMode
+          ? ('ADMIN.VEHICLES.EDIT_TITLE' | translate)
+          : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <select class="admin-field" formControlName="vehicleType">
+          <option *ngFor="let option of vehicleTypeOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <select class="admin-field" formControlName="status">
+          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="numberPlate" />
+        <small class="admin-error" *ngIf="isFieldInvalid('numberPlate')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="vehicleNumber" />
+        <small class="admin-error" *ngIf="isFieldInvalid('vehicleNumber')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitVehicle()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedVehicle">{{ selectedVehicle.vehicleNumber }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+

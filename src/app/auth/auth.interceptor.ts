@@ -21,13 +21,20 @@ export const authInterceptor: HttpInterceptorFn = (
   const authService = inject(AuthService);
   const router = inject(Router);
   const token = authService.getToken();
+  const appLanguage = localStorage.getItem('app_language') || 'th';
   const isAuthEndpoint = req.url.includes('/api/auth/');
 
-  const requestWithAuth = token
-    ? req.clone({
-        headers: req.headers.set('Authorization', `Bearer ${token}`),
-      })
-    : req;
+  let headers = req.headers;
+
+  if (!headers.has('Accept-Language')) {
+    headers = headers.set('Accept-Language', appLanguage);
+  }
+
+  if (token) {
+    headers = headers.set('Authorization', `Bearer ${token}`);
+  }
+
+  const requestWithAuth = req.clone({ headers });
 
   return next(requestWithAuth).pipe(
     mergeMap((event: HttpEvent<unknown>) => {

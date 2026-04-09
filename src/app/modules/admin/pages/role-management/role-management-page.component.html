@@ -1,0 +1,164 @@
+<section class="admin-page-intro">
+  <div>
+    <h3>{{ 'ADMIN.ROLES.TITLE' | translate }}</h3>
+    <p>{{ 'ADMIN.ROLES.SUBTITLE' | translate }}</p>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.ROLES.ADD' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-grid admin-grid--3 mt-3">
+  <article class="admin-card">
+    <p class="admin-muted">{{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}</p>
+    <p class="admin-big-number">{{ activeRoles }}</p>
+  </article>
+
+  <article class="admin-card admin-grid-span-2">
+    <div class="admin-split">
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.ROLES.LAST_UPDATE' | translate }}</p>
+        <p class="admin-emphasis">{{ lastUpdatedAt }}</p>
+      </div>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.ROLES.SYSTEM_HEALTH' | translate }}</p>
+        <p class="admin-emphasis admin-success">{{ 'ADMIN.ROLES.OPTIMIZED' | translate }}</p>
+      </div>
+      <div>
+        <p class="admin-muted">{{ 'ADMIN.ROLES.AUDITORS' | translate }}</p>
+        <p class="admin-emphasis">+12 {{ 'ADMIN.ROLES.ACTIVE' | translate }}</p>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.ROLES.SLUG' | translate }}</th>
+          <th>{{ 'ADMIN.ROLES.NAME' | translate }}</th>
+          <th>{{ 'ADMIN.ROLES.UPDATED_AT' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let role of roles; let i = index" [class.zebra]="i % 2 === 1">
+          <td>
+            <code>{{ role.slug }}</code>
+          </td>
+          <td>
+            <div class="admin-cell-stack">
+              <span class="admin-emphasis">{{ role.enLabel }}</span>
+              <span>{{ role.enDescription }}</span>
+            </div>
+          </td>
+          <td>{{ role.updatedAt }}</td>
+          <td class="text-right">
+            <div class="admin-inline-actions">
+              <button type="button" class="admin-icon-btn" (click)="openEditModal(role)">
+                <span class="material-symbols-outlined">edit_square</span>
+              </button>
+              <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(role)">
+                <span class="material-symbols-outlined">delete</span>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="admin-table-footer">
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ roles.length }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ activeRoles }} {{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}
+    </span>
+    <div class="admin-inline-actions">
+      <button type="button" class="admin-icon-btn">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <button type="button" class="admin-icon-btn">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{ isEditMode ? ('ADMIN.ROLES.EDIT_TITLE' | translate) : ('ADMIN.ROLES.ADD_TITLE' | translate) }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.ROLES.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="roleForm" class="admin-form-grid" (ngSubmit)="submitRole()">
+      <div class="admin-form-field full">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROLES.SLUG' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="slug" />
+        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
+          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROLES.EN_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="enLabel" />
+        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_LABEL' | translate }}</label>
+        <input class="admin-field" formControlName="thLabel" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.EN_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="enDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="thDescription"></textarea>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitRole()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedRole">{{ selectedRole.slug }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+

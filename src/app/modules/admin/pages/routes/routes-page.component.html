@@ -1,0 +1,156 @@
+<section class="admin-page-intro">
+  <div>
+    <h3>{{ routeName }}</h3>
+    <p>Total Distance: 84.5 km - Estimated Total: 1h 45m</p>
+    <p class="admin-muted" *ngIf="isLoading">Loading route details...</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </div>
+  <div class="admin-inline-actions">
+    <button type="button" class="admin-btn">
+      <span class="material-symbols-outlined">history</span>
+      <span>Audit Logs</span>
+    </button>
+    <button type="button" class="admin-btn admin-btn-primary">
+      <span class="material-symbols-outlined">save</span>
+      <span>Publish Changes</span>
+    </button>
+  </div>
+</section>
+
+<section class="admin-grid admin-grid--layout mt-3">
+  <article class="admin-card">
+    <div class="admin-card-head">
+      <h4>Sequence of Stops</h4>
+      <button type="button" class="admin-icon-btn">
+        <span class="material-symbols-outlined">add_circle</span>
+      </button>
+    </div>
+
+    <ul class="admin-timeline">
+      <li *ngFor="let stop of stops; let i = index">
+        <div class="admin-timeline-dot" [class.is-last]="i === stops.length - 1"></div>
+        <div class="admin-cell-stack">
+          <div class="admin-inline-label">
+            <span class="admin-emphasis">{{ stop.name }}</span>
+            <small *ngIf="stop.label">{{ stop.label }}</small>
+          </div>
+          <span>{{ stop.distance }} - {{ stop.duration }}</span>
+        </div>
+      </li>
+    </ul>
+  </article>
+
+  <article class="admin-card admin-grid-span-2">
+    <div class="admin-card-head">
+      <h4>Segments and Fare Matrix</h4>
+      <div class="admin-inline-actions">
+        <select
+          class="admin-select"
+          [ngModel]="selectedVehicleTypeSlug"
+          (ngModelChange)="onVehicleTypeChange($event)"
+        >
+          <option *ngFor="let option of vehicleTypeOptions" [value]="option.slug">
+            {{ option.name }}
+          </option>
+        </select>
+        <label class="admin-search">
+          <span class="material-symbols-outlined">search</span>
+          <input
+            type="text"
+            placeholder="Search pairs..."
+            [(ngModel)]="searchTerm"
+            (ngModelChange)="onSearchChange()"
+          />
+        </label>
+      </div>
+    </div>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Origin Stop</th>
+            <th>Destination Stop</th>
+            <th>Fare (THB)</th>
+            <th>Est. Duration</th>
+            <th class="text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let segment of pagedSegments; let i = index" [class.zebra]="i % 2 === 1">
+            <td>{{ segment.origin }}</td>
+            <td>{{ segment.destination }}</td>
+            <td class="admin-emphasis">{{ formatFare(segment.fare) }}</td>
+            <td>{{ segment.duration }}</td>
+            <td class="text-right">
+              <button type="button" class="admin-icon-btn" (click)="openEditModal(segment)">
+                <span class="material-symbols-outlined">edit</span>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="admin-table-footer">
+      <span>Showing {{ showingFrom }} - {{ showingTo }} of {{ totalSegments }} segments</span>
+      <div class="admin-inline-actions">
+        <button
+          type="button"
+          class="admin-btn admin-btn-small"
+          [disabled]="!canPreviousPage"
+          (click)="goToPreviousPage()"
+        >
+          Prev
+        </button>
+        <button type="button" class="admin-btn admin-btn-small admin-btn-primary">
+          {{ currentPage }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn admin-btn-small"
+          [disabled]="!canNextPage"
+          (click)="goToNextPage()"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section class="admin-card admin-map-card mt-3">
+  <h4>Live Network Pulse</h4>
+  <p>Currently 12 active buses on this route. Open live tracker for telemetry details.</p>
+  <button type="button" class="admin-btn admin-btn-primary">Open Live Tracker</button>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isEditModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">Edit Segment Fare</h4>
+    <p class="admin-modal-subtitle" *ngIf="selectedSegment">
+      {{ selectedSegment.origin }} -> {{ selectedSegment.destination }}
+    </p>
+
+    <form [formGroup]="editSegmentForm" class="admin-form-grid" (ngSubmit)="submitSegmentEdit()">
+      <div class="admin-form-field full">
+        <label class="admin-form-label">Fare (THB) <span class="admin-required">*</span></label>
+        <input class="admin-field" formControlName="fare" type="number" min="0.01" step="0.01" />
+        <small class="admin-error" *ngIf="isFieldInvalid('fare')">
+          Please enter a valid fare greater than 0.
+        </small>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeEditModal()">Cancel</button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSavingEdit"
+        (click)="submitSegmentEdit()"
+      >
+        {{ isSavingEdit ? 'Saving...' : 'Save' }}
+      </button>
+    </div>
+  </div>
+</div>

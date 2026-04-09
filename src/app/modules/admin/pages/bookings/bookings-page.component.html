@@ -1,0 +1,91 @@
+<section class="admin-grid admin-grid--3">
+  <article class="admin-card">
+    <p class="admin-muted">Total Bookings Today</p>
+    <p class="admin-big-number">{{ bookings.length }}</p>
+    <p class="admin-emphasis admin-success">+12%</p>
+  </article>
+  <article class="admin-card">
+    <p class="admin-muted">Pending Payments</p>
+    <p class="admin-big-number">{{ pendingPaymentCount }}</p>
+    <p class="admin-emphasis">Urgent</p>
+  </article>
+  <article class="admin-card">
+    <p class="admin-muted">Revenue (MTD)</p>
+    <p class="admin-big-number">{{ totalRevenue }}</p>
+    <p class="admin-emphasis admin-success">Updated</p>
+  </article>
+</section>
+
+<section class="admin-card mt-3">
+  <p class="admin-muted" *ngIf="isLoading">Loading booking data...</p>
+  <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+  <div class="admin-page-filters">
+    <label class="admin-search">
+      <span class="material-symbols-outlined">search</span>
+      <input type="text" placeholder="Search by booking ID or customer..." />
+    </label>
+    <select class="admin-select">
+      <option>All Statuses</option>
+    </select>
+    <label class="admin-input">
+      <span class="material-symbols-outlined">calendar_month</span>
+      <input type="text" value="Oct 01, 2023 - Oct 31, 2023" />
+    </label>
+    <button type="button" class="admin-btn">
+      <span class="material-symbols-outlined">download</span>
+      <span>Export</span>
+    </button>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Booking ID</th>
+          <th>Customer Name</th>
+          <th>Route</th>
+          <th>Booking Date</th>
+          <th>Total Fare</th>
+          <th>Booking Status</th>
+          <th>Payment Status</th>
+          <th class="text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let booking of bookings; let i = index" [class.zebra]="i % 2 === 1">
+          <td class="admin-emphasis">{{ booking.bookingId }}</td>
+          <td>{{ booking.customer }}</td>
+          <td>{{ booking.route }}</td>
+          <td>{{ booking.bookingDate }}</td>
+          <td class="admin-emphasis">{{ booking.totalFare }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(booking.bookingStatus)">
+              {{ booking.bookingStatus }}
+            </span>
+          </td>
+          <td>
+            <span class="admin-status" [ngClass]="paymentClass(booking.paymentStatus)">
+              {{ booking.paymentStatus }}
+            </span>
+          </td>
+          <td class="text-right">
+            <button type="button" class="admin-icon-btn">
+              <span class="material-symbols-outlined">more_vert</span>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="admin-table-footer">
+    <span>Showing 1 to {{ bookings.length }} of {{ bookings.length }} entries</span>
+    <div class="admin-inline-actions">
+      <button type="button" class="admin-btn admin-btn-small">Previous</button>
+      <button type="button" class="admin-btn admin-btn-small admin-btn-primary">1</button>
+      <button type="button" class="admin-btn admin-btn-small">2</button>
+      <button type="button" class="admin-btn admin-btn-small">3</button>
+      <button type="button" class="admin-btn admin-btn-small">Next</button>
+    </div>
+  </div>
+</section>

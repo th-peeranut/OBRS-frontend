@@ -1,0 +1,89 @@
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <h1>{{ 'ADMIN.LAYOUT.BRAND' | translate }}</h1>
+      <p>{{ 'ADMIN.LAYOUT.SUBTITLE' | translate }}</p>
+    </div>
+
+    <nav class="admin-nav">
+      <a
+        *ngFor="let item of navItems"
+        [routerLink]="item.path"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="admin-nav-link"
+      >
+        <span class="material-symbols-outlined">{{ item.icon }}</span>
+        <span>{{ item.labelKey | translate }}</span>
+      </a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a class="admin-nav-link" href="javascript:void(0)">
+        <span class="material-symbols-outlined">help_outline</span>
+        <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
+      </a>
+      <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
+        <span class="material-symbols-outlined">logout</span>
+        <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <div class="admin-title-block">
+        <h2>{{ pageTitleKey | translate }}</h2>
+        <p>{{ pageSubtitleKey | translate }}</p>
+      </div>
+
+      <div class="admin-topbar-actions">
+        <label class="admin-search">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" [placeholder]="'ADMIN.LAYOUT.SEARCH_PLACEHOLDER' | translate" />
+        </label>
+
+        <div class="admin-lang-switch" role="group">
+          <button
+            type="button"
+            class="admin-lang-btn"
+            [class.active]="currentLanguage === 'th'"
+            (click)="switchLanguage('th')"
+          >
+            TH
+          </button>
+          <button
+            type="button"
+            class="admin-lang-btn"
+            [class.active]="currentLanguage === 'en'"
+            (click)="switchLanguage('en')"
+          >
+            EN
+          </button>
+        </div>
+
+        <button type="button" class="admin-icon-btn">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <button type="button" class="admin-icon-btn">
+          <span class="material-symbols-outlined">help</span>
+        </button>
+
+        <div class="admin-profile">
+          <button class="admin-avatar" type="button" (click)="toggleProfileMenu()">AR</button>
+          <div class="admin-profile-menu" *ngIf="isProfileMenuOpen">
+            <button type="button" class="admin-profile-item" (click)="onLogout()">
+              <span class="material-symbols-outlined">logout</span>
+              <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="admin-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
