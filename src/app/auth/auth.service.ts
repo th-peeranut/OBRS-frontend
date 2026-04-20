@@ -13,6 +13,7 @@ import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'auth_username';
+  private readonly ROLES_KEY = 'auth_roles';
   private readonly REGISTER_VALUE_KEY = 'register_value';
   private readonly RETURN_URL_KEY = 'auth_return_url';
 
@@ -47,7 +48,8 @@ export class AuthService {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
           const username = response?.data?.user?.username ?? payload.username;
-          this.storeAuthData(token, username);
+          const roles = response?.data?.user?.roles;
+          this.storeAuthData(token, username, roles);
         }
         return response;
       })
@@ -60,7 +62,11 @@ export class AuthService {
       });
   }
 
-  private storeAuthData(token: string | null | undefined, username: string | null | undefined): void {
+  private storeAuthData(
+    token: string | null | undefined,
+    username: string | null | undefined,
+    roles?: string[] | null | undefined
+  ): void {
     if (!token) return;
     localStorage.setItem(this.TOKEN_KEY, token);
     if (username) {
@@ -68,12 +74,21 @@ export class AuthService {
     } else {
       localStorage.removeItem(this.USERNAME_KEY);
     }
+
+    const normalizedRoles = Array.isArray(roles)
+      ? roles
+          .map((role) => String(role ?? '').trim().toLowerCase())
+          .filter((role) => role.length > 0)
+      : [];
+    localStorage.setItem(this.ROLES_KEY, JSON.stringify(normalizedRoles));
+
     this.authStatusSubject.next(true);
   }
 
   clearAuthData(): void {
     localStorage.removeItem(this.TOKEN_KEY);
     localStorage.removeItem(this.USERNAME_KEY);
+    localStorage.removeItem(this.ROLES_KEY);
     this.authStatusSubject.next(false);
   }
 
@@ -107,6 +122,37 @@ export class AuthService {
 
   getUsername(): string | null {
     return localStorage.getItem(this.USERNAME_KEY);
+  }
+
+  getRoles(): string[] {
+    const rawRoles = localStorage.getItem(this.ROLES_KEY);
+    if (!rawRoles) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(rawRoles);
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .map((role) => String(role ?? '').trim().toLowerCase())
+        .filter((role) => role.length > 0);
+    } catch {
+      return [];
+    }
+  }
+
+  hasAnyRole(requiredRoles: string[]): boolean {
+    if (!Array.isArray(requiredRoles) || requiredRoles.length === 0) {
+      return true;
+    }
+
+    const userRoles = new Set(this.getRoles());
+    return requiredRoles.some((role) =>
+      userRoles.has(String(role ?? '').trim().toLowerCase())
+    );
   }
 
   logout(): void {
@@ -176,7 +222,8 @@ export class AuthService {
           if (response?.code === 200) {
             const token = response?.data?.accessToken ?? response?.data?.token;
             const username = response?.data?.user?.username ?? response?.data?.username;
-            this.storeAuthData(token, username);
+            const roles = response?.data?.user?.roles ?? response?.data?.roles;
+            this.storeAuthData(token, username, roles);
           }
           return response;
         })

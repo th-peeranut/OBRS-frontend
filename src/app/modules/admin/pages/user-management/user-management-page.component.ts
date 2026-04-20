@@ -42,9 +42,13 @@ interface StatusOption {
 })
 export class UserManagementPageComponent implements OnInit {
   protected users: UserRow[] = [];
+  protected filteredUsers: UserRow[] = [];
 
   protected roleOptions: RoleOption[] = [];
   protected statusOptions: StatusOption[] = [];
+  protected selectedRoleFilter = '';
+  protected selectedStatusFilter = '';
+  protected searchKeyword = '';
 
   protected isLoading = false;
   protected errorMessage = '';
@@ -107,6 +111,21 @@ export class UserManagementPageComponent implements OnInit {
     }
 
     return 'is-danger';
+  }
+
+  protected onRoleFilterChange(value: string): void {
+    this.selectedRoleFilter = String(value ?? '').trim().toLowerCase();
+    this.applyFilters();
+  }
+
+  protected onStatusFilterChange(value: string): void {
+    this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
+    this.applyFilters();
+  }
+
+  protected onSearchKeywordChange(value: string): void {
+    this.searchKeyword = String(value ?? '');
+    this.applyFilters();
   }
 
   protected openCreateModal(): void {
@@ -294,8 +313,11 @@ export class UserManagementPageComponent implements OnInit {
         }));
 
       this.users = users.map((user) => this.toUserRow(user));
+      this.syncFiltersWithAvailableOptions();
+      this.applyFilters();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
+      this.filteredUsers = [];
     } finally {
       this.isLoading = false;
     }
@@ -444,5 +466,64 @@ export class UserManagementPageComponent implements OnInit {
     }
 
     return { required: true };
+  }
+
+  private syncFiltersWithAvailableOptions(): void {
+    if (
+      this.selectedRoleFilter &&
+      !this.roleOptions.some(
+        (option) => option.slug.trim().toLowerCase() === this.selectedRoleFilter
+      )
+    ) {
+      this.selectedRoleFilter = '';
+    }
+
+    if (
+      this.selectedStatusFilter &&
+      !this.statusOptions.some(
+        (option) => option.code.trim().toLowerCase() === this.selectedStatusFilter
+      )
+    ) {
+      this.selectedStatusFilter = '';
+    }
+  }
+
+  private applyFilters(): void {
+    const roleFilter = this.selectedRoleFilter;
+    const statusFilter = this.selectedStatusFilter;
+    const keyword = this.searchKeyword.trim().toLowerCase();
+
+    this.filteredUsers = this.users.filter((user) => {
+      const matchRole =
+        roleFilter.length === 0 ||
+        user.roleSlugs.some((role) => role.trim().toLowerCase() === roleFilter);
+      if (!matchRole) {
+        return false;
+      }
+
+      const matchStatus =
+        statusFilter.length === 0 ||
+        user.statusCode.trim().toLowerCase() === statusFilter;
+      if (!matchStatus) {
+        return false;
+      }
+
+      if (keyword.length === 0) {
+        return true;
+      }
+
+      const searchTarget = [
+        user.fullName,
+        user.username,
+        user.email,
+        user.phone,
+        user.roles.join(' '),
+        user.status,
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return searchTarget.includes(keyword);
+    });
   }
 }

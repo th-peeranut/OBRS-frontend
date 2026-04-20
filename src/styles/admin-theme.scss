@@ -675,6 +675,44 @@
 .admin-select {
   min-width: 130px;
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 42px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, border-radius 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235c6a72' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 14px 14px;
+  background-position: calc(100% - 14px) calc(50% + 3px);
+}
+
+.admin-select:focus,
+.admin-select:focus-visible {
+  outline: none;
+  border-color: rgba(0, 102, 135, 0.4);
+  box-shadow: 0 0 0 3px rgba(77, 190, 239, 0.18);
+  border-radius: 14px;
+}
+
+/* Modern open-state polish where the browser supports :open on select */
+.admin-select:open {
+  border-color: rgba(0, 102, 135, 0.45);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(25, 28, 30, 0.12), 0 0 0 3px rgba(77, 190, 239, 0.15);
+}
+
+.admin-select option {
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.admin-select option:checked {
+  background: linear-gradient(135deg, rgba(77, 190, 239, 0.2), rgba(0, 102, 135, 0.12));
+  color: #0a4f67;
+}
+
+.admin-select::-ms-expand {
+  display: none;
 }
 
 .admin-field,

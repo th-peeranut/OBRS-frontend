@@ -12,14 +12,37 @@
 </section>
 
 <section class="admin-page-filters mt-3">
-  <button type="button" class="admin-filter-btn">
-    <span class="material-symbols-outlined">filter_list</span>
-    <span>{{ 'ADMIN.USERS.FILTER_ROLE' | translate }}</span>
-  </button>
-  <button type="button" class="admin-filter-btn">
-    <span class="material-symbols-outlined">check_circle</span>
-    <span>{{ 'ADMIN.USERS.FILTER_STATUS' | translate }}</span>
-  </button>
+  <label class="admin-input">
+    <span class="material-symbols-outlined">search</span>
+    <input
+      type="text"
+      [value]="searchKeyword"
+      (input)="onSearchKeywordChange($any($event.target).value)"
+      [placeholder]="'ADMIN.LAYOUT.SEARCH_PLACEHOLDER' | translate"
+    />
+  </label>
+
+  <select
+    class="admin-select"
+    [value]="selectedRoleFilter"
+    (change)="onRoleFilterChange($any($event.target).value)"
+  >
+    <option value="">{{ 'ADMIN.USERS.FILTER_ROLE' | translate }}</option>
+    <option *ngFor="let role of roleOptions" [value]="role.slug.toLowerCase()">
+      {{ role.label }}
+    </option>
+  </select>
+
+  <select
+    class="admin-select"
+    [value]="selectedStatusFilter"
+    (change)="onStatusFilterChange($any($event.target).value)"
+  >
+    <option value="">{{ 'ADMIN.USERS.FILTER_STATUS' | translate }}</option>
+    <option *ngFor="let status of statusOptions" [value]="status.code.toLowerCase()">
+      {{ status.label }}
+    </option>
+  </select>
 </section>
 
 <section class="admin-card mt-3">
@@ -36,7 +59,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of users; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let user of filteredUsers; let i = index" [class.zebra]="i % 2 === 1">
           <td>
             <div class="admin-cell-stack">
               <span class="admin-emphasis">{{ user.fullName }}</span>
@@ -75,7 +98,7 @@
 
   <div class="admin-table-footer">
     <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ users.length }}
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredUsers.length === 0 ? 0 : 1 }} - {{ filteredUsers.length }}
       {{ 'ADMIN.COMMON.OF' | translate }} {{ users.length }} {{ 'ADMIN.USERS.USER_COUNT' | translate }}
     </span>
   </div>

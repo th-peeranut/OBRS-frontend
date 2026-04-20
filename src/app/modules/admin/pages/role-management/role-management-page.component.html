@@ -27,12 +27,34 @@
         <p class="admin-muted">{{ 'ADMIN.ROLES.SYSTEM_HEALTH' | translate }}</p>
         <p class="admin-emphasis admin-success">{{ 'ADMIN.ROLES.OPTIMIZED' | translate }}</p>
       </div>
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.ROLES.AUDITORS' | translate }}</p>
-        <p class="admin-emphasis">+12 {{ 'ADMIN.ROLES.ACTIVE' | translate }}</p>
-      </div>
     </div>
   </article>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <div class="role-filter-dropdown" (click)="$event.stopPropagation()">
+    <button type="button" class="admin-filter-btn role-filter-toggle" (click)="toggleRoleFilterDropdown($event)">
+      <span class="role-filter-toggle-content">
+        <span class="material-symbols-outlined">filter_list</span>
+        <span>{{ selectedRoleFilterLabelKey | translate }}</span>
+      </span>
+      <span class="material-symbols-outlined role-filter-arrow" [class.open]="isRoleFilterDropdownOpen">
+        expand_more
+      </span>
+    </button>
+
+    <div class="dropdown-menu dropdown-menu-border role-filter-menu" [class.show]="isRoleFilterDropdownOpen">
+      <button
+        type="button"
+        class="dropdown-item role-filter-option"
+        *ngFor="let option of roleFilterOptions"
+        [class.active]="option.value === selectedRoleFilter"
+        (click)="selectRoleFilter(option.value)"
+      >
+        {{ option.labelKey | translate }}
+      </button>
+    </div>
+  </div>
 </section>
 
 <section class="admin-card mt-3">
@@ -47,7 +69,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let role of roles; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let role of filteredRoles; let i = index" [class.zebra]="i % 2 === 1">
           <td>
             <code>{{ role.slug }}</code>
           </td>
@@ -74,7 +96,7 @@
   </div>
   <div class="admin-table-footer">
     <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ roles.length }}
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredRoles.length === 0 ? 0 : 1 }} - {{ filteredRoles.length }}
       {{ 'ADMIN.COMMON.OF' | translate }} {{ activeRoles }} {{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}
     </span>
     <div class="admin-inline-actions">
@@ -161,4 +183,3 @@
     </div>
   </div>
 </div>
-

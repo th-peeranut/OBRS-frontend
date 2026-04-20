@@ -145,6 +145,9 @@
       "SYSTEM_HEALTH": "System Health",
       "OPTIMIZED": "Optimized",
       "AUDITORS": "Audit Team",
+      "FILTER_ALL": "Filter: All Roles",
+      "FILTER_WITH_TH": "Filter: Has Thai Label",
+      "FILTER_WITHOUT_TH": "Filter: Missing Thai Label",
       "ACTIVE": "active",
       "SLUG": "Slug",
       "NAME": "Translated Name",
@@ -160,7 +163,7 @@
     "USERS": {
       "TITLE": "User Management",
       "SUBTITLE": "Manage account access, statuses, and role assignments.",
-      "INVITE": "Invite User",
+      "INVITE": "Add User",
       "FILTER_ROLE": "Role: All Roles",
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
@@ -224,7 +227,8 @@
     "LOGIN_USERNAME": "Sign in with your username or email",
     "SEND_OTP": "Send OTP",
     "LOGIN_SUCCESS": "Signin successful",
-    "LOGIN_FAIL": "Error encountered. Signin failed"
+    "LOGIN_FAIL": "Error encountered. Signin failed",
+    "NO_ADMIN_PERMISSION": "You do not have permission to access the admin page."
   },
   "REGISTER": {
     "WELCOME": "Register",

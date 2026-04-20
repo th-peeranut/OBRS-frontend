@@ -2,3 +2,88 @@
   display: block;
 }
 
+.role-filter-dropdown {
+  position: relative;
+}
+
+.role-filter-toggle {
+  min-width: 260px;
+  justify-content: space-between;
+  border-radius: 14px;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.role-filter-toggle:focus-visible {
+  outline: none;
+  border-color: rgba(0, 102, 135, 0.35);
+  box-shadow: 0 0 0 3px rgba(77, 190, 239, 0.22);
+}
+
+.role-filter-toggle-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.role-filter-arrow {
+  transition: transform 0.2s ease;
+}
+
+.role-filter-arrow.open {
+  transform: rotate(180deg);
+}
+
+.role-filter-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 260px;
+  border: 1px solid rgba(189, 200, 207, 0.75);
+  border-radius: 14px;
+  background: #ffffff;
+  padding: 8px;
+  box-shadow: 0 16px 30px rgba(21, 38, 52, 0.12);
+  display: none;
+  z-index: 5;
+}
+
+.role-filter-menu.show {
+  display: block;
+  animation: roleFilterFadeIn 0.14s ease-out;
+}
+
+.role-filter-option {
+  border-radius: 10px;
+  margin-bottom: 4px;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #30424b;
+}
+
+.role-filter-option:last-child {
+  margin-bottom: 0;
+}
+
+.role-filter-option:hover {
+  background: #eef4f7;
+  color: #0f5268;
+}
+
+.role-filter-option.active {
+  background: rgba(0, 102, 135, 0.12);
+  color: #0b4f66;
+}
+
+@keyframes roleFilterFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -20,6 +20,11 @@ interface RoleRow {
   updatedAt: string;
 }
 
+interface RoleFilterOption {
+  value: 'all' | 'with_th' | 'without_th';
+  labelKey: string;
+}
+
 @Component({
   selector: 'app-role-management-page',
   templateUrl: './role-management-page.component.html',
@@ -27,10 +32,18 @@ interface RoleRow {
 })
 export class RoleManagementPageComponent implements OnInit {
   protected roles: RoleRow[] = [];
+  protected filteredRoles: RoleRow[] = [];
 
   protected lastUpdatedAt = '-';
   protected isLoading = false;
   protected errorMessage = '';
+  protected selectedRoleFilter: RoleFilterOption['value'] = 'all';
+  protected isRoleFilterDropdownOpen = false;
+  protected readonly roleFilterOptions: RoleFilterOption[] = [
+    { value: 'all', labelKey: 'ADMIN.ROLES.FILTER_ALL' },
+    { value: 'with_th', labelKey: 'ADMIN.ROLES.FILTER_WITH_TH' },
+    { value: 'without_th', labelKey: 'ADMIN.ROLES.FILTER_WITHOUT_TH' },
+  ];
 
   protected isFormModalOpen = false;
   protected isDeleteModalOpen = false;
@@ -62,6 +75,31 @@ export class RoleManagementPageComponent implements OnInit {
 
   get activeRoles(): number {
     return this.roles.length;
+  }
+
+  get selectedRoleFilterLabelKey(): string {
+    return (
+      this.roleFilterOptions.find((option) => option.value === this.selectedRoleFilter)?.labelKey ??
+      'ADMIN.ROLES.FILTER_ALL'
+    );
+  }
+
+  protected toggleRoleFilterDropdown(event: Event): void {
+    event.stopPropagation();
+    this.isRoleFilterDropdownOpen = !this.isRoleFilterDropdownOpen;
+  }
+
+  protected selectRoleFilter(value: RoleFilterOption['value']): void {
+    this.selectedRoleFilter = value;
+    this.isRoleFilterDropdownOpen = false;
+    this.applyRoleFilter();
+  }
+
+  @HostListener('document:click')
+  protected closeRoleFilterDropdownOnOutsideClick(): void {
+    if (this.isRoleFilterDropdownOpen) {
+      this.isRoleFilterDropdownOpen = false;
+    }
   }
 
   protected openCreateModal(): void {
@@ -177,9 +215,11 @@ export class RoleManagementPageComponent implements OnInit {
       const roles = response?.data ?? [];
 
       this.roles = roles.map((role) => this.toRoleRow(role));
+      this.applyRoleFilter();
       this.lastUpdatedAt = this.toLatestTimestamp(roles);
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
+      this.filteredRoles = [];
     } finally {
       this.isLoading = false;
     }
@@ -312,5 +352,19 @@ export class RoleManagementPageComponent implements OnInit {
     }
 
     return translations.find((item) => item.description)?.description ?? null;
+  }
+
+  private applyRoleFilter(): void {
+    if (this.selectedRoleFilter === 'with_th') {
+      this.filteredRoles = this.roles.filter((role) => role.thLabel !== '-');
+      return;
+    }
+
+    if (this.selectedRoleFilter === 'without_th') {
+      this.filteredRoles = this.roles.filter((role) => role.thLabel === '-');
+      return;
+    }
+
+    this.filteredRoles = [...this.roles];
   }
 }
