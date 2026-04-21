@@ -2,3 +2,15 @@
   display: block;
 }
 
+.admin-page-filters .admin-select option {
+  background: #ffffff;
+  color: #30424b;
+  font-weight: 600;
+}
+
+.admin-page-filters .admin-select option:hover,
+.admin-page-filters .admin-select option:focus,
+.admin-page-filters .admin-select option:focus-visible {
+  background: #eef4f7;
+  color: #0f5268;
+}

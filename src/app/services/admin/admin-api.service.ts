@@ -42,6 +42,10 @@ export interface AdminRoleDto {
 
 export interface AdminUserDto {
   id: number;
+  title?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   fullName?: string;
   email?: string;
   phoneNumber?: string;
@@ -195,6 +199,19 @@ export interface CreateUserPayload {
   roles: string[];
 }
 
+export interface UpdateUserPayload {
+  title: string;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  isPhoneNumberVerify: boolean;
+  preferredLocale: string;
+  status: string;
+  roles: string[];
+}
+
 export interface CreateVehiclePayload {
   vehicleType: string;
   numberPlate: string;
@@ -288,6 +305,24 @@ export class AdminApiService {
     );
   }
 
+  checkUserExistsByUsername(username: string): Observable<ResponseAPI<boolean>> {
+    return this.http.get<ResponseAPI<boolean>>(
+      `${this.baseUrl}/users/check-duplicate/username/${encodeURIComponent(username)}`
+    );
+  }
+
+  checkUserExistsByEmail(email: string): Observable<ResponseAPI<boolean>> {
+    return this.http.get<ResponseAPI<boolean>>(
+      `${this.baseUrl}/users/check-duplicate/email/${encodeURIComponent(email)}`
+    );
+  }
+
+  checkUserExistsByPhoneNumber(phoneNumber: string): Observable<ResponseAPI<boolean>> {
+    return this.http.get<ResponseAPI<boolean>>(
+      `${this.baseUrl}/users/check-duplicate/phoneNumber/${encodeURIComponent(phoneNumber)}`
+    );
+  }
+
   createUser(payload: CreateUserPayload): Observable<ResponseAPI<unknown>> {
     return this.http.post<ResponseAPI<unknown>>(
       `${this.baseUrl}/private/users`,
@@ -295,7 +330,7 @@ export class AdminApiService {
     );
   }
 
-  updateUser(id: number, payload: CreateUserPayload): Observable<ResponseAPI<unknown>> {
+  updateUser(id: number, payload: UpdateUserPayload): Observable<ResponseAPI<unknown>> {
     return this.http.put<ResponseAPI<unknown>>(
       `${this.baseUrl}/private/users/${id}`,
       payload

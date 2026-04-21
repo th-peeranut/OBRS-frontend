@@ -1,6 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import {
+  catchError,
+  debounceTime,
+  distinctUntilChanged,
+  firstValueFrom,
+  map,
+  of,
+  Subscription,
+  switchMap,
+} from 'rxjs';
 import {
   AdminApiService,
   AdminRoleDto,
@@ -8,6 +17,7 @@ import {
   AdminTranslationDto,
   AdminUserDto,
   CreateUserPayload,
+  UpdateUserPayload,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -40,7 +50,7 @@ interface StatusOption {
   templateUrl: './user-management-page.component.html',
   styleUrl: './user-management-page.component.scss',
 })
-export class UserManagementPageComponent implements OnInit {
+export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected users: UserRow[] = [];
   protected filteredUsers: UserRow[] = [];
 
@@ -59,8 +69,25 @@ export class UserManagementPageComponent implements OnInit {
   protected isDeleting = false;
   protected isEditMode = false;
   protected selectedUser: UserRow | null = null;
+  protected usernameIsExist = false;
+  protected emailIsExist = false;
+  protected phoneNumberIsExist = false;
 
   protected readonly userForm: FormGroup;
+  private usernameCheckSubscription?: Subscription;
+  private emailCheckSubscription?: Subscription;
+  private phoneNumberCheckSubscription?: Subscription;
+  private readonly usernameValidators = [
+    Validators.required,
+    Validators.minLength(3),
+    Validators.maxLength(50),
+    Validators.pattern(/^[a-zA-Z0-9._-]+$/),
+  ];
+  private readonly passwordValidators = [
+    Validators.required,
+    Validators.minLength(8),
+    Validators.maxLength(255),
+  ];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -77,14 +104,10 @@ export class UserManagementPageComponent implements OnInit {
       phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
       username: [
         '',
-        [
-          Validators.required,
-          Validators.minLength(3),
-          Validators.maxLength(50),
-          Validators.pattern(/^[a-zA-Z0-9._-]+$/),
-        ],
+        this.usernameValidators,
       ],
-      password: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(255)]],
+      password: ['', this.passwordValidators],
+      confirmPassword: ['', [Validators.required]],
       preferredLocale: [
         'th',
         [Validators.required, Validators.pattern(/^[a-z]{2}(-[A-Z]{2})?$/)],
@@ -96,7 +119,14 @@ export class UserManagementPageComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    this.setupDuplicateCheckSubscriptions();
     await this.loadUsersAndOptions();
+  }
+
+  ngOnDestroy(): void {
+    this.usernameCheckSubscription?.unsubscribe();
+    this.emailCheckSubscription?.unsubscribe();
+    this.phoneNumberCheckSubscription?.unsubscribe();
   }
 
   protected statusClass(status: string): string {
@@ -131,6 +161,7 @@ export class UserManagementPageComponent implements OnInit {
   protected openCreateModal(): void {
     this.isEditMode = false;
     this.selectedUser = null;
+    this.resetDuplicateFlags();
     this.userForm.reset({
       title: '',
       firstName: '',
@@ -140,12 +171,13 @@ export class UserManagementPageComponent implements OnInit {
       phoneNumber: '',
       username: '',
       password: '',
+      confirmPassword: '',
       preferredLocale: 'th',
       status: this.statusOptions[0]?.code ?? 'active',
       roles: [],
       isPhoneNumberVerify: true,
     });
-    this.userForm.get('username')?.enable();
+    this.setCredentialFieldsForCreateMode();
     this.isFormModalOpen = true;
   }
 
@@ -161,41 +193,44 @@ export class UserManagementPageComponent implements OnInit {
 
     this.isEditMode = true;
     this.selectedUser = user;
+    this.resetDuplicateFlags();
 
-    const fullName = userDetail?.fullName ?? user.fullName;
-    const nameParts = fullName.split(' ').filter((part) => part.length > 0);
-    const firstName = nameParts[0] ?? '';
-    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+    const parsedName = this.parseNameFromFullName(userDetail?.fullName ?? user.fullName);
+    const firstName = String(userDetail?.firstName ?? parsedName.firstName ?? '').trim();
+    const middleName = String(userDetail?.middleName ?? parsedName.middleName ?? '').trim();
+    const lastName = String(userDetail?.lastName ?? parsedName.lastName ?? '').trim();
     const roles = this.extractRoleSlugs(userDetail?.roles);
     const status = this.parseStatus(userDetail?.status ?? user.statusCode);
 
     this.userForm.reset({
-      title: 'Mr',
+      title: String((userDetail?.title ?? parsedName.title) || 'Mr').trim(),
       firstName,
-      middleName: '',
+      middleName,
       lastName,
       email: userDetail?.email ?? user.email,
       phoneNumber: String(userDetail?.phoneNumber ?? user.phone).replace(/\D/g, ''),
       username: userDetail?.username ?? user.username,
       password: '',
+      confirmPassword: '',
       preferredLocale: userDetail?.preferredLocale ?? 'th',
       status: status.code,
       roles: roles.length > 0 ? roles : [...user.roleSlugs],
       isPhoneNumberVerify: true,
     });
 
-    this.userForm.get('username')?.disable();
+    this.setCredentialFieldsForEditMode();
     this.isFormModalOpen = true;
   }
 
-  protected closeFormModal(): void {
-    if (this.isSubmitting) {
+  protected closeFormModal(force = false): void {
+    if (this.isSubmitting && !force) {
       return;
     }
 
     this.isFormModalOpen = false;
     this.selectedUser = null;
     this.userForm.reset();
+    this.resetDuplicateFlags();
   }
 
   protected openDeleteModal(user: UserRow): void {
@@ -203,8 +238,8 @@ export class UserManagementPageComponent implements OnInit {
     this.isDeleteModalOpen = true;
   }
 
-  protected closeDeleteModal(): void {
-    if (this.isDeleting) {
+  protected closeDeleteModal(force = false): void {
+    if (this.isDeleting && !force) {
       return;
     }
 
@@ -246,19 +281,32 @@ export class UserManagementPageComponent implements OnInit {
       return;
     }
 
+    if (!this.isEditMode) {
+      const hasCredentialError =
+        !this.checkSamePassword() ||
+        this.usernameIsExist ||
+        this.emailIsExist ||
+        this.phoneNumberIsExist;
+
+      if (hasCredentialError) {
+        this.userForm.markAllAsTouched();
+        return;
+      }
+    }
+
     this.isSubmitting = true;
     try {
-      const payload = this.toUserPayload();
-
       if (this.isEditMode && this.selectedUser) {
+        const payload = this.toUpdateUserPayload();
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
         this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
+        const payload = this.toCreateUserPayload();
         await firstValueFrom(this.adminApiService.createUser(payload));
         this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      this.closeFormModal();
+      this.closeFormModal(true);
       await this.loadUsersAndOptions();
     } catch {
       this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -276,7 +324,7 @@ export class UserManagementPageComponent implements OnInit {
     try {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
       this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      this.closeDeleteModal();
+      this.closeDeleteModal(true);
       await this.loadUsersAndOptions();
     } catch {
       this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
@@ -323,7 +371,7 @@ export class UserManagementPageComponent implements OnInit {
     }
   }
 
-  private toUserPayload(): CreateUserPayload {
+  private toCreateUserPayload(): CreateUserPayload {
     const raw = this.userForm.getRawValue();
 
     return {
@@ -335,6 +383,23 @@ export class UserManagementPageComponent implements OnInit {
       phoneNumber: String(raw.phoneNumber ?? '').trim(),
       username: String(raw.username ?? '').trim(),
       password: String(raw.password ?? '').trim(),
+      isPhoneNumberVerify: Boolean(raw.isPhoneNumberVerify),
+      preferredLocale: String(raw.preferredLocale ?? 'th').trim(),
+      status: String(raw.status ?? '').trim().toLowerCase(),
+      roles: [...(raw.roles ?? [])],
+    };
+  }
+
+  private toUpdateUserPayload(): UpdateUserPayload {
+    const raw = this.userForm.getRawValue();
+
+    return {
+      title: String(raw.title ?? '').trim(),
+      firstName: String(raw.firstName ?? '').trim(),
+      middleName: String(raw.middleName ?? '').trim() || undefined,
+      lastName: String(raw.lastName ?? '').trim(),
+      email: String(raw.email ?? '').trim(),
+      phoneNumber: String(raw.phoneNumber ?? '').trim(),
       isPhoneNumberVerify: Boolean(raw.isPhoneNumberVerify),
       preferredLocale: String(raw.preferredLocale ?? 'th').trim(),
       status: String(raw.status ?? '').trim().toLowerCase(),
@@ -438,6 +503,37 @@ export class UserManagementPageComponent implements OnInit {
       .replace(',', ' -');
   }
 
+  private parseNameFromFullName(fullName: string | null | undefined): {
+    title: string;
+    firstName: string;
+    middleName: string;
+    lastName: string;
+  } {
+    const parts = String(fullName ?? '')
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+      return { title: '', firstName: '', middleName: '', lastName: '' };
+    }
+
+    const titleTokens = new Set(['mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'dr', 'dr.']);
+    let title = '';
+    if (titleTokens.has(parts[0].toLowerCase())) {
+      title = parts.shift() ?? '';
+    }
+
+    const firstName = parts.shift() ?? '';
+    if (parts.length === 0) {
+      return { title, firstName, middleName: '', lastName: '' };
+    }
+
+    const lastName = parts.pop() ?? '';
+    const middleName = parts.join(' ');
+    return { title, firstName, middleName, lastName };
+  }
+
   private getTranslationLabel(
     translations: AdminTranslationDto[] | null | undefined,
     locale?: string
@@ -466,6 +562,89 @@ export class UserManagementPageComponent implements OnInit {
     }
 
     return { required: true };
+  }
+
+  private setCredentialFieldsForCreateMode(): void {
+    const usernameControl = this.userForm.get('username');
+    const passwordControl = this.userForm.get('password');
+    const confirmPasswordControl = this.userForm.get('confirmPassword');
+
+    usernameControl?.setValidators(this.usernameValidators);
+    passwordControl?.setValidators(this.passwordValidators);
+    confirmPasswordControl?.setValidators([Validators.required]);
+
+    usernameControl?.enable();
+    passwordControl?.enable();
+    confirmPasswordControl?.enable();
+
+    usernameControl?.updateValueAndValidity();
+    passwordControl?.updateValueAndValidity();
+    confirmPasswordControl?.updateValueAndValidity();
+  }
+
+  private setCredentialFieldsForEditMode(): void {
+    const usernameControl = this.userForm.get('username');
+    const passwordControl = this.userForm.get('password');
+    const confirmPasswordControl = this.userForm.get('confirmPassword');
+
+    usernameControl?.clearValidators();
+    passwordControl?.clearValidators();
+    confirmPasswordControl?.clearValidators();
+
+    usernameControl?.disable();
+    passwordControl?.disable();
+    confirmPasswordControl?.disable();
+
+    usernameControl?.updateValueAndValidity();
+    passwordControl?.updateValueAndValidity();
+    confirmPasswordControl?.updateValueAndValidity();
+  }
+
+  protected checkSamePassword(): boolean {
+    if (this.isEditMode) {
+      return true;
+    }
+
+    const raw = this.userForm.getRawValue();
+    const password = String(raw.password ?? '');
+    const confirmPassword = String(raw.confirmPassword ?? '');
+
+    return password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
+  }
+
+  protected shouldShowCredentialValidationError(controlName: 'username' | 'email' | 'phoneNumber'): boolean {
+    if (this.isEditMode) {
+      return false;
+    }
+
+    const control = this.userForm.get(controlName);
+    if (!control || !control.value || (!control.touched && !control.dirty)) {
+      return false;
+    }
+
+    if (controlName === 'username') {
+      return this.usernameIsExist;
+    }
+
+    if (controlName === 'email') {
+      return this.emailIsExist;
+    }
+
+    return this.phoneNumberIsExist;
+  }
+
+  protected shouldShowConfirmPasswordMismatch(): boolean {
+    if (this.isEditMode || this.checkSamePassword()) {
+      return false;
+    }
+
+    const confirmPasswordControl = this.userForm.get('confirmPassword');
+    const passwordControl = this.userForm.get('password');
+
+    return Boolean(
+      (confirmPasswordControl?.touched || confirmPasswordControl?.dirty) ||
+      (passwordControl?.touched || passwordControl?.dirty)
+    );
   }
 
   private syncFiltersWithAvailableOptions(): void {
@@ -525,5 +704,87 @@ export class UserManagementPageComponent implements OnInit {
 
       return searchTarget.includes(keyword);
     });
+  }
+
+  private resetDuplicateFlags(): void {
+    this.usernameIsExist = false;
+    this.emailIsExist = false;
+    this.phoneNumberIsExist = false;
+  }
+
+  private setupDuplicateCheckSubscriptions(): void {
+    const usernameControl = this.userForm.get('username');
+    const emailControl = this.userForm.get('email');
+    const phoneNumberControl = this.userForm.get('phoneNumber');
+
+    this.usernameCheckSubscription = usernameControl?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((value) => this.checkDuplicateUsername(value))
+      )
+      .subscribe((isExist) => {
+        this.usernameIsExist = isExist;
+      });
+
+    this.emailCheckSubscription = emailControl?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((value) => this.checkDuplicateEmail(value))
+      )
+      .subscribe((isExist) => {
+        this.emailIsExist = isExist;
+      });
+
+    this.phoneNumberCheckSubscription = phoneNumberControl?.valueChanges
+      .pipe(
+        debounceTime(500),
+        distinctUntilChanged(),
+        switchMap((value) => this.checkDuplicatePhoneNumber(value))
+      )
+      .subscribe((isExist) => {
+        this.phoneNumberIsExist = isExist;
+      });
+  }
+
+  private checkDuplicateUsername(value: unknown) {
+    const username = String(value ?? '').trim();
+    if (!this.isCreateModeActive() || username.length === 0 || this.userForm.get('username')?.invalid) {
+      return of(false);
+    }
+
+    return this.adminApiService.checkUserExistsByUsername(username).pipe(
+      map((response) => Boolean(response?.data)),
+      catchError(() => of(false))
+    );
+  }
+
+  private checkDuplicateEmail(value: unknown) {
+    const email = String(value ?? '').trim();
+    if (!this.isCreateModeActive() || email.length === 0 || this.userForm.get('email')?.invalid) {
+      return of(false);
+    }
+
+    return this.adminApiService.checkUserExistsByEmail(email).pipe(
+      map((response) => Boolean(response?.data)),
+      catchError(() => of(false))
+    );
+  }
+
+  private checkDuplicatePhoneNumber(value: unknown) {
+    const phoneNumber = String(value ?? '').trim();
+    if (!this.isCreateModeActive() || phoneNumber.length === 0 || this.userForm.get('phoneNumber')?.invalid) {
+      return of(false);
+    }
+
+    return this.adminApiService.checkUserExistsByPhoneNumber(phoneNumber).pipe(
+      map((response) => Boolean(response?.data)),
+      catchError(() => of(false))
+    );
+  }
+
+  private isCreateModeActive(): boolean {
+    return this.isFormModalOpen && !this.isEditMode;
   }
 }

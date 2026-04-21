@@ -4,7 +4,6 @@ import { firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminRoleDto,
-  AdminTranslationDto,
   AdminTranslationReqDto,
   CreateRolePayload,
 } from '../../../../services/admin/admin-api.service';
@@ -13,15 +12,13 @@ import { TranslateService } from '@ngx-translate/core';
 
 interface RoleRow {
   slug: string;
-  enLabel: string;
-  enDescription: string;
-  thLabel: string;
-  thDescription: string;
+  label: string;
+  description: string;
   updatedAt: string;
 }
 
 interface RoleFilterOption {
-  value: 'all' | 'with_th' | 'without_th';
+  value: 'all';
   labelKey: string;
 }
 
@@ -41,8 +38,6 @@ export class RoleManagementPageComponent implements OnInit {
   protected isRoleFilterDropdownOpen = false;
   protected readonly roleFilterOptions: RoleFilterOption[] = [
     { value: 'all', labelKey: 'ADMIN.ROLES.FILTER_ALL' },
-    { value: 'with_th', labelKey: 'ADMIN.ROLES.FILTER_WITH_TH' },
-    { value: 'without_th', labelKey: 'ADMIN.ROLES.FILTER_WITHOUT_TH' },
   ];
 
   protected isFormModalOpen = false;
@@ -62,10 +57,8 @@ export class RoleManagementPageComponent implements OnInit {
   ) {
     this.roleForm = this.formBuilder.group({
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
-      enLabel: ['', [Validators.required, Validators.maxLength(255)]],
-      enDescription: ['', [Validators.maxLength(500)]],
-      thLabel: ['', [Validators.maxLength(255)]],
-      thDescription: ['', [Validators.maxLength(500)]],
+      label: ['', [Validators.required, Validators.maxLength(255)]],
+      description: ['', [Validators.maxLength(500)]],
     });
   }
 
@@ -107,10 +100,8 @@ export class RoleManagementPageComponent implements OnInit {
     this.selectedRole = null;
     this.roleForm.reset({
       slug: '',
-      enLabel: '',
-      enDescription: '',
-      thLabel: '',
-      thDescription: '',
+      label: '',
+      description: '',
     });
     this.roleForm.get('slug')?.enable();
     this.isFormModalOpen = true;
@@ -121,10 +112,8 @@ export class RoleManagementPageComponent implements OnInit {
     this.selectedRole = role;
     this.roleForm.reset({
       slug: role.slug,
-      enLabel: role.enLabel,
-      enDescription: role.enDescription === '-' ? '' : role.enDescription,
-      thLabel: role.thLabel === '-' ? '' : role.thLabel,
-      thDescription: role.thDescription === '-' ? '' : role.thDescription,
+      label: role.label,
+      description: role.description === '-' ? '' : role.description,
     });
     this.roleForm.get('slug')?.disable();
     this.isFormModalOpen = true;
@@ -179,6 +168,7 @@ export class RoleManagementPageComponent implements OnInit {
         this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
+      this.isSubmitting = false;
       this.closeFormModal();
       await this.loadRoles();
     } catch {
@@ -197,6 +187,7 @@ export class RoleManagementPageComponent implements OnInit {
     try {
       await firstValueFrom(this.adminApiService.deleteRole(this.selectedRole.slug));
       this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      this.isDeleting = false;
       this.closeDeleteModal();
       await this.loadRoles();
     } catch {
@@ -229,26 +220,17 @@ export class RoleManagementPageComponent implements OnInit {
     const slug = String(this.roleForm.getRawValue()['slug'] ?? '')
       .trim()
       .toLowerCase();
-    const enLabel = String(this.roleForm.value['enLabel'] ?? '').trim();
-    const enDescription = String(this.roleForm.value['enDescription'] ?? '').trim();
-    const thLabel = String(this.roleForm.value['thLabel'] ?? '').trim();
-    const thDescription = String(this.roleForm.value['thDescription'] ?? '').trim();
+    const label = String(this.roleForm.value['label'] ?? '').trim();
+    const description = String(this.roleForm.value['description'] ?? '').trim();
+    const locale = this.getFormLocale();
 
     const translations: AdminTranslationReqDto[] = [
       {
-        locale: 'en',
-        label: enLabel,
-        description: enDescription || undefined,
+        locale,
+        label,
+        description: description || undefined,
       },
     ];
-
-    if (thLabel) {
-      translations.push({
-        locale: 'th',
-        label: thLabel,
-        description: thDescription || undefined,
-      });
-    }
 
     return {
       slug,
@@ -257,21 +239,10 @@ export class RoleManagementPageComponent implements OnInit {
   }
 
   private toRoleRow(role: AdminRoleDto): RoleRow {
-    const localizedName =
-      role.name ??
-      this.getTranslationLabel(role.translations, 'en') ??
-      role.slug;
-    const localizedDescription =
-      role.description ??
-      this.getTranslationDescription(role.translations, 'en') ??
-      '-';
-
     return {
       slug: role.slug,
-      enLabel: localizedName,
-      enDescription: localizedDescription,
-      thLabel: this.getTranslationLabel(role.translations, 'th') ?? '-',
-      thDescription: this.getTranslationDescription(role.translations, 'th') ?? '-',
+      label: role.name ?? role.slug,
+      description: role.description ?? '-',
       updatedAt: this.formatDateTime(role.updatedAt ?? role.createdAt),
     };
   }
@@ -300,71 +271,23 @@ export class RoleManagementPageComponent implements OnInit {
       return value;
     }
 
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    })
-      .format(date)
-      .replace(',', ' -');
-  }
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
 
-  private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
-    locale?: string
-  ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
-  }
-
-  private getTranslationDescription(
-    translations: AdminTranslationDto[] | null | undefined,
-    locale?: string
-  ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.description) {
-        return translation.description;
-      }
-    }
-
-    return translations.find((item) => item.description)?.description ?? null;
+    return `${day}/${month}/${year}`;
   }
 
   private applyRoleFilter(): void {
-    if (this.selectedRoleFilter === 'with_th') {
-      this.filteredRoles = this.roles.filter((role) => role.thLabel !== '-');
-      return;
-    }
-
-    if (this.selectedRoleFilter === 'without_th') {
-      this.filteredRoles = this.roles.filter((role) => role.thLabel === '-');
-      return;
-    }
-
     this.filteredRoles = [...this.roles];
+  }
+
+  private getFormLocale(): string {
+    const rawLocale = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'en'
+    ).toLowerCase();
+
+    const matchedLocale = rawLocale.match(/^[a-z]{2}/);
+    return matchedLocale?.[0] ?? 'en';
   }
 }

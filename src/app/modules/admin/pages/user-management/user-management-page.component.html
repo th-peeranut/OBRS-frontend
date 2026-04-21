@@ -155,6 +155,9 @@
         <small class="admin-error" *ngIf="isFieldInvalid('email')">
           {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
         </small>
+        <small class="admin-error" *ngIf="shouldShowCredentialValidationError('email')">
+          {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
+        </small>
       </div>
 
       <div class="admin-form-field">
@@ -165,9 +168,12 @@
         <small class="admin-error" *ngIf="isFieldInvalid('phoneNumber')">
           {{ 'ADMIN.VALIDATION.PHONE' | translate }}
         </small>
+        <small class="admin-error" *ngIf="shouldShowCredentialValidationError('phoneNumber')">
+          {{ 'ADMIN.VALIDATION.PHONE_NO_EXIST' | translate }}
+        </small>
       </div>
 
-      <div class="admin-form-field">
+      <div class="admin-form-field" *ngIf="!isEditMode">
         <label class="admin-form-label">
           {{ 'ADMIN.USERS.USERNAME' | translate }} <span class="admin-required">*</span>
         </label>
@@ -175,15 +181,31 @@
         <small class="admin-error" *ngIf="isFieldInvalid('username')">
           {{ 'ADMIN.VALIDATION.USERNAME' | translate }}
         </small>
+        <small class="admin-error" *ngIf="shouldShowCredentialValidationError('username')">
+          {{ 'ADMIN.VALIDATION.USERNAME_EXIST' | translate }}
+        </small>
       </div>
 
-      <div class="admin-form-field">
+      <div class="admin-form-field" *ngIf="!isEditMode">
         <label class="admin-form-label">
           {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
         </label>
         <input class="admin-field" formControlName="password" type="password" />
         <small class="admin-error" *ngIf="isFieldInvalid('password')">
           {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field" *ngIf="!isEditMode">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="confirmPassword" type="password" />
+        <small class="admin-error" *ngIf="isFieldInvalid('confirmPassword')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+        <small class="admin-error" *ngIf="shouldShowConfirmPasswordMismatch()">
+          {{ 'ADMIN.VALIDATION.SAME_PASSWORD_VALIDATE' | translate }}
         </small>
       </div>
 

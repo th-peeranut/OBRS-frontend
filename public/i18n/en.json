@@ -103,7 +103,11 @@
       "PHONE": "Please enter a valid phone number (10-15 digits).",
       "USERNAME": "Use 3-30 characters: lowercase letters, numbers, dot, underscore or hyphen.",
       "PASSWORD": "Password must be at least 8 characters.",
-      "ROLE_REQUIRED": "Please select at least one role."
+      "ROLE_REQUIRED": "Please select at least one role.",
+      "USERNAME_EXIST": "This username is already in use.",
+      "EMAIL_EXIST": "This email is already in use.",
+      "PHONE_NO_EXIST": "This phone number is already in use.",
+      "SAME_PASSWORD_VALIDATE": "Please enter the same password."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -154,11 +158,9 @@
       "UPDATED_AT": "Updated At",
       "ADD_TITLE": "Create Role",
       "EDIT_TITLE": "Edit Role",
-      "MODAL_HINT": "Maintain role labels and descriptions for each locale.",
-      "EN_LABEL": "English Name",
-      "TH_LABEL": "Thai Name",
-      "EN_DESCRIPTION": "English Description",
-      "TH_DESCRIPTION": "Thai Description"
+      "MODAL_HINT": "Manage role name and description in the current language.",
+      "LABEL": "Role Name",
+      "DESCRIPTION": "Description"
     },
     "USERS": {
       "TITLE": "User Management",
@@ -182,6 +184,7 @@
       "EMAIL": "Email",
       "PHONE": "Phone Number",
       "PASSWORD": "Password",
+      "CONFIRM_PASSWORD": "Confirm Password",
       "LOCALE": "Preferred Locale"
     },
     "VEHICLES": {

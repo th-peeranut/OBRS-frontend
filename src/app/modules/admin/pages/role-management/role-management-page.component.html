@@ -16,45 +16,6 @@
     <p class="admin-muted">{{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}</p>
     <p class="admin-big-number">{{ activeRoles }}</p>
   </article>
-
-  <article class="admin-card admin-grid-span-2">
-    <div class="admin-split">
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.ROLES.LAST_UPDATE' | translate }}</p>
-        <p class="admin-emphasis">{{ lastUpdatedAt }}</p>
-      </div>
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.ROLES.SYSTEM_HEALTH' | translate }}</p>
-        <p class="admin-emphasis admin-success">{{ 'ADMIN.ROLES.OPTIMIZED' | translate }}</p>
-      </div>
-    </div>
-  </article>
-</section>
-
-<section class="admin-page-filters mt-3">
-  <div class="role-filter-dropdown" (click)="$event.stopPropagation()">
-    <button type="button" class="admin-filter-btn role-filter-toggle" (click)="toggleRoleFilterDropdown($event)">
-      <span class="role-filter-toggle-content">
-        <span class="material-symbols-outlined">filter_list</span>
-        <span>{{ selectedRoleFilterLabelKey | translate }}</span>
-      </span>
-      <span class="material-symbols-outlined role-filter-arrow" [class.open]="isRoleFilterDropdownOpen">
-        expand_more
-      </span>
-    </button>
-
-    <div class="dropdown-menu dropdown-menu-border role-filter-menu" [class.show]="isRoleFilterDropdownOpen">
-      <button
-        type="button"
-        class="dropdown-item role-filter-option"
-        *ngFor="let option of roleFilterOptions"
-        [class.active]="option.value === selectedRoleFilter"
-        (click)="selectRoleFilter(option.value)"
-      >
-        {{ option.labelKey | translate }}
-      </button>
-    </div>
-  </div>
 </section>
 
 <section class="admin-card mt-3">
@@ -75,8 +36,8 @@
           </td>
           <td>
             <div class="admin-cell-stack">
-              <span class="admin-emphasis">{{ role.enLabel }}</span>
-              <span>{{ role.enDescription }}</span>
+              <span class="admin-emphasis">{{ role.label }}</span>
+              <span>{{ role.description }}</span>
             </div>
           </td>
           <td>{{ role.updatedAt }}</td>
@@ -128,29 +89,19 @@
         </small>
       </div>
 
-      <div class="admin-form-field">
+      <div class="admin-form-field role-form-name-field">
         <label class="admin-form-label">
-          {{ 'ADMIN.ROLES.EN_LABEL' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.ROLES.LABEL' | translate }} <span class="admin-required">*</span>
         </label>
-        <input class="admin-field" formControlName="enLabel" />
-        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
+        <input class="admin-field" formControlName="label" />
+        <small class="admin-error" *ngIf="isFieldInvalid('label')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
       </div>
 
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_LABEL' | translate }}</label>
-        <input class="admin-field" formControlName="thLabel" />
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROLES.EN_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="enDescription"></textarea>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="thDescription"></textarea>
+      <div class="admin-form-field role-form-description-field">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="description"></textarea>
       </div>
     </form>
 

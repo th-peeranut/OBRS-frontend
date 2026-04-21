@@ -2,6 +2,14 @@
   display: block;
 }
 
+.role-form-name-field {
+  grid-column: 1 / span 1;
+}
+
+.role-form-description-field {
+  grid-column: 1 / -1;
+}
+
 .role-filter-dropdown {
   position: relative;
 }
