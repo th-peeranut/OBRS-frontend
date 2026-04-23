@@ -163,16 +163,21 @@ export class VehiclesPageComponent implements OnInit {
         await firstValueFrom(
           this.adminApiService.updateVehicle(this.selectedVehicle.id, payload)
         );
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+        this.isSubmitting = false;
+        this.closeFormModal();
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createVehicle(payload));
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+        this.isSubmitting = false;
+        this.closeFormModal();
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      this.closeFormModal();
       await this.loadVehiclesAndOptions();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      this.isSubmitting = false;
+      this.closeFormModal();
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
     }
@@ -186,11 +191,14 @@ export class VehiclesPageComponent implements OnInit {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteVehicle(this.selectedVehicle.id));
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      this.isDeleting = false;
       this.closeDeleteModal();
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       await this.loadVehiclesAndOptions();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      this.isDeleting = false;
+      this.closeDeleteModal();
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
     }

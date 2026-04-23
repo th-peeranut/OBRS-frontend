@@ -206,10 +206,10 @@ export class RoutesPageComponent implements OnInit {
     try {
       await firstValueFrom(this.adminApiService.updateSegments(payload));
       this.applyPayloadChanges(payload);
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       isUpdated = true;
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSavingEdit = false;
       if (isUpdated) {

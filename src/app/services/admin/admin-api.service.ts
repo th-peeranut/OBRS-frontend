@@ -1,8 +1,12 @@
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { Observable } from 'rxjs';
+import {
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_GLOBAL_LOADING_ALERT,
+} from '../../shared/interceptors/http-context-tokens';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -227,17 +231,44 @@ export class AdminApiService {
 
   constructor(private readonly http: HttpClient) {}
 
+  private createAdminContext(): HttpContext {
+    return new HttpContext()
+      .set(SKIP_GLOBAL_LOADING_ALERT, true)
+      .set(SKIP_GLOBAL_ERROR_ALERT, true);
+  }
+
+  private toRequestOptions(
+    params?: HttpParams
+  ): { context: HttpContext; params?: HttpParams } {
+    const context = this.createAdminContext();
+    return params ? { context, params } : { context };
+  }
+
+  private getRequest<T>(
+    url: string,
+    params?: HttpParams
+  ): Observable<ResponseAPI<T>> {
+    return this.http.get<ResponseAPI<T>>(url, this.toRequestOptions(params));
+  }
+
+  private postRequest<T>(url: string, payload: unknown): Observable<ResponseAPI<T>> {
+    return this.http.post<ResponseAPI<T>>(url, payload, this.toRequestOptions());
+  }
+
+  private putRequest<T>(url: string, payload: unknown): Observable<ResponseAPI<T>> {
+    return this.http.put<ResponseAPI<T>>(url, payload, this.toRequestOptions());
+  }
+
+  private deleteRequest<T>(url: string): Observable<ResponseAPI<T>> {
+    return this.http.delete<ResponseAPI<T>>(url, this.toRequestOptions());
+  }
+
   getLookups(): Observable<ResponseAPI<AdminLookupDto[]>> {
-    return this.http.get<ResponseAPI<AdminLookupDto[]>>(
-      `${this.baseUrl}/private/lookups`
-    );
+    return this.getRequest<AdminLookupDto[]>(`${this.baseUrl}/private/lookups`);
   }
 
   createLookup(payload: CreateLookupPayload): Observable<ResponseAPI<unknown>> {
-    return this.http.post<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/lookups`,
-      payload
-    );
+    return this.postRequest<unknown>(`${this.baseUrl}/private/lookups`, payload);
   }
 
   updateLookup(
@@ -245,42 +276,35 @@ export class AdminApiService {
     slug: string,
     payload: CreateLookupPayload
   ): Observable<ResponseAPI<unknown>> {
-    return this.http.put<ResponseAPI<unknown>>(
+    return this.putRequest<unknown>(
       `${this.baseUrl}/private/lookups/${encodeURIComponent(category)}/${encodeURIComponent(slug)}`,
       payload
     );
   }
 
   deleteLookup(category: string, slug: string): Observable<ResponseAPI<unknown>> {
-    return this.http.delete<ResponseAPI<unknown>>(
+    return this.deleteRequest<unknown>(
       `${this.baseUrl}/private/lookups/${encodeURIComponent(category)}/${encodeURIComponent(slug)}`
     );
   }
 
   getRoles(): Observable<ResponseAPI<AdminRoleDto[]>> {
-    return this.http.get<ResponseAPI<AdminRoleDto[]>>(
-      `${this.baseUrl}/private/roles`
-    );
+    return this.getRequest<AdminRoleDto[]>(`${this.baseUrl}/private/roles`);
   }
 
   createRole(payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
-    return this.http.post<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/roles`,
-      payload
-    );
+    return this.postRequest<unknown>(`${this.baseUrl}/private/roles`, payload);
   }
 
   updateRole(slug: string, payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
-    return this.http.put<ResponseAPI<unknown>>(
+    return this.putRequest<unknown>(
       `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`,
       payload
     );
   }
 
   deleteRole(slug: string): Observable<ResponseAPI<unknown>> {
-    return this.http.delete<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`
-    );
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`);
   }
 
   getUsers(
@@ -293,127 +317,95 @@ export class AdminApiService {
       }
     }
 
-    return this.http.get<ResponseAPI<AdminUserDto[]>>(
-      `${this.baseUrl}/private/users`,
-      { params }
-    );
+    return this.getRequest<AdminUserDto[]>(`${this.baseUrl}/private/users`, params);
   }
 
   getUserById(id: number): Observable<ResponseAPI<AdminUserDto>> {
-    return this.http.get<ResponseAPI<AdminUserDto>>(
-      `${this.baseUrl}/private/users/${id}`
-    );
+    return this.getRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}`);
   }
 
   checkUserExistsByUsername(username: string): Observable<ResponseAPI<boolean>> {
-    return this.http.get<ResponseAPI<boolean>>(
+    return this.getRequest<boolean>(
       `${this.baseUrl}/users/check-duplicate/username/${encodeURIComponent(username)}`
     );
   }
 
   checkUserExistsByEmail(email: string): Observable<ResponseAPI<boolean>> {
-    return this.http.get<ResponseAPI<boolean>>(
+    return this.getRequest<boolean>(
       `${this.baseUrl}/users/check-duplicate/email/${encodeURIComponent(email)}`
     );
   }
 
   checkUserExistsByPhoneNumber(phoneNumber: string): Observable<ResponseAPI<boolean>> {
-    return this.http.get<ResponseAPI<boolean>>(
+    return this.getRequest<boolean>(
       `${this.baseUrl}/users/check-duplicate/phoneNumber/${encodeURIComponent(phoneNumber)}`
     );
   }
 
   createUser(payload: CreateUserPayload): Observable<ResponseAPI<unknown>> {
-    return this.http.post<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/users`,
-      payload
-    );
+    return this.postRequest<unknown>(`${this.baseUrl}/private/users`, payload);
   }
 
   updateUser(id: number, payload: UpdateUserPayload): Observable<ResponseAPI<unknown>> {
-    return this.http.put<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/users/${id}`,
-      payload
-    );
+    return this.putRequest<unknown>(`${this.baseUrl}/private/users/${id}`, payload);
   }
 
   deleteUser(id: number): Observable<ResponseAPI<unknown>> {
-    return this.http.delete<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/users/${id}`
-    );
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/users/${id}`);
   }
 
   getVehicles(): Observable<ResponseAPI<AdminVehicleDto[]>> {
-    return this.http.get<ResponseAPI<AdminVehicleDto[]>>(
-      `${this.baseUrl}/private/vehicles`
-    );
+    return this.getRequest<AdminVehicleDto[]>(`${this.baseUrl}/private/vehicles`);
   }
 
   createVehicle(payload: CreateVehiclePayload): Observable<ResponseAPI<unknown>> {
-    return this.http.post<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/vehicles`,
-      payload
-    );
+    return this.postRequest<unknown>(`${this.baseUrl}/private/vehicles`, payload);
   }
 
   updateVehicle(id: number, payload: CreateVehiclePayload): Observable<ResponseAPI<unknown>> {
-    return this.http.put<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/vehicles/${id}`,
-      payload
-    );
+    return this.putRequest<unknown>(`${this.baseUrl}/private/vehicles/${id}`, payload);
   }
 
   deleteVehicle(id: number): Observable<ResponseAPI<unknown>> {
-    return this.http.delete<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/vehicles/${id}`
-    );
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/vehicles/${id}`);
   }
 
   getVehicleTypes(): Observable<ResponseAPI<AdminVehicleTypeDto[]>> {
-    return this.http.get<ResponseAPI<AdminVehicleTypeDto[]>>(
-      `${this.baseUrl}/private/vehicle-types`
-    );
+    return this.getRequest<AdminVehicleTypeDto[]>(`${this.baseUrl}/private/vehicle-types`);
   }
 
   getRoutes(): Observable<ResponseAPI<AdminRouteDto[]>> {
-    return this.http.get<ResponseAPI<AdminRouteDto[]>>(`${this.baseUrl}/routes`);
+    return this.getRequest<AdminRouteDto[]>(`${this.baseUrl}/routes`);
   }
 
   getRouteStops(routeSlug: string): Observable<ResponseAPI<AdminRouteStopDto>> {
-    return this.http.get<ResponseAPI<AdminRouteStopDto>>(
+    return this.getRequest<AdminRouteStopDto>(
       `${this.baseUrl}/private/route-stops/${routeSlug}`
     );
   }
 
   getSegments(routeSlug: string): Observable<ResponseAPI<AdminSegmentDto>> {
-    return this.http.get<ResponseAPI<AdminSegmentDto>>(
+    return this.getRequest<AdminSegmentDto>(
       `${this.baseUrl}/private/segments/${routeSlug}`
     );
   }
 
   updateSegments(payload: AdminSegmentReqDto): Observable<ResponseAPI<unknown>> {
-    return this.http.put<ResponseAPI<unknown>>(
-      `${this.baseUrl}/private/segments`,
-      payload
-    );
+    return this.putRequest<unknown>(`${this.baseUrl}/private/segments`, payload);
   }
 
   getScheduleSets(): Observable<ResponseAPI<AdminScheduleSetDto[]>> {
-    return this.http.get<ResponseAPI<AdminScheduleSetDto[]>>(
-      `${this.baseUrl}/private/schedule-set`
-    );
+    return this.getRequest<AdminScheduleSetDto[]>(`${this.baseUrl}/private/schedule-set`);
   }
 
   getBookings(): Observable<ResponseAPI<AdminBookingDto[]>> {
-    return this.http.get<ResponseAPI<AdminBookingDto[]>>(
-      `${this.baseUrl}/private/bookings`
-    );
+    return this.getRequest<AdminBookingDto[]>(`${this.baseUrl}/private/bookings`);
   }
 
   getBookingPayments(
     bookingId: number
   ): Observable<ResponseAPI<AdminPaymentByBookingIdDto>> {
-    return this.http.get<ResponseAPI<AdminPaymentByBookingIdDto>>(
+    return this.getRequest<AdminPaymentByBookingIdDto>(
       `${this.baseUrl}/private/bookings/${bookingId}/payments`
     );
   }

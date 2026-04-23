@@ -143,16 +143,17 @@ export class LookupSettingsPageComponent implements OnInit {
             payload
           )
         );
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createLookup(payload));
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
+      this.isSubmitting = false;
       this.closeFormModal();
       await this.loadLookups();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
     }
@@ -172,11 +173,12 @@ export class LookupSettingsPageComponent implements OnInit {
         )
       );
 
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      this.isDeleting = false;
       this.closeDeleteModal();
       await this.loadLookups();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
     }
@@ -305,4 +307,3 @@ export class LookupSettingsPageComponent implements OnInit {
     return translations.find((item) => item.description)?.description ?? null;
   }
 }
-

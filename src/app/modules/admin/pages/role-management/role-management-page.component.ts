@@ -162,17 +162,17 @@ export class RoleManagementPageComponent implements OnInit {
         await firstValueFrom(
           this.adminApiService.updateRole(this.selectedRole.slug, payload)
         );
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createRole(payload));
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
       this.isSubmitting = false;
       this.closeFormModal();
       await this.loadRoles();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
     }
@@ -186,12 +186,12 @@ export class RoleManagementPageComponent implements OnInit {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteRole(this.selectedRole.slug));
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.isDeleting = false;
       this.closeDeleteModal();
       await this.loadRoles();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
     }

@@ -187,7 +187,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
       userDetail = response?.data ?? null;
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED'));
       return;
     }
 
@@ -299,17 +299,17 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       if (this.isEditMode && this.selectedUser) {
         const payload = this.toUpdateUserPayload();
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         const payload = this.toCreateUserPayload();
         await firstValueFrom(this.adminApiService.createUser(payload));
-        this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
       this.closeFormModal(true);
       await this.loadUsersAndOptions();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
     }
@@ -323,11 +323,11 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.closeDeleteModal(true);
       await this.loadUsersAndOptions();
     } catch {
-      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
     }

@@ -14,24 +14,7 @@
 <section class="admin-grid admin-grid--3 mt-3">
   <article class="admin-card">
     <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL_CAPACITY' | translate }}</p>
-    <p class="admin-big-number">{{ totalVehicles }} {{ 'ADMIN.VEHICLES.UNITS' | translate }}</p>
-    <p class="admin-emphasis admin-success">+4.2%</p>
-  </article>
-  <article class="admin-card admin-grid-span-2">
-    <div class="admin-split">
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
-        <p class="admin-emphasis">{{ activeVehicles }}</p>
-      </div>
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
-        <p class="admin-emphasis">{{ pendingVehicles }}</p>
-      </div>
-      <div>
-        <p class="admin-muted">{{ 'ADMIN.VEHICLES.EFFICIENCY' | translate }}</p>
-        <p class="admin-emphasis">94.8%</p>
-      </div>
-    </div>
+    <p class="admin-big-number">{{ totalVehicles }}</p>
   </article>
 </section>
 
@@ -47,7 +30,6 @@
           <th>{{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }}</th>
           <th>{{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }}</th>
           <th>{{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.CURRENT_ROUTE' | translate }}</th>
           <th>{{ 'ADMIN.VEHICLES.STATUS' | translate }}</th>
           <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
         </tr>
@@ -57,7 +39,6 @@
           <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
           <td><code>{{ vehicle.plate }}</code></td>
           <td>{{ vehicle.vehicleType }}</td>
-          <td>{{ vehicle.route }}</td>
           <td>
             <span class="admin-status" [ngClass]="statusClass(vehicle.status)">{{ vehicle.status }}</span>
           </td>
