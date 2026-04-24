@@ -299,16 +299,21 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       if (this.isEditMode && this.selectedUser) {
         const payload = this.toUpdateUserPayload();
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
+        this.isSubmitting = false;
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         const payload = this.toCreateUserPayload();
         await firstValueFrom(this.adminApiService.createUser(payload));
+        this.isSubmitting = false;
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      this.closeFormModal(true);
       await this.loadUsersAndOptions();
     } catch {
+      this.isSubmitting = false;
+      this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
@@ -323,10 +328,11 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
-      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.closeDeleteModal(true);
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       await this.loadUsersAndOptions();
     } catch {
+      this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;

@@ -292,6 +292,16 @@ export class AdminApiService {
     return this.getRequest<AdminRoleDto[]>(`${this.baseUrl}/private/roles`);
   }
 
+  getRoleBySlug(slug: string): Observable<ResponseAPI<AdminRoleDto>> {
+    return this.getRequest<AdminRoleDto>(
+      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`
+    );
+  }
+
+  getRoleById(id: number): Observable<ResponseAPI<AdminRoleDto>> {
+    return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/id/${id}`);
+  }
+
   createRole(payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/roles`, payload);
   }
@@ -356,6 +366,10 @@ export class AdminApiService {
 
   getVehicles(): Observable<ResponseAPI<AdminVehicleDto[]>> {
     return this.getRequest<AdminVehicleDto[]>(`${this.baseUrl}/private/vehicles`);
+  }
+
+  getVehicleById(id: number): Observable<ResponseAPI<AdminVehicleDto>> {
+    return this.getRequest<AdminVehicleDto>(`${this.baseUrl}/private/vehicles/${id}`);
   }
 
   createVehicle(payload: CreateVehiclePayload): Observable<ResponseAPI<unknown>> {

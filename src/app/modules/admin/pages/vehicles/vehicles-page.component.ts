@@ -108,20 +108,34 @@ export class VehiclesPageComponent implements OnInit {
     this.isFormModalOpen = true;
   }
 
-  protected openEditModal(vehicle: VehicleRow): void {
+  protected async openEditModal(vehicle: VehicleRow): Promise<void> {
+    let vehicleDetail: AdminVehicleDto | null = null;
+    try {
+      const response = await firstValueFrom(this.adminApiService.getVehicleById(vehicle.id));
+      vehicleDetail = response?.data ?? null;
+    } catch {
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED'));
+      return;
+    }
+
+    const vehicleType = String(vehicleDetail?.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim();
+    const numberPlate = String(vehicleDetail?.numberPlate ?? vehicle.plate).trim();
+    const vehicleNumber = String(vehicleDetail?.vehicleNumber ?? vehicle.vehicleNumber).trim();
+    const status = String(vehicleDetail?.status ?? vehicle.statusCode).trim().toLowerCase();
+
     this.isEditMode = true;
     this.selectedVehicle = vehicle;
     this.vehicleForm.reset({
-      vehicleType: vehicle.vehicleTypeSlug,
-      numberPlate: vehicle.plate,
-      vehicleNumber: vehicle.vehicleNumber,
-      status: vehicle.statusCode,
+      vehicleType,
+      numberPlate,
+      vehicleNumber,
+      status,
     });
     this.isFormModalOpen = true;
   }
 
-  protected closeFormModal(): void {
-    if (this.isSubmitting) {
+  protected closeFormModal(force = false): void {
+    if (this.isSubmitting && !force) {
       return;
     }
 
@@ -135,8 +149,8 @@ export class VehiclesPageComponent implements OnInit {
     this.isDeleteModalOpen = true;
   }
 
-  protected closeDeleteModal(): void {
-    if (this.isDeleting) {
+  protected closeDeleteModal(force = false): void {
+    if (this.isDeleting && !force) {
       return;
     }
 
@@ -163,20 +177,17 @@ export class VehiclesPageComponent implements OnInit {
         await firstValueFrom(
           this.adminApiService.updateVehicle(this.selectedVehicle.id, payload)
         );
-        this.isSubmitting = false;
-        this.closeFormModal();
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createVehicle(payload));
-        this.isSubmitting = false;
-        this.closeFormModal();
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
       await this.loadVehiclesAndOptions();
     } catch {
-      this.isSubmitting = false;
-      this.closeFormModal();
+      this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
@@ -191,13 +202,11 @@ export class VehiclesPageComponent implements OnInit {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteVehicle(this.selectedVehicle.id));
-      this.isDeleting = false;
-      this.closeDeleteModal();
+      this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       await this.loadVehiclesAndOptions();
     } catch {
-      this.isDeleting = false;
-      this.closeDeleteModal();
+      this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;

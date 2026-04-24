@@ -11,6 +11,7 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
 
 interface RoleRow {
+  id: number;
   slug: string;
   label: string;
   description: string;
@@ -107,20 +108,41 @@ export class RoleManagementPageComponent implements OnInit {
     this.isFormModalOpen = true;
   }
 
-  protected openEditModal(role: RoleRow): void {
+  protected async openEditModal(role: RoleRow): Promise<void> {
+    let roleDetail: AdminRoleDto | null = null;
+    try {
+      const response =
+        role.id > 0
+          ? await firstValueFrom(this.adminApiService.getRoleById(role.id))
+          : await firstValueFrom(this.adminApiService.getRoleBySlug(role.slug));
+      roleDetail = response?.data ?? null;
+    } catch {
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
+      return;
+    }
+
+    const slug = String(roleDetail?.slug ?? role.slug).trim();
+    const label = String(roleDetail?.name ?? role.label).trim();
+    const description = String(roleDetail?.description ?? role.description)
+      .trim()
+      .replace(/^-$/, '');
+
     this.isEditMode = true;
-    this.selectedRole = role;
+    this.selectedRole = {
+      ...role,
+      slug,
+    };
     this.roleForm.reset({
-      slug: role.slug,
-      label: role.label,
-      description: role.description === '-' ? '' : role.description,
+      slug,
+      label,
+      description,
     });
     this.roleForm.get('slug')?.disable();
     this.isFormModalOpen = true;
   }
 
-  protected closeFormModal(): void {
-    if (this.isSubmitting) {
+  protected closeFormModal(force = false): void {
+    if (this.isSubmitting && !force) {
       return;
     }
 
@@ -134,8 +156,8 @@ export class RoleManagementPageComponent implements OnInit {
     this.isDeleteModalOpen = true;
   }
 
-  protected closeDeleteModal(): void {
-    if (this.isDeleting) {
+  protected closeDeleteModal(force = false): void {
+    if (this.isDeleting && !force) {
       return;
     }
 
@@ -162,16 +184,17 @@ export class RoleManagementPageComponent implements OnInit {
         await firstValueFrom(
           this.adminApiService.updateRole(this.selectedRole.slug, payload)
         );
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createRole(payload));
+        this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      this.isSubmitting = false;
-      this.closeFormModal();
       await this.loadRoles();
     } catch {
+      this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
       this.isSubmitting = false;
@@ -186,11 +209,11 @@ export class RoleManagementPageComponent implements OnInit {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteRole(this.selectedRole.slug));
+      this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      this.isDeleting = false;
-      this.closeDeleteModal();
       await this.loadRoles();
     } catch {
+      this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
@@ -240,6 +263,7 @@ export class RoleManagementPageComponent implements OnInit {
 
   private toRoleRow(role: AdminRoleDto): RoleRow {
     return {
+      id: Number(role.id ?? 0),
       slug: role.slug,
       label: role.name ?? role.slug,
       description: role.description ?? '-',
