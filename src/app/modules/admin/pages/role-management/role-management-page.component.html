@@ -18,6 +18,19 @@
   </article>
 </section>
 
+<section class="admin-page-filters mt-3">
+  <select
+    class="admin-select"
+    [value]="selectedStatusFilter"
+    (change)="onStatusFilterChange($any($event.target).value)"
+  >
+    <option value="">{{ 'ADMIN.ROLES.FILTER_STATUS' | translate }}</option>
+    <option *ngFor="let status of statusOptions" [value]="status.code.toLowerCase()">
+      {{ status.label }}
+    </option>
+  </select>
+</section>
+
 <section class="admin-card mt-3">
   <div class="admin-table-wrap">
     <table class="admin-table">
@@ -25,6 +38,7 @@
         <tr>
           <th>{{ 'ADMIN.ROLES.SLUG' | translate }}</th>
           <th>{{ 'ADMIN.ROLES.NAME' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
           <th>{{ 'ADMIN.ROLES.UPDATED_AT' | translate }}</th>
           <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
         </tr>
@@ -39,6 +53,9 @@
               <span class="admin-emphasis">{{ role.label }}</span>
               <span>{{ role.description }}</span>
             </div>
+          </td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(role.statusCode)">{{ role.status }}</span>
           </td>
           <td>{{ role.updatedAt }}</td>
           <td class="text-right">
@@ -58,7 +75,7 @@
   <div class="admin-table-footer">
     <span>
       {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredRoles.length === 0 ? 0 : 1 }} - {{ filteredRoles.length }}
-      {{ 'ADMIN.COMMON.OF' | translate }} {{ activeRoles }} {{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ roles.length }} {{ 'ADMIN.ROLES.ACTIVE_ROLES' | translate }}
     </span>
     <div class="admin-inline-actions">
       <button type="button" class="admin-icon-btn">
@@ -102,6 +119,18 @@
       <div class="admin-form-field role-form-description-field">
         <label class="admin-form-label">{{ 'ADMIN.ROLES.DESCRIPTION' | translate }}</label>
         <textarea class="admin-field" formControlName="description"></textarea>
+      </div>
+
+      <div class="admin-form-field role-form-name-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <select class="admin-field" formControlName="status">
+          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
+        </select>
+        <small class="admin-error" *ngIf="isFieldInvalid('status')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
       </div>
     </form>
 

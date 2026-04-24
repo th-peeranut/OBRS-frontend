@@ -1,9 +1,10 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminRoleDto,
+  AdminStatusDto,
   AdminTranslationReqDto,
   CreateRolePayload,
 } from '../../../../services/admin/admin-api.service';
@@ -15,12 +16,14 @@ interface RoleRow {
   slug: string;
   label: string;
   description: string;
+  status: string;
+  statusCode: string;
   updatedAt: string;
 }
 
-interface RoleFilterOption {
-  value: 'all';
-  labelKey: string;
+interface StatusOption {
+  code: string;
+  label: string;
 }
 
 @Component({
@@ -31,15 +34,12 @@ interface RoleFilterOption {
 export class RoleManagementPageComponent implements OnInit {
   protected roles: RoleRow[] = [];
   protected filteredRoles: RoleRow[] = [];
+  protected statusOptions: StatusOption[] = [];
 
   protected lastUpdatedAt = '-';
   protected isLoading = false;
   protected errorMessage = '';
-  protected selectedRoleFilter: RoleFilterOption['value'] = 'all';
-  protected isRoleFilterDropdownOpen = false;
-  protected readonly roleFilterOptions: RoleFilterOption[] = [
-    { value: 'all', labelKey: 'ADMIN.ROLES.FILTER_ALL' },
-  ];
+  protected selectedStatusFilter = '';
 
   protected isFormModalOpen = false;
   protected isDeleteModalOpen = false;
@@ -60,40 +60,35 @@ export class RoleManagementPageComponent implements OnInit {
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
       label: ['', [Validators.required, Validators.maxLength(255)]],
       description: ['', [Validators.maxLength(500)]],
+      status: ['', [Validators.required]],
     });
   }
 
   async ngOnInit(): Promise<void> {
-    await this.loadRoles();
+    await this.loadRolesAndStatusOptions();
   }
 
   get activeRoles(): number {
-    return this.roles.length;
+    return this.roles.filter((role) => role.statusCode === 'active').length;
   }
 
-  get selectedRoleFilterLabelKey(): string {
-    return (
-      this.roleFilterOptions.find((option) => option.value === this.selectedRoleFilter)?.labelKey ??
-      'ADMIN.ROLES.FILTER_ALL'
-    );
-  }
-
-  protected toggleRoleFilterDropdown(event: Event): void {
-    event.stopPropagation();
-    this.isRoleFilterDropdownOpen = !this.isRoleFilterDropdownOpen;
-  }
-
-  protected selectRoleFilter(value: RoleFilterOption['value']): void {
-    this.selectedRoleFilter = value;
-    this.isRoleFilterDropdownOpen = false;
+  protected onStatusFilterChange(value: string): void {
+    this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
     this.applyRoleFilter();
   }
 
-  @HostListener('document:click')
-  protected closeRoleFilterDropdownOnOutsideClick(): void {
-    if (this.isRoleFilterDropdownOpen) {
-      this.isRoleFilterDropdownOpen = false;
+  protected statusClass(status: string): string {
+    const normalizedStatus = status.toUpperCase();
+
+    if (normalizedStatus === 'ACTIVE') {
+      return 'is-success';
     }
+
+    if (normalizedStatus.includes('PENDING')) {
+      return 'is-warning';
+    }
+
+    return 'is-danger';
   }
 
   protected openCreateModal(): void {
@@ -103,6 +98,7 @@ export class RoleManagementPageComponent implements OnInit {
       slug: '',
       label: '',
       description: '',
+      status: this.statusOptions[0]?.code ?? 'active',
     });
     this.roleForm.get('slug')?.enable();
     this.isFormModalOpen = true;
@@ -111,31 +107,38 @@ export class RoleManagementPageComponent implements OnInit {
   protected async openEditModal(role: RoleRow): Promise<void> {
     let roleDetail: AdminRoleDto | null = null;
     try {
-      const response =
-        role.id > 0
-          ? await firstValueFrom(this.adminApiService.getRoleById(role.id))
-          : await firstValueFrom(this.adminApiService.getRoleBySlug(role.slug));
+      const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
       roleDetail = response?.data ?? null;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
-      return;
+    } catch (error) {
+      if (this.isNotFoundError(error)) {
+        try {
+          const response = await firstValueFrom(this.adminApiService.getRoleBySlug(role.slug));
+          roleDetail = response?.data ?? null;
+        } catch {
+          roleDetail = null;
+        }
+      } else {
+        await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
+        return;
+      }
     }
 
-    const slug = String(roleDetail?.slug ?? role.slug).trim();
-    const label = String(roleDetail?.name ?? role.label).trim();
-    const description = String(roleDetail?.description ?? role.description)
+    const safeRoleDetail = roleDetail ?? this.toRoleDetailFallback(role);
+
+    const slug = String(safeRoleDetail.slug ?? role.slug).trim();
+    const label = String(safeRoleDetail.name ?? role.label).trim();
+    const description = String(safeRoleDetail.description ?? role.description)
       .trim()
       .replace(/^-$/, '');
+    const status = this.parseStatus(safeRoleDetail.status ?? role.statusCode);
 
     this.isEditMode = true;
-    this.selectedRole = {
-      ...role,
-      slug,
-    };
+    this.selectedRole = role;
     this.roleForm.reset({
       slug,
       label,
       description,
+      status: status.code,
     });
     this.roleForm.get('slug')?.disable();
     this.isFormModalOpen = true;
@@ -181,9 +184,7 @@ export class RoleManagementPageComponent implements OnInit {
       const payload = this.toRolePayload();
 
       if (this.isEditMode && this.selectedRole) {
-        await firstValueFrom(
-          this.adminApiService.updateRole(this.selectedRole.slug, payload)
-        );
+        await this.updateRole(this.selectedRole, payload);
         this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
@@ -192,7 +193,7 @@ export class RoleManagementPageComponent implements OnInit {
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadRoles();
+      await this.loadRolesAndStatusOptions();
     } catch {
       this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -208,10 +209,10 @@ export class RoleManagementPageComponent implements OnInit {
 
     this.isDeleting = true;
     try {
-      await firstValueFrom(this.adminApiService.deleteRole(this.selectedRole.slug));
+      await this.deleteRole(this.selectedRole);
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadRoles();
+      await this.loadRolesAndStatusOptions();
     } catch {
       this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
@@ -220,15 +221,31 @@ export class RoleManagementPageComponent implements OnInit {
     }
   }
 
-  private async loadRoles(): Promise<void> {
+  private async loadRolesAndStatusOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
 
     try {
-      const response = await firstValueFrom(this.adminApiService.getRoles());
-      const roles = response?.data ?? [];
+      const [rolesResponse, lookupsResponse] = await Promise.all([
+        firstValueFrom(this.adminApiService.getRoles()),
+        firstValueFrom(this.adminApiService.getLookups()),
+      ]);
+
+      const roles = rolesResponse?.data ?? [];
+      const lookups = lookupsResponse?.data ?? [];
+
+      this.statusOptions = lookups
+        .filter((lookup) => lookup.category === 'role_status')
+        .map((lookup) => ({
+          code: lookup.slug,
+          label:
+            lookup.translations.find((translation) => translation.locale?.toLowerCase() === 'en')?.label ??
+            lookup.translations.find((translation) => translation.label)?.label ??
+            lookup.slug,
+        }));
 
       this.roles = roles.map((role) => this.toRoleRow(role));
+      this.syncStatusFilterWithAvailableOptions();
       this.applyRoleFilter();
       this.lastUpdatedAt = this.toLatestTimestamp(roles);
     } catch {
@@ -245,6 +262,7 @@ export class RoleManagementPageComponent implements OnInit {
       .toLowerCase();
     const label = String(this.roleForm.value['label'] ?? '').trim();
     const description = String(this.roleForm.value['description'] ?? '').trim();
+    const status = String(this.roleForm.value['status'] ?? '').trim().toLowerCase();
     const locale = this.getFormLocale();
 
     const translations: AdminTranslationReqDto[] = [
@@ -257,17 +275,43 @@ export class RoleManagementPageComponent implements OnInit {
 
     return {
       slug,
+      status,
       translations,
     };
   }
 
   private toRoleRow(role: AdminRoleDto): RoleRow {
+    const status = this.parseStatus(role.status);
+
     return {
       id: Number(role.id ?? 0),
       slug: role.slug,
       label: role.name ?? role.slug,
       description: role.description ?? '-',
+      status: status.name,
+      statusCode: status.code,
       updatedAt: this.formatDateTime(role.updatedAt ?? role.createdAt),
+    };
+  }
+
+  private parseStatus(value: string | AdminStatusDto | null | undefined): {
+    code: string;
+    name: string;
+  } {
+    if (typeof value === 'string') {
+      const code = value.toLowerCase();
+      return {
+        code,
+        name: value.replace(/_/g, ' ').toUpperCase(),
+      };
+    }
+
+    const code = String(value?.code ?? 'unknown').toLowerCase();
+    const fallbackName = code.replace(/_/g, ' ').toUpperCase();
+
+    return {
+      code,
+      name: String(value?.name ?? value?.label ?? fallbackName),
     };
   }
 
@@ -303,7 +347,26 @@ export class RoleManagementPageComponent implements OnInit {
   }
 
   private applyRoleFilter(): void {
-    this.filteredRoles = [...this.roles];
+    const statusFilter = this.selectedStatusFilter;
+
+    this.filteredRoles = this.roles.filter((role) => {
+      if (statusFilter.length === 0) {
+        return true;
+      }
+
+      return role.statusCode.trim().toLowerCase() === statusFilter;
+    });
+  }
+
+  private syncStatusFilterWithAvailableOptions(): void {
+    if (
+      this.selectedStatusFilter &&
+      !this.statusOptions.some(
+        (option) => option.code.trim().toLowerCase() === this.selectedStatusFilter
+      )
+    ) {
+      this.selectedStatusFilter = '';
+    }
   }
 
   private getFormLocale(): string {
@@ -313,5 +376,44 @@ export class RoleManagementPageComponent implements OnInit {
 
     const matchedLocale = rawLocale.match(/^[a-z]{2}/);
     return matchedLocale?.[0] ?? 'en';
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    const status = (error as { status?: number } | null | undefined)?.status;
+    return status === 404;
+  }
+
+  private toRoleDetailFallback(role: RoleRow): AdminRoleDto {
+    return {
+      id: role.id,
+      slug: role.slug,
+      name: role.label,
+      description: role.description === '-' ? '' : role.description,
+      status: role.statusCode,
+    };
+  }
+
+  private async updateRole(role: RoleRow, payload: CreateRolePayload): Promise<void> {
+    try {
+      await firstValueFrom(this.adminApiService.updateRoleById(role.id, payload));
+    } catch (error) {
+      if (!this.isNotFoundError(error)) {
+        throw error;
+      }
+
+      await firstValueFrom(this.adminApiService.updateRoleBySlug(role.slug, payload));
+    }
+  }
+
+  private async deleteRole(role: RoleRow): Promise<void> {
+    try {
+      await firstValueFrom(this.adminApiService.deleteRoleById(role.id));
+    } catch (error) {
+      if (!this.isNotFoundError(error)) {
+        throw error;
+      }
+
+      await firstValueFrom(this.adminApiService.deleteRoleBySlug(role.slug));
+    }
   }
 }

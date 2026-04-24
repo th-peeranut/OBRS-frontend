@@ -129,6 +129,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.phoneNumberCheckSubscription?.unsubscribe();
   }
 
+  protected get activeUsers(): number {
+    return this.users.filter((user) => user.statusCode === 'active').length;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.toUpperCase();
 

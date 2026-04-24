@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { Observable } from 'rxjs';
+import { Observable, catchError, throwError } from 'rxjs';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -23,6 +23,7 @@ export interface AdminTranslationReqDto {
 export interface AdminStatusDto {
   code?: string;
   name?: string;
+  label?: string;
 }
 
 export interface AdminLookupDto {
@@ -185,6 +186,7 @@ export interface CreateLookupPayload {
 
 export interface CreateRolePayload {
   slug?: string;
+  status: string;
   translations: AdminTranslationReqDto[];
 }
 
@@ -299,22 +301,43 @@ export class AdminApiService {
   }
 
   getRoleById(id: number): Observable<ResponseAPI<AdminRoleDto>> {
-    return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/id/${id}`);
+    return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/${id}`).pipe(
+      catchError((error) => {
+        if (error?.status === 404) {
+          return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/id/${id}`);
+        }
+
+        return throwError(() => error);
+      })
+    );
   }
 
   createRole(payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/roles`, payload);
   }
 
-  updateRole(slug: string, payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
+  updateRoleById(id: number, payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/roles/${id}`,
+      payload
+    );
+  }
+
+  updateRoleBySlug(slug: string, payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(
       `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`,
       payload
     );
   }
 
-  deleteRole(slug: string): Observable<ResponseAPI<unknown>> {
-    return this.deleteRequest<unknown>(`${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`);
+  deleteRoleById(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/roles/${id}`);
+  }
+
+  deleteRoleBySlug(slug: string): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(
+      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`
+    );
   }
 
   getUsers(
