@@ -1,0 +1,24 @@
+services:
+  backend:
+    build:
+      context: ./OBRS-backend
+    container_name: obrs-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://host.docker.internal:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: P@ssw0rd
+      SERVER_PORT: 8000
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./OBRS-frontend
+    container_name: obrs-frontend
+    depends_on:
+      - backend
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "4200:4200"
