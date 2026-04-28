@@ -204,6 +204,7 @@
       "VEHICLE_TYPE": "Vehicle Type",
       "CURRENT_ROUTE": "Current Route",
       "STATUS": "Status",
+      "FILTER_STATUS": "Status: All",
       "ADD_TITLE": "Create Vehicle",
       "EDIT_TITLE": "Edit Vehicle",
       "MODAL_HINT": "Set vehicle information and current operating status."

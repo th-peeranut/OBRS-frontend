@@ -18,6 +18,19 @@
   </article>
 </section>
 
+<section class="admin-page-filters mt-3">
+  <select
+    class="admin-select"
+    [value]="selectedStatusFilter"
+    (change)="onStatusFilterChange($any($event.target).value)"
+  >
+    <option value="">{{ 'ADMIN.VEHICLES.FILTER_STATUS' | translate }}</option>
+    <option *ngFor="let status of statusOptions" [value]="status.code.toLowerCase()">
+      {{ status.label }}
+    </option>
+  </select>
+</section>
+
 <section class="admin-card mt-3">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</h4>
@@ -35,7 +48,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let vehicle of vehicles; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let vehicle of filteredVehicles; let i = index" [class.zebra]="i % 2 === 1">
           <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
           <td><code>{{ vehicle.plate }}</code></td>
           <td>{{ vehicle.vehicleType }}</td>
@@ -58,7 +71,7 @@
   </div>
   <div class="admin-table-footer">
     <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} 1 - {{ vehicles.length }}
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredVehicles.length === 0 ? 0 : 1 }} - {{ filteredVehicles.length }}
       {{ 'ADMIN.COMMON.OF' | translate }} {{ vehicles.length }} {{ 'ADMIN.VEHICLES.UNITS' | translate }}
     </span>
   </div>
@@ -144,4 +157,3 @@
     </div>
   </div>
 </div>
-

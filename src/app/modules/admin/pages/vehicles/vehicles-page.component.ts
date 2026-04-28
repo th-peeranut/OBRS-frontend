@@ -33,8 +33,10 @@ interface Option {
 })
 export class VehiclesPageComponent implements OnInit {
   protected vehicles: VehicleRow[] = [];
+  protected filteredVehicles: VehicleRow[] = [];
   protected vehicleTypeOptions: Option[] = [];
   protected statusOptions: Option[] = [];
+  protected selectedStatusFilter = '';
 
   protected isLoading = false;
   protected errorMessage = '';
@@ -94,6 +96,11 @@ export class VehiclesPageComponent implements OnInit {
     }
 
     return 'is-danger';
+  }
+
+  protected onStatusFilterChange(value: string): void {
+    this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
+    this.applyVehicleFilter();
   }
 
   protected openCreateModal(): void {
@@ -241,8 +248,11 @@ export class VehiclesPageComponent implements OnInit {
         }));
 
       this.vehicles = vehicles.map((vehicle) => this.toVehicleRow(vehicle));
+      this.syncStatusFilterWithAvailableOptions();
+      this.applyVehicleFilter();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
+      this.filteredVehicles = [];
     } finally {
       this.isLoading = false;
     }
@@ -295,5 +305,28 @@ export class VehiclesPageComponent implements OnInit {
     }
 
     return translations.find((item) => item.label)?.label ?? null;
+  }
+
+  private applyVehicleFilter(): void {
+    const statusFilter = this.selectedStatusFilter;
+
+    this.filteredVehicles = this.vehicles.filter((vehicle) => {
+      if (statusFilter.length === 0) {
+        return true;
+      }
+
+      return vehicle.statusCode.trim().toLowerCase() === statusFilter;
+    });
+  }
+
+  private syncStatusFilterWithAvailableOptions(): void {
+    if (
+      this.selectedStatusFilter &&
+      !this.statusOptions.some(
+        (option) => option.code.trim().toLowerCase() === this.selectedStatusFilter
+      )
+    ) {
+      this.selectedStatusFilter = '';
+    }
   }
 }
