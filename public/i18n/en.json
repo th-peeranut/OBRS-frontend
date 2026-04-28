@@ -118,7 +118,8 @@
       "LOAD_LOOKUPS_FAILED": "Unable to load lookup settings.",
       "LOAD_ROLES_FAILED": "Unable to load roles.",
       "LOAD_USERS_FAILED": "Unable to load users.",
-      "LOAD_VEHICLES_FAILED": "Unable to load vehicles."
+      "LOAD_VEHICLES_FAILED": "Unable to load vehicles.",
+      "LOAD_ROUTES_FAILED": "Unable to load routes."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -208,6 +209,40 @@
       "ADD_TITLE": "Create Vehicle",
       "EDIT_TITLE": "Edit Vehicle",
       "MODAL_HINT": "Set vehicle information and current operating status."
+    },
+    "ROUTES": {
+      "TITLE": "Route Management",
+      "SUBTITLE": "Manage route records, statuses, stop sequences, and fare segments.",
+      "ADD": "Add Route",
+      "TOTAL_ROUTES": "Total Routes",
+      "ACTIVE_ROUTES": "Active Routes",
+      "SELECTED_STOPS": "Selected Route Stops",
+      "FILTER_STATUS": "Status: All",
+      "TABLE_TITLE": "Route List",
+      "SLUG": "Slug",
+      "NAME": "Route Name",
+      "STATUS": "Status",
+      "UPDATED_AT": "Updated At",
+      "UNITS": "routes",
+      "STOPS_TITLE": "Sequence of Stops",
+      "SEGMENTS_TITLE": "Segments and Fare Matrix",
+      "SEARCH_SEGMENTS": "Search pairs...",
+      "ORIGIN": "Origin",
+      "TERMINAL": "Terminal",
+      "ORIGIN_STOP": "Origin Stop",
+      "DESTINATION_STOP": "Destination Stop",
+      "FARE": "Fare (THB)",
+      "EST_DURATION": "Est. Duration",
+      "SEGMENTS": "segments",
+      "ADD_TITLE": "Create Route",
+      "EDIT_TITLE": "Edit Route",
+      "MODAL_HINT": "Set route identity, translations, and operating status.",
+      "EN_LABEL": "English Route Name",
+      "TH_LABEL": "Thai Route Name",
+      "EN_DESCRIPTION": "English Description",
+      "TH_DESCRIPTION": "Thai Description",
+      "EDIT_SEGMENT_TITLE": "Edit Segment Fare",
+      "FARE_VALIDATION": "Please enter a valid fare greater than 0."
     }
   },
   "LOGIN": {

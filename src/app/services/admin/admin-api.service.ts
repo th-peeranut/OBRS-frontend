@@ -82,6 +82,8 @@ export interface AdminRouteDto {
   id: number;
   slug: string;
   status?: string;
+  createdAt?: string;
+  updatedAt?: string;
   translations: AdminTranslationDto[];
 }
 
@@ -223,6 +225,12 @@ export interface CreateVehiclePayload {
   numberPlate: string;
   vehicleNumber: string;
   status: string;
+}
+
+export interface CreateRoutePayload {
+  slug: string;
+  status: string;
+  translations: AdminTranslationReqDto[];
 }
 
 @Injectable({
@@ -413,6 +421,29 @@ export class AdminApiService {
 
   getRoutes(): Observable<ResponseAPI<AdminRouteDto[]>> {
     return this.getRequest<AdminRouteDto[]>(`${this.baseUrl}/routes`);
+  }
+
+  getRouteBySlug(slug: string): Observable<ResponseAPI<AdminRouteDto>> {
+    return this.getRequest<AdminRouteDto>(
+      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`
+    );
+  }
+
+  createRoute(payload: CreateRoutePayload): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/routes`, payload);
+  }
+
+  updateRouteBySlug(slug: string, payload: CreateRoutePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`,
+      payload
+    );
+  }
+
+  deleteRouteBySlug(slug: string): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(
+      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`
+    );
   }
 
   getRouteStops(routeSlug: string): Observable<ResponseAPI<AdminRouteStopDto>> {

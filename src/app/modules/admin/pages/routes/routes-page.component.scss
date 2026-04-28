@@ -2,3 +2,6 @@
   display: block;
 }
 
+.admin-table tr.is-selected td {
+  background: rgba(13, 110, 253, 0.06);
+}
