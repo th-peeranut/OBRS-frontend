@@ -156,13 +156,17 @@
       "FILTER_STATUS": "Status: All",
       "ACTIVE": "active",
       "SLUG": "Slug",
-      "NAME": "Translated Name",
+      "NAME": "Role Name",
       "UPDATED_AT": "Updated At",
       "ADD_TITLE": "Create Role",
       "EDIT_TITLE": "Edit Role",
-      "MODAL_HINT": "Manage role name and description in the current language.",
+      "MODAL_HINT": "Manage role names and descriptions in English and Thai.",
       "LABEL": "Role Name",
-      "DESCRIPTION": "Description"
+      "DESCRIPTION": "Description",
+      "EN_LABEL": "English Role Name",
+      "TH_LABEL": "Thai Role Name",
+      "EN_DESCRIPTION": "English Description",
+      "TH_DESCRIPTION": "Thai Description"
     },
     "USERS": {
       "TITLE": "User Management",

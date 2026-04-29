@@ -2,10 +2,36 @@
   display: block;
 }
 
-.role-form-name-field {
-  grid-column: 1 / span 1;
+.role-form-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
 }
 
-.role-form-description-field {
-  grid-column: 1 / -1;
+.role-form-slug,
+.role-form-en-label,
+.role-form-th-label {
+  grid-column: span 2;
+}
+
+.role-form-en-description,
+.role-form-th-description {
+  grid-column: span 3;
+}
+
+.role-form-status {
+  grid-column: 1 / span 2;
+}
+
+@media (max-width: 900px) {
+  .role-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .role-form-slug,
+  .role-form-en-label,
+  .role-form-th-label,
+  .role-form-en-description,
+  .role-form-th-description,
+  .role-form-status {
+    grid-column: 1 / -1;
+  }
 }

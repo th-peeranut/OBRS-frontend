@@ -51,7 +51,6 @@
           <td>
             <div class="admin-cell-stack">
               <span class="admin-emphasis">{{ role.label }}</span>
-              <span>{{ role.description }}</span>
             </div>
           </td>
           <td>
@@ -95,8 +94,8 @@
     </h4>
     <p class="admin-modal-subtitle">{{ 'ADMIN.ROLES.MODAL_HINT' | translate }}</p>
 
-    <form [formGroup]="roleForm" class="admin-form-grid" (ngSubmit)="submitRole()">
-      <div class="admin-form-field full">
+    <form [formGroup]="roleForm" class="admin-form-grid role-form-grid" (ngSubmit)="submitRole()">
+      <div class="admin-form-field role-form-slug">
         <label class="admin-form-label">
           {{ 'ADMIN.ROLES.SLUG' | translate }} <span class="admin-required">*</span>
         </label>
@@ -106,22 +105,37 @@
         </small>
       </div>
 
-      <div class="admin-form-field role-form-name-field">
+      <div class="admin-form-field role-form-en-label">
         <label class="admin-form-label">
-          {{ 'ADMIN.ROLES.LABEL' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.ROLES.EN_LABEL' | translate }} <span class="admin-required">*</span>
         </label>
-        <input class="admin-field" formControlName="label" />
-        <small class="admin-error" *ngIf="isFieldInvalid('label')">
+        <input class="admin-field" formControlName="enLabel" />
+        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
       </div>
 
-      <div class="admin-form-field role-form-description-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROLES.DESCRIPTION' | translate }}</label>
-        <textarea class="admin-field" formControlName="description"></textarea>
+      <div class="admin-form-field role-form-th-label">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROLES.TH_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="thLabel" />
+        <small class="admin-error" *ngIf="isFieldInvalid('thLabel')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
       </div>
 
-      <div class="admin-form-field role-form-name-field">
+      <div class="admin-form-field role-form-en-description">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.EN_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="enDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field role-form-th-description">
+        <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_DESCRIPTION' | translate }}</label>
+        <textarea class="admin-field" formControlName="thDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field role-form-status">
         <label class="admin-form-label">
           {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
         </label>

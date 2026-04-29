@@ -1,10 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminRoleDto,
   AdminStatusDto,
+  AdminTranslationDto,
   AdminTranslationReqDto,
   CreateRolePayload,
 } from '../../../../services/admin/admin-api.service';
@@ -16,6 +17,10 @@ interface RoleRow {
   slug: string;
   label: string;
   description: string;
+  enLabel: string;
+  enDescription: string;
+  thLabel: string;
+  thDescription: string;
   status: string;
   statusCode: string;
   updatedAt: string;
@@ -31,7 +36,7 @@ interface StatusOption {
   templateUrl: './role-management-page.component.html',
   styleUrl: './role-management-page.component.scss',
 })
-export class RoleManagementPageComponent implements OnInit {
+export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected roles: RoleRow[] = [];
   protected filteredRoles: RoleRow[] = [];
   protected statusOptions: StatusOption[] = [];
@@ -49,6 +54,7 @@ export class RoleManagementPageComponent implements OnInit {
   protected selectedRole: RoleRow | null = null;
 
   protected readonly roleForm: FormGroup;
+  private readonly languageSubscription: Subscription;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -58,14 +64,24 @@ export class RoleManagementPageComponent implements OnInit {
   ) {
     this.roleForm = this.formBuilder.group({
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
-      label: ['', [Validators.required, Validators.maxLength(255)]],
-      description: ['', [Validators.maxLength(500)]],
+      enLabel: ['', [Validators.required, Validators.maxLength(255)]],
+      enDescription: ['', [Validators.maxLength(500)]],
+      thLabel: ['', [Validators.required, Validators.maxLength(255)]],
+      thDescription: ['', [Validators.maxLength(500)]],
       status: ['', [Validators.required]],
+    });
+
+    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
+      void this.loadRolesAndStatusOptions();
     });
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadRolesAndStatusOptions();
+  }
+
+  ngOnDestroy(): void {
+    this.languageSubscription.unsubscribe();
   }
 
   get activeRoles(): number {
@@ -96,8 +112,10 @@ export class RoleManagementPageComponent implements OnInit {
     this.selectedRole = null;
     this.roleForm.reset({
       slug: '',
-      label: '',
-      description: '',
+      enLabel: '',
+      enDescription: '',
+      thLabel: '',
+      thDescription: '',
       status: this.statusOptions[0]?.code ?? 'active',
     });
     this.roleForm.get('slug')?.enable();
@@ -126,18 +144,27 @@ export class RoleManagementPageComponent implements OnInit {
     const safeRoleDetail = roleDetail ?? this.toRoleDetailFallback(role);
 
     const slug = String(safeRoleDetail.slug ?? role.slug).trim();
-    const label = String(safeRoleDetail.name ?? role.label).trim();
-    const description = String(safeRoleDetail.description ?? role.description)
-      .trim()
-      .replace(/^-$/, '');
+    const enLabel =
+      this.getTranslationLabel(safeRoleDetail.translations, 'en') ??
+      safeRoleDetail.name ??
+      role.enLabel;
+    const thLabel = this.getTranslationLabel(safeRoleDetail.translations, 'th') ?? role.thLabel;
+    const enDescription =
+      this.getTranslationDescription(safeRoleDetail.translations, 'en') ??
+      safeRoleDetail.description ??
+      role.enDescription;
+    const thDescription =
+      this.getTranslationDescription(safeRoleDetail.translations, 'th') ?? role.thDescription;
     const status = this.parseStatus(safeRoleDetail.status ?? role.statusCode);
 
     this.isEditMode = true;
     this.selectedRole = role;
     this.roleForm.reset({
       slug,
-      label,
-      description,
+      enLabel: String(enLabel ?? '').trim().replace(/^-$/, ''),
+      enDescription: String(enDescription ?? '').trim().replace(/^-$/, ''),
+      thLabel: String(thLabel ?? '').trim().replace(/^-$/, ''),
+      thDescription: String(thDescription ?? '').trim().replace(/^-$/, ''),
       status: status.code,
     });
     this.roleForm.get('slug')?.disable();
@@ -239,12 +266,13 @@ export class RoleManagementPageComponent implements OnInit {
         .map((lookup) => ({
           code: lookup.slug,
           label:
-            lookup.translations.find((translation) => translation.locale?.toLowerCase() === 'en')?.label ??
+            this.getTranslationLabel(lookup.translations, this.getCurrentLocale()) ??
+            this.getTranslationLabel(lookup.translations, 'en') ??
             lookup.translations.find((translation) => translation.label)?.label ??
             lookup.slug,
         }));
 
-      this.roles = roles.map((role) => this.toRoleRow(role));
+      this.roles = this.sortRolesByLatestUpdated(roles).map((role) => this.toRoleRow(role));
       this.syncStatusFilterWithAvailableOptions();
       this.applyRoleFilter();
       this.lastUpdatedAt = this.toLatestTimestamp(roles);
@@ -260,18 +288,25 @@ export class RoleManagementPageComponent implements OnInit {
     const slug = String(this.roleForm.getRawValue()['slug'] ?? '')
       .trim()
       .toLowerCase();
-    const label = String(this.roleForm.value['label'] ?? '').trim();
-    const description = String(this.roleForm.value['description'] ?? '').trim();
+    const enLabel = String(this.roleForm.value['enLabel'] ?? '').trim();
+    const enDescription = String(this.roleForm.value['enDescription'] ?? '').trim();
+    const thLabel = String(this.roleForm.value['thLabel'] ?? '').trim();
+    const thDescription = String(this.roleForm.value['thDescription'] ?? '').trim();
     const status = String(this.roleForm.value['status'] ?? '').trim().toLowerCase();
-    const locale = this.getFormLocale();
 
     const translations: AdminTranslationReqDto[] = [
       {
-        locale,
-        label,
-        description: description || undefined,
+        locale: 'en',
+        label: enLabel,
+        description: enDescription || undefined,
       },
     ];
+
+    translations.push({
+      locale: 'th',
+      label: thLabel,
+      description: thDescription || undefined,
+    });
 
     return {
       slug,
@@ -282,12 +317,32 @@ export class RoleManagementPageComponent implements OnInit {
 
   private toRoleRow(role: AdminRoleDto): RoleRow {
     const status = this.parseStatus(role.status);
+    const currentLocale = this.getCurrentLocale();
+    const enLabel = this.getTranslationLabel(role.translations, 'en') ?? role.name ?? role.slug;
+    const enDescription =
+      this.getTranslationDescription(role.translations, 'en') ??
+      role.description ??
+      '-';
+    const thLabel = this.getTranslationLabel(role.translations, 'th') ?? '-';
+    const thDescription = this.getTranslationDescription(role.translations, 'th') ?? '-';
+    const localizedLabel =
+      role.name ??
+      this.getTranslationLabel(role.translations, currentLocale) ??
+      enLabel;
+    const localizedDescription =
+      role.description ??
+      this.getTranslationDescription(role.translations, currentLocale) ??
+      enDescription;
 
     return {
       id: Number(role.id ?? 0),
       slug: role.slug,
-      label: role.name ?? role.slug,
-      description: role.description ?? '-',
+      label: localizedLabel,
+      description: localizedDescription,
+      enLabel,
+      enDescription,
+      thLabel,
+      thDescription,
       status: status.name,
       statusCode: status.code,
       updatedAt: this.formatDateTime(role.updatedAt ?? role.createdAt),
@@ -327,6 +382,23 @@ export class RoleManagementPageComponent implements OnInit {
     }
 
     return this.formatDateTime(new Date(Math.max(...values)).toISOString());
+  }
+
+  private sortRolesByLatestUpdated(roles: AdminRoleDto[]): AdminRoleDto[] {
+    return [...roles].sort(
+      (first, second) =>
+        this.toTimestamp(second.updatedAt ?? second.createdAt) -
+        this.toTimestamp(first.updatedAt ?? first.createdAt)
+    );
+  }
+
+  private toTimestamp(value: string | null | undefined): number {
+    if (!value) {
+      return 0;
+    }
+
+    const timestamp = new Date(value).getTime();
+    return Number.isFinite(timestamp) ? timestamp : 0;
   }
 
   private formatDateTime(value: string | null | undefined): string {
@@ -369,18 +441,17 @@ export class RoleManagementPageComponent implements OnInit {
     }
   }
 
-  private getFormLocale(): string {
-    const rawLocale = String(
-      this.translate.currentLang || this.translate.getDefaultLang() || 'en'
-    ).toLowerCase();
-
-    const matchedLocale = rawLocale.match(/^[a-z]{2}/);
-    return matchedLocale?.[0] ?? 'en';
-  }
-
   private isNotFoundError(error: unknown): boolean {
     const status = (error as { status?: number } | null | undefined)?.status;
     return status === 404;
+  }
+
+  private getCurrentLocale(): string {
+    const rawLocale = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'th'
+    ).toLowerCase();
+
+    return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
   private toRoleDetailFallback(role: RoleRow): AdminRoleDto {
@@ -390,7 +461,61 @@ export class RoleManagementPageComponent implements OnInit {
       name: role.label,
       description: role.description === '-' ? '' : role.description,
       status: role.statusCode,
+      translations: [
+        {
+          locale: 'en',
+          label: role.enLabel,
+          description: role.enDescription === '-' ? undefined : role.enDescription,
+        },
+        {
+          locale: 'th',
+          label: role.thLabel === '-' ? undefined : role.thLabel,
+          description: role.thDescription === '-' ? undefined : role.thDescription,
+        },
+      ],
     };
+  }
+
+  private getTranslationLabel(
+    translations: AdminTranslationDto[] | null | undefined,
+    locale?: string
+  ): string | null {
+    if (!translations || translations.length === 0) {
+      return null;
+    }
+
+    if (locale) {
+      const translation = translations.find(
+        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
+      );
+
+      if (translation?.label) {
+        return translation.label;
+      }
+    }
+
+    return translations.find((item) => item.label)?.label ?? null;
+  }
+
+  private getTranslationDescription(
+    translations: AdminTranslationDto[] | null | undefined,
+    locale?: string
+  ): string | null {
+    if (!translations || translations.length === 0) {
+      return null;
+    }
+
+    if (locale) {
+      const translation = translations.find(
+        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
+      );
+
+      if (translation?.description) {
+        return translation.description;
+      }
+    }
+
+    return translations.find((item) => item.description)?.description ?? null;
   }
 
   private async updateRole(role: RoleRow, payload: CreateRolePayload): Promise<void> {
