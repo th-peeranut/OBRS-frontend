@@ -3,6 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
+  AdminLookupDto,
   AdminRoleDto,
   AdminStatusDto,
   AdminTranslationDto,
@@ -126,12 +127,12 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     let roleDetail: AdminRoleDto | null = null;
     try {
       const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
-      roleDetail = response?.data ?? null;
+      roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
     } catch (error) {
       if (this.isNotFoundError(error)) {
         try {
           const response = await firstValueFrom(this.adminApiService.getRoleBySlug(role.slug));
-          roleDetail = response?.data ?? null;
+          roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
         } catch {
           roleDetail = null;
         }
@@ -253,24 +254,22 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     this.errorMessage = '';
 
     try {
-      const [rolesResponse, lookupsResponse] = await Promise.all([
+      const [rolesResult, lookupsResult] = await Promise.allSettled([
         firstValueFrom(this.adminApiService.getRoles()),
         firstValueFrom(this.adminApiService.getLookups()),
       ]);
 
-      const roles = rolesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
+      if (rolesResult.status === 'rejected') {
+        throw rolesResult.reason;
+      }
 
-      this.statusOptions = lookups
-        .filter((lookup) => lookup.category === 'role_status')
-        .map((lookup) => ({
-          code: lookup.slug,
-          label:
-            this.getTranslationLabel(lookup.translations, this.getCurrentLocale()) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            lookup.translations.find((translation) => translation.label)?.label ??
-            lookup.slug,
-        }));
+      const roles = this.extractResponseArray<AdminRoleDto>(rolesResult.value);
+      const lookups =
+        lookupsResult.status === 'fulfilled'
+          ? this.extractResponseArray<AdminLookupDto>(lookupsResult.value)
+          : [];
+
+      this.statusOptions = this.toStatusOptions(lookups, roles);
 
       this.roles = this.sortRolesByLatestUpdated(roles).map((role) => this.toRoleRow(role));
       this.syncStatusFilterWithAvailableOptions();
@@ -313,6 +312,51 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       status,
       translations,
     };
+  }
+
+  private extractResponseData<T>(response: unknown): T | null {
+    if (response === null || response === undefined) {
+      return null;
+    }
+
+    if (typeof response === 'object' && 'data' in response) {
+      return ((response as { data?: T }).data ?? null);
+    }
+
+    return response as T;
+  }
+
+  private extractResponseArray<T>(response: unknown): T[] {
+    const data = this.extractResponseData<unknown>(response);
+    return Array.isArray(data) ? data as T[] : [];
+  }
+
+  private toStatusOptions(lookups: AdminLookupDto[], roles: AdminRoleDto[]): StatusOption[] {
+    const lookupOptions = lookups
+      .filter((lookup) => lookup.category === 'role_status')
+      .map((lookup) => ({
+        code: String(lookup.slug ?? '').trim().toLowerCase(),
+        label:
+          this.getTranslationLabel(lookup.translations, this.getCurrentLocale()) ??
+          this.getTranslationLabel(lookup.translations, 'en') ??
+          lookup.translations?.find((translation) => translation.label)?.label ??
+          lookup.slug,
+      }))
+      .filter((option) => option.code.length > 0);
+
+    if (lookupOptions.length > 0) {
+      return lookupOptions;
+    }
+
+    const statusByCode = new Map<string, string>();
+    roles.forEach((role) => {
+      const status = this.parseStatus(role.status);
+      if (status.code && status.code !== 'unknown') {
+        statusByCode.set(status.code, status.name);
+      }
+    });
+
+    return [...statusByCode.entries()].map(([code, label]) => ({ code, label }));
   }
 
   private toRoleRow(role: AdminRoleDto): RoleRow {

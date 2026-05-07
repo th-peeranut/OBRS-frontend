@@ -29,27 +29,23 @@
     />
   </label>
 
-  <select
-    class="admin-select"
+  <app-admin-dropdown
     [value]="selectedRoleFilter"
-    (change)="onRoleFilterChange($any($event.target).value)"
-  >
-    <option value="">{{ 'ADMIN.USERS.FILTER_ROLE' | translate }}</option>
-    <option *ngFor="let role of roleOptions" [value]="role.slug.toLowerCase()">
-      {{ role.label }}
-    </option>
-  </select>
+    [options]="roleOptions"
+    valueKey="slug"
+    labelKey="label"
+    [placeholder]="'ADMIN.USERS.FILTER_ROLE' | translate"
+    (valueChange)="onRoleFilterChange($event)"
+  ></app-admin-dropdown>
 
-  <select
-    class="admin-select"
+  <app-admin-dropdown
     [value]="selectedStatusFilter"
-    (change)="onStatusFilterChange($any($event.target).value)"
-  >
-    <option value="">{{ 'ADMIN.USERS.FILTER_STATUS' | translate }}</option>
-    <option *ngFor="let status of statusOptions" [value]="status.code.toLowerCase()">
-      {{ status.label }}
-    </option>
-  </select>
+    [options]="statusOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.USERS.FILTER_STATUS' | translate"
+    (valueChange)="onStatusFilterChange($event)"
+  ></app-admin-dropdown>
 </section>
 
 <section class="admin-card mt-3">
@@ -220,19 +216,22 @@
         <label class="admin-form-label">
           {{ 'ADMIN.USERS.LOCALE' | translate }} <span class="admin-required">*</span>
         </label>
-        <select class="admin-field" formControlName="preferredLocale">
-          <option value="th">th</option>
-          <option value="en">en</option>
-        </select>
+        <app-admin-dropdown
+          formControlName="preferredLocale"
+          [options]="[{ value: 'th', label: 'th' }, { value: 'en', label: 'en' }]"
+        ></app-admin-dropdown>
       </div>
 
       <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
         </label>
-        <select class="admin-field" formControlName="status">
-          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
-        </select>
+        <app-admin-dropdown
+          formControlName="status"
+          [options]="statusOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
       </div>
 
       <div class="admin-form-field full">

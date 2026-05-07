@@ -1,0 +1,43 @@
+<div class="admin-dropdown" [class.is-open]="isOpen" [class.is-disabled]="disabled">
+  <button
+    type="button"
+    class="admin-dropdown-trigger"
+    [disabled]="disabled"
+    [attr.aria-expanded]="isOpen"
+    (click)="toggleDropdown()"
+  >
+    <span class="admin-dropdown-value">
+      <span class="material-symbols-outlined admin-dropdown-leading" *ngIf="icon">{{ icon }}</span>
+      <span [class.is-placeholder]="!selectedLabel">{{ selectedLabel || placeholder }}</span>
+    </span>
+    <span class="material-symbols-outlined admin-dropdown-arrow">expand_more</span>
+  </button>
+
+  <div class="admin-dropdown-menu" *ngIf="isOpen">
+    <button
+      type="button"
+      class="admin-dropdown-option"
+      [class.is-selected]="hasEmptySelection"
+      *ngIf="placeholder"
+      (click)="selectOption('')"
+    >
+      <span>{{ placeholder }}</span>
+      <span class="material-symbols-outlined admin-dropdown-check" *ngIf="hasEmptySelection">
+        check_circle
+      </span>
+    </button>
+
+    <button
+      type="button"
+      class="admin-dropdown-option"
+      [class.is-selected]="isSelected(option)"
+      *ngFor="let option of options"
+      (click)="selectOption(option)"
+    >
+      <span>{{ getOptionLabel(option) }}</span>
+      <span class="material-symbols-outlined admin-dropdown-check" *ngIf="isSelected(option)">
+        check_circle
+      </span>
+    </button>
+  </div>
+</div>

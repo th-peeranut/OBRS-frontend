@@ -161,12 +161,19 @@
       "ADD_TITLE": "Create Role",
       "EDIT_TITLE": "Edit Role",
       "MODAL_HINT": "Manage role names and descriptions in English and Thai.",
+      "ROLE_SLUG": "Role Slug",
+      "ACCOUNT_STATUS": "Account Status",
+      "SLUG_HELP": "Permanent unique identifier for this role.",
+      "ENGLISH_CONTENT": "English Content",
+      "THAI_CONTENT": "Thai Content",
       "LABEL": "Role Name",
       "DESCRIPTION": "Description",
       "EN_LABEL": "English Role Name",
       "TH_LABEL": "Thai Role Name",
       "EN_DESCRIPTION": "English Description",
-      "TH_DESCRIPTION": "Thai Description"
+      "TH_DESCRIPTION": "Thai Description",
+      "EN_DESCRIPTION_PLACEHOLDER": "Enter a descriptive summary for this role in English...",
+      "TH_DESCRIPTION_PLACEHOLDER": "Enter a descriptive summary for this role in Thai..."
     },
     "USERS": {
       "TITLE": "User Management",

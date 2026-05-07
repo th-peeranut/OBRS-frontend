@@ -37,16 +37,14 @@
     />
   </label>
 
-  <select
-    class="admin-select"
+  <app-admin-dropdown
     [value]="selectedStatusFilter"
-    (change)="onStatusFilterChange($any($event.target).value)"
-  >
-    <option value="">{{ 'ADMIN.ROUTES.FILTER_STATUS' | translate }}</option>
-    <option *ngFor="let status of statusOptions" [value]="status.code.toLowerCase()">
-      {{ status.label }}
-    </option>
-  </select>
+    [options]="statusOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.ROUTES.FILTER_STATUS' | translate"
+    (valueChange)="onStatusFilterChange($event)"
+  ></app-admin-dropdown>
 </section>
 
 <section class="admin-card mt-3">
@@ -133,15 +131,13 @@
     <div class="admin-card-head">
       <h4>{{ 'ADMIN.ROUTES.SEGMENTS_TITLE' | translate }}</h4>
       <div class="admin-inline-actions">
-        <select
-          class="admin-select"
+        <app-admin-dropdown
           [ngModel]="selectedVehicleTypeSlug"
           (ngModelChange)="onVehicleTypeChange($event)"
-        >
-          <option *ngFor="let option of vehicleTypeOptions" [value]="option.slug">
-            {{ option.name }}
-          </option>
-        </select>
+          [options]="vehicleTypeOptions"
+          valueKey="slug"
+          labelKey="name"
+        ></app-admin-dropdown>
         <label class="admin-search">
           <span class="material-symbols-outlined">search</span>
           <input
@@ -230,9 +226,12 @@
         <label class="admin-form-label">
           {{ 'ADMIN.ROUTES.STATUS' | translate }} <span class="admin-required">*</span>
         </label>
-        <select class="admin-field" formControlName="status">
-          <option *ngFor="let option of statusOptions" [value]="option.code">{{ option.label }}</option>
-        </select>
+        <app-admin-dropdown
+          formControlName="status"
+          [options]="statusOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
       </div>
 
       <div class="admin-form-field">

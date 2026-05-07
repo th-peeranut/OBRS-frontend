@@ -9,6 +9,7 @@ import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component'
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
+import { AdminDropdownComponent } from './components/admin-dropdown/admin-dropdown.component';
 
 const routes: Routes = [
   {
@@ -65,6 +66,7 @@ const routes: Routes = [
     RoutesPageComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
+    AdminDropdownComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes)],
 })
