@@ -77,6 +77,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private usernameCheckSubscription?: Subscription;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
+  private readonly languageSubscription: Subscription;
   private readonly usernameValidators = [
     Validators.required,
     Validators.minLength(3),
@@ -116,6 +117,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       roles: [[], [this.roleRequiredValidator]],
       isPhoneNumberVerify: [true, [Validators.required]],
     });
+
+    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
+      void this.loadUsersAndOptions();
+    });
   }
 
   async ngOnInit(): Promise<void> {
@@ -124,6 +129,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.languageSubscription.unsubscribe();
     this.usernameCheckSubscription?.unsubscribe();
     this.emailCheckSubscription?.unsubscribe();
     this.phoneNumberCheckSubscription?.unsubscribe();
@@ -346,6 +352,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private async loadUsersAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
+    const currentLocale = this.getCurrentLocale();
 
     try {
       const [usersResponse, rolesResponse, lookupsResponse] = await Promise.all([
@@ -360,14 +367,21 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
       this.roleOptions = roles.map((role) => ({
         slug: role.slug,
-        label: role.name ?? this.getTranslationLabel(role.translations, 'en') ?? role.slug,
+        label:
+          role.name ??
+          this.getTranslationLabel(role.translations, currentLocale) ??
+          this.getTranslationLabel(role.translations, 'en') ??
+          role.slug,
       }));
 
       this.statusOptions = lookups
         .filter((lookup) => lookup.category === 'user_status')
         .map((lookup) => ({
           code: lookup.slug,
-          label: this.getTranslationLabel(lookup.translations, 'en') ?? lookup.slug,
+          label:
+            this.getTranslationLabel(lookup.translations, currentLocale) ??
+            this.getTranslationLabel(lookup.translations, 'en') ??
+            lookup.slug,
         }));
 
       this.users = users.map((user) => this.toUserRow(user));
@@ -458,16 +472,31 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       return [];
     }
 
+    const currentLocale = this.getCurrentLocale();
+
     return roles
       .map((role) => {
         if (typeof role === 'string') {
           return role;
         }
 
-        return role.name ?? this.getTranslationLabel(role.translations, 'en') ?? role.slug;
+        return (
+          role.name ??
+          this.getTranslationLabel(role.translations, currentLocale) ??
+          this.getTranslationLabel(role.translations, 'en') ??
+          role.slug
+        );
       })
       .map((label) => String(label ?? '').trim())
       .filter((label) => label.length > 0);
+  }
+
+  private getCurrentLocale(): string {
+    const rawLocale = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'th'
+    ).toLowerCase();
+
+    return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
   private parseStatus(value: string | AdminStatusDto | null | undefined): {

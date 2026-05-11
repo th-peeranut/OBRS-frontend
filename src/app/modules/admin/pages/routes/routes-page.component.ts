@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminRouteDto,
@@ -58,7 +58,7 @@ interface VehicleTypeOption {
   templateUrl: './routes-page.component.html',
   styleUrl: './routes-page.component.scss',
 })
-export class RoutesPageComponent implements OnInit {
+export class RoutesPageComponent implements OnInit, OnDestroy {
   protected routes: RouteRow[] = [];
   protected filteredRoutes: RouteRow[] = [];
   protected selectedRoute: RouteRow | null = null;
@@ -94,6 +94,7 @@ export class RoutesPageComponent implements OnInit {
 
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
+  private readonly languageSubscription: Subscription;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -127,10 +128,18 @@ export class RoutesPageComponent implements OnInit {
         ],
       ],
     });
+
+    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
+      void this.loadRoutesAndOptions();
+    });
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadRoutesAndOptions();
+  }
+
+  ngOnDestroy(): void {
+    this.languageSubscription.unsubscribe();
   }
 
   protected get totalRoutes(): number {
@@ -146,12 +155,17 @@ export class RoutesPageComponent implements OnInit {
   }
 
   protected get segments(): SegmentRow[] {
-    if (!this.selectedVehicleTypeSlug) {
+    const selectedVehicleTypeSlug = this.normalizeVehicleTypeKey(
+      this.selectedVehicleTypeSlug
+    );
+
+    if (!selectedVehicleTypeSlug) {
       return this.allSegments;
     }
 
     return this.allSegments.filter(
-      (segment) => segment.vehicleTypeSlug === this.selectedVehicleTypeSlug
+      (segment) =>
+        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) === selectedVehicleTypeSlug
     );
   }
 
@@ -229,8 +243,15 @@ export class RoutesPageComponent implements OnInit {
     this.currentPage = 1;
   }
 
-  protected onVehicleTypeChange(slug: string): void {
-    this.selectedVehicleTypeSlug = slug;
+  protected onVehicleTypeChange(value: string): void {
+    const normalizedValue = this.normalizeVehicleTypeKey(value);
+    const matchedOption = this.vehicleTypeOptions.find(
+      (option) =>
+        this.normalizeVehicleTypeKey(option.slug) === normalizedValue ||
+        this.normalizeVehicleTypeKey(option.name) === normalizedValue
+    );
+
+    this.selectedVehicleTypeSlug = matchedOption?.slug ?? String(value ?? '').trim();
     this.currentPage = 1;
   }
 
@@ -448,6 +469,7 @@ export class RoutesPageComponent implements OnInit {
   private async loadRoutesAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
+    const currentLocale = this.getCurrentLocale();
 
     try {
       const [routesResponse, lookupsResponse] = await Promise.all([
@@ -462,7 +484,10 @@ export class RoutesPageComponent implements OnInit {
         .filter((lookup) => lookup.category === 'route_status')
         .map((lookup) => ({
           code: lookup.slug,
-          label: this.getTranslationLabel(lookup.translations, 'en') ?? lookup.slug,
+          label:
+            this.getTranslationLabel(lookup.translations, currentLocale) ??
+            this.getTranslationLabel(lookup.translations, 'en') ??
+            lookup.slug,
         }));
 
       this.routes = routeDtos.map((route) => this.toRouteRow(route));
@@ -524,7 +549,9 @@ export class RoutesPageComponent implements OnInit {
         if (
           this.vehicleTypeOptions.length > 0 &&
           !this.vehicleTypeOptions.some(
-            (option) => option.slug === this.selectedVehicleTypeSlug
+            (option) =>
+              this.normalizeVehicleTypeKey(option.slug) ===
+              this.normalizeVehicleTypeKey(this.selectedVehicleTypeSlug)
           )
         ) {
           this.selectedVehicleTypeSlug = this.vehicleTypeOptions[0].slug;
@@ -570,12 +597,19 @@ export class RoutesPageComponent implements OnInit {
   private toRouteRow(route: AdminRouteDto): RouteRow {
     const statusCode = String(route.status ?? 'unknown').trim().toLowerCase();
     const statusLabel = statusCode.replace(/_/g, ' ').toUpperCase();
+    const currentLocale = this.getCurrentLocale();
 
     return {
       id: route.id,
       slug: route.slug,
-      label: this.getTranslationLabel(route.translations, 'en') ?? route.slug,
-      description: this.getTranslationDescription(route.translations, 'en') ?? '-',
+      label:
+        this.getTranslationLabel(route.translations, currentLocale) ??
+        this.getTranslationLabel(route.translations, 'en') ??
+        route.slug,
+      description:
+        this.getTranslationDescription(route.translations, currentLocale) ??
+        this.getTranslationDescription(route.translations, 'en') ??
+        '-',
       status: statusLabel,
       statusCode,
       updatedAt: this.formatDateTime(route.updatedAt ?? route.createdAt),
@@ -603,10 +637,13 @@ export class RoutesPageComponent implements OnInit {
       return [];
     }
 
+    const currentLocale = this.getCurrentLocale();
+
     const sortedStops = [...stops].sort((a, b) => a.stopOrder - b.stopOrder);
 
     return sortedStops.map((stop, index) => ({
       name:
+        this.getTranslationLabel(stop.stop?.translations, currentLocale) ??
         this.getTranslationLabel(stop.stop?.translations, 'en') ??
         stop.stop?.slug ??
         '-',
@@ -638,26 +675,30 @@ export class RoutesPageComponent implements OnInit {
         duration: '-',
         fromStopSlug: pair.fromStop?.slug ?? '',
         toStopSlug: pair.toStop?.slug ?? '',
-        vehicleTypeSlug: pair.vehicleType?.slug ?? '',
+        vehicleTypeSlug: String(pair.vehicleType?.slug ?? '').trim(),
         vehicleTypeName: pair.vehicleType?.name ?? pair.vehicleType?.slug ?? '-',
       };
     });
   }
 
   private toVehicleTypeOptions(segments: SegmentRow[]): VehicleTypeOption[] {
-    const options = new Map<string, string>();
+    const options = new Map<string, VehicleTypeOption>();
 
     for (const segment of segments) {
-      if (!segment.vehicleTypeSlug) {
+      const normalizedSlug = this.normalizeVehicleTypeKey(segment.vehicleTypeSlug);
+      if (!normalizedSlug) {
         continue;
       }
 
-      if (!options.has(segment.vehicleTypeSlug)) {
-        options.set(segment.vehicleTypeSlug, segment.vehicleTypeName);
+      if (!options.has(normalizedSlug)) {
+        options.set(normalizedSlug, {
+          slug: segment.vehicleTypeSlug,
+          name: segment.vehicleTypeName,
+        });
       }
     }
 
-    return [...options.entries()].map(([slug, name]) => ({ slug, name }));
+    return [...options.values()];
   }
 
   private toSegmentUpdatePayload(
@@ -665,7 +706,9 @@ export class RoutesPageComponent implements OnInit {
     editedFare: number
   ): AdminSegmentReqDto {
     const segmentsOfVehicleType = this.allSegments.filter(
-      (segment) => segment.vehicleTypeSlug === selectedSegment.vehicleTypeSlug
+      (segment) =>
+        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) ===
+        this.normalizeVehicleTypeKey(selectedSegment.vehicleTypeSlug)
     );
 
     return {
@@ -687,7 +730,10 @@ export class RoutesPageComponent implements OnInit {
     );
 
     this.allSegments = this.allSegments.map((segment) => {
-      if (segment.vehicleTypeSlug !== payload.vehicleType) {
+      if (
+        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) !==
+        this.normalizeVehicleTypeKey(payload.vehicleType)
+      ) {
         return segment;
       }
 
@@ -762,6 +808,18 @@ export class RoutesPageComponent implements OnInit {
       month: 'short',
       day: '2-digit',
     }).format(date);
+  }
+
+  private normalizeVehicleTypeKey(value: string | null | undefined): string {
+    return String(value ?? '').trim().toLowerCase();
+  }
+
+  private getCurrentLocale(): string {
+    const rawLocale = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'th'
+    ).toLowerCase();
+
+    return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
   private getTranslationLabel(

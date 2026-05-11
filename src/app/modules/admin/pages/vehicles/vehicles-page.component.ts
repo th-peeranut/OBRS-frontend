@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminTranslationDto,
@@ -31,7 +31,7 @@ interface Option {
   templateUrl: './vehicles-page.component.html',
   styleUrl: './vehicles-page.component.scss',
 })
-export class VehiclesPageComponent implements OnInit {
+export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected vehicles: VehicleRow[] = [];
   protected filteredVehicles: VehicleRow[] = [];
   protected vehicleTypeOptions: Option[] = [];
@@ -49,6 +49,7 @@ export class VehiclesPageComponent implements OnInit {
   protected selectedVehicle: VehicleRow | null = null;
 
   protected readonly vehicleForm: FormGroup;
+  private readonly languageSubscription: Subscription;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -62,10 +63,18 @@ export class VehiclesPageComponent implements OnInit {
       vehicleNumber: ['', [Validators.required, Validators.maxLength(50)]],
       status: ['', [Validators.required]],
     });
+
+    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
+      void this.loadVehiclesAndOptions();
+    });
   }
 
   async ngOnInit(): Promise<void> {
     await this.loadVehiclesAndOptions();
+  }
+
+  ngOnDestroy(): void {
+    this.languageSubscription.unsubscribe();
   }
 
   protected get totalVehicles(): number {
@@ -223,6 +232,7 @@ export class VehiclesPageComponent implements OnInit {
   private async loadVehiclesAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
+    const currentLocale = this.getCurrentLocale();
 
     try {
       const [vehiclesResponse, vehicleTypesResponse, lookupsResponse] = await Promise.all([
@@ -237,14 +247,20 @@ export class VehiclesPageComponent implements OnInit {
 
       this.vehicleTypeOptions = vehicleTypes.map((type) => ({
         code: type.slug,
-        label: this.getTranslationLabel(type.translations, 'en') ?? type.slug,
+        label:
+          this.getTranslationLabel(type.translations, currentLocale) ??
+          this.getTranslationLabel(type.translations, 'en') ??
+          type.slug,
       }));
 
       this.statusOptions = lookups
         .filter((lookup) => lookup.category === 'vehicle_status')
         .map((lookup) => ({
           code: lookup.slug,
-          label: this.getTranslationLabel(lookup.translations, 'en') ?? lookup.slug,
+          label:
+            this.getTranslationLabel(lookup.translations, currentLocale) ??
+            this.getTranslationLabel(lookup.translations, 'en') ??
+            lookup.slug,
         }));
 
       this.vehicles = vehicles.map((vehicle) => this.toVehicleRow(vehicle));
@@ -270,6 +286,7 @@ export class VehiclesPageComponent implements OnInit {
   private toVehicleRow(vehicle: AdminVehicleDto): VehicleRow {
     const statusCode = (vehicle.status ?? 'unknown').toLowerCase();
     const statusLabel = statusCode.replace(/_/g, ' ').toUpperCase();
+    const currentLocale = this.getCurrentLocale();
 
     return {
       id: vehicle.id,
@@ -278,12 +295,21 @@ export class VehiclesPageComponent implements OnInit {
       vehicleNumber: vehicle.vehicleNumber ?? '-',
       plate: vehicle.numberPlate ?? '-',
       vehicleType:
+        this.getTranslationLabel(vehicle.vehicleType?.translations, currentLocale) ??
         this.getTranslationLabel(vehicle.vehicleType?.translations, 'en') ??
         vehicle.vehicleType?.slug ??
         '-',
       route: '-',
       status: statusLabel,
     };
+  }
+
+  private getCurrentLocale(): string {
+    const rawLocale = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'th'
+    ).toLowerCase();
+
+    return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
   private getTranslationLabel(

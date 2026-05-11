@@ -132,8 +132,8 @@
       <h4>{{ 'ADMIN.ROUTES.SEGMENTS_TITLE' | translate }}</h4>
       <div class="admin-inline-actions">
         <app-admin-dropdown
-          [ngModel]="selectedVehicleTypeSlug"
-          (ngModelChange)="onVehicleTypeChange($event)"
+          [value]="selectedVehicleTypeSlug"
+          (valueChange)="onVehicleTypeChange($event)"
           [options]="vehicleTypeOptions"
           valueKey="slug"
           labelKey="name"
