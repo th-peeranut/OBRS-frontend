@@ -44,6 +44,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
   protected lastUpdatedAt = '-';
   protected isLoading = false;
+  protected isLanguageChanging = false;
   protected errorMessage = '';
   protected selectedStatusFilter = '';
 
@@ -56,6 +57,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
   protected readonly roleForm: FormGroup;
   private readonly languageSubscription: Subscription;
+  private readonly languageLoadingMinimumMs = 1000;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -73,7 +75,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     });
 
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.loadRolesAndStatusOptions();
+      void this.reloadForLanguageChange();
     });
   }
 
@@ -281,6 +283,25 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async reloadForLanguageChange(): Promise<void> {
+    this.isLanguageChanging = true;
+
+    try {
+      await Promise.all([
+        this.loadRolesAndStatusOptions(),
+        this.waitForLanguageLoadingMinimum(),
+      ]);
+    } finally {
+      this.isLanguageChanging = false;
+    }
+  }
+
+  private waitForLanguageLoadingMinimum(): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, this.languageLoadingMinimumMs);
+    });
   }
 
   private toRolePayload(): CreateRolePayload {

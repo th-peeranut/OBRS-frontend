@@ -61,6 +61,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
 
   protected isLoading = false;
+  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isFormModalOpen = false;
@@ -78,6 +79,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
   private readonly languageSubscription: Subscription;
+  private readonly languageLoadingMinimumMs = 1000;
   private readonly usernameValidators = [
     Validators.required,
     Validators.minLength(3),
@@ -119,7 +121,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     });
 
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.loadUsersAndOptions();
+      void this.reloadForLanguageChange();
     });
   }
 
@@ -393,6 +395,25 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async reloadForLanguageChange(): Promise<void> {
+    this.isLanguageChanging = true;
+
+    try {
+      await Promise.all([
+        this.loadUsersAndOptions(),
+        this.waitForLanguageLoadingMinimum(),
+      ]);
+    } finally {
+      this.isLanguageChanging = false;
+    }
+  }
+
+  private waitForLanguageLoadingMinimum(): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, this.languageLoadingMinimumMs);
+    });
   }
 
   private toCreateUserPayload(): CreateUserPayload {

@@ -78,6 +78,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected isLoading = false;
   protected isDetailLoading = false;
+  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isRouteFormModalOpen = false;
@@ -95,6 +96,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
   private readonly languageSubscription: Subscription;
+  private readonly languageLoadingMinimumMs = 1000;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -130,7 +132,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     });
 
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.loadRoutesAndOptions();
+      void this.reloadForLanguageChange();
     });
   }
 
@@ -518,6 +520,25 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isLoading = false;
     }
+  }
+
+  private async reloadForLanguageChange(): Promise<void> {
+    this.isLanguageChanging = true;
+
+    try {
+      await Promise.all([
+        this.loadRoutesAndOptions(),
+        this.waitForLanguageLoadingMinimum(),
+      ]);
+    } finally {
+      this.isLanguageChanging = false;
+    }
+  }
+
+  private waitForLanguageLoadingMinimum(): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(resolve, this.languageLoadingMinimumMs);
+    });
   }
 
   private async selectRouteForLoad(route: RouteRow): Promise<void> {

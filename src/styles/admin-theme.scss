@@ -830,6 +830,45 @@ textarea.admin-field {
   width: min(460px, 100%);
 }
 
+.admin-loading-backdrop {
+  z-index: 1300;
+  backdrop-filter: blur(4px);
+}
+
+.admin-loading-panel {
+  width: min(340px, 100%);
+  padding: 28px 24px;
+  border-radius: 18px;
+  border: 1px solid rgba(189, 200, 207, 0.75);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 18px 40px rgba(25, 28, 30, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.admin-loading-spinner {
+  font-size: 34px;
+  color: #006687;
+  animation: admin-loading-spin 1s linear infinite;
+}
+
+.admin-loading-panel .admin-modal-title {
+  font-size: 18px;
+}
+
+@keyframes admin-loading-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .admin-map-card {
   background: linear-gradient(145deg, #ebf6fb, #ffffff);
 }
