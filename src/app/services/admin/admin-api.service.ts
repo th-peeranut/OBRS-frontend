@@ -116,6 +116,7 @@ export interface AdminStopPairDto {
   toStop?: AdminNewTranslationDto;
   vehicleType?: AdminNewTranslationDto;
   fare?: string;
+  estimatedDurationMinutes?: number;
 }
 
 export interface AdminSegmentDto {
@@ -127,6 +128,7 @@ export interface AdminStopPairReqDto {
   fromStop: string;
   toStop: string;
   fare: number;
+  estimatedDurationMinutes?: number;
 }
 
 export interface AdminSegmentReqDto {

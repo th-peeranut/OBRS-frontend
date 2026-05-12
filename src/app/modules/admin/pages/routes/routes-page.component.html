@@ -298,13 +298,72 @@
     </p>
 
     <form [formGroup]="editSegmentForm" class="admin-form-grid" (ngSubmit)="submitSegmentEdit()">
-      <div class="admin-form-field full">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROUTES.ORIGIN_STOP' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="fromStopSlug"
+          [options]="stops"
+          valueKey="slug"
+          labelKey="name"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="isSegmentFieldInvalid('fromStopSlug')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROUTES.DESTINATION_STOP' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="toStopSlug"
+          [options]="stops"
+          valueKey="slug"
+          labelKey="name"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="hasSegmentFieldError('toStopSlug', 'sameStop')">
+          {{ 'ADMIN.ROUTES.SAME_STOP_VALIDATION' | translate }}
+        </small>
+        <small class="admin-error" *ngIf="hasSegmentFieldError('toStopSlug', 'stopOrder')">
+          {{ 'ADMIN.ROUTES.STOP_ORDER_VALIDATION' | translate }}
+        </small>
+        <small
+          class="admin-error"
+          *ngIf="
+            isSegmentFieldInvalid('toStopSlug') &&
+            !hasSegmentFieldError('toStopSlug', 'sameStop') &&
+            !hasSegmentFieldError('toStopSlug', 'stopOrder')
+          "
+        >
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.ROUTES.FARE' | translate }} <span class="admin-required">*</span>
         </label>
         <input class="admin-field" formControlName="fare" type="number" min="0.01" step="0.01" />
         <small class="admin-error" *ngIf="isSegmentFieldInvalid('fare')">
           {{ 'ADMIN.ROUTES.FARE_VALIDATION' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROUTES.EST_DURATION' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input
+          class="admin-field"
+          formControlName="estimatedDurationMinutes"
+          type="number"
+          min="1"
+          step="1"
+        />
+        <small class="admin-error" *ngIf="isSegmentFieldInvalid('estimatedDurationMinutes')">
+          {{ 'ADMIN.ROUTES.DURATION_VALIDATION' | translate }}
         </small>
       </div>
     </form>

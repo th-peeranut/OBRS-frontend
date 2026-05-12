@@ -254,7 +254,10 @@
       "EN_DESCRIPTION": "English Description",
       "TH_DESCRIPTION": "Thai Description",
       "EDIT_SEGMENT_TITLE": "Edit Segment Fare",
-      "FARE_VALIDATION": "Please enter a valid fare greater than 0."
+      "FARE_VALIDATION": "Please enter a valid fare greater than 0.",
+      "SAME_STOP_VALIDATION": "Destination stop must not match origin stop.",
+      "STOP_ORDER_VALIDATION": "Destination stop must be after origin stop.",
+      "DURATION_VALIDATION": "Please enter duration in minutes greater than 0."
     }
   },
   "LOGIN": {

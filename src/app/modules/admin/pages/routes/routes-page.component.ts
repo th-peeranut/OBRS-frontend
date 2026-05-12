@@ -25,9 +25,12 @@ interface RouteRow {
 }
 
 interface StopPoint {
+  slug: string;
   name: string;
   distance: string;
   duration: string;
+  stopOrder: number;
+  offsetMinutesFromOrigin: number;
   label?: string;
 }
 
@@ -37,6 +40,7 @@ interface SegmentRow {
   destination: string;
   fare: number;
   duration: string;
+  estimatedDurationMinutes: number | null;
   fromStopSlug: string;
   toStopSlug: string;
   vehicleTypeSlug: string;
@@ -121,12 +125,22 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     });
 
     this.editSegmentForm = this.formBuilder.group({
+      fromStopSlug: ['', [Validators.required]],
+      toStopSlug: ['', [Validators.required]],
       fare: [
         '',
         [
           Validators.required,
           Validators.pattern(/^\d+(\.\d{1,2})?$/),
           Validators.min(0.01),
+        ],
+      ],
+      estimatedDurationMinutes: [
+        '',
+        [
+          Validators.required,
+          Validators.pattern(/^\d+$/),
+          Validators.min(1),
         ],
       ],
     });
@@ -355,6 +369,11 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return !!field && field.invalid && (field.dirty || field.touched);
   }
 
+  protected hasSegmentFieldError(fieldName: string, errorName: string): boolean {
+    const field = this.editSegmentForm.get(fieldName);
+    return !!field?.hasError(errorName) && (field.dirty || field.touched);
+  }
+
   protected async submitRoute(): Promise<void> {
     if (this.routeForm.invalid) {
       this.routeForm.markAllAsTouched();
@@ -419,7 +438,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected openSegmentEditModal(segment: SegmentRow): void {
     this.selectedSegment = segment;
     this.editSegmentForm.reset({
+      fromStopSlug: segment.fromStopSlug,
+      toStopSlug: segment.toStopSlug,
       fare: segment.fare.toFixed(2),
+      estimatedDurationMinutes: segment.estimatedDurationMinutes ?? '',
     });
     this.isSegmentEditModalOpen = true;
   }
@@ -444,14 +466,29 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const newFare = Number(this.editSegmentForm.value['fare'] ?? 0);
-    const payload = this.toSegmentUpdatePayload(this.selectedSegment, newFare);
+    const raw = this.editSegmentForm.getRawValue();
+    const editedFromStopSlug = String(raw['fromStopSlug'] ?? '').trim();
+    const editedToStopSlug = String(raw['toStopSlug'] ?? '').trim();
+    const newFare = Number(raw['fare'] ?? 0);
+    const estimatedDurationMinutes = Number(raw['estimatedDurationMinutes'] ?? 0);
+
+    if (!this.validateSegmentStops(editedFromStopSlug, editedToStopSlug)) {
+      return;
+    }
+
+    const payload = this.toSegmentUpdatePayload(
+      this.selectedSegment,
+      editedFromStopSlug,
+      editedToStopSlug,
+      newFare,
+      estimatedDurationMinutes
+    );
     this.isSavingSegmentEdit = true;
     let isUpdated = false;
 
     try {
       await firstValueFrom(this.adminApiService.updateSegments(payload));
-      this.applyPayloadChanges(payload);
+      await this.loadRouteStructureBySlug(this.selectedRouteSlug);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       isUpdated = true;
     } catch {
@@ -663,6 +700,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     const sortedStops = [...stops].sort((a, b) => a.stopOrder - b.stopOrder);
 
     return sortedStops.map((stop, index) => ({
+      slug: stop.stop?.slug ?? '',
       name:
         this.getTranslationLabel(stop.stop?.translations, currentLocale) ??
         this.getTranslationLabel(stop.stop?.translations, 'en') ??
@@ -670,6 +708,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         '-',
       distance: `${stop.distanceKmFromOrigin ?? 0} km`,
       duration: `${stop.offsetMinutesFromOrigin ?? 0} mins`,
+      stopOrder: stop.stopOrder,
+      offsetMinutesFromOrigin: Number(stop.offsetMinutesFromOrigin ?? 0),
       label:
         index === 0
           ? this.translate.instant('ADMIN.ROUTES.ORIGIN')
@@ -693,7 +733,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         origin: pair.fromStop?.name ?? pair.fromStop?.slug ?? '-',
         destination: pair.toStop?.name ?? pair.toStop?.slug ?? '-',
         fare: Number.isFinite(parsedFare) ? parsedFare : 0,
-        duration: '-',
+        duration: this.formatDuration(pair.estimatedDurationMinutes),
+        estimatedDurationMinutes: this.normalizeDurationMinutes(
+          pair.estimatedDurationMinutes
+        ),
         fromStopSlug: pair.fromStop?.slug ?? '',
         toStopSlug: pair.toStop?.slug ?? '',
         vehicleTypeSlug: String(pair.vehicleType?.slug ?? '').trim(),
@@ -724,7 +767,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   private toSegmentUpdatePayload(
     selectedSegment: SegmentRow,
-    editedFare: number
+    editedFromStopSlug: string,
+    editedToStopSlug: string,
+    editedFare: number,
+    estimatedDurationMinutes: number
   ): AdminSegmentReqDto {
     const segmentsOfVehicleType = this.allSegments.filter(
       (segment) =>
@@ -735,41 +781,21 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return {
       route: this.selectedRouteSlug,
       vehicleType: selectedSegment.vehicleTypeSlug,
-      stopPairs: segmentsOfVehicleType.map((segment) => ({
-        fromStop: segment.fromStopSlug,
-        toStop: segment.toStopSlug,
-        fare: this.normalizeFareForSave(
-          segment.id === selectedSegment.id ? editedFare : segment.fare
-        ),
-      })),
+      stopPairs: segmentsOfVehicleType.map((segment) => {
+        const isEditedSegment = segment.id === selectedSegment.id;
+
+        return {
+          fromStop: isEditedSegment ? editedFromStopSlug : segment.fromStopSlug,
+          toStop: isEditedSegment ? editedToStopSlug : segment.toStopSlug,
+          fare: this.normalizeFareForSave(
+            isEditedSegment ? editedFare : segment.fare
+          ),
+          estimatedDurationMinutes: isEditedSegment
+            ? this.normalizeDurationForSave(estimatedDurationMinutes)
+            : undefined,
+        };
+      }),
     };
-  }
-
-  private applyPayloadChanges(payload: AdminSegmentReqDto): void {
-    const fareByPair = new Map<string, number>(
-      payload.stopPairs.map((pair) => [`${pair.fromStop}-${pair.toStop}`, pair.fare])
-    );
-
-    this.allSegments = this.allSegments.map((segment) => {
-      if (
-        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) !==
-        this.normalizeVehicleTypeKey(payload.vehicleType)
-      ) {
-        return segment;
-      }
-
-      const key = `${segment.fromStopSlug}-${segment.toStopSlug}`;
-      const updatedFare = fareByPair.get(key);
-
-      if (updatedFare === undefined) {
-        return segment;
-      }
-
-      return {
-        ...segment,
-        fare: updatedFare,
-      };
-    });
   }
 
   private applyRouteFilters(): void {
@@ -814,6 +840,48 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return Number(value.toFixed(2));
   }
 
+  private normalizeDurationForSave(value: number): number {
+    if (!Number.isFinite(value) || value <= 0) {
+      return 1;
+    }
+
+    return Math.round(value);
+  }
+
+  private normalizeDurationMinutes(value: number | null | undefined): number | null {
+    if (!Number.isFinite(value) || value === null || value === undefined) {
+      return null;
+    }
+
+    return Math.max(0, Math.round(value));
+  }
+
+  private validateSegmentStops(fromStopSlug: string, toStopSlug: string): boolean {
+    const fromStop = this.getStopPointBySlug(fromStopSlug);
+    const toStop = this.getStopPointBySlug(toStopSlug);
+    const toStopControl = this.editSegmentForm.get('toStopSlug');
+
+    if (!fromStop || !toStop) {
+      toStopControl?.setErrors({ required: true });
+      toStopControl?.markAsTouched();
+      return false;
+    }
+
+    if (fromStop.slug === toStop.slug) {
+      toStopControl?.setErrors({ sameStop: true });
+      toStopControl?.markAsTouched();
+      return false;
+    }
+
+    if (toStop.stopOrder <= fromStop.stopOrder) {
+      toStopControl?.setErrors({ stopOrder: true });
+      toStopControl?.markAsTouched();
+      return false;
+    }
+
+    return true;
+  }
+
   private formatDateTime(value: string | null | undefined): string {
     if (!value) {
       return '-';
@@ -831,8 +899,46 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }).format(date);
   }
 
+  private formatDuration(minutes: number | null | undefined): string {
+    if (!Number.isFinite(minutes) || minutes === null || minutes === undefined) {
+      return '-';
+    }
+
+    const normalizedMinutes = Math.max(0, Math.round(minutes));
+    const hours = Math.floor(normalizedMinutes / 60);
+    const remainingMinutes = normalizedMinutes % 60;
+    const currentLocale = this.getCurrentLocale();
+
+    if (currentLocale === 'th') {
+      if (hours > 0 && remainingMinutes > 0) {
+        return `${hours} ชม. ${remainingMinutes} นาที`;
+      }
+
+      if (hours > 0) {
+        return `${hours} ชม.`;
+      }
+
+      return `${remainingMinutes} นาที`;
+    }
+
+    if (hours > 0 && remainingMinutes > 0) {
+      return `${hours} hr ${remainingMinutes} min`;
+    }
+
+    if (hours > 0) {
+      return `${hours} hr`;
+    }
+
+    return `${remainingMinutes} min`;
+  }
+
   private normalizeVehicleTypeKey(value: string | null | undefined): string {
     return String(value ?? '').trim().toLowerCase();
+  }
+
+  private getStopPointBySlug(slug: string): StopPoint | undefined {
+    const normalizedSlug = String(slug ?? '').trim();
+    return this.stops.find((stop) => stop.slug === normalizedSlug);
   }
 
   private getCurrentLocale(): string {
