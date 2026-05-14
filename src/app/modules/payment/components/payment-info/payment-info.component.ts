@@ -7,6 +7,8 @@ import {
   ProvinceStationReview,
   Province,
   StationApi,
+  getStationFallbackLabel,
+  getStationTranslationLabel,
 } from '../../../../shared/interfaces/station.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import {
@@ -228,17 +230,12 @@ export class PaymentInfoComponent {
     const match = (stationList ?? []).find((station) => station.id === parsed);
     if (!match) return '';
 
-    const byLocale = match.translations?.find((item) =>
-      item.locale?.toLowerCase().startsWith(locale)
-    );
-    if (byLocale?.label) return byLocale.label;
-
-    return match.translations?.[0]?.label || match.slug || '';
+    return getStationFallbackLabel(match, locale);
   }
 
   private toStation(stationApi: StationApi): Station {
-    const nameEnglish = this.getTranslationLabel(stationApi, 'en') || stationApi.slug;
-    const nameThai = this.getTranslationLabel(stationApi, 'th') || nameEnglish;
+    const nameEnglish = getStationTranslationLabel(stationApi, 'en') || stationApi.slug;
+    const nameThai = getStationTranslationLabel(stationApi, 'th') || nameEnglish;
     return {
       id: stationApi.id,
       code: stationApi.slug,
@@ -250,12 +247,6 @@ export class PaymentInfoComponent {
       lastUpdatedDate: stationApi.lastUpdatedDate,
       url: '',
     };
-  }
-
-  private getTranslationLabel(stationApi: StationApi, locale: string): string | undefined {
-    const match = stationApi.translations?.find((item) => item.locale === locale);
-    if (match?.label) return match.label;
-    return stationApi.translations?.[0]?.label;
   }
 
   private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
@@ -282,5 +273,4 @@ export class PaymentInfoComponent {
     return diff >= 0 ? diff : 0;
   }
 }
-
 

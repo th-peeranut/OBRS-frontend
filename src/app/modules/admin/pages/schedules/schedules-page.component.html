@@ -1,73 +1,135 @@
 <section class="admin-page-intro">
   <div>
-    <h3>Schedules</h3>
-    <p>Managing 142 active trip instances across Thailand.</p>
-    <p class="admin-muted" *ngIf="isLoading">Loading schedule data...</p>
+    <h3>{{ 'ADMIN.SCHEDULES.TITLE' | translate }}</h3>
+    <p>{{ 'ADMIN.SCHEDULES.SUBTITLE' | translate }}</p>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
   </div>
-  <div class="admin-inline-actions">
-    <button type="button" class="admin-btn">
-      <span class="material-symbols-outlined">download</span>
-      <span>Export Manifest</span>
-    </button>
-    <button type="button" class="admin-btn admin-btn-primary">
-      <span class="material-symbols-outlined">bolt</span>
-      <span>Manual Dispatch</span>
-    </button>
-  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.SCHEDULES.ADD' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-grid admin-grid--3 mt-3">
+  <article class="admin-card">
+    <p class="admin-muted">{{ 'ADMIN.SCHEDULES.TOTAL_SETS' | translate }}</p>
+    <p class="admin-big-number">{{ totalSchedules }}</p>
+  </article>
+  <article class="admin-card">
+    <p class="admin-muted">{{ 'ADMIN.SCHEDULES.SCHEDULED_SETS' | translate }}</p>
+    <p class="admin-big-number">{{ activeScheduleSets }}</p>
+  </article>
+  <article class="admin-card">
+    <p class="admin-muted">{{ 'ADMIN.SCHEDULES.DEPARTURE_TIMES' | translate }}</p>
+    <p class="admin-big-number">{{ totalDepartures }}</p>
+  </article>
 </section>
 
 <section class="admin-page-filters mt-3">
   <label class="admin-search">
     <span class="material-symbols-outlined">search</span>
-    <input type="text" placeholder="Search by trip ID, driver, or plate..." />
+    <input
+      type="text"
+      [placeholder]="'ADMIN.SCHEDULES.SEARCH_PLACEHOLDER' | translate"
+      [value]="searchKeyword"
+      (input)="onSearchKeywordChange($any($event.target).value)"
+    />
   </label>
-  <label class="admin-input">
-    <span class="material-symbols-outlined">calendar_month</span>
-    <input type="date" />
-  </label>
-  <app-admin-dropdown placeholder="All Routes"></app-admin-dropdown>
-  <app-admin-dropdown placeholder="All Status"></app-admin-dropdown>
+
+  <p-calendar
+    styleClass="schedule-calendar-filter"
+    inputStyleClass="schedule-calendar-filter-input"
+    dateFormat="dd/mm/yy"
+    [ngModel]="selectedDateFilter"
+    (ngModelChange)="onDateFilterChange($event)"
+    [showIcon]="true"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.SCHEDULES.FILTER_DATE' | translate"
+    appendTo="body"
+  ></p-calendar>
+
+  <app-admin-dropdown
+    [value]="selectedRouteFilter"
+    [options]="routeOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.SCHEDULES.FILTER_ROUTE' | translate"
+    (valueChange)="onRouteFilterChange($event)"
+  ></app-admin-dropdown>
+
+  <app-admin-dropdown
+    [value]="selectedStatusFilter"
+    [options]="statusOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.SCHEDULES.FILTER_STATUS' | translate"
+    (valueChange)="onStatusFilterChange($event)"
+  ></app-admin-dropdown>
 </section>
 
 <section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.SCHEDULES.TABLE_TITLE' | translate }}</h4>
+  </div>
+
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
         <tr>
-          <th>Trip ID</th>
-          <th>Departure</th>
-          <th>Route</th>
-          <th>Vehicle</th>
-          <th>Driver</th>
-          <th>Occupancy</th>
-          <th>Status</th>
-          <th class="text-right">Actions</th>
+          <th>{{ 'ADMIN.SCHEDULES.SET_ID' | translate }}</th>
+          <th>{{ 'ADMIN.SCHEDULES.SERVICE_WINDOW' | translate }}</th>
+          <th>{{ 'ADMIN.SCHEDULES.ROUTE_VEHICLE' | translate }}</th>
+          <th>{{ 'ADMIN.SCHEDULES.FREQUENCY' | translate }}</th>
+          <th>{{ 'ADMIN.SCHEDULES.STATUS' | translate }}</th>
+          <th>{{ 'ADMIN.SCHEDULES.UPDATED_AT' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let schedule of schedules; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let schedule of filteredSchedules; let i = index" [class.zebra]="i % 2 === 1">
           <td><code>{{ schedule.tripId }}</code></td>
-          <td>{{ schedule.departure }}</td>
-          <td>{{ schedule.route }}</td>
-          <td>{{ schedule.vehicle }}</td>
-          <td>{{ schedule.driver }}</td>
           <td>
-            <div class="admin-progress">
-              <span [style.width.%]="schedule.occupancy"></span>
+            <div class="admin-cell-stack">
+              <span class="admin-emphasis">{{ schedule.dateRange }}</span>
+              <span>{{ schedule.departureTimes || '-' }}</span>
             </div>
-            <small>{{ schedule.occupancy }}%</small>
           </td>
           <td>
-            <span class="admin-status" [ngClass]="statusClass(schedule.status)">{{ schedule.status }}</span>
+            <div class="admin-cell-stack">
+              <span class="admin-emphasis">{{ schedule.route }}</span>
+              <span>{{ schedule.vehicle }}</span>
+            </div>
           </td>
+          <td>{{ schedule.frequency }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(schedule.statusCode)">
+              {{ schedule.status }}
+            </span>
+          </td>
+          <td>{{ schedule.updatedAt }}</td>
           <td class="text-right">
             <div class="admin-inline-actions">
-              <button type="button" class="admin-icon-btn">
-                <span class="material-symbols-outlined">edit</span>
+              <button
+                *ngIf="schedule.kind === 'set'"
+                type="button"
+                class="admin-icon-btn"
+                [disabled]="isGenerating"
+                (click)="generateSchedules(schedule)"
+                [attr.aria-label]="'ADMIN.SCHEDULES.GENERATE' | translate"
+              >
+                <span class="material-symbols-outlined">bolt</span>
               </button>
-              <button type="button" class="admin-icon-btn">
-                <span class="material-symbols-outlined">visibility</span>
+              <button
+                *ngIf="schedule.kind === 'set'"
+                type="button"
+                class="admin-icon-btn"
+                (click)="openEditModal(schedule)"
+              >
+                <span class="material-symbols-outlined">edit_square</span>
+              </button>
+              <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(schedule)">
+                <span class="material-symbols-outlined">delete</span>
               </button>
             </div>
           </td>
@@ -75,18 +137,162 @@
       </tbody>
     </table>
   </div>
+
   <div class="admin-table-footer">
-    <span>Showing 1 - {{ schedules.length }} of {{ schedules.length }} trips</span>
-    <div class="admin-inline-actions">
-      <button type="button" class="admin-icon-btn">
-        <span class="material-symbols-outlined">chevron_left</span>
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredSchedules.length === 0 ? 0 : 1 }} - {{ filteredSchedules.length }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ schedules.length }} {{ 'ADMIN.SCHEDULES.UNITS' | translate }}
+    </span>
+  </div>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{ isEditMode ? ('ADMIN.SCHEDULES.EDIT_TITLE' | translate) : ('ADMIN.SCHEDULES.ADD_TITLE' | translate) }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.SCHEDULES.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="scheduleForm" class="admin-form-grid" (ngSubmit)="submitScheduleSet()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.START_DATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" type="date" formControlName="startDate" />
+        <small class="admin-error" *ngIf="isFieldInvalid('startDate')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.END_DATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" type="date" formControlName="endDate" />
+        <small class="admin-error" *ngIf="isFieldInvalid('endDate')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+        <small class="admin-error" *ngIf="hasDateRangeError()">
+          {{ 'ADMIN.SCHEDULES.DATE_RANGE_VALIDATION' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.DEPARTURE_TIMES' | translate }} <span class="admin-required">*</span>
+        </label>
+        <textarea
+          class="admin-field"
+          formControlName="departureTimesText"
+          [placeholder]="'ADMIN.SCHEDULES.DEPARTURE_PLACEHOLDER' | translate"
+        ></textarea>
+        <small class="admin-error" *ngIf="isFieldInvalid('departureTimesText')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+        <small class="admin-error" *ngIf="departureTimesInvalid">
+          {{ 'ADMIN.SCHEDULES.TIME_VALIDATION' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.FREQUENCY' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="frequency"
+          [options]="frequencyOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.ROUTE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="route"
+          [options]="routeOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="isFieldInvalid('route')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="vehicleType"
+          [options]="vehicleTypeOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="isFieldInvalid('vehicleType')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.SCHEDULES.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="status"
+          [options]="statusOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
       </button>
-      <button type="button" class="admin-btn admin-btn-small admin-btn-primary">1</button>
-      <button type="button" class="admin-btn admin-btn-small">2</button>
-      <button type="button" class="admin-btn admin-btn-small">3</button>
-      <button type="button" class="admin-icon-btn">
-        <span class="material-symbols-outlined">chevron_right</span>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSubmitting"
+        (click)="submitScheduleSet()"
+      >
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
       </button>
     </div>
   </div>
-</section>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedSchedule">{{ selectedSchedule.tripId }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isDeleting"
+        (click)="confirmDelete()"
+      >
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop admin-loading-backdrop" *ngIf="isLanguageChanging">
+  <div class="admin-loading-panel" role="status" aria-live="polite" aria-busy="true">
+    <span class="material-symbols-outlined admin-loading-spinner">autorenew</span>
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.LOADING' | translate }}</h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.COMMON.LANGUAGE_LOADING' | translate }}</p>
+  </div>
+</div>

@@ -5,7 +5,11 @@ import { map, Observable, Subject } from 'rxjs';
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
-import { Station, StationApi } from '../../../../shared/interfaces/station.interface';
+import {
+  getStationTranslationLabel,
+  Station,
+  StationApi,
+} from '../../../../shared/interfaces/station.interface';
 
 @Component({
   selector: 'app-station-home',
@@ -80,8 +84,8 @@ export class StationHomeComponent implements OnInit, OnDestroy {
 
   private mapApiStations(stations: StationApi[]): Station[] {
     return stations.map((stationApi) => {
-      const english = this.getTranslationLabel(stationApi, 'en') || stationApi.slug;
-      const thai = this.getTranslationLabel(stationApi, 'th') || english;
+      const english = getStationTranslationLabel(stationApi, 'en') || stationApi.slug;
+      const thai = getStationTranslationLabel(stationApi, 'th') || english;
 
       return {
         id: stationApi.id,
@@ -97,9 +101,4 @@ export class StationHomeComponent implements OnInit, OnDestroy {
     });
   }
 
-  private getTranslationLabel(stationApi: StationApi, locale: string): string | undefined {
-    const match = stationApi.translations?.find((item) => item.locale === locale);
-    if (match?.label) return match.label;
-    return stationApi.translations?.[0]?.label;
-  }
 }

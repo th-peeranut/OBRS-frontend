@@ -14,6 +14,10 @@ export interface AdminTranslationDto {
   description?: string;
 }
 
+export type AdminTranslationCollection =
+  | AdminTranslationDto[]
+  | Record<string, AdminTranslationDto | null | undefined>;
+
 export interface AdminTranslationReqDto {
   locale: string;
   label: string;
@@ -22,15 +26,20 @@ export interface AdminTranslationReqDto {
 
 export interface AdminStatusDto {
   code?: string;
+  slug?: string;
   name?: string;
   label?: string;
+  display?: AdminTranslationCollection;
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminLookupDto {
   id: number;
   category: string;
   slug: string;
-  translations: AdminTranslationDto[];
+  translations: AdminTranslationCollection;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AdminRoleDto {
@@ -42,7 +51,7 @@ export interface AdminRoleDto {
   permissions?: string[];
   createdAt?: string;
   updatedAt?: string;
-  translations?: AdminTranslationDto[];
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminUserDto {
@@ -65,14 +74,18 @@ export interface AdminUserDto {
 export interface AdminVehicleTypeDto {
   id: number;
   slug: string;
-  translations: AdminTranslationDto[];
+  code?: string;
+  totalSeats?: number;
+  status?: string | AdminStatusDto;
+  display?: AdminTranslationCollection;
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminVehicleDto {
   id: number;
   numberPlate?: string;
   vehicleNumber?: string;
-  status?: string;
+  status?: string | AdminStatusDto;
   vehicleType?: AdminVehicleTypeDto;
   createdAt?: string;
   updatedAt?: string;
@@ -81,16 +94,20 @@ export interface AdminVehicleDto {
 export interface AdminRouteDto {
   id: number;
   slug: string;
-  status?: string;
+  code?: string;
+  status?: string | AdminStatusDto;
   createdAt?: string;
   updatedAt?: string;
-  translations: AdminTranslationDto[];
+  display?: AdminTranslationCollection;
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminStopDto {
-  id: number;
-  slug: string;
-  translations: AdminTranslationDto[];
+  id?: number;
+  slug?: string;
+  code?: string;
+  display?: AdminTranslationCollection;
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminStopOrderDto {
@@ -143,18 +160,41 @@ export interface AdminScheduleSetDto {
   endDate?: string;
   departureTimes: string[];
   frequency?: string;
-  status?: string;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  updatedAt?: string;
   route?: AdminRouteDto;
   vehicleType?: AdminVehicleTypeDto;
 }
 
+export interface AdminDriverInfoDto {
+  id?: number;
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export interface AdminScheduleDto {
+  id: number;
+  departureDateTime?: string;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  updatedAt?: string;
+  route?: AdminRouteDto;
+  vehicle?: AdminVehicleDto;
+  vehicleType?: AdminVehicleTypeDto;
+  driver?: AdminDriverInfoDto;
+}
+
 export interface AdminPersonDto {
+  name?: string;
   fullName?: string;
 }
 
 export interface AdminBookingStopDto {
+  code?: string;
   slug?: string;
-  translations: AdminTranslationDto[];
+  display?: AdminTranslationCollection;
+  translations?: AdminTranslationCollection;
 }
 
 export interface AdminBookingScheduleDto {
@@ -162,24 +202,162 @@ export interface AdminBookingScheduleDto {
   toStop?: AdminBookingStopDto;
 }
 
+export interface AdminBookingJourneyDto {
+  fromStop?: AdminBookingStopDto;
+  toStop?: AdminBookingStopDto;
+  departureDateTime?: string;
+  arrivalDateTime?: string;
+}
+
+export interface AdminPriceSummaryDto {
+  basePrice?: string;
+  discount?: string;
+  fee?: string;
+  netAmount?: string;
+  currency?: string;
+}
+
 export interface AdminBookingDto {
   id: number;
   bookingNumber?: string;
   totalAmount?: number | string;
-  status?: string;
+  status?: string | AdminStatusDto;
   createdAt?: string;
   contact?: AdminPersonDto;
   actor?: AdminPersonDto;
   bookingSchedules?: AdminBookingScheduleDto[];
+  journeys?: AdminBookingJourneyDto[];
+  pricing?: AdminPriceSummaryDto;
+  payment?: AdminPaymentSummaryDto;
 }
 
 export interface AdminPaymentSummaryDto {
   overallPaymentStatus?: string;
+  totalAmount?: string;
+  paidAmount?: string;
+  outstandingAmount?: string;
+  currency?: string;
+  status?: string;
 }
 
 export interface AdminPaymentByBookingIdDto {
   bookingId: number;
   paymentSummary?: AdminPaymentSummaryDto;
+}
+
+export function getAdminTranslationLabel(
+  translations: AdminTranslationCollection | null | undefined,
+  locale?: string
+): string | null {
+  const translation = getAdminTranslation(translations, locale);
+  return translation?.label ?? null;
+}
+
+export function getAdminTranslationDescription(
+  translations: AdminTranslationCollection | null | undefined,
+  locale?: string
+): string | null {
+  const translation = getAdminTranslation(translations, locale);
+  return translation?.description ?? null;
+}
+
+export function parseAdminStatus(
+  value: string | AdminStatusDto | null | undefined,
+  locale?: string
+): { code: string; name: string } {
+  if (typeof value === 'string') {
+    const code = value.trim().toLowerCase();
+    return {
+      code,
+      name: code.replace(/_/g, ' ').toUpperCase(),
+    };
+  }
+
+  const code = String(value?.code ?? value?.slug ?? 'unknown').trim().toLowerCase();
+  const fallbackName = code.replace(/_/g, ' ').toUpperCase();
+  const localizedLabel =
+    getAdminTranslationLabel(value?.display, locale) ??
+    getAdminTranslationLabel(value?.display, 'en') ??
+    getAdminTranslationLabel(value?.translations, locale) ??
+    getAdminTranslationLabel(value?.translations, 'en');
+
+  return {
+    code,
+    name: String(value?.name ?? value?.label ?? localizedLabel ?? fallbackName),
+  };
+}
+
+export function getAdminLookupCode(
+  value: { code?: string; slug?: string } | null | undefined
+): string {
+  return String(value?.slug ?? value?.code ?? '').trim();
+}
+
+export function getAdminLookupLabel(
+  value:
+    | {
+        code?: string;
+        slug?: string;
+        display?: AdminTranslationCollection;
+        translations?: AdminTranslationCollection;
+        name?: string;
+        label?: string;
+      }
+    | null
+    | undefined,
+  locale?: string
+): string | null {
+  const fallbackCode = getAdminLookupCode(value);
+
+  return (
+    value?.name ??
+    value?.label ??
+    getAdminTranslationLabel(value?.display, locale) ??
+    getAdminTranslationLabel(value?.display, 'en') ??
+    getAdminTranslationLabel(value?.translations, locale) ??
+    getAdminTranslationLabel(value?.translations, 'en') ??
+    (fallbackCode || null)
+  );
+}
+
+function getAdminTranslation(
+  translations: AdminTranslationCollection | null | undefined,
+  locale?: string
+): AdminTranslationDto | null {
+  if (!translations) {
+    return null;
+  }
+
+  if (Array.isArray(translations)) {
+    if (translations.length === 0) {
+      return null;
+    }
+
+    if (locale) {
+      const translation = translations.find(
+        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
+      );
+
+      if (translation?.label || translation?.description) {
+        return translation;
+      }
+    }
+
+    return translations.find((item) => item.label || item.description) ?? null;
+  }
+
+  const normalizedLocale = locale?.toLowerCase();
+  if (normalizedLocale) {
+    const translation = translations[normalizedLocale];
+    if (translation?.label || translation?.description) {
+      return translation;
+    }
+  }
+
+  const fallbackTranslation = Object.values(translations).find(
+    (translation) => translation?.label || translation?.description
+  );
+  return fallbackTranslation ?? null;
 }
 
 export interface CreateLookupPayload {
@@ -233,6 +411,16 @@ export interface CreateRoutePayload {
   slug: string;
   status: string;
   translations: AdminTranslationReqDto[];
+}
+
+export interface CreateScheduleSetPayload {
+  startDate: string;
+  endDate: string;
+  departureTimes: string[];
+  frequency?: string;
+  status: string;
+  route: string;
+  vehicleType: string;
 }
 
 @Injectable({
@@ -466,6 +654,45 @@ export class AdminApiService {
 
   getScheduleSets(): Observable<ResponseAPI<AdminScheduleSetDto[]>> {
     return this.getRequest<AdminScheduleSetDto[]>(`${this.baseUrl}/private/schedule-set`);
+  }
+
+  getSchedules(): Observable<ResponseAPI<AdminScheduleDto[]>> {
+    return this.getRequest<AdminScheduleDto[]>(`${this.baseUrl}/private/schedules`);
+  }
+
+  getScheduleSetById(id: number): Observable<ResponseAPI<AdminScheduleSetDto>> {
+    return this.getRequest<AdminScheduleSetDto>(
+      `${this.baseUrl}/private/schedule-set/${id}`
+    );
+  }
+
+  createScheduleSet(payload: CreateScheduleSetPayload): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/schedule-set`, payload);
+  }
+
+  updateScheduleSet(
+    id: number,
+    payload: CreateScheduleSetPayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/schedule-set/${id}`,
+      payload
+    );
+  }
+
+  deleteScheduleSet(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/schedule-set/${id}`);
+  }
+
+  deleteSchedule(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`);
+  }
+
+  generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/schedule-set/${id}/generate-schedules`,
+      {}
+    );
   }
 
   getBookings(): Observable<ResponseAPI<AdminBookingDto[]>> {

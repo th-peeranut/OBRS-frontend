@@ -39,6 +39,10 @@ export interface StationTranslation {
   lastUpdatedDate: string;
 }
 
+export type StationTranslationCollection =
+  | StationTranslation[]
+  | Record<string, Partial<StationTranslation> | null | undefined>;
+
 export interface StationApi {
   id: number;
   slug: string;
@@ -48,5 +52,49 @@ export interface StationApi {
   createdDate: string;
   lastUpdatedBy: string;
   lastUpdatedDate: string;
-  translations: StationTranslation[];
+  display?: StationTranslationCollection;
+  translations?: StationTranslationCollection;
+}
+
+export function getStationTranslationLabel(
+  stationApi: StationApi | null | undefined,
+  locale: string
+): string | undefined {
+  return (
+    getTranslationCollectionLabel(stationApi?.display, locale) ??
+    getTranslationCollectionLabel(stationApi?.translations, locale) ??
+    getTranslationCollectionLabel(stationApi?.display, 'en') ??
+    getTranslationCollectionLabel(stationApi?.translations, 'en')
+  );
+}
+
+export function getStationFallbackLabel(
+  stationApi: StationApi | null | undefined,
+  locale: string
+): string {
+  return getStationTranslationLabel(stationApi, locale) ?? stationApi?.slug ?? '';
+}
+
+function getTranslationCollectionLabel(
+  translations: StationTranslationCollection | null | undefined,
+  locale: string
+): string | undefined {
+  if (!translations) {
+    return undefined;
+  }
+
+  const normalizedLocale = locale.toLowerCase();
+  if (Array.isArray(translations)) {
+    const byLocale = translations.find((item) =>
+      item.locale?.toLowerCase().startsWith(normalizedLocale)
+    );
+
+    return byLocale?.label ?? translations.find((item) => item.label)?.label;
+  }
+
+  const direct = translations[normalizedLocale];
+  return (
+    direct?.label ??
+    Object.values(translations).find((item) => item?.label)?.label
+  );
 }

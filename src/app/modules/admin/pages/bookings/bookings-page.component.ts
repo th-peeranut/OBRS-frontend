@@ -4,7 +4,12 @@ import {
   AdminApiService,
   AdminBookingDto,
   AdminPaymentByBookingIdDto,
-  AdminTranslationDto,
+  AdminStatusDto,
+  AdminTranslationCollection,
+  getAdminLookupCode,
+  getAdminLookupLabel,
+  getAdminTranslationLabel,
+  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 
 interface BookingRow {
@@ -113,13 +118,13 @@ export class BookingsPageComponent implements OnInit {
 
   protected get totalRevenue(): string {
     const amount = this.bookings.reduce((sum, booking) => {
-      const parsedAmount = Number(booking.totalFare.replaceAll('$', '').replaceAll(',', ''));
+      const parsedAmount = Number(booking.totalFare.replace(/[^\d.-]/g, ''));
       return Number.isFinite(parsedAmount) ? sum + parsedAmount : sum;
     }, 0);
 
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'THB',
       maximumFractionDigits: 2,
     }).format(amount);
   }
@@ -178,43 +183,59 @@ export class BookingsPageComponent implements OnInit {
   private extractPaymentStatus(
     payment: AdminPaymentByBookingIdDto | null | undefined
   ): string | null {
-    return payment?.paymentSummary?.overallPaymentStatus ?? null;
+    return (
+      payment?.paymentSummary?.status ??
+      payment?.paymentSummary?.overallPaymentStatus ??
+      null
+    );
   }
 
   private toBookingRow(
     booking: AdminBookingDto,
     paymentStatus: string | null | undefined
   ): BookingRow {
-    const firstSchedule = booking.bookingSchedules?.[0];
-    const fromStop =
+    const firstSchedule = booking.journeys?.[0] ?? booking.bookingSchedules?.[0];
+    const fromStop = (
+      getAdminLookupLabel(firstSchedule?.fromStop, 'en') ??
       this.getTranslationLabel(firstSchedule?.fromStop?.translations, 'en') ??
-      firstSchedule?.fromStop?.slug ??
+      getAdminLookupCode(firstSchedule?.fromStop)
+    ) ||
       '-';
-    const toStop =
+    const toStop = (
+      getAdminLookupLabel(firstSchedule?.toStop, 'en') ??
       this.getTranslationLabel(firstSchedule?.toStop?.translations, 'en') ??
-      firstSchedule?.toStop?.slug ??
+      getAdminLookupCode(firstSchedule?.toStop)
+    ) ||
       '-';
     const route = `${fromStop} -> ${toStop}`;
 
-    const totalAmount = Number(booking.totalAmount);
+    const totalAmount = Number(
+      booking.totalAmount ??
+      booking.pricing?.netAmount ??
+      booking.payment?.totalAmount
+    );
+    const currency = booking.pricing?.currency ?? booking.payment?.currency ?? 'THB';
     const totalFare = Number.isFinite(totalAmount)
       ? new Intl.NumberFormat('en-US', {
           style: 'currency',
-          currency: 'USD',
+          currency,
           maximumFractionDigits: 2,
         }).format(totalAmount)
-      : String(booking.totalAmount ?? '$0.00');
+      : String(booking.totalAmount ?? booking.pricing?.netAmount ?? '0.00');
+
+    const bookingStatus = this.parseStatus(booking.status);
 
     return {
       bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
-      customer: booking.contact?.fullName ?? booking.actor?.fullName ?? '-',
+      customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
       route,
       bookingDate: this.formatDate(booking.createdAt),
       totalFare,
-      bookingStatus: (booking.status ?? 'UNKNOWN').replace(/_/g, ' ').toUpperCase(),
+      bookingStatus: bookingStatus.name,
       paymentStatus: (
         paymentStatus ??
-        this.inferPaymentStatusFromBookingStatus(booking.status)
+        booking.payment?.status ??
+        this.inferPaymentStatusFromBookingStatus(bookingStatus.code)
       )
         .replace(/_/g, ' ')
         .toUpperCase(),
@@ -252,24 +273,16 @@ export class BookingsPageComponent implements OnInit {
   }
 
   private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
+    return getAdminTranslationLabel(translations, locale);
+  }
 
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
+  private parseStatus(value: string | AdminStatusDto | null | undefined): {
+    code: string;
+    name: string;
+  } {
+    return parseAdminStatus(value, 'en');
   }
 }
-

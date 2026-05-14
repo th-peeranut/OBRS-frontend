@@ -3,13 +3,21 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
+  AdminLookupDto,
   AdminRouteDto,
   AdminRouteStopDto,
   AdminSegmentDto,
   AdminSegmentReqDto,
-  AdminTranslationDto,
+  AdminStopDto,
+  AdminStatusDto,
+  AdminTranslationCollection,
   AdminTranslationReqDto,
   CreateRoutePayload,
+  getAdminLookupCode,
+  getAdminLookupLabel,
+  getAdminTranslationDescription,
+  getAdminTranslationLabel,
+  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -238,7 +246,11 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       return 'is-success';
     }
 
-    if (normalizedStatus === 'SUSPENDED' || normalizedStatus.includes('PENDING')) {
+    if (
+      normalizedStatus === 'SUSPENDED' ||
+      normalizedStatus === 'TEMPORARILY_CLOSED' ||
+      normalizedStatus.includes('PENDING')
+    ) {
       return 'is-warning';
     }
 
@@ -326,7 +338,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.routeForm.get('slug')?.enable();
     this.routeForm.reset({
       slug: routeDetail.slug,
-      status: String(routeDetail.status ?? route.statusCode).trim().toLowerCase(),
+      status: this.parseStatus(routeDetail.status ?? route.statusCode).code,
       enLabel: this.getTranslationLabel(routeDetail.translations, 'en') ?? route.label,
       thLabel: this.getTranslationLabel(routeDetail.translations, 'th') ?? '',
       enDescription: this.getTranslationDescription(routeDetail.translations, 'en') ?? '',
@@ -519,17 +531,12 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       const routeDtos = routesResponse?.data ?? [];
       const lookups = lookupsResponse?.data ?? [];
 
-      this.statusOptions = lookups
-        .filter((lookup) => lookup.category === 'route_status')
-        .map((lookup) => ({
-          code: lookup.slug,
-          label:
-            this.getTranslationLabel(lookup.translations, currentLocale) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            lookup.slug,
-        }));
-
       this.routes = routeDtos.map((route) => this.toRouteRow(route));
+      this.statusOptions = this.toRouteStatusOptions(
+        lookups,
+        routeDtos,
+        currentLocale
+      );
       this.syncStatusFilterWithAvailableOptions();
       this.applyRouteFilters();
 
@@ -652,15 +659,60 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     };
   }
 
+  private toRouteStatusOptions(
+    lookups: AdminLookupDto[],
+    routes: AdminRouteDto[],
+    currentLocale: string
+  ): Option[] {
+    const options = new Map<string, string>();
+    const knownRouteStatuses = [
+      'active',
+      'suspended',
+      'temporarily_closed',
+      'decommissioned',
+    ];
+
+    for (const status of knownRouteStatuses) {
+      options.set(status, this.formatStatusLabel(status));
+    }
+
+    for (const lookup of lookups) {
+      if (lookup.category !== 'route_status') {
+        continue;
+      }
+
+      const code = String(lookup.slug ?? '').trim().toLowerCase();
+      if (!code) {
+        continue;
+      }
+
+      options.set(
+        code,
+        this.getTranslationLabel(lookup.translations, currentLocale) ??
+          this.getTranslationLabel(lookup.translations, 'en') ??
+          this.formatStatusLabel(code)
+      );
+    }
+
+    for (const route of routes) {
+      const status = this.parseStatus(route.status);
+      if (status.code && status.code !== 'unknown' && !options.has(status.code)) {
+        options.set(status.code, status.name);
+      }
+    }
+
+    return [...options.entries()].map(([code, label]) => ({ code, label }));
+  }
+
   private toRouteRow(route: AdminRouteDto): RouteRow {
-    const statusCode = String(route.status ?? 'unknown').trim().toLowerCase();
-    const statusLabel = statusCode.replace(/_/g, ' ').toUpperCase();
+    const status = this.parseStatus(route.status);
     const currentLocale = this.getCurrentLocale();
 
     return {
       id: route.id,
       slug: route.slug,
       label:
+        getAdminLookupLabel(route, currentLocale) ??
         this.getTranslationLabel(route.translations, currentLocale) ??
         this.getTranslationLabel(route.translations, 'en') ??
         route.slug,
@@ -668,8 +720,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.getTranslationDescription(route.translations, currentLocale) ??
         this.getTranslationDescription(route.translations, 'en') ??
         '-',
-      status: statusLabel,
-      statusCode,
+      status: status.name,
+      statusCode: status.code,
       updatedAt: this.formatDateTime(route.updatedAt ?? route.createdAt),
     };
   }
@@ -700,12 +752,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     const sortedStops = [...stops].sort((a, b) => a.stopOrder - b.stopOrder);
 
     return sortedStops.map((stop, index) => ({
-      slug: stop.stop?.slug ?? '',
-      name:
-        this.getTranslationLabel(stop.stop?.translations, currentLocale) ??
-        this.getTranslationLabel(stop.stop?.translations, 'en') ??
-        stop.stop?.slug ??
-        '-',
+      slug: getAdminLookupCode(stop.stop),
+      name: this.toStopName(stop.stop, currentLocale),
       distance: `${stop.distanceKmFromOrigin ?? 0} km`,
       duration: `${stop.offsetMinutesFromOrigin ?? 0} mins`,
       stopOrder: stop.stopOrder,
@@ -743,6 +791,16 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         vehicleTypeName: pair.vehicleType?.name ?? pair.vehicleType?.slug ?? '-',
       };
     });
+  }
+
+  private toStopName(stop: AdminStopDto | undefined, locale: string): string {
+    const name =
+      getAdminLookupLabel(stop, locale) ??
+      this.getTranslationLabel(stop?.translations, locale) ??
+      this.getTranslationLabel(stop?.translations, 'en') ??
+      getAdminLookupCode(stop);
+
+    return name || '-';
   }
 
   private toVehicleTypeOptions(segments: SegmentRow[]): VehicleTypeOption[] {
@@ -932,6 +990,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return `${remainingMinutes} min`;
   }
 
+  private formatStatusLabel(status: string): string {
+    return status.replace(/_/g, ' ').toUpperCase();
+  }
+
   private normalizeVehicleTypeKey(value: string | null | undefined): string {
     return String(value ?? '').trim().toLowerCase();
   }
@@ -950,44 +1012,23 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
+    return getAdminTranslationLabel(translations, locale);
   }
 
   private getTranslationDescription(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
+    return getAdminTranslationDescription(translations, locale);
+  }
 
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.description) {
-        return translation.description;
-      }
-    }
-
-    return translations.find((item) => item.description)?.description ?? null;
+  private parseStatus(value: string | AdminStatusDto | null | undefined): {
+    code: string;
+    name: string;
+  } {
+    return parseAdminStatus(value, this.getCurrentLocale());
   }
 }

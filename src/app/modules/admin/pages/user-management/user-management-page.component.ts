@@ -14,10 +14,12 @@ import {
   AdminApiService,
   AdminRoleDto,
   AdminStatusDto,
-  AdminTranslationDto,
+  AdminTranslationCollection,
   AdminUserDto,
   CreateUserPayload,
   UpdateUserPayload,
+  getAdminTranslationLabel,
+  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -524,21 +526,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     code: string;
     name: string;
   } {
-    if (typeof value === 'string') {
-      const code = value.toLowerCase();
-      return {
-        code,
-        name: value.replace(/_/g, ' ').toUpperCase(),
-      };
-    }
-
-    const code = String(value?.code ?? 'unknown').toLowerCase();
-    const fallbackName = code.replace(/_/g, ' ').toUpperCase();
-
-    return {
-      code,
-      name: String(value?.name ?? fallbackName),
-    };
+    return parseAdminStatus(value, this.getCurrentLocale());
   }
 
   private formatDateTime(value: string | null | undefined): string {
@@ -595,24 +583,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
+    return getAdminTranslationLabel(translations, locale);
   }
 
   private roleRequiredValidator(control: AbstractControl): { required: true } | null {

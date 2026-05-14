@@ -17,7 +17,10 @@ import { BookingState } from '../../shared/interfaces/booking.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { ScheduleBooking } from '../../shared/interfaces/schedule-booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
-import { StationApi } from '../../shared/interfaces/station.interface';
+import {
+  getStationFallbackLabel,
+  StationApi,
+} from '../../shared/interfaces/station.interface';
 import { invokeGetBookingApi } from '../../shared/stores/booking/booking.action';
 import { selectBooking } from '../../shared/stores/booking/booking.selector';
 import { invokeGetPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.action';
@@ -367,11 +370,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
       return '';
     }
 
-    const translation = station.translations?.find((item) =>
-      item.locale?.toLowerCase().startsWith(locale)
-    );
-
-    return translation?.label || station.translations?.[0]?.label || station.slug || '';
+    return getStationFallbackLabel(station, locale);
   }
 
   private resolveTitleLabel(titleCode: number | null, locale: Locale): string {

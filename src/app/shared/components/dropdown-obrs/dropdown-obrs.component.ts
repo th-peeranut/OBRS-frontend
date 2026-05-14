@@ -121,8 +121,44 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   getValue(option: any) {
     if (!option) return '';
 
-    return this.translate.currentLang === 'th'
-      ? option.nameThai
-      : option.nameEnglish;
+    const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
+    const fromName = locale === 'th' ? option.nameThai : option.nameEnglish;
+    if (fromName) return fromName;
+
+    const localizedLabel =
+      this.getTranslationLabel(option.display, locale) ??
+      this.getTranslationLabel(option.translations, locale) ??
+      this.getTranslationLabel(option.display, 'en') ??
+      this.getTranslationLabel(option.translations, 'en');
+
+    return localizedLabel ?? option.label ?? option.name ?? option.slug ?? option.code ?? '';
+  }
+
+  private getTranslationLabel(
+    translations: unknown,
+    locale: string
+  ): string | null {
+    if (!translations) {
+      return null;
+    }
+
+    if (Array.isArray(translations)) {
+      const matched = translations.find(
+        (item: any) => String(item?.locale ?? '').toLowerCase() === locale
+      );
+
+      return matched?.label ?? translations.find((item: any) => item?.label)?.label ?? null;
+    }
+
+    if (typeof translations === 'object') {
+      const translationMap = translations as Record<string, any>;
+      return (
+        translationMap[locale]?.label ??
+        Object.values(translationMap).find((item: any) => item?.label)?.label ??
+        null
+      );
+    }
+
+    return null;
   }
 }

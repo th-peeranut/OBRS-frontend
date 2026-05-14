@@ -11,7 +11,13 @@ import {
   ScheduleFilter,
 } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
-import { Province, ProvinceStationReview, Station, StationApi } from '../../../../shared/interfaces/station.interface';
+import {
+  getStationTranslationLabel,
+  Province,
+  ProvinceStationReview,
+  Station,
+  StationApi,
+} from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import dayjs from 'dayjs';
 
@@ -162,8 +168,8 @@ export class ReviewScheduleBookingSummaryComponent {
   }
 
   private toStation(stationApi: StationApi): Station {
-    const nameEnglish = this.getTranslationLabel(stationApi, 'en') || stationApi.slug;
-    const nameThai = this.getTranslationLabel(stationApi, 'th') || nameEnglish;
+    const nameEnglish = getStationTranslationLabel(stationApi, 'en') || stationApi.slug;
+    const nameThai = getStationTranslationLabel(stationApi, 'th') || nameEnglish;
     return {
       id: stationApi.id,
       code: stationApi.slug,
@@ -175,12 +181,6 @@ export class ReviewScheduleBookingSummaryComponent {
       lastUpdatedDate: stationApi.lastUpdatedDate,
       url: '',
     };
-  }
-
-  private getTranslationLabel(stationApi: StationApi, locale: string): string | undefined {
-    const match = stationApi.translations?.find((item) => item.locale === locale);
-    if (match?.label) return match.label;
-    return stationApi.translations?.[0]?.label;
   }
 
   private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {

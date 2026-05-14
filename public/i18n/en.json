@@ -120,7 +120,8 @@
       "LOAD_ROLES_FAILED": "Unable to load roles.",
       "LOAD_USERS_FAILED": "Unable to load users.",
       "LOAD_VEHICLES_FAILED": "Unable to load vehicles.",
-      "LOAD_ROUTES_FAILED": "Unable to load routes."
+      "LOAD_ROUTES_FAILED": "Unable to load routes.",
+      "LOAD_SCHEDULES_FAILED": "Unable to load schedules."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -258,6 +259,39 @@
       "SAME_STOP_VALIDATION": "Destination stop must not match origin stop.",
       "STOP_ORDER_VALIDATION": "Destination stop must be after origin stop.",
       "DURATION_VALIDATION": "Please enter duration in minutes greater than 0."
+    },
+    "SCHEDULES": {
+      "TITLE": "Schedule Management",
+      "SUBTITLE": "Create schedule sets, update timing rules, and generate trip instances.",
+      "ADD": "Add Schedule Set",
+      "TOTAL_SETS": "Schedule Sets",
+      "SCHEDULED_SETS": "Scheduled Sets",
+      "DEPARTURE_TIMES": "Departure Times",
+      "FILTER_ROUTE": "Route: All",
+      "FILTER_DATE": "Date: All",
+      "FILTER_STATUS": "Status: All",
+      "SEARCH_PLACEHOLDER": "Search by set ID, route, vehicle type, or time...",
+      "TABLE_TITLE": "Schedule Set List",
+      "SET_ID": "Set ID",
+      "SERVICE_WINDOW": "Service Window",
+      "ROUTE_VEHICLE": "Route & Vehicle",
+      "FREQUENCY": "Frequency",
+      "STATUS": "Status",
+      "UPDATED_AT": "Updated At",
+      "UNITS": "schedule sets",
+      "ADD_TITLE": "Create Schedule Set",
+      "EDIT_TITLE": "Edit Schedule Set",
+      "MODAL_HINT": "Define date range, departure times, route, and vehicle type for generated schedules.",
+      "START_DATE": "Start Date",
+      "END_DATE": "End Date",
+      "DEPARTURE_PLACEHOLDER": "08:00, 11:30, 15:00",
+      "ROUTE": "Route",
+      "VEHICLE_TYPE": "Vehicle Type",
+      "GENERATE": "Generate Schedules",
+      "GENERATE_SUCCESS": "Schedules generated successfully.",
+      "GENERATE_FAILED": "Unable to generate schedules.",
+      "DATE_RANGE_VALIDATION": "End date must be after start date.",
+      "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines."
     }
   },
   "LOGIN": {

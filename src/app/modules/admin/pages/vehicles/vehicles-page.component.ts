@@ -3,9 +3,13 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
-  AdminTranslationDto,
+  AdminStatusDto,
+  AdminTranslationCollection,
   AdminVehicleDto,
   CreateVehiclePayload,
+  getAdminLookupLabel,
+  getAdminTranslationLabel,
+  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -84,11 +88,11 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   protected get activeVehicles(): number {
-    return this.vehicles.filter((vehicle) => this.statusClass(vehicle.status) === 'is-success').length;
+    return this.vehicles.filter((vehicle) => this.statusClass(vehicle.statusCode) === 'is-success').length;
   }
 
   protected get pendingVehicles(): number {
-    return this.vehicles.filter((vehicle) => this.statusClass(vehicle.status) === 'is-warning').length;
+    return this.vehicles.filter((vehicle) => this.statusClass(vehicle.statusCode) === 'is-warning').length;
   }
 
   protected statusClass(status: string): string {
@@ -139,7 +143,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     const vehicleType = String(vehicleDetail?.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim();
     const numberPlate = String(vehicleDetail?.numberPlate ?? vehicle.plate).trim();
     const vehicleNumber = String(vehicleDetail?.vehicleNumber ?? vehicle.vehicleNumber).trim();
-    const status = String(vehicleDetail?.status ?? vehicle.statusCode).trim().toLowerCase();
+    const status = this.parseStatus(vehicleDetail?.status ?? vehicle.statusCode).code;
 
     this.isEditMode = true;
     this.selectedVehicle = vehicle;
@@ -305,23 +309,23 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   private toVehicleRow(vehicle: AdminVehicleDto): VehicleRow {
-    const statusCode = (vehicle.status ?? 'unknown').toLowerCase();
-    const statusLabel = statusCode.replace(/_/g, ' ').toUpperCase();
+    const status = this.parseStatus(vehicle.status);
     const currentLocale = this.getCurrentLocale();
 
     return {
       id: vehicle.id,
       vehicleTypeSlug: vehicle.vehicleType?.slug ?? '',
-      statusCode,
+      statusCode: status.code,
       vehicleNumber: vehicle.vehicleNumber ?? '-',
       plate: vehicle.numberPlate ?? '-',
       vehicleType:
+        getAdminLookupLabel(vehicle.vehicleType, currentLocale) ??
         this.getTranslationLabel(vehicle.vehicleType?.translations, currentLocale) ??
         this.getTranslationLabel(vehicle.vehicleType?.translations, 'en') ??
         vehicle.vehicleType?.slug ??
         '-',
       route: '-',
-      status: statusLabel,
+      status: status.name,
     };
   }
 
@@ -334,24 +338,17 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
+    return getAdminTranslationLabel(translations, locale);
+  }
 
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
+  private parseStatus(value: string | AdminStatusDto | null | undefined): {
+    code: string;
+    name: string;
+  } {
+    return parseAdminStatus(value, this.getCurrentLocale());
   }
 
   private applyVehicleFilter(): void {

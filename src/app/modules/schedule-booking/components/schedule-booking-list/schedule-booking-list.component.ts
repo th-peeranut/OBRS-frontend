@@ -13,7 +13,10 @@ import { Router } from '@angular/router';
 import dayjs from 'dayjs';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
-import { StationApi } from '../../../../shared/interfaces/station.interface';
+import {
+  getStationFallbackLabel,
+  StationApi,
+} from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 
 @Component({
@@ -182,12 +185,7 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     const match = (stationList ?? []).find((station) => station.id === parsed);
     if (!match) return '';
 
-    const byLocale = match.translations?.find((item) =>
-      item.locale?.toLowerCase().startsWith(locale)
-    );
-    if (byLocale?.label) return byLocale.label;
-
-    return match.translations?.[0]?.label || match.slug || '';
+    return getStationFallbackLabel(match, locale);
   }
 
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {

@@ -1,5 +1,6 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { CalendarModule } from 'primeng/calendar';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
@@ -68,6 +69,6 @@ const routes: Routes = [
     BookingsPageComponent,
     AdminDropdownComponent,
   ],
-  imports: [SharedModule, RouterModule.forChild(routes)],
+  imports: [SharedModule, RouterModule.forChild(routes), CalendarModule],
 })
 export class AdminModule {}

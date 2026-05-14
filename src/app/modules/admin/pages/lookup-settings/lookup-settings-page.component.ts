@@ -5,8 +5,10 @@ import {
   AdminApiService,
   AdminLookupDto,
   AdminTranslationReqDto,
-  AdminTranslationDto,
+  AdminTranslationCollection,
   CreateLookupPayload,
+  getAdminTranslationDescription,
+  getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
@@ -266,44 +268,16 @@ export class LookupSettingsPageComponent implements OnInit {
   }
 
   private getTranslationLabel(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.label) {
-        return translation.label;
-      }
-    }
-
-    return translations.find((item) => item.label)?.label ?? null;
+    return getAdminTranslationLabel(translations, locale);
   }
 
   private getTranslationDescription(
-    translations: AdminTranslationDto[] | null | undefined,
+    translations: AdminTranslationCollection | null | undefined,
     locale?: string
   ): string | null {
-    if (!translations || translations.length === 0) {
-      return null;
-    }
-
-    if (locale) {
-      const translation = translations.find(
-        (item) => item.locale?.toLowerCase() === locale.toLowerCase()
-      );
-
-      if (translation?.description) {
-        return translation.description;
-      }
-    }
-
-    return translations.find((item) => item.description)?.description ?? null;
+    return getAdminTranslationDescription(translations, locale);
   }
 }
