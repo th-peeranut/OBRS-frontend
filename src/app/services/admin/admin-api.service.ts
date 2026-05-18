@@ -423,6 +423,14 @@ export interface CreateScheduleSetPayload {
   vehicleType: string;
 }
 
+export interface CreateSchedulePayload {
+  departureDateTime: string;
+  route: string;
+  vehicleType: string;
+  vehicleId?: number;
+  driverId?: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -613,9 +621,9 @@ export class AdminApiService {
     return this.getRequest<AdminRouteDto[]>(`${this.baseUrl}/routes`);
   }
 
-  getRouteBySlug(slug: string): Observable<ResponseAPI<AdminRouteDto>> {
+  getRouteById(id: number): Observable<ResponseAPI<AdminRouteDto>> {
     return this.getRequest<AdminRouteDto>(
-      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`
+      `${this.baseUrl}/private/routes/${id}`
     );
   }
 
@@ -623,16 +631,16 @@ export class AdminApiService {
     return this.postRequest<unknown>(`${this.baseUrl}/private/routes`, payload);
   }
 
-  updateRouteBySlug(slug: string, payload: CreateRoutePayload): Observable<ResponseAPI<unknown>> {
+  updateRouteById(id: number, payload: CreateRoutePayload): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(
-      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`,
+      `${this.baseUrl}/private/routes/${id}`,
       payload
     );
   }
 
-  deleteRouteBySlug(slug: string): Observable<ResponseAPI<unknown>> {
+  deleteRouteById(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(
-      `${this.baseUrl}/private/routes/${encodeURIComponent(slug)}`
+      `${this.baseUrl}/private/routes/${id}`
     );
   }
 
@@ -660,6 +668,10 @@ export class AdminApiService {
     return this.getRequest<AdminScheduleDto[]>(`${this.baseUrl}/private/schedules`);
   }
 
+  getScheduleById(id: number): Observable<ResponseAPI<AdminScheduleDto>> {
+    return this.getRequest<AdminScheduleDto>(`${this.baseUrl}/private/schedules/${id}`);
+  }
+
   getScheduleSetById(id: number): Observable<ResponseAPI<AdminScheduleSetDto>> {
     return this.getRequest<AdminScheduleSetDto>(
       `${this.baseUrl}/private/schedule-set/${id}`
@@ -668,6 +680,17 @@ export class AdminApiService {
 
   createScheduleSet(payload: CreateScheduleSetPayload): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(`${this.baseUrl}/private/schedule-set`, payload);
+  }
+
+  createSchedule(payload: CreateSchedulePayload): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/schedules`, payload);
+  }
+
+  updateSchedule(
+    id: number,
+    payload: CreateSchedulePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`, payload);
   }
 
   updateScheduleSet(

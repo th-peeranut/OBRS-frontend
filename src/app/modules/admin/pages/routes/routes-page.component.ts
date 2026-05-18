@@ -327,7 +327,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected async openEditModal(route: RouteRow): Promise<void> {
     let routeDetail: AdminRouteDto | null = null;
     try {
-      const response = await firstValueFrom(this.adminApiService.getRouteBySlug(route.slug));
+      const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
       routeDetail = response?.data ?? null;
     } catch {
       routeDetail = this.toRouteDtoFallback(route);
@@ -393,13 +393,13 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isSubmitting = true;
-    const previousSlug = this.routeForEdit?.slug ?? '';
+    const routeIdForEdit = this.routeForEdit?.id ?? null;
 
     try {
       const payload = this.toRoutePayload();
 
-      if (this.isEditMode && previousSlug) {
-        await firstValueFrom(this.adminApiService.updateRouteBySlug(previousSlug, payload));
+      if (this.isEditMode && routeIdForEdit !== null) {
+        await firstValueFrom(this.adminApiService.updateRouteById(routeIdForEdit, payload));
         this.closeRouteFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
         this.selectedRouteSlug = payload.slug;
@@ -426,7 +426,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
     this.isDeleting = true;
     try {
-      await firstValueFrom(this.adminApiService.deleteRouteBySlug(this.routeForDelete.slug));
+      await firstValueFrom(this.adminApiService.deleteRouteById(this.routeForDelete.id));
       const deletedSlug = this.routeForDelete.slug;
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));

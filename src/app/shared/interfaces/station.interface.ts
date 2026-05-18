@@ -40,14 +40,25 @@ export interface StationTranslation {
 }
 
 export type StationTranslationCollection =
-  | StationTranslation[]
+  | Partial<StationTranslation>[]
   | Record<string, Partial<StationTranslation> | null | undefined>;
+
+export interface StationLookup {
+  code?: string;
+  slug?: string;
+  name?: string;
+  label?: string;
+  display?: StationTranslationCollection;
+  translations?: StationTranslationCollection;
+}
+
+export type StationLookupValue = string | StationLookup;
 
 export interface StationApi {
   id: number;
   slug: string;
-  status: string;
-  stopType: string;
+  status: StationLookupValue;
+  stopType: StationLookupValue;
   createdBy: string;
   createdDate: string;
   lastUpdatedBy: string;
@@ -73,6 +84,37 @@ export function getStationFallbackLabel(
   locale: string
 ): string {
   return getStationTranslationLabel(stationApi, locale) ?? stationApi?.slug ?? '';
+}
+
+export function getStopTypeLabel(
+  stopType: StationLookupValue | null | undefined,
+  locale: string
+): string {
+  if (typeof stopType === 'string') {
+    return formatStopTypeCode(stopType);
+  }
+
+  const code = getStopTypeCode(stopType);
+  return (
+    stopType?.name ??
+    stopType?.label ??
+    getTranslationCollectionLabel(stopType?.display, locale) ??
+    getTranslationCollectionLabel(stopType?.display, 'en') ??
+    getTranslationCollectionLabel(stopType?.translations, locale) ??
+    getTranslationCollectionLabel(stopType?.translations, 'en') ??
+    formatStopTypeCode(code)
+  );
+}
+
+function getStopTypeCode(stopType: StationLookup | null | undefined): string {
+  return String(stopType?.code ?? stopType?.slug ?? '').trim();
+}
+
+function formatStopTypeCode(code: string | null | undefined): string {
+  const normalized = String(code ?? '').trim().toLowerCase();
+  if (normalized === 'station') return 'Station';
+  if (normalized === 'stop') return 'Stop';
+  return String(code ?? '');
 }
 
 function getTranslationCollectionLabel(

@@ -13,6 +13,7 @@ import {
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import {
   getStationTranslationLabel,
+  getStopTypeLabel,
   Province,
   ProvinceStationReview,
   Station,
@@ -141,8 +142,8 @@ export class ReviewScheduleBookingSummaryComponent {
         if (stationApi) {
           return {
             id: stationApi.id,
-            nameThai: this.getStopTypeLabel(stationApi.stopType, 'th'),
-            nameEnglish: this.getStopTypeLabel(stationApi.stopType, 'en'),
+            nameThai: getStopTypeLabel(stationApi.stopType, 'th'),
+            nameEnglish: getStopTypeLabel(stationApi.stopType, 'en'),
             station: this.toStation(stationApi),
           } as ProvinceStationReview;
         }
@@ -181,13 +182,6 @@ export class ReviewScheduleBookingSummaryComponent {
       lastUpdatedDate: stationApi.lastUpdatedDate,
       url: '',
     };
-  }
-
-  private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
-    const normalized = (type || '').toLowerCase();
-    if (normalized === 'station') return locale === 'th' ? 'Station' : 'Station';
-    if (normalized === 'stop') return locale === 'th' ? 'Stop' : 'Stop';
-    return type || '';
   }
 
   onChangeData() {

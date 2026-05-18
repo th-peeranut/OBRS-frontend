@@ -9,7 +9,10 @@ import {
   AdminScheduleSetDto,
   AdminStatusDto,
   AdminTranslationCollection,
+  AdminUserDto,
+  AdminVehicleDto,
   AdminVehicleTypeDto,
+  CreateSchedulePayload,
   CreateScheduleSetPayload,
   getAdminLookupLabel,
   getAdminTranslationLabel,
@@ -29,7 +32,10 @@ interface ScheduleRow {
   routeSlug: string;
   route: string;
   vehicleTypeSlug: string;
+  vehicleId: number | null;
+  driverId: number | null;
   vehicle: string;
+  driver: string;
   frequency: string;
   status: string;
   statusCode: string;
@@ -50,6 +56,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected schedules: ScheduleRow[] = [];
   protected filteredSchedules: ScheduleRow[] = [];
   protected routeOptions: Option[] = [];
+  protected vehicleOptions: Option[] = [];
+  protected driverOptions: Option[] = [];
   protected vehicleTypeOptions: Option[] = [];
   protected statusOptions: Option[] = [];
   protected readonly frequencyOptions: Option[] = [
@@ -69,13 +77,16 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected isGenerating = false;
   protected isLanguageChanging = false;
   protected isEditMode = false;
+  protected isScheduleItemEditMode = false;
   protected isFormModalOpen = false;
+  protected isScheduleFormModalOpen = false;
   protected isDeleteModalOpen = false;
   protected departureTimesInvalid = false;
   protected errorMessage = '';
   protected selectedSchedule: ScheduleRow | null = null;
 
   protected readonly scheduleForm: FormGroup;
+  protected readonly scheduleItemForm: FormGroup;
   private readonly languageSubscription: Subscription;
   private readonly languageLoadingMinimumMs = 1000;
 
@@ -93,6 +104,15 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       status: ['', [Validators.required]],
       route: ['', [Validators.required]],
       vehicleType: ['', [Validators.required]],
+    });
+
+    this.scheduleItemForm = this.formBuilder.group({
+      departureDate: [null, [Validators.required]],
+      departureTime: [null, [Validators.required]],
+      route: ['', [Validators.required]],
+      vehicleType: ['', [Validators.required]],
+      vehicleId: [''],
+      driverId: [''],
     });
 
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
@@ -167,12 +187,31 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       endDate: today,
       departureTimesText: '08:00',
       frequency: 'Daily',
-      status: this.statusOptions[0]?.code ?? 'scheduled',
+      status: this.getDefaultScheduleStatusCode(),
       route: this.routeOptions[0]?.code ?? '',
       vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
     });
 
     this.isFormModalOpen = true;
+  }
+
+  protected openCreateScheduleModal(): void {
+    this.isScheduleItemEditMode = false;
+    this.selectedSchedule = null;
+
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30);
+    now.setMinutes(now.getMinutes() - (now.getMinutes() % 5));
+
+    this.scheduleItemForm.reset({
+      departureDate: this.toDateControlValue(this.toDateInputValue(now)),
+      departureTime: this.toTimeControlValue(this.toTimeInputValue(now)),
+      route: this.routeOptions[0]?.code ?? '',
+      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
+      vehicleId: '',
+      driverId: '',
+    });
+    this.isScheduleFormModalOpen = true;
   }
 
   protected async openEditModal(schedule: ScheduleRow): Promise<void> {
@@ -207,6 +246,36 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isFormModalOpen = true;
   }
 
+  protected async openScheduleEditModal(schedule: ScheduleRow): Promise<void> {
+    if (schedule.kind !== 'schedule') {
+      return;
+    }
+
+    let detail: AdminScheduleDto | null = null;
+    try {
+      const response = await firstValueFrom(this.adminApiService.getScheduleById(schedule.id));
+      detail = response?.data ?? null;
+    } catch {
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED'));
+      return;
+    }
+
+    const scheduleDetail = detail ?? this.toScheduleDetailFallback(schedule);
+    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+
+    this.isScheduleItemEditMode = true;
+    this.selectedSchedule = schedule;
+    this.scheduleItemForm.reset({
+      departureDate: this.toDateControlValue(departure.date || schedule.startDate),
+      departureTime: this.toTimeControlValue(departure.time || schedule.departureTimes),
+      route: scheduleDetail.route?.slug ?? schedule.routeSlug,
+      vehicleType: scheduleDetail.vehicleType?.slug ?? schedule.vehicleTypeSlug,
+      vehicleId: scheduleDetail.vehicle?.id ? String(scheduleDetail.vehicle.id) : '',
+      driverId: scheduleDetail.driver?.id ? String(scheduleDetail.driver.id) : '',
+    });
+    this.isScheduleFormModalOpen = true;
+  }
+
   protected closeFormModal(force = false): void {
     if (this.isSubmitting && !force) {
       return;
@@ -216,6 +285,16 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.selectedSchedule = null;
     this.departureTimesInvalid = false;
     this.scheduleForm.reset();
+  }
+
+  protected closeScheduleFormModal(force = false): void {
+    if (this.isSubmitting && !force) {
+      return;
+    }
+
+    this.isScheduleFormModalOpen = false;
+    this.selectedSchedule = null;
+    this.scheduleItemForm.reset();
   }
 
   protected openDeleteModal(schedule: ScheduleRow): void {
@@ -234,6 +313,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.scheduleForm.get(fieldName);
+    return !!field && field.invalid && (field.dirty || field.touched);
+  }
+
+  protected isScheduleFieldInvalid(fieldName: string): boolean {
+    const field = this.scheduleItemForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
   }
 
@@ -270,6 +354,35 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
 
       this.closeFormModal(true);
+      await this.loadScheduleSets();
+    } catch {
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+    } finally {
+      this.isSubmitting = false;
+    }
+  }
+
+  protected async submitSchedule(): Promise<void> {
+    if (this.scheduleItemForm.invalid) {
+      this.scheduleItemForm.markAllAsTouched();
+      return;
+    }
+
+    this.isSubmitting = true;
+    try {
+      const payload = this.toScheduleItemPayload();
+
+      if (this.isScheduleItemEditMode && this.selectedSchedule) {
+        await firstValueFrom(
+          this.adminApiService.updateSchedule(this.selectedSchedule.id, payload)
+        );
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      } else {
+        await firstValueFrom(this.adminApiService.createSchedule(payload));
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+      }
+
+      this.closeScheduleFormModal(true);
       await this.loadScheduleSets();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -322,30 +435,40 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
         scheduleSetsResponse,
         generatedSchedulesResponse,
         routesResponse,
+        vehiclesResponse,
         vehicleTypesResponse,
+        usersResponse,
         lookupsResponse,
       ] =
         await Promise.all([
           firstValueFrom(this.adminApiService.getScheduleSets()),
           firstValueFrom(this.adminApiService.getSchedules()),
           firstValueFrom(this.adminApiService.getRoutes()),
+          firstValueFrom(this.adminApiService.getVehicles()),
           firstValueFrom(this.adminApiService.getVehicleTypes()),
+          firstValueFrom(this.adminApiService.getUsers()),
           firstValueFrom(this.adminApiService.getLookups()),
         ]);
 
       const scheduleSets = scheduleSetsResponse?.data ?? [];
       const generatedSchedules = generatedSchedulesResponse?.data ?? [];
       const routes = routesResponse?.data ?? [];
+      const vehicles = vehiclesResponse?.data ?? [];
       const vehicleTypes = vehicleTypesResponse?.data ?? [];
+      const users = usersResponse?.data ?? [];
       const lookups = lookupsResponse?.data ?? [];
 
       this.routeOptions = this.toRouteOptions(routes, currentLocale);
+      this.vehicleOptions = this.toVehicleOptions(vehicles, currentLocale);
+      this.driverOptions = this.toDriverOptions(users);
       this.vehicleTypeOptions = this.toVehicleTypeOptions(vehicleTypes, currentLocale);
       this.statusOptions = this.toScheduleStatusOptions(lookups);
-      this.schedules =
-        scheduleSets.length > 0
-          ? scheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet))
-          : generatedSchedules.map((schedule) => this.toGeneratedScheduleRow(schedule));
+      this.schedules = [
+        ...scheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
+        ...generatedSchedules.map((schedule) =>
+          this.toGeneratedScheduleRow(schedule)
+        ),
+      ];
       this.syncFiltersWithAvailableOptions();
       this.applyFilters();
     } catch {
@@ -390,6 +513,22 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     };
   }
 
+  private toScheduleItemPayload(): CreateSchedulePayload {
+    const raw = this.scheduleItemForm.getRawValue();
+    const vehicleId = this.toOptionalNumber(raw.vehicleId);
+    const driverId = this.toOptionalNumber(raw.driverId);
+    const departureDate = this.toDateInputValue(this.toDateValue(raw.departureDate));
+    const departureTime = this.toTimeInputValue(this.toDateValue(raw.departureTime));
+
+    return {
+      departureDateTime: `${departureDate}T${departureTime}:00`,
+      route: String(raw.route ?? '').trim(),
+      vehicleType: String(raw.vehicleType ?? '').trim(),
+      ...(vehicleId !== undefined ? { vehicleId } : {}),
+      ...(driverId !== undefined ? { driverId } : {}),
+    };
+  }
+
   private toScheduleRow(scheduleSet: AdminScheduleSetDto): ScheduleRow {
     const currentLocale = this.getCurrentLocale();
     const routeName =
@@ -417,7 +556,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       routeSlug: scheduleSet.route?.slug ?? '',
       route: routeName,
       vehicleTypeSlug: scheduleSet.vehicleType?.slug ?? '',
+      vehicleId: null,
+      driverId: null,
       vehicle: vehicleTypeName,
+      driver: '-',
       frequency: scheduleSet.frequency ?? '-',
       status: status.name,
       statusCode: status.code,
@@ -455,7 +597,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       routeSlug: schedule.route?.slug ?? '',
       route: routeName,
       vehicleTypeSlug: schedule.vehicleType?.slug ?? '',
+      vehicleId: schedule.vehicle?.id ?? null,
+      driverId: schedule.driver?.id ?? null,
       vehicle: vehicleName,
+      driver: schedule.driver?.fullName ?? '-',
       frequency: '-',
       status: status.name,
       statusCode: status.code,
@@ -479,6 +624,34 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
         id: 0,
         slug: schedule.vehicleTypeSlug,
       },
+    };
+  }
+
+  private toScheduleDetailFallback(schedule: ScheduleRow): AdminScheduleDto {
+    return {
+      id: schedule.id,
+      departureDateTime: `${schedule.startDate}T${schedule.departureTimes || '00:00'}:00`,
+      status: schedule.statusCode,
+      route: {
+        id: 0,
+        slug: schedule.routeSlug,
+      },
+      vehicleType: {
+        id: 0,
+        slug: schedule.vehicleTypeSlug,
+      },
+      vehicle: schedule.vehicleId
+        ? {
+            id: schedule.vehicleId,
+            vehicleNumber: schedule.vehicle,
+          }
+        : undefined,
+      driver: schedule.driverId
+        ? {
+            id: schedule.driverId,
+            fullName: schedule.driver,
+          }
+        : undefined,
     };
   }
 
@@ -509,32 +682,90 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       .filter((option) => option.code.length > 0);
   }
 
+  private toVehicleOptions(
+    vehicles: AdminVehicleDto[],
+    currentLocale: string
+  ): Option[] {
+    return vehicles.map((vehicle) => {
+      const vehicleTypeName =
+        getAdminLookupLabel(vehicle.vehicleType, currentLocale) ??
+        this.getTranslationLabel(vehicle.vehicleType?.translations, currentLocale) ??
+        vehicle.vehicleType?.slug ??
+        '';
+      const identifier =
+        [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') ||
+        `#${vehicle.id}`;
+      const label = vehicleTypeName
+        ? `${identifier} - ${vehicleTypeName}`
+        : identifier;
+
+      return {
+        code: String(vehicle.id),
+        label,
+      };
+    });
+  }
+
+  private toDriverOptions(users: AdminUserDto[]): Option[] {
+    return users
+      .filter((user) => this.isDriverUser(user))
+      .map((user) => ({
+        code: String(user.id),
+        label: this.toUserDisplayName(user),
+      }));
+  }
+
+  private isDriverUser(user: AdminUserDto): boolean {
+    return (user.roles ?? []).some((role) => {
+      const roleSlug = typeof role === 'string' ? role : role.slug;
+      return String(roleSlug ?? '').trim().toLowerCase() === 'driver';
+    });
+  }
+
+  private toUserDisplayName(user: AdminUserDto): string {
+    const profileName = [
+      user.title,
+      user.firstName,
+      user.middleName,
+      user.lastName,
+    ]
+      .map((part) => String(part ?? '').trim())
+      .filter(Boolean)
+      .join(' ');
+
+    return (
+      user.fullName?.trim() ||
+      profileName ||
+      user.username?.trim() ||
+      user.email?.trim() ||
+      `#${user.id}`
+    );
+  }
+
   private toScheduleStatusOptions(lookups: AdminLookupDto[]): Option[] {
-    const statusOptions = new Map<string, string>([
-      ['scheduled', 'SCHEDULED'],
-      ['departed', 'DEPARTED'],
-      ['delayed', 'DELAYED'],
-    ]);
+    const currentLocale = this.getCurrentLocale();
 
-    for (const lookup of lookups) {
-      if (lookup.category !== 'schedule_status') {
-        continue;
-      }
+    return lookups
+      .filter((lookup) => lookup.category === 'schedule_status')
+      .map((lookup) => {
+        const code = String(lookup.slug ?? '').trim().toLowerCase();
+        return {
+          code,
+          label:
+            this.getTranslationLabel(lookup.translations, currentLocale) ??
+            this.getTranslationLabel(lookup.translations, 'en') ??
+            code.replace(/_/g, ' ').toUpperCase(),
+        };
+      })
+      .filter((option) => option.code.length > 0);
+  }
 
-      const code = String(lookup.slug ?? '').trim().toLowerCase();
-      if (!code) {
-        continue;
-      }
-
-      statusOptions.set(
-        code,
-        this.getTranslationLabel(lookup.translations, this.getCurrentLocale()) ??
-          this.getTranslationLabel(lookup.translations, 'en') ??
-          code.replace(/_/g, ' ').toUpperCase()
-      );
-    }
-
-    return [...statusOptions.entries()].map(([code, label]) => ({ code, label }));
+  private getDefaultScheduleStatusCode(): string {
+    return (
+      this.statusOptions.find((option) => option.code === 'scheduled')?.code ??
+      this.statusOptions[0]?.code ??
+      ''
+    );
   }
 
   private parseDepartureTimes(value: unknown): string[] {
@@ -669,6 +900,77 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     const day = String(value.getDate()).padStart(2, '0');
 
     return `${year}-${month}-${day}`;
+  }
+
+  private toDateControlValue(dateValue: string | null | undefined): Date | null {
+    const normalizedDate = String(dateValue ?? '').trim();
+    const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
+
+    if (!year || !month || !day) {
+      return null;
+    }
+
+    return new Date(year, month - 1, day);
+  }
+
+  private toTimeInputValue(value: Date | null): string {
+    if (!value || !Number.isFinite(value.getTime())) {
+      return '';
+    }
+
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+
+    return `${hours}:${minutes}`;
+  }
+
+  private toTimeControlValue(timeValue: string | null | undefined): Date | null {
+    const normalizedTime = String(timeValue ?? '').trim().slice(0, 5);
+    const [hours, minutes] = normalizedTime.split(':').map((part) => Number(part));
+
+    if (
+      !Number.isFinite(hours) ||
+      !Number.isFinite(minutes) ||
+      hours < 0 ||
+      hours > 23 ||
+      minutes < 0 ||
+      minutes > 59
+    ) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+  }
+
+  private toDateValue(value: unknown): Date | null {
+    if (value instanceof Date && Number.isFinite(value.getTime())) {
+      return value;
+    }
+
+    const normalizedValue = String(value ?? '').trim();
+    if (!normalizedValue) {
+      return null;
+    }
+
+    if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedValue)) {
+      return this.toDateControlValue(normalizedValue);
+    }
+
+    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(normalizedValue)) {
+      return this.toTimeControlValue(normalizedValue);
+    }
+
+    const parsedDate = new Date(normalizedValue);
+    return Number.isFinite(parsedDate.getTime()) ? parsedDate : null;
+  }
+
+  private toOptionalNumber(value: unknown): number | undefined {
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue > 0
+      ? numericValue
+      : undefined;
   }
 
   private getTodayDateInputValue(): string {

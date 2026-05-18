@@ -5,24 +5,22 @@
     <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
   </div>
-  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
-    <span class="material-symbols-outlined">add</span>
-    <span>{{ 'ADMIN.SCHEDULES.ADD' | translate }}</span>
-  </button>
+  <div class="admin-inline-actions">
+    <button type="button" class="admin-btn" (click)="openCreateScheduleModal()">
+      <span class="material-symbols-outlined">add_circle</span>
+      <span>{{ 'ADMIN.SCHEDULES.ADD_TRIP' | translate }}</span>
+    </button>
+    <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+      <span class="material-symbols-outlined">add</span>
+      <span>{{ 'ADMIN.SCHEDULES.ADD' | translate }}</span>
+    </button>
+  </div>
 </section>
 
 <section class="admin-grid admin-grid--3 mt-3">
   <article class="admin-card">
     <p class="admin-muted">{{ 'ADMIN.SCHEDULES.TOTAL_SETS' | translate }}</p>
     <p class="admin-big-number">{{ totalSchedules }}</p>
-  </article>
-  <article class="admin-card">
-    <p class="admin-muted">{{ 'ADMIN.SCHEDULES.SCHEDULED_SETS' | translate }}</p>
-    <p class="admin-big-number">{{ activeScheduleSets }}</p>
-  </article>
-  <article class="admin-card">
-    <p class="admin-muted">{{ 'ADMIN.SCHEDULES.DEPARTURE_TIMES' | translate }}</p>
-    <p class="admin-big-number">{{ totalDepartures }}</p>
   </article>
 </section>
 
@@ -40,13 +38,13 @@
   <p-calendar
     styleClass="schedule-calendar-filter"
     inputStyleClass="schedule-calendar-filter-input"
+    panelStyleClass="schedule-calendar-filter-panel"
     dateFormat="dd/mm/yy"
     [ngModel]="selectedDateFilter"
     (ngModelChange)="onDateFilterChange($event)"
     [showIcon]="true"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.SCHEDULES.FILTER_DATE' | translate"
-    appendTo="body"
   ></p-calendar>
 
   <app-admin-dropdown
@@ -121,10 +119,9 @@
                 <span class="material-symbols-outlined">bolt</span>
               </button>
               <button
-                *ngIf="schedule.kind === 'set'"
                 type="button"
                 class="admin-icon-btn"
-                (click)="openEditModal(schedule)"
+                (click)="schedule.kind === 'set' ? openEditModal(schedule) : openScheduleEditModal(schedule)"
               >
                 <span class="material-symbols-outlined">edit_square</span>
               </button>
@@ -262,6 +259,140 @@
         {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
       </button>
     </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop schedule-form-backdrop" *ngIf="isScheduleFormModalOpen">
+  <div class="admin-modal schedule-form-modal" role="dialog" aria-modal="true">
+    <div class="schedule-form-header">
+      <div>
+        <h4 class="admin-modal-title">
+          {{
+            isScheduleItemEditMode
+              ? ('ADMIN.SCHEDULES.EDIT_TRIP_TITLE' | translate)
+              : ('ADMIN.SCHEDULES.ADD_TRIP_TITLE' | translate)
+          }}
+        </h4>
+        <p class="admin-modal-subtitle">{{ 'ADMIN.SCHEDULES.TRIP_MODAL_HINT' | translate }}</p>
+      </div>
+      <button
+        type="button"
+        class="schedule-form-close"
+        [disabled]="isSubmitting"
+        (click)="closeScheduleFormModal()"
+        [attr.aria-label]="'ADMIN.COMMON.CANCEL' | translate"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form [formGroup]="scheduleItemForm" class="schedule-form-shell" (ngSubmit)="submitSchedule()">
+      <div class="schedule-form-body">
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.SCHEDULES.DEPARTURE_DATE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <p-calendar
+            formControlName="departureDate"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.SCHEDULES.DEPARTURE_DATE' | translate"
+          ></p-calendar>
+          <small class="schedule-form-message admin-error">
+            {{ isScheduleFieldInvalid('departureDate') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+          </small>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.SCHEDULES.DEPARTURE_TIME' | translate }} <span class="admin-required">*</span>
+          </label>
+          <p-calendar
+            formControlName="departureTime"
+            styleClass="schedule-calendar-filter"
+            inputStyleClass="schedule-calendar-filter-input"
+            panelStyleClass="schedule-calendar-filter-panel"
+            [timeOnly]="true"
+            [hourFormat]="'24'"
+            [showIcon]="true"
+            [showButtonBar]="true"
+            [placeholder]="'ADMIN.SCHEDULES.DEPARTURE_TIME' | translate"
+          ></p-calendar>
+          <small class="schedule-form-message admin-error">
+            {{
+              isScheduleFieldInvalid('departureTime')
+                ? ('ADMIN.SCHEDULES.TIME_VALIDATION' | translate)
+                : ''
+            }}
+          </small>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.SCHEDULES.ROUTE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="route"
+            [options]="routeOptions"
+            valueKey="code"
+            labelKey="label"
+          ></app-admin-dropdown>
+          <small class="schedule-form-message admin-error">
+            {{ isScheduleFieldInvalid('route') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+          </small>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'ADMIN.SCHEDULES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
+          </label>
+          <app-admin-dropdown
+            formControlName="vehicleType"
+            [options]="vehicleTypeOptions"
+            valueKey="code"
+            labelKey="label"
+          ></app-admin-dropdown>
+          <small class="schedule-form-message admin-error">
+            {{ isScheduleFieldInvalid('vehicleType') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+          </small>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.SCHEDULES.VEHICLE' | translate }}</label>
+          <app-admin-dropdown
+            formControlName="vehicleId"
+            [options]="vehicleOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.SCHEDULES.VEHICLE_OPTIONAL' | translate"
+          ></app-admin-dropdown>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.SCHEDULES.DRIVER' | translate }}</label>
+          <app-admin-dropdown
+            formControlName="driverId"
+            [options]="driverOptions"
+            valueKey="code"
+            labelKey="label"
+            [placeholder]="'ADMIN.SCHEDULES.DRIVER_OPTIONAL' | translate"
+          ></app-admin-dropdown>
+        </div>
+      </div>
+
+      <div class="admin-modal-actions schedule-form-actions">
+        <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="closeScheduleFormModal()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSubmitting">
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 

@@ -136,6 +136,43 @@
   left: 16px;
 }
 
+:host ::ng-deep .p-calendar {
+  position: relative;
+}
+
+:host ::ng-deep .payment-card-calendar-panel {
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  width: 240px !important;
+  min-width: 240px !important;
+  padding: 8px;
+  transform-origin: top left !important;
+}
+
+:host ::ng-deep .payment-card-calendar-panel .p-datepicker-header {
+  padding: 6px 8px;
+}
+
+:host ::ng-deep .payment-card-calendar-panel .p-datepicker-title {
+  font-size: 13px;
+}
+
+:host ::ng-deep .payment-card-calendar-panel .p-monthpicker {
+  gap: 4px;
+}
+
+:host ::ng-deep .payment-card-calendar-panel .p-monthpicker-month {
+  padding: 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  :host ::ng-deep .payment-card-calendar-panel {
+    width: min(240px, 100vw - 32px) !important;
+    min-width: min(240px, 100vw - 32px) !important;
+  }
+}
+
 .payment-btn {
   background: #4bc2f7;
   color: white;

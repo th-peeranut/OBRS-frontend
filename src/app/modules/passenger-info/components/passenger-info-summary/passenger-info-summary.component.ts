@@ -16,6 +16,7 @@ import {
   ProvinceStationReview,
   StationApi,
   getStationTranslationLabel,
+  getStopTypeLabel,
 } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { Station } from '../../../../shared/interfaces/station.interface';
@@ -166,8 +167,8 @@ export class PassengerInfoSummaryComponent {
         if (stationApi) {
           return {
             id: stationApi.id,
-            nameThai: this.getStopTypeLabel(stationApi.stopType, 'th'),
-            nameEnglish: this.getStopTypeLabel(stationApi.stopType, 'en'),
+            nameThai: getStopTypeLabel(stationApi.stopType, 'th'),
+            nameEnglish: getStopTypeLabel(stationApi.stopType, 'en'),
             station: this.toStation(stationApi),
           } as ProvinceStationReview;
         }
@@ -206,13 +207,6 @@ export class PassengerInfoSummaryComponent {
       lastUpdatedDate: stationApi.lastUpdatedDate,
       url: '',
     };
-  }
-
-  private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
-    const normalized = (type || '').toLowerCase();
-    if (normalized === 'station') return locale === 'th' ? 'Station' : 'Station';
-    if (normalized === 'stop') return locale === 'th' ? 'Stop' : 'Stop';
-    return type || '';
   }
 
   onNext(): void {

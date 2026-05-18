@@ -9,6 +9,7 @@ import {
   StationApi,
   getStationFallbackLabel,
   getStationTranslationLabel,
+  getStopTypeLabel,
 } from '../../../../shared/interfaces/station.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import {
@@ -165,8 +166,8 @@ export class PaymentInfoComponent {
         if (stationApi) {
           return {
             id: stationApi.id,
-            nameThai: this.getStopTypeLabel(stationApi.stopType, 'th'),
-            nameEnglish: this.getStopTypeLabel(stationApi.stopType, 'en'),
+            nameThai: getStopTypeLabel(stationApi.stopType, 'th'),
+            nameEnglish: getStopTypeLabel(stationApi.stopType, 'en'),
             station: this.toStation(stationApi),
           } as ProvinceStationReview;
         }
@@ -249,13 +250,6 @@ export class PaymentInfoComponent {
     };
   }
 
-  private getStopTypeLabel(type: string, locale: 'en' | 'th'): string {
-    const normalized = (type || '').toLowerCase();
-    if (normalized === 'station') return locale === 'th' ? 'Station' : 'Station';
-    if (normalized === 'stop') return locale === 'th' ? 'Stop' : 'Stop';
-    return type || '';
-  }
-
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {
     return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
   }
@@ -273,4 +267,3 @@ export class PaymentInfoComponent {
     return diff >= 0 ? diff : 0;
   }
 }
-
