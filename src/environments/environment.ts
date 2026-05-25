@@ -3,8 +3,8 @@ export const environment = {
   apiUrl: 'http://localhost:8000',
   promptpay: {
     baseUrl: '',
-    id: '0850951898',
+    id: '0123456789',
   },
   omisePublicKey: '',
-  useMockPayments: true,
+  useMockPayments: false,
 };

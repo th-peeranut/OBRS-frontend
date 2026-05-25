@@ -19,7 +19,11 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
-import { PaymentPayload } from '../../../../shared/interfaces/payment.interface';
+import {
+  PaymentByBookingIdResponse,
+  PaymentPayload,
+  PaymentResponse,
+} from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -39,16 +43,15 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   qrImageUrl = '';
   referenceNo = '';
   countdown = '10 : 00';
-  refreshCooldownSeconds = 0;
   isSubmittingPayment = false;
+  isWaitingForConfirmation = false;
+  private hasRequestedQrCode = false;
   private paymentIdempotencyKey = '';
-  private readonly promptPayId = environment.promptpay?.id ?? '';
-  private readonly promptPayBaseUrl =
-    environment.promptpay?.baseUrl ?? '';
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
-  private refreshCooldownIntervalId?: ReturnType<typeof setInterval>;
-  private readonly refreshCooldownTotalSeconds = 10;
+  private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
+  private isCheckingPaymentStatus = false;
+  private readonly paymentPollingIntervalMs = 3000;
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -66,7 +69,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearCountdown();
-    this.clearRefreshCooldown();
+    this.clearPaymentPolling();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -79,31 +82,42 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.tabChange.emit(tab);
   }
 
-  refreshQrCode(): void {
-    if (this.refreshCooldownSeconds > 0) {
+  onQrError(): void {
+    this.qrImageUrl = '';
+    this.hasRequestedQrCode = false;
+    this.isWaitingForConfirmation = false;
+    this.clearPaymentPolling();
+  }
+
+  async refreshQrCode(): Promise<void> {
+    if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
       return;
     }
 
-    this.startCountdown();
-    this.loadQrCode();
-    this.startRefreshCooldown();
-  }
-
-  onQrError(): void {
     this.qrImageUrl = '';
+    this.hasRequestedQrCode = false;
+    await this.ensurePromptPayQrCode(true);
   }
 
-  async submitPayment(): Promise<void> {
-    if (this.isSubmittingPayment) {
+  private async ensurePromptPayQrCode(showMissingBookingAlert = false): Promise<void> {
+    if (
+      this.hasRequestedQrCode ||
+      this.qrImageUrl ||
+      this.isSubmittingPayment ||
+      this.isWaitingForConfirmation
+    ) {
       return;
     }
 
     const bookingId = this.bookingService.getActiveBookingId();
     if (!bookingId) {
-      this.alertService.error('Booking ID not found');
+      if (showMissingBookingAlert) {
+        this.alertService.error('Booking ID not found');
+      }
       return;
     }
 
+    this.hasRequestedQrCode = true;
     const payload: PaymentPayload = {
       bookingId,
       paymentMethod: 'qr_promptpay',
@@ -127,32 +141,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
         request.pipe(take(1))
       );
 
-      if (response?.code === 200 || response?.code === 201) {
-        const payment = response.data;
-        if (payment?.status === 'success') {
-          this.paymentIdempotencyKey = '';
-          this.alertService.success('Payment success');
-          this.router.navigate(['/e-ticket']);
-          return;
-        }
-
-        if (payment?.authorizeUri) {
-          this.qrImageUrl = payment.authorizeUri;
-          this.referenceNo = payment.transactionId ?? this.referenceNo;
-          this.alertService.success('Payment is pending confirmation');
-          return;
-        }
-
-        if (payment?.status === 'pending') {
-          this.alertService.success('Payment is pending confirmation');
-          return;
-        }
-
-        this.alertService.error(payment?.failureReason ?? 'Payment failed');
+      if (this.isSuccessfulResponse(response?.code)) {
+        this.handlePromptPayResponse(response.data);
       } else {
         this.alertService.error('Payment failed');
       }
     } catch (error) {
+      this.hasRequestedQrCode = false;
       this.alertService.error('Payment failed');
       console.error('Payment request failed', error);
     } finally {
@@ -160,20 +155,36 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  private loadQrCode(): void {
-    if (!this.promptPayId || !this.promptPayBaseUrl) {
-      this.qrImageUrl = '';
-      this.referenceNo = '';
+  downloadQrCode(): void {
+    if (!this.qrImageUrl) {
       return;
     }
 
-    const baseUrl = this.promptPayBaseUrl.replace(/\/+$/, '');
-    const amount = this.amountDisplay;
-    const url = `${baseUrl}/${encodeURIComponent(
-      this.promptPayId
-    )}/${encodeURIComponent(amount)}.png`;
-    this.qrImageUrl = `${url}?t=${Date.now()}`;
-    this.referenceNo = this.generateReferenceNo();
+    window.open(this.qrImageUrl, '_blank', 'noopener');
+  }
+
+  private handlePromptPayResponse(payment: PaymentResponse | null | undefined): void {
+    if (payment?.status === 'success') {
+      this.completePayment();
+      return;
+    }
+
+    if (payment?.authorizeUri) {
+      this.qrImageUrl = payment.authorizeUri;
+      this.referenceNo = payment.transactionId ?? this.referenceNo;
+      this.isWaitingForConfirmation = true;
+      this.startCountdown();
+      this.startPaymentPolling();
+      return;
+    }
+
+    if (payment?.status === 'pending') {
+      this.isWaitingForConfirmation = true;
+      this.startPaymentPolling();
+      return;
+    }
+
+    this.alertService.error(payment?.failureReason ?? 'Payment failed');
   }
 
   private watchAmount(): void {
@@ -190,7 +201,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       )
       .subscribe((total) => {
         this.amountDisplay = this.formatAmount(total);
-        this.loadQrCode();
+        if (total > 0) {
+          void this.ensurePromptPayQrCode();
+        }
       });
   }
 
@@ -263,26 +276,69 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  private startRefreshCooldown(): void {
-    this.clearRefreshCooldown();
-    this.refreshCooldownSeconds = this.refreshCooldownTotalSeconds;
-
-    this.refreshCooldownIntervalId = setInterval(() => {
-      if (this.refreshCooldownSeconds <= 0) {
-        this.clearRefreshCooldown();
-        return;
-      }
-
-      this.refreshCooldownSeconds -= 1;
-    }, 1000);
+  private startPaymentPolling(): void {
+    this.clearPaymentPolling();
+    void this.checkPaymentStatus();
+    this.paymentPollingIntervalId = setInterval(() => {
+      void this.checkPaymentStatus();
+    }, this.paymentPollingIntervalMs);
   }
 
-  private clearRefreshCooldown(): void {
-    if (this.refreshCooldownIntervalId) {
-      clearInterval(this.refreshCooldownIntervalId);
-      this.refreshCooldownIntervalId = undefined;
+  private clearPaymentPolling(): void {
+    if (this.paymentPollingIntervalId) {
+      clearInterval(this.paymentPollingIntervalId);
+      this.paymentPollingIntervalId = undefined;
     }
-    this.refreshCooldownSeconds = 0;
+    this.isCheckingPaymentStatus = false;
+  }
+
+  private async checkPaymentStatus(): Promise<void> {
+    if (this.isCheckingPaymentStatus) {
+      return;
+    }
+
+    const bookingId = this.bookingService.getActiveBookingId();
+    if (!bookingId) {
+      return;
+    }
+
+    this.isCheckingPaymentStatus = true;
+    try {
+      const response = await firstValueFrom(
+        this.paymentService.getBookingPayments(bookingId).pipe(take(1))
+      );
+
+      if (this.isPaymentConfirmed(response.data)) {
+        this.completePayment();
+      }
+    } catch (error) {
+      console.error('Payment status polling failed', error);
+    } finally {
+      this.isCheckingPaymentStatus = false;
+    }
+  }
+
+  private isPaymentConfirmed(payment: PaymentByBookingIdResponse | null | undefined): boolean {
+    const summaryStatus = payment?.paymentSummary?.status?.toLowerCase();
+    const hasSuccessfulTransaction =
+      payment?.transactions?.some((transaction) =>
+        transaction.status?.toLowerCase() === 'success'
+      ) ?? false;
+
+    return summaryStatus === 'fully_paid' || hasSuccessfulTransaction;
+  }
+
+  private completePayment(): void {
+    this.hasRequestedQrCode = false;
+    this.paymentIdempotencyKey = '';
+    this.isWaitingForConfirmation = false;
+    this.clearPaymentPolling();
+    this.alertService.success('Payment success');
+    this.router.navigate(['/e-ticket']);
+  }
+
+  private isSuccessfulResponse(code: number | null | undefined): boolean {
+    return code === 200 || code === 201;
   }
 
   onBack(): void {

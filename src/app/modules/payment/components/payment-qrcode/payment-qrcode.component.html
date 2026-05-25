@@ -53,23 +53,6 @@
       </div>
     </div>
 
-    <!-- <div class="qr-actions">
-      <button
-        type="button"
-        class="btn-refresh"
-        (click)="refreshQrCode()"
-        [disabled]="refreshCooldownSeconds > 0"
-      >
-        {{ "PAYMENT.QR.REFRESH" | translate }}
-      </button>
-      <span class="refresh-hint" *ngIf="refreshCooldownSeconds > 0">
-        {{
-          "PAYMENT.QR.REFRESH_HINT"
-            | translate: { seconds: refreshCooldownSeconds }
-        }}
-      </span>
-    </div> -->
-
     <div class="qr-footer">
       <div class="merchant-name">
         {{ "PAYMENT.QR.MERCHANT_NAME" | translate }}
@@ -80,7 +63,12 @@
     </div>
   </div>
 
-  <button type="button" class="btn-download">
+  <button
+    type="button"
+    class="btn-download"
+    (click)="downloadQrCode()"
+    [disabled]="!qrImageUrl"
+  >
     <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
     {{ "PAYMENT.QR.DOWNLOAD" | translate }}
   </button>
@@ -99,12 +87,14 @@
 
   <div class="payment-action-item action-end">
     <button
+      *ngIf="!isWaitingForConfirmation"
       class="payment-btn"
       type="button"
-      (click)="submitPayment()"
+      (click)="refreshQrCode()"
+      [class.payment-btn-diabled]="isSubmittingPayment"
       [disabled]="isSubmittingPayment"
     >
-      {{ "PAYMENT.QR.PAY_NOW" | translate }}
+      {{ "PAYMENT.QR.REFRESH" | translate }}
     </button>
   </div>
 </div>

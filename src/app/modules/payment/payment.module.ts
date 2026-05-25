@@ -11,6 +11,7 @@ import { PaymentInfoComponent } from './components/payment-info/payment-info.com
 import { PaymentSummaryComponent } from './components/payment-summary/payment-summary.component';
 import { PaymentCreditcardComponent } from './components/payment-creditcard/payment-creditcard.component';
 import { PaymentQrcodeComponent } from './components/payment-qrcode/payment-qrcode.component';
+import { PaymentResultComponent } from './components/payment-result/payment-result.component';
 
 /// store
 import { EffectsModule } from '@ngrx/effects';
@@ -27,7 +28,8 @@ import { BookingReducer } from '../../shared/stores/booking/booking.reducer';
 import { BookingEffect } from '../../shared/stores/booking/booking.effect';
 
 const routes: Routes = [
-  { path: '', component: PaymentComponent },
+  { path: 'result', component: PaymentResultComponent },
+  { path: '', component: PaymentComponent, pathMatch: 'full' },
 ];
 
 @NgModule({
@@ -36,7 +38,8 @@ const routes: Routes = [
     PaymentInfoComponent,
     PaymentSummaryComponent,
     PaymentCreditcardComponent,
-    PaymentQrcodeComponent
+    PaymentQrcodeComponent,
+    PaymentResultComponent
   ],
   imports: [
       SharedModule,

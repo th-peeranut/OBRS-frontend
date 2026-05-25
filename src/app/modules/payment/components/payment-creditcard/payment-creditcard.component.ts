@@ -17,6 +17,7 @@ import { PaymentService } from '../../../../services/payment/payment.service';
 import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
+  PaymentByBookingIdResponse,
   PaymentPayload,
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
@@ -41,6 +42,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   ];
   countdown = '10 : 00';
   isSubmittingPayment = false;
+  isWaitingForConfirmation = false;
   private paymentIdempotencyKey = '';
 
   creditCardForm: FormGroup;
@@ -48,6 +50,9 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   minDate: Date = new Date();
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
+  private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
+  private isCheckingPaymentStatus = false;
+  private readonly paymentPollingIntervalMs = 3000;
 
   constructor(
     private translate: TranslateService,
@@ -67,6 +72,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearCountdown();
+    this.clearPaymentPolling();
   }
 
   creatForm() {
@@ -125,7 +131,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (this.isSubmittingPayment) {
+    if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
       return;
     }
 
@@ -154,8 +160,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
         request.pipe(take(1)),
       );
 
-      if (response?.code === 200 || response?.code === 201) {
-        this.paymentIdempotencyKey = '';
+      if (this.isSuccessfulResponse(response?.code)) {
         this.handlePaymentResponse(response.data);
       } else {
         this.alertService.error('Payment failed');
@@ -205,8 +210,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {
     if (payment?.status === 'success') {
-      this.alertService.success('Payment success');
-      this.router.navigate(['/e-ticket']);
+      this.completePayment();
       return;
     }
 
@@ -216,6 +220,8 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     }
 
     if (payment?.status === 'pending') {
+      this.isWaitingForConfirmation = true;
+      this.startPaymentPolling();
       this.alertService.success('Payment is pending confirmation');
       return;
     }
@@ -254,6 +260,70 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       clearInterval(this.countdownIntervalId);
       this.countdownIntervalId = undefined;
     }
+  }
+
+  private startPaymentPolling(): void {
+    this.clearPaymentPolling();
+    void this.checkPaymentStatus();
+    this.paymentPollingIntervalId = setInterval(() => {
+      void this.checkPaymentStatus();
+    }, this.paymentPollingIntervalMs);
+  }
+
+  private clearPaymentPolling(): void {
+    if (this.paymentPollingIntervalId) {
+      clearInterval(this.paymentPollingIntervalId);
+      this.paymentPollingIntervalId = undefined;
+    }
+    this.isCheckingPaymentStatus = false;
+  }
+
+  private async checkPaymentStatus(): Promise<void> {
+    if (this.isCheckingPaymentStatus) {
+      return;
+    }
+
+    const bookingId = this.bookingService.getActiveBookingId();
+    if (!bookingId) {
+      return;
+    }
+
+    this.isCheckingPaymentStatus = true;
+    try {
+      const response = await firstValueFrom(
+        this.paymentService.getBookingPayments(bookingId).pipe(take(1))
+      );
+
+      if (this.isPaymentConfirmed(response.data)) {
+        this.completePayment();
+      }
+    } catch (error) {
+      console.error('Payment status polling failed', error);
+    } finally {
+      this.isCheckingPaymentStatus = false;
+    }
+  }
+
+  private isPaymentConfirmed(payment: PaymentByBookingIdResponse | null | undefined): boolean {
+    const summaryStatus = payment?.paymentSummary?.status?.toLowerCase();
+    const hasSuccessfulTransaction =
+      payment?.transactions?.some((transaction) =>
+        transaction.status?.toLowerCase() === 'success'
+      ) ?? false;
+
+    return summaryStatus === 'fully_paid' || hasSuccessfulTransaction;
+  }
+
+  private completePayment(): void {
+    this.paymentIdempotencyKey = '';
+    this.isWaitingForConfirmation = false;
+    this.clearPaymentPolling();
+    this.alertService.success('Payment success');
+    this.router.navigate(['/e-ticket']);
+  }
+
+  private isSuccessfulResponse(code: number | null | undefined): boolean {
+    return code === 200 || code === 201;
   }
 
   onBack(): void {
