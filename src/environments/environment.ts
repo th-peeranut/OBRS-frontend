@@ -5,4 +5,6 @@ export const environment = {
     baseUrl: '',
     id: '0850951898',
   },
+  omisePublicKey: '',
+  useMockPayments: true,
 };

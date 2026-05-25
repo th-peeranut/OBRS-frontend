@@ -13,7 +13,7 @@ import {
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import { Router } from '@angular/router';
 
-type PaymentTab = 'creditcard';
+type PaymentTab = 'creditcard' | 'qrcode';
 
 @Component({
   selector: 'app-payment',
@@ -33,6 +33,10 @@ export class PaymentComponent {
 
   onBack(): void {
     this.router.navigate(['/passenger-info']);
+  }
+
+  onPaymentTabChange(tab: PaymentTab): void {
+    this.activePaymentTab = tab;
   }
 }
 

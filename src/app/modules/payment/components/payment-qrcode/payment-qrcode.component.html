@@ -1,5 +1,13 @@
 <div class="card-container payment-card">
-  <!-- <div class="tab-group">
+  <div class="tab-group">
+    <button
+      type="button"
+      class="tab"
+      (click)="selectTab('creditcard')"
+    >
+      <img src="icons/payment-creditcard.svg" alt="Credit card icon" />
+      <span>{{ "PAYMENT.TAB.CREDIT" | translate }}</span>
+    </button>
     <button
       type="button"
       class="tab is-active"
@@ -9,7 +17,7 @@
       <img src="icons/payment-qrcode.svg" alt="QR payment icon" />
       <span>{{ "PAYMENT.TAB.QR" | translate }}</span>
     </button>
-  </div> -->
+  </div>
 
   <div class="qr-panel">
     <div class="qr-header">

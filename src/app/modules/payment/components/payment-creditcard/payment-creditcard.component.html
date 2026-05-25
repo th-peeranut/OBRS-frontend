@@ -9,6 +9,14 @@
       <img src="icons/payment-creditcard.svg" alt="Credit card icon" />
       <span>{{ "PAYMENT.TAB.CREDIT" | translate }}</span>
     </button>
+    <button
+      type="button"
+      class="tab"
+      (click)="selectTab('qrcode')"
+    >
+      <img src="icons/payment-qrcode.svg" alt="QR payment icon" />
+      <span>{{ "PAYMENT.TAB.QR" | translate }}</span>
+    </button>
   </div>
 
   <form class="login-form mt-3" [formGroup]="creditCardForm">

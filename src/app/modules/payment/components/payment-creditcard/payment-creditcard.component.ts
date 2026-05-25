@@ -11,10 +11,15 @@ import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
+import { environment } from '../../../../../environments/environment';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
+import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
 import { AlertService } from '../../../../shared/services/alert.service';
-import { PaymentPayload } from '../../../../shared/interfaces/payment.interface';
+import {
+  PaymentPayload,
+  PaymentResponse,
+} from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -40,7 +45,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   creditCardForm: FormGroup;
 
-  minDate: Date;
+  minDate: Date = new Date();
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
 
@@ -50,6 +55,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
+    private omiseTokenService: OmiseTokenService,
     private alertService: AlertService,
   ) {
     this.creatForm();
@@ -129,28 +135,28 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const cardToken = this.getCardToken();
-    const payload: PaymentPayload = {
-      bookingId,
-      paymentMethod: 'card',
-      cardToken: '1234567890123456'
-    };
     const idempotencyKey =
       this.paymentIdempotencyKey || generateIdempotencyKey();
     this.paymentIdempotencyKey = idempotencyKey;
 
     this.isSubmittingPayment = true;
     try {
+      const cardToken = await this.resolveCardToken();
+      const payload: PaymentPayload = {
+        bookingId,
+        paymentMethod: 'card',
+        cardToken,
+      };
+      const request = environment.useMockPayments
+        ? this.paymentService.createMockPayment(payload, idempotencyKey)
+        : this.paymentService.createPayment(payload, idempotencyKey);
       const response = await firstValueFrom(
-        this.paymentService
-          .createPayment(payload, idempotencyKey)
-          .pipe(take(1)),
+        request.pipe(take(1)),
       );
 
       if (response?.code === 200 || response?.code === 201) {
         this.paymentIdempotencyKey = '';
-        this.alertService.success('Payment success');
-        this.router.navigate(['/e-ticket']);
+        this.handlePaymentResponse(response.data);
       } else {
         this.alertService.error('Payment failed');
       }
@@ -162,10 +168,59 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private getCardToken(): string {
+  private async resolveCardToken(): Promise<string> {
+    if (environment.useMockPayments) {
+      return 'mock_card_token';
+    }
+
+    const expiryDate = this.getExpiryDate();
+    if (!expiryDate) {
+      throw new Error('Invalid card expiry date');
+    }
+
+    return this.omiseTokenService.createCardToken({
+      number: this.getCardNumber(),
+      expiration_month: expiryDate.getMonth() + 1,
+      expiration_year: expiryDate.getFullYear(),
+      security_code: String(this.getFormValue('cvv') ?? ''),
+      name: 'OBRS Customer',
+    });
+  }
+
+  private getCardNumber(): string {
     const raw = String(this.getFormValue('creditCardNo') ?? '');
     const digits = raw.replace(/\D+/g, '');
     return digits || 'abc';
+  }
+
+  private getExpiryDate(): Date | null {
+    const rawValue = this.getFormValue('expireDate');
+    if (rawValue instanceof Date && Number.isFinite(rawValue.getTime())) {
+      return rawValue;
+    }
+
+    const parsed = new Date(rawValue);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }
+
+  private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {
+    if (payment?.status === 'success') {
+      this.alertService.success('Payment success');
+      this.router.navigate(['/e-ticket']);
+      return;
+    }
+
+    if (payment?.authorizeUri) {
+      window.location.href = payment.authorizeUri;
+      return;
+    }
+
+    if (payment?.status === 'pending') {
+      this.alertService.success('Payment is pending confirmation');
+      return;
+    }
+
+    this.alertService.error(payment?.failureReason ?? 'Payment failed');
   }
 
   private startCountdown(): void {

@@ -105,12 +105,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
 
     const payload: PaymentPayload = {
-      // bookingId,
-      // paymentMethod: 'qr_promptpay',
-      // qrReferenceNumber: this.referenceNo || this.generateReferenceNo(),
       bookingId,
-      paymentMethod: 'card',
-      cardToken: '1234567890123456'
+      paymentMethod: 'qr_promptpay',
+      qrReferenceNumber: this.referenceNo || this.generateReferenceNo(),
     };
     const idempotencyKey =
       this.paymentIdempotencyKey || generateIdempotencyKey();
@@ -119,14 +116,39 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.isSubmittingPayment = true;
 
     try {
+      const request = environment.useMockPayments
+        ? this.paymentService.createMockPayment(
+            payload,
+            idempotencyKey,
+            'promptpay_pending'
+          )
+        : this.paymentService.createPayment(payload, idempotencyKey);
       const response = await firstValueFrom(
-        this.paymentService.createPayment(payload, idempotencyKey).pipe(take(1))
+        request.pipe(take(1))
       );
 
       if (response?.code === 200 || response?.code === 201) {
-        this.paymentIdempotencyKey = '';
-        this.alertService.success('Payment success');
-        this.router.navigate(['/e-ticket']);
+        const payment = response.data;
+        if (payment?.status === 'success') {
+          this.paymentIdempotencyKey = '';
+          this.alertService.success('Payment success');
+          this.router.navigate(['/e-ticket']);
+          return;
+        }
+
+        if (payment?.authorizeUri) {
+          this.qrImageUrl = payment.authorizeUri;
+          this.referenceNo = payment.transactionId ?? this.referenceNo;
+          this.alertService.success('Payment is pending confirmation');
+          return;
+        }
+
+        if (payment?.status === 'pending') {
+          this.alertService.success('Payment is pending confirmation');
+          return;
+        }
+
+        this.alertService.error(payment?.failureReason ?? 'Payment failed');
       } else {
         this.alertService.error('Payment failed');
       }

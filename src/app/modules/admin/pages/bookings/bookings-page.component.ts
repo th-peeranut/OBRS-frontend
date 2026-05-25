@@ -95,17 +95,25 @@ export class BookingsPageComponent implements OnInit {
   }
 
   protected paymentClass(status: string): string {
-    const normalizedStatus = status.toUpperCase();
+    const normalizedStatus = status.trim().replace(/\s+/g, '_').toUpperCase();
 
     if (
       normalizedStatus === 'SUCCESS' ||
       normalizedStatus === 'PAID' ||
-      normalizedStatus === 'FULLY_PAID'
+      normalizedStatus === 'FULLY_PAID' ||
+      normalizedStatus === 'REFUND_PROCESSED' ||
+      normalizedStatus === 'REFUNDED'
     ) {
       return 'is-success';
     }
 
-    if (normalizedStatus === 'PENDING' || normalizedStatus === 'PARTIAL') {
+    if (
+      normalizedStatus === 'PENDING' ||
+      normalizedStatus === 'PARTIAL' ||
+      normalizedStatus === 'PARTIAL_PAID' ||
+      normalizedStatus === 'REFUND_REQUIRED' ||
+      normalizedStatus === 'MANUAL_REFUND_REQUIRED'
+    ) {
       return 'is-warning';
     }
 

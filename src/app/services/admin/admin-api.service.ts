@@ -7,6 +7,11 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
+import {
+  PageResponse,
+  PaymentResponse,
+  PendingRefund,
+} from '../../shared/interfaces/payment.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -236,6 +241,7 @@ export interface AdminPaymentSummaryDto {
   totalAmount?: string;
   paidAmount?: string;
   outstandingAmount?: string;
+  refundedAmount?: string;
   currency?: string;
   status?: string;
 }
@@ -243,6 +249,18 @@ export interface AdminPaymentSummaryDto {
 export interface AdminPaymentByBookingIdDto {
   bookingId: number;
   paymentSummary?: AdminPaymentSummaryDto;
+  transactions?: AdminPaymentTransactionDto[];
+}
+
+export interface AdminPaymentTransactionDto {
+  transactionId?: string;
+  paymentMethod?: string;
+  amount?: number | string;
+  currency?: string;
+  status?: string;
+  gatewayResponse?: string;
+  paidAt?: string;
+  remark?: string;
 }
 
 export function getAdminTranslationLabel(
@@ -727,6 +745,27 @@ export class AdminApiService {
   ): Observable<ResponseAPI<AdminPaymentByBookingIdDto>> {
     return this.getRequest<AdminPaymentByBookingIdDto>(
       `${this.baseUrl}/private/bookings/${bookingId}/payments`
+    );
+  }
+
+  getPendingManualRefunds(
+    page = 0,
+    size = 20
+  ): Observable<ResponseAPI<PageResponse<PendingRefund>>> {
+    const params = new HttpParams()
+      .set('page', page)
+      .set('size', size);
+
+    return this.getRequest<PageResponse<PendingRefund>>(
+      `${this.baseUrl}/private/payments/refunds/pending`,
+      params
+    );
+  }
+
+  refundPayment(paymentId: number): Observable<ResponseAPI<PaymentResponse>> {
+    return this.postRequest<PaymentResponse>(
+      `${this.baseUrl}/private/payments/${paymentId}/refund`,
+      {}
     );
   }
 }
