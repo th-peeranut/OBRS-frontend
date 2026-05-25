@@ -6,7 +6,7 @@ import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import {
-  getStationFallbackLabel,
+  getStationTranslationLabel,
   Station,
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
@@ -84,8 +84,8 @@ export class StationHomeComponent implements OnInit, OnDestroy {
 
   private mapApiStations(stations: StationApi[]): Station[] {
     return stations.map((stationApi) => {
-      const english = getStationFallbackLabel(stationApi, 'en');
-      const thai = getStationFallbackLabel(stationApi, 'th') || english;
+      const english = getStationTranslationLabel(stationApi, 'en') || stationApi.slug;
+      const thai = getStationTranslationLabel(stationApi, 'th') || english;
 
       return {
         id: stationApi.id,

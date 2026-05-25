@@ -41,8 +41,7 @@ export interface StationTranslation {
 
 export type StationTranslationCollection =
   | Partial<StationTranslation>[]
-  | Partial<StationTranslation>
-  | Record<string, Partial<StationTranslation> | string | null | undefined>;
+  | Record<string, Partial<StationTranslation> | null | undefined>;
 
 export interface StationLookup {
   code?: string;
@@ -122,7 +121,7 @@ function getTranslationCollectionLabel(
   translations: StationTranslationCollection | null | undefined,
   locale: string
 ): string | undefined {
-  if (!translations || typeof translations !== 'object') {
+  if (!translations) {
     return undefined;
   }
 
@@ -135,30 +134,9 @@ function getTranslationCollectionLabel(
     return byLocale?.label ?? translations.find((item) => item.label)?.label;
   }
 
-  const singleTranslation = translations as Partial<StationTranslation>;
-  if (singleTranslation.locale?.toLowerCase().startsWith(normalizedLocale)) {
-    return singleTranslation.label;
-  }
-  if (singleTranslation.label) {
-    return singleTranslation.label;
-  }
-
-  const translationMap = translations as Record<
-    string,
-    Partial<StationTranslation> | string | null | undefined
-  >;
-  const direct = translationMap[normalizedLocale];
-  if (typeof direct === 'string') {
-    return direct;
-  }
-  if (direct?.label) {
-    return direct.label;
-  }
-
-  const fallback = Object.values(translationMap).find(
-    (item): item is Partial<StationTranslation> =>
-      !!item && typeof item === 'object' && typeof item.label === 'string'
+  const direct = translations[normalizedLocale];
+  return (
+    direct?.label ??
+    Object.values(translations).find((item) => item?.label)?.label
   );
-
-  return fallback?.label;
 }
