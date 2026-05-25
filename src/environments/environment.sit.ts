@@ -1,10 +1,10 @@
 export const environment = {
   production: false,
-  apiUrl: 'xxx',
+  apiUrl: 'https://sit-obrs-backend.koyeb.app',
   promptpay: {
     baseUrl: '',
-    id: '0123456789',
+    id: '0850951898',
   },
-  omisePublicKey: '',
+  omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
   useMockPayments: false,
 };
