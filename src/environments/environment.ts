@@ -5,6 +5,6 @@ export const environment = {
     baseUrl: '',
     id: '0123456789',
   },
-  omisePublicKey: '',
+  omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
   useMockPayments: false,
 };

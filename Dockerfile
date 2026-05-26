@@ -1,10 +1,16 @@
-FROM node:20-alpine
+FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm ci
 
 COPY . .
-EXPOSE 4200
+ARG BUILD_CONFIGURATION=production
+RUN npm run build -- --configuration ${BUILD_CONFIGURATION}
 
-CMD ["npm", "start", "--", "--host", "0.0.0.0", "--poll", "2000"]
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist/obrs/browser /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
