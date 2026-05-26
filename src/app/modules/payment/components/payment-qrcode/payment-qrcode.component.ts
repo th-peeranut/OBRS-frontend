@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { combineLatest, firstValueFrom, Subject } from 'rxjs';
 import { distinctUntilChanged, map, take, takeUntil } from 'rxjs/operators';
+import QRCode from 'qrcode';
 import { environment } from '../../../../../environments/environment';
 import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
@@ -27,6 +28,7 @@ import {
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
 type PaymentTab = 'creditcard' | 'qrcode';
+type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
 
 @Component({
   selector: 'app-payment-qrcode',
@@ -41,6 +43,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   amountDisplay = '0.00';
   readonly qrImageAlt = 'PromptPay QR code';
   qrImageUrl = '';
+  qrPaymentUrl = '';
   referenceNo = '';
   countdown = '10 : 00';
   isSubmittingPayment = false;
@@ -49,9 +52,6 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   private paymentIdempotencyKey = '';
   private countdownTotalSeconds = 10 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
-  private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
-  private isCheckingPaymentStatus = false;
-  private readonly paymentPollingIntervalMs = 3000;
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -69,7 +69,6 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearCountdown();
-    this.clearPaymentPolling();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -84,9 +83,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   onQrError(): void {
     this.qrImageUrl = '';
+    this.qrPaymentUrl = '';
     this.hasRequestedQrCode = false;
     this.isWaitingForConfirmation = false;
-    this.clearPaymentPolling();
   }
 
   async refreshQrCode(): Promise<void> {
@@ -95,6 +94,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
 
     this.qrImageUrl = '';
+    this.qrPaymentUrl = '';
     this.hasRequestedQrCode = false;
     await this.ensurePromptPayQrCode(true);
   }
@@ -142,7 +142,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       );
 
       if (this.isSuccessfulResponse(response?.code)) {
-        this.handlePromptPayResponse(response.data);
+        await this.handlePromptPayResponse(response.data);
       } else {
         this.alertService.error('Payment failed');
       }
@@ -163,28 +163,37 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     window.open(this.qrImageUrl, '_blank', 'noopener');
   }
 
-  private handlePromptPayResponse(payment: PaymentResponse | null | undefined): void {
-    if (payment?.status === 'success') {
+  private async handlePromptPayResponse(
+    payment: PromptPayPaymentData | null | undefined
+  ): Promise<void> {
+    const paymentStatus = this.getPaymentStatus(payment);
+    if (this.isSuccessStatus(paymentStatus)) {
       this.completePayment();
       return;
     }
 
-    if (payment?.authorizeUri) {
-      this.qrImageUrl = payment.authorizeUri;
-      this.referenceNo = payment.transactionId ?? this.referenceNo;
-      this.isWaitingForConfirmation = true;
+    const qrImageSource = this.getQrImageSource(payment);
+    const authorizeUri = this.getAuthorizeUri(payment);
+    if (qrImageSource || authorizeUri) {
+      this.qrPaymentUrl = authorizeUri ?? qrImageSource ?? '';
+      this.qrImageUrl = qrImageSource ?? await this.generateQrImage(authorizeUri ?? '');
+      this.referenceNo = this.getTransactionId(payment) ?? this.referenceNo;
+      this.isWaitingForConfirmation = false;
       this.startCountdown();
-      this.startPaymentPolling();
+
+      if (!this.qrImageUrl) {
+        this.alertService.error('QR code not found');
+      }
       return;
     }
 
-    if (payment?.status === 'pending') {
-      this.isWaitingForConfirmation = true;
-      this.startPaymentPolling();
+    if (this.isPendingStatus(paymentStatus)) {
+      this.alertService.error('QR code not found');
+      this.isWaitingForConfirmation = false;
       return;
     }
 
-    this.alertService.error(payment?.failureReason ?? 'Payment failed');
+    this.alertService.error(this.getFailureReason(payment) ?? 'Payment failed');
   }
 
   private watchAmount(): void {
@@ -245,6 +254,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.countdownIntervalId = setInterval(() => {
       if (this.countdownTotalSeconds <= 0) {
         this.clearCountdown();
+        this.isWaitingForConfirmation = false;
         return;
       }
 
@@ -276,69 +286,223 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  private startPaymentPolling(): void {
-    this.clearPaymentPolling();
-    void this.checkPaymentStatus();
-    this.paymentPollingIntervalId = setInterval(() => {
-      void this.checkPaymentStatus();
-    }, this.paymentPollingIntervalMs);
-  }
-
-  private clearPaymentPolling(): void {
-    if (this.paymentPollingIntervalId) {
-      clearInterval(this.paymentPollingIntervalId);
-      this.paymentPollingIntervalId = undefined;
-    }
-    this.isCheckingPaymentStatus = false;
-  }
-
-  private async checkPaymentStatus(): Promise<void> {
-    if (this.isCheckingPaymentStatus) {
-      return;
-    }
-
-    const bookingId = this.bookingService.getActiveBookingId();
-    if (!bookingId) {
-      return;
-    }
-
-    this.isCheckingPaymentStatus = true;
-    try {
-      const response = await firstValueFrom(
-        this.paymentService.getBookingPayments(bookingId).pipe(take(1))
-      );
-
-      if (this.isPaymentConfirmed(response.data)) {
-        this.completePayment();
-      }
-    } catch (error) {
-      console.error('Payment status polling failed', error);
-    } finally {
-      this.isCheckingPaymentStatus = false;
-    }
-  }
-
-  private isPaymentConfirmed(payment: PaymentByBookingIdResponse | null | undefined): boolean {
-    const summaryStatus = payment?.paymentSummary?.status?.toLowerCase();
-    const hasSuccessfulTransaction =
-      payment?.transactions?.some((transaction) =>
-        transaction.status?.toLowerCase() === 'success'
-      ) ?? false;
-
-    return summaryStatus === 'fully_paid' || hasSuccessfulTransaction;
-  }
-
   private completePayment(): void {
     this.hasRequestedQrCode = false;
     this.paymentIdempotencyKey = '';
     this.isWaitingForConfirmation = false;
-    this.clearPaymentPolling();
     this.alertService.success('Payment success');
     this.router.navigate(['/e-ticket']);
   }
 
   private isSuccessfulResponse(code: number | null | undefined): boolean {
     return code === 200 || code === 201;
+  }
+
+  private getPaymentStatus(
+    payment: PromptPayPaymentData | null | undefined
+  ): string | undefined {
+    if (!payment) {
+      return undefined;
+    }
+
+    if ('paymentSummary' in payment) {
+      return (
+        payment.paymentSummary?.status ??
+        payment.transactions?.[0]?.status
+      );
+    }
+
+    return payment.status;
+  }
+
+  private getAuthorizeUri(
+    payment: PromptPayPaymentData | null | undefined
+  ): string | undefined {
+    if (!payment) {
+      return undefined;
+    }
+
+    if ('authorizeUri' in payment && payment.authorizeUri) {
+      return payment.authorizeUri;
+    }
+
+    if ('transactions' in payment) {
+      for (const transaction of payment.transactions ?? []) {
+        const gatewayResponse = this.parseGatewayResponse(
+          transaction.gatewayResponse
+        );
+        const gatewayAuthorizeUri = this.pickFirstString(gatewayResponse, [
+          'authorize_uri',
+          'authorizeUri',
+          'authorize_url',
+          'authorizeUrl',
+        ]);
+        if (gatewayAuthorizeUri) {
+          return gatewayAuthorizeUri;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private getQrImageSource(
+    payment: PromptPayPaymentData | null | undefined
+  ): string | undefined {
+    if (!payment) {
+      return undefined;
+    }
+
+    if ('transactions' in payment) {
+      for (const transaction of payment.transactions ?? []) {
+        const gatewayResponse = this.parseGatewayResponse(
+          transaction.gatewayResponse
+        );
+        const qrImageSource = this.extractGatewayQrImageSource(gatewayResponse);
+        if (qrImageSource) {
+          return qrImageSource;
+        }
+      }
+    }
+
+    return undefined;
+  }
+
+  private parseGatewayResponse(
+    gatewayResponse: unknown
+  ): Record<string, unknown> | null {
+    if (!gatewayResponse) {
+      return null;
+    }
+
+    if (typeof gatewayResponse === 'object' && !Array.isArray(gatewayResponse)) {
+      return gatewayResponse as Record<string, unknown>;
+    }
+
+    if (typeof gatewayResponse !== 'string') {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(gatewayResponse) as unknown;
+      if (typeof parsed === 'string') {
+        return this.parseGatewayResponse(parsed);
+      }
+
+      return typeof parsed === 'object' && parsed && !Array.isArray(parsed)
+        ? parsed as Record<string, unknown>
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private extractGatewayQrImageSource(
+    gatewayResponse: Record<string, unknown> | null
+  ): string | undefined {
+    if (!gatewayResponse) {
+      return undefined;
+    }
+
+    const direct = this.pickFirstString(gatewayResponse, [
+      'qrCodeUrl',
+      'qr_code_url',
+      'qrImageUrl',
+      'qr_image_url',
+      'downloadUri',
+      'download_uri',
+    ]);
+    if (direct) {
+      return direct;
+    }
+
+    const source = this.asRecord(gatewayResponse['source']);
+    const scannableCode = this.asRecord(source?.['scannable_code']);
+    const image = this.asRecord(scannableCode?.['image']);
+
+    return this.pickFirstString(image, [
+      'download_uri',
+      'downloadUri',
+      'uri',
+      'url',
+    ]);
+  }
+
+  private pickFirstString(
+    source: Record<string, unknown> | null | undefined,
+    keys: string[]
+  ): string | undefined {
+    if (!source) {
+      return undefined;
+    }
+
+    for (const key of keys) {
+      const value = source[key];
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+
+    return undefined;
+  }
+
+  private asRecord(value: unknown): Record<string, unknown> | null {
+    return value && typeof value === 'object' && !Array.isArray(value)
+      ? value as Record<string, unknown>
+      : null;
+  }
+
+  private getTransactionId(
+    payment: PromptPayPaymentData | null | undefined
+  ): string | undefined {
+    if (!payment) {
+      return undefined;
+    }
+
+    if ('transactionId' in payment && payment.transactionId) {
+      return payment.transactionId;
+    }
+
+    if ('transactions' in payment) {
+      return payment.transactions?.[0]?.transactionId;
+    }
+
+    return undefined;
+  }
+
+  private getFailureReason(
+    payment: PromptPayPaymentData | null | undefined
+  ): string | undefined {
+    if (!payment || !('failureReason' in payment)) {
+      return undefined;
+    }
+
+    return payment.failureReason;
+  }
+
+  private isPendingStatus(status: string | null | undefined): boolean {
+    return ['pending', 'unpaid'].includes(
+      String(status ?? '').trim().toLowerCase()
+    );
+  }
+
+  private isSuccessStatus(status: string | null | undefined): boolean {
+    return ['success', 'successful', 'paid', 'fully_paid'].includes(
+      String(status ?? '').trim().toLowerCase()
+    );
+  }
+
+  private async generateQrImage(payload: string): Promise<string> {
+    try {
+      return await QRCode.toDataURL(payload, {
+        width: 240,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      });
+    } catch (error) {
+      console.error('Generate PromptPay QR failed', error);
+      return '';
+    }
   }
 
   onBack(): void {
