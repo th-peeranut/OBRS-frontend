@@ -101,7 +101,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
         this.isRoundTripReturn = roundTripId === 2;
 
-        const passengerInfo = scheduleFilter?.passengerInfo || [
+        const passengerInfo = Array.isArray(scheduleFilter?.passengerInfo)
+          ? scheduleFilter.passengerInfo
+          : [
           { type: 'ADULT', count: 0 },
           { type: 'KIDS', count: 0 },
         ];
@@ -200,9 +202,11 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   getPayload() {
     const formValue = { ...this.bookingForm.getRawValue() };
 
+    const passengerInfo = Array.isArray(formValue.passengerInfo)
+      ? formValue.passengerInfo
+      : [];
     const getPassengerCount = (type: string) =>
-      formValue.passengerInfo?.find((item: any) => item.type === type)?.count ||
-      0;
+      passengerInfo.find((item: any) => item.type === type)?.count || 0;
 
     formValue.adultCount = getPassengerCount('ADULT');
     formValue.kidsCount = getPassengerCount('KIDS');

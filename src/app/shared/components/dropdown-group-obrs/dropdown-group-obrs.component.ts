@@ -144,6 +144,14 @@ export class DropdownGroupObrsComponent
     return Array.isArray(this.options) ? this.options : [];
   }
 
+  get optionList(): any[] {
+    return this.getOptions();
+  }
+
+  getGroupStations(group: any): any[] {
+    return Array.isArray(group?.stations) ? group.stations : [];
+  }
+
   private getTranslationLabel(
     translations: unknown,
     locale: string

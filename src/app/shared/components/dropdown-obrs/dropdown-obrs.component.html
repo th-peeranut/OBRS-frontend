@@ -32,7 +32,7 @@
       aria-labelledby="dropdownObrs"
     >
       <!-- DROPDOWN OPTION -->
-      <ng-container *ngFor="let option of options; let optionIndex = index">
+      <ng-container *ngFor="let option of optionList; let optionIndex = index">
         <li>
           <a
             class="dropdown-item dropdown-option"
@@ -43,7 +43,7 @@
         </li>
       </ng-container>
 
-      <ng-container *ngIf="options.length === 0">
+      <ng-container *ngIf="optionList.length === 0">
         <li class="px-3">
           {{ "SHARED.NO_CONTENT" | translate }}
         </li>

@@ -123,6 +123,10 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
     return Array.isArray(this.options) ? this.options : [];
   }
 
+  get optionList(): any[] {
+    return this.getOptions();
+  }
+
   getValue(option: any) {
     if (!option) return '';
 
