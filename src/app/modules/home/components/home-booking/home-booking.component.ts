@@ -66,8 +66,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   ngOnInit() {
     this.rawProvinceStationList.pipe(takeUntil(this.destroy$)).subscribe((stationList) => {
       this.allProvinceStationList = stationList || [];
-      this.startProvinceStationList = stationList || [];
-      this.endProvinceStationList = stationList || [];
+      this.syncStationOptions();
     });
   }
 
@@ -161,9 +160,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       startStationId: station.id,
     });
 
-    this.endProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.syncStationOptions(station.id, this.getFormValue('stopStationId'));
   }
 
   onEndStationChange(station: StationApi) {
@@ -171,12 +168,27 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
       stopStationId: station.id,
     });
 
-    this.startProvinceStationList = this.allProvinceStationList.filter(
-      (item) => item.id !== station.id
-    );
+    this.syncStationOptions(this.getFormValue('startStationId'), station.id);
   }
 
   getFormValue(controlName: string) {
     return this.bookingForm.get(controlName)?.value;
+  }
+
+  private syncStationOptions(
+    selectedStartId?: string | number | null,
+    selectedStopId?: string | number | null
+  ): void {
+    const currentStartId =
+      selectedStartId ?? this.bookingForm.get('startStationId')?.value;
+    const currentStopId =
+      selectedStopId ?? this.bookingForm.get('stopStationId')?.value;
+
+    this.startProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== Number(currentStopId)
+    );
+    this.endProvinceStationList = this.allProvinceStationList.filter(
+      (item) => item.id !== Number(currentStartId)
+    );
   }
 }

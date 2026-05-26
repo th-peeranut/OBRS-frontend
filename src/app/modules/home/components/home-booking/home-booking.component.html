@@ -27,6 +27,7 @@
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.START_STATION'"
+            [value]="getFormValue('startStationId')"
             [options]="startProvinceStationList"
             (currentValue)="onStartStationChange($event)"
           ></app-dropdown-group-obrs>
@@ -41,6 +42,7 @@
             [isBorder]="true"
             [isLabel]="true"
             [label]="'HOME.HOME_BOOKING.END_STATION'"
+            [value]="getFormValue('stopStationId')"
             [options]="endProvinceStationList"
             (currentValue)="onEndStationChange($event)"
           ></app-dropdown-group-obrs>
