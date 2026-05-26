@@ -5,11 +5,7 @@ import { map, Observable, Subject } from 'rxjs';
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
-import {
-  getStationTranslationLabel,
-  Station,
-  StationApi,
-} from '../../../../shared/interfaces/station.interface';
+import { Station, StationApi } from '../../../../shared/interfaces/station.interface';
 
 @Component({
   selector: 'app-station-home',
@@ -84,21 +80,47 @@ export class StationHomeComponent implements OnInit, OnDestroy {
 
   private mapApiStations(stations: StationApi[]): Station[] {
     return stations.map((stationApi) => {
-      const english = getStationTranslationLabel(stationApi, 'en') || stationApi.slug;
-      const thai = getStationTranslationLabel(stationApi, 'th') || english;
+      const english = this.getTranslationLabel(stationApi?.translations, 'en') || stationApi.slug;
+      const thai = this.getTranslationLabel(stationApi?.translations, 'th') || english;
 
       return {
         id: stationApi.id,
         code: stationApi.slug,
         nameThai: thai,
         nameEnglish: english,
-        createdBy: stationApi.createdBy,
-        createdDate: stationApi.createdDate,
-        lastUpdatedBy: stationApi.lastUpdatedBy,
-        lastUpdatedDate: stationApi.lastUpdatedDate,
+        createdBy: stationApi.createdBy ?? '',
+        createdDate: stationApi.createdDate ?? stationApi.createdAt ?? '',
+        lastUpdatedBy: stationApi.lastUpdatedBy ?? '',
+        lastUpdatedDate: stationApi.lastUpdatedDate ?? stationApi.updatedAt ?? '',
         url: '',
       };
     });
+  }
+
+  private getTranslationLabel(translations: unknown, locale: string): string {
+    if (!translations) {
+      return '';
+    }
+
+    const normalizedLocale = locale.toLowerCase();
+    if (Array.isArray(translations)) {
+      const matched = translations.find((item: any) =>
+        String(item?.locale ?? '').toLowerCase().startsWith(normalizedLocale)
+      );
+
+      return matched?.label ?? translations.find((item: any) => item?.label)?.label ?? '';
+    }
+
+    if (typeof translations === 'object') {
+      const translationMap = translations as Record<string, any>;
+      return (
+        translationMap[normalizedLocale]?.label ??
+        Object.values(translationMap).find((item: any) => item?.label)?.label ??
+        ''
+      );
+    }
+
+    return '';
   }
 
 }
