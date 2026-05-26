@@ -54,13 +54,14 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   ) {}
 
   ngOnChanges(changes: SimpleChanges) {
-    const defaultData = this.options.find((value: any) => value.isDefault);
+    const options = this.getOptions();
+    const defaultData = options.find((value: any) => value.isDefault);
     if (defaultData) {
       this.setCurrentValue(defaultData);
     }
 
     if (this.value) {
-      let selectedOption = this.options.find(
+      let selectedOption = options.find(
         (option: any) => option.id === this.value
       );
 
@@ -103,7 +104,7 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   }
 
   writeValue(value: number): void {
-    this.selectedValue = this.options.find(
+    this.selectedValue = this.getOptions().find(
       (option: any) => option.id === value
     )!;
   }
@@ -117,6 +118,10 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   }
 
   setDisabledState?(isDisabled: boolean): void {}
+
+  private getOptions(): any[] {
+    return Array.isArray(this.options) ? this.options : [];
+  }
 
   getValue(option: any) {
     if (!option) return '';

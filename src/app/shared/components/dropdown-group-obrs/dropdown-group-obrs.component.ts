@@ -55,14 +55,17 @@ export class DropdownGroupObrsComponent
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
+    const options = this.getOptions();
+
     if (!this.value) {
       this.selectedValue = null;
       return;
     }
 
     if (this.isGroupedOptions()) {
-      for (const group of this.options) {
-        const match = (group.stations || []).find(
+      for (const group of options) {
+        const stations = Array.isArray(group?.stations) ? group.stations : [];
+        const match = stations.find(
           (station: any) => station.id === this.value
         );
         if (match) {
@@ -72,7 +75,7 @@ export class DropdownGroupObrsComponent
       }
     }
 
-    const selected = this.options.find((option: any) => option.id === this.value);
+    const selected = options.find((option: any) => option.id === this.value);
     this.selectedValue = selected ?? null;
   }
 
@@ -132,8 +135,13 @@ export class DropdownGroupObrsComponent
   }
 
   isGroupedOptions(): boolean {
-    if (!this.options || this.options.length === 0) return false;
-    return Array.isArray(this.options[0]?.stations);
+    const options = this.getOptions();
+    if (options.length === 0) return false;
+    return Array.isArray(options[0]?.stations);
+  }
+
+  private getOptions(): any[] {
+    return Array.isArray(this.options) ? this.options : [];
   }
 
   private getTranslationLabel(

@@ -36,16 +36,20 @@ export class DropdownObrsPassengerComponent
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();
 
   isDropdownOpen: boolean = false;
-  selectedValue: DropdownPassenger[] = [
-    {
-      type: 'ADULT',
-      count: 0,
-    },
-    {
-      type: 'KIDS',
-      count: 0,
-    },
-  ];
+  selectedValue: DropdownPassenger[] = this.getDefaultPassengers();
+
+  private getDefaultPassengers(): DropdownPassenger[] {
+    return [
+      {
+        type: 'ADULT',
+        count: 0,
+      },
+      {
+        type: 'KIDS',
+        count: 0,
+      },
+    ];
+  }
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
@@ -95,20 +99,20 @@ export class DropdownObrsPassengerComponent
   }
 
   get sumPassenger() {
-    return this.selectedValue.reduce((n, { count }) => n + count, 0);
+    return this.getSelectedPassengers().reduce((n, { count }) => n + count, 0);
   }
 
   get sumAdultPassenger() {
-    return this.selectedValue.find((value) => value.type === 'ADULT')?.count;
+    return this.getPassengerCount('ADULT');
   }
 
   get sumKidsPassenger() {
-    return this.selectedValue.find((value) => value.type === 'KIDS')?.count;
+    return this.getPassengerCount('KIDS');
   }
 
   updatePassengerCount(type: string, action: string) {
     // Create a shallow clone of the array and its objects
-    const updatedPassengers = this.selectedValue.map((passenger) => ({
+    const updatedPassengers = this.getSelectedPassengers().map((passenger) => ({
       ...passenger,
     }));
 
@@ -128,9 +132,9 @@ export class DropdownObrsPassengerComponent
   }
 
   writeValue(value: DropdownPassenger[]): void {
-    if (value) {
-      this.selectedValue = value;
-    }
+    this.selectedValue = Array.isArray(value)
+      ? value
+      : this.getDefaultPassengers();
   }
 
   registerOnChange(fn: (value: DropdownPassenger[]) => void): void {
@@ -142,4 +146,19 @@ export class DropdownObrsPassengerComponent
   }
 
   setDisabledState?(isDisabled: boolean): void {}
+
+  private getPassengerCount(type: string): number {
+    return (
+      this.getSelectedPassengers().find((value) => value.type === type)?.count ?? 0
+    );
+  }
+
+  private getSelectedPassengers(): DropdownPassenger[] {
+    if (Array.isArray(this.selectedValue)) {
+      return this.selectedValue;
+    }
+
+    this.selectedValue = this.getDefaultPassengers();
+    return this.selectedValue;
+  }
 }
