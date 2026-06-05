@@ -61,33 +61,33 @@
     </div>
     <!-- FORM SECTION -->
     <form class="login-form mt-3" [formGroup]="loginForm">
-      <!-- INPUT FIELD -> ชื่อผู้ใช้งาน -->
+      <!-- INPUT FIELD -> อีเมล -->
       <div class="mt-3">
         <label
           for="email"
           [class.label-error]="
-            getForm('username')?.errors &&
-            (getForm('username')?.touched || getForm('username')?.dirty)
+            getForm('email')?.errors &&
+            (getForm('email')?.touched || getForm('email')?.dirty)
           "
         >
           {{ "LOGIN.USERNAME" | translate }}
         </label>
         <input
           class="form-control mt-1"
-          type="text"
-          id="username"
-          formControlName="username"
+          type="email"
+          id="email"
+          formControlName="email"
           [placeholder]="'LOGIN.USERNAME_PLACEHOLDER' | translate"
           [class.form-error]="
-            getForm('username')?.errors &&
-            (getForm('username')?.touched || getForm('username')?.dirty)
+            getForm('email')?.errors &&
+            (getForm('email')?.touched || getForm('email')?.dirty)
           "
         />
         <div
           class="text-error"
           *ngIf="
-            getForm('username')?.errors &&
-            (getForm('username')?.touched || getForm('username')?.dirty)
+            getForm('email')?.errors &&
+            (getForm('email')?.touched || getForm('email')?.dirty)
           "
         >
           {{ "LOGIN.USERNAME_REQUIRED" | translate }}

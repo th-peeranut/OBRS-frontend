@@ -1,5 +1,5 @@
 export interface Login {
-  username: string;
+  email: string;
   password: string;
 }
 
@@ -7,7 +7,6 @@ export interface LoginUser {
   id: number;
   fullName: string;
   email: string;
-  username: string;
   preferredLocale: string;
   status: string;
   roles: string[];
@@ -27,9 +26,11 @@ export interface Register {
   lastName: string;
   email: string;
   phoneNumber: string;
-  username: string;
   password: string;
-  isPhoneNumberVerify: boolean;
-  roles: string[];
   preferredLocale: string;
+  pdpaConsent: boolean;
+  // Backend ignores these fields (login is email-based), kept for local form state only.
+  username?: string;
+  isPhoneNumberVerify?: boolean;
+  roles?: string[];
 }

@@ -28,14 +28,14 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router) {}
 
   login(payload: {
-    username: string;
+    email: string;
     password: string;
   }): Promise<ResponseAPI<LoginResponseData>> {
     return this.callLogin(payload);
   }
 
   private callLogin(payload: {
-    username: string;
+    email: string;
     password: string;
   }): Promise<ResponseAPI<LoginResponseData>> {
     return this.http
@@ -47,7 +47,7 @@ export class AuthService {
       .then((response) => {
         if (response?.code === 200) {
           const token = response?.data?.accessToken;
-          const username = response?.data?.user?.username ?? payload.username;
+          const username = response?.data?.user?.email ?? payload.email;
           const roles = response?.data?.user?.roles;
           this.storeAuthData(token, username, roles);
         }
@@ -194,6 +194,7 @@ export class AuthService {
       roles: [],
       preferredLocale: '',
       username: '',
+      pdpaConsent: false,
     };
     sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
   }
@@ -221,7 +222,7 @@ export class AuthService {
         .then((response) => {
           if (response?.code === 200) {
             const token = response?.data?.accessToken ?? response?.data?.token;
-            const username = response?.data?.user?.username ?? response?.data?.username;
+            const username = response?.data?.user?.email ?? response?.data?.email;
             const roles = response?.data?.user?.roles ?? response?.data?.roles;
             this.storeAuthData(token, username, roles);
           }
@@ -237,11 +238,24 @@ export class AuthService {
   }
 
   forgetPassword(payload: {
-    phoneNo: string;
+    email: string;
   }): Promise<ResponseAPI<any> | undefined> {
     return this.http
       .post<ResponseAPI<any>>(
-        `${environment.apiUrl}/api/auth/forgetpassword`,
+        `${environment.apiUrl}/api/auth/password-reset/request`,
+        payload
+      )
+      .toPromise()
+      .then((response) => response);
+  }
+
+  confirmPasswordReset(payload: {
+    token: string;
+    newPassword: string;
+  }): Promise<ResponseAPI<any> | undefined> {
+    return this.http
+      .post<ResponseAPI<any>>(
+        `${environment.apiUrl}/api/auth/password-reset/confirm`,
         payload
       )
       .toPromise()

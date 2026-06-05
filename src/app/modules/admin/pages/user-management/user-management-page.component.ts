@@ -434,6 +434,9 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       preferredLocale: String(raw.preferredLocale ?? 'th').trim(),
       status: String(raw.status ?? '').trim().toLowerCase(),
       roles: [...(raw.roles ?? [])],
+      // Backend requires PDPA consent on user creation (UserReqDto extends SignUpReqDto).
+      // Admin-created accounts record consent on behalf of the operator.
+      pdpaConsent: true,
     };
   }
 

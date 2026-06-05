@@ -135,6 +135,7 @@ export class RegisterComponent implements OnDestroy {
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
       preferredLocale: [''],
+      pdpaConsent: [false, Validators.requiredTrue],
     });
 
     this.emailSubscription$ = this.registerForm.get('email')?.valueChanges
