@@ -739,8 +739,12 @@ export class AdminApiService {
     );
   }
 
-  getBookings(): Observable<ResponseAPI<AdminBookingDto[]>> {
-    return this.getRequest<AdminBookingDto[]>(`${this.baseUrl}/private/bookings`);
+  getBookings(): Observable<ResponseAPI<PageResponse<AdminBookingDto>>> {
+    const params = new HttpParams().set('page', '0').set('size', '100');
+    return this.getRequest<PageResponse<AdminBookingDto>>(
+      `${this.baseUrl}/private/admin/bookings`,
+      params
+    );
   }
 
   getBookingPayments(

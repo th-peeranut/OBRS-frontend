@@ -1,0 +1,69 @@
+@import "../../../../../styles/variables.scss";
+
+.card-container {
+  background: $primary-white;
+  padding: 24px;
+  padding-top: 0px;
+  border-radius: 8px;
+
+  display: flex;
+  flex-direction: column;
+  row-gap: 24px;
+
+  border: 1px solid $primary-lightgrey;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.card-body {
+  padding: 8px;
+}
+
+.subtitle {
+  font-size: 16px;
+  font-weight: 600;
+  color: #757a86;
+}
+
+.passenget-badge {
+  background: $secondary-light-blue;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-primary;
+
+  min-width: 70px;
+  height: 30px;
+  width: fit-content;
+
+  text-align: center;
+}
+
+.form-row {
+  display: flex;
+  row-gap: 8px;
+}
+
+.form-control {
+  height: 48px;
+}
+
+@media (max-width: 992px) {
+  .card-container {
+    padding: 20px;
+    padding-top: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .card-container {
+    padding: 16px;
+    padding-top: 0;
+  }
+
+  .form-check-inline {
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+}

@@ -515,9 +515,13 @@
       "ADULT": "Adult",
       "CHILD": "Child"
     },
+    "BOOKER": {
+      "SECTION_TITLE": "Booker information",
+      "BADGE": "Booker"
+    },
     "FORM": {
       "SECTION_TITLE": "Personal information",
-      "USE_REGISTERED_INFO": "Use registered information",
+      "USE_THIS_PASSENGER_AS_BOOKER": "Use this passenger as the booker",
       "TITLE": "Title",
       "TITLE_REQUIRED": "Please enter a title",
       "FIRST_NAME": "First name",
@@ -606,8 +610,9 @@
       "VEHICLE_PLATE": "Vehicle no.",
       "SEAT": "Seat",
       "PASSENGERS": "Passengers",
+      "BOOKER": "Booker",
       "PASSENGER_NAME": "Passenger name",
-      "PASSENGER_PHONE": "Phone number",
+      "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
       "TOTAL_UNIT": "baht"

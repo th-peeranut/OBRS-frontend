@@ -111,7 +111,6 @@ describe('ETicketComponent', () => {
   describe('applyApiOverrides', () => {
     const storePassengers: PassengerInfo[] = [
       {
-        isUseAddressInfo: false,
         isAdult: true,
         title: 1,
         firstName: 'Abc',

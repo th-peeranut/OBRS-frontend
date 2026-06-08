@@ -1,0 +1,266 @@
+<ng-container *ngIf="bookerForm">
+  <!-- FORM SECTION -->
+  <form class="login-form" [formGroup]="bookerForm" novalidate>
+    <div class="card-container mt-3">
+      <!-- BODY -->
+      <div class="card-body">
+        <div class="row form-row">
+          <!-- คนที่จอง -->
+          <div class="col-12">
+            <div class="passenget-badge">
+              {{ "PASSENGER_INFO.BOOKER.BADGE" | translate }}
+            </div>
+          </div>
+
+          <!-- ข้อมูลส่วนตัว -->
+          <div class="col-12 my-3">
+            <div class="subtitle">
+              {{ "PASSENGER_INFO.FORM.SECTION_TITLE" | translate }}
+            </div>
+          </div>
+
+          <!-- คำนำหน้า -->
+          <div class="col-12 col-md-6">
+            <label
+              for="booker-title"
+              [class.label-error]="
+                bookerForm.get('title')?.errors &&
+                (bookerForm.get('title')?.touched || bookerForm.get('title')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.TITLE" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <app-dropdown-obrs
+              [isBorder]="true"
+              [isLabel]="false"
+              [options]="titleOptions"
+              formControlName="title"
+              id="booker-title"
+            ></app-dropdown-obrs>
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('title')?.errors &&
+                (bookerForm.get('title')?.touched || bookerForm.get('title')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.TITLE_REQUIRED" | translate }}
+            </div>
+          </div>
+
+          <!-- ชื่อจริง -->
+          <div class="col-12 col-md-6">
+            <label
+              for="booker-firstName"
+              [class.label-error]="
+                bookerForm.get('firstName')?.errors &&
+                (bookerForm.get('firstName')?.touched ||
+                  bookerForm.get('firstName')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.FIRST_NAME" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <input
+              class="form-control mt-1"
+              id="booker-firstName"
+              formControlName="firstName"
+              [class.form-error]="
+                bookerForm.get('firstName')?.errors &&
+                (bookerForm.get('firstName')?.touched ||
+                  bookerForm.get('firstName')?.dirty)
+              "
+            />
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('firstName')?.errors &&
+                (bookerForm.get('firstName')?.touched ||
+                  bookerForm.get('firstName')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.FIRST_NAME_REQUIRED" | translate }}
+            </div>
+          </div>
+
+          <!-- ชื่อกลาง (ถ้ามี) -->
+          <div class="col-12 col-md-6">
+            <label for="booker-middleName">
+              {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
+            </label>
+            <input
+              class="form-control mt-1"
+              id="booker-middleName"
+              formControlName="middleName"
+            />
+          </div>
+
+          <!-- นามสกุล -->
+          <div class="col-12 col-md-6">
+            <label
+              for="booker-lastName"
+              [class.label-error]="
+                bookerForm.get('lastName')?.errors &&
+                (bookerForm.get('lastName')?.touched ||
+                  bookerForm.get('lastName')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.LAST_NAME" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <input
+              class="form-control mt-1"
+              id="booker-lastName"
+              formControlName="lastName"
+              [class.form-error]="
+                bookerForm.get('lastName')?.errors &&
+                (bookerForm.get('lastName')?.touched ||
+                  bookerForm.get('lastName')?.dirty)
+              "
+            />
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('lastName')?.errors &&
+                (bookerForm.get('lastName')?.touched ||
+                  bookerForm.get('lastName')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.LAST_NAME_REQUIRED" | translate }}
+            </div>
+          </div>
+
+          <div class="col-12 col-md-6">
+            <!-- หมายเลขโทรศัพท์ -->
+            <label
+              for="booker-phoneNumber"
+              [class.label-error]="
+                bookerForm.get('phoneNumber')?.errors &&
+                (bookerForm.get('phoneNumber')?.touched ||
+                  bookerForm.get('phoneNumber')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.PHONE_NUMBER" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <input
+              class="form-control mt-1"
+              type="text"
+              id="booker-phoneNumber"
+              formControlName="phoneNumber"
+              [placeholder]="
+                'PASSENGER_INFO.FORM.PHONE_NUMBER_PLACEHOLDER' | translate
+              "
+              [class.form-error]="
+                bookerForm.get('phoneNumber')?.errors &&
+                (bookerForm.get('phoneNumber')?.touched ||
+                  bookerForm.get('phoneNumber')?.dirty)
+              "
+            />
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('phoneNumber')?.hasError('required') &&
+                (bookerForm.get('phoneNumber')?.touched ||
+                  bookerForm.get('phoneNumber')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.PHONE_NUMBER_REQUIRED" | translate }}
+            </div>
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('phoneNumber')?.hasError('pattern') &&
+                (bookerForm.get('phoneNumber')?.touched ||
+                  bookerForm.get('phoneNumber')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.PHONE_NUMBER_INVALID" | translate }}
+            </div>
+          </div>
+
+          <!-- เพศ/สถานะสภาพ -->
+          <div class="col-6">
+            <label
+              [class.label-error]="
+                bookerForm.get('gender')?.errors &&
+                (bookerForm.get('gender')?.touched || bookerForm.get('gender')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.GENDER_STATUS" | translate }}
+              <span class="form-required">*</span>
+            </label>
+
+            <!-- ชาย -->
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="booker-gender_male"
+                formControlName="gender"
+                value="MALE"
+              />
+              <label class="form-check-label" for="booker-gender_male">
+                <img
+                  class="passenger-male-icon"
+                  src="icons/passenger-male.svg"
+                  alt="Passenger male Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.MALE" | translate }}
+              </label>
+            </div>
+
+            <!-- หญิง -->
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="booker-gender_female"
+                formControlName="gender"
+                value="FEMALE"
+              />
+              <label class="form-check-label" for="booker-gender_female">
+                <img
+                  class="passenger-female-icon"
+                  src="icons/passenger-female.svg"
+                  alt="Passenger Female Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.FEMALE" | translate }}
+              </label>
+            </div>
+
+            <!-- พระ -->
+            <div class="form-check form-check-inline">
+              <input
+                class="form-check-input"
+                type="radio"
+                id="booker-gender_monk"
+                formControlName="gender"
+                value="MONK"
+              />
+              <label class="form-check-label" for="booker-gender_monk">
+                <img
+                  class="passenger-monk-icon"
+                  src="icons/passenger-monk.svg"
+                  alt="Passenger Monk Icon"
+                />
+                {{ "PASSENGER_INFO.GENDER.MONK" | translate }}
+              </label>
+            </div>
+
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('gender')?.errors &&
+                (bookerForm.get('gender')?.touched || bookerForm.get('gender')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.GENDER_STATUS_REQUIRED" | translate }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</ng-container>

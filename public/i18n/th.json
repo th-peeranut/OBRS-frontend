@@ -516,9 +516,13 @@
       "ADULT": "ผู้ใหญ่",
       "CHILD": "เด็ก"
     },
+    "BOOKER": {
+      "SECTION_TITLE": "ข้อมูลคนที่จอง",
+      "BADGE": "คนที่จอง"
+    },
     "FORM": {
       "SECTION_TITLE": "ข้อมูลส่วนตัว",
-      "USE_REGISTERED_INFO": "ใช้ข้อมูลที่ลงทะเบียน",
+      "USE_THIS_PASSENGER_AS_BOOKER": "ใช้ข้อมูลผู้โดยสารคนนี้เป็นคนจอง",
       "TITLE": "คำนำหน้า",
       "TITLE_REQUIRED": "กรุณากรอกคำนำหน้า",
       "FIRST_NAME": "ชื่อจริง",
@@ -607,8 +611,9 @@
       "VEHICLE_PLATE": "หมายเลขรถ/ทะเบียน",
       "SEAT": "ที่นั่ง",
       "PASSENGERS": "ผู้โดยสาร",
+      "BOOKER": "คนที่จอง",
       "PASSENGER_NAME": "ชื่อ-นามสกุล",
-      "PASSENGER_PHONE": "หมายเลขโทรศัพท์",
+      "PASSENGER_PHONE": "หมายเลขโทรศัพท์คนที่จอง",
       "PAYMENT_DATE": "วันเวลาที่ชำระ",
       "TOTAL": "รวมทั้งสิ้น",
       "TOTAL_UNIT": "บาท"

@@ -8,8 +8,13 @@
       {{ "PASSENGER_INFO.PAGE.FORM_TITLE" | translate }}
     </h3>
 
+    <app-booker-info-form
+      (validityChange)="onBookerFormValidityChange($event)"
+    ></app-booker-info-form>
+
     <app-passenger-info-form
       (validityChange)="onPassengerFormValidityChange($event)"
+      (useAsBooker)="onUsePassengerAsBooker($event)"
     ></app-passenger-info-form>
   </div>
 
@@ -19,7 +24,7 @@
     </h3>
 
     <app-passenger-info-summary
-      [isNextDisabled]="!isPassengerFormValid"
+      [isNextDisabled]="!isPassengerFormValid || !isBookerFormValid"
       (next)="onSubmitPassengerInfo()"
       (back)="onBack()"
     ></app-passenger-info-summary>

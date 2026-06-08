@@ -12,6 +12,7 @@ import {
 import { invokeSetPassengerInfo } from '../../shared/stores/passenger-info/passenger-info.action';
 import { invokeSetBookingApi } from '../../shared/stores/booking/booking.action';
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
+import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
 import { selectScheduleBooking } from '../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
 import { BookingService } from '../../services/booking/booking.service';
@@ -39,7 +40,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 export class PassengerInfoComponent {
   @ViewChild(PassengerInfoFormComponent)
   passengerInfoFormComponent?: PassengerInfoFormComponent;
+  @ViewChild(BookerInfoFormComponent)
+  bookerInfoFormComponent?: BookerInfoFormComponent;
   isPassengerFormValid = false;
+  isBookerFormValid = false;
   rawProvinceStationList: Observable<StationApi[]>;
   private readonly titleMap: Record<number, string> = {
     1: 'Mr.',
@@ -75,17 +79,26 @@ export class PassengerInfoComponent {
     this.isPassengerFormValid = isValid;
   }
 
+  onBookerFormValidityChange(isValid: boolean): void {
+    this.isBookerFormValid = isValid;
+  }
+
+  onUsePassengerAsBooker(passenger: PassengerInfo): void {
+    this.bookerInfoFormComponent?.patchBooker(passenger);
+  }
+
   async onSubmitPassengerInfo(): Promise<void> {
     const passengerInfo =
       this.passengerInfoFormComponent?.validateAndGetPassengerInfo();
+    const booker = this.bookerInfoFormComponent?.validateAndGetBooker();
 
-    if (!passengerInfo) {
+    if (!passengerInfo || !booker) {
       return;
     }
 
     this.store.dispatch(invokeSetPassengerInfo({ passengerInfo }));
 
-    const bookingPayload = await this.buildBookingPayload(passengerInfo);
+    const bookingPayload = await this.buildBookingPayload(passengerInfo, booker);
 
     let isBookingCreated = false;
 
@@ -125,7 +138,8 @@ export class PassengerInfoComponent {
   }
 
   private async buildBookingPayload(
-    passengerInfo: PassengerInfo[]
+    passengerInfo: PassengerInfo[],
+    booker: PassengerInfo
   ): Promise<BookingPayload | null> {
     const scheduleBooking = await firstValueFrom(
       this.store.pipe(select(selectScheduleBooking), take(1))
@@ -161,7 +175,7 @@ export class PassengerInfoComponent {
         ? this.calculateTotalAmount(passengerInfo, arrivalSchedule?.pricePerSeat)
         : 0);
 
-    const contact = this.buildContactPayload(passengerInfo);
+    const contact = this.buildContactPayload(booker);
 
     const payload: BookingPayload = {
       bookingType: isReturnTrip ? 'return' : 'one_way',
@@ -267,16 +281,15 @@ export class PassengerInfoComponent {
     return Number.isFinite(parsed) ? parsed : 0;
   }
 
-  private buildContactPayload(passengers: PassengerInfo[]): BookingPayload['contact'] {
-    const primary = passengers[0];
-    const phoneNumber = this.normalizePhoneNumber(primary?.phoneNumber ?? '');
+  private buildContactPayload(booker: PassengerInfo): BookingPayload['contact'] {
+    const phoneNumber = this.normalizePhoneNumber(booker?.phoneNumber ?? '');
     const preferredLocale = this.getPreferredLocale();
 
     return {
-      title: this.normalizeTitle(primary?.title),
-      firstName: (primary?.firstName ?? '').trim(),
-      middleName: (primary?.middleName ?? '').trim() || null,
-      lastName: (primary?.lastName ?? '').trim(),
+      title: this.normalizeTitle(booker?.title),
+      firstName: (booker?.firstName ?? '').trim(),
+      middleName: (booker?.middleName ?? '').trim() || null,
+      lastName: (booker?.lastName ?? '').trim(),
       phoneNumber,
       preferredLocale,
     };

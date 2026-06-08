@@ -41,6 +41,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
+  @Output() useAsBooker = new EventEmitter<PassengerInfo>();
 
   titleOptions: Dropdown[] = [
     {
@@ -197,6 +198,32 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     this.emitValidity();
   }
 
+  onUseAsBookerChange(index: number, isChecked: boolean): void {
+    if (!isChecked) {
+      return;
+    }
+
+    // Only one passenger can be the booker at a time.
+    this.passengerData.controls.forEach((control, idx) => {
+      if (idx !== index) {
+        control.get('useAsBooker')?.setValue(false, { emitEvent: false });
+      }
+    });
+
+    this.useAsBooker.emit(this.buildPassengerInfoAt(index));
+  }
+
+  private buildPassengerInfoAt(index: number): PassengerInfo {
+    const raw = this.passengerData.at(index).getRawValue();
+    return {
+      ...raw,
+      title:
+        typeof raw.title === 'object' && raw.title !== null
+          ? raw.title.id
+          : raw.title ?? null,
+    } as PassengerInfo;
+  }
+
   getFormErrors(
     index: number,
     controlName: string,
@@ -265,7 +292,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   private createPassengerGroup(isAdult: boolean = false): FormGroup {
     return this.fb.group({
-      isUseAddressInfo: [false],
+      useAsBooker: [false],
       isAdult: [isAdult],
       title: [null, Validators.required],
       firstName: ['', Validators.required],

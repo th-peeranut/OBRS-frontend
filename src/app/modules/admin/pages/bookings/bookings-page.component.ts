@@ -143,7 +143,7 @@ export class BookingsPageComponent implements OnInit {
 
     try {
       const response = await firstValueFrom(this.adminApiService.getBookings());
-      const bookings = response?.data ?? [];
+      const bookings = response?.data?.content ?? [];
 
       const paymentStatusMap = await this.loadPaymentStatusMap(bookings);
       this.bookings = bookings.map((booking) =>

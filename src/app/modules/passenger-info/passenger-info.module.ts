@@ -19,6 +19,7 @@ import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedu
 import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
 import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
+import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
 import { PassengerSeatBusComponent } from './components/passenger-seat-bus/passenger-seat-bus.component';
 import { PassengerSeatVanComponent } from './components/passenger-seat-van/passenger-seat-van.component';
 import { PassengerSeatBoxComponent } from './components/passenger-seat-box/passenger-seat-box.component';
@@ -33,7 +34,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  declarations: [PassengerInfoComponent, PassengerInfoFormComponent, PassengerInfoSummaryComponent, PassengerSeatBusComponent, PassengerSeatVanComponent, PassengerSeatBoxComponent],
+  declarations: [PassengerInfoComponent, BookerInfoFormComponent, PassengerInfoFormComponent, PassengerInfoSummaryComponent, PassengerSeatBusComponent, PassengerSeatVanComponent, PassengerSeatBoxComponent],
   imports: [
     SharedModule,
     RouterModule.forChild(routes),

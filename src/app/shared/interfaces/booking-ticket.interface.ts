@@ -44,5 +44,7 @@ export interface BookingTicketsData {
   bookingNumber: string;
   bookingStatus?: string;
   totalTickets?: number;
+  contactPhoneNumber?: string;
+  totalAmount?: number | string;
   journeys?: BookingTicketJourney[];
 }

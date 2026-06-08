@@ -65,6 +65,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   qrCodeDataUrl = '';
 
   passengers: TicketPassenger[] = [];
+  booker: TicketPassenger | null = null;
   private latestQrPayload = '';
   private ticketApiData: BookingTicketsData | null = null;
   private latestLocale: Locale = 'en';
@@ -558,6 +559,30 @@ export class ETicketComponent implements OnInit, OnDestroy {
       this.passengers = apiPassengers;
       this.seats = this.buildSeatList(apiPassengers);
     }
+
+    this.booker = this.buildBookerFromApi(data);
+
+    if (data.totalAmount !== undefined && data.totalAmount !== null) {
+      this.totalAmount = this.formatAmount(data.totalAmount);
+    }
+  }
+
+  private buildBookerFromApi(data: BookingTicketsData): TicketPassenger | null {
+    const phone = data.contactPhoneNumber?.trim();
+    if (!phone) {
+      return null;
+    }
+
+    return {
+      name: '-',
+      phone,
+      seat: '-',
+    };
+  }
+
+  private formatAmount(value: number | string): string {
+    const parsed = typeof value === 'string' ? parseFloat(value) : value;
+    return Number.isFinite(parsed) ? parsed.toFixed(2) : String(value);
   }
 
   private findJourney(

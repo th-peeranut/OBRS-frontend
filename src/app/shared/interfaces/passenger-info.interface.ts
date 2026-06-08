@@ -1,5 +1,4 @@
 export interface PassengerInfo {
-  isUseAddressInfo: boolean;
   isAdult: boolean;
   title: number | null;
   firstName: string;
@@ -9,6 +8,7 @@ export interface PassengerInfo {
   gender: string;
   isSelectSeat: boolean;
   passengerSeat: string;
+  useAsBooker?: boolean;
 }
 
 export type PassengerInfoState = PassengerInfo[];

@@ -5,6 +5,8 @@ export interface BookingPassenger {
   firstName: string;
   middleName: string | null;
   lastName: string;
+  identityCardNumber?: string | null;
+  phoneNumber?: string | null;
 }
 
 export interface BookingContact {
@@ -14,6 +16,7 @@ export interface BookingContact {
   lastName: string;
   phoneNumber: string;
   preferredLocale: string;
+  identityCardNumber?: string | null;
 }
 
 export interface BookingSchedulePayload {
