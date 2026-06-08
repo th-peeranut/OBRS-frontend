@@ -4,6 +4,7 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:https": "ng serve --ssl",
     "start:sit": "ng serve --configuration sit",
     "build": "ng build",
     "build:sit": "ng build --configuration sit",

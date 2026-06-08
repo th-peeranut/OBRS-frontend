@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { BookingPayload } from '../../shared/interfaces/booking.interface';
+import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { Observable } from 'rxjs';
 
@@ -20,8 +21,10 @@ export class BookingService {
     );
   }
 
-  getBookingTickets(bookingId: number): Observable<ResponseAPI<unknown>> {
-    return this.http.get<ResponseAPI<unknown>>(
+  getBookingTickets(
+    bookingId: number
+  ): Observable<ResponseAPI<BookingTicketsData>> {
+    return this.http.get<ResponseAPI<BookingTicketsData>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/tickets`
     );
   }

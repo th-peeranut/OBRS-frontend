@@ -1,9 +1,19 @@
+// Mirrors backend RouteSummaryResponse (translation/lookup based).
+export interface RouteTranslation {
+  label: string;
+  description: string | null;
+}
+
+export interface RouteLookup {
+  code: string;
+  display?: Record<string, { label: string; description?: string | null }>;
+}
+
 export interface Route {
   id: number;
-  nameThai: string;
-  nameEnglish: string;
-  createdBy: string;
-  createdDate: string;
-  lastUpdatedBy: string;
-  lastUpdatedDate: string;
+  slug: string;
+  status: RouteLookup;
+  translations: Record<string, RouteTranslation>;
+  createdAt: string;
+  updatedAt: string;
 }

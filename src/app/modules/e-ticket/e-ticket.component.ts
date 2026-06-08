@@ -14,6 +14,10 @@ import dayjs from 'dayjs';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
+import {
+  BookingTicketJourney,
+  BookingTicketsData,
+} from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { ScheduleBooking } from '../../shared/interfaces/schedule-booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
@@ -62,11 +66,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   passengers: TicketPassenger[] = [];
   private latestQrPayload = '';
-  private ticketApiBookingNumber = '';
-  private ticketApiTicketNumber = '';
-  private ticketApiPaymentDateTime = '';
-  private ticketApiVehicleType = '';
-  private ticketApiVehiclePlate = '';
+  private ticketApiData: BookingTicketsData | null = null;
+  private latestLocale: Locale = 'en';
+  private latestStorePassengers: PassengerInfo[] | null = null;
   private lastTicketRequestBookingId: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
@@ -158,9 +160,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const departureSchedule = schedules[0] ?? null;
     const returnSchedule = schedules[1] ?? null;
     const bookingId = this.getBookingId(booking?.bookingId);
-    const bookingNumber =
-      this.ticketApiBookingNumber ||
-      this.normalizeBookingNumber(booking?.bookingNumber);
+    const bookingNumber = this.normalizeBookingNumber(booking?.bookingNumber);
     const ticketPassengers = this.buildPassengerRows(passengerInfo, locale);
 
     const fromName = this.getStationLabelById(
@@ -176,10 +176,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     this.bookingNumber = bookingNumber || '-';
     this.ticketNumber =
-      this.ticketApiTicketNumber ||
-      (this.bookingNumber !== '-'
+      this.bookingNumber !== '-'
         ? this.bookingNumber
-        : this.buildTicketNumber(bookingId, departureSchedule));
+        : this.buildTicketNumber(bookingId, departureSchedule);
     void this.updateQrCode(this.ticketNumber);
     this.travelDate = this.buildTravelDate(
       departureSchedule?.departureDateTime,
@@ -191,24 +190,23 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.origin = fromName || '-';
     this.destination = toName || '-';
     this.vehicleType =
-      this.ticketApiVehicleType ||
-      this.formatVehicleType(departureSchedule?.vehicleType) ||
-      '-';
-    this.vehiclePlate = this.ticketApiVehiclePlate || '-';
+      this.formatVehicleType(departureSchedule?.vehicleType) || '-';
+    this.vehiclePlate = '-';
     this.seats = this.buildSeatList(ticketPassengers);
     this.passengers = ticketPassengers;
     this.passengerSummary = this.buildPassengerSummary(scheduleFilter?.passengerInfo);
-    this.paymentDate = this.formatDateTime(
-      this.ticketApiPaymentDateTime || dayjs().toISOString(),
-      locale
-    );
+    this.paymentDate = this.formatDateTime(dayjs().toISOString(), locale);
     this.totalAmount = this.calculateTotalAmount(
       schedules,
       scheduleFilter?.passengerInfo,
       ticketPassengers.length
     ).toFixed(2);
 
-    void this.loadTicketFromApi(bookingId, locale);
+    this.latestLocale = locale;
+    this.latestStorePassengers = passengerInfo;
+    this.applyApiOverrides(locale, passengerInfo);
+
+    void this.loadTicketFromApi(bookingId);
   }
 
   private getSchedules(schedule?: Schedule[] | null): Schedule[] {
@@ -266,8 +264,18 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private formatScheduleTimeRange(schedule: Schedule | null): string {
     if (!schedule) return '';
 
-    const startTime = this.formatTime(schedule.departureDateTime);
-    const endTime = this.formatTime(schedule.arrivalDateTime);
+    return this.formatTimeRange(
+      schedule.departureDateTime,
+      schedule.arrivalDateTime
+    );
+  }
+
+  private formatTimeRange(
+    departureDateTime: string | undefined,
+    arrivalDateTime: string | undefined
+  ): string {
+    const startTime = this.formatTime(departureDateTime);
+    const endTime = this.formatTime(arrivalDateTime);
 
     if (startTime && endTime) {
       return `${startTime} - ${endTime}`;
@@ -453,10 +461,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return this.bookingService.getActiveBookingId();
   }
 
-  private async loadTicketFromApi(
-    bookingId: number | null,
-    locale: Locale
-  ): Promise<void> {
+  private async loadTicketFromApi(bookingId: number | null): Promise<void> {
     if (!bookingId) {
       return;
     }
@@ -470,185 +475,165 @@ export class ETicketComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(
         this.bookingService.getBookingTickets(bookingId)
       );
-      if (response?.code === 200 || response?.code === 201) {
-        this.applyTicketApiResponse(response?.data);
-        this.refreshTicketFieldsFromApi(locale);
+      if (
+        (response?.code === 200 || response?.code === 201) &&
+        response?.data
+      ) {
+        this.ticketApiData = response.data;
+        this.applyApiOverrides(this.latestLocale, this.latestStorePassengers);
       }
     } catch (error) {
       console.error('Get booking tickets failed', error);
     }
   }
 
-  private refreshTicketFieldsFromApi(locale: Locale): void {
-    if (this.ticketApiBookingNumber) {
-      this.bookingNumber = this.ticketApiBookingNumber;
-    }
-
-    if (this.ticketApiTicketNumber) {
-      this.ticketNumber = this.ticketApiTicketNumber;
-      void this.updateQrCode(this.ticketNumber);
-    }
-
-    if (this.ticketApiPaymentDateTime) {
-      this.paymentDate = this.formatDateTime(this.ticketApiPaymentDateTime, locale);
-    }
-
-    if (this.ticketApiVehicleType) {
-      this.vehicleType = this.ticketApiVehicleType;
-    }
-
-    if (this.ticketApiVehiclePlate) {
-      this.vehiclePlate = this.ticketApiVehiclePlate;
-    }
-  }
-
-  private applyTicketApiResponse(data: unknown): void {
-    const rootPayload = this.extractRootPayload(data);
-    const primaryJourney = rootPayload
-      ? this.extractPrimaryJourney(rootPayload)
-      : null;
-    const vehicle = primaryJourney ? this.asRecord(primaryJourney['vehicle']) : null;
-    if (vehicle) {
-      const vehicleType = this.pickFirstString(vehicle, ['vehicleType']);
-      if (vehicleType) {
-        this.ticketApiVehicleType = this.formatVehicleType(vehicleType);
-      }
-
-      const vehicleNumber = this.pickFirstString(vehicle, ['vehicleNumber']);
-      const numberPlate = this.pickFirstString(vehicle, ['numberPlate']);
-      const vehiclePlate = this.buildVehiclePlate(vehicleNumber, numberPlate);
-      if (vehiclePlate) {
-        this.ticketApiVehiclePlate = vehiclePlate;
-      }
-    }
-
-    const ticketPayload = this.extractTicketPayload(data);
-    if (!ticketPayload) {
+  private applyApiOverrides(
+    locale: Locale,
+    storePassengers: PassengerInfo[] | null
+  ): void {
+    const data = this.ticketApiData;
+    if (!data) {
       return;
     }
 
-    const bookingNumber = this.pickFirstString(ticketPayload, [
-      'bookingNumber',
-      'bookingNo',
-    ]);
+    const journeys = data.journeys ?? [];
+    const outbound =
+      this.findJourney(journeys, 'outbound') ?? journeys[0] ?? null;
+    const inbound =
+      this.findJourney(journeys, 'inbound') ??
+      (journeys.length > 1 ? journeys[1] : null);
+
+    const bookingNumber = data.bookingNumber?.trim();
     if (bookingNumber) {
-      this.ticketApiBookingNumber = bookingNumber;
+      this.bookingNumber = bookingNumber;
     }
 
-    const ticketNumber = this.pickFirstString(ticketPayload, [
-      'ticketNumber',
-      'ticketNo',
-      'ticketCode',
-      'number',
-    ]);
+    const ticketNumber = this.collectTicketNumbers(journeys);
     if (ticketNumber) {
-      this.ticketApiTicketNumber = ticketNumber;
+      this.ticketNumber = ticketNumber;
+      void this.updateQrCode(this.ticketNumber);
     }
 
-    const paymentDateTime = this.pickFirstString(ticketPayload, [
-      'paymentDateTime',
-      'paymentDate',
-      'paidAt',
-      'createdAt',
-    ]);
-    if (paymentDateTime) {
-      this.ticketApiPaymentDateTime = paymentDateTime;
+    const fromName = outbound?.fromStop?.label?.trim() ?? '';
+    const toName = outbound?.toStop?.label?.trim() ?? '';
+    if (fromName) {
+      this.origin = fromName;
+    }
+    if (toName) {
+      this.destination = toName;
+    }
+    if (fromName || toName) {
+      this.route = this.buildRouteLabel(fromName, toName, !!inbound);
+    }
+
+    const travelDate = this.buildTravelDate(
+      outbound?.departureDateTime,
+      inbound?.departureDateTime,
+      locale
+    );
+    if (travelDate !== '-') {
+      this.travelDate = travelDate;
+    }
+
+    const travelTime = this.buildJourneyTravelTime(outbound, inbound);
+    if (travelTime !== '-') {
+      this.travelTime = travelTime;
+    }
+
+    const vehicleType = outbound?.vehicle?.vehicleType?.label?.trim();
+    if (vehicleType) {
+      this.vehicleType = this.formatVehicleType(vehicleType);
+    }
+
+    const vehiclePlate = this.buildVehiclePlate(
+      outbound?.vehicle?.vehicleNumber?.trim() ?? '',
+      outbound?.vehicle?.numberPlate?.trim() ?? ''
+    );
+    if (vehiclePlate) {
+      this.vehiclePlate = vehiclePlate;
+    }
+
+    const apiPassengers = this.buildPassengersFromApi(outbound, storePassengers);
+    if (apiPassengers.length > 0) {
+      this.passengers = apiPassengers;
+      this.seats = this.buildSeatList(apiPassengers);
     }
   }
 
-  private extractTicketPayload(data: unknown): Record<string, unknown> | null {
-    if (Array.isArray(data)) {
-      return this.asRecord(data[0]);
-    }
-
-    const root = this.asRecord(data);
-    if (!root) {
-      return null;
-    }
-
-    const topLevelTicket = this.extractPrimaryTicket(root);
-    if (topLevelTicket) {
-      return {
-        ...root,
-        ...topLevelTicket,
-      };
-    }
-
-    const primaryJourney = this.extractPrimaryJourney(root);
-    const journeyTicket = primaryJourney
-      ? this.extractPrimaryTicket(primaryJourney)
-      : null;
-    if (primaryJourney && journeyTicket) {
-      return {
-        ...root,
-        ...primaryJourney,
-        ...journeyTicket,
-      };
-    }
-
-    return root;
+  private findJourney(
+    journeys: BookingTicketJourney[],
+    code: string
+  ): BookingTicketJourney | null {
+    return (
+      journeys.find(
+        (journey) =>
+          (journey.legType?.code ?? '').trim().toLowerCase() === code
+      ) ?? null
+    );
   }
 
-  private extractPrimaryTicket(
-    source: Record<string, unknown>
-  ): Record<string, unknown> | null {
-    const tickets = source['tickets'];
-    if (Array.isArray(tickets) && tickets.length > 0) {
-      return this.asRecord(tickets[0]);
-    }
-
-    return this.asRecord(source['ticket']);
-  }
-
-  private asRecord(value: unknown): Record<string, unknown> | null {
-    if (!value || typeof value !== 'object' || Array.isArray(value)) {
-      return null;
-    }
-
-    return value as Record<string, unknown>;
-  }
-
-  private pickFirstString(
-    source: Record<string, unknown>,
-    keys: string[]
-  ): string {
-    for (const key of keys) {
-      const value = source[key];
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
+  private collectTicketNumbers(journeys: BookingTicketJourney[]): string {
+    const numbers: string[] = [];
+    for (const journey of journeys) {
+      for (const ticket of journey.tickets ?? []) {
+        const number = ticket.ticketNumber?.trim();
+        if (number && !numbers.includes(number)) {
+          numbers.push(number);
+        }
       }
     }
 
-    return '';
+    return numbers.join(', ');
   }
 
-  private extractRootPayload(data: unknown): Record<string, unknown> | null {
-    if (Array.isArray(data)) {
-      return this.asRecord(data[0]);
+  private buildJourneyTravelTime(
+    outbound: BookingTicketJourney | null,
+    inbound: BookingTicketJourney | null
+  ): string {
+    const departureTime = this.formatTimeRange(
+      outbound?.departureDateTime,
+      outbound?.arrivalDateTime
+    );
+    const returnTime = this.formatTimeRange(
+      inbound?.departureDateTime,
+      inbound?.arrivalDateTime
+    );
+
+    if (departureTime && returnTime) {
+      return `${departureTime} / ${returnTime}`;
     }
 
-    return this.asRecord(data);
+    return departureTime || returnTime || '-';
   }
 
-  private extractPrimaryJourney(
-    source: Record<string, unknown>
-  ): Record<string, unknown> | null {
-    const journeys = source['journeys'];
-    if (!Array.isArray(journeys) || journeys.length === 0) {
-      return null;
+  private buildPassengersFromApi(
+    journey: BookingTicketJourney | null,
+    storePassengers: PassengerInfo[] | null
+  ): TicketPassenger[] {
+    const tickets = journey?.tickets ?? [];
+    return tickets.map((ticket) => {
+      const seat = ticket.seatNumber?.trim() || '-';
+      return {
+        name: ticket.passengerName?.trim() || '-',
+        phone: this.findPhoneForSeat(seat, storePassengers),
+        seat,
+      };
+    });
+  }
+
+  private findPhoneForSeat(
+    seat: string,
+    storePassengers: PassengerInfo[] | null
+  ): string {
+    if (!seat || seat === '-') {
+      return '-';
     }
 
-    const outbound =
-      journeys.find((item) => {
-        const candidate = this.asRecord(item);
-        const legType = candidate?.['legType'];
-        return (
-          typeof legType === 'string' &&
-          legType.trim().toLowerCase() === 'outbound'
-        );
-      }) ?? journeys[0];
+    const match = (storePassengers ?? []).find(
+      (passenger) => passenger.passengerSeat?.trim() === seat
+    );
 
-    return this.asRecord(outbound);
+    return match?.phoneNumber?.trim() || '-';
   }
 
   private buildVehiclePlate(vehicleNumber: string, numberPlate: string): string {

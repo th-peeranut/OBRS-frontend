@@ -11,17 +11,11 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
-  checkExistUsername(username: string): Promise<ResponseAPI<any>> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .get<ResponseAPI<any>>(this.url + `/username/${username}`, {
-        headers,
-      })
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to get api');
-        return response;
-      });
+  // NOTE: The backend no longer exposes a username duplicate-check endpoint
+  // (the user model is now email-based and has no username field). This
+  // resolves to "not taken" without an HTTP call so callers keep working.
+  checkExistUsername(_username: string): Promise<ResponseAPI<boolean>> {
+    return Promise.resolve({ code: 200, message: 'OK', data: false });
   }
 
   checkExistEmail(email: string): Promise<ResponseAPI<any>> {

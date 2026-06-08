@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { Observable, catchError, throwError } from 'rxjs';
+import { Observable, catchError, of, throwError } from 'rxjs';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -397,12 +397,14 @@ export interface CreateUserPayload {
   lastName: string;
   email: string;
   phoneNumber: string;
-  username: string;
   password: string;
-  isPhoneNumberVerify: boolean;
   preferredLocale: string;
   status: string;
   roles: string[];
+  pdpaConsent: boolean;
+  // Backend (UserReqDto extends SignUpReqDto) ignores these; kept optional for local form state.
+  username?: string;
+  isPhoneNumberVerify?: boolean;
 }
 
 export interface UpdateUserPayload {
@@ -581,10 +583,11 @@ export class AdminApiService {
     return this.getRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}`);
   }
 
-  checkUserExistsByUsername(username: string): Observable<ResponseAPI<boolean>> {
-    return this.getRequest<boolean>(
-      `${this.baseUrl}/users/check-duplicate/username/${encodeURIComponent(username)}`
-    );
+  // NOTE: The backend no longer exposes a username duplicate-check endpoint
+  // (the user model is email-based and has no username field). Emit "not taken"
+  // without an HTTP call so existing callers keep working.
+  checkUserExistsByUsername(_username: string): Observable<ResponseAPI<boolean>> {
+    return of({ code: 200, message: 'OK', data: false });
   }
 
   checkUserExistsByEmail(email: string): Observable<ResponseAPI<boolean>> {

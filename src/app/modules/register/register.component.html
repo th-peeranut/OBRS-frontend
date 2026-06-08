@@ -492,6 +492,27 @@
           </div>
         </div>
       </div>
+      <!-- PDPA CONSENT -->
+      <div class="form-check mt-3">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="pdpaConsent"
+          formControlName="pdpaConsent"
+        />
+        <label class="form-check-label ms-2" for="pdpaConsent">
+          {{ "REGISTER.PDPA_CONSENT" | translate }}
+        </label>
+        <div
+          class="text-error"
+          *ngIf="
+            getForm('pdpaConsent')?.errors &&
+            (getForm('pdpaConsent')?.touched || getForm('pdpaConsent')?.dirty)
+          "
+        >
+          {{ "REGISTER.PDPA_CONSENT_REQUIRED" | translate }}
+        </div>
+      </div>
       <!-- SUBMIT BUTTON -->
       <button
         type="submit"
