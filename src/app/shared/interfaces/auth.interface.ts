@@ -34,3 +34,15 @@ export interface Register {
   isPhoneNumberVerify?: boolean;
   roles?: string[];
 }
+
+export interface SignUpPayload {
+  title?: string | null;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  preferredLocale: string;
+  pdpaConsent: boolean;
+}

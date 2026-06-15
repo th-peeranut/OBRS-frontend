@@ -46,10 +46,8 @@ describe('ReviewScheduleBookingSummaryComponent', () => {
           en: { label: 'Bangkok' },
           th: { label: 'Bangkok' },
         },
-        createdBy: '',
-        createdDate: '',
-        lastUpdatedBy: '',
-        lastUpdatedDate: '',
+        createdAt: '',
+        updatedAt: '',
       },
     ];
     component.rawProvinceStationList = of(stations);

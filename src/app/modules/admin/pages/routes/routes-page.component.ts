@@ -328,7 +328,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     let routeDetail: AdminRouteDto | null = null;
     try {
       const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
-      routeDetail = response?.data ?? null;
+      routeDetail = response.data ?? this.toRouteDtoFallback(route);
     } catch {
       routeDetail = this.toRouteDtoFallback(route);
     }

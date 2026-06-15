@@ -3,7 +3,11 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoginResponseData, Register } from '../shared/interfaces/auth.interface';
+import {
+  LoginResponseData,
+  Register,
+  SignUpPayload,
+} from '../shared/interfaces/auth.interface';
 import { ResponseAPI } from '../shared/interfaces/response.interface';
 import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 
@@ -199,25 +203,40 @@ export class AuthService {
     sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
   }
 
-  register(payload: Register): Promise<ResponseAPI<any>> {
+  register(payload: Register): Promise<ResponseAPI<unknown>> {
+    const signUpPayload: SignUpPayload = {
+      title: payload.title,
+      firstName: payload.firstName,
+      middleName: payload.middleName,
+      lastName: payload.lastName,
+      email: payload.email,
+      phoneNumber: payload.phoneNumber,
+      password: payload.password,
+      preferredLocale: payload.preferredLocale,
+      pdpaConsent: payload.pdpaConsent,
+    };
+
     return this.http
-      .post<ResponseAPI<any>>(`${environment.apiUrl}/api/auth/signup`, payload)
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/signup`,
+        signUpPayload
+      )
       .toPromise()
       .then((response) => response)
       .catch((err) => err);
   }
 
   loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<any> | undefined> {
+    const endpoint = environment.useDevApiEndpoints
+      ? '/api/auth/login/otp/test'
+      : '/api/auth/login/otp';
+
     return (
       this.http
         .post<ResponseAPI<any>>(
-          `${environment.apiUrl}/api/auth/login/otp/test`,
+          `${environment.apiUrl}${endpoint}`,
           payload
         )
-        // .post<ResponseAPI<any>>(
-        //   `${environment.apiUrl}/api/auth/login/otp`,
-        //   payload
-        // )
         .toPromise()
         .then((response) => {
           if (response?.code === 200) {

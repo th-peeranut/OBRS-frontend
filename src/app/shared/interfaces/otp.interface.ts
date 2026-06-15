@@ -1,11 +1,16 @@
 export interface OtpRequest {
-  msisdn?: string;
+  msisdn: string;
 }
 
-export interface OtpResponse {
+export interface OtpRequestResponse {
   refNo: string;
   status: string;
   token: string;
+}
+
+export interface OtpVerifyResponse {
+  status: string;
+  message: string;
 }
 
 export interface OtpVerify {

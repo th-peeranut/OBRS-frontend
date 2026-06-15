@@ -25,6 +25,7 @@ import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface'
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
+import { toApiOffsetDateTime } from '../../shared/lib/api-date-time';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
 import { StationApi } from '../../shared/interfaces/station.interface';
 import { Observable } from 'rxjs';
@@ -315,18 +316,7 @@ export class PassengerInfoComponent {
   }
 
   private normalizeDateTime(dateTime?: string): string {
-    if (!dateTime) {
-      return '';
-    }
-
-    const normalized = dateTime.includes('T')
-      ? dateTime
-      : dateTime.replace(' ', 'T');
-    const datetime = dayjs(normalized);
-
-    return datetime.isValid()
-      ? datetime.format('YYYY-MM-DDTHH:mm:ss')
-      : normalized;
+    return toApiOffsetDateTime(dateTime);
   }
 
   private normalizeSeatNumber(seatNumber?: string | null): string | null {

@@ -59,12 +59,8 @@ export interface StationApi {
   slug: string;
   status: StationLookupValue;
   stopType: StationLookupValue;
-  createdBy: string;
-  createdDate: string;
-  createdAt?: string;
-  lastUpdatedBy: string;
-  lastUpdatedDate: string;
-  updatedAt?: string;
+  createdAt: string;
+  updatedAt: string;
   display?: StationTranslationCollection;
   translations?: StationTranslationCollection;
 }
