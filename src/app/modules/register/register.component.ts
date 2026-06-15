@@ -300,12 +300,16 @@ export class RegisterComponent implements OnDestroy {
 
     let res: ResponseAPI<boolean> | null = null;
 
-    if (option === REGISTER_OPTION.USERNAME) {
-      res = await firstValueFrom(this.usersService.checkExistUsername(value));
-    } else if (option === REGISTER_OPTION.EMAIL) {
-      res = await firstValueFrom(this.usersService.checkExistEmail(value));
-    } else if (option === REGISTER_OPTION.PHONENUMBER) {
-      res = await firstValueFrom(this.usersService.checkExistPhoneNumber(value));
+    try {
+      if (option === REGISTER_OPTION.USERNAME) {
+        res = await firstValueFrom(this.usersService.checkExistUsername(value));
+      } else if (option === REGISTER_OPTION.EMAIL) {
+        res = await firstValueFrom(this.usersService.checkExistEmail(value));
+      } else if (option === REGISTER_OPTION.PHONENUMBER) {
+        res = await firstValueFrom(this.usersService.checkExistPhoneNumber(value));
+      }
+    } catch {
+      return;
     }
 
     if (res?.code === 200) {
