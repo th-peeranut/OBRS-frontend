@@ -143,6 +143,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }, 0);
   }
 
+  protected trackById(_index: number, item: ScheduleRow): number {
+    return item.id;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.trim().toUpperCase();
 

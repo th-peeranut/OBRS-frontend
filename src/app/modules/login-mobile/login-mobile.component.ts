@@ -21,6 +21,7 @@ export class LoginMobileComponent implements OnDestroy  {
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   languageOnChange$: Subscription;
+  private unlistenDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
@@ -33,14 +34,15 @@ export class LoginMobileComponent implements OnDestroy  {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
     
-    this.creatForm();
+    this.createForm();
   }
 
   ngOnDestroy(): void {
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
+    this.unlistenDropdown?.();
   }
 
-  creatForm() {
+  createForm() {
     this.loginForm = this.fb.group({
       phoneNo: ['', Validators.required],
     });
@@ -83,9 +85,13 @@ export class LoginMobileComponent implements OnDestroy  {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = undefined;
     }
   }
 

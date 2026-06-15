@@ -40,6 +40,7 @@ export class RegisterComponent implements OnDestroy {
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   languageOnChange$: Subscription;
+  private unlistenDropdown?: () => void;
 
   usernameSubscription$?: Subscription;
   emailSubscription$?: Subscription;
@@ -117,6 +118,7 @@ export class RegisterComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
+    this.unlistenDropdown?.();
 
     if (this.usernameSubscription$) this.usernameSubscription$.unsubscribe();
     if (this.emailSubscription$) this.emailSubscription$.unsubscribe();
@@ -202,9 +204,13 @@ export class RegisterComponent implements OnDestroy {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = undefined;
     }
   }
 

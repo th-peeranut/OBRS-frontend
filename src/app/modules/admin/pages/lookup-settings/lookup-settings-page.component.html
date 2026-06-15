@@ -28,7 +28,7 @@
   <article class="admin-card">
     <h4>{{ 'ADMIN.LOOKUP.CATEGORIES' | translate }}</h4>
     <ul class="admin-list">
-      <li *ngFor="let category of categories">
+      <li *ngFor="let category of categories; trackBy: trackByCategoryName">
         <span>{{ category.name }}</span>
         <strong>{{ category.count }}</strong>
       </li>
@@ -51,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let entry of entries; let i = index" [class.zebra]="i % 2 === 1">
+          <tr *ngFor="let entry of entries; let i = index; trackBy: trackByEntryId" [class.zebra]="i % 2 === 1">
             <td>
               <span class="admin-chip">{{ entry.category }}</span>
             </td>

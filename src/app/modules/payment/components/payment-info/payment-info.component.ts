@@ -192,6 +192,10 @@ export class PaymentInfoComponent {
       : station.nameEnglish;
   }
 
+  trackByIndex(index: number): number {
+    return index;
+  }
+
   getPassengerFullName(passenger: PassengerInfo): string {
     const middle = passenger.middleName ? ` ${passenger.middleName}` : '';
     return `${passenger.firstName}${middle} ${passenger.lastName}`.trim();

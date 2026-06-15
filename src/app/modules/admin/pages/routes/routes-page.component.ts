@@ -239,6 +239,18 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return Math.min(this.currentPage * this.pageSize, this.totalSegments);
   }
 
+  protected trackByRouteId(_index: number, item: RouteRow): number {
+    return item.id;
+  }
+
+  protected trackByStopSlug(_index: number, stop: StopPoint): string {
+    return stop.slug;
+  }
+
+  protected trackBySegmentId(_index: number, segment: SegmentRow): number {
+    return segment.id;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.trim().toUpperCase();
 

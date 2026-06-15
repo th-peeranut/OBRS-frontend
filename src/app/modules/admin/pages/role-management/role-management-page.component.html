@@ -42,7 +42,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let role of filteredRoles; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let role of filteredRoles; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
           <td>
             <code>{{ role.slug }}</code>
           </td>

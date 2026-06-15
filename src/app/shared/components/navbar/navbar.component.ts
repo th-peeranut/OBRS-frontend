@@ -35,6 +35,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   languageOnChange$: Subscription;
   authSubscription$: Subscription;
+  private unlistenLanguageDropdown?: () => void;
+  private unlistenProfileDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
@@ -61,6 +63,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
     if (this.authSubscription$) this.authSubscription$.unsubscribe();
+    this.unlistenLanguageDropdown?.();
+    this.unlistenProfileDropdown?.();
   }
 
   switchLanguage(lang: string) {
@@ -76,9 +80,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isLanguageDropdownOpen = !this.isLanguageDropdownOpen;
 
     if (this.isLanguageDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenLanguageDropdown?.();
+      this.unlistenLanguageDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleLanguageDropdownOutsideClick(event)
       );
+    } else {
+      this.unlistenLanguageDropdown?.();
+      this.unlistenLanguageDropdown = undefined;
     }
   }
 
@@ -100,9 +108,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isProfileDropdownOpen = !this.isProfileDropdownOpen;
 
     if (this.isProfileDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenProfileDropdown?.();
+      this.unlistenProfileDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleProfileDropdownOutsideClick(event)
       );
+    } else {
+      this.unlistenProfileDropdown?.();
+      this.unlistenProfileDropdown = undefined;
     }
   }
 
@@ -125,14 +137,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   }
 
   async onLogout() {
-    // const res = await this.authService.logout(payload);
-
-    // if (res?.code === 200) {
-    //   this.alertService.success(this.translate.instant('HOME.SIGNOUT_SUCCESS'));
-    // } else {
-    //   this.alertService.error(this.translate.instant('HOME.SIGNOUT_FAIL'));
-    // }
-
     this.isProfileDropdownOpen = false;
 
     this.authService.clearAuthData();

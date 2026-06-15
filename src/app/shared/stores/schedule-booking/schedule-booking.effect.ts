@@ -17,10 +17,6 @@ export class ScheduleBookingEffect {
   private actions$ = inject(Actions);
   private store = inject(Store<Appstate>);
 
-  constructor() {
-    // console.log('✅ Store in effect:', this.store); // should now log correctly
-  }
-
   getScheduleBookings$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeGetScheduleBookingApi),

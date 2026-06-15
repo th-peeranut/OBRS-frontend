@@ -62,7 +62,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let user of filteredUsers; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let user of filteredUsers; let i = index; trackBy: trackByUserId" [class.zebra]="i % 2 === 1">
           <td>
             <div class="admin-cell-stack">
               <span class="admin-emphasis">{{ user.fullName }}</span>
@@ -78,7 +78,7 @@
           </td>
           <td>
             <div class="admin-tags">
-              <span class="admin-chip" *ngFor="let role of user.roles">{{ role }}</span>
+              <span class="admin-chip" *ngFor="let role of user.roles; trackBy: trackByRoleString">{{ role }}</span>
             </div>
           </td>
           <td>
@@ -278,7 +278,7 @@
           <div class="user-role-list">
             <label
               class="user-role-chip"
-              *ngFor="let role of roleOptions"
+              *ngFor="let role of roleOptions; trackBy: trackByRoleSlug"
               [class.is-selected]="isRoleChecked(role.slug)"
             >
               <input

@@ -139,6 +139,18 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.phoneNumberCheckSubscription?.unsubscribe();
   }
 
+  protected trackByUserId(_index: number, user: UserRow): number {
+    return user.id;
+  }
+
+  protected trackByRoleSlug(_index: number, role: RoleOption): string {
+    return role.slug;
+  }
+
+  protected trackByRoleString(_index: number, role: string): string {
+    return role;
+  }
+
   protected get activeUsers(): number {
     return this.users.filter((user) => user.statusCode === 'active').length;
   }

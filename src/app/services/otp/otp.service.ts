@@ -6,6 +6,7 @@ import {
   OtpVerifyResponse,
 } from '../../shared/interfaces/otp.interface';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 
@@ -20,35 +21,23 @@ export class OtpService {
 
   requestOTP(payload: OtpRequest): Promise<ResponseAPI<OtpRequestResponse>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .post<ResponseAPI<OtpRequestResponse>>(
+    return firstValueFrom(
+      this.http.post<ResponseAPI<OtpRequestResponse>>(
         `${this.url}/request${this.endpointSuffix}`,
         payload,
-        {
-          headers,
-        }
+        { headers }
       )
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to request otp');
-        return response;
-      });
+    );
   }
 
   verifyOTP(payload: OtpVerify): Promise<ResponseAPI<OtpVerifyResponse>> {
     const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .post<ResponseAPI<OtpVerifyResponse>>(
+    return firstValueFrom(
+      this.http.post<ResponseAPI<OtpVerifyResponse>>(
         `${this.url}/verify${this.endpointSuffix}`,
         payload,
-        {
-          headers,
-        }
+        { headers }
       )
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to verify otp');
-        return response;
-      });
+    );
   }
 }

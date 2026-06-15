@@ -5,6 +5,7 @@ import {
   forwardRef,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   Renderer2,
   SimpleChanges,
@@ -29,7 +30,7 @@ import { CommonModule } from '@angular/common';
   ],
   imports: [CommonModule, TranslateModule],
 })
-export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
+export class DropdownObrsComponent implements ControlValueAccessor, OnChanges, OnDestroy {
   @Input() isLabel: boolean = false;
   @Input() label: string = '';
   @Input() options: any = [];
@@ -46,6 +47,7 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
   // ControlValueAccessor handlers
   private onChange: (value: number) => void = () => {};
   private onTouched: () => void = () => {};
+  private unlistenDropdown?: () => void;
 
   constructor(
     private renderer: Renderer2,
@@ -73,13 +75,21 @@ export class DropdownObrsComponent implements ControlValueAccessor, OnChanges {
     }
   }
 
+  ngOnDestroy(): void {
+    this.unlistenDropdown?.();
+  }
+
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = undefined;
     }
   }
 

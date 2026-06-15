@@ -18,9 +18,10 @@ import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedu
 import { BookingService } from '../../services/booking/booking.service';
 import {
   BookingPayload,
+  BookingCreationResponse,
   BookingSchedulePayload,
 } from '../../shared/interfaces/booking.interface';
-import { Schedule } from '../../shared/interfaces/schedule.interface';
+import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
@@ -213,7 +214,7 @@ export class PassengerInfoComponent {
     return Array.isArray(schedule) ? schedule : [schedule];
   }
 
-  private isReturnTrip(roundTrip: any): boolean {
+  private isReturnTrip(roundTrip: ScheduleFilter['roundTrip'] | number | null | undefined): boolean {
     const roundTripId =
       typeof roundTrip === 'object' && roundTrip !== null ? roundTrip.id : roundTrip;
     const value = String(roundTripId).toLowerCase();
@@ -359,13 +360,13 @@ export class PassengerInfoComponent {
     return normalized || 'male';
   }
 
-  private extractBookingId(data: any): number | null {
+  private extractBookingId(data: BookingCreationResponse | null | undefined): number | null {
     const candidate = data?.bookingId ?? data?.id ?? data?.booking?.id;
     const bookingId = Number(candidate);
     return Number.isFinite(bookingId) && bookingId > 0 ? bookingId : null;
   }
 
-  private extractBookingNumber(data: any): string | null {
+  private extractBookingNumber(data: BookingCreationResponse | null | undefined): string | null {
     const candidate =
       data?.bookingNumber ??
       data?.bookingNo ??

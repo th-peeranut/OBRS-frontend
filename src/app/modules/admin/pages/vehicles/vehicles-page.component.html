@@ -46,7 +46,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let vehicle of filteredVehicles; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let vehicle of filteredVehicles; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
           <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
           <td><code>{{ vehicle.plate }}</code></td>
           <td>{{ vehicle.vehicleType }}</td>

@@ -37,13 +37,15 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   otpCode: string = '';
   token: string = '';
 
-  remainingTime: number = 5 * 60;
+  private readonly otpCountdownSeconds = 5 * 60;
+  remainingTime: number = this.otpCountdownSeconds;
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
   languageOnChange$: Subscription;
+  private unlistenDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
@@ -51,7 +53,6 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
-    private service: AuthService,
     private alertService: AlertService,
     private router: Router,
     private route: ActivatedRoute,
@@ -62,12 +63,12 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
   }
 
-  async ngOnInit() {
+  async ngOnInit(): Promise<void> {
     this.option = this.route.snapshot.paramMap.get('option')?.toString();
     this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
 
     if (this.validateRouteError()) {
-      this.alertService.error('พบข้อผิดพลาด');
+      this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.ROUTE_ERROR'));
       this.router.navigateByUrl('/home');
     }
 
@@ -77,6 +78,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
     if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
+    this.unlistenDropdown?.();
   }
 
   switchLanguage(lang: string) {
@@ -92,9 +94,13 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = undefined;
     }
   }
 
@@ -119,7 +125,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   startTimer(): void {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
 
-    this.remainingTime = 5 * 60;
+    this.remainingTime = this.otpCountdownSeconds;
     this.displayTime = '05:00';
 
     this.timerSubscription$ = interval(1000)
@@ -156,7 +162,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         this.startTimer();
         this.token = res.data?.token ?? '';
       } else if (typeof res?.code === 'number') {
-        this.alertService.error('error');
+        this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.OTP_REQUEST_FAILED'));
       }
     } catch {
       // Error alert is handled by the global interceptor.
@@ -181,21 +187,17 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
           resVerify = await this.otpService.verifyOTP(payload);
         }
 
-        console.log(resVerify);
         if (resVerify?.code === 200) {
-          if (this.option === 'forget-password') {
-            // const res = await this.service.forgetPassword(payload);
-          } else if (this.option === 'register') {
-            const registerValue = this.service.getRegisterValue();
-            console.log(registerValue);
+          if (this.option === 'register') {
+            const registerValue = this.authService.getRegisterValue();
             if (registerValue) {
-              const resRegister = await this.service.register(registerValue);
+              const resRegister = await this.authService.register(registerValue);
 
               if (resRegister?.code === 201) {
                 this.alertService.success(
                   this.translate.instant('REGISTER.REGISTER_SUCCESS')
                 );
-                this.service.clearRegisterValue();
+                this.authService.clearRegisterValue();
                 this.router.navigateByUrl('/login');
               } else if (typeof resRegister?.code === 'number') {
                 this.alertService.error(
@@ -204,11 +206,11 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               }
             }
           } else if (this.option === 'login') {
-            this.alertService.success('succ');
+            this.alertService.success(this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS'));
             await this.authService.navigateAfterLogin('/home');
           }
         } else if (typeof resVerify?.code === 'number') {
-          this.alertService.error('error');
+          this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.OTP_VERIFY_FAILED'));
         }
       } catch {
         // Error alert is handled by the global interceptor.

@@ -68,6 +68,14 @@ export class LookupSettingsPageComponent implements OnInit {
     return this.entries.length;
   }
 
+  protected trackByCategoryName(_index: number, item: { name: string; count: number }): string {
+    return item.name;
+  }
+
+  protected trackByEntryId(_index: number, entry: LookupEntry): number {
+    return entry.id;
+  }
+
   protected openCreateModal(): void {
     this.isEditMode = false;
     this.selectedEntry = null;

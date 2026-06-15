@@ -83,6 +83,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.languageSubscription.unsubscribe();
   }
 
+  protected trackById(_index: number, item: VehicleRow): number {
+    return item.id;
+  }
+
   protected get totalVehicles(): number {
     return this.vehicles.length;
   }

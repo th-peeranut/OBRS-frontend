@@ -61,7 +61,8 @@
     "dateFormat": "dd/mm/yy"
   },
   "SHARED": {
-    "NO_CONTENT": "ไม่พบข้อมูล"
+    "NO_CONTENT": "ไม่พบข้อมูล",
+    "ERROR_GENERAL": "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
   },
   "ADMIN": {
     "PAGES": {
@@ -264,7 +265,7 @@
       "TITLE": "จัดการตารางเดินรถ",
       "SUBTITLE": "สร้างชุดตารางเดินรถ แก้ไขเวลาเดินรถ และสร้างเที่ยวรถจากชุดตาราง",
       "ADD": "เพิ่มชุดตาราง",
-      "ADD_TRIP": "\u0e40\u0e1e\u0e34\u0e48\u0e21\u0e40\u0e17\u0e35\u0e48\u0e22\u0e27\u0e23\u0e16",
+      "ADD_TRIP": "เพิ่มเที่ยวรถ",
       "TOTAL_SETS": "ชุดตารางทั้งหมด",
       "SCHEDULED_SETS": "จำนวน",
       "DEPARTURE_TIMES": "เวลาออกเดินทาง",
@@ -283,20 +284,20 @@
       "ADD_TITLE": "สร้างชุดตารางเดินรถ",
       "EDIT_TITLE": "แก้ไขชุดตารางเดินรถ",
       "MODAL_HINT": "กำหนดช่วงวันที่ เวลาออกเดินทาง เส้นทาง และประเภทรถสำหรับสร้างเที่ยวรถ",
-      "ADD_TRIP_TITLE": "\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e40\u0e17\u0e35\u0e48\u0e22\u0e27\u0e23\u0e16",
-      "EDIT_TRIP_TITLE": "\u0e41\u0e01\u0e49\u0e44\u0e02\u0e40\u0e17\u0e35\u0e48\u0e22\u0e27\u0e23\u0e16",
-      "TRIP_MODAL_HINT": "\u0e2a\u0e23\u0e49\u0e32\u0e07\u0e2b\u0e23\u0e37\u0e2d\u0e41\u0e01\u0e49\u0e44\u0e02\u0e40\u0e17\u0e35\u0e48\u0e22\u0e27\u0e23\u0e16\u0e23\u0e32\u0e22\u0e40\u0e17\u0e35\u0e48\u0e22\u0e27",
+      "ADD_TRIP_TITLE": "สร้างเที่ยวรถ",
+      "EDIT_TRIP_TITLE": "แก้ไขเที่ยวรถ",
+      "TRIP_MODAL_HINT": "สร้างหรือแก้ไขเที่ยวรถรายเที่ยว",
       "START_DATE": "วันที่เริ่มต้น",
       "END_DATE": "วันที่สิ้นสุด",
-      "DEPARTURE_DATE": "\u0e27\u0e31\u0e19\u0e17\u0e35\u0e48\u0e2d\u0e2d\u0e01\u0e40\u0e14\u0e34\u0e19\u0e17\u0e32\u0e07",
-      "DEPARTURE_TIME": "\u0e40\u0e27\u0e25\u0e32\u0e2d\u0e2d\u0e01\u0e40\u0e14\u0e34\u0e19\u0e17\u0e32\u0e07",
+      "DEPARTURE_DATE": "วันที่ออกเดินทาง",
+      "DEPARTURE_TIME": "เวลาออกเดินทาง",
       "DEPARTURE_PLACEHOLDER": "08:00, 11:30, 15:00",
       "ROUTE": "เส้นทาง",
       "VEHICLE_TYPE": "ประเภทรถ",
-      "VEHICLE": "\u0e23\u0e16",
-      "DRIVER": "\u0e04\u0e19\u0e02\u0e31\u0e1a",
-      "VEHICLE_OPTIONAL": "\u0e23\u0e16: \u0e44\u0e21\u0e48\u0e1a\u0e31\u0e07\u0e04\u0e31\u0e1a",
-      "DRIVER_OPTIONAL": "\u0e04\u0e19\u0e02\u0e31\u0e1a: \u0e44\u0e21\u0e48\u0e1a\u0e31\u0e07\u0e04\u0e31\u0e1a",
+      "VEHICLE": "รถ",
+      "DRIVER": "คนขับ",
+      "VEHICLE_OPTIONAL": "รถ: ไม่บังคับ",
+      "DRIVER_OPTIONAL": "คนขับ: ไม่บังคับ",
       "GENERATE": "สร้างเที่ยวรถ",
       "GENERATE_SUCCESS": "สร้างเที่ยวรถสำเร็จ",
       "GENERATE_FAILED": "ไม่สามารถสร้างเที่ยวรถได้",
@@ -392,7 +393,11 @@
     "OTP_REF": "อ้างอิงจาก",
     "OTP_LOGIN": "ยืนยัน",
     "NO_OTP": "คุณยังไม่ได้รับหมายเลข OPT?",
-    "NO_OTP_LINK": "ส่งอีกครั้ง"
+    "NO_OTP_LINK": "ส่งอีกครั้ง",
+    "LOGIN_SUCCESS": "เข้าสู่ระบบสำเร็จ",
+    "OTP_REQUEST_FAILED": "ส่ง OTP ล้มเหลว กรุณาลองใหม่อีกครั้ง",
+    "OTP_VERIFY_FAILED": "การยืนยัน OTP ล้มเหลว กรุณาตรวจสอบรหัสและลองใหม่",
+    "ROUTE_ERROR": "คำขอไม่ถูกต้อง กรุณากลับไปและลองใหม่อีกครั้ง"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "ลืมรหัสผ่าน",

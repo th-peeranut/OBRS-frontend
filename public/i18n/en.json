@@ -61,7 +61,8 @@
     "dateFormat": "mm/dd/yy"
   },
   "SHARED": {
-    "NO_CONTENT": "No data found"
+    "NO_CONTENT": "No data found",
+    "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "ADMIN": {
     "PAGES": {
@@ -391,7 +392,11 @@
     "OTP_REF": "Ref",
     "OTP_LOGIN": "Confirm",
     "NO_OTP": "You have not received the OPT number?",
-    "NO_OTP_LINK": "Resend"
+    "NO_OTP_LINK": "Resend",
+    "LOGIN_SUCCESS": "Login successful",
+    "OTP_REQUEST_FAILED": "Failed to send OTP. Please try again.",
+    "OTP_VERIFY_FAILED": "OTP verification failed. Please check the code and try again.",
+    "ROUTE_ERROR": "Invalid request. Please go back and try again."
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",
