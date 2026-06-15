@@ -27,7 +27,7 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   @Output() validityChange = new EventEmitter<boolean>();
 
-  titleOptions: Dropdown[] = TITLE_OPTIONS;
+  titleOptions: Dropdown[] = [...TITLE_OPTIONS];
 
   constructor(private fb: FormBuilder) {
     this.createForm();
@@ -85,7 +85,6 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
 
   clearForm(): void {
     this.bookerForm.reset();
-    this.bookerForm.markAsUntouched();
     this.emitValidity();
   }
 

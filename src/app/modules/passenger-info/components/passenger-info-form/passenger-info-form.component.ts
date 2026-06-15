@@ -44,7 +44,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   @Output() validityChange = new EventEmitter<boolean>();
   @Output() useAsBooker = new EventEmitter<PassengerInfo | null>();
 
-  titleOptions: Dropdown[] = TITLE_OPTIONS;
+  titleOptions: Dropdown[] = [...TITLE_OPTIONS];
 
   scheduleFilter: Observable<ScheduleFilter>;
 

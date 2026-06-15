@@ -159,9 +159,27 @@ Keep the following in sync with relevant code changes:
 - **`CONTEXT.md`** (repo root): domain glossary only — terms, definitions, preferred vs. avoided names. Update when a new domain concept is introduced or naming is reworked.
 - **`docs/adr/`**: Add an ADR for hard-to-reverse, surprising, trade-off-driven decisions (new state management pattern, new third-party library, deliberate deviation from conventions).
 
-## 13. API Contract & Cross-Repo Governance
+## 13. AI Action Protocol
 
-### The Contract
+### Risk Levels (General)
+
+Classify **every action** before proceeding, regardless of whether it touches the backend contract:
+
+| Level | Definition | Examples | Action |
+|---|---|---|---|
+| **R0** | Irreversible or high blast-radius | Push to main, modify auth/payment flows (`auth.interceptor.ts`, `idempotency-key.ts`), delete a shared state slice, remove a shared interface used across modules | **Stop. State the classification explicitly and confirm with the developer before proceeding. Do not implement unilaterally.** |
+| **R1** | Reversible but requires care or notification | Add a `package.json` dependency, update shared interfaces after a backend contract change, change a shared interceptor, update NgRx state for a renamed field, add a new i18n key | Proceed, then document the change in the relevant living docs and notify affected parties (e.g., update `docs/handoff.md` Contract Requests, add ADR). |
+| **R2** | No broad impact, easy to revert | Fix UI, update config, rename a local variable, fix a style bug, add/update tests | Proceed immediately. |
+
+**Escalation rule**: If a task begins as R2 but incidentally touches an R1 or R0 concern, reclassify before continuing.
+
+---
+
+### Cross-Repo Governance
+
+The general risk levels above apply everywhere. The rules below **add** backend-specific obligations on top for changes that consume or depend on the shared API contract.
+
+#### The Contract
 
 The API contract (endpoint paths, request/response shapes, auth levels, error codes, envelope format) lives in the backend repository:
 
@@ -171,23 +189,23 @@ The API contract (endpoint paths, request/response shapes, auth levels, error co
 
 When you need to know what an endpoint returns, read those files. Do not assume backend behavior that is not documented there. `ResponseAPI<T>` (called `ApiResponse` in the domain glossary) has a fixed shape — `{ status, message, data }` — defined by the backend. Do not modify it.
 
-### Rules
+#### Rules
 
 - **Do not change the API shape yourself.** If the contract doesn't match what the frontend expects, stop and ask — do not guess or work around it.
 - **Do not add fields to request bodies** that are not in the contract.
 - **Do not call an endpoint** that is not yet documented in `../OBRS-backend/docs/api/`.
 
-### Handoff Notes
+#### Handoff Notes
 
 `docs/handoff.md` is the two-way coordination channel between this repo and the backend:
 
 - **Read the "Pending Changes" section** before starting any task that consumes a new or changed endpoint.
 - **Write to the "Contract Requests" section** when you discover the API contract is missing a field you need, returns an unnecessary field, or has a shape that doesn't match what the frontend requires. Use the template in `docs/handoff.md`. Do not work around a missing field silently — always write a contract request and stop.
 
-### AI Risk Levels (frontend)
+#### API Contract Risk Levels
 
-| Level | Definition | Examples | Action |
+| Level | Definition | Examples | Additional Action |
 |---|---|---|---|
-| **R0** | Hard to reverse or affects live users | Push to main, modify auth/payment flows, delete state slice | Stop. Ask first. |
-| **R1** | Reversible but tedious | Update interface shapes after a backend contract change, update NgRx state for renamed field | Proceed, notify. |
-| **R2** | Easy to revert, no cross-repo impact | Fix UI, update config, rename variable, fix style bug | Proceed immediately. |
+| **R0** | Hard to reverse or breaks the contract | Push to main, assume an undocumented endpoint/field exists | Stop (per general R0). Coordinate with the backend first. Do not proceed until both sides are aligned. |
+| **R1** | Reversible but requires cross-repo notification | Update interface shapes after a backend contract change, consume a newly documented endpoint | Proceed (per general R1), then add a **Contract Requests** entry to `docs/handoff.md` if the backend still needs to act. |
+| **R2** | No cross-repo impact | Fix UI, update config, rename a variable, fix a style bug | Proceed immediately. No cross-repo action needed. |
