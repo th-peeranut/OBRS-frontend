@@ -739,6 +739,7 @@ export class AdminApiService {
     );
   }
 
+  // TODO: implement server-side pagination in the admin UI; size=100 silently caps results
   getBookings(): Observable<ResponseAPI<PageResponse<AdminBookingDto>>> {
     const params = new HttpParams().set('page', '0').set('size', '100');
     return this.getRequest<PageResponse<AdminBookingDto>>(

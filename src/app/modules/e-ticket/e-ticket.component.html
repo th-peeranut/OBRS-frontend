@@ -98,7 +98,7 @@
 
         <div class="ticket-divider dotted"></div>
 
-        <div class="ticket-passengers">
+        <div class="ticket-passengers" *ngIf="booker">
           <div class="passenger-list">
             <div class="passenger-row">
               <div class="passenger-detail">
@@ -106,7 +106,7 @@
                   <span class="label">
                     {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
                   </span>
-                  <span class="value">{{ booker?.phone }}</span>
+                  <span class="value">{{ booker.phone }}</span>
                 </div>
               </div>
             </div>

@@ -1,7 +1,6 @@
 export const environment = {
   production: false,
-  // apiUrl: 'http://localhost:8000',
-  apiUrl: 'https://sit-obrs-backend.koyeb.app',
+  apiUrl: 'http://localhost:8000',
   promptpay: {
     baseUrl: '',
     id: '0123456789',

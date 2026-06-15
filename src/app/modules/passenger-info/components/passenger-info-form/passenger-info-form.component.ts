@@ -15,6 +15,7 @@ import {
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
+import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { Observable, Subject } from 'rxjs';
 import { select, Store } from '@ngrx/store';
 import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
@@ -41,56 +42,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
-  @Output() useAsBooker = new EventEmitter<PassengerInfo>();
+  @Output() useAsBooker = new EventEmitter<PassengerInfo | null>();
 
-  titleOptions: Dropdown[] = [
-    {
-      id: 1,
-      nameThai: 'นาย',
-      nameEnglish: 'Mr.',
-      isDefault: true,
-    },
-    {
-      id: 2,
-      nameThai: 'นางสาว',
-      nameEnglish: 'Miss',
-    },
-    {
-      id: 3,
-      nameThai: 'นาง',
-      nameEnglish: 'Mrs.',
-    },
-    {
-      id: 4,
-      nameThai: 'เด็กชาย',
-      nameEnglish: 'Master',
-    },
-    {
-      id: 5,
-      nameThai: 'เด็กหญิง',
-      nameEnglish: 'Miss (Child)',
-    },
-    {
-      id: 6,
-      nameThai: 'ดร.',
-      nameEnglish: 'Dr.',
-    },
-    {
-      id: 7,
-      nameThai: 'ศ.',
-      nameEnglish: 'Professor',
-    },
-    {
-      id: 8,
-      nameThai: 'รศ.',
-      nameEnglish: 'Associate Professor',
-    },
-    {
-      id: 9,
-      nameThai: 'ผศ.',
-      nameEnglish: 'Assistant Professor',
-    },
-  ];
+  titleOptions: Dropdown[] = TITLE_OPTIONS;
 
   scheduleFilter: Observable<ScheduleFilter>;
 
@@ -200,6 +154,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   onUseAsBookerChange(index: number, isChecked: boolean): void {
     if (!isChecked) {
+      this.useAsBooker.emit(null);
       return;
     }
 
