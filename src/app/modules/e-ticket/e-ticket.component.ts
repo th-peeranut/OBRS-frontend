@@ -41,7 +41,7 @@ interface TicketPassenger {
   phone: string;
   seat: string;
 }
-type Locale = 'en' | 'th';
+type Locale = 'en' | 'th' | 'zh';
 
 @Component({
   selector: 'app-e-ticket',
@@ -73,16 +73,16 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private lastTicketRequestBookingId: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
-  private readonly titleMap: Record<number, { en: string; th: string }> = {
-    1: { en: 'Mr.', th: 'นาย' },
-    2: { en: 'Miss', th: 'นางสาว' },
-    3: { en: 'Mrs.', th: 'นาง' },
-    4: { en: 'Master', th: 'เด็กชาย' },
-    5: { en: 'Miss (Child)', th: 'เด็กหญิง' },
-    6: { en: 'Dr.', th: 'ดร.' },
-    7: { en: 'Professor', th: 'ศ.' },
-    8: { en: 'Associate Professor', th: 'รศ.' },
-    9: { en: 'Assistant Professor', th: 'ผศ.' },
+  private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
+    1: { en: 'Mr.', th: 'นาย', zh: '先生' },
+    2: { en: 'Miss', th: 'นางสาว', zh: '小姐' },
+    3: { en: 'Mrs.', th: 'นาง', zh: '女士' },
+    4: { en: 'Master', th: 'เด็กชาย', zh: '小弟' },
+    5: { en: 'Miss (Child)', th: 'เด็กหญิง', zh: '小妹' },
+    6: { en: 'Dr.', th: 'ดร.', zh: '博士' },
+    7: { en: 'Professor', th: 'ศ.', zh: '教授' },
+    8: { en: 'Associate Professor', th: 'รศ.', zh: '副教授' },
+    9: { en: 'Assistant Professor', th: 'ผศ.', zh: '助理教授' },
   };
 
   private readonly scheduleBooking$: Observable<ScheduleBooking | null>;
@@ -403,6 +403,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const months: Record<Locale, readonly string[]> = {
       en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
       th: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
+      zh: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
     };
 
     const day = date.date();
@@ -445,7 +446,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
   }
 
   private normalizeLocale(locale: string | null | undefined): Locale {
-    return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+    const l = (locale || '').toLowerCase();
+    if (l.startsWith('th')) return 'th';
+    if (l.startsWith('zh')) return 'zh';
+    return 'en';
   }
 
   private normalizeBookingNumber(value: string | null | undefined): string {

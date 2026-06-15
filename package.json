@@ -10,7 +10,9 @@
     "build:sit": "ng build --configuration sit",
     "deploy:sit": "ng build --configuration sit",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "private": true,
   "dependencies": {
@@ -46,6 +48,7 @@
     "@angular-devkit/build-angular": "~18.1.2",
     "@angular/cli": "~18.1.2",
     "@angular/compiler-cli": "~18.1.0",
+    "@playwright/test": "^1.61.0",
     "@types/jasmine": "~5.1.0",
     "@types/qrcode": "^1.5.5",
     "jasmine-core": "~5.1.0",

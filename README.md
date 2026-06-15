@@ -47,10 +47,28 @@ App URL:
 
 ## Environments
 
-- Local config: `src/environments/environment.ts`
-  - default API URL: `http://localhost:8000`
-- SIT config: `src/environments/environment.sit.ts`
-  - API URL: `https://sit-obrs-backend.koyeb.app`
+The environment is selected **at startup** — it is baked into the running app and cannot be changed while the app is running.
+
+| Environment | API backend | Command |
+|---|---|---|
+| Local (default) | `http://localhost:8000` | `npm start` |
+| SIT | `https://sit-obrs-backend.koyeb.app` | `npm run start:sit` |
+
+Environment config files live in `src/environments/`.
+
+**To work against two backends at the same time**, open two terminals and start each on a different port:
+
+```bash
+# Terminal 1 — local backend
+npm start
+# → http://localhost:4200
+
+# Terminal 2 — SIT backend (pick any free port)
+npx ng serve --configuration sit --port 4201
+# → http://localhost:4201
+```
+
+Open both URLs in separate browser tabs or windows and switch between them as needed.
 
 ## Useful Commands
 

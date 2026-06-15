@@ -11,8 +11,8 @@ import { Observable } from 'rxjs';
 export class StationService {
   constructor(private http: HttpClient) {}
 
-  getAll(): Observable<StationApi[] | ResponseAPI<StationApi[]>> {
-    return this.http.get<StationApi[] | ResponseAPI<StationApi[]>>(
+  getAll(): Observable<ResponseAPI<StationApi[]>> {
+    return this.http.get<ResponseAPI<StationApi[]>>(
       `${environment.apiUrl}/api/stops`
     );
   }

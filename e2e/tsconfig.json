@@ -1,0 +1,9 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "resolveJsonModule": true,
+    "module": "commonjs",
+    "esModuleInterop": true
+  },
+  "include": ["**/*.ts", "**/*.json"]
+}

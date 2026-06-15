@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { Observable, catchError, of, throwError } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -385,7 +385,7 @@ export interface CreateLookupPayload {
 }
 
 export interface CreateRolePayload {
-  slug?: string;
+  slug: string;
   status: string;
   translations: AdminTranslationReqDto[];
 }
@@ -520,22 +520,8 @@ export class AdminApiService {
     return this.getRequest<AdminRoleDto[]>(`${this.baseUrl}/private/roles`);
   }
 
-  getRoleBySlug(slug: string): Observable<ResponseAPI<AdminRoleDto>> {
-    return this.getRequest<AdminRoleDto>(
-      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`
-    );
-  }
-
   getRoleById(id: number): Observable<ResponseAPI<AdminRoleDto>> {
-    return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/${id}`).pipe(
-      catchError((error) => {
-        if (error?.status === 404) {
-          return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/id/${id}`);
-        }
-
-        return throwError(() => error);
-      })
-    );
+    return this.getRequest<AdminRoleDto>(`${this.baseUrl}/private/roles/${id}`);
   }
 
   createRole(payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
@@ -549,21 +535,8 @@ export class AdminApiService {
     );
   }
 
-  updateRoleBySlug(slug: string, payload: CreateRolePayload): Observable<ResponseAPI<unknown>> {
-    return this.putRequest<unknown>(
-      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`,
-      payload
-    );
-  }
-
   deleteRoleById(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/roles/${id}`);
-  }
-
-  deleteRoleBySlug(slug: string): Observable<ResponseAPI<unknown>> {
-    return this.deleteRequest<unknown>(
-      `${this.baseUrl}/private/roles/${encodeURIComponent(slug)}`
-    );
   }
 
   getUsers(
@@ -739,6 +712,7 @@ export class AdminApiService {
     );
   }
 
+  // TODO: implement server-side pagination in the admin UI; size=100 silently caps results
   getBookings(): Observable<ResponseAPI<PageResponse<AdminBookingDto>>> {
     const params = new HttpParams().set('page', '0').set('size', '100');
     return this.getRequest<PageResponse<AdminBookingDto>>(

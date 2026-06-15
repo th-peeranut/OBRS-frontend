@@ -13,6 +13,7 @@ import { PrimeNGConfig } from 'primeng/api';
 import {
   debounceTime,
   distinctUntilChanged,
+  firstValueFrom,
   Subscription,
   switchMap,
 } from 'rxjs';
@@ -20,6 +21,7 @@ import { UserService } from '../../services/user/user.service';
 import { REGISTER_OPTION } from '../../shared/enum/register-option.enum';
 import { AlertService } from '../../shared/services/alert.service';
 import { Dropdown } from '../../shared/interfaces/dropdown.interface';
+import { ResponseAPI } from '../../shared/interfaces/response.interface';
 
 @Component({
   selector: 'app-register',
@@ -296,14 +298,18 @@ export class RegisterComponent implements OnDestroy {
   async checkDuplicateData(value: string, option: number) {
     if (!value) return;
 
-    let res: any = null;
+    let res: ResponseAPI<boolean> | null = null;
 
-    if (option === REGISTER_OPTION.USERNAME) {
-      res = await this.usersService.checkExistUsername(value);
-    } else if (option === REGISTER_OPTION.EMAIL) {
-      res = await this.usersService.checkExistEmail(value);
-    } else if (option === REGISTER_OPTION.PHONENUMBER) {
-      res = await this.usersService.checkExistPhoneNumber(value);
+    try {
+      if (option === REGISTER_OPTION.USERNAME) {
+        res = await firstValueFrom(this.usersService.checkExistUsername(value));
+      } else if (option === REGISTER_OPTION.EMAIL) {
+        res = await firstValueFrom(this.usersService.checkExistEmail(value));
+      } else if (option === REGISTER_OPTION.PHONENUMBER) {
+        res = await firstValueFrom(this.usersService.checkExistPhoneNumber(value));
+      }
+    } catch {
+      return;
     }
 
     if (res?.code === 200) {

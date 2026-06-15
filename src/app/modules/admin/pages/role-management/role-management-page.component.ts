@@ -134,17 +134,8 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
       roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
     } catch (error) {
-      if (this.isNotFoundError(error)) {
-        try {
-          const response = await firstValueFrom(this.adminApiService.getRoleBySlug(role.slug));
-          roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
-        } catch {
-          roleDetail = null;
-        }
-      } else {
-        await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
-        return;
-      }
+      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
+      return;
     }
 
     const safeRoleDetail = roleDetail ?? this.toRoleDetailFallback(role);
@@ -494,11 +485,6 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private isNotFoundError(error: unknown): boolean {
-    const status = (error as { status?: number } | null | undefined)?.status;
-    return status === 404;
-  }
-
   private getCurrentLocale(): string {
     const rawLocale = String(
       this.translate.currentLang || this.translate.getDefaultLang() || 'th'
@@ -544,26 +530,10 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private async updateRole(role: RoleRow, payload: CreateRolePayload): Promise<void> {
-    try {
-      await firstValueFrom(this.adminApiService.updateRoleById(role.id, payload));
-    } catch (error) {
-      if (!this.isNotFoundError(error)) {
-        throw error;
-      }
-
-      await firstValueFrom(this.adminApiService.updateRoleBySlug(role.slug, payload));
-    }
+    await firstValueFrom(this.adminApiService.updateRoleById(role.id, payload));
   }
 
   private async deleteRole(role: RoleRow): Promise<void> {
-    try {
-      await firstValueFrom(this.adminApiService.deleteRoleById(role.id));
-    } catch (error) {
-      if (!this.isNotFoundError(error)) {
-        throw error;
-      }
-
-      await firstValueFrom(this.adminApiService.deleteRoleBySlug(role.slug));
-    }
+    await firstValueFrom(this.adminApiService.deleteRoleById(role.id));
   }
 }

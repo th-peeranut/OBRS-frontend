@@ -96,22 +96,24 @@
           </div>
         </div>
 
-        <div class="ticket-divider dotted"></div>
+        <ng-container *ngIf="booker">
+          <div class="ticket-divider dotted"></div>
 
-        <div class="ticket-passengers">
-          <div class="passenger-list">
-            <div class="passenger-row">
-              <div class="passenger-detail">
-                <div class="passenger-field">
-                  <span class="label">
-                    {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
-                  </span>
-                  <span class="value">{{ booker?.phone }}</span>
+          <div class="ticket-passengers">
+            <div class="passenger-list">
+              <div class="passenger-row">
+                <div class="passenger-detail">
+                  <div class="passenger-field">
+                    <span class="label">
+                      {{ "E_TICKET.LABEL.PASSENGER_PHONE" | translate }}
+                    </span>
+                    <span class="value">{{ booker.phone }}</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </ng-container>
 
         <div class="ticket-passengers mt-3">
           <div class="ticket-item full">

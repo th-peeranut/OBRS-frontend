@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "message": "OK",
+  "data": {
+    "departureSchedules": [
+      {
+        "id": 101,
+        "vehicleType": "van",
+        "departureDateTime": "2026-07-01T08:00:00",
+        "arrivalDateTime": "2026-07-01T13:00:00",
+        "pricePerSeat": "500",
+        "availableSeats": 5,
+        "availableSeatNumbers": ["1", "2", "3", "4", "5"]
+      }
+    ],
+    "arrivalSchedules": null
+  }
+}
