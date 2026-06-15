@@ -1,0 +1,34 @@
+{
+  "code": 200,
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "slug": "nong-sak",
+      "status": "active",
+      "stopType": "station",
+      "createdBy": "system",
+      "createdDate": "2024-01-01",
+      "lastUpdatedBy": "system",
+      "lastUpdatedDate": "2024-01-01",
+      "display": [
+        { "locale": "en", "label": "Nong Sak" },
+        { "locale": "th", "label": "หนองสัก" }
+      ]
+    },
+    {
+      "id": 2,
+      "slug": "bangkok",
+      "status": "active",
+      "stopType": "station",
+      "createdBy": "system",
+      "createdDate": "2024-01-01",
+      "lastUpdatedBy": "system",
+      "lastUpdatedDate": "2024-01-01",
+      "display": [
+        { "locale": "en", "label": "Bangkok" },
+        { "locale": "th", "label": "กรุงเทพ" }
+      ]
+    }
+  ]
+}
