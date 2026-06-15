@@ -41,7 +41,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
-  @Output() useAsBooker = new EventEmitter<PassengerInfo>();
+  @Output() useBookerAsPassenger = new EventEmitter<number>();
 
   titleOptions: Dropdown[] = [
     {
@@ -198,30 +198,30 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     this.emitValidity();
   }
 
-  onUseAsBookerChange(index: number, isChecked: boolean): void {
+  onUseBookerInfoChange(index: number, isChecked: boolean): void {
     if (!isChecked) {
       return;
     }
 
-    // Only one passenger can be the booker at a time.
-    this.passengerData.controls.forEach((control, idx) => {
-      if (idx !== index) {
-        control.get('useAsBooker')?.setValue(false, { emitEvent: false });
-      }
-    });
-
-    this.useAsBooker.emit(this.buildPassengerInfoAt(index));
+    this.useBookerAsPassenger.emit(index);
   }
 
-  private buildPassengerInfoAt(index: number): PassengerInfo {
-    const raw = this.passengerData.at(index).getRawValue();
-    return {
-      ...raw,
-      title:
-        typeof raw.title === 'object' && raw.title !== null
-          ? raw.title.id
-          : raw.title ?? null,
-    } as PassengerInfo;
+  applyBookerToPassenger(index: number, booker: PassengerInfo): void {
+    const group = this.passengerData.at(index);
+    if (!group || !booker) {
+      return;
+    }
+
+    group.patchValue({
+      title: booker.title,
+      firstName: booker.firstName ?? '',
+      middleName: booker.middleName ?? '',
+      lastName: booker.lastName ?? '',
+      phoneNumber: booker.phoneNumber ?? '',
+      gender: booker.gender ?? '',
+    });
+    group.markAllAsTouched();
+    this.emitValidity();
   }
 
   getFormErrors(
@@ -292,7 +292,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   private createPassengerGroup(isAdult: boolean = false): FormGroup {
     return this.fb.group({
-      useAsBooker: [false],
+      useBookerInfo: [false],
       isAdult: [isAdult],
       title: [null, Validators.required],
       firstName: ['', Validators.required],

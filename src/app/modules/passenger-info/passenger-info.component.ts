@@ -83,8 +83,11 @@ export class PassengerInfoComponent {
     this.isBookerFormValid = isValid;
   }
 
-  onUsePassengerAsBooker(passenger: PassengerInfo): void {
-    this.bookerInfoFormComponent?.patchBooker(passenger);
+  onUseBookerAsPassenger(index: number): void {
+    const booker = this.bookerInfoFormComponent?.getCurrentBooker();
+    if (booker) {
+      this.passengerInfoFormComponent?.applyBookerToPassenger(index, booker);
+    }
   }
 
   async onSubmitPassengerInfo(): Promise<void> {

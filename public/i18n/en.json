@@ -521,7 +521,7 @@
     },
     "FORM": {
       "SECTION_TITLE": "Personal information",
-      "USE_THIS_PASSENGER_AS_BOOKER": "Use this passenger as the booker",
+      "USE_BOOKER_AS_THIS_PASSENGER": "Use the booker's info for this passenger",
       "TITLE": "Title",
       "TITLE_REQUIRED": "Please enter a title",
       "FIRST_NAME": "First name",

@@ -522,7 +522,7 @@
     },
     "FORM": {
       "SECTION_TITLE": "ข้อมูลส่วนตัว",
-      "USE_THIS_PASSENGER_AS_BOOKER": "ใช้ข้อมูลผู้โดยสารคนนี้เป็นคนจอง",
+      "USE_BOOKER_AS_THIS_PASSENGER": "ใช้ข้อมูลคนที่จองเป็นผู้โดยสารคนนี้",
       "TITLE": "คำนำหน้า",
       "TITLE_REQUIRED": "กรุณากรอกคำนำหน้า",
       "FIRST_NAME": "ชื่อจริง",
