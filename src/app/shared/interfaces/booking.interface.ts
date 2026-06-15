@@ -15,6 +15,7 @@ export interface BookingContact {
   middleName: string | null;
   lastName: string;
   phoneNumber: string;
+  email?: string | null;
   preferredLocale: string;
   identityCardNumber?: string | null;
 }

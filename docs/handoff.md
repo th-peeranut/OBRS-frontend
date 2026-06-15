@@ -20,7 +20,22 @@ _No pending changes. All documented endpoints in `../OBRS-backend/docs/api/` are
 
 ## Contract Requests (Frontend → Backend)
 
-_No pending requests._
+### [Frontend] 2026-06-15 — Admin booking list endpoint missing from API docs
+**Affected endpoint**: `GET /api/private/admin/bookings`
+**Request type**: New endpoint (or documentation of existing endpoint)
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/admin/bookings` paginated list | New or undocumented endpoint | Admin booking management page lists all bookings; currently calls this undocumented path |
+
+### Suggested contract change
+The response should be a `Page<BookingRespDto>` (same shape as `GET /api/private/bookings/me`) but unscoped — returning all bookings across all users, accessible to `ADMIN` only.
+
+Suggested query params: `page`, `size`, `sort` (standard Pageable), plus optional filter params such as `status`, `bookingNumber`.
+
+### Impact if not addressed
+The admin bookings page (`/admin/bookings`) currently calls `GET /api/private/admin/bookings`. If the endpoint does not exist, the page returns a 404 and admins cannot view the booking list.
 
 ---
 

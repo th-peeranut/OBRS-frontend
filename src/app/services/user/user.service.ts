@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
+import { Observable, of } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -14,33 +15,15 @@ export class UserService {
   // NOTE: The backend no longer exposes a username duplicate-check endpoint
   // (the user model is now email-based and has no username field). This
   // resolves to "not taken" without an HTTP call so callers keep working.
-  checkExistUsername(_username: string): Promise<ResponseAPI<boolean>> {
-    return Promise.resolve({ code: 200, message: 'OK', data: false });
+  checkExistUsername(_username: string): Observable<ResponseAPI<boolean>> {
+    return of({ code: 200, message: 'OK', data: false });
   }
 
-  checkExistEmail(email: string): Promise<ResponseAPI<any>> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .get<ResponseAPI<any>>(this.url + `/email/${email}`, {
-        headers,
-      })
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to get api');
-        return response;
-      });
+  checkExistEmail(email: string): Observable<ResponseAPI<boolean>> {
+    return this.http.get<ResponseAPI<boolean>>(`${this.url}/email/${email}`);
   }
 
-  checkExistPhoneNumber(phoneNumber: string): Promise<ResponseAPI<any>> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http
-      .get<ResponseAPI<any>>(this.url + `/phoneNumber/${phoneNumber}`, {
-        headers,
-      })
-      .toPromise()
-      .then((response) => {
-        if (!response) throw new Error('Failed to get api');
-        return response;
-      });
+  checkExistPhoneNumber(phoneNumber: string): Observable<ResponseAPI<boolean>> {
+    return this.http.get<ResponseAPI<boolean>>(`${this.url}/phoneNumber/${phoneNumber}`);
   }
 }

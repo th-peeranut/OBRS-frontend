@@ -38,9 +38,8 @@ export class ProvinceEffect {
   );
 
   private extractStations(
-    response: StationApi[] | ResponseAPI<StationApi[]> | null | undefined
+    response: ResponseAPI<StationApi[]> | null | undefined
   ): StationApi[] {
-    if (Array.isArray(response)) return response;
     if (response && Array.isArray(response.data)) return response.data;
     return [];
   }
