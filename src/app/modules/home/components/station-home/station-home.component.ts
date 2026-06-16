@@ -75,7 +75,7 @@ export class StationHomeComponent implements OnInit, OnDestroy {
 
   navMap(url: string) {
     if (!url) return;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   private mapApiStations(stations: StationApi[]): Station[] {
