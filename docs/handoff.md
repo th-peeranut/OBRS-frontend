@@ -14,7 +14,33 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
-_No pending changes. All documented endpoints in `../OBRS-backend/docs/api/` are current._
+## [Backend] 2026-06-15 — `payment.status` value renamed from `"success"` to `"paid"`
+**Risk level**: R0 (breaking)
+**Triggered by**: Terminology alignment — `"success"` described an operation outcome; `"paid"` describes the object's state, consistent with `booking.status = "confirmed"` and `ticket.status = "confirmed"`.
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| All endpoints returning `PaymentRespDto` | Field value renamed | `status` field value `"success"` → `"paid"` |
+| `POST /api/private/payments` | Value in response | `status` now returns `"paid"` for a successful synchronous charge |
+| `POST /api/private/payments/walk-in` | Value in response | `status` now returns `"paid"` |
+| `POST /api/webhook/omise` | Side-effect | Terminal-status idempotency guard now checks `"paid"` instead of `"success"` |
+| `GET /api/private/bookings/{id}/payments` | Value in list | Payment entries with `status = "success"` are now `"paid"` |
+
+### Response shapes before / after
+- **Before**: `{ "status": "success", ... }`
+- **After**: `{ "status": "paid", ... }`
+
+The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแล้ว`, ZH: `已支付`) have been updated. All other status values (`pending`, `failed`, `cancelled`, `expired`, `refunded`, `manual_refund_required`) are unchanged.
+
+### Action required in frontend
+- [ ] Update any `PaymentStatus` enum / type that has a `SUCCESS = "success"` entry → `PAID = "paid"`
+- [ ] Update display strings / badge labels that check `status === "success"`
+- [ ] Update any filter/query params that send `status=success` → `status=paid`
+- [ ] Search for hardcoded string `"success"` in payment-status contexts
+
+### Still unfinished on backend
+- None — all source, SQL seeds, and API docs are updated.
 
 ---
 
