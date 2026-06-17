@@ -10,7 +10,7 @@
         {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
       </h3>
 
-      <div class="schedule-item mb-3" *ngFor="let departure of departureList">
+      <div class="schedule-item mb-3" *ngFor="let departure of departureList; trackBy: trackById">
         <!-- LEFT -->
         <div class="left">
           <div class="icon">
@@ -92,7 +92,7 @@
       </h3>
 
       <ng-container *ngIf="isSelectFirst">
-        <div class="schedule-item mb-3" *ngFor="let return of returnList">
+        <div class="schedule-item mb-3" *ngFor="let return of returnList; trackBy: trackById">
           <!-- LEFT -->
           <div class="left">
             <div class="icon">

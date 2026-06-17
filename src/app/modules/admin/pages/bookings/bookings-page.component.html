@@ -51,7 +51,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let booking of bookings; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let booking of bookings; let i = index; trackBy: trackByBookingId" [class.zebra]="i % 2 === 1">
           <td class="admin-emphasis">{{ booking.bookingId }}</td>
           <td>{{ booking.customer }}</td>
           <td>{{ booking.route }}</td>

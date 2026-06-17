@@ -18,10 +18,6 @@ export class ScheduleFilterEffect {
   private actions$ = inject(Actions);
   private store = inject(Store<Appstate>);
 
-  constructor() {
-    // console.log('✅ Store in effect:', this.store); // should now log correctly
-  }
-
   getScheduleFilters$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeGetScheduleFilterApi),

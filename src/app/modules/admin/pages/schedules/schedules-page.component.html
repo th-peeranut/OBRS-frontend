@@ -85,7 +85,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let schedule of filteredSchedules; let i = index" [class.zebra]="i % 2 === 1">
+        <tr *ngFor="let schedule of filteredSchedules; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
           <td><code>{{ schedule.tripId }}</code></td>
           <td>
             <div class="admin-cell-stack">

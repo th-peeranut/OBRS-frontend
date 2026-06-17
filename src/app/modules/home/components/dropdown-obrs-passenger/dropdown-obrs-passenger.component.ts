@@ -6,6 +6,7 @@ import {
   forwardRef,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   Renderer2,
   SimpleChanges,
@@ -30,7 +31,7 @@ import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interf
   imports: [CommonModule, TranslateModule],
 })
 export class DropdownObrsPassengerComponent
-  implements ControlValueAccessor, OnChanges
+  implements ControlValueAccessor, OnChanges, OnDestroy
 {
   @Input() data?: DropdownPassenger;
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();
@@ -53,7 +54,7 @@ export class DropdownObrsPassengerComponent
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  private documentClickListener!: () => void;
+  private documentClickListener?: () => void;
 
   private onChange: (value: DropdownPassenger[]) => void = () => {};
   private onTouched: () => void = () => {};
@@ -62,13 +63,21 @@ export class DropdownObrsPassengerComponent
 
   ngOnChanges(changes: SimpleChanges): void {}
 
+  ngOnDestroy(): void {
+    this.documentClickListener?.();
+  }
+
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.documentClickListener?.();
+      this.documentClickListener = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.documentClickListener?.();
+      this.documentClickListener = undefined;
     }
   }
 

@@ -85,6 +85,10 @@ export class AdminLayoutComponent implements OnInit {
     this.primengConfig.setTranslation(calendarTranslation);
   }
 
+  protected trackByPath(_index: number, item: AdminNavItem): string {
+    return item.path;
+  }
+
   protected toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }

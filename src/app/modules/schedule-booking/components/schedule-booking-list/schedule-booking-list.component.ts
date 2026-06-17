@@ -4,7 +4,7 @@ import {
   ScheduleFilter,
   ScheduleList,
 } from '../../../../shared/interfaces/schedule.interface';
-import { combineLatest, map, Observable, startWith, Subscription } from 'rxjs';
+import { combineLatest, map, Observable, startWith, Subscription, take } from 'rxjs';
 import { Store, select } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
@@ -104,7 +104,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       })
     );
 
-    this.scheduleList$ = this.scheduleList.subscribe((schedules) => {
+    if (this.scheduleList$) this.scheduleList$.unsubscribe();
+    this.scheduleList$ = this.scheduleList.pipe(take(1)).subscribe((schedules) => {
       const hasArrivalSchedules = (schedules?.arrivalSchedules?.length ?? 0) > 0;
       if (!hasArrivalSchedules || !isFirst) {
         this.router.navigate(['/review-schedule-booking']);
@@ -190,6 +191,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {
     return (locale || '').toLowerCase().startsWith('th') ? 'th' : 'en';
+  }
+
+  trackById(_index: number, item: Schedule): number {
+    return item.id;
   }
 
   private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {

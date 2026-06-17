@@ -125,7 +125,7 @@
           <div class="passenger-list">
             <div
               class="passenger-row"
-              *ngFor="let passenger of passengers; let i = index"
+              *ngFor="let passenger of passengers; let i = index; trackBy: trackByIndex"
             >
               <div class="passenger-index">{{ i + 1 }}.</div>
               <div class="passenger-detail">

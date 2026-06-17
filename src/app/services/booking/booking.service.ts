@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
-  CreateBookingResponse,
+  BookingCreationResponse,
 } from '../../shared/interfaces/booking.interface';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
@@ -17,8 +17,8 @@ export class BookingService {
 
   constructor(private http: HttpClient) {}
 
-  createBooking(payload: BookingPayload): Observable<ResponseAPI<CreateBookingResponse>> {
-    return this.http.post<ResponseAPI<CreateBookingResponse>>(
+  createBooking(payload: BookingPayload): Observable<ResponseAPI<BookingCreationResponse>> {
+    return this.http.post<ResponseAPI<BookingCreationResponse>>(
       `${environment.apiUrl}/api/private/bookings`,
       payload
     );

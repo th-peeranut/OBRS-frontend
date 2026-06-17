@@ -76,6 +76,10 @@ export class BookingsPageComponent implements OnInit {
     await this.loadBookings();
   }
 
+  protected trackByBookingId(_index: number, booking: BookingRow): string {
+    return booking.bookingId;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.toUpperCase();
 

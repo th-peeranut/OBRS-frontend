@@ -67,6 +67,10 @@ export class StationHomeComponent implements OnInit, OnDestroy {
     return index === 0 || index === listLength - 1;
   }
 
+  trackByStationId(_index: number, station: Station): number {
+    return station.id;
+  }
+
   getStationName(station: Station): string {
     return this.translateService.currentLang === 'th'
       ? station.nameThai

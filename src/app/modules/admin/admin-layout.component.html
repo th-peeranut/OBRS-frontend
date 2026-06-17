@@ -7,7 +7,7 @@
 
     <nav class="admin-nav">
       <a
-        *ngFor="let item of navItems"
+        *ngFor="let item of navItems; trackBy: trackByPath"
         [routerLink]="item.path"
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"

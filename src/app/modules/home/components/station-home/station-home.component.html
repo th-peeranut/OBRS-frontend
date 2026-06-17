@@ -32,7 +32,7 @@
             <div class="timeline" *ngIf="getDisplayedStations(stations) as orderedStations">
               <div
                 class="timeline-row"
-                *ngFor="let station of orderedStations; let i = index"
+                *ngFor="let station of orderedStations; let i = index; trackBy: trackByStationId"
               >
                 <div class="side side-left">
                   <button

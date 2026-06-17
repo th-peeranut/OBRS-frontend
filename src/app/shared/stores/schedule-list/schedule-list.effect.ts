@@ -20,10 +20,6 @@ export class ScheduleListEffect {
   private store = inject(Store<Appstate>);
   private service = inject(ScheduleService);
 
-  constructor() {
-    // console.log('✅ Store in effect:', this.store); // should now log correctly
-  }
-
   getScheduleLists$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeGetScheduleListApi),

@@ -65,7 +65,7 @@
       </thead>
       <tbody>
         <tr
-          *ngFor="let route of filteredRoutes; let i = index"
+          *ngFor="let route of filteredRoutes; let i = index; trackBy: trackByRouteId"
           [class.zebra]="i % 2 === 1"
           [class.is-selected]="route.slug === selectedRouteSlug"
         >
@@ -114,7 +114,7 @@
     </div>
 
     <ul class="admin-timeline">
-      <li *ngFor="let stop of stops; let i = index">
+      <li *ngFor="let stop of stops; let i = index; trackBy: trackByStopSlug">
         <div class="admin-timeline-dot" [class.is-last]="i === stops.length - 1"></div>
         <div class="admin-cell-stack">
           <div class="admin-inline-label">
@@ -162,7 +162,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let segment of pagedSegments; let i = index" [class.zebra]="i % 2 === 1">
+          <tr *ngFor="let segment of pagedSegments; let i = index; trackBy: trackBySegmentId" [class.zebra]="i % 2 === 1">
             <td>{{ segment.origin }}</td>
             <td>{{ segment.destination }}</td>
             <td class="admin-emphasis">{{ formatFare(segment.fare) }}</td>

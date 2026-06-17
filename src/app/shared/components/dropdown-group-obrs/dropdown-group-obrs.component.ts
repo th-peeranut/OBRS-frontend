@@ -5,6 +5,7 @@ import {
   forwardRef,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   Renderer2,
   SimpleChanges,
@@ -29,7 +30,7 @@ import { CommonModule } from '@angular/common';
   imports: [CommonModule, TranslateModule],
 })
 export class DropdownGroupObrsComponent
-  implements ControlValueAccessor, OnChanges
+  implements ControlValueAccessor, OnChanges, OnDestroy
 {
   @Input() isLabel: boolean = false;
   @Input() label: string = '';
@@ -47,6 +48,7 @@ export class DropdownGroupObrsComponent
 
   private onChange: (value: any) => void = () => {};
   private onTouched: () => void = () => {};
+  private unlistenDropdown?: () => void;
 
   constructor(
     private renderer: Renderer2,
@@ -82,9 +84,13 @@ export class DropdownGroupObrsComponent
   toggleDropdown(): void {
     this.isDropdownOpen = !this.isDropdownOpen;
     if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
+    } else {
+      this.unlistenDropdown?.();
+      this.unlistenDropdown = undefined;
     }
   }
 
@@ -115,6 +121,10 @@ export class DropdownGroupObrsComponent
 
   registerOnTouched(fn: any): void {
     this.onTouched = fn;
+  }
+
+  ngOnDestroy(): void {
+    this.unlistenDropdown?.();
   }
 
   setDisabledState?(isDisabled: boolean): void {}

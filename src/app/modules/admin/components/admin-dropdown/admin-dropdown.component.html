@@ -31,7 +31,7 @@
       type="button"
       class="admin-dropdown-option"
       [class.is-selected]="isSelected(option)"
-      *ngFor="let option of options"
+      *ngFor="let option of options; trackBy: trackByOption"
       (click)="selectOption(option)"
     >
       <span>{{ getOptionLabel(option) }}</span>

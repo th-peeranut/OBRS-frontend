@@ -111,6 +111,10 @@ export class AdminDropdownComponent implements ControlValueAccessor {
     return String(option ?? '');
   }
 
+  trackByOption(_index: number, option: unknown): string {
+    return this.getOptionValue(option);
+  }
+
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
   }

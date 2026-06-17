@@ -115,7 +115,7 @@
 
       <div
         class="passenger-section"
-        *ngFor="let passenger of passengers; let i = index"
+        *ngFor="let passenger of passengers; let i = index; trackBy: trackByIndex"
       >
         <div class="w-50">
           <div class="passenger-info">
@@ -249,7 +249,7 @@
 
       <div
         class="passenger-section"
-        *ngFor="let passenger of passengers; let i = index"
+        *ngFor="let passenger of passengers; let i = index; trackBy: trackByIndex"
       >
         <div class="w-50">
           <div class="passenger-info">
