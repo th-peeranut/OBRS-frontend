@@ -66,26 +66,12 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
     return !!errors && !!errors[errorName];
   }
 
-  patchBooker(data: PassengerInfo): void {
-    if (!this.bookerForm || !data) {
-      return;
+  getCurrentBooker(): PassengerInfo | null {
+    if (!this.bookerForm) {
+      return null;
     }
 
-    this.bookerForm.patchValue({
-      title: data.title,
-      firstName: data.firstName ?? '',
-      middleName: data.middleName ?? '',
-      lastName: data.lastName ?? '',
-      phoneNumber: data.phoneNumber ?? '',
-      gender: data.gender ?? '',
-    });
-    this.bookerForm.markAllAsTouched();
-    this.emitValidity();
-  }
-
-  clearForm(): void {
-    this.bookerForm.reset();
-    this.emitValidity();
+    return this.buildBookerPayload();
   }
 
   validateAndGetBooker(): PassengerInfo | null {

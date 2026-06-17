@@ -88,10 +88,10 @@ export class StationHomeComponent implements OnInit, OnDestroy {
         code: stationApi.slug,
         nameThai: thai,
         nameEnglish: english,
-        createdBy: stationApi.createdBy ?? '',
-        createdDate: stationApi.createdDate ?? stationApi.createdAt ?? '',
-        lastUpdatedBy: stationApi.lastUpdatedBy ?? '',
-        lastUpdatedDate: stationApi.lastUpdatedDate ?? stationApi.updatedAt ?? '',
+        createdBy: '',
+        createdDate: stationApi.createdAt,
+        lastUpdatedBy: '',
+        lastUpdatedDate: stationApi.updatedAt,
         url: '',
       };
     });

@@ -20,6 +20,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 
 interface ScheduleRow {
   kind: 'set' | 'schedule';
@@ -521,7 +522,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     const departureTime = this.toTimeInputValue(this.toDateValue(raw.departureTime));
 
     return {
-      departureDateTime: `${departureDate}T${departureTime}:00`,
+      departureDateTime: combineBangkokDateTime(departureDate, departureTime),
       route: String(raw.route ?? '').trim(),
       vehicleType: String(raw.vehicleType ?? '').trim(),
       ...(vehicleId !== undefined ? { vehicleId } : {}),

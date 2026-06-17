@@ -29,19 +29,19 @@
               </div>
             </div>
 
-            <!-- ใช้ข้อมูลผู้โดยสารคนนี้เป็นคนจอง -->
-            <div class="col-12 mb-3">
+            <!-- ใช้ข้อมูลคนที่จองเป็นผู้โดยสารคนนี้ (แสดงเฉพาะคนแรก) -->
+            <div class="col-12 mb-3" *ngIf="i === 0">
               <div class="form-check form-check-inline">
                 <input
                   class="form-check-input"
                   type="checkbox"
-                  id="useAsBooker-{{ i }}"
-                  formControlName="useAsBooker"
-                  (change)="onUseAsBookerChange(i, $any($event.target).checked)"
+                  id="useBookerInfo-{{ i }}"
+                  formControlName="useBookerInfo"
+                  (change)="onUseBookerInfoChange(i, $any($event.target).checked)"
                 />
-                <label class="form-check-label" for="useAsBooker-{{ i }}">
+                <label class="form-check-label" for="useBookerInfo-{{ i }}">
                   {{
-                    "PASSENGER_INFO.FORM.USE_THIS_PASSENGER_AS_BOOKER" | translate
+                    "PASSENGER_INFO.FORM.USE_BOOKER_AS_THIS_PASSENGER" | translate
                   }}
                 </label>
               </div>

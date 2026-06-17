@@ -3,7 +3,13 @@ import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { LoginResponseData, Register } from '../shared/interfaces/auth.interface';
+import {
+  LoginResponseData,
+  PasswordResetConfirmResponse,
+  PasswordResetRequestResponse,
+  Register,
+  SignUpPayload,
+} from '../shared/interfaces/auth.interface';
 import { ResponseAPI } from '../shared/interfaces/response.interface';
 import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
 
@@ -199,31 +205,46 @@ export class AuthService {
     sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
   }
 
-  register(payload: Register): Promise<ResponseAPI<any>> {
+  register(payload: Register): Promise<ResponseAPI<unknown>> {
+    const signUpPayload: SignUpPayload = {
+      title: payload.title,
+      firstName: payload.firstName,
+      middleName: payload.middleName,
+      lastName: payload.lastName,
+      email: payload.email,
+      phoneNumber: payload.phoneNumber,
+      password: payload.password,
+      preferredLocale: payload.preferredLocale,
+      pdpaConsent: payload.pdpaConsent,
+    };
+
     return this.http
-      .post<ResponseAPI<any>>(`${environment.apiUrl}/api/auth/signup`, payload)
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/signup`,
+        signUpPayload
+      )
       .toPromise()
       .then((response) => response)
       .catch((err) => err);
   }
 
-  loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<any> | undefined> {
+  loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<LoginResponseData> | undefined> {
+    const endpoint = environment.useDevApiEndpoints
+      ? '/api/auth/login/otp/test'
+      : '/api/auth/login/otp';
+
     return (
       this.http
-        .post<ResponseAPI<any>>(
-          `${environment.apiUrl}/api/auth/login/otp/test`,
+        .post<ResponseAPI<LoginResponseData>>(
+          `${environment.apiUrl}${endpoint}`,
           payload
         )
-        // .post<ResponseAPI<any>>(
-        //   `${environment.apiUrl}/api/auth/login/otp`,
-        //   payload
-        // )
         .toPromise()
         .then((response) => {
           if (response?.code === 200) {
-            const token = response?.data?.accessToken ?? response?.data?.token;
-            const username = response?.data?.user?.email ?? response?.data?.email;
-            const roles = response?.data?.user?.roles ?? response?.data?.roles;
+            const token = response?.data?.accessToken;
+            const username = response?.data?.user?.email;
+            const roles = response?.data?.user?.roles;
             this.storeAuthData(token, username, roles);
           }
           return response;
@@ -239,9 +260,9 @@ export class AuthService {
 
   forgetPassword(payload: {
     email: string;
-  }): Promise<ResponseAPI<any> | undefined> {
+  }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
     return this.http
-      .post<ResponseAPI<any>>(
+      .post<ResponseAPI<PasswordResetRequestResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/request`,
         payload
       )
@@ -252,9 +273,9 @@ export class AuthService {
   confirmPasswordReset(payload: {
     token: string;
     newPassword: string;
-  }): Promise<ResponseAPI<any> | undefined> {
+  }): Promise<ResponseAPI<PasswordResetConfirmResponse> | undefined> {
     return this.http
-      .post<ResponseAPI<any>>(
+      .post<ResponseAPI<PasswordResetConfirmResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/confirm`,
         payload
       )

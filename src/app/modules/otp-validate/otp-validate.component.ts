@@ -147,14 +147,14 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   async sendOtp() {
     this.token = '';
 
-    const payload: OtpRequest = { msisdn: this.phoneNo };
+    const payload: OtpRequest = { msisdn: this.phoneNo ?? '' };
 
     try {
       const res = await this.otpService.requestOTP(payload);
 
       if (res?.code === 200) {
         this.startTimer();
-        this.token = res?.data?.token;
+        this.token = res.data?.token ?? '';
       } else if (typeof res?.code === 'number') {
         this.alertService.error('error');
       }

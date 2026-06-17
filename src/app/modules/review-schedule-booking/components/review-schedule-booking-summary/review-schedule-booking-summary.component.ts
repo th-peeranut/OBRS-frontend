@@ -176,10 +176,10 @@ export class ReviewScheduleBookingSummaryComponent {
       code: stationApi.slug,
       nameThai,
       nameEnglish,
-      createdBy: stationApi.createdBy,
-      createdDate: stationApi.createdDate,
-      lastUpdatedBy: stationApi.lastUpdatedBy,
-      lastUpdatedDate: stationApi.lastUpdatedDate,
+      createdBy: '',
+      createdDate: stationApi.createdAt,
+      lastUpdatedBy: '',
+      lastUpdatedDate: stationApi.updatedAt,
       url: '',
     };
   }

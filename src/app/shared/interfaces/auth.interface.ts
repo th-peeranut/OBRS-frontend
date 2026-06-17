@@ -19,6 +19,10 @@ export interface LoginResponseData {
   user: LoginUser;
 }
 
+export type PasswordResetRequestResponse = unknown;
+
+export type PasswordResetConfirmResponse = unknown;
+
 export interface Register {
   title?: string | null;
   firstName: string;
@@ -33,4 +37,16 @@ export interface Register {
   username?: string;
   isPhoneNumberVerify?: boolean;
   roles?: string[];
+}
+
+export interface SignUpPayload {
+  title?: string | null;
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
+  password: string;
+  preferredLocale: string;
+  pdpaConsent: boolean;
 }

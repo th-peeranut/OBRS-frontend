@@ -49,7 +49,7 @@ export class ScheduleListEffect {
             );
 
             return invokeGetScheduleListApiSuccess({
-              schedule_list: response?.code === 200 ? response?.data : null,
+              schedule_list: response?.code === 200 ? response.data ?? null : null,
             });
           })
         );

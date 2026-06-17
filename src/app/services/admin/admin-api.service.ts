@@ -402,9 +402,6 @@ export interface CreateUserPayload {
   status: string;
   roles: string[];
   pdpaConsent: boolean;
-  // Backend (UserReqDto extends SignUpReqDto) ignores these; kept optional for local form state.
-  username?: string;
-  isPhoneNumberVerify?: boolean;
 }
 
 export interface UpdateUserPayload {

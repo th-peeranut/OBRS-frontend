@@ -314,11 +314,11 @@ export class RegisterComponent implements OnDestroy {
 
     if (res?.code === 200) {
       if (option === REGISTER_OPTION.USERNAME) {
-        this.usernameIsExist = res?.data;
+        this.usernameIsExist = res.data ?? false;
       } else if (option === REGISTER_OPTION.EMAIL) {
-        this.emailIsExist = res?.data;
+        this.emailIsExist = res.data ?? false;
       } else if (option === REGISTER_OPTION.PHONENUMBER) {
-        this.phoneNumberIsExist = res?.data;
+        this.phoneNumberIsExist = res.data ?? false;
       }
     }
   }

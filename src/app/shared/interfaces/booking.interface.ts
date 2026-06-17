@@ -38,6 +38,11 @@ export interface BookingPayload {
   arrivalSchedule?: BookingSchedulePayload | null;
 }
 
+export interface CreateBookingResponse {
+  bookingId: number;
+  bookingNumber: string;
+}
+
 export interface BookingState {
   bookingId: number | null;
   bookingNumber: string | null;

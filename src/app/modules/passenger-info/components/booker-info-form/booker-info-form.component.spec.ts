@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ReactiveFormsModule } from '@angular/forms';
 import { BookerInfoFormComponent } from './booker-info-form.component';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import { SharedModule } from '../../../../shared/shared.module';
+import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { TranslateModule } from '@ngx-translate/core';
 
 describe('BookerInfoFormComponent', () => {
   let component: BookerInfoFormComponent;
@@ -22,7 +24,11 @@ describe('BookerInfoFormComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [BookerInfoFormComponent],
-      imports: [ReactiveFormsModule],
+      imports: [
+        SharedModule,
+        DropdownObrsComponent,
+        TranslateModule.forRoot(),
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(BookerInfoFormComponent);
@@ -83,23 +89,15 @@ describe('BookerInfoFormComponent', () => {
     });
   });
 
-  describe('patchBooker', () => {
-    it('fills the form from a PassengerInfo and marks valid', () => {
-      component.patchBooker(validBooker);
-      expect(component.bookerForm.value.firstName).toBe('Somchai');
-      expect(component.bookerForm.value.phoneNumber).toBe('0812345678');
-      expect(component.bookerForm.touched).toBeTrue();
-    });
-  });
+  describe('getCurrentBooker', () => {
+    it('returns the current form value without requiring a valid form', () => {
+      component.bookerForm.patchValue(validBooker);
 
-  describe('clearForm', () => {
-    it('resets form to untouched invalid state', () => {
-      component.patchBooker(validBooker);
-      expect(component.bookerForm.valid).toBeTrue();
+      const result = component.getCurrentBooker();
 
-      component.clearForm();
-      expect(component.bookerForm.valid).toBeFalse();
-      expect(component.bookerForm.touched).toBeFalse();
+      expect(result?.firstName).toBe('Somchai');
+      expect(result?.phoneNumber).toBe('0812345678');
+      expect(result?.title).toBe(1);
     });
   });
 
