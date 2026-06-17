@@ -19,6 +19,10 @@ export interface LoginResponseData {
   user: LoginUser;
 }
 
+export type PasswordResetRequestResponse = unknown;
+
+export type PasswordResetConfirmResponse = unknown;
+
 export interface Register {
   title?: string | null;
   firstName: string;

@@ -5,6 +5,8 @@ import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
 import {
   LoginResponseData,
+  PasswordResetConfirmResponse,
+  PasswordResetRequestResponse,
   Register,
   SignUpPayload,
 } from '../shared/interfaces/auth.interface';
@@ -226,23 +228,23 @@ export class AuthService {
       .catch((err) => err);
   }
 
-  loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<any> | undefined> {
+  loginWithOtp(payload: LoginOtpVerify): Promise<ResponseAPI<LoginResponseData> | undefined> {
     const endpoint = environment.useDevApiEndpoints
       ? '/api/auth/login/otp/test'
       : '/api/auth/login/otp';
 
     return (
       this.http
-        .post<ResponseAPI<any>>(
+        .post<ResponseAPI<LoginResponseData>>(
           `${environment.apiUrl}${endpoint}`,
           payload
         )
         .toPromise()
         .then((response) => {
           if (response?.code === 200) {
-            const token = response?.data?.accessToken ?? response?.data?.token;
-            const username = response?.data?.user?.email ?? response?.data?.email;
-            const roles = response?.data?.user?.roles ?? response?.data?.roles;
+            const token = response?.data?.accessToken;
+            const username = response?.data?.user?.email;
+            const roles = response?.data?.user?.roles;
             this.storeAuthData(token, username, roles);
           }
           return response;
@@ -258,9 +260,9 @@ export class AuthService {
 
   forgetPassword(payload: {
     email: string;
-  }): Promise<ResponseAPI<any> | undefined> {
+  }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
     return this.http
-      .post<ResponseAPI<any>>(
+      .post<ResponseAPI<PasswordResetRequestResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/request`,
         payload
       )
@@ -271,9 +273,9 @@ export class AuthService {
   confirmPasswordReset(payload: {
     token: string;
     newPassword: string;
-  }): Promise<ResponseAPI<any> | undefined> {
+  }): Promise<ResponseAPI<PasswordResetConfirmResponse> | undefined> {
     return this.http
-      .post<ResponseAPI<any>>(
+      .post<ResponseAPI<PasswordResetConfirmResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/confirm`,
         payload
       )
