@@ -58,6 +58,9 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected selectedRole: RoleRow | null = null;
 
   protected readonly roleForm: FormGroup;
+  // Placeholder rows rendered while the (occasionally cold-starting) backend
+  // responds, so the table shows its shape instead of a blank body.
+  protected readonly skeletonRows = Array.from({ length: 5 });
   private readonly languageSubscription: Subscription;
 
   private rawRoles: AdminRoleDto[] = [];

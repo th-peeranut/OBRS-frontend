@@ -45,6 +45,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
 
   protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
   protected isFormModalOpen = false;

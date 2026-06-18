@@ -33,6 +33,7 @@ export class LookupSettingsPageComponent implements OnInit {
   protected entries: LookupEntry[] = [];
 
   protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
   protected isFormModalOpen = false;

@@ -73,6 +73,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
 
   protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isGenerating = false;

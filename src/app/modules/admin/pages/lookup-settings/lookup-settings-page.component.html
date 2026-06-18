@@ -51,28 +51,48 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let entry of entries; let i = index" [class.zebra]="i % 2 === 1">
-            <td>
-              <span class="admin-chip">{{ entry.category }}</span>
-            </td>
-            <td><code>{{ entry.slug }}</code></td>
-            <td>
-              <div class="admin-cell-stack">
-                <span><strong>EN:</strong> {{ entry.enLabel }}</span>
-                <span><strong>TH:</strong> {{ entry.thLabel }}</span>
-              </div>
-            </td>
-            <td class="text-right">
-              <div class="admin-inline-actions">
-                <button type="button" class="admin-icon-btn" (click)="openEditModal(entry)">
-                  <span class="material-symbols-outlined">edit</span>
-                </button>
-                <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(entry)">
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
+          <ng-container *ngIf="isLoading">
+            <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+              <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+              <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+              <td>
+                <div class="admin-cell-stack">
+                  <span class="admin-skeleton"></span>
+                  <span class="admin-skeleton admin-skeleton--sm"></span>
+                </div>
+              </td>
+              <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            </tr>
+          </ng-container>
+
+          <ng-container *ngIf="!isLoading">
+            <tr *ngFor="let entry of entries; let i = index" [class.zebra]="i % 2 === 1">
+              <td>
+                <span class="admin-chip">{{ entry.category }}</span>
+              </td>
+              <td><code>{{ entry.slug }}</code></td>
+              <td>
+                <div class="admin-cell-stack">
+                  <span><strong>EN:</strong> {{ entry.enLabel }}</span>
+                  <span><strong>TH:</strong> {{ entry.thLabel }}</span>
+                </div>
+              </td>
+              <td class="text-right">
+                <div class="admin-inline-actions">
+                  <button type="button" class="admin-icon-btn" (click)="openEditModal(entry)">
+                    <span class="material-symbols-outlined">edit</span>
+                  </button>
+                  <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(entry)">
+                    <span class="material-symbols-outlined">delete</span>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <tr *ngIf="entries.length === 0 && !errorMessage" class="admin-empty-row">
+              <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            </tr>
+          </ng-container>
         </tbody>
       </table>
     </div>

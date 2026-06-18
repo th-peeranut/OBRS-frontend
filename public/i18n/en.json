@@ -84,6 +84,7 @@
     },
     "COMMON": {
       "LOADING": "Loading data...",
+      "NO_DATA": "No data to display.",
       "LANGUAGE_LOADING": "Refreshing content for the selected language...",
       "ACTIONS": "Actions",
       "SHOWING": "Showing",

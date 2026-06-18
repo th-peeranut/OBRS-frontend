@@ -68,6 +68,7 @@ export class BookingsPageComponent implements OnInit {
   ];
 
   protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
   constructor(private readonly adminApiService: AdminApiService) {}

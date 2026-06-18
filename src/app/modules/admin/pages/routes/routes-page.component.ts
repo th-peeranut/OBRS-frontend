@@ -89,6 +89,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected currentPage = 1;
 
   protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected isDetailLoading = false;
   protected errorMessage = '';
 
