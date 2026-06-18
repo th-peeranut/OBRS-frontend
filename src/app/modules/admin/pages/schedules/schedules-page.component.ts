@@ -76,7 +76,6 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isGenerating = false;
-  protected isLanguageChanging = false;
   protected isEditMode = false;
   protected isScheduleItemEditMode = false;
   protected isFormModalOpen = false;
@@ -89,7 +88,14 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
   private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+
+  private rawScheduleSets: AdminScheduleSetDto[] = [];
+  private rawGeneratedSchedules: AdminScheduleDto[] = [];
+  private rawRoutes: AdminRouteDto[] = [];
+  private rawVehicles: AdminVehicleDto[] = [];
+  private rawVehicleTypes: AdminVehicleTypeDto[] = [];
+  private rawUsers: AdminUserDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -116,8 +122,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       driverId: [''],
     });
 
+    // Language change only swaps displayed translations; data is already loaded,
+    // so re-derive the view locally instead of re-fetching from the backend.
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
+      this.applyLocalization();
     });
   }
 
@@ -429,7 +437,6 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   private async loadScheduleSets(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
-    const currentLocale = this.getCurrentLocale();
 
     try {
       const [
@@ -451,27 +458,15 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
           firstValueFrom(this.adminApiService.getLookups()),
         ]);
 
-      const scheduleSets = scheduleSetsResponse?.data ?? [];
-      const generatedSchedules = generatedSchedulesResponse?.data ?? [];
-      const routes = routesResponse?.data ?? [];
-      const vehicles = vehiclesResponse?.data ?? [];
-      const vehicleTypes = vehicleTypesResponse?.data ?? [];
-      const users = usersResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
+      this.rawScheduleSets = scheduleSetsResponse?.data ?? [];
+      this.rawGeneratedSchedules = generatedSchedulesResponse?.data ?? [];
+      this.rawRoutes = routesResponse?.data ?? [];
+      this.rawVehicles = vehiclesResponse?.data ?? [];
+      this.rawVehicleTypes = vehicleTypesResponse?.data ?? [];
+      this.rawUsers = usersResponse?.data ?? [];
+      this.rawLookups = lookupsResponse?.data ?? [];
 
-      this.routeOptions = this.toRouteOptions(routes, currentLocale);
-      this.vehicleOptions = this.toVehicleOptions(vehicles, currentLocale);
-      this.driverOptions = this.toDriverOptions(users);
-      this.vehicleTypeOptions = this.toVehicleTypeOptions(vehicleTypes, currentLocale);
-      this.statusOptions = this.toScheduleStatusOptions(lookups);
-      this.schedules = [
-        ...scheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
-        ...generatedSchedules.map((schedule) =>
-          this.toGeneratedScheduleRow(schedule)
-        ),
-      ];
-      this.syncFiltersWithAvailableOptions();
-      this.applyFilters();
+      this.applyLocalization();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED');
       this.schedules = [];
@@ -481,23 +476,24 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
+    const currentLocale = this.getCurrentLocale();
 
-    try {
-      await Promise.all([
-        this.loadScheduleSets(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+    this.routeOptions = this.toRouteOptions(this.rawRoutes, currentLocale);
+    this.vehicleOptions = this.toVehicleOptions(this.rawVehicles, currentLocale);
+    this.driverOptions = this.toDriverOptions(this.rawUsers);
+    this.vehicleTypeOptions = this.toVehicleTypeOptions(this.rawVehicleTypes, currentLocale);
+    this.statusOptions = this.toScheduleStatusOptions(this.rawLookups);
+    this.schedules = [
+      ...this.rawScheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
+      ...this.rawGeneratedSchedules.map((schedule) =>
+        this.toGeneratedScheduleRow(schedule)
+      ),
+    ];
+    this.syncFiltersWithAvailableOptions();
+    this.applyFilters();
   }
 
   private toSchedulePayload(): CreateScheduleSetPayload {

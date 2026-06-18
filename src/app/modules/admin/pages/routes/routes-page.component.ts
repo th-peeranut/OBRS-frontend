@@ -90,7 +90,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected isLoading = false;
   protected isDetailLoading = false;
-  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isRouteFormModalOpen = false;
@@ -108,7 +107,9 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
   private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+
+  private rawRouteDtos: AdminRouteDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -153,8 +154,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       ],
     });
 
+    // Language change relabels in memory; only the selected route's structure
+    // (server-localized stop names) needs a refresh — not the whole route list.
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
+      void this.relocalizeForLanguageChange();
     });
   }
 
@@ -520,7 +523,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   private async loadRoutesAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
-    const currentLocale = this.getCurrentLocale();
 
     try {
       const [routesResponse, lookupsResponse] = await Promise.all([
@@ -528,17 +530,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         firstValueFrom(this.adminApiService.getLookups()),
       ]);
 
-      const routeDtos = routesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
+      this.rawRouteDtos = routesResponse?.data ?? [];
+      this.rawLookups = lookupsResponse?.data ?? [];
 
-      this.routes = routeDtos.map((route) => this.toRouteRow(route));
-      this.statusOptions = this.toRouteStatusOptions(
-        lookups,
-        routeDtos,
-        currentLocale
-      );
-      this.syncStatusFilterWithAvailableOptions();
-      this.applyRouteFilters();
+      this.applyRouteListLocalization();
 
       const nextRoute =
         this.routes.find((route) => route.slug === this.selectedRouteSlug) ??
@@ -566,23 +561,31 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
-
-    try {
-      await Promise.all([
-        this.loadRoutesAndOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
+  // Re-derive the locale-dependent route list + status options from cached DTOs.
+  private applyRouteListLocalization(): void {
+    const currentLocale = this.getCurrentLocale();
+    this.routes = this.rawRouteDtos.map((route) => this.toRouteRow(route));
+    this.statusOptions = this.toRouteStatusOptions(
+      this.rawLookups,
+      this.rawRouteDtos,
+      currentLocale
+    );
+    this.syncStatusFilterWithAvailableOptions();
+    this.applyRouteFilters();
   }
 
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+  // On language change: relabel the list instantly from memory, then refresh only
+  // the selected route's structure (stops/segments carry server-localized names) —
+  // far lighter than re-fetching the full route + lookup lists.
+  private async relocalizeForLanguageChange(): Promise<void> {
+    this.applyRouteListLocalization();
+
+    const selectedSlug =
+      this.routes.find((route) => route.slug === this.selectedRouteSlug)?.slug ?? '';
+
+    if (selectedSlug) {
+      await this.loadRouteStructureBySlug(selectedSlug);
+    }
   }
 
   private async selectRouteForLoad(route: RouteRow): Promise<void> {

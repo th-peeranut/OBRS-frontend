@@ -47,7 +47,6 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
   protected lastUpdatedAt = '-';
   protected isLoading = false;
-  protected isLanguageChanging = false;
   protected errorMessage = '';
   protected selectedStatusFilter = '';
 
@@ -60,7 +59,9 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
   protected readonly roleForm: FormGroup;
   private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+
+  private rawRoles: AdminRoleDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -77,8 +78,10 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       status: ['', [Validators.required]],
     });
 
+    // Switching language only changes which translation we display; the data is
+    // already in memory, so re-derive the view locally instead of re-fetching.
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
+      this.applyLocalization();
     });
   }
 
@@ -259,18 +262,13 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
         throw rolesResult.reason;
       }
 
-      const roles = this.extractResponseArray<AdminRoleDto>(rolesResult.value);
-      const lookups =
+      this.rawRoles = this.extractResponseArray<AdminRoleDto>(rolesResult.value);
+      this.rawLookups =
         lookupsResult.status === 'fulfilled'
           ? this.extractResponseArray<AdminLookupDto>(lookupsResult.value)
           : [];
 
-      this.statusOptions = this.toStatusOptions(lookups, roles);
-
-      this.roles = this.sortRolesByLatestUpdated(roles).map((role) => this.toRoleRow(role));
-      this.syncStatusFilterWithAvailableOptions();
-      this.applyRoleFilter();
-      this.lastUpdatedAt = this.toLatestTimestamp(roles);
+      this.applyLocalization();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
       this.filteredRoles = [];
@@ -279,23 +277,14 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
-
-    try {
-      await Promise.all([
-        this.loadRolesAndStatusOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
+    this.statusOptions = this.toStatusOptions(this.rawLookups, this.rawRoles);
+    this.roles = this.sortRolesByLatestUpdated(this.rawRoles).map((role) => this.toRoleRow(role));
+    this.syncStatusFilterWithAvailableOptions();
+    this.applyRoleFilter();
+    this.lastUpdatedAt = this.toLatestTimestamp(this.rawRoles);
   }
 
   private toRolePayload(): CreateRolePayload {

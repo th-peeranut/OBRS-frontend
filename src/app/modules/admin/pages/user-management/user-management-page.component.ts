@@ -12,6 +12,7 @@ import {
 } from 'rxjs';
 import {
   AdminApiService,
+  AdminLookupDto,
   AdminRoleDto,
   AdminStatusDto,
   AdminTranslationCollection,
@@ -63,7 +64,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
 
   protected isLoading = false;
-  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isFormModalOpen = false;
@@ -81,7 +81,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
   private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+
+  private rawUsers: AdminUserDto[] = [];
+  private rawRoles: AdminRoleDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
   private readonly usernameValidators = [
     Validators.required,
     Validators.minLength(3),
@@ -122,8 +125,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       isPhoneNumberVerify: [true, [Validators.required]],
     });
 
+    // Language change only swaps displayed translations; data is already loaded,
+    // so re-derive the view locally instead of re-fetching from the backend.
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
+      this.applyLocalization();
     });
   }
 
@@ -356,7 +361,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private async loadUsersAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
-    const currentLocale = this.getCurrentLocale();
 
     try {
       const [usersResponse, rolesResponse, lookupsResponse] = await Promise.all([
@@ -365,32 +369,11 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
         firstValueFrom(this.adminApiService.getLookups()),
       ]);
 
-      const users = usersResponse?.data ?? [];
-      const roles = rolesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
+      this.rawUsers = usersResponse?.data ?? [];
+      this.rawRoles = rolesResponse?.data ?? [];
+      this.rawLookups = lookupsResponse?.data ?? [];
 
-      this.roleOptions = roles.map((role) => ({
-        slug: role.slug,
-        label:
-          role.name ??
-          this.getTranslationLabel(role.translations, currentLocale) ??
-          this.getTranslationLabel(role.translations, 'en') ??
-          role.slug,
-      }));
-
-      this.statusOptions = lookups
-        .filter((lookup) => lookup.category === 'user_status')
-        .map((lookup) => ({
-          code: lookup.slug,
-          label:
-            this.getTranslationLabel(lookup.translations, currentLocale) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            lookup.slug,
-        }));
-
-      this.users = users.map((user) => this.toUserRow(user));
-      this.syncFiltersWithAvailableOptions();
-      this.applyFilters();
+      this.applyLocalization();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
       this.filteredUsers = [];
@@ -399,23 +382,33 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
+    const currentLocale = this.getCurrentLocale();
 
-    try {
-      await Promise.all([
-        this.loadUsersAndOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
+    this.roleOptions = this.rawRoles.map((role) => ({
+      slug: role.slug,
+      label:
+        role.name ??
+        this.getTranslationLabel(role.translations, currentLocale) ??
+        this.getTranslationLabel(role.translations, 'en') ??
+        role.slug,
+    }));
 
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+    this.statusOptions = this.rawLookups
+      .filter((lookup) => lookup.category === 'user_status')
+      .map((lookup) => ({
+        code: lookup.slug,
+        label:
+          this.getTranslationLabel(lookup.translations, currentLocale) ??
+          this.getTranslationLabel(lookup.translations, 'en') ??
+          lookup.slug,
+      }));
+
+    this.users = this.rawUsers.map((user) => this.toUserRow(user));
+    this.syncFiltersWithAvailableOptions();
+    this.applyFilters();
   }
 
   private toCreateUserPayload(): CreateUserPayload {

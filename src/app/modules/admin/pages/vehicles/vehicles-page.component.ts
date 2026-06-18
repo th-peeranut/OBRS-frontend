@@ -3,9 +3,11 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
+  AdminLookupDto,
   AdminStatusDto,
   AdminTranslationCollection,
   AdminVehicleDto,
+  AdminVehicleTypeDto,
   CreateVehiclePayload,
   getAdminLookupLabel,
   getAdminTranslationLabel,
@@ -43,7 +45,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
 
   protected isLoading = false;
-  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isFormModalOpen = false;
@@ -55,7 +56,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
   protected readonly vehicleForm: FormGroup;
   private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+
+  private rawVehicles: AdminVehicleDto[] = [];
+  private rawVehicleTypes: AdminVehicleTypeDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -70,8 +74,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
       status: ['', [Validators.required]],
     });
 
+    // Language change only swaps displayed translations; data is already loaded,
+    // so re-derive the view locally instead of re-fetching from the backend.
     this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
+      this.applyLocalization();
     });
   }
 
@@ -238,7 +244,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   private async loadVehiclesAndOptions(): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
-    const currentLocale = this.getCurrentLocale();
 
     try {
       const [vehiclesResponse, vehicleTypesResponse, lookupsResponse] = await Promise.all([
@@ -247,31 +252,11 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
         firstValueFrom(this.adminApiService.getLookups()),
       ]);
 
-      const vehicles = vehiclesResponse?.data ?? [];
-      const vehicleTypes = vehicleTypesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
+      this.rawVehicles = vehiclesResponse?.data ?? [];
+      this.rawVehicleTypes = vehicleTypesResponse?.data ?? [];
+      this.rawLookups = lookupsResponse?.data ?? [];
 
-      this.vehicleTypeOptions = vehicleTypes.map((type) => ({
-        code: type.slug,
-        label:
-          this.getTranslationLabel(type.translations, currentLocale) ??
-          this.getTranslationLabel(type.translations, 'en') ??
-          type.slug,
-      }));
-
-      this.statusOptions = lookups
-        .filter((lookup) => lookup.category === 'vehicle_status')
-        .map((lookup) => ({
-          code: lookup.slug,
-          label:
-            this.getTranslationLabel(lookup.translations, currentLocale) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            lookup.slug,
-        }));
-
-      this.vehicles = vehicles.map((vehicle) => this.toVehicleRow(vehicle));
-      this.syncStatusFilterWithAvailableOptions();
-      this.applyVehicleFilter();
+      this.applyLocalization();
     } catch {
       this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
       this.filteredVehicles = [];
@@ -280,23 +265,32 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
+    const currentLocale = this.getCurrentLocale();
 
-    try {
-      await Promise.all([
-        this.loadVehiclesAndOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
+    this.vehicleTypeOptions = this.rawVehicleTypes.map((type) => ({
+      code: type.slug,
+      label:
+        this.getTranslationLabel(type.translations, currentLocale) ??
+        this.getTranslationLabel(type.translations, 'en') ??
+        type.slug,
+    }));
 
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+    this.statusOptions = this.rawLookups
+      .filter((lookup) => lookup.category === 'vehicle_status')
+      .map((lookup) => ({
+        code: lookup.slug,
+        label:
+          this.getTranslationLabel(lookup.translations, currentLocale) ??
+          this.getTranslationLabel(lookup.translations, 'en') ??
+          lookup.slug,
+      }));
+
+    this.vehicles = this.rawVehicles.map((vehicle) => this.toVehicleRow(vehicle));
+    this.syncStatusFilterWithAvailableOptions();
+    this.applyVehicleFilter();
   }
 
   private toVehiclePayload(): CreateVehiclePayload {
