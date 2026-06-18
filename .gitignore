@@ -40,3 +40,7 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Playwright auth state — contains JWT, never commit
+e2e/fixtures/admin-auth.json
+playwright-report/

@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+  globalSetup: './e2e/global-setup.ts',
   testDir: './e2e',
+  timeout: 90_000,
   retries: 0,
   reporter: 'html',
   use: {
@@ -15,7 +17,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm start',
+    command: 'ng serve --configuration sit',
     url: 'http://localhost:4200',
     reuseExistingServer: true,
     timeout: 120 * 1000,

@@ -62,9 +62,9 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected vehicleTypeOptions: Option[] = [];
   protected statusOptions: Option[] = [];
   protected readonly frequencyOptions: Option[] = [
-    { code: 'Daily', label: 'Daily' },
-    { code: 'Weekly', label: 'Weekly' },
-    { code: 'Monthly', label: 'Monthly' },
+    { code: 'daily', label: 'Daily' },
+    { code: 'weekly', label: 'Weekly' },
+    { code: 'monthly', label: 'Monthly' },
   ];
 
   protected selectedRouteFilter = '';
