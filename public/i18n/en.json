@@ -468,7 +468,8 @@
       "SIGNUP": "Register",
       "SIGNOUT": "Sign out",
       "SIGNOUT_SUCCESS": "Successfully signed out",
-      "SIGNOUT_FAIL": "Failed to sign out"
+      "SIGNOUT_FAIL": "Failed to sign out",
+      "ADMIN_DASHBOARD": "Admin Dashboard"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",

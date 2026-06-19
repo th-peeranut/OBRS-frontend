@@ -31,6 +31,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   @ViewChild('profileDropdown', { static: true }) profileDropdown!: ElementRef;
 
   isLogin: boolean = false;
+  isAdmin: boolean = false;
   userName: string | null = '';
 
   languageOnChange$: Subscription;
@@ -55,6 +56,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authSubscription$ = this.authService.authStatus$.subscribe(
       (status) => {
         this.isLogin = status;
+        this.isAdmin = status && this.authService.hasAnyRole(['admin']);
         this.userName = this.authService.getUsername();
       }
     );

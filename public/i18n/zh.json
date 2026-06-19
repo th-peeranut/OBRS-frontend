@@ -468,7 +468,8 @@
       "SIGNUP": "注册",
       "SIGNOUT": "退出登录",
       "SIGNOUT_SUCCESS": "退出登录成功",
-      "SIGNOUT_FAIL": "退出登录失败"
+      "SIGNOUT_FAIL": "退出登录失败",
+      "ADMIN_DASHBOARD": "管理后台"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",
