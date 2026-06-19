@@ -149,6 +149,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
+  trackByIndex(index: number): number {
+    return index;
+  }
+
   private mapTicketFields(
     scheduleBooking: ScheduleBooking | null,
     booking: BookingState | null,

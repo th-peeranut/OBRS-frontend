@@ -287,6 +287,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     })) as PassengerInfo[];
   }
 
+  trackByIndex(index: number): number {
+    return index;
+  }
+
   private emitValidity(): void {
     const hasPassenger = this.passengerData?.length > 0;
     const isValid = (this.passengerForm?.valid ?? false) && hasPassenger;

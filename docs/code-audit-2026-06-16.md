@@ -79,3 +79,42 @@ These are real but either broader-than-R2 or touch sensitive flows. Recorded as 
 6. Replace the hardcoded `'succ'`/`'error'` alert strings with i18n keys (all three locales).
 
 *Items 2–3 and 6 require approval / human review before implementation per CLAUDE.md §9 and §13.*
+
+---
+
+## 5. Update — 2026-06-19: backlog items applied on `dev`
+
+A subset of the Section 3/4 backlog was implemented on `dev` by salvaging the non-conflicting,
+low-risk files from the sibling audit branch `claude/youthful-hypatia-aazq5y` (commit `adab489`,
+`audit-2026-06-15`). The conflicting admin-page changes from that branch were **not** taken — `dev`'s
+admin overhaul already superseded them. Verified against a clean `ng build --configuration production`
+(exit 0).
+
+**Closed:**
+- **Commented-out debug logs removed** (Section 3 Low) — `schedule-filter.effect.ts`,
+  `schedule-list.effect.ts`, `schedule-booking.effect.ts`.
+- **`schedule-booking-list` subscription leak fixed** (Section 3 Perf / Step 5) — pre-unsubscribe +
+  `.pipe(take(1))` on the `scheduleList` subscription.
+- **Document-click listener leaks fixed** — `renderer.listen('document','click', …)` was registered on
+  every dropdown open and never removed. Now stores the unlisten fn, calls it before re-listening, on
+  close, and in `ngOnDestroy` (added `OnDestroy` where missing): `login`, `login-mobile`,
+  `forget-password`, `register`, `navbar` (×2), and shared `dropdown-obrs`, `dropdown-group-obrs`,
+  `dropdown-obrs-passenger`.
+- **`.toPromise()` → `firstValueFrom`** in `otp.service.ts` (2 occurrences). Note: the Section 3 item
+  flagged only `auth.service.ts` (7 occurrences) — those remain **pending** (R0, auth flow).
+- **Typo fix** — `creatForm()` → `createForm()` in `login`, `login-mobile`, `forget-password`.
+
+**Partially done:**
+- **`trackBy` on `*ngFor`** (Section 3 Perf / Step 4) — added to list/table views: `admin-dropdown`,
+  `e-ticket`, `passenger-info-form`, `payment-info`, `schedule-booking-list`, `station-home`. The
+  shared dropdown **option** lists (`dropdown-obrs`, `dropdown-group-obrs`) still lack `trackBy` — only
+  their listener leak was fixed. De-templating the dropdown helper functions remains pending.
+
+**Intentionally excluded:**
+- `passenger-info.component.ts` from `adab489` was **not** taken. Its only change was cosmetic
+  type-tightening (`any` → named types) that imported `BookingCreationResponse`, a type that does not
+  exist in `dev`'s `booking.interface.ts` — it would have broken the build with no runtime benefit.
+
+**Still pending** (unchanged from Section 4): payment/booking `console.error(error)` review (1),
+dependency-security upgrade (2), `auth.service.ts` `.toPromise()`/`any` refactor (3), `AppComponent`
+subscription cleanup (5, still no `ngOnDestroy`), and the hardcoded `'succ'`/`'error'` i18n strings (6).
