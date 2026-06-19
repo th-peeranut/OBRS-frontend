@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminLookupDto,
@@ -12,6 +12,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { LookupsStore } from './lookups.store';
 
 interface LookupEntry {
   id: number;
@@ -28,11 +29,11 @@ interface LookupEntry {
   templateUrl: './lookup-settings-page.component.html',
   styleUrl: './lookup-settings-page.component.scss',
 })
-export class LookupSettingsPageComponent implements OnInit {
+export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   protected categories: Array<{ name: string; count: number }> = [];
   protected entries: LookupEntry[] = [];
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -45,11 +46,14 @@ export class LookupSettingsPageComponent implements OnInit {
 
   protected readonly lookupForm: FormGroup;
 
+  private readonly subscriptions = new Subscription();
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: LookupsStore
   ) {
     this.lookupForm = this.formBuilder.group({
       category: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
@@ -61,8 +65,37 @@ export class LookupSettingsPageComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadLookups();
+  ngOnInit(): void {
+    // Render the cached lookups instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((lookups) => {
+        if (lookups) {
+          this.entries = lookups.map((lookup) => this.toLookupEntry(lookup));
+          this.categories = this.toCategorySummary(lookups);
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.errorMessage =
+          failed && !this.store.hasValue
+            ? this.translate.instant('ADMIN.MESSAGES.LOAD_LOOKUPS_FAILED')
+            : '';
+      })
+    );
+    void this.store.refresh();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   protected get totalEntries(): number {
@@ -154,7 +187,7 @@ export class LookupSettingsPageComponent implements OnInit {
 
       this.isSubmitting = false;
       this.closeFormModal();
-      await this.loadLookups();
+      await this.store.refresh();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
@@ -179,28 +212,11 @@ export class LookupSettingsPageComponent implements OnInit {
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.isDeleting = false;
       this.closeDeleteModal();
-      await this.loadLookups();
+      await this.store.refresh();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
-    }
-  }
-
-  private async loadLookups(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const response = await firstValueFrom(this.adminApiService.getLookups());
-      const lookups = response?.data ?? [];
-
-      this.entries = lookups.map((lookup) => this.toLookupEntry(lookup));
-      this.categories = this.toCategorySummary(lookups);
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_LOOKUPS_FAILED');
-    } finally {
-      this.isLoading = false;
     }
   }
 

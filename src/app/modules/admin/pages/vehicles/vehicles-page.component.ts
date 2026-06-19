@@ -15,6 +15,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { VehiclesStore } from './vehicles.store';
 
 interface VehicleRow {
   id: number;
@@ -44,7 +45,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected statusOptions: Option[] = [];
   protected selectedStatusFilter = '';
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -56,7 +57,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected selectedVehicle: VehicleRow | null = null;
 
   protected readonly vehicleForm: FormGroup;
-  private readonly languageSubscription: Subscription;
+  private readonly subscriptions = new Subscription();
 
   private rawVehicles: AdminVehicleDto[] = [];
   private rawVehicleTypes: AdminVehicleTypeDto[] = [];
@@ -66,7 +67,8 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: VehiclesStore
   ) {
     this.vehicleForm = this.formBuilder.group({
       vehicleType: ['', [Validators.required]],
@@ -77,17 +79,48 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
     // Language change only swaps displayed translations; data is already loaded,
     // so re-derive the view locally instead of re-fetching from the backend.
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      this.applyLocalization();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadVehiclesAndOptions();
+  ngOnInit(): void {
+    // Render the cached list instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawVehicles = data.vehicles;
+          this.rawVehicleTypes = data.vehicleTypes;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
+          this.filteredVehicles = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   protected get totalVehicles(): number {
@@ -214,7 +247,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadVehiclesAndOptions();
+      await this.store.refresh();
     } catch {
       this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -233,36 +266,12 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
       await firstValueFrom(this.adminApiService.deleteVehicle(this.selectedVehicle.id));
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadVehiclesAndOptions();
+      await this.store.refresh();
     } catch {
       this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
-    }
-  }
-
-  private async loadVehiclesAndOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [vehiclesResponse, vehicleTypesResponse, lookupsResponse] = await Promise.all([
-        firstValueFrom(this.adminApiService.getVehicles()),
-        firstValueFrom(this.adminApiService.getVehicleTypes()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      this.rawVehicles = vehiclesResponse?.data ?? [];
-      this.rawVehicleTypes = vehicleTypesResponse?.data ?? [];
-      this.rawLookups = lookupsResponse?.data ?? [];
-
-      this.applyLocalization();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
-      this.filteredVehicles = [];
-    } finally {
-      this.isLoading = false;
     }
   }
 

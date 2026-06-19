@@ -15,6 +15,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { RolesStore } from './roles.store';
 
 interface RoleRow {
   id: number;
@@ -46,7 +47,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected statusOptions: StatusOption[] = [];
 
   protected lastUpdatedAt = '-';
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected errorMessage = '';
   protected selectedStatusFilter = '';
 
@@ -61,7 +62,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   // Placeholder rows rendered while the (occasionally cold-starting) backend
   // responds, so the table shows its shape instead of a blank body.
   protected readonly skeletonRows = Array.from({ length: 5 });
-  private readonly languageSubscription: Subscription;
+  private readonly subscriptions = new Subscription();
 
   private rawRoles: AdminRoleDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
@@ -70,7 +71,8 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: RolesStore
   ) {
     this.roleForm = this.formBuilder.group({
       slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
@@ -83,17 +85,47 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
     // Switching language only changes which translation we display; the data is
     // already in memory, so re-derive the view locally instead of re-fetching.
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      this.applyLocalization();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadRolesAndStatusOptions();
+  ngOnInit(): void {
+    // Render the cached roles instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawRoles = data.roles;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
+          this.filteredRoles = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   get activeRoles(): number {
@@ -223,7 +255,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadRolesAndStatusOptions();
+      await this.store.refresh();
     } catch {
       this.closeFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -242,41 +274,12 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       await this.deleteRole(this.selectedRole);
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadRolesAndStatusOptions();
+      await this.store.refresh();
     } catch {
       this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
-    }
-  }
-
-  private async loadRolesAndStatusOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [rolesResult, lookupsResult] = await Promise.allSettled([
-        firstValueFrom(this.adminApiService.getRoles()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      if (rolesResult.status === 'rejected') {
-        throw rolesResult.reason;
-      }
-
-      this.rawRoles = this.extractResponseArray<AdminRoleDto>(rolesResult.value);
-      this.rawLookups =
-        lookupsResult.status === 'fulfilled'
-          ? this.extractResponseArray<AdminLookupDto>(lookupsResult.value)
-          : [];
-
-      this.applyLocalization();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
-      this.filteredRoles = [];
-    } finally {
-      this.isLoading = false;
     }
   }
 

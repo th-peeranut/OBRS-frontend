@@ -21,6 +21,7 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { SchedulesStore } from './schedules.store';
 
 interface ScheduleRow {
   kind: 'set' | 'schedule';
@@ -77,7 +78,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected selectedDateFilter: Date | null = null;
   protected searchKeyword = '';
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected isSubmitting = false;
   protected isDeleting = false;
@@ -93,7 +94,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
-  private readonly languageSubscription: Subscription;
+  private readonly subscriptions = new Subscription();
 
   private rawScheduleSets: AdminScheduleSetDto[] = [];
   private rawGeneratedSchedules: AdminScheduleDto[] = [];
@@ -107,7 +108,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: SchedulesStore
   ) {
     this.scheduleForm = this.formBuilder.group({
       startDate: ['', [Validators.required]],
@@ -130,17 +132,53 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
     // Language change only swaps displayed translations; data is already loaded,
     // so re-derive the view locally instead of re-fetching from the backend.
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      this.applyLocalization();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadScheduleSets();
+  ngOnInit(): void {
+    // Render the cached schedules instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawScheduleSets = data.scheduleSets;
+          this.rawGeneratedSchedules = data.generatedSchedules;
+          this.rawRoutes = data.routes;
+          this.rawVehicles = data.vehicles;
+          this.rawVehicleTypes = data.vehicleTypes;
+          this.rawUsers = data.users;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED');
+          this.schedules = [];
+          this.filteredSchedules = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   // Unfiltered totals power the tab badges so they stay stable while filtering a tab.
@@ -392,7 +430,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
 
       this.closeFormModal(true);
-      await this.loadScheduleSets();
+      await this.store.refresh();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
@@ -421,7 +459,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
 
       this.closeScheduleFormModal(true);
-      await this.loadScheduleSets();
+      await this.store.refresh();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
     } finally {
@@ -443,7 +481,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadScheduleSets();
+      await this.store.refresh();
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
@@ -457,54 +495,12 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       await firstValueFrom(this.adminApiService.generateSchedulesFromSet(schedule.id));
       await this.alertService.success(this.translate.instant('ADMIN.SCHEDULES.GENERATE_SUCCESS'));
       // Reload so the newly generated trips are present, then drill into them.
-      await this.loadScheduleSets();
+      await this.store.refresh();
       this.viewSchedulesForSet(schedule);
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED'));
     } finally {
       this.isGenerating = false;
-    }
-  }
-
-  private async loadScheduleSets(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [
-        scheduleSetsResponse,
-        generatedSchedulesResponse,
-        routesResponse,
-        vehiclesResponse,
-        vehicleTypesResponse,
-        usersResponse,
-        lookupsResponse,
-      ] =
-        await Promise.all([
-          firstValueFrom(this.adminApiService.getScheduleSets()),
-          firstValueFrom(this.adminApiService.getSchedules()),
-          firstValueFrom(this.adminApiService.getRoutes()),
-          firstValueFrom(this.adminApiService.getVehicles()),
-          firstValueFrom(this.adminApiService.getVehicleTypes()),
-          firstValueFrom(this.adminApiService.getUsers()),
-          firstValueFrom(this.adminApiService.getLookups()),
-        ]);
-
-      this.rawScheduleSets = scheduleSetsResponse?.data ?? [];
-      this.rawGeneratedSchedules = generatedSchedulesResponse?.data ?? [];
-      this.rawRoutes = routesResponse?.data ?? [];
-      this.rawVehicles = vehiclesResponse?.data ?? [];
-      this.rawVehicleTypes = vehicleTypesResponse?.data ?? [];
-      this.rawUsers = usersResponse?.data ?? [];
-      this.rawLookups = lookupsResponse?.data ?? [];
-
-      this.applyLocalization();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED');
-      this.schedules = [];
-      this.filteredSchedules = [];
-    } finally {
-      this.isLoading = false;
     }
   }
 

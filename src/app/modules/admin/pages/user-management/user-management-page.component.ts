@@ -24,6 +24,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { UsersStore } from './users.store';
 
 interface UserRow {
   id: number;
@@ -63,7 +64,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
   protected searchKeyword = '';
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -81,7 +82,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private usernameCheckSubscription?: Subscription;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
-  private readonly languageSubscription: Subscription;
+  private readonly subscriptions = new Subscription();
 
   private rawUsers: AdminUserDto[] = [];
   private rawRoles: AdminRoleDto[] = [];
@@ -102,7 +103,8 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: UsersStore
   ) {
     this.userForm = this.formBuilder.group({
       title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -128,21 +130,52 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
     // Language change only swaps displayed translations; data is already loaded,
     // so re-derive the view locally instead of re-fetching from the backend.
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      this.applyLocalization();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     this.setupDuplicateCheckSubscriptions();
-    await this.loadUsersAndOptions();
+    // Render the cached users instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawUsers = data.users;
+          this.rawRoles = data.roles;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
+          this.filteredUsers = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
     this.usernameCheckSubscription?.unsubscribe();
     this.emailCheckSubscription?.unsubscribe();
     this.phoneNumberCheckSubscription?.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   protected get activeUsers(): number {
@@ -330,7 +363,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadUsersAndOptions();
+      await this.store.refresh();
     } catch {
       this.isSubmitting = false;
       this.closeFormModal(true);
@@ -350,36 +383,12 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadUsersAndOptions();
+      await this.store.refresh();
     } catch {
       this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
     } finally {
       this.isDeleting = false;
-    }
-  }
-
-  private async loadUsersAndOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [usersResponse, rolesResponse, lookupsResponse] = await Promise.all([
-        firstValueFrom(this.adminApiService.getUsers()),
-        firstValueFrom(this.adminApiService.getRoles()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      this.rawUsers = usersResponse?.data ?? [];
-      this.rawRoles = rolesResponse?.data ?? [];
-      this.rawLookups = lookupsResponse?.data ?? [];
-
-      this.applyLocalization();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
-      this.filteredUsers = [];
-    } finally {
-      this.isLoading = false;
     }
   }
 

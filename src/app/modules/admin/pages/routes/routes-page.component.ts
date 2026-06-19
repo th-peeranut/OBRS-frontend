@@ -21,6 +21,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateService } from '@ngx-translate/core';
+import { RoutesStore } from './routes.store';
 
 interface RouteRow {
   id: number;
@@ -88,7 +89,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected readonly pageSize = 5;
   protected currentPage = 1;
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected isDetailLoading = false;
   protected errorMessage = '';
@@ -107,7 +108,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
-  private readonly languageSubscription: Subscription;
+  private readonly subscriptions = new Subscription();
 
   private rawRouteDtos: AdminRouteDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
@@ -116,7 +117,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: RoutesStore
   ) {
     this.routeForm = this.formBuilder.group({
       slug: [
@@ -157,17 +159,82 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
     // Language change relabels in memory; only the selected route's structure
     // (server-localized stop names) needs a refresh — not the whole route list.
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.relocalizeForLanguageChange();
-    });
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        void this.relocalizeForLanguageChange();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadRoutesAndOptions();
+  ngOnInit(): void {
+    // Render the cached route list instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.applyRouteListFromCache(data.routes, data.lookups);
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROUTES_FAILED');
+          this.routes = [];
+          this.filteredRoutes = [];
+          this.selectedRoute = null;
+          this.selectedRouteSlug = '';
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
+  }
+
+  // Derive the localized list from cached DTOs, then keep/select a route. The
+  // selected route's structure is only (re)loaded when the selection actually
+  // changes, so the cache-replay + background-revalidate emissions don't
+  // reload the detail twice on re-entry.
+  private applyRouteListFromCache(
+    routes: AdminRouteDto[],
+    lookups: AdminLookupDto[]
+  ): void {
+    this.rawRouteDtos = routes;
+    this.rawLookups = lookups;
+    this.applyRouteListLocalization();
+
+    const nextRoute =
+      this.routes.find((route) => route.slug === this.selectedRouteSlug) ??
+      this.filteredRoutes[0] ??
+      this.routes[0] ??
+      null;
+
+    if (!nextRoute) {
+      this.selectedRoute = null;
+      this.selectedRouteSlug = '';
+      this.stops = [];
+      this.allSegments = [];
+      this.vehicleTypeOptions = [];
+      return;
+    }
+
+    if (this.selectedRouteSlug !== nextRoute.slug || !this.selectedRoute) {
+      void this.selectRouteForLoad(nextRoute);
+    } else {
+      this.selectedRoute = nextRoute;
+    }
   }
 
   protected get totalRoutes(): number {
@@ -414,7 +481,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.selectedRouteSlug = payload.slug;
       }
 
-      await this.loadRoutesAndOptions();
+      await this.store.refresh();
     } catch {
       this.closeRouteFormModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
@@ -442,7 +509,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.allSegments = [];
       }
 
-      await this.loadRoutesAndOptions();
+      await this.store.refresh();
     } catch {
       this.closeDeleteModal(true);
       await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
@@ -519,47 +586,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected formatFare(fare: number): string {
     return fare.toFixed(2);
-  }
-
-  private async loadRoutesAndOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [routesResponse, lookupsResponse] = await Promise.all([
-        firstValueFrom(this.adminApiService.getRoutes()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      this.rawRouteDtos = routesResponse?.data ?? [];
-      this.rawLookups = lookupsResponse?.data ?? [];
-
-      this.applyRouteListLocalization();
-
-      const nextRoute =
-        this.routes.find((route) => route.slug === this.selectedRouteSlug) ??
-        this.filteredRoutes[0] ??
-        this.routes[0] ??
-        null;
-
-      if (nextRoute) {
-        await this.selectRouteForLoad(nextRoute);
-      } else {
-        this.selectedRoute = null;
-        this.selectedRouteSlug = '';
-        this.stops = [];
-        this.allSegments = [];
-        this.vehicleTypeOptions = [];
-      }
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROUTES_FAILED');
-      this.routes = [];
-      this.filteredRoutes = [];
-      this.selectedRoute = null;
-      this.selectedRouteSlug = '';
-    } finally {
-      this.isLoading = false;
-    }
   }
 
   // Re-derive the locale-dependent route list + status options from cached DTOs.

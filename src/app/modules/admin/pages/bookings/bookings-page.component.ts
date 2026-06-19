@@ -1,42 +1,17 @@
-import { Component, OnInit } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
-import {
-  AdminApiService,
-  AdminBookingDto,
-  AdminPaymentByBookingIdDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
-  getAdminLookupCode,
-  getAdminLookupLabel,
-  getAdminTranslationLabel,
-  parseAdminStatus,
-} from '../../../../services/admin/admin-api.service';
-
-interface BookingRow {
-  bookingId: string;
-  customer: string;
-  route: string;
-  bookingDate: string;
-  totalFare: string;
-  bookingStatus: string;
-  paymentStatus: string;
-}
-
-interface StatusOption {
-  code: string;
-  label: string;
-}
+import { BookingRow, BookingsStore, StatusOption } from './bookings.store';
 
 @Component({
   selector: 'app-bookings-page',
   templateUrl: './bookings-page.component.html',
   styleUrl: './bookings-page.component.scss',
 })
-export class BookingsPageComponent implements OnInit {
+export class BookingsPageComponent implements OnInit, OnDestroy {
   protected allBookings: BookingRow[] = [];
 
-  protected isLoading = false;
+  protected isRefreshing = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -47,13 +22,46 @@ export class BookingsPageComponent implements OnInit {
   protected readonly pageSize = 10;
   protected currentPage = 1;
 
+  private readonly subscriptions = new Subscription();
+
   constructor(
-    private readonly adminApiService: AdminApiService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: BookingsStore
   ) {}
 
-  async ngOnInit(): Promise<void> {
-    await this.loadBookings();
+  ngOnInit(): void {
+    // Render the cached bookings instantly on re-entry (skipping the payment
+    // N+1 burst), then revalidate in the background.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.allBookings = data.rows;
+          this.statusOptions = data.statusOptions;
+          this.currentPage = 1;
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.errorMessage =
+          failed && !this.store.hasValue
+            ? this.translate.instant('ADMIN.BOOKINGS.LOAD_FAILED')
+            : '';
+      })
+    );
+    void this.store.refresh();
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   protected get filteredBookings(): BookingRow[] {
@@ -191,171 +199,5 @@ export class BookingsPageComponent implements OnInit {
   private toCsvCell(value: string): string {
     const safe = (value ?? '').replace(/"/g, '""');
     return `"${safe}"`;
-  }
-
-  private async loadBookings(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const response = await firstValueFrom(this.adminApiService.getBookings());
-      const bookings = response?.data?.content ?? [];
-
-      const paymentStatusMap = await this.loadPaymentStatusMap(bookings);
-      this.allBookings = bookings.map((booking) =>
-        this.toBookingRow(booking, paymentStatusMap.get(booking.id))
-      );
-      this.statusOptions = this.buildStatusOptions(this.allBookings);
-      this.currentPage = 1;
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.BOOKINGS.LOAD_FAILED');
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private buildStatusOptions(bookings: BookingRow[]): StatusOption[] {
-    const codes = Array.from(
-      new Set(bookings.map((booking) => booking.bookingStatus).filter((code) => code.length > 0))
-    ).sort();
-    return codes.map((code) => ({ code, label: code }));
-  }
-
-  private async loadPaymentStatusMap(
-    bookings: AdminBookingDto[]
-  ): Promise<Map<number, string>> {
-    const statusMap = new Map<number, string>();
-
-    const paymentRequests = bookings
-      .filter((booking) => Number.isFinite(booking.id))
-      .map((booking) => this.loadPaymentStatusByBookingId(booking.id));
-
-    const paymentResults = await Promise.all(paymentRequests);
-    for (const result of paymentResults) {
-      if (result.status) {
-        statusMap.set(result.bookingId, result.status);
-      }
-    }
-
-    return statusMap;
-  }
-
-  private async loadPaymentStatusByBookingId(
-    bookingId: number
-  ): Promise<{ bookingId: number; status: string | null }> {
-    try {
-      const response = await firstValueFrom(this.adminApiService.getBookingPayments(bookingId));
-      const payment = response?.data;
-      const status = this.extractPaymentStatus(payment);
-      return { bookingId, status };
-    } catch {
-      return { bookingId, status: null };
-    }
-  }
-
-  private extractPaymentStatus(
-    payment: AdminPaymentByBookingIdDto | null | undefined
-  ): string | null {
-    return (
-      payment?.paymentSummary?.status ??
-      payment?.paymentSummary?.overallPaymentStatus ??
-      null
-    );
-  }
-
-  private toBookingRow(
-    booking: AdminBookingDto,
-    paymentStatus: string | null | undefined
-  ): BookingRow {
-    const firstSchedule = booking.journeys?.[0] ?? booking.bookingSchedules?.[0];
-    const fromStop = (
-      getAdminLookupLabel(firstSchedule?.fromStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.fromStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.fromStop)
-    ) ||
-      '-';
-    const toStop = (
-      getAdminLookupLabel(firstSchedule?.toStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.toStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.toStop)
-    ) ||
-      '-';
-    const route = `${fromStop} -> ${toStop}`;
-
-    const totalAmount = Number(
-      booking.totalAmount ??
-      booking.pricing?.netAmount ??
-      booking.payment?.totalAmount
-    );
-    const currency = booking.pricing?.currency ?? booking.payment?.currency ?? 'THB';
-    const totalFare = Number.isFinite(totalAmount)
-      ? new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 2,
-        }).format(totalAmount)
-      : String(booking.totalAmount ?? booking.pricing?.netAmount ?? '0.00');
-
-    const bookingStatus = this.parseStatus(booking.status);
-
-    return {
-      bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
-      customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
-      route,
-      bookingDate: this.formatDate(booking.createdAt),
-      totalFare,
-      bookingStatus: bookingStatus.name,
-      paymentStatus: (
-        paymentStatus ??
-        booking.payment?.status ??
-        this.inferPaymentStatusFromBookingStatus(bookingStatus.code)
-      )
-        .replace(/_/g, ' ')
-        .toUpperCase(),
-    };
-  }
-
-  private inferPaymentStatusFromBookingStatus(status: string | null | undefined): string {
-    const normalizedStatus = (status ?? '').toUpperCase();
-    if (normalizedStatus === 'CANCELLED') {
-      return 'FAILED';
-    }
-
-    if (normalizedStatus === 'CONFIRMED' || normalizedStatus === 'COMPLETED') {
-      return 'SUCCESS';
-    }
-
-    return 'PENDING';
-  }
-
-  private formatDate(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-    }).format(date);
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, 'en');
   }
 }
