@@ -355,7 +355,8 @@
       "RECENT_BOOKINGS": "最近预订",
       "VIEW_ALL": "查看全部",
       "LOAD_FAILED": "无法加载仪表板数据。",
-      "PARTIAL_LOAD_FAILED": "部分仪表板数据无法加载。"
+      "PARTIAL_LOAD_FAILED": "部分仪表板数据无法加载。",
+      "UPDATING": "正在更新…"
     }
   },
   "LOGIN": {

@@ -355,7 +355,8 @@
       "RECENT_BOOKINGS": "Recent Bookings",
       "VIEW_ALL": "View all",
       "LOAD_FAILED": "Unable to load dashboard data.",
-      "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded."
+      "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded.",
+      "UPDATING": "Updating…"
     }
   },
   "LOGIN": {
