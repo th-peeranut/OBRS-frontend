@@ -5,6 +5,16 @@
 @import "./styles/variables.scss";
 @import "./styles/admin-theme.scss";
 
+// SweetAlert2 defaults its container to z-index 1060, which sits *below* the
+// app's overlay layers (admin modals 1200, dropdowns 1250, loading 1300). When
+// an alert is fired while a modal is open (e.g. a failed save in an admin modal),
+// the popup renders behind the modal and can never be dismissed — the awaited
+// Swal.fire() promise hangs and the calling form stays stuck (e.g. "Saving...").
+// Lift it above every app overlay so alerts are always interactable.
+.swal2-container {
+  z-index: 1400;
+}
+
 * {
   font-family: "Sarabun", sans-serif;
 }
