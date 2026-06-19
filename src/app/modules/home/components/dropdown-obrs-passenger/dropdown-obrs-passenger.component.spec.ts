@@ -1,20 +1,11 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { DropdownObrsPassengerComponent } from './dropdown-obrs-passenger.component';
+import { createElementRefStub } from '../../../../testing/test-stubs';
 
 describe('DropdownObrsPassengerComponent', () => {
   let component: DropdownObrsPassengerComponent;
-  let fixture: ComponentFixture<DropdownObrsPassengerComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [DropdownObrsPassengerComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(DropdownObrsPassengerComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new DropdownObrsPassengerComponent({} as never, createElementRefStub());
   });
 
   it('should create', () => {

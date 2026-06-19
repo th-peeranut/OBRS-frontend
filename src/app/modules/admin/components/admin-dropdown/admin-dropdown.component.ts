@@ -111,9 +111,11 @@ export class AdminDropdownComponent implements ControlValueAccessor {
     return String(option ?? '');
   }
 
-  trackByOption(_index: number, option: unknown): string {
+  // Arrow-function field: NgForOf invokes trackBy as a free function, so a
+  // regular method would lose `this` and `this.getOptionValue` would be undefined.
+  trackByOption = (_index: number, option: unknown): string => {
     return this.getOptionValue(option);
-  }
+  };
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;

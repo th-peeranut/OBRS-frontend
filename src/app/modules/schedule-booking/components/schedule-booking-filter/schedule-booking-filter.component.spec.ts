@@ -1,20 +1,18 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder } from '@angular/forms';
 
 import { ScheduleBookingFilterComponent } from './schedule-booking-filter.component';
+import { createRouterStub, createStoreStub } from '../../../../testing/test-stubs';
 
 describe('ScheduleBookingFilterComponent', () => {
   let component: ScheduleBookingFilterComponent;
-  let fixture: ComponentFixture<ScheduleBookingFilterComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ScheduleBookingFilterComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(ScheduleBookingFilterComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new ScheduleBookingFilterComponent(
+      new FormBuilder(),
+      createRouterStub(),
+      createStoreStub(),
+      createStoreStub()
+    );
   });
 
   it('should create', () => {

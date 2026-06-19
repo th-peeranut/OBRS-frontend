@@ -1,20 +1,21 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { PassengerInfoComponent } from './passenger-info.component';
+import {
+  createRouterStub,
+  createStoreStub,
+  createTranslateStub,
+} from '../../testing/test-stubs';
 
 describe('PassengerInfoComponent', () => {
   let component: PassengerInfoComponent;
-  let fixture: ComponentFixture<PassengerInfoComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [PassengerInfoComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(PassengerInfoComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      {} as never,
+      createTranslateStub(),
+      {} as never
+    );
   });
 
   it('should create', () => {

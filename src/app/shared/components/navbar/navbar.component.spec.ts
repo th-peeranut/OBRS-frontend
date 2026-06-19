@@ -1,20 +1,24 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { NavbarComponent } from './navbar.component';
+import {
+  createElementRefStub,
+  createPrimeNgConfigStub,
+  createRouterStub,
+  createTranslateStub,
+} from '../../../testing/test-stubs';
 
 describe('NavbarComponent', () => {
   let component: NavbarComponent;
-  let fixture: ComponentFixture<NavbarComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [NavbarComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(NavbarComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new NavbarComponent(
+      createTranslateStub(),
+      createPrimeNgConfigStub(),
+      {} as never,
+      createElementRefStub(),
+      {} as never,
+      createRouterStub(),
+      {} as never
+    );
   });
 
   it('should create', () => {

@@ -1,20 +1,28 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder } from '@angular/forms';
 
 import { RegisterComponent } from './register.component';
+import {
+  createElementRefStub,
+  createPrimeNgConfigStub,
+  createRouterStub,
+  createTranslateStub,
+} from '../../testing/test-stubs';
 
 describe('RegisterComponent', () => {
   let component: RegisterComponent;
-  let fixture: ComponentFixture<RegisterComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [RegisterComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(RegisterComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new RegisterComponent(
+      createTranslateStub(),
+      createPrimeNgConfigStub(),
+      {} as never,
+      createElementRefStub(),
+      new FormBuilder(),
+      {} as never,
+      {} as never,
+      {} as never,
+      createRouterStub()
+    );
   });
 
   it('should create', () => {

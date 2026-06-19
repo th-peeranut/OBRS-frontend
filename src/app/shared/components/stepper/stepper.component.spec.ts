@@ -1,20 +1,11 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { StepperComponent } from './stepper.component';
+import { createRouterStub } from '../../../testing/test-stubs';
 
 describe('StepperComponent', () => {
   let component: StepperComponent;
-  let fixture: ComponentFixture<StepperComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [StepperComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(StepperComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new StepperComponent(createRouterStub());
   });
 
   it('should create', () => {
