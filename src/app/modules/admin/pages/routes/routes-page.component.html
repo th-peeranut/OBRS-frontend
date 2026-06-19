@@ -253,7 +253,12 @@
     <h4 class="admin-modal-title">
       {{ isEditMode ? ('ADMIN.ROUTES.EDIT_TITLE' | translate) : ('ADMIN.ROUTES.ADD_TITLE' | translate) }}
     </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.ROUTES.MODAL_HINT' | translate }}</p>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.ROUTES.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
 
     <form [formGroup]="routeForm" class="admin-form-grid" (ngSubmit)="submitRoute()">
       <div class="admin-form-field">

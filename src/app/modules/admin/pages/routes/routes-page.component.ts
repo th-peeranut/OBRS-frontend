@@ -101,6 +101,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected routeForEdit: RouteRow | null = null;
   protected routeForDelete: RouteRow | null = null;
 
@@ -399,26 +400,65 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(route: RouteRow): Promise<void> {
-    let routeDetail: AdminRouteDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
-      routeDetail = response.data ?? this.toRouteDtoFallback(route);
-    } catch {
-      routeDetail = this.toRouteDtoFallback(route);
-    }
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (possibly slow) detail fetch. The server
+    // detail (Thai translations, full description) is patched in once it
+    // arrives — see the fetch below.
     this.isEditMode = true;
     this.routeForEdit = route;
+    this.isEditDetailLoading = true;
     this.routeForm.get('slug')?.enable();
-    this.routeForm.reset({
+    this.applyRouteFormValues(this.toRouteDtoFallback(route), route);
+    this.isRouteFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
+      const routeDetail = response.data;
+      // Ignore a stale response if the user has closed the modal or moved on
+      // to editing a different route in the meantime.
+      if (routeDetail && this.isRouteFormModalOpen && this.routeForEdit?.id === route.id) {
+        this.applyRouteFormValues(routeDetail, route, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      // Only clear the loading hint if this fetch is still the current one —
+      // a stale response (modal closed, or switched to another route) must not
+      // turn off the hint for a different in-flight detail fetch.
+      if (this.isRouteFormModalOpen && this.routeForEdit?.id === route.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the route form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyRouteFormValues(
+    routeDetail: AdminRouteDto,
+    route: RouteRow,
+    onlyPristine = false
+  ): void {
+    const values = {
       slug: routeDetail.slug,
       status: this.parseStatus(routeDetail.status ?? route.statusCode).code,
       enLabel: this.getTranslationLabel(routeDetail.translations, 'en') ?? route.label,
       thLabel: this.getTranslationLabel(routeDetail.translations, 'th') ?? '',
       enDescription: this.getTranslationDescription(routeDetail.translations, 'en') ?? '',
       thDescription: this.getTranslationDescription(routeDetail.translations, 'th') ?? '',
-    });
-    this.isRouteFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.routeForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.routeForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeRouteFormModal(force = false): void {
@@ -427,6 +467,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isRouteFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.routeForEdit = null;
     this.routeForm.reset();
   }
