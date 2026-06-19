@@ -11,6 +11,7 @@ import {
   getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { LookupsStore } from './lookups.store';
 
@@ -190,8 +191,11 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
       this.isSubmitting = false;
       this.closeFormModal();
       await this.store.refresh();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -215,8 +219,11 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
       this.isDeleting = false;
       this.closeDeleteModal();
       await this.store.refresh();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
