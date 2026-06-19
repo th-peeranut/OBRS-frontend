@@ -91,6 +91,8 @@
     "COMMON": {
       "LOADING": "Loading data...",
       "NO_DATA": "No data to display.",
+      "UPDATING": "Updating…",
+      "REFRESH_FAILED": "Showing saved data — couldn't refresh.",
       "LANGUAGE_LOADING": "Refreshing content for the selected language...",
       "ACTIONS": "Actions",
       "EDIT": "Edit",

@@ -48,6 +48,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
   protected lastUpdatedAt = '-';
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected errorMessage = '';
   protected selectedStatusFilter = '';
 
@@ -108,6 +109,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         if (failed && !this.store.hasValue) {
           this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
           this.filteredRoles = [];

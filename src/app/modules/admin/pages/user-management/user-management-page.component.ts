@@ -65,6 +65,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected searchKeyword = '';
 
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -155,6 +156,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         if (failed && !this.store.hasValue) {
           this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
           this.filteredUsers = [];

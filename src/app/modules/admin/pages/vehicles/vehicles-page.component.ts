@@ -46,6 +46,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
 
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -103,6 +104,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         if (failed && !this.store.hasValue) {
           this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
           this.filteredVehicles = [];

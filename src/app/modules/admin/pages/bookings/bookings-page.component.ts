@@ -12,6 +12,7 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
   protected allBookings: BookingRow[] = [];
 
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -37,7 +38,9 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
         if (data) {
           this.allBookings = data.rows;
           this.statusOptions = data.statusOptions;
-          this.currentPage = 1;
+          // Preserve the user's current page across a background revalidate;
+          // only clamp it if the (possibly smaller) result set has fewer pages.
+          this.currentPage = Math.min(this.currentPage, this.totalPages);
         }
       })
     );
@@ -46,6 +49,7 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         this.errorMessage =
           failed && !this.store.hasValue
             ? this.translate.instant('ADMIN.BOOKINGS.LOAD_FAILED')

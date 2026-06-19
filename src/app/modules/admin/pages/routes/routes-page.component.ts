@@ -90,6 +90,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected currentPage = 1;
 
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected isDetailLoading = false;
   protected errorMessage = '';
@@ -180,6 +181,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         if (failed && !this.store.hasValue) {
           this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROUTES_FAILED');
           this.routes = [];

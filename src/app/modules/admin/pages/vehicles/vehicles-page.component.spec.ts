@@ -73,5 +73,17 @@ describe('VehiclesPageComponent', () => {
     store.error$.next(true);
 
     expect((component as any).errorMessage).toBe('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED');
+    expect((component as any).refreshFailed).toBeFalse(); // full error, not the stale hint
+  });
+
+  it('flags refreshFailed (stale hint) when a revalidate fails with cached data shown', () => {
+    const store = makeStoreStub(makeData());
+    const component = makeComponent(store);
+    component.ngOnInit();
+
+    store.error$.next(true);
+
+    expect((component as any).refreshFailed).toBeTrue();
+    expect((component as any).errorMessage).toBe(''); // cache kept, no blocking error
   });
 });

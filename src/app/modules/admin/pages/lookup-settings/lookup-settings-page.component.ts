@@ -34,6 +34,7 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   protected entries: LookupEntry[] = [];
 
   protected isRefreshing = false;
+  protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
@@ -80,6 +81,7 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
         this.errorMessage =
           failed && !this.store.hasValue
             ? this.translate.instant('ADMIN.MESSAGES.LOAD_LOOKUPS_FAILED')

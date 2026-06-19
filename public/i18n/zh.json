@@ -91,6 +91,8 @@
     "COMMON": {
       "LOADING": "加载数据中...",
       "NO_DATA": "没有可显示的数据。",
+      "UPDATING": "正在更新…",
+      "REFRESH_FAILED": "正在显示已保存的数据 — 无法刷新。",
       "LANGUAGE_LOADING": "正在刷新所选语言的内容...",
       "ACTIONS": "操作",
       "EDIT": "编辑",
