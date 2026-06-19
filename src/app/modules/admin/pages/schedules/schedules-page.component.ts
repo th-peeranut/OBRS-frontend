@@ -19,6 +19,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import { SchedulesStore } from './schedules.store';
@@ -433,8 +434,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
       this.closeFormModal(true);
       await this.store.refresh();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -462,8 +466,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
       this.closeScheduleFormModal(true);
       await this.store.refresh();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -484,8 +491,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       this.closeDeleteModal(true);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       await this.store.refresh();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
@@ -499,8 +509,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       // Reload so the newly generated trips are present, then drill into them.
       await this.store.refresh();
       this.viewSchedulesForSet(schedule);
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isGenerating = false;
     }
