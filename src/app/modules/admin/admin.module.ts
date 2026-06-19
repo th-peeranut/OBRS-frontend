@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
+import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
 import { RoleManagementPageComponent } from './pages/role-management/role-management-page.component';
 import { UserManagementPageComponent } from './pages/user-management/user-management-page.component';
@@ -11,13 +12,19 @@ import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { AdminDropdownComponent } from './components/admin-dropdown/admin-dropdown.component';
+import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 
 const routes: Routes = [
   {
     path: '',
     component: AdminLayoutComponent,
     children: [
-      { path: '', redirectTo: 'lookup-settings', pathMatch: 'full' },
+      { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
+      {
+        path: 'dashboard',
+        component: DashboardPageComponent,
+        data: { titleKey: 'ADMIN.PAGES.DASHBOARD' },
+      },
       {
         path: 'lookup-settings',
         component: LookupSettingsPageComponent,
@@ -60,6 +67,7 @@ const routes: Routes = [
 @NgModule({
   declarations: [
     AdminLayoutComponent,
+    DashboardPageComponent,
     LookupSettingsPageComponent,
     RoleManagementPageComponent,
     UserManagementPageComponent,
@@ -68,6 +76,7 @@ const routes: Routes = [
     SchedulesPageComponent,
     BookingsPageComponent,
     AdminDropdownComponent,
+    AdminModalBackdropDirective,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule],
 })

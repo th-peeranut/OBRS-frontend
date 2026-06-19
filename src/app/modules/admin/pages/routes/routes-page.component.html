@@ -98,13 +98,28 @@
             <td>{{ route.updatedAt }}</td>
             <td class="text-right">
               <div class="admin-inline-actions">
-                <button type="button" class="admin-icon-btn" (click)="selectRoute(route)">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.VIEW' | translate"
+                  (click)="selectRoute(route)"
+                >
                   <span class="material-symbols-outlined">visibility</span>
                 </button>
-                <button type="button" class="admin-icon-btn" (click)="openEditModal(route)">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="openEditModal(route)"
+                >
                   <span class="material-symbols-outlined">edit_square</span>
                 </button>
-                <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(route)">
+                <button
+                  type="button"
+                  class="admin-icon-btn danger"
+                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                  (click)="openDeleteModal(route)"
+                >
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -189,7 +204,12 @@
             <td class="admin-emphasis">{{ formatFare(segment.fare) }}</td>
             <td>{{ segment.duration }}</td>
             <td class="text-right">
-              <button type="button" class="admin-icon-btn" (click)="openSegmentEditModal(segment)">
+              <button
+                type="button"
+                class="admin-icon-btn"
+                [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                (click)="openSegmentEditModal(segment)"
+              >
                 <span class="material-symbols-outlined">edit_square</span>
               </button>
             </td>
@@ -207,6 +227,7 @@
         <button
           type="button"
           class="admin-icon-btn"
+          [attr.aria-label]="'ADMIN.COMMON.PREVIOUS' | translate"
           [disabled]="!canPreviousPage"
           (click)="goToPreviousPage()"
         >
@@ -215,6 +236,7 @@
         <button
           type="button"
           class="admin-icon-btn"
+          [attr.aria-label]="'ADMIN.COMMON.NEXT' | translate"
           [disabled]="!canNextPage"
           (click)="goToNextPage()"
         >
@@ -225,7 +247,7 @@
   </article>
 </section>
 
-<div class="admin-modal-backdrop" *ngIf="isRouteFormModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isRouteFormModalOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeRouteFormModal()">
   <div class="admin-modal">
     <h4 class="admin-modal-title">
       {{ isEditMode ? ('ADMIN.ROUTES.EDIT_TITLE' | translate) : ('ADMIN.ROUTES.ADD_TITLE' | translate) }}
@@ -292,7 +314,7 @@
   </div>
 </div>
 
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
   <div class="admin-modal admin-modal-confirm">
     <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
     <p class="admin-modal-subtitle">
@@ -311,7 +333,7 @@
   </div>
 </div>
 
-<div class="admin-modal-backdrop" *ngIf="isSegmentEditModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isSegmentEditModalOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeSegmentEditModal()">
   <div class="admin-modal">
     <h4 class="admin-modal-title">{{ 'ADMIN.ROUTES.EDIT_SEGMENT_TITLE' | translate }}</h4>
     <p class="admin-modal-subtitle" *ngIf="selectedSegment">

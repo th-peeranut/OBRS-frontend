@@ -66,6 +66,7 @@
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "Admin Dashboard",
+      "DASHBOARD": "Dashboard",
       "LOOKUP_SETTINGS": "Lookup Settings",
       "ROLE_MANAGEMENT": "Role Management",
       "USER_MANAGEMENT": "User Management",
@@ -80,13 +81,26 @@
       "SUPPORT": "Support",
       "SIGN_OUT": "Sign Out",
       "SEARCH_PLACEHOLDER": "Search admin data...",
-      "LOGOUT_SUCCESS": "Signed out successfully"
+      "LOGOUT_SUCCESS": "Signed out successfully",
+      "OPEN_MENU": "Open navigation menu",
+      "CLOSE_MENU": "Close navigation menu",
+      "PROFILE_MENU": "Open profile menu",
+      "LANGUAGE_EN": "Switch to English",
+      "LANGUAGE_TH": "Switch to Thai"
     },
     "COMMON": {
       "LOADING": "Loading data...",
       "NO_DATA": "No data to display.",
       "LANGUAGE_LOADING": "Refreshing content for the selected language...",
       "ACTIONS": "Actions",
+      "EDIT": "Edit",
+      "VIEW": "View",
+      "CLOSE": "Close",
+      "SEARCH": "Search",
+      "EXPORT": "Export",
+      "PREVIOUS": "Previous",
+      "NEXT": "Next",
+      "ENTRIES": "entries",
       "SHOWING": "Showing",
       "OF": "of",
       "CANCEL": "Cancel",
@@ -208,6 +222,7 @@
       "MONITORING": "Fleet Monitoring Active",
       "TITLE": "Vehicle Management",
       "ADD": "Add Vehicle",
+      "TOTAL": "Total Vehicles",
       "TOTAL_CAPACITY": "Active Vehicles",
       "UNITS": "Units",
       "ACTIVE": "Active Vehicles",
@@ -303,6 +318,34 @@
       "GENERATE_FAILED": "Unable to generate schedules.",
       "DATE_RANGE_VALIDATION": "End date must be after start date.",
       "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines."
+    },
+    "BOOKINGS": {
+      "TITLE": "Bookings Management",
+      "SUBTITLE": "Search, filter, and export customer bookings.",
+      "SEARCH_PLACEHOLDER": "Search by booking ID or customer...",
+      "FILTER_STATUS": "All Statuses",
+      "BOOKING_ID": "Booking ID",
+      "CUSTOMER": "Customer Name",
+      "ROUTE": "Route",
+      "BOOKING_DATE": "Booking Date",
+      "TOTAL_FARE": "Total Fare",
+      "BOOKING_STATUS": "Booking Status",
+      "PAYMENT_STATUS": "Payment Status",
+      "UNITS": "bookings",
+      "LOADING": "Loading booking data...",
+      "LOAD_FAILED": "Unable to load booking data from backend."
+    },
+    "DASHBOARD": {
+      "TITLE": "Dashboard",
+      "SUBTITLE": "Operational overview across bookings and fleet.",
+      "TOTAL_BOOKINGS": "Total Bookings",
+      "PENDING_PAYMENTS": "Pending Payments",
+      "REVENUE": "Revenue",
+      "ACTIVE_VEHICLES": "Active Vehicles",
+      "RECENT_BOOKINGS": "Recent Bookings",
+      "VIEW_ALL": "View all",
+      "LOAD_FAILED": "Unable to load dashboard data.",
+      "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded."
     }
   },
   "LOGIN": {

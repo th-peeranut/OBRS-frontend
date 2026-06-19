@@ -1,6 +1,6 @@
 export const environment = {
   production: false,
-  apiUrl: 'http://localhost:8000', // local dev only — use `ng serve --configuration sit` for SIT backend
+  apiUrl: 'http://localhost:8000', // local backend only — selected via `npm run start:local`. Default `npm start` now uses environment.sit.ts (SIT backend on Koyeb).
   promptpay: {
     baseUrl: '',
     id: '0123456789',

@@ -140,8 +140,8 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 
 ## 10. Commands
 ```bash
-npm start                          # Dev server on http://localhost:4200
-ng serve --configuration sit       # Dev server against SIT backend
+npm start                          # Dev server on http://localhost:4200, against the SIT backend (default)
+npm run start:local                # Dev server against the local backend (http://localhost:8000)
 ng build                           # Production build
 ng build --configuration sit       # SIT build
 ng test --watch=false --browsers ChromeHeadless   # CI-safe test run

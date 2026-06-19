@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, firstValueFrom, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -18,9 +18,14 @@ interface AdminNavItem {
   styleUrl: './admin-layout.component.scss',
 })
 export class AdminLayoutComponent implements OnInit {
-  protected pageTitleKey = 'ADMIN.PAGES.LOOKUP_SETTINGS';
+  protected pageTitleKey = 'ADMIN.PAGES.DASHBOARD';
   protected readonly pageSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
   protected readonly navItems: AdminNavItem[] = [
+    {
+      path: 'dashboard',
+      labelKey: 'ADMIN.PAGES.DASHBOARD',
+      icon: 'dashboard',
+    },
     {
       path: 'lookup-settings',
       labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS',
@@ -48,6 +53,7 @@ export class AdminLayoutComponent implements OnInit {
 
   protected currentLanguage = 'th';
   protected isProfileMenuOpen = false;
+  protected isSidebarOpen = false;
 
   constructor(
     private readonly router: Router,
@@ -55,8 +61,25 @@ export class AdminLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly primengConfig: PrimeNGConfig
+    private readonly primengConfig: PrimeNGConfig,
+    private readonly elementRef: ElementRef<HTMLElement>
   ) {}
+
+  protected get userInitials(): string {
+    const username = this.authService.getUsername() ?? '';
+    const namePart = username.split('@')[0] ?? '';
+    const segments = namePart.split(/[.\-_\s]+/).filter((segment) => segment.length > 0);
+
+    if (segments.length === 0) {
+      return 'AD';
+    }
+
+    if (segments.length === 1) {
+      return segments[0].slice(0, 2).toUpperCase();
+    }
+
+    return (segments[0][0] + segments[1][0]).toUpperCase();
+  }
 
   ngOnInit(): void {
     this.setupLanguage();
@@ -73,7 +96,31 @@ export class AdminLayoutComponent implements OnInit {
           typeof titleKey === 'string' && titleKey.length > 0
             ? titleKey
             : 'ADMIN.PAGES.DEFAULT';
+        // Collapse the mobile drawer whenever navigation completes.
+        this.isSidebarOpen = false;
       });
+  }
+
+  protected toggleSidebar(): void {
+    this.isSidebarOpen = !this.isSidebarOpen;
+  }
+
+  protected closeSidebar(): void {
+    this.isSidebarOpen = false;
+  }
+
+  @HostListener('document:keydown.escape')
+  protected onEscape(): void {
+    this.isProfileMenuOpen = false;
+    this.isSidebarOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    const profile = this.elementRef.nativeElement.querySelector('.admin-profile');
+    if (this.isProfileMenuOpen && profile && !profile.contains(event.target as Node)) {
+      this.isProfileMenuOpen = false;
+    }
   }
 
   protected async switchLanguage(lang: string): Promise<void> {

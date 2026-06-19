@@ -1,5 +1,12 @@
-<div class="admin-shell">
-  <aside class="admin-sidebar">
+<div class="admin-shell" [class.is-sidebar-open]="isSidebarOpen">
+  <div
+    class="admin-sidebar-backdrop"
+    *ngIf="isSidebarOpen"
+    (click)="closeSidebar()"
+    aria-hidden="true"
+  ></div>
+
+  <aside class="admin-sidebar" [class.is-open]="isSidebarOpen">
     <div class="admin-brand">
       <h1>{{ 'ADMIN.LAYOUT.BRAND' | translate }}</h1>
       <p>{{ 'ADMIN.LAYOUT.SUBTITLE' | translate }}</p>
@@ -12,6 +19,7 @@
         routerLinkActive="active"
         [routerLinkActiveOptions]="{ exact: true }"
         class="admin-nav-link"
+        (click)="closeSidebar()"
       >
         <span class="material-symbols-outlined">{{ item.icon }}</span>
         <span>{{ item.labelKey | translate }}</span>
@@ -19,10 +27,10 @@
     </nav>
 
     <div class="admin-sidebar-footer">
-      <a class="admin-nav-link" href="javascript:void(0)">
+      <button class="admin-nav-link admin-nav-btn" type="button">
         <span class="material-symbols-outlined">help_outline</span>
         <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
-      </a>
+      </button>
       <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
         <span class="material-symbols-outlined">logout</span>
         <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
@@ -32,22 +40,29 @@
 
   <div class="admin-main">
     <header class="admin-topbar">
+      <button
+        type="button"
+        class="admin-icon-btn admin-menu-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="isSidebarOpen"
+        [attr.aria-label]="(isSidebarOpen ? 'ADMIN.LAYOUT.CLOSE_MENU' : 'ADMIN.LAYOUT.OPEN_MENU') | translate"
+      >
+        <span class="material-symbols-outlined">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
+      </button>
+
       <div class="admin-title-block">
         <h2>{{ pageTitleKey | translate }}</h2>
         <p>{{ pageSubtitleKey | translate }}</p>
       </div>
 
       <div class="admin-topbar-actions">
-        <label class="admin-search">
-          <span class="material-symbols-outlined">search</span>
-          <input type="text" [placeholder]="'ADMIN.LAYOUT.SEARCH_PLACEHOLDER' | translate" />
-        </label>
-
-        <div class="admin-lang-switch" role="group">
+        <div class="admin-lang-switch" role="group" [attr.aria-label]="'ADMIN.LAYOUT.SUBTITLE' | translate">
           <button
             type="button"
             class="admin-lang-btn"
             [class.active]="currentLanguage === 'th'"
+            [attr.aria-pressed]="currentLanguage === 'th'"
+            [attr.aria-label]="'ADMIN.LAYOUT.LANGUAGE_TH' | translate"
             (click)="switchLanguage('th')"
           >
             TH
@@ -56,6 +71,8 @@
             type="button"
             class="admin-lang-btn"
             [class.active]="currentLanguage === 'en'"
+            [attr.aria-pressed]="currentLanguage === 'en'"
+            [attr.aria-label]="'ADMIN.LAYOUT.LANGUAGE_EN' | translate"
             (click)="switchLanguage('en')"
           >
             EN
@@ -63,9 +80,18 @@
         </div>
 
         <div class="admin-profile">
-          <button class="admin-avatar" type="button" (click)="toggleProfileMenu()">AR</button>
-          <div class="admin-profile-menu" *ngIf="isProfileMenuOpen">
-            <button type="button" class="admin-profile-item" (click)="onLogout()">
+          <button
+            class="admin-avatar"
+            type="button"
+            (click)="toggleProfileMenu()"
+            [attr.aria-expanded]="isProfileMenuOpen"
+            aria-haspopup="menu"
+            [attr.aria-label]="'ADMIN.LAYOUT.PROFILE_MENU' | translate"
+          >
+            {{ userInitials }}
+          </button>
+          <div class="admin-profile-menu" *ngIf="isProfileMenuOpen" role="menu">
+            <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
               <span class="material-symbols-outlined">logout</span>
               <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
             </button>
@@ -79,4 +105,3 @@
     </main>
   </div>
 </div>
-

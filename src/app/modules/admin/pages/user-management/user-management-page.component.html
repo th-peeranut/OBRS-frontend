@@ -108,10 +108,20 @@
             </td>
             <td class="text-right">
               <div class="admin-inline-actions">
-                <button type="button" class="admin-icon-btn" (click)="openEditModal(user)">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="openEditModal(user)"
+                >
                   <span class="material-symbols-outlined">edit_square</span>
                 </button>
-                <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(user)">
+                <button
+                  type="button"
+                  class="admin-icon-btn danger"
+                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                  (click)="openDeleteModal(user)"
+                >
                   <span class="material-symbols-outlined">delete</span>
                 </button>
               </div>
@@ -134,7 +144,7 @@
   </div>
 </section>
 
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeFormModal()">
   <div class="user-editor-modal">
     <div class="user-editor-header">
       <div>
@@ -334,7 +344,7 @@
   </div>
 </div>
 
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
   <div class="admin-modal admin-modal-confirm">
     <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
     <p class="admin-modal-subtitle">

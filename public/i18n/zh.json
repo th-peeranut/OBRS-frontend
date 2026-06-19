@@ -66,6 +66,7 @@
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "管理员仪表板",
+      "DASHBOARD": "仪表板",
       "LOOKUP_SETTINGS": "查找设置",
       "ROLE_MANAGEMENT": "角色管理",
       "USER_MANAGEMENT": "用户管理",
@@ -80,13 +81,26 @@
       "SUPPORT": "支持",
       "SIGN_OUT": "退出登录",
       "SEARCH_PLACEHOLDER": "搜索管理数据...",
-      "LOGOUT_SUCCESS": "已成功退出登录"
+      "LOGOUT_SUCCESS": "已成功退出登录",
+      "OPEN_MENU": "打开导航菜单",
+      "CLOSE_MENU": "关闭导航菜单",
+      "PROFILE_MENU": "打开个人资料菜单",
+      "LANGUAGE_EN": "切换到英文",
+      "LANGUAGE_TH": "切换到泰文"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
       "NO_DATA": "没有可显示的数据。",
       "LANGUAGE_LOADING": "正在刷新所选语言的内容...",
       "ACTIONS": "操作",
+      "EDIT": "编辑",
+      "VIEW": "查看",
+      "CLOSE": "关闭",
+      "SEARCH": "搜索",
+      "EXPORT": "导出",
+      "PREVIOUS": "上一页",
+      "NEXT": "下一页",
+      "ENTRIES": "条",
       "SHOWING": "显示",
       "OF": "/",
       "CANCEL": "取消",
@@ -208,6 +222,7 @@
       "MONITORING": "车队监控已启用",
       "TITLE": "车辆管理",
       "ADD": "添加车辆",
+      "TOTAL": "车辆总数",
       "TOTAL_CAPACITY": "活跃车辆",
       "UNITS": "辆",
       "ACTIVE": "活跃车辆",
@@ -303,6 +318,34 @@
       "GENERATE_FAILED": "无法生成班次。",
       "DATE_RANGE_VALIDATION": "结束日期必须在开始日期之后。",
       "TIME_VALIDATION": "请使用HH:mm格式，用逗号或换行分隔。"
+    },
+    "BOOKINGS": {
+      "TITLE": "预订管理",
+      "SUBTITLE": "搜索、筛选和导出客户预订。",
+      "SEARCH_PLACEHOLDER": "按预订编号或客户搜索...",
+      "FILTER_STATUS": "所有状态",
+      "BOOKING_ID": "预订编号",
+      "CUSTOMER": "客户姓名",
+      "ROUTE": "路线",
+      "BOOKING_DATE": "预订日期",
+      "TOTAL_FARE": "总票价",
+      "BOOKING_STATUS": "预订状态",
+      "PAYMENT_STATUS": "支付状态",
+      "UNITS": "条预订",
+      "LOADING": "正在加载预订数据...",
+      "LOAD_FAILED": "无法从后端加载预订数据。"
+    },
+    "DASHBOARD": {
+      "TITLE": "仪表板",
+      "SUBTITLE": "预订与车队的运营概览。",
+      "TOTAL_BOOKINGS": "预订总数",
+      "PENDING_PAYMENTS": "待支付",
+      "REVENUE": "收入",
+      "ACTIVE_VEHICLES": "在用车辆",
+      "RECENT_BOOKINGS": "最近预订",
+      "VIEW_ALL": "查看全部",
+      "LOAD_FAILED": "无法加载仪表板数据。",
+      "PARTIAL_LOAD_FAILED": "部分仪表板数据无法加载。"
     }
   },
   "LOGIN": {
