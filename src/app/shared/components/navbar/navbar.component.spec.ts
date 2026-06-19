@@ -68,4 +68,18 @@ describe('NavbarComponent', () => {
 
     expect(component.isAdmin).toBe(false);
   });
+
+  it('scrolls to the footer contact section', () => {
+    const target = document.createElement('div');
+    target.id = 'footer-contact';
+    const scrollSpy = spyOn(target, 'scrollIntoView');
+    document.body.appendChild(target);
+
+    try {
+      component.scrollToContact();
+      expect(scrollSpy).toHaveBeenCalled();
+    } finally {
+      document.body.removeChild(target);
+    }
+  });
 });

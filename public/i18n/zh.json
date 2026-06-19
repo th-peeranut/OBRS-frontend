@@ -692,5 +692,20 @@
       "TITLE": "服务条款",
       "CONTENT": "&emsp;&emsp;1. 票务销售分为两种类型：\n      <br />&emsp;&emsp;&emsp;&emsp;? 普通票务销售：在出发地出发时间前12小时内购票，直至车辆到达该站\n      <br />&emsp;&emsp;&emsp;&emsp;? 预售票务：至少在出发地出发时间前12小时购票，预售最多提前60天\n      <br />&emsp;&emsp;2. 已取消不定期票的改签条件。\n      <br />&emsp;&emsp;3. 改签只能进行指定日期更改。\n      <br />&emsp;&emsp;4. 改签只能免费进行一次。如果票据已经改签，则不能再次改签，只能用于出行。\n      注意：改签可通过3个渠道进行：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 所有3个站的售票处\n      <br />&emsp;&emsp;&emsp;&emsp;2. https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;&emsp;&emsp;3. 指定日期改签只能从改签申请日起30天内设定出行日期\n      <br />&emsp;&emsp;&emsp;&emsp;4. 改签必须在原出发时间前至少24小时进行\n      <br />&emsp;&emsp;5. 重印票据分为两种情况：\n      <br />&emsp;&emsp;&emsp;&emsp;? 收费重印：票据丢失、撕毁、遗忘，或在其他站购买和打印的票据等。\n      <br />&emsp;&emsp;&emsp;&emsp;? 免费重印：通过网络渠道购买的票据，或交易期间打印机故障、停电、系统故障等。\n      <br />&emsp;&emsp;6. 以下情况允许退票：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 因不可抗力导致行程中断，如自然灾害或政治情况\n      <br />&emsp;&emsp;&emsp;&emsp;2. 乘客紧急情况、疾病或事故：必须在出行日期后3天内提交医疗证明；否则，旅行权利将被没收\n      注意：除上述情况外，不可退票。"
     }
+  },
+  "HOW_TO_BOOK": {
+    "TITLE": "如何预订和付款",
+    "INTRO": "只需几个简单步骤即可在线预订巴士车票并付款。",
+    "BOOKING_TITLE": "预订车票",
+    "STEP_1": "在首页选择出发地、目的地和出行日期，然后搜索可用的班次。",
+    "STEP_2": "从可用的班次时刻表中选择出发时间。",
+    "STEP_3": "查看行程详情并选择座位。",
+    "STEP_4": "为每位乘客填写乘客信息。",
+    "STEP_5": "确认预订摘要并继续付款。",
+    "PAYMENT_TITLE": "付款",
+    "PAYMENT_INTRO": "我们接受以下付款方式：",
+    "PAYMENT_1": "信用卡或借记卡（Visa、Mastercard）。",
+    "PAYMENT_2": "PromptPay 二维码。",
+    "PAYMENT_NOTE": "付款确认后，将立即签发电子车票，您也可以在预订记录中查看。"
   }
 }

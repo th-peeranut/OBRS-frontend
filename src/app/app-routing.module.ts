@@ -104,6 +104,13 @@ const routes: Routes = [
         (m) => m.BusinessPolicyModule
       ),
   },
+  {
+    path: 'how-to-book',
+    loadChildren: () =>
+      import('./modules/how-to-book/how-to-book.module').then(
+        (m) => m.HowToBookModule
+      ),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },

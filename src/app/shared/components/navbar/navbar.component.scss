@@ -35,6 +35,11 @@
     color: $primary-blue;
     font-weight: 500;
   }
+
+  // Click-only link (no href), e.g. the "Contact us" scroll action.
+  &-action {
+    cursor: pointer;
+  }
 }
 
 .btn.dropdown-toggle {

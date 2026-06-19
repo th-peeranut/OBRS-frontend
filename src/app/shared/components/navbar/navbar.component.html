@@ -5,15 +5,23 @@
   </div>
 
   <!-- หน้าแรก -->
-  <a class="menu-font menu-font-active" href="#">
+  <a
+    class="menu-font"
+    routerLink="/home"
+    routerLinkActive="menu-font-active"
+  >
     {{ "HOME.NAVBAR.HOME" | translate }}
   </a>
   <!-- วิธีจองและชำระเงิน -->
-  <a class="menu-font" href="#">
+  <a
+    class="menu-font"
+    routerLink="/how-to-book"
+    routerLinkActive="menu-font-active"
+  >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
   <!-- ติดต่อเรา -->
-  <a class="menu-font" href="#">
+  <a class="menu-font menu-font-action" (click)="scrollToContact()">
     {{ "HOME.NAVBAR.CONTACT" | translate }}
   </a>
 

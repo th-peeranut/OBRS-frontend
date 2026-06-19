@@ -138,6 +138,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isShowPassword = !this.isShowPassword;
   }
 
+  // The contact details live in the footer, which is rendered as a sibling
+  // component on every page that shows the navbar — so scroll to it by id
+  // rather than reaching across components with a ViewChild.
+  scrollToContact() {
+    document
+      .getElementById('footer-contact')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   async onLogout() {
     this.isProfileDropdownOpen = false;
 
