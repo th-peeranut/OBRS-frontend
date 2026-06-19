@@ -25,6 +25,7 @@ import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 interface ScheduleRow {
   kind: 'set' | 'schedule';
   id: number;
+  scheduleSetId: number | null;
   tripId: string;
   dateRange: string;
   startDate: string;
@@ -67,6 +68,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     { code: 'monthly', label: 'Monthly' },
   ];
 
+  protected activeTab: 'set' | 'schedule' = 'set';
+  // When set, the Schedules tab is scoped to the trips this set generated,
+  // matched exactly by the backend scheduleSetId provenance link.
+  protected focusedSet: ScheduleRow | null = null;
   protected selectedRouteFilter = '';
   protected selectedStatusFilter = '';
   protected selectedDateFilter: Date | null = null;
@@ -138,18 +143,41 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.languageSubscription.unsubscribe();
   }
 
-  protected get totalSchedules(): number {
-    return this.schedules.length;
+  // Unfiltered totals power the tab badges so they stay stable while filtering a tab.
+  protected get scheduleSetTotal(): number {
+    return this.schedules.filter((schedule) => schedule.kind === 'set').length;
   }
 
-  protected get activeScheduleSets(): number {
-    return this.schedules.filter((schedule) => schedule.statusCode === 'scheduled').length;
+  protected get scheduleTripTotal(): number {
+    return this.schedules.filter((schedule) => schedule.kind === 'schedule').length;
   }
 
-  protected get totalDepartures(): number {
-    return this.schedules.reduce((total, schedule) => {
-      return total + schedule.departureTimes.split(',').filter((time) => time.trim()).length;
-    }, 0);
+  // The two tables read from the same filtered list, split by kind.
+  protected get scheduleSetRows(): ScheduleRow[] {
+    return this.filteredSchedules.filter((schedule) => schedule.kind === 'set');
+  }
+
+  protected get tripRows(): ScheduleRow[] {
+    return this.filteredSchedules.filter((schedule) => schedule.kind === 'schedule');
+  }
+
+  protected setActiveTab(tab: 'set' | 'schedule'): void {
+    this.activeTab = tab;
+  }
+
+  // Drill from a set into the schedules it produced, scoped by scheduleSetId.
+  protected viewSchedulesForSet(set: ScheduleRow): void {
+    if (set.kind !== 'set') {
+      return;
+    }
+    this.focusedSet = set;
+    this.activeTab = 'schedule';
+    this.applyFilters();
+  }
+
+  protected clearFocusedSet(): void {
+    this.focusedSet = null;
+    this.applyFilters();
   }
 
   protected statusClass(status: string): string {
@@ -428,6 +456,9 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.adminApiService.generateSchedulesFromSet(schedule.id));
       await this.alertService.success(this.translate.instant('ADMIN.SCHEDULES.GENERATE_SUCCESS'));
+      // Reload so the newly generated trips are present, then drill into them.
+      await this.loadScheduleSets();
+      this.viewSchedulesForSet(schedule);
     } catch {
       await this.alertService.error(this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED'));
     } finally {
@@ -546,6 +577,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     return {
       id: scheduleSet.id,
       kind: 'set',
+      scheduleSetId: null,
       tripId: `#SET-${scheduleSet.id}`,
       dateRange: `${this.formatDateForDisplay(startDate)} to ${this.formatDateForDisplay(endDate)}`,
       startDate,
@@ -587,6 +619,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     return {
       id: schedule.id,
       kind: 'schedule',
+      scheduleSetId: schedule.scheduleSetId ?? null,
       tripId: `#SCH-${schedule.id}`,
       dateRange: this.formatDateForDisplay(departureDateTime.date),
       startDate: departureDateTime.date,
@@ -793,6 +826,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     const dateFilter = this.toDateInputValue(this.selectedDateFilter);
 
     this.filteredSchedules = this.schedules.filter((schedule) => {
+      if (this.focusedSet && schedule.kind === 'schedule' && !this.matchesFocusedSet(schedule)) {
+        return false;
+      }
+
       if (routeFilter && schedule.routeSlug.trim().toLowerCase() !== routeFilter) {
         return false;
       }
@@ -824,6 +861,17 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
         .toLowerCase()
         .includes(keyword);
     });
+  }
+
+  // A generated schedule belongs to a set when its backend scheduleSetId
+  // matches. Ad-hoc schedules (no set) have a null id and never match.
+  private matchesFocusedSet(schedule: ScheduleRow): boolean {
+    const set = this.focusedSet;
+    if (!set) {
+      return true;
+    }
+
+    return schedule.scheduleSetId === set.id;
   }
 
   private syncFiltersWithAvailableOptions(): void {

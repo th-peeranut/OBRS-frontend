@@ -317,7 +317,17 @@
       "GENERATE_SUCCESS": "Schedules generated successfully.",
       "GENERATE_FAILED": "Unable to generate schedules.",
       "DATE_RANGE_VALIDATION": "End date must be after start date.",
-      "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines."
+      "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines.",
+      "TAB_SETS": "Schedule Sets",
+      "TAB_TRIPS": "Schedules",
+      "TRIPS_TABLE_TITLE": "Schedule List",
+      "TRIPS_SEARCH_PLACEHOLDER": "Search by schedule ID, route, vehicle, or driver...",
+      "TRIP_ID": "Schedule ID",
+      "DEPARTURE": "Departure",
+      "TRIP_UNITS": "schedules",
+      "VIEW_SCHEDULES": "View generated schedules",
+      "FOCUSED_BANNER": "Showing schedules generated from {{set}}.",
+      "FOCUSED_CLEAR": "Show all schedules"
     },
     "BOOKINGS": {
       "TITLE": "Bookings Management",

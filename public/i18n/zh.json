@@ -317,7 +317,17 @@
       "GENERATE_SUCCESS": "班次生成成功。",
       "GENERATE_FAILED": "无法生成班次。",
       "DATE_RANGE_VALIDATION": "结束日期必须在开始日期之后。",
-      "TIME_VALIDATION": "请使用HH:mm格式，用逗号或换行分隔。"
+      "TIME_VALIDATION": "请使用HH:mm格式，用逗号或换行分隔。",
+      "TAB_SETS": "班次组",
+      "TAB_TRIPS": "班次",
+      "TRIPS_TABLE_TITLE": "班次列表",
+      "TRIPS_SEARCH_PLACEHOLDER": "按班次ID、路线、车辆或司机搜索...",
+      "TRIP_ID": "班次ID",
+      "DEPARTURE": "出发",
+      "TRIP_UNITS": "个班次",
+      "VIEW_SCHEDULES": "查看生成的班次",
+      "FOCUSED_BANNER": "显示由 {{set}} 生成的班次。",
+      "FOCUSED_CLEAR": "显示全部班次"
     },
     "BOOKINGS": {
       "TITLE": "预订管理",

@@ -317,7 +317,17 @@
       "GENERATE_SUCCESS": "สร้างเที่ยวรถสำเร็จ",
       "GENERATE_FAILED": "ไม่สามารถสร้างเที่ยวรถได้",
       "DATE_RANGE_VALIDATION": "วันที่สิ้นสุดต้องอยู่หลังวันที่เริ่มต้น",
-      "TIME_VALIDATION": "ใช้รูปแบบ HH:mm และคั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่"
+      "TIME_VALIDATION": "ใช้รูปแบบ HH:mm และคั่นด้วยจุลภาคหรือขึ้นบรรทัดใหม่",
+      "TAB_SETS": "ชุดตาราง",
+      "TAB_TRIPS": "เที่ยวรถ",
+      "TRIPS_TABLE_TITLE": "รายการเที่ยวรถ",
+      "TRIPS_SEARCH_PLACEHOLDER": "ค้นหาด้วยรหัสเที่ยวรถ เส้นทาง รถ หรือคนขับ...",
+      "TRIP_ID": "รหัสเที่ยวรถ",
+      "DEPARTURE": "ออกเดินทาง",
+      "TRIP_UNITS": "เที่ยวรถ",
+      "VIEW_SCHEDULES": "ดูเที่ยวรถที่สร้าง",
+      "FOCUSED_BANNER": "แสดงเที่ยวรถที่สร้างจาก {{set}}",
+      "FOCUSED_CLEAR": "แสดงเที่ยวรถทั้งหมด"
     },
     "BOOKINGS": {
       "TITLE": "จัดการการจอง",
