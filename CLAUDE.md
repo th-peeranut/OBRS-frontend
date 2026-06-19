@@ -146,7 +146,10 @@ ng build                           # Production build
 ng build --configuration sit       # SIT build
 ng test --watch=false --browsers ChromeHeadless   # CI-safe test run
 ng test                            # Interactive test (opens browser)
+npx tsc --noEmit -p tsconfig.app.json              # Authoritative type check
 ```
+
+> **Type-check gotcha:** the esbuild dev builder (`npm start` / `ng build --configuration development`) emits JS and reports `exit 0` even when there are TypeScript type errors — they surface only as the in-browser dev overlay, not as a failed build. Do **not** treat a green dev build as a passing type check. Use `npx tsc --noEmit -p tsconfig.app.json` (or a production `ng build`) as the reliable type gate before committing.
 
 ## 11. Security Rules
 - **Secrets**: Omise public key and API URLs must live in `environment.ts` / `environment.sit.ts`. Never hardcode in components or services.
