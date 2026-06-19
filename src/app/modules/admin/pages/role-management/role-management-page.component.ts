@@ -58,6 +58,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected selectedRole: RoleRow | null = null;
 
   protected readonly roleForm: FormGroup;
@@ -77,7 +78,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     private readonly store: RolesStore
   ) {
     this.roleForm = this.formBuilder.group({
-      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
+      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
       enLabel: ['', [Validators.required, Validators.maxLength(255)]],
       enDescription: ['', [Validators.maxLength(500)]],
       thLabel: ['', [Validators.required, Validators.maxLength(255)]],
@@ -170,43 +171,74 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(role: RoleRow): Promise<void> {
-    let roleDetail: AdminRoleDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
-      roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
-    } catch (error) {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
-      return;
-    }
-
-    const safeRoleDetail = roleDetail ?? this.toRoleDetailFallback(role);
-
-    const slug = String(safeRoleDetail.slug ?? role.slug).trim();
-    const enLabel =
-      this.getTranslationLabel(safeRoleDetail.translations, 'en') ??
-      safeRoleDetail.name ??
-      role.enLabel;
-    const thLabel = this.getTranslationLabel(safeRoleDetail.translations, 'th') ?? role.thLabel;
-    const enDescription =
-      this.getTranslationDescription(safeRoleDetail.translations, 'en') ??
-      safeRoleDetail.description ??
-      role.enDescription;
-    const thDescription =
-      this.getTranslationDescription(safeRoleDetail.translations, 'th') ?? role.thDescription;
-    const status = this.parseStatus(safeRoleDetail.status ?? role.statusCode);
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (consistently ~2s+ on SIT) detail fetch.
+    // The server detail (full translations/description) is patched in once it
+    // arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedRole = role;
-    this.roleForm.reset({
-      slug,
+    this.isEditDetailLoading = true;
+    this.applyRoleFormValues(this.toRoleDetailFallback(role), role);
+    this.roleForm.get('slug')?.disable();
+    this.isFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
+      const roleDetail = this.extractResponseData<AdminRoleDto>(response);
+      // Ignore a stale response if the user closed the modal or switched roles.
+      if (roleDetail && this.isFormModalOpen && this.selectedRole?.id === role.id) {
+        this.applyRoleFormValues(roleDetail, role, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedRole?.id === role.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the role form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyRoleFormValues(
+    roleDetail: AdminRoleDto,
+    role: RoleRow,
+    onlyPristine = false
+  ): void {
+    const enLabel =
+      this.getTranslationLabel(roleDetail.translations, 'en') ??
+      roleDetail.name ??
+      role.enLabel;
+    const thLabel = this.getTranslationLabel(roleDetail.translations, 'th') ?? role.thLabel;
+    const enDescription =
+      this.getTranslationDescription(roleDetail.translations, 'en') ??
+      roleDetail.description ??
+      role.enDescription;
+    const thDescription =
+      this.getTranslationDescription(roleDetail.translations, 'th') ?? role.thDescription;
+    const status = this.parseStatus(roleDetail.status ?? role.statusCode);
+
+    const values = {
+      slug: String(roleDetail.slug ?? role.slug).trim(),
       enLabel: String(enLabel ?? '').trim().replace(/^-$/, ''),
       enDescription: String(enDescription ?? '').trim().replace(/^-$/, ''),
       thLabel: String(thLabel ?? '').trim().replace(/^-$/, ''),
       thDescription: String(thDescription ?? '').trim().replace(/^-$/, ''),
       status: status.code,
-    });
-    this.roleForm.get('slug')?.disable();
-    this.isFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.roleForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.roleForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeFormModal(force = false): void {
@@ -215,6 +247,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedRole = null;
     this.roleForm.reset();
   }
@@ -241,6 +274,9 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected async submitRole(): Promise<void> {
     if (this.roleForm.invalid) {
       this.roleForm.markAllAsTouched();
+      // Without this the click looks like a no-op when a field is invalid
+      // (e.g. a slug the pattern rejects) — surface why nothing was saved.
+      await this.alertService.warning(this.translate.instant('ADMIN.VALIDATION.FORM_INVALID'));
       return;
     }
 

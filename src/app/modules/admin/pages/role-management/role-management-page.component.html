@@ -117,7 +117,12 @@
         <h4 class="admin-modal-title">
           {{ isEditMode ? ('ADMIN.ROLES.EDIT_TITLE' | translate) : ('ADMIN.ROLES.ADD_TITLE' | translate) }}
         </h4>
-        <p class="admin-modal-subtitle">{{ 'ADMIN.ROLES.MODAL_HINT' | translate }}</p>
+        <p class="admin-modal-subtitle">
+          {{ 'ADMIN.ROLES.MODAL_HINT' | translate }}
+          <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        </p>
       </div>
       <button
         type="button"

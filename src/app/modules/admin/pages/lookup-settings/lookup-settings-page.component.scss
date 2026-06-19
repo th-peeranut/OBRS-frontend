@@ -2,3 +2,14 @@
   display: block;
 }
 
+// Category section header inside the archive table, so the (otherwise long,
+// flat) list reads grouped by category.
+.admin-group-row td {
+  position: sticky;
+  top: 0;
+  background: var(--admin-surface-muted, #f1f5f9);
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+

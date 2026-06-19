@@ -294,8 +294,13 @@
       </div>
 
       <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.ROUTES.TH_LABEL' | translate }}</label>
+        <label class="admin-form-label">
+          {{ 'ADMIN.ROUTES.TH_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
         <input class="admin-field" formControlName="thLabel" />
+        <small class="admin-error" *ngIf="isRouteFieldInvalid('thLabel')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
       </div>
 
       <div class="admin-form-field">

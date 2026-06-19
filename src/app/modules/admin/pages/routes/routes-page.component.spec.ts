@@ -78,6 +78,23 @@ describe('RoutesPageComponent edit modal', () => {
     expect((component as any).routeForm.get('enLabel').value).toBe('A to B');
   });
 
+  // Regression: the create-route form must require the Thai route name.
+  it('requires the Thai route name (thLabel)', () => {
+    const { component } = makeComponent(new Subject<ResponseAPI<AdminRouteDto>>());
+    (component as any).openCreateModal();
+    const form = (component as any).routeForm;
+
+    form.get('slug').setValue('a-b');
+    form.get('status').setValue('active');
+    form.get('enLabel').setValue('A to B');
+    form.get('thLabel').setValue('');
+    expect(form.get('thLabel').valid).toBeFalse();
+    expect(form.valid).toBeFalse();
+
+    form.get('thLabel').setValue('เอ ถึง บี');
+    expect(form.valid).toBeTrue();
+  });
+
   it('patches server detail into untouched fields without clobbering user input', async () => {
     const getRouteById$ = new Subject<ResponseAPI<AdminRouteDto>>();
     const { component } = makeComponent(getRouteById$);

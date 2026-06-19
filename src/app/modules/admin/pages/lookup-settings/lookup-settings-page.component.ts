@@ -58,8 +58,8 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
     private readonly store: LookupsStore
   ) {
     this.lookupForm = this.formBuilder.group({
-      category: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
-      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
+      category: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
+      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
       enLabel: ['', [Validators.required, Validators.maxLength(255)]],
       enDescription: ['', [Validators.maxLength(500)]],
       thLabel: ['', [Validators.maxLength(255)]],
@@ -166,31 +166,36 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   protected async submitLookup(): Promise<void> {
     if (this.lookupForm.invalid) {
       this.lookupForm.markAllAsTouched();
+      await this.alertService.warning(this.translate.instant('ADMIN.VALIDATION.FORM_INVALID'));
       return;
     }
 
     this.isSubmitting = true;
+    const wasEdit = this.isEditMode;
+    const original = this.selectedEntry;
 
     try {
       const payload = this.toLookupPayload();
 
-      if (this.isEditMode && this.selectedEntry) {
+      if (wasEdit && original) {
         await firstValueFrom(
-          this.adminApiService.updateLookup(
-            this.selectedEntry.category,
-            this.selectedEntry.slug,
-            payload
-          )
+          this.adminApiService.updateLookup(original.category, original.slug, payload)
         );
-        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createLookup(payload));
-        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
+      // Reflect the change in the table immediately. Each SIT round-trip costs
+      // ~2s on its own, so waiting on a full re-fetch before the user sees the
+      // edit is what made saves feel slow — patch locally, revalidate in the
+      // background.
+      this.applyOptimisticLookup(payload, wasEdit ? original : null);
       this.isSubmitting = false;
       this.closeFormModal();
-      await this.store.refresh();
+      await this.alertService.success(
+        this.translate.instant(wasEdit ? 'ADMIN.MESSAGES.UPDATED' : 'ADMIN.MESSAGES.CREATED')
+      );
+      void this.store.refresh();
     } catch (error) {
       const message =
         extractApiErrorMessage(error) ||
@@ -227,6 +232,71 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isDeleting = false;
     }
+  }
+
+  /** Entries grouped by category so the archive table reads by section. */
+  protected get groupedEntries(): Array<{ category: string; items: LookupEntry[] }> {
+    const map = new Map<string, LookupEntry[]>();
+    for (const entry of this.entries) {
+      const items = map.get(entry.category) ?? [];
+      items.push(entry);
+      map.set(entry.category, items);
+    }
+
+    return Array.from(map.entries())
+      .map(([category, items]) => ({ category, items }))
+      .sort((a, b) => a.category.localeCompare(b.category));
+  }
+
+  // Patch the local table to reflect a just-saved lookup, so the change shows
+  // instantly while the authoritative re-fetch runs in the background.
+  private applyOptimisticLookup(
+    payload: CreateLookupPayload,
+    original: LookupEntry | null
+  ): void {
+    const entry = this.toEntryFromPayload(payload, original?.id ?? 0);
+
+    if (original) {
+      this.entries = this.entries.map((existing) =>
+        existing.category === original.category && existing.slug === original.slug
+          ? entry
+          : existing
+      );
+    } else {
+      this.entries = [entry, ...this.entries];
+    }
+
+    this.categories = this.toCategorySummaryFromEntries(this.entries);
+  }
+
+  private toEntryFromPayload(payload: CreateLookupPayload, id: number): LookupEntry {
+    const byLocale = (locale: string) =>
+      payload.translations.find((translation) => translation.locale === locale);
+    const en = byLocale('en');
+    const th = byLocale('th');
+
+    return {
+      id,
+      category: payload.category,
+      slug: payload.slug,
+      enLabel: en?.label || '-',
+      enDescription: en?.description || '-',
+      thLabel: th?.label || '-',
+      thDescription: th?.description || '-',
+    };
+  }
+
+  private toCategorySummaryFromEntries(
+    entries: LookupEntry[]
+  ): Array<{ name: string; count: number }> {
+    const categoryMap = new Map<string, number>();
+    for (const entry of entries) {
+      categoryMap.set(entry.category, (categoryMap.get(entry.category) ?? 0) + 1);
+    }
+
+    return Array.from(categoryMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
   }
 
   private toLookupPayload(): CreateLookupPayload {

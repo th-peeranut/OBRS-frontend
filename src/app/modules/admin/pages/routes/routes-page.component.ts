@@ -134,7 +134,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       ],
       status: ['', [Validators.required]],
       enLabel: ['', [Validators.required, Validators.maxLength(100)]],
-      thLabel: ['', [Validators.maxLength(100)]],
+      thLabel: ['', [Validators.required, Validators.maxLength(100)]],
       enDescription: ['', [Validators.maxLength(255)]],
       thDescription: ['', [Validators.maxLength(255)]],
     });

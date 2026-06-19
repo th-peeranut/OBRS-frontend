@@ -125,7 +125,8 @@
       "USERNAME_EXIST": "This username is already in use.",
       "EMAIL_EXIST": "This email is already in use.",
       "PHONE_NO_EXIST": "This phone number is already in use.",
-      "SAME_PASSWORD_VALIDATE": "Please enter the same password."
+      "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
+      "FORM_INVALID": "Please complete the highlighted required fields."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",

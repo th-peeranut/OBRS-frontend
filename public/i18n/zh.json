@@ -125,7 +125,8 @@
       "USERNAME_EXIST": "此用户名已被使用。",
       "EMAIL_EXIST": "此电子邮件已被使用。",
       "PHONE_NO_EXIST": "此电话号码已被使用。",
-      "SAME_PASSWORD_VALIDATE": "请输入相同的密码。"
+      "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
+      "FORM_INVALID": "请填写标记的必填字段。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
