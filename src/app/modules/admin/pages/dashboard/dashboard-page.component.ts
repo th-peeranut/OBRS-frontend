@@ -6,6 +6,7 @@ import {
   DashboardSnapshot,
   RecentBookingRow,
 } from './admin-dashboard.store';
+import { pollWhileVisible } from '../../shared/admin-auto-refresh';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -33,6 +34,9 @@ export class DashboardPageComponent implements OnInit, OnDestroy {
       this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
     );
     void this.store.refresh();
+    // Operational data (bookings/payments) arrives from customers, so poll for
+    // it while this page is open; stops on navigate-away via the teardown bag.
+    this.subscriptions.add(pollWhileVisible(() => void this.store.refresh()));
   }
 
   ngOnDestroy(): void {

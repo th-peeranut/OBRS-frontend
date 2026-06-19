@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingRow, BookingsStore, StatusOption } from './bookings.store';
+import { pollWhileVisible } from '../../shared/admin-auto-refresh';
 
 @Component({
   selector: 'app-bookings-page',
@@ -57,6 +58,9 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
       })
     );
     void this.store.refresh();
+    // Bookings/payments are created by customers, so poll for new ones while
+    // this page is open; stops on navigate-away via the teardown bag.
+    this.subscriptions.add(pollWhileVisible(() => void this.store.refresh()));
   }
 
   ngOnDestroy(): void {
