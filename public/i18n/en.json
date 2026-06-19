@@ -695,17 +695,25 @@
   },
   "HOW_TO_BOOK": {
     "TITLE": "How to Book and Pay",
-    "INTRO": "Book your bus ticket and pay online in a few simple steps.",
+    "INTRO": "Booking your bus ticket is quick and completely online. Follow the steps below to reserve your seats and pay securely.",
     "BOOKING_TITLE": "Booking your ticket",
     "STEP_1": "On the home page, select your origin, destination, and travel date, then search for available trips.",
     "STEP_2": "Choose a departure time from the list of available schedules.",
-    "STEP_3": "Review the trip details and pick your seats.",
-    "STEP_4": "Enter passenger information for each traveler.",
-    "STEP_5": "Confirm your booking summary and continue to payment.",
+    "STEP_3": "Review the trip details and select your seats.",
+    "STEP_4": "Enter the passenger information for each traveler.",
+    "STEP_5": "Check your booking summary, then continue to payment.",
     "PAYMENT_TITLE": "Paying for your booking",
-    "PAYMENT_INTRO": "We accept the following payment methods:",
-    "PAYMENT_1": "Credit or debit card (Visa, Mastercard).",
-    "PAYMENT_2": "PromptPay QR code.",
-    "PAYMENT_NOTE": "Once payment is confirmed, your e-ticket is issued immediately and is also available from your booking history."
+    "PAYMENT_INTRO": "At the payment step, choose one of the following secure payment methods:",
+    "PAYMENT_1": "Credit or debit card (Visa, Mastercard)",
+    "PAYMENT_2": "PromptPay — scan the QR code with your mobile banking app",
+    "PAYMENT_NOTE": "Please do not close or refresh the page while your payment is being processed, until the confirmation screen appears.",
+    "ETICKET_TITLE": "Getting your e-ticket",
+    "ETICKET_TEXT": "As soon as your payment is confirmed, your e-ticket is issued automatically. You can view it on the confirmation screen and find it again later in your booking history. Present the e-ticket — printed or on your phone — to staff before boarding.",
+    "TIPS_TITLE": "Before you travel",
+    "TIP_1": "Arrive at the station at least 30 minutes before departure to check in.",
+    "TIP_2": "Bring a valid photo ID that matches the passenger name on your ticket.",
+    "TIP_3": "Keep your booking reference handy in case you need to contact support.",
+    "HELP_TITLE": "Need help?",
+    "HELP_TEXT": "If you have any questions about booking or payment, you can reach us through the contact channels listed in the footer of any page."
   }
 }

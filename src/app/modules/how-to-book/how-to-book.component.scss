@@ -35,7 +35,8 @@
   }
 
   .steps,
-  .methods {
+  .methods,
+  .tips {
     margin: 0 0 12px;
     padding-left: 24px;
 
@@ -69,7 +70,8 @@
 
     p,
     .steps li,
-    .methods li {
+    .methods li,
+    .tips li {
       font-size: 14px;
       line-height: 1.8;
     }

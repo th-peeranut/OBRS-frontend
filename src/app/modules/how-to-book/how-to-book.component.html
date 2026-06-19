@@ -1,7 +1,8 @@
 <app-navbar></app-navbar>
 
-<!-- TODO: placeholder copy — replace HOW_TO_BOOK.* strings with finalized
-     booking/payment instructions once product confirms the wording. -->
+<!-- NOTE: this is a full first draft of the booking/payment guide. Review
+     with product before treating as final — especially the accepted payment
+     methods and the 30-minute check-in time. -->
 <section class="how-to-book-container">
   <div class="how-to-book-card">
     <h1>{{ "HOW_TO_BOOK.TITLE" | translate }}</h1>
@@ -23,6 +24,19 @@
       <li>{{ "HOW_TO_BOOK.PAYMENT_2" | translate }}</li>
     </ul>
     <p class="note">{{ "HOW_TO_BOOK.PAYMENT_NOTE" | translate }}</p>
+
+    <h2>{{ "HOW_TO_BOOK.ETICKET_TITLE" | translate }}</h2>
+    <p>{{ "HOW_TO_BOOK.ETICKET_TEXT" | translate }}</p>
+
+    <h2>{{ "HOW_TO_BOOK.TIPS_TITLE" | translate }}</h2>
+    <ul class="tips">
+      <li>{{ "HOW_TO_BOOK.TIP_1" | translate }}</li>
+      <li>{{ "HOW_TO_BOOK.TIP_2" | translate }}</li>
+      <li>{{ "HOW_TO_BOOK.TIP_3" | translate }}</li>
+    </ul>
+
+    <h2>{{ "HOW_TO_BOOK.HELP_TITLE" | translate }}</h2>
+    <p>{{ "HOW_TO_BOOK.HELP_TEXT" | translate }}</p>
   </div>
 </section>
 

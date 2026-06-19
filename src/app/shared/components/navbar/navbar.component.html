@@ -21,9 +21,13 @@
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
   <!-- ติดต่อเรา -->
-  <a class="menu-font menu-font-action" (click)="scrollToContact()">
+  <button
+    type="button"
+    class="menu-font menu-font-action"
+    (click)="scrollToContact()"
+  >
     {{ "HOME.NAVBAR.CONTACT" | translate }}
-  </a>
+  </button>
 
   <div class="button-container">
     <!-- Change Language Dropdown -->
