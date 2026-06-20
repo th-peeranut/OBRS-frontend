@@ -502,16 +502,16 @@
     },
     "FOOTER": {
       "TITLE": "คิวรถ NJ ผู้ใหญ่ปู",
-      "TAGLINE": "จองตั๋วรถตู้โดยสารออนไลน์",
+      "TAGLINE": "จองตั๋วรถโดยสารออนไลน์",
       "HEAD_OFFICE_LABEL": "ที่ตั้งสำนักงานใหญ่",
       "ADDRESS": "3/5 หมู่ 3 ตำบลหนองชาก อำเภอบ้านบึง ชลบุรี 20170",
       "SALES_TITLE": "จุดจำหน่ายตั๋วโดยสาร",
       "SALES_NONG_CHAK": "หนองชาก",
       "SALES_NONG_CHAK_SUB": "อ.บ้านบึง จ.ชลบุรี",
-      "SALES_BAN_BUENG": "บ้านบึง (ตลาดวิสิทธิ์ชัย)",
+      "SALES_BAN_BUENG": "ตลาดวิศิษฐ์ชัย",
       "SALES_BAN_BUENG_SUB": "อ.บ้านบึง จ.ชลบุรี",
       "SALES_MOCHIT": "หมอชิต",
-      "SALES_MOCHIT_SUB": "สถานีขนส่งผู้โดยสารขนาดเล็ก (จตุจักร) อาคาร C ช่อง C5",
+      "SALES_MOCHIT_SUB": "สถานีเดินรถโดยสารขนาดเล็ก (จตุจักร) อาคาร C ช่อง C5",
       "MENU_TITLE": "ข้อมูลและบริการ",
       "MENU_TEXT_1": "วิธีจองและชำระเงิน",
       "MENU_PRIVACY_POLICY": "นโยบายความเป็นส่วนตัว",
@@ -520,7 +520,7 @@
       "CONTACT_TITLE": "ติดต่อเรา",
       "CONTACT_FACEBOOK": "NJ ผู้ใหญ่ปู",
       "CONTACT_INSTAGRAM": "@nj.phuyaipu",
-      "CONTACT_PHONE": "09 0562 2019",
+      "CONTACT_PHONE": "09-0562-2019",
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved."
     }
   },

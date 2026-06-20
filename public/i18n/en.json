@@ -501,13 +501,13 @@
     },
     "FOOTER": {
       "TITLE": "NJ Phuyaipu",
-      "TAGLINE": "Online van ticket booking",
+      "TAGLINE": "Online bus ticket booking",
       "HEAD_OFFICE_LABEL": "Head office location",
       "ADDRESS": "3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chonburi 20170",
       "SALES_TITLE": "Ticket sales points",
       "SALES_NONG_CHAK": "Nong Chak",
       "SALES_NONG_CHAK_SUB": "Ban Bueng District, Chonburi",
-      "SALES_BAN_BUENG": "Ban Bueng (Wisit Chai Market)",
+      "SALES_BAN_BUENG": "Wisit Chai Market",
       "SALES_BAN_BUENG_SUB": "Ban Bueng District, Chonburi",
       "SALES_MOCHIT": "Mo Chit",
       "SALES_MOCHIT_SUB": "Small Passenger Terminal (Chatuchak) Building C, Counter C5",
@@ -519,7 +519,7 @@
       "CONTACT_TITLE": "Contact us",
       "CONTACT_FACEBOOK": "NJ Phuyaipu",
       "CONTACT_INSTAGRAM": "@nj.phuyaipu",
-      "CONTACT_PHONE": "09 0562 2019",
+      "CONTACT_PHONE": "09-0562-2019",
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved."
     }
   },
