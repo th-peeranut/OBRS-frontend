@@ -27,17 +27,17 @@ const routes: Routes = [
         data: { titleKey: 'ADMIN.PAGES.DASHBOARD' },
       },
       {
-        path: 'lookup-settings',
+        path: 'lookups',
         component: LookupSettingsPageComponent,
         data: { titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS' },
       },
       {
-        path: 'role-management',
+        path: 'roles',
         component: RoleManagementPageComponent,
         data: { titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT' },
       },
       {
-        path: 'user-management',
+        path: 'users',
         component: UserManagementPageComponent,
         data: { titleKey: 'ADMIN.PAGES.USER_MANAGEMENT' },
       },
@@ -61,6 +61,11 @@ const routes: Routes = [
         component: BookingsPageComponent,
         data: { titleKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT' },
       },
+      // Back-compat redirects for the pre-standardization paths, so existing
+      // bookmarks/deep links to the old admin URLs keep working.
+      { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
+      { path: 'role-management', redirectTo: 'roles', pathMatch: 'full' },
+      { path: 'user-management', redirectTo: 'users', pathMatch: 'full' },
     ],
   },
 ];

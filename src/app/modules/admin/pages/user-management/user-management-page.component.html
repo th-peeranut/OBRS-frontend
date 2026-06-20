@@ -55,7 +55,6 @@
       <thead>
         <tr>
           <th>{{ 'ADMIN.USERS.FULL_NAME' | translate }}</th>
-          <th>{{ 'ADMIN.USERS.USERNAME' | translate }}</th>
           <th>{{ 'ADMIN.USERS.EMAIL_PHONE' | translate }}</th>
           <th>{{ 'ADMIN.USERS.ROLES' | translate }}</th>
           <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
@@ -71,7 +70,6 @@
                 <span class="admin-skeleton admin-skeleton--sm"></span>
               </div>
             </td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td>
               <div class="admin-cell-stack">
                 <span class="admin-skeleton"></span>
@@ -92,7 +90,6 @@
                 <span>{{ user.lastActive }}</span>
               </div>
             </td>
-            <td>{{ user.username }}</td>
             <td>
               <div class="admin-cell-stack">
                 <span>{{ user.email }}</span>
@@ -130,7 +127,7 @@
           </tr>
 
           <tr *ngIf="filteredUsers.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="6">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
           </tr>
         </ng-container>
       </tbody>

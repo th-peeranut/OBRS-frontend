@@ -30,7 +30,6 @@ import { UsersStore } from './users.store';
 interface UserRow {
   id: number;
   fullName: string;
-  username: string;
   email: string;
   phone: string;
   roleSlugs: string[];
@@ -498,7 +497,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     return {
       id: user.id,
       fullName: user.fullName ?? '-',
-      username: user.username ?? '-',
       email: user.email ?? '-',
       phone: user.phoneNumber ?? '-',
       roleSlugs,
@@ -751,7 +749,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
       const searchTarget = [
         user.fullName,
-        user.username,
         user.email,
         user.phone,
         user.roles.join(' '),

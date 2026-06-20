@@ -27,17 +27,17 @@ export class AdminLayoutComponent implements OnInit {
       icon: 'dashboard',
     },
     {
-      path: 'lookup-settings',
+      path: 'lookups',
       labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS',
       icon: 'settings_input_component',
     },
     {
-      path: 'role-management',
+      path: 'roles',
       labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT',
       icon: 'admin_panel_settings',
     },
     {
-      path: 'user-management',
+      path: 'users',
       labelKey: 'ADMIN.PAGES.USER_MANAGEMENT',
       icon: 'group',
     },

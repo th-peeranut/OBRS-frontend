@@ -8,7 +8,6 @@ import { createTranslateStub } from '../../../../testing/test-stubs';
 const USER_ROW = {
   id: 1,
   fullName: 'Mr John Doe',
-  username: 'jdoe',
   email: 'john@example.com',
   phone: '0812345678',
   roleSlugs: ['admin'],
