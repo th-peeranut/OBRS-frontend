@@ -501,13 +501,13 @@
     },
     "FOOTER": {
       "TITLE": "NJ Phuyaipu",
-      "TAGLINE": "在线面包车购票",
+      "TAGLINE": "在线巴士购票",
       "HEAD_OFFICE_LABEL": "总部地址",
       "ADDRESS": "3/5 第3村，侬差克次区，班碰区，春武里府 20170",
       "SALES_TITLE": "售票点",
       "SALES_NONG_CHAK": "侬差克",
       "SALES_NONG_CHAK_SUB": "班碰区，春武里府",
-      "SALES_BAN_BUENG": "班碰（威实猜市场）",
+      "SALES_BAN_BUENG": "威实猜市场",
       "SALES_BAN_BUENG_SUB": "班碰区，春武里府",
       "SALES_MOCHIT": "摩奇",
       "SALES_MOCHIT_SUB": "小型客运站（乍都乍）C楼，C5柜台",
@@ -519,7 +519,7 @@
       "CONTACT_TITLE": "联系我们",
       "CONTACT_FACEBOOK": "NJ Phuyaipu",
       "CONTACT_INSTAGRAM": "@nj.phuyaipu",
-      "CONTACT_PHONE": "09 0562 2019",
+      "CONTACT_PHONE": "09-0562-2019",
       "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026。保留所有权利。"
     }
   },
