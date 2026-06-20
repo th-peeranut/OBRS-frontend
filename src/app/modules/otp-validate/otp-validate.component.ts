@@ -11,7 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
-import { PrimeNGConfig } from 'primeng/api';
+import { LanguageService } from '../../shared/services/language.service';
 import { OtpService } from '../../services/otp/otp.service';
 import {
   LoginOtpVerify,
@@ -43,11 +43,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  languageOnChange$: Subscription;
-
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
+    private languageService: LanguageService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -76,19 +74,12 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
   }
 
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    // Persist so the authInterceptor sends a matching Accept-Language header;
-    // otherwise it falls back to 'th' and backend error messages stay Thai (#22).
-    localStorage.setItem('app_language', lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {

@@ -3,7 +3,7 @@ import { FormBuilder } from '@angular/forms';
 import { RegisterComponent } from './register.component';
 import {
   createElementRefStub,
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
@@ -14,7 +14,7 @@ describe('RegisterComponent', () => {
   beforeEach(() => {
     component = new RegisterComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub(),
+      createLanguageServiceStub(),
       {} as never,
       createElementRefStub(),
       new FormBuilder(),

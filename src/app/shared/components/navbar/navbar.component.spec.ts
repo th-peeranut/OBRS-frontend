@@ -9,7 +9,7 @@ import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
 import {
   createElementRefStub,
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../../testing/test-stubs';
@@ -18,6 +18,7 @@ describe('NavbarComponent', () => {
   let component: NavbarComponent;
   let authStatus$: BehaviorSubject<boolean>;
   let roles: string[];
+  let languageServiceStub: any;
 
   function createAuthStub(): any {
     return {
@@ -31,14 +32,15 @@ describe('NavbarComponent', () => {
   beforeEach(() => {
     authStatus$ = new BehaviorSubject<boolean>(false);
     roles = [];
+    languageServiceStub = createLanguageServiceStub();
     component = new NavbarComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub(),
       {} as never,
       createElementRefStub(),
       createAuthStub(),
       createRouterStub(),
-      {} as never
+      {} as never,
+      languageServiceStub
     );
   });
 
@@ -120,17 +122,15 @@ describe('NavbarComponent', () => {
     expect(component.isDriver).toBe(false);
   });
 
-  it('persists the selected language so the Accept-Language header matches', () => {
-    // Regression for #22: switchLanguage only called translate.use(), so the
-    // authInterceptor (Accept-Language = localStorage.app_language || 'th')
-    // kept sending 'th' and backend error modals stayed Thai after switching.
-    localStorage.removeItem('app_language');
+  it('delegates language switching to LanguageService (which persists it)', () => {
+    // Regression for #22: switching must go through LanguageService so the
+    // choice is persisted and the authInterceptor sends a matching
+    // Accept-Language header (instead of each component re-implementing it).
+    const switchSpy = spyOn(languageServiceStub, 'switch').and.resolveTo();
 
     component.switchLanguage('en');
-    expect(localStorage.getItem('app_language')).toBe('en');
 
-    component.switchLanguage('th');
-    expect(localStorage.getItem('app_language')).toBe('th');
+    expect(switchSpy).toHaveBeenCalledWith('en');
   });
 
   it('scrolls to the footer contact section', () => {

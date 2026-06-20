@@ -1,6 +1,6 @@
 import { AppComponent } from './app.component';
 import {
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createTranslateStub,
 } from './testing/test-stubs';
 
@@ -10,7 +10,7 @@ describe('AppComponent', () => {
   beforeEach(() => {
     component = new AppComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub()
+      createLanguageServiceStub()
     );
   });
 

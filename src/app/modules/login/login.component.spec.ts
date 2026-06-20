@@ -3,7 +3,7 @@ import { FormBuilder } from '@angular/forms';
 import { LoginComponent } from './login.component';
 import {
   createElementRefStub,
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
 
@@ -13,7 +13,7 @@ describe('LoginComponent', () => {
   beforeEach(() => {
     component = new LoginComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub(),
+      createLanguageServiceStub(),
       {} as never,
       createElementRefStub(),
       new FormBuilder(),

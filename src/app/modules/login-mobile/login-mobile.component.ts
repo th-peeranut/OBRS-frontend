@@ -2,8 +2,7 @@ import { Component, ElementRef, OnDestroy, Renderer2, ViewChild } from '@angular
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
-import { Subscription } from 'rxjs';
+import { LanguageService } from '../../shared/services/language.service';
 
 @Component({
   selector: 'app-login-mobile',
@@ -20,12 +19,11 @@ export class LoginMobileComponent implements OnDestroy  {
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  languageOnChange$: Subscription;
   private unlistenDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
+    private languageService: LanguageService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -38,7 +36,6 @@ export class LoginMobileComponent implements OnDestroy  {
   }
 
   ngOnDestroy(): void {
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
     this.unlistenDropdown?.();
   }
 
@@ -75,13 +72,7 @@ export class LoginMobileComponent implements OnDestroy  {
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    // Persist so the authInterceptor sends a matching Accept-Language header;
-    // otherwise it falls back to 'th' and backend error messages stay Thai (#22).
-    localStorage.setItem('app_language', lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {

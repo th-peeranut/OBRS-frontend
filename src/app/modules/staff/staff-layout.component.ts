@@ -1,9 +1,9 @@
 import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, firstValueFrom, startWith } from 'rxjs';
+import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
-import { PrimeNGConfig } from 'primeng/api';
+import { LanguageService } from '../../shared/services/language.service';
 import { TranslateService } from '@ngx-translate/core';
 
 interface StaffNavItem {
@@ -71,7 +71,7 @@ export class StaffLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly primengConfig: PrimeNGConfig,
+    private readonly languageService: LanguageService,
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
 
@@ -115,10 +115,7 @@ export class StaffLayoutComponent implements OnInit {
 
   protected async switchLanguage(lang: string): Promise<void> {
     this.currentLanguage = lang;
-    localStorage.setItem('app_language', lang);
-    this.translate.use(lang);
-    const calendarTranslation = await firstValueFrom(this.translate.get('CALENDAR'));
-    this.primengConfig.setTranslation(calendarTranslation as Record<string, unknown>);
+    await this.languageService.switch(lang);
   }
 
   protected toggleProfileMenu(): void {
@@ -132,9 +129,7 @@ export class StaffLayoutComponent implements OnInit {
   }
 
   private async setupLanguage(): Promise<void> {
-    const savedLanguage = localStorage.getItem('app_language');
-    const activeLanguage = savedLanguage ?? this.translate.currentLang ?? 'th';
-    await this.switchLanguage(activeLanguage);
+    await this.switchLanguage(this.languageService.getStoredLanguage());
   }
 
   private getDeepestRoute(route: ActivatedRoute): ActivatedRoute {

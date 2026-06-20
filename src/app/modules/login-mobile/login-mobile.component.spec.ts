@@ -3,7 +3,7 @@ import { FormBuilder } from '@angular/forms';
 import { LoginMobileComponent } from './login-mobile.component';
 import {
   createElementRefStub,
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
@@ -14,7 +14,7 @@ describe('LoginMobileComponent', () => {
   beforeEach(() => {
     component = new LoginMobileComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub(),
+      createLanguageServiceStub(),
       {} as never,
       createElementRefStub(),
       new FormBuilder(),

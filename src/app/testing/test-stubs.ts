@@ -46,6 +46,14 @@ export function createPrimeNgConfigStub(): any {
   return { setTranslation: () => {} };
 }
 
+/** LanguageService: `switch` resolves; `getStoredLanguage` returns a default. */
+export function createLanguageServiceStub(): any {
+  return {
+    switch: () => Promise.resolve(),
+    getStoredLanguage: () => 'th',
+  };
+}
+
 /** ElementRef backed by a detached DOM node. */
 export function createElementRefStub(): any {
   return { nativeElement: document.createElement('div') };

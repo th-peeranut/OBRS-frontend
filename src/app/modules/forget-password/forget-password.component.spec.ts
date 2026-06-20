@@ -3,7 +3,7 @@ import { FormBuilder } from '@angular/forms';
 import { ForgetPasswordComponent } from './forget-password.component';
 import {
   createElementRefStub,
-  createPrimeNgConfigStub,
+  createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
@@ -14,7 +14,7 @@ describe('ForgetPasswordComponent', () => {
   beforeEach(() => {
     component = new ForgetPasswordComponent(
       createTranslateStub(),
-      createPrimeNgConfigStub(),
+      createLanguageServiceStub(),
       {} as never,
       createElementRefStub(),
       new FormBuilder(),

@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
+import { LanguageService } from '../shared/services/language.service';
 
 let isHandlingAuthError = false;
 
@@ -20,14 +21,14 @@ export const authInterceptor: HttpInterceptorFn = (
 ): Observable<HttpEvent<any>> => {
   const authService = inject(AuthService);
   const router = inject(Router);
+  const languageService = inject(LanguageService);
   const token = authService.getToken();
-  const appLanguage = localStorage.getItem('app_language') || 'th';
   const isAuthEndpoint = req.url.includes('/api/auth/');
 
   let headers = req.headers;
 
   if (!headers.has('Accept-Language')) {
-    headers = headers.set('Accept-Language', appLanguage);
+    headers = headers.set('Accept-Language', languageService.getStoredLanguage());
   }
 
   if (token) {
