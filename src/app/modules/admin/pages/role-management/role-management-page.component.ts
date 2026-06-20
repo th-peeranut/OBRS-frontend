@@ -284,17 +284,26 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     try {
       const payload = this.toRolePayload();
 
+      // Start revalidating the table the moment the write succeeds, so it runs
+      // concurrently with the success dialog (a SweetAlert the user dismisses by
+      // hand) instead of only starting after — on SIT each request is ~2s, so
+      // serialising refresh behind the popup is what made "add role" feel ~8s.
+      // store.refresh() never rejects (errors surface via error$), so holding
+      // the promise and awaiting it after the alert is safe.
+      let refresh: Promise<void>;
       if (this.isEditMode && this.selectedRole) {
         await this.updateRole(this.selectedRole, payload);
         this.closeFormModal(true);
+        refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createRole(payload));
         this.closeFormModal(true);
+        refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.store.refresh();
+      await refresh;
     } catch (error) {
       this.closeFormModal(true);
       const message =
@@ -315,8 +324,10 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     try {
       await this.deleteRole(this.selectedRole);
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog (see submitRole).
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.store.refresh();
+      await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
       const message =

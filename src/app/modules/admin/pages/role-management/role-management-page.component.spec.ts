@@ -64,15 +64,21 @@ function makeComponent(getRoleById$?: Subject<ResponseAPI<AdminRoleDto>>) {
     error: jasmine.createSpy('error').and.resolveTo(undefined),
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
   };
+  const store = makeStoreStub();
   const component = new RoleManagementPageComponent(
     adminApi as any,
     new FormBuilder(),
     alert as any,
     createTranslateStub() as any,
-    makeStoreStub() as any
+    store as any
   );
   (component as any).statusOptions = [{ code: 'active', label: 'Active' }];
-  return { component, adminApi, alert };
+  return { component, adminApi, alert, store };
+}
+
+/** Resolve after all pending microtasks have flushed. */
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe('RoleManagementPageComponent edit modal', () => {
@@ -136,5 +142,37 @@ describe('RoleManagementPageComponent create submit', () => {
 
     await (component as any).submitRole();
     expect(adminApi.createRole).toHaveBeenCalled();
+  });
+
+  // Regression: the table revalidate must start concurrently with the success
+  // dialog, not after the user dismisses it. On SIT each request is ~2s, so
+  // serialising refresh behind the (hand-dismissed) popup was a big part of why
+  // "add role" felt ~8s. With the success dialog held open, refresh must
+  // already have been kicked off.
+  it('starts the table refresh while the success dialog is still open', async () => {
+    const { component, store, alert } = makeComponent();
+    let resolveSuccess!: () => void;
+    alert.success.and.returnValue(
+      new Promise<void>((resolve) => {
+        resolveSuccess = resolve;
+      })
+    );
+
+    (component as any).openCreateModal();
+    const form = (component as any).roleForm;
+    form.get('slug').setValue('bus-operator');
+    form.get('enLabel').setValue('Bus Operator');
+    form.get('thLabel').setValue('พนักงานรถ');
+    form.get('status').setValue('active');
+
+    const done = (component as any).submitRole();
+    await flush();
+
+    // Success dialog is open (its promise is unresolved) yet refresh already ran.
+    expect(alert.success).toHaveBeenCalled();
+    expect(store.refresh).toHaveBeenCalledTimes(1);
+
+    resolveSuccess();
+    await done;
   });
 });
