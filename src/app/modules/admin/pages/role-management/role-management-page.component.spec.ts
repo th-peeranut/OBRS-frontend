@@ -35,16 +35,29 @@ function detailResponse(): ResponseAPI<AdminRoleDto> {
   };
 }
 
+interface RolesData {
+  roles: Array<{ id: number; slug: string; status: string; translations: unknown[] }>;
+  lookups: unknown[];
+}
+
 function makeStoreStub() {
-  return {
-    data$: new BehaviorSubject<unknown>(null),
+  const data$ = new BehaviorSubject<unknown>(null);
+  const store = {
+    data$,
     refreshing$: new BehaviorSubject<boolean>(false),
     error$: new BehaviorSubject<boolean>(false),
     refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    mutate: jasmine.createSpy('mutate').and.callFake((transform: (d: RolesData) => RolesData) => {
+      const current = data$.value;
+      if (current !== null) {
+        data$.next(transform(current as RolesData));
+      }
+    }),
     get hasValue() {
-      return false;
+      return data$.value !== null;
     },
   };
+  return store;
 }
 
 function makeComponent(getRoleById$?: Subject<ResponseAPI<AdminRoleDto>>) {
@@ -57,6 +70,9 @@ function makeComponent(getRoleById$?: Subject<ResponseAPI<AdminRoleDto>>) {
       .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
     updateRoleById: jasmine
       .createSpy('updateRoleById')
+      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
+    deleteRoleById: jasmine
+      .createSpy('deleteRoleById')
       .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
   };
   const alert = {
@@ -114,6 +130,58 @@ describe('RoleManagementPageComponent edit modal', () => {
     expect(form.get('enDescription').value).toBe('Owner EN desc');
     expect(form.get('enLabel').value).toBe('User typed');
     expect((component as any).isEditDetailLoading).toBeFalse();
+  });
+});
+
+describe('RoleManagementPageComponent confirmDelete — optimistic removal', () => {
+  // Regression for SIT issue #14: the deleted role must disappear from the
+  // rendered table synchronously on confirmDelete(), before the background
+  // store.refresh() resolves (~2s on SIT).
+  it('removes the deleted role from filteredRoles synchronously, before refresh resolves', async () => {
+    const { component, store, alert } = makeComponent();
+
+    // Seed the store with two roles; the component subscribes via ngOnInit.
+    const seedData: RolesData = {
+      roles: [
+        { id: 7, slug: 'owner', status: 'active', translations: [] },
+        { id: 9, slug: 'driver', status: 'active', translations: [] },
+      ],
+      lookups: [],
+    };
+    store.data$.next(seedData);
+    // Trigger subscription (ngOnInit is not called in unit tests without TestBed,
+    // so subscribe manually as the component does in ngOnInit).
+    store.data$.subscribe((data) => {
+      if (data) {
+        (component as any).rawRoles = (data as RolesData).roles;
+        (component as any).rawLookups = (data as RolesData).lookups;
+        (component as any).applyLocalization();
+      }
+    });
+
+    // Make refresh stay pending so we can assert before it resolves.
+    let resolveRefresh!: () => void;
+    store.refresh.and.returnValue(new Promise<void>((r) => { resolveRefresh = r; }));
+    // Make the success alert resolve immediately.
+    alert.success.and.resolveTo(undefined);
+
+    // Select role id=7 for deletion.
+    (component as any).selectedRole = { ...ROLE_ROW, id: 7 };
+    (component as any).isDeleteModalOpen = true;
+
+    const done = (component as any).confirmDelete();
+    // Flush microtasks so the delete API call + mutate run synchronously.
+    await flush();
+
+    // The role must be gone from filteredRoles BEFORE refresh resolves.
+    const filteredRoles: Array<{ id: number }> = (component as any).filteredRoles;
+    expect(filteredRoles.every((r) => r.id !== 7)).toBeTrue();
+    // The other role must still be present.
+    expect(filteredRoles.some((r) => r.id === 9)).toBeTrue();
+
+    // Resolve refresh to let the test complete cleanly.
+    resolveRefresh();
+    await done;
   });
 });
 

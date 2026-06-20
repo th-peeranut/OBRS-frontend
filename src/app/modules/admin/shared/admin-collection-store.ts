@@ -56,6 +56,18 @@ export abstract class AdminCollectionStore<T> {
   }
 
   /**
+   * Apply a transform to the cached value and emit it immediately (optimistic
+   * update), so the UI reflects a local mutation without waiting on the
+   * background revalidate. No-op when there's no cached value yet.
+   */
+  mutate(transform: (current: T) => T): void {
+    const current = this.dataSubject.value;
+    if (current !== null) {
+      this.dataSubject.next(transform(current));
+    }
+  }
+
+  /**
    * Revalidate in the background. The cached value stays visible throughout.
    *
    * Concurrent calls are deduped into a single in-flight cycle (no parallel

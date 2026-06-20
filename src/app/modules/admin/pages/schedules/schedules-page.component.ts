@@ -550,14 +550,25 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
     this.isDeleting = true;
     try {
-      if (this.selectedSchedule.kind === 'schedule') {
-        await firstValueFrom(this.adminApiService.deleteSchedule(this.selectedSchedule.id));
+      // Capture before closeDeleteModal clears selectedSchedule.
+      const { id, kind } = this.selectedSchedule;
+      if (kind === 'schedule') {
+        await firstValueFrom(this.adminApiService.deleteSchedule(id));
       } else {
-        await firstValueFrom(this.adminApiService.deleteScheduleSet(this.selectedSchedule.id));
+        await firstValueFrom(this.adminApiService.deleteScheduleSet(id));
+      }
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      if (kind === 'schedule') {
+        this.store.mutate((d) => ({ ...d, generatedSchedules: d.generatedSchedules.filter((s) => s.id !== id) }));
+      } else {
+        this.store.mutate((d) => ({ ...d, scheduleSets: d.scheduleSets.filter((s) => s.id !== id) }));
       }
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog.
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.store.refresh();
+      await refresh;
     } catch (error) {
       const message =
         extractApiErrorMessage(error) ||

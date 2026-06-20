@@ -409,9 +409,16 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
+      // Capture id before closeDeleteModal clears selectedUser.
+      const id = this.selectedUser.id;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, users: d.users.filter((u) => u.id !== id) }));
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog (see submitUser).
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.store.refresh();
+      await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
       const message =

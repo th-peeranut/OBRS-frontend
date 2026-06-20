@@ -563,9 +563,13 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteRouteById(this.routeForDelete.id));
+      // Capture before closeDeleteModal clears routeForDelete.
+      const deletedId = this.routeForDelete.id;
       const deletedSlug = this.routeForDelete.slug;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, routes: d.routes.filter((r) => r.id !== deletedId) }));
       this.closeDeleteModal(true);
-      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
 
       if (this.selectedRouteSlug === deletedSlug) {
         this.selectedRouteSlug = '';
@@ -574,7 +578,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.allSegments = [];
       }
 
-      await this.store.refresh();
+      // Overlap the table revalidate with the success dialog.
+      const refresh = this.store.refresh();
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
       const message =

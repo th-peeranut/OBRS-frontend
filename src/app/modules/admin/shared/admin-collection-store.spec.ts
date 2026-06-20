@@ -130,4 +130,38 @@ describe('AdminCollectionStore', () => {
 
     expect(store.value).toBeNull();
   });
+
+  describe('mutate', () => {
+    it('transforms and re-emits the cached value synchronously to data$', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.resolve({ items: [1, 2, 3] });
+      await store.refresh();
+
+      const emitted: Array<Data | null> = [];
+      store.data$.subscribe((value) => emitted.push(value));
+      // At this point, BehaviorSubject has already replayed the cached value.
+      expect(emitted).toEqual([{ items: [1, 2, 3] }]);
+
+      store.mutate((d) => ({ items: d.items.filter((i) => i !== 2) }));
+
+      // mutate must emit synchronously — no await needed.
+      expect(emitted).toEqual([{ items: [1, 2, 3] }, { items: [1, 3] }]);
+      expect(store.value).toEqual({ items: [1, 3] });
+    });
+
+    it('is a no-op when the cache is null — does not emit a transformed value', () => {
+      const store = new TestStore();
+      // No refresh: cache is null.
+
+      const emitted: Array<Data | null> = [];
+      store.data$.subscribe((value) => emitted.push(value));
+      expect(emitted).toEqual([null]); // BehaviorSubject initial replay
+
+      store.mutate((d) => ({ items: [...d.items, 99] }));
+
+      // Must not have emitted anything extra after the replay.
+      expect(emitted).toEqual([null]);
+      expect(store.value).toBeNull();
+    });
+  });
 });

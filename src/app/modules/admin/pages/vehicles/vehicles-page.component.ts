@@ -312,9 +312,16 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteVehicle(this.selectedVehicle.id));
+      // Capture id before closeDeleteModal clears selectedVehicle.
+      const id = this.selectedVehicle.id;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, vehicles: d.vehicles.filter((v) => v.id !== id) }));
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog.
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.store.refresh();
+      await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
       const message =

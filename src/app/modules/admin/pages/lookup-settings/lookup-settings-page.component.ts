@@ -213,13 +213,15 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
 
     this.isDeleting = true;
     try {
+      // Capture before closeDeleteModal clears selectedEntry.
+      const { category, slug } = this.selectedEntry;
       await firstValueFrom(
-        this.adminApiService.deleteLookup(
-          this.selectedEntry.category,
-          this.selectedEntry.slug
-        )
+        this.adminApiService.deleteLookup(category, slug)
       );
 
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((list) => list.filter((x) => !(x.category === category && x.slug === slug)));
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.isDeleting = false;
       this.closeDeleteModal();

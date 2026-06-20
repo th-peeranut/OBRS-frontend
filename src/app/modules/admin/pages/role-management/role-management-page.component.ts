@@ -323,6 +323,11 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await this.deleteRole(this.selectedRole);
+      // Capture id before closeDeleteModal clears selectedRole.
+      const id = this.selectedRole.id;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, roles: d.roles.filter((r) => Number(r.id) !== Number(id)) }));
       this.closeDeleteModal(true);
       // Overlap the table revalidate with the success dialog (see submitRole).
       const refresh = this.store.refresh();
