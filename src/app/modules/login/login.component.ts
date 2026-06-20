@@ -85,6 +85,9 @@ export class LoginComponent implements OnDestroy {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
     this.translate.use(lang);
+    // Persist so the authInterceptor sends a matching Accept-Language header;
+    // otherwise it falls back to 'th' and backend error messages stay Thai (#22).
+    localStorage.setItem('app_language', lang);
     this.languageOnChange$ = this.translate
       .get('CALENDAR')
       .subscribe((res) => this.primengConfig.setTranslation(res));

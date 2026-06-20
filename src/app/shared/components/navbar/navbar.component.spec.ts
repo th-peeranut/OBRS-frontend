@@ -120,6 +120,19 @@ describe('NavbarComponent', () => {
     expect(component.isDriver).toBe(false);
   });
 
+  it('persists the selected language so the Accept-Language header matches', () => {
+    // Regression for #22: switchLanguage only called translate.use(), so the
+    // authInterceptor (Accept-Language = localStorage.app_language || 'th')
+    // kept sending 'th' and backend error modals stayed Thai after switching.
+    localStorage.removeItem('app_language');
+
+    component.switchLanguage('en');
+    expect(localStorage.getItem('app_language')).toBe('en');
+
+    component.switchLanguage('th');
+    expect(localStorage.getItem('app_language')).toBe('th');
+  });
+
   it('scrolls to the footer contact section', () => {
     const target = document.createElement('div');
     target.id = 'footer-contact';

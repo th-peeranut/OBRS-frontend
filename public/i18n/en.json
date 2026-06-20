@@ -492,7 +492,8 @@
       "DEPARTURE_DATE": "Departure date",
       "ROUND_DEPARTURE": "Round day to go",
       "ROUND_RETURN": "Round day to return",
-      "SEARCH": "Search"
+      "SEARCH": "Search",
+      "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching."
     },
     "STATION": {
       "HEADER": "Service point route map",

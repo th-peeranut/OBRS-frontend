@@ -492,7 +492,8 @@
       "DEPARTURE_DATE": "出发日期",
       "ROUND_DEPARTURE": "往程日期",
       "ROUND_RETURN": "返程日期",
-      "SEARCH": "搜索"
+      "SEARCH": "搜索",
+      "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。"
     },
     "STATION": {
       "HEADER": "服务点路线图",

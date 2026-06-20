@@ -1,5 +1,30 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-20 — Language not persisted on 5 more customer pages (self-fixed, #22)
+
+**Files:** `switchLanguage()` in `login.component.ts`, `login-mobile.component.ts`,
+`register.component.ts`, `forget-password.component.ts`, `otp-validate.component.ts`.
+
+**Problem:** The #22 fix added `localStorage.setItem('app_language', lang)` to the
+navbar's `switchLanguage()`, but five other customer-facing (unauthenticated) pages
+had the identical pre-fix body — `translate.use(lang)` with no persistence. The
+`authInterceptor` builds `Accept-Language` from `localStorage['app_language'] || 'th'`,
+so switching language on login/register/OTP/forgot-password did NOT change the header.
+These are exactly the pages that POST to the backend (login, register, send-OTP,
+reset-password) and surface backend error modals — so the #22 symptom ("error stays
+Thai after switching to English") reproduced there even after the navbar fix.
+
+**Fix (pattern to learn):** When you fix a shared symptom rooted in a duplicated
+method, grep the whole app for the method (`switchLanguage`) and fix every copy, not
+just the one on the reported page. Root cause = N copies of the same omission. Each of
+these components already *reads* `localStorage.getItem('app_language')` in ngOnInit to
+seed `currentLanguage`, so the write side was simply missing — persisting also makes
+the choice sticky across these pages, consistent with admin/staff layouts.
+
+**Takeaway:** The real fix for a "duplicated logic" bug is to consider extracting a
+shared `LanguageService.switch(lang)` so persistence can never drift again. Left as a
+follow-up (>30 lines, new file) — see "Notes for the developer" below.
+
 ## 2026-06-20 — Sell page BUS seat map showed booked seats as free (self-fixed)
 
 **File:** `src/app/modules/staff/pages/sell/sell-page.component.ts` — `getTakenSeats()`
