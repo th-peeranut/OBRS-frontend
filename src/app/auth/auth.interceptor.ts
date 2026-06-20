@@ -11,7 +11,7 @@ import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
-import { LanguageService } from '../shared/services/language.service';
+import { APP_LANGUAGE_KEY, DEFAULT_LANGUAGE } from '../shared/services/language.service';
 
 let isHandlingAuthError = false;
 
@@ -21,14 +21,18 @@ export const authInterceptor: HttpInterceptorFn = (
 ): Observable<HttpEvent<any>> => {
   const authService = inject(AuthService);
   const router = inject(Router);
-  const languageService = inject(LanguageService);
   const token = authService.getToken();
+  // Read localStorage directly (NOT via LanguageService): the TranslateModule
+  // HTTP loader runs this interceptor, so injecting LanguageService here — which
+  // depends on TranslateService — creates a circular DI and breaks language
+  // switching. The key/default constants keep it centralized without the cycle.
+  const appLanguage = localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE;
   const isAuthEndpoint = req.url.includes('/api/auth/');
 
   let headers = req.headers;
 
   if (!headers.has('Accept-Language')) {
-    headers = headers.set('Accept-Language', languageService.getStoredLanguage());
+    headers = headers.set('Accept-Language', appLanguage);
   }
 
   if (token) {
