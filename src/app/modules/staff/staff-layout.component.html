@@ -35,6 +35,7 @@
             <a class="nav-link d-flex align-items-center gap-2 rounded px-3"
                [routerLink]="['/staff', item.path]"
                routerLinkActive="active bg-primary text-white"
+               [routerLinkActiveOptions]="{ exact: false }"
                (click)="isSidebarOpen = false">
               <span class="material-icons" style="font-size:18px">{{ item.icon }}</span>
               {{ item.labelKey | translate }}

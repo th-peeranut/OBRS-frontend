@@ -475,7 +475,8 @@
       "SIGNOUT": "Sign out",
       "SIGNOUT_SUCCESS": "Successfully signed out",
       "SIGNOUT_FAIL": "Failed to sign out",
-      "ADMIN_DASHBOARD": "Admin Dashboard"
+      "ADMIN_DASHBOARD": "Admin Dashboard",
+      "STAFF_PORTAL": "Staff Portal"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
@@ -857,6 +858,12 @@
       "BOOKING_NUMBER": "Booking",
       "VIEW_TICKET_BTN": "View E-Ticket",
       "NEW_SALE_BTN": "New Sale"
+    },
+    "BOARDING_ENTRY": {
+      "TITLE": "Select a Schedule",
+      "SUBTITLE": "Choose a schedule to view its boarding list.",
+      "EMPTY_TITLE": "No schedules available",
+      "EMPTY_BODY": "You have no schedules assigned. Please check back later."
     }
   }
 }

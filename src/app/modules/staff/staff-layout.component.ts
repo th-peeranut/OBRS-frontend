@@ -39,6 +39,10 @@ export class StaffLayoutComponent implements OnInit {
       items.push({ path: 'driver', labelKey: 'STAFF.NAV.MY_SCHEDULES', icon: 'directions_bus' });
     }
 
+    if (isSalesperson || isDriver) {
+      items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg' });
+    }
+
     return items;
   }
 

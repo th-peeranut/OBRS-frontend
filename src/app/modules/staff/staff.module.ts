@@ -11,6 +11,7 @@ import { SellPageComponent } from './pages/sell/sell-page.component';
 import { StaffSchedulesPageComponent } from './pages/staff-schedules/staff-schedules-page.component';
 import { DriverSchedulesPageComponent } from './pages/driver-schedules/driver-schedules-page.component';
 import { BoardingListPageComponent } from './pages/boarding-list/boarding-list-page.component';
+import { BoardingEntryPageComponent } from './pages/boarding-entry/boarding-entry-page.component';
 
 const routes: Routes = [
   {
@@ -37,6 +38,12 @@ const routes: Routes = [
         data: { requiredRoles: ['driver'], titleKey: 'STAFF.PAGES.DRIVER' },
       },
       {
+        path: 'boarding',
+        component: BoardingEntryPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.BOARDING' },
+      },
+      {
         path: 'boarding/:scheduleId',
         component: BoardingListPageComponent,
         canActivate: [AuthGuard],
@@ -53,6 +60,7 @@ const routes: Routes = [
     StaffSchedulesPageComponent,
     DriverSchedulesPageComponent,
     BoardingListPageComponent,
+    BoardingEntryPageComponent,
   ],
   imports: [
     SharedModule,

@@ -32,6 +32,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   isLogin: boolean = false;
   isAdmin: boolean = false;
+  isSalesperson: boolean = false;
+  isDriver: boolean = false;
   userName: string | null = '';
 
   languageOnChange$: Subscription;
@@ -57,6 +59,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
       (status) => {
         this.isLogin = status;
         this.isAdmin = status && this.authService.hasAnyRole(['admin']);
+        this.isSalesperson = status && this.authService.hasAnyRole(['salesperson']);
+        this.isDriver = status && this.authService.hasAnyRole(['driver']);
         this.userName = this.authService.getUsername();
       }
     );

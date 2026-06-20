@@ -69,6 +69,50 @@ describe('NavbarComponent', () => {
     expect(component.isAdmin).toBe(false);
   });
 
+  it('flags salesperson users when logged in with the salesperson role', () => {
+    roles = ['salesperson'];
+    authStatus$.next(true);
+
+    component.ngOnInit();
+
+    expect(component.isSalesperson).toBe(true);
+    expect(component.isDriver).toBe(false);
+  });
+
+  it('flags driver users when logged in with the driver role', () => {
+    roles = ['driver'];
+    authStatus$.next(true);
+
+    component.ngOnInit();
+
+    expect(component.isDriver).toBe(true);
+    expect(component.isSalesperson).toBe(false);
+  });
+
+  it('flags both roles when user has salesperson and driver roles', () => {
+    roles = ['salesperson', 'driver'];
+    authStatus$.next(true);
+
+    component.ngOnInit();
+
+    expect(component.isSalesperson).toBe(true);
+    expect(component.isDriver).toBe(true);
+  });
+
+  it('clears staff flags on logout', () => {
+    roles = ['salesperson', 'driver'];
+    authStatus$.next(true);
+    component.ngOnInit();
+    expect(component.isSalesperson).toBe(true);
+    expect(component.isDriver).toBe(true);
+
+    roles = [];
+    authStatus$.next(false);
+
+    expect(component.isSalesperson).toBe(false);
+    expect(component.isDriver).toBe(false);
+  });
+
   it('scrolls to the footer contact section', () => {
     const target = document.createElement('div');
     target.id = 'footer-contact';

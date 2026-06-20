@@ -1,0 +1,53 @@
+<div class="container-fluid py-4">
+  <h4 class="fw-bold mb-1">{{ 'STAFF.BOARDING_ENTRY.TITLE' | translate }}</h4>
+  <p class="text-muted mb-4">{{ 'STAFF.BOARDING_ENTRY.SUBTITLE' | translate }}</p>
+
+  <!-- Empty state -->
+  <ng-container *ngIf="isEmpty">
+    <div class="text-center py-5">
+      <span class="material-icons text-muted d-block mb-2" style="font-size:64px">event_seat</span>
+      <div class="fw-semibold fs-5">{{ 'STAFF.BOARDING_ENTRY.EMPTY_TITLE' | translate }}</div>
+      <div class="text-muted">{{ 'STAFF.BOARDING_ENTRY.EMPTY_BODY' | translate }}</div>
+    </div>
+  </ng-container>
+
+  <div class="card shadow-sm border-0" *ngIf="!isEmpty">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.DRIVER.TRIP_ID' | translate }}</th>
+              <th>{{ 'STAFF.DRIVER.DEPARTURE' | translate }}</th>
+              <th>{{ 'STAFF.DRIVER.ROUTE' | translate }}</th>
+              <th>{{ 'STAFF.DRIVER.VEHICLE' | translate }}</th>
+              <th>{{ 'STAFF.DRIVER.STATUS' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngIf="isLoading">
+              <tr *ngFor="let row of skeletonRows">
+                <td colspan="6"><div class="bg-light rounded" style="height:20px"></div></td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading">
+              <tr *ngFor="let row of rows">
+                <td class="fw-semibold">{{ row.tripId }}</td>
+                <td>{{ row.departure }}</td>
+                <td>{{ row.route }}</td>
+                <td>{{ row.vehicle }}</td>
+                <td><span class="badge bg-secondary">{{ row.status }}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-outline-primary" (click)="viewBoarding(row)">
+                    {{ 'STAFF.DRIVER.BOARDING_BTN' | translate }}
+                  </button>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

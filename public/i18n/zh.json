@@ -475,7 +475,8 @@
       "SIGNOUT": "退出登录",
       "SIGNOUT_SUCCESS": "退出登录成功",
       "SIGNOUT_FAIL": "退出登录失败",
-      "ADMIN_DASHBOARD": "管理后台"
+      "ADMIN_DASHBOARD": "管理后台",
+      "STAFF_PORTAL": "员工门户"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",
@@ -857,6 +858,12 @@
       "BOOKING_NUMBER": "订单号",
       "VIEW_TICKET_BTN": "查看电子票",
       "NEW_SALE_BTN": "新建销售"
+    },
+    "BOARDING_ENTRY": {
+      "TITLE": "选择班次",
+      "SUBTITLE": "选择班次以查看登车名单。",
+      "EMPTY_TITLE": "暂无可用班次",
+      "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     }
   }
 }

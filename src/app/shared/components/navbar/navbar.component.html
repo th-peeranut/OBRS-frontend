@@ -111,6 +111,11 @@
               {{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}
             </a>
           </li>
+          <li *ngIf="isSalesperson || isDriver">
+            <a class="dropdown-item menu-lang" [routerLink]="'/staff'">
+              {{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}
+            </a>
+          </li>
           <li>
             <a class="dropdown-item menu-lang" (click)="onLogout()">
               {{ "HOME.NAVBAR.SIGNOUT" | translate }}
