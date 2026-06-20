@@ -21,8 +21,14 @@ function createStaffStoreStub(schedules: unknown[] = []): any {
 }
 
 function createAuthStub(roles: string[]): any {
+  const normalized = roles.map((r) => r.toLowerCase());
   return {
-    hasAnyRole: (required: string[]) => required.some((r) => roles.includes(r)),
+    // Mirror the real AuthService: admin is a role superset for hasAnyRole,
+    // but getRoles() reports only the literal roles held.
+    getRoles: () => normalized,
+    hasAnyRole: (required: string[]) =>
+      normalized.includes('admin') ||
+      required.some((r) => normalized.includes(r.toLowerCase())),
   };
 }
 
@@ -47,6 +53,23 @@ describe('BoardingEntryPageComponent', () => {
       createStaffStoreStub()
     );
     expect(component).toBeTruthy();
+  });
+
+  it('uses the full staff schedule view (not the driver view) for an admin', () => {
+    const driverStore = createDriverStoreStub();
+    const staffStore = createStaffStoreStub();
+    const driverRefresh = spyOn(driverStore, 'refresh').and.callThrough();
+    const staffRefresh = spyOn(staffStore, 'refresh').and.callThrough();
+    const component = new BoardingEntryPageComponent(
+      createRouterStub(),
+      createTranslateStub(),
+      createAuthStub(['admin']),
+      driverStore,
+      staffStore
+    );
+    component.ngOnInit();
+    expect(staffRefresh).toHaveBeenCalled();
+    expect(driverRefresh).not.toHaveBeenCalled();
   });
 
   it('shows empty state when no schedules', () => {

@@ -38,7 +38,13 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
     private readonly driverSchedulesStore: DriverSchedulesStore,
     private readonly staffSchedulesStore: StaffSchedulesStore
   ) {
-    this.isDriver = this.authService.hasAnyRole(['driver']);
+    // View selection (not authorization): a driver sees only their own
+    // assigned trips, while everyone else authorised for this page — a
+    // salesperson, and an admin via the role hierarchy — sees the full
+    // schedule. Check the *actual* driver role here rather than hasAnyRole
+    // (which an admin satisfies for every role), so an admin lands on the full
+    // schedule view instead of an empty driver view.
+    this.isDriver = this.authService.getRoles().includes('driver');
     this.isSalesperson = this.authService.hasAnyRole(['salesperson']);
   }
 

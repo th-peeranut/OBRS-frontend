@@ -156,6 +156,16 @@ export class AuthService {
     }
 
     const userRoles = new Set(this.getRoles());
+
+    // Admin is the top of the backend role hierarchy
+    // (ROLE_ADMIN > ROLE_OWNER > ROLE_SALESPERSON > ROLE_DRIVER > ROLE_USER,
+    // see WebSecurityConfig#roleHierarchy), so an admin implicitly satisfies
+    // every role requirement. Mirror that here so the admin can reach pages
+    // (e.g. the Staff portal) the backend already authorises.
+    if (userRoles.has('admin')) {
+      return true;
+    }
+
     return requiredRoles.some((role) =>
       userRoles.has(String(role ?? '').trim().toLowerCase())
     );
