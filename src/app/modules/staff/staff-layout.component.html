@@ -44,7 +44,7 @@
            [class.d-lg-flex]="true">
       <nav class="py-3 px-2 flex-grow-1">
         <ul class="nav flex-column gap-1">
-          <li class="nav-item" *ngFor="let item of navItems">
+          <li class="nav-item" *ngFor="let item of navItems; trackBy: trackNavItem">
             <a class="nav-link d-flex align-items-center gap-2 rounded px-3"
                [routerLink]="['/staff', item.path]"
                routerLinkActive="active bg-primary text-white"

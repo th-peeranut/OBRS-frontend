@@ -25,7 +25,13 @@ export class StaffLayoutComponent implements OnInit {
   protected isProfileMenuOpen = false;
   protected isSidebarOpen = false;
 
-  protected get navItems(): StaffNavItem[] {
+  // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:
+  // a getter returning a fresh array each change-detection cycle, bound to an
+  // *ngFor containing routerLinkActive, recreates those directives on every cycle
+  // and never lets change detection stabilise — hard-locking the browser.
+  protected navItems: StaffNavItem[] = [];
+
+  private buildNavItems(): StaffNavItem[] {
     const isSalesperson = this.authService.hasAnyRole(['salesperson']);
     const isDriver = this.authService.hasAnyRole(['driver']);
     const items: StaffNavItem[] = [];
@@ -44,6 +50,10 @@ export class StaffLayoutComponent implements OnInit {
     }
 
     return items;
+  }
+
+  protected trackNavItem(_index: number, item: StaffNavItem): string {
+    return item.path;
   }
 
   protected get userInitials(): string {
@@ -66,6 +76,7 @@ export class StaffLayoutComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.navItems = this.buildNavItems();
     void this.setupLanguage();
 
     this.router.events
