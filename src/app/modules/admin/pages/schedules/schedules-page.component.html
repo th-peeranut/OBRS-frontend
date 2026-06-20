@@ -329,7 +329,12 @@
     <h4 class="admin-modal-title">
       {{ isEditMode ? ('ADMIN.SCHEDULES.EDIT_TITLE' | translate) : ('ADMIN.SCHEDULES.ADD_TITLE' | translate) }}
     </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.SCHEDULES.MODAL_HINT' | translate }}</p>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.SCHEDULES.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
 
     <form [formGroup]="scheduleForm" class="admin-form-grid" (ngSubmit)="submitScheduleSet()">
       <div class="admin-form-field">
@@ -454,7 +459,12 @@
               : ('ADMIN.SCHEDULES.ADD_TRIP_TITLE' | translate)
           }}
         </h4>
-        <p class="admin-modal-subtitle">{{ 'ADMIN.SCHEDULES.TRIP_MODAL_HINT' | translate }}</p>
+        <p class="admin-modal-subtitle">
+          {{ 'ADMIN.SCHEDULES.TRIP_MODAL_HINT' | translate }}
+          <span class="admin-muted" *ngIf="isScheduleItemEditMode && isScheduleEditDetailLoading">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        </p>
       </div>
       <button
         type="button"

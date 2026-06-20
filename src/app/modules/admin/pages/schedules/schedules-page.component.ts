@@ -87,6 +87,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected isGenerating = false;
   protected isEditMode = false;
   protected isScheduleItemEditMode = false;
+  protected isEditDetailLoading = false;
+  protected isScheduleEditDetailLoading = false;
   protected isFormModalOpen = false;
   protected isScheduleFormModalOpen = false;
   protected isDeleteModalOpen = false;
@@ -298,31 +300,35 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let detail: AdminScheduleSetDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getScheduleSetById(schedule.id));
-      detail = response?.data ?? null;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED'));
-      return;
-    }
-
-    const scheduleSet = detail ?? this.toScheduleSetFallback(schedule);
-    const status = this.parseStatus(scheduleSet.status);
-
+    // Open the modal immediately from the row data we already hold, so it
+    // appears without waiting on the (slow on SIT) detail fetch. The server
+    // detail is patched in once it arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedSchedule = schedule;
+    this.isEditDetailLoading = true;
+    this.applyScheduleSetFormValues(this.toScheduleSetFallback(schedule), schedule);
+    // Clear AFTER building the fallback: toScheduleSetFallback() runs
+    // parseDepartureTimes(), which flips departureTimesInvalid=true on any
+    // malformed stored time (e.g. a single-digit hour). Resetting here keeps a
+    // freshly opened edit modal from showing a spurious validation error before
+    // the user has touched the field.
     this.departureTimesInvalid = false;
-    this.scheduleForm.reset({
-      startDate: scheduleSet.startDate ?? schedule.startDate,
-      endDate: scheduleSet.endDate ?? schedule.endDate,
-      departureTimesText: this.toDepartureTimesText(scheduleSet.departureTimes),
-      frequency: scheduleSet.frequency ?? schedule.frequency,
-      status: status.code,
-      route: scheduleSet.route?.slug ?? schedule.routeSlug,
-      vehicleType: scheduleSet.vehicleType?.slug ?? schedule.vehicleTypeSlug,
-    });
     this.isFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getScheduleSetById(schedule.id));
+      const detail = response?.data ?? null;
+      // Ignore a stale response if the user closed the modal or switched rows.
+      if (detail && this.isFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.applyScheduleSetFormValues(detail, schedule, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
   }
 
   protected async openScheduleEditModal(schedule: ScheduleRow): Promise<void> {
@@ -330,29 +336,88 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let detail: AdminScheduleDto | null = null;
+    // Open the modal immediately from the row data; patch server detail in once
+    // it arrives (see fetch below) so a slow SIT response can't blank-wait.
+    this.isScheduleItemEditMode = true;
+    this.selectedSchedule = schedule;
+    this.isScheduleEditDetailLoading = true;
+    this.applyScheduleItemFormValues(this.toScheduleDetailFallback(schedule), schedule);
+    this.isScheduleFormModalOpen = true;
+
     try {
       const response = await firstValueFrom(this.adminApiService.getScheduleById(schedule.id));
-      detail = response?.data ?? null;
+      const detail = response?.data ?? null;
+      if (detail && this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.applyScheduleItemFormValues(detail, schedule, true);
+      }
     } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED'));
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.isScheduleEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the schedule-set form from a DTO. When `onlyPristine` is set (the
+  // late detail patch), only controls the user hasn't started editing are
+  // filled, so the arriving server data never clobbers in-progress input.
+  private applyScheduleSetFormValues(
+    scheduleSet: AdminScheduleSetDto,
+    schedule: ScheduleRow,
+    onlyPristine = false
+  ): void {
+    const status = this.parseStatus(scheduleSet.status);
+    const values = {
+      startDate: scheduleSet.startDate ?? schedule.startDate,
+      endDate: scheduleSet.endDate ?? schedule.endDate,
+      departureTimesText: this.toDepartureTimesText(scheduleSet.departureTimes),
+      frequency: scheduleSet.frequency ?? schedule.frequency,
+      status: status.code,
+      route: scheduleSet.route?.slug ?? schedule.routeSlug,
+      vehicleType: scheduleSet.vehicleType?.slug ?? schedule.vehicleTypeSlug,
+    };
+
+    if (!onlyPristine) {
+      this.scheduleForm.reset(values);
       return;
     }
 
-    const scheduleDetail = detail ?? this.toScheduleDetailFallback(schedule);
-    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.scheduleForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
+  }
 
-    this.isScheduleItemEditMode = true;
-    this.selectedSchedule = schedule;
-    this.scheduleItemForm.reset({
+  // Same optimistic-open / patch-only-pristine contract for the trip form.
+  private applyScheduleItemFormValues(
+    scheduleDetail: AdminScheduleDto,
+    schedule: ScheduleRow,
+    onlyPristine = false
+  ): void {
+    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+    const values = {
       departureDate: this.toDateControlValue(departure.date || schedule.startDate),
       departureTime: this.toTimeControlValue(departure.time || schedule.departureTimes),
       route: scheduleDetail.route?.slug ?? schedule.routeSlug,
       vehicleType: scheduleDetail.vehicleType?.slug ?? schedule.vehicleTypeSlug,
       vehicleId: scheduleDetail.vehicle?.id ? String(scheduleDetail.vehicle.id) : '',
       driverId: scheduleDetail.driver?.id ? String(scheduleDetail.driver.id) : '',
-    });
-    this.isScheduleFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.scheduleItemForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.scheduleItemForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeFormModal(force = false): void {
@@ -361,6 +426,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedSchedule = null;
     this.departureTimesInvalid = false;
     this.scheduleForm.reset();
@@ -372,6 +438,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isScheduleFormModalOpen = false;
+    this.isScheduleEditDetailLoading = false;
     this.selectedSchedule = null;
     this.scheduleItemForm.reset();
   }

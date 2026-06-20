@@ -152,7 +152,12 @@
         <h4 class="user-editor-title">
           {{ isEditMode ? ('ADMIN.USERS.EDIT_TITLE' | translate) : ('ADMIN.USERS.ADD_TITLE' | translate) }}
         </h4>
-        <p class="user-editor-subtitle">{{ 'ADMIN.USERS.MODAL_HINT' | translate }}</p>
+        <p class="user-editor-subtitle">
+          {{ 'ADMIN.USERS.MODAL_HINT' | translate }}
+          <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        </p>
       </div>
       <button type="button" class="user-editor-close" (click)="closeFormModal()">
         <span class="material-symbols-outlined">close</span>
@@ -212,19 +217,6 @@
           </div>
 
           <div class="user-editor-grid is-two-column">
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.USERNAME' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="username" />
-              <small class="admin-error" *ngIf="isFieldInvalid('username')">
-                {{ 'ADMIN.VALIDATION.USERNAME' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowCredentialValidationError('username')">
-                {{ 'ADMIN.VALIDATION.USERNAME_EXIST' | translate }}
-              </small>
-            </div>
-
             <div class="user-field">
               <label>
                 {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>

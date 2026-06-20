@@ -56,6 +56,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected selectedVehicle: VehicleRow | null = null;
 
   protected readonly vehicleForm: FormGroup;
@@ -174,29 +175,69 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(vehicle: VehicleRow): Promise<void> {
-    let vehicleDetail: AdminVehicleDto | null = null;
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (slow on SIT) detail fetch. The server
+    // detail is patched in once it arrives — see the fetch below.
+    this.isEditMode = true;
+    this.selectedVehicle = vehicle;
+    this.isEditDetailLoading = true;
+    this.applyVehicleFormValues(this.toVehicleDtoFallback(vehicle), vehicle);
+    this.isFormModalOpen = true;
+
     try {
       const response = await firstValueFrom(this.adminApiService.getVehicleById(vehicle.id));
-      vehicleDetail = response?.data ?? null;
+      const vehicleDetail = response?.data ?? null;
+      // Ignore a stale response if the user has closed the modal or moved on
+      // to editing a different vehicle in the meantime.
+      if (vehicleDetail && this.isFormModalOpen && this.selectedVehicle?.id === vehicle.id) {
+        this.applyVehicleFormValues(vehicleDetail, vehicle, true);
+      }
     } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_VEHICLES_FAILED'));
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      // Only clear the loading hint if this fetch is still the current one.
+      if (this.isFormModalOpen && this.selectedVehicle?.id === vehicle.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the vehicle form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyVehicleFormValues(
+    vehicleDetail: AdminVehicleDto,
+    vehicle: VehicleRow,
+    onlyPristine = false
+  ): void {
+    const values = {
+      vehicleType: String(vehicleDetail.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim(),
+      numberPlate: String(vehicleDetail.numberPlate ?? vehicle.plate).trim(),
+      vehicleNumber: String(vehicleDetail.vehicleNumber ?? vehicle.vehicleNumber).trim(),
+      status: this.parseStatus(vehicleDetail.status ?? vehicle.statusCode).code,
+    };
+
+    if (!onlyPristine) {
+      this.vehicleForm.reset(values);
       return;
     }
 
-    const vehicleType = String(vehicleDetail?.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim();
-    const numberPlate = String(vehicleDetail?.numberPlate ?? vehicle.plate).trim();
-    const vehicleNumber = String(vehicleDetail?.vehicleNumber ?? vehicle.vehicleNumber).trim();
-    const status = this.parseStatus(vehicleDetail?.status ?? vehicle.statusCode).code;
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.vehicleForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
+  }
 
-    this.isEditMode = true;
-    this.selectedVehicle = vehicle;
-    this.vehicleForm.reset({
-      vehicleType,
-      numberPlate,
-      vehicleNumber,
-      status,
-    });
-    this.isFormModalOpen = true;
+  private toVehicleDtoFallback(vehicle: VehicleRow): AdminVehicleDto {
+    return {
+      id: vehicle.id,
+      numberPlate: vehicle.plate,
+      vehicleNumber: vehicle.vehicleNumber,
+      status: vehicle.statusCode,
+      vehicleType: { id: 0, slug: vehicle.vehicleTypeSlug },
+    };
   }
 
   protected closeFormModal(force = false): void {
@@ -205,6 +246,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedVehicle = null;
     this.vehicleForm.reset();
   }

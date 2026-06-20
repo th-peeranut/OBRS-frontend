@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
@@ -111,6 +111,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
+  @ViewChild('routeDetailSection') private routeDetailSection?: ElementRef<HTMLElement>;
   private readonly subscriptions = new Subscription();
 
   private rawRouteDtos: AdminRouteDto[] = [];
@@ -375,13 +376,30 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async selectRoute(route: RouteRow): Promise<void> {
-    if (this.selectedRouteSlug === route.slug && this.selectedRoute) {
-      return;
-    }
+    // The detail panel renders below the route table and a route is already
+    // auto-selected on load, so without scrolling the View action looks like it
+    // "does nothing". Always bring the panel into view; only (re)load the
+    // structure when the selection actually changes.
+    const alreadyLoaded = this.selectedRouteSlug === route.slug && !!this.selectedRoute;
 
     this.selectedRoute = route;
     this.selectedRouteSlug = route.slug;
-    await this.loadRouteStructureBySlug(route.slug);
+    this.scrollDetailIntoView();
+
+    if (!alreadyLoaded) {
+      await this.loadRouteStructureBySlug(route.slug);
+    }
+  }
+
+  private scrollDetailIntoView(): void {
+    // Defer to the next tick so the *ngIf detail panel is in the DOM before we
+    // scroll to it (it may have been hidden when no route was selected).
+    setTimeout(() => {
+      this.routeDetailSection?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   }
 
   protected openCreateModal(): void {

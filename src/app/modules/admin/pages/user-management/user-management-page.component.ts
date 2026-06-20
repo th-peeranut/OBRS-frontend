@@ -75,13 +75,12 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected selectedUser: UserRow | null = null;
-  protected usernameIsExist = false;
   protected emailIsExist = false;
   protected phoneNumberIsExist = false;
 
   protected readonly userForm: FormGroup;
-  private usernameCheckSubscription?: Subscription;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
   private readonly subscriptions = new Subscription();
@@ -89,12 +88,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private rawUsers: AdminUserDto[] = [];
   private rawRoles: AdminRoleDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
-  private readonly usernameValidators = [
-    Validators.required,
-    Validators.minLength(3),
-    Validators.maxLength(50),
-    Validators.pattern(/^[a-zA-Z0-9._-]+$/),
-  ];
   private readonly passwordValidators = [
     Validators.required,
     Validators.minLength(8),
@@ -115,10 +108,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
       phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
-      username: [
-        '',
-        this.usernameValidators,
-      ],
       password: ['', this.passwordValidators],
       confirmPassword: ['', [Validators.required]],
       preferredLocale: [
@@ -171,7 +160,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
-    this.usernameCheckSubscription?.unsubscribe();
     this.emailCheckSubscription?.unsubscribe();
     this.phoneNumberCheckSubscription?.unsubscribe();
   }
@@ -225,7 +213,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       lastName: '',
       email: '',
       phoneNumber: '',
-      username: '',
       password: '',
       confirmPassword: '',
       preferredLocale: 'th',
@@ -238,44 +225,80 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(user: UserRow): Promise<void> {
-    let userDetail: AdminUserDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
-      userDetail = response?.data ?? null;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED'));
-      return;
-    }
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (slow on SIT) detail fetch. The server
+    // detail is patched in once it arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedUser = user;
+    this.isEditDetailLoading = true;
     this.resetDuplicateFlags();
+    this.applyUserFormValues(this.toUserDtoFallback(user), user);
+    this.setCredentialFieldsForEditMode();
+    this.isFormModalOpen = true;
 
-    const parsedName = this.parseNameFromFullName(userDetail?.fullName ?? user.fullName);
-    const firstName = String(userDetail?.firstName ?? parsedName.firstName ?? '').trim();
-    const middleName = String(userDetail?.middleName ?? parsedName.middleName ?? '').trim();
-    const lastName = String(userDetail?.lastName ?? parsedName.lastName ?? '').trim();
-    const roles = this.extractRoleSlugs(userDetail?.roles);
-    const status = this.parseStatus(userDetail?.status ?? user.statusCode);
+    try {
+      const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
+      const userDetail = response?.data ?? null;
+      // Ignore a stale response if the user closed the modal or switched rows.
+      if (userDetail && this.isFormModalOpen && this.selectedUser?.id === user.id) {
+        this.applyUserFormValues(userDetail, user, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedUser?.id === user.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
 
-    this.userForm.reset({
-      title: String((userDetail?.title ?? parsedName.title) || 'Mr').trim(),
-      firstName,
-      middleName,
-      lastName,
-      email: userDetail?.email ?? user.email,
-      phoneNumber: String(userDetail?.phoneNumber ?? user.phone).replace(/\D/g, ''),
-      username: userDetail?.username ?? user.username,
-      password: '',
-      confirmPassword: '',
-      preferredLocale: userDetail?.preferredLocale ?? 'th',
+  // Populate the user form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyUserFormValues(
+    userDetail: AdminUserDto,
+    user: UserRow,
+    onlyPristine = false
+  ): void {
+    const parsedName = this.parseNameFromFullName(userDetail.fullName ?? user.fullName);
+    const roles = this.extractRoleSlugs(userDetail.roles);
+    const status = this.parseStatus(userDetail.status ?? user.statusCode);
+
+    const values: Record<string, unknown> = {
+      title: String((userDetail.title ?? parsedName.title) || 'Mr').trim(),
+      firstName: String(userDetail.firstName ?? parsedName.firstName ?? '').trim(),
+      middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
+      lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
+      email: userDetail.email ?? user.email,
+      phoneNumber: String(userDetail.phoneNumber ?? user.phone).replace(/\D/g, ''),
+      preferredLocale: userDetail.preferredLocale ?? 'th',
       status: status.code,
       roles: roles.length > 0 ? roles : [...user.roleSlugs],
       isPhoneNumberVerify: true,
-    });
+    };
 
-    this.setCredentialFieldsForEditMode();
-    this.isFormModalOpen = true;
+    if (!onlyPristine) {
+      this.userForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.userForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
+  }
+
+  private toUserDtoFallback(user: UserRow): AdminUserDto {
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phone,
+      status: user.statusCode,
+      roles: [...user.roleSlugs],
+    };
   }
 
   protected closeFormModal(force = false): void {
@@ -284,6 +307,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedUser = null;
     this.userForm.reset();
     this.resetDuplicateFlags();
@@ -340,7 +364,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     if (!this.isEditMode) {
       const hasCredentialError =
         !this.checkSamePassword() ||
-        this.usernameIsExist ||
         this.emailIsExist ||
         this.phoneNumberIsExist;
 
@@ -612,37 +635,29 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private setCredentialFieldsForCreateMode(): void {
-    const usernameControl = this.userForm.get('username');
     const passwordControl = this.userForm.get('password');
     const confirmPasswordControl = this.userForm.get('confirmPassword');
 
-    usernameControl?.setValidators(this.usernameValidators);
     passwordControl?.setValidators(this.passwordValidators);
     confirmPasswordControl?.setValidators([Validators.required]);
 
-    usernameControl?.enable();
     passwordControl?.enable();
     confirmPasswordControl?.enable();
 
-    usernameControl?.updateValueAndValidity();
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
   }
 
   private setCredentialFieldsForEditMode(): void {
-    const usernameControl = this.userForm.get('username');
     const passwordControl = this.userForm.get('password');
     const confirmPasswordControl = this.userForm.get('confirmPassword');
 
-    usernameControl?.clearValidators();
     passwordControl?.clearValidators();
     confirmPasswordControl?.clearValidators();
 
-    usernameControl?.disable();
     passwordControl?.disable();
     confirmPasswordControl?.disable();
 
-    usernameControl?.updateValueAndValidity();
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
   }
@@ -659,7 +674,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     return password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
   }
 
-  protected shouldShowCredentialValidationError(controlName: 'username' | 'email' | 'phoneNumber'): boolean {
+  protected shouldShowCredentialValidationError(controlName: 'email' | 'phoneNumber'): boolean {
     if (this.isEditMode) {
       return false;
     }
@@ -667,10 +682,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     const control = this.userForm.get(controlName);
     if (!control || !control.value || (!control.touched && !control.dirty)) {
       return false;
-    }
-
-    if (controlName === 'username') {
-      return this.usernameIsExist;
     }
 
     if (controlName === 'email') {
@@ -754,25 +765,13 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private resetDuplicateFlags(): void {
-    this.usernameIsExist = false;
     this.emailIsExist = false;
     this.phoneNumberIsExist = false;
   }
 
   private setupDuplicateCheckSubscriptions(): void {
-    const usernameControl = this.userForm.get('username');
     const emailControl = this.userForm.get('email');
     const phoneNumberControl = this.userForm.get('phoneNumber');
-
-    this.usernameCheckSubscription = usernameControl?.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap((value) => this.checkDuplicateUsername(value))
-      )
-      .subscribe((isExist) => {
-        this.usernameIsExist = isExist;
-      });
 
     this.emailCheckSubscription = emailControl?.valueChanges
       .pipe(
@@ -793,18 +792,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       .subscribe((isExist) => {
         this.phoneNumberIsExist = isExist;
       });
-  }
-
-  private checkDuplicateUsername(value: unknown) {
-    const username = String(value ?? '').trim();
-    if (!this.isCreateModeActive() || username.length === 0 || this.userForm.get('username')?.invalid) {
-      return of(false);
-    }
-
-    return this.adminApiService.checkUserExistsByUsername(username).pipe(
-      map((response) => Boolean(response?.data)),
-      catchError(() => of(false))
-    );
   }
 
   private checkDuplicateEmail(value: unknown) {

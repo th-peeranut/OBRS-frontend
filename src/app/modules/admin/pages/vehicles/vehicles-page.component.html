@@ -128,7 +128,12 @@
           : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
       }}
     </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}</p>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
 
     <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
       <div class="admin-form-field">
