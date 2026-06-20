@@ -1,22 +1,72 @@
-﻿<div class="footer-container">
-  <!-- ADDRESS -->
+<div class="footer-container">
+  <!-- BRAND -->
   <div class="address-container">
     <!-- LOGO -->
     <img class="logo" src="images/logo.svg" alt="Logo" />
-    <!-- HEADER -->
+    <!-- BRAND NAME -->
     <div class="address-title mt-3">
-      {{ "HOME.FOOTER.HEADER" | translate }}
-    </div>
-    <!-- TITLE -->
-    <div class="address-text mt-2">
       {{ "HOME.FOOTER.TITLE" | translate }}
+    </div>
+    <!-- TAGLINE -->
+    <div class="address-text mt-1">
+      {{ "HOME.FOOTER.TAGLINE" | translate }}
+    </div>
+    <!-- HEAD OFFICE -->
+    <div class="address-subtitle mt-3">
+      {{ "HOME.FOOTER.HEAD_OFFICE_LABEL" | translate }}
     </div>
     <!-- ADDRESS -->
     <div class="address-text">
       {{ "HOME.FOOTER.ADDRESS" | translate }}
     </div>
   </div>
-  <!-- MENU -->
+  <!-- TICKET SALES POINTS -->
+  <div class="sales-container">
+    <!-- SALES TITLE -->
+    <div class="sales-title mt-2">
+      {{ "HOME.FOOTER.SALES_TITLE" | translate }}
+    </div>
+    <!-- NONG CHAK -->
+    <a
+      class="sales-item mt-3"
+      href="https://maps.app.goo.gl/ud32xFp5EPmAGszd9"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img class="sales-icon" src="images/footer-location.svg" alt="Location Icon" />
+      <span class="sales-text">
+        <span class="sales-name">{{ "HOME.FOOTER.SALES_NONG_CHAK" | translate }}</span>
+        <span class="sales-sub">{{ "HOME.FOOTER.SALES_NONG_CHAK_SUB" | translate }}</span>
+      </span>
+    </a>
+    <!-- BAN BUENG -->
+    <a
+      class="sales-item mt-3"
+      href="https://maps.app.goo.gl/wyUKZe9nJ5r7cSVR7"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img class="sales-icon" src="images/footer-location.svg" alt="Location Icon" />
+      <span class="sales-text">
+        <span class="sales-name">{{ "HOME.FOOTER.SALES_BAN_BUENG" | translate }}</span>
+        <span class="sales-sub">{{ "HOME.FOOTER.SALES_BAN_BUENG_SUB" | translate }}</span>
+      </span>
+    </a>
+    <!-- MO CHIT -->
+    <a
+      class="sales-item mt-3"
+      href="https://maps.app.goo.gl/qxVydpgtpDAM7z6J6"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img class="sales-icon" src="images/footer-location.svg" alt="Location Icon" />
+      <span class="sales-text">
+        <span class="sales-name">{{ "HOME.FOOTER.SALES_MOCHIT" | translate }}</span>
+        <span class="sales-sub">{{ "HOME.FOOTER.SALES_MOCHIT_SUB" | translate }}</span>
+      </span>
+    </a>
+  </div>
+  <!-- INFORMATION & SERVICES -->
   <div class="menu-container">
     <!-- MENU TITLE -->
     <div class="menu-title mt-2">
@@ -39,52 +89,45 @@
       {{ "HOME.FOOTER.MENU_BUSINESS_POLICY" | translate }}
     </a>
   </div>
-  <!-- MAIN CONTACT -->
+  <!-- CONTACT US -->
   <div id="footer-contact" class="contact-container">
-    <!--  MAIN CONTACT TITLE -->
+    <!-- CONTACT TITLE -->
     <div class="contact-title mt-2">
-      {{ "HOME.FOOTER.MAIN_CONTACT_TITLE" | translate }}
+      {{ "HOME.FOOTER.CONTACT_TITLE" | translate }}
     </div>
-    <!--  MAIN CONTACT ADDRESS -->
-    <div class="contact-text mt-3">
-      <!-- ICON -->
+    <!-- FACEBOOK -->
+    <a
+      class="contact-text mt-3"
+      href="https://www.facebook.com/nj.phuyaipu"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <img
         class="contact-icon contact-icon-facebook"
         src="images/footer-facebook.svg"
-        alt="Facbook Icon"
+        alt="Facebook Icon"
       />
-      <!-- TEXT -->
-      {{ "HOME.FOOTER.MAIN_CONTACT_ADDRESS_1" | translate }} <br />
-      <!-- TEXT -->
-      {{ "HOME.FOOTER.MAIN_CONTACT_ADDRESS_2" | translate }}
-    </div>
-    <!--  MAIN CONTACT PHONE NUMBER -->
-    <div class="contact-text mt-2">
-      <!-- ICON -->
-      <img class="contact-icon contact-icon-phone" src="images/footer-phone.svg" alt="Phone Icon" />
-      <!-- TEXT -->
-      {{ "HOME.FOOTER.MAIN_CONTACT_PHONE_NUMBER" | translate }}
-    </div>
-  </div>
-  <!-- MAIN CONTACT (MOCHIT) -->
-  <div class="contact-container">
-    <!--  MAIN CONTACT TITLE MOCHIT)--> 
-    <div class="contact-title mt-2">
-      {{ "HOME.FOOTER.MOCHIT_CONTACT_TITLE" | translate }}
-    </div>
-    <!--  MAIN CONTACT LOCATION MOCHIT) -->
-    <div class="contact-text mt-3">
-      <!-- ICON -->
+      {{ "HOME.FOOTER.CONTACT_FACEBOOK" | translate }}
+    </a>
+    <!-- INSTAGRAM -->
+    <a
+      class="contact-text mt-2"
+      href="https://www.instagram.com/nj.phuyaipu"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
       <img
-        class="contact-icon contact-icon-location"
-        src="images/footer-location.svg"
-        alt="Location Icon"
+        class="contact-icon contact-icon-instagram"
+        src="images/footer-instagram.svg"
+        alt="Instagram Icon"
       />
-      <!-- TEXT -->
-      {{ "HOME.FOOTER.MOCHIT_CONTACT_ADDRESS_1" | translate }} <br />
-      <!-- TEXT -->
-      {{ "HOME.FOOTER.MOCHIT_CONTACT_ADDRESS_2" | translate }}
-    </div>
+      {{ "HOME.FOOTER.CONTACT_INSTAGRAM" | translate }}
+    </a>
+    <!-- PHONE -->
+    <a class="contact-text mt-2" href="tel:0905622019">
+      <img class="contact-icon contact-icon-phone" src="images/footer-phone.svg" alt="Phone Icon" />
+      {{ "HOME.FOOTER.CONTACT_PHONE" | translate }}
+    </a>
   </div>
 </div>
 <!-- LINE -->
