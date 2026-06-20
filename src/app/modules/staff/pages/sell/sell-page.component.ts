@@ -104,10 +104,18 @@ export class SellPageComponent implements OnDestroy {
     return this.steps.indexOf(this.currentStep);
   }
 
+  // Fixed seat universe for the BUS layout (see passenger-seat-bus.component.html: B1..B21).
+  private readonly busSeatLabels: string[] = Array.from({ length: 21 }, (_, i) => `B${i + 1}`);
+
   protected getTakenSeats(schedule: ScheduleSearchItemDto | null): string[] {
     if (!schedule) return [];
-    // taken = all seats that are not in availableSeatNumbers (we don't have the full list here, just available)
-    return [];
+    // The BUS seat component has no availableSeatNumbers input, so derive the
+    // taken set as the complement of availableSeatNumbers over the fixed layout.
+    // availableSeatNumbers are plain digit strings (matching the VAN normalization),
+    // so compare on the numeric part of each label.
+    const available = (schedule.availableSeatNumbers ?? []).map((s) => String(s).replace(/\D/g, ''));
+    if (available.length === 0) return [];
+    return this.busSeatLabels.filter((label) => !available.includes(label.replace(/\D/g, '')));
   }
 
   protected async search(): Promise<void> {
