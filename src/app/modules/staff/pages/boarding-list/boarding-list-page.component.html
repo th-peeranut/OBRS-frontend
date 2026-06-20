@@ -1,0 +1,66 @@
+<div class="container-fluid py-4">
+  <h4 class="fw-bold mb-1">{{ 'STAFF.BOARDING.TITLE' | translate }}</h4>
+  <p class="text-muted mb-4">{{ 'STAFF.BOARDING.SUBTITLE' | translate }}</p>
+
+  <div *ngIf="errorMessage" class="alert alert-danger mb-3">{{ errorMessage }}</div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngIf="isLoading">
+              <tr *ngFor="let row of skeletonRows">
+                <td colspan="7"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading && items.length === 0 && !errorMessage">
+              <tr>
+                <td colspan="7" class="text-center py-5">
+                  <span class="material-icons text-muted d-block mb-2" style="font-size:48px">people</span>
+                  <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
+                  <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
+                </td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading">
+              <tr *ngFor="let item of items">
+                <td class="fw-semibold">{{ item.ticketNumber }}</td>
+                <td>{{ item.seatNumber }}</td>
+                <td>{{ item.passengerName }}</td>
+                <td>{{ item.fromStop }}</td>
+                <td>{{ item.toStop }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="isCheckedIn(item)" [class.bg-secondary]="!isCheckedIn(item)">
+                    {{ item.status.label }}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    class="btn btn-sm"
+                    [class.btn-outline-secondary]="isCheckedIn(item)"
+                    [class.btn-primary]="!isCheckedIn(item)"
+                    [disabled]="isCheckedIn(item) || isCheckingIn(item)"
+                    (click)="checkIn(item)">
+                    {{ isCheckedIn(item) ? ('STAFF.BOARDING.CHECKED_IN' | translate) : ('STAFF.BOARDING.CHECK_IN_BTN' | translate) }}
+                  </button>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

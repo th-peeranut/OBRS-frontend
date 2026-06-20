@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
 import { SharedModule } from '../../shared/shared.module';
+import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
@@ -11,8 +12,6 @@ import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component'
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
-import { AdminDropdownComponent } from './components/admin-dropdown/admin-dropdown.component';
-import { AdminRefreshHintComponent } from './components/admin-refresh-hint/admin-refresh-hint.component';
 import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 
 const routes: Routes = [
@@ -81,10 +80,8 @@ const routes: Routes = [
     RoutesPageComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
-    AdminDropdownComponent,
-    AdminRefreshHintComponent,
     AdminModalBackdropDirective,
   ],
-  imports: [SharedModule, RouterModule.forChild(routes), CalendarModule],
+  imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })
 export class AdminModule {}

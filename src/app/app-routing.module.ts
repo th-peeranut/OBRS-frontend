@@ -112,6 +112,12 @@ const routes: Routes = [
       ),
   },
 
+  {
+    path: 'staff',
+    loadChildren: () =>
+      import('./modules/staff/staff.module').then((m) => m.StaffModule),
+  },
+
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
 ];
