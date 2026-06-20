@@ -42,4 +42,14 @@ describe('StaffLayoutComponent', () => {
     const homeLink = fixture.debugElement.query(By.css('a[href="/home"]'));
     expect(homeLink).withContext('home link should exist').toBeTruthy();
   });
+
+  it('renders the brand as the logo image linking to /staff', () => {
+    // Regression for #19: the staff brand should use the logo, not text,
+    // while keeping its /staff destination (per #16).
+    const logo = fixture.debugElement.query(
+      By.css('a.navbar-brand[href="/staff"] img.staff-brand-logo'),
+    );
+    expect(logo).withContext('brand logo image should exist').toBeTruthy();
+    expect(logo.nativeElement.getAttribute('src')).toBe('images/logo.svg');
+  });
 });
