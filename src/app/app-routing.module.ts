@@ -114,6 +114,8 @@ const routes: Routes = [
 
   {
     path: 'staff',
+    canActivate: [AuthGuard],
+    data: { requiredRoles: ['driver', 'salesperson'] },
     loadChildren: () =>
       import('./modules/staff/staff.module').then((m) => m.StaffModule),
   },
