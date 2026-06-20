@@ -1,5 +1,12 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
+import { PrimeNGConfig } from 'primeng/api';
 import { BehaviorSubject } from 'rxjs';
 import { NavbarComponent } from './navbar.component';
+import { AuthService } from '../../../auth/auth.service';
+import { AlertService } from '../../services/alert.service';
 import {
   createElementRefStub,
   createPrimeNgConfigStub,
@@ -125,5 +132,51 @@ describe('NavbarComponent', () => {
     } finally {
       document.body.removeChild(target);
     }
+  });
+});
+
+describe('NavbarComponent template', () => {
+  let fixture: ComponentFixture<NavbarComponent>;
+
+  const authStub = {
+    authStatus$: new BehaviorSubject<boolean>(false),
+    getUsername: () => 'tester',
+    hasAnyRole: () => false,
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [NavbarComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(NavbarComponent);
+    fixture.detectChanges();
+  });
+
+  it('makes the logo navigate to /home', () => {
+    // Regression for #20: the logo is the home navigation, replacing the
+    // separate Home menu link.
+    const logoLink = fixture.debugElement.query(
+      By.css('a.logo[href="/home"] img.logo'),
+    );
+    expect(logoLink).withContext('logo should link to /home').toBeTruthy();
+    expect(logoLink.nativeElement.getAttribute('src')).toBe('images/logo.svg');
+  });
+
+  it('has no separate Home menu link', () => {
+    // Regression for #20: home navigation lives on the logo only; the
+    // dedicated Home menu link must be gone.
+    const menuHomeLink = fixture.debugElement.query(
+      By.css('a.menu-font[href="/home"]'),
+    );
+    expect(menuHomeLink)
+      .withContext('separate Home menu link should be removed')
+      .toBeNull();
   });
 });

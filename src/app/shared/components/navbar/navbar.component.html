@@ -1,17 +1,9 @@
 <div class="navbar-container">
-  <!-- logo -->
-  <div class="logo">
+  <!-- logo (navigates to home) -->
+  <a class="logo" routerLink="/home">
     <img class="logo" src="images/logo.svg" alt="Logo" />
-  </div>
-
-  <!-- หน้าแรก -->
-  <a
-    class="menu-font"
-    routerLink="/home"
-    routerLinkActive="menu-font-active"
-  >
-    {{ "HOME.NAVBAR.HOME" | translate }}
   </a>
+
   <!-- วิธีจองและชำระเงิน -->
   <a
     class="menu-font"

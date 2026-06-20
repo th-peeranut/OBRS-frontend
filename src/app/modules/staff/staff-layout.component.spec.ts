@@ -37,19 +37,31 @@ describe('StaffLayoutComponent', () => {
   });
 
   it('renders a navbar link back to the public home page', () => {
-    // Regression for #16: the staff shell had no UI path to /home
-    // (the brand links to /staff, Sign Out routes to /login).
+    // Regression for #16: the staff shell had no UI path to /home.
+    // Per #20 that path is now the brand logo itself.
     const homeLink = fixture.debugElement.query(By.css('a[href="/home"]'));
     expect(homeLink).withContext('home link should exist').toBeTruthy();
   });
 
-  it('renders the brand as the logo image linking to /staff', () => {
-    // Regression for #19: the staff brand should use the logo, not text,
-    // while keeping its /staff destination (per #16).
+  it('renders the brand as the logo image linking to /home', () => {
+    // Regression for #20: the brand logo is the home navigation (links to
+    // /home), replacing the separate Home button. (Supersedes #19's /staff
+    // destination per the user request.)
     const logo = fixture.debugElement.query(
-      By.css('a.navbar-brand[href="/staff"] img.staff-brand-logo'),
+      By.css('a.navbar-brand[href="/home"] img.staff-brand-logo'),
     );
     expect(logo).withContext('brand logo image should exist').toBeTruthy();
     expect(logo.nativeElement.getAttribute('src')).toBe('images/logo.svg');
+  });
+
+  it('has no separate Home button in the navbar menu', () => {
+    // Regression for #20: home navigation lives on the brand logo only; the
+    // dedicated Home nav-item must be gone.
+    const menuHomeLink = fixture.debugElement.query(
+      By.css('ul.navbar-nav a[href="/home"]'),
+    );
+    expect(menuHomeLink)
+      .withContext('separate Home menu link should be removed')
+      .toBeNull();
   });
 });
