@@ -84,20 +84,10 @@
   cursor: pointer;
 }
 
-.admin-brand h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #05354a;
-}
-
-.admin-brand p {
-  margin: 4px 0 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64727a;
+.admin-brand-logo {
+  display: block;
+  width: auto;
+  height: 40px;
 }
 
 .admin-nav {

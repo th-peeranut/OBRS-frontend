@@ -41,4 +41,11 @@ describe('AdminLayoutComponent', () => {
     expect(brandLink).withContext('brand link should exist').toBeTruthy();
     expect(brandLink.nativeElement.getAttribute('href')).toBe('/home');
   });
+
+  it('renders the brand home link as the logo image', () => {
+    // Regression for #17: the brand home link should use the logo, not text.
+    const logo = fixture.debugElement.query(By.css('.admin-brand-link img.admin-brand-logo'));
+    expect(logo).withContext('brand logo image should exist').toBeTruthy();
+    expect(logo.nativeElement.getAttribute('src')).toBe('images/logo.svg');
+  });
 });

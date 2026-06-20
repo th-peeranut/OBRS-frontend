@@ -14,8 +14,11 @@
         [attr.aria-label]="'ADMIN.LAYOUT.HOME_LINK' | translate"
         (click)="closeSidebar()"
       >
-        <h1>{{ 'ADMIN.LAYOUT.BRAND' | translate }}</h1>
-        <p>{{ 'ADMIN.LAYOUT.SUBTITLE' | translate }}</p>
+        <img
+          class="admin-brand-logo"
+          src="images/logo.svg"
+          [attr.alt]="'ADMIN.LAYOUT.BRAND' | translate"
+        />
       </a>
     </div>
 
