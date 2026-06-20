@@ -78,6 +78,7 @@
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
       "SUBTITLE": "ผู้ดูแลระบบโลจิสติกส์",
+      "HOME_LINK": "ไปยังหน้าแรกของเว็บไซต์",
       "SUPPORT": "ช่วยเหลือ",
       "SIGN_OUT": "ออกจากระบบ",
       "SEARCH_PLACEHOLDER": "ค้นหาข้อมูลผู้ดูแล...",

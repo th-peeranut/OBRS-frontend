@@ -78,6 +78,7 @@
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
       "SUBTITLE": "Logistics Admin",
+      "HOME_LINK": "Go to public site home",
       "SUPPORT": "Support",
       "SIGN_OUT": "Sign Out",
       "SEARCH_PLACEHOLDER": "Search admin data...",

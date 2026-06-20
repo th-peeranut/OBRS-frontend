@@ -78,6 +78,7 @@
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
       "SUBTITLE": "物流管理",
+      "HOME_LINK": "前往网站首页",
       "SUPPORT": "支持",
       "SIGN_OUT": "退出登录",
       "SEARCH_PLACEHOLDER": "搜索管理数据...",

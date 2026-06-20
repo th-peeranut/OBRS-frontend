@@ -8,8 +8,15 @@
 
   <aside class="admin-sidebar" [class.is-open]="isSidebarOpen">
     <div class="admin-brand">
-      <h1>{{ 'ADMIN.LAYOUT.BRAND' | translate }}</h1>
-      <p>{{ 'ADMIN.LAYOUT.SUBTITLE' | translate }}</p>
+      <a
+        routerLink="/home"
+        class="admin-brand-link"
+        [attr.aria-label]="'ADMIN.LAYOUT.HOME_LINK' | translate"
+        (click)="closeSidebar()"
+      >
+        <h1>{{ 'ADMIN.LAYOUT.BRAND' | translate }}</h1>
+        <p>{{ 'ADMIN.LAYOUT.SUBTITLE' | translate }}</p>
+      </a>
     </div>
 
     <nav class="admin-nav">
