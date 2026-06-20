@@ -11,6 +11,15 @@
     <div class="collapse navbar-collapse">
       <ul class="navbar-nav ms-auto align-items-center gap-2">
         <li class="nav-item">
+          <a class="nav-link text-white d-flex align-items-center gap-1"
+             routerLink="/home"
+             [attr.aria-label]="'STAFF.LAYOUT.HOME_LINK' | translate"
+             (click)="isSidebarOpen = false">
+            <span class="material-icons" style="font-size:18px">home</span>
+            <span>{{ 'STAFF.LAYOUT.HOME_LINK' | translate }}</span>
+          </a>
+        </li>
+        <li class="nav-item">
           <span class="navbar-text text-white me-2 fw-semibold">{{ userInitials }}</span>
         </li>
         <li class="nav-item">

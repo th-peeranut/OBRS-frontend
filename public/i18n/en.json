@@ -734,6 +734,7 @@
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
       "SUBTITLE": "Staff Portal",
+      "HOME_LINK": "Home",
       "SIGN_OUT": "Sign Out",
       "OPEN_MENU": "Open navigation menu",
       "LOGOUT_SUCCESS": "Signed out successfully"

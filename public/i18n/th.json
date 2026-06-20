@@ -735,6 +735,7 @@
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
       "SUBTITLE": "พอร์ทัลพนักงาน",
+      "HOME_LINK": "หน้าแรก",
       "SIGN_OUT": "ออกจากระบบ",
       "OPEN_MENU": "เปิดเมนูนำทาง",
       "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ"

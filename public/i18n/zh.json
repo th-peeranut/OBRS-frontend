@@ -734,6 +734,7 @@
     "LAYOUT": {
       "BRAND": "OBRS 员工",
       "SUBTITLE": "员工门户",
+      "HOME_LINK": "首页",
       "SIGN_OUT": "退出登录",
       "OPEN_MENU": "打开导航菜单",
       "LOGOUT_SUCCESS": "退出成功"
