@@ -482,7 +482,7 @@
       "SIGNIN": "Sign in",
       "SIGNUP": "Register",
       "SIGNOUT": "Sign out",
-      "SIGNOUT_SUCCESS": "Successfully signed out",
+      "SIGNOUT_SUCCESS": "Signed out successfully",
       "SIGNOUT_FAIL": "Failed to sign out",
       "ADMIN_DASHBOARD": "Admin Dashboard",
       "STAFF_PORTAL": "Staff Area",

@@ -143,6 +143,30 @@ describe('NavbarComponent', () => {
     expect(component.currentLanguage).toBe('en');
   });
 
+  it('clears auth and navigates to /home on sign out', async () => {
+    // Parity with the admin topbar: sign-out must navigate away, not leave the
+    // user on the current (possibly auth-gated) page.
+    const router = createRouterStub();
+    const navSpy = spyOn(router, 'navigate').and.resolveTo(true);
+    const auth: any = createAuthStub();
+    auth.clearAuthData = () => {};
+    const clearSpy = spyOn(auth, 'clearAuthData');
+    const comp = new NavbarComponent(
+      createTranslateStub(),
+      {} as never,
+      createElementRefStub(),
+      auth,
+      router,
+      { success: () => {} } as never,
+      createLanguageServiceStub()
+    );
+
+    await comp.onLogout();
+
+    expect(clearSpy).toHaveBeenCalled();
+    expect(navSpy).toHaveBeenCalledWith(['/home']);
+  });
+
   it('scrolls to the footer contact section', () => {
     const target = document.createElement('div');
     target.id = 'footer-contact';
