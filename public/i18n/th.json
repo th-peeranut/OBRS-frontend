@@ -486,7 +486,7 @@
       "SIGNOUT_SUCCESS": "ออกจากระบบสำเร็จ",
       "SIGNOUT_FAIL": "พบข้อผิดพลาด ออกจากระบบไม่สำเร็จ",
       "ADMIN_DASHBOARD": "แดชบอร์ดผู้ดูแลระบบ",
-      "STAFF_PORTAL": "พอร์ทัลพนักงาน",
+      "STAFF_PORTAL": "พื้นที่พนักงาน",
       "LANGUAGE_SWITCH": "ภาษา",
       "LANGUAGE_TH": "เปลี่ยนเป็นภาษาไทย",
       "LANGUAGE_EN": "เปลี่ยนเป็นภาษาอังกฤษ",
