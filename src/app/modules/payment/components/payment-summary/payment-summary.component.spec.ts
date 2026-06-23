@@ -1,20 +1,20 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { PaymentSummaryComponent } from './payment-summary.component';
+import {
+  createRouterStub,
+  createStoreStub,
+  createTranslateStub,
+} from '../../../../testing/test-stubs';
 
 describe('PaymentSummaryComponent', () => {
   let component: PaymentSummaryComponent;
-  let fixture: ComponentFixture<PaymentSummaryComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [PaymentSummaryComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(PaymentSummaryComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new PaymentSummaryComponent(
+      createStoreStub(),
+      createRouterStub(),
+      createStoreStub(),
+      createTranslateStub()
+    );
   });
 
   it('should create', () => {

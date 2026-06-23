@@ -2,6 +2,88 @@
   display: block;
 }
 
+.schedule-tabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(0, 102, 135, 0.06);
+}
+
+.schedule-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5a666c;
+  cursor: pointer;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.schedule-tab .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.schedule-tab.is-active {
+  background: #ffffff;
+  color: #0a3f58;
+  box-shadow: 0 4px 12px rgba(25, 28, 30, 0.1);
+}
+
+.schedule-tab-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: rgba(0, 102, 135, 0.12);
+  color: #006687;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.schedule-tab.is-active .schedule-tab-count {
+  background: linear-gradient(135deg, #006687, #4dbeef);
+  color: #ffffff;
+}
+
+.schedule-focus-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 102, 135, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 102, 135, 0.06);
+  color: #0a3f58;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.schedule-focus-banner .material-symbols-outlined {
+  font-size: 18px;
+  color: #006687;
+}
+
+.schedule-focus-clear {
+  margin-left: auto;
+  border: 0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #006687;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(0, 102, 135, 0.25);
+}
+
 .schedule-form-backdrop {
   background: rgba(45, 49, 51, 0.4);
   backdrop-filter: blur(5px);

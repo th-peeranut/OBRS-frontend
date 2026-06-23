@@ -1,21 +1,25 @@
 <div class="navbar-container">
-  <!-- logo -->
-  <div class="logo">
+  <!-- logo (navigates to home) -->
+  <a class="logo" routerLink="/home">
     <img class="logo" src="images/logo.svg" alt="Logo" />
-  </div>
-
-  <!-- หน้าแรก -->
-  <a class="menu-font menu-font-active" href="#">
-    {{ "HOME.NAVBAR.HOME" | translate }}
   </a>
+
   <!-- วิธีจองและชำระเงิน -->
-  <a class="menu-font" href="#">
+  <a
+    class="menu-font"
+    routerLink="/how-to-book"
+    routerLinkActive="menu-font-active"
+  >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
   <!-- ติดต่อเรา -->
-  <a class="menu-font" href="#">
+  <button
+    type="button"
+    class="menu-font menu-font-action"
+    (click)="scrollToContact()"
+  >
     {{ "HOME.NAVBAR.CONTACT" | translate }}
-  </a>
+  </button>
 
   <div class="button-container">
     <!-- Change Language Dropdown -->
@@ -94,6 +98,16 @@
         </button>
   
         <ul class="dropdown-menu" aria-labelledby="profileDropdown">
+          <li *ngIf="isAdmin">
+            <a class="dropdown-item menu-lang" [routerLink]="'/admin/dashboard'">
+              {{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}
+            </a>
+          </li>
+          <li *ngIf="isSalesperson || isDriver">
+            <a class="dropdown-item menu-lang" [routerLink]="'/staff'">
+              {{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}
+            </a>
+          </li>
           <li>
             <a class="dropdown-item menu-lang" (click)="onLogout()">
               {{ "HOME.NAVBAR.SIGNOUT" | translate }}

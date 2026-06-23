@@ -67,6 +67,7 @@
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "Admin Dashboard",
+      "DASHBOARD": "Dashboard",
       "LOOKUP_SETTINGS": "Lookup Settings",
       "ROLE_MANAGEMENT": "Role Management",
       "USER_MANAGEMENT": "User Management",
@@ -78,15 +79,32 @@
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
       "SUBTITLE": "Logistics Admin",
+      "HOME_LINK": "Go to public site home",
       "SUPPORT": "Support",
       "SIGN_OUT": "Sign Out",
       "SEARCH_PLACEHOLDER": "Search admin data...",
-      "LOGOUT_SUCCESS": "Signed out successfully"
+      "LOGOUT_SUCCESS": "Signed out successfully",
+      "OPEN_MENU": "Open navigation menu",
+      "CLOSE_MENU": "Close navigation menu",
+      "PROFILE_MENU": "Open profile menu",
+      "LANGUAGE_EN": "Switch to English",
+      "LANGUAGE_TH": "Switch to Thai"
     },
     "COMMON": {
       "LOADING": "Loading data...",
+      "NO_DATA": "No data to display.",
+      "UPDATING": "Updating…",
+      "REFRESH_FAILED": "Showing saved data — couldn't refresh.",
       "LANGUAGE_LOADING": "Refreshing content for the selected language...",
       "ACTIONS": "Actions",
+      "EDIT": "Edit",
+      "VIEW": "View",
+      "CLOSE": "Close",
+      "SEARCH": "Search",
+      "EXPORT": "Export",
+      "PREVIOUS": "Previous",
+      "NEXT": "Next",
+      "ENTRIES": "entries",
       "SHOWING": "Showing",
       "OF": "of",
       "CANCEL": "Cancel",
@@ -109,7 +127,8 @@
       "USERNAME_EXIST": "This username is already in use.",
       "EMAIL_EXIST": "This email is already in use.",
       "PHONE_NO_EXIST": "This phone number is already in use.",
-      "SAME_PASSWORD_VALIDATE": "Please enter the same password."
+      "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
+      "FORM_INVALID": "Please complete the highlighted required fields."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -122,7 +141,9 @@
       "LOAD_USERS_FAILED": "Unable to load users.",
       "LOAD_VEHICLES_FAILED": "Unable to load vehicles.",
       "LOAD_ROUTES_FAILED": "Unable to load routes.",
-      "LOAD_SCHEDULES_FAILED": "Unable to load schedules."
+      "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
+      "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
+      "DELETE_BTN": "Delete"
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -208,6 +229,7 @@
       "MONITORING": "Fleet Monitoring Active",
       "TITLE": "Vehicle Management",
       "ADD": "Add Vehicle",
+      "TOTAL": "Total Vehicles",
       "TOTAL_CAPACITY": "Active Vehicles",
       "UNITS": "Units",
       "ACTIVE": "Active Vehicles",
@@ -302,7 +324,46 @@
       "GENERATE_SUCCESS": "Schedules generated successfully.",
       "GENERATE_FAILED": "Unable to generate schedules.",
       "DATE_RANGE_VALIDATION": "End date must be after start date.",
-      "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines."
+      "TIME_VALIDATION": "Use HH:mm format, separated by commas or new lines.",
+      "TAB_SETS": "Schedule Sets",
+      "TAB_TRIPS": "Schedules",
+      "TRIPS_TABLE_TITLE": "Schedule List",
+      "TRIPS_SEARCH_PLACEHOLDER": "Search by schedule ID, route, vehicle, or driver...",
+      "TRIP_ID": "Schedule ID",
+      "DEPARTURE": "Departure",
+      "TRIP_UNITS": "schedules",
+      "VIEW_SCHEDULES": "View generated schedules",
+      "FOCUSED_BANNER": "Showing schedules generated from {{set}}.",
+      "FOCUSED_CLEAR": "Show all schedules"
+    },
+    "BOOKINGS": {
+      "TITLE": "Bookings Management",
+      "SUBTITLE": "Search, filter, and export customer bookings.",
+      "SEARCH_PLACEHOLDER": "Search by booking ID or customer...",
+      "FILTER_STATUS": "All Statuses",
+      "BOOKING_ID": "Booking ID",
+      "CUSTOMER": "Customer Name",
+      "ROUTE": "Route",
+      "BOOKING_DATE": "Booking Date",
+      "TOTAL_FARE": "Total Fare",
+      "BOOKING_STATUS": "Booking Status",
+      "PAYMENT_STATUS": "Payment Status",
+      "UNITS": "bookings",
+      "LOADING": "Loading booking data...",
+      "LOAD_FAILED": "Unable to load booking data from backend."
+    },
+    "DASHBOARD": {
+      "TITLE": "Dashboard",
+      "SUBTITLE": "Operational overview across bookings and fleet.",
+      "TOTAL_BOOKINGS": "Total Bookings",
+      "PENDING_PAYMENTS": "Pending Payments",
+      "REVENUE": "Revenue",
+      "ACTIVE_VEHICLES": "Active Vehicles",
+      "RECENT_BOOKINGS": "Recent Bookings",
+      "VIEW_ALL": "View all",
+      "LOAD_FAILED": "Unable to load dashboard data.",
+      "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded.",
+      "UPDATING": "Updating…"
     }
   },
   "LOGIN": {
@@ -419,7 +480,9 @@
       "SIGNUP": "Register",
       "SIGNOUT": "Sign out",
       "SIGNOUT_SUCCESS": "Successfully signed out",
-      "SIGNOUT_FAIL": "Failed to sign out"
+      "SIGNOUT_FAIL": "Failed to sign out",
+      "ADMIN_DASHBOARD": "Admin Dashboard",
+      "STAFF_PORTAL": "Staff Portal"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
@@ -434,7 +497,8 @@
       "DEPARTURE_DATE": "Departure date",
       "ROUND_DEPARTURE": "Round day to go",
       "ROUND_RETURN": "Round day to return",
-      "SEARCH": "Search"
+      "SEARCH": "Search",
+      "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching."
     },
     "STATION": {
       "HEADER": "Service point route map",
@@ -442,23 +506,27 @@
       "STOP": "Bangkok - Ban Bueng - Nong Sak"
     },
     "FOOTER": {
-      "HEADER": "Head office location",
-      "TITLE": "NJ van service, Pu",
+      "TITLE": "NJ Phuyaipu",
+      "TAGLINE": "Online bus ticket booking",
+      "HEAD_OFFICE_LABEL": "Head office location",
       "ADDRESS": "3/5 Moo 3, Nong Chak Subdistrict, Ban Bueng District, Chonburi 20170",
-      "MENU_TITLE": "Menu",
+      "SALES_TITLE": "Ticket sales points",
+      "SALES_NONG_CHAK": "Nong Chak",
+      "SALES_NONG_CHAK_SUB": "Ban Bueng District, Chonburi",
+      "SALES_BAN_BUENG": "Wisit Chai Market",
+      "SALES_BAN_BUENG_SUB": "Ban Bueng District, Chonburi",
+      "SALES_MOCHIT": "Mo Chit",
+      "SALES_MOCHIT_SUB": "Small Passenger Terminal (Chatuchak) Building C, Counter C5",
+      "MENU_TITLE": "Information & Services",
       "MENU_TEXT_1": "How to book and pay",
-      "MENU_TEXT_2": "Contact us",
-      "MAIN_CONTACT_TITLE": "Head Office Contact Channel",
-      "MAIN_CONTACT_ADDRESS_1": "NJ Van Queue Pu,",
-      "MAIN_CONTACT_ADDRESS_2": "Nong Chak-Ban Bueng-Mo Chit",
-      "MAIN_CONTACT_PHONE_NUMBER": "090-562-2019",
-      "MOCHIT_CONTACT_TITLE": "Head Office Contact Channel",
-      "MOCHIT_CONTACT_ADDRESS_1": "Small Passenger Transport Station",
-      "MOCHIT_CONTACT_ADDRESS_2": "(Chatuchak) Building C, Counter C5",
-      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024. all rights reserved",
       "MENU_PRIVACY_POLICY": "Privacy Policy",
       "MENU_REFUND_POLICY": "Refund Policy",
-      "MENU_BUSINESS_POLICY": "Business Policy (Cancellation/Refund)"
+      "MENU_BUSINESS_POLICY": "Business Policy (Cancellation/Refund)",
+      "CONTACT_TITLE": "Contact us",
+      "CONTACT_FACEBOOK": "NJ Phuyaipu",
+      "CONTACT_INSTAGRAM": "@nj.phuyaipu",
+      "CONTACT_PHONE": "09-0562-2019",
+      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026. All rights reserved."
     }
   },
   "STEPPER": {
@@ -592,12 +660,22 @@
     },
     "QR": {
       "REFRESH": "Refresh QR",
+      "CONFIRM_PAYMENT": "Confirm Payment",
+      "CONFIRM_DIALOG": {
+        "TITLE": "Confirm payment?",
+        "MESSAGE": "Please scan and pay with the QR code in your banking app before confirming. Continue only after the transfer is complete.",
+        "CONFIRM": "I have paid",
+        "CANCEL": "Not yet"
+      },
       "REFRESH_HINT": "Available in {{seconds}}s",
       "DOWNLOAD": "Download QR",
       "BACK": "Back",
       "PAY_NOW": "Pay now",
       "MERCHANT_NAME": "Merchant name",
       "MERCHANT_REF": "Reference:"
+    },
+    "RESULT": {
+      "FAILED_REDIRECT": "Payment failed. Please select a schedule and book again."
     }
   },
   "E_TICKET": {
@@ -641,6 +719,173 @@
     "BUSINESS": {
       "TITLE": "Terms and Conditions of Service",
       "CONTENT": "&emsp;&emsp;1. Ticket sales are divided into 2 types:\n      <br />&emsp;&emsp;&emsp;&emsp;? Regular ticket sales: purchasing tickets within 12 hours before departure time from origin and until the vehicle arrives at that station\n      <br />&emsp;&emsp;&emsp;&emsp;? Advance ticket sales: purchasing tickets at least 12 hours before departure time from origin, and advance booking is available up to 60 days\n      <br />&emsp;&emsp;2. The condition for postponing open-date tickets has been canceled.\n      <br />&emsp;&emsp;3. Ticket changes can only be made as date-specified changes.\n      <br />&emsp;&emsp;4. Ticket change can be made only once without fee. If a ticket has already been changed, it cannot be changed again and must be used for travel only.\n      Note: Ticket changes can be made through 3 channels:\n      <br />&emsp;&emsp;&emsp;&emsp;1. Sales offices at all 3 stations\n      <br />&emsp;&emsp;&emsp;&emsp;2. https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;&emsp;&emsp;3. Date-specified ticket changes can set a travel date within 30 days only, counted from the date of the change request\n      <br />&emsp;&emsp;&emsp;&emsp;4. Ticket changes must be made at least 24 hours before the original departure time\n      <br />&emsp;&emsp;5. Reprinting tickets is divided into 2 cases:\n      <br />&emsp;&emsp;&emsp;&emsp;? Reprint with fee: lost, torn, forgotten ticket, or tickets purchased and printed at another station, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;? Reprint without fee: tickets purchased via internet channel, or printer problems during transaction, power outage, system failure, etc.\n      <br />&emsp;&emsp;6. Ticket cancellation conditions are allowed in the following cases:\n      <br />&emsp;&emsp;&emsp;&emsp;1. Force majeure causing trip suspension, such as natural disasters or political situations\n      <br />&emsp;&emsp;&emsp;&emsp;2. Passenger emergency, illness, or accident: a medical certificate must be submitted within 3 days from travel date; otherwise, travel rights are forfeited\n      Note: Cases other than those above cannot be canceled.\n\n      <br />&emsp;&emsp;7. Refund conditions\n      In cases of force majeure that require trip suspension, or when the booking system cannot reserve seats, the company will refund within 3 business days after receiving complete documents from the customer.\n\n      <br />Documents required for ticket refund are as follows:\n      <br />&emsp;&emsp;&emsp;&emsp;1. Original ticket\n      <br />&emsp;&emsp;&emsp;&emsp;2. Copy of the traveler?s ID card (name must match the ticket)\n      <br />&emsp;&emsp;&emsp;&emsp;3. Copy of the representative?s ID card (if another person processes on behalf of the traveler)\n      <br />&emsp;&emsp;&emsp;&emsp;Note:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. For refunds, passengers must contact and collect the refund within 7 business days (government working days) from the date the company notifies them; otherwise, the company reserves the right not to provide the refund\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. If the passenger does not travel on the specified date/time stated in the ticket after accepting these conditions, the travel right is considered forfeited\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. The company reserves the right to change these terms and conditions for online ticket purchasing service without prior notice\n\n      <br />&emsp;&emsp;8. Passenger groups eligible for fare discounts under Department of Land Transport conditions are divided into 3 types:\n      <br />&emsp;&emsp;? Children with height not exceeding 130 cm (if not wearing a student uniform)\n      <br />&emsp;&emsp;? Monks\n      <br />&emsp;&emsp;? Soldiers and police officers in uniform\n      <br />&emsp;&emsp;9. If a passenger?s discount card is close to expiration and the passenger wants to buy an advance ticket where the travel date matches the card?s expiration date, the passenger can proceed normally based on the purchase date.\n      <br />&emsp;&emsp;10. If a passenger wants to use fare-discount rights but asks a relative/friend to buy the ticket without presenting the original discount evidence card, the discount cannot be used unless the original evidence is presented.\n      <br />&emsp;&emsp;11. If a passenger used a fare-discount card but cannot travel and wants to transfer travel to a relative/friend, it can be changed without fee, but fare difference must be paid.\n\n      <br />\n      <br />&emsp;&emsp;&emsp;&emsp;Temporary ticket conditions due to COVID-19 situation\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Effective from April 30, 2021 onward, or until further notice\n      <br />&emsp;&emsp;&emsp;&emsp;Ticket postponement\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Date-specified postponement\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;? Customers can request ticket postponement before vehicle departure from origin within 2 hours\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;? Date-selection period extended to 60 days\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;? If the 60-day period has ended and the situation is still unresolved, passengers can reissue replacement tickets at Greenbus ticket sales points\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Open-date postponement\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;? Customers can request ticket postponement before vehicle departure from origin within 24 hours\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;? Ticket validity is 60 days from postponement date; passengers must specify the travel date within 60 days from the postponement date\n\n      <br />\n      <br />&emsp;&emsp;&emsp;&emsp;Travel conditions for passengers\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;For your benefit, please read the following travel conditions:\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;1. Passengers must comply with the Land Transport Act B.E. 2522 (1979), ministerial regulations, and other related transport laws\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;2. Passengers must comply with the company?s transport conditions and acknowledge/accept these passenger travel announcements as stated herein\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;3. Passengers must be ready and arrive at the passenger terminal at least 30 minutes before departure to check tickets\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;4. The company will not accept baggage containing flammable objects, pets, illegal items, war weapons, strong-smelling food, objects containing liquid, fragile objects, improperly packed items, or oversized/heavy items unsuitable for transport\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;5. The company reserves the right to change unacceptable baggage categories without prior notice; in case of damage, the company is not liable and passengers are responsible for all damages\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;6. The carrier is not liable for passengers or baggage due to delays, events beyond control, or inherent deterioration damage, etc.\n      <br />&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;7. If a passenger does not travel on the specified date/time in the agreed ticket, the travel right is considered forfeited"
+    }
+  },
+  "HOW_TO_BOOK": {
+    "TITLE": "How to Book and Pay",
+    "INTRO": "Booking your bus ticket is quick and completely online. Follow the steps below to reserve your seats and pay securely.",
+    "BOOKING_TITLE": "Booking your ticket",
+    "STEP_1": "On the home page, select your origin, destination, and travel date, then search for available trips.",
+    "STEP_2": "Choose a departure time from the list of available schedules.",
+    "STEP_3": "Review the trip details and select your seats.",
+    "STEP_4": "Enter the passenger information for each traveler.",
+    "STEP_5": "Check your booking summary, then continue to payment.",
+    "PAYMENT_TITLE": "Paying for your booking",
+    "PAYMENT_INTRO": "At the payment step, choose one of the following secure payment methods:",
+    "PAYMENT_1": "Credit or debit card (Visa, Mastercard)",
+    "PAYMENT_2": "PromptPay — scan the QR code with your mobile banking app",
+    "PAYMENT_NOTE": "Please do not close or refresh the page while your payment is being processed, until the confirmation screen appears.",
+    "ETICKET_TITLE": "Getting your e-ticket",
+    "ETICKET_TEXT": "As soon as your payment is confirmed, your e-ticket is issued automatically. You can view it on the confirmation screen and find it again later in your booking history. Present the e-ticket — printed or on your phone — to staff before boarding.",
+    "TIPS_TITLE": "Before you travel",
+    "TIP_1": "Arrive at the station at least 30 minutes before departure to check in.",
+    "TIP_2": "Bring a valid photo ID that matches the passenger name on your ticket.",
+    "TIP_3": "Keep your booking reference handy in case you need to contact support.",
+    "HELP_TITLE": "Need help?",
+    "HELP_TEXT": "If you have any questions about booking or payment, you can reach us through the contact channels listed in the footer of any page."
+  },
+  "STAFF": {
+    "PAGES": {
+      "SELL": "Walk-in Sales",
+      "SCHEDULES": "Schedule Management",
+      "DRIVER": "My Schedules",
+      "BOARDING": "Boarding List"
+    },
+    "LAYOUT": {
+      "BRAND": "OBRS STAFF",
+      "SUBTITLE": "Staff Portal",
+      "HOME_LINK": "Home",
+      "SIGN_OUT": "Sign Out",
+      "OPEN_MENU": "Open navigation menu",
+      "LOGOUT_SUCCESS": "Signed out successfully"
+    },
+    "NAV": {
+      "SELL": "Walk-in Sales",
+      "SCHEDULES": "Schedules",
+      "MY_SCHEDULES": "My Schedules",
+      "BOARDING": "Boarding List"
+    },
+    "MESSAGES": {
+      "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
+      "LOAD_MY_SCHEDULES_FAILED": "Unable to load your schedules.",
+      "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
+      "CHECK_IN_SUCCESS": "Checked in successfully.",
+      "CHECK_IN_FAILED": "Unable to check in passenger."
+    },
+    "VALIDATION": {
+      "FORM_INVALID": "Please complete all required fields.",
+      "FROM_TO_SAME": "Departure and destination stops cannot be the same.",
+      "RETURN_DATE_BEFORE_DEPARTURE": "Return date must be after departure date.",
+      "SEAT_COUNT_MISMATCH": "Please select the correct number of seats."
+    },
+    "BOARDING": {
+      "TITLE": "Boarding List",
+      "SUBTITLE": "Manage passenger check-ins for this schedule.",
+      "TICKET_NO": "Ticket No.",
+      "SEAT": "Seat",
+      "PASSENGER": "Passenger",
+      "FROM": "From",
+      "TO": "To",
+      "STATUS": "Status",
+      "CHECKED_IN": "Checked In",
+      "CHECK_IN_BTN": "Check In",
+      "EMPTY_TITLE": "No passengers yet",
+      "EMPTY_BODY": "No boarding records found for this schedule."
+    },
+    "DRIVER": {
+      "TITLE": "My Assigned Schedules",
+      "SUBTITLE": "Schedules you are assigned to drive.",
+      "TRIP_ID": "Trip ID",
+      "DEPARTURE": "Departure",
+      "ROUTE": "Route",
+      "VEHICLE": "Vehicle",
+      "STATUS": "Status",
+      "BOARDING_BTN": "Boarding List",
+      "EMPTY_TITLE": "No schedules assigned",
+      "EMPTY_BODY": "You have no upcoming driving schedules."
+    },
+    "SCHEDULES": {
+      "TITLE": "Schedule Management",
+      "SUBTITLE": "Create and manage trip schedules.",
+      "ADD": "Add Schedule",
+      "ADD_TITLE": "Create Schedule",
+      "EDIT_TITLE": "Edit Schedule",
+      "MODAL_HINT": "Fill in the schedule details below.",
+      "SEARCH_PLACEHOLDER": "Search by ID, route, vehicle or driver...",
+      "FILTER_ROUTE": "Route: All",
+      "FILTER_STATUS": "Status: All",
+      "TRIP_ID": "Trip ID",
+      "DEPARTURE": "Departure",
+      "ROUTE_VEHICLE": "Route / Vehicle",
+      "DRIVER_COL": "Driver",
+      "STATUS": "Status",
+      "UPDATED_AT": "Updated At",
+      "BOARDING_LIST_BTN": "Boarding",
+      "DEPARTURE_DATE": "Departure Date",
+      "DEPARTURE_TIME": "Departure Time",
+      "ROUTE": "Route",
+      "VEHICLE_TYPE": "Vehicle Type",
+      "VEHICLE": "Vehicle",
+      "DRIVER": "Driver"
+    },
+    "SELL": {
+      "STEP_SEARCH": "Search",
+      "STEP_SEATS": "Seats",
+      "STEP_PASSENGERS": "Passengers",
+      "STEP_PAYMENT": "Payment",
+      "STEP_TICKET": "Ticket",
+      "BOOKING_TYPE": "Booking Type",
+      "ONE_WAY": "One Way",
+      "RETURN": "Return Trip",
+      "PASSENGER_COUNT": "Number of Passengers",
+      "FROM_STOP": "From Stop (slug)",
+      "TO_STOP": "To Stop (slug)",
+      "DEPARTURE_DATE": "Departure Date",
+      "RETURN_DATE": "Return Date",
+      "SEARCH_BTN": "Search Schedules",
+      "SEARCHING": "Searching...",
+      "SELECT_DEPARTURE": "Select Departure Trip",
+      "SELECT_RETURN": "Select Return Trip",
+      "NO_SCHEDULES": "No schedules available.",
+      "SEAT_AVAILABLE": "Available Seats",
+      "PRICE_PER_SEAT": "Price/Seat",
+      "TO": "to",
+      "LEG_DEPARTURE": "Departure Leg",
+      "SEATS_SELECTED": "Seats Selected",
+      "LOADING_SEATS": "Loading seat map...",
+      "BACK_BTN": "Back",
+      "NEXT_BTN": "Next",
+      "CONFIRM_BTN": "Confirm",
+      "CONFIRMING": "Confirming...",
+      "SEAT_NUMBER_BADGE": "Seat",
+      "PASSENGER_TITLE": "Title",
+      "FIRST_NAME": "First Name",
+      "MIDDLE_NAME": "Middle Name",
+      "LAST_NAME": "Last Name",
+      "PHONE": "Phone Number",
+      "ID_CARD": "ID Card Number",
+      "GENDER": "Gender",
+      "GENDER_MALE": "Male",
+      "GENDER_FEMALE": "Female",
+      "GENDER_MONK": "Monk",
+      "CONTACT_NAME": "Contact Person",
+      "CONTACT_PHONE": "Contact Phone",
+      "CONTACT_EMAIL": "Contact Email",
+      "TOTAL_AMOUNT": "Total Amount",
+      "CASH_ONLY_BADGE": "Cash Payment",
+      "CASH_ONLY_NOTE": "Walk-in sales accept cash only. Collect payment before confirming.",
+      "PAY_BTN": "Confirm Cash Received",
+      "PROCESSING": "Processing...",
+      "BOOKING_SUCCESS": "Booking Complete!",
+      "BOOKING_NUMBER": "Booking",
+      "VIEW_TICKET_BTN": "View E-Ticket",
+      "NEW_SALE_BTN": "New Sale"
+    },
+    "BOARDING_ENTRY": {
+      "TITLE": "Select a Schedule",
+      "SUBTITLE": "Choose a schedule to view its boarding list.",
+      "EMPTY_TITLE": "No schedules available",
+      "EMPTY_BODY": "You have no schedules assigned. Please check back later."
     }
   }
 }

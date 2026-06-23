@@ -1,0 +1,9 @@
+.staff-brand-logo {
+  display: block;
+  width: auto;
+  height: 32px;
+  // The logo art is blue (#4069B8 / #4BC2F7); the staff navbar is bg-primary
+  // (navbar-dark, white text), so render the logo white to match the brand
+  // text it replaces and keep it legible on the colored bar.
+  filter: brightness(0) invert(1);
+}

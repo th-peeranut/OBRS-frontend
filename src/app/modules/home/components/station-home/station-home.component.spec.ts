@@ -1,20 +1,20 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
 import { StationHomeComponent } from './station-home.component';
+import {
+  createRouterStub,
+  createStoreStub,
+  createTranslateStub,
+} from '../../../../testing/test-stubs';
 
 describe('StationHomeComponent', () => {
   let component: StationHomeComponent;
-  let fixture: ComponentFixture<StationHomeComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [StationHomeComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(StationHomeComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new StationHomeComponent(
+      createRouterStub(),
+      createTranslateStub(),
+      createStoreStub(),
+      createStoreStub()
+    );
   });
 
   it('should create', () => {

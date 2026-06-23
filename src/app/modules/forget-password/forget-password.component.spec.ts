@@ -1,20 +1,25 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder } from '@angular/forms';
 
 import { ForgetPasswordComponent } from './forget-password.component';
+import {
+  createElementRefStub,
+  createLanguageServiceStub,
+  createRouterStub,
+  createTranslateStub,
+} from '../../testing/test-stubs';
 
 describe('ForgetPasswordComponent', () => {
   let component: ForgetPasswordComponent;
-  let fixture: ComponentFixture<ForgetPasswordComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [ForgetPasswordComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(ForgetPasswordComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new ForgetPasswordComponent(
+      createTranslateStub(),
+      createLanguageServiceStub(),
+      {} as never,
+      createElementRefStub(),
+      new FormBuilder(),
+      createRouterStub()
+    );
   });
 
   it('should create', () => {

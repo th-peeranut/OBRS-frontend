@@ -19,12 +19,15 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { SchedulesStore } from './schedules.store';
 
 interface ScheduleRow {
   kind: 'set' | 'schedule';
   id: number;
+  scheduleSetId: number | null;
   tripId: string;
   dateRange: string;
   startDate: string;
@@ -62,23 +65,30 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected vehicleTypeOptions: Option[] = [];
   protected statusOptions: Option[] = [];
   protected readonly frequencyOptions: Option[] = [
-    { code: 'Daily', label: 'Daily' },
-    { code: 'Weekly', label: 'Weekly' },
-    { code: 'Monthly', label: 'Monthly' },
+    { code: 'daily', label: 'Daily' },
+    { code: 'weekly', label: 'Weekly' },
+    { code: 'monthly', label: 'Monthly' },
   ];
 
+  protected activeTab: 'set' | 'schedule' = 'set';
+  // When set, the Schedules tab is scoped to the trips this set generated,
+  // matched exactly by the backend scheduleSetId provenance link.
+  protected focusedSet: ScheduleRow | null = null;
   protected selectedRouteFilter = '';
   protected selectedStatusFilter = '';
   protected selectedDateFilter: Date | null = null;
   protected searchKeyword = '';
 
-  protected isLoading = false;
+  protected isRefreshing = false;
+  protected refreshFailed = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isGenerating = false;
-  protected isLanguageChanging = false;
   protected isEditMode = false;
   protected isScheduleItemEditMode = false;
+  protected isEditDetailLoading = false;
+  protected isScheduleEditDetailLoading = false;
   protected isFormModalOpen = false;
   protected isScheduleFormModalOpen = false;
   protected isDeleteModalOpen = false;
@@ -88,14 +98,22 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
-  private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+  private readonly subscriptions = new Subscription();
+
+  private rawScheduleSets: AdminScheduleSetDto[] = [];
+  private rawGeneratedSchedules: AdminScheduleDto[] = [];
+  private rawRoutes: AdminRouteDto[] = [];
+  private rawVehicles: AdminVehicleDto[] = [];
+  private rawVehicleTypes: AdminVehicleTypeDto[] = [];
+  private rawUsers: AdminUserDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: SchedulesStore
   ) {
     this.scheduleForm = this.formBuilder.group({
       startDate: ['', [Validators.required]],
@@ -116,31 +134,93 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       driverId: [''],
     });
 
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
-    });
+    // Language change only swaps displayed translations; data is already loaded,
+    // so re-derive the view locally instead of re-fetching from the backend.
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadScheduleSets();
+  ngOnInit(): void {
+    // Render the cached schedules instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawScheduleSets = data.scheduleSets;
+          this.rawGeneratedSchedules = data.generatedSchedules;
+          this.rawRoutes = data.routes;
+          this.rawVehicles = data.vehicles;
+          this.rawVehicleTypes = data.vehicleTypes;
+          this.rawUsers = data.users;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED');
+          this.schedules = [];
+          this.filteredSchedules = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
   }
 
-  protected get totalSchedules(): number {
-    return this.schedules.length;
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected get activeScheduleSets(): number {
-    return this.schedules.filter((schedule) => schedule.statusCode === 'scheduled').length;
+  // Unfiltered totals power the tab badges so they stay stable while filtering a tab.
+  protected get scheduleSetTotal(): number {
+    return this.schedules.filter((schedule) => schedule.kind === 'set').length;
   }
 
-  protected get totalDepartures(): number {
-    return this.schedules.reduce((total, schedule) => {
-      return total + schedule.departureTimes.split(',').filter((time) => time.trim()).length;
-    }, 0);
+  protected get scheduleTripTotal(): number {
+    return this.schedules.filter((schedule) => schedule.kind === 'schedule').length;
+  }
+
+  // The two tables read from the same filtered list, split by kind.
+  protected get scheduleSetRows(): ScheduleRow[] {
+    return this.filteredSchedules.filter((schedule) => schedule.kind === 'set');
+  }
+
+  protected get tripRows(): ScheduleRow[] {
+    return this.filteredSchedules.filter((schedule) => schedule.kind === 'schedule');
+  }
+
+  protected setActiveTab(tab: 'set' | 'schedule'): void {
+    this.activeTab = tab;
+  }
+
+  // Drill from a set into the schedules it produced, scoped by scheduleSetId.
+  protected viewSchedulesForSet(set: ScheduleRow): void {
+    if (set.kind !== 'set') {
+      return;
+    }
+    this.focusedSet = set;
+    this.activeTab = 'schedule';
+    this.applyFilters();
+  }
+
+  protected clearFocusedSet(): void {
+    this.focusedSet = null;
+    this.applyFilters();
   }
 
   protected trackById(_index: number, item: ScheduleRow): number {
@@ -224,31 +304,35 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let detail: AdminScheduleSetDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getScheduleSetById(schedule.id));
-      detail = response?.data ?? null;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED'));
-      return;
-    }
-
-    const scheduleSet = detail ?? this.toScheduleSetFallback(schedule);
-    const status = this.parseStatus(scheduleSet.status);
-
+    // Open the modal immediately from the row data we already hold, so it
+    // appears without waiting on the (slow on SIT) detail fetch. The server
+    // detail is patched in once it arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedSchedule = schedule;
+    this.isEditDetailLoading = true;
+    this.applyScheduleSetFormValues(this.toScheduleSetFallback(schedule), schedule);
+    // Clear AFTER building the fallback: toScheduleSetFallback() runs
+    // parseDepartureTimes(), which flips departureTimesInvalid=true on any
+    // malformed stored time (e.g. a single-digit hour). Resetting here keeps a
+    // freshly opened edit modal from showing a spurious validation error before
+    // the user has touched the field.
     this.departureTimesInvalid = false;
-    this.scheduleForm.reset({
-      startDate: scheduleSet.startDate ?? schedule.startDate,
-      endDate: scheduleSet.endDate ?? schedule.endDate,
-      departureTimesText: this.toDepartureTimesText(scheduleSet.departureTimes),
-      frequency: scheduleSet.frequency ?? schedule.frequency,
-      status: status.code,
-      route: scheduleSet.route?.slug ?? schedule.routeSlug,
-      vehicleType: scheduleSet.vehicleType?.slug ?? schedule.vehicleTypeSlug,
-    });
     this.isFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getScheduleSetById(schedule.id));
+      const detail = response?.data ?? null;
+      // Ignore a stale response if the user closed the modal or switched rows.
+      if (detail && this.isFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.applyScheduleSetFormValues(detail, schedule, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
   }
 
   protected async openScheduleEditModal(schedule: ScheduleRow): Promise<void> {
@@ -256,29 +340,88 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    let detail: AdminScheduleDto | null = null;
+    // Open the modal immediately from the row data; patch server detail in once
+    // it arrives (see fetch below) so a slow SIT response can't blank-wait.
+    this.isScheduleItemEditMode = true;
+    this.selectedSchedule = schedule;
+    this.isScheduleEditDetailLoading = true;
+    this.applyScheduleItemFormValues(this.toScheduleDetailFallback(schedule), schedule);
+    this.isScheduleFormModalOpen = true;
+
     try {
       const response = await firstValueFrom(this.adminApiService.getScheduleById(schedule.id));
-      detail = response?.data ?? null;
+      const detail = response?.data ?? null;
+      if (detail && this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.applyScheduleItemFormValues(detail, schedule, true);
+      }
     } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED'));
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isScheduleFormModalOpen && this.selectedSchedule?.id === schedule.id) {
+        this.isScheduleEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the schedule-set form from a DTO. When `onlyPristine` is set (the
+  // late detail patch), only controls the user hasn't started editing are
+  // filled, so the arriving server data never clobbers in-progress input.
+  private applyScheduleSetFormValues(
+    scheduleSet: AdminScheduleSetDto,
+    schedule: ScheduleRow,
+    onlyPristine = false
+  ): void {
+    const status = this.parseStatus(scheduleSet.status);
+    const values = {
+      startDate: scheduleSet.startDate ?? schedule.startDate,
+      endDate: scheduleSet.endDate ?? schedule.endDate,
+      departureTimesText: this.toDepartureTimesText(scheduleSet.departureTimes),
+      frequency: scheduleSet.frequency ?? schedule.frequency,
+      status: status.code,
+      route: scheduleSet.route?.slug ?? schedule.routeSlug,
+      vehicleType: scheduleSet.vehicleType?.slug ?? schedule.vehicleTypeSlug,
+    };
+
+    if (!onlyPristine) {
+      this.scheduleForm.reset(values);
       return;
     }
 
-    const scheduleDetail = detail ?? this.toScheduleDetailFallback(schedule);
-    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.scheduleForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
+  }
 
-    this.isScheduleItemEditMode = true;
-    this.selectedSchedule = schedule;
-    this.scheduleItemForm.reset({
+  // Same optimistic-open / patch-only-pristine contract for the trip form.
+  private applyScheduleItemFormValues(
+    scheduleDetail: AdminScheduleDto,
+    schedule: ScheduleRow,
+    onlyPristine = false
+  ): void {
+    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+    const values = {
       departureDate: this.toDateControlValue(departure.date || schedule.startDate),
       departureTime: this.toTimeControlValue(departure.time || schedule.departureTimes),
       route: scheduleDetail.route?.slug ?? schedule.routeSlug,
       vehicleType: scheduleDetail.vehicleType?.slug ?? schedule.vehicleTypeSlug,
       vehicleId: scheduleDetail.vehicle?.id ? String(scheduleDetail.vehicle.id) : '',
       driverId: scheduleDetail.driver?.id ? String(scheduleDetail.driver.id) : '',
-    });
-    this.isScheduleFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.scheduleItemForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.scheduleItemForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeFormModal(force = false): void {
@@ -287,6 +430,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedSchedule = null;
     this.departureTimesInvalid = false;
     this.scheduleForm.reset();
@@ -298,6 +442,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isScheduleFormModalOpen = false;
+    this.isScheduleEditDetailLoading = false;
     this.selectedSchedule = null;
     this.scheduleItemForm.reset();
   }
@@ -359,9 +504,12 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
 
       this.closeFormModal(true);
-      await this.loadScheduleSets();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.store.refresh();
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -388,9 +536,12 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       }
 
       this.closeScheduleFormModal(true);
-      await this.loadScheduleSets();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      await this.store.refresh();
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -403,16 +554,30 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
 
     this.isDeleting = true;
     try {
-      if (this.selectedSchedule.kind === 'schedule') {
-        await firstValueFrom(this.adminApiService.deleteSchedule(this.selectedSchedule.id));
+      // Capture before closeDeleteModal clears selectedSchedule.
+      const { id, kind } = this.selectedSchedule;
+      if (kind === 'schedule') {
+        await firstValueFrom(this.adminApiService.deleteSchedule(id));
       } else {
-        await firstValueFrom(this.adminApiService.deleteScheduleSet(this.selectedSchedule.id));
+        await firstValueFrom(this.adminApiService.deleteScheduleSet(id));
+      }
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      if (kind === 'schedule') {
+        this.store.mutate((d) => ({ ...d, generatedSchedules: d.generatedSchedules.filter((s) => s.id !== id) }));
+      } else {
+        this.store.mutate((d) => ({ ...d, scheduleSets: d.scheduleSets.filter((s) => s.id !== id) }));
       }
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog.
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadScheduleSets();
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      await refresh;
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
@@ -423,85 +588,37 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     try {
       await firstValueFrom(this.adminApiService.generateSchedulesFromSet(schedule.id));
       await this.alertService.success(this.translate.instant('ADMIN.SCHEDULES.GENERATE_SUCCESS'));
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED'));
+      // Reload so the newly generated trips are present, then drill into them.
+      await this.store.refresh();
+      this.viewSchedulesForSet(schedule);
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.SCHEDULES.GENERATE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isGenerating = false;
     }
   }
 
-  private async loadScheduleSets(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
     const currentLocale = this.getCurrentLocale();
 
-    try {
-      const [
-        scheduleSetsResponse,
-        generatedSchedulesResponse,
-        routesResponse,
-        vehiclesResponse,
-        vehicleTypesResponse,
-        usersResponse,
-        lookupsResponse,
-      ] =
-        await Promise.all([
-          firstValueFrom(this.adminApiService.getScheduleSets()),
-          firstValueFrom(this.adminApiService.getSchedules()),
-          firstValueFrom(this.adminApiService.getRoutes()),
-          firstValueFrom(this.adminApiService.getVehicles()),
-          firstValueFrom(this.adminApiService.getVehicleTypes()),
-          firstValueFrom(this.adminApiService.getUsers()),
-          firstValueFrom(this.adminApiService.getLookups()),
-        ]);
-
-      const scheduleSets = scheduleSetsResponse?.data ?? [];
-      const generatedSchedules = generatedSchedulesResponse?.data ?? [];
-      const routes = routesResponse?.data ?? [];
-      const vehicles = vehiclesResponse?.data ?? [];
-      const vehicleTypes = vehicleTypesResponse?.data ?? [];
-      const users = usersResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
-
-      this.routeOptions = this.toRouteOptions(routes, currentLocale);
-      this.vehicleOptions = this.toVehicleOptions(vehicles, currentLocale);
-      this.driverOptions = this.toDriverOptions(users);
-      this.vehicleTypeOptions = this.toVehicleTypeOptions(vehicleTypes, currentLocale);
-      this.statusOptions = this.toScheduleStatusOptions(lookups);
-      this.schedules = [
-        ...scheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
-        ...generatedSchedules.map((schedule) =>
-          this.toGeneratedScheduleRow(schedule)
-        ),
-      ];
-      this.syncFiltersWithAvailableOptions();
-      this.applyFilters();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_SCHEDULES_FAILED');
-      this.schedules = [];
-      this.filteredSchedules = [];
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
-
-    try {
-      await Promise.all([
-        this.loadScheduleSets(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+    this.routeOptions = this.toRouteOptions(this.rawRoutes, currentLocale);
+    this.vehicleOptions = this.toVehicleOptions(this.rawVehicles, currentLocale);
+    this.driverOptions = this.toDriverOptions(this.rawUsers);
+    this.vehicleTypeOptions = this.toVehicleTypeOptions(this.rawVehicleTypes, currentLocale);
+    this.statusOptions = this.toScheduleStatusOptions(this.rawLookups);
+    this.schedules = [
+      ...this.rawScheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
+      ...this.rawGeneratedSchedules.map((schedule) =>
+        this.toGeneratedScheduleRow(schedule)
+      ),
+    ];
+    this.syncFiltersWithAvailableOptions();
+    this.applyFilters();
   }
 
   private toSchedulePayload(): CreateScheduleSetPayload {
@@ -553,6 +670,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     return {
       id: scheduleSet.id,
       kind: 'set',
+      scheduleSetId: null,
       tripId: `#SET-${scheduleSet.id}`,
       dateRange: `${this.formatDateForDisplay(startDate)} to ${this.formatDateForDisplay(endDate)}`,
       startDate,
@@ -594,6 +712,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     return {
       id: schedule.id,
       kind: 'schedule',
+      scheduleSetId: schedule.scheduleSetId ?? null,
       tripId: `#SCH-${schedule.id}`,
       dateRange: this.formatDateForDisplay(departureDateTime.date),
       startDate: departureDateTime.date,
@@ -800,6 +919,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     const dateFilter = this.toDateInputValue(this.selectedDateFilter);
 
     this.filteredSchedules = this.schedules.filter((schedule) => {
+      if (this.focusedSet && schedule.kind === 'schedule' && !this.matchesFocusedSet(schedule)) {
+        return false;
+      }
+
       if (routeFilter && schedule.routeSlug.trim().toLowerCase() !== routeFilter) {
         return false;
       }
@@ -831,6 +954,17 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
         .toLowerCase()
         .includes(keyword);
     });
+  }
+
+  // A generated schedule belongs to a set when its backend scheduleSetId
+  // matches. Ad-hoc schedules (no set) have a null id and never match.
+  private matchesFocusedSet(schedule: ScheduleRow): boolean {
+    const set = this.focusedSet;
+    if (!set) {
+      return true;
+    }
+
+    return schedule.scheduleSetId === set.id;
   }
 
   private syncFiltersWithAvailableOptions(): void {

@@ -90,11 +90,11 @@
       *ngIf="!isWaitingForConfirmation"
       class="payment-btn"
       type="button"
-      (click)="refreshQrCode()"
-      [class.payment-btn-diabled]="isSubmittingPayment"
-      [disabled]="isSubmittingPayment"
+      (click)="confirmPayment()"
+      [class.payment-btn-diabled]="isSubmittingPayment || !qrPaymentUrl"
+      [disabled]="isSubmittingPayment || !qrPaymentUrl"
     >
-      {{ "PAYMENT.QR.REFRESH" | translate }}
+      {{ "PAYMENT.QR.CONFIRM_PAYMENT" | translate }}
     </button>
   </div>
 </div>

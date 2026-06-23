@@ -1,6 +1,5 @@
 import { inject } from '@angular/core';
 import {
-  HttpErrorResponse,
   HttpHandlerFn,
   HttpInterceptorFn,
   HttpRequest,
@@ -8,6 +7,7 @@ import {
 import { throwError } from 'rxjs';
 import { catchError, finalize } from 'rxjs/operators';
 import { AlertService } from '../services/alert.service';
+import { extractApiErrorMessage } from '../lib/api-error';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -31,7 +31,7 @@ export const errorInterceptor: HttpInterceptorFn = (
   return next(req).pipe(
     catchError((error: unknown) => {
       if (shouldShowError) {
-        const message = getErrorMessage(error) || 'Request failed.';
+        const message = extractApiErrorMessage(error) || 'Request failed.';
         alertService.error(message);
       }
       return throwError(() => error);
@@ -43,31 +43,3 @@ export const errorInterceptor: HttpInterceptorFn = (
     })
   );
 };
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof HttpErrorResponse) {
-    if (error.error == null) {
-      return '';
-    }
-
-    if (typeof error.error === 'string') {
-      return error.error;
-    }
-
-    if (typeof error.error?.message === 'string') {
-      return error.error.message;
-    }
-
-    if (typeof error.message === 'string') {
-      return error.message;
-    }
-
-    return '';
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return '';
-}

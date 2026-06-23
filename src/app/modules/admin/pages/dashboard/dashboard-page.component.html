@@ -1,0 +1,93 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted">{{ 'ADMIN.DASHBOARD.SUBTITLE' | translate }}</p>
+    <h3>{{ 'ADMIN.DASHBOARD.TITLE' | translate }}</h3>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <p class="admin-muted" *ngIf="isRefreshing && !isLoading">{{ 'ADMIN.DASHBOARD.UPDATING' | translate }}</p>
+  </div>
+</section>
+
+<section class="admin-grid admin-grid--4 mt-3">
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.TOTAL_BOOKINGS' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ totalBookings }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">pending_actions</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.PENDING_PAYMENTS' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ pendingPayments }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.REVENUE' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ revenue }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.DASHBOARD.ACTIVE_VEHICLES' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ activeVehicles }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.DASHBOARD.RECENT_BOOKINGS' | translate }}</h4>
+    <a class="admin-btn admin-btn-small" routerLink="../bookings">
+      {{ 'ADMIN.DASHBOARD.VIEW_ALL' | translate }}
+    </a>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.BOOKINGS.BOOKING_ID' | translate }}</th>
+          <th>{{ 'ADMIN.BOOKINGS.CUSTOMER' | translate }}</th>
+          <th>{{ 'ADMIN.BOOKINGS.TOTAL_FARE' | translate }}</th>
+          <th>{{ 'ADMIN.BOOKINGS.BOOKING_STATUS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of [1, 2, 3, 4, 5]" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr *ngFor="let booking of recentBookings; let i = index" [class.zebra]="i % 2 === 1">
+            <td class="admin-emphasis">{{ booking.bookingId }}</td>
+            <td>{{ booking.customer }}</td>
+            <td class="admin-emphasis">{{ booking.totalFare }}</td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(booking.status)">{{ booking.status }}</span>
+            </td>
+          </tr>
+
+          <tr *ngIf="recentBookings.length === 0 && !errorMessage" class="admin-empty-row">
+            <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>

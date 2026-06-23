@@ -14,6 +14,8 @@ import {
   ScheduleFilter,
   ScheduleFilterPayload,
 } from '../../../../shared/interfaces/schedule.interface';
+import { TranslateService } from '@ngx-translate/core';
+import { AlertService } from '../../../../shared/services/alert.service';
 
 import { select, Store } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
@@ -69,7 +71,9 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     private fb: FormBuilder,
     private router: Router,
     private store: Store,
-    private appStore: Store<Appstate>
+    private appStore: Store<Appstate>,
+    private translate: TranslateService,
+    private alertService: AlertService
   ) {
     this.minDate = new Date();
 
@@ -137,11 +141,17 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
         this.syncStationOptions();
 
         if (scheduleFilter) {
-          this.store.dispatch(
-            invokeGetScheduleListApi({
-              schedule_filter: this.getPayload(),
-            })
-          );
+          const payload = this.getPayload();
+          // Only auto-search when the saved filter is complete; otherwise the
+          // backend would reject it and surface a generic "validation failed"
+          // modal on page load (e.g. arriving from an incomplete home search).
+          if (this.isSearchable(payload)) {
+            this.store.dispatch(
+              invokeGetScheduleListApi({
+                schedule_filter: payload,
+              })
+            );
+          }
         }
       });
   }
@@ -185,6 +195,16 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   onSearch() {
     const formValue = { ...this.bookingForm.getRawValue() };
+    const payload = this.getPayload();
+
+    // Guard the required fields client-side so the user gets a clear, localized
+    // message instead of the backend's generic "validation failed" modal.
+    if (!this.isSearchable(payload)) {
+      this.alertService.warning(
+        this.translate.instant('HOME.HOME_BOOKING.SEARCH_VALIDATION')
+      );
+      return;
+    }
 
     this.store.dispatch(
       invokeSetScheduleFilterApi({
@@ -194,8 +214,18 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
     this.store.dispatch(
       invokeGetScheduleListApi({
-        schedule_filter: this.getPayload(),
+        schedule_filter: payload,
       })
+    );
+  }
+
+  // Mirrors the backend ScheduleSearchReqDto required fields: origin, destination
+  // (@NotBlank) and at least one passenger (@Min(1)).
+  private isSearchable(payload: ScheduleFilterPayload): boolean {
+    return (
+      !!payload.fromStop &&
+      !!payload.toStop &&
+      (payload.numberOfPassengers ?? 0) >= 1
     );
   }
 

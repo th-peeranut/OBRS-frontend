@@ -1,79 +1,123 @@
-import { Component, OnInit } from '@angular/core';
-import { firstValueFrom } from 'rxjs';
-import {
-  AdminApiService,
-  AdminBookingDto,
-  AdminPaymentByBookingIdDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
-  getAdminLookupCode,
-  getAdminLookupLabel,
-  getAdminTranslationLabel,
-  parseAdminStatus,
-} from '../../../../services/admin/admin-api.service';
-
-interface BookingRow {
-  bookingId: string;
-  customer: string;
-  route: string;
-  bookingDate: string;
-  totalFare: string;
-  bookingStatus: string;
-  paymentStatus: string;
-}
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Subscription } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { BookingRow, BookingsStore, StatusOption } from './bookings.store';
+import { pollWhileVisible } from '../../shared/admin-auto-refresh';
 
 @Component({
   selector: 'app-bookings-page',
   templateUrl: './bookings-page.component.html',
   styleUrl: './bookings-page.component.scss',
 })
-export class BookingsPageComponent implements OnInit {
-  protected bookings: BookingRow[] = [
-    {
-      bookingId: '#BK-22910',
-      customer: 'John Simmons',
-      route: 'SFO -> LAX',
-      bookingDate: 'Oct 24, 2023',
-      totalFare: '$245.00',
-      bookingStatus: 'CONFIRMED',
-      paymentStatus: 'SUCCESS',
-    },
-    {
-      bookingId: '#BK-22911',
-      customer: 'Amanda Miller',
-      route: 'NYC -> PHL',
-      bookingDate: 'Oct 24, 2023',
-      totalFare: '$89.50',
-      bookingStatus: 'PENDING',
-      paymentStatus: 'PENDING',
-    },
-    {
-      bookingId: '#BK-22912',
-      customer: 'Robert Taylor',
-      route: 'CHI -> DET',
-      bookingDate: 'Oct 23, 2023',
-      totalFare: '$112.00',
-      bookingStatus: 'CANCELLED',
-      paymentStatus: 'FAILED',
-    },
-    {
-      bookingId: '#BK-22913',
-      customer: 'Linda White',
-      route: 'SEA -> POR',
-      bookingDate: 'Oct 23, 2023',
-      totalFare: '$55.00',
-      bookingStatus: 'CONFIRMED',
-      paymentStatus: 'SUCCESS',
-    },
-  ];
+export class BookingsPageComponent implements OnInit, OnDestroy {
+  protected allBookings: BookingRow[] = [];
 
-  protected isLoading = false;
+  protected isRefreshing = false;
+  protected refreshFailed = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
-  constructor(private readonly adminApiService: AdminApiService) {}
+  protected searchTerm = '';
+  protected selectedStatus = '';
+  protected statusOptions: StatusOption[] = [];
 
-  async ngOnInit(): Promise<void> {
-    await this.loadBookings();
+  protected readonly pageSize = 10;
+  protected currentPage = 1;
+
+  private readonly subscriptions = new Subscription();
+
+  constructor(
+    private readonly translate: TranslateService,
+    private readonly store: BookingsStore
+  ) {}
+
+  ngOnInit(): void {
+    // Render the cached bookings instantly on re-entry (skipping the payment
+    // N+1 burst), then revalidate in the background.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.allBookings = data.rows;
+          this.statusOptions = data.statusOptions;
+          // Preserve the user's current page across a background revalidate;
+          // only clamp it if the (possibly smaller) result set has fewer pages.
+          this.currentPage = Math.min(this.currentPage, this.totalPages);
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        this.errorMessage =
+          failed && !this.store.hasValue
+            ? this.translate.instant('ADMIN.BOOKINGS.LOAD_FAILED')
+            : '';
+      })
+    );
+    void this.store.refresh();
+    // Bookings/payments are created by customers, so poll for new ones while
+    // this page is open; stops on navigate-away via the teardown bag.
+    this.subscriptions.add(pollWhileVisible(() => void this.store.refresh()));
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
+  }
+
+  protected get filteredBookings(): BookingRow[] {
+    const term = this.searchTerm.trim().toLowerCase();
+    const status = this.selectedStatus.trim().toUpperCase();
+
+    return this.allBookings.filter((booking) => {
+      const matchesTerm =
+        term === '' ||
+        booking.bookingId.toLowerCase().includes(term) ||
+        booking.customer.toLowerCase().includes(term);
+      const matchesStatus =
+        status === '' || booking.bookingStatus.toUpperCase() === status;
+      return matchesTerm && matchesStatus;
+    });
+  }
+
+  protected get totalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredBookings.length / this.pageSize));
+  }
+
+  protected get pagedBookings(): BookingRow[] {
+    const start = (this.currentPage - 1) * this.pageSize;
+    return this.filteredBookings.slice(start, start + this.pageSize);
+  }
+
+  protected get rangeStart(): number {
+    return this.filteredBookings.length === 0
+      ? 0
+      : (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  protected get rangeEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.filteredBookings.length);
+  }
+
+  protected onSearchChange(value: string): void {
+    this.searchTerm = value;
+    this.currentPage = 1;
+  }
+
+  protected onStatusFilterChange(value: string): void {
+    this.selectedStatus = value ?? '';
+    this.currentPage = 1;
+  }
+
+  protected goToPage(page: number): void {
+    this.currentPage = Math.min(Math.max(1, page), this.totalPages);
   }
 
   protected trackByBookingId(_index: number, booking: BookingRow): string {
@@ -124,177 +168,48 @@ export class BookingsPageComponent implements OnInit {
     return 'is-danger';
   }
 
-  protected get pendingPaymentCount(): number {
-    return this.bookings.filter((booking) => this.paymentClass(booking.paymentStatus) === 'is-warning').length;
-  }
-
-  protected get totalRevenue(): string {
-    const amount = this.bookings.reduce((sum, booking) => {
-      const parsedAmount = Number(booking.totalFare.replace(/[^\d.-]/g, ''));
-      return Number.isFinite(parsedAmount) ? sum + parsedAmount : sum;
-    }, 0);
-
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
-
-  private async loadBookings(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const response = await firstValueFrom(this.adminApiService.getBookings());
-      const bookings = response?.data?.content ?? [];
-
-      const paymentStatusMap = await this.loadPaymentStatusMap(bookings);
-      this.bookings = bookings.map((booking) =>
-        this.toBookingRow(booking, paymentStatusMap.get(booking.id))
-      );
-    } catch {
-      this.errorMessage = 'Unable to load booking data from backend.';
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private async loadPaymentStatusMap(
-    bookings: AdminBookingDto[]
-  ): Promise<Map<number, string>> {
-    const statusMap = new Map<number, string>();
-
-    const paymentRequests = bookings
-      .filter((booking) => Number.isFinite(booking.id))
-      .map((booking) => this.loadPaymentStatusByBookingId(booking.id));
-
-    const paymentResults = await Promise.all(paymentRequests);
-    for (const result of paymentResults) {
-      if (result.status) {
-        statusMap.set(result.bookingId, result.status);
-      }
+  protected exportCsv(): void {
+    const rows = this.filteredBookings;
+    if (rows.length === 0) {
+      return;
     }
 
-    return statusMap;
-  }
+    const headers = [
+      this.translate.instant('ADMIN.BOOKINGS.BOOKING_ID'),
+      this.translate.instant('ADMIN.BOOKINGS.CUSTOMER'),
+      this.translate.instant('ADMIN.BOOKINGS.ROUTE'),
+      this.translate.instant('ADMIN.BOOKINGS.BOOKING_DATE'),
+      this.translate.instant('ADMIN.BOOKINGS.TOTAL_FARE'),
+      this.translate.instant('ADMIN.BOOKINGS.BOOKING_STATUS'),
+      this.translate.instant('ADMIN.BOOKINGS.PAYMENT_STATUS'),
+    ];
 
-  private async loadPaymentStatusByBookingId(
-    bookingId: number
-  ): Promise<{ bookingId: number; status: string | null }> {
-    try {
-      const response = await firstValueFrom(this.adminApiService.getBookingPayments(bookingId));
-      const payment = response?.data;
-      const status = this.extractPaymentStatus(payment);
-      return { bookingId, status };
-    } catch {
-      return { bookingId, status: null };
-    }
-  }
-
-  private extractPaymentStatus(
-    payment: AdminPaymentByBookingIdDto | null | undefined
-  ): string | null {
-    return (
-      payment?.paymentSummary?.status ??
-      payment?.paymentSummary?.overallPaymentStatus ??
-      null
+    const lines = rows.map((row) =>
+      [
+        row.bookingId,
+        row.customer,
+        row.route,
+        row.bookingDate,
+        row.totalFare,
+        row.bookingStatus,
+        row.paymentStatus,
+      ]
+        .map((value) => this.toCsvCell(value))
+        .join(',')
     );
+
+    const csv = [headers.map((value) => this.toCsvCell(value)).join(','), ...lines].join('\r\n');
+    const blob = new Blob([`﻿${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `bookings-${new Date().toISOString().slice(0, 10)}.csv`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
-  private toBookingRow(
-    booking: AdminBookingDto,
-    paymentStatus: string | null | undefined
-  ): BookingRow {
-    const firstSchedule = booking.journeys?.[0] ?? booking.bookingSchedules?.[0];
-    const fromStop = (
-      getAdminLookupLabel(firstSchedule?.fromStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.fromStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.fromStop)
-    ) ||
-      '-';
-    const toStop = (
-      getAdminLookupLabel(firstSchedule?.toStop, 'en') ??
-      this.getTranslationLabel(firstSchedule?.toStop?.translations, 'en') ??
-      getAdminLookupCode(firstSchedule?.toStop)
-    ) ||
-      '-';
-    const route = `${fromStop} -> ${toStop}`;
-
-    const totalAmount = Number(
-      booking.totalAmount ??
-      booking.pricing?.netAmount ??
-      booking.payment?.totalAmount
-    );
-    const currency = booking.pricing?.currency ?? booking.payment?.currency ?? 'THB';
-    const totalFare = Number.isFinite(totalAmount)
-      ? new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency,
-          maximumFractionDigits: 2,
-        }).format(totalAmount)
-      : String(booking.totalAmount ?? booking.pricing?.netAmount ?? '0.00');
-
-    const bookingStatus = this.parseStatus(booking.status);
-
-    return {
-      bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
-      customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
-      route,
-      bookingDate: this.formatDate(booking.createdAt),
-      totalFare,
-      bookingStatus: bookingStatus.name,
-      paymentStatus: (
-        paymentStatus ??
-        booking.payment?.status ??
-        this.inferPaymentStatusFromBookingStatus(bookingStatus.code)
-      )
-        .replace(/_/g, ' ')
-        .toUpperCase(),
-    };
-  }
-
-  private inferPaymentStatusFromBookingStatus(status: string | null | undefined): string {
-    const normalizedStatus = (status ?? '').toUpperCase();
-    if (normalizedStatus === 'CANCELLED') {
-      return 'FAILED';
-    }
-
-    if (normalizedStatus === 'CONFIRMED' || normalizedStatus === 'COMPLETED') {
-      return 'SUCCESS';
-    }
-
-    return 'PENDING';
-  }
-
-  private formatDate(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-    }).format(date);
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, 'en');
+  private toCsvCell(value: string): string {
+    const safe = (value ?? '').replace(/"/g, '""');
+    return `"${safe}"`;
   }
 }

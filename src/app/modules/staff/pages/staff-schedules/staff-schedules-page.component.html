@@ -1,0 +1,177 @@
+<div class="container-fluid py-4">
+  <div class="d-flex justify-content-between align-items-center mb-1">
+    <div>
+      <h4 class="fw-bold mb-0">{{ 'STAFF.SCHEDULES.TITLE' | translate }}</h4>
+      <p class="text-muted mb-0">{{ 'STAFF.SCHEDULES.SUBTITLE' | translate }}</p>
+    </div>
+    <button class="btn btn-primary" (click)="openCreateModal()">
+      <i class="bi bi-plus-lg me-1"></i>{{ 'STAFF.SCHEDULES.ADD' | translate }}
+    </button>
+  </div>
+
+  <div *ngIf="errorMessage" class="alert alert-danger mt-3">{{ errorMessage }}</div>
+
+  <div class="card shadow-sm border-0 mt-3">
+    <div class="card-header bg-white border-bottom-0 d-flex gap-2 flex-wrap py-3">
+      <input class="form-control form-control-sm w-auto flex-grow-1"
+             [placeholder]="'STAFF.SCHEDULES.SEARCH_PLACEHOLDER' | translate"
+             (input)="onSearchChange($any($event.target).value)" />
+      <app-admin-dropdown
+        [options]="routeOptions"
+        valueKey="code"
+        labelKey="label"
+        [placeholder]="'STAFF.SCHEDULES.FILTER_ROUTE' | translate"
+        (valueChange)="onRouteFilterChange($event)">
+      </app-admin-dropdown>
+      <app-admin-dropdown
+        [options]="statusOptions"
+        valueKey="code"
+        labelKey="label"
+        [placeholder]="'STAFF.SCHEDULES.FILTER_STATUS' | translate"
+        (valueChange)="onStatusFilterChange($event)">
+      </app-admin-dropdown>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.SCHEDULES.TRIP_ID' | translate }}</th>
+              <th>{{ 'STAFF.SCHEDULES.DEPARTURE' | translate }}</th>
+              <th>{{ 'STAFF.SCHEDULES.ROUTE_VEHICLE' | translate }}</th>
+              <th>{{ 'STAFF.SCHEDULES.DRIVER_COL' | translate }}</th>
+              <th>{{ 'STAFF.SCHEDULES.STATUS' | translate }}</th>
+              <th>{{ 'STAFF.SCHEDULES.UPDATED_AT' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngIf="isLoading">
+              <tr *ngFor="let row of skeletonRows">
+                <td colspan="7"><div class="bg-light rounded" style="height:20px"></div></td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading && filteredRows.length === 0 && !errorMessage">
+              <tr>
+                <td colspan="7" class="text-center py-5 text-muted">{{ 'STAFF.SELL.NO_SCHEDULES' | translate }}</td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading">
+              <tr *ngFor="let row of filteredRows">
+                <td class="fw-semibold">{{ row.tripId }}</td>
+                <td>{{ row.departure }}</td>
+                <td>{{ row.route }} / {{ row.vehicle }}</td>
+                <td>{{ row.driver }}</td>
+                <td><span class="badge bg-secondary">{{ row.status }}</span></td>
+                <td>{{ row.updatedAt }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <button class="btn btn-sm btn-outline-secondary" (click)="openEditModal(row)">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" (click)="openDeleteModal(row)">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-primary" (click)="viewBoarding(row)">
+                      {{ 'STAFF.SCHEDULES.BOARDING_LIST_BTN' | translate }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Form Modal -->
+<div class="modal d-block" tabindex="-1" *ngIf="isFormModalOpen" style="background:rgba(0,0,0,0.5)">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          {{ (isEditMode ? 'STAFF.SCHEDULES.EDIT_TITLE' : 'STAFF.SCHEDULES.ADD_TITLE') | translate }}
+        </h5>
+        <button class="btn-close" (click)="closeFormModal()"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">{{ 'STAFF.SCHEDULES.MODAL_HINT' | translate }}</p>
+        <form [formGroup]="scheduleItemForm">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_DATE' | translate }}</label>
+              <p-calendar formControlName="departureDate" [showIcon]="true" dateFormat="yy-mm-dd"
+                          [class.is-invalid]="isFieldInvalid('departureDate')"></p-calendar>
+              <div class="invalid-feedback d-block" *ngIf="isFieldInvalid('departureDate')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_TIME' | translate }}</label>
+              <p-calendar formControlName="departureTime" [timeOnly]="true" hourFormat="24"
+                          [class.is-invalid]="isFieldInvalid('departureTime')"></p-calendar>
+              <div class="invalid-feedback d-block" *ngIf="isFieldInvalid('departureTime')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.ROUTE' | translate }}</label>
+              <app-admin-dropdown formControlName="route" [options]="routeOptions" valueKey="code" labelKey="label"
+                                  [placeholder]="'STAFF.SCHEDULES.ROUTE' | translate">
+              </app-admin-dropdown>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.VEHICLE_TYPE' | translate }}</label>
+              <app-admin-dropdown formControlName="vehicleType" [options]="vehicleTypeOptions" valueKey="code" labelKey="label"
+                                  [placeholder]="'STAFF.SCHEDULES.VEHICLE_TYPE' | translate">
+              </app-admin-dropdown>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.VEHICLE' | translate }}</label>
+              <app-admin-dropdown formControlName="vehicleId" [options]="vehicleOptions" valueKey="code" labelKey="label"
+                                  [placeholder]="'STAFF.SCHEDULES.VEHICLE' | translate">
+              </app-admin-dropdown>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">{{ 'STAFF.SCHEDULES.DRIVER' | translate }}</label>
+              <app-admin-dropdown formControlName="driverId" [options]="driverOptions" valueKey="code" labelKey="label"
+                                  [placeholder]="'STAFF.SCHEDULES.DRIVER' | translate">
+              </app-admin-dropdown>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeFormModal()" [disabled]="isSubmitting">
+          {{ 'STAFF.SELL.BACK_BTN' | translate }}
+        </button>
+        <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+          {{ 'STAFF.SELL.CONFIRM_BTN' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal d-block" tabindex="-1" *ngIf="isDeleteModalOpen" style="background:rgba(0,0,0,0.5)">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_TITLE' | translate }}</h5>
+        <button class="btn-close" (click)="closeDeleteModal()"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_BODY' | translate }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeDeleteModal()" [disabled]="isDeleting">
+          {{ 'STAFF.SELL.BACK_BTN' | translate }}
+        </button>
+        <button class="btn btn-danger" (click)="confirmDelete()" [disabled]="isDeleting">
+          <span *ngIf="isDeleting" class="spinner-border spinner-border-sm me-1"></span>
+          {{ 'ADMIN.MESSAGES.DELETE_BTN' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

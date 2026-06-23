@@ -104,6 +104,21 @@ const routes: Routes = [
         (m) => m.BusinessPolicyModule
       ),
   },
+  {
+    path: 'how-to-book',
+    loadChildren: () =>
+      import('./modules/how-to-book/how-to-book.module').then(
+        (m) => m.HowToBookModule
+      ),
+  },
+
+  {
+    path: 'staff',
+    canActivate: [AuthGuard],
+    data: { requiredRoles: ['driver', 'salesperson'] },
+    loadChildren: () =>
+      import('./modules/staff/staff.module').then((m) => m.StaffModule),
+  },
 
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },

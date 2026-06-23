@@ -67,6 +67,7 @@
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "管理员仪表板",
+      "DASHBOARD": "仪表板",
       "LOOKUP_SETTINGS": "查找设置",
       "ROLE_MANAGEMENT": "角色管理",
       "USER_MANAGEMENT": "用户管理",
@@ -78,15 +79,32 @@
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
       "SUBTITLE": "物流管理",
+      "HOME_LINK": "前往网站首页",
       "SUPPORT": "支持",
       "SIGN_OUT": "退出登录",
       "SEARCH_PLACEHOLDER": "搜索管理数据...",
-      "LOGOUT_SUCCESS": "已成功退出登录"
+      "LOGOUT_SUCCESS": "已成功退出登录",
+      "OPEN_MENU": "打开导航菜单",
+      "CLOSE_MENU": "关闭导航菜单",
+      "PROFILE_MENU": "打开个人资料菜单",
+      "LANGUAGE_EN": "切换到英文",
+      "LANGUAGE_TH": "切换到泰文"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
+      "NO_DATA": "没有可显示的数据。",
+      "UPDATING": "正在更新…",
+      "REFRESH_FAILED": "正在显示已保存的数据 — 无法刷新。",
       "LANGUAGE_LOADING": "正在刷新所选语言的内容...",
       "ACTIONS": "操作",
+      "EDIT": "编辑",
+      "VIEW": "查看",
+      "CLOSE": "关闭",
+      "SEARCH": "搜索",
+      "EXPORT": "导出",
+      "PREVIOUS": "上一页",
+      "NEXT": "下一页",
+      "ENTRIES": "条",
       "SHOWING": "显示",
       "OF": "/",
       "CANCEL": "取消",
@@ -109,7 +127,8 @@
       "USERNAME_EXIST": "此用户名已被使用。",
       "EMAIL_EXIST": "此电子邮件已被使用。",
       "PHONE_NO_EXIST": "此电话号码已被使用。",
-      "SAME_PASSWORD_VALIDATE": "请输入相同的密码。"
+      "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
+      "FORM_INVALID": "请填写标记的必填字段。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
@@ -122,7 +141,9 @@
       "LOAD_USERS_FAILED": "无法加载用户。",
       "LOAD_VEHICLES_FAILED": "无法加载车辆。",
       "LOAD_ROUTES_FAILED": "无法加载路线。",
-      "LOAD_SCHEDULES_FAILED": "无法加载班次。"
+      "LOAD_SCHEDULES_FAILED": "无法加载班次。",
+      "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
+      "DELETE_BTN": "删除"
     },
     "LOOKUP": {
       "TITLE": "查找设置",
@@ -208,6 +229,7 @@
       "MONITORING": "车队监控已启用",
       "TITLE": "车辆管理",
       "ADD": "添加车辆",
+      "TOTAL": "车辆总数",
       "TOTAL_CAPACITY": "活跃车辆",
       "UNITS": "辆",
       "ACTIVE": "活跃车辆",
@@ -302,7 +324,46 @@
       "GENERATE_SUCCESS": "班次生成成功。",
       "GENERATE_FAILED": "无法生成班次。",
       "DATE_RANGE_VALIDATION": "结束日期必须在开始日期之后。",
-      "TIME_VALIDATION": "请使用HH:mm格式，用逗号或换行分隔。"
+      "TIME_VALIDATION": "请使用HH:mm格式，用逗号或换行分隔。",
+      "TAB_SETS": "班次组",
+      "TAB_TRIPS": "班次",
+      "TRIPS_TABLE_TITLE": "班次列表",
+      "TRIPS_SEARCH_PLACEHOLDER": "按班次ID、路线、车辆或司机搜索...",
+      "TRIP_ID": "班次ID",
+      "DEPARTURE": "出发",
+      "TRIP_UNITS": "个班次",
+      "VIEW_SCHEDULES": "查看生成的班次",
+      "FOCUSED_BANNER": "显示由 {{set}} 生成的班次。",
+      "FOCUSED_CLEAR": "显示全部班次"
+    },
+    "BOOKINGS": {
+      "TITLE": "预订管理",
+      "SUBTITLE": "搜索、筛选和导出客户预订。",
+      "SEARCH_PLACEHOLDER": "按预订编号或客户搜索...",
+      "FILTER_STATUS": "所有状态",
+      "BOOKING_ID": "预订编号",
+      "CUSTOMER": "客户姓名",
+      "ROUTE": "路线",
+      "BOOKING_DATE": "预订日期",
+      "TOTAL_FARE": "总票价",
+      "BOOKING_STATUS": "预订状态",
+      "PAYMENT_STATUS": "支付状态",
+      "UNITS": "条预订",
+      "LOADING": "正在加载预订数据...",
+      "LOAD_FAILED": "无法从后端加载预订数据。"
+    },
+    "DASHBOARD": {
+      "TITLE": "仪表板",
+      "SUBTITLE": "预订与车队的运营概览。",
+      "TOTAL_BOOKINGS": "预订总数",
+      "PENDING_PAYMENTS": "待支付",
+      "REVENUE": "收入",
+      "ACTIVE_VEHICLES": "在用车辆",
+      "RECENT_BOOKINGS": "最近预订",
+      "VIEW_ALL": "查看全部",
+      "LOAD_FAILED": "无法加载仪表板数据。",
+      "PARTIAL_LOAD_FAILED": "部分仪表板数据无法加载。",
+      "UPDATING": "正在更新…"
     }
   },
   "LOGIN": {
@@ -419,7 +480,9 @@
       "SIGNUP": "注册",
       "SIGNOUT": "退出登录",
       "SIGNOUT_SUCCESS": "退出登录成功",
-      "SIGNOUT_FAIL": "退出登录失败"
+      "SIGNOUT_FAIL": "退出登录失败",
+      "ADMIN_DASHBOARD": "管理后台",
+      "STAFF_PORTAL": "员工门户"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",
@@ -434,7 +497,8 @@
       "DEPARTURE_DATE": "出发日期",
       "ROUND_DEPARTURE": "往程日期",
       "ROUND_RETURN": "返程日期",
-      "SEARCH": "搜索"
+      "SEARCH": "搜索",
+      "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。"
     },
     "STATION": {
       "HEADER": "服务点路线图",
@@ -442,23 +506,27 @@
       "STOP": "曼谷 - 班碰 - 侬萨克"
     },
     "FOOTER": {
-      "HEADER": "总部地址",
-      "TITLE": "NJ面包车服务，Pu",
+      "TITLE": "NJ Phuyaipu",
+      "TAGLINE": "在线巴士购票",
+      "HEAD_OFFICE_LABEL": "总部地址",
       "ADDRESS": "3/5 第3村，侬差克次区，班碰区，春武里府 20170",
-      "MENU_TITLE": "菜单",
+      "SALES_TITLE": "售票点",
+      "SALES_NONG_CHAK": "侬差克",
+      "SALES_NONG_CHAK_SUB": "班碰区，春武里府",
+      "SALES_BAN_BUENG": "威实猜市场",
+      "SALES_BAN_BUENG_SUB": "班碰区，春武里府",
+      "SALES_MOCHIT": "摩奇",
+      "SALES_MOCHIT_SUB": "小型巴士客运站（乍都乍）C楼，C5柜台",
+      "MENU_TITLE": "信息与服务",
       "MENU_TEXT_1": "如何预订和付款",
-      "MENU_TEXT_2": "联系我们",
-      "MAIN_CONTACT_TITLE": "总部联系渠道",
-      "MAIN_CONTACT_ADDRESS_1": "NJ面包车队列，Pu，",
-      "MAIN_CONTACT_ADDRESS_2": "侬差克-班碰-摩奇特",
-      "MAIN_CONTACT_PHONE_NUMBER": "090-562-2019",
-      "MOCHIT_CONTACT_TITLE": "总部联系渠道",
-      "MOCHIT_CONTACT_ADDRESS_1": "小型客运站",
-      "MOCHIT_CONTACT_ADDRESS_2": "（乍都乍）C楼，C5柜台",
-      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2024。保留所有权利",
       "MENU_PRIVACY_POLICY": "隐私政策",
       "MENU_REFUND_POLICY": "退款政策",
-      "MENU_BUSINESS_POLICY": "业务政策（取消/退款）"
+      "MENU_BUSINESS_POLICY": "业务政策（取消/退款）",
+      "CONTACT_TITLE": "联系我们",
+      "CONTACT_FACEBOOK": "NJ Phuyaipu",
+      "CONTACT_INSTAGRAM": "@nj.phuyaipu",
+      "CONTACT_PHONE": "09-0562-2019",
+      "COPYRIGHT_TEXT": "© NJ Phuyaipu 2026。保留所有权利。"
     }
   },
   "STEPPER": {
@@ -592,12 +660,22 @@
     },
     "QR": {
       "REFRESH": "刷新二维码",
+      "CONFIRM_PAYMENT": "确认付款",
+      "CONFIRM_DIALOG": {
+        "TITLE": "确认已付款？",
+        "MESSAGE": "请先使用银行应用扫描二维码并完成付款。请仅在转账成功后继续确认。",
+        "CONFIRM": "我已付款",
+        "CANCEL": "还没有"
+      },
       "REFRESH_HINT": "{{seconds}}秒后可用",
       "DOWNLOAD": "下载二维码",
       "BACK": "返回",
       "PAY_NOW": "立即付款",
       "MERCHANT_NAME": "商家名称",
       "MERCHANT_REF": "参考："
+    },
+    "RESULT": {
+      "FAILED_REDIRECT": "付款失败。请重新选择班次并再次预订。"
     }
   },
   "E_TICKET": {
@@ -636,11 +714,178 @@
     "PRIVACY": {
       "TITLE": "隐私政策",
       "CONTENT_1": "&emsp;&emsp;&emsp;本个人数据保护政策由NJ旅行运输有限合伙公司制定，旨在说明公司如何处理数据主体的个人数据，包括收集、存储、使用、披露及相关权利。为确保数据主体了解公司的个人数据保护政策，公司特此宣布本个人数据保护政策：",
-      "CONTENT_2": "&emsp;&emsp;&emsp;\"个人数据\"是指与可直接或间接识别某人身份的个人相关的信息，但不包括已故人员的数据。\n      个人数据收集：个人数据将以合法公平的方式收集。公司将仅收集和存储使用所必需的数据，采用电子方式或其他方式，按照规定目的和法律要求进行。公司将在数据收集之前或收集时通知数据主体并获得同意。\n      个人数据收集目的\n      <br />&emsp;&emsp;1. 公司收集、存储和使用数据主体的个人数据，以用于数据主体的各种利益和公司的业务运营，例如促销活动、数据库准备以及根据数据主体兴趣提供福利，或任何法律不禁止的其他目的，或按照现在和未来适用的法律法规要求，包括同意公司向数据处理者传输、转移或披露数据。\n      <br />&emsp;&emsp;2. 公司将根据获得同意的目的或必要期限保留数据主体的个人数据。如果公司后来更改目的，将通知数据主体。"
+      "CONTENT_2": "&emsp;&emsp;&emsp;“个人数据”是指与可直接或间接识别某人身份的个人相关的信息，但不包括已故人员的数据。\n      个人数据收集：个人数据将以合法公平的方式收集。公司将仅收集和存储使用所必需的数据，采用电子方式或其他方式，按照规定目的和法律要求进行。公司将在数据收集之前或收集时通知数据主体并获得同意。\n      个人数据收集目的\n      <br />&emsp;&emsp;1. 公司收集、存储和使用数据主体的个人数据，以用于数据主体的各种利益和公司的业务运营，例如促销活动、数据库准备以及根据数据主体兴趣提供福利，或任何法律不禁止的其他目的，或按照现在和未来适用的法律法规要求，包括同意公司向数据处理者传输、转移或披露数据。\n      <br />&emsp;&emsp;2. 公司将根据获得同意的目的或必要期限保留数据主体的个人数据。如果公司后来更改目的，将通知数据主体。"
     },
     "BUSINESS": {
       "TITLE": "服务条款",
       "CONTENT": "&emsp;&emsp;1. 票务销售分为两种类型：\n      <br />&emsp;&emsp;&emsp;&emsp;? 普通票务销售：在出发地出发时间前12小时内购票，直至车辆到达该站\n      <br />&emsp;&emsp;&emsp;&emsp;? 预售票务：至少在出发地出发时间前12小时购票，预售最多提前60天\n      <br />&emsp;&emsp;2. 已取消不定期票的改签条件。\n      <br />&emsp;&emsp;3. 改签只能进行指定日期更改。\n      <br />&emsp;&emsp;4. 改签只能免费进行一次。如果票据已经改签，则不能再次改签，只能用于出行。\n      注意：改签可通过3个渠道进行：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 所有3个站的售票处\n      <br />&emsp;&emsp;&emsp;&emsp;2. https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;&emsp;&emsp;3. 指定日期改签只能从改签申请日起30天内设定出行日期\n      <br />&emsp;&emsp;&emsp;&emsp;4. 改签必须在原出发时间前至少24小时进行\n      <br />&emsp;&emsp;5. 重印票据分为两种情况：\n      <br />&emsp;&emsp;&emsp;&emsp;? 收费重印：票据丢失、撕毁、遗忘，或在其他站购买和打印的票据等。\n      <br />&emsp;&emsp;&emsp;&emsp;? 免费重印：通过网络渠道购买的票据，或交易期间打印机故障、停电、系统故障等。\n      <br />&emsp;&emsp;6. 以下情况允许退票：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 因不可抗力导致行程中断，如自然灾害或政治情况\n      <br />&emsp;&emsp;&emsp;&emsp;2. 乘客紧急情况、疾病或事故：必须在出行日期后3天内提交医疗证明；否则，旅行权利将被没收\n      注意：除上述情况外，不可退票。"
+    }
+  },
+  "HOW_TO_BOOK": {
+    "TITLE": "如何预订和付款",
+    "INTRO": "预订巴士车票快捷且全程在线。请按照以下步骤预订座位并安全付款。",
+    "BOOKING_TITLE": "预订车票",
+    "STEP_1": "在首页选择出发地、目的地和出行日期，然后搜索可用的班次。",
+    "STEP_2": "从可用的班次时刻表中选择出发时间。",
+    "STEP_3": "查看行程详情并选择座位。",
+    "STEP_4": "为每位乘客填写乘客信息。",
+    "STEP_5": "核对预订摘要，然后继续付款。",
+    "PAYMENT_TITLE": "付款",
+    "PAYMENT_INTRO": "在付款步骤，请选择以下任一安全付款方式：",
+    "PAYMENT_1": "信用卡或借记卡（Visa、Mastercard）",
+    "PAYMENT_2": "PromptPay — 使用手机银行应用扫描二维码",
+    "PAYMENT_NOTE": "付款处理期间，请勿关闭或刷新页面，直至出现确认页面。",
+    "ETICKET_TITLE": "获取电子车票",
+    "ETICKET_TEXT": "付款确认后，系统将自动签发电子车票。您可在确认页面查看，之后也可在预订记录中找到。登车前请向工作人员出示电子车票（打印版或手机版）。",
+    "TIPS_TITLE": "出行前须知",
+    "TIP_1": "请在发车前至少30分钟到达车站办理登车手续。",
+    "TIP_2": "请携带与车票上乘客姓名一致的有效带照片证件。",
+    "TIP_3": "请保存好您的预订编号，以便需要时联系客服。",
+    "HELP_TITLE": "需要帮助？",
+    "HELP_TEXT": "如对预订或付款有任何疑问，您可以通过每个页面页脚中列出的联系方式与我们联系。"
+  },
+  "STAFF": {
+    "PAGES": {
+      "SELL": "现场售票",
+      "SCHEDULES": "班次管理",
+      "DRIVER": "我的班次",
+      "BOARDING": "登车名单"
+    },
+    "LAYOUT": {
+      "BRAND": "OBRS 员工",
+      "SUBTITLE": "员工门户",
+      "HOME_LINK": "首页",
+      "SIGN_OUT": "退出登录",
+      "OPEN_MENU": "打开导航菜单",
+      "LOGOUT_SUCCESS": "退出成功"
+    },
+    "NAV": {
+      "SELL": "现场售票",
+      "SCHEDULES": "班次",
+      "MY_SCHEDULES": "我的班次",
+      "BOARDING": "登车名单"
+    },
+    "MESSAGES": {
+      "LOAD_BOARDING_FAILED": "无法加载登车名单。",
+      "LOAD_MY_SCHEDULES_FAILED": "无法加载您的班次。",
+      "LOAD_SCHEDULES_FAILED": "无法加载班次。",
+      "CHECK_IN_SUCCESS": "登机成功。",
+      "CHECK_IN_FAILED": "无法完成旅客值机。"
+    },
+    "VALIDATION": {
+      "FORM_INVALID": "请填写所有必填字段。",
+      "FROM_TO_SAME": "出发站和目的站不能相同。",
+      "RETURN_DATE_BEFORE_DEPARTURE": "返程日期必须在出发日期之后。",
+      "SEAT_COUNT_MISMATCH": "请选择正确数量的座位。"
+    },
+    "BOARDING": {
+      "TITLE": "登车名单",
+      "SUBTITLE": "管理本班次旅客登车情况",
+      "TICKET_NO": "票号",
+      "SEAT": "座位",
+      "PASSENGER": "旅客",
+      "FROM": "出发站",
+      "TO": "到达站",
+      "STATUS": "状态",
+      "CHECKED_IN": "已登车",
+      "CHECK_IN_BTN": "登车",
+      "EMPTY_TITLE": "暂无旅客",
+      "EMPTY_BODY": "本班次暂无登车记录。"
+    },
+    "DRIVER": {
+      "TITLE": "我的分配班次",
+      "SUBTITLE": "您被分配驾驶的班次",
+      "TRIP_ID": "行程编号",
+      "DEPARTURE": "出发时间",
+      "ROUTE": "路线",
+      "VEHICLE": "车辆",
+      "STATUS": "状态",
+      "BOARDING_BTN": "登车名单",
+      "EMPTY_TITLE": "暂无班次",
+      "EMPTY_BODY": "您目前没有即将到来的驾驶班次。"
+    },
+    "SCHEDULES": {
+      "TITLE": "班次管理",
+      "SUBTITLE": "创建和管理班次",
+      "ADD": "添加班次",
+      "ADD_TITLE": "创建班次",
+      "EDIT_TITLE": "编辑班次",
+      "MODAL_HINT": "填写下方班次详情。",
+      "SEARCH_PLACEHOLDER": "按编号、路线、车辆或驾驶员搜索...",
+      "FILTER_ROUTE": "路线：全部",
+      "FILTER_STATUS": "状态：全部",
+      "TRIP_ID": "行程编号",
+      "DEPARTURE": "出发时间",
+      "ROUTE_VEHICLE": "路线 / 车辆",
+      "DRIVER_COL": "驾驶员",
+      "STATUS": "状态",
+      "UPDATED_AT": "更新时间",
+      "BOARDING_LIST_BTN": "登车",
+      "DEPARTURE_DATE": "出发日期",
+      "DEPARTURE_TIME": "出发时间",
+      "ROUTE": "路线",
+      "VEHICLE_TYPE": "车型",
+      "VEHICLE": "车辆",
+      "DRIVER": "驾驶员"
+    },
+    "SELL": {
+      "STEP_SEARCH": "搜索",
+      "STEP_SEATS": "选座",
+      "STEP_PASSENGERS": "旅客信息",
+      "STEP_PAYMENT": "付款",
+      "STEP_TICKET": "车票",
+      "BOOKING_TYPE": "订票类型",
+      "ONE_WAY": "单程",
+      "RETURN": "往返",
+      "PASSENGER_COUNT": "旅客人数",
+      "FROM_STOP": "出发站（slug）",
+      "TO_STOP": "到达站（slug）",
+      "DEPARTURE_DATE": "出发日期",
+      "RETURN_DATE": "返程日期",
+      "SEARCH_BTN": "搜索班次",
+      "SEARCHING": "搜索中...",
+      "SELECT_DEPARTURE": "选择去程",
+      "SELECT_RETURN": "选择返程",
+      "NO_SCHEDULES": "暂无可用班次。",
+      "SEAT_AVAILABLE": "可用座位",
+      "PRICE_PER_SEAT": "每座价格",
+      "TO": "至",
+      "LEG_DEPARTURE": "去程",
+      "SEATS_SELECTED": "已选座位",
+      "LOADING_SEATS": "正在加载座位图...",
+      "BACK_BTN": "返回",
+      "NEXT_BTN": "下一步",
+      "CONFIRM_BTN": "确认",
+      "CONFIRMING": "确认中...",
+      "SEAT_NUMBER_BADGE": "座位",
+      "PASSENGER_TITLE": "称谓",
+      "FIRST_NAME": "名字",
+      "MIDDLE_NAME": "中间名",
+      "LAST_NAME": "姓氏",
+      "PHONE": "电话",
+      "ID_CARD": "身份证号",
+      "GENDER": "性别",
+      "GENDER_MALE": "男",
+      "GENDER_FEMALE": "女",
+      "GENDER_MONK": "僧侣",
+      "CONTACT_NAME": "联系人",
+      "CONTACT_PHONE": "联系电话",
+      "CONTACT_EMAIL": "联系邮箱",
+      "TOTAL_AMOUNT": "总金额",
+      "CASH_ONLY_BADGE": "现金支付",
+      "CASH_ONLY_NOTE": "现场售票仅接受现金，请先收款再确认。",
+      "PAY_BTN": "确认已收现金",
+      "PROCESSING": "处理中...",
+      "BOOKING_SUCCESS": "订票成功！",
+      "BOOKING_NUMBER": "订单号",
+      "VIEW_TICKET_BTN": "查看电子票",
+      "NEW_SALE_BTN": "新建销售"
+    },
+    "BOARDING_ENTRY": {
+      "TITLE": "选择班次",
+      "SUBTITLE": "选择班次以查看登车名单。",
+      "EMPTY_TITLE": "暂无可用班次",
+      "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     }
   }
 }

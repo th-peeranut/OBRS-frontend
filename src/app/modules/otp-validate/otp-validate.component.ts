@@ -11,7 +11,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
-import { PrimeNGConfig } from 'primeng/api';
+import { LanguageService } from '../../shared/services/language.service';
 import { OtpService } from '../../services/otp/otp.service';
 import {
   LoginOtpVerify,
@@ -37,22 +37,19 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   otpCode: string = '';
   token: string = '';
 
-  private readonly otpCountdownSeconds = 5 * 60;
-  remainingTime: number = this.otpCountdownSeconds;
+  remainingTime: number = 5 * 60;
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  languageOnChange$: Subscription;
-  private unlistenDropdown?: () => void;
-
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
+    private languageService: LanguageService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
+    private service: AuthService,
     private alertService: AlertService,
     private router: Router,
     private route: ActivatedRoute,
@@ -63,12 +60,12 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
   }
 
-  async ngOnInit(): Promise<void> {
+  async ngOnInit() {
     this.option = this.route.snapshot.paramMap.get('option')?.toString();
     this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
 
     if (this.validateRouteError()) {
-      this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.ROUTE_ERROR'));
+      this.alertService.error('พบข้อผิดพลาด');
       this.router.navigateByUrl('/home');
     }
 
@@ -77,30 +74,21 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
-    this.unlistenDropdown?.();
   }
 
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {
     this.isDropdownOpen = !this.isDropdownOpen;
 
     if (this.isDropdownOpen) {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
+      this.renderer.listen('document', 'click', (event: Event) =>
         this.handleOutsideClick(event)
       );
-    } else {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = undefined;
     }
   }
 
@@ -125,7 +113,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   startTimer(): void {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
 
-    this.remainingTime = this.otpCountdownSeconds;
+    this.remainingTime = 5 * 60;
     this.displayTime = '05:00';
 
     this.timerSubscription$ = interval(1000)
@@ -162,7 +150,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         this.startTimer();
         this.token = res.data?.token ?? '';
       } else if (typeof res?.code === 'number') {
-        this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.OTP_REQUEST_FAILED'));
+        this.alertService.error('error');
       }
     } catch {
       // Error alert is handled by the global interceptor.
@@ -188,16 +176,18 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         }
 
         if (resVerify?.code === 200) {
-          if (this.option === 'register') {
-            const registerValue = this.authService.getRegisterValue();
+          if (this.option === 'forget-password') {
+            // const res = await this.service.forgetPassword(payload);
+          } else if (this.option === 'register') {
+            const registerValue = this.service.getRegisterValue();
             if (registerValue) {
-              const resRegister = await this.authService.register(registerValue);
+              const resRegister = await this.service.register(registerValue);
 
               if (resRegister?.code === 201) {
                 this.alertService.success(
                   this.translate.instant('REGISTER.REGISTER_SUCCESS')
                 );
-                this.authService.clearRegisterValue();
+                this.service.clearRegisterValue();
                 this.router.navigateByUrl('/login');
               } else if (typeof resRegister?.code === 'number') {
                 this.alertService.error(
@@ -206,11 +196,11 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               }
             }
           } else if (this.option === 'login') {
-            this.alertService.success(this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS'));
+            this.alertService.success('succ');
             await this.authService.navigateAfterLogin('/home');
           }
         } else if (typeof resVerify?.code === 'number') {
-          this.alertService.error(this.translate.instant('LOGIN_BY_PHONE_NO.OTP_VERIFY_FAILED'));
+          this.alertService.error('error');
         }
       } catch {
         // Error alert is handled by the global interceptor.

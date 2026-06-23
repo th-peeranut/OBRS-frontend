@@ -35,6 +35,7 @@ const routes: Routes = [
 
 @NgModule({
   declarations: [PassengerInfoComponent, BookerInfoFormComponent, PassengerInfoFormComponent, PassengerInfoSummaryComponent, PassengerSeatBusComponent, PassengerSeatVanComponent, PassengerSeatBoxComponent],
+  exports: [PassengerSeatBusComponent, PassengerSeatVanComponent],
   imports: [
     SharedModule,
     RouterModule.forChild(routes),

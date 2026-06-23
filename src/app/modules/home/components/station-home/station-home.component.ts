@@ -59,6 +59,10 @@ export class StationHomeComponent implements OnInit, OnDestroy {
     return stations;
   }
 
+  trackByStationId(_index: number, station: Station): number {
+    return station.id;
+  }
+
   isLeft(index: number): boolean {
     return index % 2 === 0;
   }

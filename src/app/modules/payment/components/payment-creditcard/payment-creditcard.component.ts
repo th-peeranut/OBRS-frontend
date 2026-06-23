@@ -40,7 +40,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     { name: 'Mastercard', icon: 'icons/payment-brand-mastercard.svg' },
     { name: 'UnionPay', icon: 'icons/payment-brand-unionpay.svg' },
   ];
-  countdown = '10 : 00';
+  countdown = '15 : 00';
   isSubmittingPayment = false;
   isWaitingForConfirmation = false;
   private paymentIdempotencyKey = '';
@@ -48,7 +48,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   creditCardForm: FormGroup;
 
   minDate: Date = new Date();
-  private countdownTotalSeconds = 10 * 60;
+  private countdownTotalSeconds = 15 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
   private isCheckingPaymentStatus = false;
@@ -231,7 +231,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   private startCountdown(): void {
     this.clearCountdown();
-    this.countdownTotalSeconds = 10 * 60;
+    this.countdownTotalSeconds = 15 * 60;
     this.updateCountdownLabel();
 
     this.countdownIntervalId = setInterval(() => {

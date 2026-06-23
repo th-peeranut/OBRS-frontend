@@ -40,3 +40,12 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Playwright auth state — contains JWT, never commit
+e2e/fixtures/admin-auth.json
+playwright-report/
+
+# Local manual login scaffolding + captured screenshots (the .mjs hardcodes a
+# dev password; the PNGs are throwaway artifacts) — keep out of the repo
+e2e/manual-admin-login.mjs
+e2e/*.png

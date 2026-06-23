@@ -8,8 +8,7 @@ import {
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
-import { Subscription } from 'rxjs';
+import { LanguageService } from '../../shared/services/language.service';
 
 @Component({
   selector: 'app-forget-password',
@@ -26,12 +25,11 @@ export class ForgetPasswordComponent implements OnDestroy {
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  languageOnChange$: Subscription;
   private unlistenDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
+    private languageService: LanguageService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -44,7 +42,6 @@ export class ForgetPasswordComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
     this.unlistenDropdown?.();
   }
 
@@ -81,10 +78,7 @@ export class ForgetPasswordComponent implements OnDestroy {
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {

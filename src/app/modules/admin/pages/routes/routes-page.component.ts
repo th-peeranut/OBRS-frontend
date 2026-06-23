@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
@@ -20,7 +20,9 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
+import { RoutesStore } from './routes.store';
 
 interface RouteRow {
   id: number;
@@ -88,9 +90,10 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected readonly pageSize = 5;
   protected currentPage = 1;
 
-  protected isLoading = false;
+  protected isRefreshing = false;
+  protected refreshFailed = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected isDetailLoading = false;
-  protected isLanguageChanging = false;
   protected errorMessage = '';
 
   protected isRouteFormModalOpen = false;
@@ -98,6 +101,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected routeForEdit: RouteRow | null = null;
   protected routeForDelete: RouteRow | null = null;
 
@@ -107,14 +111,18 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected readonly routeForm: FormGroup;
   protected readonly editSegmentForm: FormGroup;
-  private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+  @ViewChild('routeDetailSection') private routeDetailSection?: ElementRef<HTMLElement>;
+  private readonly subscriptions = new Subscription();
+
+  private rawRouteDtos: AdminRouteDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: RoutesStore
   ) {
     this.routeForm = this.formBuilder.group({
       slug: [
@@ -127,7 +135,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       ],
       status: ['', [Validators.required]],
       enLabel: ['', [Validators.required, Validators.maxLength(100)]],
-      thLabel: ['', [Validators.maxLength(100)]],
+      thLabel: ['', [Validators.required, Validators.maxLength(100)]],
       enDescription: ['', [Validators.maxLength(255)]],
       thDescription: ['', [Validators.maxLength(255)]],
     });
@@ -153,17 +161,85 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       ],
     });
 
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
-    });
+    // Language change relabels in memory; only the selected route's structure
+    // (server-localized stop names) needs a refresh — not the whole route list.
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        void this.relocalizeForLanguageChange();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadRoutesAndOptions();
+  ngOnInit(): void {
+    // Render the cached route list instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.applyRouteListFromCache(data.routes, data.lookups);
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROUTES_FAILED');
+          this.routes = [];
+          this.filteredRoutes = [];
+          this.selectedRoute = null;
+          this.selectedRouteSlug = '';
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
+  }
+
+  // Derive the localized list from cached DTOs, then keep/select a route. The
+  // selected route's structure is only (re)loaded when the selection actually
+  // changes, so the cache-replay + background-revalidate emissions don't
+  // reload the detail twice on re-entry.
+  private applyRouteListFromCache(
+    routes: AdminRouteDto[],
+    lookups: AdminLookupDto[]
+  ): void {
+    this.rawRouteDtos = routes;
+    this.rawLookups = lookups;
+    this.applyRouteListLocalization();
+
+    const nextRoute =
+      this.routes.find((route) => route.slug === this.selectedRouteSlug) ??
+      this.filteredRoutes[0] ??
+      this.routes[0] ??
+      null;
+
+    if (!nextRoute) {
+      this.selectedRoute = null;
+      this.selectedRouteSlug = '';
+      this.stops = [];
+      this.allSegments = [];
+      this.vehicleTypeOptions = [];
+      return;
+    }
+
+    if (this.selectedRouteSlug !== nextRoute.slug || !this.selectedRoute) {
+      void this.selectRouteForLoad(nextRoute);
+    } else {
+      this.selectedRoute = nextRoute;
+    }
   }
 
   protected get totalRoutes(): number {
@@ -312,13 +388,30 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async selectRoute(route: RouteRow): Promise<void> {
-    if (this.selectedRouteSlug === route.slug && this.selectedRoute) {
-      return;
-    }
+    // The detail panel renders below the route table and a route is already
+    // auto-selected on load, so without scrolling the View action looks like it
+    // "does nothing". Always bring the panel into view; only (re)load the
+    // structure when the selection actually changes.
+    const alreadyLoaded = this.selectedRouteSlug === route.slug && !!this.selectedRoute;
 
     this.selectedRoute = route;
     this.selectedRouteSlug = route.slug;
-    await this.loadRouteStructureBySlug(route.slug);
+    this.scrollDetailIntoView();
+
+    if (!alreadyLoaded) {
+      await this.loadRouteStructureBySlug(route.slug);
+    }
+  }
+
+  private scrollDetailIntoView(): void {
+    // Defer to the next tick so the *ngIf detail panel is in the DOM before we
+    // scroll to it (it may have been hidden when no route was selected).
+    setTimeout(() => {
+      this.routeDetailSection?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   }
 
   protected openCreateModal(): void {
@@ -337,26 +430,65 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(route: RouteRow): Promise<void> {
-    let routeDetail: AdminRouteDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
-      routeDetail = response.data ?? this.toRouteDtoFallback(route);
-    } catch {
-      routeDetail = this.toRouteDtoFallback(route);
-    }
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (possibly slow) detail fetch. The server
+    // detail (Thai translations, full description) is patched in once it
+    // arrives — see the fetch below.
     this.isEditMode = true;
     this.routeForEdit = route;
+    this.isEditDetailLoading = true;
     this.routeForm.get('slug')?.enable();
-    this.routeForm.reset({
+    this.applyRouteFormValues(this.toRouteDtoFallback(route), route);
+    this.isRouteFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getRouteById(route.id));
+      const routeDetail = response.data;
+      // Ignore a stale response if the user has closed the modal or moved on
+      // to editing a different route in the meantime.
+      if (routeDetail && this.isRouteFormModalOpen && this.routeForEdit?.id === route.id) {
+        this.applyRouteFormValues(routeDetail, route, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      // Only clear the loading hint if this fetch is still the current one —
+      // a stale response (modal closed, or switched to another route) must not
+      // turn off the hint for a different in-flight detail fetch.
+      if (this.isRouteFormModalOpen && this.routeForEdit?.id === route.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the route form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyRouteFormValues(
+    routeDetail: AdminRouteDto,
+    route: RouteRow,
+    onlyPristine = false
+  ): void {
+    const values = {
       slug: routeDetail.slug,
       status: this.parseStatus(routeDetail.status ?? route.statusCode).code,
       enLabel: this.getTranslationLabel(routeDetail.translations, 'en') ?? route.label,
       thLabel: this.getTranslationLabel(routeDetail.translations, 'th') ?? '',
       enDescription: this.getTranslationDescription(routeDetail.translations, 'en') ?? '',
       thDescription: this.getTranslationDescription(routeDetail.translations, 'th') ?? '',
-    });
-    this.isRouteFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.routeForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.routeForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeRouteFormModal(force = false): void {
@@ -365,6 +497,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
 
     this.isRouteFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.routeForEdit = null;
     this.routeForm.reset();
   }
@@ -422,10 +555,13 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.selectedRouteSlug = payload.slug;
       }
 
-      await this.loadRoutesAndOptions();
-    } catch {
+      await this.store.refresh();
+    } catch (error) {
       this.closeRouteFormModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -439,9 +575,13 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteRouteById(this.routeForDelete.id));
+      // Capture before closeDeleteModal clears routeForDelete.
+      const deletedId = this.routeForDelete.id;
       const deletedSlug = this.routeForDelete.slug;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, routes: d.routes.filter((r) => r.id !== deletedId) }));
       this.closeDeleteModal(true);
-      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
 
       if (this.selectedRouteSlug === deletedSlug) {
         this.selectedRouteSlug = '';
@@ -450,10 +590,16 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         this.allSegments = [];
       }
 
-      await this.loadRoutesAndOptions();
-    } catch {
+      // Overlap the table revalidate with the success dialog.
+      const refresh = this.store.refresh();
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      await refresh;
+    } catch (error) {
       this.closeDeleteModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
@@ -515,8 +661,11 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       await this.loadRouteStructureBySlug(this.selectedRouteSlug);
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       isUpdated = true;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+    } catch (error) {
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSavingSegmentEdit = false;
       if (isUpdated) {
@@ -529,72 +678,31 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return fare.toFixed(2);
   }
 
-  private async loadRoutesAndOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
+  // Re-derive the locale-dependent route list + status options from cached DTOs.
+  private applyRouteListLocalization(): void {
     const currentLocale = this.getCurrentLocale();
-
-    try {
-      const [routesResponse, lookupsResponse] = await Promise.all([
-        firstValueFrom(this.adminApiService.getRoutes()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      const routeDtos = routesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
-
-      this.routes = routeDtos.map((route) => this.toRouteRow(route));
-      this.statusOptions = this.toRouteStatusOptions(
-        lookups,
-        routeDtos,
-        currentLocale
-      );
-      this.syncStatusFilterWithAvailableOptions();
-      this.applyRouteFilters();
-
-      const nextRoute =
-        this.routes.find((route) => route.slug === this.selectedRouteSlug) ??
-        this.filteredRoutes[0] ??
-        this.routes[0] ??
-        null;
-
-      if (nextRoute) {
-        await this.selectRouteForLoad(nextRoute);
-      } else {
-        this.selectedRoute = null;
-        this.selectedRouteSlug = '';
-        this.stops = [];
-        this.allSegments = [];
-        this.vehicleTypeOptions = [];
-      }
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROUTES_FAILED');
-      this.routes = [];
-      this.filteredRoutes = [];
-      this.selectedRoute = null;
-      this.selectedRouteSlug = '';
-    } finally {
-      this.isLoading = false;
-    }
+    this.routes = this.rawRouteDtos.map((route) => this.toRouteRow(route));
+    this.statusOptions = this.toRouteStatusOptions(
+      this.rawLookups,
+      this.rawRouteDtos,
+      currentLocale
+    );
+    this.syncStatusFilterWithAvailableOptions();
+    this.applyRouteFilters();
   }
 
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
+  // On language change: relabel the list instantly from memory, then refresh only
+  // the selected route's structure (stops/segments carry server-localized names) —
+  // far lighter than re-fetching the full route + lookup lists.
+  private async relocalizeForLanguageChange(): Promise<void> {
+    this.applyRouteListLocalization();
 
-    try {
-      await Promise.all([
-        this.loadRoutesAndOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
+    const selectedSlug =
+      this.routes.find((route) => route.slug === this.selectedRouteSlug)?.slug ?? '';
+
+    if (selectedSlug) {
+      await this.loadRouteStructureBySlug(selectedSlug);
     }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
   }
 
   private async selectRouteForLoad(route: RouteRow): Promise<void> {

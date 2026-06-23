@@ -9,7 +9,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
 import { Router } from '@angular/router';
-import { PrimeNGConfig } from 'primeng/api';
+import { LanguageService } from '../../shared/services/language.service';
 import {
   debounceTime,
   distinctUntilChanged,
@@ -39,7 +39,6 @@ export class RegisterComponent implements OnDestroy {
 
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
 
-  languageOnChange$: Subscription;
   private unlistenDropdown?: () => void;
 
   usernameSubscription$?: Subscription;
@@ -101,7 +100,7 @@ export class RegisterComponent implements OnDestroy {
 
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
+    private languageService: LanguageService,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private fb: FormBuilder,
@@ -117,7 +116,6 @@ export class RegisterComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
     this.unlistenDropdown?.();
 
     if (this.usernameSubscription$) this.usernameSubscription$.unsubscribe();
@@ -194,10 +192,7 @@ export class RegisterComponent implements OnDestroy {
   switchLanguage(lang: string) {
     this.isDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {

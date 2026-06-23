@@ -75,4 +75,24 @@ describe('AuthService', () => {
     request.flush({ code: 201, message: 'Created' });
     expect((await resultPromise).code).toBe(201);
   });
+
+  describe('hasAnyRole', () => {
+    const setRoles = (roles: string[]) =>
+      localStorage.setItem('auth_roles', JSON.stringify(roles));
+
+    it('grants an admin access to staff-only routes (admin is a role superset)', () => {
+      setRoles(['admin']);
+      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(true);
+    });
+
+    it('still matches a non-admin user on their own role', () => {
+      setRoles(['salesperson']);
+      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(true);
+    });
+
+    it('still denies a user who holds none of the required roles', () => {
+      setRoles(['user']);
+      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(false);
+    });
+  });
 });

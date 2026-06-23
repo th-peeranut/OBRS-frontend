@@ -14,7 +14,9 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
+import { RolesStore } from './roles.store';
 
 interface RoleRow {
   id: number;
@@ -46,8 +48,8 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected statusOptions: StatusOption[] = [];
 
   protected lastUpdatedAt = '-';
-  protected isLoading = false;
-  protected isLanguageChanging = false;
+  protected isRefreshing = false;
+  protected refreshFailed = false;
   protected errorMessage = '';
   protected selectedStatusFilter = '';
 
@@ -56,20 +58,27 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected selectedRole: RoleRow | null = null;
 
   protected readonly roleForm: FormGroup;
-  private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
+  // Placeholder rows rendered while the (occasionally cold-starting) backend
+  // responds, so the table shows its shape instead of a blank body.
+  protected readonly skeletonRows = Array.from({ length: 5 });
+  private readonly subscriptions = new Subscription();
+
+  private rawRoles: AdminRoleDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: RolesStore
   ) {
     this.roleForm = this.formBuilder.group({
-      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_]+$/)]],
+      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
       enLabel: ['', [Validators.required, Validators.maxLength(255)]],
       enDescription: ['', [Validators.maxLength(500)]],
       thLabel: ['', [Validators.required, Validators.maxLength(255)]],
@@ -77,17 +86,50 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       status: ['', [Validators.required]],
     });
 
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
-    });
+    // Switching language only changes which translation we display; the data is
+    // already in memory, so re-derive the view locally instead of re-fetching.
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadRolesAndStatusOptions();
+  ngOnInit(): void {
+    // Render the cached roles instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawRoles = data.roles;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
+          this.filteredRoles = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   get activeRoles(): number {
@@ -133,43 +175,74 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(role: RoleRow): Promise<void> {
-    let roleDetail: AdminRoleDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
-      roleDetail = this.extractResponseData<AdminRoleDto>(response) ?? null;
-    } catch (error) {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED'));
-      return;
-    }
-
-    const safeRoleDetail = roleDetail ?? this.toRoleDetailFallback(role);
-
-    const slug = String(safeRoleDetail.slug ?? role.slug).trim();
-    const enLabel =
-      this.getTranslationLabel(safeRoleDetail.translations, 'en') ??
-      safeRoleDetail.name ??
-      role.enLabel;
-    const thLabel = this.getTranslationLabel(safeRoleDetail.translations, 'th') ?? role.thLabel;
-    const enDescription =
-      this.getTranslationDescription(safeRoleDetail.translations, 'en') ??
-      safeRoleDetail.description ??
-      role.enDescription;
-    const thDescription =
-      this.getTranslationDescription(safeRoleDetail.translations, 'th') ?? role.thDescription;
-    const status = this.parseStatus(safeRoleDetail.status ?? role.statusCode);
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (consistently ~2s+ on SIT) detail fetch.
+    // The server detail (full translations/description) is patched in once it
+    // arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedRole = role;
-    this.roleForm.reset({
-      slug,
+    this.isEditDetailLoading = true;
+    this.applyRoleFormValues(this.toRoleDetailFallback(role), role);
+    this.roleForm.get('slug')?.disable();
+    this.isFormModalOpen = true;
+
+    try {
+      const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
+      const roleDetail = this.extractResponseData<AdminRoleDto>(response);
+      // Ignore a stale response if the user closed the modal or switched roles.
+      if (roleDetail && this.isFormModalOpen && this.selectedRole?.id === role.id) {
+        this.applyRoleFormValues(roleDetail, role, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedRole?.id === role.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  // Populate the role form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyRoleFormValues(
+    roleDetail: AdminRoleDto,
+    role: RoleRow,
+    onlyPristine = false
+  ): void {
+    const enLabel =
+      this.getTranslationLabel(roleDetail.translations, 'en') ??
+      roleDetail.name ??
+      role.enLabel;
+    const thLabel = this.getTranslationLabel(roleDetail.translations, 'th') ?? role.thLabel;
+    const enDescription =
+      this.getTranslationDescription(roleDetail.translations, 'en') ??
+      roleDetail.description ??
+      role.enDescription;
+    const thDescription =
+      this.getTranslationDescription(roleDetail.translations, 'th') ?? role.thDescription;
+    const status = this.parseStatus(roleDetail.status ?? role.statusCode);
+
+    const values = {
+      slug: String(roleDetail.slug ?? role.slug).trim(),
       enLabel: String(enLabel ?? '').trim().replace(/^-$/, ''),
       enDescription: String(enDescription ?? '').trim().replace(/^-$/, ''),
       thLabel: String(thLabel ?? '').trim().replace(/^-$/, ''),
       thDescription: String(thDescription ?? '').trim().replace(/^-$/, ''),
       status: status.code,
-    });
-    this.roleForm.get('slug')?.disable();
-    this.isFormModalOpen = true;
+    };
+
+    if (!onlyPristine) {
+      this.roleForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.roleForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
   }
 
   protected closeFormModal(force = false): void {
@@ -178,6 +251,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedRole = null;
     this.roleForm.reset();
   }
@@ -204,6 +278,9 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   protected async submitRole(): Promise<void> {
     if (this.roleForm.invalid) {
       this.roleForm.markAllAsTouched();
+      // Without this the click looks like a no-op when a field is invalid
+      // (e.g. a slug the pattern rejects) — surface why nothing was saved.
+      await this.alertService.warning(this.translate.instant('ADMIN.VALIDATION.FORM_INVALID'));
       return;
     }
 
@@ -211,20 +288,32 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     try {
       const payload = this.toRolePayload();
 
+      // Start revalidating the table the moment the write succeeds, so it runs
+      // concurrently with the success dialog (a SweetAlert the user dismisses by
+      // hand) instead of only starting after — on SIT each request is ~2s, so
+      // serialising refresh behind the popup is what made "add role" feel ~8s.
+      // store.refresh() never rejects (errors surface via error$), so holding
+      // the promise and awaiting it after the alert is safe.
+      let refresh: Promise<void>;
       if (this.isEditMode && this.selectedRole) {
         await this.updateRole(this.selectedRole, payload);
         this.closeFormModal(true);
+        refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
         await firstValueFrom(this.adminApiService.createRole(payload));
         this.closeFormModal(true);
+        refresh = this.store.refresh();
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadRolesAndStatusOptions();
-    } catch {
+      await refresh;
+    } catch (error) {
       this.closeFormModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -238,68 +327,35 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await this.deleteRole(this.selectedRole);
+      // Capture id before closeDeleteModal clears selectedRole.
+      const id = this.selectedRole.id;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, roles: d.roles.filter((r) => Number(r.id) !== Number(id)) }));
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog (see submitRole).
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadRolesAndStatusOptions();
-    } catch {
+      await refresh;
+    } catch (error) {
       this.closeDeleteModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
   }
 
-  private async loadRolesAndStatusOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
-
-    try {
-      const [rolesResult, lookupsResult] = await Promise.allSettled([
-        firstValueFrom(this.adminApiService.getRoles()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
-
-      if (rolesResult.status === 'rejected') {
-        throw rolesResult.reason;
-      }
-
-      const roles = this.extractResponseArray<AdminRoleDto>(rolesResult.value);
-      const lookups =
-        lookupsResult.status === 'fulfilled'
-          ? this.extractResponseArray<AdminLookupDto>(lookupsResult.value)
-          : [];
-
-      this.statusOptions = this.toStatusOptions(lookups, roles);
-
-      this.roles = this.sortRolesByLatestUpdated(roles).map((role) => this.toRoleRow(role));
-      this.syncStatusFilterWithAvailableOptions();
-      this.applyRoleFilter();
-      this.lastUpdatedAt = this.toLatestTimestamp(roles);
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_ROLES_FAILED');
-      this.filteredRoles = [];
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
-
-    try {
-      await Promise.all([
-        this.loadRolesAndStatusOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
+    this.statusOptions = this.toStatusOptions(this.rawLookups, this.rawRoles);
+    this.roles = this.sortRolesByLatestUpdated(this.rawRoles).map((role) => this.toRoleRow(role));
+    this.syncStatusFilterWithAvailableOptions();
+    this.applyRoleFilter();
+    this.lastUpdatedAt = this.toLatestTimestamp(this.rawRoles);
   }
 
   private toRolePayload(): CreateRolePayload {

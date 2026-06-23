@@ -7,11 +7,11 @@ import {
   ViewChild,
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
-import { PrimeNGConfig } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
+import { LanguageService } from '../../services/language.service';
 
 @Component({
   selector: 'app-navbar',
@@ -31,21 +31,23 @@ export class NavbarComponent implements OnInit, OnDestroy {
   @ViewChild('profileDropdown', { static: true }) profileDropdown!: ElementRef;
 
   isLogin: boolean = false;
+  isAdmin: boolean = false;
+  isSalesperson: boolean = false;
+  isDriver: boolean = false;
   userName: string | null = '';
 
-  languageOnChange$: Subscription;
   authSubscription$: Subscription;
   private unlistenLanguageDropdown?: () => void;
   private unlistenProfileDropdown?: () => void;
 
   constructor(
     private translate: TranslateService,
-    private primengConfig: PrimeNGConfig,
     private renderer: Renderer2,
     private elementRef: ElementRef,
     private authService: AuthService,
     private router: Router,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private languageService: LanguageService
   ) {
     const currentLanguage = this.translate.currentLang;
     this.switchLanguage(currentLanguage ? currentLanguage : 'th');
@@ -55,13 +57,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authSubscription$ = this.authService.authStatus$.subscribe(
       (status) => {
         this.isLogin = status;
+        this.isAdmin = status && this.authService.hasAnyRole(['admin']);
+        this.isSalesperson = status && this.authService.hasAnyRole(['salesperson']);
+        this.isDriver = status && this.authService.hasAnyRole(['driver']);
         this.userName = this.authService.getUsername();
       }
     );
   }
 
   ngOnDestroy(): void {
-    if (this.languageOnChange$) this.languageOnChange$.unsubscribe();
     if (this.authSubscription$) this.authSubscription$.unsubscribe();
     this.unlistenLanguageDropdown?.();
     this.unlistenProfileDropdown?.();
@@ -70,10 +74,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   switchLanguage(lang: string) {
     this.isLanguageDropdownOpen = false;
     this.currentLanguage = lang;
-    this.translate.use(lang);
-    this.languageOnChange$ = this.translate
-      .get('CALENDAR')
-      .subscribe((res) => this.primengConfig.setTranslation(res));
+    void this.languageService.switch(lang);
   }
 
   toggleDropdown() {
@@ -134,6 +135,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   toggleShowPassword() {
     this.isShowPassword = !this.isShowPassword;
+  }
+
+  // The contact details live in the footer, which is rendered as a sibling
+  // component on every page that shows the navbar — so scroll to it by id
+  // rather than reaching across components with a ViewChild.
+  scrollToContact() {
+    document
+      .getElementById('footer-contact')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async onLogout() {

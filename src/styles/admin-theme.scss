@@ -77,20 +77,17 @@
   padding: 0 10px;
 }
 
-.admin-brand h1 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: #05354a;
+.admin-brand-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
 
-.admin-brand p {
-  margin: 4px 0 0;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #64727a;
+.admin-brand-logo {
+  display: block;
+  width: auto;
+  height: 40px;
 }
 
 .admin-nav {
@@ -253,6 +250,14 @@
   color: var(--admin-danger-text);
 }
 
+.admin-menu-toggle {
+  display: none;
+}
+
+.admin-sidebar-backdrop {
+  display: none;
+}
+
 .admin-avatar {
   width: 38px;
   height: 38px;
@@ -378,6 +383,42 @@
 
 .admin-grid--3 {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-grid--4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-kpi {
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+}
+
+.admin-kpi-icon {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(77, 190, 239, 0.16);
+  color: #006687;
+}
+
+.admin-kpi-icon.is-success {
+  background: var(--admin-success-bg);
+  color: var(--admin-success-text);
+}
+
+.admin-kpi-icon.is-warning {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+}
+
+.admin-kpi .admin-big-number {
+  font-size: 28px;
 }
 
 .admin-grid--layout {
@@ -565,6 +606,59 @@
 .admin-cell-stack span {
   color: #54636b;
   font-size: 12px;
+}
+
+// Loading placeholders shown in admin tables while the (occasionally
+// cold-starting) backend responds, plus the empty-state row when a fetch
+// returns nothing. Shared by every admin list page.
+.admin-skeleton {
+  display: block;
+  width: 100%;
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    rgba(110, 121, 127, 0.12) 25%,
+    rgba(110, 121, 127, 0.22) 37%,
+    rgba(110, 121, 127, 0.12) 63%
+  );
+  background-size: 400% 100%;
+  animation: admin-skeleton-shimmer 1.4s ease infinite;
+}
+
+.admin-skeleton--sm {
+  width: 60%;
+}
+
+.admin-skeleton--pill {
+  width: 72px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+.admin-table tbody tr.admin-skeleton-row:hover {
+  background: transparent;
+}
+
+.admin-empty-row td {
+  padding: 32px 14px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+@keyframes admin-skeleton-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skeleton {
+    animation: none;
+  }
 }
 
 .admin-chip {
@@ -937,37 +1031,48 @@ textarea.admin-field {
   .admin-grid--layout .admin-grid-span-2 {
     grid-column: span 2;
   }
+
+  .admin-grid--4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1100px) {
-  .admin-shell {
-    flex-direction: column;
+  .admin-menu-toggle {
+    display: inline-flex;
   }
 
   .admin-sidebar {
-    width: 100%;
-    height: auto;
-    position: static;
-    border-right: 0;
-    border-bottom: 1px solid rgba(189, 200, 207, 0.5);
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 40;
+    width: 280px;
+    height: 100vh;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+    box-shadow: 0 18px 40px rgba(25, 28, 30, 0.25);
+  }
+
+  .admin-sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 35;
+    background: rgba(25, 28, 30, 0.45);
   }
 
   .admin-topbar {
-    position: static;
-    height: auto;
     padding: 12px 16px;
-    flex-direction: column;
-    align-items: stretch;
   }
 
   .admin-topbar-actions {
     justify-content: flex-end;
     flex-wrap: wrap;
-  }
-
-  .admin-search {
-    min-width: 0;
-    width: 100%;
   }
 
   .admin-form-grid {
@@ -976,6 +1081,10 @@ textarea.admin-field {
 
   .admin-content {
     padding: 16px;
+  }
+
+  .admin-grid--4 {
+    grid-template-columns: 1fr;
   }
 
   .admin-grid--3 {

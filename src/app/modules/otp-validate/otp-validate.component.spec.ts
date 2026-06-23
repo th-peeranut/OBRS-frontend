@@ -1,20 +1,30 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder } from '@angular/forms';
 
 import { OtpValidateComponent } from './otp-validate.component';
+import {
+  createElementRefStub,
+  createLanguageServiceStub,
+  createRouterStub,
+  createTranslateStub,
+} from '../../testing/test-stubs';
 
 describe('OtpValidateComponent', () => {
   let component: OtpValidateComponent;
-  let fixture: ComponentFixture<OtpValidateComponent>;
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      declarations: [OtpValidateComponent]
-    })
-    .compileComponents();
-
-    fixture = TestBed.createComponent(OtpValidateComponent);
-    component = fixture.componentInstance;
-    fixture.detectChanges();
+  beforeEach(() => {
+    component = new OtpValidateComponent(
+      createTranslateStub(),
+      createLanguageServiceStub(),
+      {} as never,
+      createElementRefStub(),
+      new FormBuilder(),
+      {} as never,
+      {} as never,
+      createRouterStub(),
+      {} as never,
+      {} as never,
+      {} as never
+    );
   });
 
   it('should create', () => {

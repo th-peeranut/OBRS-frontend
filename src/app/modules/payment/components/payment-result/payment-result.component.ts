@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -14,21 +15,25 @@ import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/paymen
 })
 export class PaymentResultComponent implements OnInit, OnDestroy {
   protected isChecking = true;
-  protected countdown = '00 : 30';
+  protected countdown = '15 : 00';
 
   private pollingIntervalId?: ReturnType<typeof setInterval>;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
-  private remainingSeconds = 30;
+  private readonly timeoutSeconds = 15 * 60;
+  private remainingSeconds = this.timeoutSeconds;
   private attempts = 0;
-  private readonly maxAttempts = 10;
   private readonly pollingIntervalMs = 3000;
+  private readonly maxAttempts = Math.ceil(
+    (this.timeoutSeconds * 1000) / this.pollingIntervalMs
+  ) + 1;
   private isRequestInFlight = false;
 
   constructor(
     private readonly router: Router,
     private readonly bookingService: BookingService,
     private readonly paymentService: PaymentService,
-    private readonly alertService: AlertService
+    private readonly alertService: AlertService,
+    private readonly translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -66,7 +71,9 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
 
     try {
       const response = await firstValueFrom(
-        this.paymentService.getBookingPayments(bookingId).pipe(take(1))
+        this.paymentService.getBookingPayments(bookingId, {
+          skipGlobalLoadingAlert: true,
+        }).pipe(take(1))
       );
 
       if (this.isPaymentConfirmed(response.data)) {
@@ -75,7 +82,7 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
       }
 
       if (this.isPaymentFailed(response.data)) {
-        this.failPayment();
+        await this.failPayment();
         return;
       }
 
@@ -115,12 +122,14 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     this.router.navigate(['/e-ticket']);
   }
 
-  private failPayment(): void {
+  private async failPayment(): Promise<void> {
     this.isChecking = false;
     this.clearPolling();
     this.clearCountdown();
-    this.alertService.error('Payment failed');
-    this.router.navigate(['/payment']);
+    await this.alertService.error(
+      this.translate.instant('PAYMENT.RESULT.FAILED_REDIRECT')
+    );
+    this.router.navigate(['/schedule-booking']);
   }
 
   private timeoutPayment(): void {

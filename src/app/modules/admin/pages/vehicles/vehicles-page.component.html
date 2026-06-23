@@ -4,6 +4,7 @@
     <h3>{{ 'ADMIN.VEHICLES.TITLE' | translate }}</h3>
     <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
   <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
     <span class="material-symbols-outlined">add</span>
@@ -12,9 +13,26 @@
 </section>
 
 <section class="admin-grid admin-grid--3 mt-3">
-  <article class="admin-card">
-    <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL_CAPACITY' | translate }}</p>
-    <p class="admin-big-number">{{ totalVehicles }}</p>
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.VEHICLES.TOTAL' | translate }}</p>
+      <p class="admin-big-number">{{ totalVehicles }}</p>
+    </div>
+  </article>
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">check_circle</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.VEHICLES.ACTIVE' | translate }}</p>
+      <p class="admin-big-number">{{ activeVehicles }}</p>
+    </div>
+  </article>
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">pending_actions</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.VEHICLES.PENDING' | translate }}</p>
+      <p class="admin-big-number">{{ pendingVehicles }}</p>
+    </div>
   </article>
 </section>
 
@@ -46,24 +64,50 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let vehicle of filteredVehicles; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
-          <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
-          <td><code>{{ vehicle.plate }}</code></td>
-          <td>{{ vehicle.vehicleType }}</td>
-          <td>
-            <span class="admin-status" [ngClass]="statusClass(vehicle.statusCode)">{{ vehicle.status }}</span>
-          </td>
-          <td class="text-right">
-            <div class="admin-inline-actions">
-              <button type="button" class="admin-icon-btn" (click)="openEditModal(vehicle)">
-                <span class="material-symbols-outlined">edit_square</span>
-              </button>
-              <button type="button" class="admin-icon-btn danger" (click)="openDeleteModal(vehicle)">
-                <span class="material-symbols-outlined">delete</span>
-              </button>
-            </div>
-          </td>
-        </tr>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr *ngFor="let vehicle of filteredVehicles; let i = index" [class.zebra]="i % 2 === 1">
+            <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
+            <td><code>{{ vehicle.plate }}</code></td>
+            <td>{{ vehicle.vehicleType }}</td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(vehicle.statusCode)">{{ vehicle.status }}</span>
+            </td>
+            <td class="text-right">
+              <div class="admin-inline-actions">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="openEditModal(vehicle)"
+                >
+                  <span class="material-symbols-outlined">edit_square</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn danger"
+                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                  (click)="openDeleteModal(vehicle)"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="filteredVehicles.length === 0 && !errorMessage" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
       </tbody>
     </table>
   </div>
@@ -75,7 +119,7 @@
   </div>
 </section>
 
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
   <div class="admin-modal">
     <h4 class="admin-modal-title">
       {{
@@ -84,7 +128,12 @@
           : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
       }}
     </h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}</p>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
 
     <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
       <div class="admin-form-field">
@@ -143,7 +192,7 @@
   </div>
 </div>
 
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen">
+<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
   <div class="admin-modal admin-modal-confirm">
     <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
     <p class="admin-modal-subtitle">
@@ -159,13 +208,5 @@
         {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
       </button>
     </div>
-  </div>
-</div>
-
-<div class="admin-modal-backdrop admin-loading-backdrop" *ngIf="isLanguageChanging">
-  <div class="admin-loading-panel" role="status" aria-live="polite" aria-busy="true">
-    <span class="material-symbols-outlined admin-loading-spinner">autorenew</span>
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.LOADING' | translate }}</h4>
-    <p class="admin-modal-subtitle">{{ 'ADMIN.COMMON.LANGUAGE_LOADING' | translate }}</p>
   </div>
 </div>

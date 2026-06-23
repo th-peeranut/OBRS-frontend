@@ -12,6 +12,7 @@ import {
 } from 'rxjs';
 import {
   AdminApiService,
+  AdminLookupDto,
   AdminRoleDto,
   AdminStatusDto,
   AdminTranslationCollection,
@@ -22,12 +23,13 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
+import { UsersStore } from './users.store';
 
 interface UserRow {
   id: number;
   fullName: string;
-  username: string;
   email: string;
   phone: string;
   roleSlugs: string[];
@@ -62,8 +64,9 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected selectedStatusFilter = '';
   protected searchKeyword = '';
 
-  protected isLoading = false;
-  protected isLanguageChanging = false;
+  protected isRefreshing = false;
+  protected refreshFailed = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
 
   protected isFormModalOpen = false;
@@ -71,23 +74,19 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected isDeleting = false;
   protected isEditMode = false;
+  protected isEditDetailLoading = false;
   protected selectedUser: UserRow | null = null;
-  protected usernameIsExist = false;
   protected emailIsExist = false;
   protected phoneNumberIsExist = false;
 
   protected readonly userForm: FormGroup;
-  private usernameCheckSubscription?: Subscription;
   private emailCheckSubscription?: Subscription;
   private phoneNumberCheckSubscription?: Subscription;
-  private readonly languageSubscription: Subscription;
-  private readonly languageLoadingMinimumMs = 1000;
-  private readonly usernameValidators = [
-    Validators.required,
-    Validators.minLength(3),
-    Validators.maxLength(50),
-    Validators.pattern(/^[a-zA-Z0-9._-]+$/),
-  ];
+  private readonly subscriptions = new Subscription();
+
+  private rawUsers: AdminUserDto[] = [];
+  private rawRoles: AdminRoleDto[] = [];
+  private rawLookups: AdminLookupDto[] = [];
   private readonly passwordValidators = [
     Validators.required,
     Validators.minLength(8),
@@ -98,7 +97,8 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: UsersStore
   ) {
     this.userForm = this.formBuilder.group({
       title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -107,10 +107,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
       phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
-      username: [
-        '',
-        this.usernameValidators,
-      ],
       password: ['', this.passwordValidators],
       confirmPassword: ['', [Validators.required]],
       preferredLocale: [
@@ -122,33 +118,54 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       isPhoneNumberVerify: [true, [Validators.required]],
     });
 
-    this.languageSubscription = this.translate.onLangChange.subscribe(() => {
-      void this.reloadForLanguageChange();
-    });
+    // Language change only swaps displayed translations; data is already loaded,
+    // so re-derive the view locally instead of re-fetching from the backend.
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.applyLocalization();
+      })
+    );
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     this.setupDuplicateCheckSubscriptions();
-    await this.loadUsersAndOptions();
+    // Render the cached users instantly on re-entry, then revalidate.
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawUsers = data.users;
+          this.rawRoles = data.roles;
+          this.rawLookups = data.lookups;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        if (failed && !this.store.hasValue) {
+          this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
+          this.filteredUsers = [];
+        } else {
+          this.errorMessage = '';
+        }
+      })
+    );
+    void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.languageSubscription.unsubscribe();
-    this.usernameCheckSubscription?.unsubscribe();
+    this.subscriptions.unsubscribe();
     this.emailCheckSubscription?.unsubscribe();
     this.phoneNumberCheckSubscription?.unsubscribe();
   }
 
-  protected trackByUserId(_index: number, user: UserRow): number {
-    return user.id;
-  }
-
-  protected trackByRoleSlug(_index: number, role: RoleOption): string {
-    return role.slug;
-  }
-
-  protected trackByRoleString(_index: number, role: string): string {
-    return role;
+  /** Skeletons only while loading with no cached data yet. */
+  protected get isLoading(): boolean {
+    return this.isRefreshing && !this.store.hasValue;
   }
 
   protected get activeUsers(): number {
@@ -195,7 +212,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       lastName: '',
       email: '',
       phoneNumber: '',
-      username: '',
       password: '',
       confirmPassword: '',
       preferredLocale: 'th',
@@ -208,44 +224,80 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected async openEditModal(user: UserRow): Promise<void> {
-    let userDetail: AdminUserDto | null = null;
-    try {
-      const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
-      userDetail = response?.data ?? null;
-    } catch {
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED'));
-      return;
-    }
-
+    // Open the modal immediately with the row data we already hold, so it
+    // appears without waiting on the (slow on SIT) detail fetch. The server
+    // detail is patched in once it arrives — see the fetch below.
     this.isEditMode = true;
     this.selectedUser = user;
+    this.isEditDetailLoading = true;
     this.resetDuplicateFlags();
+    this.applyUserFormValues(this.toUserDtoFallback(user), user);
+    this.setCredentialFieldsForEditMode();
+    this.isFormModalOpen = true;
 
-    const parsedName = this.parseNameFromFullName(userDetail?.fullName ?? user.fullName);
-    const firstName = String(userDetail?.firstName ?? parsedName.firstName ?? '').trim();
-    const middleName = String(userDetail?.middleName ?? parsedName.middleName ?? '').trim();
-    const lastName = String(userDetail?.lastName ?? parsedName.lastName ?? '').trim();
-    const roles = this.extractRoleSlugs(userDetail?.roles);
-    const status = this.parseStatus(userDetail?.status ?? user.statusCode);
+    try {
+      const response = await firstValueFrom(this.adminApiService.getUserById(user.id));
+      const userDetail = response?.data ?? null;
+      // Ignore a stale response if the user closed the modal or switched rows.
+      if (userDetail && this.isFormModalOpen && this.selectedUser?.id === user.id) {
+        this.applyUserFormValues(userDetail, user, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedUser?.id === user.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
 
-    this.userForm.reset({
-      title: String((userDetail?.title ?? parsedName.title) || 'Mr').trim(),
-      firstName,
-      middleName,
-      lastName,
-      email: userDetail?.email ?? user.email,
-      phoneNumber: String(userDetail?.phoneNumber ?? user.phone).replace(/\D/g, ''),
-      username: userDetail?.username ?? user.username,
-      password: '',
-      confirmPassword: '',
-      preferredLocale: userDetail?.preferredLocale ?? 'th',
+  // Populate the user form from a DTO. When `onlyPristine` is set (the late
+  // detail patch), only controls the user hasn't started editing are filled,
+  // so the arriving server data never clobbers in-progress input.
+  private applyUserFormValues(
+    userDetail: AdminUserDto,
+    user: UserRow,
+    onlyPristine = false
+  ): void {
+    const parsedName = this.parseNameFromFullName(userDetail.fullName ?? user.fullName);
+    const roles = this.extractRoleSlugs(userDetail.roles);
+    const status = this.parseStatus(userDetail.status ?? user.statusCode);
+
+    const values: Record<string, unknown> = {
+      title: String((userDetail.title ?? parsedName.title) || 'Mr').trim(),
+      firstName: String(userDetail.firstName ?? parsedName.firstName ?? '').trim(),
+      middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
+      lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
+      email: userDetail.email ?? user.email,
+      phoneNumber: String(userDetail.phoneNumber ?? user.phone).replace(/\D/g, ''),
+      preferredLocale: userDetail.preferredLocale ?? 'th',
       status: status.code,
       roles: roles.length > 0 ? roles : [...user.roleSlugs],
       isPhoneNumberVerify: true,
-    });
+    };
 
-    this.setCredentialFieldsForEditMode();
-    this.isFormModalOpen = true;
+    if (!onlyPristine) {
+      this.userForm.reset(values);
+      return;
+    }
+
+    for (const [name, value] of Object.entries(values)) {
+      const control = this.userForm.get(name);
+      if (control?.pristine) {
+        control.setValue(value);
+      }
+    }
+  }
+
+  private toUserDtoFallback(user: UserRow): AdminUserDto {
+    return {
+      id: user.id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phone,
+      status: user.statusCode,
+      roles: [...user.roleSlugs],
+    };
   }
 
   protected closeFormModal(force = false): void {
@@ -254,6 +306,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     }
 
     this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
     this.selectedUser = null;
     this.userForm.reset();
     this.resetDuplicateFlags();
@@ -310,7 +363,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     if (!this.isEditMode) {
       const hasCredentialError =
         !this.checkSamePassword() ||
-        this.usernameIsExist ||
         this.emailIsExist ||
         this.phoneNumberIsExist;
 
@@ -336,11 +388,14 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
       }
 
-      await this.loadUsersAndOptions();
-    } catch {
+      await this.store.refresh();
+    } catch (error) {
       this.isSubmitting = false;
       this.closeFormModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isSubmitting = false;
     }
@@ -354,80 +409,54 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.isDeleting = true;
     try {
       await firstValueFrom(this.adminApiService.deleteUser(this.selectedUser.id));
+      // Capture id before closeDeleteModal clears selectedUser.
+      const id = this.selectedUser.id;
+      // Optimistically remove the deleted row so the table updates synchronously,
+      // without waiting for the background re-fetch to land (~2s on SIT).
+      this.store.mutate((d) => ({ ...d, users: d.users.filter((u) => u.id !== id) }));
       this.closeDeleteModal(true);
+      // Overlap the table revalidate with the success dialog (see submitUser).
+      const refresh = this.store.refresh();
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
-      await this.loadUsersAndOptions();
-    } catch {
+      await refresh;
+    } catch (error) {
       this.closeDeleteModal(true);
-      await this.alertService.error(this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED'));
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
     } finally {
       this.isDeleting = false;
     }
   }
 
-  private async loadUsersAndOptions(): Promise<void> {
-    this.isLoading = true;
-    this.errorMessage = '';
+  // Re-derive every locale-dependent view field from the DTOs already in memory.
+  // Runs on initial load and on each language change — no backend round-trip.
+  private applyLocalization(): void {
     const currentLocale = this.getCurrentLocale();
 
-    try {
-      const [usersResponse, rolesResponse, lookupsResponse] = await Promise.all([
-        firstValueFrom(this.adminApiService.getUsers()),
-        firstValueFrom(this.adminApiService.getRoles()),
-        firstValueFrom(this.adminApiService.getLookups()),
-      ]);
+    this.roleOptions = this.rawRoles.map((role) => ({
+      slug: role.slug,
+      label:
+        role.name ??
+        this.getTranslationLabel(role.translations, currentLocale) ??
+        this.getTranslationLabel(role.translations, 'en') ??
+        role.slug,
+    }));
 
-      const users = usersResponse?.data ?? [];
-      const roles = rolesResponse?.data ?? [];
-      const lookups = lookupsResponse?.data ?? [];
-
-      this.roleOptions = roles.map((role) => ({
-        slug: role.slug,
+    this.statusOptions = this.rawLookups
+      .filter((lookup) => lookup.category === 'user_status')
+      .map((lookup) => ({
+        code: lookup.slug,
         label:
-          role.name ??
-          this.getTranslationLabel(role.translations, currentLocale) ??
-          this.getTranslationLabel(role.translations, 'en') ??
-          role.slug,
+          this.getTranslationLabel(lookup.translations, currentLocale) ??
+          this.getTranslationLabel(lookup.translations, 'en') ??
+          lookup.slug,
       }));
 
-      this.statusOptions = lookups
-        .filter((lookup) => lookup.category === 'user_status')
-        .map((lookup) => ({
-          code: lookup.slug,
-          label:
-            this.getTranslationLabel(lookup.translations, currentLocale) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            lookup.slug,
-        }));
-
-      this.users = users.map((user) => this.toUserRow(user));
-      this.syncFiltersWithAvailableOptions();
-      this.applyFilters();
-    } catch {
-      this.errorMessage = this.translate.instant('ADMIN.MESSAGES.LOAD_USERS_FAILED');
-      this.filteredUsers = [];
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  private async reloadForLanguageChange(): Promise<void> {
-    this.isLanguageChanging = true;
-
-    try {
-      await Promise.all([
-        this.loadUsersAndOptions(),
-        this.waitForLanguageLoadingMinimum(),
-      ]);
-    } finally {
-      this.isLanguageChanging = false;
-    }
-  }
-
-  private waitForLanguageLoadingMinimum(): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, this.languageLoadingMinimumMs);
-    });
+    this.users = this.rawUsers.map((user) => this.toUserRow(user));
+    this.syncFiltersWithAvailableOptions();
+    this.applyFilters();
   }
 
   private toCreateUserPayload(): CreateUserPayload {
@@ -475,7 +504,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     return {
       id: user.id,
       fullName: user.fullName ?? '-',
-      username: user.username ?? '-',
       email: user.email ?? '-',
       phone: user.phoneNumber ?? '-',
       roleSlugs,
@@ -612,37 +640,29 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private setCredentialFieldsForCreateMode(): void {
-    const usernameControl = this.userForm.get('username');
     const passwordControl = this.userForm.get('password');
     const confirmPasswordControl = this.userForm.get('confirmPassword');
 
-    usernameControl?.setValidators(this.usernameValidators);
     passwordControl?.setValidators(this.passwordValidators);
     confirmPasswordControl?.setValidators([Validators.required]);
 
-    usernameControl?.enable();
     passwordControl?.enable();
     confirmPasswordControl?.enable();
 
-    usernameControl?.updateValueAndValidity();
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
   }
 
   private setCredentialFieldsForEditMode(): void {
-    const usernameControl = this.userForm.get('username');
     const passwordControl = this.userForm.get('password');
     const confirmPasswordControl = this.userForm.get('confirmPassword');
 
-    usernameControl?.clearValidators();
     passwordControl?.clearValidators();
     confirmPasswordControl?.clearValidators();
 
-    usernameControl?.disable();
     passwordControl?.disable();
     confirmPasswordControl?.disable();
 
-    usernameControl?.updateValueAndValidity();
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
   }
@@ -659,7 +679,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     return password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
   }
 
-  protected shouldShowCredentialValidationError(controlName: 'username' | 'email' | 'phoneNumber'): boolean {
+  protected shouldShowCredentialValidationError(controlName: 'email' | 'phoneNumber'): boolean {
     if (this.isEditMode) {
       return false;
     }
@@ -667,10 +687,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     const control = this.userForm.get(controlName);
     if (!control || !control.value || (!control.touched && !control.dirty)) {
       return false;
-    }
-
-    if (controlName === 'username') {
-      return this.usernameIsExist;
     }
 
     if (controlName === 'email') {
@@ -740,7 +756,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
       const searchTarget = [
         user.fullName,
-        user.username,
         user.email,
         user.phone,
         user.roles.join(' '),
@@ -754,25 +769,13 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private resetDuplicateFlags(): void {
-    this.usernameIsExist = false;
     this.emailIsExist = false;
     this.phoneNumberIsExist = false;
   }
 
   private setupDuplicateCheckSubscriptions(): void {
-    const usernameControl = this.userForm.get('username');
     const emailControl = this.userForm.get('email');
     const phoneNumberControl = this.userForm.get('phoneNumber');
-
-    this.usernameCheckSubscription = usernameControl?.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap((value) => this.checkDuplicateUsername(value))
-      )
-      .subscribe((isExist) => {
-        this.usernameIsExist = isExist;
-      });
 
     this.emailCheckSubscription = emailControl?.valueChanges
       .pipe(
@@ -793,18 +796,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       .subscribe((isExist) => {
         this.phoneNumberIsExist = isExist;
       });
-  }
-
-  private checkDuplicateUsername(value: unknown) {
-    const username = String(value ?? '').trim();
-    if (!this.isCreateModeActive() || username.length === 0 || this.userForm.get('username')?.invalid) {
-      return of(false);
-    }
-
-    return this.adminApiService.checkUserExistsByUsername(username).pipe(
-      map((response) => Boolean(response?.data)),
-      catchError(() => of(false))
-    );
   }
 
   private checkDuplicateEmail(value: unknown) {

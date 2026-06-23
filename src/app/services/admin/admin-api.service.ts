@@ -180,6 +180,7 @@ export interface AdminDriverInfoDto {
 
 export interface AdminScheduleDto {
   id: number;
+  scheduleSetId?: number | null;
   departureDateTime?: string;
   status?: string | AdminStatusDto;
   createdAt?: string;
