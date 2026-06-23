@@ -485,7 +485,11 @@
       "SIGNOUT_SUCCESS": "退出登录成功",
       "SIGNOUT_FAIL": "退出登录失败",
       "ADMIN_DASHBOARD": "管理后台",
-      "STAFF_PORTAL": "员工门户"
+      "STAFF_PORTAL": "员工门户",
+      "LANGUAGE_SWITCH": "语言",
+      "LANGUAGE_TH": "切换到泰语",
+      "LANGUAGE_EN": "切换到英语",
+      "PROFILE_MENU": "打开个人资料菜单"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",

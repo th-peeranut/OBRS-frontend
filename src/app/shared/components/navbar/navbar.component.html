@@ -22,43 +22,32 @@
   </button>
 
   <div class="button-container">
-    <!-- Change Language Dropdown -->
-    <div class="dropdown mb-3">
+    <!-- Language segmented toggle -->
+    <div
+      class="navbar-lang-switch"
+      role="group"
+      [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
+    >
       <button
-        #languageDropdown
-        class="btn btn-lang dropdown-toggle p-0"
         type="button"
-        id="languageDropdown"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
-        [class.active]="isLanguageDropdownOpen"
-        (click)="toggleDropdown()"
+        class="navbar-lang-btn"
+        [class.active]="currentLanguage === 'th'"
+        [attr.aria-pressed]="currentLanguage === 'th'"
+        [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_TH' | translate"
+        (click)="switchLanguage('th')"
       >
-        <img class="mx-2" [src]="currentLanguage + '.svg'" alt="th" />
-        {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
-        <img
-          class="arrow-icon"
-          [src]="isLanguageDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
-          alt="Arrow Icon"
-        />
+        TH
       </button>
-
-      <ul class="dropdown-menu" aria-labelledby="languageDropdown">
-        <li>
-          <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
-            <img class="mx-2" src="th.svg" alt="th" />
-
-            ภาษาไทย
-          </a>
-        </li>
-        <li>
-          <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
-            <img class="mx-2" src="en.svg" alt="en" />
-
-            English
-          </a>
-        </li>
-      </ul>
+      <button
+        type="button"
+        class="navbar-lang-btn"
+        [class.active]="currentLanguage === 'en'"
+        [attr.aria-pressed]="currentLanguage === 'en'"
+        [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_EN' | translate"
+        (click)="switchLanguage('en')"
+      >
+        EN
+      </button>
     </div>
 
     <div class="divide-line"></div>
@@ -76,44 +65,50 @@
     </ng-container>
 
     <ng-container *ngIf="isLogin">
-      <!-- PROFILE DROPDOWN -->
-      <div class="dropdown mb-3">
+      <!-- PROFILE AVATAR DROPDOWN -->
+      <div class="navbar-profile">
         <button
           #profileDropdown
-          class="btn btn-lang dropdown-toggle-no-border p-0"
+          class="navbar-avatar"
           type="button"
-          id="profileDropdown"
-          data-bs-toggle="dropdown"
-          aria-expanded="false"
-          [class.active]="isProfileDropdownOpen"
-          (click)="toggleDropdown()"
+          (click)="toggleProfileDropdown()"
+          [attr.aria-expanded]="isProfileDropdownOpen"
+          aria-haspopup="menu"
+          [attr.aria-label]="'HOME.NAVBAR.PROFILE_MENU' | translate"
         >
-          <img class="mx-2" src="images/profile.svg" alt="Profile Image" />
-          {{ userName }}
-          <img
-            class="arrow-icon"
-            [src]="isProfileDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
-            alt="Arrow Icon"
-          />
+          {{ userInitials }}
         </button>
-  
-        <ul class="dropdown-menu" aria-labelledby="profileDropdown">
-          <li *ngIf="isAdmin">
-            <a class="dropdown-item menu-lang" [routerLink]="'/admin/dashboard'">
-              {{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}
-            </a>
-          </li>
-          <li *ngIf="isSalesperson || isDriver">
-            <a class="dropdown-item menu-lang" [routerLink]="'/staff'">
-              {{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}
-            </a>
-          </li>
-          <li>
-            <a class="dropdown-item menu-lang" (click)="onLogout()">
-              {{ "HOME.NAVBAR.SIGNOUT" | translate }}
-            </a>
-          </li>
-        </ul>
+        <div class="navbar-profile-menu" *ngIf="isProfileDropdownOpen" role="menu">
+          <a
+            *ngIf="isAdmin"
+            class="navbar-profile-item"
+            role="menuitem"
+            [routerLink]="'/admin/dashboard'"
+            (click)="isProfileDropdownOpen = false"
+          >
+            <span class="material-symbols-outlined">dashboard</span>
+            <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
+          </a>
+          <a
+            *ngIf="isSalesperson || isDriver"
+            class="navbar-profile-item"
+            role="menuitem"
+            [routerLink]="'/staff'"
+            (click)="isProfileDropdownOpen = false"
+          >
+            <span class="material-symbols-outlined">badge</span>
+            <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+          </a>
+          <button
+            type="button"
+            class="navbar-profile-item"
+            role="menuitem"
+            (click)="onLogout()"
+          >
+            <span class="material-symbols-outlined">logout</span>
+            <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+          </button>
+        </div>
       </div>
     </ng-container>
   </div>

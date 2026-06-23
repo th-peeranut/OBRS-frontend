@@ -1,5 +1,34 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-23 — Navbar admin-reskin: group aria-label + dead field (self-fixed, #24)
+
+**Files:** `navbar.component.html`, `navbar.component.ts`, `public/i18n/{en,th,zh}.json`.
+
+Two issues in the TH|EN toggle + avatar dropdown reskin:
+1. **a11y:** the `<div role="group">` wrapping the TH/EN buttons had
+   `aria-label="HOME.NAVBAR.LANGUAGE_TH"` → screen readers announced the whole group as
+   "Switch to Thai", which is the label for ONE button. A radiogroup/group label must describe the
+   group, not a child. Added a neutral `HOME.NAVBAR.LANGUAGE_SWITCH` ("Language"/"ภาษา"/"语言") key in
+   all three locales and pointed the group at it. Rule: a `role="group"` aria-label names the set, not
+   a member — reuse a member's label only by accident.
+2. **Dead code:** `userName` field + its `ngOnInit` assignment survived the refactor even though the
+   template switched from `{{ userName }}` to `{{ userInitials }}`. Removed both. When you replace a
+   bound field with a getter, grep the field name across the component's html+ts+spec and delete the
+   orphan.
+
+Note on the retained outside-click machinery: `toggleProfileDropdown` /
+`handleProfileDropdownOutsideClick` (renderer `document` listen) is the old pattern; the admin
+reference (`admin-layout.component.ts`) does this far more cleanly with
+`@HostListener('document:click')` (close-only, `!profile.contains(target)`) plus
+`@HostListener('document:keydown.escape')`. Functionally the navbar version works, but it lacks the
+Escape-to-close affordance the admin topbar has — flagged to developer, not self-fixed (parity, not a
+bug).
+
+The `@ViewChild('profileDropdown', static:false)` change is CORRECT: the ref lives behind
+`*ngIf="isLogin"`, so `static:true` would resolve it to `undefined`. It's only dereferenced from the
+document-click handler, which can only be registered after the avatar (also behind the `*ngIf`) is
+clicked — so no NPE.
+
 ## 2026-06-23 — Bookings departureTime: don't paper over a missing DTO field with `as` (self-fixed, #23)
 The hotfix read departure time via `(schedule as { departureDateTime?: string })?.departureDateTime`.
 The cast existed only because `AdminBookingScheduleDto` lacked the field that backend #17 now serves.

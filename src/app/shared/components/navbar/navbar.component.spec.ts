@@ -133,6 +133,16 @@ describe('NavbarComponent', () => {
     expect(switchSpy).toHaveBeenCalledWith('en');
   });
 
+  it('reflects currentLanguage when TH is selected', () => {
+    component.switchLanguage('th');
+    expect(component.currentLanguage).toBe('th');
+  });
+
+  it('reflects currentLanguage when EN is selected', () => {
+    component.switchLanguage('en');
+    expect(component.currentLanguage).toBe('en');
+  });
+
   it('scrolls to the footer contact section', () => {
     const target = document.createElement('div');
     target.id = 'footer-contact';
@@ -145,6 +155,80 @@ describe('NavbarComponent', () => {
     } finally {
       document.body.removeChild(target);
     }
+  });
+
+  describe('userInitials getter', () => {
+    it('returns two initials from a dot-separated username', () => {
+      const stub: any = {
+        authStatus$,
+        getUsername: () => 'john.doe',
+        hasAnyRole: () => false,
+      };
+      const comp = new NavbarComponent(
+        createTranslateStub(),
+        {} as never,
+        createElementRefStub(),
+        stub,
+        createRouterStub(),
+        {} as never,
+        createLanguageServiceStub()
+      );
+      expect(comp.userInitials).toBe('JD');
+    });
+
+    it('returns first two chars when username has a single segment', () => {
+      const stub: any = {
+        authStatus$,
+        getUsername: () => 'alice',
+        hasAnyRole: () => false,
+      };
+      const comp = new NavbarComponent(
+        createTranslateStub(),
+        {} as never,
+        createElementRefStub(),
+        stub,
+        createRouterStub(),
+        {} as never,
+        createLanguageServiceStub()
+      );
+      expect(comp.userInitials).toBe('AL');
+    });
+
+    it('strips the email domain before computing initials', () => {
+      const stub: any = {
+        authStatus$,
+        getUsername: () => 'jane.smith@example.com',
+        hasAnyRole: () => false,
+      };
+      const comp = new NavbarComponent(
+        createTranslateStub(),
+        {} as never,
+        createElementRefStub(),
+        stub,
+        createRouterStub(),
+        {} as never,
+        createLanguageServiceStub()
+      );
+      expect(comp.userInitials).toBe('JS');
+    });
+
+    it('falls back to AD when username is null', () => {
+      const stub: any = {
+        authStatus$,
+        getUsername: () => null,
+        hasAnyRole: () => false,
+      };
+      const comp = new NavbarComponent(
+        createTranslateStub(),
+        {} as never,
+        createElementRefStub(),
+        stub,
+        createRouterStub(),
+        {} as never,
+        createLanguageServiceStub()
+      );
+      expect(comp.userInitials).toBe('AD');
+    });
   });
 });
 
@@ -191,5 +275,114 @@ describe('NavbarComponent template', () => {
     expect(menuHomeLink)
       .withContext('separate Home menu link should be removed')
       .toBeNull();
+  });
+
+  it('renders the TH language button', () => {
+    const thBtn = fixture.debugElement.query(
+      By.css('.navbar-lang-btn[aria-pressed]')
+    );
+    expect(thBtn).withContext('TH/EN toggle should be present').toBeTruthy();
+  });
+
+  it('marks the active language button with the active class', () => {
+    fixture.componentInstance.currentLanguage = 'th';
+    fixture.detectChanges();
+
+    const buttons = fixture.debugElement.queryAll(By.css('.navbar-lang-btn'));
+    const activeButtons = buttons.filter(btn =>
+      btn.nativeElement.classList.contains('active')
+    );
+    expect(activeButtons.length).toBe(1);
+    expect(activeButtons[0].nativeElement.textContent.trim()).toBe('TH');
+  });
+
+  it('switches the active class to EN when EN is the current language', () => {
+    fixture.componentInstance.currentLanguage = 'en';
+    fixture.detectChanges();
+
+    const buttons = fixture.debugElement.queryAll(By.css('.navbar-lang-btn'));
+    const activeButtons = buttons.filter(btn =>
+      btn.nativeElement.classList.contains('active')
+    );
+    expect(activeButtons.length).toBe(1);
+    expect(activeButtons[0].nativeElement.textContent.trim()).toBe('EN');
+  });
+
+  it('does not show the avatar when logged out', () => {
+    const avatar = fixture.debugElement.query(By.css('.navbar-avatar'));
+    expect(avatar).withContext('avatar should not render when logged out').toBeNull();
+  });
+});
+
+describe('NavbarComponent template (logged in)', () => {
+  let fixture: ComponentFixture<NavbarComponent>;
+  let component: NavbarComponent;
+
+  const authStub = {
+    authStatus$: new BehaviorSubject<boolean>(true),
+    getUsername: () => 'john.doe',
+    hasAnyRole: (required: string[]) => required.includes('admin'),
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [NavbarComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(NavbarComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('shows the avatar with user initials when logged in', () => {
+    const avatar = fixture.debugElement.query(By.css('.navbar-avatar'));
+    expect(avatar).withContext('avatar should render when logged in').toBeTruthy();
+    expect(avatar.nativeElement.textContent.trim()).toBe('JD');
+  });
+
+  it('opens and closes the profile menu when the avatar is toggled', () => {
+    expect(fixture.debugElement.query(By.css('.navbar-profile-menu'))).toBeNull();
+
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+    expect(
+      fixture.debugElement.query(By.css('.navbar-profile-menu')),
+    ).withContext('menu should open on first toggle').toBeTruthy();
+
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+    expect(
+      fixture.debugElement.query(By.css('.navbar-profile-menu')),
+    ).withContext('menu should close on second toggle').toBeNull();
+  });
+
+  it('closes the open profile menu on Escape (parity with admin topbar)', () => {
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('.navbar-profile-menu'))).toBeTruthy();
+
+    component.closeProfileDropdownOnEscape();
+    fixture.detectChanges();
+    expect(
+      fixture.debugElement.query(By.css('.navbar-profile-menu')),
+    ).withContext('Escape should close the menu').toBeNull();
+  });
+
+  it('shows the admin dashboard link in the menu for admin users', () => {
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+
+    const dashboardLink = fixture.debugElement.query(
+      By.css('.navbar-profile-item[href="/admin/dashboard"]'),
+    );
+    expect(dashboardLink)
+      .withContext('admin users should see the dashboard link')
+      .toBeTruthy();
   });
 });

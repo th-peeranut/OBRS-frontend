@@ -1,6 +1,7 @@
 import {
   Component,
   ElementRef,
+  HostListener,
   OnDestroy,
   OnInit,
   Renderer2,
@@ -19,25 +20,20 @@ import { LanguageService } from '../../services/language.service';
   styleUrl: './navbar.component.scss',
 })
 export class NavbarComponent implements OnInit, OnDestroy {
-  isLanguageDropdownOpen: boolean = false;
   isProfileDropdownOpen: boolean = false;
 
   isShowPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
-  @ViewChild('languageDropdown', { static: true })
-  languageDropdown!: ElementRef;
-  @ViewChild('profileDropdown', { static: true }) profileDropdown!: ElementRef;
+  @ViewChild('profileDropdown') profileDropdown!: ElementRef;
 
   isLogin: boolean = false;
   isAdmin: boolean = false;
   isSalesperson: boolean = false;
   isDriver: boolean = false;
-  userName: string | null = '';
 
   authSubscription$: Subscription;
-  private unlistenLanguageDropdown?: () => void;
   private unlistenProfileDropdown?: () => void;
 
   constructor(
@@ -60,49 +56,34 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.isAdmin = status && this.authService.hasAnyRole(['admin']);
         this.isSalesperson = status && this.authService.hasAnyRole(['salesperson']);
         this.isDriver = status && this.authService.hasAnyRole(['driver']);
-        this.userName = this.authService.getUsername();
       }
     );
   }
 
   ngOnDestroy(): void {
     if (this.authSubscription$) this.authSubscription$.unsubscribe();
-    this.unlistenLanguageDropdown?.();
     this.unlistenProfileDropdown?.();
   }
 
+  get userInitials(): string {
+    const username = this.authService.getUsername() ?? '';
+    const namePart = username.split('@')[0] ?? '';
+    const segments = namePart.split(/[.\-_\s]+/).filter((segment) => segment.length > 0);
+
+    if (segments.length === 0) {
+      return 'AD';
+    }
+
+    if (segments.length === 1) {
+      return segments[0].slice(0, 2).toUpperCase();
+    }
+
+    return (segments[0][0] + segments[1][0]).toUpperCase();
+  }
+
   switchLanguage(lang: string) {
-    this.isLanguageDropdownOpen = false;
     this.currentLanguage = lang;
     void this.languageService.switch(lang);
-  }
-
-  toggleDropdown() {
-    this.isLanguageDropdownOpen = !this.isLanguageDropdownOpen;
-
-    if (this.isLanguageDropdownOpen) {
-      this.unlistenLanguageDropdown?.();
-      this.unlistenLanguageDropdown = this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleLanguageDropdownOutsideClick(event)
-      );
-    } else {
-      this.unlistenLanguageDropdown?.();
-      this.unlistenLanguageDropdown = undefined;
-    }
-  }
-
-  handleLanguageDropdownOutsideClick(event: Event) {
-    const targetElement = event.target as HTMLElement;
-    const clickedInsideDropdown =
-      this.elementRef.nativeElement.contains(targetElement);
-    const clickedDropdownButton =
-      this.languageDropdown.nativeElement.contains(targetElement);
-
-    if (clickedInsideDropdown && clickedDropdownButton) {
-      this.isLanguageDropdownOpen = true;
-    } else {
-      this.isLanguageDropdownOpen = false;
-    }
   }
 
   toggleProfileDropdown() {
@@ -114,6 +95,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.handleProfileDropdownOutsideClick(event)
       );
     } else {
+      this.unlistenProfileDropdown?.();
+      this.unlistenProfileDropdown = undefined;
+    }
+  }
+
+  // Mirror the admin topbar: Escape closes the open profile menu.
+  @HostListener('document:keydown.escape')
+  closeProfileDropdownOnEscape() {
+    if (this.isProfileDropdownOpen) {
+      this.isProfileDropdownOpen = false;
       this.unlistenProfileDropdown?.();
       this.unlistenProfileDropdown = undefined;
     }
