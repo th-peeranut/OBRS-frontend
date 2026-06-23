@@ -53,18 +53,10 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  column-gap: 16px;
+  column-gap: 10px;
   flex-wrap: nowrap;
 
   height: 80px;
-}
-
-.divide-line {
-  width: 40px;
-  height: 0px;
-
-  border: 1px solid #dddee1;
-  transform: rotate(-90deg);
 }
 
 .btn-signin {
@@ -231,10 +223,6 @@
     flex-wrap: wrap;
     column-gap: 10px;
     row-gap: 8px;
-  }
-
-  .divide-line {
-    display: none;
   }
 
   .btn-signin,
