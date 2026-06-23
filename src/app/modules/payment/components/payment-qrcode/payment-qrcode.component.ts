@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
+import { TranslateService } from '@ngx-translate/core';
 import { combineLatest, firstValueFrom, Subject } from 'rxjs';
 import { distinctUntilChanged, map, take, takeUntil } from 'rxjs/operators';
 import QRCode from 'qrcode';
@@ -45,12 +46,12 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
   qrImageUrl = '';
   qrPaymentUrl = '';
   referenceNo = '';
-  countdown = '10 : 00';
+  countdown = '15 : 00';
   isSubmittingPayment = false;
   isWaitingForConfirmation = false;
   private hasRequestedQrCode = false;
   private paymentIdempotencyKey = '';
-  private countdownTotalSeconds = 10 * 60;
+  private countdownTotalSeconds = 15 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private readonly destroy$ = new Subject<void>();
 
@@ -59,7 +60,8 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private translate: TranslateService
   ) {}
 
   ngOnInit(): void {
@@ -88,15 +90,24 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.isWaitingForConfirmation = false;
   }
 
-  async refreshQrCode(): Promise<void> {
-    if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
+  async confirmPayment(): Promise<void> {
+    if (this.isSubmittingPayment || !this.qrPaymentUrl) {
       return;
     }
 
-    this.qrImageUrl = '';
-    this.qrPaymentUrl = '';
-    this.hasRequestedQrCode = false;
-    await this.ensurePromptPayQrCode(true);
+    const isConfirmed = await this.alertService.confirm({
+      title: this.translate.instant('PAYMENT.QR.CONFIRM_DIALOG.TITLE'),
+      text: this.translate.instant('PAYMENT.QR.CONFIRM_DIALOG.MESSAGE'),
+      confirmButtonText: this.translate.instant('PAYMENT.QR.CONFIRM_DIALOG.CONFIRM'),
+      cancelButtonText: this.translate.instant('PAYMENT.QR.CONFIRM_DIALOG.CANCEL'),
+      icon: 'warning',
+    });
+
+    if (!isConfirmed) {
+      return;
+    }
+
+    window.location.href = this.qrPaymentUrl;
   }
 
   private async ensurePromptPayQrCode(showMissingBookingAlert = false): Promise<void> {
@@ -155,12 +166,34 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     }
   }
 
-  downloadQrCode(): void {
+  async downloadQrCode(): Promise<void> {
     if (!this.qrImageUrl) {
       return;
     }
 
-    window.open(this.qrImageUrl, '_blank', 'noopener');
+    const filename = this.getQrCodeDownloadFilename(this.qrImageUrl);
+    if (this.qrImageUrl.startsWith('data:') || this.qrImageUrl.startsWith('blob:')) {
+      this.triggerQrCodeDownload(this.qrImageUrl, filename);
+      return;
+    }
+
+    try {
+      const response = await fetch(this.qrImageUrl, { mode: 'cors' });
+      if (!response.ok) {
+        throw new Error(`QR image request failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      this.triggerQrCodeDownload(
+        objectUrl,
+        this.getQrCodeDownloadFilename(this.qrImageUrl, blob.type)
+      );
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    } catch (error) {
+      console.warn('QR code download fallback used', error);
+      this.triggerQrCodeDownload(this.qrImageUrl, filename);
+    }
   }
 
   private async handlePromptPayResponse(
@@ -175,7 +208,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     const qrImageSource = this.getQrImageSource(payment);
     const authorizeUri = this.getAuthorizeUri(payment);
     if (qrImageSource || authorizeUri) {
-      this.qrPaymentUrl = authorizeUri ?? qrImageSource ?? '';
+      this.qrPaymentUrl = authorizeUri ?? '';
       this.qrImageUrl = qrImageSource ?? await this.generateQrImage(authorizeUri ?? '');
       this.referenceNo = this.getTransactionId(payment) ?? this.referenceNo;
       this.isWaitingForConfirmation = false;
@@ -248,7 +281,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   private startCountdown(): void {
     this.clearCountdown();
-    this.countdownTotalSeconds = 10 * 60;
+    this.countdownTotalSeconds = 15 * 60;
     this.updateCountdownLabel();
 
     this.countdownIntervalId = setInterval(() => {
@@ -271,6 +304,35 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   private padTime(value: number): string {
     return value < 10 ? `0${value}` : `${value}`;
+  }
+
+  private triggerQrCodeDownload(url: string, filename: string): void {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  private getQrCodeDownloadFilename(source: string, mimeType = ''): string {
+    const reference = this.referenceNo || 'promptpay';
+    const safeReference = reference.replace(/[^a-zA-Z0-9_-]/g, '-');
+    const extension = this.getQrCodeFileExtension(source, mimeType);
+    return `promptpay-qr-${safeReference}.${extension}`;
+  }
+
+  private getQrCodeFileExtension(source: string, mimeType: string): 'png' | 'svg' {
+    if (
+      mimeType.includes('svg') ||
+      source.startsWith('data:image/svg') ||
+      source.toLowerCase().includes('.svg')
+    ) {
+      return 'svg';
+    }
+
+    return 'png';
   }
 
   private generateReferenceNo(): string {

@@ -14,11 +14,13 @@
         />
       </div>
 
-      <article class="ticket-paper">
+      <article #ticketPaper class="ticket-paper">
         <div class="ticket-header">
           <img
             class="ticket-logo"
             src="images/logo.svg"
+            width="104"
+            height="45"
             [attr.alt]="'E_TICKET.LOGO_ALT' | translate"
           />
           <div class="ticket-subtitle">
@@ -178,7 +180,12 @@
           </div>
         </div>
 
-        <button type="button" class="download-btn">
+        <button
+          type="button"
+          class="download-btn"
+          (click)="downloadTicketImage()"
+          [disabled]="isDownloadingTicket"
+        >
           <img src="icons/payment-download.svg" alt="" aria-hidden="true" />
           {{ "E_TICKET.DOWNLOAD" | translate }}
         </button>

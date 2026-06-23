@@ -655,12 +655,22 @@
     },
     "QR": {
       "REFRESH": "Refresh QR",
+      "CONFIRM_PAYMENT": "Confirm Payment",
+      "CONFIRM_DIALOG": {
+        "TITLE": "Confirm payment?",
+        "MESSAGE": "Please scan and pay with the QR code in your banking app before confirming. Continue only after the transfer is complete.",
+        "CONFIRM": "I have paid",
+        "CANCEL": "Not yet"
+      },
       "REFRESH_HINT": "Available in {{seconds}}s",
       "DOWNLOAD": "Download QR",
       "BACK": "Back",
       "PAY_NOW": "Pay now",
       "MERCHANT_NAME": "Merchant name",
       "MERCHANT_REF": "Reference:"
+    },
+    "RESULT": {
+      "FAILED_REDIRECT": "Payment failed. Please select a schedule and book again."
     }
   },
   "E_TICKET": {

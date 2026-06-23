@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpContext, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
@@ -11,6 +11,11 @@ import {
   PendingRefund,
 } from '../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../shared/lib/idempotency-key';
+import { SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
+
+interface PaymentRequestOptions {
+  skipGlobalLoadingAlert?: boolean;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -73,10 +78,18 @@ export class PaymentService {
   }
 
   getBookingPayments(
-    bookingId: number
+    bookingId: number,
+    options: PaymentRequestOptions = {}
   ): Observable<ResponseAPI<PaymentByBookingIdResponse>> {
+    const requestOptions = options.skipGlobalLoadingAlert
+      ? {
+          context: new HttpContext().set(SKIP_GLOBAL_LOADING_ALERT, true),
+        }
+      : {};
+
     return this.http.get<ResponseAPI<PaymentByBookingIdResponse>>(
-      `${environment.apiUrl}/api/private/bookings/${bookingId}/payments`
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/payments`,
+      requestOptions
     );
   }
 

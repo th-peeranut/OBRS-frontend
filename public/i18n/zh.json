@@ -655,12 +655,22 @@
     },
     "QR": {
       "REFRESH": "刷新二维码",
+      "CONFIRM_PAYMENT": "确认付款",
+      "CONFIRM_DIALOG": {
+        "TITLE": "确认已付款？",
+        "MESSAGE": "请先使用银行应用扫描二维码并完成付款。请仅在转账成功后继续确认。",
+        "CONFIRM": "我已付款",
+        "CANCEL": "还没有"
+      },
       "REFRESH_HINT": "{{seconds}}秒后可用",
       "DOWNLOAD": "下载二维码",
       "BACK": "返回",
       "PAY_NOW": "立即付款",
       "MERCHANT_NAME": "商家名称",
       "MERCHANT_REF": "参考："
+    },
+    "RESULT": {
+      "FAILED_REDIRECT": "付款失败。请重新选择班次并再次预订。"
     }
   },
   "E_TICKET": {

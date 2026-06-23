@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import {
@@ -11,6 +11,7 @@ import {
   takeUntil,
 } from 'rxjs';
 import dayjs from 'dayjs';
+import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
@@ -49,6 +50,8 @@ type Locale = 'en' | 'th' | 'zh';
   styleUrl: './e-ticket.component.scss',
 })
 export class ETicketComponent implements OnInit, OnDestroy {
+  @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
+
   bookingNumber = '-';
   ticketNumber = '-';
   travelDate = '-';
@@ -63,6 +66,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   paymentDate = '-';
   totalAmount = '0.00';
   qrCodeDataUrl = '';
+  isDownloadingTicket = false;
 
   passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
@@ -151,6 +155,56 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
   trackByIndex(index: number): number {
     return index;
+  }
+
+  async downloadTicketImage(): Promise<void> {
+    const ticketElement = this.ticketPaper?.nativeElement;
+    if (!ticketElement || this.isDownloadingTicket) {
+      return;
+    }
+
+    this.isDownloadingTicket = true;
+
+    try {
+      const canvas = await html2canvas(ticketElement, {
+        backgroundColor: '#ffffff',
+        scale: Math.max(window.devicePixelRatio || 1, 2),
+        useCORS: true,
+        onclone: (clonedDocument) => {
+          clonedDocument
+            .querySelector('.ticket-paper')
+            ?.classList.add('is-exporting');
+        },
+        ignoreElements: (element) => element.classList.contains('download-btn'),
+      });
+
+      const imageUrl = canvas.toDataURL('image/png');
+      this.triggerTicketDownload(imageUrl);
+    } catch (error) {
+      console.error('Download e-ticket image failed', error);
+    } finally {
+      this.isDownloadingTicket = false;
+    }
+  }
+
+  private triggerTicketDownload(imageUrl: string): void {
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = this.getTicketDownloadFilename();
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  private getTicketDownloadFilename(): string {
+    const rawReference =
+      this.ticketNumber !== '-' ? this.ticketNumber : this.bookingNumber;
+    const safeReference = String(rawReference || 'ticket')
+      .trim()
+      .replace(/[^a-zA-Z0-9_-]/g, '-');
+
+    return `e-ticket-${safeReference || 'ticket'}.png`;
   }
 
   private mapTicketFields(
