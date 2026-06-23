@@ -67,13 +67,13 @@
     "PAGES": {
       "DEFAULT": "Admin Dashboard",
       "DASHBOARD": "Dashboard",
-      "LOOKUP_SETTINGS": "Lookup Settings",
-      "ROLE_MANAGEMENT": "Role Management",
-      "USER_MANAGEMENT": "User Management",
-      "VEHICLE_MANAGEMENT": "Vehicle Management",
-      "ROUTE_MANAGEMENT": "Route Management",
+      "LOOKUP_SETTINGS": "Lookups",
+      "ROLE_MANAGEMENT": "Roles",
+      "USER_MANAGEMENT": "Users",
+      "VEHICLE_MANAGEMENT": "Vehicles",
+      "ROUTE_MANAGEMENT": "Routes",
       "SCHEDULES": "Schedules",
-      "BOOKINGS_MANAGEMENT": "Bookings Management"
+      "BOOKINGS_MANAGEMENT": "Bookings"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -87,7 +87,8 @@
       "CLOSE_MENU": "Close navigation menu",
       "PROFILE_MENU": "Open profile menu",
       "LANGUAGE_EN": "Switch to English",
-      "LANGUAGE_TH": "Switch to Thai"
+      "LANGUAGE_TH": "Switch to Thai",
+      "STAFF_AREA": "Staff Area"
     },
     "COMMON": {
       "LOADING": "Loading data...",
@@ -167,6 +168,7 @@
     "ROLES": {
       "TITLE": "Access Control Archive",
       "SUBTITLE": "Define and audit role permissions across the organization.",
+      "TABLE_TITLE": "Role List",
       "ADD": "Add Role",
       "ACTIVE_ROLES": "Active Roles",
       "LAST_UPDATE": "Last Update",
@@ -201,6 +203,7 @@
     "USERS": {
       "TITLE": "User Management",
       "SUBTITLE": "Manage account access, statuses, and role assignments.",
+      "TABLE_TITLE": "User List",
       "INVITE": "Add User",
       "ACTIVE_USERS": "Active Users",
       "FILTER_ROLE": "Role: All Roles",
@@ -248,6 +251,8 @@
     "ROUTES": {
       "TITLE": "Route Management",
       "SUBTITLE": "Manage route records, statuses, stop sequences, and fare segments.",
+      "STOPS_EMPTY": "No stops configured for this route.",
+      "SEGMENTS_EMPTY": "No segments configured for this route.",
       "ADD": "Add Route",
       "TOTAL_ROUTES": "Total Routes",
       "ACTIVE_ROUTES": "Active Routes",
@@ -338,12 +343,15 @@
     "BOOKINGS": {
       "TITLE": "Bookings Management",
       "SUBTITLE": "Search, filter, and export customer bookings.",
-      "SEARCH_PLACEHOLDER": "Search by booking ID or customer...",
+      "TABLE_TITLE": "Booking List",
+      "SEARCH_PLACEHOLDER": "Search by booking ID or booker name...",
       "FILTER_STATUS": "All Statuses",
       "BOOKING_ID": "Booking ID",
-      "CUSTOMER": "Customer Name",
+      "BOOKER_NAME": "Booker Name",
+      "CUSTOMER": "Booker Name",
       "ROUTE": "Route",
       "BOOKING_DATE": "Booking Date",
+      "DEPARTURE_TIME": "Departure Time",
       "TOTAL_FARE": "Total Fare",
       "BOOKING_STATUS": "Booking Status",
       "PAYMENT_STATUS": "Payment Status",

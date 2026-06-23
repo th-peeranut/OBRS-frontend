@@ -67,13 +67,13 @@
     "PAGES": {
       "DEFAULT": "管理员仪表板",
       "DASHBOARD": "仪表板",
-      "LOOKUP_SETTINGS": "查找设置",
-      "ROLE_MANAGEMENT": "角色管理",
-      "USER_MANAGEMENT": "用户管理",
-      "VEHICLE_MANAGEMENT": "车辆管理",
-      "ROUTE_MANAGEMENT": "路线管理",
-      "SCHEDULES": "班次管理",
-      "BOOKINGS_MANAGEMENT": "预订管理"
+      "LOOKUP_SETTINGS": "查找",
+      "ROLE_MANAGEMENT": "角色",
+      "USER_MANAGEMENT": "用户",
+      "VEHICLE_MANAGEMENT": "车辆",
+      "ROUTE_MANAGEMENT": "路线",
+      "SCHEDULES": "班次",
+      "BOOKINGS_MANAGEMENT": "预订"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -87,7 +87,8 @@
       "CLOSE_MENU": "关闭导航菜单",
       "PROFILE_MENU": "打开个人资料菜单",
       "LANGUAGE_EN": "切换到英文",
-      "LANGUAGE_TH": "切换到泰文"
+      "LANGUAGE_TH": "切换到泰文",
+      "STAFF_AREA": "员工区域"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
@@ -167,6 +168,7 @@
     "ROLES": {
       "TITLE": "访问控制档案",
       "SUBTITLE": "定义和审计整个组织的角色权限。",
+      "TABLE_TITLE": "角色列表",
       "ADD": "添加角色",
       "ACTIVE_ROLES": "活跃角色",
       "LAST_UPDATE": "最后更新",
@@ -201,6 +203,7 @@
     "USERS": {
       "TITLE": "用户管理",
       "SUBTITLE": "管理账户访问权限、状态和角色分配。",
+      "TABLE_TITLE": "用户列表",
       "INVITE": "添加用户",
       "ACTIVE_USERS": "活跃用户",
       "FILTER_ROLE": "角色：所有角色",
@@ -248,6 +251,8 @@
     "ROUTES": {
       "TITLE": "路线管理",
       "SUBTITLE": "管理路线记录、状态、停靠点顺序和票价区间。",
+      "STOPS_EMPTY": "此路线尚未配置停靠点。",
+      "SEGMENTS_EMPTY": "此路线尚未配置区间。",
       "ADD": "添加路线",
       "TOTAL_ROUTES": "总路线数",
       "ACTIVE_ROUTES": "活跃路线",
@@ -338,12 +343,15 @@
     "BOOKINGS": {
       "TITLE": "预订管理",
       "SUBTITLE": "搜索、筛选和导出客户预订。",
-      "SEARCH_PLACEHOLDER": "按预订编号或客户搜索...",
+      "TABLE_TITLE": "预订列表",
+      "SEARCH_PLACEHOLDER": "按预订编号或预订人姓名搜索...",
       "FILTER_STATUS": "所有状态",
       "BOOKING_ID": "预订编号",
-      "CUSTOMER": "客户姓名",
+      "BOOKER_NAME": "预订人姓名",
+      "CUSTOMER": "预订人姓名",
       "ROUTE": "路线",
       "BOOKING_DATE": "预订日期",
+      "DEPARTURE_TIME": "出发时间",
       "TOTAL_FARE": "总票价",
       "BOOKING_STATUS": "预订状态",
       "PAYMENT_STATUS": "支付状态",

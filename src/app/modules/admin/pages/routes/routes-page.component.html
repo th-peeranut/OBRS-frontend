@@ -150,7 +150,7 @@
       <span class="admin-muted" *ngIf="isDetailLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</span>
     </div>
 
-    <ul class="admin-timeline">
+    <ul class="admin-timeline" *ngIf="stops.length > 0">
       <li *ngFor="let stop of stops; let i = index">
         <div class="admin-timeline-dot" [class.is-last]="i === stops.length - 1"></div>
         <div class="admin-cell-stack">
@@ -162,6 +162,9 @@
         </div>
       </li>
     </ul>
+    <p class="admin-muted" *ngIf="stops.length === 0 && !isDetailLoading">
+      {{ 'ADMIN.ROUTES.STOPS_EMPTY' | translate }}
+    </p>
   </article>
 
   <article class="admin-card admin-grid-span-2">
@@ -214,6 +217,9 @@
                 <span class="material-symbols-outlined">edit_square</span>
               </button>
             </td>
+          </tr>
+          <tr *ngIf="allSegments.length === 0 && !isDetailLoading" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.ROUTES.SEGMENTS_EMPTY' | translate }}</td>
           </tr>
         </tbody>
       </table>

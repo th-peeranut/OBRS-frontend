@@ -67,13 +67,13 @@
     "PAGES": {
       "DEFAULT": "แดชบอร์ดผู้ดูแล",
       "DASHBOARD": "แดชบอร์ด",
-      "LOOKUP_SETTINGS": "ตั้งค่า Lookup",
-      "ROLE_MANAGEMENT": "จัดการบทบาท",
-      "USER_MANAGEMENT": "จัดการผู้ใช้",
-      "VEHICLE_MANAGEMENT": "จัดการยานพาหนะ",
-      "ROUTE_MANAGEMENT": "จัดการเส้นทาง",
+      "LOOKUP_SETTINGS": "Lookup",
+      "ROLE_MANAGEMENT": "บทบาท",
+      "USER_MANAGEMENT": "ผู้ใช้",
+      "VEHICLE_MANAGEMENT": "ยานพาหนะ",
+      "ROUTE_MANAGEMENT": "เส้นทาง",
       "SCHEDULES": "ตารางเดินรถ",
-      "BOOKINGS_MANAGEMENT": "จัดการการจอง"
+      "BOOKINGS_MANAGEMENT": "การจอง"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -87,7 +87,8 @@
       "CLOSE_MENU": "ปิดเมนูนำทาง",
       "PROFILE_MENU": "เปิดเมนูโปรไฟล์",
       "LANGUAGE_EN": "เปลี่ยนเป็นภาษาอังกฤษ",
-      "LANGUAGE_TH": "เปลี่ยนเป็นภาษาไทย"
+      "LANGUAGE_TH": "เปลี่ยนเป็นภาษาไทย",
+      "STAFF_AREA": "พื้นที่พนักงาน"
     },
     "COMMON": {
       "LOADING": "กำลังโหลดข้อมูล...",
@@ -167,6 +168,7 @@
     "ROLES": {
       "TITLE": "คลังการควบคุมสิทธิ์",
       "SUBTITLE": "กำหนดและตรวจสอบบทบาทขององค์กร",
+      "TABLE_TITLE": "รายการบทบาท",
       "ADD": "เพิ่มบทบาท",
       "ACTIVE_ROLES": "บทบาทที่ใช้งาน",
       "LAST_UPDATE": "อัปเดตล่าสุด",
@@ -201,6 +203,7 @@
     "USERS": {
       "TITLE": "จัดการผู้ใช้",
       "SUBTITLE": "จัดการสิทธิ์การเข้าถึง สถานะ และบทบาทผู้ใช้",
+      "TABLE_TITLE": "รายการผู้ใช้",
       "INVITE": "เพิ่มผู้ใช้",
       "ACTIVE_USERS": "ผู้ใช้ที่ใช้งาน",
       "FILTER_ROLE": "บทบาท: ทั้งหมด",
@@ -248,6 +251,8 @@
     "ROUTES": {
       "TITLE": "จัดการเส้นทาง",
       "SUBTITLE": "จัดการข้อมูลเส้นทาง สถานะ ลำดับจุดจอด และค่าโดยสารรายช่วง",
+      "STOPS_EMPTY": "ยังไม่มีจุดจอดสำหรับเส้นทางนี้",
+      "SEGMENTS_EMPTY": "ยังไม่มีช่วงเส้นทางสำหรับเส้นทางนี้",
       "ADD": "เพิ่มเส้นทาง",
       "TOTAL_ROUTES": "จำนวนเส้นทางทั้งหมด",
       "ACTIVE_ROUTES": "เส้นทางที่ใช้งาน",
@@ -338,12 +343,15 @@
     "BOOKINGS": {
       "TITLE": "จัดการการจอง",
       "SUBTITLE": "ค้นหา กรอง และส่งออกข้อมูลการจองของลูกค้า",
-      "SEARCH_PLACEHOLDER": "ค้นหาด้วยรหัสการจองหรือชื่อลูกค้า...",
+      "TABLE_TITLE": "รายการการจอง",
+      "SEARCH_PLACEHOLDER": "ค้นหาด้วยรหัสการจองหรือชื่อผู้จอง...",
       "FILTER_STATUS": "ทุกสถานะ",
       "BOOKING_ID": "รหัสการจอง",
-      "CUSTOMER": "ชื่อลูกค้า",
+      "BOOKER_NAME": "ชื่อผู้จอง",
+      "CUSTOMER": "ชื่อผู้จอง",
       "ROUTE": "เส้นทาง",
       "BOOKING_DATE": "วันที่จอง",
+      "DEPARTURE_TIME": "เวลาออกเดินทาง",
       "TOTAL_FARE": "ค่าโดยสารรวม",
       "BOOKING_STATUS": "สถานะการจอง",
       "PAYMENT_STATUS": "สถานะการชำระเงิน",

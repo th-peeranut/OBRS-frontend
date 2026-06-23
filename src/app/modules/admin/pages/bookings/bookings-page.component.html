@@ -9,6 +9,10 @@
 </section>
 
 <section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.BOOKINGS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
   <div class="admin-page-filters">
     <label class="admin-search">
       <span class="material-symbols-outlined">search</span>
@@ -44,9 +48,10 @@
       <thead>
         <tr>
           <th>{{ 'ADMIN.BOOKINGS.BOOKING_ID' | translate }}</th>
-          <th>{{ 'ADMIN.BOOKINGS.CUSTOMER' | translate }}</th>
+          <th>{{ 'ADMIN.BOOKINGS.BOOKER_NAME' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.ROUTE' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.BOOKING_DATE' | translate }}</th>
+          <th>{{ 'ADMIN.BOOKINGS.DEPARTURE_TIME' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.TOTAL_FARE' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.BOOKING_STATUS' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.PAYMENT_STATUS' | translate }}</th>
@@ -55,6 +60,7 @@
       <tbody>
         <ng-container *ngIf="isLoading">
           <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -71,6 +77,7 @@
             <td>{{ booking.customer }}</td>
             <td>{{ booking.route }}</td>
             <td>{{ booking.bookingDate }}</td>
+            <td>{{ booking.departureTime }}</td>
             <td class="admin-emphasis">{{ booking.totalFare }}</td>
             <td>
               <span class="admin-status" [ngClass]="statusClass(booking.bookingStatus)">
@@ -85,7 +92,7 @@
           </tr>
 
           <tr *ngIf="filteredBookings.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="7">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            <td colspan="8">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
           </tr>
         </ng-container>
       </tbody>

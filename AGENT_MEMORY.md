@@ -1,5 +1,19 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-23 — Bookings departureTime: don't paper over a missing DTO field with `as` (self-fixed, #23)
+The hotfix read departure time via `(schedule as { departureDateTime?: string })?.departureDateTime`.
+The cast existed only because `AdminBookingScheduleDto` lacked the field that backend #17 now serves.
+Two problems it hid:
+1. Selection was `bookingSchedules?.[0] ?? journeys?.[0]` — it picks the FIRST non-null *object*, then
+   reads `.departureDateTime`. If `bookingSchedules[0]` exists but has no timestamp (current SIT state),
+   you get `undefined` and never fall through to `journeys[0].departureDateTime`. The `??` was at the
+   wrong level (object, not field).
+Fix pattern: add the real field to the DTO (`departureDateTime?`/`arrivalDateTime?` on
+AdminBookingScheduleDto) and coalesce at the FIELD level:
+`booking.bookingSchedules?.[0]?.departureDateTime ?? booking.journeys?.[0]?.departureDateTime ?? null`.
+Rule: when a backend contract adds a field, update the typed DTO — never reach for `as { x?: T }`. The
+cast disables exactly the null-safety analysis you need here.
+
 ## 2026-06-20 — Language not persisted on 5 more customer pages (self-fixed, #22)
 
 **Files:** `switchLanguage()` in `login.component.ts`, `login-mobile.component.ts`,

@@ -19,6 +19,7 @@ export interface BookingRow {
   customer: string;
   route: string;
   bookingDate: string;
+  departureTime: string;
   totalFare: string;
   bookingStatus: string;
   paymentStatus: string;
@@ -146,11 +147,17 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
 
     const bookingStatus = this.parseStatus(booking.status);
 
+    const departureDateTimeRaw =
+      booking.bookingSchedules?.[0]?.departureDateTime ??
+      booking.journeys?.[0]?.departureDateTime ??
+      null;
+
     return {
       bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
       customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
       route,
-      bookingDate: this.formatDate(booking.createdAt),
+      bookingDate: this.formatDateTime(booking.createdAt),
+      departureTime: this.formatDateTime(departureDateTimeRaw),
       totalFare,
       bookingStatus: bookingStatus.name,
       paymentStatus: (
@@ -176,7 +183,7 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
     return 'PENDING';
   }
 
-  private formatDate(value: string | null | undefined): string {
+  private formatDateTime(value: string | null | undefined): string {
     if (!value) {
       return '-';
     }
@@ -190,6 +197,9 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       year: 'numeric',
       month: 'short',
       day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
     }).format(date);
   }
 

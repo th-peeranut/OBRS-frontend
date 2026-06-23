@@ -172,9 +172,10 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
 
     const headers = [
       this.translate.instant('ADMIN.BOOKINGS.BOOKING_ID'),
-      this.translate.instant('ADMIN.BOOKINGS.CUSTOMER'),
+      this.translate.instant('ADMIN.BOOKINGS.BOOKER_NAME'),
       this.translate.instant('ADMIN.BOOKINGS.ROUTE'),
       this.translate.instant('ADMIN.BOOKINGS.BOOKING_DATE'),
+      this.translate.instant('ADMIN.BOOKINGS.DEPARTURE_TIME'),
       this.translate.instant('ADMIN.BOOKINGS.TOTAL_FARE'),
       this.translate.instant('ADMIN.BOOKINGS.BOOKING_STATUS'),
       this.translate.instant('ADMIN.BOOKINGS.PAYMENT_STATUS'),
@@ -186,6 +187,7 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
         row.customer,
         row.route,
         row.bookingDate,
+        row.departureTime,
         row.totalFare,
         row.bookingStatus,
         row.paymentStatus,

@@ -206,6 +206,8 @@ export interface AdminBookingStopDto {
 export interface AdminBookingScheduleDto {
   fromStop?: AdminBookingStopDto;
   toStop?: AdminBookingStopDto;
+  departureDateTime?: string;
+  arrivalDateTime?: string;
 }
 
 export interface AdminBookingJourneyDto {

@@ -101,6 +101,16 @@
             {{ userInitials }}
           </button>
           <div class="admin-profile-menu" *ngIf="isProfileMenuOpen" role="menu">
+            <a
+              *ngIf="isStaffUser"
+              class="admin-profile-item"
+              role="menuitem"
+              [routerLink]="'/staff'"
+              (click)="closeProfileMenu()"
+            >
+              <span class="material-symbols-outlined">badge</span>
+              <span>{{ 'ADMIN.LAYOUT.STAFF_AREA' | translate }}</span>
+            </a>
             <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
               <span class="material-symbols-outlined">logout</span>
               <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>

@@ -65,6 +65,10 @@ export class AdminLayoutComponent implements OnInit {
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
 
+  protected get isStaffUser(): boolean {
+    return this.authService.hasAnyRole(['salesperson', 'driver']);
+  }
+
   protected get userInitials(): string {
     const username = this.authService.getUsername() ?? '';
     const namePart = username.split('@')[0] ?? '';
@@ -130,6 +134,10 @@ export class AdminLayoutComponent implements OnInit {
 
   protected toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  protected closeProfileMenu(): void {
+    this.isProfileMenuOpen = false;
   }
 
   protected onLogout(): void {

@@ -14,6 +14,7 @@ describe('AdminLayoutComponent', () => {
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
+    hasAnyRole: (_roles: string[]) => false,
   };
 
   beforeEach(async () => {
