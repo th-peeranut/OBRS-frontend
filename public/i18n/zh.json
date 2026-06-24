@@ -770,6 +770,7 @@
       "OPEN_MENU": "打开导航菜单",
       "CLOSE_MENU": "关闭导航菜单",
       "PROFILE_MENU": "打开个人资料菜单",
+      "ADMIN_DASHBOARD": "管理后台",
       "LANGUAGE_TH": "切换到泰文",
       "LANGUAGE_EN": "切换到英文",
       "LOGOUT_SUCCESS": "退出成功"

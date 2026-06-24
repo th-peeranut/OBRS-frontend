@@ -98,6 +98,46 @@ describe('StaffLayoutComponent', () => {
     expect(enButton!.nativeElement.getAttribute('aria-pressed')).toBe('true');
   });
 
+  it('shows an Admin Dashboard link in the profile menu for admins', () => {
+    // Regression for #40: admins satisfy the /staff route guard (role hierarchy)
+    // and can land on /staff/sell, but the shell offered no path to /admin.
+    // The upper-right profile menu must expose an /admin/dashboard shortcut.
+    const original = authStub.hasAnyRole;
+    authStub.hasAnyRole = () => true; // user holds the admin role
+    try {
+      const f = TestBed.createComponent(StaffLayoutComponent);
+      f.detectChanges();
+
+      // open the profile dropdown
+      f.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+      f.detectChanges();
+
+      const adminLink = f.debugElement.query(
+        By.css('.admin-profile-menu a[href="/admin/dashboard"]'),
+      );
+      expect(adminLink)
+        .withContext('admins should see an Admin Dashboard link')
+        .toBeTruthy();
+    } finally {
+      authStub.hasAnyRole = original; // never leak the mutated stub into later specs
+    }
+  });
+
+  it('hides the Admin Dashboard link from non-admin staff', () => {
+    // Counterpart to #40: a pure salesperson/driver would be bounced by the
+    // /admin AuthGuard, so the link must not appear for them. Default stub
+    // hasAnyRole returns false → not an admin.
+    fixture.debugElement.query(By.css('.admin-avatar')).nativeElement.click();
+    fixture.detectChanges();
+
+    const adminLink = fixture.debugElement.query(
+      By.css('.admin-profile-menu a[href="/admin/dashboard"]'),
+    );
+    expect(adminLink)
+      .withContext('non-admins must not see the Admin Dashboard link')
+      .toBeNull();
+  });
+
   it('renders nav icons with the bound material-symbols-outlined class', () => {
     // Regression for #31: the staff portal must use .material-symbols-outlined
     // (the webfont class loaded by the app), not the legacy .material-icons class.

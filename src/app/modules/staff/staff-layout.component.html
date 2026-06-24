@@ -97,6 +97,16 @@
             {{ userInitials }}
           </button>
           <div class="admin-profile-menu" *ngIf="isProfileMenuOpen" role="menu">
+            <a
+              *ngIf="isAdmin"
+              routerLink="/admin/dashboard"
+              class="admin-profile-item"
+              role="menuitem"
+              (click)="closeProfileMenu()"
+            >
+              <span class="material-symbols-outlined">admin_panel_settings</span>
+              <span>{{ 'STAFF.LAYOUT.ADMIN_DASHBOARD' | translate }}</span>
+            </a>
             <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
               <span class="material-symbols-outlined">logout</span>
               <span>{{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}</span>

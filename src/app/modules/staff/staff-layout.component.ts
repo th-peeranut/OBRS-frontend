@@ -25,6 +25,13 @@ export class StaffLayoutComponent implements OnInit {
   protected isSidebarOpen = false;
   protected isProfileMenuOpen = false;
 
+  // Whether to surface the Admin Dashboard shortcut in the profile menu.
+  // Admins satisfy the /staff route guard via the backend role hierarchy
+  // (see AuthService.hasAnyRole), so they can land here; gate the link on the
+  // admin role so non-admin staff don't get a dead link the /admin AuthGuard
+  // would only bounce.
+  protected isAdmin = false;
+
   // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:
   // a getter returning a fresh array each change-detection cycle, bound to an
   // *ngFor containing routerLinkActive, recreates those directives on every cycle
@@ -77,6 +84,7 @@ export class StaffLayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.navItems = this.buildNavItems();
+    this.isAdmin = this.authService.hasAnyRole(['admin']);
     void this.setupLanguage();
 
     this.router.events
@@ -105,6 +113,10 @@ export class StaffLayoutComponent implements OnInit {
 
   protected toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  protected closeProfileMenu(): void {
+    this.isProfileMenuOpen = false;
   }
 
   @HostListener('document:keydown.escape')

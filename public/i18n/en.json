@@ -770,6 +770,7 @@
       "OPEN_MENU": "Open navigation menu",
       "CLOSE_MENU": "Close navigation menu",
       "PROFILE_MENU": "Open profile menu",
+      "ADMIN_DASHBOARD": "Admin Dashboard",
       "LANGUAGE_TH": "Switch to Thai",
       "LANGUAGE_EN": "Switch to English",
       "LOGOUT_SUCCESS": "Signed out successfully"
