@@ -229,6 +229,7 @@
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
+      "SUBTITLE": "Manage fleet vehicles, capacities, and operating status.",
       "TITLE": "Vehicle Management",
       "ADD": "Add Vehicle",
       "TOTAL": "Total Vehicles",

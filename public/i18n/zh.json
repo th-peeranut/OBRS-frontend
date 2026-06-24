@@ -229,6 +229,7 @@
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",
+      "SUBTITLE": "管理车队车辆、载客量和运营状态。",
       "TITLE": "车辆管理",
       "ADD": "添加车辆",
       "TOTAL": "车辆总数",
