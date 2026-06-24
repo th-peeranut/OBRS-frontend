@@ -784,7 +784,12 @@
       "FORM_INVALID": "Please complete all required fields.",
       "FROM_TO_SAME": "Departure and destination stops cannot be the same.",
       "RETURN_DATE_BEFORE_DEPARTURE": "Return date must be after departure date.",
-      "SEAT_COUNT_MISMATCH": "Please select the correct number of seats."
+      "SEAT_COUNT_MISMATCH": "Please select the correct number of seats.",
+      "REQUIRED": "This field is required.",
+      "FIELD_INVALID": "Please enter a valid value.",
+      "PHONE_INVALID": "Enter a valid 10-digit phone number (e.g. 0812345678).",
+      "ID_CARD_INVALID": "Enter a valid 13-digit ID card number.",
+      "EMAIL_INVALID": "Enter a valid email address."
     },
     "BOARDING": {
       "TITLE": "Boarding List",

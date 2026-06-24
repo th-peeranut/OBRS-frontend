@@ -203,10 +203,12 @@
               <div class="col-md-3">
                 <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
                 <input class="form-control" formControlName="title" [class.is-invalid]="isPassengerFieldInvalid(i, 'title')" />
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'title') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-3">
                 <label class="form-label">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
                 <input class="form-control" formControlName="firstName" [class.is-invalid]="isPassengerFieldInvalid(i, 'firstName')" />
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'firstName') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-3">
                 <label class="form-label">{{ 'STAFF.SELL.MIDDLE_NAME' | translate }}</label>
@@ -215,14 +217,17 @@
               <div class="col-md-3">
                 <label class="form-label">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
                 <input class="form-control" formControlName="lastName" [class.is-invalid]="isPassengerFieldInvalid(i, 'lastName')" />
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'lastName') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-4">
                 <label class="form-label">{{ 'STAFF.SELL.PHONE' | translate }}</label>
-                <input class="form-control" formControlName="phoneNumber" [class.is-invalid]="isPassengerFieldInvalid(i, 'phoneNumber')" />
+                <input class="form-control" formControlName="phoneNumber" inputmode="tel" maxlength="10" [class.is-invalid]="isPassengerFieldInvalid(i, 'phoneNumber')" />
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'phoneNumber') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-4">
                 <label class="form-label">{{ 'STAFF.SELL.ID_CARD' | translate }}</label>
-                <input class="form-control" formControlName="identityCardNumber" [class.is-invalid]="isPassengerFieldInvalid(i, 'identityCardNumber')" />
+                <input class="form-control" formControlName="identityCardNumber" inputmode="numeric" maxlength="13" [class.is-invalid]="isPassengerFieldInvalid(i, 'identityCardNumber')" />
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'identityCardNumber') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-4">
                 <label class="form-label">{{ 'STAFF.SELL.GENDER' | translate }}</label>
@@ -245,10 +250,12 @@
             <div class="col-md-2">
               <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
               <input class="form-control" formControlName="title" [class.is-invalid]="isContactFieldInvalid('title')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('title') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-3">
               <label class="form-label">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
               <input class="form-control" formControlName="firstName" [class.is-invalid]="isContactFieldInvalid('firstName')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('firstName') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-3">
               <label class="form-label">{{ 'STAFF.SELL.MIDDLE_NAME' | translate }}</label>
@@ -257,18 +264,22 @@
             <div class="col-md-4">
               <label class="form-label">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
               <input class="form-control" formControlName="lastName" [class.is-invalid]="isContactFieldInvalid('lastName')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('lastName') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">{{ 'STAFF.SELL.CONTACT_PHONE' | translate }}</label>
-              <input class="form-control" formControlName="phoneNumber" [class.is-invalid]="isContactFieldInvalid('phoneNumber')" />
+              <input class="form-control" formControlName="phoneNumber" inputmode="tel" maxlength="10" [class.is-invalid]="isContactFieldInvalid('phoneNumber')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('phoneNumber') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">{{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}</label>
               <input class="form-control" formControlName="email" type="email" [class.is-invalid]="isContactFieldInvalid('email')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('email') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-4">
               <label class="form-label">{{ 'STAFF.SELL.ID_CARD' | translate }}</label>
-              <input class="form-control" formControlName="identityCardNumber" [class.is-invalid]="isContactFieldInvalid('identityCardNumber')" />
+              <input class="form-control" formControlName="identityCardNumber" inputmode="numeric" maxlength="13" [class.is-invalid]="isContactFieldInvalid('identityCardNumber')" />
+              <div class="invalid-feedback d-block" *ngIf="contactError('identityCardNumber') as key">{{ key | translate }}</div>
             </div>
           </div>
         </div>

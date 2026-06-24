@@ -784,7 +784,12 @@
       "FORM_INVALID": "请填写所有必填字段。",
       "FROM_TO_SAME": "出发站和目的站不能相同。",
       "RETURN_DATE_BEFORE_DEPARTURE": "返程日期必须在出发日期之后。",
-      "SEAT_COUNT_MISMATCH": "请选择正确数量的座位。"
+      "SEAT_COUNT_MISMATCH": "请选择正确数量的座位。",
+      "REQUIRED": "此栏为必填项。",
+      "FIELD_INVALID": "请输入有效的值。",
+      "PHONE_INVALID": "请输入有效的 10 位电话号码（例如 0812345678）。",
+      "ID_CARD_INVALID": "请输入有效的 13 位身份证号码。",
+      "EMAIL_INVALID": "请输入有效的电子邮箱地址。"
     },
     "BOARDING": {
       "TITLE": "登车名单",

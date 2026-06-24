@@ -623,4 +623,52 @@ test.describe('Authenticated walk-in flow tests', () => {
       await expect(page.locator('select[formControlName="bookingType"]')).toBeVisible({ timeout: 8_000 });
     });
   });
+
+  // ── Passenger field validation ───────────────────────────────────────────
+  test.describe('Passenger field validation', () => {
+    test('invalid phone shows an inline error and Confirm is blocked', async ({ page }) => {
+      await page.route('**/api/private/**', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
+      );
+      await page.route(SEARCH_ENDPOINT, (route) => route.fulfill({ json: VAN_SEARCH_RESP }));
+      await page.route(SEATS_ENDPOINT, (route) => route.fulfill({ json: SEATS_RESP }));
+      // Deliberately NO bookings route: if Confirm wrongly proceeded, the booking
+      // POST would 404 and the flow would error — but it must never get that far.
+
+      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
+      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+
+      // Reach the passengers step (search → pick schedule → pick seat → Next)
+      await fillSearchForm(page, { date: '2026-09-02' });
+      const scheduleCard = page.locator('.card.mb-2.border').first();
+      await scheduleCard.waitFor({ timeout: 15_000 });
+      await scheduleCard.click();
+      const seatA1 = page.getByText('A1', { exact: true });
+      await seatA1.waitFor({ timeout: 12_000 });
+      await seatA1.click();
+      await page.locator('button.btn.btn-primary:has-text("Next")').click();
+      await page.locator('.card-header:has-text("Seat")').waitFor({ timeout: 10_000 });
+
+      // Enter an invalid (too-short) phone and ID on the first passenger
+      const phone = page.locator('[formArrayName="passengers"] input[formControlName="phoneNumber"]').first();
+      await phone.fill('123');
+      await phone.blur();
+      const idCard = page.locator('[formArrayName="passengers"] input[formControlName="identityCardNumber"]').first();
+      await idCard.fill('99');
+      await idCard.blur();
+
+      // Field-specific inline errors are shown
+      await expect(
+        page.getByText('Enter a valid 10-digit phone number (e.g. 0812345678).')
+      ).toBeVisible({ timeout: 5_000 });
+      await expect(
+        page.getByText('Enter a valid 13-digit ID card number.')
+      ).toBeVisible({ timeout: 5_000 });
+
+      // Confirm is blocked: a validation alert fires and we stay on the passengers step
+      await page.locator('button.btn-primary:has-text("Confirm")').click();
+      await dismissAlert(page);
+      await expect(page.locator('.card-header:has-text("Seat")')).toBeVisible();
+    });
+  });
 });

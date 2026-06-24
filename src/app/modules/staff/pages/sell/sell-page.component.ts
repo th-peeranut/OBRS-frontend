@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Store, select } from '@ngrx/store';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
@@ -45,6 +45,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
 
   // Earliest selectable departure (today) — staff cannot sell a past departure.
   protected readonly minDate = new Date();
+
+  // Field formats, shared by passenger and contact forms (mirrors the public
+  // booking forms). Thai mobile = 10 digits starting with 0; Thai national ID =
+  // exactly 13 digits.
+  private readonly phonePattern = /^0\d{9}$/;
+  private readonly idCardPattern = /^\d{13}$/;
 
   // Stop dropdowns (searchable). `allStopOptions` is the full localized list;
   // `fromStopOptions`/`toStopOptions` exclude the counterpart selection so a
@@ -102,8 +108,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
         firstName: ['', [Validators.required]],
         middleName: [''],
         lastName: ['', [Validators.required]],
-        phoneNumber: ['', [Validators.required]],
-        identityCardNumber: ['', [Validators.required]],
+        phoneNumber: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
+        identityCardNumber: ['', [Validators.required, Validators.pattern(this.idCardPattern)]],
         email: ['', [Validators.required, Validators.email]],
         preferredLocale: ['th'],
       }),
@@ -516,8 +522,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
         firstName: ['', [Validators.required]],
         middleName: [''],
         lastName: ['', [Validators.required]],
-        identityCardNumber: ['', [Validators.required, Validators.minLength(13), Validators.maxLength(13)]],
-        phoneNumber: ['', [Validators.required]],
+        identityCardNumber: ['', [Validators.required, Validators.pattern(this.idCardPattern)]],
+        phoneNumber: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
         gender: ['MALE', [Validators.required]],
       }));
     }
@@ -530,12 +536,36 @@ export class SellPageComponent implements OnInit, OnDestroy {
   }
 
   protected isPassengerFieldInvalid(passengerIndex: number, fieldName: string): boolean {
-    const ctrl = this.passengersArray.at(passengerIndex)?.get(fieldName);
-    return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
+    return !!this.passengerError(passengerIndex, fieldName);
   }
 
   protected isContactFieldInvalid(fieldName: string): boolean {
-    const ctrl = this.passengersForm.get('contact')?.get(fieldName);
-    return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
+    return !!this.contactError(fieldName);
+  }
+
+  /** i18n key for the active validation error on a passenger field, or null if valid/untouched. */
+  protected passengerError(passengerIndex: number, fieldName: string): string | null {
+    return this.errorMessageKey(this.passengersArray.at(passengerIndex)?.get(fieldName), fieldName);
+  }
+
+  /** i18n key for the active validation error on a contact field, or null if valid/untouched. */
+  protected contactError(fieldName: string): string | null {
+    return this.errorMessageKey(this.passengersForm.get('contact')?.get(fieldName), fieldName);
+  }
+
+  /**
+   * Maps a control's first relevant error to a localized message key, but only
+   * once the user has interacted (dirty/touched) so pristine forms stay quiet.
+   */
+  private errorMessageKey(ctrl: AbstractControl | null | undefined, fieldName: string): string | null {
+    if (!ctrl || !ctrl.invalid || !(ctrl.dirty || ctrl.touched)) return null;
+    const errors = ctrl.errors ?? {};
+    if (errors['required']) return 'STAFF.VALIDATION.REQUIRED';
+    if (errors['email']) return 'STAFF.VALIDATION.EMAIL_INVALID';
+    if (errors['pattern'] || errors['minlength'] || errors['maxlength']) {
+      if (fieldName === 'phoneNumber') return 'STAFF.VALIDATION.PHONE_INVALID';
+      if (fieldName === 'identityCardNumber') return 'STAFF.VALIDATION.ID_CARD_INVALID';
+    }
+    return 'STAFF.VALIDATION.FIELD_INVALID';
   }
 }
