@@ -1,0 +1,69 @@
+<div class="trip-browser d-flex flex-column h-100">
+  <!-- Date picker -->
+  <div class="mb-3">
+    <p-calendar
+      styleClass="trip-browser-calendar"
+      [(ngModel)]="selectedDate"
+      dateFormat="dd/mm/yy"
+      [minDate]="today"
+      [showIcon]="true"
+      appendTo="body"
+      (ngModelChange)="onDateChange($event)"
+    ></p-calendar>
+  </div>
+
+  <!-- Loading state -->
+  <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center flex-grow-1 py-4">
+    <p-progressSpinner styleClass="trip-spinner" [style]="{'width':'40px','height':'40px'}"></p-progressSpinner>
+  </div>
+
+  <!-- Empty state -->
+  <div *ngIf="!isLoading && sortedGroups.length === 0"
+       class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-4">
+    <i class="bi bi-calendar-x" style="font-size:2.5rem"></i>
+    <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.TRIPS_EMPTY' | translate }}</p>
+  </div>
+
+  <!-- Route groups -->
+  <div *ngIf="!isLoading && sortedGroups.length > 0" class="trip-list overflow-auto flex-grow-1">
+    <ng-container *ngFor="let group of sortedGroups">
+      <!-- Sticky route header -->
+      <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted">
+        {{ group.routeLabel }}
+      </div>
+      <!-- Trip rows -->
+      <div *ngFor="let trip of group.trips"
+           class="trip-row d-flex flex-column gap-1 px-2 py-2 border-bottom"
+           [class.trip-row--selected]="trip.scheduleId === selectedTripId"
+           role="button"
+           tabindex="0"
+           (click)="selectTrip(trip)"
+           (keydown.enter)="selectTrip(trip)"
+           (keydown.space)="$event.preventDefault(); selectTrip(trip)">
+
+        <!-- Time + vehicle -->
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="fw-semibold">{{ formatTime(trip.departureDateTime) }}</span>
+          <span class="small text-muted">
+            {{ trip.licensePlate || '&mdash;' }}
+            <span *ngIf="trip.driverName"> &middot; {{ trip.driverName }}</span>
+            <span *ngIf="!trip.driverName"> &middot; &mdash;</span>
+          </span>
+        </div>
+
+        <!-- Availability badges -->
+        <div class="d-flex gap-1 flex-wrap">
+          <span class="badge border border-secondary text-dark bg-white" style="font-weight:normal">
+            {{ trip.availableCount }} {{ 'STAFF.SELL.BADGE_AVAILABLE' | translate }}
+          </span>
+          <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-weight:normal">
+            {{ trip.reservedUnpaidCount }} {{ 'STAFF.SELL.BADGE_RESERVED' | translate }}
+          </span>
+          <span class="badge bg-success text-white" style="font-weight:normal">
+            {{ trip.soldPaidCount }} {{ 'STAFF.SELL.BADGE_SOLD' | translate }}
+          </span>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

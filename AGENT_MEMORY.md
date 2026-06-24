@@ -1,5 +1,43 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-24 — QA pass: feature/walkin-ticket-sales Walk-in POS single-screen
+
+**Branch merged:** `feature/walkin-ticket-sales` → `dev`
+
+**Test results:**
+- Playwright E2E: 27/27 PASSED (new spec replaced old 5-step wizard spec)
+  - AC-1 through AC-12 covered; WI-A, WI-G watch items covered
+  - One self-fix: AC-10 tab count used `li[role="tab"]` (0 hits) — PrimeNG uses `a[role="tab"]` anchors inside `li[role="presentation"]`; fixed to `a[role="tab"]`
+- Backend unit tests: 633/633 PASSED (4 skipped)
+  - Walk-in specific: ScheduleWalkInServiceTest (11), ScheduleWalkInControllerTest (6), ScheduleWalkInSecurityTest (4) all green
+
+**Key observations:**
+- Old `staff-sell-walkin.spec.ts` tested the 5-step wizard (fromStop, toStop, bookingType selectors, passengers array with gender). Completely replaced for the new 3-column POS.
+- PrimeNG `p-tabview` nav renders `li[role="presentation"]` for tab items (not `li[role="tab"]`); the `a` inside has `role="tab"`.
+- WI-A (totalAmount>0) confirmed by E2E: payload captured shows `totalAmount: 350` for 1-seat × 350 THB trip.
+- WI-G (null pricePerSeat) confirmed: Sell button stays disabled when `canSell` gates on `totalAmount > 0`.
+- API functional tests: SIT backend predates this feature (returns 400/TYPE_MISMATCH for `walk-in` path matching `{id}` route). Contract verified via MockMvc-based controller tests instead.
+- i18n: all 3 locales (en/th/zh) have identical STAFF.SELL key sets — AC-11 passed.
+
+## 2026-06-24 — Walk-in POS booking payload omitted `totalAmount` (self-fixed)
+
+**File:** `src/app/modules/staff/pages/sell/sell-page.component.ts` (`onSell`).
+
+The new single-screen POS built the `POST /api/private/bookings` payload without a
+`totalAmount` field. The locked contract's `BookingReqDto` declares `totalAmount(>0)`
+(NotNull/Positive on the backend), and the canonical online flow
+(`passenger-info.component.ts`) always sends it (`price * passengers`). The walk-in payload
+would have been rejected (400) or booked at zero. The checkout child already computes the
+same value for its `canSell` gate but never forwarded it.
+
+**Fix:** recompute `totalAmount = (parseFloat(trip.pricePerSeat || '0') || 0) * seatCount`
+in `onSell` and add it to the booking payload (typed field + value). Added a spec asserting
+`callArg.totalAmount === 600` for a 2-seat / 300-baht trip, plus two checkout specs proving
+`canSell` stays false when `pricePerSeat` is `null` or `'0'` (the contract's null-price gate).
+**Rule:** when you assemble a request payload by hand, diff it field-by-field against the
+locked DTO contract AND the existing reference implementation of the same endpoint — don't
+trust that the gate getter covering a value means the value reaches the wire.
+
 ## 2026-06-24 — Dark-mode accent text fails WCAG (self-fixed, #39)
 
 **File:** `src/styles/admin-theme.scss`.

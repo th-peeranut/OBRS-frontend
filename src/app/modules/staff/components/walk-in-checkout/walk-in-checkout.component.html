@@ -1,0 +1,139 @@
+<div class="checkout-panel d-flex flex-column gap-3">
+
+  <!-- Contact form -->
+  <form [formGroup]="contactForm" novalidate>
+    <!-- Title -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
+      <select class="form-select form-select-sm"
+              formControlName="title"
+              [class.is-invalid]="isFieldInvalid('title')">
+        <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
+        <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+      </select>
+      <div class="invalid-feedback d-block" *ngIf="fieldError('title') as key">{{ key | translate }}</div>
+    </div>
+
+    <!-- First Name -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
+      <input class="form-control form-control-sm"
+             formControlName="firstName"
+             [class.is-invalid]="isFieldInvalid('firstName')" />
+      <div class="invalid-feedback d-block" *ngIf="fieldError('firstName') as key">{{ key | translate }}</div>
+    </div>
+
+    <!-- Last Name -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
+      <input class="form-control form-control-sm"
+             formControlName="lastName"
+             [class.is-invalid]="isFieldInvalid('lastName')" />
+      <div class="invalid-feedback d-block" *ngIf="fieldError('lastName') as key">{{ key | translate }}</div>
+    </div>
+
+    <!-- Phone -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">{{ 'STAFF.SELL.PHONE' | translate }}</label>
+      <input class="form-control form-control-sm"
+             formControlName="phoneNumber"
+             inputmode="tel"
+             maxlength="10"
+             [class.is-invalid]="isFieldInvalid('phoneNumber')" />
+      <div class="invalid-feedback d-block" *ngIf="fieldError('phoneNumber') as key">{{ key | translate }}</div>
+    </div>
+
+    <!-- ID Card (optional) -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold">
+        {{ 'STAFF.SELL.ID_CARD' | translate }}
+        <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
+      </label>
+      <input class="form-control form-control-sm"
+             formControlName="identityCardNumber"
+             inputmode="numeric"
+             maxlength="13"
+             [class.is-invalid]="isFieldInvalid('identityCardNumber')" />
+      <div class="invalid-feedback d-block" *ngIf="fieldError('identityCardNumber') as key">{{ key | translate }}</div>
+    </div>
+
+    <!-- Email (optional) -->
+    <div class="mb-3">
+      <label class="form-label small fw-semibold">
+        {{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}
+        <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
+      </label>
+      <input class="form-control form-control-sm"
+             formControlName="email"
+             type="email"
+             [class.is-invalid]="isFieldInvalid('email')" />
+      <div class="invalid-feedback d-block" *ngIf="fieldError('email') as key">{{ key | translate }}</div>
+    </div>
+  </form>
+
+  <!-- Payment method tiles -->
+  <div class="d-flex flex-column gap-2">
+    <!-- Cash (active) -->
+    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border border-success bg-success bg-opacity-10"
+         role="button"
+         tabindex="0">
+      <i class="bi bi-cash-coin fs-5 text-success"></i>
+      <span class="fw-semibold text-success">{{ 'STAFF.SELL.PAYMENT_CASH' | translate }}</span>
+    </div>
+    <!-- PromptPay (disabled) -->
+    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
+         aria-disabled="true"
+         tabindex="-1"
+         style="pointer-events:none">
+      <i class="bi bi-qr-code fs-5 text-muted"></i>
+      <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_PROMPTPAY' | translate }}</span>
+      <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
+    </div>
+    <!-- Credit (disabled) -->
+    <div class="payment-tile d-flex align-items-center gap-2 p-2 rounded border opacity-50"
+         aria-disabled="true"
+         tabindex="-1"
+         style="pointer-events:none">
+      <i class="bi bi-credit-card fs-5 text-muted"></i>
+      <span class="text-muted">{{ 'STAFF.SELL.PAYMENT_CREDIT' | translate }}</span>
+      <span class="badge bg-secondary ms-auto small">{{ 'STAFF.SELL.COMING_SOON' | translate }}</span>
+    </div>
+  </div>
+
+  <!-- Totals section -->
+  <div class="border rounded p-3 bg-light">
+    <div class="d-flex justify-content-between mb-2">
+      <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
+      <span class="fw-bold">{{ totalAmount | currency:'THB':'symbol' }}</span>
+    </div>
+
+    <div class="mb-2">
+      <label class="form-label small mb-1">{{ 'STAFF.SELL.CASH_RECEIVED' | translate }}</label>
+      <input type="number"
+             class="form-control form-control-sm"
+             [(ngModel)]="cashReceived"
+             [min]="0"
+             step="1" />
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center"
+         aria-live="polite">
+      <span class="small">{{ 'STAFF.SELL.CHANGE_DUE' | translate }}</span>
+      <span class="fw-semibold"
+            [class.text-success]="changeDue >= 0"
+            [class.text-danger]="changeDue < 0">
+        {{ changeDue | currency:'THB':'symbol' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Sell button -->
+  <button class="btn btn-success btn-lg w-100"
+          [disabled]="!canSell || isSelling"
+          [title]="'STAFF.SELL.SELL_DISABLED_HINT' | translate"
+          (click)="onSell()">
+    <span *ngIf="isSelling" class="spinner-border spinner-border-sm me-1"></span>
+    {{ (isSelling ? 'STAFF.SELL.SELLING' : 'STAFF.SELL.SELL_BTN') | translate }}
+  </button>
+
+</div>

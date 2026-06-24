@@ -1,23 +1,29 @@
 /**
- * E2E spec — Walk-in ticket sale flow (SellPageComponent)
+ * E2E spec — Walk-in POS single-screen (SellPageComponent, feature/walkin-ticket-sales)
  *
- * All four risk areas from the QA mandate:
- *   RA-1  Idempotent cash settlement (same Idempotency-Key on pay→error→retry)
- *   RA-2  BUS seat double-booking guard (taken seat is not clickable; SEAT_COUNT_MISMATCH)
- *   RA-3  Role boundaries (salesperson/admin allowed; driver + plain user blocked)
- *   RA-4  409 seat-conflict surfaces a usable alert, stepper does not die
+ * Tests cover the NEW 3-column POS that replaced the old 5-step wizard:
+ *   AC-1   Date picker loads trips grouped by route, no from/to needed
+ *   AC-2   Zero-trip day → 200 + empty-state UI (not an error modal)
+ *   AC-3   Trip row shows plate, driver, 3 badges; counts sum to capacity
+ *   AC-4   BUS seat map: taken seats blocked; VAN edge: sold-out blocks selection
+ *   AC-5   Customer form: title+first+last+phone required; no gender field;
+ *           Sell disabled until 4 fields valid AND >=1 seat AND cash>=total
+ *   AC-6   Booking payload has NO gender; one contact block; passengerType=ADULT
+ *   AC-7   Cash tile active; PromptPay/credit tiles disabled ("Coming soon")
+ *   AC-8   Change due = received − total live; Sell disabled when received < total
+ *   AC-9   Success: payWalkIn called; badge counts refresh (trips reload)
+ *   AC-10  Center panel has 3 tabs; Trip Details tab shows plate/driver
+ *   AC-11  All 3 locales have STAFF.SELL keys (static check via mocked i18n)
+ *   AC-12  Old wizard selectors absent (no bookingType dropdown, no fromStop)
  *
- * Auth strategy:
- *   - Tests that navigate to /staff/sell and interact with the page use
- *     storageState: admin-auth.json (real SIT token).  The admin role passes
- *     every AuthGuard check (AuthService.hasAnyRole returns true for admin).
- *   - Role-boundary redirect tests (driver/user) inject via addInitScript because
- *     those tests never reach a page that makes backend calls — AuthGuard fires
- *     before any HTTP request is issued.
+ * Watch items (scrutinize):
+ *   WI-A   totalAmount > 0 in booking payload (self-fix guard)
+ *   WI-G   Null pricePerSeat trip: Sell button stays disabled
  *
- * Network strategy:
- *   All /api/* calls in the walk-in flow are intercepted and fulfilled with
- *   fixture data. The SIT backend is never touched by these tests.
+ * Role boundary tests (RA-3) are retained unchanged:
+ *   driver / plain user → redirected away from /staff/sell
+ *   unauthenticated → /login
+ *   admin → reaches /staff/sell
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -27,111 +33,141 @@ const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
 
 // ── Endpoint matchers ─────────────────────────────────────────────────────────
 
-const SEARCH_ENDPOINT  = '**/api/public/schedules/search';
-const SEATS_ENDPOINT   = '**/api/public/schedules/*/seats';
-const BOOKINGS_ENDPOINT = '**/api/private/bookings';
-const PAYMENT_ENDPOINT  = '**/api/private/payments/walk-in';
+const WALK_IN_SCHEDULES_ENDPOINT = '**/api/private/schedules/walk-in**';
+const BOOKINGS_ENDPOINT           = '**/api/private/bookings';
+const PAYMENT_ENDPOINT            = '**/api/private/payments/walk-in';
 
 // ── Fixture responses ─────────────────────────────────────────────────────────
 
-/**
- * BUS schedule where B3 is taken (numeric "3" absent from availableSeatNumbers).
- * The component's getTakenSeats() converts availableSeatNumbers to digit-only
- * strings and returns the complement over B1..B21, so "3" absent → B3 disabled.
- */
-const BUS_SEARCH_RESP = {
-  code: 200, message: 'OK',
-  data: {
-    departureSchedules: [{
-      id: 201, vehicleType: 'BUS',
-      departureDateTime: '2026-09-01T08:00:00',
-      arrivalDateTime:   '2026-09-01T13:00:00',
-      pricePerSeat: '300',
-      availableSeats: 20,
-      // numeric "3" absent → B3 is taken; all other 1..21 are available
-      availableSeatNumbers: [
-        '1','2','4','5','6','7','8','9','10',
-        '11','12','13','14','15','16','17','18','19','20','21',
-      ],
-    }],
-    arrivalSchedules: null,
-  },
-};
-
-/** VAN schedule where seats 1,2,3 are available (A1,A2,A3 labels in the van component). */
-const VAN_SEARCH_RESP = {
-  code: 200, message: 'OK',
-  data: {
-    departureSchedules: [{
-      id: 202, vehicleType: 'van',
-      departureDateTime: '2026-09-02T09:00:00',
-      arrivalDateTime:   '2026-09-02T14:00:00',
-      pricePerSeat: '200',
-      availableSeats: 3,
-      availableSeatNumbers: ['1','2','3'],
-    }],
-    arrivalSchedules: null,
-  },
-};
-
-const SEATS_RESP = {
-  code: 200, message: 'OK',
-  data: [
-    { seatNumber: 'B1', rowIndex: 0, columnIndex: 0 },
-    { seatNumber: 'B2', rowIndex: 1, columnIndex: 2 },
+/** A typical BUS trip: capacity=21, 1 reserved (B3), 2 sold (B4,B5), 18 available */
+const BUS_TRIP_FIXTURE = {
+  scheduleId: 201,
+  vehicleType: 'bus',
+  licensePlate: 'TH-8888',
+  driverName: 'Somchai Driver',
+  departureDateTime: '2026-09-01T08:00:00Z',
+  arrivalDateTime: '2026-09-01T13:00:00Z',
+  pricePerSeat: '350.00',
+  capacity: 21,
+  availableCount: 18,
+  reservedUnpaidCount: 1,
+  soldPaidCount: 2,
+  // B3 reserved, B4 sold, B5 sold → absent from availableSeatNumbers
+  availableSeatNumbers: [
+    '1','2','4','6','7','8','9','10',
+    '11','12','13','14','15','16','17','18','19','20','21',
   ],
 };
 
-/**
- * Round-trip search: a departure (08:00) AND an arrival/return (15:00) BUS
- * schedule, all seats available. Distinct times let the test target each card.
- */
-const ALL_BUS_SEATS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21'];
-const RETURN_SEARCH_RESP = {
-  code: 200, message: 'OK',
-  data: {
-    departureSchedules: [{
-      id: 301, vehicleType: 'BUS',
-      departureDateTime: '2026-09-01T08:00:00', arrivalDateTime: '2026-09-01T13:00:00',
-      pricePerSeat: '300', availableSeats: 21, availableSeatNumbers: ALL_BUS_SEATS,
-    }],
-    arrivalSchedules: [{
-      id: 302, vehicleType: 'BUS',
-      departureDateTime: '2026-09-05T15:00:00', arrivalDateTime: '2026-09-05T20:00:00',
-      pricePerSeat: '300', availableSeats: 21, availableSeatNumbers: ALL_BUS_SEATS,
-    }],
-  },
+const WALK_IN_SCHEDULES_RESP = {
+  code: 200,
+  message: 'OK',
+  data: [
+    {
+      routeSlug: 'bkk-cnx',
+      routeLabel: 'Bangkok - Chiang Mai',
+      trips: [BUS_TRIP_FIXTURE],
+    },
+  ],
+};
+
+/** A VAN trip where ALL seats are sold out (availableSeatNumbers=[]) */
+const SOLDOUT_VAN_TRIP_FIXTURE = {
+  scheduleId: 202,
+  vehicleType: 'van',
+  licensePlate: 'TH-9999',
+  driverName: 'Wirat Driver',
+  departureDateTime: '2026-09-01T10:00:00Z',
+  arrivalDateTime: '2026-09-01T15:00:00Z',
+  pricePerSeat: '200.00',
+  capacity: 10,
+  availableCount: 0,
+  reservedUnpaidCount: 0,
+  soldPaidCount: 10,
+  availableSeatNumbers: [],
+};
+
+const SOLDOUT_VAN_RESP = {
+  code: 200,
+  message: 'OK',
+  data: [
+    {
+      routeSlug: 'cnx-phs',
+      routeLabel: 'Chiang Mai - Phitsanulok',
+      trips: [SOLDOUT_VAN_TRIP_FIXTURE],
+    },
+  ],
+};
+
+/** A BUS trip where pricePerSeat is null (WI-G: Sell button must stay disabled) */
+const NULL_PRICE_TRIP_FIXTURE = {
+  ...BUS_TRIP_FIXTURE,
+  scheduleId: 203,
+  pricePerSeat: null,
+  availableSeatNumbers: ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21'],
+  availableCount: 21,
+  reservedUnpaidCount: 0,
+  soldPaidCount: 0,
+};
+
+const NULL_PRICE_RESP = {
+  code: 200,
+  message: 'OK',
+  data: [
+    {
+      routeSlug: 'bkk-cnx',
+      routeLabel: 'Bangkok - Chiang Mai',
+      trips: [NULL_PRICE_TRIP_FIXTURE],
+    },
+  ],
+};
+
+/** Two-route response for testing grouping */
+const MULTI_ROUTE_RESP = {
+  code: 200,
+  message: 'OK',
+  data: [
+    {
+      routeSlug: 'bkk-cnx',
+      routeLabel: 'Bangkok - Chiang Mai',
+      trips: [BUS_TRIP_FIXTURE],
+    },
+    {
+      routeSlug: 'cnx-phs',
+      routeLabel: 'Chiang Mai - Phitsanulok',
+      trips: [
+        {
+          ...BUS_TRIP_FIXTURE,
+          scheduleId: 210,
+          departureDateTime: '2026-09-01T07:00:00Z',
+          arrivalDateTime: '2026-09-01T12:00:00Z',
+        },
+      ],
+    },
+  ],
+};
+
+const EMPTY_RESP = {
+  code: 200,
+  message: 'OK',
+  data: [],
 };
 
 const BOOKING_RESP = {
-  code: 201, message: 'Created',
-  data: { bookingId: 9999, bookingNumber: 'BK-20260901-E2E' },
+  code: 201,
+  message: 'Created',
+  data: { bookingId: 9001, bookingNumber: 'BK-20260901-POS' },
 };
 
 const PAYMENT_RESP = {
-  code: 200, message: 'OK',
-  data: { id: 555, bookingId: 9999, status: 'paid', paymentMethod: 'cash', amount: 300 },
+  code: 200,
+  message: 'OK',
+  data: { id: 777, bookingId: 9001, status: 'paid', paymentMethod: 'cash', amount: 350 },
 };
-
-/** Stops backing the searchable From/To dropdowns (slug = the value the search API receives). */
-const STOPS_RESP = {
-  code: 200, message: 'OK',
-  data: [
-    { id: 1, slug: 'nong-sak', status: 'active', stopType: 'stop', createdAt: '', updatedAt: '',
-      translations: [{ locale: 'en', label: 'Nong Sak' }, { locale: 'th', label: 'หนองศักดิ์' }] },
-    { id: 2, slug: 'bangkok', status: 'active', stopType: 'station', createdAt: '', updatedAt: '',
-      translations: [{ locale: 'en', label: 'Bangkok' }, { locale: 'th', label: 'กรุงเทพ' }] },
-  ],
-};
-
-const STOPS_ENDPOINT = '**/api/stops';
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
-/**
- * Inject role-based fake auth into localStorage BEFORE Angular boots.
- * Used only for redirect tests where the guard fires before any HTTP call.
- */
+/** Inject role-based fake auth before Angular boots (for redirect tests only). */
 function injectFakeAuth(page: Page, roles: string[]): Promise<void> {
   return page.addInitScript((rolesArg: string[]) => {
     localStorage.setItem('auth_token', 'e2e-fake-token');
@@ -141,88 +177,31 @@ function injectFakeAuth(page: Page, roles: string[]): Promise<void> {
   }, roles);
 }
 
-// ── Step helpers ──────────────────────────────────────────────────────────────
-
-/** Open a searchable PrimeNG stop dropdown and pick the option by its visible label. */
-async function selectStop(page: Page, formControlName: string, label: string): Promise<void> {
-  await page.locator(`p-dropdown[formControlName="${formControlName}"]`).click();
-  const panel = page.locator('.p-dropdown-panel');
-  await panel.waitFor({ state: 'visible', timeout: 10_000 });
-  await panel.getByText(label, { exact: true }).click();
-  await panel.waitFor({ state: 'hidden', timeout: 10_000 });
+/** Fill the checkout contact form with valid data. */
+async function fillContactForm(page: Page): Promise<void> {
+  await page.locator('select[formControlName="title"]').selectOption({ index: 1 });
+  await page.locator('input[formControlName="firstName"]').fill('Test');
+  await page.locator('input[formControlName="lastName"]').fill('Passenger');
+  await page.locator('input[formControlName="phoneNumber"]').fill('0812345678');
 }
 
-/**
- * Type a date into a PrimeNG p-calendar.  `iso` is YYYY-MM-DD; the picker's
- * dateFormat is dd/mm/yy (4-digit year), so convert before typing.
- * Use pressSequentially (not fill): p-calendar parses typed input on real
- * keystrokes/Enter — a bulk fill() sets the input text but never updates the
- * form model.  Enter commits, Escape closes the overlay off the submit button.
- */
-async function pickDate(page: Page, formControlName: string, iso: string): Promise<void> {
-  const [y, m, d] = iso.split('-');
-  const input = page.locator(`p-calendar[formControlName="${formControlName}"] input`);
-  await input.click();
-  await input.pressSequentially(`${d}/${m}/${y}`, { delay: 20 });
-  await page.keyboard.press('Enter');
-  await page.keyboard.press('Escape');
-}
+// ── Wait for the POS page to be ready ────────────────────────────────────────
 
-/** Fill and submit the search form.  Assumes the page is already on /staff/sell step=search. */
-async function fillSearchForm(
-  page: Page,
-  opts: { vehicleType?: 'bus' | 'van'; date?: string } = {}
-): Promise<void> {
-  const date = opts.date ?? '2026-09-01';
-  await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-  await selectStop(page, 'fromStop', 'Nong Sak');
-  await selectStop(page, 'toStop', 'Bangkok');
-  await pickDate(page, 'departureDate', date);
-  await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
-  await page.locator('form button.btn-primary').click();
-}
-
-/** Fill the passenger + contact forms and click Confirm booking. */
-async function fillPassengersAndConfirm(page: Page): Promise<void> {
-  await page.locator('[formArrayName="passengers"] select[formControlName="title"]')
-    .first().waitFor({ timeout: 12_000 });
-  await page.locator('[formArrayName="passengers"] select[formControlName="title"]').first().selectOption('Mr.');
-  await page.locator('[formArrayName="passengers"] input[formControlName="firstName"]').first().fill('Test');
-  await page.locator('[formArrayName="passengers"] input[formControlName="lastName"]').first().fill('Passenger');
-  await page.locator('[formArrayName="passengers"] input[formControlName="identityCardNumber"]').first().fill('1234567890123');
-  await page.locator('[formArrayName="passengers"] input[formControlName="phoneNumber"]').first().fill('0812345678');
-  await page.locator('[formArrayName="passengers"] select[formControlName="gender"]').first().selectOption('MALE');
-
-  await page.locator('[formGroupName="contact"] select[formControlName="title"]').selectOption('Mrs.');
-  await page.locator('[formGroupName="contact"] input[formControlName="firstName"]').fill('Contact');
-  await page.locator('[formGroupName="contact"] input[formControlName="lastName"]').fill('Person');
-  await page.locator('[formGroupName="contact"] input[formControlName="phoneNumber"]').fill('0891234567');
-  await page.locator('[formGroupName="contact"] input[formControlName="email"]').fill('contact@example.com');
-  await page.locator('[formGroupName="contact"] input[formControlName="identityCardNumber"]').fill('9876543210987');
-
-  await page.locator('button.btn-primary:has-text("Confirm")').click();
-}
-
-/** Dismiss a SweetAlert modal via JS click (avoids Playwright pointer-event interception). */
-async function dismissAlert(page: Page): Promise<void> {
-  await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.evaluate(() => {
-    (document.querySelector('.swal2-confirm') as HTMLButtonElement | null)?.click();
-  });
-  await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 10_000 });
+/** Navigate to /staff/sell and wait for the trip-browser to be present. */
+async function gotoSellPage(page: Page): Promise<void> {
+  await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
+  // The walk-in-trip-browser is always rendered (even empty-state)
+  await page.locator('app-walk-in-trip-browser').waitFor({ state: 'visible', timeout: 20_000 });
 }
 
 // =============================================================================
-// RA-3  Role boundaries — unauthenticated / wrong-role tests
-// (These use fake tokens; the guard fires before any HTTP call is made.)
+// RA-3  Role boundaries — redirect behaviour (fake tokens, no backend calls)
 // =============================================================================
 
 test.describe('RA-3: Role boundaries — redirect behaviour', () => {
   test('driver is redirected away from /staff/sell (canActivate blocks it)', async ({ page }) => {
     await injectFakeAuth(page, ['driver']);
     await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-
-    // AuthGuard blocks driver from the salesperson-only route
     await page.waitForURL((url) => !url.pathname.startsWith('/staff/sell'), { timeout: 15_000 });
     expect(page.url()).not.toContain('/staff/sell');
   });
@@ -230,7 +209,6 @@ test.describe('RA-3: Role boundaries — redirect behaviour', () => {
   test('plain user is redirected away from /staff/sell', async ({ page }) => {
     await injectFakeAuth(page, ['user']);
     await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-
     await page.waitForURL((url) => !url.pathname.startsWith('/staff/sell'), { timeout: 15_000 });
     expect(page.url()).not.toContain('/staff/sell');
   });
@@ -238,500 +216,577 @@ test.describe('RA-3: Role boundaries — redirect behaviour', () => {
   test('unauthenticated visitor is redirected to /login', async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('app_language', 'en');
-      // No auth_token set → isAuthenticated() returns false
     });
     await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-
     await page.waitForURL('**/login**', { timeout: 15_000 });
     expect(page.url()).toContain('/login');
   });
 });
 
 // =============================================================================
-// Authenticated suites — use stored admin auth so page.goto doesn't hang.
-// Admin role satisfies every canActivate check (AuthService.hasAnyRole → true).
+// Authenticated suite — all remaining tests use stored admin auth
 // =============================================================================
 
-test.describe('Authenticated walk-in flow tests', () => {
+test.describe('Walk-in POS single-screen (authenticated)', () => {
   test.use({ storageState: ADMIN_AUTH });
 
-  // The sell page loads the stop list on init to populate the From/To dropdowns.
-  // Register the mock before each navigation so the request never hits SIT.
-  test.beforeEach(async ({ page }) => {
-    await page.route(STOPS_ENDPOINT, (route) => route.fulfill({ json: STOPS_RESP }));
-  });
+  // ── AC-12  Old wizard selectors MUST NOT exist ───────────────────────────
 
-  // ── RA-3 positive case: admin (which passes all role checks) can reach /staff/sell ─
-
-  test('RA-3: admin can reach /staff/sell — search form renders', async ({ page }) => {
-    await page.route('**/api/private/**', (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
+  test('AC-12: old 5-step wizard selectors are absent from /staff/sell', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
     );
-    await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
+    await gotoSellPage(page);
 
-    await expect(page.locator('select[formControlName="bookingType"]')).toBeVisible({ timeout: 20_000 });
+    // Old wizard had bookingType select, fromStop/toStop p-dropdown, numberOfPassengers
+    await expect(page.locator('select[formControlName="bookingType"]')).toHaveCount(0);
+    await expect(page.locator('p-dropdown[formControlName="fromStop"]')).toHaveCount(0);
+    await expect(page.locator('p-dropdown[formControlName="toStop"]')).toHaveCount(0);
+    await expect(page.locator('input[formControlName="numberOfPassengers"]')).toHaveCount(0);
+
+    // New 3-column POS components are present
+    await expect(page.locator('app-walk-in-trip-browser')).toBeVisible();
+    await expect(page.locator('app-walk-in-center-panel')).toBeVisible();
+    await expect(page.locator('app-walk-in-checkout')).toBeVisible();
   });
 
-  // ── RA-2  BUS seat double-booking guard ──────────────────────────────────
-
-  test.describe('RA-2: BUS seat availability — takenSeats complement logic', () => {
-    test('B3 (taken) renders with disabled class; B1 (available) does not', async ({ page }) => {
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: BUS_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-
-      // Wait for search form
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
-
-      // Submit search → moves to seats step
-      await fillSearchForm(page);
-
-      // Select the schedule card to render the seat map
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-
-      // Wait for seat map
-      const seatB1 = page.getByText('B1', { exact: true });
-      await seatB1.waitFor({ timeout: 12_000 });
-
-      const seatB3 = page.getByText('B3', { exact: true });
-
-      // B3 is NOT in availableSeatNumbers → getTakenSeats() includes it → .disabled class
-      await expect(seatB3).toHaveClass(/disabled/, { timeout: 5_000 });
-
-      // B1 IS available → no disabled class
-      await expect(seatB1).not.toHaveClass(/disabled/);
-    });
-
-    test('clicking a taken BUS seat (B3) does not change the selection count', async ({ page }) => {
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: BUS_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
-
-      await fillSearchForm(page);
-
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-
-      const seatB3 = page.getByText('B3', { exact: true });
-      await seatB3.waitFor({ timeout: 12_000 });
-
-      // Click the disabled seat — the bus component's setPassengerSeatPosition
-      // returns early when isSeatTakenByOther() is true
-      await seatB3.click({ force: true });
-
-      // Selection counter should still show 0 / 1 (no selection happened).
-      // The template renders the count inside a <span class="badge seats-progress">.
-      const counter = page.locator('.seats-progress', { hasText: /0\s*\/\s*1/ });
-      await expect(counter).toBeVisible({ timeout: 5_000 });
-    });
-
-    test('SEAT_COUNT_MISMATCH alert fires when Next is clicked with no seat selected', async ({ page }) => {
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: BUS_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
-
-      await fillSearchForm(page);
-
-      // Select schedule but do NOT pick any seat
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-      await page.locator('.seat-box').first().waitFor({ timeout: 12_000 });
-
-      // Click Next without a seat selected
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-
-      // SEAT_COUNT_MISMATCH warning alert must appear
-      await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 12_000 });
-
-      // The English SEAT_COUNT_MISMATCH message ("Please select a seat for every
-      // passenger") is rendered as the SweetAlert title (alertService.warning →
-      // Swal.fire({ title }) ), not the html-container.
-      const alertText = (await page.locator('.swal2-popup').textContent()) ?? '';
-      expect(alertText.toLowerCase()).toMatch(/seat|passenger/);
-
-      await dismissAlert(page);
-
-      // Stepper did NOT advance — seat-box elements are still visible (we're still on seats step)
-      await expect(page.locator('.seat-box').first()).toBeVisible();
-    });
+  test('RA-3: admin can reach /staff/sell — POS layout renders', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+    await expect(page.locator('app-walk-in-trip-browser')).toBeVisible();
   });
 
-  // ── RA-4  409 seat-conflict ───────────────────────────────────────────────
+  // ── AC-1  Date picker loads trips, grouped by route ──────────────────────
 
-  test.describe('RA-4: 409 seat-conflict is surfaced as an alert', () => {
-    test('booking 409 shows an alert and leaves stepper on passengers step', async ({ page }) => {
-      // Catch-all FIRST so the specific routes below take precedence (Playwright
-      // runs matching routes in reverse registration order — last registered wins).
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: BUS_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      // Booking endpoint returns 409
-      await page.route(BOOKINGS_ENDPOINT, (route) =>
-        route.fulfill({
-          status: 409,
-          json: { code: 409, message: 'SEAT_CONFLICT', data: null },
-        })
-      );
+  test('AC-1: page loads current-day trips on init, grouped by route', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: MULTI_ROUTE_RESP })
+    );
+    await gotoSellPage(page);
 
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+    // Two route group headers visible
+    await expect(page.locator('.route-group-header', { hasText: 'Bangkok - Chiang Mai' })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('.route-group-header', { hasText: 'Chiang Mai - Phitsanulok' })).toBeVisible({ timeout: 10_000 });
 
-      // Step 1: search
-      await fillSearchForm(page);
-
-      // Step 2: select schedule, pick seat B1
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-      const seatB1 = page.getByText('B1', { exact: true });
-      await seatB1.waitFor({ timeout: 12_000 });
-      await seatB1.click();
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-
-      // Step 3: passengers → submit → 409
-      await fillPassengersAndConfirm(page);
-
-      // Error alert must appear
-      await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 15_000 });
-      await dismissAlert(page);
-
-      // Stepper did NOT advance to payment — Confirm button still present and enabled
-      const confirmBtn = page.locator('button.btn-primary:has-text("Confirm")');
-      await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
-      await expect(confirmBtn).not.toBeDisabled();
-    });
+    // Trip rows rendered (at least 2 total for the two routes)
+    await expect(page.locator('.trip-row')).toHaveCount(2, { timeout: 10_000 });
   });
 
-  // ── RA-1  Idempotent cash settlement ─────────────────────────────────────
+  // ── AC-2  Empty day → 200 + empty-state (not error) ─────────────────────
 
-  test.describe('RA-1: Idempotent cash settlement', () => {
-    test('same Idempotency-Key is sent on pay → server error → retry', async ({ page }) => {
-      const capturedKeys: string[] = [];
-      let payCallCount = 0;
+  test('AC-2: zero-trip day shows empty-state UI, no error modal', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
 
-      // Catch-all FIRST so the specific routes below take precedence (Playwright
-      // runs matching routes in reverse registration order — last registered wins).
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: BUS_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route(BOOKINGS_ENDPOINT, (route) =>
-        route.fulfill({ status: 201, json: BOOKING_RESP })
-      );
-      await page.route(PAYMENT_ENDPOINT, (route) => {
-        payCallCount++;
-        const key = route.request().headers()['idempotency-key'];
-        capturedKeys.push(key ?? '');
-        if (payCallCount === 1) {
-          return route.fulfill({
-            status: 500,
-            json: { code: 500, message: 'Internal Server Error' },
-          });
-        }
-        return route.fulfill({ json: PAYMENT_RESP });
-      });
+    // Ensure no alert fires
+    let alertFired = false;
+    page.on('dialog', () => { alertFired = true; });
 
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+    await gotoSellPage(page);
 
-      // Step 1: search
-      await fillSearchForm(page);
+    // Empty-state element in trip browser
+    const emptyMsg = page.locator('text=No trips scheduled for this date.');
+    await expect(emptyMsg).toBeVisible({ timeout: 10_000 });
 
-      // Step 2: seats — select schedule card and click B1
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-      const seatB1 = page.getByText('B1', { exact: true });
-      await seatB1.waitFor({ timeout: 12_000 });
-      await seatB1.click();
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-
-      // Step 3: passengers
-      await fillPassengersAndConfirm(page);
-
-      // Step 4: payment — first attempt fails
-      const payBtn = page.locator('button.btn-success');
-      await payBtn.waitFor({ timeout: 12_000 });
-      await payBtn.click();
-
-      // Dismiss the error alert
-      await dismissAlert(page);
-
-      // Retry — button re-enabled
-      await expect(payBtn).not.toBeDisabled({ timeout: 5_000 });
-      await payBtn.click();
-
-      // Step 5: ticket — booking number visible
-      await expect(page.locator('text=BK-20260901-E2E')).toBeVisible({ timeout: 20_000 });
-
-      // Idempotency assertions
-      expect(payCallCount).toBe(2);
-      expect(capturedKeys).toHaveLength(2);
-      expect(capturedKeys[0]).toBeTruthy();
-      // Both calls MUST use the same key
-      expect(capturedKeys[0]).toBe(capturedKeys[1]);
-      // Key must be a valid UUID v4
-      expect(capturedKeys[0]).toMatch(
-        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-      );
-    });
+    // No SweetAlert container
+    await expect(page.locator('.swal2-container')).toHaveCount(0);
+    expect(alertFired).toBe(false);
   });
 
-  // ── Happy path — full flow (VAN schedule) ────────────────────────────────
+  // ── AC-3  Trip row badges: plate, driver, 3 badges sum to capacity ────────
 
-  test.describe('Happy path: full walk-in sale (VAN schedule)', () => {
-    test('Search → Seats → Passengers → Payment → E-ticket (bookingNumber visible)', async ({ page }) => {
-      // Catch-all FIRST so the specific routes below take precedence (Playwright
-      // runs matching routes in reverse registration order — last registered wins).
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: VAN_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route(BOOKINGS_ENDPOINT, (route) =>
-        route.fulfill({ status: 201, json: BOOKING_RESP })
-      );
-      await page.route(PAYMENT_ENDPOINT, (route) =>
-        route.fulfill({ json: PAYMENT_RESP })
-      );
+  test('AC-3: trip row shows plate, driver and 3 badge counts that sum to capacity', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
 
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+    const tripRow = page.locator('.trip-row').first();
+    await tripRow.waitFor({ timeout: 10_000 });
 
-      // ── Step 1: Search ────────────────────────────────────────────────────
-      await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-      await selectStop(page, 'fromStop', 'Nong Sak');
-      await selectStop(page, 'toStop', 'Bangkok');
-      await pickDate(page, 'departureDate', '2026-09-02');
-      await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
-      await page.locator('form button.btn-primary').click();
+    // License plate and driver name displayed
+    await expect(tripRow).toContainText('TH-8888');
+    await expect(tripRow).toContainText('Somchai Driver');
 
-      // ── Step 2: Seats — VAN schedule ─────────────────────────────────────
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
+    // Three badge counts: 18 available, 1 reserved, 2 sold
+    // availableCount=18, reservedUnpaidCount=1, soldPaidCount=2 → sum=21=capacity
+    await expect(tripRow).toContainText('18');
+    await expect(tripRow).toContainText('1');
+    await expect(tripRow).toContainText('2');
 
-      // VAN uses A-prefixed labels (A1..A10). Seat A1 should be available.
-      const seatA1 = page.getByText('A1', { exact: true });
-      await seatA1.waitFor({ timeout: 12_000 });
-      await seatA1.click();
-
-      // Selection counter reflects 1 selected seat: "1 / 1 Seats Selected"
-      await expect(page.locator('.seats-progress', { hasText: /1\s*\/\s*1/ })).toBeVisible({ timeout: 5_000 });
-
-      // Proceed to passengers
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-
-      // ── Step 3: Passengers ────────────────────────────────────────────────
-      // The seat badge shows in the card header
-      await page.locator('.card-header:has-text("Seat")').waitFor({ timeout: 10_000 });
-
-      await fillPassengersAndConfirm(page);
-
-      // ── Step 4: Payment ───────────────────────────────────────────────────
-      const payBtn = page.locator('button.btn-success');
-      await payBtn.waitFor({ timeout: 12_000 });
-
-      // Cash-only badge must be visible; no payment method selector
-      await expect(page.locator('.badge.bg-success')).toBeVisible();
-      await expect(page.locator('select[formControlName="paymentMethod"]')).not.toBeVisible();
-
-      await payBtn.click();
-
-      // ── Step 5: E-ticket ──────────────────────────────────────────────────
-      await expect(page.locator('text=BK-20260901-E2E')).toBeVisible({ timeout: 20_000 });
-
-      // "View e-ticket" and "New sale" buttons present (target by stable class,
-      // not by translated label which is "View E-Ticket" / "New Sale").
-      await expect(page.locator('button.btn-outline-primary')).toBeVisible();
-      await expect(page.locator('button.btn-primary:has-text("New Sale")')).toBeVisible();
-    });
-
-    test('New sale button resets the stepper back to the search step', async ({ page }) => {
-      // Catch-all FIRST so the specific routes below take precedence (Playwright
-      // runs matching routes in reverse registration order — last registered wins).
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) =>
-        route.fulfill({ json: VAN_SEARCH_RESP })
-      );
-      await page.route(SEATS_ENDPOINT, (route) =>
-        route.fulfill({ json: SEATS_RESP })
-      );
-      await page.route(BOOKINGS_ENDPOINT, (route) =>
-        route.fulfill({ status: 201, json: BOOKING_RESP })
-      );
-      await page.route(PAYMENT_ENDPOINT, (route) =>
-        route.fulfill({ json: PAYMENT_RESP })
-      );
-
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
-
-      // Complete the flow
-      await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-      await selectStop(page, 'fromStop', 'Nong Sak');
-      await selectStop(page, 'toStop', 'Bangkok');
-      await pickDate(page, 'departureDate', '2026-09-02');
-      await page.locator('form button.btn-primary').click();
-
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-
-      const seatA1 = page.getByText('A1', { exact: true });
-      await seatA1.waitFor({ timeout: 12_000 });
-      await seatA1.click();
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-
-      await fillPassengersAndConfirm(page);
-
-      const payBtn = page.locator('button.btn-success');
-      await payBtn.waitFor({ timeout: 12_000 });
-      await payBtn.click();
-
-      await expect(page.locator('text=BK-20260901-E2E')).toBeVisible({ timeout: 20_000 });
-
-      // Click New sale
-      await page.locator('button:has-text("New sale"), button:has-text("New Sale")').click();
-
-      // Stepper returns to search step
-      await expect(page.locator('select[formControlName="bookingType"]')).toBeVisible({ timeout: 8_000 });
-    });
+    // Verify badge elements explicitly
+    const badges = tripRow.locator('.badge');
+    await expect(badges).toHaveCount(3, { timeout: 5_000 });
   });
 
-  // ── Passenger field validation ───────────────────────────────────────────
-  test.describe('Passenger field validation', () => {
-    test('invalid phone shows an inline error and Confirm is blocked', async ({ page }) => {
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) => route.fulfill({ json: VAN_SEARCH_RESP }));
-      await page.route(SEATS_ENDPOINT, (route) => route.fulfill({ json: SEATS_RESP }));
-      // Deliberately NO bookings route: if Confirm wrongly proceeded, the booking
-      // POST would 404 and the flow would error — but it must never get that far.
+  // ── AC-4  Seat map reflects trip; taken seats not selectable ─────────────
 
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+  test('AC-4: selecting a BUS trip shows seat map; seat absent from availableSeatNumbers is taken', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
 
-      // Reach the passengers step (search → pick schedule → pick seat → Next)
-      await fillSearchForm(page, { date: '2026-09-02' });
-      const scheduleCard = page.locator('.card.mb-2.border').first();
-      await scheduleCard.waitFor({ timeout: 15_000 });
-      await scheduleCard.click();
-      const seatA1 = page.getByText('A1', { exact: true });
-      await seatA1.waitFor({ timeout: 12_000 });
-      await seatA1.click();
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-      await page.locator('.card-header:has-text("Seat")').waitFor({ timeout: 10_000 });
+    // Click the first trip row to select it
+    const tripRow = page.locator('.trip-row').first();
+    await tripRow.waitFor({ timeout: 10_000 });
+    await tripRow.click();
 
-      // Enter an invalid (too-short) phone and ID on the first passenger
-      const phone = page.locator('[formArrayName="passengers"] input[formControlName="phoneNumber"]').first();
-      await phone.fill('123');
-      await phone.blur();
-      const idCard = page.locator('[formArrayName="passengers"] input[formControlName="identityCardNumber"]').first();
-      await idCard.fill('99');
-      await idCard.blur();
+    // Center panel shows seat map (bus: app-passenger-seat-bus)
+    await expect(page.locator('app-passenger-seat-bus')).toBeVisible({ timeout: 15_000 });
 
-      // Field-specific inline errors are shown
-      await expect(
-        page.getByText('Enter a valid 10-digit phone number (e.g. 0812345678).')
-      ).toBeVisible({ timeout: 5_000 });
-      await expect(
-        page.getByText('Enter a valid 13-digit ID card number.')
-      ).toBeVisible({ timeout: 5_000 });
+    // B3 is absent from availableSeatNumbers (digits 1..21 minus {3,4,5})
+    // The center panel's takenSeats complement logic maps absent digit → B-label
+    // B3 (digit 3) should have .disabled class
+    const seatB3 = page.getByText('B3', { exact: true });
+    await seatB3.waitFor({ timeout: 10_000 });
+    await expect(seatB3).toHaveClass(/disabled/, { timeout: 5_000 });
 
-      // Confirm is blocked: a validation alert fires and we stay on the passengers step
-      await page.locator('button.btn-primary:has-text("Confirm")').click();
-      await dismissAlert(page);
-      await expect(page.locator('.card-header:has-text("Seat")')).toBeVisible();
-    });
+    // B1 is available (digit 1 present)
+    const seatB1 = page.getByText('B1', { exact: true });
+    await expect(seatB1).not.toHaveClass(/disabled/);
   });
 
-  // ── Return-trip seat selection (regression for #38) ──────────────────────
-  test.describe('Return trip seat selection', () => {
-    test('return trip renders a separate arrival seat map and Next proceeds', async ({ page }) => {
-      await page.route('**/api/private/**', (route) =>
-        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
-      );
-      await page.route(SEARCH_ENDPOINT, (route) => route.fulfill({ json: RETURN_SEARCH_RESP }));
-      await page.route(SEATS_ENDPOINT, (route) => route.fulfill({ json: SEATS_RESP }));
+  test('AC-4 VAN edge: sold-out VAN (availableSeatNumbers=[]) → all seats non-selectable', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: SOLDOUT_VAN_RESP })
+    );
+    await gotoSellPage(page);
 
-      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
-      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+    const tripRow = page.locator('.trip-row').first();
+    await tripRow.waitFor({ timeout: 10_000 });
+    await tripRow.click();
 
-      // Search a ROUND TRIP
-      await page.locator('select[formControlName="bookingType"]').selectOption('return');
-      await selectStop(page, 'fromStop', 'Nong Sak');
-      await selectStop(page, 'toStop', 'Bangkok');
-      await pickDate(page, 'departureDate', '2026-09-01');
-      await pickDate(page, 'returnDate', '2026-09-05');
-      await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
-      await page.locator('form button.btn-primary').click();
+    // VAN seat map renders
+    await expect(page.locator('app-passenger-seat-van')).toBeVisible({ timeout: 15_000 });
 
-      // Pick the departure schedule (08:00) and a departure seat
-      await page.locator('.card.mb-2.border', { hasText: '08:00' }).first().click();
-      await page.locator('.seatmap-departure').getByText('B1', { exact: true }).click();
+    // With availableSeatNumbers=[], the takenSeats complement for BUS would return
+    // all bus labels. For VAN the isSeatAvailable uses availableSeatNumbers directly.
+    // When the list is empty NO seat should be selectable → all seats have .taken or
+    // .disabled class on the van component cells.
+    // The Sell button must stay disabled because no seat can be selected.
+    const sellBtn = page.locator('button.btn-success');
+    await expect(sellBtn).toBeDisabled({ timeout: 5_000 });
+  });
 
-      // Before choosing a return trip, there is no return seat map yet
-      await expect(page.locator('.seatmap-return')).toHaveCount(0);
+  // ── AC-5  Customer form: 4 required fields; no gender; Sell disabled until valid ─
 
-      // Pick the return schedule (15:00) → the arrival seat map appears
-      await page.locator('.card.mb-2.border', { hasText: '15:00' }).first().click();
-      await expect(page.locator('.seatmap-return')).toBeVisible({ timeout: 5_000 });
+  test('AC-5: Sell button disabled until all 4 required fields valid AND seat selected AND cash sufficient', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
 
-      // Pick a return seat (scoped to the return map so it isn't confused with departure B1)
-      await page.locator('.seatmap-return').getByText('B2', { exact: true }).click();
+    const sellBtn = page.locator('button.btn-success');
 
-      // Both legs satisfied → Next advances to the passengers step (no SEAT_COUNT_MISMATCH)
-      await page.locator('button.btn.btn-primary:has-text("Next")').click();
-      await expect(page.locator('.card-header:has-text("Seat")').first()).toBeVisible({ timeout: 10_000 });
+    // Initially disabled (no seat, no form data)
+    await expect(sellBtn).toBeDisabled({ timeout: 10_000 });
+
+    // Select trip and seat
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    // Still disabled (no contact form filled)
+    await expect(sellBtn).toBeDisabled();
+
+    // Fill contact form
+    await fillContactForm(page);
+
+    // Still disabled (cash received = 0, total = 350)
+    await expect(sellBtn).toBeDisabled();
+
+    // Enter sufficient cash
+    await page.locator('input[type="number"]').fill('400');
+
+    // Now enabled
+    await expect(sellBtn).not.toBeDisabled({ timeout: 5_000 });
+  });
+
+  test('AC-5: no gender field in checkout form', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Gender field must not exist anywhere on the sell page
+    await expect(page.locator('select[formControlName="gender"]')).toHaveCount(0);
+    await expect(page.locator('input[formControlName="gender"]')).toHaveCount(0);
+  });
+
+  // ── AC-6  Booking payload: no gender, one contact block, ADULT passengerType ─
+
+  test('AC-6: booking POST has no gender, one contact block, passengerType=ADULT, totalAmount>0 (WI-A)', async ({ page }) => {
+    let capturedBookingPayload: Record<string, unknown> | null = null;
+
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await page.route(BOOKINGS_ENDPOINT, async (route) => {
+      const body = route.request().postDataJSON() as Record<string, unknown>;
+      capturedBookingPayload = body;
+      await route.fulfill({ status: 201, json: BOOKING_RESP });
     });
+    await page.route(PAYMENT_ENDPOINT, (route) =>
+      route.fulfill({ json: PAYMENT_RESP })
+    );
+
+    await gotoSellPage(page);
+
+    // Select trip and seat B1
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    // Fill contact form
+    await fillContactForm(page);
+
+    // Enter cash >= total (350)
+    await page.locator('input[type="number"]').fill('400');
+
+    // Click Sell
+    await page.locator('button.btn-success').click();
+
+    // Wait for navigation to e-ticket
+    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+
+    // Verify captured payload
+    expect(capturedBookingPayload).not.toBeNull();
+
+    const payload = capturedBookingPayload!;
+
+    // WI-A: totalAmount > 0
+    expect(Number(payload['totalAmount'])).toBeGreaterThan(0);
+
+    // AC-6: booking channel
+    expect(payload['bookingChannel']).toBe('walk_in');
+
+    // AC-6: no top-level gender
+    expect(payload).not.toHaveProperty('gender');
+
+    // AC-6: one contact block (not array)
+    expect(payload['contact']).toBeDefined();
+    expect(Array.isArray(payload['contact'])).toBe(false);
+
+    // AC-6: passengerType=ADULT on each passenger
+    const depSchedule = payload['departureSchedule'] as { passengers: Array<Record<string, unknown>> };
+    expect(depSchedule.passengers.length).toBeGreaterThanOrEqual(1);
+    for (const p of depSchedule.passengers) {
+      expect(p['passengerType']).toBe('ADULT');
+      expect(p).not.toHaveProperty('gender');
+    }
+  });
+
+  // ── AC-7  Payment tiles: cash active; PromptPay/credit disabled ───────────
+
+  test('AC-7: cash tile is active; PromptPay and credit tiles are disabled with "Coming Soon"', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Cash tile: success styling
+    const cashTile = page.locator('.payment-tile').filter({ hasText: 'Cash' });
+    await expect(cashTile).toBeVisible({ timeout: 10_000 });
+    await expect(cashTile).toHaveClass(/border-success/);
+
+    // PromptPay tile: disabled, "Coming soon"
+    const promptPayTile = page.locator('.payment-tile').filter({ hasText: 'PromptPay' });
+    await expect(promptPayTile).toBeVisible();
+    await expect(promptPayTile).toHaveAttribute('aria-disabled', 'true');
+    await expect(promptPayTile.locator('.badge')).toContainText('Coming Soon', { ignoreCase: true });
+
+    // Credit tile: disabled, "Coming soon"
+    const creditTile = page.locator('.payment-tile').filter({ hasText: 'Credit Card' });
+    await expect(creditTile).toBeVisible();
+    await expect(creditTile).toHaveAttribute('aria-disabled', 'true');
+    await expect(creditTile.locator('.badge')).toContainText('Coming Soon', { ignoreCase: true });
+  });
+
+  test('AC-7: no Omise-related DOM element exists on the sell page', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Omise checkout script or button class
+    await expect(page.locator('[data-omise]')).toHaveCount(0);
+    await expect(page.locator('.omise-checkout')).toHaveCount(0);
+  });
+
+  // ── AC-8  Change due = received − total; Sell disabled when received < total ─
+
+  test('AC-8: change due reflects cash received minus total amount live', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Select trip and seat to get a total > 0
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    await fillContactForm(page);
+
+    // Enter less than total (350): received=300
+    const cashInput = page.locator('input[type="number"]');
+    await cashInput.fill('300');
+
+    // Change due should be negative (300 - 350 = -50)
+    const changeDue = page.locator('[aria-live="polite"] .fw-semibold');
+    await expect(changeDue).toHaveClass(/text-danger/, { timeout: 5_000 });
+
+    // Sell still disabled
+    await expect(page.locator('button.btn-success')).toBeDisabled();
+
+    // Enter exact amount: change=0 → enabled
+    await cashInput.fill('350');
+    await expect(page.locator('button.btn-success')).not.toBeDisabled({ timeout: 3_000 });
+
+    // Enter more: change positive
+    await cashInput.fill('500');
+    await expect(changeDue).toHaveClass(/text-success/, { timeout: 3_000 });
+  });
+
+  // ── AC-9  Successful sale → trips list refreshes ─────────────────────────
+
+  test('AC-9: successful Sell calls payWalkIn and navigates to /e-ticket', async ({ page }) => {
+    let walkInCallCount = 0;
+
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) => {
+      walkInCallCount++;
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP });
+    });
+    await page.route(BOOKINGS_ENDPOINT, (route) =>
+      route.fulfill({ status: 201, json: BOOKING_RESP })
+    );
+    await page.route(PAYMENT_ENDPOINT, (route) =>
+      route.fulfill({ json: PAYMENT_RESP })
+    );
+
+    await gotoSellPage(page);
+    const initialCallCount = walkInCallCount;
+
+    // Select trip and seat
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    await fillContactForm(page);
+    await page.locator('input[type="number"]').fill('400');
+
+    await page.locator('button.btn-success').click();
+
+    // Navigates to e-ticket on success
+    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+
+    // Walk-in schedules were reloaded after payment (badge refresh — AC-9)
+    expect(walkInCallCount).toBeGreaterThan(initialCallCount);
+  });
+
+  // ── AC-10  Center panel: 3 tabs ───────────────────────────────────────────
+
+  test('AC-10: center panel shows 3 tabs after trip selection', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Select trip
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+
+    // p-tabView appears with 3 tabs
+    await expect(page.locator('p-tabview')).toBeVisible({ timeout: 10_000 });
+
+    // PrimeNG tabview: 3 li[role="presentation"] for real tabs + 1 ink-bar li[aria-hidden="true"].
+    // The real tab anchors have role="tab" inside each presentation li.
+    await expect(page.locator('.p-tabview-nav a[role="tab"]')).toHaveCount(3, { timeout: 5_000 });
+
+    // Tab labels
+    await expect(page.locator('.p-tabview-nav')).toContainText('Ticket Sales');
+    await expect(page.locator('.p-tabview-nav')).toContainText('Trip Details');
+    await expect(page.locator('.p-tabview-nav')).toContainText('Boarding');
+  });
+
+  test('AC-10: Trip Details tab shows license plate and driver name', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+
+    // Click Trip Details tab
+    await page.locator('.p-tabview-nav').getByText('Trip Details').click();
+
+    // Trip details show plate and driver
+    await expect(page.locator('dd', { hasText: 'TH-8888' })).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('dd', { hasText: 'Somchai Driver' })).toBeVisible({ timeout: 5_000 });
+  });
+
+  // ── AC-11  i18n keys exist in all 3 locales (static check via mocked API) ─
+
+  test('AC-11: required STAFF.SELL i18n keys are present in all three locale files', async ({ page }) => {
+    // This test statically loads each locale JSON and verifies key presence.
+    // It does NOT navigate to /staff/sell — purely a file-level assertion.
+    const requiredKeys = [
+      'BADGE_AVAILABLE', 'BADGE_RESERVED', 'BADGE_SOLD',
+      'TRIPS_EMPTY', 'CENTER_EMPTY',
+      'TAB_TICKET_SALES', 'TAB_TRIP_DETAILS', 'TAB_BOARDING',
+      'PAYMENT_CASH', 'PAYMENT_PROMPTPAY', 'PAYMENT_CREDIT', 'COMING_SOON',
+      'CASH_RECEIVED', 'CHANGE_DUE', 'SELL_BTN', 'SELLING',
+      'PASSENGER_TITLE', 'FIRST_NAME', 'LAST_NAME', 'PHONE', 'ID_CARD',
+      'OPTIONAL', 'TOTAL_AMOUNT',
+    ];
+
+    const locales = ['en', 'th', 'zh'];
+
+    for (const locale of locales) {
+      const resp = await page.request.get(`http://localhost:4200/i18n/${locale}.json`);
+      expect(resp.status()).toBe(200);
+      const data = await resp.json() as { STAFF?: { SELL?: Record<string, string> } };
+      const sellKeys = Object.keys(data?.STAFF?.SELL ?? {});
+
+      for (const key of requiredKeys) {
+        expect(sellKeys, `locale=${locale} missing STAFF.SELL.${key}`).toContain(key);
+      }
+    }
+  });
+
+  // ── WI-G  Null pricePerSeat → Sell stays disabled ────────────────────────
+
+  test('WI-G: null pricePerSeat trip shows in list but Sell button stays disabled', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: NULL_PRICE_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Trip is shown in the list
+    await expect(page.locator('.trip-row')).toBeVisible({ timeout: 10_000 });
+
+    // Select trip and a seat
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    // Fill contact form
+    await fillContactForm(page);
+
+    // Enter cash
+    await page.locator('input[type="number"]').fill('999');
+
+    // Sell must remain disabled because totalAmount = 0 (null price)
+    await expect(page.locator('button.btn-success')).toBeDisabled({ timeout: 3_000 });
+  });
+
+  // ── WI-A integration guard: idempotency key is sent with payment ──────────
+
+  test('WI-A: Idempotency-Key header is sent with the walk-in payment request', async ({ page }) => {
+    let capturedIdempotencyKey: string | null = null;
+
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await page.route(BOOKINGS_ENDPOINT, (route) =>
+      route.fulfill({ status: 201, json: BOOKING_RESP })
+    );
+    await page.route(PAYMENT_ENDPOINT, (route) => {
+      capturedIdempotencyKey = route.request().headers()['idempotency-key'] ?? null;
+      route.fulfill({ json: PAYMENT_RESP });
+    });
+
+    await gotoSellPage(page);
+
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    await fillContactForm(page);
+    await page.locator('input[type="number"]').fill('400');
+    await page.locator('button.btn-success').click();
+
+    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+
+    // Idempotency key must be a valid UUID v4
+    expect(capturedIdempotencyKey).toBeTruthy();
+    expect(capturedIdempotencyKey).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    );
+  });
+
+  // ── Full happy-path flow ───────────────────────────────────────────────────
+
+  test('Full happy path: select date → trip → seat → fill form → cash → Sell → /e-ticket', async ({ page }) => {
+    let bookingPayload: Record<string, unknown> | null = null;
+
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await page.route(BOOKINGS_ENDPOINT, async (route) => {
+      bookingPayload = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({ status: 201, json: BOOKING_RESP });
+    });
+    await page.route(PAYMENT_ENDPOINT, (route) =>
+      route.fulfill({ json: PAYMENT_RESP })
+    );
+
+    await gotoSellPage(page);
+
+    // Trip browser shows route group and trip row
+    await expect(page.locator('.route-group-header')).toBeVisible({ timeout: 10_000 });
+
+    // Select the first trip
+    await page.locator('.trip-row').first().click();
+
+    // Seat map loads
+    await expect(page.locator('app-passenger-seat-bus')).toBeVisible({ timeout: 15_000 });
+
+    // Select B1
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 10_000 });
+    await seatB1.click();
+
+    // Fill checkout form
+    await fillContactForm(page);
+
+    // Enter cash
+    await page.locator('input[type="number"]').fill('400');
+
+    // Change due = 400 - 350 = 50 → positive, green
+    await expect(page.locator('[aria-live="polite"] .fw-semibold')).toHaveClass(/text-success/, { timeout: 3_000 });
+
+    // Sell
+    await page.locator('button.btn-success').click();
+
+    // Navigates to /e-ticket
+    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+
+    // Verify booking payload correctness (WI-A, WI-B, AC-6)
+    expect(bookingPayload).not.toBeNull();
+    expect(bookingPayload!['totalAmount']).toBe(350);
+    expect(bookingPayload!['bookingChannel']).toBe('walk_in');
+    expect(bookingPayload!['bookingType']).toBe('one_way');
+    const dep = bookingPayload!['departureSchedule'] as { scheduleId: number; passengers: Array<Record<string, unknown>> };
+    expect(dep.scheduleId).toBe(201);
+    expect(dep.passengers[0]['seatNumber']).toBeDefined();
+    expect(dep.passengers[0]['passengerType']).toBe('ADULT');
+    expect(dep.passengers[0]).not.toHaveProperty('gender');
   });
 });

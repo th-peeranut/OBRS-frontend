@@ -2,6 +2,9 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
+import { TabViewModule } from 'primeng/tabview';
+import { BadgeModule } from 'primeng/badge';
+import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
@@ -17,6 +20,9 @@ import { StaffSchedulesPageComponent } from './pages/staff-schedules/staff-sched
 import { DriverSchedulesPageComponent } from './pages/driver-schedules/driver-schedules-page.component';
 import { BoardingListPageComponent } from './pages/boarding-list/boarding-list-page.component';
 import { BoardingEntryPageComponent } from './pages/boarding-entry/boarding-entry-page.component';
+import { WalkInTripBrowserComponent } from './components/walk-in-trip-browser/walk-in-trip-browser.component';
+import { WalkInCenterPanelComponent } from './components/walk-in-center-panel/walk-in-center-panel.component';
+import { WalkInCheckoutComponent } from './components/walk-in-checkout/walk-in-checkout.component';
 
 export const staffRoutes: Routes = [
   {
@@ -66,12 +72,18 @@ export const staffRoutes: Routes = [
     DriverSchedulesPageComponent,
     BoardingListPageComponent,
     BoardingEntryPageComponent,
+    WalkInTripBrowserComponent,
+    WalkInCenterPanelComponent,
+    WalkInCheckoutComponent,
   ],
   imports: [
     SharedModule,
     RouterModule.forChild(staffRoutes),
     CalendarModule,
     DropdownModule,
+    TabViewModule,
+    BadgeModule,
+    ProgressSpinnerModule,
     AdminSharedModule,
     PassengerSeatModule,
 

@@ -1,0 +1,29 @@
+:host ::ng-deep .trip-browser-calendar.p-calendar {
+  width: 100%;
+
+  .p-inputtext {
+    width: 100%;
+  }
+}
+
+.trip-row {
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+
+  &--selected {
+    background-color: rgba(13, 110, 253, 0.08);
+    border-left: 3px solid #0d6efd !important;
+  }
+}
+
+.route-group-header {
+  top: 0;
+  z-index: 1;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
