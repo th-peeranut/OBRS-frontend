@@ -1,4 +1,4 @@
-<div class="admin-shell" [class.is-sidebar-open]="isSidebarOpen">
+<div class="admin-shell theme-admin" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen">
   <div
     class="admin-sidebar-backdrop"
     *ngIf="isSidebarOpen"
@@ -66,6 +66,16 @@
       </div>
 
       <div class="admin-topbar-actions">
+        <button
+          type="button"
+          class="admin-icon-btn"
+          (click)="toggleTheme()"
+          [attr.aria-pressed]="isDarkMode"
+          [attr.aria-label]="'ADMIN.LAYOUT.THEME_TOGGLE' | translate"
+        >
+          <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+
         <div class="admin-lang-switch" role="group" [attr.aria-label]="'ADMIN.LAYOUT.SUBTITLE' | translate">
           <button
             type="button"

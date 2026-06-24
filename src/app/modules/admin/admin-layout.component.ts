@@ -4,6 +4,7 @@ import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { LanguageService } from '../../shared/services/language.service';
+import { ThemeService } from '../../shared/services/theme.service';
 import { TranslateService } from '@ngx-translate/core';
 
 interface AdminNavItem {
@@ -54,6 +55,7 @@ export class AdminLayoutComponent implements OnInit {
   protected currentLanguage = 'th';
   protected isProfileMenuOpen = false;
   protected isSidebarOpen = false;
+  protected isDarkMode = false;
 
   constructor(
     private readonly router: Router,
@@ -62,6 +64,7 @@ export class AdminLayoutComponent implements OnInit {
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
     private readonly languageService: LanguageService,
+    private readonly themeService: ThemeService,
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
 
@@ -86,6 +89,7 @@ export class AdminLayoutComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.isDarkMode = this.themeService.getStoredMode() === 'dark';
     this.setupLanguage();
 
     this.router.events
@@ -116,6 +120,11 @@ export class AdminLayoutComponent implements OnInit {
 
   protected closeSidebar(): void {
     this.isSidebarOpen = false;
+  }
+
+  protected toggleTheme(): void {
+    this.isDarkMode = !this.isDarkMode;
+    this.themeService.setMode(this.isDarkMode ? 'dark' : 'light');
   }
 
   @HostListener('document:keydown.escape')
@@ -163,4 +172,3 @@ export class AdminLayoutComponent implements OnInit {
     return currentRoute;
   }
 }
-

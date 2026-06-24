@@ -7,6 +7,7 @@ import { PrimeNGConfig } from 'primeng/api';
 import { AdminLayoutComponent } from './admin-layout.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { ThemeService } from '../../shared/services/theme.service';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -17,6 +18,11 @@ describe('AdminLayoutComponent', () => {
     hasAnyRole: (_roles: string[]) => false,
   };
 
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [AdminLayoutComponent],
@@ -25,6 +31,7 @@ describe('AdminLayoutComponent', () => {
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: ThemeService, useValue: themeServiceStub },
       ],
     }).compileComponents();
 
@@ -48,5 +55,15 @@ describe('AdminLayoutComponent', () => {
     const logo = fixture.debugElement.query(By.css('.admin-brand-link img.admin-brand-logo'));
     expect(logo).withContext('brand logo image should exist').toBeTruthy();
     expect(logo.nativeElement.getAttribute('src')).toBe('images/logo.svg');
+  });
+
+  it('renders the theme-admin variant class on the shell root', () => {
+    const shell = fixture.debugElement.query(By.css('.admin-shell.theme-admin'));
+    expect(shell).withContext('admin shell should carry theme-admin class').toBeTruthy();
+  });
+
+  it('renders the dark mode toggle button', () => {
+    const toggleBtn = fixture.debugElement.query(By.css('button[aria-pressed]'));
+    expect(toggleBtn).withContext('dark mode toggle button should exist').toBeTruthy();
   });
 });

@@ -88,7 +88,10 @@
       "PROFILE_MENU": "Open profile menu",
       "LANGUAGE_EN": "Switch to English",
       "LANGUAGE_TH": "Switch to Thai",
-      "STAFF_AREA": "Staff Area"
+      "STAFF_AREA": "Staff Area",
+      "THEME_TOGGLE": "Toggle dark mode",
+      "THEME_LIGHT": "Light mode",
+      "THEME_DARK": "Dark mode"
     },
     "COMMON": {
       "LOADING": "Loading data...",
@@ -765,6 +768,10 @@
       "HOME_LINK": "Home",
       "SIGN_OUT": "Sign Out",
       "OPEN_MENU": "Open navigation menu",
+      "CLOSE_MENU": "Close navigation menu",
+      "PROFILE_MENU": "Open profile menu",
+      "LANGUAGE_TH": "Switch to Thai",
+      "LANGUAGE_EN": "Switch to English",
       "LOGOUT_SUCCESS": "Signed out successfully"
     },
     "NAV": {

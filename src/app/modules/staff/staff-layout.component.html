@@ -1,63 +1,112 @@
-<div class="d-flex min-vh-100 flex-column">
-  <!-- Top Navbar -->
-  <nav class="navbar navbar-expand-lg bg-primary navbar-dark px-3 py-2 shadow-sm">
-    <a class="navbar-brand fw-bold d-flex align-items-center" routerLink="/home"
-       [attr.aria-label]="'STAFF.LAYOUT.HOME_LINK' | translate">
-      <img
-        class="staff-brand-logo"
-        src="images/logo.svg"
-        [attr.alt]="'STAFF.LAYOUT.BRAND' | translate"
-      />
-    </a>
-    <button class="navbar-toggler ms-auto" type="button" (click)="toggleSidebar()"
-            [attr.aria-label]="'STAFF.LAYOUT.OPEN_MENU' | translate">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse">
-      <ul class="navbar-nav ms-auto align-items-center gap-2">
-        <li class="nav-item">
-          <span class="navbar-text text-white me-2 fw-semibold">{{ userInitials }}</span>
-        </li>
-        <li class="nav-item">
-          <button class="btn btn-sm btn-outline-light" (click)="onLogout()">
-            {{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}
-          </button>
-        </li>
-      </ul>
-    </div>
-  </nav>
+<div class="admin-shell theme-staff" [class.is-sidebar-open]="isSidebarOpen">
+  <div
+    class="admin-sidebar-backdrop"
+    *ngIf="isSidebarOpen"
+    (click)="closeSidebar()"
+    aria-hidden="true"
+  ></div>
 
-  <div class="d-flex flex-grow-1">
-    <!-- Sidebar -->
-    <aside class="bg-light border-end d-flex flex-column"
-           [style.width]="'220px'"
-           [style.min-width]="'220px'"
-           [class.d-none]="!isSidebarOpen"
-           [class.d-lg-flex]="true">
-      <nav class="py-3 px-2 flex-grow-1">
-        <ul class="nav flex-column gap-1">
-          <li class="nav-item" *ngFor="let item of navItems; trackBy: trackNavItem">
-            <a class="nav-link d-flex align-items-center gap-2 rounded px-3"
-               [routerLink]="['/staff', item.path]"
-               routerLinkActive="active bg-primary text-white"
-               [routerLinkActiveOptions]="{ exact: false }"
-               (click)="isSidebarOpen = false">
-              <span class="material-symbols-outlined" style="font-size:18px">{{ item.icon }}</span>
-              {{ item.labelKey | translate }}
-            </a>
-          </li>
-        </ul>
-      </nav>
-      <div class="p-3 border-top">
-        <div class="d-flex gap-2">
-          <button class="btn btn-sm" [class.btn-primary]="currentLanguage === 'th'" [class.btn-outline-secondary]="currentLanguage !== 'th'" (click)="switchLanguage('th')">TH</button>
-          <button class="btn btn-sm" [class.btn-primary]="currentLanguage === 'en'" [class.btn-outline-secondary]="currentLanguage !== 'en'" (click)="switchLanguage('en')">EN</button>
+  <aside class="admin-sidebar" [class.is-open]="isSidebarOpen">
+    <div class="admin-brand">
+      <a
+        routerLink="/home"
+        class="admin-brand-link"
+        [attr.aria-label]="'STAFF.LAYOUT.HOME_LINK' | translate"
+        (click)="closeSidebar()"
+      >
+        <img
+          class="admin-brand-logo"
+          src="images/logo.svg"
+          [attr.alt]="'STAFF.LAYOUT.BRAND' | translate"
+        />
+      </a>
+    </div>
+
+    <nav class="admin-nav">
+      <a
+        *ngFor="let item of navItems; trackBy: trackNavItem"
+        [routerLink]="['/staff', item.path]"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="admin-nav-link"
+        (click)="closeSidebar()"
+      >
+        <span class="material-symbols-outlined">{{ item.icon }}</span>
+        <span>{{ item.labelKey | translate }}</span>
+      </a>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
+        <span class="material-symbols-outlined">logout</span>
+        <span>{{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}</span>
+      </button>
+    </div>
+  </aside>
+
+  <div class="admin-main">
+    <header class="admin-topbar">
+      <button
+        type="button"
+        class="admin-icon-btn admin-menu-toggle"
+        (click)="toggleSidebar()"
+        [attr.aria-expanded]="isSidebarOpen"
+        [attr.aria-label]="(isSidebarOpen ? 'STAFF.LAYOUT.CLOSE_MENU' : 'STAFF.LAYOUT.OPEN_MENU') | translate"
+      >
+        <span class="material-symbols-outlined">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
+      </button>
+
+      <div class="admin-title-block">
+        <h2>{{ pageTitleKey | translate }}</h2>
+        <p>{{ pageSubtitleKey | translate }}</p>
+      </div>
+
+      <div class="admin-topbar-actions">
+        <div class="admin-lang-switch" role="group" [attr.aria-label]="'STAFF.LAYOUT.SUBTITLE' | translate">
+          <button
+            type="button"
+            class="admin-lang-btn"
+            [class.active]="currentLanguage === 'th'"
+            [attr.aria-pressed]="currentLanguage === 'th'"
+            [attr.aria-label]="'STAFF.LAYOUT.LANGUAGE_TH' | translate"
+            (click)="switchLanguage('th')"
+          >
+            TH
+          </button>
+          <button
+            type="button"
+            class="admin-lang-btn"
+            [class.active]="currentLanguage === 'en'"
+            [attr.aria-pressed]="currentLanguage === 'en'"
+            [attr.aria-label]="'STAFF.LAYOUT.LANGUAGE_EN' | translate"
+            (click)="switchLanguage('en')"
+          >
+            EN
+          </button>
+        </div>
+
+        <div class="admin-profile">
+          <button
+            class="admin-avatar"
+            type="button"
+            (click)="toggleProfileMenu()"
+            [attr.aria-expanded]="isProfileMenuOpen"
+            aria-haspopup="menu"
+            [attr.aria-label]="'STAFF.LAYOUT.PROFILE_MENU' | translate"
+          >
+            {{ userInitials }}
+          </button>
+          <div class="admin-profile-menu" *ngIf="isProfileMenuOpen" role="menu">
+            <button type="button" class="admin-profile-item" role="menuitem" (click)="onLogout()">
+              <span class="material-symbols-outlined">logout</span>
+              <span>{{ 'STAFF.LAYOUT.SIGN_OUT' | translate }}</span>
+            </button>
+          </div>
         </div>
       </div>
-    </aside>
+    </header>
 
-    <!-- Main content -->
-    <main class="flex-grow-1 overflow-auto">
+    <main class="admin-content">
       <router-outlet></router-outlet>
     </main>
   </div>

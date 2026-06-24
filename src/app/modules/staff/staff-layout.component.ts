@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -23,6 +23,7 @@ export class StaffLayoutComponent implements OnInit {
 
   protected currentLanguage = 'th';
   protected isSidebarOpen = false;
+  protected isProfileMenuOpen = false;
 
   // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:
   // a getter returning a fresh array each change-detection cycle, bound to an
@@ -70,7 +71,8 @@ export class StaffLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly languageService: LanguageService
+    private readonly languageService: LanguageService,
+    private readonly elementRef: ElementRef<HTMLElement>
   ) {}
 
   ngOnInit(): void {
@@ -97,9 +99,30 @@ export class StaffLayoutComponent implements OnInit {
     this.isSidebarOpen = !this.isSidebarOpen;
   }
 
+  protected closeSidebar(): void {
+    this.isSidebarOpen = false;
+  }
+
+  protected toggleProfileMenu(): void {
+    this.isProfileMenuOpen = !this.isProfileMenuOpen;
+  }
+
+  protected closeProfileMenu(): void {
+    this.isProfileMenuOpen = false;
+  }
+
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     this.isSidebarOpen = false;
+    this.isProfileMenuOpen = false;
+  }
+
+  @HostListener('document:click', ['$event'])
+  protected onDocumentClick(event: MouseEvent): void {
+    const profile = this.elementRef.nativeElement.querySelector('.admin-profile');
+    if (this.isProfileMenuOpen && profile && !profile.contains(event.target as Node)) {
+      this.isProfileMenuOpen = false;
+    }
   }
 
   protected async switchLanguage(lang: string): Promise<void> {
@@ -108,6 +131,7 @@ export class StaffLayoutComponent implements OnInit {
   }
 
   protected onLogout(): void {
+    this.isProfileMenuOpen = false;
     void this.alertService.success(this.translate.instant('STAFF.LAYOUT.LOGOUT_SUCCESS'));
     this.authService.logout();
   }

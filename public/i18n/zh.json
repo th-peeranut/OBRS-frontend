@@ -88,7 +88,10 @@
       "PROFILE_MENU": "打开个人资料菜单",
       "LANGUAGE_EN": "切换到英文",
       "LANGUAGE_TH": "切换到泰文",
-      "STAFF_AREA": "员工区域"
+      "STAFF_AREA": "员工区域",
+      "THEME_TOGGLE": "切换深色模式",
+      "THEME_LIGHT": "浅色模式",
+      "THEME_DARK": "深色模式"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
@@ -765,6 +768,10 @@
       "HOME_LINK": "首页",
       "SIGN_OUT": "退出登录",
       "OPEN_MENU": "打开导航菜单",
+      "CLOSE_MENU": "关闭导航菜单",
+      "PROFILE_MENU": "打开个人资料菜单",
+      "LANGUAGE_TH": "切换到泰文",
+      "LANGUAGE_EN": "切换到英文",
       "LOGOUT_SUCCESS": "退出成功"
     },
     "NAV": {
