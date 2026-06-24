@@ -178,7 +178,8 @@
           <p class="mb-0 mt-2">{{ 'STAFF.SELL.SELECT_TRIP_PROMPT' | translate }}</p>
         </div>
 
-        <div *ngIf="selectedDeparture">
+        <!-- Departure leg seat map -->
+        <div *ngIf="selectedDeparture" class="seatmap-departure">
           <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.LEG_DEPARTURE' | translate }} — {{ 'STAFF.SELL.STEP_SEATS' | translate }}</h6>
 
           <!-- Progress + selected seats -->
@@ -193,12 +194,7 @@
             </span>
           </div>
 
-          <!-- Legend -->
-          <div class="d-flex gap-3 mb-3 small text-muted flex-wrap">
-            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-available"></span>{{ 'STAFF.SELL.LEGEND_AVAILABLE' | translate }}</span>
-            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-selected"><span class="material-symbols-outlined" style="font-size:11px">person</span></span>{{ 'STAFF.SELL.LEGEND_SELECTED' | translate }}</span>
-            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-taken"></span>{{ 'STAFF.SELL.LEGEND_TAKEN' | translate }}</span>
-          </div>
+          <ng-container *ngTemplateOutlet="seatLegend"></ng-container>
 
           <ng-container *ngIf="isLoadingSeats">
             <div class="text-muted">{{ 'STAFF.SELL.LOADING_SEATS' | translate }}</div>
@@ -222,9 +218,61 @@
               (passengerSeatPositionOnChange)="onDepartureSeatChange($event)">
             </app-passenger-seat-bus>
           </ng-container>
+
+          <!-- Prompt to also choose a return trip before its seats can be picked -->
+          <div *ngIf="isReturnTrip && !selectedArrival" class="alert alert-info mt-3 mb-0 py-2 small">
+            {{ 'STAFF.SELL.SELECT_RETURN_PROMPT' | translate }}
+          </div>
+        </div>
+
+        <!-- Return leg seat map (round-trip only, once a return schedule is chosen) -->
+        <div *ngIf="isReturnTrip && selectedArrival" class="seatmap-return mt-4 pt-3 border-top">
+          <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.LEG_RETURN' | translate }} — {{ 'STAFF.SELL.STEP_SEATS' | translate }}</h6>
+
+          <!-- Progress + selected seats -->
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <span class="badge seats-progress-return"
+                  [class.bg-success]="selectedArrivalSeats.length === numberOfPassengers"
+                  [class.bg-secondary]="selectedArrivalSeats.length !== numberOfPassengers">
+              {{ selectedArrivalSeats.length }} / {{ numberOfPassengers }} {{ 'STAFF.SELL.SEATS_SELECTED' | translate }}
+            </span>
+            <span *ngIf="selectedArrivalSeats.length" class="small text-muted">
+              {{ 'STAFF.SELL.SELECTED_SEATS' | translate }}: {{ selectedArrivalSeats.join(', ') }}
+            </span>
+          </div>
+
+          <ng-container *ngTemplateOutlet="seatLegend"></ng-container>
+
+          <ng-container *ngIf="selectedArrival.vehicleType?.toLowerCase() === 'van'">
+            <app-passenger-seat-van
+              [gender]="'MALE'"
+              [takenSeats]="getTakenSeats(selectedArrival)"
+              [currentSeat]="selectedArrivalSeats[0] ?? ''"
+              [availableSeatNumbers]="selectedArrival.availableSeatNumbers"
+              (passengerSeatPositionOnChange)="onArrivalSeatChange($event)">
+            </app-passenger-seat-van>
+          </ng-container>
+
+          <ng-container *ngIf="selectedArrival.vehicleType?.toLowerCase() !== 'van'">
+            <app-passenger-seat-bus
+              [gender]="'MALE'"
+              [takenSeats]="getTakenSeats(selectedArrival)"
+              [currentSeat]="selectedArrivalSeats[0] ?? ''"
+              (passengerSeatPositionOnChange)="onArrivalSeatChange($event)">
+            </app-passenger-seat-bus>
+          </ng-container>
         </div>
       </div>
     </div>
+
+    <!-- Shared seat legend (used by both legs) -->
+    <ng-template #seatLegend>
+      <div class="d-flex gap-3 mb-3 small text-muted flex-wrap">
+        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-available"></span>{{ 'STAFF.SELL.LEGEND_AVAILABLE' | translate }}</span>
+        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-selected"><span class="material-symbols-outlined" style="font-size:11px">person</span></span>{{ 'STAFF.SELL.LEGEND_SELECTED' | translate }}</span>
+        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-taken"></span>{{ 'STAFF.SELL.LEGEND_TAKEN' | translate }}</span>
+      </div>
+    </ng-template>
 
     <div class="d-flex justify-content-between mt-4">
       <button class="btn btn-secondary" (click)="goBack()">{{ 'STAFF.SELL.BACK_BTN' | translate }}</button>

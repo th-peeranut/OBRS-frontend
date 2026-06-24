@@ -869,6 +869,8 @@
       "PRICE_PER_SEAT": "Price/Seat",
       "TO": "to",
       "LEG_DEPARTURE": "Departure Leg",
+      "LEG_RETURN": "Return Leg",
+      "SELECT_RETURN_PROMPT": "Now select a return trip on the left to choose its seats.",
       "SEATS_SELECTED": "Seats Selected",
       "LOADING_SEATS": "Loading seat map...",
       "SEATS_PICK_TRIP": "Choose a trip on the left.",

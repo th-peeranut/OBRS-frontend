@@ -82,6 +82,27 @@ const SEATS_RESP = {
   ],
 };
 
+/**
+ * Round-trip search: a departure (08:00) AND an arrival/return (15:00) BUS
+ * schedule, all seats available. Distinct times let the test target each card.
+ */
+const ALL_BUS_SEATS = ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21'];
+const RETURN_SEARCH_RESP = {
+  code: 200, message: 'OK',
+  data: {
+    departureSchedules: [{
+      id: 301, vehicleType: 'BUS',
+      departureDateTime: '2026-09-01T08:00:00', arrivalDateTime: '2026-09-01T13:00:00',
+      pricePerSeat: '300', availableSeats: 21, availableSeatNumbers: ALL_BUS_SEATS,
+    }],
+    arrivalSchedules: [{
+      id: 302, vehicleType: 'BUS',
+      departureDateTime: '2026-09-05T15:00:00', arrivalDateTime: '2026-09-05T20:00:00',
+      pricePerSeat: '300', availableSeats: 21, availableSeatNumbers: ALL_BUS_SEATS,
+    }],
+  },
+};
+
 const BOOKING_RESP = {
   code: 201, message: 'Created',
   data: { bookingId: 9999, bookingNumber: 'BK-20260901-E2E' },
@@ -670,6 +691,47 @@ test.describe('Authenticated walk-in flow tests', () => {
       await page.locator('button.btn-primary:has-text("Confirm")').click();
       await dismissAlert(page);
       await expect(page.locator('.card-header:has-text("Seat")')).toBeVisible();
+    });
+  });
+
+  // ── Return-trip seat selection (regression for #38) ──────────────────────
+  test.describe('Return trip seat selection', () => {
+    test('return trip renders a separate arrival seat map and Next proceeds', async ({ page }) => {
+      await page.route('**/api/private/**', (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ code: 200, message: 'OK', data: [] }) })
+      );
+      await page.route(SEARCH_ENDPOINT, (route) => route.fulfill({ json: RETURN_SEARCH_RESP }));
+      await page.route(SEATS_ENDPOINT, (route) => route.fulfill({ json: SEATS_RESP }));
+
+      await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
+      await page.locator('select[formControlName="bookingType"]').waitFor({ timeout: 20_000 });
+
+      // Search a ROUND TRIP
+      await page.locator('select[formControlName="bookingType"]').selectOption('return');
+      await selectStop(page, 'fromStop', 'Nong Sak');
+      await selectStop(page, 'toStop', 'Bangkok');
+      await pickDate(page, 'departureDate', '2026-09-01');
+      await pickDate(page, 'returnDate', '2026-09-05');
+      await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
+      await page.locator('form button.btn-primary').click();
+
+      // Pick the departure schedule (08:00) and a departure seat
+      await page.locator('.card.mb-2.border', { hasText: '08:00' }).first().click();
+      await page.locator('.seatmap-departure').getByText('B1', { exact: true }).click();
+
+      // Before choosing a return trip, there is no return seat map yet
+      await expect(page.locator('.seatmap-return')).toHaveCount(0);
+
+      // Pick the return schedule (15:00) → the arrival seat map appears
+      await page.locator('.card.mb-2.border', { hasText: '15:00' }).first().click();
+      await expect(page.locator('.seatmap-return')).toBeVisible({ timeout: 5_000 });
+
+      // Pick a return seat (scoped to the return map so it isn't confused with departure B1)
+      await page.locator('.seatmap-return').getByText('B2', { exact: true }).click();
+
+      // Both legs satisfied → Next advances to the passengers step (no SEAT_COUNT_MISMATCH)
+      await page.locator('button.btn.btn-primary:has-text("Next")').click();
+      await expect(page.locator('.card-header:has-text("Seat")').first()).toBeVisible({ timeout: 10_000 });
     });
   });
 });
