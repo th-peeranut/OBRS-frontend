@@ -112,6 +112,10 @@
 
   <!-- STEP: Seats -->
   <div *ngIf="currentStep === 'seats'">
+    <!-- Step instruction -->
+    <p class="text-muted mb-3"><span class="fw-semibold">1.</span> {{ 'STAFF.SELL.SEATS_PICK_TRIP' | translate }}
+      &nbsp; <span class="fw-semibold">2.</span> {{ 'STAFF.SELL.SEATS_PICK_SEATS' | translate }}</p>
+
     <div class="row g-4">
       <!-- Departure schedules list -->
       <div class="col-lg-4">
@@ -123,9 +127,17 @@
              class="card mb-2 border"
              style="cursor:pointer"
              [class.border-primary]="selectedDeparture?.id === sch.id"
+             [class.border-2]="selectedDeparture?.id === sch.id"
+             [class.bg-primary]="selectedDeparture?.id === sch.id"
+             [class.bg-opacity-10]="selectedDeparture?.id === sch.id"
              (click)="selectDeparture(sch)">
           <div class="card-body py-2">
-            <div class="fw-semibold">{{ sch.departureDateTime }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime }}</div>
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div class="fw-semibold">{{ sch.departureDateTime | date:'d MMM y, HH:mm' }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime | date:'HH:mm' }}</div>
+              <span *ngIf="selectedDeparture?.id === sch.id" class="badge bg-primary d-inline-flex align-items-center gap-1">
+                <span class="material-symbols-outlined" style="font-size:14px">check</span>{{ 'STAFF.SELL.SELECTED_BADGE' | translate }}
+              </span>
+            </div>
             <div class="small text-muted">
               {{ 'STAFF.SELL.SEAT_AVAILABLE' | translate }}: {{ sch.availableSeats }}
               &middot; {{ 'STAFF.SELL.PRICE_PER_SEAT' | translate }}: {{ sch.pricePerSeat }}
@@ -139,9 +151,17 @@
                class="card mb-2 border"
                style="cursor:pointer"
                [class.border-primary]="selectedArrival?.id === sch.id"
+               [class.border-2]="selectedArrival?.id === sch.id"
+               [class.bg-primary]="selectedArrival?.id === sch.id"
+               [class.bg-opacity-10]="selectedArrival?.id === sch.id"
                (click)="selectArrival(sch)">
             <div class="card-body py-2">
-              <div class="fw-semibold">{{ sch.departureDateTime }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime }}</div>
+              <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="fw-semibold">{{ sch.departureDateTime | date:'d MMM y, HH:mm' }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime | date:'HH:mm' }}</div>
+                <span *ngIf="selectedArrival?.id === sch.id" class="badge bg-primary d-inline-flex align-items-center gap-1">
+                  <span class="material-symbols-outlined" style="font-size:14px">check</span>{{ 'STAFF.SELL.SELECTED_BADGE' | translate }}
+                </span>
+              </div>
               <div class="small text-muted">
                 {{ 'STAFF.SELL.SEAT_AVAILABLE' | translate }}: {{ sch.availableSeats }}
               </div>
@@ -152,11 +172,33 @@
 
       <!-- Seat map -->
       <div class="col-lg-8">
+        <!-- Empty state: no trip chosen yet -->
+        <div *ngIf="!selectedDeparture" class="border rounded d-flex flex-column align-items-center justify-content-center text-muted text-center p-5 h-100">
+          <span class="material-symbols-outlined" style="font-size:48px">event_seat</span>
+          <p class="mb-0 mt-2">{{ 'STAFF.SELL.SELECT_TRIP_PROMPT' | translate }}</p>
+        </div>
+
         <div *ngIf="selectedDeparture">
           <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.LEG_DEPARTURE' | translate }} — {{ 'STAFF.SELL.STEP_SEATS' | translate }}</h6>
-          <p class="text-muted small mb-2">
-            {{ 'STAFF.SELL.SEATS_SELECTED' | translate }}: {{ selectedDepartureSeats.length }} / {{ numberOfPassengers }}
-          </p>
+
+          <!-- Progress + selected seats -->
+          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+            <span class="badge seats-progress"
+                  [class.bg-success]="selectedDepartureSeats.length === numberOfPassengers"
+                  [class.bg-secondary]="selectedDepartureSeats.length !== numberOfPassengers">
+              {{ selectedDepartureSeats.length }} / {{ numberOfPassengers }} {{ 'STAFF.SELL.SEATS_SELECTED' | translate }}
+            </span>
+            <span *ngIf="selectedDepartureSeats.length" class="small text-muted">
+              {{ 'STAFF.SELL.SELECTED_SEATS' | translate }}: {{ selectedDepartureSeats.join(', ') }}
+            </span>
+          </div>
+
+          <!-- Legend -->
+          <div class="d-flex gap-3 mb-3 small text-muted flex-wrap">
+            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-available"></span>{{ 'STAFF.SELL.LEGEND_AVAILABLE' | translate }}</span>
+            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-selected"><span class="material-symbols-outlined" style="font-size:11px">person</span></span>{{ 'STAFF.SELL.LEGEND_SELECTED' | translate }}</span>
+            <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-taken"></span>{{ 'STAFF.SELL.LEGEND_TAKEN' | translate }}</span>
+          </div>
 
           <ng-container *ngIf="isLoadingSeats">
             <div class="text-muted">{{ 'STAFF.SELL.LOADING_SEATS' | translate }}</div>

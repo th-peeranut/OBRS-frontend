@@ -319,8 +319,8 @@ test.describe('Authenticated walk-in flow tests', () => {
       await seatB3.click({ force: true });
 
       // Selection counter should still show 0 / 1 (no selection happened).
-      // The template renders: "<SEATS_SELECTED>: 0 / 1" inside a <p class="text-muted small">
-      const counter = page.locator('p.text-muted.small', { hasText: /0\s*\/\s*1/ });
+      // The template renders the count inside a <span class="badge seats-progress">.
+      const counter = page.locator('.seats-progress', { hasText: /0\s*\/\s*1/ });
       await expect(counter).toBeVisible({ timeout: 5_000 });
     });
 
@@ -540,8 +540,8 @@ test.describe('Authenticated walk-in flow tests', () => {
       await seatA1.waitFor({ timeout: 12_000 });
       await seatA1.click();
 
-      // Selection counter reflects 1 selected seat: "<SEATS_SELECTED>: 1 / 1"
-      await expect(page.locator('p.text-muted.small', { hasText: /1\s*\/\s*1/ })).toBeVisible({ timeout: 5_000 });
+      // Selection counter reflects 1 selected seat: "1 / 1 Seats Selected"
+      await expect(page.locator('.seats-progress', { hasText: /1\s*\/\s*1/ })).toBeVisible({ timeout: 5_000 });
 
       // Proceed to passengers
       await page.locator('button.btn.btn-primary:has-text("Next")').click();
