@@ -148,7 +148,7 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  height: 80px;
+  min-height: 80px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -157,6 +157,12 @@
   background: rgba(255, 255, 255, 0.85);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid rgba(189, 200, 207, 0.45);
+}
+
+/* Allow the title/subtitle column to shrink and wrap within the flex row
+   instead of forcing the now-sentence-length subtitle to overflow the bar. */
+.admin-title-block {
+  min-width: 0;
 }
 
 .admin-title-block h2 {

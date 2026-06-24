@@ -23,42 +23,42 @@ const routes: Routes = [
       {
         path: 'dashboard',
         component: DashboardPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.DASHBOARD' },
+        data: { titleKey: 'ADMIN.PAGES.DASHBOARD', subtitleKey: 'ADMIN.DASHBOARD.SUBTITLE' },
       },
       {
         path: 'lookups',
         component: LookupSettingsPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS' },
+        data: { titleKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', subtitleKey: 'ADMIN.LOOKUP.SUBTITLE' },
       },
       {
         path: 'roles',
         component: RoleManagementPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT' },
+        data: { titleKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', subtitleKey: 'ADMIN.ROLES.SUBTITLE' },
       },
       {
         path: 'users',
         component: UserManagementPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.USER_MANAGEMENT' },
+        data: { titleKey: 'ADMIN.PAGES.USER_MANAGEMENT', subtitleKey: 'ADMIN.USERS.SUBTITLE' },
       },
       {
         path: 'vehicles',
         component: VehiclesPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT' },
+        data: { titleKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', subtitleKey: 'ADMIN.VEHICLES.SUBTITLE' },
       },
       {
         path: 'routes',
         component: RoutesPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT' },
+        data: { titleKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', subtitleKey: 'ADMIN.ROUTES.SUBTITLE' },
       },
       {
         path: 'schedules',
         component: SchedulesPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.SCHEDULES' },
+        data: { titleKey: 'ADMIN.PAGES.SCHEDULES', subtitleKey: 'ADMIN.SCHEDULES.SUBTITLE' },
       },
       {
         path: 'bookings',
         component: BookingsPageComponent,
-        data: { titleKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT' },
+        data: { titleKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', subtitleKey: 'ADMIN.BOOKINGS.SUBTITLE' },
       },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.

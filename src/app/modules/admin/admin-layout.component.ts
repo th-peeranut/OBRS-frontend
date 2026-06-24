@@ -19,7 +19,7 @@ interface AdminNavItem {
 })
 export class AdminLayoutComponent implements OnInit {
   protected pageTitleKey = 'ADMIN.PAGES.DASHBOARD';
-  protected readonly pageSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
+  protected pageSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
   protected readonly navItems: AdminNavItem[] = [
     {
       path: 'dashboard',
@@ -100,6 +100,11 @@ export class AdminLayoutComponent implements OnInit {
           typeof titleKey === 'string' && titleKey.length > 0
             ? titleKey
             : 'ADMIN.PAGES.DEFAULT';
+        const subtitleKey = activeRoute.snapshot.data['subtitleKey'];
+        this.pageSubtitleKey =
+          typeof subtitleKey === 'string' && subtitleKey.length > 0
+            ? subtitleKey
+            : 'ADMIN.LAYOUT.SUBTITLE';
         // Collapse the mobile drawer whenever navigation completes.
         this.isSidebarOpen = false;
       });
