@@ -64,4 +64,34 @@ describe('StaffLayoutComponent', () => {
       .withContext('separate Home menu link should be removed')
       .toBeNull();
   });
+
+  it('renders nav icons with the bound material-symbols-outlined class', () => {
+    // Regression for #31: the staff portal used the legacy `material-icons`
+    // class, but the app only loads the Material Symbols Outlined webfont and
+    // binds it via `.material-symbols-outlined`. Outside `.admin-shell` the
+    // unbound class left the ligature names ("sell", "calendar_month", ...)
+    // painting as literal text. Icons must use the bound class.
+    const original = authStub.hasAnyRole;
+    authStub.hasAnyRole = () => true; // salesperson + driver → nav items render
+    try {
+      const f = TestBed.createComponent(StaffLayoutComponent);
+      f.detectChanges();
+
+      const boundIcons = f.debugElement.queryAll(
+        By.css('.nav-link span.material-symbols-outlined'),
+      );
+      expect(boundIcons.length)
+        .withContext('nav icons should use the bound material-symbols-outlined class')
+        .toBeGreaterThan(0);
+
+      const legacyIcons = f.debugElement.queryAll(
+        By.css('.nav-link span.material-icons'),
+      );
+      expect(legacyIcons.length)
+        .withContext('unbound legacy material-icons class must not be used')
+        .toBe(0);
+    } finally {
+      authStub.hasAnyRole = original; // never leak the mutated stub into later specs
+    }
+  });
 });

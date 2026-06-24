@@ -19,6 +19,27 @@
   font-family: "Sarabun", sans-serif;
 }
 
+// Material Symbols Outlined is the only icon webfont the app loads (see the
+// @import above). Bind the icon font globally so icon spans render outside the
+// admin shell too (e.g. the staff portal, which is not inside `.admin-shell`).
+// `.material-icons` is kept as an alias for the legacy class name so any
+// remaining usages still resolve to the loaded font. The universal `*` rule
+// above sets Sarabun on everything; a class selector outranks it, so these win.
+.material-symbols-outlined,
+.material-icons {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
 hr {
   border: 0;
   border-top: 1px solid $primary-grey;
