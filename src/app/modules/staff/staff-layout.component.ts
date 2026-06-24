@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -22,7 +22,6 @@ export class StaffLayoutComponent implements OnInit {
   protected readonly pageSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
 
   protected currentLanguage = 'th';
-  protected isProfileMenuOpen = false;
   protected isSidebarOpen = false;
 
   // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:
@@ -71,8 +70,7 @@ export class StaffLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly languageService: LanguageService,
-    private readonly elementRef: ElementRef<HTMLElement>
+    private readonly languageService: LanguageService
   ) {}
 
   ngOnInit(): void {
@@ -101,16 +99,7 @@ export class StaffLayoutComponent implements OnInit {
 
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
-    this.isProfileMenuOpen = false;
     this.isSidebarOpen = false;
-  }
-
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const profile = this.elementRef.nativeElement.querySelector('.staff-profile');
-    if (this.isProfileMenuOpen && profile && !profile.contains(event.target as Node)) {
-      this.isProfileMenuOpen = false;
-    }
   }
 
   protected async switchLanguage(lang: string): Promise<void> {
@@ -118,12 +107,7 @@ export class StaffLayoutComponent implements OnInit {
     await this.languageService.switch(lang);
   }
 
-  protected toggleProfileMenu(): void {
-    this.isProfileMenuOpen = !this.isProfileMenuOpen;
-  }
-
   protected onLogout(): void {
-    this.isProfileMenuOpen = false;
     void this.alertService.success(this.translate.instant('STAFF.LAYOUT.LOGOUT_SUCCESS'));
     this.authService.logout();
   }
