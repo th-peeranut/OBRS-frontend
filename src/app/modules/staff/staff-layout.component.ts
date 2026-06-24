@@ -107,10 +107,6 @@ export class StaffLayoutComponent implements OnInit {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
 
-  protected closeProfileMenu(): void {
-    this.isProfileMenuOpen = false;
-  }
-
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     this.isSidebarOpen = false;

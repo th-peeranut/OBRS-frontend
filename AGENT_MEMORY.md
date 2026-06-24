@@ -1,5 +1,25 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-24 — Dark-mode accent text fails WCAG (self-fixed, #39)
+
+**File:** `src/styles/admin-theme.scss`.
+
+The unify-shell change added `.admin-shell.is-dark` flipping `--admin-surface*` and
+`--admin-text/muted/outline`, but it did NOT flip the `--accent*` tokens. `--accent-text`
+(light-mode values `#b3420a` orange / `#0f766e` teal / `#075c7a`) is deliberately dark so it
+reads on white — but those same values are used in dark mode for card/modal headings, table
+`code`, chips and status badges. On the dark surfaces (`#1d2226` / `#14181b`) that is only
+~2.8:1, below the WCAG AA 4.5:1 floor for normal text. Light mode was fine (~5.5:1); the
+defect appears only on the dark path, which is the admin-only shipped path (orange → 2.83:1).
+
+**Fix:** added dark-mode `--accent-text` overrides scoped to `.is-dark` (generic `#fdba74`,
+plus `.theme-admin.is-dark` → `#fb923c` ≈7:1 and `.theme-staff.is-dark` → `#5eead4` ≈10:1).
+`--accent-soft` (a translucent tint) was left unchanged — the lighter text still passes AA
+over it (~6:1). **Rule:** when you introduce a dark-mode surface flip, every token that
+encodes a foreground colour tuned for the light surface (here the accent *text*, not just the
+neutral text) must get a dark-mode value too. Don't stop at `--admin-text`; audit accents.
+
+
 ## 2026-06-23 — Navbar admin-reskin: group aria-label + dead field (self-fixed, #24)
 
 **Files:** `navbar.component.html`, `navbar.component.ts`, `public/i18n/{en,th,zh}.json`.

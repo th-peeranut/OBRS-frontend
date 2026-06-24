@@ -66,6 +66,24 @@
     var(--admin-surface);
 }
 
+/* Dark-mode accent text: the light-mode --accent-text values (#b3420a /
+   #0f766e / #075c7a) are deliberately dark so they read on white, but that
+   leaves them at ~2.8:1 on the dark surfaces above (fails WCAG AA). Lift them
+   to the lighter accent shades so headings, table code, chips and badges stay
+   legible in dark mode. --accent-soft (a translucent tint) is left as-is; the
+   lighter text passes AA over it too. */
+.admin-shell.is-dark {
+  --accent-text: #fdba74;
+}
+
+.admin-shell.theme-admin.is-dark {
+  --accent-text: #fb923c;
+}
+
+.admin-shell.theme-staff.is-dark {
+  --accent-text: #5eead4;
+}
+
 .admin-shell,
 .admin-shell * {
   font-family: "Inter", sans-serif;

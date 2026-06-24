@@ -66,6 +66,38 @@ describe('StaffLayoutComponent', () => {
       .toBeNull();
   });
 
+  it('renders the TH/EN language toggle in the top-right topbar, not the sidebar footer', () => {
+    // Regression for #39: the headline ask was to move the language switch from
+    // the sidebar footer (bottom-left) to the top bar's right-side actions,
+    // matching the home/admin pages. Lock its new location so a future refactor
+    // can't silently move it back.
+    const topbarLangButtons = fixture.debugElement.queryAll(
+      By.css('.admin-topbar-actions .admin-lang-switch .admin-lang-btn'),
+    );
+    expect(topbarLangButtons.length)
+      .withContext('both TH/EN buttons should live in the topbar actions')
+      .toBe(2);
+
+    const sidebarLangButtons = fixture.debugElement.queryAll(
+      By.css('.admin-sidebar-footer .admin-lang-btn'),
+    );
+    expect(sidebarLangButtons.length)
+      .withContext('language buttons must no longer sit in the sidebar footer')
+      .toBe(0);
+  });
+
+  it('marks the active language button as pressed when clicked', () => {
+    const enButton = fixture.debugElement
+      .queryAll(By.css('.admin-topbar-actions .admin-lang-btn'))
+      .find((btn) => btn.nativeElement.textContent.trim() === 'EN');
+    expect(enButton).withContext('EN button should exist in the topbar').toBeTruthy();
+
+    enButton!.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(enButton!.nativeElement.getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('renders nav icons with the bound material-symbols-outlined class', () => {
     // Regression for #31: the staff portal must use .material-symbols-outlined
     // (the webfont class loaded by the app), not the legacy .material-icons class.
