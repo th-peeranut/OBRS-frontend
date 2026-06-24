@@ -163,15 +163,15 @@ async function fillSearchForm(
 
 /** Fill the passenger + contact forms and click Confirm booking. */
 async function fillPassengersAndConfirm(page: Page): Promise<void> {
-  await page.locator('[formArrayName="passengers"] input[formControlName="title"]')
+  await page.locator('[formArrayName="passengers"] select[formControlName="title"]')
     .first().waitFor({ timeout: 12_000 });
-  await page.locator('[formArrayName="passengers"] input[formControlName="title"]').first().fill('Mr');
+  await page.locator('[formArrayName="passengers"] select[formControlName="title"]').first().selectOption('Mr.');
   await page.locator('[formArrayName="passengers"] input[formControlName="firstName"]').first().fill('Test');
   await page.locator('[formArrayName="passengers"] input[formControlName="lastName"]').first().fill('Passenger');
   await page.locator('[formArrayName="passengers"] input[formControlName="identityCardNumber"]').first().fill('1234567890123');
   await page.locator('[formArrayName="passengers"] input[formControlName="phoneNumber"]').first().fill('0812345678');
 
-  await page.locator('[formGroupName="contact"] input[formControlName="title"]').fill('Ms');
+  await page.locator('[formGroupName="contact"] select[formControlName="title"]').selectOption('Mrs.');
   await page.locator('[formGroupName="contact"] input[formControlName="firstName"]').fill('Contact');
   await page.locator('[formGroupName="contact"] input[formControlName="lastName"]').fill('Person');
   await page.locator('[formGroupName="contact"] input[formControlName="phoneNumber"]').fill('0891234567');

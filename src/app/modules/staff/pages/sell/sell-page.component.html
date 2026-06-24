@@ -202,7 +202,10 @@
             <div class="row g-3">
               <div class="col-md-3">
                 <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
-                <input class="form-control" formControlName="title" [class.is-invalid]="isPassengerFieldInvalid(i, 'title')" />
+                <select class="form-select" formControlName="title" [class.is-invalid]="isPassengerFieldInvalid(i, 'title')">
+                  <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
+                  <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+                </select>
                 <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'title') as key">{{ key | translate }}</div>
               </div>
               <div class="col-md-3">
@@ -249,7 +252,10 @@
           <div class="row g-3">
             <div class="col-md-2">
               <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
-              <input class="form-control" formControlName="title" [class.is-invalid]="isContactFieldInvalid('title')" />
+              <select class="form-select" formControlName="title" [class.is-invalid]="isContactFieldInvalid('title')">
+                <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
+                <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+              </select>
               <div class="invalid-feedback d-block" *ngIf="contactError('title') as key">{{ key | translate }}</div>
             </div>
             <div class="col-md-3">

@@ -20,6 +20,8 @@ import {
 } from '../../../../shared/interfaces/station.interface';
 import { invokeGetAllProvinceWithStationApi } from '../../../../shared/stores/station/station.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
+import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
+import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import dayjs from 'dayjs';
 
 type SellStep = 'search' | 'seats' | 'passengers' | 'payment' | 'ticket';
@@ -51,6 +53,15 @@ export class SellPageComponent implements OnInit, OnDestroy {
   // exactly 13 digits.
   private readonly phonePattern = /^0\d{9}$/;
   private readonly idCardPattern = /^\d{13}$/;
+
+  // Salutation options for the title dropdowns (shared app constant). The option
+  // value is the stable English salutation so the selection survives a language
+  // switch; the visible label follows the active language.
+  protected readonly titleOptions: Dropdown[] = TITLE_OPTIONS;
+
+  protected titleLabel(option: Dropdown): string {
+    return this.translate.currentLang === 'th' ? option.nameThai : option.nameEnglish;
+  }
 
   // Stop dropdowns (searchable). `allStopOptions` is the full localized list;
   // `fromStopOptions`/`toStopOptions` exclude the counterpart selection so a
