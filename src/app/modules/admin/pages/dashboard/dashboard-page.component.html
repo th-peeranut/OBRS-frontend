@@ -1,7 +1,6 @@
 <section class="admin-page-intro">
   <div>
     <p class="admin-muted">{{ 'ADMIN.DASHBOARD.SUBTITLE' | translate }}</p>
-    <h3>{{ 'ADMIN.DASHBOARD.TITLE' | translate }}</h3>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
     <p class="admin-muted" *ngIf="isRefreshing && !isLoading">{{ 'ADMIN.DASHBOARD.UPDATING' | translate }}</p>
   </div>

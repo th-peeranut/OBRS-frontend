@@ -1,7 +1,6 @@
 <section class="admin-page-intro">
   <div>
     <p class="admin-muted">{{ 'ADMIN.BOOKINGS.SUBTITLE' | translate }}</p>
-    <h3>{{ 'ADMIN.BOOKINGS.TITLE' | translate }}</h3>
     <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.BOOKINGS.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
