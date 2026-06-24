@@ -234,11 +234,11 @@
               </div>
               <div class="col-md-4">
                 <label class="form-label">{{ 'STAFF.SELL.GENDER' | translate }}</label>
-                <select class="form-select" formControlName="gender">
-                  <option value="MALE">{{ 'STAFF.SELL.GENDER_MALE' | translate }}</option>
-                  <option value="FEMALE">{{ 'STAFF.SELL.GENDER_FEMALE' | translate }}</option>
-                  <option value="MONK">{{ 'STAFF.SELL.GENDER_MONK' | translate }}</option>
+                <select class="form-select" formControlName="gender" [class.is-invalid]="isPassengerFieldInvalid(i, 'gender')">
+                  <option value="" disabled>{{ 'STAFF.SELL.GENDER_PLACEHOLDER' | translate }}</option>
+                  <option *ngFor="let g of genderOptions" [value]="g.value">{{ g.labelKey | translate }}</option>
                 </select>
+                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'gender') as key">{{ key | translate }}</div>
               </div>
             </div>
           </div>

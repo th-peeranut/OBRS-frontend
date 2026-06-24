@@ -63,6 +63,14 @@ export class SellPageComponent implements OnInit, OnDestroy {
     return this.translate.currentLang === 'th' ? option.nameThai : option.nameEnglish;
   }
 
+  // Gender options for the dropdown — array-driven with a placeholder, mirroring
+  // the title dropdown. Labels come from i18n keys (no shared constant exists).
+  protected readonly genderOptions: { value: string; labelKey: string }[] = [
+    { value: 'MALE', labelKey: 'STAFF.SELL.GENDER_MALE' },
+    { value: 'FEMALE', labelKey: 'STAFF.SELL.GENDER_FEMALE' },
+    { value: 'MONK', labelKey: 'STAFF.SELL.GENDER_MONK' },
+  ];
+
   // Stop dropdowns (searchable). `allStopOptions` is the full localized list;
   // `fromStopOptions`/`toStopOptions` exclude the counterpart selection so a
   // staffer cannot pick the same stop for both ends.
@@ -535,7 +543,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
         lastName: ['', [Validators.required]],
         identityCardNumber: ['', [Validators.required, Validators.pattern(this.idCardPattern)]],
         phoneNumber: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
-        gender: ['MALE', [Validators.required]],
+        gender: ['', [Validators.required]],
       }));
     }
   }

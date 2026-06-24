@@ -170,6 +170,7 @@ async function fillPassengersAndConfirm(page: Page): Promise<void> {
   await page.locator('[formArrayName="passengers"] input[formControlName="lastName"]').first().fill('Passenger');
   await page.locator('[formArrayName="passengers"] input[formControlName="identityCardNumber"]').first().fill('1234567890123');
   await page.locator('[formArrayName="passengers"] input[formControlName="phoneNumber"]').first().fill('0812345678');
+  await page.locator('[formArrayName="passengers"] select[formControlName="gender"]').first().selectOption('MALE');
 
   await page.locator('[formGroupName="contact"] select[formControlName="title"]').selectOption('Mrs.');
   await page.locator('[formGroupName="contact"] input[formControlName="firstName"]').fill('Contact');

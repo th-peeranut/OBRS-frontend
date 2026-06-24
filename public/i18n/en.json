@@ -857,6 +857,7 @@
       "NO_STOPS": "No stops found",
       "DATE_PLACEHOLDER": "Select a date",
       "TITLE_PLACEHOLDER": "Select title",
+      "GENDER_PLACEHOLDER": "Select gender",
       "DEPARTURE_DATE": "Departure Date",
       "RETURN_DATE": "Return Date",
       "SEARCH_BTN": "Search Schedules",
