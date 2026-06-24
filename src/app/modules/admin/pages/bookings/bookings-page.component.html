@@ -1,4 +1,4 @@
-<section class="admin-page-intro">
+<section class="admin-page-intro" *ngIf="isLoading || errorMessage || isRefreshing || refreshFailed">
   <div>
     <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.BOOKINGS.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
