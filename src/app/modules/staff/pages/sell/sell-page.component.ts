@@ -111,8 +111,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
       return p;
     });
 
+    const totalAmount =
+      (parseFloat(trip.pricePerSeat || '0') || 0) * this.selectedSeats.length;
+
     const bookingPayload: {
       bookingType: 'one_way';
+      totalAmount: number;
       bookingChannel: 'walk_in';
       departureSchedule: {
         scheduleId: number;
@@ -131,6 +135,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       };
     } = {
       bookingType: 'one_way',
+      totalAmount,
       bookingChannel: 'walk_in',
       departureSchedule: {
         scheduleId: trip.scheduleId,

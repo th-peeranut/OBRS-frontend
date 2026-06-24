@@ -245,6 +245,18 @@ describe('SellPageComponent', () => {
       expect(callArg.departureSchedule.passengers.length).toBe(3);
     });
 
+    it('includes a positive totalAmount (price * seat count) in the payload', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ pricePerSeat: '300' });
+      (comp as any).selectedSeats = ['B1', 'B2'];
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(600);
+    });
+
     it('calls payWalkIn after successful booking creation', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);

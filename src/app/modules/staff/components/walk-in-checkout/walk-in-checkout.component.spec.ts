@@ -71,6 +71,25 @@ describe('WalkInCheckoutComponent', () => {
       expect((comp as any).canSell).toBeFalse();
     });
 
+    it('returns false when trip pricePerSeat is null (totalAmount 0)', () => {
+      const comp = makeComponent();
+      comp.selectedTrip = makeTrip({ pricePerSeat: null as unknown as string });
+      comp.selectedSeats = ['B1'];
+      comp['cashReceived'] = 0;
+      fillValidContact(comp);
+      expect((comp as any).totalAmount).toBe(0);
+      expect((comp as any).canSell).toBeFalse();
+    });
+
+    it('returns false when trip pricePerSeat is "0"', () => {
+      const comp = makeComponent();
+      comp.selectedTrip = makeTrip({ pricePerSeat: '0' });
+      comp.selectedSeats = ['B1'];
+      comp['cashReceived'] = 0;
+      fillValidContact(comp);
+      expect((comp as any).canSell).toBeFalse();
+    });
+
     it('returns false when totalAmount is 0 (no trip)', () => {
       const comp = makeComponent();
       comp.selectedTrip = null;
