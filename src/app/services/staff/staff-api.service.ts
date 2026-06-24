@@ -42,15 +42,14 @@ export interface WalkInBookingPassengerReqDto {
   firstName: string;
   middleName?: string;
   lastName: string;
-  identityCardNumber: string;
+  identityCardNumber?: string;
   phoneNumber: string;
-  gender: string;
 }
 
 export interface WalkInBookingScheduleReqDto {
   scheduleId: number;
-  fromStop: string;
-  toStop: string;
+  fromStop?: string;
+  toStop?: string;
   departureDateTime: string;
   arrivalDateTime: string;
   passengers: WalkInBookingPassengerReqDto[];
@@ -62,9 +61,30 @@ export interface WalkInContactReqDto {
   middleName?: string;
   lastName: string;
   phoneNumber: string;
-  identityCardNumber: string;
-  email: string;
+  identityCardNumber?: string;
+  email?: string;
   preferredLocale: string;
+}
+
+export interface WalkInTripDto {
+  scheduleId: number;
+  vehicleType: 'bus' | 'van';
+  licensePlate: string | null;
+  driverName: string | null;
+  departureDateTime: string;
+  arrivalDateTime: string;
+  pricePerSeat: string;
+  capacity: number;
+  availableCount: number;
+  reservedUnpaidCount: number;
+  soldPaidCount: number;
+  availableSeatNumbers: string[];
+}
+
+export interface WalkInRouteGroupDto {
+  routeSlug: string;
+  routeLabel: string;
+  trips: WalkInTripDto[];
 }
 
 export interface WalkInBookingReqDto {
@@ -168,6 +188,13 @@ export class StaffApiService {
       `${environment.apiUrl}/api/private/payments/walk-in`,
       body,
       { context: this.skipContext, headers }
+    );
+  }
+
+  getWalkInSchedules(date: string): Observable<ResponseAPI<WalkInRouteGroupDto[]>> {
+    return this.http.get<ResponseAPI<WalkInRouteGroupDto[]>>(
+      `${environment.apiUrl}/api/private/schedules/walk-in?date=${date}`,
+      { context: this.skipContext }
     );
   }
 }

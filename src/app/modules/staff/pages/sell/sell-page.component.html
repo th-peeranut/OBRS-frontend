@@ -1,425 +1,46 @@
-<div class="container-fluid py-4">
-  <h4 class="fw-bold mb-1">{{ 'STAFF.PAGES.SELL' | translate }}</h4>
+<div class="container-fluid py-3">
+  <h4 class="fw-bold mb-3">{{ 'STAFF.PAGES.SELL' | translate }}</h4>
 
-  <!-- Step Indicator -->
-  <div class="d-flex align-items-center mb-4 gap-2 overflow-auto">
-    <ng-container *ngFor="let step of steps; let i = index">
-      <div class="d-flex align-items-center gap-1 text-nowrap">
-        <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold"
-             style="width:28px;height:28px;font-size:13px"
-             [class.bg-primary]="i <= stepIndex"
-             [class.text-white]="i <= stepIndex"
-             [class.bg-light]="i > stepIndex"
-             [class.text-muted]="i > stepIndex">
-          {{ i + 1 }}
-        </div>
-        <span class="small" [class.fw-semibold]="i === stepIndex">
-          {{ ('STAFF.SELL.STEP_' + step.toUpperCase()) | translate }}
-        </span>
-      </div>
-      <div *ngIf="i < steps.length - 1" class="flex-grow-1 border-top" style="min-width:20px"></div>
-    </ng-container>
-  </div>
-
-  <!-- STEP: Search -->
-  <div *ngIf="currentStep === 'search'">
-    <div class="card shadow-sm border-0">
-      <div class="card-body">
-        <form [formGroup]="searchForm">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">{{ 'STAFF.SELL.BOOKING_TYPE' | translate }}</label>
-              <select class="form-select" formControlName="bookingType">
-                <option value="one_way">{{ 'STAFF.SELL.ONE_WAY' | translate }}</option>
-                <option value="return">{{ 'STAFF.SELL.RETURN' | translate }}</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ 'STAFF.SELL.PASSENGER_COUNT' | translate }}</label>
-              <input type="number" class="form-control" formControlName="numberOfPassengers" min="1" />
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ 'STAFF.SELL.FROM_STOP' | translate }}</label>
-              <p-dropdown
-                styleClass="stop-dropdown"
-                formControlName="fromStop"
-                [options]="fromStopOptions"
-                optionLabel="label"
-                optionValue="value"
-                [filter]="true"
-                filterBy="label"
-                [showClear]="true"
-                [autoDisplayFirst]="false"
-                [placeholder]="'STAFF.SELL.STOP_PLACEHOLDER' | translate"
-                [emptyMessage]="'STAFF.SELL.NO_STOPS' | translate"
-                [emptyFilterMessage]="'STAFF.SELL.NO_STOPS' | translate"
-              ></p-dropdown>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ 'STAFF.SELL.TO_STOP' | translate }}</label>
-              <p-dropdown
-                styleClass="stop-dropdown"
-                formControlName="toStop"
-                [options]="toStopOptions"
-                optionLabel="label"
-                optionValue="value"
-                [filter]="true"
-                filterBy="label"
-                [showClear]="true"
-                [autoDisplayFirst]="false"
-                [placeholder]="'STAFF.SELL.STOP_PLACEHOLDER' | translate"
-                [emptyMessage]="'STAFF.SELL.NO_STOPS' | translate"
-                [emptyFilterMessage]="'STAFF.SELL.NO_STOPS' | translate"
-              ></p-dropdown>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">{{ 'STAFF.SELL.DEPARTURE_DATE' | translate }}</label>
-              <p-calendar
-                styleClass="staff-calendar"
-                formControlName="departureDate"
-                dateFormat="dd/mm/yy"
-                [minDate]="minDate"
-                [showIcon]="true"
-                [showButtonBar]="true"
-                appendTo="body"
-                [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
-              ></p-calendar>
-            </div>
-            <div class="col-md-6" *ngIf="isReturnTrip">
-              <label class="form-label">{{ 'STAFF.SELL.RETURN_DATE' | translate }}</label>
-              <p-calendar
-                styleClass="staff-calendar"
-                formControlName="returnDate"
-                dateFormat="dd/mm/yy"
-                [minDate]="returnMinDate"
-                [showIcon]="true"
-                [showButtonBar]="true"
-                appendTo="body"
-                [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
-              ></p-calendar>
-            </div>
-          </div>
-          <div class="mt-3">
-            <button class="btn btn-primary" (click)="search()" [disabled]="isSearching">
-              <span *ngIf="isSearching" class="spinner-border spinner-border-sm me-1"></span>
-              {{ (isSearching ? 'STAFF.SELL.SEARCHING' : 'STAFF.SELL.SEARCH_BTN') | translate }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP: Seats -->
-  <div *ngIf="currentStep === 'seats'">
-    <!-- Step instruction -->
-    <p class="text-muted mb-3"><span class="fw-semibold">1.</span> {{ 'STAFF.SELL.SEATS_PICK_TRIP' | translate }}
-      &nbsp; <span class="fw-semibold">2.</span> {{ 'STAFF.SELL.SEATS_PICK_SEATS' | translate }}</p>
-
-    <div class="row g-4">
-      <!-- Departure schedules list -->
-      <div class="col-lg-4">
-        <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.SELECT_DEPARTURE' | translate }}</h6>
-        <div *ngIf="departureSchedules.length === 0" class="text-muted small">
-          {{ 'STAFF.SELL.NO_SCHEDULES' | translate }}
-        </div>
-        <div *ngFor="let sch of departureSchedules"
-             class="card mb-2 border"
-             style="cursor:pointer"
-             [class.border-primary]="selectedDeparture?.id === sch.id"
-             [class.border-2]="selectedDeparture?.id === sch.id"
-             [class.bg-primary]="selectedDeparture?.id === sch.id"
-             [class.bg-opacity-10]="selectedDeparture?.id === sch.id"
-             (click)="selectDeparture(sch)">
-          <div class="card-body py-2">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-              <div class="fw-semibold">{{ sch.departureDateTime | date:'d MMM y, HH:mm' }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime | date:'HH:mm' }}</div>
-              <span *ngIf="selectedDeparture?.id === sch.id" class="badge bg-primary d-inline-flex align-items-center gap-1">
-                <span class="material-symbols-outlined" style="font-size:14px">check</span>{{ 'STAFF.SELL.SELECTED_BADGE' | translate }}
-              </span>
-            </div>
-            <div class="small text-muted">
-              {{ 'STAFF.SELL.SEAT_AVAILABLE' | translate }}: {{ sch.availableSeats }}
-              &middot; {{ 'STAFF.SELL.PRICE_PER_SEAT' | translate }}: {{ sch.pricePerSeat }}
-            </div>
-          </div>
-        </div>
-
-        <ng-container *ngIf="isReturnTrip">
-          <h6 class="fw-semibold mb-2 mt-3">{{ 'STAFF.SELL.SELECT_RETURN' | translate }}</h6>
-          <div *ngFor="let sch of arrivalSchedules"
-               class="card mb-2 border"
-               style="cursor:pointer"
-               [class.border-primary]="selectedArrival?.id === sch.id"
-               [class.border-2]="selectedArrival?.id === sch.id"
-               [class.bg-primary]="selectedArrival?.id === sch.id"
-               [class.bg-opacity-10]="selectedArrival?.id === sch.id"
-               (click)="selectArrival(sch)">
-            <div class="card-body py-2">
-              <div class="d-flex justify-content-between align-items-start gap-2">
-                <div class="fw-semibold">{{ sch.departureDateTime | date:'d MMM y, HH:mm' }} {{ 'STAFF.SELL.TO' | translate }} {{ sch.arrivalDateTime | date:'HH:mm' }}</div>
-                <span *ngIf="selectedArrival?.id === sch.id" class="badge bg-primary d-inline-flex align-items-center gap-1">
-                  <span class="material-symbols-outlined" style="font-size:14px">check</span>{{ 'STAFF.SELL.SELECTED_BADGE' | translate }}
-                </span>
-              </div>
-              <div class="small text-muted">
-                {{ 'STAFF.SELL.SEAT_AVAILABLE' | translate }}: {{ sch.availableSeats }}
-              </div>
-            </div>
-          </div>
-        </ng-container>
-      </div>
-
-      <!-- Seat map -->
-      <div class="col-lg-8">
-        <!-- Empty state: no trip chosen yet -->
-        <div *ngIf="!selectedDeparture" class="border rounded d-flex flex-column align-items-center justify-content-center text-muted text-center p-5 h-100">
-          <span class="material-symbols-outlined" style="font-size:48px">event_seat</span>
-          <p class="mb-0 mt-2">{{ 'STAFF.SELL.SELECT_TRIP_PROMPT' | translate }}</p>
-        </div>
-
-        <!-- Departure leg seat map -->
-        <div *ngIf="selectedDeparture" class="seatmap-departure">
-          <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.LEG_DEPARTURE' | translate }} — {{ 'STAFF.SELL.STEP_SEATS' | translate }}</h6>
-
-          <!-- Progress + selected seats -->
-          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-            <span class="badge seats-progress"
-                  [class.bg-success]="selectedDepartureSeats.length === numberOfPassengers"
-                  [class.bg-secondary]="selectedDepartureSeats.length !== numberOfPassengers">
-              {{ selectedDepartureSeats.length }} / {{ numberOfPassengers }} {{ 'STAFF.SELL.SEATS_SELECTED' | translate }}
-            </span>
-            <span *ngIf="selectedDepartureSeats.length" class="small text-muted">
-              {{ 'STAFF.SELL.SELECTED_SEATS' | translate }}: {{ selectedDepartureSeats.join(', ') }}
-            </span>
-          </div>
-
-          <ng-container *ngTemplateOutlet="seatLegend"></ng-container>
-
-          <ng-container *ngIf="isLoadingSeats">
-            <div class="text-muted">{{ 'STAFF.SELL.LOADING_SEATS' | translate }}</div>
-          </ng-container>
-
-          <ng-container *ngIf="!isLoadingSeats && selectedDeparture.vehicleType?.toLowerCase() === 'van'">
-            <app-passenger-seat-van
-              [gender]="'MALE'"
-              [takenSeats]="getTakenSeats(selectedDeparture)"
-              [currentSeat]="selectedDepartureSeats[0] ?? ''"
-              [availableSeatNumbers]="selectedDeparture.availableSeatNumbers"
-              (passengerSeatPositionOnChange)="onDepartureSeatChange($event)">
-            </app-passenger-seat-van>
-          </ng-container>
-
-          <ng-container *ngIf="!isLoadingSeats && selectedDeparture.vehicleType?.toLowerCase() !== 'van'">
-            <app-passenger-seat-bus
-              [gender]="'MALE'"
-              [takenSeats]="getTakenSeats(selectedDeparture)"
-              [currentSeat]="selectedDepartureSeats[0] ?? ''"
-              (passengerSeatPositionOnChange)="onDepartureSeatChange($event)">
-            </app-passenger-seat-bus>
-          </ng-container>
-
-          <!-- Prompt to also choose a return trip before its seats can be picked -->
-          <div *ngIf="isReturnTrip && !selectedArrival" class="alert alert-info mt-3 mb-0 py-2 small">
-            {{ 'STAFF.SELL.SELECT_RETURN_PROMPT' | translate }}
-          </div>
-        </div>
-
-        <!-- Return leg seat map (round-trip only, once a return schedule is chosen) -->
-        <div *ngIf="isReturnTrip && selectedArrival" class="seatmap-return mt-4 pt-3 border-top">
-          <h6 class="fw-semibold mb-2">{{ 'STAFF.SELL.LEG_RETURN' | translate }} — {{ 'STAFF.SELL.STEP_SEATS' | translate }}</h6>
-
-          <!-- Progress + selected seats -->
-          <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
-            <span class="badge seats-progress-return"
-                  [class.bg-success]="selectedArrivalSeats.length === numberOfPassengers"
-                  [class.bg-secondary]="selectedArrivalSeats.length !== numberOfPassengers">
-              {{ selectedArrivalSeats.length }} / {{ numberOfPassengers }} {{ 'STAFF.SELL.SEATS_SELECTED' | translate }}
-            </span>
-            <span *ngIf="selectedArrivalSeats.length" class="small text-muted">
-              {{ 'STAFF.SELL.SELECTED_SEATS' | translate }}: {{ selectedArrivalSeats.join(', ') }}
-            </span>
-          </div>
-
-          <ng-container *ngTemplateOutlet="seatLegend"></ng-container>
-
-          <ng-container *ngIf="selectedArrival.vehicleType?.toLowerCase() === 'van'">
-            <app-passenger-seat-van
-              [gender]="'MALE'"
-              [takenSeats]="getTakenSeats(selectedArrival)"
-              [currentSeat]="selectedArrivalSeats[0] ?? ''"
-              [availableSeatNumbers]="selectedArrival.availableSeatNumbers"
-              (passengerSeatPositionOnChange)="onArrivalSeatChange($event)">
-            </app-passenger-seat-van>
-          </ng-container>
-
-          <ng-container *ngIf="selectedArrival.vehicleType?.toLowerCase() !== 'van'">
-            <app-passenger-seat-bus
-              [gender]="'MALE'"
-              [takenSeats]="getTakenSeats(selectedArrival)"
-              [currentSeat]="selectedArrivalSeats[0] ?? ''"
-              (passengerSeatPositionOnChange)="onArrivalSeatChange($event)">
-            </app-passenger-seat-bus>
-          </ng-container>
+  <div class="row g-3 pos-layout">
+    <!-- LEFT: Trip Browser -->
+    <div class="col-xl-3 col-lg-3 col-md-12">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body d-flex flex-column p-2">
+          <app-walk-in-trip-browser
+            [isLoading]="isLoadingTrips"
+            [routeGroups]="routeGroups"
+            [selectedTripId]="selectedTrip?.scheduleId ?? null"
+            (dateChanged)="onDateChanged($event)"
+            (tripSelected)="onTripSelected($event)">
+          </app-walk-in-trip-browser>
         </div>
       </div>
     </div>
 
-    <!-- Shared seat legend (used by both legs) -->
-    <ng-template #seatLegend>
-      <div class="d-flex gap-3 mb-3 small text-muted flex-wrap">
-        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-available"></span>{{ 'STAFF.SELL.LEGEND_AVAILABLE' | translate }}</span>
-        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-selected"><span class="material-symbols-outlined" style="font-size:11px">person</span></span>{{ 'STAFF.SELL.LEGEND_SELECTED' | translate }}</span>
-        <span class="d-inline-flex align-items-center gap-1"><span class="seat-swatch seat-swatch-taken"></span>{{ 'STAFF.SELL.LEGEND_TAKEN' | translate }}</span>
-      </div>
-    </ng-template>
-
-    <div class="d-flex justify-content-between mt-4">
-      <button class="btn btn-secondary" (click)="goBack()">{{ 'STAFF.SELL.BACK_BTN' | translate }}</button>
-      <button class="btn btn-primary" (click)="proceedFromSeats()">{{ 'STAFF.SELL.NEXT_BTN' | translate }}</button>
-    </div>
-  </div>
-
-  <!-- STEP: Passengers -->
-  <div *ngIf="currentStep === 'passengers'">
-    <form [formGroup]="passengersForm">
-      <div formArrayName="passengers">
-        <div *ngFor="let pg of passengersArray.controls; let i = index" [formGroupName]="i" class="card mb-3 border-0 shadow-sm">
-          <div class="card-header bg-light fw-semibold">
-            {{ 'STAFF.SELL.SEAT_NUMBER_BADGE' | translate }}: {{ selectedDepartureSeats[i] }}
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-3">
-                <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
-                <select class="form-select" formControlName="title" [class.is-invalid]="isPassengerFieldInvalid(i, 'title')">
-                  <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
-                  <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
-                </select>
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'title') as key">{{ key | translate }}</div>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
-                <input class="form-control" formControlName="firstName" [class.is-invalid]="isPassengerFieldInvalid(i, 'firstName')" />
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'firstName') as key">{{ key | translate }}</div>
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">{{ 'STAFF.SELL.MIDDLE_NAME' | translate }}</label>
-                <input class="form-control" formControlName="middleName" />
-              </div>
-              <div class="col-md-3">
-                <label class="form-label">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
-                <input class="form-control" formControlName="lastName" [class.is-invalid]="isPassengerFieldInvalid(i, 'lastName')" />
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'lastName') as key">{{ key | translate }}</div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">{{ 'STAFF.SELL.PHONE' | translate }}</label>
-                <input class="form-control" formControlName="phoneNumber" inputmode="tel" maxlength="10" [class.is-invalid]="isPassengerFieldInvalid(i, 'phoneNumber')" />
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'phoneNumber') as key">{{ key | translate }}</div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">{{ 'STAFF.SELL.ID_CARD' | translate }}</label>
-                <input class="form-control" formControlName="identityCardNumber" inputmode="numeric" maxlength="13" [class.is-invalid]="isPassengerFieldInvalid(i, 'identityCardNumber')" />
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'identityCardNumber') as key">{{ key | translate }}</div>
-              </div>
-              <div class="col-md-4">
-                <label class="form-label">{{ 'STAFF.SELL.GENDER' | translate }}</label>
-                <select class="form-select" formControlName="gender" [class.is-invalid]="isPassengerFieldInvalid(i, 'gender')">
-                  <option value="" disabled>{{ 'STAFF.SELL.GENDER_PLACEHOLDER' | translate }}</option>
-                  <option *ngFor="let g of genderOptions" [value]="g.value">{{ g.labelKey | translate }}</option>
-                </select>
-                <div class="invalid-feedback d-block" *ngIf="passengerError(i, 'gender') as key">{{ key | translate }}</div>
-              </div>
-            </div>
-          </div>
+    <!-- CENTER: Seat map / trip details / boarding -->
+    <div class="col-xl-5 col-lg-5 col-md-12">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body p-3">
+          <app-walk-in-center-panel
+            [selectedTrip]="selectedTrip"
+            [selectedSeats]="selectedSeats"
+            [isLoadingSeats]="isLoadingSeats"
+            (seatToggled)="onSeatToggled($event)">
+          </app-walk-in-center-panel>
         </div>
       </div>
-
-      <!-- Contact -->
-      <div class="card border-0 shadow-sm mb-3" formGroupName="contact">
-        <div class="card-header bg-light fw-semibold">{{ 'STAFF.SELL.CONTACT_NAME' | translate }}</div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-2">
-              <label class="form-label">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
-              <select class="form-select" formControlName="title" [class.is-invalid]="isContactFieldInvalid('title')">
-                <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
-                <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
-              </select>
-              <div class="invalid-feedback d-block" *ngIf="contactError('title') as key">{{ key | translate }}</div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">{{ 'STAFF.SELL.FIRST_NAME' | translate }}</label>
-              <input class="form-control" formControlName="firstName" [class.is-invalid]="isContactFieldInvalid('firstName')" />
-              <div class="invalid-feedback d-block" *ngIf="contactError('firstName') as key">{{ key | translate }}</div>
-            </div>
-            <div class="col-md-3">
-              <label class="form-label">{{ 'STAFF.SELL.MIDDLE_NAME' | translate }}</label>
-              <input class="form-control" formControlName="middleName" />
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">{{ 'STAFF.SELL.LAST_NAME' | translate }}</label>
-              <input class="form-control" formControlName="lastName" [class.is-invalid]="isContactFieldInvalid('lastName')" />
-              <div class="invalid-feedback d-block" *ngIf="contactError('lastName') as key">{{ key | translate }}</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">{{ 'STAFF.SELL.CONTACT_PHONE' | translate }}</label>
-              <input class="form-control" formControlName="phoneNumber" inputmode="tel" maxlength="10" [class.is-invalid]="isContactFieldInvalid('phoneNumber')" />
-              <div class="invalid-feedback d-block" *ngIf="contactError('phoneNumber') as key">{{ key | translate }}</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">{{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}</label>
-              <input class="form-control" formControlName="email" type="email" [class.is-invalid]="isContactFieldInvalid('email')" />
-              <div class="invalid-feedback d-block" *ngIf="contactError('email') as key">{{ key | translate }}</div>
-            </div>
-            <div class="col-md-4">
-              <label class="form-label">{{ 'STAFF.SELL.ID_CARD' | translate }}</label>
-              <input class="form-control" formControlName="identityCardNumber" inputmode="numeric" maxlength="13" [class.is-invalid]="isContactFieldInvalid('identityCardNumber')" />
-              <div class="invalid-feedback d-block" *ngIf="contactError('identityCardNumber') as key">{{ key | translate }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
-
-    <div class="d-flex justify-content-between mt-3">
-      <button class="btn btn-secondary" (click)="goBack()">{{ 'STAFF.SELL.BACK_BTN' | translate }}</button>
-      <button class="btn btn-primary" (click)="confirmBooking()" [disabled]="isConfirming">
-        <span *ngIf="isConfirming" class="spinner-border spinner-border-sm me-1"></span>
-        {{ (isConfirming ? 'STAFF.SELL.CONFIRMING' : 'STAFF.SELL.CONFIRM_BTN') | translate }}
-      </button>
     </div>
-  </div>
 
-  <!-- STEP: Payment -->
-  <div *ngIf="currentStep === 'payment'">
-    <div class="card shadow-sm border-0 mx-auto" style="max-width:480px">
-      <div class="card-body text-center py-4">
-        <div class="fs-4 fw-bold mb-2">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}: {{ totalAmount | currency:'THB':'symbol' }}</div>
-        <span class="badge bg-success fs-6 px-3 py-2 mb-2">{{ 'STAFF.SELL.CASH_ONLY_BADGE' | translate }}</span>
-        <p class="text-muted small">{{ 'STAFF.SELL.CASH_ONLY_NOTE' | translate }}</p>
-        <button class="btn btn-success btn-lg w-100 mt-3" (click)="pay()" [disabled]="isProcessingPayment">
-          <span *ngIf="isProcessingPayment" class="spinner-border spinner-border-sm me-1"></span>
-          {{ (isProcessingPayment ? 'STAFF.SELL.PROCESSING' : 'STAFF.SELL.PAY_BTN') | translate }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- STEP: Ticket -->
-  <div *ngIf="currentStep === 'ticket'">
-    <div class="card shadow-sm border-0 text-center mx-auto" style="max-width:480px">
-      <div class="card-body py-5">
-        <span class="material-symbols-outlined text-success" style="font-size:64px">check_circle</span>
-        <h5 class="mt-3 fw-bold">{{ 'STAFF.SELL.BOOKING_SUCCESS' | translate }}</h5>
-        <p class="text-muted">{{ 'STAFF.SELL.BOOKING_NUMBER' | translate }} #{{ bookingNumber }}</p>
-        <div class="d-flex gap-2 justify-content-center mt-3">
-          <button class="btn btn-outline-primary" (click)="viewTicket()">
-            {{ 'STAFF.SELL.VIEW_TICKET_BTN' | translate }}
-          </button>
-          <button class="btn btn-primary" (click)="newSale()">
-            {{ 'STAFF.SELL.NEW_SALE_BTN' | translate }}
-          </button>
+    <!-- RIGHT: Checkout -->
+    <div class="col-xl-4 col-lg-4 col-md-12">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body p-3">
+          <app-walk-in-checkout
+            [selectedTrip]="selectedTrip"
+            [selectedSeats]="selectedSeats"
+            [isSelling]="isSelling"
+            (sell)="onSell($event)">
+          </app-walk-in-checkout>
         </div>
       </div>
     </div>

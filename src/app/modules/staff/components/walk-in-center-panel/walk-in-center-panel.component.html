@@ -1,0 +1,106 @@
+<div class="center-panel d-flex flex-column h-100">
+  <!-- Empty state: no trip selected -->
+  <div *ngIf="!selectedTrip"
+       class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-muted text-center py-5">
+    <i class="bi bi-map" style="font-size:2.5rem"></i>
+    <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.CENTER_EMPTY' | translate }}</p>
+  </div>
+
+  <!-- Trip selected: show tabs -->
+  <p-tabView *ngIf="selectedTrip" styleClass="center-tabview">
+
+    <!-- Tab 1: Ticket Sales (seat map) -->
+    <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
+      <!-- Trip headline -->
+      <div class="mb-3">
+        <div class="fw-semibold">
+          {{ selectedTrip.departureDateTime | date:'d MMM y' }}
+          &mdash; {{ formatTime(selectedTrip.departureDateTime) }} &rarr; {{ formatTime(selectedTrip.arrivalDateTime) }}
+        </div>
+      </div>
+
+      <!-- Passenger type icons (decorative) -->
+      <div class="d-flex gap-3 mb-3" aria-hidden="true">
+        <i class="bi bi-person fs-4 text-muted" title="Adult"></i>
+        <i class="bi bi-person-dress fs-4 text-muted" title="Female"></i>
+        <i class="bi bi-person-raised-hand fs-4 text-muted" title="Other"></i>
+      </div>
+
+      <!-- Selected seat chips -->
+      <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-3">
+        <span *ngFor="let seat of selectedSeats"
+              class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
+          {{ seat }}
+        </span>
+      </div>
+
+      <!-- Loading overlay -->
+      <div *ngIf="isLoadingSeats" class="d-flex justify-content-center py-4">
+        <p-progressSpinner [style]="{'width':'36px','height':'36px'}"></p-progressSpinner>
+      </div>
+
+      <!-- Van seat map -->
+      <ng-container *ngIf="!isLoadingSeats && isVan">
+        <app-passenger-seat-van
+          [gender]="'MALE'"
+          [takenSeats]="takenSeats"
+          [currentSeat]="currentSeat"
+          [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
+          (passengerSeatPositionOnChange)="seatToggled.emit($event)">
+        </app-passenger-seat-van>
+      </ng-container>
+
+      <!-- Bus seat map -->
+      <ng-container *ngIf="!isLoadingSeats && !isVan">
+        <app-passenger-seat-bus
+          [gender]="'MALE'"
+          [takenSeats]="takenSeats"
+          [currentSeat]="currentSeat"
+          (passengerSeatPositionOnChange)="seatToggled.emit($event)">
+        </app-passenger-seat-bus>
+      </ng-container>
+    </p-tabPanel>
+
+    <!-- Tab 2: Trip Details -->
+    <p-tabPanel [header]="'STAFF.SELL.TAB_TRIP_DETAILS' | translate">
+      <dl class="row mb-0 small">
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_PLATE' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.licensePlate || '&mdash;' }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_DRIVER' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.driverName || '&mdash;' }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_DEPARTURE' | translate }}</dt>
+        <dd class="col-sm-7">{{ formatDateTime(selectedTrip.departureDateTime) }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_ARRIVAL' | translate }}</dt>
+        <dd class="col-sm-7">{{ formatDateTime(selectedTrip.arrivalDateTime) }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_PRICE' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.pricePerSeat | currency:'THB':'symbol' }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_CAPACITY' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.capacity }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_AVAILABLE' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.availableCount }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_RESERVED' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.reservedUnpaidCount }}</dd>
+
+        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_SOLD' | translate }}</dt>
+        <dd class="col-sm-7">{{ selectedTrip.soldPaidCount }}</dd>
+      </dl>
+    </p-tabPanel>
+
+    <!-- Tab 3: Boarding -->
+    <p-tabPanel [header]="'STAFF.SELL.TAB_BOARDING' | translate">
+      <p class="small text-muted mb-3">{{ 'STAFF.SELL.BOARDING_TAB_HINT' | translate }}</p>
+      <a [routerLink]="['/staff/boarding']" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-clipboard-check me-1"></i>
+        {{ 'STAFF.SELL.TAB_BOARDING' | translate }}
+      </a>
+    </p-tabPanel>
+
+  </p-tabView>
+</div>

@@ -1,53 +1,20 @@
-// Make the PrimeNG stop dropdowns span the column and roughly match the
-// Bootstrap form controls used elsewhere on the search step.
-:host ::ng-deep .stop-dropdown.p-dropdown {
-  width: 100%;
-  border-radius: 24px;
-  align-items: center;
+// POS layout: fixed height on larger screens so all three columns scroll independently
+@media (min-width: 992px) {
+  .pos-layout {
+    height: calc(100vh - 120px);
 
-  .p-dropdown-label {
-    display: flex;
-    align-items: center;
+    > [class*='col-'] {
+      height: 100%;
+
+      .card {
+        height: 100%;
+        overflow: hidden;
+      }
+
+      .card-body {
+        height: 100%;
+        overflow-y: auto;
+      }
+    }
   }
-}
-
-// Departure / return date pickers: span the column and round the input to match
-// the stop dropdowns and Bootstrap form controls.
-:host ::ng-deep .staff-calendar.p-calendar {
-  width: 100%;
-
-  .p-inputtext {
-    width: 100%;
-    border-top-left-radius: 24px;
-    border-bottom-left-radius: 24px;
-  }
-}
-
-// Seat-map legend swatches — colours mirror the shared seat-box component
-// (available = white + blue border #4bc2f7; taken = grey $primary-grey #babdc3).
-.seat-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  flex: 0 0 auto;
-}
-
-.seat-swatch-available {
-  background: #fff;
-  border: 1px solid #4bc2f7;
-}
-
-.seat-swatch-selected {
-  background: #fff;
-  border: 1px solid #4bc2f7;
-  color: #4bc2f7;
-}
-
-.seat-swatch-taken {
-  background: #babdc3;
-  border: 1px solid #babdc3;
 }
