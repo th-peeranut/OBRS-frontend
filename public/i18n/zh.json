@@ -850,6 +850,7 @@
       "TO_STOP": "到达站",
       "STOP_PLACEHOLDER": "选择站点",
       "NO_STOPS": "未找到站点",
+      "DATE_PLACEHOLDER": "选择日期",
       "DEPARTURE_DATE": "出发日期",
       "RETURN_DATE": "返程日期",
       "SEARCH_BTN": "搜索班次",

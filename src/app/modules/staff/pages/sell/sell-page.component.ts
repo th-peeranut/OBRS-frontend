@@ -20,6 +20,7 @@ import {
 } from '../../../../shared/interfaces/station.interface';
 import { invokeGetAllProvinceWithStationApi } from '../../../../shared/stores/station/station.action';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
+import dayjs from 'dayjs';
 
 type SellStep = 'search' | 'seats' | 'passengers' | 'payment' | 'ticket';
 
@@ -41,6 +42,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
   // Search step
   protected readonly searchForm: FormGroup;
   protected isSearching = false;
+
+  // Earliest selectable departure (today) — staff cannot sell a past departure.
+  protected readonly minDate = new Date();
 
   // Stop dropdowns (searchable). `allStopOptions` is the full localized list;
   // `fromStopOptions`/`toStopOptions` exclude the counterpart selection so a
@@ -84,8 +88,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingType: ['one_way', [Validators.required]],
       fromStop: ['', [Validators.required]],
       toStop: ['', [Validators.required]],
-      departureDate: ['', [Validators.required]],
-      returnDate: [''],
+      // Date controls hold `Date` objects (PrimeNG p-calendar), formatted to
+      // YYYY-MM-DD only when building the API request.
+      departureDate: [null as Date | null, [Validators.required]],
+      returnDate: [null as Date | null],
       numberOfPassengers: [1, [Validators.required, Validators.min(1)]],
     });
 
@@ -157,6 +163,17 @@ export class SellPageComponent implements OnInit, OnDestroy {
     return this.searchForm.get('bookingType')?.value === 'return';
   }
 
+  /** Return trip can't depart before the outbound: clamp the return picker to the chosen departure. */
+  protected get returnMinDate(): Date {
+    const departure = this.searchForm.get('departureDate')?.value as Date | null;
+    return departure ?? this.minDate;
+  }
+
+  /** PrimeNG p-calendar yields a Date; the search API wants a YYYY-MM-DD string. */
+  private formatDate(value: Date | string | null | undefined): string {
+    return value ? dayjs(value).format('YYYY-MM-DD') : '';
+  }
+
   protected get numberOfPassengers(): number {
     return Number(this.searchForm.get('numberOfPassengers')?.value ?? 1);
   }
@@ -194,8 +211,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingType: 'one_way' | 'return';
       fromStop: string;
       toStop: string;
-      departureDate: string;
-      returnDate: string;
+      departureDate: Date | null;
+      returnDate: Date | null;
       numberOfPassengers: number;
     };
     const fromStop = String(v.fromStop ?? '').trim();
@@ -205,7 +222,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (v.bookingType === 'return' && v.returnDate && v.departureDate && v.returnDate < v.departureDate) {
+    const departureDate = this.formatDate(v.departureDate);
+    const returnDate = this.formatDate(v.returnDate);
+
+    if (v.bookingType === 'return' && returnDate && departureDate && returnDate < departureDate) {
       await this.alertService.warning(this.translate.instant('STAFF.VALIDATION.RETURN_DATE_BEFORE_DEPARTURE'));
       return;
     }
@@ -214,13 +234,13 @@ export class SellPageComponent implements OnInit, OnDestroy {
     try {
       const req: ScheduleSearchReqDto = {
         bookingType: v.bookingType,
-        departureDate: v.departureDate,
+        departureDate,
         fromStop,
         toStop,
         numberOfPassengers: Number(v.numberOfPassengers),
       };
-      if (v.bookingType === 'return' && v.returnDate) {
-        req.returnDate = v.returnDate;
+      if (v.bookingType === 'return' && returnDate) {
+        req.returnDate = returnDate;
       }
 
       const response = await firstValueFrom(this.staffApiService.searchSchedules(req));

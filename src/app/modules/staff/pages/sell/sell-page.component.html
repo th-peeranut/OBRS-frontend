@@ -74,11 +74,29 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">{{ 'STAFF.SELL.DEPARTURE_DATE' | translate }}</label>
-              <input type="date" class="form-control" formControlName="departureDate" />
+              <p-calendar
+                styleClass="staff-calendar"
+                formControlName="departureDate"
+                dateFormat="dd/mm/yy"
+                [minDate]="minDate"
+                [showIcon]="true"
+                [showButtonBar]="true"
+                appendTo="body"
+                [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
+              ></p-calendar>
             </div>
             <div class="col-md-6" *ngIf="isReturnTrip">
               <label class="form-label">{{ 'STAFF.SELL.RETURN_DATE' | translate }}</label>
-              <input type="date" class="form-control" formControlName="returnDate" />
+              <p-calendar
+                styleClass="staff-calendar"
+                formControlName="returnDate"
+                dateFormat="dd/mm/yy"
+                [minDate]="returnMinDate"
+                [showIcon]="true"
+                [showButtonBar]="true"
+                appendTo="body"
+                [placeholder]="'STAFF.SELL.DATE_PLACEHOLDER' | translate"
+              ></p-calendar>
             </div>
           </div>
           <div class="mt-3">

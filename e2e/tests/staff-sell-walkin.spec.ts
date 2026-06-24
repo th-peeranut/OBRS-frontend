@@ -131,6 +131,22 @@ async function selectStop(page: Page, formControlName: string, label: string): P
   await panel.waitFor({ state: 'hidden', timeout: 10_000 });
 }
 
+/**
+ * Type a date into a PrimeNG p-calendar.  `iso` is YYYY-MM-DD; the picker's
+ * dateFormat is dd/mm/yy (4-digit year), so convert before typing.
+ * Use pressSequentially (not fill): p-calendar parses typed input on real
+ * keystrokes/Enter — a bulk fill() sets the input text but never updates the
+ * form model.  Enter commits, Escape closes the overlay off the submit button.
+ */
+async function pickDate(page: Page, formControlName: string, iso: string): Promise<void> {
+  const [y, m, d] = iso.split('-');
+  const input = page.locator(`p-calendar[formControlName="${formControlName}"] input`);
+  await input.click();
+  await input.pressSequentially(`${d}/${m}/${y}`, { delay: 20 });
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Escape');
+}
+
 /** Fill and submit the search form.  Assumes the page is already on /staff/sell step=search. */
 async function fillSearchForm(
   page: Page,
@@ -140,7 +156,7 @@ async function fillSearchForm(
   await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
   await selectStop(page, 'fromStop', 'Nong Sak');
   await selectStop(page, 'toStop', 'Bangkok');
-  await page.locator('input[formControlName="departureDate"]').fill(date);
+  await pickDate(page, 'departureDate', date);
   await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
   await page.locator('form button.btn-primary').click();
 }
@@ -509,7 +525,7 @@ test.describe('Authenticated walk-in flow tests', () => {
       await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
       await selectStop(page, 'fromStop', 'Nong Sak');
       await selectStop(page, 'toStop', 'Bangkok');
-      await page.locator('input[formControlName="departureDate"]').fill('2026-09-02');
+      await pickDate(page, 'departureDate', '2026-09-02');
       await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
       await page.locator('form button.btn-primary').click();
 
@@ -580,7 +596,7 @@ test.describe('Authenticated walk-in flow tests', () => {
       await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
       await selectStop(page, 'fromStop', 'Nong Sak');
       await selectStop(page, 'toStop', 'Bangkok');
-      await page.locator('input[formControlName="departureDate"]').fill('2026-09-02');
+      await pickDate(page, 'departureDate', '2026-09-02');
       await page.locator('form button.btn-primary').click();
 
       const scheduleCard = page.locator('.card.mb-2.border').first();

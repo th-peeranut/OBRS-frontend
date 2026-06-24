@@ -10,3 +10,15 @@
     align-items: center;
   }
 }
+
+// Departure / return date pickers: span the column and round the input to match
+// the stop dropdowns and Bootstrap form controls.
+:host ::ng-deep .staff-calendar.p-calendar {
+  width: 100%;
+
+  .p-inputtext {
+    width: 100%;
+    border-top-left-radius: 24px;
+    border-bottom-left-radius: 24px;
+  }
+}

@@ -851,6 +851,7 @@
       "TO_STOP": "ปลายทาง",
       "STOP_PLACEHOLDER": "เลือกจุดจอด",
       "NO_STOPS": "ไม่พบจุดจอด",
+      "DATE_PLACEHOLDER": "เลือกวันที่",
       "DEPARTURE_DATE": "วันออกเดินทาง",
       "RETURN_DATE": "วันเดินทางกลับ",
       "SEARCH_BTN": "ค้นหาตาราง",
