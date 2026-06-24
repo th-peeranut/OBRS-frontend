@@ -187,3 +187,30 @@ was modified.
 - Routes: each child has canActivate:[AuthGuard] + data.requiredRoles lowercase. Parent /staff route
   has requiredRoles:['driver','salesperson']. AuthGuard checks hasAnyRole.
 - i18n STAFF keys: present in en.json, th.json, zh.json (changed files include all three).
+
+## 2026-06-24 — Bare /staff redirect: regression test didn't lock the bug (self-fixed, #30)
+
+**Files:** `staff-routing.spec.ts` (rewritten), `staff.module.ts`, `passenger-info.module.ts`
+(exported the previously module-local `routes` consts as `staffRoutes` / `passengerInfoRoutes`).
+
+The fix itself (extracting `PassengerSeatModule` so `StaffModule` no longer imports
+`PassengerInfoModule`) was correct and resolves the root cause. The problem was the **regression
+test**: it hand-rolled a *stub* `staffRoutes` table that simply omitted the leaking passenger-info
+empty-path route, and never imported the real `StaffModule` / `PassengerInfoModule`. A stub that
+mirrors the desired routes proves nothing — it passes identically with the bug present, because the
+bug lived in NgModule import *composition* (Angular flattening a child module's
+`RouterModule.forChild` routes into the lazy context), not in any literal route array the stub copied.
+The trivial `StaffLayoutComponent !== PassengerInfoComponent` "structural guard" was always true and
+unrelated to the bug.
+
+**What I changed:** the spec now asserts against the **real exported route arrays** and the **real
+compiled module import graph** (walking `StaffModule.ɵinj.imports`). The decisive assertion —
+`StaffModule must not import PassengerInfoModule` — was verified to FAIL when the fix is reverted
+(re-adding the `PassengerInfoModule` import) and PASS with the fix in place. That is what "locks the
+regression" means.
+
+**Rule:** a regression test must consume the *real* artifact the bug lives in, not a parallel
+hand-authored copy of the intended state. Before trusting a regression test, revert the fix and
+confirm the test goes red. If it stays green against the buggy code, it tests nothing. When the bug
+is in module wiring, assert on the module's actual metadata/route exports — export the `const` if you
+must — rather than re-declaring stub routes.

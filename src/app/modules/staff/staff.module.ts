@@ -4,7 +4,7 @@ import { CalendarModule } from 'primeng/calendar';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthGuard } from '../../auth/auth.guard';
 import { AdminSharedModule } from '../admin/admin-shared.module';
-import { PassengerInfoModule } from '../passenger-info/passenger-info.module';
+import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
 
 import { StaffLayoutComponent } from './staff-layout.component';
 import { SellPageComponent } from './pages/sell/sell-page.component';
@@ -13,7 +13,7 @@ import { DriverSchedulesPageComponent } from './pages/driver-schedules/driver-sc
 import { BoardingListPageComponent } from './pages/boarding-list/boarding-list-page.component';
 import { BoardingEntryPageComponent } from './pages/boarding-entry/boarding-entry-page.component';
 
-const routes: Routes = [
+export const staffRoutes: Routes = [
   {
     path: '',
     component: StaffLayoutComponent,
@@ -64,10 +64,10 @@ const routes: Routes = [
   ],
   imports: [
     SharedModule,
-    RouterModule.forChild(routes),
+    RouterModule.forChild(staffRoutes),
     CalendarModule,
     AdminSharedModule,
-    PassengerInfoModule,
+    PassengerSeatModule,
   ],
 })
 export class StaffModule {}

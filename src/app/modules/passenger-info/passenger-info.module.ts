@@ -20,25 +20,23 @@ import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/sched
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
 import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
 import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
-import { PassengerSeatBusComponent } from './components/passenger-seat-bus/passenger-seat-bus.component';
-import { PassengerSeatVanComponent } from './components/passenger-seat-van/passenger-seat-van.component';
-import { PassengerSeatBoxComponent } from './components/passenger-seat-box/passenger-seat-box.component';
 import { PassengerInfoReducer } from '../../shared/stores/passenger-info/passenger-info.reducer';
 import { PassengerInfoEffect } from '../../shared/stores/passenger-info/passenger-info.effect';
 import { BookingReducer } from '../../shared/stores/booking/booking.reducer';
 import { BookingEffect } from '../../shared/stores/booking/booking.effect';
+import { PassengerSeatModule } from './passenger-seat.module';
 
 
-const routes: Routes = [
+export const passengerInfoRoutes: Routes = [
   { path: '', component: PassengerInfoComponent },
 ];
 
 @NgModule({
-  declarations: [PassengerInfoComponent, BookerInfoFormComponent, PassengerInfoFormComponent, PassengerInfoSummaryComponent, PassengerSeatBusComponent, PassengerSeatVanComponent, PassengerSeatBoxComponent],
-  exports: [PassengerSeatBusComponent, PassengerSeatVanComponent],
+  declarations: [PassengerInfoComponent, BookerInfoFormComponent, PassengerInfoFormComponent, PassengerInfoSummaryComponent],
   imports: [
     SharedModule,
-    RouterModule.forChild(routes),
+    RouterModule.forChild(passengerInfoRoutes),
+    PassengerSeatModule,
 
     // Add-ons
     CalendarModule,
