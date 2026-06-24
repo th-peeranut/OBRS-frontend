@@ -92,6 +92,19 @@ const PAYMENT_RESP = {
   data: { id: 555, bookingId: 9999, status: 'paid', paymentMethod: 'cash', amount: 300 },
 };
 
+/** Stops backing the searchable From/To dropdowns (slug = the value the search API receives). */
+const STOPS_RESP = {
+  code: 200, message: 'OK',
+  data: [
+    { id: 1, slug: 'nong-sak', status: 'active', stopType: 'stop', createdAt: '', updatedAt: '',
+      translations: [{ locale: 'en', label: 'Nong Sak' }, { locale: 'th', label: 'หนองศักดิ์' }] },
+    { id: 2, slug: 'bangkok', status: 'active', stopType: 'station', createdAt: '', updatedAt: '',
+      translations: [{ locale: 'en', label: 'Bangkok' }, { locale: 'th', label: 'กรุงเทพ' }] },
+  ],
+};
+
+const STOPS_ENDPOINT = '**/api/stops';
+
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 /**
@@ -109,6 +122,15 @@ function injectFakeAuth(page: Page, roles: string[]): Promise<void> {
 
 // ── Step helpers ──────────────────────────────────────────────────────────────
 
+/** Open a searchable PrimeNG stop dropdown and pick the option by its visible label. */
+async function selectStop(page: Page, formControlName: string, label: string): Promise<void> {
+  await page.locator(`p-dropdown[formControlName="${formControlName}"]`).click();
+  const panel = page.locator('.p-dropdown-panel');
+  await panel.waitFor({ state: 'visible', timeout: 10_000 });
+  await panel.getByText(label, { exact: true }).click();
+  await panel.waitFor({ state: 'hidden', timeout: 10_000 });
+}
+
 /** Fill and submit the search form.  Assumes the page is already on /staff/sell step=search. */
 async function fillSearchForm(
   page: Page,
@@ -116,8 +138,8 @@ async function fillSearchForm(
 ): Promise<void> {
   const date = opts.date ?? '2026-09-01';
   await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-  await page.locator('input[formControlName="fromStop"]').fill('nong-sak');
-  await page.locator('input[formControlName="toStop"]').fill('bangkok');
+  await selectStop(page, 'fromStop', 'Nong Sak');
+  await selectStop(page, 'toStop', 'Bangkok');
   await page.locator('input[formControlName="departureDate"]').fill(date);
   await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
   await page.locator('form button.btn-primary').click();
@@ -194,6 +216,12 @@ test.describe('RA-3: Role boundaries — redirect behaviour', () => {
 
 test.describe('Authenticated walk-in flow tests', () => {
   test.use({ storageState: ADMIN_AUTH });
+
+  // The sell page loads the stop list on init to populate the From/To dropdowns.
+  // Register the mock before each navigation so the request never hits SIT.
+  test.beforeEach(async ({ page }) => {
+    await page.route(STOPS_ENDPOINT, (route) => route.fulfill({ json: STOPS_RESP }));
+  });
 
   // ── RA-3 positive case: admin (which passes all role checks) can reach /staff/sell ─
 
@@ -479,8 +507,8 @@ test.describe('Authenticated walk-in flow tests', () => {
 
       // ── Step 1: Search ────────────────────────────────────────────────────
       await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-      await page.locator('input[formControlName="fromStop"]').fill('nong-sak');
-      await page.locator('input[formControlName="toStop"]').fill('bangkok');
+      await selectStop(page, 'fromStop', 'Nong Sak');
+      await selectStop(page, 'toStop', 'Bangkok');
       await page.locator('input[formControlName="departureDate"]').fill('2026-09-02');
       await page.locator('input[formControlName="numberOfPassengers"]').fill('1');
       await page.locator('form button.btn-primary').click();
@@ -550,8 +578,8 @@ test.describe('Authenticated walk-in flow tests', () => {
 
       // Complete the flow
       await page.locator('select[formControlName="bookingType"]').selectOption('one_way');
-      await page.locator('input[formControlName="fromStop"]').fill('nong-sak');
-      await page.locator('input[formControlName="toStop"]').fill('bangkok');
+      await selectStop(page, 'fromStop', 'Nong Sak');
+      await selectStop(page, 'toStop', 'Bangkok');
       await page.locator('input[formControlName="departureDate"]').fill('2026-09-02');
       await page.locator('form button.btn-primary').click();
 

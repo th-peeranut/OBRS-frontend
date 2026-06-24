@@ -849,6 +849,8 @@
       "PASSENGER_COUNT": "จำนวนผู้โดยสาร",
       "FROM_STOP": "ต้นทาง",
       "TO_STOP": "ปลายทาง",
+      "STOP_PLACEHOLDER": "เลือกจุดจอด",
+      "NO_STOPS": "ไม่พบจุดจอด",
       "DEPARTURE_DATE": "วันออกเดินทาง",
       "RETURN_DATE": "วันเดินทางกลับ",
       "SEARCH_BTN": "ค้นหาตาราง",

@@ -1,10 +1,15 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
+import { DropdownModule } from 'primeng/dropdown';
+import { StoreModule } from '@ngrx/store';
+import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthGuard } from '../../auth/auth.guard';
 import { AdminSharedModule } from '../admin/admin-shared.module';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
+import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
+import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 
 import { StaffLayoutComponent } from './staff-layout.component';
 import { SellPageComponent } from './pages/sell/sell-page.component';
@@ -66,8 +71,14 @@ export const staffRoutes: Routes = [
     SharedModule,
     RouterModule.forChild(staffRoutes),
     CalendarModule,
+    DropdownModule,
     AdminSharedModule,
     PassengerSeatModule,
+
+    // Station list (stop dropdowns on the sell search step). Registered per
+    // lazy module — same pattern as the public booking modules.
+    StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
+    EffectsModule.forFeature([ProvinceEffect]),
   ],
 })
 export class StaffModule {}

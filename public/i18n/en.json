@@ -848,6 +848,8 @@
       "PASSENGER_COUNT": "Number of Passengers",
       "FROM_STOP": "From Stop",
       "TO_STOP": "To Stop",
+      "STOP_PLACEHOLDER": "Select a stop",
+      "NO_STOPS": "No stops found",
       "DEPARTURE_DATE": "Departure Date",
       "RETURN_DATE": "Return Date",
       "SEARCH_BTN": "Search Schedules",

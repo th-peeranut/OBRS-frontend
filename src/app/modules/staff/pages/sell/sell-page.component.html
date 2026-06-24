@@ -40,11 +40,37 @@
             </div>
             <div class="col-md-6">
               <label class="form-label">{{ 'STAFF.SELL.FROM_STOP' | translate }}</label>
-              <input type="text" class="form-control" formControlName="fromStop" />
+              <p-dropdown
+                styleClass="stop-dropdown"
+                formControlName="fromStop"
+                [options]="fromStopOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                [autoDisplayFirst]="false"
+                [placeholder]="'STAFF.SELL.STOP_PLACEHOLDER' | translate"
+                [emptyMessage]="'STAFF.SELL.NO_STOPS' | translate"
+                [emptyFilterMessage]="'STAFF.SELL.NO_STOPS' | translate"
+              ></p-dropdown>
             </div>
             <div class="col-md-6">
               <label class="form-label">{{ 'STAFF.SELL.TO_STOP' | translate }}</label>
-              <input type="text" class="form-control" formControlName="toStop" />
+              <p-dropdown
+                styleClass="stop-dropdown"
+                formControlName="toStop"
+                [options]="toStopOptions"
+                optionLabel="label"
+                optionValue="value"
+                [filter]="true"
+                filterBy="label"
+                [showClear]="true"
+                [autoDisplayFirst]="false"
+                [placeholder]="'STAFF.SELL.STOP_PLACEHOLDER' | translate"
+                [emptyMessage]="'STAFF.SELL.NO_STOPS' | translate"
+                [emptyFilterMessage]="'STAFF.SELL.NO_STOPS' | translate"
+              ></p-dropdown>
             </div>
             <div class="col-md-6">
               <label class="form-label">{{ 'STAFF.SELL.DEPARTURE_DATE' | translate }}</label>

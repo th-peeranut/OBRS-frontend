@@ -1,7 +1,7 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Store } from '@ngrx/store';
+import { Store, select } from '@ngrx/store';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -14,21 +14,41 @@ import {
   WalkInBookingScheduleReqDto,
 } from '../../../../services/staff/staff-api.service';
 import { invokeSetBookingApi } from '../../../../shared/stores/booking/booking.action';
+import {
+  StationApi,
+  getStationFallbackLabel,
+} from '../../../../shared/interfaces/station.interface';
+import { invokeGetAllProvinceWithStationApi } from '../../../../shared/stores/station/station.action';
+import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 
 type SellStep = 'search' | 'seats' | 'passengers' | 'payment' | 'ticket';
+
+/** A selectable stop in the search dropdowns: the `slug` the API expects, plus a localized label. */
+interface StopOption {
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-sell-page',
   templateUrl: './sell-page.component.html',
   styleUrl: './sell-page.component.scss',
 })
-export class SellPageComponent implements OnDestroy {
+export class SellPageComponent implements OnInit, OnDestroy {
   protected currentStep: SellStep = 'search';
   protected readonly steps: SellStep[] = ['search', 'seats', 'passengers', 'payment', 'ticket'];
 
   // Search step
   protected readonly searchForm: FormGroup;
   protected isSearching = false;
+
+  // Stop dropdowns (searchable). `allStopOptions` is the full localized list;
+  // `fromStopOptions`/`toStopOptions` exclude the counterpart selection so a
+  // staffer cannot pick the same stop for both ends.
+  private allStations: StationApi[] = [];
+  protected allStopOptions: StopOption[] = [];
+  protected fromStopOptions: StopOption[] = [];
+  protected toStopOptions: StopOption[] = [];
   protected departureSchedules: ScheduleSearchItemDto[] = [];
   protected arrivalSchedules: ScheduleSearchItemDto[] = [];
   protected selectedDeparture: ScheduleSearchItemDto | null = null;
@@ -84,8 +104,53 @@ export class SellPageComponent implements OnDestroy {
     });
   }
 
+  ngOnInit(): void {
+    // Load the stop list once (the effect no-ops if already cached) and keep the
+    // dropdown options in sync with it and with the active language.
+    this.store.dispatch(invokeGetAllProvinceWithStationApi());
+
+    this.subscriptions.add(
+      this.store.pipe(select(selectProvinceWithStation)).subscribe((stations) => {
+        this.allStations = stations ?? [];
+        this.rebuildStopOptions();
+      })
+    );
+
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => this.rebuildStopOptions())
+    );
+
+    // Re-filter the opposite list whenever one end changes so the same stop is
+    // never selectable on both sides.
+    this.subscriptions.add(
+      this.searchForm.get('fromStop')!.valueChanges.subscribe(() => this.syncStopOptions())
+    );
+    this.subscriptions.add(
+      this.searchForm.get('toStop')!.valueChanges.subscribe(() => this.syncStopOptions())
+    );
+  }
+
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+  }
+
+  private rebuildStopOptions(): void {
+    const locale = this.translate.currentLang || this.translate.defaultLang || 'th';
+    this.allStopOptions = this.allStations
+      .map((station) => ({
+        label: getStationFallbackLabel(station, locale),
+        value: station.slug,
+      }))
+      .filter((option) => !!option.value)
+      .sort((a, b) => a.label.localeCompare(b.label, locale));
+    this.syncStopOptions();
+  }
+
+  private syncStopOptions(): void {
+    const from = this.searchForm.get('fromStop')?.value;
+    const to = this.searchForm.get('toStop')?.value;
+    this.fromStopOptions = this.allStopOptions.filter((option) => option.value !== to);
+    this.toStopOptions = this.allStopOptions.filter((option) => option.value !== from);
   }
 
   protected get isReturnTrip(): boolean {
