@@ -49,3 +49,6 @@ playwright-report/
 # dev password; the PNGs are throwaway artifacts) — keep out of the repo
 e2e/manual-admin-login.mjs
 e2e/*.png
+
+# Graphify code-graph output — locally generated AST artifact, not versioned
+graphify-out/
