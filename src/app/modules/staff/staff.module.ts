@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { inject, NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
@@ -9,6 +9,7 @@ import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthGuard } from '../../auth/auth.guard';
+import { AuthService } from '../../auth/auth.service';
 import { AdminSharedModule } from '../admin/admin-shared.module';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
@@ -29,7 +30,16 @@ export const staffRoutes: Routes = [
     path: '',
     component: StaffLayoutComponent,
     children: [
-      { path: '', redirectTo: 'sell', pathMatch: 'full' },
+      // Role-aware default landing: the staff portal is shared by salespersons
+      // and drivers, but the sell desk is salesperson-only. A static redirect to
+      // 'sell' bounces drivers off the salesperson guard, so pick the landing by
+      // role — salesperson/admin → sell, driver → driver schedules.
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: () =>
+          inject(AuthService).hasAnyRole(['salesperson']) ? 'sell' : 'driver',
+      },
       {
         path: 'sell',
         component: SellPageComponent,

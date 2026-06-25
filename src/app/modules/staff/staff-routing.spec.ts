@@ -15,10 +15,12 @@
  * PassengerInfoComponent route under staff), these assertions break.
  */
 import { Route } from '@angular/router';
+import { TestBed } from '@angular/core/testing';
 
 import { StaffModule, staffRoutes } from './staff.module';
 import { StaffLayoutComponent } from './staff-layout.component';
 import { SellPageComponent } from './pages/sell/sell-page.component';
+import { AuthService } from '../../auth/auth.service';
 import {
   PassengerInfoModule,
   passengerInfoRoutes,
@@ -54,20 +56,47 @@ function importedModules(moduleClass: unknown): Set<unknown> {
 }
 
 describe('StaffModule routing regression (#30 – bare /staff redirect)', () => {
-  it('declares an empty-path redirect to "sell" under the StaffLayout shell', () => {
+  // Regression for OBRS-frontend #66: bare /staff used to statically redirect to
+  // 'sell', which is salesperson-only — so a driver opening the Staff Portal was
+  // bounced off the sell guard ("no permission to access the admin page"). The
+  // redirect is now role-aware, so a driver lands on their own page.
+  it('redirects bare /staff by role: salesperson → sell, driver → driver', () => {
     const shell = staffRoutes.find((r) => r.path === '');
     expect(shell?.component)
       .withContext('the bare staff path must render StaffLayoutComponent')
       .toBe(StaffLayoutComponent);
 
     const emptyChild = shell?.children?.find((r) => r.path === '');
-    expect(emptyChild?.redirectTo)
-      .withContext('bare /staff must redirect to sell')
-      .toBe('sell');
     expect(emptyChild?.pathMatch).toBe('full');
+    expect(typeof emptyChild?.redirectTo)
+      .withContext('bare /staff must redirect via a role-aware function')
+      .toBe('function');
 
     const sell = shell?.children?.find((r) => r.path === 'sell');
     expect(sell?.component).toBe(SellPageComponent);
+
+    // Drive the real functional redirect with a stubbed AuthService so the
+    // driver branch is exercised end-to-end (the bug only surfaced for drivers).
+    const runRedirect = (roles: string[]): unknown => {
+      const authStub: Pick<AuthService, 'hasAnyRole'> = {
+        hasAnyRole: (required: string[]) =>
+          required.some((r) => roles.includes(r)),
+      };
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        providers: [{ provide: AuthService, useValue: authStub }],
+      });
+      return TestBed.runInInjectionContext(() =>
+        (emptyChild!.redirectTo as (...args: unknown[]) => unknown)({})
+      );
+    };
+
+    expect(runRedirect(['salesperson']))
+      .withContext('salespersons land on the sell desk')
+      .toBe('sell');
+    expect(runRedirect(['driver']))
+      .withContext('drivers (no sell access) land on their schedules page')
+      .toBe('driver');
   });
 
   it('never references PassengerInfoComponent anywhere in the staff route tree', () => {
