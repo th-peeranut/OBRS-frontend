@@ -1,5 +1,123 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: online seat-picker Phase 1 (surface seat map + seat-race errors)
+
+**Self-fix (duplicate alert):** removed the `extractApiErrorMessage` fallback block (and
+its import) from `passenger-info.component.ts` `onSubmitPassengerInfo` catch. `createBooking`
+does NOT set `SKIP_GLOBAL_ERROR_ALERT`, so the global `errorInterceptor` already calls
+`alertService.error(extractApiErrorMessage(error) || 'Request failed.')` for every failed
+`/api/` call and re-throws. The component's fallback then raised the SAME message a second
+time → double toast. The seat-error branch keeps its own localized alert (it is a distinct
+message) but is still double-toasted by the interceptor — see "Returned to developer".
+Pattern: before adding `alertService.error(...)` in a component catch, check whether the
+request opts out of the global interceptor via `SKIP_GLOBAL_ERROR_ALERT`. If it does not,
+the interceptor already owns generic error messaging — only add a component alert for a
+message the interceptor cannot produce, and suppress the global one for that request.
+
+**Self-fix (cosmetic):** collapsed the dangling 3-line `<div class="seat-map-wrap mt-3">`
+in `passenger-info-form.component.html` back to one line — the `*ngIf="...isSelectSeat..."`
+was removed (Phase 1-A always renders the map) leaving an empty attribute artifact.
+
+**Verified correct (traced end-to-end):**
+- Phase 1-A: seat map renders unconditionally; `isSelectSeat:[true]` is now vestigial — the
+  only reader was the removed template `*ngIf`. Grep confirms no code reads `.value`.
+  Booker form still hard-codes `isSelectSeat:false`, harmless (it has no seat map).
+- 401 early-return preserved; `error.error?.errorCode` read correctly for the two seat codes.
+- Seat map (van) sources `availableSeatNumbers$` from `selectScheduleBooking`, NOT
+  `selectScheduleList` — so the refresh genuinely must patch schedule-booking to update the
+  map. The intent is real; the mechanism is the problem (below).
+
+**Returned to developer (NOT self-fixed — >30 lines / lifecycle plumbing):**
+- `refreshScheduleAvailability` waits for the fresh list with
+  `firstValueFrom(store.pipe(select(selectScheduleList), skip(1), take(1)))`. This is
+  fragile: (a) `skip(1)` assumes the very next emission is the HTTP result, but the
+  schedule-list store is global and any other emission grabs the wrong value; (b) on a
+  non-200/error the effect sets the store to `null` (or an unchanged value collapsed by
+  NgRx `distinctUntilChanged`) → no 2nd emission → the `firstValueFrom` promise NEVER
+  resolves and the subscription leaks. The component has NO `destroy$`/`ngOnDestroy`, and
+  both call sites fire-and-forget the async method, so there is no teardown. Recommended:
+  add `OnDestroy` + `destroy$`, react to the list via
+  `pipe(filter(l => !!l), takeUntil(destroy$))` keyed on the known schedule IDs, or move the
+  bridge into an effect. Pattern: never use `skip(1)` to "wait for my dispatch's result" on
+  a shared store — there is no guarantee the next emission is yours, and the no-emission
+  path leaks.
+- Seat-race branch double-toasts (interceptor generic message + component localized one).
+  Real fix needs `createBooking` to send `SKIP_GLOBAL_ERROR_ALERT` (edit in
+  `booking.service.ts`, out of this review's scope).
+- `buildScheduleFilterPayload` / `resolveStationCode` duplicate the payload+slug logic in
+  `home-booking.component.ts` and `schedule-booking-filter.component.ts` (and `resolveStationCode`
+  near-duplicates the component's own `getStationCodeById`). The two existing builders read
+  their own forms, so none is directly reusable — extract a shared
+  `buildScheduleFilterPayload(filter, stations)` util and have all three call it.
+
+**Tests:** the C-error specs DO drive the real `onSubmitPassengerInfo` catch via a real
+`throwError` (good), but they `spyOn(buildBookingPayload)` so the payload assembly is not
+exercised, and the availability-refresh path (`refreshScheduleAvailability`, the `skip(1)`
+wait, the schedule-booking patch) has ZERO coverage. NOTE: `ng test` could not be run green
+in this working tree — an unrelated in-flight `login.component.spec.ts` constructs
+`LoginComponent` with 7 args (constructor takes 6), failing the shared TS compile.
+
+## 2026-06-25 — Scrutinize: login lang switcher mirrors home navbar switcher
+
+**Self-fix (dead dependency):** removed `private elementRef: ElementRef` from the
+`LoginComponent` constructor (and the now-unused `ElementRef` import). When you port the
+navbar's outside-click handler that matches by CSS class
+(`targetElement.closest('.navbar-lang-dropdown')`), `elementRef` is no longer read by
+anything — the old Bootstrap handler used `this.elementRef.nativeElement.contains(...)`,
+but the class-based handler does not. The navbar KEEPS `elementRef` only because its
+`handleMobileMenuOutsideClick` still uses `nativeElement.contains`; login has no mobile
+panel, so it has no such use. No spec churn: there is no `login.component.spec.ts`, so
+nothing constructs the component with positional args. Pattern: after copying a method
+from another component, re-grep the destination for each injected dependency it used to
+need — a class-based DOM match drops the `ElementRef` requirement.
+
+**Verified correct (traced end-to-end):**
+- Outside-click + listener lifecycle: `toggleLangDropdown` registers a document click
+  listener only while open; `closeLangDropdown` unlistens and nulls the handle;
+  `ngOnDestroy` unlistens. Selecting an item runs the item's `(click)` first
+  (closeLangDropdown unregisters the doc listener) so the same click does NOT re-fire the
+  document handler. No leak, no double-handling.
+- Material Symbols glyphs render via the GLOBAL `.material-symbols-outlined` rule in
+  styles.scss — login does not need the navbar's component-scoped `%mat-icon` placeholder
+  (which is itself redundant with the global rule). Parity confirmed.
+- No leftover references to removed classes (`btn-lang`, `menu-lang`, `arrow-icon`,
+  `dropdown-toggle`, flag svgs) in login html/scss/ts.
+
+**Returned to developer (not self-fixed — needs a new file):**
+- No `login.component.spec.ts` exists. The new switcher behavior (toggle open/close,
+  select language calls languageService.switch + closes, outside-click closes,
+  currentEndonym fallback) has zero regression coverage. This loop has no QA stage — add a
+  spec. See report for the minimal cases.
+
+
+## 2026-06-25 — Scrutinize: remove walk-in trip-headline + dead supporting code (issue #55)
+
+**Self-fix (dead code):** removed the orphaned `formatDate(dateTime)` ("D MMM YYYY")
+method from `walk-in-center-panel.component.ts`. It was NOT introduced by this diff —
+it was pre-existing dead code, never referenced from the template or anywhere in the
+component. Each other component (e-ticket, payment-info, review-schedule-booking,
+passenger-info-summary) has its OWN `formatDate`, so a global grep looks busy; always
+scope the grep to the component dir AND check the template before assuming a `formatXxx`
+helper is live. While cleaning up sibling dead methods (`formatTime`), sweep the whole
+helper block for other unused ones in the same class — don't stop at the symbols named
+in the ticket.
+Pattern: `dayjs` import stays — `formatDateTime` (Trip Details tab) still uses it, so
+removing `formatTime`/`formatDate` does not orphan the import.
+
+**Verified correct (traced end-to-end):**
+- `selectedRouteSlug` correctly KEPT: it feeds `loadSegments(routeSlug, trip)` and the
+  stale-response guards (`selectedRouteSlug !== routeSlug`) in both the success and error
+  callbacks of the segment fetch. Removing it would break segment loading. Good call.
+- `selectedRouteLabel` removal is complete: gone from the field, both assignments
+  (`onDateChanged` reset + `onTripSelected`), the `[routeLabel]` binding, and all specs.
+  No residual references anywhere. `WalkInRouteGroupDto.routeLabel` (DTO field) and the
+  trip-browser's own `formatTime`/`routeLabel` usages are separate and correctly untouched.
+- Padding change `py-2` → `pt-0 pb-2` does NOT reopen the #41/#55 viewport-fit e2e: the
+  SCSS binds `.container-fluid` to `height: calc(100vh - 156px)` with `flex-direction:
+  column` + `.pos-layout { min-height: 0 }`. The container's own padding is absorbed by
+  the flex column (the SCSS comment states this explicitly); only the fixed 156px chrome
+  constant — unchanged here — drives the fit. Safe.
+
 ## 2026-06-25 — Scrutinize: per-seat passenger type + pickup/drop-off state lift (issue #53)
 
 **Self-fix (test):** `sell-page.component.spec.ts` → "stamps each passenger with the
