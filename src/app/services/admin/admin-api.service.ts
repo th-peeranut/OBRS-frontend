@@ -76,6 +76,12 @@ export interface AdminUserDto {
   roles: Array<string | AdminRoleDto>;
 }
 
+export interface LayoutResponse {
+  id: number;
+  name?: string;
+  label?: string;
+}
+
 export interface AdminVehicleTypeDto {
   id: number;
   slug: string;
@@ -84,6 +90,8 @@ export interface AdminVehicleTypeDto {
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
+  /** Seat-map options — only present on the vehicle-type detail endpoint. */
+  seatMaps?: LayoutResponse[];
 }
 
 export interface AdminVehicleDto {
@@ -189,6 +197,8 @@ export interface AdminScheduleDto {
   vehicle?: AdminVehicleDto;
   vehicleType?: AdminVehicleTypeDto;
   driver?: AdminDriverInfoDto;
+  /** Overridden seating capacity; null means use vehicleType.totalSeats as the effective value. */
+  seatingCapacity?: number | null;
 }
 
 export interface AdminPersonDto {
@@ -451,6 +461,20 @@ export interface CreateSchedulePayload {
   driverId?: number;
 }
 
+export interface UpdateSchedulePayload {
+  route: string;
+  vehicleType: string;
+  vehicleId: number | null;
+  driverId: number | null;
+  departureDateTime: string;
+  seatingCapacity: number | null;
+}
+
+export interface DriverDto {
+  id: number;
+  name: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -611,6 +635,10 @@ export class AdminApiService {
     return this.getRequest<AdminVehicleTypeDto[]>(`${this.baseUrl}/private/vehicle-types`);
   }
 
+  getVehicleTypeById(id: number): Observable<ResponseAPI<AdminVehicleTypeDto>> {
+    return this.getRequest<AdminVehicleTypeDto>(`${this.baseUrl}/private/vehicle-types/${id}`);
+  }
+
   getRoutes(): Observable<ResponseAPI<AdminRouteDto[]>> {
     return this.getRequest<AdminRouteDto[]>(`${this.baseUrl}/routes`);
   }
@@ -682,7 +710,7 @@ export class AdminApiService {
 
   updateSchedule(
     id: number,
-    payload: CreateSchedulePayload
+    payload: CreateSchedulePayload | UpdateSchedulePayload
   ): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`, payload);
   }

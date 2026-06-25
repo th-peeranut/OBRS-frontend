@@ -5,6 +5,7 @@ import { DropdownModule } from 'primeng/dropdown';
 import { TabViewModule } from 'primeng/tabview';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
@@ -24,6 +25,8 @@ import { BoardingEntryPageComponent } from './pages/boarding-entry/boarding-entr
 import { WalkInTripBrowserComponent } from './components/walk-in-trip-browser/walk-in-trip-browser.component';
 import { WalkInCenterPanelComponent } from './components/walk-in-center-panel/walk-in-center-panel.component';
 import { WalkInCheckoutComponent } from './components/walk-in-checkout/walk-in-checkout.component';
+import { TripDetailsViewComponent } from './components/trip-details-edit/trip-details-view/trip-details-view.component';
+import { TripDetailsEditFormComponent } from './components/trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
 
 export const staffRoutes: Routes = [
   {
@@ -85,6 +88,8 @@ export const staffRoutes: Routes = [
     WalkInTripBrowserComponent,
     WalkInCenterPanelComponent,
     WalkInCheckoutComponent,
+    TripDetailsViewComponent,
+    TripDetailsEditFormComponent,
   ],
   imports: [
     SharedModule,
@@ -94,6 +99,7 @@ export const staffRoutes: Routes = [
     TabViewModule,
     BadgeModule,
     ProgressSpinnerModule,
+    InputNumberModule,
     AdminSharedModule,
     PassengerSeatModule,
 

@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { SKIP_GLOBAL_ERROR_ALERT, SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
+import { DriverDto } from '../admin/admin-api.service';
 
 export interface ScheduleSearchReqDto {
   bookingType: 'one_way' | 'return';
@@ -209,6 +210,15 @@ export class StaffApiService {
   getRouteSegments(routeSlug: string): Observable<ResponseAPI<RouteSegmentsDto>> {
     return this.http.get<ResponseAPI<RouteSegmentsDto>>(
       `${environment.apiUrl}/api/private/segments/${encodeURIComponent(routeSlug)}`,
+      { context: this.skipContext }
+    );
+  }
+
+  // Driver list — GET /api/private/users/drivers (SALESPERSON-readable).
+  // Must NOT use AdminApiService.getUsers() which hits /private/users (OWNER-only, 403 for salesperson).
+  getDrivers(): Observable<ResponseAPI<DriverDto[]>> {
+    return this.http.get<ResponseAPI<DriverDto[]>>(
+      `${environment.apiUrl}/api/private/users/drivers`,
       { context: this.skipContext }
     );
   }

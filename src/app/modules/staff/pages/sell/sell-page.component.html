@@ -33,7 +33,9 @@
             (seatToggled)="onSeatToggled($event)"
             (passengerTypeChange)="onPassengerTypeChanged($event)"
             (pickupChange)="onPickupChanged($event)"
-            (dropoffChange)="onDropoffChanged($event)">
+            (dropoffChange)="onDropoffChanged($event)"
+            (tripDetailsUpdated)="onTripDetailsUpdated($event)"
+            (refreshTripsRequested)="onRefreshTripsRequested()">
           </app-walk-in-center-panel>
         </div>
       </div>
