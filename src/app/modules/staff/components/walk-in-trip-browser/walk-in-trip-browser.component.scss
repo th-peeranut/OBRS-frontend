@@ -1,8 +1,15 @@
+// Lay the calendar out as a flex row so the input grows and the date-trigger
+// button keeps its natural width. The old `.p-inputtext { width: 100% }` made the
+// input consume the whole inline-flex container, crushing the trigger button into
+// a ~2px accent-coloured sliver at the right edge (the "blue strip").
 :host ::ng-deep .trip-browser-calendar.p-calendar {
+  display: flex;
   width: 100%;
 
   .p-inputtext {
-    width: 100%;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
   }
 }
 

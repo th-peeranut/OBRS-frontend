@@ -1,6 +1,7 @@
 <div class="container-fluid py-4">
-  <h4 class="fw-bold mb-1">{{ 'STAFF.BOARDING_ENTRY.TITLE' | translate }}</h4>
-  <p class="text-muted mb-4">{{ 'STAFF.BOARDING_ENTRY.SUBTITLE' | translate }}</p>
+  <!-- Page title + subtitle ("Boarding List" / "Choose a schedule…") are shown by
+       the staff layout topbar; this h4 is the distinct in-step action heading. -->
+  <h4 class="fw-bold mb-3">{{ 'STAFF.BOARDING_ENTRY.TITLE' | translate }}</h4>
 
   <!-- Empty state -->
   <ng-container *ngIf="isEmpty">

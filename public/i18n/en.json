@@ -850,6 +850,7 @@
       "DRIVER": "Driver"
     },
     "SELL": {
+      "SUBTITLE": "Sell tickets to walk-in customers",
       "DATE_PLACEHOLDER": "Select a date",
       "TITLE_PLACEHOLDER": "Select title",
       "DEPARTURE_DATE": "Departure Date",

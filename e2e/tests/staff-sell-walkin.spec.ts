@@ -835,4 +835,46 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await gotoSellPage(page);
     await expect(page.getByRole('heading', { name: 'Walk-in Sales' })).toHaveCount(1);
   });
+
+  // ── Topbar subtitle is route-driven (mirrors admin) ─────────────────────────
+  test('Layout: topbar shows the route-specific subtitle on /staff/sell', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+    await expect(page.locator('.admin-topbar')).toContainText('Sell tickets to walk-in customers');
+  });
+
+  // ── Date picker trigger button is not crushed into a sliver (the "blue strip") ─
+  test('Layout: date picker trigger button keeps its width (not a 2px sliver)', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+    const trigger = page.locator('.trip-browser-calendar .p-datepicker-trigger');
+    await expect(trigger).toBeVisible();
+    const box = await trigger.boundingBox();
+    expect(box!.width, 'calendar trigger should not be crushed to a sliver').toBeGreaterThan(20);
+  });
+
+  // ── Sell button reachable without scrolling the checkout card (sticky footer) ─
+  test('Layout: Sell button is visible without scrolling the checkout card', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+    const sell = page.locator('button.btn-success');
+    await expect(sell).toBeVisible();
+    // The checkout card scrolls; the action footer is sticky, so at scrollTop=0 the
+    // Sell button must already sit within the card-body's visible rect.
+    const inView = await sell.evaluate((btn) => {
+      const body = btn.closest('.card-body');
+      if (!body) return false;
+      const b = btn.getBoundingClientRect();
+      const c = body.getBoundingClientRect();
+      return b.height > 0 && b.bottom <= c.bottom + 1 && b.top >= c.top - 1;
+    });
+    expect(inView, 'Sell button should be in view without scrolling').toBe(true);
+  });
 });

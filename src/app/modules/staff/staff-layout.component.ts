@@ -19,7 +19,9 @@ interface StaffNavItem {
 })
 export class StaffLayoutComponent implements OnInit {
   protected pageTitleKey = 'STAFF.PAGES.SELL';
-  protected readonly pageSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
+  // Route-driven subtitle (mirrors pageTitleKey); falls back to the generic
+  // portal subtitle when a route doesn't declare one.
+  protected pageSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
 
   protected currentLanguage = 'th';
   protected isSidebarOpen = false;
@@ -99,6 +101,11 @@ export class StaffLayoutComponent implements OnInit {
           typeof titleKey === 'string' && titleKey.length > 0
             ? titleKey
             : 'STAFF.PAGES.SELL';
+        const subtitleKey = activeRoute.snapshot.data['subtitleKey'];
+        this.pageSubtitleKey =
+          typeof subtitleKey === 'string' && subtitleKey.length > 0
+            ? subtitleKey
+            : 'STAFF.LAYOUT.SUBTITLE';
         this.isSidebarOpen = false;
       });
   }

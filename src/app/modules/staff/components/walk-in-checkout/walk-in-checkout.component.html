@@ -100,40 +100,44 @@
     </div>
   </div>
 
-  <!-- Totals section -->
-  <div class="border rounded p-3 bg-light">
-    <div class="d-flex justify-content-between mb-2">
-      <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
-      <span class="fw-bold">{{ totalAmount | currency:'THB':'symbol' }}</span>
+  <!-- Action footer: totals + Sell pinned to the bottom of the scrolling card so
+       the Sell button is always reachable without scrolling. -->
+  <div class="checkout-actions d-flex flex-column gap-3">
+    <!-- Totals section -->
+    <div class="border rounded p-3 bg-light">
+      <div class="d-flex justify-content-between mb-2">
+        <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
+        <span class="fw-bold">{{ totalAmount | currency:'THB':'symbol' }}</span>
+      </div>
+
+      <div class="mb-2">
+        <label class="form-label small mb-1">{{ 'STAFF.SELL.CASH_RECEIVED' | translate }}</label>
+        <input type="number"
+               class="form-control form-control-sm"
+               [(ngModel)]="cashReceived"
+               [min]="0"
+               step="1" />
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center"
+           aria-live="polite">
+        <span class="small">{{ 'STAFF.SELL.CHANGE_DUE' | translate }}</span>
+        <span class="fw-semibold"
+              [class.text-success]="changeDue >= 0"
+              [class.text-danger]="changeDue < 0">
+          {{ changeDue | currency:'THB':'symbol' }}
+        </span>
+      </div>
     </div>
 
-    <div class="mb-2">
-      <label class="form-label small mb-1">{{ 'STAFF.SELL.CASH_RECEIVED' | translate }}</label>
-      <input type="number"
-             class="form-control form-control-sm"
-             [(ngModel)]="cashReceived"
-             [min]="0"
-             step="1" />
-    </div>
-
-    <div class="d-flex justify-content-between align-items-center"
-         aria-live="polite">
-      <span class="small">{{ 'STAFF.SELL.CHANGE_DUE' | translate }}</span>
-      <span class="fw-semibold"
-            [class.text-success]="changeDue >= 0"
-            [class.text-danger]="changeDue < 0">
-        {{ changeDue | currency:'THB':'symbol' }}
-      </span>
-    </div>
+    <!-- Sell button -->
+    <button class="btn btn-success btn-lg w-100"
+            [disabled]="!canSell || isSelling"
+            [title]="'STAFF.SELL.SELL_DISABLED_HINT' | translate"
+            (click)="onSell()">
+      <span *ngIf="isSelling" class="spinner-border spinner-border-sm me-1"></span>
+      {{ (isSelling ? 'STAFF.SELL.SELLING' : 'STAFF.SELL.SELL_BTN') | translate }}
+    </button>
   </div>
-
-  <!-- Sell button -->
-  <button class="btn btn-success btn-lg w-100"
-          [disabled]="!canSell || isSelling"
-          [title]="'STAFF.SELL.SELL_DISABLED_HINT' | translate"
-          (click)="onSell()">
-    <span *ngIf="isSelling" class="spinner-border spinner-border-sm me-1"></span>
-    {{ (isSelling ? 'STAFF.SELL.SELLING' : 'STAFF.SELL.SELL_BTN') | translate }}
-  </button>
 
 </div>

@@ -850,6 +850,7 @@
       "DRIVER": "驾驶员"
     },
     "SELL": {
+      "SUBTITLE": "向现场顾客售票",
       "DATE_PLACEHOLDER": "选择日期",
       "TITLE_PLACEHOLDER": "选择称谓",
       "DEPARTURE_DATE": "出发日期",

@@ -1,3 +1,19 @@
 .payment-tile {
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
+
+// Keep the totals + Sell button visible at the bottom of the scrolling checkout
+// card so the cashier never has to scroll to complete the sale. The card body
+// (in sell-page) is the scroll container; this footer sticks to its bottom edge.
+.checkout-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  // Mask the form content scrolling underneath and visually separate the footer.
+  // Negative inline margins + padding let the white background span the card-body
+  // padding so content doesn't peek at the rounded card edges.
+  background: var(--admin-surface-card, #fff);
+  padding-top: 0.75rem;
+  margin-bottom: -0.25rem;
+  box-shadow: 0 -8px 12px -8px rgba(0, 0, 0, 0.18);
+}

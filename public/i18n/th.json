@@ -851,6 +851,7 @@
       "DRIVER": "คนขับ"
     },
     "SELL": {
+      "SUBTITLE": "ขายตั๋วให้ลูกค้าหน้าเคาน์เตอร์",
       "DATE_PLACEHOLDER": "เลือกวันที่",
       "TITLE_PLACEHOLDER": "เลือกคำนำหน้า",
       "DEPARTURE_DATE": "วันออกเดินทาง",
