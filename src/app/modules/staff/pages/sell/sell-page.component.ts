@@ -102,7 +102,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
         phoneNumber: string;
         identityCardNumber?: string;
       } = {
-        passengerType: 'ADULT',
+        // Walk-in passengers default to the 'male' passenger_type — the only
+        // gender-neutral choice available given the checkout has no gender field,
+        // and it mirrors the seat map's hard-coded MALE rendering. The backend
+        // resolves passenger_type by exact lookup slug (male|female|monk|nun);
+        // the previous 'ADULT' value matched no lookup and 404'd every sale.
+        passengerType: 'male',
         seatNumber: seat,
         title: payload.contact.title,
         firstName: payload.contact.firstName,

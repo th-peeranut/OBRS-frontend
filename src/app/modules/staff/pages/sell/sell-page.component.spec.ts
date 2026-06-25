@@ -263,6 +263,21 @@ describe('SellPageComponent', () => {
       expect(callArg.totalAmount).toBe(340);
     });
 
+    it('sends a valid passenger_type lookup slug (not the unresolvable "ADULT")', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passenger = callArg.departureSchedule.passengers[0];
+      // Backend resolves passenger_type by exact lookup slug; 'ADULT' matched
+      // none and 404'd. Must be one of the seeded gender-neutral/role slugs.
+      expect(['male', 'female', 'monk', 'nun']).toContain(passenger.passengerType);
+    });
+
     it('forwards the selected pickup/drop-off stops to the booking schedule', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);

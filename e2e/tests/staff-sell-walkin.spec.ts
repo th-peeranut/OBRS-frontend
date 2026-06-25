@@ -8,7 +8,8 @@
  *   AC-4   BUS seat map: taken seats blocked; VAN edge: sold-out blocks selection
  *   AC-5   Customer form: title+first+last+phone required; no gender field;
  *           Sell disabled until 4 fields valid AND >=1 seat AND cash>=total
- *   AC-6   Booking payload has NO gender; one contact block; passengerType=ADULT
+ *   AC-6   Booking payload has NO gender; one contact block; passengerType=male
+ *          (the only gender-neutral lookup slug; 'ADULT' matched none and 404'd)
  *   AC-7   Cash tile active; PromptPay/credit tiles disabled ("Coming soon")
  *   AC-8   Change due = received − total live; Sell disabled when received < total
  *   AC-9   Success: payWalkIn called; badge counts refresh (trips reload)
@@ -454,9 +455,9 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await expect(page.locator('input[formControlName="gender"]')).toHaveCount(0);
   });
 
-  // ── AC-6  Booking payload: no gender, one contact block, ADULT passengerType ─
+  // ── AC-6  Booking payload: no gender, one contact block, valid passengerType ─
 
-  test('AC-6: booking POST has no gender, one contact block, passengerType=ADULT, totalAmount>0 (WI-A)', async ({ page }) => {
+  test('AC-6: booking POST has no gender, one contact block, passengerType=male, totalAmount>0 (WI-A)', async ({ page }) => {
     let capturedBookingPayload: Record<string, unknown> | null = null;
 
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
@@ -510,11 +511,12 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     expect(payload['contact']).toBeDefined();
     expect(Array.isArray(payload['contact'])).toBe(false);
 
-    // AC-6: passengerType=ADULT on each passenger
+    // AC-6: a valid passenger_type lookup slug on each passenger (male); the old
+    // 'ADULT' value resolved to no lookup and 404'd every walk-in sale.
     const depSchedule = payload['departureSchedule'] as { passengers: Array<Record<string, unknown>> };
     expect(depSchedule.passengers.length).toBeGreaterThanOrEqual(1);
     for (const p of depSchedule.passengers) {
-      expect(p['passengerType']).toBe('ADULT');
+      expect(p['passengerType']).toBe('male');
       expect(p).not.toHaveProperty('gender');
     }
   });
@@ -827,7 +829,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     const dep = bookingPayload!['departureSchedule'] as { scheduleId: number; passengers: Array<Record<string, unknown>> };
     expect(dep.scheduleId).toBe(201);
     expect(dep.passengers[0]['seatNumber']).toBeDefined();
-    expect(dep.passengers[0]['passengerType']).toBe('ADULT');
+    expect(dep.passengers[0]['passengerType']).toBe('male');
     expect(dep.passengers[0]).not.toHaveProperty('gender');
   });
 
