@@ -1,9 +1,7 @@
 import {
   Component,
-  ElementRef,
   OnDestroy,
   Renderer2,
-  ViewChild,
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
@@ -23,23 +21,35 @@ import { AlertService } from '../../shared/services/alert.service';
 import { Dropdown } from '../../shared/interfaces/dropdown.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 
+interface LanguageOption {
+  code: string;
+  endonym: string;
+  /** i18n key for the item's aria-label, e.g. HOME.NAVBAR.LANGUAGE_EN */
+  ariaKey: string;
+}
+
 @Component({
   selector: 'app-register',
   templateUrl: './register.component.html',
   styleUrl: './register.component.scss',
 })
 export class RegisterComponent implements OnDestroy {
-  isDropdownOpen: boolean = false;
+  isLangDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
   isShowConfirmPassword: boolean = false;
 
   currentLanguage: string = 'th';
 
+  /** Static language list — endonyms are intentionally locale-invariant. */
+  readonly languages: LanguageOption[] = [
+    { code: 'en', endonym: 'English', ariaKey: 'HOME.NAVBAR.LANGUAGE_EN' },
+    { code: 'th', endonym: 'ไทย', ariaKey: 'HOME.NAVBAR.LANGUAGE_TH' },
+    { code: 'zh', endonym: '中文', ariaKey: 'HOME.NAVBAR.LANGUAGE_ZH' },
+  ];
+
   registerForm: FormGroup;
 
-  @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
-
-  private unlistenDropdown?: () => void;
+  private unlistenLangDropdown?: () => void;
 
   usernameSubscription$?: Subscription;
   emailSubscription$?: Subscription;
@@ -102,7 +112,6 @@ export class RegisterComponent implements OnDestroy {
     private translate: TranslateService,
     private languageService: LanguageService,
     private renderer: Renderer2,
-    private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
     private alertService: AlertService,
@@ -116,12 +125,19 @@ export class RegisterComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.unlistenDropdown?.();
+    this.unlistenLangDropdown?.();
 
     if (this.usernameSubscription$) this.usernameSubscription$.unsubscribe();
     if (this.emailSubscription$) this.emailSubscription$.unsubscribe();
     if (this.phoneNumberSubscription$)
       this.phoneNumberSubscription$.unsubscribe();
+  }
+
+  get currentEndonym(): string {
+    return (
+      this.languages.find((l) => l.code === this.currentLanguage)?.endonym ??
+      this.currentLanguage
+    );
   }
 
   createForm() {
@@ -190,36 +206,44 @@ export class RegisterComponent implements OnDestroy {
   }
 
   switchLanguage(lang: string) {
-    this.isDropdownOpen = false;
     this.currentLanguage = lang;
     void this.languageService.switch(lang);
   }
 
-  toggleDropdown() {
-    this.isDropdownOpen = !this.isDropdownOpen;
+  selectLanguage(lang: string) {
+    this.switchLanguage(lang);
+    this.closeLangDropdown();
+  }
 
-    if (this.isDropdownOpen) {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleOutsideClick(event)
+  toggleLangDropdown() {
+    this.isLangDropdownOpen = !this.isLangDropdownOpen;
+
+    if (this.isLangDropdownOpen) {
+      this.unlistenLangDropdown?.();
+      this.unlistenLangDropdown = this.renderer.listen('document', 'click', (event: Event) =>
+        this.handleLangDropdownOutsideClick(event)
       );
     } else {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = undefined;
+      this.closeLangDropdown();
     }
   }
 
-  handleOutsideClick(event: Event) {
-    const targetElement = event.target as HTMLElement;
-    const clickedInsideDropdown =
-      this.elementRef.nativeElement.contains(targetElement);
-    const clickedDropdownButton =
-      this.dropdownButton.nativeElement.contains(targetElement);
+  closeLangDropdown() {
+    this.isLangDropdownOpen = false;
+    this.unlistenLangDropdown?.();
+    this.unlistenLangDropdown = undefined;
+  }
 
-    if (clickedInsideDropdown && clickedDropdownButton) {
-      this.isDropdownOpen = true;
+  handleLangDropdownOutsideClick(event: Event) {
+    const targetElement = event.target as HTMLElement;
+    // Match by class (mirrors the navbar switcher) so a click anywhere on the
+    // trigger counts as inside; anything else closes the menu.
+    const clickedTriggerButton = !!targetElement.closest('.navbar-lang-dropdown');
+
+    if (clickedTriggerButton) {
+      this.isLangDropdownOpen = true;
     } else {
-      this.isDropdownOpen = false;
+      this.closeLangDropdown();
     }
   }
 
