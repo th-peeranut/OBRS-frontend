@@ -808,7 +808,7 @@
       "FROM": "From",
       "TO": "To",
       "STATUS": "Status",
-      "CHECKED_IN": "Checked In",
+      "CHECKED_IN": "Checked in",
       "CHECK_IN_BTN": "Check In",
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule."
