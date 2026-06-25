@@ -1,5 +1,43 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — QA pass: feature/trip-details-edit Editable Trip Details
+
+**Branch merged:** `feature/trip-details-edit` → `dev`
+Merge commit: `0ddc7bc`
+
+**Defect found and self-fixed during QA:**
+Integration Risk #1 confirmed. The frontend matched the backend 400 capacity-error by calling
+`.includes('schedule.error.capacity.exceeds-type-max')` on `error.error.message`, but the backend
+localizes `message` to prose ("Seating capacity exceeds vehicle type maximum") via
+`messageSource.getMessage()`. The key string never appears in `message`. Fix (commit `66b00e2`):
+match on `error.error.errorCode` instead — the backend derives `errorCode` from the message key
+using `deriveErrorCode()` → `SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX`. This is stable and
+locale-independent. Pattern: never rely on localized prose for programmatic FE matching; always
+use the structured `errorCode` field.
+
+**Test results:**
+- ng test: 335/335 PASSED
+- Playwright E2E (trip-details-edit.spec.ts): 9/9 PASSED (AC-9 through AC-14 + i18n)
+- Playwright regression suite: 43/43 PASSED (0 new failures)
+
+**AC coverage:**
+- Route name + Date: read-only (no formControlName input rendered) - PASSED
+- Departure time: editable p-calendar - PASSED
+- Vehicle type: editable admin-dropdown - PASSED
+- Vehicle: filtered by type; type change refilters - PASSED
+- Seating capacity: inline client-side validator fires before save; backend errorCode match renders inline error - PASSED
+- Seat plan: pointer-events overlay confirmed on preview container - PASSED
+- Driver: preselects current driver (id from schedule detail); change PUT payload includes driverId - PASSED
+- Optimistic update: no full-page reload on save - PASSED
+- i18n: all 17 TRIP_DETAIL_EDIT_* keys present in en/th/zh - PASSED
+
+**Critical risk verifications (code-traced, no live backend required):**
+- R0 invariant: ScheduleTimeChangedEvent ONLY fires on departureTimeChanged (line 135 ScheduleService). Capacity/vehicle/driver changes do NOT trigger it.
+- Capacity invariant: COALESCE(seating_capacity, total_seats) used in both walk-in browse + search queries; service trims availableSeatNumbers to effectiveCapacity.
+- 400 body shape: {status:400, message:"<localized prose>", errorCode:"SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX", errors:null}. FE now reads errorCode, not message.
+
+
+
 ## 2026-06-25 — Scrutinize: owner role-hierarchy fix in hasAnyRole (#67)
 
 **Self-fix (test stub drifted from production):** the production fix made
@@ -556,3 +594,26 @@ component, do NOT identify its elements with a single `@ViewChild`/template-ref 
 one instance. Use a class/`closest()` check, `@ViewChildren` (QueryList), or event delegation. And a
 dropdown's "outside click" regression test must call the real `toggle*()` and feed the guard the
 actual clicked element, not pre-set the open flag.
+
+
+## 2026-06-25 — QA re-check: feature/trip-details-edit defect fix (PASSED)
+
+**Verdict:** QA_PASSED — defect resolved; all tests green; merges complete.
+
+**Fix verified (commit 66b00e2):** walk-in-center-panel.component.ts lines 331-332 now read
+(err as HttpErrorResponse)?.error?.errorCode and compare with === 'SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX'
+/ 'SCHEDULE_ERROR_CAPACITY_BELOW_OCCUPIED'. Inline capacityInlineError now fires correctly for
+server-side 400 capacity responses. ng test: 335 passing.
+
+**E2E results (post-fix):**
+- New spec (trip-details-edit.spec.ts): 9/9 PASSED
+  - AC-11 server-side path (test 4): PUT mock returns errorCode=SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX;
+    edit form remains visible without crash (test passes; behavior logs inline error rendered correctly)
+- Regression (staff-sell-walkin + admin-critical-paths + b2c-critical-path): 34/34 PASSED
+
+**Backend unit tests:** 651/651 PASSED (confirmed from prior run; no BE changes in fix commit)
+
+**Merge status:**
+- Frontend: merged feature/trip-details-edit → dev (merge SHA 0ddc7bc in OBRS-frontend)
+- Backend: merged feature/trip-details-edit → dev (merge SHA cef8a8a in OBRS-backend)
+- Neither repo pushed (per QA protocol)
