@@ -10,7 +10,6 @@ import dayjs from 'dayjs';
 export class WalkInCenterPanelComponent {
   @Input() selectedTrip: WalkInTripDto | null = null;
   @Input() selectedSeats: string[] = [];
-  @Input() isLoadingSeats = false;
 
   @Output() seatToggled = new EventEmitter<string>();
 

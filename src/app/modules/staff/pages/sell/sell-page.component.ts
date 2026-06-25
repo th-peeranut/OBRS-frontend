@@ -28,7 +28,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected routeGroups: WalkInRouteGroupDto[] = [];
   protected selectedTrip: WalkInTripDto | null = null;
   protected selectedSeats: string[] = [];
-  protected isLoadingSeats = false;
   protected isSelling = false;
   protected bookingId: number | null = null;
   protected bookingNumber: string | null = null;
@@ -65,7 +64,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedTrip = trip;
     this.selectedSeats = [];
     this.idempotencyKey = null;
-    this.loadSeatMap(trip.scheduleId);
+    // Seat availability comes from the walk-in trip DTO (availableSeatNumbers),
+    // rendered directly by the seat-map component — no separate seat fetch needed.
   }
 
   protected onSeatToggled(seat: string): void {
@@ -228,21 +228,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
         error: () => {
           this.routeGroups = [];
           this.isLoadingTrips = false;
-        },
-      });
-  }
-
-  private loadSeatMap(scheduleId: number): void {
-    this.isLoadingSeats = true;
-    this.staffApiService
-      .getSeatMap(scheduleId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: () => {
-          this.isLoadingSeats = false;
-        },
-        error: () => {
-          this.isLoadingSeats = false;
         },
       });
   }

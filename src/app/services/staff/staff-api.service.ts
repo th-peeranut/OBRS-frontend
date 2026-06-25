@@ -29,12 +29,6 @@ export interface ScheduleSearchResultDto {
   arrivalSchedules: ScheduleSearchItemDto[];
 }
 
-export interface SeatMapItemDto {
-  seatNumber: string;
-  rowIndex: number;
-  columnIndex: number;
-}
-
 export interface WalkInBookingPassengerReqDto {
   passengerType: string;
   seatNumber: string;
@@ -162,13 +156,6 @@ export class StaffApiService {
     return this.http.post<ResponseAPI<ScheduleSearchResultDto>>(
       `${environment.apiUrl}/api/public/schedules/search`,
       req,
-      { context: this.skipContext }
-    );
-  }
-
-  getSeatMap(scheduleId: number): Observable<ResponseAPI<SeatMapItemDto[]>> {
-    return this.http.get<ResponseAPI<SeatMapItemDto[]>>(
-      `${environment.apiUrl}/api/public/schedules/${scheduleId}/seats`,
       { context: this.skipContext }
     );
   }

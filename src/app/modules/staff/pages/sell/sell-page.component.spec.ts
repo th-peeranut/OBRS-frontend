@@ -32,13 +32,11 @@ function makeRouteGroup(trips: WalkInTripDto[] = []): WalkInRouteGroupDto {
 
 function createStaffApiStub(overrides: Partial<{
   getWalkInSchedules: ReturnType<typeof jasmine.createSpy>;
-  getSeatMap: ReturnType<typeof jasmine.createSpy>;
   createWalkInBooking: ReturnType<typeof jasmine.createSpy>;
   payWalkIn: ReturnType<typeof jasmine.createSpy>;
 }> = {}): any {
   return {
     getWalkInSchedules: jasmine.createSpy('getWalkInSchedules').and.returnValue(of({ data: [] })),
-    getSeatMap: jasmine.createSpy('getSeatMap').and.returnValue(of({ data: [] })),
     createWalkInBooking: jasmine.createSpy('createWalkInBooking').and.returnValue(
       of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
     ),
@@ -141,14 +139,15 @@ describe('SellPageComponent', () => {
   });
 
   describe('onTripSelected', () => {
-    it('sets selectedTrip and loads seat map', () => {
+    it('sets selectedTrip without fetching a separate seat map', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
       comp.ngOnInit();
       const trip = makeTrip({ scheduleId: 42 });
       (comp as any).onTripSelected(trip);
       expect((comp as any).selectedTrip).toEqual(trip);
-      expect(api.getSeatMap).toHaveBeenCalledWith(42);
+      // Seat availability comes from the trip DTO; no getSeatMap call should exist.
+      expect((api as Record<string, unknown>)['getSeatMap']).toBeUndefined();
     });
 
     it('clears previously selected seats when new trip selected', () => {

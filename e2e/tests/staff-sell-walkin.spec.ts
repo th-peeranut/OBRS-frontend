@@ -877,4 +877,23 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     });
     expect(inView, 'Sell button should be in view without scrolling').toBe(true);
   });
+
+  // ── No dead seat-map fetch on trip selection (issue: 404 on /…/seats) ───────
+  // Seat availability comes from the walk-in trip DTO; selecting a trip must NOT
+  // fire the old GET /api/public/schedules/{id}/seats (which 404'd) and the seat
+  // map must still render.
+  test('Layout: selecting a trip renders the seat map without a separate seat fetch', async ({ page }) => {
+    let seatsRequested = 0;
+    await page.route('**/schedules/*/seats', (route) => {
+      seatsRequested++;
+      route.fulfill({ status: 404, json: {} });
+    });
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+    await page.locator('.trip-row').first().click();
+    await expect(page.locator('app-passenger-seat-bus')).toBeVisible({ timeout: 15_000 });
+    expect(seatsRequested, 'no separate seat-map fetch should fire').toBe(0);
+  });
 });

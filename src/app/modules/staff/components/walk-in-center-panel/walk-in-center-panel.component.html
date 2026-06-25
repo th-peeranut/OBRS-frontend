@@ -34,13 +34,8 @@
         </span>
       </div>
 
-      <!-- Loading overlay -->
-      <div *ngIf="isLoadingSeats" class="d-flex justify-content-center py-4">
-        <p-progressSpinner [style]="{'width':'36px','height':'36px'}"></p-progressSpinner>
-      </div>
-
       <!-- Van seat map -->
-      <ng-container *ngIf="!isLoadingSeats && isVan">
+      <ng-container *ngIf="isVan">
         <app-passenger-seat-van
           [gender]="'MALE'"
           [takenSeats]="takenSeats"
@@ -51,7 +46,7 @@
       </ng-container>
 
       <!-- Bus seat map -->
-      <ng-container *ngIf="!isLoadingSeats && !isVan">
+      <ng-container *ngIf="!isVan">
         <app-passenger-seat-bus
           [gender]="'MALE'"
           [takenSeats]="takenSeats"
