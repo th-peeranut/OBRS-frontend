@@ -141,6 +141,10 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     this.applyRoleFilter();
   }
 
+  protected trackById(_index: number, item: RoleRow): number {
+    return item.id;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.toUpperCase();
 

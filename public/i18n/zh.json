@@ -1,4 +1,54 @@
 {
+  "MY_BOOKINGS": {
+    "TITLE": "我的预订",
+    "SUBTITLE": "查看您的行程，如有变动可取消预订。",
+    "BOOKING_NUMBER": "预订编号",
+    "DEPARTURE": "出发时间",
+    "PASSENGERS": "乘客",
+    "TOTAL": "总计",
+    "RETRY": "重试",
+    "EMPTY": "您还没有任何预订。",
+    "BOOK_NOW": "立即预订",
+    "VIEW_TICKET": "查看电子票",
+    "LOAD_FAILED": "无法加载您的预订，请重试。",
+    "NOT_CANCELLABLE": "无法取消",
+    "TICKET_MODAL": {
+      "LOADING": "正在加载您的电子票…",
+      "LOAD_FAILED": "无法加载电子票，请重试。",
+      "CLOSE": "关闭"
+    },
+    "FILTERS": {
+      "ALL": "全部",
+      "CONFIRMED": "已确认",
+      "PENDING": "待支付",
+      "CANCELLED": "已取消",
+      "EXPIRED": "已过期"
+    },
+    "STATUS": {
+      "pending": "待支付",
+      "confirmed": "已确认",
+      "cancelled": "已取消",
+      "expired": "已过期",
+      "refunded": "已退款"
+    },
+    "TRIP_TYPE": {
+      "one_way": "单程",
+      "return": "往返"
+    },
+    "CANCEL": {
+      "ACTION": "取消预订",
+      "CONFIRM_TITLE": "确定取消此预订？",
+      "CONFIRM_TEXT": "预订 {{bookingNumber}}（{{route}}）",
+      "REFUND_LINE": "退款：{{refund}}（{{rate}}）",
+      "PENALTY_LINE": "取消手续费：{{penalty}}",
+      "MANUAL_REFUND_NOTE": "此支付方式不支持自动退款，我们的工作人员将通过银行转账为您办理退款。",
+      "CONFIRM_BUTTON": "确认取消",
+      "CANCEL_BUTTON": "保留预订",
+      "SUCCESS": "您的预订已取消，正在处理 {{refund}} 的退款。",
+      "SUCCESS_MANUAL": "您的预订已取消，工作人员将为您转账退款 {{refund}}。",
+      "FAILED": "无法取消预订，请重试。"
+    }
+  },
   "CALENDAR": {
     "dayNames": [
       "星期日",
@@ -61,7 +111,8 @@
     "dateFormat": "yy/mm/dd"
   },
   "SHARED": {
-    "NO_CONTENT": "未找到数据"
+    "NO_CONTENT": "未找到数据",
+    "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
     "THEME_TOGGLE": "切换深色模式"
@@ -469,7 +520,11 @@
     "OTP_REF": "参考号",
     "OTP_LOGIN": "确认",
     "NO_OTP": "未收到OTP验证码？",
-    "NO_OTP_LINK": "重新发送"
+    "NO_OTP_LINK": "重新发送",
+    "LOGIN_SUCCESS": "登录成功",
+    "OTP_REQUEST_FAILED": "发送OTP失败，请重试。",
+    "OTP_VERIFY_FAILED": "OTP验证失败，请检查验证码后重试。",
+    "ROUTE_ERROR": "请求无效，请返回后重试。"
   },
   "FORGET_PASSWORD": {
     "WELCOME": "忘记密码？",
@@ -501,7 +556,8 @@
       "LANGUAGE_ZH": "切换到中文",
       "MENU": "菜单",
       "PROFILE_MENU": "打开个人资料菜单",
-      "THEME_TOGGLE": "切换深色模式"
+      "THEME_TOGGLE": "切换深色模式",
+      "MY_BOOKINGS": "我的预订"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",

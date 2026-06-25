@@ -53,6 +53,15 @@
         </button>
         <div class="navbar-profile-menu" *ngIf="isProfileDropdownOpen" role="menu">
           <a
+            class="navbar-profile-item"
+            role="menuitem"
+            [routerLink]="'/my-bookings'"
+            (click)="isProfileDropdownOpen = false"
+          >
+            <span class="material-symbols-outlined">confirmation_number</span>
+            <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
+          </a>
+          <a
             *ngIf="isAdmin"
             class="navbar-profile-item"
             role="menuitem"
@@ -151,6 +160,14 @@
     </ng-container>
 
     <ng-container *ngIf="isLogin">
+      <a
+        class="navbar-mobile-link"
+        routerLink="/my-bookings"
+        (click)="closeMobileMenu()"
+      >
+        <span class="material-symbols-outlined">confirmation_number</span>
+        <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
+      </a>
       <a
         *ngIf="isAdmin"
         class="navbar-mobile-link"

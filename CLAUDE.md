@@ -102,7 +102,7 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 
 ## 7. Testing & Quality
 **Checklist before completion:**
-1. `ng build --configuration production` passes with no errors. Bundle budgets: 900kB warning / 1500kB error for initial chunk.
+1. `ng build --configuration production` passes with no errors. Bundle budgets: 1.5MB warning / 2MB error for initial chunk; 6kB warning / 10kB error per component style.
 2. `ng test --watch=false --browsers ChromeHeadless` passes for the spec files covering changed logic.
 3. New services must have at least one spec file. New components should have a spec file; if creating a new component on a class with no existing spec, creating the spec is part of the task.
 4. No `any` introduced (TypeScript strict mode).

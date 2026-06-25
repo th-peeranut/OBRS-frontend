@@ -127,6 +127,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     return this.isRefreshing && !this.store.hasValue;
   }
 
+  protected trackById(_index: number, item: VehicleRow): number {
+    return item.id;
+  }
+
   protected get totalVehicles(): number {
     return this.vehicles.length;
   }

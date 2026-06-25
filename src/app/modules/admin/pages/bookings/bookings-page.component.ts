@@ -120,6 +120,10 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     this.currentPage = Math.min(Math.max(1, page), this.totalPages);
   }
 
+  protected trackByBookingId(_index: number, booking: BookingRow): string {
+    return booking.bookingId;
+  }
+
   protected statusClass(status: string): string {
     const normalizedStatus = status.toUpperCase();
 
