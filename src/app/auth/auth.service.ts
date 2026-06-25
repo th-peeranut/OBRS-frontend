@@ -23,6 +23,18 @@ export class AuthService {
   private readonly REGISTER_VALUE_KEY = 'register_value';
   private readonly RETURN_URL_KEY = 'auth_return_url';
 
+  // Backend role hierarchy, highest → lowest (WebSecurityConfig#roleHierarchy:
+  // admin > owner > salesperson > driver > customer). A higher role implicitly
+  // satisfies every lower requirement, so the frontend mirrors it below in
+  // hasAnyRole — never gating more tightly than the backend @PreAuthorize.
+  private static readonly ROLE_HIERARCHY = [
+    'admin',
+    'owner',
+    'salesperson',
+    'driver',
+    'customer',
+  ];
+
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
     this.isAuthenticated()
@@ -155,19 +167,25 @@ export class AuthService {
       return true;
     }
 
-    const userRoles = new Set(this.getRoles());
-
-    // Admin is the top of the backend role hierarchy
-    // (ROLE_ADMIN > ROLE_OWNER > ROLE_SALESPERSON > ROLE_DRIVER > ROLE_USER,
-    // see WebSecurityConfig#roleHierarchy), so an admin implicitly satisfies
-    // every role requirement. Mirror that here so the admin can reach pages
-    // (e.g. the Staff portal) the backend already authorises.
-    if (userRoles.has('admin')) {
-      return true;
+    // Expand each held role to also cover every role it outranks, so a higher
+    // role (e.g. owner) satisfies a lower requirement (salesperson/driver) the
+    // way the backend hierarchy does — admin still satisfies everything, owner
+    // reaches the Staff portal, and a driver still cannot reach salesperson-only
+    // pages. An unrecognised role only matches itself.
+    const effectiveRoles = new Set<string>();
+    for (const role of this.getRoles()) {
+      const rank = AuthService.ROLE_HIERARCHY.indexOf(role);
+      if (rank === -1) {
+        effectiveRoles.add(role);
+      } else {
+        for (let i = rank; i < AuthService.ROLE_HIERARCHY.length; i++) {
+          effectiveRoles.add(AuthService.ROLE_HIERARCHY[i]);
+        }
+      }
     }
 
     return requiredRoles.some((role) =>
-      userRoles.has(String(role ?? '').trim().toLowerCase())
+      effectiveRoles.has(String(role ?? '').trim().toLowerCase())
     );
   }
 

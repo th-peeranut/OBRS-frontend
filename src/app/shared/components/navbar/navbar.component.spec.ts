@@ -37,8 +37,23 @@ describe('NavbarComponent', () => {
     return {
       authStatus$,
       getUsername: () => 'tester',
-      hasAnyRole: (required: string[]) =>
-        required.some((role) => roles.includes(role)),
+      // Mirror the real AuthService hierarchy (admin > owner > salesperson >
+      // driver > customer): a held role also satisfies every role it outranks,
+      // so e.g. a salesperson satisfies ['driver']. Keeping the stub faithful
+      // means these specs exercise the same expansion users see at runtime.
+      hasAnyRole: (required: string[]) => {
+        const HIERARCHY = ['admin', 'owner', 'salesperson', 'driver', 'customer'];
+        const effective = new Set<string>();
+        for (const r of roles) {
+          const rank = HIERARCHY.indexOf(r);
+          if (rank === -1) {
+            effective.add(r);
+          } else {
+            for (let i = rank; i < HIERARCHY.length; i++) effective.add(HIERARCHY[i]);
+          }
+        }
+        return required.some((role) => effective.has(role));
+      },
     };
   }
 
@@ -96,7 +111,9 @@ describe('NavbarComponent', () => {
     component.ngOnInit();
 
     expect(component.isSalesperson).toBe(true);
-    expect(component.isDriver).toBe(false);
+    // A salesperson outranks driver in the backend hierarchy, so isDriver is
+    // also true — the driver nav/route is part of what a salesperson may reach.
+    expect(component.isDriver).toBe(true);
   });
 
   it('flags driver users when logged in with the driver role', () => {

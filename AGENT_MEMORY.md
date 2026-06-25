@@ -1,5 +1,26 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: owner role-hierarchy fix in hasAnyRole (#67)
+
+**Self-fix (test stub drifted from production):** the production fix made
+`AuthService.hasAnyRole` expand a held role to every role it outranks
+(admin > owner > salesperson > driver > customer). But `navbar.component.spec.ts`
+mocked `hasAnyRole` with a plain exact-match stub
+(`required.some(r => roles.includes(r))`). After the fix that stub no longer
+matched real runtime — a salesperson is now `isDriver === true`, yet the spec
+asserted `isDriver === false`. The test stayed green only because it tested the
+mock, not the behavior.
+
+I rewrote the stub to mirror the real hierarchy expansion and corrected the one
+assertion that genuinely changed (salesperson now flags `isDriver`). Pattern to
+remember: **when you change a service method's semantics, audit every hand-rolled
+stub of that method across the spec suite** — a stub that's simpler than the real
+implementation will silently pass and hide the behavioral shift. Same exact-match
+stub still lives in `staff-routing.spec.ts` (line ~82) and
+`boarding-entry-page.component.spec.ts`; they don't assert the salesperson→driver
+case so they're harmless today, but keep them in mind if those specs grow.
+
+
 ## 2026-06-25 — Scrutinize: global light/dark mode toggle (staff + public surfaces)
 
 **Self-fix (CSS cross-surface bleed):** `src/styles/dark-theme.scss` scoped its dark rules

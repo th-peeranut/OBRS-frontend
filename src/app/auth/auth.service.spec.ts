@@ -91,8 +91,31 @@ describe('AuthService', () => {
     });
 
     it('still denies a user who holds none of the required roles', () => {
-      setRoles(['user']);
+      setRoles(['customer']);
       expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(false);
+    });
+
+    // Regression for OBRS-frontend #67: owner (above salesperson in the backend
+    // hierarchy admin > owner > salesperson > driver > customer) was locked out
+    // of the staff portal because the frontend only mirrored the admin tier.
+    it('grants an owner access to salesperson/driver routes (owner outranks both)', () => {
+      setRoles(['owner']);
+      expect(service.hasAnyRole(['salesperson'])).toBe(true);
+      expect(service.hasAnyRole(['driver'])).toBe(true);
+      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(true);
+    });
+
+    it('does NOT let an owner reach admin-only routes (admin outranks owner)', () => {
+      setRoles(['owner']);
+      expect(service.hasAnyRole(['admin'])).toBe(false);
+    });
+
+    it('lets a salesperson satisfy driver routes but a driver cannot satisfy salesperson routes', () => {
+      setRoles(['salesperson']);
+      expect(service.hasAnyRole(['driver'])).toBe(true);
+
+      setRoles(['driver']);
+      expect(service.hasAnyRole(['salesperson'])).toBe(false);
     });
   });
 });
