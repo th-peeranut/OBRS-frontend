@@ -5,9 +5,12 @@ import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 
 import { AdminLayoutComponent } from './admin-layout.component';
+import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService } from '../../shared/services/theme.service';
+import { LanguageService } from '../../shared/services/language.service';
+import { createLanguageServiceStub } from '../../testing/test-stubs';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -25,13 +28,14 @@ describe('AdminLayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [AdminLayoutComponent],
+      declarations: [AdminLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: ThemeService, useValue: themeServiceStub },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
       ],
     }).compileComponents();
 

@@ -3,7 +3,6 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
-import { LanguageService } from '../../shared/services/language.service';
 import { TranslateService } from '@ngx-translate/core';
 
 interface StaffNavItem {
@@ -23,7 +22,6 @@ export class StaffLayoutComponent implements OnInit {
   // portal subtitle when a route doesn't declare one.
   protected pageSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
 
-  protected currentLanguage = 'th';
   protected isSidebarOpen = false;
   protected isSidebarCollapsed = false;
   protected isProfileMenuOpen = false;
@@ -84,7 +82,6 @@ export class StaffLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly languageService: LanguageService,
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
 
@@ -92,7 +89,6 @@ export class StaffLayoutComponent implements OnInit {
     this.navItems = this.buildNavItems();
     this.isAdmin = this.authService.hasAnyRole(['admin']);
     this.isSidebarCollapsed = this.readCollapsedPreference();
-    void this.setupLanguage();
 
     this.router.events
       .pipe(
@@ -165,19 +161,10 @@ export class StaffLayoutComponent implements OnInit {
     }
   }
 
-  protected async switchLanguage(lang: string): Promise<void> {
-    this.currentLanguage = lang;
-    await this.languageService.switch(lang);
-  }
-
   protected onLogout(): void {
     this.isProfileMenuOpen = false;
     void this.alertService.success(this.translate.instant('STAFF.LAYOUT.LOGOUT_SUCCESS'));
     this.authService.logout();
-  }
-
-  private async setupLanguage(): Promise<void> {
-    await this.switchLanguage(this.languageService.getStoredLanguage());
   }
 
   private getDeepestRoute(route: ActivatedRoute): ActivatedRoute {

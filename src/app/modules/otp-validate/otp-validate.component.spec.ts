@@ -2,8 +2,6 @@ import { FormBuilder } from '@angular/forms';
 
 import { OtpValidateComponent } from './otp-validate.component';
 import {
-  createElementRefStub,
-  createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../testing/test-stubs';
@@ -14,9 +12,6 @@ describe('OtpValidateComponent', () => {
   beforeEach(() => {
     component = new OtpValidateComponent(
       createTranslateStub(),
-      createLanguageServiceStub(),
-      {} as never,
-      createElementRefStub(),
       new FormBuilder(),
       {} as never,
       {} as never,

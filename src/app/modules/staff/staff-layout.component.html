@@ -76,28 +76,7 @@
       </div>
 
       <div class="admin-topbar-actions">
-        <div class="admin-lang-switch" role="group" [attr.aria-label]="'STAFF.LAYOUT.SUBTITLE' | translate">
-          <button
-            type="button"
-            class="admin-lang-btn"
-            [class.active]="currentLanguage === 'th'"
-            [attr.aria-pressed]="currentLanguage === 'th'"
-            [attr.aria-label]="'STAFF.LAYOUT.LANGUAGE_TH' | translate"
-            (click)="switchLanguage('th')"
-          >
-            TH
-          </button>
-          <button
-            type="button"
-            class="admin-lang-btn"
-            [class.active]="currentLanguage === 'en'"
-            [attr.aria-pressed]="currentLanguage === 'en'"
-            [attr.aria-label]="'STAFF.LAYOUT.LANGUAGE_EN' | translate"
-            (click)="switchLanguage('en')"
-          >
-            EN
-          </button>
-        </div>
+        <app-lang-switcher></app-lang-switcher>
 
         <div class="admin-profile">
           <button

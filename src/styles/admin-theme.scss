@@ -276,36 +276,6 @@
   gap: 10px;
 }
 
-.admin-lang-switch {
-  display: inline-flex;
-  border: 1px solid rgba(189, 200, 207, 0.6);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.is-dark .admin-lang-switch {
-  border-color: var(--admin-outline);
-}
-
-.admin-lang-btn {
-  border: 0;
-  background: var(--admin-surface-card);
-  color: #506068;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.is-dark .admin-lang-btn {
-  color: var(--admin-muted);
-}
-
-.admin-lang-btn.active {
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
 .admin-search {
   display: flex;
   align-items: center;

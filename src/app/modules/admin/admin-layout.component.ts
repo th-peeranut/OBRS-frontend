@@ -3,7 +3,6 @@ import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter, startWith } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
-import { LanguageService } from '../../shared/services/language.service';
 import { ThemeService } from '../../shared/services/theme.service';
 import { TranslateService } from '@ngx-translate/core';
 
@@ -52,7 +51,6 @@ export class AdminLayoutComponent implements OnInit {
     { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
   ];
 
-  protected currentLanguage = 'th';
   protected isProfileMenuOpen = false;
   protected isSidebarOpen = false;
   protected isSidebarCollapsed = false;
@@ -67,7 +65,6 @@ export class AdminLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly languageService: LanguageService,
     private readonly themeService: ThemeService,
     private readonly elementRef: ElementRef<HTMLElement>
   ) {}
@@ -95,7 +92,6 @@ export class AdminLayoutComponent implements OnInit {
   ngOnInit(): void {
     this.isDarkMode = this.themeService.getStoredMode() === 'dark';
     this.isSidebarCollapsed = this.readCollapsedPreference();
-    this.setupLanguage();
 
     this.router.events
       .pipe(
@@ -166,11 +162,6 @@ export class AdminLayoutComponent implements OnInit {
     }
   }
 
-  protected async switchLanguage(lang: string): Promise<void> {
-    this.currentLanguage = lang;
-    await this.languageService.switch(lang);
-  }
-
   protected toggleProfileMenu(): void {
     this.isProfileMenuOpen = !this.isProfileMenuOpen;
   }
@@ -183,10 +174,6 @@ export class AdminLayoutComponent implements OnInit {
     this.isProfileMenuOpen = false;
     this.alertService.success(this.translate.instant('ADMIN.LAYOUT.LOGOUT_SUCCESS'));
     this.authService.logout();
-  }
-
-  private async setupLanguage(): Promise<void> {
-    await this.switchLanguage(this.languageService.getStoredLanguage());
   }
 
   private getDeepestRoute(route: ActivatedRoute): ActivatedRoute {

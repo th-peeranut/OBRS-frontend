@@ -1,17 +1,9 @@
-import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  OnInit,
-  Renderer2,
-  ViewChild,
-} from '@angular/core';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
 import { interval, Subscription, takeWhile } from 'rxjs';
-import { LanguageService } from '../../shared/services/language.service';
 import { OtpService } from '../../services/otp/otp.service';
 import {
   LoginOtpVerify,
@@ -26,10 +18,7 @@ import { AlertService } from '../../shared/services/alert.service';
   styleUrl: './otp-validate.component.scss',
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
-  isDropdownOpen: boolean = false;
   isShowPassword: boolean = false;
-
-  currentLanguage: string = 'th';
 
   option: string | undefined = 'login';
 
@@ -41,13 +30,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
-  @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
-
   constructor(
     private translate: TranslateService,
-    private languageService: LanguageService,
-    private renderer: Renderer2,
-    private elementRef: ElementRef,
     private fb: FormBuilder,
     private service: AuthService,
     private alertService: AlertService,
@@ -55,10 +39,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private otpService: OtpService,
     private authService: AuthService
-  ) {
-    const currentLanguage = this.translate.currentLang;
-    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-  }
+  ) {}
 
   async ngOnInit() {
     this.option = this.route.snapshot.paramMap.get('option')?.toString();
@@ -74,36 +55,6 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
   ngOnDestroy() {
     if (this.timerSubscription$) this.timerSubscription$.unsubscribe();
-  }
-
-  switchLanguage(lang: string) {
-    this.isDropdownOpen = false;
-    this.currentLanguage = lang;
-    void this.languageService.switch(lang);
-  }
-
-  toggleDropdown() {
-    this.isDropdownOpen = !this.isDropdownOpen;
-
-    if (this.isDropdownOpen) {
-      this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleOutsideClick(event)
-      );
-    }
-  }
-
-  handleOutsideClick(event: Event) {
-    const targetElement = event.target as HTMLElement;
-    const clickedInsideDropdown =
-      this.elementRef.nativeElement.contains(targetElement);
-    const clickedDropdownButton =
-      this.dropdownButton.nativeElement.contains(targetElement);
-
-    if (clickedInsideDropdown && clickedDropdownButton) {
-      this.isDropdownOpen = true;
-    } else {
-      this.isDropdownOpen = false;
-    }
   }
 
   toggleShowPassword() {

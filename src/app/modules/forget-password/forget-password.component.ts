@@ -1,48 +1,22 @@
-import {
-  Component,
-  ElementRef,
-  OnDestroy,
-  Renderer2,
-  ViewChild,
-} from '@angular/core';
+import { Component } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { TranslateService } from '@ngx-translate/core';
-import { LanguageService } from '../../shared/services/language.service';
 
 @Component({
   selector: 'app-forget-password',
   templateUrl: './forget-password.component.html',
   styleUrl: './forget-password.component.scss',
 })
-export class ForgetPasswordComponent implements OnDestroy {
-  isDropdownOpen: boolean = false;
+export class ForgetPasswordComponent {
   isShowPassword: boolean = false;
-
-  currentLanguage: string = 'th';
 
   loginForm: FormGroup;
 
-  @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
-
-  private unlistenDropdown?: () => void;
-
   constructor(
-    private translate: TranslateService,
-    private languageService: LanguageService,
-    private renderer: Renderer2,
-    private elementRef: ElementRef,
     private fb: FormBuilder,
     private router: Router
   ) {
-    const currentLanguage = this.translate.currentLang;
-    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-
     this.createForm();
-  }
-
-  ngOnDestroy(): void {
-    this.unlistenDropdown?.();
   }
 
   createForm() {
@@ -73,40 +47,6 @@ export class ForgetPasswordComponent implements OnDestroy {
     }
 
     return !!errors[errorName];
-  }
-
-  switchLanguage(lang: string) {
-    this.isDropdownOpen = false;
-    this.currentLanguage = lang;
-    void this.languageService.switch(lang);
-  }
-
-  toggleDropdown() {
-    this.isDropdownOpen = !this.isDropdownOpen;
-
-    if (this.isDropdownOpen) {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleOutsideClick(event)
-      );
-    } else {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = undefined;
-    }
-  }
-
-  handleOutsideClick(event: Event) {
-    const targetElement = event.target as HTMLElement;
-    const clickedInsideDropdown =
-      this.elementRef.nativeElement.contains(targetElement);
-    const clickedDropdownButton =
-      this.dropdownButton.nativeElement.contains(targetElement);
-
-    if (clickedInsideDropdown && clickedDropdownButton) {
-      this.isDropdownOpen = true;
-    } else {
-      this.isDropdownOpen = false;
-    }
   }
 
   toggleShowPassword() {

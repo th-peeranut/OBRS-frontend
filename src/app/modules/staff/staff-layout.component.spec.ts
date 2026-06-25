@@ -5,8 +5,11 @@ import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 
 import { StaffLayoutComponent } from './staff-layout.component';
+import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { LanguageService } from '../../shared/services/language.service';
+import { createLanguageServiceStub } from '../../testing/test-stubs';
 
 describe('StaffLayoutComponent', () => {
   let fixture: ComponentFixture<StaffLayoutComponent>;
@@ -19,12 +22,13 @@ describe('StaffLayoutComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [StaffLayoutComponent],
+      declarations: [StaffLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
       ],
     }).compileComponents();
 
@@ -66,36 +70,23 @@ describe('StaffLayoutComponent', () => {
       .toBeNull();
   });
 
-  it('renders the TH/EN language toggle in the top-right topbar, not the sidebar footer', () => {
-    // Regression for #39: the headline ask was to move the language switch from
-    // the sidebar footer (bottom-left) to the top bar's right-side actions,
-    // matching the home/admin pages. Lock its new location so a future refactor
-    // can't silently move it back.
-    const topbarLangButtons = fixture.debugElement.queryAll(
-      By.css('.admin-topbar-actions .admin-lang-switch .admin-lang-btn'),
+  it('renders the shared language switcher in the top-right topbar, not the sidebar footer', () => {
+    // Regression for #39 (location) + #59 (shared component): the language switch
+    // lives in the top bar's right-side actions, matching home/admin. Lock its
+    // location so a future refactor can't silently move it back to the sidebar.
+    const topbarSwitcher = fixture.debugElement.query(
+      By.css('.admin-topbar-actions app-lang-switcher'),
     );
-    expect(topbarLangButtons.length)
-      .withContext('both TH/EN buttons should live in the topbar actions')
-      .toBe(2);
+    expect(topbarSwitcher)
+      .withContext('the shared switcher should live in the topbar actions')
+      .toBeTruthy();
 
-    const sidebarLangButtons = fixture.debugElement.queryAll(
-      By.css('.admin-sidebar-footer .admin-lang-btn'),
+    const sidebarSwitcher = fixture.debugElement.queryAll(
+      By.css('.admin-sidebar-footer app-lang-switcher, .admin-sidebar-footer .admin-lang-btn'),
     );
-    expect(sidebarLangButtons.length)
-      .withContext('language buttons must no longer sit in the sidebar footer')
+    expect(sidebarSwitcher.length)
+      .withContext('the switcher must no longer sit in the sidebar footer')
       .toBe(0);
-  });
-
-  it('marks the active language button as pressed when clicked', () => {
-    const enButton = fixture.debugElement
-      .queryAll(By.css('.admin-topbar-actions .admin-lang-btn'))
-      .find((btn) => btn.nativeElement.textContent.trim() === 'EN');
-    expect(enButton).withContext('EN button should exist in the topbar').toBeTruthy();
-
-    enButton!.nativeElement.click();
-    fixture.detectChanges();
-
-    expect(enButton!.nativeElement.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('shows an Admin Dashboard link in the profile menu for admins', () => {
