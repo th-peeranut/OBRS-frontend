@@ -487,3 +487,16 @@ body.is-dark {
     background-color: $dk-bg !important;
   }
 }
+
+// =============================================================================
+// 15. E-ticket page
+// =============================================================================
+// The shared navbar/stepper/footer are dark, but the e-ticket section sits on a
+// light ($secondary-lightgrey) background — a bright band between them. Darken
+// that page background. The ticket card itself (.ticket-shell) is left white on
+// purpose: a paper boarding-pass look that reads cleanly on the dark page.
+body.is-dark {
+  .ticket-page {
+    background: $dk-bg !important;
+  }
+}
