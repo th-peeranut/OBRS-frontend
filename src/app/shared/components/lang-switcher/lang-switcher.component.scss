@@ -14,10 +14,12 @@
   align-items: center;
   justify-content: center;
   // Font / size / shape match the original language button: ~16px label,
-  // 180px-wide rounded pill (radius 24px), 8px padding. Colours, background
-  // and hover are left as the shared design.
+  // rounded pill (radius 24px), 8px padding. Colours, background and hover are
+  // left as the shared design. Width is content-sized (not a fixed 180px) so
+  // every surface matches the compact home-navbar switcher.
   gap: 8px;
-  width: 180px;
+  width: auto;
+  min-width: 0;
   max-width: 100%;
   border: 1px solid rgba(189, 200, 207, 0.6);
   border-radius: 24px;
@@ -34,14 +36,6 @@
     background: rgba(77, 190, 239, 0.08);
     color: #005f7e;
   }
-}
-
-// In the navbar (desktop bar + mobile panel, both inside <app-navbar>), size the
-// pill to its content with a min-width floor instead of the fixed 180px, so it
-// sits compactly among the nav actions.
-:host-context(app-navbar) .navbar-lang-trigger {
-  width: auto;
-  min-width: 0;
 }
 
 // Globe reads a touch larger than the 16px label; the chevron/check stay 16px.
