@@ -1,31 +1,8 @@
 <div class="checkout-panel d-flex flex-column gap-2">
 
-  <!-- Journey: pickup & drop-off points (required by the backend per segment) -->
-  <div class="row g-2" *ngIf="selectedTrip">
-    <div class="col-6">
-      <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PICKUP_POINT' | translate }}</label>
-      <select class="form-select form-select-sm"
-              [(ngModel)]="pickupSlug"
-              [disabled]="isLoadingSegments || pickupOptions.length === 0"
-              (ngModelChange)="onPickupChange()">
-        <option value="" disabled>{{ 'STAFF.SELL.STOP_PLACEHOLDER' | translate }}</option>
-        <option *ngFor="let s of pickupOptions" [value]="s.slug">{{ s.name }}</option>
-      </select>
-    </div>
-    <div class="col-6">
-      <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.DROPOFF_POINT' | translate }}</label>
-      <select class="form-select form-select-sm"
-              [(ngModel)]="dropoffSlug"
-              [disabled]="isLoadingSegments || dropoffOptions.length === 0">
-        <option value="" disabled>{{ 'STAFF.SELL.STOP_PLACEHOLDER' | translate }}</option>
-        <option *ngFor="let s of dropoffOptions" [value]="s.slug">{{ s.name }}</option>
-      </select>
-    </div>
-  </div>
-
   <!-- Contact form -->
   <form [formGroup]="contactForm" novalidate>
-    <!-- Title (full width now that passenger type moved to center panel) -->
+    <!-- Title -->
     <div class="mb-2">
       <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
       <select class="form-select form-select-sm"

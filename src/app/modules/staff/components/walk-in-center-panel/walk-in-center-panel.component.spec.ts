@@ -1,5 +1,6 @@
 import { WalkInCenterPanelComponent } from './walk-in-center-panel.component';
 import { WalkInTripDto } from '../../../../services/staff/staff-api.service';
+import { StopOption } from '../../pages/sell/sell-page.component';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   return {
@@ -17,6 +18,10 @@ function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
     availableSeatNumbers: ['1', '2', '3', '4', '5'],
     ...overrides,
   };
+}
+
+function makeStopOption(slug: string, name: string, time = ''): StopOption {
+  return { slug, name, time };
 }
 
 function makeComponent(): WalkInCenterPanelComponent {
@@ -132,6 +137,23 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  describe('seatGendersUpper getter', () => {
+    it('returns null when seatPassengerTypes is empty', () => {
+      const comp = makeComponent();
+      comp.seatPassengerTypes = {};
+      expect((comp as any).seatGendersUpper).toBeNull();
+    });
+
+    it('returns upper-cased map when seatPassengerTypes has entries', () => {
+      const comp = makeComponent();
+      comp.seatPassengerTypes = { B1: 'male', B3: 'female' };
+      const upper = (comp as any).seatGendersUpper;
+      expect(upper).not.toBeNull();
+      expect(upper['B1']).toBe('MALE');
+      expect(upper['B3']).toBe('FEMALE');
+    });
+  });
+
   describe('takenSeats getter', () => {
     it('returns empty array when no trip selected', () => {
       const comp = makeComponent();
@@ -154,6 +176,24 @@ describe('WalkInCenterPanelComponent', () => {
     it('formats ISO datetime to HH:mm', () => {
       const comp = makeComponent();
       expect((comp as any).formatTime('2026-07-01T08:30:00')).toBe('08:30');
+    });
+  });
+
+  describe('stop selection outputs', () => {
+    it('emits pickupChange when stop button is clicked', () => {
+      const comp = makeComponent();
+      const emitted: string[] = [];
+      comp.pickupChange.subscribe((v) => emitted.push(v));
+      comp.pickupChange.emit('stop_a');
+      expect(emitted).toEqual(['stop_a']);
+    });
+
+    it('emits dropoffChange when stop button is clicked', () => {
+      const comp = makeComponent();
+      const emitted: string[] = [];
+      comp.dropoffChange.subscribe((v) => emitted.push(v));
+      comp.dropoffChange.emit('stop_c');
+      expect(emitted).toEqual(['stop_c']);
     });
   });
 });

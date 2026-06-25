@@ -912,14 +912,13 @@
       "TRIP_DETAIL_AVAILABLE": "ว่าง",
       "TRIP_DETAIL_RESERVED": "จองแล้ว (ยังไม่ชำระ)",
       "TRIP_DETAIL_SOLD": "ขายแล้ว (ชำระแล้ว)",
-      "PICKUP_POINT": "จุดรับ",
-      "DROPOFF_POINT": "จุดส่ง",
-      "STOP_PLACEHOLDER": "เลือกจุดจอด",
       "PASSENGER_TYPE": "ประเภทผู้โดยสาร",
       "PTYPE_MALE": "ชาย",
       "PTYPE_FEMALE": "หญิง",
       "PTYPE_MONK": "พระภิกษุ",
-      "PTYPE_NUN": "แม่ชี"
+      "PTYPE_NUN": "แม่ชี",
+      "FROM_LABEL": "จาก",
+      "TO_LABEL": "ถึง"
     },
     "BOARDING_ENTRY": {
       "TITLE": "เลือกรอบเดินทาง",

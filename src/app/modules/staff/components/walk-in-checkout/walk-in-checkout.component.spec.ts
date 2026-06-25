@@ -1,9 +1,6 @@
-import { of } from 'rxjs';
 import { FormBuilder } from '@angular/forms';
 import { WalkInCheckoutComponent } from './walk-in-checkout.component';
 import {
-  RouteSegmentsDto,
-  SegmentStopPairDto,
   WalkInTripDto,
 } from '../../../../services/staff/staff-api.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
@@ -26,49 +23,9 @@ function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   };
 }
 
-function pair(from: string, to: string, fare: string, vt = 'bus'): SegmentStopPairDto {
-  return {
-    segmentId: 0,
-    fromStop: { slug: from, name: from.toUpperCase() },
-    toStop: { slug: to, name: to.toUpperCase() },
-    vehicleType: { slug: vt, name: vt },
-    fare,
-    estimatedDurationMinutes: 60,
-  };
-}
-
-// A 3-stop route a → b → c (bus). Full route a→c = 300; a→b = 100; b→c = 200.
-const SEGMENTS: RouteSegmentsDto = {
-  route: { slug: 'route-x', name: 'Route X' },
-  stopPairs: [
-    pair('a', 'b', '100'),
-    pair('a', 'c', '300'),
-    pair('b', 'c', '200'),
-    // a 'van' pair that must be filtered out for a bus trip:
-    pair('a', 'c', '999', 'van'),
-  ],
-};
-
-function createStaffApiStub(segments: RouteSegmentsDto = SEGMENTS): any {
-  return {
-    getRouteSegments: jasmine
-      .createSpy('getRouteSegments')
-      .and.returnValue(of({ data: segments })),
-  };
-}
-
-function makeComponent(staffApi = createStaffApiStub()): WalkInCheckoutComponent {
+function makeComponent(): WalkInCheckoutComponent {
   const fb = new FormBuilder();
-  return new WalkInCheckoutComponent(fb, createTranslateStub(), staffApi);
-}
-
-/** Load the route segments into the component as the template binding would. */
-function loadRoute(comp: WalkInCheckoutComponent, trip = makeTrip()): void {
-  comp.selectedTrip = trip;
-  comp.routeSlug = 'route-x';
-  comp.ngOnChanges({
-    routeSlug: { currentValue: 'route-x', previousValue: null, firstChange: true, isFirstChange: () => true },
-  });
+  return new WalkInCheckoutComponent(fb, createTranslateStub());
 }
 
 function fillValidContact(comp: WalkInCheckoutComponent): void {
@@ -87,53 +44,19 @@ describe('WalkInCheckoutComponent', () => {
     expect(makeComponent()).toBeTruthy();
   });
 
-  describe('segment loading & pickup/drop-off', () => {
-    it('defaults to the full route (origin → destination) with the full-route fare', () => {
-      const comp = makeComponent();
-      loadRoute(comp);
-      expect(comp['pickupSlug']).toBe('a');
-      expect(comp['dropoffSlug']).toBe('c');
-      expect((comp as any).segmentFare).toBe(300);
-    });
-
-    it('orders stops origin → destination and offers all but the last as pickups', () => {
-      const comp = makeComponent();
-      loadRoute(comp);
-      expect((comp as any).orderedStops.map((s: any) => s.slug)).toEqual(['a', 'b', 'c']);
-      expect((comp as any).pickupOptions.map((s: any) => s.slug)).toEqual(['a', 'b']);
-    });
-
-    it('filters stop pairs to the trip vehicle type (ignores the van fare)', () => {
-      const comp = makeComponent();
-      loadRoute(comp, makeTrip({ vehicleType: 'bus' }));
-      // a→c bus fare is 300, not the 999 van fare
-      expect((comp as any).segmentFare).toBe(300);
-    });
-
-    it('limits drop-off options to stops downstream of the chosen pickup', () => {
-      const comp = makeComponent();
-      loadRoute(comp);
-      comp['pickupSlug'] = 'b';
-      (comp as any).onPickupChange();
-      expect((comp as any).dropoffOptions.map((s: any) => s.slug)).toEqual(['c']);
-      expect(comp['dropoffSlug']).toBe('c');
-      expect((comp as any).segmentFare).toBe(200);
-    });
-  });
-
   describe('canSell gating', () => {
     it('returns false when form is invalid', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       expect((comp as any).canSell).toBeFalse();
     });
 
     it('returns false when email is missing (required for walk-in)', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
         title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: '',
@@ -143,8 +66,8 @@ describe('WalkInCheckoutComponent', () => {
 
     it('returns false when no seats selected', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = [];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       fillValidContact(comp);
       expect((comp as any).canSell).toBeFalse();
@@ -152,26 +75,26 @@ describe('WalkInCheckoutComponent', () => {
 
     it('returns false when cashReceived < totalAmount', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
-      comp['cashReceived'] = 200; // total is 300
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 200;
       fillValidContact(comp);
       expect((comp as any).canSell).toBeFalse();
     });
 
-    it('returns false when no valid segment is selected (no route loaded)', () => {
+    it('returns false when pricePerSeat is 0 (no segment selected)', () => {
       const comp = makeComponent();
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 0;
       comp['cashReceived'] = 0;
       fillValidContact(comp);
-      expect((comp as any).segmentFare).toBeNull();
       expect((comp as any).canSell).toBeFalse();
     });
 
     it('returns true when all conditions are met', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       fillValidContact(comp);
       expect((comp as any).canSell).toBeTrue();
@@ -179,8 +102,8 @@ describe('WalkInCheckoutComponent', () => {
 
     it('returns true when cashReceived > totalAmount (change due)', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 500;
       fillValidContact(comp);
       expect((comp as any).canSell).toBeTrue();
@@ -188,35 +111,35 @@ describe('WalkInCheckoutComponent', () => {
   });
 
   describe('total & change due', () => {
-    it('multiplies the segment fare by the seat count', () => {
+    it('multiplies pricePerSeat by the seat count', () => {
       const comp = makeComponent();
-      loadRoute(comp);
-      comp.selectedSeats = ['B1', 'B2']; // 2 * 300
+      comp.selectedSeats = ['B1', 'B2'];
+      comp.pricePerSeat = 300;
       expect((comp as any).totalAmount).toBe(600);
     });
 
     it('change is positive when cash > total', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 500;
       expect((comp as any).changeDue).toBe(200);
     });
 
     it('change is zero when cash equals total', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       expect((comp as any).changeDue).toBe(0);
     });
   });
 
   describe('sell payload', () => {
-    it('emits fromStop, toStop, segment fare and email; omits blank idCard', () => {
+    it('emits contact + cashReceived; omits blank idCard', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       fillValidContact(comp);
 
@@ -225,18 +148,19 @@ describe('WalkInCheckoutComponent', () => {
       (comp as any).onSell();
 
       expect(emitted).toBeDefined();
-      expect(emitted!.fromStop).toBe('a');
-      expect(emitted!.toStop).toBe('c');
-      expect(emitted!.pricePerSeat).toBe(300);
       expect(emitted!.contact.email).toBe('somchai@example.com');
       expect('identityCardNumber' in emitted!.contact).toBeFalse();
       expect('gender' in emitted!.contact).toBeFalse();
+      // fromStop / toStop / pricePerSeat are no longer in the payload (now in sell-page)
+      expect(('fromStop' as string) in emitted!).toBeFalse();
+      expect(('toStop' as string) in emitted!).toBeFalse();
+      expect(('pricePerSeat' as string) in emitted!).toBeFalse();
     });
 
     it('does not emit when the form is invalid (blank email)', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
         title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: '',
@@ -250,8 +174,8 @@ describe('WalkInCheckoutComponent', () => {
 
     it('includes identityCardNumber when provided', () => {
       const comp = makeComponent();
-      loadRoute(comp);
       comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].setValue({
         title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee',
@@ -269,7 +193,7 @@ describe('WalkInCheckoutComponent', () => {
   });
 
   // Note: passenger type selection was moved to walk-in-center-panel (Change 1 / issue #50).
-  // The checkout component no longer owns passengerType or passengerTypeChange.
+  // Segment / pickup / drop-off logic was moved to sell-page (Change 2 / issue #53).
 
   describe('lifecycle', () => {
     it('cleans up on destroy', () => {

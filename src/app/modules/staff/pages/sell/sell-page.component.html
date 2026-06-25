@@ -25,8 +25,16 @@
             [selectedSeats]="selectedSeats"
             [passengerGender]="selectedPassengerType"
             [routeLabel]="selectedRouteLabel"
+            [seatPassengerTypes]="seatPassengerTypes"
+            [pickupOptions]="pickupOptions"
+            [dropoffOptions]="dropoffOptions"
+            [pickupSlug]="pickupSlug"
+            [dropoffSlug]="dropoffSlug"
+            [isLoadingSegments]="isLoadingSegments"
             (seatToggled)="onSeatToggled($event)"
-            (passengerTypeChange)="onPassengerTypeChanged($event)">
+            (passengerTypeChange)="onPassengerTypeChanged($event)"
+            (pickupChange)="onPickupChanged($event)"
+            (dropoffChange)="onDropoffChanged($event)">
           </app-walk-in-center-panel>
         </div>
       </div>
@@ -38,9 +46,9 @@
         <div class="card-body p-2">
           <app-walk-in-checkout
             [selectedTrip]="selectedTrip"
-            [routeSlug]="selectedRouteSlug"
             [selectedSeats]="selectedSeats"
             [isSelling]="isSelling"
+            [pricePerSeat]="pricePerSeat"
             (sell)="onSell($event)">
           </app-walk-in-checkout>
         </div>

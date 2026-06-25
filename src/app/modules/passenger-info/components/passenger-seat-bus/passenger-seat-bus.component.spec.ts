@@ -68,4 +68,68 @@ describe('PassengerSeatBusComponent', () => {
       expect(emitted).toEqual(['A1', '']);
     });
   });
+
+  describe('seatGenderFor (single-select mode, seatGenders=null)', () => {
+    beforeEach(() => {
+      component.gender = 'MALE';
+      component.seatGenders = null;
+      component.takenSeats = [];
+    });
+
+    it('returns gender for the currently selected seat', () => {
+      component.setPassengerSeatPosition('B1');
+      expect(component.seatGenderFor('B1')).toBe('MALE');
+    });
+
+    it('returns empty string for non-selected seats', () => {
+      component.setPassengerSeatPosition('B1');
+      expect(component.seatGenderFor('B2')).toBe('');
+    });
+  });
+
+  describe('seatGenderFor (multi-select mode, seatGenders set)', () => {
+    beforeEach(() => {
+      component.seatGenders = { B1: 'MALE', B3: 'FEMALE' };
+      component.takenSeats = [];
+    });
+
+    it('returns the gender from the map for a mapped seat', () => {
+      expect(component.seatGenderFor('B1')).toBe('MALE');
+      expect(component.seatGenderFor('B3')).toBe('FEMALE');
+    });
+
+    it('returns empty string for a seat not in the map', () => {
+      expect(component.seatGenderFor('B2')).toBe('');
+    });
+  });
+
+  describe('isSeatActive', () => {
+    it('single-select: true only for the isSelected seat', () => {
+      component.gender = 'MALE';
+      component.seatGenders = null;
+      component.takenSeats = [];
+      component.setPassengerSeatPosition('B1');
+      expect(component.isSeatActive('B1')).toBeTrue();
+      expect(component.isSeatActive('B2')).toBeFalse();
+    });
+
+    it('multi-select: true for seats in the seatGenders map', () => {
+      component.seatGenders = { B1: 'MALE', B3: 'FEMALE' };
+      expect(component.isSeatActive('B1')).toBeTrue();
+      expect(component.isSeatActive('B3')).toBeTrue();
+      expect(component.isSeatActive('B2')).toBeFalse();
+    });
+
+    it('multi-select: emits seatClicked even when gender input is empty (map drives guard)', () => {
+      // In multi-select mode the gender string is irrelevant — the seatGenders map guards.
+      component.gender = '';
+      component.seatGenders = { B1: 'MALE' };
+      component.takenSeats = [];
+      const emitted: string[] = [];
+      component.seatClicked.subscribe((s: string) => emitted.push(s));
+
+      component.setPassengerSeatPosition('B2'); // not in map, but map is non-null → click allowed
+      expect(emitted).toEqual(['B2']);
+    });
+  });
 });

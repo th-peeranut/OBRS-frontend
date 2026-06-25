@@ -1,5 +1,43 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: per-seat passenger type + pickup/drop-off state lift (issue #53)
+
+**Self-fix (test):** `sell-page.component.spec.ts` → "stamps each passenger with the
+passenger type staff selected" was a **vacuous test** (Karma warned "has no expectations").
+It pre-set `selectedSeats = ['B1','B2']` and THEN called `onSeatToggled('B1')`/`('B2')`.
+Because B1/B2 were already in the array, `onSeatToggled` took the *removal* branch and
+emptied `selectedSeats`, so `onSell` built an empty `passengers` array and the
+`for…expect` loop body never ran — the assertion executed zero times.
+Fix: drop the manual `selectedSeats` pre-seed, add the seats via the real `onSeatToggled`
+flow (so `seatPassengerTypes` is actually populated), and assert `passengers.length === 2`
+before the per-passenger loop.
+Pattern: `onSeatToggled` is a *toggle*. In tests, never pre-populate `selectedSeats` and
+then call the toggle for the same seats — drive seats exclusively through the toggle, and
+always assert array length before a `for…of … expect` so the loop can't pass vacuously.
+
+**Verified correct (traced end-to-end):**
+- Seat components' `seatGenders = null` default path is behaviorally identical to before:
+  `seatGenderFor(l)` null-branch = `isSelected===l ? gender : ''`; `!isSeatActive(l)` null-branch
+  = `isSelected!==l`. Customer passenger-info flow unaffected (it never sets `seatGenders`).
+- Per-seat bug fix holds: `onSeatToggled` snapshots `selectedPassengerType` into
+  `seatPassengerTypes[seat]` at click time; `onPassengerTypeChanged` only mutates the active
+  type, never the map. `onSell` reads `seatPassengerTypes[seat] ?? selectedPassengerType`.
+  Removal deletes the map entry; resets fire on date change, trip change, and post-sale.
+- State lift complete: no orphaned segment state left in `walk-in-checkout`; `canSell` now
+  gates on `pricePerSeat > 0`, totals on `pricePerSeat`. Stale-response guards
+  (`selectedRouteSlug !== routeSlug`) preserved in the lifted `loadSegments`. Drop-off kept
+  valid on pickup change via `onPickupChange`.
+
+**Minor (left for dev, non-blocking):**
+- `walk-in-center-panel.stopRowLabel()` is dead code — defined + unit-tested but never used in
+  the template (HTML renders `{{opt.name}}`/`{{opt.time}}` inline). Remove method + its 2 tests.
+- Orphaned i18n keys `STAFF.SELL.PICKUP_POINT/DROPOFF_POINT/STOP_PLACEHOLDER` no longer
+  referenced after the checkout `<select>`s were removed; safe to delete from en/th/zh.
+- `_buildStopTimes`: a leg with missing/zero `estimatedDurationMinutes` sets that stop's time
+  to '' WITHOUT advancing `cumulativeMinutes`, so any downstream stop with a valid leg shows an
+  under-counted (too-early) time rather than ''. No crash; low-severity display inaccuracy on
+  incomplete duration data only.
+
 ## 2026-06-25 — Scrutinize: walk-in seat count/total fix + calendar restyle
 
 **Self-fix (3-line comment):** Updated the stale leading comment in

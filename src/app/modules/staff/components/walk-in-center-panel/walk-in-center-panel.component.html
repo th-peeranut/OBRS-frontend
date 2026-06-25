@@ -29,6 +29,45 @@
         </ng-template>
       </div>
 
+      <!-- จาก / ถึง stop selection lists (above passenger type tiles) -->
+      <div class="row g-2 mb-3" *ngIf="pickupOptions.length > 0 || isLoadingSegments">
+        <!-- จาก (From / Pickup) -->
+        <div class="col-6">
+          <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
+          <div class="stop-list overflow-auto border rounded" style="max-height:150px">
+            <div *ngIf="isLoadingSegments" class="text-muted small p-2">
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            </div>
+            <button *ngFor="let opt of pickupOptions"
+                    type="button"
+                    class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
+                    [class.active]="opt.slug === pickupSlug"
+                    (click)="pickupChange.emit(opt.slug)">
+              <span>{{ opt.name }}</span>
+              <span *ngIf="opt.time" class="text-muted ms-1">{{ opt.time }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- ถึง (To / Drop-off) -->
+        <div class="col-6">
+          <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
+          <div class="stop-list overflow-auto border rounded" style="max-height:150px">
+            <div *ngIf="isLoadingSegments" class="text-muted small p-2">
+              <span class="spinner-border spinner-border-sm me-1"></span>
+            </div>
+            <button *ngFor="let opt of dropoffOptions"
+                    type="button"
+                    class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
+                    [class.active]="opt.slug === dropoffSlug"
+                    (click)="dropoffChange.emit(opt.slug)">
+              <span>{{ opt.name }}</span>
+              <span *ngIf="opt.time" class="text-muted ms-1">{{ opt.time }}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Passenger type avatar tiles -->
       <div class="ptype-row d-flex flex-row gap-2 justify-content-center mb-3">
         <div *ngFor="let pt of passengerTypeOptions"
@@ -61,6 +100,7 @@
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
           [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
+          [seatGenders]="seatGendersUpper"
           (seatClicked)="seatToggled.emit($event)">
         </app-passenger-seat-van>
       </ng-container>
@@ -71,6 +111,7 @@
           [gender]="seatGender"
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
+          [seatGenders]="seatGendersUpper"
           (seatClicked)="seatToggled.emit($event)">
         </app-passenger-seat-bus>
       </ng-container>

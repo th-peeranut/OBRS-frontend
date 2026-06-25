@@ -34,6 +34,7 @@ function createStaffApiStub(overrides: Partial<{
   getWalkInSchedules: ReturnType<typeof jasmine.createSpy>;
   createWalkInBooking: ReturnType<typeof jasmine.createSpy>;
   payWalkIn: ReturnType<typeof jasmine.createSpy>;
+  getRouteSegments: ReturnType<typeof jasmine.createSpy>;
 }> = {}): any {
   return {
     getWalkInSchedules: jasmine.createSpy('getWalkInSchedules').and.returnValue(of({ data: [] })),
@@ -41,6 +42,7 @@ function createStaffApiStub(overrides: Partial<{
       of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
     ),
     payWalkIn: jasmine.createSpy('payWalkIn').and.returnValue(of({ data: {} })),
+    getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of({ data: { stopPairs: [] } })),
     ...overrides,
   };
 }
@@ -62,6 +64,7 @@ function makeComponent(staffApi = createStaffApiStub(), alertService = createAle
   );
 }
 
+/** A minimal checkout payload (no longer carries fromStop/toStop/pricePerSeat — those live in sell-page). */
 const validPayload: WalkInCheckoutPayload = {
   contact: {
     title: 'Mr.',
@@ -70,11 +73,15 @@ const validPayload: WalkInCheckoutPayload = {
     phoneNumber: '0812345678',
     email: 'somchai@example.com',
   },
-  fromStop: 'stop_a',
-  toStop: 'stop_b',
-  pricePerSeat: 300,
   cashReceived: 300,
 };
+
+/** Inject segment fare directly so onSell can build the payload. */
+function setSegmentFare(comp: SellPageComponent, fare: number, pickup = 'stop_a', dropoff = 'stop_b'): void {
+  (comp as any).fareMap = new Map([[`${pickup}|${dropoff}`, fare]]);
+  (comp as any).pickupSlug = pickup;
+  (comp as any).dropoffSlug = dropoff;
+}
 
 describe('SellPageComponent', () => {
   it('should create', () => {
@@ -147,6 +154,13 @@ describe('SellPageComponent', () => {
       (comp as any).onDateChanged(new Date());
       expect((comp as any).selectedRouteLabel).toBeNull();
     });
+
+    it('resets seatPassengerTypes on date change', () => {
+      const comp = makeComponent();
+      (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).seatPassengerTypes).toEqual({});
+    });
   });
 
   describe('onPassengerTypeChanged', () => {
@@ -163,6 +177,15 @@ describe('SellPageComponent', () => {
         (comp as any).onPassengerTypeChanged(slug);
         expect((comp as any).selectedPassengerType).toBe(slug);
       }
+    });
+
+    it('does NOT change already-selected seat types when type changes', () => {
+      const comp = makeComponent();
+      (comp as any).onPassengerTypeChanged('male');
+      (comp as any).onSeatToggled('B1'); // B1 → male
+      (comp as any).onPassengerTypeChanged('female');
+      // B1 must still be male — changing type must not retro-assign
+      expect((comp as any).seatPassengerTypes['B1']).toBe('male');
     });
   });
 
@@ -184,6 +207,13 @@ describe('SellPageComponent', () => {
       (comp as any).selectedSeats = ['B1', 'B2'];
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).selectedSeats).toEqual([]);
+    });
+
+    it('resets seatPassengerTypes when new trip selected', () => {
+      const comp = makeComponent();
+      (comp as any).seatPassengerTypes = { B1: 'male' };
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).seatPassengerTypes).toEqual({});
     });
 
     it('sets selectedRouteLabel from the matching routeGroup', () => {
@@ -237,6 +267,53 @@ describe('SellPageComponent', () => {
       (comp as any).onSeatToggled('');
       expect((comp as any).selectedSeats).toEqual(['B1']);
     });
+
+    it('captures passenger type at click time into seatPassengerTypes', () => {
+      const comp = makeComponent();
+      (comp as any).onPassengerTypeChanged('female');
+      (comp as any).onSeatToggled('B1');
+      expect((comp as any).seatPassengerTypes['B1']).toBe('female');
+    });
+
+    it('removes seat type from seatPassengerTypes when seat is deselected', () => {
+      const comp = makeComponent();
+      (comp as any).onSeatToggled('B1'); // adds with default 'male'
+      (comp as any).onSeatToggled('B1'); // removes
+      expect('B1' in (comp as any).seatPassengerTypes).toBeFalse();
+    });
+  });
+
+  describe('per-seat passenger type (Change 1 core fix)', () => {
+    it('seat1 keeps type A after staff switches to type B and adds seat2', () => {
+      const comp = makeComponent();
+      (comp as any).onPassengerTypeChanged('male');
+      (comp as any).onSeatToggled('B1'); // B1 → male
+      (comp as any).onPassengerTypeChanged('female');
+      (comp as any).onSeatToggled('B2'); // B2 → female
+
+      expect((comp as any).seatPassengerTypes['B1']).toBe('male');
+      expect((comp as any).seatPassengerTypes['B2']).toBe('female');
+    });
+
+    it('onSell uses per-seat type from seatPassengerTypes in booking payload', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onPassengerTypeChanged('male');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onPassengerTypeChanged('female');
+      (comp as any).onSeatToggled('B2');
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { passengerType: string; seatNumber: string }[] = callArg.departureSchedule.passengers;
+      const b1 = passengers.find((p) => p.seatNumber === 'B1');
+      const b2 = passengers.find((p) => p.seatNumber === 'B2');
+      expect(b1?.passengerType).toBe('male');
+      expect(b2?.passengerType).toBe('female');
+    });
   });
 
   describe('onSell', () => {
@@ -245,6 +322,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -259,6 +337,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       const payloadWithId: WalkInCheckoutPayload = {
         ...validPayload,
@@ -276,6 +355,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -289,6 +369,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -301,6 +382,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1', 'B2', 'B3'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -308,15 +390,14 @@ describe('SellPageComponent', () => {
       expect(callArg.departureSchedule.passengers.length).toBe(3);
     });
 
-    it('uses the segment fare from the payload for totalAmount (fare * seat count)', () => {
+    it('uses the segment fare from sell-page for totalAmount (fare * seat count)', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip({ pricePerSeat: '300' });
       (comp as any).selectedSeats = ['B1', 'B2'];
+      setSegmentFare(comp, 170);
 
-      // payload.pricePerSeat (170) is the chosen segment's fare, NOT the trip's
-      // full-route pricePerSeat (300) — proves the segment fare drives the total.
-      (comp as any).onSell({ ...validPayload, pricePerSeat: 170 });
+      (comp as any).onSell(validPayload);
 
       const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
       expect(callArg.totalAmount).toBe(340);
@@ -327,13 +408,12 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
       const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
       const passenger = callArg.departureSchedule.passengers[0];
-      // Backend resolves passenger_type by exact lookup slug; 'ADULT' matched
-      // none and 404'd. Must be one of the seeded gender-neutral/role slugs.
       expect(['male', 'female', 'monk', 'nun']).toContain(passenger.passengerType);
     });
 
@@ -341,13 +421,18 @@ describe('SellPageComponent', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
-      (comp as any).selectedSeats = ['B1', 'B2'];
+      // Add the seats via the real toggle flow so seatPassengerTypes is populated.
       (comp as any).onPassengerTypeChanged('monk');
+      (comp as any).onSeatToggled('B1');
+      (comp as any).onSeatToggled('B2');
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
       const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
-      for (const p of callArg.departureSchedule.passengers) {
+      const passengers = callArg.departureSchedule.passengers;
+      expect(passengers.length).toBe(2);
+      for (const p of passengers) {
         expect(p.passengerType).toBe('monk');
       }
     });
@@ -357,6 +442,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300, 'stop_a', 'stop_b');
 
       (comp as any).onSell(validPayload);
 
@@ -370,6 +456,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -384,6 +471,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api, alertService);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
 
       (comp as any).onSell(validPayload);
 
@@ -399,6 +487,19 @@ describe('SellPageComponent', () => {
       (comp as any).onSell(validPayload);
 
       expect(api.createWalkInBooking).not.toHaveBeenCalled();
+    });
+
+    it('resets seatPassengerTypes after a successful sale', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).onSeatToggled('B1');
+      (comp as any).seatPassengerTypes = { B1: 'male' };
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      expect((comp as any).seatPassengerTypes).toEqual({});
     });
   });
 
