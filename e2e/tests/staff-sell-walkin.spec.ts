@@ -947,3 +947,87 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     expect(seatsRequested, 'no separate seat-map fetch should fire').toBe(0);
   });
 });
+
+// =============================================================================
+// Multi-stop pickup/drop-off — the selected stop must be VISIBLY highlighted
+// -----------------------------------------------------------------------------
+// Regression: the From/To stop buttons use Bootstrap's .list-group-item/.active
+// classes but were NOT wrapped in a .list-group. In Bootstrap 5.3 the active
+// theme is driven by CSS custom properties (--bs-list-group-active-bg/-color)
+// that are *declared on .list-group*; without that wrapper they are unset, so
+// the .active stop rendered with a transparent background — no visible
+// selection. Staff reported the pickup/drop-off points as unselectable
+// ("can't choose"), even though the click logic worked. The lists are now
+// .list-group, so .active paints the blue highlight and clicking moves it.
+//
+// The AC suite above only mocks a single-pair route (origin→dest, one option
+// each), so multi-stop selection — and therefore this defect — was never
+// exercised. This test uses a 4-stop route to guard it.
+// =============================================================================
+
+const MS = (slug: string, name: string) => ({ slug, name });
+const [STOP_A, STOP_B, STOP_C, STOP_D] = [
+  MS('a', 'Stop A'), MS('b', 'Stop B'), MS('c', 'Stop C'), MS('d', 'Stop D'),
+];
+const MS_BUS_VT = { slug: 'bus', name: 'Bus' };
+const msPair = (
+  fromStop: { slug: string; name: string },
+  toStop: { slug: string; name: string },
+  fare: string,
+  estimatedDurationMinutes: number,
+  segmentId: number
+) => ({ segmentId, fromStop, toStop, vehicleType: MS_BUS_VT, fare, estimatedDurationMinutes });
+
+/** A linear 4-stop bus route (A→B→C→D) with a fare for every downstream pair. */
+const MULTI_STOP_SEGMENTS_RESP = {
+  code: 200,
+  message: 'OK',
+  data: {
+    route: { slug: 'route', name: 'Route' },
+    stopPairs: [
+      msPair(STOP_A, STOP_B, '50.00', 15, 1),
+      msPair(STOP_B, STOP_C, '200.00', 90, 2),
+      msPair(STOP_C, STOP_D, '30.00', 14, 3),
+      msPair(STOP_A, STOP_C, '250.00', 105, 4),
+      msPair(STOP_A, STOP_D, '280.00', 120, 5),
+      msPair(STOP_B, STOP_D, '230.00', 104, 6),
+    ],
+  },
+};
+
+/** A Bootstrap-transparent background means the .active highlight is invisible. */
+function isVisibleHighlight(bg: string): boolean {
+  return bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';
+}
+
+test.describe('Multi-stop pickup/drop-off — selected stop is visibly highlighted', () => {
+  test('default + clicked From stop have a visible (non-transparent) highlight', async ({ page }) => {
+    await injectFakeAuth(page, ['admin']);
+    await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) => route.fulfill({ json: WALK_IN_SCHEDULES_RESP }));
+
+    await gotoSellPage(page);
+    await page.locator('.trip-row').first().click();
+
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    await fromList.locator('button').first().waitFor({ timeout: 15_000 });
+
+    // Pickup options = every stop except the final destination → A, B, C.
+    await expect(fromList.locator('button')).toHaveCount(3);
+
+    // The default pickup (Stop A) is active AND visibly highlighted (the bug:
+    // .active was applied but rendered transparent → looked unselected).
+    const activeFrom = fromList.locator('button.active');
+    await expect(activeFrom).toHaveCount(1);
+    const defaultBg = await activeFrom.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(isVisibleHighlight(defaultBg), `active stop must be highlighted, got ${defaultBg}`).toBe(true);
+
+    // Choosing a different pickup moves the visible highlight to it (and only it).
+    const secondOption = fromList.locator('button').nth(1);
+    await secondOption.click();
+    await expect(secondOption).toHaveClass(/active/);
+    const secondBg = await secondOption.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(isVisibleHighlight(secondBg), `clicked stop must be highlighted, got ${secondBg}`).toBe(true);
+    await expect(fromList.locator('button.active')).toHaveCount(1);
+  });
+});

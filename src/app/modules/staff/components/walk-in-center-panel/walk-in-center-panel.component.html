@@ -16,7 +16,7 @@
         <!-- จาก (From / Pickup) -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
-          <div class="stop-list overflow-auto border rounded" style="max-height:150px">
+          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
@@ -26,7 +26,7 @@
                     [class.active]="opt.slug === pickupSlug"
                     (click)="pickupChange.emit(opt.slug)">
               <span>{{ opt.name }}</span>
-              <span *ngIf="opt.time" class="text-muted ms-1">{{ opt.time }}</span>
+              <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
             </button>
           </div>
         </div>
@@ -34,7 +34,7 @@
         <!-- ถึง (To / Drop-off) -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
-          <div class="stop-list overflow-auto border rounded" style="max-height:150px">
+          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
@@ -44,7 +44,7 @@
                     [class.active]="opt.slug === dropoffSlug"
                     (click)="dropoffChange.emit(opt.slug)">
               <span>{{ opt.name }}</span>
-              <span *ngIf="opt.time" class="text-muted ms-1">{{ opt.time }}</span>
+              <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
             </button>
           </div>
         </div>
