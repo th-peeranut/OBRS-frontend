@@ -789,4 +789,37 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     expect(dep.passengers[0]['passengerType']).toBe('ADULT');
     expect(dep.passengers[0]).not.toHaveProperty('gender');
   });
+
+  // ── Layout regression (issue #41): POS fits viewport, no full-page scroll ───
+  // The 3-column POS is viewport-bound: only the columns scroll, never the page.
+  // Regression for `.pos-layout { height: calc(100vh - 120px) }` undershooting the
+  // real chrome (~212px), which pushed the layout past 100vh and scrolled the page.
+
+  test('Layout: /staff/sell fits the viewport with no full-page vertical scroll at desktop width', async ({ page }) => {
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
+    );
+    await gotoSellPage(page);
+
+    // Select a trip so the full seat map renders — this is the tall content that
+    // used to overflow the page.
+    await page.locator('.trip-row').first().click();
+    await expect(page.locator('app-passenger-seat-bus')).toBeVisible({ timeout: 15_000 });
+
+    // The document must not scroll: all chrome + the 3-column layout fits the viewport.
+    const pageOverflow = await page.evaluate(() => {
+      const doc = document.documentElement;
+      return doc.scrollHeight - doc.clientHeight;
+    });
+    expect(pageOverflow, 'page must not overflow the viewport (issue #41)').toBeLessThanOrEqual(1);
+
+    // Control — the fix must PRESERVE independent per-column scrolling: the center
+    // column (seat map) still scrolls inside its own card, not via the page.
+    const centerBody = page.locator('.card-body:has(app-walk-in-center-panel)');
+    const centerScrollable = await centerBody.evaluate(
+      (el) => el.scrollHeight > el.clientHeight
+    );
+    expect(centerScrollable, 'center column should scroll internally, not the page').toBe(true);
+  });
 });

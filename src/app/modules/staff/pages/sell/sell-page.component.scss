@@ -1,7 +1,23 @@
-// POS layout: fixed height on larger screens so all three columns scroll independently
+// POS layout: viewport-bound on larger screens so all three columns scroll
+// independently and the page itself never scrolls.
+//
+// Bind the page to the viewport minus only the *outer* chrome that lives outside
+// this component: the sticky topbar (renders ~98px — its title block exceeds the
+// 80px min-height) plus .admin-content's vertical padding (24px + 32px). Measured
+// at 154px; reserve 156px for a small margin. The inner heading and the
+// container's own padding are absorbed by the flex column below, so spacing/heading
+// tweaks don't reopen the bug. The e2e test "fits the viewport" (issue #41) guards
+// this constant against future topbar/padding changes.
 @media (min-width: 992px) {
+  .container-fluid {
+    height: calc(100vh - 156px);
+    display: flex;
+    flex-direction: column;
+  }
+
   .pos-layout {
-    height: calc(100vh - 120px);
+    flex: 1 1 auto;
+    min-height: 0;
 
     > [class*='col-'] {
       height: 100%;
