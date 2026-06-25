@@ -30,6 +30,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected selectedTrip: WalkInTripDto | null = null;
   protected selectedRouteSlug: string | null = null;
   protected selectedSeats: string[] = [];
+  // passenger_type lookup slug chosen by staff in the checkout (male|female|monk|nun).
+  protected selectedPassengerType = 'male';
   protected isSelling = false;
   protected bookingId: number | null = null;
   protected bookingNumber: string | null = null;
@@ -72,6 +74,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
     // rendered directly by the seat-map component — no separate seat fetch needed.
   }
 
+  protected onPassengerTypeChanged(passengerType: string): void {
+    this.selectedPassengerType = passengerType;
+  }
+
   protected onSeatToggled(seat: string): void {
     const idx = this.selectedSeats.indexOf(seat);
     if (idx >= 0) {
@@ -102,12 +108,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
         phoneNumber: string;
         identityCardNumber?: string;
       } = {
-        // Walk-in passengers default to the 'male' passenger_type — the only
-        // gender-neutral choice available given the checkout has no gender field,
-        // and it mirrors the seat map's hard-coded MALE rendering. The backend
-        // resolves passenger_type by exact lookup slug (male|female|monk|nun);
-        // the previous 'ADULT' value matched no lookup and 404'd every sale.
-        passengerType: 'male',
+        // passenger_type chosen by staff in the checkout (male|female|monk|nun).
+        // The backend resolves it by exact lookup slug; the previous hardcoded
+        // 'ADULT' value matched no lookup and 404'd every sale.
+        passengerType: this.selectedPassengerType,
         seatNumber: seat,
         title: payload.contact.title,
         firstName: payload.contact.firstName,

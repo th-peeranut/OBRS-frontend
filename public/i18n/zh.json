@@ -913,7 +913,12 @@
       "TRIP_DETAIL_SOLD": "已售(已付)",
       "PICKUP_POINT": "上车点",
       "DROPOFF_POINT": "下车点",
-      "STOP_PLACEHOLDER": "选择站点"
+      "STOP_PLACEHOLDER": "选择站点",
+      "PASSENGER_TYPE": "乘客类型",
+      "PTYPE_MALE": "男性",
+      "PTYPE_FEMALE": "女性",
+      "PTYPE_MONK": "僧侣",
+      "PTYPE_NUN": "尼姑"
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",

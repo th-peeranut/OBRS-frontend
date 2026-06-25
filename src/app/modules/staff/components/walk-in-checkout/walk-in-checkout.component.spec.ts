@@ -268,6 +268,20 @@ describe('WalkInCheckoutComponent', () => {
     });
   });
 
+  describe('passenger type', () => {
+    it('defaults to male and emits the selected slug on change', () => {
+      const comp = makeComponent();
+      expect(comp['passengerType']).toBe('male');
+
+      let emitted: string | undefined;
+      comp.passengerTypeChange.subscribe((v) => { emitted = v; });
+      comp['passengerType'] = 'nun';
+      (comp as any).onPassengerTypeChange();
+
+      expect(emitted).toBe('nun');
+    });
+  });
+
   describe('lifecycle', () => {
     it('cleans up on destroy', () => {
       const comp = makeComponent();

@@ -30,7 +30,7 @@
       <!-- Van seat map -->
       <ng-container *ngIf="isVan">
         <app-passenger-seat-van
-          [gender]="'MALE'"
+          [gender]="seatGender"
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
           [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
@@ -41,7 +41,7 @@
       <!-- Bus seat map -->
       <ng-container *ngIf="!isVan">
         <app-passenger-seat-bus
-          [gender]="'MALE'"
+          [gender]="seatGender"
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
           (passengerSeatPositionOnChange)="seatToggled.emit($event)">

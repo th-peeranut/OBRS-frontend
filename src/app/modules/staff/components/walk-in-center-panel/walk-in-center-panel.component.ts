@@ -10,8 +10,16 @@ import dayjs from 'dayjs';
 export class WalkInCenterPanelComponent {
   @Input() selectedTrip: WalkInTripDto | null = null;
   @Input() selectedSeats: string[] = [];
+  /** passenger_type lookup slug (male|female|monk|nun) chosen in the checkout;
+   *  drives the seat-map icon for the selected seat. */
+  @Input() passengerGender = 'male';
 
   @Output() seatToggled = new EventEmitter<string>();
+
+  /** Seat components expect an upper-case gender token (MALE|FEMALE|MONK). */
+  protected get seatGender(): string {
+    return (this.passengerGender || 'male').toUpperCase();
+  }
 
   // Fixed seat universe for the BUS layout (B1..B21).
   private readonly busSeatLabels: string[] = Array.from(

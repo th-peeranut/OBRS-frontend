@@ -23,6 +23,7 @@
           <app-walk-in-center-panel
             [selectedTrip]="selectedTrip"
             [selectedSeats]="selectedSeats"
+            [passengerGender]="selectedPassengerType"
             (seatToggled)="onSeatToggled($event)">
           </app-walk-in-center-panel>
         </div>
@@ -38,6 +39,7 @@
             [routeSlug]="selectedRouteSlug"
             [selectedSeats]="selectedSeats"
             [isSelling]="isSelling"
+            (passengerTypeChange)="onPassengerTypeChanged($event)"
             (sell)="onSell($event)">
           </app-walk-in-checkout>
         </div>

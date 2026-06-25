@@ -278,6 +278,21 @@ describe('SellPageComponent', () => {
       expect(['male', 'female', 'monk', 'nun']).toContain(passenger.passengerType);
     });
 
+    it('stamps each passenger with the passenger type staff selected', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1', 'B2'];
+      (comp as any).onPassengerTypeChanged('monk');
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      for (const p of callArg.departureSchedule.passengers) {
+        expect(p.passengerType).toBe('monk');
+      }
+    });
+
     it('forwards the selected pickup/drop-off stops to the booking schedule', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
