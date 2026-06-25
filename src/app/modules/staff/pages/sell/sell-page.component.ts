@@ -18,6 +18,7 @@ import { invokeSetBookingApi } from '../../../../shared/stores/booking/booking.a
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 import { WalkInTripSelection } from '../../components/walk-in-trip-browser/walk-in-trip-browser.component';
+import { TripDetailsUpdatedEvent } from '../../components/walk-in-center-panel/walk-in-center-panel.component';
 
 /** Stop option enriched with a computed departure time string. */
 export interface StopOption extends SegmentStopRefDto {
@@ -122,6 +123,29 @@ export class SellPageComponent implements OnInit, OnDestroy {
 
   protected onDropoffChanged(slug: string): void {
     this.dropoffSlug = slug;
+  }
+
+  /**
+   * Handles an optimistic patch from WalkInCenterPanelComponent after a successful schedule update.
+   * Merges the patch into selectedTrip and the matching row in routeGroups.
+   */
+  protected onTripDetailsUpdated(event: TripDetailsUpdatedEvent): void {
+    if (this.selectedTrip && this.selectedTrip.scheduleId === event.scheduleId) {
+      this.selectedTrip = { ...this.selectedTrip, ...event.patch };
+    }
+    this.routeGroups = this.routeGroups.map((group) => ({
+      ...group,
+      trips: group.trips.map((trip) =>
+        trip.scheduleId === event.scheduleId ? { ...trip, ...event.patch } : trip
+      ),
+    }));
+  }
+
+  /**
+   * Called by WalkInCenterPanelComponent after a successful save to reload the trips list.
+   */
+  protected onRefreshTripsRequested(): void {
+    this.loadTrips(this.selectedDate);
   }
 
   /** Stops eligible as a pickup: every stop except the final destination. */

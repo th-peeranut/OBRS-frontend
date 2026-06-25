@@ -1,6 +1,16 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WalkInCenterPanelComponent } from './walk-in-center-panel.component';
 import { WalkInTripDto } from '../../../../services/staff/staff-api.service';
 import { StopOption } from '../../pages/sell/sell-page.component';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { StaffApiService } from '../../../../services/staff/staff-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { CommonModule } from '@angular/common';
+import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { of } from 'rxjs';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   return {
@@ -24,54 +34,92 @@ function makeStopOption(slug: string, name: string, time = ''): StopOption {
   return { slug, name, time };
 }
 
-function makeComponent(): WalkInCenterPanelComponent {
-  return new WalkInCenterPanelComponent();
-}
-
 describe('WalkInCenterPanelComponent', () => {
+  let component: WalkInCenterPanelComponent;
+  let fixture: ComponentFixture<WalkInCenterPanelComponent>;
+
+  const adminApiServiceSpy = jasmine.createSpyObj('AdminApiService', [
+    'getScheduleById',
+    'getVehicleTypes',
+    'getVehicles',
+    'getVehicleTypeById',
+    'updateSchedule',
+  ]);
+  adminApiServiceSpy.getScheduleById.and.returnValue(of({ data: null }));
+  adminApiServiceSpy.getVehicleTypes.and.returnValue(of({ data: [] }));
+  adminApiServiceSpy.getVehicles.and.returnValue(of({ data: [] }));
+  adminApiServiceSpy.getVehicleTypeById.and.returnValue(of({ data: { seatMaps: [] } }));
+  adminApiServiceSpy.updateSchedule.and.returnValue(of({ status: 200, message: 'OK' }));
+
+  const staffApiServiceSpy = jasmine.createSpyObj('StaffApiService', ['getDrivers']);
+  staffApiServiceSpy.getDrivers.and.returnValue(of({ data: [] }));
+
+  const alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error', 'warning']);
+  alertServiceSpy.success.and.returnValue(Promise.resolve(undefined));
+  alertServiceSpy.error.and.returnValue(Promise.resolve(undefined));
+  alertServiceSpy.warning.and.returnValue(Promise.resolve(undefined));
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [WalkInCenterPanelComponent],
+      imports: [
+        CommonModule,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+      ],
+      providers: [
+        { provide: AdminApiService, useValue: adminApiServiceSpy },
+        { provide: StaffApiService, useValue: staffApiServiceSpy },
+        { provide: AlertService, useValue: alertServiceSpy },
+        TranslateService,
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(WalkInCenterPanelComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
   it('should create', () => {
-    expect(makeComponent()).toBeTruthy();
+    expect(component).toBeTruthy();
   });
 
   describe('passengerTypeOptions', () => {
     it('defines 4 passenger type options (male, female, monk, nun)', () => {
-      const comp = makeComponent();
-      const values = (comp as any).passengerTypeOptions.map((o: { value: string }) => o.value);
+      const values = (component as unknown as { passengerTypeOptions: { value: string }[] })
+        .passengerTypeOptions.map((o) => o.value);
       expect(values).toEqual(['male', 'female', 'monk', 'nun']);
     });
 
     it('provides an SVG icon path for male, female and monk', () => {
-      const comp = makeComponent();
-      const opts: { value: string; icon: string }[] = (comp as any).passengerTypeOptions;
+      const opts = (component as unknown as { passengerTypeOptions: { value: string; icon: string }[] }).passengerTypeOptions;
       expect(opts.find((o) => o.value === 'male')?.icon).toContain('passenger-male.svg');
       expect(opts.find((o) => o.value === 'female')?.icon).toContain('passenger-female.svg');
       expect(opts.find((o) => o.value === 'monk')?.icon).toContain('passenger-monk.svg');
     });
 
     it('uses empty icon string for nun (Bootstrap Icon fallback)', () => {
-      const comp = makeComponent();
-      const opts: { value: string; icon: string }[] = (comp as any).passengerTypeOptions;
+      const opts = (component as unknown as { passengerTypeOptions: { value: string; icon: string }[] }).passengerTypeOptions;
       expect(opts.find((o) => o.value === 'nun')?.icon).toBe('');
     });
   });
 
   describe('onSelectPassengerType', () => {
     it('emits passengerTypeChange with the clicked value', () => {
-      const comp = makeComponent();
       let emitted: string | undefined;
-      comp.passengerTypeChange.subscribe((v) => { emitted = v; });
-
-      (comp as any).onSelectPassengerType('female');
+      component.passengerTypeChange.subscribe((v) => { emitted = v; });
+      (component as unknown as { onSelectPassengerType: (v: string) => void }).onSelectPassengerType('female');
       expect(emitted).toBe('female');
     });
 
     it('emits for each valid passenger type', () => {
-      const comp = makeComponent();
       const emitted: string[] = [];
-      comp.passengerTypeChange.subscribe((v) => emitted.push(v));
-
+      component.passengerTypeChange.subscribe((v) => emitted.push(v));
+      const fn = (component as unknown as { onSelectPassengerType: (v: string) => void }).onSelectPassengerType.bind(component);
       for (const v of ['male', 'female', 'monk', 'nun']) {
-        (comp as any).onSelectPassengerType(v);
+        fn(v);
       }
       expect(emitted).toEqual(['male', 'female', 'monk', 'nun']);
     });
@@ -79,46 +127,40 @@ describe('WalkInCenterPanelComponent', () => {
 
   describe('seatGender getter', () => {
     it('uppercases passengerGender for seat-map components', () => {
-      const comp = makeComponent();
-      comp.passengerGender = 'male';
-      expect((comp as any).seatGender).toBe('MALE');
+      component.passengerGender = 'male';
+      expect((component as unknown as { seatGender: string }).seatGender).toBe('MALE');
     });
 
     it('defaults to MALE when passengerGender is empty', () => {
-      const comp = makeComponent();
-      comp.passengerGender = '';
-      expect((comp as any).seatGender).toBe('MALE');
+      component.passengerGender = '';
+      expect((component as unknown as { seatGender: string }).seatGender).toBe('MALE');
     });
   });
 
   describe('seatGendersUpper getter', () => {
     it('returns null when seatPassengerTypes is empty', () => {
-      const comp = makeComponent();
-      comp.seatPassengerTypes = {};
-      expect((comp as any).seatGendersUpper).toBeNull();
+      component.seatPassengerTypes = {};
+      expect((component as unknown as { seatGendersUpper: Record<string, string> | null }).seatGendersUpper).toBeNull();
     });
 
     it('returns upper-cased map when seatPassengerTypes has entries', () => {
-      const comp = makeComponent();
-      comp.seatPassengerTypes = { B1: 'male', B3: 'female' };
-      const upper = (comp as any).seatGendersUpper;
+      component.seatPassengerTypes = { B1: 'male', B3: 'female' };
+      const upper = (component as unknown as { seatGendersUpper: Record<string, string> | null }).seatGendersUpper;
       expect(upper).not.toBeNull();
-      expect(upper['B1']).toBe('MALE');
-      expect(upper['B3']).toBe('FEMALE');
+      expect(upper!['B1']).toBe('MALE');
+      expect(upper!['B3']).toBe('FEMALE');
     });
   });
 
   describe('takenSeats getter', () => {
     it('returns empty array when no trip selected', () => {
-      const comp = makeComponent();
-      comp.selectedTrip = null;
-      expect((comp as any).takenSeats).toEqual([]);
+      component.selectedTrip = null;
+      expect((component as unknown as { takenSeats: string[] }).takenSeats).toEqual([]);
     });
 
     it('returns taken bus seats that are not in availableSeatNumbers', () => {
-      const comp = makeComponent();
-      comp.selectedTrip = makeTrip({ availableSeatNumbers: ['1', '2', '3'] });
-      const taken: string[] = (comp as any).takenSeats;
+      component.selectedTrip = makeTrip({ availableSeatNumbers: ['1', '2', '3'] });
+      const taken = (component as unknown as { takenSeats: string[] }).takenSeats;
       expect(taken).not.toContain('B1');
       expect(taken).not.toContain('B2');
       expect(taken).not.toContain('B3');
@@ -127,20 +169,43 @@ describe('WalkInCenterPanelComponent', () => {
   });
 
   describe('stop selection outputs', () => {
-    it('emits pickupChange when stop button is clicked', () => {
-      const comp = makeComponent();
+    it('emits pickupChange', () => {
       const emitted: string[] = [];
-      comp.pickupChange.subscribe((v) => emitted.push(v));
-      comp.pickupChange.emit('stop_a');
+      component.pickupChange.subscribe((v) => emitted.push(v));
+      component.pickupChange.emit('stop_a');
       expect(emitted).toEqual(['stop_a']);
     });
 
-    it('emits dropoffChange when stop button is clicked', () => {
-      const comp = makeComponent();
+    it('emits dropoffChange', () => {
       const emitted: string[] = [];
-      comp.dropoffChange.subscribe((v) => emitted.push(v));
-      comp.dropoffChange.emit('stop_c');
+      component.dropoffChange.subscribe((v) => emitted.push(v));
+      component.dropoffChange.emit('stop_c');
       expect(emitted).toEqual(['stop_c']);
+    });
+  });
+
+  describe('edit mode', () => {
+    it('isEditMode starts false', () => {
+      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
+    });
+
+    it('closeEditMode resets isEditMode to false', () => {
+      (component as unknown as { isEditMode: boolean }).isEditMode = true;
+      (component as unknown as { closeEditMode: () => void }).closeEditMode();
+      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
+    });
+
+    it('ngOnChanges closes edit mode when selectedTrip changes', () => {
+      (component as unknown as { isEditMode: boolean }).isEditMode = true;
+      component.ngOnChanges({
+        selectedTrip: {
+          currentValue: makeTrip({ scheduleId: 2 }),
+          previousValue: makeTrip({ scheduleId: 1 }),
+          firstChange: false,
+          isFirstChange: () => false,
+        },
+      });
+      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
     });
   });
 });

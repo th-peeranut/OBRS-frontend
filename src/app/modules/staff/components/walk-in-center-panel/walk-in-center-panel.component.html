@@ -101,34 +101,48 @@
 
     <!-- Tab 2: Trip Details -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TRIP_DETAILS' | translate">
-      <dl class="row mb-0 small">
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_PLATE' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.licensePlate || '&mdash;' }}</dd>
 
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_DRIVER' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.driverName || '&mdash;' }}</dd>
+      <!-- Read-only view -->
+      <ng-container *ngIf="!isEditMode">
+        <app-trip-details-view [trip]="selectedTrip"></app-trip-details-view>
+        <div class="mt-3">
+          <button
+            type="button"
+            class="btn btn-sm btn-outline-primary"
+            (click)="openEditMode()"
+          >
+            <i class="bi bi-pencil me-1"></i>
+            {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_BTN' | translate }}
+          </button>
+        </div>
+      </ng-container>
 
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_DEPARTURE' | translate }}</dt>
-        <dd class="col-sm-7">{{ formatDateTime(selectedTrip.departureDateTime) }}</dd>
+      <!-- Edit form -->
+      <ng-container *ngIf="isEditMode">
+        <!-- Loading bar while fetching form data -->
+        <div *ngIf="isEditLoading" class="mb-2">
+          <div class="progress" style="height: 3px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
+          </div>
+        </div>
 
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_ARRIVAL' | translate }}</dt>
-        <dd class="col-sm-7">{{ formatDateTime(selectedTrip.arrivalDateTime) }}</dd>
+        <app-trip-details-edit-form
+          [trip]="selectedTrip"
+          [routeName]="editFormRouteName"
+          [routeDate]="editFormRouteDate"
+          [isLoading]="isEditLoading"
+          [isSaving]="isSaving"
+          [vehicleTypes]="vehicleTypes"
+          [vehicles]="vehicles"
+          [drivers]="drivers"
+          [seatMapOptions]="seatMapOptions"
+          [capacityInlineError]="capacityInlineError"
+          (vehicleTypeChanged)="onVehicleTypeChanged($event)"
+          (save)="onSave($event)"
+          (cancel)="closeEditMode()">
+        </app-trip-details-edit-form>
+      </ng-container>
 
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_PRICE' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.pricePerSeat | currency:'THB':'symbol' }}</dd>
-
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_CAPACITY' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.capacity }}</dd>
-
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_AVAILABLE' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.availableCount }}</dd>
-
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_RESERVED' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.reservedUnpaidCount }}</dd>
-
-        <dt class="col-sm-5">{{ 'STAFF.SELL.TRIP_DETAIL_SOLD' | translate }}</dt>
-        <dd class="col-sm-7">{{ selectedTrip.soldPaidCount }}</dd>
-      </dl>
     </p-tabPanel>
 
     <!-- Tab 3: Boarding -->
