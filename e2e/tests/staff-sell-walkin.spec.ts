@@ -36,6 +36,32 @@ const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
 const WALK_IN_SCHEDULES_ENDPOINT = '**/api/private/schedules/walk-in**';
 const BOOKINGS_ENDPOINT           = '**/api/private/bookings';
 const PAYMENT_ENDPOINT            = '**/api/private/payments/walk-in';
+const SEGMENTS_ENDPOINT           = '**/api/private/segments/**';
+
+/**
+ * Stop pairs for the walk-in checkout pickup/drop-off + segment pricing.
+ * Single full-route pair per vehicle type → pickup/drop-off default to
+ * origin→destination. Bus full-route fare = 350 (matches the bus trip fixtures'
+ * totalAmount assertions); van = 200.
+ */
+const SEGMENTS_RESP = {
+  code: 200,
+  message: 'OK',
+  data: {
+    route: { slug: 'route', name: 'Route' },
+    stopPairs: [
+      { segmentId: 1, fromStop: { slug: 'origin', name: 'Origin' }, toStop: { slug: 'dest', name: 'Destination' }, vehicleType: { slug: 'bus', name: 'Bus' }, fare: '350.00', estimatedDurationMinutes: 300 },
+      { segmentId: 2, fromStop: { slug: 'origin', name: 'Origin' }, toStop: { slug: 'dest', name: 'Destination' }, vehicleType: { slug: 'van', name: 'Van' }, fare: '200.00', estimatedDurationMinutes: 300 },
+    ],
+  },
+};
+
+/** A route with no stop pairs — pickup/drop-off cannot resolve, Sell stays disabled. */
+const SEGMENTS_EMPTY_RESP = {
+  code: 200,
+  message: 'OK',
+  data: { route: { slug: 'route', name: 'Route' }, stopPairs: [] },
+};
 
 // ── Fixture responses ─────────────────────────────────────────────────────────
 
@@ -177,12 +203,13 @@ function injectFakeAuth(page: Page, roles: string[]): Promise<void> {
   }, roles);
 }
 
-/** Fill the checkout contact form with valid data. */
+/** Fill the checkout contact form with valid data (email is required for walk-in). */
 async function fillContactForm(page: Page): Promise<void> {
   await page.locator('select[formControlName="title"]').selectOption({ index: 1 });
   await page.locator('input[formControlName="firstName"]').fill('Test');
   await page.locator('input[formControlName="lastName"]').fill('Passenger');
   await page.locator('input[formControlName="phoneNumber"]').fill('0812345678');
+  await page.locator('input[formControlName="email"]').fill('walkin@example.com');
 }
 
 // ── Wait for the POS page to be ready ────────────────────────────────────────
@@ -229,6 +256,14 @@ test.describe('RA-3: Role boundaries — redirect behaviour', () => {
 
 test.describe('Walk-in POS single-screen (authenticated)', () => {
   test.use({ storageState: ADMIN_AUTH });
+
+  // Every authenticated test gets the route stop pairs by default (selecting a
+  // trip triggers a /segments fetch for pickup/drop-off + pricing). Tests that
+  // need a different shape register their own /segments route in the body, which
+  // takes precedence over this beforeEach handler.
+  test.beforeEach(async ({ page }) => {
+    await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: SEGMENTS_RESP }));
+  });
 
   // ── AC-12  Old wizard selectors MUST NOT exist ───────────────────────────
 
@@ -667,9 +702,15 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     }
   });
 
-  // ── WI-G  Null pricePerSeat → Sell stays disabled ────────────────────────
+  // ── WI-G  No resolvable segment fare → Sell stays disabled ────────────────
+  // Price now comes from the chosen pickup→drop-off segment, not the trip's
+  // full-route pricePerSeat. When the route exposes no stop pairs, pickup/
+  // drop-off cannot resolve, the total is 0, and Sell must stay disabled —
+  // guarding against a zero-amount sale (the spirit of the old null-price guard).
 
-  test('WI-G: null pricePerSeat trip shows in list but Sell button stays disabled', async ({ page }) => {
+  test('WI-G: route with no stop pairs → pickup/drop-off empty, Sell stays disabled', async ({ page }) => {
+    // Override the default segments mock with an empty stop-pair list.
+    await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: SEGMENTS_EMPTY_RESP }));
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
       route.fulfill({ json: NULL_PRICE_RESP })
     );
@@ -690,7 +731,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     // Enter cash
     await page.locator('input[type="number"]').fill('999');
 
-    // Sell must remain disabled because totalAmount = 0 (null price)
+    // Sell must remain disabled because no segment fare resolves (totalAmount = 0)
     await expect(page.locator('button.btn-success')).toBeDisabled({ timeout: 3_000 });
   });
 

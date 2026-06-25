@@ -91,7 +91,9 @@
       "STAFF_AREA": "Staff Area",
       "THEME_TOGGLE": "Toggle dark mode",
       "THEME_LIGHT": "Light mode",
-      "THEME_DARK": "Dark mode"
+      "THEME_DARK": "Dark mode",
+      "COLLAPSE_MENU": "Collapse menu",
+      "EXPAND_MENU": "Expand menu"
     },
     "COMMON": {
       "LOADING": "Loading data...",
@@ -775,7 +777,9 @@
       "ADMIN_DASHBOARD": "Admin Dashboard",
       "LANGUAGE_TH": "Switch to Thai",
       "LANGUAGE_EN": "Switch to English",
-      "LOGOUT_SUCCESS": "Signed out successfully"
+      "LOGOUT_SUCCESS": "Signed out successfully",
+      "COLLAPSE_MENU": "Collapse menu",
+      "EXPAND_MENU": "Expand menu"
     },
     "NAV": {
       "SELL": "Walk-in Sales",
@@ -906,7 +910,10 @@
       "TRIP_DETAIL_CAPACITY": "Capacity",
       "TRIP_DETAIL_AVAILABLE": "Available",
       "TRIP_DETAIL_RESERVED": "Reserved (Unpaid)",
-      "TRIP_DETAIL_SOLD": "Sold (Paid)"
+      "TRIP_DETAIL_SOLD": "Sold (Paid)",
+      "PICKUP_POINT": "Pickup Point",
+      "DROPOFF_POINT": "Drop-off Point",
+      "STOP_PLACEHOLDER": "Select stop"
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",

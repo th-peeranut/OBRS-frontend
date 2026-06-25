@@ -91,7 +91,9 @@
       "STAFF_AREA": "员工区域",
       "THEME_TOGGLE": "切换深色模式",
       "THEME_LIGHT": "浅色模式",
-      "THEME_DARK": "深色模式"
+      "THEME_DARK": "深色模式",
+      "COLLAPSE_MENU": "收起菜单",
+      "EXPAND_MENU": "展开菜单"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
@@ -775,7 +777,9 @@
       "ADMIN_DASHBOARD": "管理后台",
       "LANGUAGE_TH": "切换到泰文",
       "LANGUAGE_EN": "切换到英文",
-      "LOGOUT_SUCCESS": "退出成功"
+      "LOGOUT_SUCCESS": "退出成功",
+      "COLLAPSE_MENU": "收起菜单",
+      "EXPAND_MENU": "展开菜单"
     },
     "NAV": {
       "SELL": "现场售票",
@@ -906,7 +910,10 @@
       "TRIP_DETAIL_CAPACITY": "座位容量",
       "TRIP_DETAIL_AVAILABLE": "可用",
       "TRIP_DETAIL_RESERVED": "已预留(待付)",
-      "TRIP_DETAIL_SOLD": "已售(已付)"
+      "TRIP_DETAIL_SOLD": "已售(已付)",
+      "PICKUP_POINT": "上车点",
+      "DROPOFF_POINT": "下车点",
+      "STOP_PLACEHOLDER": "选择站点"
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",

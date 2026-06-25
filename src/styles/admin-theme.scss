@@ -361,8 +361,22 @@
   display: none;
 }
 
+/* Desktop-only sidebar collapse toggle (hidden on mobile, where the hamburger
+   drawer is used instead — see the max-width: 1100px block). */
+.admin-collapse-toggle {
+  display: inline-flex;
+}
+
 .admin-sidebar-backdrop {
   display: none;
+}
+
+/* ── Collapsed sidebar (desktop icon rail) ──
+   Only meaningful at desktop widths; below 1100px the sidebar is an off-canvas
+   drawer, so these rules are scoped to min-width: 1101px further down. */
+.admin-sidebar {
+  overflow-x: hidden;
+  transition: width 0.2s ease, padding 0.2s ease;
 }
 
 .admin-avatar {
@@ -1210,6 +1224,45 @@ textarea.admin-field {
 
 .text-right {
   text-align: right;
+}
+
+/* ── Collapsed sidebar rail — desktop only ── */
+@media (min-width: 1101px) {
+  .admin-shell.is-sidebar-collapsed .admin-sidebar {
+    width: 76px;
+    padding: 24px 12px;
+  }
+
+  /* Hide every text label, keeping just the icons. The brand logo is replaced
+     by a compact mark height so it fits the rail. */
+  .admin-shell.is-sidebar-collapsed .admin-nav-link > span:not(.material-symbols-outlined),
+  .admin-shell.is-sidebar-collapsed .admin-nav-btn > span:not(.material-symbols-outlined) {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-collapsed .admin-nav-link,
+  .admin-shell.is-sidebar-collapsed .admin-nav-btn {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .admin-shell.is-sidebar-collapsed .admin-brand {
+    padding: 0;
+    display: flex;
+    justify-content: center;
+  }
+
+  .admin-shell.is-sidebar-collapsed .admin-brand-logo {
+    height: 30px;
+  }
+}
+
+@media (max-width: 1100px) {
+  /* The collapse rail is a desktop affordance; on mobile the drawer is used. */
+  .admin-collapse-toggle {
+    display: none;
+  }
 }
 
 @media (max-width: 1290px) {

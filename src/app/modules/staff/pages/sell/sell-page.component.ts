@@ -14,6 +14,7 @@ import {
 import { invokeSetBookingApi } from '../../../../shared/stores/booking/booking.action';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
+import { WalkInTripSelection } from '../../components/walk-in-trip-browser/walk-in-trip-browser.component';
 import dayjs from 'dayjs';
 
 @Component({
@@ -27,6 +28,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected isLoadingTrips = false;
   protected routeGroups: WalkInRouteGroupDto[] = [];
   protected selectedTrip: WalkInTripDto | null = null;
+  protected selectedRouteSlug: string | null = null;
   protected selectedSeats: string[] = [];
   protected isSelling = false;
   protected bookingId: number | null = null;
@@ -55,13 +57,15 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected onDateChanged(date: Date): void {
     this.selectedDate = date;
     this.selectedTrip = null;
+    this.selectedRouteSlug = null;
     this.selectedSeats = [];
     this.idempotencyKey = null;
     this.loadTrips(date);
   }
 
-  protected onTripSelected(trip: WalkInTripDto): void {
-    this.selectedTrip = trip;
+  protected onTripSelected(selection: WalkInTripSelection): void {
+    this.selectedTrip = selection.trip;
+    this.selectedRouteSlug = selection.routeSlug;
     this.selectedSeats = [];
     this.idempotencyKey = null;
     // Seat availability comes from the walk-in trip DTO (availableSeatNumbers),
@@ -111,8 +115,11 @@ export class SellPageComponent implements OnInit, OnDestroy {
       return p;
     });
 
-    const totalAmount =
-      (parseFloat(trip.pricePerSeat || '0') || 0) * this.selectedSeats.length;
+    // Price comes from the chosen pickup→drop-off segment fare (resolved in the
+    // checkout from /segments), not the trip's full-route price — otherwise the
+    // backend's per-segment amount check (booking.error.amount.mismatch) rejects
+    // any non-full-route selection.
+    const totalAmount = payload.pricePerSeat * this.selectedSeats.length;
 
     const bookingPayload: {
       bookingType: 'one_way';
@@ -120,6 +127,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingChannel: 'walk_in';
       departureSchedule: {
         scheduleId: number;
+        fromStop: string;
+        toStop: string;
         departureDateTime: string;
         arrivalDateTime: string;
         passengers: typeof passengers;
@@ -139,6 +148,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingChannel: 'walk_in',
       departureSchedule: {
         scheduleId: trip.scheduleId,
+        fromStop: payload.fromStop,
+        toStop: payload.toStop,
         departureDateTime: trip.departureDateTime,
         arrivalDateTime: trip.arrivalDateTime,
         passengers,

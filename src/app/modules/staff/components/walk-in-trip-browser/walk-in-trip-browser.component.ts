@@ -2,6 +2,13 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { WalkInRouteGroupDto, WalkInTripDto } from '../../../../services/staff/staff-api.service';
 import dayjs from 'dayjs';
 
+/** A selected trip carries its owning route slug so the sell page can fetch the
+ *  route's stop pairs (pickup/drop-off + segment fares). */
+export interface WalkInTripSelection {
+  trip: WalkInTripDto;
+  routeSlug: string;
+}
+
 @Component({
   selector: 'app-walk-in-trip-browser',
   templateUrl: './walk-in-trip-browser.component.html',
@@ -13,7 +20,7 @@ export class WalkInTripBrowserComponent {
   @Input() selectedTripId: number | null = null;
 
   @Output() dateChanged = new EventEmitter<Date>();
-  @Output() tripSelected = new EventEmitter<WalkInTripDto>();
+  @Output() tripSelected = new EventEmitter<WalkInTripSelection>();
 
   protected selectedDate: Date = new Date();
   protected readonly today: Date = new Date();
@@ -24,8 +31,8 @@ export class WalkInTripBrowserComponent {
     }
   }
 
-  protected selectTrip(trip: WalkInTripDto): void {
-    this.tripSelected.emit(trip);
+  protected selectTrip(trip: WalkInTripDto, routeSlug: string): void {
+    this.tripSelected.emit({ trip, routeSlug });
   }
 
   protected formatTime(dateTime: string): string {

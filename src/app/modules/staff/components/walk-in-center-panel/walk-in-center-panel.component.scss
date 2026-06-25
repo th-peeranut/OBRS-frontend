@@ -5,3 +5,14 @@
 :host ::ng-deep .center-tabview .p-tabview-nav {
   flex-wrap: wrap;
 }
+
+// Compact seat map for the POS panel: a smaller seat size + tighter padding so
+// the whole van/bus map fits the center card without scrolling. The shared seat
+// components honour --seat-size (default 80px elsewhere).
+:host ::ng-deep app-passenger-seat-van .card-container,
+:host ::ng-deep app-passenger-seat-bus .card-container {
+  --seat-size: 52px;
+  width: 100%;
+  padding: 14px;
+  row-gap: 12px;
+}

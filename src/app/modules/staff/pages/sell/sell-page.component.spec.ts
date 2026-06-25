@@ -68,7 +68,11 @@ const validPayload: WalkInCheckoutPayload = {
     firstName: 'Somchai',
     lastName: 'Rakdee',
     phoneNumber: '0812345678',
+    email: 'somchai@example.com',
   },
+  fromStop: 'stop_a',
+  toStop: 'stop_b',
+  pricePerSeat: 300,
   cashReceived: 300,
 };
 
@@ -144,8 +148,9 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api);
       comp.ngOnInit();
       const trip = makeTrip({ scheduleId: 42 });
-      (comp as any).onTripSelected(trip);
+      (comp as any).onTripSelected({ trip, routeSlug: 'bkk-cm' });
       expect((comp as any).selectedTrip).toEqual(trip);
+      expect((comp as any).selectedRouteSlug).toBe('bkk-cm');
       // Seat availability comes from the trip DTO; no getSeatMap call should exist.
       expect((api as Record<string, unknown>)['getSeatMap']).toBeUndefined();
     });
@@ -153,7 +158,7 @@ describe('SellPageComponent', () => {
     it('clears previously selected seats when new trip selected', () => {
       const comp = makeComponent();
       (comp as any).selectedSeats = ['B1', 'B2'];
-      (comp as any).onTripSelected(makeTrip());
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).selectedSeats).toEqual([]);
     });
   });
@@ -244,16 +249,31 @@ describe('SellPageComponent', () => {
       expect(callArg.departureSchedule.passengers.length).toBe(3);
     });
 
-    it('includes a positive totalAmount (price * seat count) in the payload', () => {
+    it('uses the segment fare from the payload for totalAmount (fare * seat count)', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
       (comp as any).selectedTrip = makeTrip({ pricePerSeat: '300' });
       (comp as any).selectedSeats = ['B1', 'B2'];
 
+      // payload.pricePerSeat (170) is the chosen segment's fare, NOT the trip's
+      // full-route pricePerSeat (300) — proves the segment fare drives the total.
+      (comp as any).onSell({ ...validPayload, pricePerSeat: 170 });
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(340);
+    });
+
+    it('forwards the selected pickup/drop-off stops to the booking schedule', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+
       (comp as any).onSell(validPayload);
 
       const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
-      expect(callArg.totalAmount).toBe(600);
+      expect(callArg.departureSchedule.fromStop).toBe('stop_a');
+      expect(callArg.departureSchedule.toStop).toBe('stop_b');
     });
 
     it('calls payWalkIn after successful booking creation', () => {

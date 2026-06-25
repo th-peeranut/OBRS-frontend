@@ -25,7 +25,11 @@ export class StaffLayoutComponent implements OnInit {
 
   protected currentLanguage = 'th';
   protected isSidebarOpen = false;
+  protected isSidebarCollapsed = false;
   protected isProfileMenuOpen = false;
+
+  // Desktop sidebar collapse state, shared across admin + staff areas.
+  private static readonly SIDEBAR_COLLAPSED_KEY = 'obrs-sidebar-collapsed';
 
   // Whether to surface the Admin Dashboard shortcut in the profile menu.
   // Admins satisfy the /staff route guard via the backend role hierarchy
@@ -87,6 +91,7 @@ export class StaffLayoutComponent implements OnInit {
   ngOnInit(): void {
     this.navItems = this.buildNavItems();
     this.isAdmin = this.authService.hasAnyRole(['admin']);
+    this.isSidebarCollapsed = this.readCollapsedPreference();
     void this.setupLanguage();
 
     this.router.events
@@ -116,6 +121,26 @@ export class StaffLayoutComponent implements OnInit {
 
   protected closeSidebar(): void {
     this.isSidebarOpen = false;
+  }
+
+  protected toggleSidebarCollapse(): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    try {
+      localStorage.setItem(
+        StaffLayoutComponent.SIDEBAR_COLLAPSED_KEY,
+        this.isSidebarCollapsed ? '1' : '0'
+      );
+    } catch {
+      // localStorage unavailable (private mode) — collapse still works in-session.
+    }
+  }
+
+  private readCollapsedPreference(): boolean {
+    try {
+      return localStorage.getItem(StaffLayoutComponent.SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
   }
 
   protected toggleProfileMenu(): void {

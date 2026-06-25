@@ -1,4 +1,4 @@
-<div class="admin-shell theme-admin" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen">
+<div class="admin-shell theme-admin" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen" [class.is-sidebar-collapsed]="isSidebarCollapsed">
   <div
     class="admin-sidebar-backdrop"
     *ngIf="isSidebarOpen"
@@ -58,6 +58,17 @@
         [attr.aria-label]="(isSidebarOpen ? 'ADMIN.LAYOUT.CLOSE_MENU' : 'ADMIN.LAYOUT.OPEN_MENU') | translate"
       >
         <span class="material-symbols-outlined">{{ isSidebarOpen ? 'close' : 'menu' }}</span>
+      </button>
+
+      <!-- Desktop-only: collapse the sidebar to an icon rail to reclaim width. -->
+      <button
+        type="button"
+        class="admin-icon-btn admin-collapse-toggle"
+        (click)="toggleSidebarCollapse()"
+        [attr.aria-pressed]="isSidebarCollapsed"
+        [attr.aria-label]="(isSidebarCollapsed ? 'ADMIN.LAYOUT.EXPAND_MENU' : 'ADMIN.LAYOUT.COLLAPSE_MENU') | translate"
+      >
+        <span class="material-symbols-outlined">{{ isSidebarCollapsed ? 'menu_open' : 'menu' }}</span>
       </button>
 
       <div class="admin-title-block">

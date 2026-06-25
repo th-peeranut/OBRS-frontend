@@ -55,7 +55,11 @@ export class AdminLayoutComponent implements OnInit {
   protected currentLanguage = 'th';
   protected isProfileMenuOpen = false;
   protected isSidebarOpen = false;
+  protected isSidebarCollapsed = false;
   protected isDarkMode = false;
+
+  // Desktop sidebar collapse state, shared across admin + staff areas.
+  private static readonly SIDEBAR_COLLAPSED_KEY = 'obrs-sidebar-collapsed';
 
   constructor(
     private readonly router: Router,
@@ -90,6 +94,7 @@ export class AdminLayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.isDarkMode = this.themeService.getStoredMode() === 'dark';
+    this.isSidebarCollapsed = this.readCollapsedPreference();
     this.setupLanguage();
 
     this.router.events
@@ -120,6 +125,26 @@ export class AdminLayoutComponent implements OnInit {
 
   protected closeSidebar(): void {
     this.isSidebarOpen = false;
+  }
+
+  protected toggleSidebarCollapse(): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
+    try {
+      localStorage.setItem(
+        AdminLayoutComponent.SIDEBAR_COLLAPSED_KEY,
+        this.isSidebarCollapsed ? '1' : '0'
+      );
+    } catch {
+      // localStorage unavailable (private mode) — collapse still works in-session.
+    }
+  }
+
+  private readCollapsedPreference(): boolean {
+    try {
+      return localStorage.getItem(AdminLayoutComponent.SIDEBAR_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
   }
 
   protected toggleTheme(): void {

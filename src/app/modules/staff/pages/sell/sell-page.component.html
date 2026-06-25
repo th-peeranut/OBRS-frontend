@@ -1,6 +1,6 @@
-<div class="container-fluid py-3">
+<div class="container-fluid py-2">
   <!-- Page title is shown by the staff layout topbar; no in-page heading here. -->
-  <div class="row g-3 pos-layout">
+  <div class="row g-2 pos-layout">
     <!-- LEFT: Trip Browser -->
     <div class="col-xl-3 col-lg-3 col-md-12">
       <div class="card h-100 border-0 shadow-sm">
@@ -19,7 +19,7 @@
     <!-- CENTER: Seat map / trip details / boarding -->
     <div class="col-xl-5 col-lg-5 col-md-12">
       <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body p-3">
+        <div class="card-body p-2">
           <app-walk-in-center-panel
             [selectedTrip]="selectedTrip"
             [selectedSeats]="selectedSeats"
@@ -32,9 +32,10 @@
     <!-- RIGHT: Checkout -->
     <div class="col-xl-4 col-lg-4 col-md-12">
       <div class="card h-100 border-0 shadow-sm">
-        <div class="card-body p-3">
+        <div class="card-body p-2">
           <app-walk-in-checkout
             [selectedTrip]="selectedTrip"
+            [routeSlug]="selectedRouteSlug"
             [selectedSeats]="selectedSeats"
             [isSelling]="isSelling"
             (sell)="onSell($event)">

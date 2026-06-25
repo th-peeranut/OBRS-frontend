@@ -91,7 +91,9 @@
       "STAFF_AREA": "พื้นที่พนักงาน",
       "THEME_TOGGLE": "สลับโหมดมืด",
       "THEME_LIGHT": "โหมดสว่าง",
-      "THEME_DARK": "โหมดมืด"
+      "THEME_DARK": "โหมดมืด",
+      "COLLAPSE_MENU": "ย่อเมนู",
+      "EXPAND_MENU": "ขยายเมนู"
     },
     "COMMON": {
       "LOADING": "กำลังโหลดข้อมูล...",
@@ -776,7 +778,9 @@
       "ADMIN_DASHBOARD": "แดชบอร์ดผู้ดูแลระบบ",
       "LANGUAGE_TH": "เปลี่ยนเป็นภาษาไทย",
       "LANGUAGE_EN": "เปลี่ยนเป็นภาษาอังกฤษ",
-      "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ"
+      "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ",
+      "COLLAPSE_MENU": "ย่อเมนู",
+      "EXPAND_MENU": "ขยายเมนู"
     },
     "NAV": {
       "SELL": "ขายตั๋ว Walk-in",
@@ -907,7 +911,10 @@
       "TRIP_DETAIL_CAPACITY": "ความจุ",
       "TRIP_DETAIL_AVAILABLE": "ว่าง",
       "TRIP_DETAIL_RESERVED": "จองแล้ว (ยังไม่ชำระ)",
-      "TRIP_DETAIL_SOLD": "ขายแล้ว (ชำระแล้ว)"
+      "TRIP_DETAIL_SOLD": "ขายแล้ว (ชำระแล้ว)",
+      "PICKUP_POINT": "จุดรับ",
+      "DROPOFF_POINT": "จุดส่ง",
+      "STOP_PLACEHOLDER": "เลือกจุดจอด"
     },
     "BOARDING_ENTRY": {
       "TITLE": "เลือกรอบเดินทาง",

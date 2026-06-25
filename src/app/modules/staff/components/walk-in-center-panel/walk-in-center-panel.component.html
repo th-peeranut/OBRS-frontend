@@ -12,22 +12,15 @@
     <!-- Tab 1: Ticket Sales (seat map) -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
       <!-- Trip headline -->
-      <div class="mb-3">
+      <div class="mb-2">
         <div class="fw-semibold">
           {{ selectedTrip.departureDateTime | date:'d MMM y' }}
           &mdash; {{ formatTime(selectedTrip.departureDateTime) }} &rarr; {{ formatTime(selectedTrip.arrivalDateTime) }}
         </div>
       </div>
 
-      <!-- Passenger type icons (decorative) -->
-      <div class="d-flex gap-3 mb-3" aria-hidden="true">
-        <i class="bi bi-person fs-4 text-muted" title="Adult"></i>
-        <i class="bi bi-person-dress fs-4 text-muted" title="Female"></i>
-        <i class="bi bi-person-raised-hand fs-4 text-muted" title="Other"></i>
-      </div>
-
       <!-- Selected seat chips -->
-      <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-3">
+      <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
         <span *ngFor="let seat of selectedSeats"
               class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
           {{ seat }}

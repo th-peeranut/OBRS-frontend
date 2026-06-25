@@ -81,6 +81,25 @@ export interface WalkInRouteGroupDto {
   trips: WalkInTripDto[];
 }
 
+export interface SegmentStopRefDto {
+  slug: string;
+  name: string;
+}
+
+export interface SegmentStopPairDto {
+  segmentId: number;
+  fromStop: SegmentStopRefDto;
+  toStop: SegmentStopRefDto;
+  vehicleType: SegmentStopRefDto;
+  fare: string;
+  estimatedDurationMinutes: number;
+}
+
+export interface RouteSegmentsDto {
+  route: SegmentStopRefDto;
+  stopPairs: SegmentStopPairDto[];
+}
+
 export interface WalkInBookingReqDto {
   bookingType: 'one_way' | 'return';
   totalAmount: number;
@@ -181,6 +200,15 @@ export class StaffApiService {
   getWalkInSchedules(date: string): Observable<ResponseAPI<WalkInRouteGroupDto[]>> {
     return this.http.get<ResponseAPI<WalkInRouteGroupDto[]>>(
       `${environment.apiUrl}/api/private/schedules/walk-in?date=${date}`,
+      { context: this.skipContext }
+    );
+  }
+
+  // Stop pairs (with per-vehicle-type fares) for a route — drives the walk-in
+  // pickup/drop-off selection and segment pricing. Salesperson-authorized.
+  getRouteSegments(routeSlug: string): Observable<ResponseAPI<RouteSegmentsDto>> {
+    return this.http.get<ResponseAPI<RouteSegmentsDto>>(
+      `${environment.apiUrl}/api/private/segments/${encodeURIComponent(routeSlug)}`,
       { context: this.skipContext }
     );
   }

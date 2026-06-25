@@ -27,8 +27,10 @@
 
   border: 1px solid #4bc2f7;
 
-  width: 80px;
-  height: 80px;
+  // Honour --seat-size (default 80px) so hosts can render a more compact map —
+  // e.g. the walk-in POS panel, which fits the seat map without scrolling.
+  width: var(--seat-size, 80px);
+  height: var(--seat-size, 80px);
   padding: 5px;
   cursor: pointer;
 
@@ -38,8 +40,8 @@
   font-weight: bold;
 
   img {
-    width: 40px;
-    height: 40px;
+    width: calc(var(--seat-size, 80px) * 0.5);
+    height: calc(var(--seat-size, 80px) * 0.5);
     object-fit: contain;
 
     position: absolute;
