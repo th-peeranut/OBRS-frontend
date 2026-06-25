@@ -49,6 +49,7 @@
   align-items: center;
   column-gap: 10px;
   height: 80px;
+  margin-left: auto; // push language switcher + auth to the far right (desktop only)
 }
 
 .btn-signin {
