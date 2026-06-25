@@ -8,6 +8,7 @@ import {
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { forkJoin, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -327,9 +328,11 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
         error: (err: unknown) => {
           this.isSaving = false;
           const msg = extractApiErrorMessage(err);
+          const errorCode: string =
+            (err as HttpErrorResponse)?.error?.errorCode ?? '';
 
-          // Map backend capacity error keys to inline messages.
-          if (msg.includes('schedule.error.capacity.exceeds-type-max')) {
+          // Map backend capacity errorCode values to inline messages.
+          if (errorCode === 'SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX') {
             const max = this.getEffectiveTotalSeats(formValue.vehicleType);
             this.capacityInlineError = this.translate.instant(
               'STAFF.SELL.TRIP_DETAIL_ERR_CAPACITY_MAX',
@@ -337,7 +340,7 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
             );
             return;
           }
-          if (msg.includes('schedule.error.capacity.below-occupied')) {
+          if (errorCode === 'SCHEDULE_ERROR_CAPACITY_BELOW_OCCUPIED') {
             const occupied = trip.soldPaidCount + trip.reservedUnpaidCount;
             this.capacityInlineError = this.translate.instant(
               'STAFF.SELL.TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED',
