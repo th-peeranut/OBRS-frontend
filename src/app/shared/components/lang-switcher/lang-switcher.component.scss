@@ -1,0 +1,95 @@
+// The Material Symbols font-family is applied globally via styles.scss on
+// `.material-symbols-outlined`, so only sizing is set here.
+
+:host {
+  display: inline-flex;
+}
+
+.navbar-lang-dropdown {
+  position: relative;
+}
+
+.navbar-lang-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgba(189, 200, 207, 0.6);
+  border-radius: 10px;
+  background: #fff;
+  color: #506068;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(77, 190, 239, 0.08);
+    color: #005f7e;
+  }
+}
+
+.navbar-lang-globe,
+.navbar-lang-chevron,
+.navbar-lang-check {
+  font-size: 16px;
+}
+
+.navbar-lang-check {
+  visibility: hidden;
+  &.visible {
+    visibility: visible;
+  }
+}
+
+.navbar-lang-label {
+  min-width: 0;
+}
+
+.navbar-lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 140px;
+  border: 1px solid rgba(189, 200, 207, 0.7);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(25, 28, 30, 0.12);
+  padding: 6px;
+  z-index: 50;
+
+  // Mobile-panel placement: anchor to the left edge and cap width to viewport.
+  &.align-left {
+    right: auto;
+    left: 0;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+.navbar-lang-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  color: #3f4f57;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+
+  &:hover {
+    background: rgba(77, 190, 239, 0.12);
+    color: #005f7e;
+  }
+  &.active {
+    background: rgba(77, 190, 239, 0.16);
+    color: #0a5675;
+  }
+}

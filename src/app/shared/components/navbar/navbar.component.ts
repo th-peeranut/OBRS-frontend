@@ -12,14 +12,6 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
-import { LanguageService } from '../../services/language.service';
-
-interface LanguageOption {
-  code: string;
-  endonym: string;
-  /** i18n key for the item's aria-label, e.g. HOME.NAVBAR.LANGUAGE_EN */
-  ariaKey: string;
-}
 
 @Component({
   selector: 'app-navbar',
@@ -28,19 +20,9 @@ interface LanguageOption {
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   isProfileDropdownOpen: boolean = false;
-  isLangDropdownOpen: boolean = false;
   isMobileMenuOpen: boolean = false;
 
   isShowPassword: boolean = false;
-
-  currentLanguage: string = 'th';
-
-  /** Static language list — endonyms are intentionally locale-invariant. */
-  readonly languages: LanguageOption[] = [
-    { code: 'en', endonym: 'English', ariaKey: 'HOME.NAVBAR.LANGUAGE_EN' },
-    { code: 'th', endonym: 'ไทย', ariaKey: 'HOME.NAVBAR.LANGUAGE_TH' },
-    { code: 'zh', endonym: '中文', ariaKey: 'HOME.NAVBAR.LANGUAGE_ZH' },
-  ];
 
   @ViewChild('profileDropdown') profileDropdown!: ElementRef;
   @ViewChild('hamburgerBtn') hamburgerBtn!: ElementRef;
@@ -52,7 +34,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   authSubscription$: Subscription;
   private unlistenProfileDropdown?: () => void;
-  private unlistenLangDropdown?: () => void;
   private unlistenMobileMenu?: () => void;
 
   constructor(
@@ -61,12 +42,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     private elementRef: ElementRef,
     private authService: AuthService,
     private router: Router,
-    private alertService: AlertService,
-    private languageService: LanguageService
-  ) {
-    const currentLanguage = this.translate.currentLang;
-    this.switchLanguage(currentLanguage ? currentLanguage : 'th');
-  }
+    private alertService: AlertService
+  ) {}
 
   ngOnInit(): void {
     this.authSubscription$ = this.authService.authStatus$.subscribe(
@@ -82,7 +59,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.authSubscription$) this.authSubscription$.unsubscribe();
     this.unlistenProfileDropdown?.();
-    this.unlistenLangDropdown?.();
     this.unlistenMobileMenu?.();
   }
 
@@ -100,60 +76,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
 
     return (segments[0][0] + segments[1][0]).toUpperCase();
-  }
-
-  get currentEndonym(): string {
-    return this.languages.find((l) => l.code === this.currentLanguage)?.endonym ?? this.currentLanguage;
-  }
-
-  switchLanguage(lang: string) {
-    this.currentLanguage = lang;
-    void this.languageService.switch(lang);
-  }
-
-  selectLanguage(lang: string) {
-    this.switchLanguage(lang);
-    this.closeLangDropdown();
-    // Language selection does NOT close the mobile menu — the sub-dropdown
-    // closes on its own; the user stays in the panel to see the updated label.
-  }
-
-  // ── Language dropdown ───────────────────────────────────────────────────────
-
-  toggleLangDropdown() {
-    this.isLangDropdownOpen = !this.isLangDropdownOpen;
-
-    if (this.isLangDropdownOpen) {
-      this.unlistenLangDropdown?.();
-      this.unlistenLangDropdown = this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleLangDropdownOutsideClick(event)
-      );
-    } else {
-      this.closeLangDropdown();
-    }
-  }
-
-  closeLangDropdown() {
-    this.isLangDropdownOpen = false;
-    this.unlistenLangDropdown?.();
-    this.unlistenLangDropdown = undefined;
-  }
-
-  handleLangDropdownOutsideClick(event: Event) {
-    const targetElement = event.target as HTMLElement;
-    // The language switcher template is rendered into BOTH the desktop bar and
-    // the mobile panel, so a single @ViewChild ref cannot identify "the" trigger
-    // (it would resolve to the first/hidden instance). Match by class instead so
-    // a click on EITHER switcher instance counts as inside the trigger.
-    const clickedTriggerButton = !!targetElement.closest('.navbar-lang-dropdown');
-
-    if (clickedTriggerButton) {
-      this.isLangDropdownOpen = true;
-    } else {
-      this.isLangDropdownOpen = false;
-      this.unlistenLangDropdown?.();
-      this.unlistenLangDropdown = undefined;
-    }
   }
 
   // ── Mobile hamburger menu ───────────────────────────────────────────────────
@@ -175,8 +97,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.isMobileMenuOpen = false;
     this.unlistenMobileMenu?.();
     this.unlistenMobileMenu = undefined;
-    // Also close the language sub-dropdown when the panel closes.
-    this.closeLangDropdown();
+    // The mobile language switcher lives inside the *ngIf panel, so it is
+    // destroyed (and cleans up its own listener) when the panel closes.
   }
 
   handleMobileMenuOutsideClick(event: Event) {
@@ -212,12 +134,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
       this.unlistenProfileDropdown?.();
       this.unlistenProfileDropdown = undefined;
     }
-    if (this.isLangDropdownOpen) {
-      this.closeLangDropdown();
-    }
     if (this.isMobileMenuOpen) {
       this.closeMobileMenu();
     }
+    // The language switcher closes itself on Escape (own @HostListener).
   }
 
   /** @deprecated Use closeDropdownsOnEscape — kept for test backward-compat. */

@@ -8,9 +8,15 @@ import { TranslateModule } from '@ngx-translate/core';
 import { NavbarComponent } from './components/navbar/navbar.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { StepperComponent } from './components/stepper/stepper.component';
+import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.component';
 
 @NgModule({
-  declarations: [FooterComponent, NavbarComponent, StepperComponent],
+  declarations: [
+    FooterComponent,
+    NavbarComponent,
+    StepperComponent,
+    LangSwitcherComponent,
+  ],
   imports: [
     CommonModule,
     RouterModule,
@@ -25,11 +31,12 @@ import { StepperComponent } from './components/stepper/stepper.component';
     FormsModule,
     TranslateModule,
     ReactiveFormsModule,
-    
+
     // Components
     FooterComponent,
     NavbarComponent,
-    StepperComponent
+    StepperComponent,
+    LangSwitcherComponent,
   ],
 })
 export class SharedModule {}

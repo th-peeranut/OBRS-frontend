@@ -1,0 +1,40 @@
+<div class="navbar-lang-dropdown">
+  <button
+    type="button"
+    class="navbar-lang-trigger"
+    (click)="toggleLangDropdown()"
+    [attr.aria-expanded]="isLangDropdownOpen"
+    aria-haspopup="menu"
+    [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
+  >
+    <span class="material-symbols-outlined navbar-lang-globe">language</span>
+    <span class="navbar-lang-label">{{ currentEndonym }}</span>
+    <span class="material-symbols-outlined navbar-lang-chevron">expand_more</span>
+  </button>
+
+  <div
+    class="navbar-lang-menu"
+    [class.align-left]="menuAlign === 'left'"
+    *ngIf="isLangDropdownOpen"
+    role="menu"
+  >
+    <button
+      *ngFor="let lang of languages"
+      type="button"
+      class="navbar-lang-item"
+      [class.active]="currentLanguage === lang.code"
+      role="menuitemradio"
+      [attr.aria-checked]="currentLanguage === lang.code"
+      [attr.aria-current]="currentLanguage === lang.code ? 'true' : null"
+      [attr.aria-label]="lang.ariaKey | translate"
+      (click)="selectLanguage(lang.code)"
+    >
+      <span
+        class="material-symbols-outlined navbar-lang-check"
+        [class.visible]="currentLanguage === lang.code"
+        aria-hidden="true"
+      >check</span>
+      <span>{{ lang.endonym }}</span>
+    </button>
+  </div>
+</div>

@@ -5,8 +5,10 @@ import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 import { BehaviorSubject } from 'rxjs';
 import { NavbarComponent } from './navbar.component';
+import { LangSwitcherComponent } from '../lang-switcher/lang-switcher.component';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
+import { LanguageService } from '../../services/language.service';
 import {
   createElementRefStub,
   createLanguageServiceStub,
@@ -18,7 +20,6 @@ describe('NavbarComponent', () => {
   let component: NavbarComponent;
   let authStatus$: BehaviorSubject<boolean>;
   let roles: string[];
-  let languageServiceStub: ReturnType<typeof createLanguageServiceStub>;
 
   function createAuthStub(): any {
     return {
@@ -32,15 +33,13 @@ describe('NavbarComponent', () => {
   beforeEach(() => {
     authStatus$ = new BehaviorSubject<boolean>(false);
     roles = [];
-    languageServiceStub = createLanguageServiceStub();
     component = new NavbarComponent(
       createTranslateStub(),
       {} as never,
       createElementRefStub(),
       createAuthStub(),
       createRouterStub(),
-      {} as never,
-      languageServiceStub
+      {} as never
     );
   });
 
@@ -122,40 +121,6 @@ describe('NavbarComponent', () => {
     expect(component.isDriver).toBe(false);
   });
 
-  it('delegates language switching to LanguageService (which persists it)', () => {
-    // Regression for #22: switching must go through LanguageService so the
-    // choice is persisted and the authInterceptor sends a matching
-    // Accept-Language header (instead of each component re-implementing it).
-    const switchSpy = spyOn(languageServiceStub, 'switch').and.resolveTo();
-
-    component.switchLanguage('en');
-
-    expect(switchSpy).toHaveBeenCalledWith('en');
-  });
-
-  it('reflects currentLanguage when TH is selected', () => {
-    component.switchLanguage('th');
-    expect(component.currentLanguage).toBe('th');
-  });
-
-  it('reflects currentLanguage when EN is selected', () => {
-    component.switchLanguage('en');
-    expect(component.currentLanguage).toBe('en');
-  });
-
-  it('reflects currentLanguage when ZH is selected', () => {
-    component.switchLanguage('zh');
-    expect(component.currentLanguage).toBe('zh');
-  });
-
-  it('delegates ZH language switching to LanguageService', () => {
-    const switchSpy = spyOn(languageServiceStub, 'switch').and.resolveTo();
-
-    component.switchLanguage('zh');
-
-    expect(switchSpy).toHaveBeenCalledWith('zh');
-  });
-
   it('clears auth and navigates to /home on sign out', async () => {
     // Parity with the admin topbar: sign-out must navigate away, not leave the
     // user on the current (possibly auth-gated) page.
@@ -170,8 +135,7 @@ describe('NavbarComponent', () => {
       createElementRefStub(),
       auth,
       router,
-      { success: () => {} } as never,
-      createLanguageServiceStub()
+      { success: () => {} } as never
     );
 
     await comp.onLogout();
@@ -194,43 +158,7 @@ describe('NavbarComponent', () => {
     }
   });
 
-  // ── Language dropdown state ─────────────────────────────────────────────────
-
-  it('isLangDropdownOpen starts as false', () => {
-    // Verify the initial state — toggle logic is exercised in the template suite
-    // where Renderer2 is provided by TestBed.
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
-
-  it('closeLangDropdown sets isLangDropdownOpen to false', () => {
-    component.isLangDropdownOpen = true;
-    component.closeLangDropdown();
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
-
-  it('selectLanguage switches the language and closes the dropdown', () => {
-    const switchSpy = spyOn(languageServiceStub, 'switch').and.resolveTo();
-    component.isLangDropdownOpen = true;
-
-    component.selectLanguage('zh');
-
-    expect(switchSpy).toHaveBeenCalledWith('zh');
-    expect(component.currentLanguage).toBe('zh');
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
-
-  it('selectLanguage works for all three language codes', () => {
-    for (const code of ['en', 'th', 'zh']) {
-      component.selectLanguage(code);
-      expect(component.currentLanguage).toBe(code);
-    }
-  });
-
-  it('Escape closes the language dropdown', () => {
-    component.isLangDropdownOpen = true;
-    component.closeDropdownsOnEscape();
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
+  // ── Overlay state (profile + mobile; language lives in LangSwitcherComponent) ──
 
   it('Escape closes the profile dropdown', () => {
     component.isProfileDropdownOpen = true;
@@ -244,8 +172,6 @@ describe('NavbarComponent', () => {
     expect(component.isMobileMenuOpen).toBe(false);
   });
 
-  // ── Mobile hamburger state ──────────────────────────────────────────────────
-
   it('isMobileMenuOpen starts as false', () => {
     expect(component.isMobileMenuOpen).toBe(false);
   });
@@ -256,111 +182,37 @@ describe('NavbarComponent', () => {
     expect(component.isMobileMenuOpen).toBe(false);
   });
 
-  it('closeMobileMenu also closes the language sub-dropdown', () => {
-    component.isMobileMenuOpen = true;
-    component.isLangDropdownOpen = true;
-    component.closeMobileMenu();
-    expect(component.isMobileMenuOpen).toBe(false);
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
-
-  it('selectLanguage does NOT close the mobile menu', () => {
-    component.isMobileMenuOpen = true;
-    component.selectLanguage('en');
-    expect(component.isMobileMenuOpen).toBe(true);
-  });
-
-  it('languages list has exactly three entries: en, th, zh', () => {
-    const codes = component.languages.map((l) => l.code);
-    expect(codes).toEqual(['en', 'th', 'zh']);
-  });
-
-  it('currentEndonym returns English for EN', () => {
-    component.currentLanguage = 'en';
-    expect(component.currentEndonym).toBe('English');
-  });
-
-  it('currentEndonym returns ไทย for TH', () => {
-    component.currentLanguage = 'th';
-    expect(component.currentEndonym).toBe('ไทย');
-  });
-
-  it('currentEndonym returns 中文 for ZH', () => {
-    component.currentLanguage = 'zh';
-    expect(component.currentEndonym).toBe('中文');
-  });
-
   describe('userInitials getter', () => {
-    it('returns two initials from a dot-separated username', () => {
+    function makeComp(getUsername: () => string | null): NavbarComponent {
       const stub: any = {
         authStatus$,
-        getUsername: () => 'john.doe',
+        getUsername,
         hasAnyRole: () => false,
       };
-      const comp = new NavbarComponent(
+      return new NavbarComponent(
         createTranslateStub(),
         {} as never,
         createElementRefStub(),
         stub,
         createRouterStub(),
-        {} as never,
-        createLanguageServiceStub()
+        {} as never
       );
-      expect(comp.userInitials).toBe('JD');
+    }
+
+    it('returns two initials from a dot-separated username', () => {
+      expect(makeComp(() => 'john.doe').userInitials).toBe('JD');
     });
 
     it('returns first two chars when username has a single segment', () => {
-      const stub: any = {
-        authStatus$,
-        getUsername: () => 'alice',
-        hasAnyRole: () => false,
-      };
-      const comp = new NavbarComponent(
-        createTranslateStub(),
-        {} as never,
-        createElementRefStub(),
-        stub,
-        createRouterStub(),
-        {} as never,
-        createLanguageServiceStub()
-      );
-      expect(comp.userInitials).toBe('AL');
+      expect(makeComp(() => 'alice').userInitials).toBe('AL');
     });
 
     it('strips the email domain before computing initials', () => {
-      const stub: any = {
-        authStatus$,
-        getUsername: () => 'jane.smith@example.com',
-        hasAnyRole: () => false,
-      };
-      const comp = new NavbarComponent(
-        createTranslateStub(),
-        {} as never,
-        createElementRefStub(),
-        stub,
-        createRouterStub(),
-        {} as never,
-        createLanguageServiceStub()
-      );
-      expect(comp.userInitials).toBe('JS');
+      expect(makeComp(() => 'jane.smith@example.com').userInitials).toBe('JS');
     });
 
     it('falls back to AD when username is null', () => {
-      const stub: any = {
-        authStatus$,
-        getUsername: () => null,
-        hasAnyRole: () => false,
-      };
-      const comp = new NavbarComponent(
-        createTranslateStub(),
-        {} as never,
-        createElementRefStub(),
-        stub,
-        createRouterStub(),
-        {} as never,
-        createLanguageServiceStub()
-      );
-      expect(comp.userInitials).toBe('AD');
+      expect(makeComp(() => null).userInitials).toBe('AD');
     });
   });
 });
@@ -376,12 +228,13 @@ describe('NavbarComponent template', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
       ],
     }).compileComponents();
 
@@ -410,111 +263,10 @@ describe('NavbarComponent template', () => {
       .toBeNull();
   });
 
-  it('renders the language trigger button', () => {
-    const trigger = fixture.debugElement.query(
-      By.css('.navbar-lang-trigger')
-    );
-    expect(trigger).withContext('language trigger should be present').toBeTruthy();
-  });
-
-  it('language trigger has aria-haspopup="menu"', () => {
-    const trigger = fixture.debugElement.query(By.css('.navbar-lang-trigger'));
-    expect(trigger.nativeElement.getAttribute('aria-haspopup')).toBe('menu');
-  });
-
-  it('language dropdown is closed initially', () => {
-    const menu = fixture.debugElement.query(By.css('.navbar-lang-menu'));
-    expect(menu).withContext('language menu should not be rendered initially').toBeNull();
-  });
-
-  it('clicking the trigger opens the language dropdown', () => {
-    const trigger = fixture.debugElement.query(By.css('.navbar-lang-trigger'));
-    trigger.nativeElement.click();
-    fixture.detectChanges();
-
-    const menu = fixture.debugElement.query(By.css('.navbar-lang-menu'));
-    expect(menu).withContext('language menu should open after click').toBeTruthy();
-  });
-
-  it('clicking the trigger twice closes the language dropdown', () => {
-    const trigger = fixture.debugElement.query(By.css('.navbar-lang-trigger'));
-    trigger.nativeElement.click();
-    fixture.detectChanges();
-    trigger.nativeElement.click();
-    fixture.detectChanges();
-
-    const menu = fixture.debugElement.query(By.css('.navbar-lang-menu'));
-    expect(menu).withContext('language menu should close on second click').toBeNull();
-  });
-
-  it('open language menu has role="menu"', () => {
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const menu = fixture.debugElement.query(By.css('.navbar-lang-menu'));
-    expect(menu.nativeElement.getAttribute('role')).toBe('menu');
-  });
-
-  it('language menu contains items with role="menuitemradio"', () => {
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const items = fixture.debugElement.queryAll(By.css('.navbar-lang-item[role="menuitemradio"]'));
-    expect(items.length).toBe(3);
-  });
-
-  it('renders all three endonyms in the open menu', () => {
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const items = fixture.debugElement.queryAll(By.css('.navbar-lang-item'));
-    const texts = items.map((i) => i.nativeElement.textContent.trim());
-    expect(texts.some((t) => t.includes('English'))).toBe(true);
-    expect(texts.some((t) => t.includes('ไทย'))).toBe(true);
-    expect(texts.some((t) => t.includes('中文'))).toBe(true);
-  });
-
-  it('active language item has aria-checked="true"', () => {
-    fixture.componentInstance.currentLanguage = 'th';
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const items = fixture.debugElement.queryAll(By.css('.navbar-lang-item'));
-    const thItem = items.find((i) => i.nativeElement.textContent.includes('ไทย'));
-    expect(thItem).toBeTruthy();
-    expect(thItem!.nativeElement.getAttribute('aria-checked')).toBe('true');
-  });
-
-  it('active language item has the active CSS class', () => {
-    fixture.componentInstance.currentLanguage = 'en';
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const items = fixture.debugElement.queryAll(By.css('.navbar-lang-item'));
-    const enItem = items.find((i) => i.nativeElement.textContent.includes('English'));
-    expect(enItem!.nativeElement.classList.contains('active')).toBe(true);
-  });
-
-  it('selecting a language item calls switchLanguage and closes the menu', () => {
-    fixture.componentInstance.isLangDropdownOpen = true;
-    fixture.detectChanges();
-
-    const switchSpy = spyOn(fixture.componentInstance, 'selectLanguage').and.callThrough();
-    const items = fixture.debugElement.queryAll(By.css('.navbar-lang-item'));
-    const zhItem = items.find((i) => i.nativeElement.textContent.includes('中文'));
-    zhItem!.nativeElement.click();
-    fixture.detectChanges();
-
-    expect(switchSpy).toHaveBeenCalledWith('zh');
-    expect(fixture.debugElement.query(By.css('.navbar-lang-menu'))).toBeNull();
-  });
-
-  it('trigger label shows the current language endonym', () => {
-    fixture.componentInstance.currentLanguage = 'zh';
-    fixture.detectChanges();
-
-    const label = fixture.debugElement.query(By.css('.navbar-lang-label'));
-    expect(label.nativeElement.textContent.trim()).toBe('中文');
+  it('renders the shared language switcher in the desktop bar', () => {
+    const switcher = fixture.debugElement.query(By.css('app-lang-switcher'));
+    expect(switcher).withContext('language switcher should be present').toBeTruthy();
+    expect(switcher.query(By.css('.navbar-lang-trigger'))).toBeTruthy();
   });
 
   it('does not show the avatar when logged out', () => {
@@ -535,12 +287,13 @@ describe('NavbarComponent template (logged in)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
       ],
     }).compileComponents();
 
@@ -608,12 +361,13 @@ describe('NavbarComponent hamburger menu', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
       ],
     }).compileComponents();
 
@@ -686,16 +440,7 @@ describe('NavbarComponent hamburger menu', () => {
     expect(panel).toBeTruthy();
   });
 
-  it('mobile panel contains the language switcher trigger', () => {
-    component.isMobileMenuOpen = true;
-    fixture.detectChanges();
-
-    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
-    const triggers = panel.queryAll(By.css('.navbar-lang-trigger'));
-    expect(triggers.length).toBeGreaterThan(0);
-  });
-
-  it('mobile panel language switcher is in the first section (top position)', () => {
+  it('mobile panel contains the language switcher in its first section (top)', () => {
     component.isMobileMenuOpen = true;
     fixture.detectChanges();
 
@@ -703,11 +448,19 @@ describe('NavbarComponent hamburger menu', () => {
     const sections = panel.queryAll(By.css('.navbar-mobile-section'));
     expect(sections.length).toBeGreaterThan(0);
 
-    // The first section must contain the language trigger.
-    const langInFirstSection = sections[0].query(By.css('.navbar-lang-trigger'));
+    const langInFirstSection = sections[0].query(By.css('app-lang-switcher'));
     expect(langInFirstSection)
       .withContext('language switcher should be in the first section of the mobile panel')
       .toBeTruthy();
+  });
+
+  it('the mobile switcher menu aligns left (menuAlign input)', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const switcher = panel.query(By.directive(LangSwitcherComponent));
+    expect(switcher.componentInstance.menuAlign).toBe('left');
   });
 
   it('mobile panel contains the how-to-book nav link', () => {
@@ -753,45 +506,18 @@ describe('NavbarComponent hamburger menu', () => {
     expect(component.isMobileMenuOpen).toBe(false);
   });
 
-  it('language selection inside mobile panel does NOT close the panel', () => {
+  it('selecting a language inside the mobile panel does NOT close the panel', () => {
     component.isMobileMenuOpen = true;
-    component.isLangDropdownOpen = true;
     fixture.detectChanges();
 
-    // Click a language item in the mobile panel.
+    // Open the in-panel switcher and pick a language.
     const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
-    const items = panel.queryAll(By.css('.navbar-lang-item'));
-    expect(items.length).toBeGreaterThan(0);
-    items[0].nativeElement.click();
+    panel.query(By.css('.navbar-lang-trigger')).nativeElement.click();
+    fixture.detectChanges();
+    panel.query(By.css('.navbar-lang-item')).nativeElement.click();
     fixture.detectChanges();
 
-    // Language sub-dropdown closes but mobile panel stays open.
+    // The switcher manages its own state; the parent panel stays open.
     expect(component.isMobileMenuOpen).toBe(true);
-    expect(component.isLangDropdownOpen).toBe(false);
-  });
-
-  it('opening the lang dropdown via the MOBILE trigger keeps it open', () => {
-    // Regression: the switcher template renders twice (desktop + mobile). The
-    // same-click guard must treat a click on EITHER trigger as inside, otherwise
-    // the menu opened from the mobile panel snaps shut on the same click. Drive
-    // the real toggle + outside-click guard with the mobile trigger as target.
-    component.isMobileMenuOpen = true;
-    fixture.detectChanges();
-
-    const triggers = fixture.debugElement.queryAll(By.css('.navbar-lang-trigger'));
-    expect(triggers.length).toBe(2);
-    const mobileTrigger = fixture.debugElement
-      .query(By.css('.navbar-mobile-panel'))
-      .query(By.css('.navbar-lang-trigger')).nativeElement;
-
-    component.toggleLangDropdown();
-    expect(component.isLangDropdownOpen).toBe(true);
-
-    // Simulate the same opening click bubbling to document, target = MOBILE trigger.
-    component.handleLangDropdownOutsideClick({ target: mobileTrigger } as unknown as Event);
-
-    expect(component.isLangDropdownOpen)
-      .withContext('lang menu must stay open when opened from the mobile trigger')
-      .toBe(true);
   });
 });
