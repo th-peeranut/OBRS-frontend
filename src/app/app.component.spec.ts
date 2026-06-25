@@ -1,8 +1,19 @@
+import { of } from 'rxjs';
 import { AppComponent } from './app.component';
 import {
   createLanguageServiceStub,
   createTranslateStub,
 } from './testing/test-stubs';
+
+function createThemeServiceStub(): any {
+  return {
+    mode$: of('light'),
+    init: () => {},
+    toggle: () => {},
+    getStoredMode: () => 'light',
+    setMode: () => {},
+  };
+}
 
 describe('AppComponent', () => {
   let component: AppComponent;
@@ -10,7 +21,8 @@ describe('AppComponent', () => {
   beforeEach(() => {
     component = new AppComponent(
       createTranslateStub(),
-      createLanguageServiceStub()
+      createLanguageServiceStub(),
+      createThemeServiceStub()
     );
   });
 

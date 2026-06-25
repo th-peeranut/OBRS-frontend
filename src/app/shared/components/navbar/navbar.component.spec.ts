@@ -3,18 +3,30 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, of } from 'rxjs';
 import { NavbarComponent } from './navbar.component';
 import { LangSwitcherComponent } from '../lang-switcher/lang-switcher.component';
+import { ThemeToggleComponent } from '../theme-toggle/theme-toggle.component';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
 import { LanguageService } from '../../services/language.service';
+import { ThemeService } from '../../services/theme.service';
 import {
   createElementRefStub,
   createLanguageServiceStub,
   createRouterStub,
   createTranslateStub,
 } from '../../../testing/test-stubs';
+
+function createThemeServiceStub(): any {
+  return {
+    mode$: of('light'),
+    toggle: jasmine.createSpy('toggle'),
+    getStoredMode: () => 'light',
+    setMode: () => {},
+    init: () => {},
+  };
+}
 
 describe('NavbarComponent', () => {
   let component: NavbarComponent;
@@ -228,13 +240,14 @@ describe('NavbarComponent template', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: createThemeServiceStub() },
       ],
     }).compileComponents();
 
@@ -269,6 +282,11 @@ describe('NavbarComponent template', () => {
     expect(switcher.query(By.css('.navbar-lang-trigger'))).toBeTruthy();
   });
 
+  it('renders the theme toggle in the desktop bar', () => {
+    const toggle = fixture.debugElement.query(By.css('app-theme-toggle'));
+    expect(toggle).withContext('theme toggle should be present in the desktop bar').toBeTruthy();
+  });
+
   it('does not show the avatar when logged out', () => {
     const avatar = fixture.debugElement.query(By.css('.navbar-avatar'));
     expect(avatar).withContext('avatar should not render when logged out').toBeNull();
@@ -287,13 +305,14 @@ describe('NavbarComponent template (logged in)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: createThemeServiceStub() },
       ],
     }).compileComponents();
 
@@ -361,13 +380,14 @@ describe('NavbarComponent hamburger menu', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NavbarComponent, LangSwitcherComponent],
+      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: createThemeServiceStub() },
       ],
     }).compileComponents();
 

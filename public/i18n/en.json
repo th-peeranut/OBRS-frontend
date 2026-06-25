@@ -63,6 +63,9 @@
   "SHARED": {
     "NO_CONTENT": "No data found"
   },
+  "COMMON": {
+    "THEME_TOGGLE": "Toggle dark mode"
+  },
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "Admin Dashboard",
@@ -497,7 +500,8 @@
       "LANGUAGE_EN": "Switch to English",
       "LANGUAGE_ZH": "Switch to Chinese",
       "MENU": "Menu",
-      "PROFILE_MENU": "Open profile menu"
+      "PROFILE_MENU": "Open profile menu",
+      "THEME_TOGGLE": "Toggle dark mode"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",
@@ -780,7 +784,8 @@
       "LANGUAGE_EN": "Switch to English",
       "LOGOUT_SUCCESS": "Signed out successfully",
       "COLLAPSE_MENU": "Collapse menu",
-      "EXPAND_MENU": "Expand menu"
+      "EXPAND_MENU": "Expand menu",
+      "THEME_TOGGLE": "Toggle dark mode"
     },
     "NAV": {
       "SELL": "Walk-in Sales",

@@ -1,8 +1,9 @@
-import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith } from 'rxjs';
+import { filter, startWith, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { ThemeService } from '../../shared/services/theme.service';
 import { TranslateService } from '@ngx-translate/core';
 
 interface StaffNavItem {
@@ -16,7 +17,7 @@ interface StaffNavItem {
   templateUrl: './staff-layout.component.html',
   styleUrl: './staff-layout.component.scss',
 })
-export class StaffLayoutComponent implements OnInit {
+export class StaffLayoutComponent implements OnInit, OnDestroy {
   protected pageTitleKey = 'STAFF.PAGES.SELL';
   // Route-driven subtitle (mirrors pageTitleKey); falls back to the generic
   // portal subtitle when a route doesn't declare one.
@@ -25,6 +26,9 @@ export class StaffLayoutComponent implements OnInit {
   protected isSidebarOpen = false;
   protected isSidebarCollapsed = false;
   protected isProfileMenuOpen = false;
+  protected isDarkMode = false;
+
+  private readonly destroy$ = new Subject<void>();
 
   // Desktop sidebar collapse state, shared across admin + staff areas.
   private static readonly SIDEBAR_COLLAPSED_KEY = 'obrs-sidebar-collapsed';
@@ -82,13 +86,22 @@ export class StaffLayoutComponent implements OnInit {
     private readonly authService: AuthService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly elementRef: ElementRef<HTMLElement>
+    private readonly elementRef: ElementRef<HTMLElement>,
+    private readonly themeService: ThemeService
   ) {}
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
 
   ngOnInit(): void {
     this.navItems = this.buildNavItems();
     this.isAdmin = this.authService.hasAnyRole(['admin']);
     this.isSidebarCollapsed = this.readCollapsedPreference();
+    this.themeService.mode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
+      this.isDarkMode = mode === 'dark';
+    });
 
     this.router.events
       .pipe(
@@ -109,6 +122,10 @@ export class StaffLayoutComponent implements OnInit {
             : 'STAFF.LAYOUT.SUBTITLE';
         this.isSidebarOpen = false;
       });
+  }
+
+  protected toggleTheme(): void {
+    this.themeService.toggle();
   }
 
   protected toggleSidebar(): void {

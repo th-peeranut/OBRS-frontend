@@ -1,0 +1,49 @@
+// ThemeToggleComponent — minimal neutral icon button.
+//
+// Uses `currentColor` so it inherits text colour from the parent surface
+// (white on a dark background, dark on a light background). No hardcoded
+// colours here — callers set the context via global body.is-dark rules or
+// .admin-shell.is-dark variables.
+
+:host {
+  display: inline-flex;
+}
+
+.theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(189, 200, 207, 0.6);
+  border-radius: 10px;
+  background: transparent;
+  color: #506068;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+
+  .material-symbols-outlined {
+    font-size: 20px;
+    line-height: 1;
+  }
+
+  &:hover {
+    background: rgba(77, 190, 239, 0.08);
+    color: #005f7e;
+  }
+}
+
+// Admin / staff dark shell — use shell CSS variables so the button reads
+// consistently inside the dark topbar (same pattern as lang-switcher).
+:host-context(.is-dark) {
+  .theme-toggle-btn {
+    border-color: var(--admin-outline, rgba(255, 255, 255, 0.15));
+    color: var(--admin-text, #e8eaf0);
+
+    &:hover {
+      background: var(--accent-soft, rgba(75, 194, 247, 0.12));
+      color: var(--accent-text, #4bc2f7);
+    }
+  }
+}

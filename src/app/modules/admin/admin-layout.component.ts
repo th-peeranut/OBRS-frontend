@@ -1,6 +1,6 @@
-import { Component, ElementRef, HostListener, OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith } from 'rxjs';
+import { filter, startWith, Subject, takeUntil } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService } from '../../shared/services/theme.service';
@@ -17,7 +17,7 @@ interface AdminNavItem {
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.scss',
 })
-export class AdminLayoutComponent implements OnInit {
+export class AdminLayoutComponent implements OnInit, OnDestroy {
   protected pageTitleKey = 'ADMIN.PAGES.DASHBOARD';
   protected pageSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
   protected readonly navItems: AdminNavItem[] = [
@@ -56,6 +56,8 @@ export class AdminLayoutComponent implements OnInit {
   protected isSidebarCollapsed = false;
   protected isDarkMode = false;
 
+  private readonly destroy$ = new Subject<void>();
+
   // Desktop sidebar collapse state, shared across admin + staff areas.
   private static readonly SIDEBAR_COLLAPSED_KEY = 'obrs-sidebar-collapsed';
 
@@ -89,8 +91,15 @@ export class AdminLayoutComponent implements OnInit {
     return (segments[0][0] + segments[1][0]).toUpperCase();
   }
 
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   ngOnInit(): void {
-    this.isDarkMode = this.themeService.getStoredMode() === 'dark';
+    this.themeService.mode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
+      this.isDarkMode = mode === 'dark';
+    });
     this.isSidebarCollapsed = this.readCollapsedPreference();
 
     this.router.events
@@ -144,8 +153,7 @@ export class AdminLayoutComponent implements OnInit {
   }
 
   protected toggleTheme(): void {
-    this.isDarkMode = !this.isDarkMode;
-    this.themeService.setMode(this.isDarkMode ? 'dark' : 'light');
+    this.themeService.toggle();
   }
 
   @HostListener('document:keydown.escape')

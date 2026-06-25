@@ -4,6 +4,7 @@
 @import "sweetalert2/dist/sweetalert2.min.css";
 @import "./styles/variables.scss";
 @import "./styles/admin-theme.scss";
+@import "./styles/dark-theme.scss";
 
 // SweetAlert2 defaults its container to z-index 1060, which sits *below* the
 // app's overlay layers (admin modals 1200, dropdowns 1250, loading 1300). When

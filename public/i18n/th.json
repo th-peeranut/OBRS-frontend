@@ -63,6 +63,9 @@
   "SHARED": {
     "NO_CONTENT": "ไม่พบข้อมูล"
   },
+  "COMMON": {
+    "THEME_TOGGLE": "สลับโหมดมืด"
+  },
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "แดชบอร์ดผู้ดูแล",
@@ -498,7 +501,8 @@
       "LANGUAGE_EN": "เปลี่ยนเป็นภาษาอังกฤษ",
       "LANGUAGE_ZH": "เปลี่ยนเป็นภาษาจีน",
       "MENU": "เมนู",
-      "PROFILE_MENU": "เปิดเมนูโปรไฟล์"
+      "PROFILE_MENU": "เปิดเมนูโปรไฟล์",
+      "THEME_TOGGLE": "สลับโหมดมืด"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "เที่ยวเดียว",
@@ -781,7 +785,8 @@
       "LANGUAGE_EN": "เปลี่ยนเป็นภาษาอังกฤษ",
       "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ",
       "COLLAPSE_MENU": "ย่อเมนู",
-      "EXPAND_MENU": "ขยายเมนู"
+      "EXPAND_MENU": "ขยายเมนู",
+      "THEME_TOGGLE": "สลับโหมดมืด"
     },
     "NAV": {
       "SELL": "ขายตั๋ว Walk-in",

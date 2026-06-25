@@ -3,11 +3,13 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
+import { BehaviorSubject } from 'rxjs';
 
 import { StaffLayoutComponent } from './staff-layout.component';
 import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 
@@ -20,6 +22,14 @@ describe('StaffLayoutComponent', () => {
     logout: jasmine.createSpy('logout'),
   };
 
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
+  };
+
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [StaffLayoutComponent, LangSwitcherComponent],
@@ -29,6 +39,7 @@ describe('StaffLayoutComponent', () => {
         { provide: AlertService, useValue: { success: () => {} } },
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: themeServiceStub },
       ],
     }).compileComponents();
 
@@ -127,6 +138,17 @@ describe('StaffLayoutComponent', () => {
     expect(adminLink)
       .withContext('non-admins must not see the Admin Dashboard link')
       .toBeNull();
+  });
+
+  it('renders a dark mode toggle button in the topbar actions', () => {
+    const toggleBtn = fixture.debugElement.query(By.css('.admin-topbar-actions button[aria-pressed]'));
+    expect(toggleBtn).withContext('dark mode toggle button should exist in topbar actions').toBeTruthy();
+  });
+
+  it('clicking the theme toggle button calls ThemeService.toggle()', () => {
+    const toggleBtn = fixture.debugElement.query(By.css('.admin-topbar-actions button[aria-pressed]'));
+    toggleBtn.nativeElement.click();
+    expect(themeServiceStub.toggle).toHaveBeenCalled();
   });
 
   it('renders nav icons with the bound material-symbols-outlined class', () => {

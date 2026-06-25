@@ -9,6 +9,7 @@ import { NavbarComponent } from './components/navbar/navbar.component';
 import { FooterComponent } from './components/footer/footer.component';
 import { StepperComponent } from './components/stepper/stepper.component';
 import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.component';
+import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 
 @NgModule({
   declarations: [
@@ -16,6 +17,7 @@ import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.
     NavbarComponent,
     StepperComponent,
     LangSwitcherComponent,
+    ThemeToggleComponent,
   ],
   imports: [
     CommonModule,
@@ -37,6 +39,7 @@ import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.
     NavbarComponent,
     StepperComponent,
     LangSwitcherComponent,
+    ThemeToggleComponent,
   ],
 })
 export class SharedModule {}

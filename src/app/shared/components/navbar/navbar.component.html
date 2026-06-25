@@ -22,6 +22,9 @@
 
   <!-- Desktop button-container (language switcher + auth) — hidden at ≤992px -->
   <div class="button-container navbar-desktop-only">
+    <!-- Dark mode toggle — desktop instance -->
+    <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
+
     <!-- Language globe dropdown — desktop instance -->
     <app-lang-switcher></app-lang-switcher>
 
@@ -107,9 +110,10 @@
   role="navigation"
   [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
 >
-  <!-- 1. Language switcher at the top (UX requirement) — mobile instance -->
+  <!-- 1. Language switcher + theme toggle at the top (UX requirement) — mobile instance -->
   <div class="navbar-mobile-section navbar-mobile-lang">
     <app-lang-switcher menuAlign="left"></app-lang-switcher>
+    <app-theme-toggle ariaLabelKey="HOME.NAVBAR.THEME_TOGGLE"></app-theme-toggle>
   </div>
 
   <!-- 2. Nav links -->

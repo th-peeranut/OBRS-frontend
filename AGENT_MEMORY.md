@@ -1,5 +1,34 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: global light/dark mode toggle (staff + public surfaces)
+
+**Self-fix (CSS cross-surface bleed):** `src/styles/dark-theme.scss` scoped its dark rules
+under `body.is-dark`. The new `ThemeService.applyBodyClass()` toggles `is-dark` on
+`document.body` GLOBALLY (not just the `.admin-shell` div as before). Two generic selectors
+therefore bled the public dark palette INTO the admin/staff shells, which already self-theme
+via `admin-theme.scss` using `--admin-*` tokens:
+  1. `body.is-dark label, input { color: ... !important }` (section 1) — collided with
+     `.admin-shell label/input` at equal specificity; dark-theme.scss imports AFTER
+     admin-theme.scss in styles.scss, so the public rule won by source order.
+  2. `body.is-dark .form-control { background-color:#161922 !important; ... }` (section 4) —
+     the staff portal uses bare `.form-control` inputs (walk-in-checkout, staff-schedules),
+     so staff inputs got painted with the public dark-input palette instead of admin tokens.
+  Fix: qualified those two rules with `:not(.admin-shell ...)` so they only apply outside the
+  admin/staff shells. Verified `ng build` compiles and `ng test` (334) green.
+  Pattern: when a global `body.is-dark` class drives dark mode, any UNQUALIFIED element or
+  generic-utility selector (`label`, `input`, `.form-control`, `.title`, `.content-container`)
+  under `body.is-dark` WILL leak into the self-theming `.admin-shell`. Either prefix
+  public-page rules with a public-only ancestor, or exclude `.admin-shell` descendants. The
+  `.admin-*`-prefixed and page-component-specific selectors (`.login-container`, `.payment-*`,
+  `.stepper-*`, `.how-to-book-*`) are safe because they don't appear inside the shells.
+
+**Returned to developer (test gap, not a blocker):** the staff/navbar toggle buttons have no
+test asserting the click calls `themeService.toggle()`. Staff spec only checks the button
+renders; navbar spec stubs `toggle: () => {}` as a plain fn (not a spy) and adds no
+toggle/render test at all. The `ThemeService` itself is well covered (theme.service.spec.ts:
+body class, persistence, toggle, init), so the wiring risk is low — but add a click→toggle
+spy assertion for staff and navbar to lock the behaviour. See report for exact locations.
+
 ## 2026-06-25 — Scrutinize: online seat-picker Phase 1 (surface seat map + seat-race errors)
 
 **Self-fix (duplicate alert):** removed the `extractApiErrorMessage` fallback block (and

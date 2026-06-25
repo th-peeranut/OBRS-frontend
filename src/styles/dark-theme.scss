@@ -1,0 +1,348 @@
+// =============================================================================
+// dark-theme.scss — Global dark mode for public / passenger surfaces
+// =============================================================================
+//
+// Approach:
+//   - All rules are scoped under `body.is-dark` so they only fire when the
+//     ThemeService has toggled dark mode on.
+//   - The admin/staff shells self-theme via `.admin-shell.is-dark` (defined in
+//     admin-theme.scss) and are excluded here — no double-handling.
+//   - Component-scoped SCSS files use build-time $variables; we cannot reach
+//     those at runtime. So we override with explicit selectors here.
+//   - Colour palette used: dark surface #0f1117, card #1a1d27, soft surface
+//     #22263a, border rgba(255,255,255,0.10), primary text #e8eaf0, muted
+//     #9aa3b8, accent #4bc2f7 (matches the existing $primary-blue).
+// =============================================================================
+
+// ── Dark-mode token shorthand (for readability in this file only) ───────────
+$dk-bg:           #0f1117;
+$dk-bg-card:      #1a1d27;
+$dk-bg-soft:      #22263a;
+$dk-bg-input:     #161922;
+$dk-border:       rgba(255, 255, 255, 0.10);
+$dk-border-muted: rgba(255, 255, 255, 0.06);
+$dk-text:         #e8eaf0;
+$dk-text-muted:   #9aa3b8;
+$dk-accent:       #4bc2f7;
+$dk-accent-hover: #3ab0e4;
+$dk-danger:       #f87171;
+
+// =============================================================================
+// 1. Page base
+// =============================================================================
+body.is-dark {
+  background-color: $dk-bg;
+  color: $dk-text;
+
+  // Generic horizontal rule
+  hr { border-top-color: $dk-border; }
+
+  // Override the global label/input colour set in styles.scss.
+  // Scoped away from .admin-shell: the admin/staff shells self-theme their
+  // own label/input via admin-theme.scss (`.admin-shell label/input`), and
+  // body.is-dark is now applied globally, so an unqualified rule here would
+  // bleed the public palette into the admin/staff surfaces.
+  label:not(.admin-shell label),
+  input:not(.admin-shell input) {
+    color: $dk-text !important;
+  }
+
+  // Error colours stay red — intentionally not darkened
+  .label-error,
+  .text-error,
+  .form-required { color: $dk-danger !important; }
+}
+
+// =============================================================================
+// 2. Public Navbar
+// =============================================================================
+body.is-dark {
+  .navbar-container {
+    background-color: $dk-bg-card;
+    border-bottom: 1px solid $dk-border;
+  }
+
+  .menu-font {
+    color: $dk-text;
+    &-active { color: $dk-accent; }
+  }
+
+  // Theme toggle button (app-theme-toggle on public surfaces)
+  // The component's :host-context(.is-dark) handles the admin/staff shell;
+  // this rule covers body.is-dark pages outside any .admin-shell wrapper.
+  app-theme-toggle .theme-toggle-btn {
+    border-color: $dk-border;
+    color: $dk-text-muted;
+    &:hover { background: rgba(75, 194, 247, 0.12); color: $dk-accent; }
+  }
+
+  // Sign-in / Sign-up buttons
+  .btn-signin {
+    color: $dk-text;
+    border-color: $dk-border;
+    background-color: transparent;
+    &:hover { background: rgba(75, 194, 247, 0.08); }
+  }
+
+  .btn-signup {
+    background-color: $dk-accent;
+    color: #0f1117;
+  }
+
+  // Profile avatar / dropdown
+  .navbar-profile-menu {
+    background: $dk-bg-card;
+    border-color: $dk-border;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .navbar-profile-item {
+    color: $dk-text;
+    &:hover { background: rgba(75, 194, 247, 0.12); color: $dk-accent; }
+  }
+
+  // Hamburger button
+  .navbar-hamburger {
+    background: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text-muted;
+    &:hover { background: rgba(75, 194, 247, 0.10); color: $dk-accent; }
+  }
+
+  // Mobile panel
+  .navbar-mobile-panel {
+    background-color: $dk-bg-card;
+    border-top-color: $dk-border;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .navbar-mobile-section {
+    & + & { border-top-color: $dk-border-muted; }
+  }
+
+  .navbar-mobile-link {
+    color: $dk-text;
+    .material-symbols-outlined { color: $dk-text-muted; }
+    &:hover { background: rgba(75, 194, 247, 0.10); color: $dk-accent; }
+  }
+
+  .navbar-mobile-signout {
+    color: $dk-danger;
+    &:hover { background: rgba(248, 113, 113, 0.10); color: #fca5a5; }
+  }
+}
+
+// =============================================================================
+// 3. Footer
+// =============================================================================
+body.is-dark {
+  .footer-container {
+    background-color: $dk-bg-card;
+  }
+
+  .line-container .divide-line {
+    border-top-color: $dk-border;
+  }
+
+  .copyright-container .copyright-text,
+  .address-container .address-title,
+  .address-container .address-subtitle,
+  .address-container .address-text,
+  .sales-container .sales-title,
+  .sales-container .sales-name,
+  .sales-container .sales-sub,
+  .menu-container .menu-title,
+  .menu-container .menu-text,
+  .contact-container .contact-title,
+  .contact-container .contact-text {
+    color: $dk-text-muted;
+  }
+
+  .sales-container .sales-item:hover .sales-name,
+  .menu-container .menu-text:hover,
+  .contact-container .contact-text:hover {
+    color: $dk-accent;
+  }
+}
+
+// =============================================================================
+// 4. Global form controls (from styles.scss)
+// =============================================================================
+body.is-dark {
+  // Scoped away from .admin-shell — the staff portal (walk-in-checkout,
+  // staff-schedules) uses bare `.form-control` inputs that must keep the
+  // admin token palette, not the public dark-input palette.
+  .form-control:not(.admin-shell .form-control) {
+    background-color: $dk-bg-input !important;
+    border-color: $dk-border !important;
+    color: $dk-text !important;
+
+    &:focus {
+      border-color: $dk-accent !important;
+      box-shadow: 0 0 0 3px rgba(75, 194, 247, 0.15) !important;
+    }
+  }
+
+  // OTP boxes
+  .ngx-otp-input-box {
+    background-color: $dk-bg-input !important;
+    border-color: $dk-border !important;
+    color: $dk-text !important;
+
+    &:focus {
+      border-color: $dk-accent !important;
+      box-shadow: 0 0 0 3px rgba(75, 194, 247, 0.15) !important;
+    }
+  }
+
+  // Password container (toggle icon)
+  .password-container .icon-eye {
+    color: $dk-text-muted;
+  }
+
+  // Link colour
+  .obrs-link {
+    color: $dk-accent;
+  }
+}
+
+// =============================================================================
+// 5. Login / Register pages
+// =============================================================================
+body.is-dark {
+  .login-container {
+    background: $dk-bg;
+
+    .welcome-text,
+    .hint-text {
+      color: $dk-text;
+    }
+
+    .login-form {
+      .login-btn {
+        background-color: $dk-accent;
+        color: #0f1117;
+      }
+
+      .login-by-phone-no-btn {
+        background-color: $dk-bg-soft;
+        border-color: $dk-accent;
+        color: $dk-accent;
+      }
+
+      .register-link {
+        color: $dk-text-muted;
+        a { color: $dk-accent; }
+      }
+    }
+  }
+
+  // Tooltip box used in register
+  .tooltip-box {
+    background-color: $dk-bg-card;
+    color: $dk-text;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
+}
+
+// =============================================================================
+// 6. Home page & booking widget
+// =============================================================================
+body.is-dark {
+  .booking-container {
+    .secondary-lightgrey-bg {
+      background-color: $dk-bg-soft;
+    }
+  }
+
+  // Home page search card background
+  .booking-section {
+    background-color: $dk-bg-card;
+  }
+}
+
+// =============================================================================
+// 7. Schedule booking / search results
+// =============================================================================
+body.is-dark {
+  .content-container { background-color: transparent; }
+
+  // General card-like wrappers used across booking flow pages
+  .form-container,
+  .summary-container {
+    background-color: transparent;
+    color: $dk-text;
+  }
+
+  .title { color: $dk-text; }
+}
+
+// =============================================================================
+// 8. Passenger info / seat picker
+// =============================================================================
+body.is-dark {
+  // Passenger info page wrappers follow the same pattern as schedule-booking
+  // (.content-container / .form-container) — already covered in section 7.
+
+  // Seat availability indicators (class names from passenger-seat-bus/van)
+  .seat-available { background-color: $dk-bg-soft; }
+  .seat-selected  { background-color: $dk-accent; color: #0f1117; }
+  .seat-occupied  { opacity: 0.35; }
+}
+
+// =============================================================================
+// 9. How-to-book page
+// =============================================================================
+body.is-dark {
+  .how-to-book-container {
+    background-color: $dk-bg;
+  }
+
+  .how-to-book-card {
+    color: $dk-text;
+
+    h1, h2, h3 { color: $dk-text; }
+    p, li       { color: $dk-text-muted; }
+
+    // Step cards / callout boxes inside the guide
+    .step-card,
+    .how-to-book-step {
+      background-color: $dk-bg-card;
+      border-color: $dk-border;
+      color: $dk-text;
+    }
+  }
+}
+
+// =============================================================================
+// 10. Shared stepper component
+// =============================================================================
+body.is-dark {
+  .stepper-container {
+    background-color: $dk-bg-card;
+  }
+
+  .stepper-step {
+    color: $dk-text-muted;
+    &.active, &.completed { color: $dk-accent; }
+  }
+
+  .stepper-connector { background-color: $dk-border; }
+}
+
+// =============================================================================
+// 11. Payment page
+// =============================================================================
+body.is-dark {
+  // Payment info and summary cards
+  .payment-container,
+  .payment-card,
+  .payment-summary-card {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text;
+  }
+
+  .payment-label { color: $dk-text-muted; }
+  .payment-value { color: $dk-text; }
+}

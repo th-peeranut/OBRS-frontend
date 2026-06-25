@@ -8,10 +8,12 @@
   margin: auto;
   background: $primary-white;
 
-  // CHANGE LANGUAGE SWITCH — wraps the shared <app-lang-switcher> component
+  // CHANGE LANGUAGE SWITCH + THEME TOGGLE — wraps shared components
   .change-language {
     display: flex;
+    align-items: center;
     justify-content: flex-end;
+    gap: 8px;
   }
 
   // LEFT SECTION

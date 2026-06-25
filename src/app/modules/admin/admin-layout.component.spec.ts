@@ -3,12 +3,13 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
+import { BehaviorSubject } from 'rxjs';
 
 import { AdminLayoutComponent } from './admin-layout.component';
 import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
-import { ThemeService } from '../../shared/services/theme.service';
+import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 
@@ -21,9 +22,12 @@ describe('AdminLayoutComponent', () => {
     hasAnyRole: (_roles: string[]) => false,
   };
 
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
   const themeServiceStub: Partial<ThemeService> = {
     getStoredMode: () => 'light',
     setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
   };
 
   beforeEach(async () => {

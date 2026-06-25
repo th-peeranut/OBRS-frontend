@@ -1,4 +1,4 @@
-<div class="admin-shell theme-staff" [class.is-sidebar-open]="isSidebarOpen" [class.is-sidebar-collapsed]="isSidebarCollapsed">
+<div class="admin-shell theme-staff" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen" [class.is-sidebar-collapsed]="isSidebarCollapsed">
   <div
     class="admin-sidebar-backdrop"
     *ngIf="isSidebarOpen"
@@ -76,6 +76,16 @@
       </div>
 
       <div class="admin-topbar-actions">
+        <button
+          type="button"
+          class="admin-icon-btn"
+          (click)="toggleTheme()"
+          [attr.aria-pressed]="isDarkMode"
+          [attr.aria-label]="'STAFF.LAYOUT.THEME_TOGGLE' | translate"
+        >
+          <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
+        </button>
+
         <app-lang-switcher></app-lang-switcher>
 
         <div class="admin-profile">
