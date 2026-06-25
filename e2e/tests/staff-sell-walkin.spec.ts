@@ -822,4 +822,17 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     );
     expect(centerScrollable, 'center column should scroll internally, not the page').toBe(true);
   });
+
+  // ── Header regression (issue #42): page title shown once, not duplicated ────
+  // The staff layout topbar renders the per-route title; the in-page <h4> that
+  // duplicated it has been removed. "Walk-in Sales" must appear as exactly one
+  // heading (the topbar), not two.
+
+  test('Layout: /staff/sell shows the page title only once (no duplicate in-page heading)', async ({ page }) => {
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
+      route.fulfill({ json: EMPTY_RESP })
+    );
+    await gotoSellPage(page);
+    await expect(page.getByRole('heading', { name: 'Walk-in Sales' })).toHaveCount(1);
+  });
 });
