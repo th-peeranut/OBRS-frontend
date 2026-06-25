@@ -278,16 +278,23 @@ body.is-dark {
 }
 
 // =============================================================================
-// 8. Passenger info / seat picker
+// 8. Passenger info / seat map
 // =============================================================================
 body.is-dark {
-  // Passenger info page wrappers follow the same pattern as schedule-booking
-  // (.content-container / .form-container) — already covered in section 7.
+  // Seat cells (passenger-seat-bus/van) are white ($primary-white) in light
+  // mode, grey when disabled. Excluded inside .admin-shell — the staff walk-in
+  // panel reuses these seat components and self-themes via .admin-shell.is-dark.
+  .seat-box:not(.admin-shell .seat-box) {
+    background-color: $dk-bg-soft !important;
+    color: $dk-text !important;
+    border: 1px solid $dk-border;
+  }
 
-  // Seat availability indicators (class names from passenger-seat-bus/van)
-  .seat-available { background-color: $dk-bg-soft; }
-  .seat-selected  { background-color: $dk-accent; color: #0f1117; }
-  .seat-occupied  { opacity: 0.35; }
+  .seat-box.disabled:not(.admin-shell .seat-box) {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+    color: $dk-text-muted !important;
+    opacity: 0.55;
+  }
 }
 
 // =============================================================================
@@ -345,6 +352,24 @@ body.is-dark {
 
   .payment-label { color: $dk-text-muted; }
   .payment-value { color: $dk-text; }
+
+  // Payment-method tabs (.tab / .tab.is-active inside .card-container.payment-card).
+  // The active tab is light-blue with blue text in light mode; the section-14
+  // blanket "lift card text to light" rule would wash its label out on that pale
+  // fill. Re-assert a readable dark-mode treatment: muted inactive, accent active.
+  .tab:not(.admin-shell .tab) {
+    color: $dk-text-muted !important;
+    background: transparent !important;
+    border-color: $dk-border !important;
+
+    &.is-active {
+      background: rgba(75, 194, 247, 0.16) !important;
+      color: $dk-accent !important;
+      border-color: $dk-accent !important;
+    }
+
+    img { opacity: 0.9; }
+  }
 }
 
 // =============================================================================
@@ -409,5 +434,56 @@ body.is-dark {
       color: $dk-text;
     }
     table td > span.p-disabled { opacity: 0.35; }
+  }
+}
+
+// =============================================================================
+// 14. Booking-flow shared cards — .card-container + trip result .schedule-item
+// =============================================================================
+// Every booking step (schedule results, review, passenger-info, payment) wraps
+// its content in a `.card-container`, which is white ($primary-white / #f6f7f7)
+// in light mode; the trip-result row is a white `.schedule-item` inside a light
+// `.booking-container` panel (#f6fcff). With real trip data these render as
+// bright white blocks on the dark page. Theme them to the dark card surface and
+// lift their (dark $text-*) text to light.
+//
+// `.card-container` and `.seat-box` are ALSO used by the staff walk-in panel
+// inside `.admin-shell` (which self-themes), so every rule excludes that subtree
+// with `:not(.admin-shell …)` — the same guard as the global form-control rule.
+body.is-dark {
+  .card-container:not(.admin-shell .card-container),
+  .schedule-item {
+    background-color: $dk-bg-card !important;
+    border-color: $dk-border !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  // Inner header/body wrappers carry their own white background — clear it.
+  .card-container:not(.admin-shell .card-container) .card-header,
+  .card-container:not(.admin-shell .card-container) .card-body {
+    background-color: transparent !important;
+  }
+
+  // Lift every text node inside these cards off the dark surface. Buttons keep
+  // their own coloured fills; forcing their label colour light is harmless.
+  .card-container:not(.admin-shell .card-container),
+  .card-container:not(.admin-shell .card-container) *,
+  .schedule-item,
+  .schedule-item * {
+    color: $dk-text !important;
+  }
+
+  // Re-assert error/required red, which the blanket rule above would wash out.
+  .card-container:not(.admin-shell .card-container) .form-required,
+  .card-container:not(.admin-shell .card-container) .text-error,
+  .card-container:not(.admin-shell .card-container) .label-error,
+  .schedule-item .text-error {
+    color: $dk-danger !important;
+  }
+
+  // Schedule-results outer panel (.booking-container, light #f6fcff). Scope via
+  // :has(.schedule-item) so the home page's own .booking-container is untouched.
+  .booking-container:has(.schedule-item) {
+    background-color: $dk-bg !important;
   }
 }
