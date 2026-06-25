@@ -14,7 +14,7 @@ export class AppComponent {
     private translate: TranslateService,
     private languageService: LanguageService
   ) {
-    translate.addLangs(['en', 'th']);
+    translate.addLangs(['en', 'th', 'zh']);
     translate.setDefaultLang('th');
     void this.languageService.switch(this.languageService.getStoredLanguage());
   }

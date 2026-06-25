@@ -493,6 +493,7 @@
       "LANGUAGE_SWITCH": "语言",
       "LANGUAGE_TH": "切换到泰语",
       "LANGUAGE_EN": "切换到英语",
+      "LANGUAGE_ZH": "切换到中文",
       "PROFILE_MENU": "打开个人资料菜单"
     },
     "HOME_BOOKING": {
@@ -605,7 +606,7 @@
     },
     "FORM": {
       "SECTION_TITLE": "个人信息",
-      "USE_THIS_PASSENGER_AS_BOOKER": "将此乘客设为预订人",
+      "USE_BOOKER_AS_THIS_PASSENGER": "将此乘客设为预订人",
       "TITLE": "称谓",
       "TITLE_REQUIRED": "请输入称谓",
       "FIRST_NAME": "名",
