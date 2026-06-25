@@ -1,76 +1,85 @@
+<!--
+  Language-switcher sub-template — rendered once on desktop (inside .button-container)
+  and once inside the mobile panel. Both share the same component state
+  (currentLanguage, isLangDropdownOpen, languages, selectLanguage, toggleLangDropdown).
+  No template-ref var is used to identify the trigger: because this template is
+  instantiated twice, a single @ViewChild could not point at "the" trigger. The
+  outside-click guard matches on the .navbar-lang-dropdown class instead, so a
+  click on EITHER instance is correctly treated as inside the trigger.
+-->
+<ng-template #langSwitcher>
+  <div class="navbar-lang-dropdown">
+    <button
+      type="button"
+      class="navbar-lang-trigger"
+      (click)="toggleLangDropdown()"
+      [attr.aria-expanded]="isLangDropdownOpen"
+      aria-haspopup="menu"
+      [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
+    >
+      <span class="material-symbols-outlined navbar-lang-globe">language</span>
+      <span class="navbar-lang-label">{{ currentEndonym }}</span>
+      <span class="material-symbols-outlined navbar-lang-chevron">expand_more</span>
+    </button>
+
+    <div
+      class="navbar-lang-menu"
+      *ngIf="isLangDropdownOpen"
+      role="menu"
+    >
+      <button
+        *ngFor="let lang of languages"
+        type="button"
+        class="navbar-lang-item"
+        [class.active]="currentLanguage === lang.code"
+        role="menuitemradio"
+        [attr.aria-checked]="currentLanguage === lang.code"
+        [attr.aria-current]="currentLanguage === lang.code ? 'true' : null"
+        [attr.aria-label]="lang.ariaKey | translate"
+        (click)="selectLanguage(lang.code)"
+      >
+        <span
+          class="material-symbols-outlined navbar-lang-check"
+          [class.visible]="currentLanguage === lang.code"
+          aria-hidden="true"
+        >check</span>
+        <span>{{ lang.endonym }}</span>
+      </button>
+    </div>
+  </div>
+</ng-template>
+
 <div class="navbar-container">
   <!-- logo (navigates to home) -->
   <a class="logo" routerLink="/home">
     <img class="logo" src="images/logo.svg" alt="Logo" />
   </a>
 
-  <!-- วิธีจองและชำระเงิน -->
+  <!-- Desktop nav links — hidden at ≤992px -->
   <a
-    class="menu-font"
+    class="menu-font navbar-desktop-only"
     routerLink="/how-to-book"
     routerLinkActive="menu-font-active"
   >
     {{ "HOME.NAVBAR.BOOKING" | translate }}
   </a>
-  <!-- ติดต่อเรา -->
   <button
     type="button"
-    class="menu-font menu-font-action"
+    class="menu-font menu-font-action navbar-desktop-only"
     (click)="scrollToContact()"
   >
     {{ "HOME.NAVBAR.CONTACT" | translate }}
   </button>
 
-  <div class="button-container">
-    <!-- Language globe dropdown -->
-    <div class="navbar-lang-dropdown">
-      <button
-        #langDropdown
-        type="button"
-        class="navbar-lang-trigger"
-        (click)="toggleLangDropdown()"
-        [attr.aria-expanded]="isLangDropdownOpen"
-        aria-haspopup="menu"
-        [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
-      >
-        <span class="material-symbols-outlined navbar-lang-globe">language</span>
-        <span class="navbar-lang-label">{{ currentEndonym }}</span>
-        <span class="material-symbols-outlined navbar-lang-chevron">expand_more</span>
-      </button>
-
-      <div
-        class="navbar-lang-menu"
-        *ngIf="isLangDropdownOpen"
-        role="menu"
-      >
-        <button
-          *ngFor="let lang of languages"
-          type="button"
-          class="navbar-lang-item"
-          [class.active]="currentLanguage === lang.code"
-          role="menuitemradio"
-          [attr.aria-checked]="currentLanguage === lang.code"
-          [attr.aria-current]="currentLanguage === lang.code ? 'true' : null"
-          [attr.aria-label]="lang.ariaKey | translate"
-          (click)="selectLanguage(lang.code)"
-        >
-          <span
-            class="material-symbols-outlined navbar-lang-check"
-            [class.visible]="currentLanguage === lang.code"
-            aria-hidden="true"
-          >check</span>
-          <span>{{ lang.endonym }}</span>
-        </button>
-      </div>
-    </div>
+  <!-- Desktop button-container (language switcher + auth) — hidden at ≤992px -->
+  <div class="button-container navbar-desktop-only">
+    <!-- Language globe dropdown — desktop instance -->
+    <ng-container *ngTemplateOutlet="langSwitcher"></ng-container>
 
     <ng-container *ngIf="!isLogin">
-      <!-- เข้าสู่ระบบ -->
       <button class="btn btn-signin" type="button" [routerLink]="'/login'">
         {{ "HOME.NAVBAR.SIGNIN" | translate }}
       </button>
-
-      <!-- สมัครสมาชิก -->
       <button class="btn btn-signup" type="button" [routerLink]="'/register'">
         {{ "HOME.NAVBAR.SIGNUP" | translate }}
       </button>
@@ -124,4 +133,97 @@
       </div>
     </ng-container>
   </div>
+
+  <!-- Hamburger toggle — visible only at ≤992px -->
+  <button
+    #hamburgerBtn
+    type="button"
+    class="navbar-hamburger"
+    (click)="toggleMobileMenu()"
+    [attr.aria-expanded]="isMobileMenuOpen"
+    aria-controls="navbar-mobile-panel"
+    [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
+  >
+    <span class="material-symbols-outlined">
+      {{ isMobileMenuOpen ? 'close' : 'menu' }}
+    </span>
+  </button>
 </div>
+
+<!-- Mobile slide-down panel — visible only at ≤992px when open -->
+<nav
+  id="navbar-mobile-panel"
+  class="navbar-mobile-panel"
+  *ngIf="isMobileMenuOpen"
+  role="navigation"
+  [attr.aria-label]="'HOME.NAVBAR.MENU' | translate"
+>
+  <!-- 1. Language switcher at the top (UX requirement) — mobile instance -->
+  <div class="navbar-mobile-section navbar-mobile-lang">
+    <ng-container *ngTemplateOutlet="langSwitcher"></ng-container>
+  </div>
+
+  <!-- 2. Nav links -->
+  <div class="navbar-mobile-section">
+    <a
+      class="navbar-mobile-link"
+      routerLink="/how-to-book"
+      routerLinkActive="navbar-mobile-link-active"
+      (click)="closeMobileMenu()"
+    >
+      <span class="material-symbols-outlined">directions_bus</span>
+      <span>{{ "HOME.NAVBAR.BOOKING" | translate }}</span>
+    </a>
+    <button
+      type="button"
+      class="navbar-mobile-link"
+      (click)="mobileScrollToContact()"
+    >
+      <span class="material-symbols-outlined">contact_support</span>
+      <span>{{ "HOME.NAVBAR.CONTACT" | translate }}</span>
+    </button>
+  </div>
+
+  <!-- 3. Auth area -->
+  <div class="navbar-mobile-section">
+    <ng-container *ngIf="!isLogin">
+      <a class="navbar-mobile-link" routerLink="/login" (click)="closeMobileMenu()">
+        <span class="material-symbols-outlined">login</span>
+        <span>{{ "HOME.NAVBAR.SIGNIN" | translate }}</span>
+      </a>
+      <a class="navbar-mobile-link" routerLink="/register" (click)="closeMobileMenu()">
+        <span class="material-symbols-outlined">person_add</span>
+        <span>{{ "HOME.NAVBAR.SIGNUP" | translate }}</span>
+      </a>
+    </ng-container>
+
+    <ng-container *ngIf="isLogin">
+      <a
+        *ngIf="isAdmin"
+        class="navbar-mobile-link"
+        routerLink="/admin/dashboard"
+        (click)="closeMobileMenu()"
+      >
+        <span class="material-symbols-outlined">dashboard</span>
+        <span>{{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}</span>
+      </a>
+      <a
+        *ngIf="isSalesperson || isDriver"
+        class="navbar-mobile-link"
+        routerLink="/staff"
+        (click)="closeMobileMenu()"
+      >
+        <span class="material-symbols-outlined">badge</span>
+        <span>{{ "HOME.NAVBAR.STAFF_PORTAL" | translate }}</span>
+      </a>
+      <button
+        type="button"
+        class="navbar-mobile-link navbar-mobile-signout"
+        (click)="onLogout()"
+      >
+        <span class="material-symbols-outlined">logout</span>
+        <span>{{ "HOME.NAVBAR.SIGNOUT" | translate }}</span>
+      </button>
+    </ng-container>
+  </div>
+</nav>

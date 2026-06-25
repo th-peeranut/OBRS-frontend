@@ -238,6 +238,38 @@ describe('NavbarComponent', () => {
     expect(component.isProfileDropdownOpen).toBe(false);
   });
 
+  it('Escape closes the mobile menu', () => {
+    component.isMobileMenuOpen = true;
+    component.closeDropdownsOnEscape();
+    expect(component.isMobileMenuOpen).toBe(false);
+  });
+
+  // ── Mobile hamburger state ──────────────────────────────────────────────────
+
+  it('isMobileMenuOpen starts as false', () => {
+    expect(component.isMobileMenuOpen).toBe(false);
+  });
+
+  it('closeMobileMenu sets isMobileMenuOpen to false', () => {
+    component.isMobileMenuOpen = true;
+    component.closeMobileMenu();
+    expect(component.isMobileMenuOpen).toBe(false);
+  });
+
+  it('closeMobileMenu also closes the language sub-dropdown', () => {
+    component.isMobileMenuOpen = true;
+    component.isLangDropdownOpen = true;
+    component.closeMobileMenu();
+    expect(component.isMobileMenuOpen).toBe(false);
+    expect(component.isLangDropdownOpen).toBe(false);
+  });
+
+  it('selectLanguage does NOT close the mobile menu', () => {
+    component.isMobileMenuOpen = true;
+    component.selectLanguage('en');
+    expect(component.isMobileMenuOpen).toBe(true);
+  });
+
   it('languages list has exactly three entries: en, th, zh', () => {
     const codes = component.languages.map((l) => l.code);
     expect(codes).toEqual(['en', 'th', 'zh']);
@@ -561,5 +593,205 @@ describe('NavbarComponent template (logged in)', () => {
     expect(dashboardLink)
       .withContext('admin users should see the dashboard link')
       .toBeTruthy();
+  });
+});
+
+describe('NavbarComponent hamburger menu', () => {
+  let fixture: ComponentFixture<NavbarComponent>;
+  let component: NavbarComponent;
+
+  const authStub = {
+    authStatus$: new BehaviorSubject<boolean>(false),
+    getUsername: () => 'tester',
+    hasAnyRole: () => false,
+  };
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [NavbarComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(NavbarComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  });
+
+  it('renders the hamburger button', () => {
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    expect(btn).withContext('hamburger button should be in the DOM').toBeTruthy();
+  });
+
+  it('hamburger button has aria-controls="navbar-mobile-panel"', () => {
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    expect(btn.nativeElement.getAttribute('aria-controls')).toBe('navbar-mobile-panel');
+  });
+
+  it('hamburger button has aria-expanded="false" initially', () => {
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    expect(btn.nativeElement.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('mobile panel is not rendered initially', () => {
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(panel).withContext('mobile panel should be absent initially').toBeNull();
+  });
+
+  it('clicking the hamburger button opens the mobile panel', () => {
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    btn.nativeElement.click();
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(panel).withContext('mobile panel should appear after click').toBeTruthy();
+  });
+
+  it('hamburger aria-expanded becomes true when panel is open', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    expect(btn.nativeElement.getAttribute('aria-expanded')).toBe('true');
+  });
+
+  it('clicking the hamburger again closes the mobile panel', () => {
+    const btn = fixture.debugElement.query(By.css('.navbar-hamburger'));
+    btn.nativeElement.click();
+    fixture.detectChanges();
+    btn.nativeElement.click();
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(panel).withContext('mobile panel should close on second click').toBeNull();
+  });
+
+  it('mobile panel has role="navigation"', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(panel.nativeElement.getAttribute('role')).toBe('navigation');
+  });
+
+  it('mobile panel has id="navbar-mobile-panel"', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('#navbar-mobile-panel'));
+    expect(panel).toBeTruthy();
+  });
+
+  it('mobile panel contains the language switcher trigger', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const triggers = panel.queryAll(By.css('.navbar-lang-trigger'));
+    expect(triggers.length).toBeGreaterThan(0);
+  });
+
+  it('mobile panel language switcher is in the first section (top position)', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const sections = panel.queryAll(By.css('.navbar-mobile-section'));
+    expect(sections.length).toBeGreaterThan(0);
+
+    // The first section must contain the language trigger.
+    const langInFirstSection = sections[0].query(By.css('.navbar-lang-trigger'));
+    expect(langInFirstSection)
+      .withContext('language switcher should be in the first section of the mobile panel')
+      .toBeTruthy();
+  });
+
+  it('mobile panel contains the how-to-book nav link', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const link = panel.query(By.css('a.navbar-mobile-link[href="/how-to-book"]'));
+    expect(link).withContext('how-to-book link should be in the panel').toBeTruthy();
+  });
+
+  it('mobile panel contains sign-in and register links when logged out', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const loginLink = panel.query(By.css('a.navbar-mobile-link[href="/login"]'));
+    const registerLink = panel.query(By.css('a.navbar-mobile-link[href="/register"]'));
+    expect(loginLink).withContext('sign-in link should be present').toBeTruthy();
+    expect(registerLink).withContext('register link should be present').toBeTruthy();
+  });
+
+  it('Escape closes the mobile panel', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    component.closeDropdownsOnEscape();
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    expect(panel).withContext('Escape should close the mobile panel').toBeNull();
+  });
+
+  it('clicking a nav link in the mobile panel closes the panel', () => {
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const link = panel.query(By.css('a.navbar-mobile-link[href="/how-to-book"]'));
+    link.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(component.isMobileMenuOpen).toBe(false);
+  });
+
+  it('language selection inside mobile panel does NOT close the panel', () => {
+    component.isMobileMenuOpen = true;
+    component.isLangDropdownOpen = true;
+    fixture.detectChanges();
+
+    // Click a language item in the mobile panel.
+    const panel = fixture.debugElement.query(By.css('.navbar-mobile-panel'));
+    const items = panel.queryAll(By.css('.navbar-lang-item'));
+    expect(items.length).toBeGreaterThan(0);
+    items[0].nativeElement.click();
+    fixture.detectChanges();
+
+    // Language sub-dropdown closes but mobile panel stays open.
+    expect(component.isMobileMenuOpen).toBe(true);
+    expect(component.isLangDropdownOpen).toBe(false);
+  });
+
+  it('opening the lang dropdown via the MOBILE trigger keeps it open', () => {
+    // Regression: the switcher template renders twice (desktop + mobile). The
+    // same-click guard must treat a click on EITHER trigger as inside, otherwise
+    // the menu opened from the mobile panel snaps shut on the same click. Drive
+    // the real toggle + outside-click guard with the mobile trigger as target.
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+
+    const triggers = fixture.debugElement.queryAll(By.css('.navbar-lang-trigger'));
+    expect(triggers.length).toBe(2);
+    const mobileTrigger = fixture.debugElement
+      .query(By.css('.navbar-mobile-panel'))
+      .query(By.css('.navbar-lang-trigger')).nativeElement;
+
+    component.toggleLangDropdown();
+    expect(component.isLangDropdownOpen).toBe(true);
+
+    // Simulate the same opening click bubbling to document, target = MOBILE trigger.
+    component.handleLangDropdownOutsideClick({ target: mobileTrigger } as unknown as Event);
+
+    expect(component.isLangDropdownOpen)
+      .withContext('lang menu must stay open when opened from the mobile trigger')
+      .toBe(true);
   });
 });

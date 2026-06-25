@@ -272,3 +272,35 @@ hand-authored copy of the intended state. Before trusting a regression test, rev
 confirm the test goes red. If it stays green against the buggy code, it tests nothing. When the bug
 is in module wiring, assert on the module's actual metadata/route exports — export the `const` if you
 must — rather than re-declaring stub routes.
+
+---
+
+## navbar mobile hamburger — a single `@ViewChild` cannot identify a template rendered twice
+
+**Bug (caught in scrutinize, self-fixed):** The language switcher was extracted into one
+`<ng-template #langSwitcher>` and rendered via `*ngTemplateOutlet` into BOTH the desktop bar and the
+mobile panel. The trigger button carried a `#langDropdown` template-ref read by
+`@ViewChild('langDropdown')`, and `handleLangDropdownOutsideClick` used
+`this.langDropdown.nativeElement.contains(target)` as its "clicked the trigger?" guard.
+
+When both outlets are in the DOM (mobile panel open — note the desktop copy is only `display:none`,
+still present), a single-element `@ViewChild` resolves to the **first** match = the hidden desktop
+trigger. The same click that opened the menu from the **mobile** trigger then failed
+`desktopTrigger.contains(mobileTrigger)` → the guard's else-branch slammed the menu shut. Net effect:
+the language dropdown was impossible to open on mobile. The header comment claiming "@ViewChild
+resolves the LAST instance, so it's safe" was wrong on two counts (it's the first, and one ref can
+never represent two elements).
+
+**Why the new tests missed it:** they set `isLangDropdownOpen = true` by hand instead of calling
+`toggleLangDropdown()`, so the same-click guard was never exercised. A test that drives the real
+toggle path with the mobile trigger as the event target fails on the old code.
+
+**Fix:** drop the `@ViewChild`/template-ref entirely; match the trigger by class with
+`(event.target as HTMLElement).closest('.navbar-lang-dropdown')`. Class matching is correct for N
+instances of the same template.
+
+**Rule:** when a template (or `ng-template`/`*ngTemplateOutlet`) is instantiated more than once in a
+component, do NOT identify its elements with a single `@ViewChild`/template-ref — it silently binds to
+one instance. Use a class/`closest()` check, `@ViewChildren` (QueryList), or event delegation. And a
+dropdown's "outside click" regression test must call the real `toggle*()` and feed the guard the
+actual clicked element, not pre-set the open flag.

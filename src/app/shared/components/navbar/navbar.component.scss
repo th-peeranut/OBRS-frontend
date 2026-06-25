@@ -1,25 +1,26 @@
 @import "../../../../styles/variables.scss";
 
+%mat-icon {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1;
+}
+
 .navbar-container {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
   align-items: center;
   column-gap: 40px;
-  row-gap: 10px;
-
   width: 100%;
   height: 80px;
   padding: 0 clamp(16px, 5vw, 48px);
   box-sizing: border-box;
-
   background-color: $primary-white;
 }
 
 .logo {
   width: 80px;
   height: 35px;
-
   margin-right: 209px;
   flex-shrink: 0;
 }
@@ -31,14 +32,8 @@
   text-decoration: none;
   white-space: nowrap;
 
-  &-active {
-    color: $primary-blue;
-    font-weight: 500;
-  }
+  &-active { color: $primary-blue; font-weight: 500; }
 
-  // Click-only action rendered as a <button> for keyboard accessibility,
-  // e.g. the "Contact us" scroll action. Reset the native button chrome so
-  // it matches the sibling <a> menu links.
   &-action {
     cursor: pointer;
     background: none;
@@ -51,49 +46,35 @@
 
 .button-container {
   display: flex;
-  flex-direction: row;
   align-items: center;
   column-gap: 10px;
-  flex-wrap: nowrap;
-
   height: 80px;
 }
 
 .btn-signin {
-  display: inline-block;
   min-width: 140px;
   height: 52px;
   padding: 8px 30px;
-
   font-size: 18px;
   font-weight: 500;
   color: $text-black;
-
   border: 1px solid $primary-lightgrey;
   border-radius: 24px;
-
   background-color: transparent;
 }
 
 .btn-signup {
-  display: inline-block;
   min-width: 160px;
   height: 52px;
   padding: 8px 30px;
-
   font-size: 18px;
   font-weight: 500;
   color: $text-white;
-
   border-radius: 24px;
-
   background-color: $primary-blue;
 }
 
-// Language globe dropdown
-.navbar-lang-dropdown {
-  position: relative;
-}
+.navbar-lang-dropdown { position: relative; }
 
 .navbar-lang-trigger {
   display: inline-flex;
@@ -101,7 +82,7 @@
   gap: 4px;
   border: 1px solid rgba(189, 200, 207, 0.6);
   border-radius: 10px;
-  background: #ffffff;
+  background: #fff;
   color: #506068;
   font-size: 13px;
   font-weight: 600;
@@ -110,34 +91,19 @@
   cursor: pointer;
   white-space: nowrap;
 
-  &:hover {
-    background: rgba(77, 190, 239, 0.08);
-    color: #005f7e;
-  }
+  &:hover { background: rgba(77, 190, 239, 0.08); color: #005f7e; }
 }
 
-.navbar-lang-globe {
-  font-family: "Material Symbols Outlined";
-  font-style: normal;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 1;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+.navbar-lang-globe,
+.navbar-lang-chevron,
+.navbar-lang-check { @extend %mat-icon; font-size: 16px; }
+
+.navbar-lang-check {
+  visibility: hidden;
+  &.visible { visibility: visible; }
 }
 
-.navbar-lang-label {
-  // Allow the label to size to content — no fixed width.
-  min-width: 0;
-}
-
-.navbar-lang-chevron {
-  font-family: "Material Symbols Outlined";
-  font-style: normal;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 1;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-}
+.navbar-lang-label { min-width: 0; }
 
 .navbar-lang-menu {
   position: absolute;
@@ -146,7 +112,7 @@
   min-width: 140px;
   border: 1px solid rgba(189, 200, 207, 0.7);
   border-radius: 10px;
-  background: #ffffff;
+  background: #fff;
   box-shadow: 0 10px 24px rgba(25, 28, 30, 0.12);
   padding: 6px;
   z-index: 50;
@@ -169,35 +135,11 @@
   text-align: left;
   white-space: nowrap;
 
-  &:hover {
-    background: rgba(77, 190, 239, 0.12);
-    color: #005f7e;
-  }
-
-  &.active {
-    background: rgba(77, 190, 239, 0.16);
-    color: #0a5675;
-  }
+  &:hover { background: rgba(77, 190, 239, 0.12); color: #005f7e; }
+  &.active { background: rgba(77, 190, 239, 0.16); color: #0a5675; }
 }
 
-.navbar-lang-check {
-  font-family: "Material Symbols Outlined";
-  font-style: normal;
-  font-weight: 400;
-  font-size: 16px;
-  line-height: 1;
-  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  visibility: hidden;
-
-  &.visible {
-    visibility: visible;
-  }
-}
-
-// Profile avatar + dropdown — mirrors .admin-avatar / .admin-profile / .admin-profile-menu / .admin-profile-item
-.navbar-profile {
-  position: relative;
-}
+.navbar-profile { position: relative; }
 
 .navbar-avatar {
   width: 38px;
@@ -209,7 +151,7 @@
   font-weight: 700;
   font-size: 13px;
   background: linear-gradient(135deg, #006687, #4dbeef);
-  color: #ffffff;
+  color: #fff;
   border: 0;
   cursor: pointer;
 }
@@ -221,7 +163,7 @@
   min-width: 175px;
   border: 1px solid rgba(189, 200, 207, 0.7);
   border-radius: 10px;
-  background: #ffffff;
+  background: #fff;
   box-shadow: 0 10px 24px rgba(25, 28, 30, 0.12);
   padding: 6px;
   z-index: 50;
@@ -242,96 +184,92 @@
   cursor: pointer;
   text-decoration: none;
 
-  .material-symbols-outlined {
-    font-family: "Material Symbols Outlined";
-    font-style: normal;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 1;
-    letter-spacing: normal;
-    text-transform: none;
-    display: inline-block;
-    white-space: nowrap;
-    word-wrap: normal;
-    direction: ltr;
-    font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-  }
+  .material-symbols-outlined { @extend %mat-icon; font-size: 18px; }
+  &:hover { background: rgba(77, 190, 239, 0.12); color: #005f7e; }
+}
 
-  &:hover {
-    background: rgba(77, 190, 239, 0.12);
-    color: #005f7e;
-  }
+.navbar-hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(189, 200, 207, 0.6);
+  border-radius: 10px;
+  background: #fff;
+  color: #506068;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-left: auto;
+
+  .material-symbols-outlined { @extend %mat-icon; font-size: 22px; }
+  &:hover { background: rgba(77, 190, 239, 0.08); color: #005f7e; }
+}
+
+.navbar-mobile-panel {
+  display: none;
+  flex-direction: column;
+  background-color: $primary-white;
+  border-top: 1px solid rgba(189, 200, 207, 0.5);
+  padding: 12px 16px 16px;
+  box-shadow: 0 8px 20px rgba(25, 28, 30, 0.1);
+  z-index: 40;
+}
+
+.navbar-mobile-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 0;
+  & + & { border-top: 1px solid rgba(189, 200, 207, 0.4); }
+}
+
+.navbar-mobile-lang .navbar-lang-menu {
+  right: auto;
+  left: 0;
+  max-width: calc(100vw - 32px);
+}
+
+.navbar-mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: #3f4f57;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+
+  .material-symbols-outlined { @extend %mat-icon; font-size: 20px; color: #506068; flex-shrink: 0; }
+  &:hover { background: rgba(77, 190, 239, 0.1); color: #005f7e; }
+}
+
+.navbar-mobile-signout {
+  color: #c0392b;
+  &:hover { background: rgba(192, 57, 43, 0.08); color: #a93226; }
 }
 
 @media (max-width: 1200px) {
-  .navbar-container {
-    column-gap: 24px;
-    padding: 0 20px;
-  }
-
-  .logo {
-    margin-right: 72px;
-  }
-
-  .menu-font {
-    font-size: 16px;
-  }
+  .navbar-container { column-gap: 24px; padding: 0 20px; }
+  .logo { margin-right: 72px; }
+  .menu-font { font-size: 16px; }
 }
 
 @media (max-width: 992px) {
-  .navbar-container {
-    height: auto;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    column-gap: 16px;
-    padding: 12px 16px;
-  }
-
-  .logo {
-    margin-right: 0;
-    width: 72px;
-    height: 32px;
-  }
-
-  .menu-font {
-    font-size: 15px;
-  }
-
-  .button-container {
-    width: 100%;
-    height: auto;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    column-gap: 10px;
-    row-gap: 8px;
-  }
-
-  .btn-signin,
-  .btn-signup {
-    min-width: 120px;
-    height: 44px;
-    padding: 8px 16px;
-    font-size: 15px;
-  }
+  .navbar-container { height: auto; justify-content: space-between; column-gap: 16px; padding: 12px 16px; }
+  .logo { margin-right: 0; width: 72px; height: 32px; }
+  .navbar-desktop-only { display: none !important; }
+  .navbar-hamburger { display: inline-flex; }
+  .navbar-mobile-panel { display: flex; }
 }
 
 @media (max-width: 576px) {
-  .navbar-container {
-    justify-content: center;
-    column-gap: 12px;
-  }
-
-  .menu-font {
-    font-size: 14px;
-  }
-
-  .button-container {
-    justify-content: center;
-  }
-
-  .btn-signin,
-  .btn-signup {
-    min-width: calc(50% - 6px);
-    font-size: 14px;
-  }
+  .navbar-container { column-gap: 12px; padding: 10px 12px; }
 }

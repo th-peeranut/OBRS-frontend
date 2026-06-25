@@ -29,6 +29,7 @@ interface LanguageOption {
 export class NavbarComponent implements OnInit, OnDestroy {
   isProfileDropdownOpen: boolean = false;
   isLangDropdownOpen: boolean = false;
+  isMobileMenuOpen: boolean = false;
 
   isShowPassword: boolean = false;
 
@@ -42,7 +43,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ];
 
   @ViewChild('profileDropdown') profileDropdown!: ElementRef;
-  @ViewChild('langDropdown') langDropdown!: ElementRef;
+  @ViewChild('hamburgerBtn') hamburgerBtn!: ElementRef;
 
   isLogin: boolean = false;
   isAdmin: boolean = false;
@@ -52,6 +53,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   authSubscription$: Subscription;
   private unlistenProfileDropdown?: () => void;
   private unlistenLangDropdown?: () => void;
+  private unlistenMobileMenu?: () => void;
 
   constructor(
     private translate: TranslateService,
@@ -81,6 +83,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     if (this.authSubscription$) this.authSubscription$.unsubscribe();
     this.unlistenProfileDropdown?.();
     this.unlistenLangDropdown?.();
+    this.unlistenMobileMenu?.();
   }
 
   get userInitials(): string {
@@ -111,6 +114,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
   selectLanguage(lang: string) {
     this.switchLanguage(lang);
     this.closeLangDropdown();
+    // Language selection does NOT close the mobile menu — the sub-dropdown
+    // closes on its own; the user stays in the panel to see the updated label.
   }
 
   // ── Language dropdown ───────────────────────────────────────────────────────
@@ -136,15 +141,50 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   handleLangDropdownOutsideClick(event: Event) {
     const targetElement = event.target as HTMLElement;
-    const clickedInsideDropdown = this.elementRef.nativeElement.contains(targetElement);
-    const clickedTriggerButton = this.langDropdown?.nativeElement.contains(targetElement);
+    // The language switcher template is rendered into BOTH the desktop bar and
+    // the mobile panel, so a single @ViewChild ref cannot identify "the" trigger
+    // (it would resolve to the first/hidden instance). Match by class instead so
+    // a click on EITHER switcher instance counts as inside the trigger.
+    const clickedTriggerButton = !!targetElement.closest('.navbar-lang-dropdown');
 
-    if (clickedInsideDropdown && clickedTriggerButton) {
+    if (clickedTriggerButton) {
       this.isLangDropdownOpen = true;
     } else {
       this.isLangDropdownOpen = false;
       this.unlistenLangDropdown?.();
       this.unlistenLangDropdown = undefined;
+    }
+  }
+
+  // ── Mobile hamburger menu ───────────────────────────────────────────────────
+
+  toggleMobileMenu() {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+
+    if (this.isMobileMenuOpen) {
+      this.unlistenMobileMenu?.();
+      this.unlistenMobileMenu = this.renderer.listen('document', 'click', (event: Event) =>
+        this.handleMobileMenuOutsideClick(event)
+      );
+    } else {
+      this.closeMobileMenu();
+    }
+  }
+
+  closeMobileMenu() {
+    this.isMobileMenuOpen = false;
+    this.unlistenMobileMenu?.();
+    this.unlistenMobileMenu = undefined;
+    // Also close the language sub-dropdown when the panel closes.
+    this.closeLangDropdown();
+  }
+
+  handleMobileMenuOutsideClick(event: Event) {
+    const targetElement = event.target as HTMLElement;
+    const clickedInsideComponent = this.elementRef.nativeElement.contains(targetElement);
+
+    if (!clickedInsideComponent) {
+      this.closeMobileMenu();
     }
   }
 
@@ -164,7 +204,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Mirror the admin topbar: Escape closes any open dropdown menu.
+  // Mirror the admin topbar: Escape closes any open overlay.
   @HostListener('document:keydown.escape')
   closeDropdownsOnEscape() {
     if (this.isProfileDropdownOpen) {
@@ -174,6 +214,9 @@ export class NavbarComponent implements OnInit, OnDestroy {
     }
     if (this.isLangDropdownOpen) {
       this.closeLangDropdown();
+    }
+    if (this.isMobileMenuOpen) {
+      this.closeMobileMenu();
     }
   }
 
@@ -209,8 +252,15 @@ export class NavbarComponent implements OnInit, OnDestroy {
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
+  /** Close the mobile menu then scroll to the contact section. */
+  mobileScrollToContact() {
+    this.closeMobileMenu();
+    this.scrollToContact();
+  }
+
   async onLogout() {
     this.isProfileDropdownOpen = false;
+    this.isMobileMenuOpen = false;
 
     this.authService.clearAuthData();
     this.alertService.success(
