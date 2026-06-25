@@ -36,7 +36,19 @@
   }
 }
 
-.navbar-lang-globe,
+// In the navbar (desktop bar + mobile panel, both inside <app-navbar>), size the
+// pill to its content with a min-width floor instead of the fixed 180px, so it
+// sits compactly among the nav actions.
+:host-context(app-navbar) .navbar-lang-trigger {
+  width: auto;
+  min-width: 0;
+}
+
+// Globe reads a touch larger than the 16px label; the chevron/check stay 16px.
+.navbar-lang-globe {
+  font-size: 20px;
+}
+
 .navbar-lang-chevron,
 .navbar-lang-check {
   font-size: 16px;
