@@ -13,6 +13,66 @@
   }
 }
 
+.calendar-icon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 12px;
+  left: 16px;
+}
+
+:host ::ng-deep .p-calendar {
+  position: relative;
+}
+
+:host ::ng-deep .booking-calendar-panel {
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  width: 280px !important;
+  min-width: 280px !important;
+  padding: 8px;
+  transform-origin: top left !important;
+}
+
+:host ::ng-deep .booking-calendar-panel .p-datepicker-header {
+  padding: 6px 8px;
+}
+
+:host ::ng-deep .booking-calendar-panel .p-datepicker-title {
+  font-size: 13px;
+}
+
+:host ::ng-deep .booking-calendar-panel table {
+  margin: 0;
+  font-size: 12px;
+}
+
+:host ::ng-deep .booking-calendar-panel table th,
+:host ::ng-deep .booking-calendar-panel table td {
+  padding: 2px;
+}
+
+:host ::ng-deep .booking-calendar-panel table td > span {
+  width: 28px;
+  height: 28px;
+}
+
+:host ::ng-deep .booking-calendar-panel .p-datepicker-buttonbar {
+  padding: 6px 8px 0;
+}
+
+:host ::ng-deep .booking-calendar-panel .p-button {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  :host ::ng-deep .booking-calendar-panel {
+    width: min(280px, 100vw - 32px) !important;
+    min-width: min(280px, 100vw - 32px) !important;
+  }
+}
+
 .trip-row {
   cursor: pointer;
   transition: background-color 0.15s ease;

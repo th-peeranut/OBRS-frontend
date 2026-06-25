@@ -83,6 +83,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
   }
 
   protected onSeatToggled(seat: string): void {
+    if (!seat) { return; }
     const idx = this.selectedSeats.indexOf(seat);
     if (idx >= 0) {
       this.selectedSeats = this.selectedSeats.filter((s) => s !== seat);

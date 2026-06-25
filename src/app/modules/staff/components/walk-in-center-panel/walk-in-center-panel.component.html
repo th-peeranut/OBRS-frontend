@@ -61,7 +61,7 @@
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
           [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
-          (passengerSeatPositionOnChange)="seatToggled.emit($event)">
+          (seatClicked)="seatToggled.emit($event)">
         </app-passenger-seat-van>
       </ng-container>
 
@@ -71,7 +71,7 @@
           [gender]="seatGender"
           [takenSeats]="takenSeats"
           [currentSeat]="currentSeat"
-          (passengerSeatPositionOnChange)="seatToggled.emit($event)">
+          (seatClicked)="seatToggled.emit($event)">
         </app-passenger-seat-bus>
       </ng-container>
     </p-tabPanel>

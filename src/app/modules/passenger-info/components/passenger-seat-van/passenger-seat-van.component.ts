@@ -19,6 +19,7 @@ export class PassengerSeatVanComponent implements OnChanges {
   @Input() availableSeatNumbers: string[] | null = null;
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
+  @Output() seatClicked = new EventEmitter<string>();
 
   isSelected: string = '';
 
@@ -40,6 +41,8 @@ export class PassengerSeatVanComponent implements OnChanges {
     if (this.isSeatTakenByOther(passengerSeatPosition)) {
       return;
     }
+
+    this.seatClicked.emit(passengerSeatPosition);
 
     if (this.isSelected == passengerSeatPosition) {
       this.isSelected = '';

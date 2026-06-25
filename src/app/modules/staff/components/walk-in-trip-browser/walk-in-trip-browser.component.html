@@ -1,18 +1,21 @@
 <div class="trip-browser d-flex flex-column h-100">
   <!-- Date picker -->
   <div class="mb-3">
-    <!-- No calendar icon: the date is selected directly in the input field
-         (clicking the field opens the overlay), so the trailing button was
-         redundant and only added width/whitespace. -->
+    <!-- Styled to match the home booking calendar: in-input calendar.svg icon
+         (iconDisplay='input'), and panelStyleClass="booking-calendar-panel" with
+         no appendTo so the component-scoped :host ::ng-deep panel styles apply. -->
     <p-calendar
       styleClass="trip-browser-calendar"
+      panelStyleClass="booking-calendar-panel"
       [(ngModel)]="selectedDate"
       dateFormat="dd/mm/yy"
       [minDate]="today"
-      [showIcon]="false"
-      appendTo="body"
+      [showIcon]="true"
+      [iconDisplay]="'input'"
       (ngModelChange)="onDateChange($event)"
-    ></p-calendar>
+    >
+      <ng-template pTemplate="inputicon"><img class="calendar-icon" src="icons/calendar.svg" alt="Calendar Icon" /></ng-template>
+    </p-calendar>
   </div>
 
   <!-- Loading state -->

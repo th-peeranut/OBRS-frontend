@@ -1,5 +1,34 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: walk-in seat count/total fix + calendar restyle
+
+**Self-fix (3-line comment):** Updated the stale leading comment in
+`walk-in-trip-browser.component.html`. It still read "No calendar icon... the trailing
+button was redundant" while the same change re-added an in-input `calendar.svg` icon —
+the comment now contradicted the code. Replaced it with an accurate description (in-input
+icon via `iconDisplay='input'`, `panelStyleClass="booking-calendar-panel"`, no `appendTo`).
+Pattern: when you reverse a decision, rewrite the comment that justified the old one — a
+contradicting comment is worse than none.
+
+**Verified correct (traced end-to-end):**
+- `seatClicked` is emitted unconditionally after the gender/taken-by-other guards, before the
+  `isSelected` toggle. The walk-in count fix therefore does NOT depend on the seat component's
+  internal single-select `isSelected` state (which goes stale in multi-select, but is only used
+  for the single-highlight visual — a pre-existing UX limitation, not a count bug). Multi-seat
+  deselect (select A1, A2, deselect A1 → [A2]) works because the parent `selectedSeats` array is
+  the source of truth and `onSeatToggled` toggles by value.
+- Walk-in flow binds ONLY `seatClicked`; `passengerSeatPositionOnChange` is no longer bound there
+  → no double-fire. The passenger-info single-select flow still binds
+  `passengerSeatPositionOnChange` and relies on its `''`-on-deselect to clear the form control
+  (`setPassengerSeat`), so preserving that emit is correct.
+- Removing `appendTo="body"` is REQUIRED, not incidental: `:host ::ng-deep .booking-calendar-panel`
+  cannot reach a panel appended to `<body>`. Matches the proven home-booking / schedule-booking
+  pattern. Van unavailable-seat clicks are still blocked by the seat-box `isDisabled` guard.
+
+**Test note (left as-is):** `sell-page` "select then deselect leaves length 0" passes on the OLD
+code too (it never passes `''`), so it's non-discriminating. The real regression test is
+"empty string seat is a no-op" — that one fails without the `if (!seat) return;` guard. Adequate.
+
 ## 2026-06-25 — Scrutinize: issue #50 walk-in passenger-type tiles + center header
 
 **Self-fix (1 line):** Added `[attr.aria-pressed]="passengerGender === pt.value"` to the

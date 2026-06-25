@@ -222,6 +222,21 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedSeats).not.toContain('B1');
       expect((comp as any).selectedSeats).toContain('B2');
     });
+
+    it('select then deselect leaves selectedSeats empty (length 0)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedSeats = [];
+      (comp as any).onSeatToggled('A1'); // select
+      (comp as any).onSeatToggled('A1'); // deselect
+      expect((comp as any).selectedSeats.length).toBe(0);
+    });
+
+    it('empty string seat is a no-op (phantom guard)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedSeats = ['B1'];
+      (comp as any).onSeatToggled('');
+      expect((comp as any).selectedSeats).toEqual(['B1']);
+    });
   });
 
   describe('onSell', () => {

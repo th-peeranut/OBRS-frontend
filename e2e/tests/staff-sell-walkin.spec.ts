@@ -888,16 +888,23 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await expect(page.locator('.admin-topbar')).toContainText('Sell tickets to walk-in customers');
   });
 
-  // ── Date picker trigger button is not crushed into a sliver (the "blue strip") ─
-  test('Layout: date picker trigger button keeps its width (not a 2px sliver)', async ({ page }) => {
+  // ── Date picker matches the home booking calendar (issue #52) ───────────────
+  // The picker now uses the home pattern: iconDisplay="input" renders the calendar
+  // icon INSIDE the field (no separate trailing trigger button). Guards both the
+  // in-input icon's presence and that the input still fills its container — the
+  // latter is the original "not crushed into a sliver / blue strip" regression.
+  test('Layout: date picker shows the in-input calendar icon and a full-width input', async ({ page }) => {
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
       route.fulfill({ json: EMPTY_RESP })
     );
     await gotoSellPage(page);
-    const trigger = page.locator('.trip-browser-calendar .p-datepicker-trigger');
-    await expect(trigger).toBeVisible();
-    const box = await trigger.boundingBox();
-    expect(box!.width, 'calendar trigger should not be crushed to a sliver').toBeGreaterThan(20);
+    // Home-parity in-input calendar icon is rendered inside the field.
+    await expect(page.locator('.trip-browser-calendar .calendar-icon')).toBeVisible();
+    // The date input fills its container (not crushed into a sliver).
+    const input = page.locator('.trip-browser-calendar input.p-inputtext');
+    await expect(input).toBeVisible();
+    const box = await input.boundingBox();
+    expect(box!.width, 'calendar input should fill its container, not be crushed').toBeGreaterThan(120);
   });
 
   // ── Sell button reachable without scrolling the checkout card (sticky footer) ─
