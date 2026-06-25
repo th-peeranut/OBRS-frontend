@@ -346,3 +346,68 @@ body.is-dark {
   .payment-label { color: $dk-text-muted; }
   .payment-value { color: $dk-text; }
 }
+
+// =============================================================================
+// 12. Secondary "back" / "change info" buttons (booking flow)
+// =============================================================================
+// These render white-filled (.btn-back, .btn-change-info) or transparent with
+// near-black text (.back-btn) in light mode — both read wrong on the dark
+// surface (a glowing white block, or invisible dark text). Restyle them as
+// outlined secondary buttons: transparent fill, light text, subtle border.
+// Booking-flow-only class names, so no .admin-shell exclusion is needed.
+body.is-dark {
+  .btn-back,
+  .back-btn,
+  .btn-change-info {
+    background-color: transparent !important;
+    color: $dk-text !important;
+    border: 1px solid $dk-border !important;
+
+    &:hover {
+      background-color: rgba(75, 194, 247, 0.10) !important;
+      border-color: $dk-accent !important;
+      color: $dk-accent !important;
+    }
+  }
+}
+
+// =============================================================================
+// 13. PrimeNG calendar (booking widget date, payment expiry)
+// =============================================================================
+// The p-calendar input keeps PrimeNG's light theme (white field) on the dark
+// surface. Dark-theme the input and the open datepicker overlay. The overlay
+// renders under body (inline or appendTo="body"), so body.is-dark reaches it.
+body.is-dark {
+  .p-calendar .p-inputtext {
+    background-color: $dk-bg-input !important;
+    border-color: $dk-border !important;
+    color: $dk-text !important;
+  }
+
+  .p-datepicker {
+    background: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text;
+
+    .p-datepicker-header {
+      background: $dk-bg-card;
+      color: $dk-text;
+      border-bottom-color: $dk-border;
+
+      .p-datepicker-title .p-link,
+      .p-datepicker-prev,
+      .p-datepicker-next { color: $dk-text; }
+    }
+
+    table td > span { color: $dk-text; }
+    table td > span.p-highlight { background: $dk-accent; color: #0f1117; }
+    table td > span:not(.p-disabled):not(.p-highlight):hover {
+      background: rgba(75, 194, 247, 0.15);
+    }
+    table td.p-datepicker-today > span {
+      background: $dk-bg-soft;
+      color: $dk-text;
+    }
+    table td > span.p-disabled { opacity: 0.35; }
+  }
+}
