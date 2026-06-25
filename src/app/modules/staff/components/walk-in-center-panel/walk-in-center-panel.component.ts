@@ -13,8 +13,6 @@ export class WalkInCenterPanelComponent {
   @Input() selectedSeats: string[] = [];
   /** passenger_type lookup slug (male|female|monk|nun); drives the seat-map icon for the NEXT seat. */
   @Input() passengerGender = 'male';
-  /** Route label from the parent (e.g. "Bangkok → Chiang Mai"). */
-  @Input() routeLabel: string | null = null;
 
   /** Per-seat passenger type map (seat label → passenger_type slug) for multi-select rendering. */
   @Input() seatPassengerTypes: Record<string, string> = {};
@@ -37,15 +35,6 @@ export class WalkInCenterPanelComponent {
     { value: 'monk',   labelKey: 'STAFF.SELL.PTYPE_MONK',   icon: 'icons/passenger-monk.svg' },
     { value: 'nun',    labelKey: 'STAFF.SELL.PTYPE_NUN',    icon: '' },
   ];
-
-  /** Splits routeLabel on any arrow/dash separator and returns first and last
-   *  segment names, trimmed. Returns null when routeLabel is absent. */
-  protected get routeEndpoints(): { from: string; to: string } | null {
-    if (!this.routeLabel || !this.routeLabel.trim()) return null;
-    const parts = this.routeLabel.split(/\s*[→—–\-]\s*/).map((p) => p.trim()).filter(Boolean);
-    if (parts.length < 2) return null;
-    return { from: parts[0], to: parts[parts.length - 1] };
-  }
 
   protected onSelectPassengerType(v: string): void {
     this.passengerTypeChange.emit(v);
@@ -97,13 +86,5 @@ export class WalkInCenterPanelComponent {
 
   protected formatDateTime(dateTime: string): string {
     return dayjs(dateTime).format('D MMM YYYY HH:mm');
-  }
-
-  protected formatDate(dateTime: string): string {
-    return dayjs(dateTime).format('D MMM YYYY');
-  }
-
-  protected formatTime(dateTime: string): string {
-    return dayjs(dateTime).format('HH:mm');
   }
 }

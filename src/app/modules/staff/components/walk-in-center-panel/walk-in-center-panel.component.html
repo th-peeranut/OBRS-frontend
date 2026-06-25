@@ -11,24 +11,6 @@
 
     <!-- Tab 1: Ticket Sales (seat map) -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
-      <!-- Trip headline -->
-      <div class="mb-2 text-center">
-        <ng-container *ngIf="routeEndpoints; else fallbackHeader">
-          <div class="fw-bold">
-            {{ routeEndpoints.from }} {{ formatTime(selectedTrip.departureDateTime) }}
-            &rarr;
-            {{ routeEndpoints.to }} {{ formatTime(selectedTrip.arrivalDateTime) }}
-          </div>
-          <div class="small text-muted">{{ selectedTrip.departureDateTime | date:'d MMM y' }}</div>
-        </ng-container>
-        <ng-template #fallbackHeader>
-          <div class="fw-semibold">
-            {{ selectedTrip.departureDateTime | date:'d MMM y' }}
-            &mdash; {{ formatTime(selectedTrip.departureDateTime) }} &rarr; {{ formatTime(selectedTrip.arrivalDateTime) }}
-          </div>
-        </ng-template>
-      </div>
-
       <!-- จาก / ถึง stop selection lists (above passenger type tiles) -->
       <div class="row g-2 mb-3" *ngIf="pickupOptions.length > 0 || isLoadingSegments">
         <!-- จาก (From / Pickup) -->

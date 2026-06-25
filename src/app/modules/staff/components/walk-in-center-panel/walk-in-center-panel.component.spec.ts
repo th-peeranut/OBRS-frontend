@@ -77,52 +77,6 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
-  describe('routeEndpoints getter', () => {
-    it('returns null when routeLabel is null', () => {
-      const comp = makeComponent();
-      comp.routeLabel = null;
-      expect((comp as any).routeEndpoints).toBeNull();
-    });
-
-    it('returns null when routeLabel is empty string', () => {
-      const comp = makeComponent();
-      comp.routeLabel = '';
-      expect((comp as any).routeEndpoints).toBeNull();
-    });
-
-    it('splits "Bangkok → Chiang Mai" on arrow separator', () => {
-      const comp = makeComponent();
-      comp.routeLabel = 'Bangkok → Chiang Mai';
-      const ep = (comp as any).routeEndpoints;
-      expect(ep).not.toBeNull();
-      expect(ep.from).toBe('Bangkok');
-      expect(ep.to).toBe('Chiang Mai');
-    });
-
-    it('splits "BANGKOK-CHONBURI" on dash separator', () => {
-      const comp = makeComponent();
-      comp.routeLabel = 'BANGKOK-CHONBURI';
-      const ep = (comp as any).routeEndpoints;
-      expect(ep).not.toBeNull();
-      expect(ep.from).toBe('BANGKOK');
-      expect(ep.to).toBe('CHONBURI');
-    });
-
-    it('returns first and last parts for a 3-segment label', () => {
-      const comp = makeComponent();
-      comp.routeLabel = 'Bangkok → Chonburi → Chiang Mai';
-      const ep = (comp as any).routeEndpoints;
-      expect(ep?.from).toBe('Bangkok');
-      expect(ep?.to).toBe('Chiang Mai');
-    });
-
-    it('returns null when label has only one part (no separator)', () => {
-      const comp = makeComponent();
-      comp.routeLabel = 'Bangkok';
-      expect((comp as any).routeEndpoints).toBeNull();
-    });
-  });
-
   describe('seatGender getter', () => {
     it('uppercases passengerGender for seat-map components', () => {
       const comp = makeComponent();
@@ -169,13 +123,6 @@ describe('WalkInCenterPanelComponent', () => {
       expect(taken).not.toContain('B2');
       expect(taken).not.toContain('B3');
       expect(taken).toContain('B4');
-    });
-  });
-
-  describe('formatTime', () => {
-    it('formats ISO datetime to HH:mm', () => {
-      const comp = makeComponent();
-      expect((comp as any).formatTime('2026-07-01T08:30:00')).toBe('08:30');
     });
   });
 

@@ -148,13 +148,6 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedSeats).toEqual([]);
     });
 
-    it('resets selectedRouteLabel on date change', () => {
-      const comp = makeComponent();
-      (comp as any).selectedRouteLabel = 'Bangkok → Chiang Mai';
-      (comp as any).onDateChanged(new Date());
-      expect((comp as any).selectedRouteLabel).toBeNull();
-    });
-
     it('resets seatPassengerTypes on date change', () => {
       const comp = makeComponent();
       (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
@@ -214,26 +207,6 @@ describe('SellPageComponent', () => {
       (comp as any).seatPassengerTypes = { B1: 'male' };
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).seatPassengerTypes).toEqual({});
-    });
-
-    it('sets selectedRouteLabel from the matching routeGroup', () => {
-      const trip = makeTrip();
-      const api = createStaffApiStub({
-        getWalkInSchedules: jasmine.createSpy().and.returnValue(
-          of({ data: [makeRouteGroup([trip])] })
-        ),
-      });
-      const comp = makeComponent(api);
-      comp.ngOnInit(); // populates routeGroups with 'bkk-cm' / 'Bangkok → Chiang Mai'
-      (comp as any).onTripSelected({ trip, routeSlug: 'bkk-cm' });
-      expect((comp as any).selectedRouteLabel).toBe('Bangkok → Chiang Mai');
-    });
-
-    it('sets selectedRouteLabel to null when routeSlug has no match', () => {
-      const comp = makeComponent();
-      comp.ngOnInit();
-      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'unknown-route' });
-      expect((comp as any).selectedRouteLabel).toBeNull();
     });
   });
 

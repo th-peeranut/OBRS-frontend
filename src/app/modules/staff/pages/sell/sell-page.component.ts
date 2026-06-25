@@ -37,7 +37,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected routeGroups: WalkInRouteGroupDto[] = [];
   protected selectedTrip: WalkInTripDto | null = null;
   protected selectedRouteSlug: string | null = null;
-  protected selectedRouteLabel: string | null = null;
   protected selectedSeats: string[] = [];
   /** passenger_type lookup slug chosen by staff via the center-panel tiles. */
   protected selectedPassengerType = 'male';
@@ -78,7 +77,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedDate = date;
     this.selectedTrip = null;
     this.selectedRouteSlug = null;
-    this.selectedRouteLabel = null;
     this.selectedSeats = [];
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
@@ -89,8 +87,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected onTripSelected(selection: WalkInTripSelection): void {
     this.selectedTrip = selection.trip;
     this.selectedRouteSlug = selection.routeSlug;
-    this.selectedRouteLabel =
-      this.routeGroups.find((g) => g.routeSlug === selection.routeSlug)?.routeLabel ?? null;
     this.selectedSeats = [];
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
