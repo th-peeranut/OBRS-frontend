@@ -6,46 +6,43 @@
   </div>
   <!-- RIGHT SECTION -->
   <div class="right-section">
-    <!-- CHANGE LANGUAGE SWITCH -->
-    <div class="change-language dropdown">
-      <button
-        #dropdownButton
-        class="btn btn-lang dropdown-toggle p-0"
-        type="button"
-        id="dropdownMenuButton"
-        data-bs-toggle="dropdown"
-        aria-expanded="false"
-        [class.active]="isDropdownOpen"
-        (click)="toggleDropdown()"
-      >
-        <!-- FLAG IMAGE -->
-        <img class="mx-2" [src]="currentLanguage + '.svg'" alt="th" />
-        <!-- LANGUAGE TEXT -->
-        {{ currentLanguage === "th" ? "ภาษาไทย" : "English" }}
-        <!-- ARROW ICON -->
-        <img
-          class="arrow-icon"
-          [src]="isDropdownOpen ? 'arrow-up.svg' : 'arrow-down.svg'"
-          alt="Arrow Icon"
-        />
-      </button>
-      <!-- LANGUAGE LIST -->
-      <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <!-- THAI LANGUAGE -->
-        <li>
-          <a class="dropdown-item menu-lang" (click)="switchLanguage('th')">
-            <img class="mx-2" src="th.svg" alt="th" />
-            ภาษาไทย
-          </a>
-        </li>
-        <!-- ENGLISH LANGUAGE -->
-        <li>
-          <a class="dropdown-item menu-lang" (click)="switchLanguage('en')">
-            <img class="mx-2" src="en.svg" alt="en" />
-            English
-          </a>
-        </li>
-      </ul>
+    <!-- CHANGE LANGUAGE SWITCH — mirrors the home navbar switcher -->
+    <div class="change-language">
+      <div class="navbar-lang-dropdown">
+        <button
+          type="button"
+          class="navbar-lang-trigger"
+          (click)="toggleLangDropdown()"
+          [attr.aria-expanded]="isLangDropdownOpen"
+          aria-haspopup="menu"
+          [attr.aria-label]="'HOME.NAVBAR.LANGUAGE_SWITCH' | translate"
+        >
+          <span class="material-symbols-outlined navbar-lang-globe">language</span>
+          <span class="navbar-lang-label">{{ currentEndonym }}</span>
+          <span class="material-symbols-outlined navbar-lang-chevron">expand_more</span>
+        </button>
+
+        <div class="navbar-lang-menu" *ngIf="isLangDropdownOpen" role="menu">
+          <button
+            *ngFor="let lang of languages"
+            type="button"
+            class="navbar-lang-item"
+            [class.active]="currentLanguage === lang.code"
+            role="menuitemradio"
+            [attr.aria-checked]="currentLanguage === lang.code"
+            [attr.aria-current]="currentLanguage === lang.code ? 'true' : null"
+            [attr.aria-label]="lang.ariaKey | translate"
+            (click)="selectLanguage(lang.code)"
+          >
+            <span
+              class="material-symbols-outlined navbar-lang-check"
+              [class.visible]="currentLanguage === lang.code"
+              aria-hidden="true"
+            >check</span>
+            <span>{{ lang.endonym }}</span>
+          </button>
+        </div>
+      </div>
     </div>
     <!-- LOGO WEBSITE -->
     <div class="logo-section mt-5">
