@@ -289,26 +289,7 @@
               {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
             </div>
 
-            <div class="col-12 mt-3">
-              <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  id="isSelectSeat-{{ i }}"
-                  formControlName="isSelectSeat"
-                />
-                <label class="form-check-label" for="isSelectSeat-{{ i }}">
-                  {{
-                    "PASSENGER_INFO.FORM.SELECT_SEAT_OPTIONAL" | translate
-                  }}
-                </label>
-              </div>
-            </div>
-
-            <div
-              class="seat-map-wrap mt-3"
-              *ngIf="group.get('isSelectSeat')?.value"
-            >
+            <div class="seat-map-wrap mt-3">
               <div class="seat-map-inner">
                 <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
                   <app-passenger-seat-van

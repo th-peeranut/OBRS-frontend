@@ -254,7 +254,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       lastName: ['', Validators.required],
       phoneNumber: ['', [Validators.pattern(/^0\d{9}$/)]],
       gender: ['', Validators.required],
-      isSelectSeat: [false],
+      isSelectSeat: [true],
       passengerSeat: [''],
     });
   }

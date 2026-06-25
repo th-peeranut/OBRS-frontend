@@ -623,9 +623,8 @@
       "PHONE_NUMBER_INVALID": "请输入有效的10位手机号码",
       "GENDER_STATUS": "性别/状态",
       "GENDER_STATUS_REQUIRED": "请选择性别/状态",
-      "SELECT_SEAT_OPTIONAL": "选择座位（可选）",
       "SEAT_SECTION_TITLE": "座位选择",
-      "SEAT_SECTION_HINT": "如果您想现在选择特定座位，请勾选此框。"
+      "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。"
     },
     "GENDER": {
       "MALE": "男",
