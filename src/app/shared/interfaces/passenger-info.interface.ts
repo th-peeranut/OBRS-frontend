@@ -8,6 +8,8 @@ export interface PassengerInfo {
   gender: string;
   isSelectSeat: boolean;
   passengerSeat: string;
+  /** Seat for the return (inbound) leg on round-trip bookings; unset for one-way. */
+  passengerSeatReturn?: string;
   useBookerInfo?: boolean;
 }
 

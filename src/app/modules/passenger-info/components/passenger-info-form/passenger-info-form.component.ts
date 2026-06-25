@@ -18,7 +18,7 @@ import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { Observable, Subject } from 'rxjs';
 import { select, Store } from '@ngrx/store';
-import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
+import { Schedule, ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { invokeGetPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.action';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
@@ -39,6 +39,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   scheduleBooking$: Observable<ScheduleBooking | null>;
   isVanVehicle$: Observable<boolean>;
   availableSeatNumbers$: Observable<string[]>;
+  isReturnTrip$: Observable<boolean>;
+  isVanVehicleReturn$: Observable<boolean>;
+  availableSeatNumbersReturn$: Observable<string[]>;
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
   @Output() validityChange = new EventEmitter<boolean>();
@@ -77,6 +80,25 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
           : booking?.schedule ?? null;
         return scheduleData?.availableSeatNumbers ?? [];
       }),
+      shareReplay(1)
+    );
+
+    // Return (inbound) leg — only present on round-trip bookings, where the
+    // schedule-booking store holds an array of two schedules. The arrival
+    // vehicle/availability is independent of the departure leg.
+    this.isReturnTrip$ = this.scheduleBooking$.pipe(
+      map((booking) => this.returnSchedule(booking) !== null),
+      shareReplay(1)
+    );
+    this.isVanVehicleReturn$ = this.scheduleBooking$.pipe(
+      map((booking) => {
+        const normalized = (this.returnSchedule(booking)?.vehicleType ?? '').toLowerCase();
+        return normalized === 'van' || normalized === 'minibus';
+      }),
+      shareReplay(1)
+    );
+    this.availableSeatNumbersReturn$ = this.scheduleBooking$.pipe(
+      map((booking) => this.returnSchedule(booking)?.availableSeatNumbers ?? []),
       shareReplay(1)
     );
 
@@ -228,6 +250,43 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     );
   }
 
+  setPassengerSeatReturn(index: number, passengerSeat: string) {
+    if (passengerSeat && this.isSeatAlreadyTakenReturn(index, passengerSeat)) {
+      return;
+    }
+
+    this.passengerData
+      .at(index)
+      .get('passengerSeatReturn')
+      ?.setValue(passengerSeat);
+    this.emitValidity();
+  }
+
+  getTakenSeatsReturn(currentIndex: number): string[] {
+    return this.passengerData.controls
+      .map((ctrl, idx) =>
+        idx === currentIndex ? null : ctrl.get('passengerSeatReturn')?.value || null
+      )
+      .filter((seat): seat is string => !!seat);
+  }
+
+  private isSeatAlreadyTakenReturn(currentIndex: number, seat: string): boolean {
+    return this.passengerData.controls.some(
+      (ctrl, idx) =>
+        idx !== currentIndex &&
+        (ctrl.get('passengerSeatReturn')?.value || '') === seat
+    );
+  }
+
+  /** Second (inbound) schedule on a round trip, or null for one-way. */
+  private returnSchedule(booking: ScheduleBooking | null): Schedule | null {
+    const schedule = booking?.schedule;
+    if (!Array.isArray(schedule)) {
+      return null;
+    }
+    return schedule[1] ?? null;
+  }
+
   validateAndGetPassengerInfo(): PassengerInfo[] | null {
     if (!this.passengerForm) {
       return null;
@@ -256,6 +315,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       gender: ['', Validators.required],
       isSelectSeat: [true],
       passengerSeat: [''],
+      passengerSeatReturn: [''],
     });
   }
 

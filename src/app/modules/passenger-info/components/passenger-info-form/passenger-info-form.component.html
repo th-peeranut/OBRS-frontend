@@ -289,6 +289,12 @@
               {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
             </div>
 
+            <!-- Outbound leg label (only labelled when there's a return leg too) -->
+            <div class="col-12 mt-2" *ngIf="isReturnTrip$ | async">
+              <div class="seat-leg-label">
+                {{ "PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND" | translate }}
+              </div>
+            </div>
             <div class="seat-map-wrap mt-3">
               <div class="seat-map-inner">
                 <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
@@ -310,6 +316,42 @@
                 </ng-template>
               </div>
             </div>
+
+            <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
+            <ng-container *ngIf="isReturnTrip$ | async">
+              <div class="col-12 mt-3">
+                <div class="seat-leg-label">
+                  {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
+                </div>
+              </div>
+              <div class="seat-map-wrap mt-2">
+                <div class="seat-map-inner">
+                  <ng-container
+                    *ngIf="isVanVehicleReturn$ | async; else busSeatMapReturn"
+                  >
+                    <app-passenger-seat-van
+                      [gender]="group.get('gender')?.value"
+                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
+                      [takenSeats]="getTakenSeatsReturn(i)"
+                      [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
+                      (passengerSeatPositionOnChange)="
+                        setPassengerSeatReturn(i, $event)
+                      "
+                    ></app-passenger-seat-van>
+                  </ng-container>
+                  <ng-template #busSeatMapReturn>
+                    <app-passenger-seat-bus
+                      [gender]="group.get('gender')?.value"
+                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
+                      [takenSeats]="getTakenSeatsReturn(i)"
+                      (passengerSeatPositionOnChange)="
+                        setPassengerSeatReturn(i, $event)
+                      "
+                    ></app-passenger-seat-bus>
+                  </ng-template>
+                </div>
+              </div>
+            </ng-container>
           </div>
         </div>
       </div>

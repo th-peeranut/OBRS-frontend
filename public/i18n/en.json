@@ -624,7 +624,9 @@
       "GENDER_STATUS": "Gender/Status",
       "GENDER_STATUS_REQUIRED": "Please select a gender/status",
       "SEAT_SECTION_TITLE": "Seat selection",
-      "SEAT_SECTION_HINT": "Choose your seat — if you skip it, one is assigned automatically."
+      "SEAT_SECTION_HINT": "Choose your seat — if you skip it, one is assigned automatically.",
+      "SEAT_LEG_OUTBOUND": "Departure seat",
+      "SEAT_LEG_RETURN": "Return seat"
     },
     "GENDER": {
       "MALE": "Male",

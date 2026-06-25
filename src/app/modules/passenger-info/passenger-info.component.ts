@@ -167,10 +167,13 @@ export class PassengerInfoComponent {
     const departureSchedule = schedules[0];
     const arrivalSchedule = isReturnTrip ? schedules[1] : null;
 
-    const departurePassengers = this.buildPassengersPayload(passengerInfo);
+    const departurePassengers = this.buildPassengersPayload(
+      passengerInfo,
+      'outbound'
+    );
     const arrivalPassengers =
       isReturnTrip && arrivalSchedule
-        ? this.buildPassengersPayload(passengerInfo)
+        ? this.buildPassengersPayload(passengerInfo, 'inbound')
         : [];
 
     const totalAmount =
@@ -221,11 +224,14 @@ export class PassengerInfoComponent {
   }
 
   private buildPassengersPayload(
-    passengers: PassengerInfo[]
+    passengers: PassengerInfo[],
+    leg: 'outbound' | 'inbound' = 'outbound'
   ): BookingSchedulePayload['passengers'] {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
-      seatNumber: this.normalizeSeatNumber(passenger.passengerSeat),
+      seatNumber: this.normalizeSeatNumber(
+        leg === 'inbound' ? passenger.passengerSeatReturn : passenger.passengerSeat
+      ),
       title: this.normalizeTitle(passenger.title),
       firstName: passenger.firstName,
       middleName: passenger.middleName || null,
