@@ -84,6 +84,14 @@ const routes: Routes = [
       ),
   },
   {
+    path: 'my-bookings',
+    canActivate: [AuthGuard],
+    loadChildren: () =>
+      import('./modules/my-bookings/my-bookings.module').then(
+        (m) => m.MyBookingsModule
+      ),
+  },
+  {
     path: 'refund-policy',
     loadChildren: () =>
       import('./modules/refund-policy/refund-policy.module').then(

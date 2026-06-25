@@ -98,6 +98,11 @@
         </button>
   
         <ul class="dropdown-menu" aria-labelledby="profileDropdown">
+          <li>
+            <a class="dropdown-item menu-lang" [routerLink]="'/my-bookings'">
+              {{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}
+            </a>
+          </li>
           <li *ngIf="isAdmin">
             <a class="dropdown-item menu-lang" [routerLink]="'/admin/dashboard'">
               {{ "HOME.NAVBAR.ADMIN_DASHBOARD" | translate }}

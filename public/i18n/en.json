@@ -1,4 +1,54 @@
 {
+  "MY_BOOKINGS": {
+    "TITLE": "My Bookings",
+    "SUBTITLE": "View your trips and cancel a booking if your plans change.",
+    "BOOKING_NUMBER": "Booking No.",
+    "DEPARTURE": "Departure",
+    "PASSENGERS": "Passengers",
+    "TOTAL": "Total",
+    "RETRY": "Try again",
+    "EMPTY": "You don't have any bookings yet.",
+    "BOOK_NOW": "Book a trip",
+    "VIEW_TICKET": "View e-ticket",
+    "LOAD_FAILED": "Unable to load your bookings. Please try again.",
+    "NOT_CANCELLABLE": "Cannot be cancelled",
+    "TICKET_MODAL": {
+      "LOADING": "Loading your e-ticket…",
+      "LOAD_FAILED": "Unable to load the e-ticket. Please try again.",
+      "CLOSE": "Close"
+    },
+    "FILTERS": {
+      "ALL": "All",
+      "CONFIRMED": "Confirmed",
+      "PENDING": "Pending",
+      "CANCELLED": "Cancelled",
+      "EXPIRED": "Expired"
+    },
+    "STATUS": {
+      "pending": "Pending payment",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "expired": "Expired",
+      "refunded": "Refunded"
+    },
+    "TRIP_TYPE": {
+      "one_way": "One way",
+      "return": "Round trip"
+    },
+    "CANCEL": {
+      "ACTION": "Cancel booking",
+      "CONFIRM_TITLE": "Cancel this booking?",
+      "CONFIRM_TEXT": "Booking {{bookingNumber}} ({{route}})",
+      "REFUND_LINE": "Refund: {{refund}} ({{rate}})",
+      "PENALTY_LINE": "Cancellation fee: {{penalty}}",
+      "MANUAL_REFUND_NOTE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account.",
+      "CONFIRM_BUTTON": "Confirm cancellation",
+      "CANCEL_BUTTON": "Keep booking",
+      "SUCCESS": "Your booking has been cancelled. A refund of {{refund}} is being processed.",
+      "SUCCESS_MANUAL": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff.",
+      "FAILED": "Unable to cancel the booking. Please try again."
+    }
+  },
   "CALENDAR": {
     "dayNames": [
       "Sunday",
@@ -482,7 +532,8 @@
       "SIGNOUT_SUCCESS": "Successfully signed out",
       "SIGNOUT_FAIL": "Failed to sign out",
       "ADMIN_DASHBOARD": "Admin Dashboard",
-      "STAFF_PORTAL": "Staff Portal"
+      "STAFF_PORTAL": "Staff Portal",
+      "MY_BOOKINGS": "My Bookings"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",

@@ -1,0 +1,45 @@
+<div class="ticket-modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="ticket-modal" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="ticket-modal__close"
+      (click)="close()"
+      [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
+    >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="ticket-modal__body">
+      <div class="ticket-modal__state" *ngIf="loading">
+        <span class="ticket-modal__spinner" aria-hidden="true"></span>
+        <p>{{ "MY_BOOKINGS.TICKET_MODAL.LOADING" | translate }}</p>
+      </div>
+
+      <div class="ticket-modal__state" *ngIf="!loading && error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ error }}</p>
+        <button type="button" class="ticket-modal__retry" (click)="retry()">
+          {{ "MY_BOOKINGS.RETRY" | translate }}
+        </button>
+      </div>
+
+      <app-e-ticket-card
+        *ngIf="!loading && !error && card"
+        [bookingNumber]="card.bookingNumber"
+        [ticketNumber]="card.ticketNumber"
+        [travelDate]="card.travelDate"
+        [travelTime]="card.travelTime"
+        [route]="card.route"
+        [origin]="card.origin"
+        [destination]="card.destination"
+        [vehicleType]="card.vehicleType"
+        [vehiclePlate]="card.vehiclePlate"
+        [seats]="card.seats"
+        [paymentDate]="card.paymentDate"
+        [totalAmount]="card.totalAmount"
+        [passengers]="card.passengers"
+        [booker]="card.booker"
+      ></app-e-ticket-card>
+    </div>
+  </div>
+</div>

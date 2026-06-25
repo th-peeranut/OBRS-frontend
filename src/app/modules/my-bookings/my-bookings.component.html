@@ -1,0 +1,131 @@
+<app-navbar></app-navbar>
+
+<section class="my-bookings" *ngIf="vm$ | async as vm">
+  <div class="my-bookings__inner">
+    <header class="my-bookings__header">
+      <h1>{{ "MY_BOOKINGS.TITLE" | translate }}</h1>
+      <p>{{ "MY_BOOKINGS.SUBTITLE" | translate }}</p>
+    </header>
+
+    <!-- Status filter pills -->
+    <nav class="filter-pills" aria-label="status filter">
+      <button
+        *ngFor="let filter of statusFilters"
+        type="button"
+        class="filter-pill"
+        [class.is-active]="selectedStatus === filter.value"
+        (click)="onStatusChange(filter.value)"
+      >
+        {{ filter.labelKey | translate }}
+      </button>
+    </nav>
+
+    <!-- Loading skeletons (first load only) -->
+    <ng-container *ngIf="vm.loading && !vm.loaded">
+      <div class="booking-card booking-card--skeleton" *ngFor="let row of skeletonRows">
+        <span class="skeleton skeleton--line"></span>
+        <span class="skeleton skeleton--line skeleton--short"></span>
+        <span class="skeleton skeleton--line skeleton--short"></span>
+      </div>
+    </ng-container>
+
+    <!-- Error state -->
+    <div class="state-card state-card--error" *ngIf="vm.error && !vm.loading">
+      <i class="bi bi-exclamation-triangle"></i>
+      <p>{{ vm.error }}</p>
+      <button type="button" class="btn-secondary" (click)="onRetry()">
+        {{ "MY_BOOKINGS.RETRY" | translate }}
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div
+      class="state-card state-card--empty"
+      *ngIf="vm.loaded && !vm.error && vm.items.length === 0"
+    >
+      <i class="bi bi-ticket-perforated"></i>
+      <p>{{ "MY_BOOKINGS.EMPTY" | translate }}</p>
+      <a class="btn-primary" routerLink="/home">
+        {{ "MY_BOOKINGS.BOOK_NOW" | translate }}
+      </a>
+    </div>
+
+    <!-- Booking cards -->
+    <ng-container *ngIf="!vm.error">
+      <article
+        class="booking-card"
+        *ngFor="let booking of vm.items; trackBy: trackById"
+      >
+        <div class="booking-card__top">
+          <div class="booking-card__ref">
+            <span class="label">{{ "MY_BOOKINGS.BOOKING_NUMBER" | translate }}</span>
+            <strong>{{ booking.bookingNumber }}</strong>
+          </div>
+          <span class="status-badge" [ngClass]="statusClass(booking.statusCode)">
+            {{ "MY_BOOKINGS.STATUS." + booking.statusCode | translate }}
+          </span>
+        </div>
+
+        <div class="booking-card__route">
+          <i class="bi bi-bus-front"></i>
+          <span class="route-text">{{ booking.route }}</span>
+          <span class="trip-type">
+            {{ "MY_BOOKINGS.TRIP_TYPE." + booking.bookingType | translate }}
+          </span>
+        </div>
+
+        <dl class="booking-card__meta">
+          <div>
+            <dt>{{ "MY_BOOKINGS.DEPARTURE" | translate }}</dt>
+            <dd>{{ booking.departureLabel }}</dd>
+          </div>
+          <div>
+            <dt>{{ "MY_BOOKINGS.PASSENGERS" | translate }}</dt>
+            <dd>{{ booking.passengerCount }}</dd>
+          </div>
+          <div>
+            <dt>{{ "MY_BOOKINGS.TOTAL" | translate }}</dt>
+            <dd class="amount">{{ booking.totalAmountLabel }}</dd>
+          </div>
+        </dl>
+
+        <footer class="booking-card__actions">
+          <button
+            *ngIf="booking.paid"
+            type="button"
+            class="btn-ticket"
+            (click)="onViewTicket(booking)"
+          >
+            <i class="bi bi-qr-code-scan"></i>
+            {{ "MY_BOOKINGS.VIEW_TICKET" | translate }}
+          </button>
+          <button
+            *ngIf="booking.cancellable"
+            type="button"
+            class="btn-cancel"
+            [disabled]="vm.cancellingBookingId !== null"
+            (click)="onCancel(booking)"
+          >
+            <span
+              *ngIf="vm.cancellingBookingId === booking.id"
+              class="spinner"
+              aria-hidden="true"
+            ></span>
+            {{ "MY_BOOKINGS.CANCEL.ACTION" | translate }}
+          </button>
+          <span class="not-cancellable" *ngIf="!booking.cancellable && !booking.paid">
+            {{ "MY_BOOKINGS.NOT_CANCELLABLE" | translate }}
+          </span>
+        </footer>
+      </article>
+    </ng-container>
+  </div>
+</section>
+
+<app-my-booking-ticket-modal
+  *ngIf="activeTicketBookingId"
+  [bookingId]="activeTicketBookingId"
+  (closed)="onCloseTicket()"
+></app-my-booking-ticket-modal>
+
+<app-footer></app-footer>
