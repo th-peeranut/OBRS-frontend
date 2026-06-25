@@ -29,8 +29,9 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected routeGroups: WalkInRouteGroupDto[] = [];
   protected selectedTrip: WalkInTripDto | null = null;
   protected selectedRouteSlug: string | null = null;
+  protected selectedRouteLabel: string | null = null;
   protected selectedSeats: string[] = [];
-  // passenger_type lookup slug chosen by staff in the checkout (male|female|monk|nun).
+  // passenger_type lookup slug chosen by staff via the center-panel tiles (male|female|monk|nun).
   protected selectedPassengerType = 'male';
   protected isSelling = false;
   protected bookingId: number | null = null;
@@ -60,6 +61,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedDate = date;
     this.selectedTrip = null;
     this.selectedRouteSlug = null;
+    this.selectedRouteLabel = null;
     this.selectedSeats = [];
     this.idempotencyKey = null;
     this.loadTrips(date);
@@ -68,6 +70,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected onTripSelected(selection: WalkInTripSelection): void {
     this.selectedTrip = selection.trip;
     this.selectedRouteSlug = selection.routeSlug;
+    this.selectedRouteLabel =
+      this.routeGroups.find((g) => g.routeSlug === selection.routeSlug)?.routeLabel ?? null;
     this.selectedSeats = [];
     this.idempotencyKey = null;
     // Seat availability comes from the walk-in trip DTO (availableSeatNumbers),

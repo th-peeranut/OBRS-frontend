@@ -24,7 +24,9 @@
             [selectedTrip]="selectedTrip"
             [selectedSeats]="selectedSeats"
             [passengerGender]="selectedPassengerType"
-            (seatToggled)="onSeatToggled($event)">
+            [routeLabel]="selectedRouteLabel"
+            (seatToggled)="onSeatToggled($event)"
+            (passengerTypeChange)="onPassengerTypeChanged($event)">
           </app-walk-in-center-panel>
         </div>
       </div>
@@ -39,7 +41,6 @@
             [routeSlug]="selectedRouteSlug"
             [selectedSeats]="selectedSeats"
             [isSelling]="isSelling"
-            (passengerTypeChange)="onPassengerTypeChanged($event)"
             (sell)="onSell($event)">
           </app-walk-in-checkout>
         </div>

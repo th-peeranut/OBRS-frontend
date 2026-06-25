@@ -41,19 +41,8 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isSelling = false;
 
   @Output() sell = new EventEmitter<WalkInCheckoutPayload>();
-  /** Emitted whenever staff change the passenger type, so the sell page can
-   *  colour the seat map and stamp the booking with the chosen lookup slug. */
-  @Output() passengerTypeChange = new EventEmitter<string>();
 
   protected readonly titleOptions: Dropdown[] = TITLE_OPTIONS;
-  // passenger_type lookup slugs the backend accepts (category 'passenger_type').
-  protected readonly passengerTypeOptions: { value: string; labelKey: string }[] = [
-    { value: 'male', labelKey: 'STAFF.SELL.PTYPE_MALE' },
-    { value: 'female', labelKey: 'STAFF.SELL.PTYPE_FEMALE' },
-    { value: 'monk', labelKey: 'STAFF.SELL.PTYPE_MONK' },
-    { value: 'nun', labelKey: 'STAFF.SELL.PTYPE_NUN' },
-  ];
-  protected passengerType = 'male';
   protected readonly contactForm: FormGroup;
   protected selectedPaymentMethod: 'cash' = 'cash';
   protected cashReceived = 0;
@@ -135,10 +124,6 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     if (!this.pickupSlug || !this.dropoffSlug) return null;
     const fare = this.fareMap.get(`${this.pickupSlug}|${this.dropoffSlug}`);
     return fare === undefined ? null : fare;
-  }
-
-  protected onPassengerTypeChange(): void {
-    this.passengerTypeChange.emit(this.passengerType);
   }
 
   protected onPickupChange(): void {

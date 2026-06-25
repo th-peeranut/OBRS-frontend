@@ -12,10 +12,37 @@
     <!-- Tab 1: Ticket Sales (seat map) -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
       <!-- Trip headline -->
-      <div class="mb-2">
-        <div class="fw-semibold">
-          {{ selectedTrip.departureDateTime | date:'d MMM y' }}
-          &mdash; {{ formatTime(selectedTrip.departureDateTime) }} &rarr; {{ formatTime(selectedTrip.arrivalDateTime) }}
+      <div class="mb-2 text-center">
+        <ng-container *ngIf="routeEndpoints; else fallbackHeader">
+          <div class="fw-bold">
+            {{ routeEndpoints.from }} {{ formatTime(selectedTrip.departureDateTime) }}
+            &rarr;
+            {{ routeEndpoints.to }} {{ formatTime(selectedTrip.arrivalDateTime) }}
+          </div>
+          <div class="small text-muted">{{ selectedTrip.departureDateTime | date:'d MMM y' }}</div>
+        </ng-container>
+        <ng-template #fallbackHeader>
+          <div class="fw-semibold">
+            {{ selectedTrip.departureDateTime | date:'d MMM y' }}
+            &mdash; {{ formatTime(selectedTrip.departureDateTime) }} &rarr; {{ formatTime(selectedTrip.arrivalDateTime) }}
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Passenger type avatar tiles -->
+      <div class="ptype-row d-flex flex-row gap-2 justify-content-center mb-3">
+        <div *ngFor="let pt of passengerTypeOptions"
+             class="ptype-tile d-flex flex-column align-items-center justify-content-center gap-1 rounded cursor-pointer"
+             [class.ptype-tile--active]="passengerGender === pt.value"
+             role="button"
+             tabindex="0"
+             [attr.aria-pressed]="passengerGender === pt.value"
+             (click)="onSelectPassengerType(pt.value)"
+             (keydown.enter)="onSelectPassengerType(pt.value)"
+             (keydown.space)="$event.preventDefault(); onSelectPassengerType(pt.value)">
+          <img *ngIf="pt.icon" [src]="pt.icon" [alt]="pt.labelKey | translate" class="ptype-icon" />
+          <i *ngIf="!pt.icon" class="bi bi-person ptype-icon-fallback"></i>
+          <span class="ptype-label">{{ pt.labelKey | translate }}</span>
         </div>
       </div>
 

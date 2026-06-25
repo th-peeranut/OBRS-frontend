@@ -25,27 +25,16 @@
 
   <!-- Contact form -->
   <form [formGroup]="contactForm" novalidate>
-    <!-- Title + Passenger type (side by side) -->
-    <div class="row g-2 mb-2">
-      <div class="col-6">
-        <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
-        <select class="form-select form-select-sm"
-                formControlName="title"
-                [class.is-invalid]="isFieldInvalid('title')">
-          <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
-          <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
-        </select>
-        <div class="invalid-feedback d-block" *ngIf="fieldError('title') as key">{{ key | translate }}</div>
-      </div>
-      <div class="col-6">
-        <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PASSENGER_TYPE' | translate }}</label>
-        <select class="form-select form-select-sm"
-                [(ngModel)]="passengerType"
-                [ngModelOptions]="{ standalone: true }"
-                (ngModelChange)="onPassengerTypeChange()">
-          <option *ngFor="let pt of passengerTypeOptions" [value]="pt.value">{{ pt.labelKey | translate }}</option>
-        </select>
-      </div>
+    <!-- Title (full width now that passenger type moved to center panel) -->
+    <div class="mb-2">
+      <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.PASSENGER_TITLE' | translate }}</label>
+      <select class="form-select form-select-sm"
+              formControlName="title"
+              [class.is-invalid]="isFieldInvalid('title')">
+        <option value="" disabled>{{ 'STAFF.SELL.TITLE_PLACEHOLDER' | translate }}</option>
+        <option *ngFor="let t of titleOptions" [value]="t.nameEnglish">{{ titleLabel(t) }}</option>
+      </select>
+      <div class="invalid-feedback d-block" *ngIf="fieldError('title') as key">{{ key | translate }}</div>
     </div>
 
     <!-- First + Last Name (side by side to save vertical space) -->

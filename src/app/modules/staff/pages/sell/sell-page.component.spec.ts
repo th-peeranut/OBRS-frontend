@@ -140,6 +140,30 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedTrip).toBeNull();
       expect((comp as any).selectedSeats).toEqual([]);
     });
+
+    it('resets selectedRouteLabel on date change', () => {
+      const comp = makeComponent();
+      (comp as any).selectedRouteLabel = 'Bangkok → Chiang Mai';
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).selectedRouteLabel).toBeNull();
+    });
+  });
+
+  describe('onPassengerTypeChanged', () => {
+    it('updates selectedPassengerType when center-panel emits passengerTypeChange', () => {
+      const comp = makeComponent();
+      expect((comp as any).selectedPassengerType).toBe('male');
+      (comp as any).onPassengerTypeChanged('monk');
+      expect((comp as any).selectedPassengerType).toBe('monk');
+    });
+
+    it('accepts all valid passenger type slugs', () => {
+      const comp = makeComponent();
+      for (const slug of ['male', 'female', 'monk', 'nun']) {
+        (comp as any).onPassengerTypeChanged(slug);
+        expect((comp as any).selectedPassengerType).toBe(slug);
+      }
+    });
   });
 
   describe('onTripSelected', () => {
@@ -160,6 +184,26 @@ describe('SellPageComponent', () => {
       (comp as any).selectedSeats = ['B1', 'B2'];
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).selectedSeats).toEqual([]);
+    });
+
+    it('sets selectedRouteLabel from the matching routeGroup', () => {
+      const trip = makeTrip();
+      const api = createStaffApiStub({
+        getWalkInSchedules: jasmine.createSpy().and.returnValue(
+          of({ data: [makeRouteGroup([trip])] })
+        ),
+      });
+      const comp = makeComponent(api);
+      comp.ngOnInit(); // populates routeGroups with 'bkk-cm' / 'Bangkok → Chiang Mai'
+      (comp as any).onTripSelected({ trip, routeSlug: 'bkk-cm' });
+      expect((comp as any).selectedRouteLabel).toBe('Bangkok → Chiang Mai');
+    });
+
+    it('sets selectedRouteLabel to null when routeSlug has no match', () => {
+      const comp = makeComponent();
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'unknown-route' });
+      expect((comp as any).selectedRouteLabel).toBeNull();
     });
   });
 

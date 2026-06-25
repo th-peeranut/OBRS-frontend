@@ -16,3 +16,41 @@
   padding: 14px;
   row-gap: 12px;
 }
+
+// Passenger type selector tiles
+.ptype-tile {
+  width: 68px;
+  min-height: 72px;
+  border: 1px solid #dee2e6;
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+
+  &:hover {
+    border-color: #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
+  }
+
+  &--active {
+    border-color: #0d6efd !important;
+    background-color: rgba(13, 110, 253, 0.1) !important;
+  }
+}
+
+.ptype-icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.ptype-icon-fallback {
+  font-size: 2rem;
+  color: #6c757d;
+}
+
+.ptype-label {
+  font-size: 0.7rem;
+  text-align: center;
+  color: #212529;
+  line-height: 1.2;
+}

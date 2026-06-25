@@ -268,19 +268,8 @@ describe('WalkInCheckoutComponent', () => {
     });
   });
 
-  describe('passenger type', () => {
-    it('defaults to male and emits the selected slug on change', () => {
-      const comp = makeComponent();
-      expect(comp['passengerType']).toBe('male');
-
-      let emitted: string | undefined;
-      comp.passengerTypeChange.subscribe((v) => { emitted = v; });
-      comp['passengerType'] = 'nun';
-      (comp as any).onPassengerTypeChange();
-
-      expect(emitted).toBe('nun');
-    });
-  });
+  // Note: passenger type selection was moved to walk-in-center-panel (Change 1 / issue #50).
+  // The checkout component no longer owns passengerType or passengerTypeChange.
 
   describe('lifecycle', () => {
     it('cleans up on destroy', () => {

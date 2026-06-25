@@ -1,5 +1,22 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-25 — Scrutinize: issue #50 walk-in passenger-type tiles + center header
+
+**Self-fix (1 line):** Added `[attr.aria-pressed]="passengerGender === pt.value"` to the
+passenger-type tiles in `walk-in-center-panel.component.html`. The tiles use `role="button"`
+and a `--active` CSS class to show selection, but that active state was visual-only. For a
+toggle-button tile group, screen readers need `aria-pressed` to announce which option is
+selected. Pattern: whenever a `role="button"` element represents a toggled/selected state,
+pair the visual `[class.x--active]` with `[attr.aria-pressed]` bound to the same condition.
+
+**Not fixed (left as-is, acceptable for a small UI change):**
+- `(keydown.space)` does not call `preventDefault()`, so Space may also scroll the page while
+  the tile is focused. Minor; revisit if QA flags it.
+- `routeEndpoints` splits `routeLabel` on `→ — – -`. Robust for the standard
+  "City → City" backend labels. Only failure mode is a 2-endpoint label where a single city
+  name contains a spaced hyphen — unlikely given current backend data. Fallback header renders
+  correctly when the label has no separator or is null.
+
 ## 2026-06-24 — QA pass: feature/walkin-ticket-sales Walk-in POS single-screen
 
 **Branch merged:** `feature/walkin-ticket-sales` → `dev`
