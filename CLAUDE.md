@@ -110,6 +110,8 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 
 **Chrome requirement**: `ng test` requires ChromeHeadless. If Chrome is not found, escalate with: "ChromeHeadless not available — `ng test` skipped, manual verification required."
 
+**Live browser verification**: Always verify UI/frontend changes live in the browser (DOM inspection or screenshots) before considering them complete. Restart the dev server if results look stale.
+
 ## 8. File Placement Rules
 
 ### New Feature (B2C or Admin):
