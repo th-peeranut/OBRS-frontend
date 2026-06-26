@@ -1,7 +1,7 @@
 # Trip Details edit-mode page pattern
 
 **Date**: 2026-06-25
-**Status**: Accepted
+**Status**: Accepted — amended 2026-06-26 (direct-edit; read-only view removed, see "Amendment" below)
 
 ## Context
 
@@ -16,6 +16,13 @@ save. See `../OBRS-backend/docs/api/scheduling.md` and the companion backend ADR
 ## Decision
 
 ### 1. View↔edit toggle inside the tab — no new route
+
+> **Amended 2026-06-26 (direct-edit):** the read-only step was removed. Staff open this tab only to make
+> changes, so the read-only `app-trip-details-view` + "Edit" button were pure friction. The tab now renders
+> `app-trip-details-edit-form` **directly**: opening the Trip Details tab (`p-tabView (onChange)`) calls
+> `openEditMode()` immediately. The `app-trip-details-view` component was deleted. `isEditMode` is retained
+> as the "Trip Details tab is active / form loaded" flag that gates the data load and the in-flight guard.
+> See the "Amendment" section at the end for the full rationale.
 
 A single boolean flag (`isEditMode`) on `WalkInCenterPanelComponent` switches between:
 
@@ -83,6 +90,31 @@ dropdown (`code: String(v.id)`) and converted back (`Number(value) || null`) whe
   centre panel is the appropriate smart component for this scoped edit flow.
 - `SellPageComponent` gained two new outputs: `(tripDetailsUpdated)` and `(refreshTripsRequested)`, keeping the
   authoritative trip list in the smart parent.
+
+## Amendment (2026-06-26) — direct edit, no read-only step
+
+**Why:** Field feedback — staff only ever open the Trip Details tab to change something (e.g. departure time
+or driver). The read-only view + "Edit" button forced two clicks to reach the same form. Removing the gate
+cuts it to one.
+
+**Changes:**
+
+1. **Tab activation loads the form.** `<p-tabView (onChange)="onTabChange($event.index)">`; `onTabChange`
+   calls `openEditMode()` when the Trip Details tab (index 1) becomes active, and `closeEditMode()` when
+   leaving (so a stale in-flight `forkJoin` can't clobber the next open via its `if (!isEditMode) return` guard).
+2. **Form always rendered in the panel** (no `*ngIf="isEditMode"` wrapper); `isEditMode` now means "tab active /
+   loaded". The read-only `app-trip-details-view` component and its `*ngIf="!isEditMode"` block were **deleted**
+   (removed from `StaffModule` declarations + files).
+3. **Trip switched while the tab is open** → `ngOnChanges` re-runs `openEditMode()` for the new trip (reload),
+   instead of closing edit mode.
+4. **Save success no longer closes the form.** `onSave` drops the `closeEditMode()` call; emitting
+   `(tripDetailsUpdated)` gives the parent a new `selectedTrip` reference, which flows back as `@Input` and
+   reloads the form with server truth via `ngOnChanges`. The success toast confirms the save.
+5. **Secondary button = revert.** The form's `(cancel)` output now binds to `revertChanges()` (reloads the
+   original values) rather than `closeEditMode()` — there is no read-only view to return to.
+
+The optimistic-open / untouched-guard SWR mechanics (Decision 2) are unchanged; only the trigger moved from a
+button click to tab activation.
 
 ## Cross-references
 
