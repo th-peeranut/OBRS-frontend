@@ -6,6 +6,7 @@ import { TabViewModule } from 'primeng/tabview';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
+import { MenuModule } from 'primeng/menu';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
@@ -98,6 +99,7 @@ export const staffRoutes: Routes = [
     BadgeModule,
     ProgressSpinnerModule,
     InputNumberModule,
+    MenuModule,
     AdminSharedModule,
     PassengerSeatModule,
 

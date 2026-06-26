@@ -1011,7 +1011,13 @@
       "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "Capacity is below current occupancy ({{occupied}})",
       "STOP_FILTER_PLACEHOLDER": "Search stop",
       "STOP_NO_MATCH": "No stops match",
-      "POPULAR_LABEL": "Popular"
+      "POPULAR_LABEL": "Popular",
+      "SCHEDULE_ADD_FOR_ROUTE": "Add schedule for {{routeLabel}}",
+      "SCHEDULE_TRIP_ACTIONS": "Schedule actions for {{time}}",
+      "SCHEDULE_EDIT_ITEM": "Edit schedule",
+      "SCHEDULE_DELETE_ITEM": "Delete schedule",
+      "BACK_BTN": "Back",
+      "CONFIRM_BTN": "Confirm"
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",
