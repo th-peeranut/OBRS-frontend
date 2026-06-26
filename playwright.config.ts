@@ -7,26 +7,18 @@ export default defineConfig({
   retries: 0,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4201',
+    baseURL: 'http://localhost:4200',
     trace: 'on-first-retry',
   },
   projects: [
     {
       name: 'chromium',
-      use: {
-        ...devices['Desktop Chrome'],
-        launchOptions: {
-          // Port 4201 is used (4200 is occupied by another worktree's ng-serve).
-          // SIT CORS allows only localhost:4200; --disable-web-security bypasses
-          // CORS for any unmocked calls while all critical endpoints are mocked via page.route.
-          args: ['--disable-web-security'],
-        },
-      },
+      use: { ...devices['Desktop Chrome'] },
     },
   ],
   webServer: {
-    command: 'ng serve --configuration sit --port 4201',
-    url: 'http://localhost:4201',
+    command: 'ng serve --configuration sit',
+    url: 'http://localhost:4200',
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },
