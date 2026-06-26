@@ -995,6 +995,139 @@ const MULTI_STOP_SEGMENTS_RESP = {
   },
 };
 
+// =============================================================================
+// Stop filter — AC per walkin-stop-search feature
+// =============================================================================
+// Criterion 10: typing narrows a list, no-match hint appears, clearing restores
+// the list, and selecting a filtered stop still completes the walk-in flow.
+// =============================================================================
+
+test.describe('Stop filter — searchable input above จาก/ถึง lists', () => {
+  test.use({ storageState: ADMIN_AUTH });
+
+  test.beforeEach(async ({ page }) => {
+    await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));
+    await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) => route.fulfill({ json: WALK_IN_SCHEDULES_RESP }));
+  });
+
+  /** Helper: open the sell page and click the first trip to show the stop lists. */
+  async function openWithStops(page: import('@playwright/test').Page): Promise<void> {
+    await gotoSellPage(page);
+    await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
+    await page.locator('.trip-row').first().click();
+    // Wait for the stop lists to appear (pickup list has at least one button).
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    await fromList.locator('button').first().waitFor({ timeout: 15_000 });
+  }
+
+  test('typing in the From filter narrows the pickup list', async ({ page }) => {
+    await openWithStops(page);
+
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    const fromFilter = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('input');
+
+    // Before filtering, multiple options are visible.
+    const countBefore = await fromList.locator('button').count();
+    expect(countBefore).toBeGreaterThan(1);
+
+    // Type a query that matches only "Stop B".
+    await fromFilter.fill('Stop B');
+    const countAfter = await fromList.locator('button').count();
+    expect(countAfter).toBeLessThan(countBefore);
+    expect(countAfter).toBeGreaterThanOrEqual(1);
+    await expect(fromList.locator('button').first()).toContainText('Stop B');
+  });
+
+  test('no-match hint appears when the filter excludes every option', async ({ page }) => {
+    await openWithStops(page);
+
+    const fromFilter = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('input');
+    await fromFilter.fill('zzznomatch999');
+
+    // No stop buttons remain.
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    await expect(fromList.locator('button')).toHaveCount(0);
+
+    // The no-match hint is visible somewhere inside the stop-list.
+    // We match on a locator that is a div inside the list (not a button).
+    await expect(fromList.locator('div')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('clearing the filter restores the full list', async ({ page }) => {
+    await openWithStops(page);
+
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    const fromFilter = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('input');
+
+    const countFull = await fromList.locator('button').count();
+
+    await fromFilter.fill('zzznomatch999');
+    await expect(fromList.locator('button')).toHaveCount(0);
+
+    // Clear via the clear button (×).
+    const clearBtn = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('button');
+    await clearBtn.click();
+
+    // List is restored.
+    await expect(fromList.locator('button')).toHaveCount(countFull, { timeout: 3_000 });
+  });
+
+  test('From and To filters are independent — filtering one does not affect the other', async ({ page }) => {
+    await openWithStops(page);
+
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    const toList = page.locator('app-walk-in-center-panel .stop-list').nth(1);
+    const fromFilter = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('input');
+
+    const toCountBefore = await toList.locator('button').count();
+
+    // Filter the From list down to nothing.
+    await fromFilter.fill('zzznomatch999');
+    await expect(fromList.locator('button')).toHaveCount(0);
+
+    // To list is unaffected.
+    await expect(toList.locator('button')).toHaveCount(toCountBefore);
+  });
+
+  test('selecting a filtered stop still emits the selection (AC-10 Criterion 7)', async ({ page }) => {
+    await page.route(BOOKINGS_ENDPOINT, (route) =>
+      route.fulfill({ status: 201, json: BOOKING_RESP })
+    );
+    await page.route(PAYMENT_ENDPOINT, (route) =>
+      route.fulfill({ json: PAYMENT_RESP })
+    );
+
+    await openWithStops(page);
+
+    const fromList = page.locator('app-walk-in-center-panel .stop-list').nth(0);
+    const toList = page.locator('app-walk-in-center-panel .stop-list').nth(1);
+    const fromFilter = page.locator('app-walk-in-center-panel .input-group').nth(0).locator('input');
+    const toFilter = page.locator('app-walk-in-center-panel .input-group').nth(1).locator('input');
+
+    // Filter From list to show only "Stop A" and click it.
+    await fromFilter.fill('Stop A');
+    await fromList.locator('button').first().click();
+    await expect(fromList.locator('button.active')).toHaveCount(1);
+
+    // Filter To list and click the first visible option.
+    await toFilter.fill('Stop D');
+    await toList.locator('button').first().waitFor({ timeout: 5_000 });
+    await toList.locator('button').first().click();
+    await expect(toList.locator('button.active')).toHaveCount(1);
+
+    // The seat map and checkout flow still work — pick a seat and complete the sale.
+    const seatB1 = page.getByText('B1', { exact: true });
+    await seatB1.waitFor({ timeout: 12_000 });
+    await seatB1.click();
+
+    await fillContactForm(page);
+    await page.locator('input[type="number"]').fill('400');
+
+    const sellBtn = page.locator('button.btn-success');
+    await expect(sellBtn).not.toBeDisabled({ timeout: 5_000 });
+  });
+});
+
 /** A Bootstrap-transparent background means the .active highlight is invisible. */
 function isVisibleHighlight(bg: string): boolean {
   return bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent';

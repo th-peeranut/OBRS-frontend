@@ -16,11 +16,32 @@
         <!-- จาก (From / Pickup) -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
+          <div class="input-group input-group-sm mb-1">
+            <span class="input-group-text bg-transparent border-end-0 px-2">
+              <i class="bi bi-search text-muted" style="font-size:0.7rem"></i>
+            </span>
+            <input type="text"
+                   class="form-control form-control-sm border-start-0 ps-1"
+                   [(ngModel)]="pickupFilter"
+                   [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
+                   [attr.aria-label]="('STAFF.SELL.FROM_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
+                   autocomplete="off" />
+            <button *ngIf="pickupFilter" type="button"
+                    class="btn btn-sm btn-outline-secondary border-start-0 px-2"
+                    (click)="pickupFilter = ''"
+                    [attr.aria-label]="'COMMON.CLEAR' | translate">
+              <i class="bi bi-x" style="font-size:0.85rem"></i>
+            </button>
+          </div>
           <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
-            <button *ngFor="let opt of pickupOptions"
+            <div *ngIf="!isLoadingSegments && pickupFilter.trim() && filteredPickupOptions.length === 0"
+                 class="text-muted small p-2">
+              {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
+            </div>
+            <button *ngFor="let opt of filteredPickupOptions"
                     type="button"
                     class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
                     [class.active]="opt.slug === pickupSlug"
@@ -34,11 +55,32 @@
         <!-- ถึง (To / Drop-off) -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
+          <div class="input-group input-group-sm mb-1">
+            <span class="input-group-text bg-transparent border-end-0 px-2">
+              <i class="bi bi-search text-muted" style="font-size:0.7rem"></i>
+            </span>
+            <input type="text"
+                   class="form-control form-control-sm border-start-0 ps-1"
+                   [(ngModel)]="dropoffFilter"
+                   [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
+                   [attr.aria-label]="('STAFF.SELL.TO_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
+                   autocomplete="off" />
+            <button *ngIf="dropoffFilter" type="button"
+                    class="btn btn-sm btn-outline-secondary border-start-0 px-2"
+                    (click)="dropoffFilter = ''"
+                    [attr.aria-label]="'COMMON.CLEAR' | translate">
+              <i class="bi bi-x" style="font-size:0.85rem"></i>
+            </button>
+          </div>
           <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
-            <button *ngFor="let opt of dropoffOptions"
+            <div *ngIf="!isLoadingSegments && dropoffFilter.trim() && filteredDropoffOptions.length === 0"
+                 class="text-muted small p-2">
+              {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
+            </div>
+            <button *ngFor="let opt of filteredDropoffOptions"
                     type="button"
                     class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
                     [class.active]="opt.slug === dropoffSlug"

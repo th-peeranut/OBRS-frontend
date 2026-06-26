@@ -115,7 +115,8 @@
     "ERROR_GENERAL": "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
   },
   "COMMON": {
-    "THEME_TOGGLE": "สลับโหมดมืด"
+    "THEME_TOGGLE": "สลับโหมดมืด",
+    "CLEAR": "ล้าง"
   },
   "ADMIN": {
     "PAGES": {
@@ -1008,7 +1009,9 @@
       "TRIP_DETAIL_SAVE_SUCCESS": "บันทึกข้อมูลเที่ยวรถสำเร็จ",
       "TRIP_DETAIL_ERR_FORM_INVALID": "กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน",
       "TRIP_DETAIL_ERR_CAPACITY_MAX": "ความจุเกินจำนวนที่นั่งสูงสุด ({{max}})",
-      "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "ความจุต่ำกว่าจำนวนผู้โดยสารที่มีอยู่ ({{occupied}})"
+      "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "ความจุต่ำกว่าจำนวนผู้โดยสารที่มีอยู่ ({{occupied}})",
+      "STOP_FILTER_PLACEHOLDER": "ค้นหาจุดจอด",
+      "STOP_NO_MATCH": "ไม่พบจุดจอดที่ตรงกัน"
     },
     "BOARDING_ENTRY": {
       "TITLE": "เลือกรอบเดินทาง",
