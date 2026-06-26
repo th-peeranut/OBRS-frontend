@@ -33,6 +33,13 @@ import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interf
 export class DropdownObrsPassengerComponent
   implements ControlValueAccessor, OnChanges, OnDestroy
 {
+  /**
+   * Maximum passengers a single booking can request. Mirrors the backend
+   * ScheduleSearchReqDto.MAX_PASSENGERS_PER_BOOKING (largest vehicle = minibus,
+   * 21 seats), so a higher count can never match a schedule.
+   */
+  readonly maxPassengers = 21;
+
   @Input() data?: DropdownPassenger;
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();
 
@@ -119,7 +126,17 @@ export class DropdownObrsPassengerComponent
     return this.getPassengerCount('KIDS');
   }
 
+  get isAtMaxPassengers(): boolean {
+    return this.sumPassenger >= this.maxPassengers;
+  }
+
   updatePassengerCount(type: string, action: string) {
+    // Cap the total at maxPassengers — no vehicle seats more, so a higher
+    // count can never match a schedule (backend rejects it with 400).
+    if (action === 'ADD' && this.isAtMaxPassengers) {
+      return;
+    }
+
     // Create a shallow clone of the array and its objects
     const updatedPassengers = this.getSelectedPassengers().map((passenger) => ({
       ...passenger,

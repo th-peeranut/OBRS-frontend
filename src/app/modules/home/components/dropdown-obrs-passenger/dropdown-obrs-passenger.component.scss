@@ -75,6 +75,18 @@
   min-width: 300px;
 }
 
+.passenger-icon.passenger-add.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.passenger-max-hint {
+  padding: 4px 10px 2px;
+  font-size: 12px;
+  color: $text-lightgrey;
+}
+
 li {
   font-size: 18px;
   color: $text-black;

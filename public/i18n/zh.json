@@ -574,7 +574,8 @@
       "ROUND_DEPARTURE": "往程日期",
       "ROUND_RETURN": "返程日期",
       "SEARCH": "搜索",
-      "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。"
+      "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。",
+      "PASSENGER_MAX_HINT": "每次预订最多 {{max}} 名乘客。"
     },
     "STATION": {
       "HEADER": "服务点路线图",
@@ -624,7 +625,8 @@
     "SEAT_UNIT": "个座位",
     "SEAT_PER_PASSENGER": "价格/人",
     "CHOOSE": "选择",
-    "CHANGE": "修改数据"
+    "CHANGE": "修改数据",
+    "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {

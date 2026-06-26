@@ -57,6 +57,7 @@
 
             <img
               class="passenger-icon passenger-add"
+              [class.disabled]="isAtMaxPassengers"
               src="icons/passenger-add.svg"
               alt="Passenger Add Icon"
               (click)="updatePassengerCount('ADULT', 'ADD')"
@@ -90,6 +91,7 @@
 
             <img
               class="passenger-icon passenger-add"
+              [class.disabled]="isAtMaxPassengers"
               src="icons/passenger-add.svg"
               alt="Passenger Add Icon"
               (click)="updatePassengerCount('KIDS', 'ADD')"
@@ -97,6 +99,12 @@
           </div>
         </div>
       </a>
+    </li>
+    <!-- MAX-PASSENGERS HINT -->
+    <li *ngIf="isAtMaxPassengers">
+      <div class="passenger-max-hint">
+        {{ "HOME.HOME_BOOKING.PASSENGER_MAX_HINT" | translate: { max: maxPassengers } }}
+      </div>
     </li>
   </ul>
 </div>
