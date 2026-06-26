@@ -67,6 +67,24 @@ export class SellPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadTrips(this.selectedDate);
+    // Stop/route names are server-localized (resolved from the Accept-Language
+    // header) and cached in component state on fetch. The `| translate` pipes
+    // re-render on a language switch, but this cached server data does not — so
+    // re-fetch it, preserving the current selection (slugs are locale-invariant).
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.reloadLocalizedData());
+  }
+
+  /** Re-fetch server-localized data (trips + segments) after a language switch. */
+  private reloadLocalizedData(): void {
+    this.loadTrips(this.selectedDate);
+    if (this.selectedRouteSlug && this.selectedTrip) {
+      this.loadSegments(this.selectedRouteSlug, this.selectedTrip, {
+        pickup: this.pickupSlug,
+        dropoff: this.dropoffSlug,
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -337,7 +355,11 @@ export class SellPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  private loadSegments(routeSlug: string, trip: WalkInTripDto): void {
+  private loadSegments(
+    routeSlug: string,
+    trip: WalkInTripDto,
+    preserve?: { pickup: string; dropoff: string }
+  ): void {
     this._resetSegments();
     if (!routeSlug) return;
 
@@ -366,7 +388,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
           }
           this._buildStopTimes(pairs, trip);
           this.orderedStops = this._buildOrderedStops(pairs);
-          this._applyDefaultStops();
+          this._applyDefaultStops(preserve);
           this.isLoadingSegments = false;
         },
         error: () => {
@@ -436,9 +458,22 @@ export class SellPageComponent implements OnInit, OnDestroy {
     );
   }
 
-  /** Default to the full route: origin (first) → destination (last). */
-  private _applyDefaultStops(): void {
+  /**
+   * Default to the full route: origin (first) → destination (last). When
+   * `preserve` is given (e.g. a language-switch reload) and its slugs are still
+   * valid for the freshly-fetched stops, keep that selection instead — slugs are
+   * locale-invariant, so only the displayed names should change.
+   */
+  private _applyDefaultStops(preserve?: { pickup: string; dropoff: string }): void {
     if (this.orderedStops.length < 2) return;
+    if (preserve && this.orderedStops.some((s) => s.slug === preserve.pickup)) {
+      this.pickupSlug = preserve.pickup;
+      // dropoffOptions depends on pickupSlug, so it's valid to read now.
+      this.dropoffSlug = this.dropoffOptions.some((s) => s.slug === preserve.dropoff)
+        ? preserve.dropoff
+        : this.dropoffOptions[0]?.slug ?? '';
+      return;
+    }
     this.pickupSlug = this.orderedStops[0].slug;
     const dest = this.orderedStops[this.orderedStops.length - 1].slug;
     this.dropoffSlug = this.fareMap.has(`${this.pickupSlug}|${dest}`)

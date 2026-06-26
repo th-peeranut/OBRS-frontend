@@ -1,4 +1,4 @@
-import { of, throwError } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { SellPageComponent } from './sell-page.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
 import { createRouterStub, createStoreStub, createTranslateStub } from '../../../../testing/test-stubs';
@@ -473,6 +473,118 @@ describe('SellPageComponent', () => {
       (comp as any).onSell(validPayload);
 
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+  });
+
+  describe('re-localization on language change', () => {
+    // Stop/route names come from the server resolved by Accept-Language, so they
+    // are stale after a language switch unless re-fetched. These guard that the
+    // page re-requests them — without resetting the staff's segment selection.
+    function segPairsResponse() {
+      const pair = (from: string, to: string, fare: string) => ({
+        segmentId: 0,
+        fromStop: { slug: from, name: from.toUpperCase() },
+        toStop: { slug: to, name: to.toUpperCase() },
+        vehicleType: { slug: 'bus', name: 'Bus' },
+        fare,
+        estimatedDurationMinutes: 30,
+      });
+      return {
+        data: {
+          stopPairs: [
+            pair('stop_a', 'stop_b', '100'),
+            pair('stop_b', 'stop_c', '100'),
+            pair('stop_a', 'stop_c', '200'),
+          ],
+        },
+      };
+    }
+
+    function makeComponentWithTranslate(api = createStaffApiStub()): {
+      comp: SellPageComponent;
+      translate: any;
+    } {
+      const translate = createTranslateStub();
+      const comp = new SellPageComponent(
+        createRouterStub(),
+        createStoreStub(),
+        api,
+        createAlertStub(),
+        translate
+      );
+      return { comp, translate };
+    }
+
+    it('re-fetches trips on language change (route-group labels are server-localized)', () => {
+      const api = createStaffApiStub();
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit(); // 1st getWalkInSchedules
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect(api.getWalkInSchedules).toHaveBeenCalledTimes(2);
+    });
+
+    it('re-fetches segments for the selected trip on language change (core fix)', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+      });
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' }); // 1st getRouteSegments
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect(api.getRouteSegments).toHaveBeenCalledTimes(2);
+    });
+
+    it('does NOT re-fetch segments on language change when no trip is selected', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+      });
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit();
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect(api.getRouteSegments).not.toHaveBeenCalled();
+    });
+
+    it('preserves the current pickup/drop-off selection across the reload', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+      });
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      // Staff narrows the segment away from the default full route (a → c).
+      (comp as any).pickupSlug = 'stop_b';
+      (comp as any).dropoffSlug = 'stop_c';
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect((comp as any).pickupSlug).toBe('stop_b');
+      expect((comp as any).dropoffSlug).toBe('stop_c');
+    });
+
+    it('keeps a still-valid pickup but falls back to its first drop-off when the prior drop-off is gone', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+      });
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      (comp as any).pickupSlug = 'stop_a';
+      (comp as any).dropoffSlug = 'ghost_stop'; // no longer a valid drop-off for stop_a
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect((comp as any).pickupSlug).toBe('stop_a');
+      expect((comp as any).dropoffSlug).toBe('stop_b'); // first valid drop-off for stop_a
+    });
+
+    it('resets to the full route default when the preserved pickup is gone', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+      });
+      const { comp, translate } = makeComponentWithTranslate(api);
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      (comp as any).pickupSlug = 'ghost_stop'; // not present in the re-fetched stops
+      (comp as any).dropoffSlug = 'ghost_stop';
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect((comp as any).pickupSlug).toBe('stop_a'); // origin
+      expect((comp as any).dropoffSlug).toBe('stop_c'); // destination
     });
   });
 

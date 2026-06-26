@@ -31,8 +31,14 @@ export class LanguageService {
 
   /** Apply and persist `lang`, then refresh the PrimeNG calendar translations. */
   async switch(lang: string): Promise<void> {
-    this.translate.use(lang);
+    // Persist BEFORE `translate.use()`: for an already-loaded language, `use()`
+    // emits `onLangChange` synchronously, and subscribers that re-fetch
+    // server-localized data (e.g. the walk-in sell page) build their request
+    // inside that emission. The authInterceptor reads this key to set the
+    // Accept-Language header, so it must already hold the new language or the
+    // re-fetch goes out with the old locale and the server data stays stale.
     localStorage.setItem(APP_LANGUAGE_KEY, lang);
+    this.translate.use(lang);
     const calendar = await firstValueFrom(this.translate.get('CALENDAR'));
     this.primengConfig.setTranslation(calendar);
   }
