@@ -1,4 +1,4 @@
-# ADR 0004: Shared SidebarLayoutBaseComponent with Hover-Overlay/Pin Interaction
+# ADR 0005: Shared SidebarLayoutBaseComponent with Hover-Overlay/Pin Interaction
 
 **Date:** 2026-06-26
 **Status:** Accepted
@@ -34,7 +34,7 @@ Additionally, the original UX used a click-to-collapse chevron mounted on the to
 1. **DRY**: ~100 lines of duplicated lifecycle and interaction code removed. Future changes to sidebar behaviour (e.g., keyboard shortcuts, new hover delay) require editing exactly one file.
 2. **Better UX**: Hover-to-expand is a well-established pattern (VS Code, Notion, Linear) that avoids an explicit click to see labels. The pin affordance preserves power-user intent without sacrificing screen real estate for casual users.
 3. **Predictable layout**: The 76px stub always reserves the column; the overlay never causes content jump. Only the explicit pin action causes a reflow (and persists it to localStorage).
-4. **Angular 18 inject() in abstract base**: Constructor injection in abstract classes forces every child to declare a large `super(router, route, ...)` call that grows with every new dep. `inject()` fields in the `@Directive()` base cleanly express "these deps belong to the base." Children contribute nothing to DI unless they add their own unique deps.
+4. **Angular 18 inject() in abstract base**: Constructor injection in abstract classes forces every child to declare a large `super(router, route, ...)` call that grows with every new dep. `inject()` fields in the `@Directive()` base cleanly express "these deps belong to the base." Children contribute nothing to DI unless they add their own unique deps. **Note:** this is a deliberate, localized exception to the repo's general "constructor DI" convention (CLAUDE.md) — it applies only to this shared abstract base, where constructor DI would otherwise force a brittle `super(...)` chain in both child layouts. Feature components continue to use constructor DI.
 
 ## Consequences
 
