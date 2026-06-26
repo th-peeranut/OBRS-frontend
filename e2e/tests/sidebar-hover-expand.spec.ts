@@ -1,6 +1,10 @@
 /**
  * Playwright acceptance tests — sidebar hover-expand feature
- * Branch: ao/sidebar-hover-expand
+ *
+ * Runs under the standard playwright.config.ts (testDir: ./e2e, port 4200).
+ * Uses the shared admin-auth.json fixture produced by e2e/global-setup.ts:
+ * admin@system.local outranks salesperson in the role hierarchy, so the
+ * /staff/* routes and their nav links render (needed by AC6).
  *
  * Acceptance criteria covered:
  *   AC1  — 76px rail at rest; hover expands; mouse-leave collapses after ~120ms
@@ -19,7 +23,7 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 
-const SIDEBAR_AUTH = path.resolve(__dirname, '../fixtures/sidebar-auth.json');
+const SIDEBAR_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
