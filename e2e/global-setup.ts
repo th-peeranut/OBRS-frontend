@@ -4,14 +4,19 @@ import path from 'path';
 const AUTH_FILE = path.resolve(__dirname, 'fixtures/admin-auth.json');
 
 async function globalSetup(_config: FullConfig): Promise<void> {
-  const browser = await chromium.launch();
+  // Port 4201 is used (4200 is occupied by another worktree's ng-serve).
+  // SIT CORS allows only localhost:4200; --disable-web-security bypasses CORS so
+  // the login POST to the SIT backend succeeds from localhost:4201.
+  const browser = await chromium.launch({
+    args: ['--disable-web-security'],
+  });
   const page = await browser.newPage();
 
   await page.addInitScript(() => {
     localStorage.setItem('app_language', 'en');
   });
 
-  await page.goto('http://localhost:4200/login');
+  await page.goto('http://localhost:4201/login');
 
   // Wait for Angular to bootstrap and the email input to be interactive
   await page.locator('input[type="email"]').waitFor({ state: 'visible', timeout: 15_000 });
