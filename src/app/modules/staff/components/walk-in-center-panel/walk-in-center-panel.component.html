@@ -17,40 +17,32 @@
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
           <div class="input-group input-group-sm mb-1">
-            <span class="input-group-text bg-transparent border-end-0 px-2">
-              <i class="bi bi-search text-muted" style="font-size:0.7rem"></i>
-            </span>
             <input type="text"
-                   class="form-control form-control-sm border-start-0 ps-1"
+                   class="form-control form-control-sm"
                    [(ngModel)]="pickupFilter"
                    [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
                    [attr.aria-label]="('STAFF.SELL.FROM_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
                    autocomplete="off" />
             <button *ngIf="pickupFilter" type="button"
-                    class="btn btn-sm btn-outline-secondary border-start-0 px-2"
+                    class="btn btn-sm btn-outline-secondary"
                     (click)="pickupFilter = ''"
                     [attr.aria-label]="'COMMON.CLEAR' | translate">
               <i class="bi bi-x" style="font-size:0.85rem"></i>
             </button>
           </div>
-          <ng-container *ngIf="!isLoadingSegments && filteredPopularPickupOptions.length > 0">
-            <div class="list-group list-group-flush border rounded mb-1">
-              <div class="list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
+          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+            <ng-container *ngIf="!isLoadingSegments && filteredPopularPickupOptions.length > 0">
+              <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
                 <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
                 <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
               </div>
               <button *ngFor="let opt of filteredPopularPickupOptions" type="button"
                       class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
                       [class.active]="opt.slug === pickupSlug" (click)="pickupChange.emit(opt.slug)">
-                <span class="d-flex align-items-center gap-1">
-                  <i class="bi bi-pin-fill text-warning" style="font-size:0.55rem" aria-hidden="true"></i>
-                  <span>{{ opt.name }}</span>
-                </span>
+                <span>{{ opt.name }}</span>
                 <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
               </button>
-            </div>
-          </ng-container>
-          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+            </ng-container>
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
@@ -73,40 +65,32 @@
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
           <div class="input-group input-group-sm mb-1">
-            <span class="input-group-text bg-transparent border-end-0 px-2">
-              <i class="bi bi-search text-muted" style="font-size:0.7rem"></i>
-            </span>
             <input type="text"
-                   class="form-control form-control-sm border-start-0 ps-1"
+                   class="form-control form-control-sm"
                    [(ngModel)]="dropoffFilter"
                    [placeholder]="'STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate"
                    [attr.aria-label]="('STAFF.SELL.TO_LABEL' | translate) + ' – ' + ('STAFF.SELL.STOP_FILTER_PLACEHOLDER' | translate)"
                    autocomplete="off" />
             <button *ngIf="dropoffFilter" type="button"
-                    class="btn btn-sm btn-outline-secondary border-start-0 px-2"
+                    class="btn btn-sm btn-outline-secondary"
                     (click)="dropoffFilter = ''"
                     [attr.aria-label]="'COMMON.CLEAR' | translate">
               <i class="bi bi-x" style="font-size:0.85rem"></i>
             </button>
           </div>
-          <ng-container *ngIf="!isLoadingSegments && filteredPopularDropoffOptions.length > 0">
-            <div class="list-group list-group-flush border rounded mb-1">
-              <div class="list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
+          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+            <ng-container *ngIf="!isLoadingSegments && filteredPopularDropoffOptions.length > 0">
+              <div class="stop-list-header list-group-item py-0 px-2 d-flex align-items-center gap-1 bg-light">
                 <i class="bi bi-pin-fill text-warning" style="font-size:0.6rem" aria-hidden="true"></i>
                 <span class="text-muted" style="font-size:0.65rem">{{ 'STAFF.SELL.POPULAR_LABEL' | translate }}</span>
               </div>
               <button *ngFor="let opt of filteredPopularDropoffOptions" type="button"
                       class="list-group-item list-group-item-action py-1 px-2 small d-flex justify-content-between"
                       [class.active]="opt.slug === dropoffSlug" (click)="dropoffChange.emit(opt.slug)">
-                <span class="d-flex align-items-center gap-1">
-                  <i class="bi bi-pin-fill text-warning" style="font-size:0.55rem" aria-hidden="true"></i>
-                  <span>{{ opt.name }}</span>
-                </span>
+                <span>{{ opt.name }}</span>
                 <span *ngIf="opt.time" class="opacity-75 ms-1">{{ opt.time }}</span>
               </button>
-            </div>
-          </ng-container>
-          <div class="stop-list list-group list-group-flush overflow-auto border rounded" style="max-height:150px">
+            </ng-container>
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
