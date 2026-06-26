@@ -139,10 +139,39 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
     private readonly translate: TranslateService
   ) {}
 
+  /** Zero-based index of the "Trip Details" tab in the p-tabView. */
+  private static readonly TRIP_DETAILS_TAB_INDEX = 1;
+
   ngOnChanges(changes: SimpleChanges): void {
-    // If the selected trip changes while editing, close edit mode.
-    if (changes['selectedTrip'] && this.isEditMode) {
+    // If the selected trip changes while the Trip Details tab is open, reload the
+    // editable form for the newly selected trip (it stays directly editable).
+    const tripChange = changes['selectedTrip'];
+    if (tripChange && !tripChange.firstChange && this.isEditMode) {
+      if (this.selectedTrip) {
+        this.openEditMode();
+      } else {
+        this.closeEditMode();
+      }
+    }
+  }
+
+  /**
+   * Trip Details fields are directly editable — opening the tab loads the form
+   * immediately (no read-only step / Edit button). Leaving the tab tears the
+   * form state down so a stale in-flight load can't clobber the next open.
+   */
+  protected onTabChange(index: number): void {
+    if (index === WalkInCenterPanelComponent.TRIP_DETAILS_TAB_INDEX) {
+      this.openEditMode();
+    } else if (this.isEditMode) {
       this.closeEditMode();
+    }
+  }
+
+  /** Secondary button in the edit form: discard unsaved edits by reloading originals. */
+  protected revertChanges(): void {
+    if (this.selectedTrip) {
+      this.openEditMode();
     }
   }
 
@@ -348,9 +377,12 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
             patch.capacity = formValue.seatingCapacity;
           }
 
-          this.tripDetailsUpdated.emit({ scheduleId: trip.scheduleId, patch });
+          this.capacityInlineError = '';
 
-          this.closeEditMode();
+          // Emitting the patch updates selectedTrip in the parent (new reference),
+          // which flows back as an @Input and reloads the form with server truth
+          // via ngOnChanges. The tab stays directly editable — no read-only step.
+          this.tripDetailsUpdated.emit({ scheduleId: trip.scheduleId, patch });
 
           void this.alertService.success(
             this.translate.instant('STAFF.SELL.TRIP_DETAIL_SAVE_SUCCESS')
