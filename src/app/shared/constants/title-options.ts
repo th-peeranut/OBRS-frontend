@@ -3,7 +3,7 @@ import { Dropdown } from '../interfaces/dropdown.interface';
 export const TITLE_OPTIONS: Dropdown[] = [
   { id: 1, nameThai: 'นาย', nameEnglish: 'Mr.', nameChinese: '先生', isDefault: true },
   { id: 2, nameThai: 'นางสาว', nameEnglish: 'Miss', nameChinese: '小姐' },
-  { id: 3, nameThai: 'นาง', nameEnglish: 'Mrs.', nameChinese: '女士' },
+  { id: 3, nameThai: 'นาง', nameEnglish: 'Mrs.', nameChinese: '太太' },
   { id: 4, nameThai: 'เด็กชาย', nameEnglish: 'Master', nameChinese: '小弟弟' },
   { id: 5, nameThai: 'เด็กหญิง', nameEnglish: 'Miss (Child)', nameChinese: '小妹妹' },
   { id: 6, nameThai: 'ดร.', nameEnglish: 'Dr.', nameChinese: '博士' },
