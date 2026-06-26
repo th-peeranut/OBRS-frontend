@@ -96,6 +96,19 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
     });
   }
 
+  /** Returns true when at least one passenger (adult or child) is selected. */
+  get isPassengerSelected(): boolean {
+    const passengerInfo = this.bookingForm.get('passengerInfo')?.value;
+    if (!Array.isArray(passengerInfo)) {
+      return false;
+    }
+    const total = passengerInfo.reduce(
+      (sum: number, p: { count?: number }) => sum + (p.count ?? 0),
+      0
+    );
+    return total >= 1;
+  }
+
   onSearch() {
     const formValue = { ...this.bookingForm.getRawValue() };
 

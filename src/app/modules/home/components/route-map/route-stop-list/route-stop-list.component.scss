@@ -1,0 +1,74 @@
+.route-stop-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.stop-list-scroll {
+  overflow-y: auto;
+  max-height: 340px;
+  flex: 1;
+}
+
+.stop-row {
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+  }
+
+  &--selected {
+    background-color: rgba(59, 176, 231, 0.12);
+    border-color: rgba(59, 176, 231, 0.4);
+  }
+
+  &--selected.stop-row--dropoff {
+    background-color: rgba(220, 53, 69, 0.1);
+    border-color: rgba(220, 53, 69, 0.3);
+  }
+}
+
+.stop-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #3bb0e7;
+  flex-shrink: 0;
+
+  &--dropoff {
+    background-color: #dc3545;
+  }
+
+  &--selected {
+    width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+    box-shadow: 0 0 0 3px rgba(59, 176, 231, 0.35);
+  }
+
+  &--dropoff#{&}--selected {
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+  }
+}
+
+.stop-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.stop-address {
+  font-size: 0.75rem;
+}
+
+.stop-time {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}

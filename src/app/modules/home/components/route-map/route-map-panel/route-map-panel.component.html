@@ -1,0 +1,55 @@
+<!-- LIVE MAP (only when API loaded + key set + coordinates exist) -->
+<ng-container *ngIf="showMap; else mapPlaceholder">
+  <google-map
+    class="route-google-map"
+    [options]="mapOptions"
+    width="100%"
+    height="480px"
+  >
+    <!-- PICKUP MARKERS -->
+    <map-marker
+      *ngFor="let stop of pickupStops"
+      [options]="getPickupMarkerOptions(stop)"
+    ></map-marker>
+
+    <!-- DROPOFF MARKERS -->
+    <map-marker
+      *ngFor="let stop of dropoffStops"
+      [options]="getDropoffMarkerOptions(stop)"
+    ></map-marker>
+
+    <!-- ROUTE POLYLINE -->
+    <map-polyline
+      *ngIf="polylinePath.length > 1"
+      [path]="polylinePath"
+      [options]="polylineOptions"
+    ></map-polyline>
+  </google-map>
+
+  <!-- LEGEND -->
+  <div class="map-legend mt-2 p-2 rounded border d-flex flex-wrap gap-3 align-items-center">
+    <span class="fw-semibold small">{{ 'HOME.ROUTE_MAP.LEGEND_TITLE' | translate }}</span>
+    <div class="d-flex align-items-center gap-1" *ngIf="routeMeta">
+      <span class="legend-dot legend-dot--pickup"></span>
+      <span class="small">
+        {{ 'HOME.ROUTE_MAP.LEGEND_PICKUP' | translate: { province: routeMeta.originProvinceLabel, count: pickupStops.length } }}
+      </span>
+    </div>
+    <div class="d-flex align-items-center gap-1" *ngIf="routeMeta">
+      <span class="legend-dot legend-dot--dropoff"></span>
+      <span class="small">
+        {{ 'HOME.ROUTE_MAP.LEGEND_DROPOFF' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffStops.length } }}
+      </span>
+    </div>
+  </div>
+</ng-container>
+
+<!-- PLACEHOLDER (no key, no coords, or API error) -->
+<ng-template #mapPlaceholder>
+  <div class="route-map-placeholder d-flex flex-column align-items-center justify-content-center rounded border bg-light">
+    <i class="bi bi-map fs-1 text-muted mb-2"></i>
+    <span class="text-muted small text-center px-3">
+      {{ 'HOME.ROUTE_MAP.MAP_UNAVAILABLE' | translate }}
+    </span>
+  </div>
+</ng-template>

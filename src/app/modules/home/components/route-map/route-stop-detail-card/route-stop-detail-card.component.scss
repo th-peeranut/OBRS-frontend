@@ -1,0 +1,30 @@
+.detail-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #fff;
+  background-color: #3bb0e7;
+  flex-shrink: 0;
+
+  &--dropoff {
+    background-color: #dc3545;
+  }
+}
+
+.detail-photo {
+  max-height: 140px;
+  object-fit: cover;
+}
+
+.detail-empty {
+  min-height: 120px;
+}
+
+:host ::ng-deep .route-stop-detail-card .p-card-content {
+  padding: 0.75rem;
+}

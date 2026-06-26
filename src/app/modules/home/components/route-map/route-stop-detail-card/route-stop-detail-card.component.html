@@ -1,0 +1,87 @@
+<p-card styleClass="route-stop-detail-card h-100">
+  <!-- NO SELECTION PLACEHOLDER -->
+  <ng-container *ngIf="!stop">
+    <div class="detail-empty d-flex flex-column align-items-center justify-content-center py-4 text-muted">
+      <i class="bi bi-geo-alt fs-2 mb-2"></i>
+      <span class="small">{{ 'HOME.ROUTE_MAP.DETAIL_NO_SELECTION' | translate }}</span>
+    </div>
+  </ng-container>
+
+  <!-- STOP DETAIL -->
+  <ng-container *ngIf="stop">
+    <!-- CARD TITLE -->
+    <div class="d-flex align-items-center gap-2 mb-3">
+      <span
+        class="detail-order-badge"
+        [class.detail-order-badge--pickup]="type === 'pickup'"
+        [class.detail-order-badge--dropoff]="type === 'dropoff'"
+      >{{ stop.order }}</span>
+      <div>
+        <div class="fw-semibold">{{ stop.name }}</div>
+        <div class="text-muted small">
+          <ng-container *ngIf="type === 'pickup'">
+            {{ 'HOME.ROUTE_MAP.DETAIL_PICKUP_TITLE' | translate: { province: province } }}
+          </ng-container>
+          <ng-container *ngIf="type === 'dropoff'">
+            {{ 'HOME.ROUTE_MAP.DETAIL_DROPOFF_TITLE' | translate: { province: province } }}
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- PHOTO -->
+    <img
+      *ngIf="stop.primaryPhotoUrl"
+      [src]="stop.primaryPhotoUrl"
+      class="detail-photo w-100 rounded mb-2"
+      [alt]="stop.name"
+      loading="lazy"
+    />
+
+    <!-- MINI STATIC MAP (only when key + coords available) -->
+    <img
+      *ngIf="staticMapUrl"
+      [src]="staticMapUrl"
+      class="detail-photo w-100 rounded mb-2"
+      [alt]="stop.name"
+      loading="lazy"
+    />
+
+    <!-- APPROX TIME -->
+    <div class="mb-2 small">
+      <i class="bi bi-clock me-1 text-muted"></i>
+      {{ 'HOME.ROUTE_MAP.DETAIL_TIME' | translate: { time: stop.approxTime } }}
+    </div>
+
+    <!-- ADDRESS -->
+    <div class="mb-3 small text-muted">
+      <i class="bi bi-geo-alt me-1"></i>{{ stop.address }}
+    </div>
+
+    <!-- ACTION BUTTONS -->
+    <div class="d-flex gap-2 flex-wrap">
+      <p-button
+        severity="secondary"
+        size="small"
+        [label]="'HOME.ROUTE_MAP.BTN_VIEW_PHOTO' | translate"
+        [disabled]="!stop.primaryPhotoUrl"
+        (onClick)="openPhoto()"
+      >
+        <ng-template pTemplate="icon">
+          <i class="bi bi-image me-1"></i>
+        </ng-template>
+      </p-button>
+      <p-button
+        severity="secondary"
+        size="small"
+        [label]="'HOME.ROUTE_MAP.BTN_OPEN_MAPS' | translate"
+        [disabled]="!stop.googleMapsUrl"
+        (onClick)="openMaps()"
+      >
+        <ng-template pTemplate="icon">
+          <i class="bi bi-map me-1"></i>
+        </ng-template>
+      </p-button>
+    </div>
+  </ng-container>
+</p-card>

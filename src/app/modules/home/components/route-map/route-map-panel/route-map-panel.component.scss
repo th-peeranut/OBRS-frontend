@@ -1,0 +1,52 @@
+.route-map-placeholder {
+  height: 480px;
+  min-height: 240px;
+}
+
+.route-google-map {
+  display: block;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.map-legend {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+
+  &--pickup {
+    background-color: #3bb0e7;
+  }
+
+  &--dropoff {
+    background-color: #dc3545;
+  }
+}
+
+/* Responsive map heights */
+@media (max-width: 1199px) {
+  .route-map-placeholder,
+  :host ::ng-deep google-map .map-container {
+    height: 300px !important;
+  }
+
+  .route-map-placeholder {
+    height: 300px;
+  }
+}
+
+@media (max-width: 767px) {
+  .route-map-placeholder,
+  :host ::ng-deep google-map .map-container {
+    height: 240px !important;
+  }
+
+  .route-map-placeholder {
+    height: 240px;
+  }
+}
