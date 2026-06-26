@@ -184,6 +184,130 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Stop filter logic
+  // ---------------------------------------------------------------------------
+
+  describe('filteredPickupOptions getter', () => {
+    const stops = [
+      makeStopOption('a', 'Bangkok Central'),
+      makeStopOption('b', 'Chiang Mai Old City'),
+      makeStopOption('c', 'Phuket Town'),
+    ];
+
+    beforeEach(() => {
+      component.pickupOptions = stops;
+      (component as unknown as { pickupFilter: string }).pickupFilter = '';
+    });
+
+    it('returns full list when filter is empty', () => {
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result).toEqual(stops);
+    });
+
+    it('returns full list when filter is only whitespace', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = '   ';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result).toEqual(stops);
+    });
+
+    it('filters by substring (case-insensitive)', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'chiang';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('b');
+    });
+
+    it('is case-insensitive for Latin text', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'BANGKOK';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('a');
+    });
+
+    it('returns empty array when no stops match', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'zzznomatch';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('does NOT mutate the @Input pickupOptions array', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'phuket';
+      (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(component.pickupOptions).toEqual(stops);
+      expect(component.pickupOptions.length).toBe(3);
+    });
+
+    it('partial match returns multiple results', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'a';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      // 'Bangkok Central' and 'Chiang Mai Old City' both contain 'a'
+      expect(result.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  describe('filteredDropoffOptions getter', () => {
+    const stops = [
+      makeStopOption('x', 'Hat Yai'),
+      makeStopOption('y', 'Khon Kaen'),
+      makeStopOption('z', 'Lampang Central'),
+    ];
+
+    beforeEach(() => {
+      component.dropoffOptions = stops;
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = '';
+    });
+
+    it('returns full list when filter is empty', () => {
+      const result = (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(result).toEqual(stops);
+    });
+
+    it('filters by substring (case-insensitive)', () => {
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = 'khon';
+      const result = (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('y');
+    });
+
+    it('returns empty array when no stops match', () => {
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = 'nomatch999';
+      const result = (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('does NOT mutate the @Input dropoffOptions array', () => {
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = 'hat';
+      (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(component.dropoffOptions).toEqual(stops);
+      expect(component.dropoffOptions.length).toBe(3);
+    });
+
+    it('is independent from the pickup filter', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'zzz';
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = '';
+      const result = (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(result).toEqual(stops);
+    });
+  });
+
+  describe('filter no-match condition', () => {
+    it('filteredPickupOptions.length === 0 when filter matches nothing', () => {
+      component.pickupOptions = [makeStopOption('a', 'Bangkok')];
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'zzznomatch';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('filteredPickupOptions.length > 0 after clearing the filter', () => {
+      component.pickupOptions = [makeStopOption('a', 'Bangkok')];
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'zzznomatch';
+      (component as unknown as { pickupFilter: string }).pickupFilter = '';
+      const result = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(result.length).toBe(1);
+    });
+  });
+
   describe('edit mode', () => {
     it('isEditMode starts false', () => {
       expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();

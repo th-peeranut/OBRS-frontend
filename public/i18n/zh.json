@@ -115,7 +115,8 @@
     "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
-    "THEME_TOGGLE": "切换深色模式"
+    "THEME_TOGGLE": "切换深色模式",
+    "CLEAR": "清除"
   },
   "ADMIN": {
     "PAGES": {
@@ -1007,7 +1008,9 @@
       "TRIP_DETAIL_SAVE_SUCCESS": "班次信息已保存",
       "TRIP_DETAIL_ERR_FORM_INVALID": "请填写所有必填字段",
       "TRIP_DETAIL_ERR_CAPACITY_MAX": "容量超出最大座位数 ({{max}})",
-      "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "容量低于当前已占座位数 ({{occupied}})"
+      "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "容量低于当前已占座位数 ({{occupied}})",
+      "STOP_FILTER_PLACEHOLDER": "搜索站点",
+      "STOP_NO_MATCH": "没有匹配的站点"
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",

@@ -71,6 +71,22 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
 
   @ViewChild(TripDetailsEditFormComponent) editFormRef?: TripDetailsEditFormComponent;
 
+  // --- Stop filter state (client-side, non-destructive) ---
+  protected pickupFilter = '';
+  protected dropoffFilter = '';
+
+  protected get filteredPickupOptions(): StopOption[] {
+    const q = this.pickupFilter.trim().toLowerCase();
+    if (!q) return this.pickupOptions;
+    return this.pickupOptions.filter(o => o.name.toLowerCase().includes(q));
+  }
+
+  protected get filteredDropoffOptions(): StopOption[] {
+    const q = this.dropoffFilter.trim().toLowerCase();
+    if (!q) return this.dropoffOptions;
+    return this.dropoffOptions.filter(o => o.name.toLowerCase().includes(q));
+  }
+
   // --- Edit-mode state ---
   protected isEditMode = false;
   protected isEditLoading = false;
