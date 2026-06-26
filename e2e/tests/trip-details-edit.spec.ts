@@ -583,13 +583,9 @@ test.describe('AC-13: Driver dropdown — preselection and save', () => {
       expect(capturedPayload).toHaveProperty('driverId');
     }
 
-    // The form should close (edit mode ends on success or the view re-renders)
-    // Either the edit form closes or a success alert appears
-    // The save might succeed or the form might remain if something's wrong
-    // Just verify the page didn't crash
-    const formPresence = await page.locator('app-trip-details-edit-form').isVisible();
-    const viewPresence = await page.locator('app-trip-details-view').isVisible();
-    expect(formPresence || viewPresence, 'Either form or view should be visible after save').toBe(true);
+    // Direct-edit: the tab stays editable after save (it reloads server truth),
+    // so the edit form must remain present — there is no read-only view to fall back to.
+    await expect(page.locator('app-trip-details-edit-form')).toBeVisible();
   });
 });
 
@@ -656,21 +652,19 @@ test.describe('AC-14: Save success — read-only view and trip row update withou
       'A full page reload must not happen on save — optimistic patch only'
     ).toBe(navCountAfterLoad);
 
-    // After success the edit form should close (isEditMode = false)
-    // and the success toast / read-only view should be visible
+    // Direct-edit: after a successful save the tab stays editable and the success
+    // toast confirms the save. The form remains mounted (reloaded with server truth);
+    // a success toast should appear — and crucially no full page reload happened.
     const successToast = page.locator('.swal2-container');
-    const tripDetailsView = page.locator('app-trip-details-view');
     const editForm = page.locator('app-trip-details-edit-form');
 
-    // Either the toast appeared or the view re-rendered
     const toastVisible = await successToast.isVisible();
-    const viewVisible = await tripDetailsView.isVisible();
     const formStillVisible = await editForm.isVisible();
 
-    // The save should have: closed the form OR shown a toast (or both)
+    // The save confirmed via toast and/or the editable form is still present (no crash, no reload).
     expect(
-      toastVisible || viewVisible || !formStillVisible,
-      'Save should close the form or show a success message'
+      toastVisible || formStillVisible,
+      'Save should show a success toast and keep the editable form mounted'
     ).toBe(true);
   });
 });

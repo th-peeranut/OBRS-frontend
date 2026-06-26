@@ -308,28 +308,133 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
-  describe('edit mode', () => {
+  // ---------------------------------------------------------------------------
+  // Direct-edit (ADR-0003 amendment, 2026-06-26): the Trip Details tab is
+  // directly editable — activating the tab loads the form, no Edit-button step.
+  // These guard against a regression to the old read-only + Edit-click flow.
+  // ---------------------------------------------------------------------------
+  describe('direct edit', () => {
+    type Internals = {
+      isEditMode: boolean;
+      closeEditMode: () => void;
+      onTabChange: (i: number) => void;
+      revertChanges: () => void;
+      onSave: (v: unknown) => void;
+    };
+    const TRIP_DETAILS_TAB = 1;
+    const TICKET_SALES_TAB = 0;
+    const BOARDING_TAB = 2;
+
+    const internals = () => component as unknown as Internals;
+
+    beforeEach(() => {
+      adminApiServiceSpy.getScheduleById.calls.reset();
+      adminApiServiceSpy.updateSchedule.calls.reset();
+      alertServiceSpy.success.calls.reset();
+    });
+
     it('isEditMode starts false', () => {
-      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
+      expect(internals().isEditMode).toBeFalse();
     });
 
     it('closeEditMode resets isEditMode to false', () => {
-      (component as unknown as { isEditMode: boolean }).isEditMode = true;
-      (component as unknown as { closeEditMode: () => void }).closeEditMode();
-      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
+      internals().isEditMode = true;
+      internals().closeEditMode();
+      expect(internals().isEditMode).toBeFalse();
     });
 
-    it('ngOnChanges closes edit mode when selectedTrip changes', () => {
-      (component as unknown as { isEditMode: boolean }).isEditMode = true;
+    it('loads the edit form immediately when the Trip Details tab is activated (no Edit click)', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TRIP_DETAILS_TAB);
+      expect(internals().isEditMode).toBeTrue();
+      expect(adminApiServiceSpy.getScheduleById).toHaveBeenCalledWith(1);
+    });
+
+    it('does not load form data for the Ticket Sales tab', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TICKET_SALES_TAB);
+      expect(internals().isEditMode).toBeFalse();
+      expect(adminApiServiceSpy.getScheduleById).not.toHaveBeenCalled();
+    });
+
+    it('tears down edit state when leaving the Trip Details tab', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TRIP_DETAILS_TAB);
+      expect(internals().isEditMode).toBeTrue();
+      internals().onTabChange(BOARDING_TAB);
+      expect(internals().isEditMode).toBeFalse();
+    });
+
+    it('reloads the form for the new trip when selection changes while the tab is open', () => {
+      component.selectedTrip = makeTrip({ scheduleId: 1 });
+      internals().onTabChange(TRIP_DETAILS_TAB);
+      expect(adminApiServiceSpy.getScheduleById).toHaveBeenCalledTimes(1);
+
+      component.selectedTrip = makeTrip({ scheduleId: 2 });
       component.ngOnChanges({
         selectedTrip: {
-          currentValue: makeTrip({ scheduleId: 2 }),
+          currentValue: component.selectedTrip,
           previousValue: makeTrip({ scheduleId: 1 }),
           firstChange: false,
           isFirstChange: () => false,
         },
       });
-      expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();
+
+      expect(internals().isEditMode).toBeTrue();
+      expect(adminApiServiceSpy.getScheduleById).toHaveBeenCalledTimes(2);
+      expect(adminApiServiceSpy.getScheduleById).toHaveBeenCalledWith(2);
+    });
+
+    it('closes edit mode when selectedTrip is cleared while the tab is open', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TRIP_DETAILS_TAB);
+      component.selectedTrip = null;
+      component.ngOnChanges({
+        selectedTrip: {
+          currentValue: null,
+          previousValue: makeTrip(),
+          firstChange: false,
+          isFirstChange: () => false,
+        },
+      });
+      expect(internals().isEditMode).toBeFalse();
+    });
+
+    it('revertChanges reloads original values when a trip is selected', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TRIP_DETAILS_TAB);
+      adminApiServiceSpy.getScheduleById.calls.reset();
+      internals().revertChanges();
+      expect(adminApiServiceSpy.getScheduleById).toHaveBeenCalledTimes(1);
+    });
+
+    it('revertChanges is a no-op when no trip is selected', () => {
+      component.selectedTrip = null;
+      internals().revertChanges();
+      expect(adminApiServiceSpy.getScheduleById).not.toHaveBeenCalled();
+    });
+
+    it('keeps the tab editable after a successful save (no read-only fallback)', () => {
+      component.selectedTrip = makeTrip();
+      internals().onTabChange(TRIP_DETAILS_TAB);
+
+      const updatedSpy = jasmine.createSpy('tripDetailsUpdated');
+      component.tripDetailsUpdated.subscribe(updatedSpy);
+
+      internals().onSave({
+        departureDateTime: '2026-07-01T09:00:00+07:00',
+        vehicleType: 'bus',
+        vehicleId: null,
+        driverId: null,
+        seatingCapacity: 21,
+        seatMapId: '',
+        route: '',
+      });
+
+      expect(adminApiServiceSpy.updateSchedule).toHaveBeenCalled();
+      expect(updatedSpy).toHaveBeenCalled();
+      expect(alertServiceSpy.success).toHaveBeenCalled();
+      expect(internals().isEditMode).toBeTrue();
     });
   });
 });
