@@ -1,4 +1,5 @@
-import { of, throwError, Subject } from 'rxjs';
+import { BehaviorSubject, of, throwError, Subject } from 'rxjs';
+import { FormBuilder } from '@angular/forms';
 import { SellPageComponent } from './sell-page.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
 import { createRouterStub, createStoreStub, createTranslateStub } from '../../../../testing/test-stubs';
@@ -22,10 +23,10 @@ function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   };
 }
 
-function makeRouteGroup(trips: WalkInTripDto[] = []): WalkInRouteGroupDto {
+function makeRouteGroup(routeSlug: string, trips: WalkInTripDto[]): WalkInRouteGroupDto {
   return {
-    routeSlug: 'bkk-cm',
-    routeLabel: 'Bangkok → Chiang Mai',
+    routeSlug,
+    routeLabel: `Route ${routeSlug}`,
     trips,
   };
 }
@@ -47,20 +48,66 @@ function createStaffApiStub(overrides: Partial<{
   };
 }
 
+function createAdminApiStub(): any {
+  return {
+    createSchedule: jasmine.createSpy('createSchedule').and.returnValue(of({})),
+    updateSchedule: jasmine.createSpy('updateSchedule').and.returnValue(of({})),
+    deleteSchedule: jasmine.createSpy('deleteSchedule').and.returnValue(of({})),
+    getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(of({ data: null })),
+  };
+}
+
+function createScheduleStoreStub(hasValue = false): any {
+  const sub = new BehaviorSubject<null>(null);
+  return {
+    data$: sub.asObservable(),
+    hasValue,
+    refresh: jasmine.createSpy('refresh').and.returnValue(Promise.resolve()),
+  };
+}
+
+/** Store stub that exposes the BehaviorSubject for mid-test data emissions. */
+function createControllableScheduleStoreStub(): {
+  store: any;
+  subject: BehaviorSubject<any>;
+  hasValueRef: { value: boolean };
+} {
+  const subject = new BehaviorSubject<any>(null);
+  const hasValueRef = { value: false };
+  const store = {
+    get data$() { return subject.asObservable(); },
+    get hasValue() { return hasValueRef.value; },
+    refresh: jasmine.createSpy('refresh').and.callFake(() => {
+      hasValueRef.value = true;
+      return Promise.resolve();
+    }),
+  };
+  return { store, subject, hasValueRef };
+}
+
 function createAlertStub(): any {
   return {
     error: jasmine.createSpy('error').and.returnValue(Promise.resolve()),
     warning: jasmine.createSpy('warning').and.returnValue(Promise.resolve()),
+    success: jasmine.createSpy('success').and.returnValue(Promise.resolve()),
   };
 }
 
-function makeComponent(staffApi = createStaffApiStub(), alertService = createAlertStub()): SellPageComponent {
+function makeComponent(
+  staffApi = createStaffApiStub(),
+  alertService = createAlertStub(),
+  adminApi = createAdminApiStub(),
+  scheduleStore = createScheduleStoreStub()
+): SellPageComponent {
   return new SellPageComponent(
     createRouterStub(),
     createStoreStub(),
     staffApi,
     alertService,
-    createTranslateStub()
+    createTranslateStub(),
+    new FormBuilder(),
+    adminApi,
+    scheduleStore
   );
 }
 
@@ -99,7 +146,7 @@ describe('SellPageComponent', () => {
 
     it('populates routeGroups from API response', () => {
       const trip = makeTrip();
-      const groups = [makeRouteGroup([trip])];
+      const groups = [makeRouteGroup('bkk-cm', [trip])];
       const api = createStaffApiStub({
         getWalkInSchedules: jasmine.createSpy().and.returnValue(of({ data: groups })),
       });
@@ -510,7 +557,10 @@ describe('SellPageComponent', () => {
         createStoreStub(),
         api,
         createAlertStub(),
-        translate
+        translate,
+        new FormBuilder(),
+        createAdminApiStub(),
+        createScheduleStoreStub()
       );
       return { comp, translate };
     }
@@ -585,6 +635,193 @@ describe('SellPageComponent', () => {
       (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
       expect((comp as any).pickupSlug).toBe('stop_a'); // origin
       expect((comp as any).dropoffSlug).toBe('stop_c'); // destination
+    });
+  });
+
+  describe('schedule management — optimistic delete', () => {
+    it('removes the deleted scheduleId from routeGroups immediately (optimistic)', () => {
+      const comp = makeComponent();
+
+      const tripToDelete = makeTrip({ scheduleId: 10 });
+      const otherTrip = makeTrip({ scheduleId: 20 });
+      (comp as any).routeGroups = [
+        makeRouteGroup('r1', [tripToDelete]),
+        makeRouteGroup('r2', [otherTrip]),
+      ];
+
+      (comp as any).onDeleteScheduleClicked({ trip: tripToDelete, routeSlug: 'r1' });
+      void (comp as any).confirmDeleteSchedule();
+
+      const groups: WalkInRouteGroupDto[] = (comp as any).routeGroups;
+      // Empty group should be dropped
+      expect(groups.length).toBe(1);
+      expect(groups[0].routeSlug).toBe('r2');
+      expect(groups[0].trips[0].scheduleId).toBe(20);
+    });
+
+    it('returns a new routeGroups array reference after optimistic delete', () => {
+      const comp = makeComponent();
+
+      const tripToDelete = makeTrip({ scheduleId: 10 });
+      const originalGroups: WalkInRouteGroupDto[] = [makeRouteGroup('r1', [tripToDelete])];
+      (comp as any).routeGroups = originalGroups;
+
+      (comp as any).onDeleteScheduleClicked({ trip: tripToDelete, routeSlug: 'r1' });
+      void (comp as any).confirmDeleteSchedule();
+
+      expect((comp as any).routeGroups).not.toBe(originalGroups);
+    });
+
+    it('clears selectedTrip when the deleted trip was the selected one', () => {
+      const comp = makeComponent();
+
+      const tripToDelete = makeTrip({ scheduleId: 10 });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [tripToDelete])];
+      (comp as any).selectedTrip = tripToDelete;
+      (comp as any).selectedSeats = ['B1', 'B2'];
+      (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
+
+      (comp as any).onDeleteScheduleClicked({ trip: tripToDelete, routeSlug: 'r1' });
+      void (comp as any).confirmDeleteSchedule();
+
+      expect((comp as any).selectedTrip).toBeNull();
+      expect((comp as any).selectedSeats).toEqual([]);
+      expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+
+    it('does NOT clear selectedTrip when a different trip was deleted', () => {
+      const comp = makeComponent();
+
+      const tripToDelete = makeTrip({ scheduleId: 10 });
+      const selectedTrip = makeTrip({ scheduleId: 20 });
+      (comp as any).routeGroups = [
+        makeRouteGroup('r1', [tripToDelete]),
+        makeRouteGroup('r2', [selectedTrip]),
+      ];
+      (comp as any).selectedTrip = selectedTrip;
+      (comp as any).selectedSeats = ['B1'];
+
+      (comp as any).onDeleteScheduleClicked({ trip: tripToDelete, routeSlug: 'r1' });
+      void (comp as any).confirmDeleteSchedule();
+
+      expect((comp as any).selectedTrip).toEqual(selectedTrip);
+      expect((comp as any).selectedSeats).toEqual(['B1']);
+    });
+  });
+
+  // Regression: AC-1/AC-6 cold-open "Add schedule" has blank route/vehicleType.
+  // When the store hasn't loaded yet on first modal open, scheduleRouteOptions and
+  // scheduleVehicleTypeOptions are empty — so the form.reset() defaults to ''.
+  // Fix: applyScheduleLocalization now applies first-option defaults to pristine
+  // blank controls when the create form is open and no user pick has been made.
+  describe('schedule management — cold-open first-option defaults (regression AC-1/AC-6)', () => {
+    function makeStoreData(): any {
+      return {
+        routes: [{ slug: 'bkk-cm', label_th: 'BKK-CM', label_en: 'BKK-CM', translations: [] }],
+        vehicleTypes: [{ slug: 'bus', label_th: 'บัส', label_en: 'Bus', translations: [] }],
+        vehicles: [],
+        users: [],
+        lookups: [],
+      };
+    }
+
+    it('applies first-option defaults to route/vehicleType when store loads while create modal is open', () => {
+      const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
+      const comp = new SellPageComponent(
+        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), store
+      );
+      comp.ngOnInit();
+
+      // Cold open: store has no data yet → options arrays are empty → form gets ''
+      (comp as any).onAddScheduleClicked();
+      expect((comp as any).isScheduleFormOpen).toBeTrue();
+      expect((comp as any).scheduleItemForm.get('route')?.value).toBe('');
+      expect((comp as any).scheduleItemForm.get('vehicleType')?.value).toBe('');
+
+      // Store data arrives (e.g. after async refresh completes)
+      hasValueRef.value = true;
+      subject.next(makeStoreData());
+
+      // First-option defaults must now be applied to the still-pristine blank controls
+      expect((comp as any).scheduleItemForm.get('route')?.value).toBe('bkk-cm');
+      expect((comp as any).scheduleItemForm.get('vehicleType')?.value).toBe('bus');
+
+      comp.ngOnDestroy();
+    });
+
+    it('does NOT overwrite a user-picked route when store data arrives', () => {
+      const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
+      const comp = new SellPageComponent(
+        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), store
+      );
+      comp.ngOnInit();
+
+      (comp as any).onAddScheduleClicked();
+
+      // Simulate user picking a specific route (makes the control dirty)
+      const routeCtrl = (comp as any).scheduleItemForm.get('route');
+      routeCtrl.setValue('phuket-express');
+      routeCtrl.markAsDirty();
+
+      // Store data arrives with a different first option
+      hasValueRef.value = true;
+      subject.next(makeStoreData());
+
+      // User's pick must be preserved — dirty controls are not overwritten
+      expect((comp as any).scheduleItemForm.get('route')?.value).toBe('phuket-express');
+
+      comp.ngOnDestroy();
+    });
+
+    it('does NOT apply first-option defaults when the form is in edit mode', () => {
+      const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
+      const comp = new SellPageComponent(
+        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), store
+      );
+      comp.ngOnInit();
+
+      // Simulate edit mode open with a specific route set
+      (comp as any).isScheduleFormOpen = true;
+      (comp as any).isScheduleEditMode = true;
+      (comp as any).scheduleItemForm.get('route')?.setValue('existing-route');
+
+      // Store data arrives
+      hasValueRef.value = true;
+      subject.next(makeStoreData());
+
+      // Edit mode: must not touch the form controls
+      expect((comp as any).scheduleItemForm.get('route')?.value).toBe('existing-route');
+
+      comp.ngOnDestroy();
+    });
+
+    it('does NOT apply defaults when the create form is closed', () => {
+      const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
+      const comp = new SellPageComponent(
+        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), store
+      );
+      comp.ngOnInit();
+
+      // Form is closed (default state)
+      expect((comp as any).isScheduleFormOpen).toBeFalse();
+
+      hasValueRef.value = true;
+      subject.next(makeStoreData());
+
+      // Schedule options are populated but form was not open — no side-effects
+      expect((comp as any).scheduleRouteOptions.length).toBeGreaterThan(0);
+      // Form controls remain at initial reset values
+      expect((comp as any).scheduleItemForm.get('route')?.value).toBe('');
+
+      comp.ngOnDestroy();
     });
   });
 

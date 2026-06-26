@@ -96,9 +96,13 @@ export interface SegmentStopPairDto {
   estimatedDurationMinutes: number;
 }
 
+export interface PopularStopDto { slug: string; name: string; count: number; }
+
 export interface RouteSegmentsDto {
   route: SegmentStopRefDto;
   stopPairs: SegmentStopPairDto[];
+  popularPickupStops: PopularStopDto[];
+  popularDropoffStops: PopularStopDto[];
 }
 
 export interface WalkInBookingReqDto {

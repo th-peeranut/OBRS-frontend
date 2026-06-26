@@ -1,24 +1,35 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
-import { Subject } from 'rxjs';
+import { Subject, firstValueFrom, take } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import {
+  PopularStopDto,
   SegmentStopPairDto,
   SegmentStopRefDto,
   StaffApiService,
   WalkInRouteGroupDto,
   WalkInTripDto,
 } from '../../../../services/staff/staff-api.service';
+import {
+  AdminApiService,
+  AdminScheduleDto,
+  CreateSchedulePayload,
+  getAdminLookupLabel,
+  getAdminTranslationLabel,
+} from '../../../../services/admin/admin-api.service';
 import { invokeSetBookingApi } from '../../../../shared/stores/booking/booking.action';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 import { WalkInTripSelection } from '../../components/walk-in-trip-browser/walk-in-trip-browser.component';
 import { TripDetailsUpdatedEvent } from '../../components/walk-in-center-panel/walk-in-center-panel.component';
+import { StaffSchedulesStore, StaffSchedulesData } from '../staff-schedules/staff-schedules.store';
 
 /** Stop option enriched with a computed departure time string. */
 export interface StopOption extends SegmentStopRefDto {
@@ -52,18 +63,49 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected pickupSlug = '';
   protected dropoffSlug = '';
   protected isLoadingSegments = false;
+  protected popularPickupStops: StopOption[] = [];
+  protected popularDropoffStops: StopOption[] = [];
   private fareMap = new Map<string, number>();
 
   private idempotencyKey: string | null = null;
   private readonly destroy$ = new Subject<void>();
+
+  // --- Schedule management state ---
+  protected readonly scheduleItemForm: FormGroup;
+  protected isScheduleFormOpen = false;
+  protected isScheduleDeleteOpen = false;
+  protected isScheduleEditMode = false;
+  protected isScheduleSubmitting = false;
+  protected isScheduleDeleting = false;
+  protected isScheduleDetailLoading = false;
+  protected editingScheduleId: number | null = null;
+  protected deletingTrip: WalkInTripDto | null = null;
+
+  // Option arrays for schedule form (populated from StaffSchedulesStore)
+  protected scheduleRouteOptions: { code: string; label: string }[] = [];
+  protected scheduleVehicleTypeOptions: { code: string; label: string }[] = [];
+  protected scheduleVehicleOptions: { code: string; label: string }[] = [];
+  protected scheduleDriverOptions: { code: string; label: string }[] = [];
 
   constructor(
     private readonly router: Router,
     private readonly store: Store,
     private readonly staffApiService: StaffApiService,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
-  ) {}
+    private readonly translate: TranslateService,
+    private readonly formBuilder: FormBuilder,
+    private readonly adminApiService: AdminApiService,
+    readonly scheduleStore: StaffSchedulesStore
+  ) {
+    this.scheduleItemForm = this.formBuilder.group({
+      departureDate: [null, [Validators.required]],
+      departureTime: [null, [Validators.required]],
+      route: ['', [Validators.required]],
+      vehicleType: ['', [Validators.required]],
+      vehicleId: [''],
+      driverId: [''],
+    });
+  }
 
   ngOnInit(): void {
     this.loadTrips(this.selectedDate);
@@ -74,6 +116,22 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.reloadLocalizedData());
+
+    // Populate schedule form option arrays from StaffSchedulesStore (lazy — no upfront fetch)
+    this.scheduleStore.data$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((data) => {
+        if (data) { this.applyScheduleLocalization(data); }
+      });
+
+    // Re-map labels on language change (store data$ won't re-emit on its own)
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.scheduleStore.data$
+          .pipe(take(1))
+          .subscribe((d) => { if (d) { this.applyScheduleLocalization(d); } });
+      });
   }
 
   /** Re-fetch server-localized data (trips + segments) after a language switch. */
@@ -336,6 +394,325 @@ export class SellPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ─── Schedule management ───────────────────────────────────────────────────
+
+  private get currentScheduleLocale(): string {
+    const raw = String(this.translate.currentLang || this.translate.getDefaultLang() || 'th').toLowerCase();
+    return raw.startsWith('en') ? 'en' : 'th';
+  }
+
+  private applyScheduleLocalization(data: StaffSchedulesData): void {
+    const locale = this.currentScheduleLocale;
+    this.scheduleRouteOptions = data.routes.map((r) => ({
+      code: r.slug,
+      label: getAdminLookupLabel(r, locale) ?? getAdminTranslationLabel(r.translations, locale) ?? r.slug,
+    }));
+    this.scheduleVehicleTypeOptions = data.vehicleTypes.map((vt) => ({
+      code: vt.slug,
+      label: getAdminLookupLabel(vt, locale) ?? getAdminTranslationLabel(vt.translations, locale) ?? vt.slug,
+    }));
+    this.scheduleVehicleOptions = data.vehicles.map((v) => ({
+      code: String(v.id),
+      label: v.vehicleNumber ?? v.numberPlate ?? `#${v.id}`,
+    }));
+    this.scheduleDriverOptions = data.users
+      .filter((u) =>
+        (u.roles ?? []).some((role) => {
+          const slug = typeof role === 'string' ? role : role.slug;
+          return String(slug ?? '').trim().toLowerCase() === 'driver';
+        })
+      )
+      .map((u) => ({
+        code: String(u.id),
+        label: u.fullName?.trim() || u.email?.trim() || `#${u.id}`,
+      }));
+
+    // Cold-open fix: if the create form is open and route/vehicleType are still
+    // blank+pristine (store wasn't loaded yet when the modal opened), apply the
+    // first-option defaults now — but never overwrite a user's manual pick.
+    if (this.isScheduleFormOpen && !this.isScheduleEditMode) {
+      const routeCtrl = this.scheduleItemForm.get('route');
+      const vtCtrl = this.scheduleItemForm.get('vehicleType');
+      if (routeCtrl?.pristine && !routeCtrl.value && this.scheduleRouteOptions[0]?.code) {
+        routeCtrl.setValue(this.scheduleRouteOptions[0].code);
+      }
+      if (vtCtrl?.pristine && !vtCtrl.value && this.scheduleVehicleTypeOptions[0]?.code) {
+        vtCtrl.setValue(this.scheduleVehicleTypeOptions[0].code);
+      }
+    }
+  }
+
+  protected isScheduleFieldInvalid(fieldName: string): boolean {
+    const field = this.scheduleItemForm.get(fieldName);
+    return !!field && field.invalid && (field.dirty || field.touched);
+  }
+
+  /** Lazy-refresh store on first modal open. */
+  private ensureScheduleStoreLoaded(): void {
+    if (!this.scheduleStore.hasValue) {
+      void this.scheduleStore.refresh();
+    }
+  }
+
+  protected onAddScheduleClicked(): void {
+    this.ensureScheduleStoreLoaded();
+    this.isScheduleEditMode = false;
+    this.editingScheduleId = null;
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30);
+    this.scheduleItemForm.reset({
+      departureDate: this.selectedDate,
+      departureTime: now,
+      route: this.scheduleRouteOptions[0]?.code ?? '',
+      vehicleType: this.scheduleVehicleTypeOptions[0]?.code ?? '',
+      vehicleId: '',
+      driverId: '',
+    });
+    this.isScheduleFormOpen = true;
+  }
+
+  protected onAddScheduleForRoute(event: { routeSlug: string; date: Date }): void {
+    this.ensureScheduleStoreLoaded();
+    this.isScheduleEditMode = false;
+    this.editingScheduleId = null;
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 30);
+    this.scheduleItemForm.reset({
+      departureDate: event.date,
+      departureTime: now,
+      route: event.routeSlug,
+      vehicleType: this.scheduleVehicleTypeOptions[0]?.code ?? '',
+      vehicleId: '',
+      driverId: '',
+    });
+    this.isScheduleFormOpen = true;
+  }
+
+  protected onEditScheduleClicked(event: { trip: WalkInTripDto; routeSlug: string }): void {
+    this.ensureScheduleStoreLoaded();
+    const { trip, routeSlug } = event;
+    this.isScheduleEditMode = true;
+    this.editingScheduleId = trip.scheduleId;
+
+    // Build fallback synchronously from trip row data
+    const fallbackDto: AdminScheduleDto = {
+      id: trip.scheduleId,
+      departureDateTime: trip.departureDateTime,
+      status: '',
+      route: { id: 0, slug: routeSlug },
+      vehicleType: trip.vehicleType ? { id: 0, slug: trip.vehicleType } : undefined,
+      vehicle: undefined,
+      driver: undefined,
+    };
+    this.applyScheduleFormValues(fallbackDto);
+
+    // Open modal immediately (optimistic)
+    this.isScheduleFormOpen = true;
+    this.isScheduleDetailLoading = true;
+
+    // Fetch full detail and patch pristine-only controls
+    this.adminApiService
+      .getScheduleById(trip.scheduleId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          const detail = resp?.data ?? null;
+          if (detail && this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
+            this.applyScheduleFormValues(detail, true);
+          }
+          if (this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
+            this.isScheduleDetailLoading = false;
+          }
+        },
+        error: () => {
+          // Keep fallback values silently — do not close modal
+          if (this.isScheduleFormOpen && this.editingScheduleId === trip.scheduleId) {
+            this.isScheduleDetailLoading = false;
+          }
+        },
+      });
+  }
+
+  protected closeScheduleForm(force = false): void {
+    if (this.isScheduleSubmitting && !force) { return; }
+    this.isScheduleFormOpen = false;
+    this.isScheduleDetailLoading = false;
+    this.editingScheduleId = null;
+    this.scheduleItemForm.reset();
+  }
+
+  protected async submitSchedule(): Promise<void> {
+    if (this.scheduleItemForm.invalid) {
+      this.scheduleItemForm.markAllAsTouched();
+      await this.alertService.warning(this.translate.instant('STAFF.VALIDATION.FORM_INVALID'));
+      return;
+    }
+
+    this.isScheduleSubmitting = true;
+    try {
+      const payload = this.toSchedulePayload();
+      if (this.isScheduleEditMode && this.editingScheduleId != null) {
+        await firstValueFrom(this.adminApiService.updateSchedule(this.editingScheduleId, payload));
+        this.closeScheduleForm(true);
+        this.loadTrips(this.selectedDate);
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      } else {
+        await firstValueFrom(this.adminApiService.createSchedule(payload));
+        this.closeScheduleForm(true);
+        this.loadTrips(this.selectedDate);
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+      }
+    } catch (error) {
+      this.closeScheduleForm(true);
+      const message = extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+      await this.alertService.error(message);
+    } finally {
+      this.isScheduleSubmitting = false;
+    }
+  }
+
+  protected onDeleteScheduleClicked(event: { trip: WalkInTripDto; routeSlug: string }): void {
+    this.deletingTrip = event.trip;
+    this.isScheduleDeleteOpen = true;
+  }
+
+  protected closeScheduleDelete(force = false): void {
+    if (this.isScheduleDeleting && !force) { return; }
+    this.isScheduleDeleteOpen = false;
+    this.deletingTrip = null;
+  }
+
+  protected async confirmDeleteSchedule(): Promise<void> {
+    if (!this.deletingTrip) { return; }
+    const trip = this.deletingTrip;
+    const scheduleId = trip.scheduleId;
+
+    // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned)
+    this.routeGroups = this.routeGroups
+      .map((group) => ({
+        ...group,
+        trips: group.trips.filter((t) => t.scheduleId !== scheduleId),
+      }))
+      .filter((group) => group.trips.length > 0);
+
+    // If the deleted trip was the selected trip, reset the selection
+    // so checkout can't POST against a deleted schedule.
+    if (this.selectedTrip?.scheduleId === scheduleId) {
+      this.selectedTrip = null;
+      this.selectedRouteSlug = null;
+      this.selectedSeats = [];
+      this.seatPassengerTypes = {};
+      this.idempotencyKey = null;
+      this._resetSegments();
+    }
+
+    // Close modal immediately
+    this.isScheduleDeleting = true;
+    this.closeScheduleDelete(true);
+
+    try {
+      await firstValueFrom(this.adminApiService.deleteSchedule(scheduleId));
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
+      this.loadTrips(this.selectedDate); // reconcile
+    } catch (error) {
+      const message = extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
+      this.loadTrips(this.selectedDate); // restore
+    } finally {
+      this.isScheduleDeleting = false;
+    }
+  }
+
+  // ─── Schedule form helpers (mirroring staff-schedules-page patterns) ───────
+
+  private splitScheduleDateTime(value: string | null | undefined): { date: string; time: string } {
+    const v = String(value ?? '').trim();
+    if (!v) return { date: '', time: '' };
+    const [date, rawTime = ''] = v.includes('T') ? v.split('T') : v.split(/\s+/);
+    return { date, time: rawTime.slice(0, 5) };
+  }
+
+  private toScheduleDateControlValue(dateStr: string | null | undefined): Date | null {
+    const s = String(dateStr ?? '').trim();
+    const [y, m, d] = s.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+
+  private toScheduleTimeControlValue(timeStr: string | null | undefined): Date | null {
+    const s = String(timeStr ?? '').trim().slice(0, 5);
+    const [h, min] = s.split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(min) || h < 0 || h > 23 || min < 0 || min > 59) return null;
+    const date = new Date();
+    date.setHours(h, min, 0, 0);
+    return date;
+  }
+
+  private toScheduleDateInputValue(value: Date | null): string {
+    if (!value || !Number.isFinite(value.getTime())) return '';
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  private toScheduleTimeInputValue(value: Date | null): string {
+    if (!value || !Number.isFinite(value.getTime())) return '';
+    return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
+  }
+
+  private toScheduleDateValue(value: unknown): Date | null {
+    if (value instanceof Date && Number.isFinite(value.getTime())) return value;
+    const s = String(value ?? '').trim();
+    if (!s) return null;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return this.toScheduleDateControlValue(s);
+    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(s)) return this.toScheduleTimeControlValue(s);
+    const p = new Date(s);
+    return Number.isFinite(p.getTime()) ? p : null;
+  }
+
+  private toScheduleOptionalNumber(value: unknown): number | undefined {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  }
+
+  private toSchedulePayload(): CreateSchedulePayload {
+    const raw = this.scheduleItemForm.getRawValue();
+    const departureDate = this.toScheduleDateInputValue(this.toScheduleDateValue(raw.departureDate));
+    const departureTime = this.toScheduleTimeInputValue(this.toScheduleDateValue(raw.departureTime));
+    const vehicleId = this.toScheduleOptionalNumber(raw.vehicleId);
+    const driverId = this.toScheduleOptionalNumber(raw.driverId);
+    return {
+      departureDateTime: combineBangkokDateTime(departureDate, departureTime),
+      route: String(raw.route ?? '').trim(),
+      vehicleType: String(raw.vehicleType ?? '').trim(),
+      ...(vehicleId !== undefined ? { vehicleId } : {}),
+      ...(driverId !== undefined ? { driverId } : {}),
+    };
+  }
+
+  private applyScheduleFormValues(dto: AdminScheduleDto, onlyPristine = false): void {
+    const dep = this.splitScheduleDateTime(dto.departureDateTime);
+    const values = {
+      departureDate: this.toScheduleDateControlValue(dep.date),
+      departureTime: this.toScheduleTimeControlValue(dep.time),
+      route: dto.route?.slug ?? '',
+      vehicleType: dto.vehicleType?.slug ?? '',
+      vehicleId: dto.vehicle?.id ? String(dto.vehicle.id) : '',
+      driverId: dto.driver?.id ? String(dto.driver.id) : '',
+    };
+    if (!onlyPristine) {
+      this.scheduleItemForm.reset(values);
+      return;
+    }
+    for (const [name, value] of Object.entries(values)) {
+      const ctrl = this.scheduleItemForm.get(name);
+      if (ctrl?.pristine) { ctrl.setValue(value); }
+    }
+  }
+
+  // ─── Trip loading / segment logic (unchanged) ─────────────────────────────
+
   private loadTrips(date: Date): void {
     const dateStr = dayjs(date).format('YYYY-MM-DD');
     this.isLoadingTrips = true;
@@ -389,6 +766,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
           this._buildStopTimes(pairs, trip);
           this.orderedStops = this._buildOrderedStops(pairs);
           this._applyDefaultStops(preserve);
+
+          const rawPopularPickup: PopularStopDto[] = resp?.data?.popularPickupStops ?? [];
+          const rawPopularDropoff: PopularStopDto[] = resp?.data?.popularDropoffStops ?? [];
+          this.popularPickupStops = rawPopularPickup.map(s => ({ slug: s.slug, name: s.name, time: this.stopTime(s.slug) }));
+          this.popularDropoffStops = rawPopularDropoff.map(s => ({ slug: s.slug, name: s.name, time: this.stopTime(s.slug) }));
+
           this.isLoadingSegments = false;
         },
         error: () => {
@@ -494,5 +877,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.pickupSlug = '';
     this.dropoffSlug = '';
     this.stopTimeMap = new Map<string, string>();
+    this.popularPickupStops = [];
+    this.popularDropoffStops = [];
   }
 }

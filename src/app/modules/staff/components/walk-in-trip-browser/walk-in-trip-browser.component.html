@@ -18,6 +18,17 @@
     </p-calendar>
   </div>
 
+  <!-- Add schedule button — visible only to schedule managers (canManageSchedules=true) -->
+  <div *ngIf="canManageSchedules" class="mb-2">
+    <button
+      type="button"
+      class="btn btn-outline-primary btn-sm w-100"
+      (click)="onAddSchedule($event)"
+      (keydown.space)="$event.preventDefault(); onAddSchedule($event)">
+      <i class="bi bi-plus-lg me-1"></i>{{ 'STAFF.SCHEDULES.ADD' | translate }}
+    </button>
+  </div>
+
   <!-- Loading state -->
   <div *ngIf="isLoading" class="d-flex justify-content-center align-items-center flex-grow-1 py-4">
     <p-progressSpinner styleClass="trip-spinner" [style]="{'width':'40px','height':'40px'}"></p-progressSpinner>
@@ -34,8 +45,16 @@
   <div *ngIf="!isLoading && sortedGroups.length > 0" class="trip-list overflow-auto flex-grow-1">
     <ng-container *ngFor="let group of sortedGroups">
       <!-- Sticky route header -->
-      <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted">
-        {{ group.routeLabel }}
+      <div class="route-group-header sticky-top bg-light border-bottom px-2 py-1 small fw-semibold text-muted d-flex align-items-center justify-content-between">
+        <span>{{ group.routeLabel }}</span>
+        <button *ngIf="canManageSchedules"
+          type="button"
+          class="btn btn-link p-0 route-add-btn"
+          [attr.aria-label]="'STAFF.SELL.SCHEDULE_ADD_FOR_ROUTE' | translate: { routeLabel: group.routeLabel }"
+          (click)="onAddForRoute($event, group.routeSlug)"
+          (keydown.space)="$event.preventDefault(); onAddForRoute($event, group.routeSlug)">
+          <i class="bi bi-plus-lg"></i>
+        </button>
       </div>
       <!-- Trip rows -->
       <div *ngFor="let trip of group.trips"
@@ -50,11 +69,23 @@
         <!-- Time + vehicle -->
         <div class="d-flex justify-content-between align-items-center">
           <span class="fw-semibold">{{ formatTime(trip.departureDateTime) }}</span>
-          <span class="small text-muted">
-            {{ trip.licensePlate || '&mdash;' }}
-            <span *ngIf="trip.driverName"> &middot; {{ trip.driverName }}</span>
-            <span *ngIf="!trip.driverName"> &middot; &mdash;</span>
-          </span>
+          <div class="d-flex align-items-center gap-1">
+            <span class="small text-muted">
+              {{ trip.licensePlate || '&mdash;' }}
+              <span *ngIf="trip.driverName"> &middot; {{ trip.driverName }}</span>
+              <span *ngIf="!trip.driverName"> &middot; &mdash;</span>
+            </span>
+            <button *ngIf="canManageSchedules"
+              type="button"
+              class="btn btn-link p-0 trip-actions-btn"
+              [attr.aria-label]="'STAFF.SELL.SCHEDULE_TRIP_ACTIONS' | translate: { time: formatTime(trip.departureDateTime) }"
+              aria-haspopup="true"
+              (click)="openTripMenu($event, trip, group.routeSlug)"
+              (keydown.space)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)"
+              (keydown.enter)="$event.stopPropagation()">
+              <i class="bi bi-three-dots-vertical"></i>
+            </button>
+          </div>
         </div>
 
         <!-- Availability badges -->
@@ -72,4 +103,7 @@
       </div>
     </ng-container>
   </div>
+
+  <!-- Single popup menu for trip actions; appendTo="body" required (parent has overflow-auto) -->
+  <p-menu #tripActionMenu [popup]="true" [model]="tripActionMenuItems" appendTo="body" (onHide)="onTripMenuHide()"></p-menu>
 </div>

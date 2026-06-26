@@ -94,3 +94,27 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
+
+.route-add-btn,
+.trip-actions-btn {
+  opacity: 0.2;
+  transition: opacity 0.15s;
+  color: inherit;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 1;
+  }
+}
+
+.route-group-header:hover .route-add-btn,
+.trip-row:hover .trip-actions-btn {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .route-add-btn,
+  .trip-actions-btn {
+    opacity: 0.55;
+  }
+}

@@ -9,8 +9,13 @@
             [isLoading]="isLoadingTrips"
             [routeGroups]="routeGroups"
             [selectedTripId]="selectedTrip?.scheduleId ?? null"
+            [canManageSchedules]="true"
             (dateChanged)="onDateChanged($event)"
-            (tripSelected)="onTripSelected($event)">
+            (tripSelected)="onTripSelected($event)"
+            (addScheduleClicked)="onAddScheduleClicked()"
+            (addScheduleForRouteClicked)="onAddScheduleForRoute($event)"
+            (editScheduleClicked)="onEditScheduleClicked($event)"
+            (deleteScheduleClicked)="onDeleteScheduleClicked($event)">
           </app-walk-in-trip-browser>
         </div>
       </div>
@@ -30,6 +35,8 @@
             [pickupSlug]="pickupSlug"
             [dropoffSlug]="dropoffSlug"
             [isLoadingSegments]="isLoadingSegments"
+            [popularPickupStops]="popularPickupStops"
+            [popularDropoffStops]="popularDropoffStops"
             (seatToggled)="onSeatToggled($event)"
             (passengerTypeChange)="onPassengerTypeChanged($event)"
             (pickupChange)="onPickupChanged($event)"
@@ -52,6 +59,107 @@
             [pricePerSeat]="pricePerSeat"
             (sell)="onSell($event)">
           </app-walk-in-checkout>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Form Modal (create/edit) -->
+  <!-- NOTE: Two edit paths coexist by design:
+       - This 6-field modal (route/date/time/vehicleType/vehicle/driver) is for schedule reconfiguration,
+         triggered from trip browser "..." → Edit.
+       - The center-panel "Trip Details" tab is for capacity/seat-plan edits and remains unchanged.
+       Do NOT remove or alter the center-panel edit. -->
+  <div class="modal d-block" tabindex="-1" *ngIf="isScheduleFormOpen" style="background:rgba(0,0,0,0.5)">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            <span>{{ (isScheduleEditMode ? 'STAFF.SCHEDULES.EDIT_TITLE' : 'STAFF.SCHEDULES.ADD_TITLE') | translate }}</span>
+            <span *ngIf="isScheduleDetailLoading" class="spinner-border spinner-border-sm ms-2 text-muted" role="status"></span>
+          </h5>
+          <button class="btn-close" (click)="closeScheduleForm()"></button>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="!scheduleStore.hasValue" class="d-flex justify-content-center py-3">
+            <p-progressSpinner styleClass="schedule-spinner" [style]="{'width':'40px','height':'40px'}"></p-progressSpinner>
+          </div>
+          <ng-container *ngIf="scheduleStore.hasValue">
+            <p class="text-muted small">{{ 'STAFF.SCHEDULES.MODAL_HINT' | translate }}</p>
+            <form [formGroup]="scheduleItemForm">
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_DATE' | translate }}</label>
+                  <p-calendar formControlName="departureDate" [showIcon]="true" dateFormat="yy-mm-dd"
+                              [class.is-invalid]="isScheduleFieldInvalid('departureDate')"></p-calendar>
+                  <div class="invalid-feedback d-block" *ngIf="isScheduleFieldInvalid('departureDate')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.DEPARTURE_TIME' | translate }}</label>
+                  <p-calendar formControlName="departureTime" [timeOnly]="true" hourFormat="24"
+                              [class.is-invalid]="isScheduleFieldInvalid('departureTime')"></p-calendar>
+                  <div class="invalid-feedback d-block" *ngIf="isScheduleFieldInvalid('departureTime')">{{ 'ADMIN.VALIDATION.REQUIRED' | translate }}</div>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.ROUTE' | translate }}</label>
+                  <app-admin-dropdown formControlName="route" [options]="scheduleRouteOptions" valueKey="code" labelKey="label"
+                                      [placeholder]="'STAFF.SCHEDULES.ROUTE' | translate">
+                  </app-admin-dropdown>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.VEHICLE_TYPE' | translate }}</label>
+                  <app-admin-dropdown formControlName="vehicleType" [options]="scheduleVehicleTypeOptions" valueKey="code" labelKey="label"
+                                      [placeholder]="'STAFF.SCHEDULES.VEHICLE_TYPE' | translate">
+                  </app-admin-dropdown>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.VEHICLE' | translate }}</label>
+                  <app-admin-dropdown formControlName="vehicleId" [options]="scheduleVehicleOptions" valueKey="code" labelKey="label"
+                                      [placeholder]="'STAFF.SCHEDULES.VEHICLE' | translate">
+                  </app-admin-dropdown>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label">{{ 'STAFF.SCHEDULES.DRIVER' | translate }}</label>
+                  <app-admin-dropdown formControlName="driverId" [options]="scheduleDriverOptions" valueKey="code" labelKey="label"
+                                      [placeholder]="'STAFF.SCHEDULES.DRIVER' | translate">
+                  </app-admin-dropdown>
+                </div>
+              </div>
+            </form>
+          </ng-container>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeScheduleForm()" [disabled]="isScheduleSubmitting">
+            {{ 'STAFF.SELL.BACK_BTN' | translate }}
+          </button>
+          <button class="btn btn-primary" (click)="submitSchedule()" [disabled]="isScheduleSubmitting || !scheduleStore.hasValue">
+            <span *ngIf="isScheduleSubmitting" class="spinner-border spinner-border-sm me-1"></span>
+            {{ 'STAFF.SELL.CONFIRM_BTN' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Schedule Delete Confirm Modal -->
+  <div class="modal d-block" tabindex="-1" *ngIf="isScheduleDeleteOpen" style="background:rgba(0,0,0,0.5)">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_TITLE' | translate }}</h5>
+          <button class="btn-close" (click)="closeScheduleDelete()"></button>
+        </div>
+        <div class="modal-body">
+          <p>{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_BODY' | translate }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" (click)="closeScheduleDelete()" [disabled]="isScheduleDeleting">
+            {{ 'STAFF.SELL.BACK_BTN' | translate }}
+          </button>
+          <button class="btn btn-danger" (click)="confirmDeleteSchedule()" [disabled]="isScheduleDeleting">
+            <span *ngIf="isScheduleDeleting" class="spinner-border spinner-border-sm me-1"></span>
+            {{ 'ADMIN.MESSAGES.DELETE_BTN' | translate }}
+          </button>
         </div>
       </div>
     </div>
