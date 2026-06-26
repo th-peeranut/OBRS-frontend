@@ -7,6 +7,7 @@ import {
 } from '../../../../services/staff/staff-api.service';
 import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
+import { localizedDropdownName } from '../../../../shared/lib/localized-dropdown-name';
 import { TranslateService } from '@ngx-translate/core';
 
 export interface WalkInCheckoutPayload {
@@ -81,7 +82,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   protected titleLabel(option: Dropdown): string {
-    return this.translate.currentLang === 'th' ? option.nameThai : option.nameEnglish;
+    return localizedDropdownName(option, this.translate.currentLang);
   }
 
   protected get totalAmount(): number {

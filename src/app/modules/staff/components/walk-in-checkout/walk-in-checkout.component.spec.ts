@@ -28,6 +28,13 @@ function makeComponent(): WalkInCheckoutComponent {
   return new WalkInCheckoutComponent(fb, createTranslateStub());
 }
 
+function makeComponentWithLang(lang: string): WalkInCheckoutComponent {
+  const fb = new FormBuilder();
+  const translate = createTranslateStub();
+  translate.currentLang = lang;
+  return new WalkInCheckoutComponent(fb, translate);
+}
+
 function fillValidContact(comp: WalkInCheckoutComponent): void {
   comp['contactForm'].setValue({
     title: 'Mr.',
@@ -42,6 +49,22 @@ function fillValidContact(comp: WalkInCheckoutComponent): void {
 describe('WalkInCheckoutComponent', () => {
   it('should create', () => {
     expect(makeComponent()).toBeTruthy();
+  });
+
+  describe('titleLabel localization', () => {
+    const mr = { id: 1, nameThai: 'นาย', nameEnglish: 'Mr.', nameChinese: '先生' };
+
+    it('renders the Thai title for th', () => {
+      expect((makeComponentWithLang('th') as any).titleLabel(mr)).toBe('นาย');
+    });
+
+    it('renders the Chinese title for zh (previously fell back to English)', () => {
+      expect((makeComponentWithLang('zh') as any).titleLabel(mr)).toBe('先生');
+    });
+
+    it('renders the English title for en', () => {
+      expect((makeComponentWithLang('en') as any).titleLabel(mr)).toBe('Mr.');
+    });
   });
 
   describe('canSell gating', () => {
