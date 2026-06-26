@@ -1,0 +1,28 @@
+.route-map-section {
+  background-color: var(--surface-ground, #f5f7fa);
+}
+
+.panel-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+}
+
+.panel-header {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 0.75rem;
+}
+
+.contact-footer {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+:host ::ng-deep .p-tabview-nav {
+  border-bottom: 2px solid #dee2e6;
+}
+
+:host ::ng-deep .p-tabview-panels {
+  padding: 1rem 0 0;
+}

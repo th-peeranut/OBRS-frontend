@@ -1,5 +1,39 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-26 — Frontend: ao/route-pickup-dropoff-map
+
+**Branch:** `ao/route-pickup-dropoff-map`
+
+**Feature:** Interactive Pickup/Drop-off Route Map — replaces `<app-station-home>` on `/home`
+with a 3-panel (desktop) / 3-tab (mobile) pickup/drop-off selector backed by
+`GET /api/routes/{slug}/pickup-dropoff`.
+
+**New dependency:** `@angular/google-maps@^18` — added to package.json.
+Map rendering is degraded-graceful: `mapsApiKey = ''` in all envs → placeholder only.
+No JS error when key is blank.
+
+**Key patterns used:**
+- All 5 new components declared in `HomeModule` (no standalone).
+- `BreakpointObserver` from `@angular/cdk/layout` drives `isDesktop` flag for 3-col ↔ 3-tab switch.
+- `RouteMapHomeComponent` injects `RouteMapService` directly (smart container; not a page component).
+- `HomeComponent.@ViewChild(HomeBookingComponent)` hand-off: picks up confirmed slug, resolves
+  to `StationApi` from `selectProvinceWithStation`, calls `onStartStationChange` /
+  `onEndStationChange`, checks `isPassengerSelected` getter before calling `onSearch()`.
+- `HomeBookingComponent.isPassengerSelected` getter added (minimal public surface — sums
+  all passengerInfo counts from the form control).
+- ADDENDUM A2 status normalization: `String(status?.code ?? status?.slug ?? status).toLowerCase() === 'active'`
+- ADDENDUM A3 script race: script injected in `ngOnInit` only if mapsApiKey set and `window.google?.maps` absent.
+- `tsconfig.spec.json` types array updated to include `"google.maps"` so spec build resolves
+  `google.maps.*` types from the `/// <reference types="google.maps" />` in @angular/google-maps.
+- `home.component.spec.ts` updated to pass 3 constructor args after HomeComponent signature change.
+
+**ADR:** `docs/adr/0005-route-pickup-dropoff-map.md` documents the component family,
+Google Maps integration, ViewChild hand-off pattern, and status normalization rationale.
+
+**Test result:** 517/517 PASS. Production build: 1.38 MB initial (under 1.5 MB budget).
+
+
+
 ## 2026-06-26 — Scrutinize self-fix: ao/sidebar-hover-expand pin visible on mobile
 
 **Branch:** `ao/sidebar-hover-expand` (commit `dc32eab`)

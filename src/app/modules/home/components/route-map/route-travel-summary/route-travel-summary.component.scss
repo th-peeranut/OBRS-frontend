@@ -1,0 +1,15 @@
+.route-travel-summary {
+  font-size: 0.875rem;
+}
+
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.summary-label {
+  min-width: 60px;
+  flex-shrink: 0;
+}

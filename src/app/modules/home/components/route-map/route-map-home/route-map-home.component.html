@@ -1,0 +1,286 @@
+<section class="route-map-section py-4">
+  <div class="container-fluid px-3">
+
+    <!-- ==================== LOADING ==================== -->
+    <ng-container *ngIf="loadState === 'loading'">
+      <div class="d-flex justify-content-center align-items-center py-5">
+        <p-progressSpinner strokeWidth="4" animationDuration=".8s"></p-progressSpinner>
+        <span class="ms-3 text-muted">{{ 'HOME.ROUTE_MAP.LOADING' | translate }}</span>
+      </div>
+    </ng-container>
+
+    <!-- ==================== ERROR ==================== -->
+    <ng-container *ngIf="loadState === 'error'">
+      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+        <span>{{ 'HOME.ROUTE_MAP.LOAD_FAILED' | translate }}</span>
+        <p-button
+          styleClass="ms-auto"
+          severity="danger"
+          size="small"
+          [label]="'HOME.ROUTE_MAP.RETRY' | translate"
+          (onClick)="loadRouteData()"
+        ></p-button>
+      </div>
+    </ng-container>
+
+    <!-- ==================== EMPTY ==================== -->
+    <ng-container *ngIf="loadState === 'empty'">
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-geo-alt fs-1 mb-3 d-block"></i>
+        <p>{{ 'HOME.ROUTE_MAP.EMPTY_STATE' | translate }}</p>
+      </div>
+    </ng-container>
+
+    <!-- ==================== LOADED ==================== -->
+    <ng-container *ngIf="loadState === 'loaded' && routeMeta">
+
+      <!-- ===== DESKTOP (≥1200px): 3-column layout ===== -->
+      <ng-container *ngIf="isDesktop">
+        <div class="row g-3">
+
+          <!-- LEFT PANEL: Pickup list -->
+          <div class="col-xl-3">
+            <div class="panel-card h-100">
+              <!-- PANEL HEADER -->
+              <div class="panel-header d-flex align-items-center gap-2 mb-3">
+                <span class="fw-bold">{{ getRouteTitle() }}</span>
+                <span class="text-muted small ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
+              </div>
+
+              <p-tabView>
+                <!-- TAB: PICKUP -->
+                <p-tabPanel>
+                  <ng-template pTemplate="header">
+                    <span>
+                      {{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}
+                      <p-badge [value]="pickupStops.length.toString()" severity="info" styleClass="ms-1"></p-badge>
+                    </span>
+                  </ng-template>
+                  <app-route-stop-list
+                    [stops]="pickupStops"
+                    type="pickup"
+                    [selectedSlug]="selectedPickupSlug"
+                    [province]="routeMeta.originProvinceLabel"
+                    (stopSelected)="onPickupStopSelected($event)"
+                    (viewMapClicked)="onViewMapClicked()"
+                    (confirmClicked)="onConfirmPickup()"
+                  ></app-route-stop-list>
+
+                  <!-- CONTACT FOOTER -->
+                  <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
+                    <i class="bi bi-headset me-1"></i>
+                    <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
+                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
+                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
+                  </div>
+                </p-tabPanel>
+
+                <!-- TAB: DROPOFF -->
+                <p-tabPanel>
+                  <ng-template pTemplate="header">
+                    <span>
+                      {{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}
+                      <p-badge [value]="dropoffStops.length.toString()" severity="danger" styleClass="ms-1"></p-badge>
+                    </span>
+                  </ng-template>
+                  <app-route-stop-list
+                    [stops]="dropoffStops"
+                    type="dropoff"
+                    [selectedSlug]="selectedDropoffSlug"
+                    [province]="routeMeta.destinationProvinceLabel"
+                    (stopSelected)="onDropoffStopSelected($event)"
+                    (viewMapClicked)="onViewMapClicked()"
+                    (confirmClicked)="onConfirmDropoff()"
+                  ></app-route-stop-list>
+
+                  <!-- CONTACT FOOTER -->
+                  <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
+                    <i class="bi bi-headset me-1"></i>
+                    <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
+                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
+                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
+                  </div>
+                </p-tabPanel>
+              </p-tabView>
+            </div>
+          </div>
+
+          <!-- CENTER PANEL: Map -->
+          <div class="col-xl-6">
+            <div class="panel-card h-100" #mapPanelRef>
+              <div class="mb-2">
+                <div class="fw-bold">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
+                <div class="small text-muted">{{ getRouteTitle() }}</div>
+                <div class="small text-muted">
+                  {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
+                    distance: routeMeta.totalDistanceKm,
+                    min: routeMeta.durationMinMinutes,
+                    max: routeMeta.durationMaxMinutes
+                  } }}
+                </div>
+              </div>
+
+              <app-route-map-panel
+                [pickupStops]="pickupStops"
+                [dropoffStops]="dropoffStops"
+                [selectedPickupSlug]="selectedPickupSlug"
+                [selectedDropoffSlug]="selectedDropoffSlug"
+                [mapsApiKey]="mapsApiKey"
+                [routeMeta]="routeMeta"
+              ></app-route-map-panel>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Dropoff detail + summary -->
+          <div class="col-xl-3">
+            <div class="panel-card h-100 d-flex flex-column gap-3">
+              <div class="small text-muted fst-italic">
+                <i class="bi bi-clock me-1"></i>
+                {{ 'HOME.ROUTE_MAP.TIME_APPROX_NOTE' | translate }}
+              </div>
+              <app-route-travel-summary
+                [routeMeta]="routeMeta"
+                [pickupCount]="pickupStops.length"
+                [dropoffCount]="dropoffStops.length"
+              ></app-route-travel-summary>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- DETAIL CARDS ROW -->
+        <div class="row g-3 mt-0">
+          <div class="col-md-6">
+            <app-route-stop-detail-card
+              [stop]="selectedPickupStop"
+              type="pickup"
+              [province]="routeMeta.originProvinceLabel"
+              [mapsApiKey]="mapsApiKey"
+            ></app-route-stop-detail-card>
+          </div>
+          <div class="col-md-6">
+            <app-route-stop-detail-card
+              [stop]="selectedDropoffStop"
+              type="dropoff"
+              [province]="routeMeta.destinationProvinceLabel"
+              [mapsApiKey]="mapsApiKey"
+            ></app-route-stop-detail-card>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- ===== MOBILE/TABLET (<1200px): TabView with 3 tabs ===== -->
+      <ng-container *ngIf="!isDesktop">
+        <p-tabView>
+
+          <!-- TAB 1: จุดรับ (Pickup) -->
+          <p-tabPanel>
+            <ng-template pTemplate="header">
+              <i class="bi bi-geo-alt me-1"></i>
+              {{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}
+            </ng-template>
+
+            <app-route-stop-list
+              [stops]="pickupStops"
+              type="pickup"
+              [selectedSlug]="selectedPickupSlug"
+              [province]="routeMeta.originProvinceLabel"
+              (stopSelected)="onPickupStopSelected($event)"
+              (viewMapClicked)="onViewMapClicked()"
+              (confirmClicked)="onConfirmPickup()"
+            ></app-route-stop-list>
+
+            <div class="mt-3">
+              <app-route-stop-detail-card
+                [stop]="selectedPickupStop"
+                type="pickup"
+                [province]="routeMeta.originProvinceLabel"
+                [mapsApiKey]="mapsApiKey"
+              ></app-route-stop-detail-card>
+            </div>
+
+            <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
+              <i class="bi bi-headset me-1"></i>
+              <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
+              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
+              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
+            </div>
+          </p-tabPanel>
+
+          <!-- TAB 2: แผนที่ (Map) -->
+          <p-tabPanel>
+            <ng-template pTemplate="header">
+              <i class="bi bi-map me-1"></i>
+              {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
+            </ng-template>
+
+            <div class="mb-2 small text-muted">
+              {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
+                distance: routeMeta.totalDistanceKm,
+                min: routeMeta.durationMinMinutes,
+                max: routeMeta.durationMaxMinutes
+              } }}
+            </div>
+
+            <div #mapPanelRef>
+              <app-route-map-panel
+                [pickupStops]="pickupStops"
+                [dropoffStops]="dropoffStops"
+                [selectedPickupSlug]="selectedPickupSlug"
+                [selectedDropoffSlug]="selectedDropoffSlug"
+                [mapsApiKey]="mapsApiKey"
+                [routeMeta]="routeMeta"
+              ></app-route-map-panel>
+            </div>
+
+            <div class="mt-3">
+              <app-route-travel-summary
+                [routeMeta]="routeMeta"
+                [pickupCount]="pickupStops.length"
+                [dropoffCount]="dropoffStops.length"
+              ></app-route-travel-summary>
+            </div>
+          </p-tabPanel>
+
+          <!-- TAB 3: จุดส่ง (Dropoff) -->
+          <p-tabPanel>
+            <ng-template pTemplate="header">
+              <i class="bi bi-geo-alt-fill me-1"></i>
+              {{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}
+            </ng-template>
+
+            <app-route-stop-list
+              [stops]="dropoffStops"
+              type="dropoff"
+              [selectedSlug]="selectedDropoffSlug"
+              [province]="routeMeta.destinationProvinceLabel"
+              (stopSelected)="onDropoffStopSelected($event)"
+              (viewMapClicked)="onViewMapClicked()"
+              (confirmClicked)="onConfirmDropoff()"
+            ></app-route-stop-list>
+
+            <div class="mt-3">
+              <app-route-stop-detail-card
+                [stop]="selectedDropoffStop"
+                type="dropoff"
+                [province]="routeMeta.destinationProvinceLabel"
+                [mapsApiKey]="mapsApiKey"
+              ></app-route-stop-detail-card>
+            </div>
+
+            <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
+              <i class="bi bi-headset me-1"></i>
+              <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
+              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
+              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
+            </div>
+          </p-tabPanel>
+
+        </p-tabView>
+      </ng-container>
+
+    </ng-container><!-- /loaded -->
+
+  </div>
+</section>
