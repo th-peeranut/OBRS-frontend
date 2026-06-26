@@ -617,3 +617,22 @@ server-side 400 capacity responses. ng test: 335 passing.
 - Frontend: merged feature/trip-details-edit → dev (merge SHA 0ddc7bc in OBRS-frontend)
 - Backend: merged feature/trip-details-edit → dev (merge SHA cef8a8a in OBRS-backend)
 - Neither repo pushed (per QA protocol)
+
+
+## 2026-06-26 — Scrutinize: sit/title-prefix-chinese (issue #69) — SELF_FIXED
+
+**Self-fix (register.component.ts):** The zh title-prefix fix wired `localizedDropdownName`
+into the three forms that consume the shared `TITLE_OPTIONS` constant (walk-in-checkout,
+passenger-info-form, booker-info-form), but `register.component.ts` carried its OWN inline
+copy of the title array WITHOUT `nameChinese`. Since the register title dropdown renders via
+`app-dropdown-obrs` → `getValue` → `localizedDropdownName`, zh fell back to nameEnglish there —
+the same bug #69, just on a fourth dropdown the fix missed.
+
+Replaced the 48-line duplicate array with `titleOptions: Dropdown[] = [...TITLE_OPTIONS];`
+(+ import of TITLE_OPTIONS). The inline array was byte-identical to TITLE_OPTIONS, and
+`resolveTitleName` only reads id/nameThai/nameEnglish (all still present), so this is a safe
+drop-in that closes the zh gap on registration and removes the duplication.
+
+**Pattern for next time:** when localizing a shared option list, grep for *all* render sites
+of that list — duplicated/hardcoded copies of a shared constant won't inherit the new field.
+Prefer `[...SHARED_CONSTANT]` over re-declaring the array per component.

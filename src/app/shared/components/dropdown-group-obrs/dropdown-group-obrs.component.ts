@@ -14,6 +14,7 @@ import {
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CommonModule } from '@angular/common';
+import { localizedDropdownName } from '../../lib/localized-dropdown-name';
 
 @Component({
   selector: 'app-dropdown-group-obrs',
@@ -131,10 +132,10 @@ export class DropdownGroupObrsComponent
 
   getValue(option: any): string {
     if (!option) return '';
-    const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
-    const fromName = locale === 'th' ? option.nameThai : option.nameEnglish;
+    const fromName = localizedDropdownName(option, this.translate.currentLang);
     if (fromName) return fromName;
 
+    const locale = this.translate.currentLang === 'th' ? 'th' : 'en';
     const localizedLabel =
       this.getTranslationLabel(option.display, locale) ??
       this.getTranslationLabel(option.translations, locale) ??
