@@ -8,6 +8,7 @@ import dayjs from 'dayjs';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import {
+  PopularStopDto,
   SegmentStopPairDto,
   SegmentStopRefDto,
   StaffApiService,
@@ -52,6 +53,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected pickupSlug = '';
   protected dropoffSlug = '';
   protected isLoadingSegments = false;
+  protected popularPickupStops: StopOption[] = [];
+  protected popularDropoffStops: StopOption[] = [];
   private fareMap = new Map<string, number>();
 
   private idempotencyKey: string | null = null;
@@ -389,6 +392,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
           this._buildStopTimes(pairs, trip);
           this.orderedStops = this._buildOrderedStops(pairs);
           this._applyDefaultStops(preserve);
+
+          const rawPopularPickup: PopularStopDto[] = resp?.data?.popularPickupStops ?? [];
+          const rawPopularDropoff: PopularStopDto[] = resp?.data?.popularDropoffStops ?? [];
+          this.popularPickupStops = rawPopularPickup.map(s => ({ slug: s.slug, name: s.name, time: this.stopTime(s.slug) }));
+          this.popularDropoffStops = rawPopularDropoff.map(s => ({ slug: s.slug, name: s.name, time: this.stopTime(s.slug) }));
+
           this.isLoadingSegments = false;
         },
         error: () => {
@@ -494,5 +503,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.pickupSlug = '';
     this.dropoffSlug = '';
     this.stopTimeMap = new Map<string, string>();
+    this.popularPickupStops = [];
+    this.popularDropoffStops = [];
   }
 }

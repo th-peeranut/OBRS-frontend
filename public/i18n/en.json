@@ -1010,7 +1010,8 @@
       "TRIP_DETAIL_ERR_CAPACITY_MAX": "Capacity exceeds maximum seats ({{max}})",
       "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "Capacity is below current occupancy ({{occupied}})",
       "STOP_FILTER_PLACEHOLDER": "Search stop",
-      "STOP_NO_MATCH": "No stops match"
+      "STOP_NO_MATCH": "No stops match",
+      "POPULAR_LABEL": "Popular"
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",
