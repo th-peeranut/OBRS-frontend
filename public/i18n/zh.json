@@ -1010,7 +1010,8 @@
       "TRIP_DETAIL_ERR_CAPACITY_MAX": "容量超出最大座位数 ({{max}})",
       "TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED": "容量低于当前已占座位数 ({{occupied}})",
       "STOP_FILTER_PLACEHOLDER": "搜索站点",
-      "STOP_NO_MATCH": "没有匹配的站点"
+      "STOP_NO_MATCH": "没有匹配的站点",
+      "POPULAR_LABEL": "热门"
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",

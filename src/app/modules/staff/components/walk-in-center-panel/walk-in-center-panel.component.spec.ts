@@ -308,6 +308,152 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // Popular stop getters
+  // ---------------------------------------------------------------------------
+
+  describe('filteredPopularPickupOptions getter', () => {
+    const validPickup = [
+      makeStopOption('a', 'Bangkok'),
+      makeStopOption('b', 'Chiang Mai'),
+      makeStopOption('c', 'Phuket'),
+    ];
+
+    beforeEach(() => {
+      component.pickupOptions = validPickup;
+      component.popularPickupStops = [
+        makeStopOption('a', 'Bangkok'),
+        makeStopOption('b', 'Chiang Mai'),
+      ];
+      (component as unknown as { pickupFilter: string }).pickupFilter = '';
+    });
+
+    it('returns all valid popular stops when filter is empty', () => {
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(result.length).toBe(2);
+    });
+
+    it('filters by query (case-insensitive)', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'chiang';
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('b');
+    });
+
+    it('returns empty array when query matches nothing', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'zzznomatch';
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('excludes popular stops whose slug is not in pickupOptions (robustness guard)', () => {
+      component.popularPickupStops = [
+        makeStopOption('a', 'Bangkok'),
+        makeStopOption('unknown_slug', 'Ghost Stop'),
+      ];
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('a');
+    });
+
+    it('returns empty array when popularPickupStops is empty', () => {
+      component.popularPickupStops = [];
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('does NOT mutate the @Input popularPickupStops array', () => {
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'chiang';
+      const before = [...component.popularPickupStops];
+      (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(component.popularPickupStops).toEqual(before);
+      expect(component.popularPickupStops.length).toBe(before.length);
+    });
+
+    it('recomputes correctly when pickupOptions changes', () => {
+      component.pickupOptions = [makeStopOption('a', 'Bangkok')];
+      const result = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      // 'b' (Chiang Mai) is no longer in pickupOptions → excluded
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('a');
+    });
+
+    it('selecting a popular stop slug emits the same slug as selecting from full list', () => {
+      const emitted: string[] = [];
+      component.pickupChange.subscribe((v) => emitted.push(v));
+      const popular = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      if (popular.length > 0) {
+        component.pickupChange.emit(popular[0].slug);
+      }
+      expect(emitted[0]).toBe('a');
+    });
+  });
+
+  describe('filteredPopularDropoffOptions getter', () => {
+    const validDropoff = [
+      makeStopOption('x', 'Hat Yai'),
+      makeStopOption('y', 'Khon Kaen'),
+    ];
+
+    beforeEach(() => {
+      component.dropoffOptions = validDropoff;
+      component.popularDropoffStops = [
+        makeStopOption('x', 'Hat Yai'),
+        makeStopOption('y', 'Khon Kaen'),
+      ];
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = '';
+    });
+
+    it('returns all valid popular dropoff stops when filter is empty', () => {
+      const result = (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(result.length).toBe(2);
+    });
+
+    it('filters popular dropoff stops by query', () => {
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = 'hat';
+      const result = (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('x');
+    });
+
+    it('excludes popular dropoff stop not in dropoffOptions', () => {
+      component.popularDropoffStops = [
+        makeStopOption('x', 'Hat Yai'),
+        makeStopOption('not_valid', 'Invalid Stop'),
+      ];
+      const result = (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('x');
+    });
+
+    it('returns empty array when popularDropoffStops is empty', () => {
+      component.popularDropoffStops = [];
+      const result = (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(result.length).toBe(0);
+    });
+
+    it('does NOT mutate the @Input popularDropoffStops array', () => {
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = 'hat';
+      const before = [...component.popularDropoffStops];
+      (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(component.popularDropoffStops).toEqual(before);
+    });
+
+    it('recomputes correctly when dropoffOptions changes', () => {
+      component.dropoffOptions = [makeStopOption('x', 'Hat Yai')];
+      const result = (component as unknown as { filteredPopularDropoffOptions: StopOption[] }).filteredPopularDropoffOptions;
+      expect(result.length).toBe(1);
+      expect(result[0].slug).toBe('x');
+    });
+
+    it('selecting a popular dropoff stop emits the same slug', () => {
+      const emitted: string[] = [];
+      component.dropoffChange.subscribe((v) => emitted.push(v));
+      component.dropoffChange.emit('x');
+      expect(emitted[0]).toBe('x');
+    });
+  });
+
   describe('edit mode', () => {
     it('isEditMode starts false', () => {
       expect((component as unknown as { isEditMode: boolean }).isEditMode).toBeFalse();

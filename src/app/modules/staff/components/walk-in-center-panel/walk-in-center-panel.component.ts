@@ -58,6 +58,8 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
   @Input() pickupSlug = '';
   @Input() dropoffSlug = '';
   @Input() isLoadingSegments = false;
+  @Input() popularPickupStops: StopOption[] = [];
+  @Input() popularDropoffStops: StopOption[] = [];
 
   @Output() seatToggled = new EventEmitter<string>();
   @Output() passengerTypeChange = new EventEmitter<string>();
@@ -85,6 +87,22 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
     const q = this.dropoffFilter.trim().toLowerCase();
     if (!q) return this.dropoffOptions;
     return this.dropoffOptions.filter(o => o.name.toLowerCase().includes(q));
+  }
+
+  protected get filteredPopularPickupOptions(): StopOption[] {
+    const validSlugs = new Set(this.pickupOptions.map(o => o.slug));
+    const routeValid = this.popularPickupStops.filter(o => validSlugs.has(o.slug));
+    const q = this.pickupFilter.trim().toLowerCase();
+    if (!q) return routeValid;
+    return routeValid.filter(o => o.name.toLowerCase().includes(q));
+  }
+
+  protected get filteredPopularDropoffOptions(): StopOption[] {
+    const validSlugs = new Set(this.dropoffOptions.map(o => o.slug));
+    const routeValid = this.popularDropoffStops.filter(o => validSlugs.has(o.slug));
+    const q = this.dropoffFilter.trim().toLowerCase();
+    if (!q) return routeValid;
+    return routeValid.filter(o => o.name.toLowerCase().includes(q));
   }
 
   // --- Edit-mode state ---
