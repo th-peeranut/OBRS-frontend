@@ -331,57 +331,29 @@
   display: none;
 }
 
-/* Desktop-only sidebar collapse toggle — a circular chevron pill mounted on the
-   sidebar/content border. Anchored to the sticky topbar (left edge == sidebar's
-   right edge), so it straddles the divider and tracks the rail when collapsed.
-   Hidden on mobile, where the hamburger drawer is used instead — see the
-   max-width: 1100px block. */
-.admin-collapse-toggle {
-  position: absolute;
-  left: -14px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 5;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 999px;
-  border: 1px solid var(--admin-outline);
-  background: var(--admin-surface-card);
-  color: var(--accent-text);
-  cursor: pointer;
-  box-shadow: 0 2px 6px rgba(25, 28, 30, 0.18);
-  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.admin-collapse-toggle .material-symbols-outlined {
-  font-size: 20px;
-}
-
-.admin-collapse-toggle:hover {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-  box-shadow: 0 4px 10px rgba(25, 28, 30, 0.22);
-}
-
-.admin-collapse-toggle:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
 .admin-sidebar-backdrop {
   display: none;
 }
 
-/* ── Collapsed sidebar (desktop icon rail) ──
-   Only meaningful at desktop widths; below 1100px the sidebar is an off-canvas
-   drawer, so these rules are scoped to min-width: 1101px further down. */
-.admin-sidebar {
-  overflow-x: hidden;
-  transition: width 0.2s ease, padding 0.2s ease;
+/* Pin is a desktop-only affordance: the off-canvas drawer is the mobile
+   pattern, so there is nothing to pin at <=1100px. Hidden by default and
+   revealed as inline-flex inside the min-width:1101px block below. Without
+   this base rule the unstyled button shows in the mobile drawer and a tap
+   would silently flip the persisted pin state for the next desktop visit. */
+.admin-sidebar-pin {
+  display: none;
+}
+
+/* ── Sidebar panel — base flex layout (mobile + desktop share this) ───────────
+   On mobile the panel is normal in-flow flex content inside the off-canvas
+   drawer; on desktop (min-width: 1101px below) it becomes an absolutely
+   positioned overlay that expands on hover. The footer margin-top:auto and
+   gap are defined here so they work in both contexts. */
+.admin-sidebar-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
 }
 
 .admin-avatar {
@@ -1231,44 +1203,182 @@ textarea.admin-field {
   text-align: right;
 }
 
-/* ── Collapsed sidebar rail — desktop only ── */
+/* ── Desktop sidebar: hover-expand overlay + pin ── */
 @media (min-width: 1101px) {
-  .admin-shell.is-sidebar-collapsed .admin-sidebar {
+  /* Topbar raised above the overlay panel so it's never obscured. */
+  .admin-topbar {
+    z-index: 35;
+  }
+
+  /* The sidebar shrinks to a 76px icon rail in the normal layout flow.
+     It acts as a sticky anchor for the absolutely positioned panel; its own
+     background/border/padding are stripped (the panel owns those). */
+  .admin-sidebar {
+    flex: 0 0 76px;
     width: 76px;
-    padding: 24px 12px;
-  }
-
-  /* Hide every text label, keeping just the icons. The brand logo is replaced
-     by a compact mark height so it fits the rail. */
-  .admin-shell.is-sidebar-collapsed .admin-nav-link > span:not(.material-symbols-outlined),
-  .admin-shell.is-sidebar-collapsed .admin-nav-btn > span:not(.material-symbols-outlined) {
-    display: none;
-  }
-
-  .admin-shell.is-sidebar-collapsed .admin-nav-link,
-  .admin-shell.is-sidebar-collapsed .admin-nav-btn {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  .admin-shell.is-sidebar-collapsed .admin-brand {
+    min-width: 76px;
+    overflow: visible;
+    background: transparent;
+    border-right: none;
     padding: 0;
+  }
+
+  /* ── Overlay panel — the visible sidebar chrome ──
+     Absolutely positioned over the sticky rail so it can expand without
+     reflowing the main content. */
+  .admin-sidebar-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 76px;
+    overflow: hidden;
+    background: rgba(237, 243, 246, 0.95);
+    border-right: 1px solid rgba(189, 200, 207, 0.5);
+    padding: 28px 12px;
+    z-index: 30;
+    transition: width 220ms cubic-bezier(.4, 0, .2, 1),
+                padding 180ms cubic-bezier(.4, 0, .2, 1),
+                box-shadow 220ms ease;
+  }
+
+  .is-dark .admin-sidebar-panel {
+    background: rgba(29, 34, 38, 0.97);
+    border-right-color: rgba(58, 68, 75, 0.6);
+  }
+
+  /* ── HOVER/FOCUS OVERLAY EXPANSION ── */
+  .admin-sidebar.is-expanded .admin-sidebar-panel {
+    width: 280px;
+    padding: 28px 16px;
+    box-shadow: 4px 0 24px rgba(25, 28, 30, 0.12);
+  }
+
+  .is-dark .admin-sidebar.is-expanded .admin-sidebar-panel {
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  }
+
+  /* ── PINNED — reserved layout column (content reflows) ── */
+  .admin-shell.is-sidebar-pinned .admin-sidebar {
+    flex: 0 0 280px;
+    width: 280px;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-sidebar-panel {
+    position: relative;
+    width: 280px;
+  }
+
+  /* ── NAV LINK RAIL vs EXPANDED states ── */
+
+  /* Rail: icons centred, labels hidden */
+  .admin-nav-link,
+  .admin-nav-btn {
+    justify-content: center;
+    white-space: nowrap;
+    padding: 11px 0;
+  }
+
+  .admin-nav-link > span:not(.material-symbols-outlined),
+  .admin-nav-btn > span:not(.material-symbols-outlined) {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    transition: opacity 80ms ease, width 0ms ease 80ms;
+  }
+
+  /* Expanded: left-aligned with padding, labels visible */
+  .admin-sidebar.is-expanded .admin-nav-link,
+  .admin-sidebar.is-expanded .admin-nav-btn {
+    justify-content: flex-start;
+    padding: 11px 12px;
+  }
+
+  .admin-sidebar.is-expanded .admin-nav-link > span:not(.material-symbols-outlined),
+  .admin-sidebar.is-expanded .admin-nav-btn > span:not(.material-symbols-outlined) {
+    opacity: 1;
+    width: auto;
+    overflow: visible;
+    transition: opacity 150ms ease 80ms, width 0ms ease;
+  }
+
+  /* ── BRAND ── */
+  .admin-brand {
     display: flex;
     justify-content: center;
   }
 
-  .admin-shell.is-sidebar-collapsed .admin-brand-logo {
+  .admin-sidebar.is-expanded .admin-brand {
+    justify-content: flex-start;
+  }
+
+  .admin-brand-logo {
     height: 30px;
+    transition: height 220ms cubic-bezier(.4, 0, .2, 1);
+  }
+
+  .admin-sidebar.is-expanded .admin-brand-logo {
+    height: 40px;
+  }
+
+  /* ── PIN BUTTON ── */
+  .admin-sidebar-pin {
+    width: 28px;
+    height: 28px;
+    border: 0;
+    background: transparent;
+    color: var(--admin-muted);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    /* Hidden in rail mode — only revealed when the panel is expanded */
+    opacity: 0;
+    pointer-events: none;
+    /* In rail mode: centred within the 76px column */
+    align-self: center;
+    transition: opacity 80ms ease, background 0.15s ease, color 0.15s ease;
+  }
+
+  .admin-sidebar-pin .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  .admin-sidebar.is-expanded .admin-sidebar-pin {
+    opacity: 1;
+    pointer-events: auto;
+    /* In expanded mode: pinned to the right edge of the panel */
+    align-self: flex-end;
+  }
+
+  .admin-sidebar-pin:hover {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .admin-sidebar-pin:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .admin-sidebar-pin[aria-pressed="true"] {
+    color: var(--accent-strong);
+  }
+
+  /* ── REDUCED MOTION — disable all sidebar transitions ── */
+  @media (prefers-reduced-motion: reduce) {
+    .admin-sidebar-panel,
+    .admin-brand-logo,
+    .admin-sidebar-pin,
+    .admin-nav-link > span:not(.material-symbols-outlined),
+    .admin-nav-btn > span:not(.material-symbols-outlined) {
+      transition: none;
+    }
   }
 }
 
-@media (max-width: 1100px) {
-  /* The collapse rail is a desktop affordance; on mobile the drawer is used. */
-  .admin-collapse-toggle {
-    display: none;
-  }
-}
 
 @media (max-width: 1290px) {
   .admin-grid--layout {

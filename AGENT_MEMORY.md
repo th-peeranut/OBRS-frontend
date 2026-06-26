@@ -1,5 +1,25 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-26 — Scrutinize self-fix: ao/sidebar-hover-expand pin visible on mobile
+
+**Branch:** `ao/sidebar-hover-expand` (commit `dc32eab`)
+
+**Defect found and self-fixed:** Every `.admin-sidebar-pin` rule (display, opacity,
+align-self, hover, etc.) lived *inside* the `@media (min-width: 1101px)` desktop block in
+`src/styles/admin-theme.scss`. There was no base rule, so at <=1100px the pin rendered as a
+fully visible, clickable unstyled `<button>` between the brand and nav in the mobile drawer —
+contradicting "mobile drawer unchanged." Worse, a mobile tap calls `togglePin()`, which writes
+`obrs-sidebar-collapsed='0'`, silently making the *next desktop* session start pinned.
+
+**Fix (under 10 lines):** added a base `.admin-sidebar-pin { display: none; }` next to the
+sibling `.admin-menu-toggle` / `.admin-sidebar-backdrop` rules, which already use this exact
+"hidden by default, revealed in the desktop media query" pattern (the desktop block already sets
+`display: inline-flex`). **Pattern to remember:** when an element should only exist at one
+breakpoint, give it a base `display:none` and reveal it in the media query — do not let the
+*only* styling for an element live inside a media query, or it leaks as an unstyled element at
+other widths.
+
+
 ## 2026-06-25 — QA pass: feature/trip-details-edit Editable Trip Details
 
 **Branch merged:** `feature/trip-details-edit` → `dev`

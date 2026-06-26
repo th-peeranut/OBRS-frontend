@@ -13,6 +13,11 @@ import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 
+// localStorage shim — keeps spec storage isolated
+function clearSidebarStorage(): void {
+  try { localStorage.removeItem('obrs-sidebar-collapsed'); } catch { /* ignore */ }
+}
+
 describe('StaffLayoutComponent', () => {
   let fixture: ComponentFixture<StaffLayoutComponent>;
 
@@ -31,6 +36,7 @@ describe('StaffLayoutComponent', () => {
   };
 
   beforeEach(async () => {
+    clearSidebarStorage();
     await TestBed.configureTestingModule({
       declarations: [StaffLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
@@ -46,6 +52,8 @@ describe('StaffLayoutComponent', () => {
     fixture = TestBed.createComponent(StaffLayoutComponent);
     fixture.detectChanges();
   });
+
+  afterEach(() => { clearSidebarStorage(); });
 
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
@@ -176,5 +184,76 @@ describe('StaffLayoutComponent', () => {
     } finally {
       authStub.hasAnyRole = original; // never leak the mutated stub into later specs
     }
+  });
+
+  // ── Hover-expand / pin behaviour (regression for #tbd) ─────────────────────
+
+  it('sidebar is NOT expanded by default (hover model: icon rail)', () => {
+    // New default: isSidebarExpanded=false, isSidebarPinned=false.
+    const aside = fixture.debugElement.query(By.css('.admin-sidebar'));
+    expect(aside.nativeElement.classList.contains('is-expanded'))
+      .withContext('sidebar should not be expanded on load')
+      .toBeFalse();
+  });
+
+  it('the aside carries is-sidebar-pinned on the shell root when pinned', () => {
+    const comp = fixture.componentInstance as StaffLayoutComponent & { isSidebarPinned: boolean; togglePin: () => void };
+    comp.togglePin();
+    fixture.detectChanges();
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('shell should carry is-sidebar-pinned when pinned')
+      .toBeTrue();
+  });
+
+  it('togglePin persists pin preference to localStorage as "0"', () => {
+    const comp = fixture.componentInstance as StaffLayoutComponent & { togglePin: () => void };
+    comp.togglePin();
+    fixture.detectChanges();
+    expect(localStorage.getItem('obrs-sidebar-collapsed'))
+      .withContext('localStorage should store "0" when pinned')
+      .toBe('0');
+  });
+
+  it('unpinning writes "1" to localStorage', () => {
+    const comp = fixture.componentInstance as StaffLayoutComponent & { togglePin: () => void };
+    comp.togglePin(); // pin
+    comp.togglePin(); // unpin
+    fixture.detectChanges();
+    expect(localStorage.getItem('obrs-sidebar-collapsed'))
+      .withContext('localStorage should store "1" when unpinned')
+      .toBe('1');
+  });
+
+  it('sidebar expands on mouseenter and collapses after mouseleave (timer)', (done) => {
+    const comp = fixture.componentInstance as StaffLayoutComponent & {
+      onSidebarMouseEnter: () => void;
+      onSidebarMouseLeave: () => void;
+      isSidebarExpanded: boolean;
+    };
+
+    comp.onSidebarMouseEnter();
+    fixture.detectChanges();
+    expect(comp.isSidebarExpanded).withContext('should expand on mouseenter').toBeTrue();
+
+    comp.onSidebarMouseLeave();
+    // timer hasn't fired yet
+    expect(comp.isSidebarExpanded).withContext('should still be expanded right after mouseleave').toBeTrue();
+
+    setTimeout(() => {
+      fixture.detectChanges();
+      expect(comp.isSidebarExpanded).withContext('should collapse 120ms after mouseleave').toBeFalse();
+      done();
+    }, 150);
+  });
+
+  it('renders the pin button inside .admin-sidebar-panel', () => {
+    const pinBtn = fixture.debugElement.query(By.css('.admin-sidebar-panel .admin-sidebar-pin'));
+    expect(pinBtn).withContext('pin button should exist inside .admin-sidebar-panel').toBeTruthy();
+  });
+
+  it('the .admin-collapse-toggle button is absent (replaced by pin)', () => {
+    const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
+    expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
   });
 });
