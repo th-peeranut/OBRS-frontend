@@ -175,8 +175,10 @@ async function mountStandardMocks(page: Page): Promise<void> {
 }
 
 /**
- * Select the bus trip and open the Trip Details tab then click Edit.
- * Mounts the form-data endpoints before clicking Edit so responses are ready.
+ * Select the bus trip and open the Trip Details tab.
+ * Opening the tab now loads the editable form DIRECTLY — there is no read-only
+ * view and no "Edit" button (fields are directly editable). Form-data endpoints
+ * are mounted BEFORE the tab click because the data fetch fires on tab activation.
  */
 async function openEditForm(page: Page): Promise<void> {
   // Select the trip row
@@ -184,13 +186,8 @@ async function openEditForm(page: Page): Promise<void> {
   await tripRow.waitFor({ timeout: 10_000 });
   await tripRow.click();
 
-  // Navigate to Trip Details tab
-  await page.locator('.p-tabview-nav').getByText('Trip Details').click();
-
-  // Wait for the trip detail read-only content to appear (dl with plate data)
-  await expect(page.locator('dl.row')).toBeVisible({ timeout: 8_000 });
-
-  // Mount form-data endpoint mocks
+  // Mount form-data endpoint mocks BEFORE opening the tab — the forkJoin that
+  // loads the form fires the moment the Trip Details tab becomes active.
   // GET schedule detail — matches /api/private/schedules/201
   await page.route('**/api/private/schedules/201', (route) => {
     // Distinguish GET from PUT by method
@@ -210,11 +207,8 @@ async function openEditForm(page: Page): Promise<void> {
   // Default behavior (no mock): the request falls through to SIT proxy, which may 404/error.
   // Tests that need seat maps (AC-12) or no-seat-maps (AC-13 save, AC-14) register their own mock.
 
-  // Click Edit button — btn-outline-primary is unique in the Trip Details tab panel
-  // The button text includes an icon so we match on the text content containing "Edit"
-  const editBtn = page.locator('.p-tabview-panels .btn-outline-primary', { hasText: 'Edit' });
-  await editBtn.waitFor({ state: 'visible', timeout: 10_000 });
-  await editBtn.click();
+  // Navigate to Trip Details tab → the editable form loads directly (no Edit click)
+  await page.locator('.p-tabview-nav').getByText('Trip Details').click();
 
   // Wait for the edit form to appear
   await page.locator('app-trip-details-edit-form').waitFor({ state: 'visible', timeout: 15_000 });
@@ -589,13 +583,9 @@ test.describe('AC-13: Driver dropdown — preselection and save', () => {
       expect(capturedPayload).toHaveProperty('driverId');
     }
 
-    // The form should close (edit mode ends on success or the view re-renders)
-    // Either the edit form closes or a success alert appears
-    // The save might succeed or the form might remain if something's wrong
-    // Just verify the page didn't crash
-    const formPresence = await page.locator('app-trip-details-edit-form').isVisible();
-    const viewPresence = await page.locator('app-trip-details-view').isVisible();
-    expect(formPresence || viewPresence, 'Either form or view should be visible after save').toBe(true);
+    // Direct-edit: the tab stays editable after save (it reloads server truth),
+    // so the edit form must remain present — there is no read-only view to fall back to.
+    await expect(page.locator('app-trip-details-edit-form')).toBeVisible();
   });
 });
 
@@ -662,21 +652,19 @@ test.describe('AC-14: Save success — read-only view and trip row update withou
       'A full page reload must not happen on save — optimistic patch only'
     ).toBe(navCountAfterLoad);
 
-    // After success the edit form should close (isEditMode = false)
-    // and the success toast / read-only view should be visible
+    // Direct-edit: after a successful save the tab stays editable and the success
+    // toast confirms the save. The form remains mounted (reloaded with server truth);
+    // a success toast should appear — and crucially no full page reload happened.
     const successToast = page.locator('.swal2-container');
-    const tripDetailsView = page.locator('app-trip-details-view');
     const editForm = page.locator('app-trip-details-edit-form');
 
-    // Either the toast appeared or the view re-rendered
     const toastVisible = await successToast.isVisible();
-    const viewVisible = await tripDetailsView.isVisible();
     const formStillVisible = await editForm.isVisible();
 
-    // The save should have: closed the form OR shown a toast (or both)
+    // The save confirmed via toast and/or the editable form is still present (no crash, no reload).
     expect(
-      toastVisible || viewVisible || !formStillVisible,
-      'Save should close the form or show a success message'
+      toastVisible || formStillVisible,
+      'Save should show a success toast and keep the editable form mounted'
     ).toBe(true);
   });
 });

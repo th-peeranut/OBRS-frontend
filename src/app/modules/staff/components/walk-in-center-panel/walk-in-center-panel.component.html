@@ -7,7 +7,7 @@
   </div>
 
   <!-- Trip selected: show tabs -->
-  <p-tabView *ngIf="selectedTrip" styleClass="center-tabview">
+  <p-tabView *ngIf="selectedTrip" styleClass="center-tabview" (onChange)="onTabChange($event.index)">
 
     <!-- Tab 1: Ticket Sales (seat map) -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
@@ -141,49 +141,31 @@
       </ng-container>
     </p-tabPanel>
 
-    <!-- Tab 2: Trip Details -->
+    <!-- Tab 2: Trip Details — fields are directly editable (no read-only gate). -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TRIP_DETAILS' | translate">
 
-      <!-- Read-only view -->
-      <ng-container *ngIf="!isEditMode">
-        <app-trip-details-view [trip]="selectedTrip"></app-trip-details-view>
-        <div class="mt-3">
-          <button
-            type="button"
-            class="btn btn-sm btn-outline-primary"
-            (click)="openEditMode()"
-          >
-            <i class="bi bi-pencil me-1"></i>
-            {{ 'STAFF.SELL.TRIP_DETAIL_EDIT_BTN' | translate }}
-          </button>
+      <!-- Loading bar while fetching form data -->
+      <div *ngIf="isEditLoading" class="mb-2">
+        <div class="progress" style="height: 3px;">
+          <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
         </div>
-      </ng-container>
+      </div>
 
-      <!-- Edit form -->
-      <ng-container *ngIf="isEditMode">
-        <!-- Loading bar while fetching form data -->
-        <div *ngIf="isEditLoading" class="mb-2">
-          <div class="progress" style="height: 3px;">
-            <div class="progress-bar progress-bar-striped progress-bar-animated w-100"></div>
-          </div>
-        </div>
-
-        <app-trip-details-edit-form
-          [trip]="selectedTrip"
-          [routeName]="editFormRouteName"
-          [routeDate]="editFormRouteDate"
-          [isLoading]="isEditLoading"
-          [isSaving]="isSaving"
-          [vehicleTypes]="vehicleTypes"
-          [vehicles]="vehicles"
-          [drivers]="drivers"
-          [seatMapOptions]="seatMapOptions"
-          [capacityInlineError]="capacityInlineError"
-          (vehicleTypeChanged)="onVehicleTypeChanged($event)"
-          (save)="onSave($event)"
-          (cancel)="closeEditMode()">
-        </app-trip-details-edit-form>
-      </ng-container>
+      <app-trip-details-edit-form
+        [trip]="selectedTrip"
+        [routeName]="editFormRouteName"
+        [routeDate]="editFormRouteDate"
+        [isLoading]="isEditLoading"
+        [isSaving]="isSaving"
+        [vehicleTypes]="vehicleTypes"
+        [vehicles]="vehicles"
+        [drivers]="drivers"
+        [seatMapOptions]="seatMapOptions"
+        [capacityInlineError]="capacityInlineError"
+        (vehicleTypeChanged)="onVehicleTypeChanged($event)"
+        (save)="onSave($event)"
+        (cancel)="revertChanges()">
+      </app-trip-details-edit-form>
 
     </p-tabPanel>
 
