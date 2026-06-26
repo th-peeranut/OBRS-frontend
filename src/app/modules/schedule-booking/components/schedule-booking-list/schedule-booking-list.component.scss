@@ -20,6 +20,14 @@
     font-weight: bold;
   }
 
+  .no-results {
+    margin: 8px 0;
+    padding: 24px 16px;
+    text-align: center;
+    font-size: 15px;
+    color: #757a86;
+  }
+
   .schedule-item {
     background: $primary-white;
     border-radius: 10px;

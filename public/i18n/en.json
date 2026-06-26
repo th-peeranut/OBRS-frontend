@@ -574,7 +574,8 @@
       "ROUND_DEPARTURE": "Round day to go",
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
-      "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching."
+      "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
+      "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
     },
     "STATION": {
       "HEADER": "Service point route map",
@@ -624,7 +625,8 @@
     "SEAT_UNIT": "seats",
     "SEAT_PER_PASSENGER": "price/person",
     "CHOOSE": "select",
-    "CHANGE": "change data"
+    "CHANGE": "change data",
+    "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers."
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {

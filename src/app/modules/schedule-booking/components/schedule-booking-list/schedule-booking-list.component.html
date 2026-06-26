@@ -4,6 +4,11 @@
       {{ "SCHEDULE_BOOKING.HEADER" | translate }}
     </h3>
 
+    <!-- No results: search completed but no departure schedules matched -->
+    <p class="no-results" *ngIf="!schedules.departureSchedules?.length">
+      {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
+    </p>
+
     <!-- ขาไป -->
     <ng-container *ngIf="schedules.departureSchedules as departureList">
       <h3 class="title" *ngIf="schedules.arrivalSchedules?.length">
