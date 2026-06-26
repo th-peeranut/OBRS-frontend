@@ -148,7 +148,9 @@
       "THEME_LIGHT": "โหมดสว่าง",
       "THEME_DARK": "โหมดมืด",
       "COLLAPSE_MENU": "ย่อเมนู",
-      "EXPAND_MENU": "ขยายเมนู"
+      "EXPAND_MENU": "ขยายเมนู",
+      "PIN_MENU": "ปักหมุดเมนูให้เปิดอยู่",
+      "UNPIN_MENU": "เลิกปักหมุดเมนู"
     },
     "COMMON": {
       "LOADING": "กำลังโหลดข้อมูล...",
@@ -843,6 +845,8 @@
       "LOGOUT_SUCCESS": "ออกจากระบบสำเร็จ",
       "COLLAPSE_MENU": "ย่อเมนู",
       "EXPAND_MENU": "ขยายเมนู",
+      "PIN_MENU": "ปักหมุดเมนูให้เปิดอยู่",
+      "UNPIN_MENU": "เลิกปักหมุดเมนู",
       "THEME_TOGGLE": "สลับโหมดมืด"
     },
     "NAV": {

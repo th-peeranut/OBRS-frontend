@@ -1,0 +1,45 @@
+# ADR 0004: Shared SidebarLayoutBaseComponent with Hover-Overlay/Pin Interaction
+
+**Date:** 2026-06-26
+**Status:** Accepted
+
+## Context
+
+The OBRS app has two layout shells (`AdminLayoutComponent`, `StaffLayoutComponent`) that share identical sidebar chrome. Before this change each component duplicated:
+- Sidebar collapse state, localStorage, toggle logic
+- Router-driven page title subscription
+- Theme subscription
+- Profile-menu close / document-click handler
+- Escape key handler
+- `userInitials` getter
+- `onLogout` (parameterised only by one key difference)
+
+Additionally, the original UX used a click-to-collapse chevron mounted on the topbar edge. QA discovered this was hard to hit on narrow viewports and created confusion about whether the sidebar was collapsing or navigating.
+
+## Decision
+
+**Extract a shared abstract directive base** (`SidebarLayoutBaseComponent`) that both layout components extend. All shared logic (hover-expand state, pin/localStorage, route subscription, theme, profile menu, keyboard handlers) lives in the base. Children supply only:
+- `logoutSuccessKey`, `defaultTitleKey`, `defaultSubtitleKey` (abstract readonly fields)
+- Feature-specific nav items, role checks, and per-component initial title keys
+
+**Replace click-to-collapse with hover-to-expand + PIN:**
+- Desktop resting state: 76px icon rail (always in flow — no layout reflow).
+- Hover or keyboard focus into the sidebar → expands as an overlay (280px, z-index 30) that floats over the content without reflowing it.
+- Mouse-leave collapses after a 120ms hover-intent delay (prevents flicker on cursor drift).
+- A pin button (push_pin icon) at the top of the nav locks the sidebar open. When pinned, the sidebar switches from overlay mode to reserved-column mode (content reflows, sidebar is a permanent 280px flex child).
+- localStorage key `obrs-sidebar-collapsed` is re-interpreted: `'0'` = pinned open, `'1'` or absent = icon rail. Existing users who toggled to "expanded" (stored `'0'`) transition to "pinned". Users who never toggled (absent) now see the hover-expand model.
+
+## Rationale
+
+1. **DRY**: ~100 lines of duplicated lifecycle and interaction code removed. Future changes to sidebar behaviour (e.g., keyboard shortcuts, new hover delay) require editing exactly one file.
+2. **Better UX**: Hover-to-expand is a well-established pattern (VS Code, Notion, Linear) that avoids an explicit click to see labels. The pin affordance preserves power-user intent without sacrificing screen real estate for casual users.
+3. **Predictable layout**: The 76px stub always reserves the column; the overlay never causes content jump. Only the explicit pin action causes a reflow (and persists it to localStorage).
+4. **Angular 18 inject() in abstract base**: Constructor injection in abstract classes forces every child to declare a large `super(router, route, ...)` call that grows with every new dep. `inject()` fields in the `@Directive()` base cleanly express "these deps belong to the base." Children contribute nothing to DI unless they add their own unique deps.
+
+## Consequences
+
+- Children must call `super.ngOnInit()` from their own `ngOnInit` (after building nav items).
+- `isSidebarCollapsed` and `toggleSidebarCollapse()` are removed. Any code that referenced them outside these two components (e.g., a future feature test) will need updating.
+- Existing users who had the sidebar expanded (stored `'0'`) are silently migrated to "pinned." This is intentional and low-risk (the previous UX and the new pinned state are visually equivalent).
+- Mobile hamburger drawer (`is-sidebar-open`, `toggleSidebar`, `closeSidebar`) is unchanged.
+- The `COLLAPSE_MENU` / `EXPAND_MENU` i18n keys are kept for forward-compatibility; they are no longer referenced in the active templates but may be re-used by a future mobile-specific affordance.

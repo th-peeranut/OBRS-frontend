@@ -1,10 +1,5 @@
-import { Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
-import { filter, startWith, Subject, takeUntil } from 'rxjs';
-import { AuthService } from '../../auth/auth.service';
-import { AlertService } from '../../shared/services/alert.service';
-import { ThemeService } from '../../shared/services/theme.service';
-import { TranslateService } from '@ngx-translate/core';
+import { Component, OnInit } from '@angular/core';
+import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 
 interface AdminNavItem {
   path: string;
@@ -17,178 +12,33 @@ interface AdminNavItem {
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.scss',
 })
-export class AdminLayoutComponent implements OnInit, OnDestroy {
-  protected pageTitleKey = 'ADMIN.PAGES.DASHBOARD';
-  protected pageSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
+export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements OnInit {
+  // ── Abstract member implementations ─────────────────────────────────────────
+  protected readonly logoutSuccessKey = 'ADMIN.LAYOUT.LOGOUT_SUCCESS';
+  protected readonly defaultTitleKey = 'ADMIN.PAGES.DEFAULT';
+  protected readonly defaultSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
+
+  // Computed once at class-definition time. Must NOT be a getter — a getter
+  // returning a new array each cycle breaks *ngFor + routerLinkActive, causing
+  // change detection never to stabilise (hard-locks the browser).
   protected readonly navItems: AdminNavItem[] = [
-    {
-      path: 'dashboard',
-      labelKey: 'ADMIN.PAGES.DASHBOARD',
-      icon: 'dashboard',
-    },
-    {
-      path: 'lookups',
-      labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS',
-      icon: 'settings_input_component',
-    },
-    {
-      path: 'roles',
-      labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT',
-      icon: 'admin_panel_settings',
-    },
-    {
-      path: 'users',
-      labelKey: 'ADMIN.PAGES.USER_MANAGEMENT',
-      icon: 'group',
-    },
-    {
-      path: 'vehicles',
-      labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT',
-      icon: 'directions_bus',
-    },
+    { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard' },
+    { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component' },
+    { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings' },
+    { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group' },
+    { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus' },
     { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
     { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
     { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
   ];
 
-  protected isProfileMenuOpen = false;
-  protected isSidebarOpen = false;
-  protected isSidebarCollapsed = false;
-  protected isDarkMode = false;
-
-  private readonly destroy$ = new Subject<void>();
-
-  // Desktop sidebar collapse state, shared across admin + staff areas.
-  private static readonly SIDEBAR_COLLAPSED_KEY = 'obrs-sidebar-collapsed';
-
-  constructor(
-    private readonly router: Router,
-    private readonly route: ActivatedRoute,
-    private readonly authService: AuthService,
-    private readonly alertService: AlertService,
-    private readonly translate: TranslateService,
-    private readonly themeService: ThemeService,
-    private readonly elementRef: ElementRef<HTMLElement>
-  ) {}
-
+  // Gate the Staff Area shortcut in the profile menu on the salesperson/driver
+  // roles so admins who are not also staff don't see a link they cannot use.
   protected get isStaffUser(): boolean {
     return this.authService.hasAnyRole(['salesperson', 'driver']);
   }
 
-  protected get userInitials(): string {
-    const username = this.authService.getUsername() ?? '';
-    const namePart = username.split('@')[0] ?? '';
-    const segments = namePart.split(/[.\-_\s]+/).filter((segment) => segment.length > 0);
-
-    if (segments.length === 0) {
-      return 'AD';
-    }
-
-    if (segments.length === 1) {
-      return segments[0].slice(0, 2).toUpperCase();
-    }
-
-    return (segments[0][0] + segments[1][0]).toUpperCase();
-  }
-
-  ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
-  }
-
-  ngOnInit(): void {
-    this.themeService.mode$.pipe(takeUntil(this.destroy$)).subscribe((mode) => {
-      this.isDarkMode = mode === 'dark';
-    });
-    this.isSidebarCollapsed = this.readCollapsedPreference();
-
-    this.router.events
-      .pipe(
-        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-        startWith(new NavigationEnd(0, this.router.url, this.router.url))
-      )
-      .subscribe(() => {
-        const activeRoute = this.getDeepestRoute(this.route);
-        const titleKey = activeRoute.snapshot.data['titleKey'];
-        this.pageTitleKey =
-          typeof titleKey === 'string' && titleKey.length > 0
-            ? titleKey
-            : 'ADMIN.PAGES.DEFAULT';
-        const subtitleKey = activeRoute.snapshot.data['subtitleKey'];
-        this.pageSubtitleKey =
-          typeof subtitleKey === 'string' && subtitleKey.length > 0
-            ? subtitleKey
-            : 'ADMIN.LAYOUT.SUBTITLE';
-        // Collapse the mobile drawer whenever navigation completes.
-        this.isSidebarOpen = false;
-      });
-  }
-
-  protected toggleSidebar(): void {
-    this.isSidebarOpen = !this.isSidebarOpen;
-  }
-
-  protected closeSidebar(): void {
-    this.isSidebarOpen = false;
-  }
-
-  protected toggleSidebarCollapse(): void {
-    this.isSidebarCollapsed = !this.isSidebarCollapsed;
-    try {
-      localStorage.setItem(
-        AdminLayoutComponent.SIDEBAR_COLLAPSED_KEY,
-        this.isSidebarCollapsed ? '1' : '0'
-      );
-    } catch {
-      // localStorage unavailable (private mode) — collapse still works in-session.
-    }
-  }
-
-  private readCollapsedPreference(): boolean {
-    try {
-      return localStorage.getItem(AdminLayoutComponent.SIDEBAR_COLLAPSED_KEY) === '1';
-    } catch {
-      return false;
-    }
-  }
-
-  protected toggleTheme(): void {
-    this.themeService.toggle();
-  }
-
-  @HostListener('document:keydown.escape')
-  protected onEscape(): void {
-    this.isProfileMenuOpen = false;
-    this.isSidebarOpen = false;
-  }
-
-  @HostListener('document:click', ['$event'])
-  protected onDocumentClick(event: MouseEvent): void {
-    const profile = this.elementRef.nativeElement.querySelector('.admin-profile');
-    if (this.isProfileMenuOpen && profile && !profile.contains(event.target as Node)) {
-      this.isProfileMenuOpen = false;
-    }
-  }
-
-  protected toggleProfileMenu(): void {
-    this.isProfileMenuOpen = !this.isProfileMenuOpen;
-  }
-
-  protected closeProfileMenu(): void {
-    this.isProfileMenuOpen = false;
-  }
-
-  protected onLogout(): void {
-    this.isProfileMenuOpen = false;
-    this.alertService.success(this.translate.instant('ADMIN.LAYOUT.LOGOUT_SUCCESS'));
-    this.authService.logout();
-  }
-
-  private getDeepestRoute(route: ActivatedRoute): ActivatedRoute {
-    let currentRoute = route;
-    while (currentRoute.firstChild) {
-      currentRoute = currentRoute.firstChild;
-    }
-    return currentRoute;
+  override ngOnInit(): void {
+    super.ngOnInit();
   }
 }

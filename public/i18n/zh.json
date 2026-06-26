@@ -148,7 +148,9 @@
       "THEME_LIGHT": "浅色模式",
       "THEME_DARK": "深色模式",
       "COLLAPSE_MENU": "收起菜单",
-      "EXPAND_MENU": "展开菜单"
+      "EXPAND_MENU": "展开菜单",
+      "PIN_MENU": "固定菜单展开",
+      "UNPIN_MENU": "取消固定菜单"
     },
     "COMMON": {
       "LOADING": "加载数据中...",
@@ -842,6 +844,8 @@
       "LOGOUT_SUCCESS": "退出成功",
       "COLLAPSE_MENU": "收起菜单",
       "EXPAND_MENU": "展开菜单",
+      "PIN_MENU": "固定菜单展开",
+      "UNPIN_MENU": "取消固定菜单",
       "THEME_TOGGLE": "切换深色模式"
     },
     "NAV": {

@@ -5,6 +5,11 @@ import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 import { BehaviorSubject } from 'rxjs';
 
+// localStorage shim — keeps spec storage isolated
+function clearSidebarStorage(): void {
+  try { localStorage.removeItem('obrs-sidebar-collapsed'); } catch { /* ignore */ }
+}
+
 import { AdminLayoutComponent } from './admin-layout.component';
 import { LangSwitcherComponent } from '../../shared/components/lang-switcher/lang-switcher.component';
 import { AuthService } from '../../auth/auth.service';
@@ -31,6 +36,7 @@ describe('AdminLayoutComponent', () => {
   };
 
   beforeEach(async () => {
+    clearSidebarStorage();
     await TestBed.configureTestingModule({
       declarations: [AdminLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
@@ -46,6 +52,8 @@ describe('AdminLayoutComponent', () => {
     fixture = TestBed.createComponent(AdminLayoutComponent);
     fixture.detectChanges();
   });
+
+  afterEach(() => { clearSidebarStorage(); });
 
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
@@ -73,5 +81,43 @@ describe('AdminLayoutComponent', () => {
   it('renders the dark mode toggle button', () => {
     const toggleBtn = fixture.debugElement.query(By.css('button[aria-pressed]'));
     expect(toggleBtn).withContext('dark mode toggle button should exist').toBeTruthy();
+  });
+
+  // ── Hover-expand / pin behaviour (regression for #tbd) ─────────────────────
+
+  it('sidebar is NOT expanded by default (hover model: icon rail)', () => {
+    const aside = fixture.debugElement.query(By.css('.admin-sidebar'));
+    expect(aside.nativeElement.classList.contains('is-expanded'))
+      .withContext('sidebar should not be expanded on load')
+      .toBeFalse();
+  });
+
+  it('shell carries is-sidebar-pinned class when sidebar is pinned', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & { togglePin: () => void };
+    comp.togglePin();
+    fixture.detectChanges();
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('shell should carry is-sidebar-pinned when pinned')
+      .toBeTrue();
+  });
+
+  it('renders the pin button inside .admin-sidebar-panel', () => {
+    const pinBtn = fixture.debugElement.query(By.css('.admin-sidebar-panel .admin-sidebar-pin'));
+    expect(pinBtn).withContext('pin button should exist inside .admin-sidebar-panel').toBeTruthy();
+  });
+
+  it('the .admin-collapse-toggle button is absent (replaced by pin)', () => {
+    const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
+    expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
+  });
+
+  it('togglePin writes "0" to localStorage when pinned', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & { togglePin: () => void };
+    comp.togglePin();
+    fixture.detectChanges();
+    expect(localStorage.getItem('obrs-sidebar-collapsed'))
+      .withContext('localStorage should be "0" when pinned')
+      .toBe('0');
   });
 });

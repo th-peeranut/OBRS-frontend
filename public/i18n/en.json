@@ -148,7 +148,9 @@
       "THEME_LIGHT": "Light mode",
       "THEME_DARK": "Dark mode",
       "COLLAPSE_MENU": "Collapse menu",
-      "EXPAND_MENU": "Expand menu"
+      "EXPAND_MENU": "Expand menu",
+      "PIN_MENU": "Pin menu open",
+      "UNPIN_MENU": "Unpin menu"
     },
     "COMMON": {
       "LOADING": "Loading data...",
@@ -842,6 +844,8 @@
       "LOGOUT_SUCCESS": "Signed out successfully",
       "COLLAPSE_MENU": "Collapse menu",
       "EXPAND_MENU": "Expand menu",
+      "PIN_MENU": "Pin menu open",
+      "UNPIN_MENU": "Unpin menu",
       "THEME_TOGGLE": "Toggle dark mode"
     },
     "NAV": {

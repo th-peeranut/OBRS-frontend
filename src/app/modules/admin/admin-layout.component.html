@@ -1,4 +1,4 @@
-<div class="admin-shell theme-admin" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen" [class.is-sidebar-collapsed]="isSidebarCollapsed">
+<div class="admin-shell theme-admin" [class.is-dark]="isDarkMode" [class.is-sidebar-open]="isSidebarOpen" [class.is-sidebar-pinned]="isSidebarPinned">
   <div
     class="admin-sidebar-backdrop"
     *ngIf="isSidebarOpen"
@@ -6,64 +6,74 @@
     aria-hidden="true"
   ></div>
 
-  <aside class="admin-sidebar" [class.is-open]="isSidebarOpen">
-    <div class="admin-brand">
-      <a
-        routerLink="/home"
-        class="admin-brand-link"
-        [attr.aria-label]="'ADMIN.LAYOUT.HOME_LINK' | translate"
-        (click)="closeSidebar()"
-      >
-        <img
-          class="admin-brand-logo"
-          src="images/logo.svg"
-          [attr.alt]="'ADMIN.LAYOUT.BRAND' | translate"
-        />
-      </a>
-    </div>
+  <aside
+    class="admin-sidebar"
+    [class.is-open]="isSidebarOpen"
+    [class.is-expanded]="isSidebarExpanded"
+    (mouseenter)="onSidebarMouseEnter()"
+    (mouseleave)="onSidebarMouseLeave()"
+    (focusin)="onSidebarFocusIn()"
+    (focusout)="onSidebarFocusOut($event)"
+  >
+    <div class="admin-sidebar-panel">
+      <div class="admin-brand">
+        <a
+          routerLink="/home"
+          class="admin-brand-link"
+          [attr.aria-label]="'ADMIN.LAYOUT.HOME_LINK' | translate"
+          (click)="closeSidebar()"
+        >
+          <img
+            class="admin-brand-logo"
+            src="images/logo.svg"
+            [attr.alt]="'ADMIN.LAYOUT.BRAND' | translate"
+          />
+        </a>
+      </div>
 
-    <nav class="admin-nav">
-      <a
-        *ngFor="let item of navItems"
-        [routerLink]="item.path"
-        routerLinkActive="active"
-        [routerLinkActiveOptions]="{ exact: true }"
-        class="admin-nav-link"
-        (click)="closeSidebar()"
+      <!-- PIN BUTTON — placed after the brand in the flex column (gap:20px puts
+           it at y≈88px, below the topbar band). align-self:flex-end in expanded
+           mode moves it to the panel's top-right corner. Hidden in rail mode. -->
+      <button
+        type="button"
+        class="admin-sidebar-pin"
+        (click)="togglePin()"
+        [attr.aria-pressed]="isSidebarPinned"
+        [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.UNPIN_MENU' : 'ADMIN.LAYOUT.PIN_MENU') | translate"
+        [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.UNPIN_MENU' : 'ADMIN.LAYOUT.PIN_MENU') | translate"
       >
-        <span class="material-symbols-outlined">{{ item.icon }}</span>
-        <span>{{ item.labelKey | translate }}</span>
-      </a>
-    </nav>
+        <span class="material-symbols-outlined" [style.fontVariationSettings]="pinIconVariation">push_pin</span>
+      </button>
 
-    <div class="admin-sidebar-footer">
-      <button class="admin-nav-link admin-nav-btn" type="button">
-        <span class="material-symbols-outlined">help_outline</span>
-        <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
-      </button>
-      <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
-        <span class="material-symbols-outlined">logout</span>
-        <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
-      </button>
+      <nav class="admin-nav">
+        <a
+          *ngFor="let item of navItems"
+          [routerLink]="item.path"
+          routerLinkActive="active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="admin-nav-link"
+          (click)="onNavLinkClick()"
+        >
+          <span class="material-symbols-outlined">{{ item.icon }}</span>
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      </nav>
+
+      <div class="admin-sidebar-footer">
+        <button class="admin-nav-link admin-nav-btn" type="button">
+          <span class="material-symbols-outlined">help_outline</span>
+          <span>{{ 'ADMIN.LAYOUT.SUPPORT' | translate }}</span>
+        </button>
+        <button class="admin-nav-link admin-nav-btn" type="button" (click)="onLogout()">
+          <span class="material-symbols-outlined">logout</span>
+          <span>{{ 'ADMIN.LAYOUT.SIGN_OUT' | translate }}</span>
+        </button>
+      </div>
     </div>
   </aside>
 
   <div class="admin-main">
     <header class="admin-topbar">
-      <!-- Desktop-only: edge-mounted chevron pill that collapses the sidebar to an
-           icon rail. Sits on the sidebar/content border (hidden on mobile, where the
-           hamburger drawer is used instead — see the max-width: 1100px block). -->
-      <button
-        type="button"
-        class="admin-collapse-toggle"
-        (click)="toggleSidebarCollapse()"
-        [attr.aria-pressed]="isSidebarCollapsed"
-        [attr.title]="(isSidebarCollapsed ? 'ADMIN.LAYOUT.EXPAND_MENU' : 'ADMIN.LAYOUT.COLLAPSE_MENU') | translate"
-        [attr.aria-label]="(isSidebarCollapsed ? 'ADMIN.LAYOUT.EXPAND_MENU' : 'ADMIN.LAYOUT.COLLAPSE_MENU') | translate"
-      >
-        <span class="material-symbols-outlined">{{ isSidebarCollapsed ? 'chevron_right' : 'chevron_left' }}</span>
-      </button>
-
       <button
         type="button"
         class="admin-icon-btn admin-menu-toggle"
