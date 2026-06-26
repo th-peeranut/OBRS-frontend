@@ -335,6 +335,15 @@
   display: none;
 }
 
+/* Pin is a desktop-only affordance: the off-canvas drawer is the mobile
+   pattern, so there is nothing to pin at <=1100px. Hidden by default and
+   revealed as inline-flex inside the min-width:1101px block below. Without
+   this base rule the unstyled button shows in the mobile drawer and a tap
+   would silently flip the persisted pin state for the next desktop visit. */
+.admin-sidebar-pin {
+  display: none;
+}
+
 /* ── Sidebar panel — base flex layout (mobile + desktop share this) ───────────
    On mobile the panel is normal in-flow flex content inside the off-canvas
    drawer; on desktop (min-width: 1101px below) it becomes an absolutely
