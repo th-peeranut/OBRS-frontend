@@ -628,7 +628,8 @@
     "SEAT_PER_PASSENGER": "price/person",
     "CHOOSE": "select",
     "CHANGE": "change data",
-    "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers."
+    "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
+    "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers."
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {

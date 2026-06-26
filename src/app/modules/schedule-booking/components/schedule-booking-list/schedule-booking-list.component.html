@@ -92,6 +92,11 @@
 
     <!-- ขาไป-ขากลับ -->
     <ng-container *ngIf="schedules.arrivalSchedules as returnList">
+      <!-- Return search found outbound trips but no inbound (return) schedules -->
+      <p class="no-results" *ngIf="schedules.departureSchedules?.length && !returnList.length">
+        {{ "SCHEDULE_BOOKING.NO_RETURN_RESULTS" | translate }}
+      </p>
+
       <h3 class="title" *ngIf="isSelectFirst">
         {{ "SCHEDULE_BOOKING.SUBHEADER_RETURN" | translate }}
       </h3>
