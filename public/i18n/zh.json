@@ -626,7 +626,8 @@
     "SEAT_PER_PASSENGER": "价格/人",
     "CHOOSE": "选择",
     "CHANGE": "修改数据",
-    "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。"
+    "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。",
+    "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
