@@ -1,3 +1,7 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { WalkInTripBrowserComponent } from './walk-in-trip-browser.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
@@ -237,6 +241,69 @@ describe('WalkInTripBrowserComponent', () => {
       (comp as any).selectTrip(trip, 'r1');
 
       expect(emitted.length).toBe(1);
+    });
+  });
+
+  // Regression: live SIT verification revealed the "..." menu did NOT open via the
+  // keyboard. The earlier fix only wired (keydown.enter)="$event.stopPropagation()",
+  // relying on the native button-click to open the menu — which did not hold, so
+  // Enter became a no-op. The unit tests above call openTripMenu() directly, so they
+  // never exercised the TEMPLATE BINDING where the bug lived. This DOM-level test
+  // dispatches a real Enter keydown on the rendered "..." button and asserts the
+  // binding invokes openTripMenu (i.e. the menu opens). Space is covered the same way.
+  describe('keyboard a11y — Enter/Space on "..." button OPENS the menu (template binding)', () => {
+    let fixture: ComponentFixture<WalkInTripBrowserComponent>;
+    let comp: WalkInTripBrowserComponent;
+
+    beforeEach(async () => {
+      await TestBed.configureTestingModule({
+        declarations: [WalkInTripBrowserComponent],
+        imports: [CommonModule, TranslateModule.forRoot()],
+        providers: [TranslateService],
+        schemas: [NO_ERRORS_SCHEMA],
+      }).compileComponents();
+
+      fixture = TestBed.createComponent(WalkInTripBrowserComponent);
+      comp = fixture.componentInstance;
+      (comp as any).isLoading = false;
+      (comp as any).canManageSchedules = true;
+      (comp as any).routeGroups = [makeGroup('r1', [makeTrip({ scheduleId: 7 })])];
+      // ViewChild p-menu is an unknown element under NO_ERRORS_SCHEMA; stub toggle.
+      (comp as any).tripActionMenu = { toggle: jasmine.createSpy('toggle') };
+      fixture.detectChanges();
+      // Re-stub after view init in case the ViewChild resolved to undefined.
+      (comp as any).tripActionMenu = { toggle: jasmine.createSpy('toggle') };
+    });
+
+    function dispatchKey(key: string): void {
+      const btn = fixture.nativeElement.querySelector('.trip-actions-btn') as HTMLButtonElement;
+      expect(btn).withContext('"..." button should render').toBeTruthy();
+      const ev = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      btn.dispatchEvent(ev);
+      fixture.detectChanges();
+      return;
+    }
+
+    // openTripMenu → tripActionMenu.toggle is covered by the direct unit test above;
+    // here we only assert the TEMPLATE BINDING invokes openTripMenu (the part that
+    // was broken — Enter previously only did stopPropagation and never opened it).
+    it('Enter on the "..." button invokes openTripMenu (menu opens)', () => {
+      const spy = spyOn(comp as any, 'openTripMenu').and.callThrough();
+      dispatchKey('Enter');
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('Space on the "..." button invokes openTripMenu (menu opens)', () => {
+      const spy = spyOn(comp as any, 'openTripMenu').and.callThrough();
+      dispatchKey(' ');
+      expect(spy).toHaveBeenCalled();
+    });
+
+    it('Enter on the "..." button does NOT select the row for selling', () => {
+      const selected: unknown[] = [];
+      comp.tripSelected.subscribe((ev: unknown) => selected.push(ev));
+      dispatchKey('Enter');
+      expect(selected.length).toBe(0);
     });
   });
 });

@@ -82,7 +82,7 @@
               aria-haspopup="true"
               (click)="openTripMenu($event, trip, group.routeSlug)"
               (keydown.space)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)"
-              (keydown.enter)="$event.stopPropagation()">
+              (keydown.enter)="$event.preventDefault(); openTripMenu($event, trip, group.routeSlug)">
               <i class="bi bi-three-dots-vertical"></i>
             </button>
           </div>
