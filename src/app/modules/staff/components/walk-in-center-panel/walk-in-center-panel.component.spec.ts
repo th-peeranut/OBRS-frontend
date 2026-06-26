@@ -291,6 +291,58 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // Popular stops are pinned in their own section, so the main list must NOT
+  // repeat them (the user reported the same stop appearing twice).
+  describe('main list excludes pinned popular stops (no duplication)', () => {
+    const pickup = [
+      makeStopOption('a', 'Bangkok'),
+      makeStopOption('b', 'Chiang Mai'),
+      makeStopOption('c', 'Phuket'),
+    ];
+
+    beforeEach(() => {
+      component.pickupOptions = pickup;
+      component.dropoffOptions = pickup;
+      (component as unknown as { pickupFilter: string }).pickupFilter = '';
+      (component as unknown as { dropoffFilter: string }).dropoffFilter = '';
+    });
+
+    it('filteredPickupOptions omits route-valid popular slugs', () => {
+      component.popularPickupStops = [makeStopOption('a', 'Bangkok')];
+      const main = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      const popular = (component as unknown as { filteredPopularPickupOptions: StopOption[] }).filteredPopularPickupOptions;
+      expect(main.map(o => o.slug)).toEqual(['b', 'c']);
+      expect(popular.map(o => o.slug)).toEqual(['a']);
+      // No slug appears in both lists.
+      expect(main.some(m => popular.some(p => p.slug === m.slug))).toBe(false);
+    });
+
+    it('does not omit a popular slug that is not on the route', () => {
+      component.popularPickupStops = [makeStopOption('ghost', 'Ghost Stop')];
+      const main = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(main.map(o => o.slug)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('still excludes a popular stop when the filter query would match it', () => {
+      component.popularPickupStops = [makeStopOption('b', 'Chiang Mai')];
+      (component as unknown as { pickupFilter: string }).pickupFilter = 'chiang';
+      const main = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(main.length).toBe(0); // 'b' is pinned, so it is not in the main list
+    });
+
+    it('filteredDropoffOptions omits route-valid popular slugs', () => {
+      component.popularDropoffStops = [makeStopOption('c', 'Phuket')];
+      const main = (component as unknown as { filteredDropoffOptions: StopOption[] }).filteredDropoffOptions;
+      expect(main.map(o => o.slug)).toEqual(['a', 'b']);
+    });
+
+    it('main list is unchanged when there are no popular stops', () => {
+      component.popularPickupStops = [];
+      const main = (component as unknown as { filteredPickupOptions: StopOption[] }).filteredPickupOptions;
+      expect(main.map(o => o.slug)).toEqual(['a', 'b', 'c']);
+    });
+  });
+
   describe('filter no-match condition', () => {
     it('filteredPickupOptions.length === 0 when filter matches nothing', () => {
       component.pickupOptions = [makeStopOption('a', 'Bangkok')];

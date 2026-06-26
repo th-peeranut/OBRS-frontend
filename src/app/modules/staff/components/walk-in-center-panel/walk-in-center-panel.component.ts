@@ -77,29 +77,45 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
   protected pickupFilter = '';
   protected dropoffFilter = '';
 
+  /** Popular pickup stops that exist on the current route (slug present in pickupOptions). */
+  private get routeValidPopularPickup(): StopOption[] {
+    const validSlugs = new Set(this.pickupOptions.map(o => o.slug));
+    return this.popularPickupStops.filter(o => validSlugs.has(o.slug));
+  }
+
+  /** Popular drop-off stops that exist on the current route (slug present in dropoffOptions). */
+  private get routeValidPopularDropoff(): StopOption[] {
+    const validSlugs = new Set(this.dropoffOptions.map(o => o.slug));
+    return this.popularDropoffStops.filter(o => validSlugs.has(o.slug));
+  }
+
   protected get filteredPickupOptions(): StopOption[] {
+    // Popular stops are surfaced in their own pinned section, so exclude them
+    // here to avoid showing the same stop twice in one list.
+    const pinned = new Set(this.routeValidPopularPickup.map(o => o.slug));
+    const base = this.pickupOptions.filter(o => !pinned.has(o.slug));
     const q = this.pickupFilter.trim().toLowerCase();
-    if (!q) return this.pickupOptions;
-    return this.pickupOptions.filter(o => o.name.toLowerCase().includes(q));
+    if (!q) return base;
+    return base.filter(o => o.name.toLowerCase().includes(q));
   }
 
   protected get filteredDropoffOptions(): StopOption[] {
+    const pinned = new Set(this.routeValidPopularDropoff.map(o => o.slug));
+    const base = this.dropoffOptions.filter(o => !pinned.has(o.slug));
     const q = this.dropoffFilter.trim().toLowerCase();
-    if (!q) return this.dropoffOptions;
-    return this.dropoffOptions.filter(o => o.name.toLowerCase().includes(q));
+    if (!q) return base;
+    return base.filter(o => o.name.toLowerCase().includes(q));
   }
 
   protected get filteredPopularPickupOptions(): StopOption[] {
-    const validSlugs = new Set(this.pickupOptions.map(o => o.slug));
-    const routeValid = this.popularPickupStops.filter(o => validSlugs.has(o.slug));
+    const routeValid = this.routeValidPopularPickup;
     const q = this.pickupFilter.trim().toLowerCase();
     if (!q) return routeValid;
     return routeValid.filter(o => o.name.toLowerCase().includes(q));
   }
 
   protected get filteredPopularDropoffOptions(): StopOption[] {
-    const validSlugs = new Set(this.dropoffOptions.map(o => o.slug));
-    const routeValid = this.popularDropoffStops.filter(o => validSlugs.has(o.slug));
+    const routeValid = this.routeValidPopularDropoff;
     const q = this.dropoffFilter.trim().toLowerCase();
     if (!q) return routeValid;
     return routeValid.filter(o => o.name.toLowerCase().includes(q));

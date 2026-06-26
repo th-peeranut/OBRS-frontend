@@ -46,7 +46,7 @@
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
-            <div *ngIf="!isLoadingSegments && pickupFilter.trim() && filteredPickupOptions.length === 0"
+            <div *ngIf="!isLoadingSegments && pickupFilter.trim() && filteredPickupOptions.length === 0 && filteredPopularPickupOptions.length === 0"
                  class="text-muted small p-2">
               {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
             </div>
@@ -94,7 +94,7 @@
             <div *ngIf="isLoadingSegments" class="text-muted small p-2">
               <span class="spinner-border spinner-border-sm me-1"></span>
             </div>
-            <div *ngIf="!isLoadingSegments && dropoffFilter.trim() && filteredDropoffOptions.length === 0"
+            <div *ngIf="!isLoadingSegments && dropoffFilter.trim() && filteredDropoffOptions.length === 0 && filteredPopularDropoffOptions.length === 0"
                  class="text-muted small p-2">
               {{ 'STAFF.SELL.STOP_NO_MATCH' | translate }}
             </div>
