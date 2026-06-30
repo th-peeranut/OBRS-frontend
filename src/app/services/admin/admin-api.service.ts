@@ -12,6 +12,11 @@ import {
   PaymentResponse,
   PendingRefund,
 } from '../../shared/interfaces/payment.interface';
+import {
+  UsabilityReportDetail,
+  UsabilityReportPage,
+  UsabilityReportStatus,
+} from '../../shared/interfaces/usability-report.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -775,6 +780,28 @@ export class AdminApiService {
     return this.postRequest<PaymentResponse>(
       `${this.baseUrl}/private/payments/${paymentId}/refund`,
       {}
+    );
+  }
+
+  getUsabilityReports(): Observable<ResponseAPI<UsabilityReportPage>> {
+    return this.getRequest<UsabilityReportPage>(
+      `${this.baseUrl}/private/admin/usability-reports`
+    );
+  }
+
+  getUsabilityReportById(id: string): Observable<ResponseAPI<UsabilityReportDetail>> {
+    return this.getRequest<UsabilityReportDetail>(
+      `${this.baseUrl}/private/admin/usability-reports/${id}`
+    );
+  }
+
+  updateUsabilityReportStatus(
+    id: string,
+    status: UsabilityReportStatus
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/admin/usability-reports/${id}/status`,
+      { status }
     );
   }
 }

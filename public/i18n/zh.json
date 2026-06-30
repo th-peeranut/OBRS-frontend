@@ -1,4 +1,13 @@
 {
+  "USABILITY_REPORT": {
+    "FAB": { "LABEL": "报告问题", "ARIA_LABEL": "报告可用性问题" },
+    "MODAL": { "TITLE": "报告可用性问题", "SUBTITLE": "通过报告错误或建议帮助我们改进。", "CLOSE": "关闭", "SUBMIT": "提交报告", "SUBMITTING": "提交中..." },
+    "CATEGORY": { "LABEL": "类别", "BUG": "错误", "UX_UI_IMPROVEMENT": "UX/UI 改进", "SUGGESTION": "建议" },
+    "DESCRIPTION": { "LABEL": "描述", "PLACEHOLDER": "详细描述问题或建议...", "REQUIRED": "描述为必填项。" },
+    "IMAGES": { "LABEL": "附加图片（可选）", "HINT": "最多5张图片，每张最大5 MB。支持 JPEG、PNG、WebP、GIF。", "ADD": "添加图片", "REMOVE": "删除", "TOO_MANY": "最多只能附加5张图片。", "TOO_LARGE": "一张或多张图片超过5 MB限制。", "INVALID_TYPE": "仅支持 JPEG、PNG、WebP 和 GIF 格式的图片。" },
+    "SUBMIT_SUCCESS": "您的报告已提交。谢谢！",
+    "ERROR": { "REPORT_INVALID_CATEGORY": "所选类别无效。", "REPORT_TOO_MANY_IMAGES": "附加的图片过多。", "REPORT_UNSUPPORTED_MEDIA_TYPE": "一种或多种图片类型不受支持。", "REPORT_IMAGE_TOO_LARGE": "一张或多张图片过大。", "REPORT_PAYLOAD_TOO_LARGE": "上传总大小过大。", "REPORT_RATE_LIMITED": "您最近提交报告过于频繁，请稍后再试。", "VALIDATION_FAILED": "请检查您的输入后重试。", "GENERIC": "出现错误，请重试。" }
+  },
   "MY_BOOKINGS": {
     "TITLE": "我的预订",
     "SUBTITLE": "查看您的行程，如有变动可取消预订。",
@@ -128,7 +137,8 @@
       "VEHICLE_MANAGEMENT": "车辆",
       "ROUTE_MANAGEMENT": "路线",
       "SCHEDULES": "班次",
-      "BOOKINGS_MANAGEMENT": "预订"
+      "BOOKINGS_MANAGEMENT": "预订",
+      "USABILITY_REPORTS": "可用性报告"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -434,6 +444,22 @@
       "LOAD_FAILED": "无法加载仪表板数据。",
       "PARTIAL_LOAD_FAILED": "部分仪表板数据无法加载。",
       "UPDATING": "正在更新…"
+    },
+    "USABILITY_REPORTS": {
+      "TITLE": "可用性报告",
+      "SUBTITLE": "审查和处理用户报告的可用性问题。",
+      "TABLE_TITLE": "所有报告",
+      "FILTER_STATUS": "按状态筛选",
+      "SEARCH_PLACEHOLDER": "搜索报告...",
+      "COL": { "ID": "编号", "CATEGORY": "类别", "STATUS": "状态", "USER": "用户", "DESCRIPTION": "描述", "IMAGES": "图片", "CREATED_AT": "提交时间" },
+      "VIEW": "查看",
+      "EMPTY": "未找到可用性报告。",
+      "LOAD_FAILED": "加载报告失败，请刷新。",
+      "UNITS": "份报告",
+      "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "CLOSE": "关闭" },
+      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "resolved": "已解决", "wont_fix": "不修复" },
+      "STATUS_UPDATE_SUCCESS": "状态更新成功。",
+      "STATUS_UPDATE_FAILED": "状态更新失败，请重试。"
     }
   },
   "LOGIN": {
