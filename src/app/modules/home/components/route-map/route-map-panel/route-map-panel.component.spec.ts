@@ -1,3 +1,4 @@
+import { SimpleChange, SimpleChanges } from '@angular/core';
 import { RouteMapPanelComponent } from './route-map-panel.component';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 
@@ -15,6 +16,43 @@ function makeStop(order: number, withCoords = false): RouteStop {
   };
 }
 
+/** Build a minimal SimpleChange for use with ngOnChanges. */
+function sc<T>(currentValue: T, previousValue?: T): SimpleChange {
+  const firstChange = previousValue === undefined;
+  return { currentValue, previousValue, firstChange, isFirstChange: () => firstChange };
+}
+
+/** Helper: build a SimpleChanges bag for a single key. */
+function changes<T>(key: string, current: T, previous?: T): SimpleChanges {
+  return { [key]: sc(current, previous) };
+}
+
+// ---------------------------------------------------------------------------
+// Minimal google.maps stub — only what buildMarkerOptions() needs.
+// The real API is not available in Karma/ChromeHeadless, so tests that invoke
+// the precompute path that calls new google.maps.Size/Point must set this up.
+// ---------------------------------------------------------------------------
+interface MockSize { w: number; h: number }
+interface MockPoint { x: number; y: number }
+
+const mockMapsLib = {
+  Size: class implements MockSize {
+    constructor(public w: number, public h: number) {}
+  },
+  Point: class implements MockPoint {
+    constructor(public x: number, public y: number) {}
+  },
+};
+
+function installGoogleMock(): void {
+  (window as unknown as Record<string, unknown>)['google'] = { maps: mockMapsLib };
+}
+
+function removeGoogleMock(): void {
+  delete (window as unknown as Record<string, unknown>)['google'];
+}
+
+// ---------------------------------------------------------------------------
 describe('RouteMapPanelComponent', () => {
   let component: RouteMapPanelComponent;
 
@@ -54,6 +92,7 @@ describe('RouteMapPanelComponent', () => {
 
   it('mapCenter returns Bangkok default when no stops have coords', () => {
     component.pickupStops = [makeStop(1, false)];
+    component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
     const center = component.mapCenter;
     expect(center.lat).toBeCloseTo(13.7563, 3);
     expect(center.lng).toBeCloseTo(100.5018, 3);
@@ -61,6 +100,7 @@ describe('RouteMapPanelComponent', () => {
 
   it('polylinePath returns empty array when no stops have coords', () => {
     component.pickupStops = [makeStop(1, false)];
+    component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
     expect(component.polylinePath.length).toBe(0);
   });
 
@@ -68,4 +108,202 @@ describe('RouteMapPanelComponent', () => {
     const stop = makeStop(1, true);
     expect(component.stopHasCoords(stop)).toBeTrue();
   });
+
+  // -------------------------------------------------------------------------
+  // REGRESSION TESTS — these verify the CD-freeze fix (GitHub issue #73).
+  //
+  // The root cause was getters returning new object references on every
+  // change-detection pass, causing @angular/google-maps to call setOptions()
+  // every tick, which fired map events → CD → new references → infinite loop.
+  //
+  // Each test is annotated with whether it would FAIL on the old getter code.
+  // -------------------------------------------------------------------------
+
+  describe('reference stability (regression for CD storm / freeze fix)', () => {
+
+    it('[FAILS on old getter] mapOptions returns the SAME reference on consecutive reads without input changes', () => {
+      // Old getter code: every read returned `return { zoom:10, center: this.mapCenter, ... }` — always a new object.
+      // New field code: `mapOptions` is a precomputed field; consecutive reads return the same reference.
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const ref1 = component.mapOptions;
+      const ref2 = component.mapOptions;
+
+      expect(ref1).toBe(ref2);
+    });
+
+    it('[FAILS on old getter] polylinePath returns the SAME reference on consecutive reads without input changes', () => {
+      // Old getter computed and returned a new array on every call.
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const ref1 = component.polylinePath;
+      const ref2 = component.polylinePath;
+
+      expect(ref1).toBe(ref2);
+    });
+
+    it('[FAILS on old getter] polylineOptions returns the SAME reference on consecutive reads', () => {
+      // Old getter: `return { strokeColor: ..., strokeWeight: 4, ... }` — new object each call.
+      // New code: readonly field, always same reference.
+      const ref1 = component.polylineOptions;
+      const ref2 = component.polylineOptions;
+
+      expect(ref1).toBe(ref2);
+    });
+
+    it('ngOnChanges with new pickupStops produces a NEW mapOptions reference (recompute works)', () => {
+      const initialStops = [makeStop(1, true)];
+      component.pickupStops = initialStops;
+      component.ngOnChanges(changes('pickupStops', initialStops, []));
+      const ref1 = component.mapOptions;
+
+      const newStops = [makeStop(5, true)];
+      component.pickupStops = newStops;
+      component.ngOnChanges(changes('pickupStops', newStops, initialStops));
+      const ref2 = component.mapOptions;
+
+      expect(ref2).not.toBe(ref1);
+    });
+
+    it('mapOptions.center is recomputed when pickupStops change', () => {
+      component.pickupStops = [makeStop(1, true)]; // lat: 13.1
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      const center1 = component.mapOptions.center as google.maps.LatLngLiteral;
+
+      component.pickupStops = [makeStop(5, true)]; // lat: 13.5
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, [makeStop(1, true)]));
+      const center2 = component.mapOptions.center as google.maps.LatLngLiteral;
+
+      expect(center2.lat).not.toBeCloseTo(center1.lat, 3);
+    });
+
+    it('ngOnChanges with new polylinePath produces a NEW array reference (recompute works)', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      const path1 = component.polylinePath;
+
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, [makeStop(1, true)]));
+      const path2 = component.polylinePath;
+
+      expect(path2).not.toBe(path1);
+      expect(path2.length).toBe(2);
+    });
+
+    it('selection-only change does NOT update mapOptions reference (no unnecessary center re-apply)', () => {
+      // This was a key concern: toggling the direction selector must not cause
+      // the map to re-apply options (which would re-center and start the loop).
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      const ref1 = component.mapOptions;
+
+      component.selectedPickupSlug = 'stop-1';
+      component.ngOnChanges(changes('selectedPickupSlug', 'stop-1', null));
+      const ref2 = component.mapOptions;
+
+      expect(ref2).toBe(ref1); // Same reference — @angular/google-maps will not call setOptions
+    });
+
+  });
+
+  // -------------------------------------------------------------------------
+  // Marker regression tests — require google.maps stub
+  // -------------------------------------------------------------------------
+
+  describe('marker precompute (requires google.maps stub)', () => {
+
+    beforeEach(() => {
+      installGoogleMock();
+    });
+
+    afterEach(() => {
+      removeGoogleMock();
+    });
+
+    it('[FAILS on old code] pickupMarkers is a precomputed field returning SAME reference on consecutive reads', () => {
+      // Old code had no pickupMarkers field — markers were computed via getPickupMarkerOptions(stop)
+      // called in the template on every CD pass. New code precomputes and stores a stable array.
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const ref1 = component.pickupMarkers;
+      const ref2 = component.pickupMarkers;
+
+      expect(ref1).toBe(ref2);
+    });
+
+    it('pickupMarkers contains one entry per stop with correct slug', () => {
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      expect(component.pickupMarkers.length).toBe(2);
+      expect(component.pickupMarkers[0].slug).toBe('stop-1');
+      expect(component.pickupMarkers[1].slug).toBe('stop-2');
+    });
+
+    it('selectedPickupSlug change produces a NEW pickupMarkers reference', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      const ref1 = component.pickupMarkers;
+
+      component.selectedPickupSlug = 'stop-1';
+      component.ngOnChanges(changes('selectedPickupSlug', 'stop-1', null));
+      const ref2 = component.pickupMarkers;
+
+      expect(ref2).not.toBe(ref1);
+    });
+
+    it('selected marker uses larger icon size (44) than unselected (36)', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      const normalSize = (component.pickupMarkers[0].options.icon as google.maps.Icon).scaledSize as unknown as MockSize;
+      expect(normalSize.w).toBe(36);
+
+      component.selectedPickupSlug = 'stop-1';
+      component.ngOnChanges(changes('selectedPickupSlug', 'stop-1', null));
+      const selectedSize = (component.pickupMarkers[0].options.icon as google.maps.Icon).scaledSize as unknown as MockSize;
+      expect(selectedSize.w).toBe(44);
+    });
+
+    it('selected marker has higher zIndex (100) than unselected (order value)', () => {
+      component.pickupStops = [makeStop(3, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      expect(component.pickupMarkers[0].options.zIndex).toBe(3); // order
+
+      component.selectedPickupSlug = 'stop-3';
+      component.ngOnChanges(changes('selectedPickupSlug', 'stop-3', null));
+      expect(component.pickupMarkers[0].options.zIndex).toBe(100);
+    });
+
+    it('markers are NOT computed (no crash, empty array) when google.maps is unavailable', () => {
+      removeGoogleMock(); // Temporarily remove for this test
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      expect(component.pickupMarkers.length).toBe(0);
+      expect(component.dropoffMarkers.length).toBe(0);
+
+      installGoogleMock(); // Restore so afterEach removeGoogleMock has something to remove
+    });
+
+    it('dropoffMarkers uses red (#DC3545) color in SVG url', () => {
+      component.dropoffStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
+
+      const icon = component.dropoffMarkers[0].options.icon as google.maps.Icon;
+      expect(icon.url).toContain('%23DC3545'); // URL-encoded #DC3545
+    });
+
+    it('pickupMarkers uses blue (#3BB0E7) color in SVG url', () => {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const icon = component.pickupMarkers[0].options.icon as google.maps.Icon;
+      expect(icon.url).toContain('%233BB0E7'); // URL-encoded #3BB0E7
+    });
+
+  });
+
 });

@@ -16,6 +16,11 @@ interface GoogleWindow {
   };
 }
 
+interface MarkerEntry {
+  slug: string;
+  options: google.maps.MarkerOptions;
+}
+
 @Component({
   selector: 'app-route-map-panel',
   templateUrl: './route-map-panel.component.html',
@@ -34,6 +39,33 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   mapsLoaded = false;
   mapsError = false;
 
+  // Precomputed stable fields — only reassigned when the underlying inputs change.
+  // Keeping them as fields (not getters) prevents @angular/google-maps from seeing
+  // a new object reference on every change-detection pass, which was the root cause
+  // of the direction-toggle CD storm (GitHub issue #73).
+  mapCenter: google.maps.LatLngLiteral = { lat: 13.7563, lng: 100.5018 };
+
+  mapOptions: google.maps.MapOptions = {
+    zoom: 10,
+    center: { lat: 13.7563, lng: 100.5018 },
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+  };
+
+  polylinePath: google.maps.LatLngLiteral[] = [];
+
+  // Constant — never changes, so safe as a readonly field.
+  readonly polylineOptions: google.maps.PolylineOptions = {
+    strokeColor: '#3BB0E7',
+    strokeWeight: 4,
+    strokeOpacity: 0.85,
+  };
+
+  // Precomputed marker arrays for *ngFor — avoids per-marker method calls in the template.
+  pickupMarkers: MarkerEntry[] = [];
+  dropoffMarkers: MarkerEntry[] = [];
+
   get showMap(): boolean {
     return this.mapsLoaded && !!this.mapsApiKey && this.hasCoordinates;
   }
@@ -45,36 +77,105 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     );
   }
 
-  get mapCenter(): google.maps.LatLngLiteral {
+  trackBySlug(_index: number, item: MarkerEntry): string {
+    return item.slug;
+  }
+
+  stopHasCoords(stop: RouteStop): boolean {
+    return stop.latitude !== null && stop.longitude !== null;
+  }
+
+  ngOnInit(): void {
+    if (!this.mapsApiKey) {
+      return;
+    }
+
+    const win = window as unknown as GoogleWindow;
+    if (win.google?.maps) {
+      this.mapsLoaded = true;
+      this.recomputeMarkers();
+      return;
+    }
+
+    const existing = document.querySelector('script[data-maps-api]');
+    if (existing) {
+      existing.addEventListener('load', () => {
+        this.mapsLoaded = true;
+        this.recomputeMarkers();
+      });
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.setAttribute('data-maps-api', 'true');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${this.mapsApiKey}`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      this.mapsLoaded = true;
+      this.recomputeMarkers();
+    };
+    script.onerror = () => {
+      this.mapsError = true;
+    };
+    document.head.appendChild(script);
+  }
+
+  ngOnChanges(changes: SimpleChanges): void {
+    const stopsChanged = 'pickupStops' in changes || 'dropoffStops' in changes;
+    const pickupSelectionChanged = 'selectedPickupSlug' in changes;
+    const dropoffSelectionChanged = 'selectedDropoffSlug' in changes;
+
+    if (stopsChanged) {
+      // Stop changes affect map center, polyline path, AND all markers.
+      this.recomputeMapData();
+      this.recomputeMarkers();
+    } else {
+      // Selection-only changes: update only the affected marker array.
+      // mapOptions/mapCenter must NOT be touched — unnecessary center re-apply would
+      // re-trigger the same CD storm that this fix is designed to prevent.
+      if (pickupSelectionChanged) {
+        this.recomputePickupMarkers();
+      }
+      if (dropoffSelectionChanged) {
+        this.recomputeDropoffMarkers();
+      }
+    }
+  }
+
+  ngOnDestroy(): void {}
+
+  // ---------------------------------------------------------------------------
+  // Private recompute methods
+  // ---------------------------------------------------------------------------
+
+  private recomputeMapData(): void {
     const stopsWithCoords = [
       ...this.pickupStops,
       ...this.dropoffStops,
     ].filter((s) => s.latitude !== null && s.longitude !== null);
 
-    if (stopsWithCoords.length === 0) {
-      return { lat: 13.7563, lng: 100.5018 }; // Bangkok default
-    }
+    const center: google.maps.LatLngLiteral =
+      stopsWithCoords.length === 0
+        ? { lat: 13.7563, lng: 100.5018 } // Bangkok default
+        : {
+            lat:
+              stopsWithCoords.reduce((sum, s) => sum + (s.latitude ?? 0), 0) /
+              stopsWithCoords.length,
+            lng:
+              stopsWithCoords.reduce((sum, s) => sum + (s.longitude ?? 0), 0) /
+              stopsWithCoords.length,
+          };
 
-    const lat =
-      stopsWithCoords.reduce((sum, s) => sum + (s.latitude ?? 0), 0) /
-      stopsWithCoords.length;
-    const lng =
-      stopsWithCoords.reduce((sum, s) => sum + (s.longitude ?? 0), 0) /
-      stopsWithCoords.length;
-    return { lat, lng };
-  }
-
-  get mapOptions(): google.maps.MapOptions {
-    return {
+    this.mapCenter = center;
+    this.mapOptions = {
       zoom: 10,
-      center: this.mapCenter,
+      center,
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
     };
-  }
 
-  get polylinePath(): google.maps.LatLngLiteral[] {
     const pickupCoords = this.pickupStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
       .sort((a, b) => a.order - b.order)
@@ -85,49 +186,51 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       .sort((a, b) => a.order - b.order)
       .map((s) => ({ lat: s.latitude as number, lng: s.longitude as number }));
 
-    return [...pickupCoords, ...dropoffCoords];
+    this.polylinePath = [...pickupCoords, ...dropoffCoords];
   }
 
-  get polylineOptions(): google.maps.PolylineOptions {
-    return {
-      strokeColor: '#3BB0E7',
-      strokeWeight: 4,
-      strokeOpacity: 0.85,
-    };
+  private recomputeMarkers(): void {
+    this.recomputePickupMarkers();
+    this.recomputeDropoffMarkers();
   }
 
-  getPickupMarkerOptions(stop: RouteStop): google.maps.MarkerOptions {
-    const isSelected = stop.slug === this.selectedPickupSlug;
+  private recomputePickupMarkers(): void {
+    const win = window as unknown as GoogleWindow;
+    if (!win.google?.maps) {
+      // Google Maps JS not loaded yet; markers will be built once the script
+      // fires its onload handler (which also calls recomputeMarkers).
+      return;
+    }
+    this.pickupMarkers = this.pickupStops.map((stop) => ({
+      slug: stop.slug,
+      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, '#3BB0E7'),
+    }));
+  }
+
+  private recomputeDropoffMarkers(): void {
+    const win = window as unknown as GoogleWindow;
+    if (!win.google?.maps) {
+      return;
+    }
+    this.dropoffMarkers = this.dropoffStops.map((stop) => ({
+      slug: stop.slug,
+      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, '#DC3545'),
+    }));
+  }
+
+  private buildMarkerOptions(
+    stop: RouteStop,
+    selectedSlug: string | null,
+    color: string
+  ): google.maps.MarkerOptions {
+    const isSelected = stop.slug === selectedSlug;
     return {
       position: {
         lat: stop.latitude as number,
         lng: stop.longitude as number,
       },
       icon: {
-        url: this.buildSvgMarkerUrl(stop.order, '#3BB0E7', isSelected),
-        scaledSize: new google.maps.Size(
-          isSelected ? 44 : 36,
-          isSelected ? 44 : 36
-        ),
-        anchor: new google.maps.Point(
-          isSelected ? 22 : 18,
-          isSelected ? 44 : 36
-        ),
-      },
-      title: stop.name,
-      zIndex: isSelected ? 100 : stop.order,
-    };
-  }
-
-  getDropoffMarkerOptions(stop: RouteStop): google.maps.MarkerOptions {
-    const isSelected = stop.slug === this.selectedDropoffSlug;
-    return {
-      position: {
-        lat: stop.latitude as number,
-        lng: stop.longitude as number,
-      },
-      icon: {
-        url: this.buildSvgMarkerUrl(stop.order, '#DC3545', isSelected),
+        url: this.buildSvgMarkerUrl(stop.order, color, isSelected),
         scaledSize: new google.maps.Size(
           isSelected ? 44 : 36,
           isSelected ? 44 : 36
@@ -158,45 +261,4 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     </svg>`;
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   }
-
-  stopHasCoords(stop: RouteStop): boolean {
-    return stop.latitude !== null && stop.longitude !== null;
-  }
-
-  ngOnInit(): void {
-    if (!this.mapsApiKey) {
-      return;
-    }
-
-    const win = window as unknown as GoogleWindow;
-    if (win.google?.maps) {
-      this.mapsLoaded = true;
-      return;
-    }
-
-    const existing = document.querySelector('script[data-maps-api]');
-    if (existing) {
-      existing.addEventListener('load', () => {
-        this.mapsLoaded = true;
-      });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.setAttribute('data-maps-api', 'true');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${this.mapsApiKey}`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      this.mapsLoaded = true;
-    };
-    script.onerror = () => {
-      this.mapsError = true;
-    };
-    document.head.appendChild(script);
-  }
-
-  ngOnChanges(_changes: SimpleChanges): void {}
-
-  ngOnDestroy(): void {}
 }
