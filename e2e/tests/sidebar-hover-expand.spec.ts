@@ -1,23 +1,28 @@
 /**
- * Playwright acceptance tests — sidebar hover-expand feature
+ * Playwright acceptance tests — sidebar always-reserved-column layout
+ *
+ * Supersedes the hover-expand spec (ADR 0005 amended 2026-06-30).
+ * The sidebar is now ALWAYS an in-flow flex column — never a floating overlay.
+ * Two widths are toggled by an EXPLICIT click on the toggle button:
+ *   - Expanded (default): 280px reserved column, labels visible.
+ *   - Collapsed: 76px icon rail, labels hidden.
  *
  * Runs under the standard playwright.config.ts (testDir: ./e2e, port 4200).
- * Uses the shared admin-auth.json fixture produced by e2e/global-setup.ts:
- * admin@system.local outranks salesperson in the role hierarchy, so the
- * /staff/* routes and their nav links render (needed by AC6).
+ * Uses the shared admin-auth.json fixture produced by e2e/global-setup.ts.
  *
  * Acceptance criteria covered:
- *   AC1  — 76px rail at rest; hover expands; mouse-leave collapses after ~120ms
- *   AC2  — Overlay no-reflow: main content X position unchanged during expand/collapse
- *   AC3  — PIN: locks open on mouse-leave; content reflows to 280px; unpin reverts
- *   AC4  — Pin state persists in localStorage (key: obrs-sidebar-collapsed)
- *   AC5a — Same hover-expand behavior on /staff/schedules
- *   AC5b — Same hover-expand behavior on /admin/dashboard
- *   AC6  — Keyboard a11y: focus-in expands; focus-out collapses; pin has aria-pressed
- *   AC7  — Mobile ≤1100px: hamburger works; no hover expand; pin NOT visible in drawer
- *   AC8  — Pin icon FILL 1 when pinned, FILL 0 when unpinned (staff AND admin)
- *   AC9  — Logo is Home link in both rail and expanded states (staff AND admin)
- *   AC10 — ESC collapses expanded (unpinned) sidebar immediately
+ *   AC1  — Default: expanded 280px reserved column; no hover change
+ *   AC2  — Content starts to the right of the sidebar in BOTH states (no overlap)
+ *   AC3  — Toggle click collapses to 76px rail; main content reflows rightward
+ *   AC4  — Toggle from rail expands back to 280px; localStorage persists state
+ *   AC5a — Same always-reserved-column behavior on /staff/schedules
+ *   AC5b — Same always-reserved-column behavior on /admin/dashboard
+ *   AC6  — Toggle button is visible in BOTH states (not hidden in rail)
+ *   AC6b — Toggle button aria-pressed reflects expanded/collapsed state
+ *   AC7  — Mobile ≤1100px: hamburger drawer unchanged; desktop toggle hidden
+ *   AC8  — Logo is Home link in both collapsed and expanded states (staff + admin)
+ *   AC9  — ESC closes mobile drawer and profile menu; desktop sidebar state unchanged
+ *   AC10 — Stored "1" on reload → starts collapsed; stored "0" → starts expanded
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -27,317 +32,289 @@ const SIDEBAR_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-/** Clear the pin preference so each test starts in default icon-rail mode. */
-async function clearPinPref(page: Page): Promise<void> {
+/** Clear stored preference so the test starts from the fresh-user default. */
+async function clearSidebarPref(page: Page): Promise<void> {
   await page.evaluate(() => localStorage.removeItem('obrs-sidebar-collapsed'));
 }
 
-/** Hover inside the sidebar (centre of it). */
-async function hoverSidebar(page: Page): Promise<void> {
-  const sidebar = page.locator('.admin-sidebar');
-  await sidebar.hover();
+/** Write a specific sidebar preference without reloading. */
+async function setSidebarPref(page: Page, value: '0' | '1'): Promise<void> {
+  await page.evaluate((v) => localStorage.setItem('obrs-sidebar-collapsed', v), value);
 }
 
-/** Move mouse to the centre of .admin-main (off the sidebar). */
-async function mouseOffSidebar(page: Page): Promise<void> {
-  const mainBox = await page.locator('.admin-main').boundingBox();
-  if (!mainBox) throw new Error('admin-main not found');
-  await page.mouse.move(mainBox.x + mainBox.width / 2, mainBox.y + 50);
+/** Click the sidebar toggle button. */
+async function clickToggle(page: Page): Promise<void> {
+  await page.locator('.admin-sidebar-pin').click();
 }
 
-// ── Staff layout tests (desktop 1400×900) ─────────────────────────────────────
+// ── Staff layout tests (desktop 1400×900 default viewport) ────────────────────
 
-test.describe('Sidebar hover-expand — staff layout', () => {
+test.describe('Sidebar always-reserved-column — staff layout', () => {
   test.use({ storageState: SIDEBAR_AUTH });
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/staff/sell');
     await page.waitForLoadState('domcontentloaded');
-    await clearPinPref(page);
-    // Ensure sidebar starts collapsed (clear pin, then reload to pick up default)
+    // Clear preference and reload so the component reads the fresh default.
+    await clearSidebarPref(page);
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
   });
 
-  // ── AC1: 76px rail at rest; hover expands; mouse-leave collapses ─────────────
+  // ── AC1: Default = expanded 280px; hover does NOT change width ────────────────
 
-  test('AC1: sidebar rests as 76px rail; hover expands; mouse-leave collapses after ~120ms', async ({ page }) => {
+  test('AC1: sidebar starts as expanded 280px reserved column by default', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
     const sidebar = page.locator('.admin-sidebar');
 
-    // Rail state — not expanded
+    // Default: expanded (is-sidebar-pinned present)
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
+
+    const sidebarWidth = await sidebar.evaluate((el: Element) => el.getBoundingClientRect().width);
+    expect(sidebarWidth).toBe(280);
+
+    // Hover inside the sidebar — width must NOT change (no hover model)
+    await sidebar.hover();
+    await page.waitForTimeout(200);
+    const widthAfterHover = await sidebar.evaluate((el: Element) => el.getBoundingClientRect().width);
+    expect(widthAfterHover).toBe(280);
+    // is-expanded must never appear (overlay model gone)
     await expect(sidebar).not.toHaveClass(/is-expanded/);
+  });
+
+  // ── AC2: Content starts to the right in BOTH states — no overlap ─────────────
+
+  test('AC2: main content starts immediately to the right of the sidebar in both states', async ({ page }) => {
+    const sidebar = page.locator('.admin-sidebar');
+    const main = page.locator('.admin-main');
+
+    // Expanded: main starts at ~280px
+    const expandedSidebarBox = await sidebar.boundingBox();
+    const expandedMainBox = await main.boundingBox();
+    expect(expandedSidebarBox).not.toBeNull();
+    expect(expandedMainBox).not.toBeNull();
+    // main.x should equal (sidebar.x + sidebar.width) within 2px tolerance
+    expect(expandedMainBox!.x).toBeCloseTo(expandedSidebarBox!.x + expandedSidebarBox!.width, -1);
+
+    // Collapse → main reflows left
+    await clickToggle(page);
+    await page.waitForTimeout(250); // allow transition
+    const collapsedSidebarBox = await sidebar.boundingBox();
+    const collapsedMainBox = await main.boundingBox();
+    expect(collapsedSidebarBox).not.toBeNull();
+    expect(collapsedMainBox).not.toBeNull();
+    expect(collapsedSidebarBox!.width).toBe(76);
+    expect(collapsedMainBox!.x).toBeCloseTo(collapsedSidebarBox!.x + collapsedSidebarBox!.width, -1);
+  });
+
+  // ── AC3: Toggle collapses to 76px rail; main content reflows ─────────────────
+
+  test('AC3: toggle click collapses to 76px icon rail; shell loses is-sidebar-pinned', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
+    const sidebar = page.locator('.admin-sidebar');
+
+    // Start expanded
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
+
+    // Click toggle to collapse
+    await clickToggle(page);
+    await page.waitForTimeout(250);
+
+    await expect(shell).not.toHaveClass(/is-sidebar-pinned/);
 
     const railWidth = await sidebar.evaluate((el: Element) => el.getBoundingClientRect().width);
     expect(railWidth).toBe(76);
-
-    // Hover → expand
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-
-    // Mouse off → wait for 120ms delay
-    await mouseOffSidebar(page);
-    await page.waitForTimeout(200);
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
   });
 
-  // ── AC2: Overlay no-reflow — content X position stable ───────────────────────
+  // ── AC4: Toggle from rail expands back; localStorage persists ─────────────────
 
-  test('AC2: hover-expand is overlay — main content X position does not change', async ({ page }) => {
-    const main = page.locator('.admin-main');
-
-    const beforeBox = await main.boundingBox();
-    expect(beforeBox).not.toBeNull();
-
-    // Hover to expand
-    await hoverSidebar(page);
-    await page.locator('.admin-sidebar').waitFor({ state: 'visible' });
-    await expect(page.locator('.admin-sidebar')).toHaveClass(/is-expanded/);
-
-    const duringBox = await main.boundingBox();
-    expect(duringBox).not.toBeNull();
-    expect(duringBox!.x).toBe(beforeBox!.x);
+  test('AC4: collapse writes "1" to localStorage; expand writes "0"; reload restores state', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
 
     // Collapse
-    await mouseOffSidebar(page);
-    await page.waitForTimeout(200);
-    const afterBox = await main.boundingBox();
-    expect(afterBox).not.toBeNull();
-    expect(afterBox!.x).toBe(beforeBox!.x);
-  });
+    await clickToggle(page);
+    const afterCollapse = await page.evaluate(() => localStorage.getItem('obrs-sidebar-collapsed'));
+    expect(afterCollapse).toBe('1');
 
-  // ── AC3: PIN locks sidebar open; content reflows; unpin reverts ──────────────
-
-  test('AC3: pin locks sidebar open on mouse-leave; pinned sidebar reserves 280px column; unpin reverts', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
-    const shell = page.locator('.admin-shell');
-    const pinBtn = page.locator('.admin-sidebar-pin');
-
-    // Expand, then pin
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-    await pinBtn.click();
-
-    // Move mouse off — sidebar must remain open
-    await mouseOffSidebar(page);
-    await page.waitForTimeout(200);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-    await expect(shell).toHaveClass(/is-sidebar-pinned/);
-
-    // Reserved 280px layout column: sidebar width in flow must be 280px
-    const pinnedWidth = await sidebar.evaluate((el: Element) => el.getBoundingClientRect().width);
-    expect(pinnedWidth).toBe(280);
-
-    // Content (admin-main) starts to the right of the 280px column
-    const mainBox = await page.locator('.admin-main').boundingBox();
-    expect(mainBox).not.toBeNull();
-    expect(mainBox!.x).toBeCloseTo(280, -1); // within ~10px
-
-    // Unpin → returns to hover mode
-    await pinBtn.click();
-    await mouseOffSidebar(page);
-    await page.waitForTimeout(200);
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
+    // Reload → should stay collapsed
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
     await expect(shell).not.toHaveClass(/is-sidebar-pinned/);
-  });
 
-  // ── AC4: Pin preference persists in localStorage ──────────────────────────────
+    // Expand
+    await clickToggle(page);
+    const afterExpand = await page.evaluate(() => localStorage.getItem('obrs-sidebar-collapsed'));
+    expect(afterExpand).toBe('0');
 
-  test('AC4: pin writes "0" to localStorage; reload stays pinned; unpin writes "1"; reload back to rail', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
-    const pinBtn = page.locator('.admin-sidebar-pin');
-
-    // Pin
-    await hoverSidebar(page);
-    await pinBtn.click();
-    const stored = await page.evaluate(() => localStorage.getItem('obrs-sidebar-collapsed'));
-    expect(stored).toBe('0');
-
-    // Reload — sidebar should be pinned open
+    // Reload → should stay expanded
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
-    await expect(sidebar).toHaveClass(/is-expanded/);
-    await expect(page.locator('.admin-shell')).toHaveClass(/is-sidebar-pinned/);
-
-    // Unpin
-    await page.locator('.admin-sidebar-pin').click();
-    const storedAfterUnpin = await page.evaluate(() => localStorage.getItem('obrs-sidebar-collapsed'));
-    expect(storedAfterUnpin).toBe('1');
-
-    // Reload — sidebar should be in rail mode
-    await page.reload();
-    await page.waitForLoadState('domcontentloaded');
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
-    await expect(page.locator('.admin-shell')).not.toHaveClass(/is-sidebar-pinned/);
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC5a: Same behavior on /staff/schedules ───────────────────────────────────
+  // ── AC5a: Same always-reserved-column behavior on /staff/schedules ────────────
 
-  test('AC5a: same hover-expand behavior on /staff/schedules', async ({ page }) => {
+  test('AC5a: always-reserved-column behavior on /staff/schedules', async ({ page }) => {
     await page.goto('/staff/schedules');
     await page.waitForLoadState('domcontentloaded');
 
+    const shell = page.locator('.admin-shell');
     const sidebar = page.locator('.admin-sidebar');
+
+    // Default: expanded
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
     await expect(sidebar).not.toHaveClass(/is-expanded/);
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-
-    await mouseOffSidebar(page);
-    await page.waitForTimeout(200);
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
+    // Toggle to collapse
+    await clickToggle(page);
+    await expect(shell).not.toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC8: Pin icon FILL variation — staff ─────────────────────────────────────
+  // ── AC6: Toggle button is visible in BOTH states ──────────────────────────────
 
-  test('AC8: pin icon is FILL 0 when unpinned and FILL 1 when pinned (staff)', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
-    const pinBtn = page.locator('.admin-sidebar-pin');
-    const pinIcon = pinBtn.locator('.material-symbols-outlined');
+  test('AC6: toggle button is visible and actionable in both expanded and collapsed states', async ({ page }) => {
+    const toggleBtn = page.locator('.admin-sidebar-pin');
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
+    // Expanded state: button visible
+    await expect(toggleBtn).toBeVisible();
 
-    // Unpinned: FILL 0
-    const unpinnedVar = await pinIcon.evaluate(
-      (el: HTMLElement) => el.style.fontVariationSettings
-    );
-    expect(unpinnedVar).toContain('"FILL" 0');
+    // Collapse
+    await clickToggle(page);
+    await page.waitForTimeout(250);
 
-    // Pin — FILL 1
-    await pinBtn.click();
-    const pinnedVar = await pinIcon.evaluate(
-      (el: HTMLElement) => el.style.fontVariationSettings
-    );
-    expect(pinnedVar).toContain('"FILL" 1');
+    // Collapsed state: button still visible
+    await expect(toggleBtn).toBeVisible();
+
+    // Expand again via the button (proves it is interactable in rail mode)
+    await clickToggle(page);
+    await page.waitForTimeout(250);
+    await expect(page.locator('.admin-shell')).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC9: Logo is Home link in rail and expanded states (staff) ────────────────
+  // ── AC6b: Toggle button aria-pressed reflects state ──────────────────────────
 
-  test('AC9: brand logo links to /home in both rail and expanded states (staff)', async ({ page }) => {
+  test('AC6b: toggle button aria-pressed is "true" when expanded and "false" when collapsed', async ({ page }) => {
+    const toggleBtn = page.locator('.admin-sidebar-pin');
+
+    // Expanded: aria-pressed="true"
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
+
+    // Collapse
+    await clickToggle(page);
+    await page.waitForTimeout(250);
+
+    // Collapsed: aria-pressed="false"
+    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  // ── AC8: Logo is Home link in both states (staff) ────────────────────────────
+
+  test('AC8: brand logo links to /home in both collapsed and expanded states (staff)', async ({ page }) => {
     const brandLink = page.locator('.admin-brand-link');
-    const sidebar = page.locator('.admin-sidebar');
 
-    // Rail state
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
+    // Expanded
     await expect(brandLink).toHaveAttribute('href', '/home');
 
-    // Expanded state
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
+    // Collapse
+    await clickToggle(page);
+    await page.waitForTimeout(250);
+
+    // Collapsed
     await expect(brandLink).toHaveAttribute('href', '/home');
   });
 
-  // ── AC10: ESC collapses expanded (unpinned) sidebar immediately ───────────────
+  // ── AC9: ESC closes mobile drawer / profile menu; desktop sidebar unchanged ───
 
-  test('AC10: ESC collapses expanded unpinned sidebar immediately (no delay)', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
+  test('AC9: ESC closes profile menu; sidebar expand/collapse state is NOT changed by ESC', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
+    // Default: expanded
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
 
+    // Open profile menu
+    await page.locator('.admin-avatar').click();
+    const profileMenu = page.locator('.admin-profile-menu');
+    await expect(profileMenu).toBeVisible();
+
+    // ESC closes profile menu
     await page.keyboard.press('Escape');
-    // No waitForTimeout — ESC should collapse immediately
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
+    await expect(profileMenu).not.toBeVisible();
+
+    // Sidebar is still expanded (ESC does not collapse the reserved column)
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── Keyboard accessibility (AC6) ─────────────────────────────────────────────
+  // ── AC10: Reload with stored "1" → collapsed; "0" → expanded ─────────────────
 
-  test('AC6: focusing a nav link expands the sidebar; focusing outside collapses it (unpinned)', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
-    const firstNavLink = page.locator('.admin-nav-link').first();
+  test('AC10: stored "1" on reload starts collapsed; stored "0" starts expanded', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
 
-    // Sidebar starts collapsed
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
+    // Force collapsed pref and reload
+    await setSidebarPref(page, '1');
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await expect(shell).not.toHaveClass(/is-sidebar-pinned/);
 
-    // Focus a nav link inside the sidebar — focusin fires on aside → expands
-    await firstNavLink.focus();
-    await expect(sidebar).toHaveClass(/is-expanded/);
-
-    // Move focus to a FOCUSABLE element outside the sidebar (the theme toggle button
-    // in the topbar is a real <button> that accepts focus via Tab or focus()).
-    await page.locator('.admin-topbar-actions button[aria-pressed]').focus();
-    // focusout on the sidebar: relatedTarget is outside sidebar → collapses immediately
-    await expect(sidebar).not.toHaveClass(/is-expanded/);
-  });
-
-  test('AC6b: pin button carries aria-pressed reflecting pin state and is keyboard-reachable', async ({ page }) => {
-    const pinBtn = page.locator('.admin-sidebar-pin');
-    const sidebar = page.locator('.admin-sidebar');
-
-    // Expand sidebar so pin button is visible
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-
-    // aria-pressed should be "false" when unpinned
-    await expect(pinBtn).toHaveAttribute('aria-pressed', 'false');
-
-    // Click pin via keyboard (Enter key after focus)
-    await pinBtn.focus();
-    await page.keyboard.press('Enter');
-    await expect(pinBtn).toHaveAttribute('aria-pressed', 'true');
+    // Force expanded pref and reload
+    await setSidebarPref(page, '0');
+    await page.reload();
+    await page.waitForLoadState('domcontentloaded');
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
   });
 });
 
 // ── Admin layout tests ────────────────────────────────────────────────────────
 
-test.describe('Sidebar hover-expand — admin layout', () => {
+test.describe('Sidebar always-reserved-column — admin layout', () => {
   test.use({ storageState: SIDEBAR_AUTH });
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/admin/dashboard');
     await page.waitForLoadState('domcontentloaded');
-    await clearPinPref(page);
+    await clearSidebarPref(page);
     await page.reload();
     await page.waitForLoadState('domcontentloaded');
   });
 
-  // ── AC5b: Same behavior on /admin/dashboard ───────────────────────────────────
+  // ── AC5b: Same always-reserved-column behavior on /admin/dashboard ────────────
 
-  test('AC5b: hover-expand behavior on /admin/dashboard', async ({ page }) => {
+  test('AC5b: always-reserved-column behavior on /admin/dashboard (no hover expand)', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
     const sidebar = page.locator('.admin-sidebar');
 
+    // Default: expanded; no is-expanded class ever
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
     await expect(sidebar).not.toHaveClass(/is-expanded/);
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
-
-    await mouseOffSidebar(page);
+    // Hover does NOT change state
+    await sidebar.hover();
     await page.waitForTimeout(200);
     await expect(sidebar).not.toHaveClass(/is-expanded/);
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC8b: Pin icon variation — admin ─────────────────────────────────────────
+  test('AC5b-toggle: toggle collapses and expands on /admin/dashboard', async ({ page }) => {
+    const shell = page.locator('.admin-shell');
 
-  test('AC8b: pin icon is FILL 0 unpinned and FILL 1 pinned (admin)', async ({ page }) => {
-    const sidebar = page.locator('.admin-sidebar');
-    const pinBtn = page.locator('.admin-sidebar-pin');
-    const pinIcon = pinBtn.locator('.material-symbols-outlined');
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
+    await clickToggle(page);
+    await expect(shell).not.toHaveClass(/is-sidebar-pinned/);
 
-    const unpinnedVar = await pinIcon.evaluate(
-      (el: HTMLElement) => el.style.fontVariationSettings
-    );
-    expect(unpinnedVar).toContain('"FILL" 0');
-
-    await pinBtn.click();
-    const pinnedVar = await pinIcon.evaluate(
-      (el: HTMLElement) => el.style.fontVariationSettings
-    );
-    expect(pinnedVar).toContain('"FILL" 1');
+    await clickToggle(page);
+    await expect(shell).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC9b: Logo links to /home (admin) ────────────────────────────────────────
+  // ── AC8b: Logo links to /home (admin) ────────────────────────────────────────
 
-  test('AC9b: brand logo links to /home in both rail and expanded states (admin)', async ({ page }) => {
+  test('AC8b: brand logo links to /home in both collapsed and expanded states (admin)', async ({ page }) => {
     const brandLink = page.locator('.admin-brand-link');
-    const sidebar = page.locator('.admin-sidebar');
 
     await expect(brandLink).toHaveAttribute('href', '/home');
 
-    await hoverSidebar(page);
-    await expect(sidebar).toHaveClass(/is-expanded/);
+    await clickToggle(page);
+    await page.waitForTimeout(250);
+
     await expect(brandLink).toHaveAttribute('href', '/home');
   });
 });
@@ -350,33 +327,25 @@ test.describe('Sidebar — mobile viewport ≤1100px', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/staff/sell');
     await page.waitForLoadState('domcontentloaded');
-    await clearPinPref(page);
+    await clearSidebarPref(page);
   });
 
-  // ── AC7: Mobile hamburger works; no rail/hover expand; pin NOT visible ─────────
+  // ── AC7: Mobile hamburger drawer unchanged; desktop toggle hidden ──────────────
 
-  test('AC7: pin button is hidden on mobile; hamburger opens/closes drawer; sidebar not rail at rest', async ({ page }) => {
-    const pinBtn = page.locator('.admin-sidebar-pin');
+  test('AC7: hamburger opens/closes drawer; sidebar not a 76px rail on mobile', async ({ page }) => {
     const hamburger = page.locator('.admin-menu-toggle');
     const sidebar = page.locator('.admin-sidebar');
 
-    // Pin button must NOT be visible (display:none base rule covers mobile)
-    await expect(pinBtn).toBeHidden();
-
-    // Hamburger toggle must be visible
+    // Hamburger toggle must be visible on mobile
     await expect(hamburger).toBeVisible();
 
-    // At rest, mobile sidebar is off-canvas (transform: translateX(-100%)).
-    // It should NOT carry is-open or is-expanded on load.
+    // At rest, mobile sidebar is off-canvas — should NOT have is-open
     await expect(sidebar).not.toHaveClass(/is-open/);
 
-    // Rail width should NOT be 76px — mobile sidebar has fixed 280px width when
-    // off-canvas; the 76px rail is desktop-only (min-width: 1101px block).
-    // We verify no rail by checking there is no visible 76px element in the page flow.
+    // Mobile sidebar is off-screen; its width is 280px (not the 76px rail)
     const sidebarBox = await sidebar.boundingBox();
-    // Mobile sidebar is off-screen: x would be negative or element hidden
-    // Either way it must NOT be 76px wide as a rail
     if (sidebarBox) {
+      // Either off-screen (negative x) or 280px wide — NOT 76px
       expect(sidebarBox.width).not.toBe(76);
     }
 
@@ -384,26 +353,23 @@ test.describe('Sidebar — mobile viewport ≤1100px', () => {
     await hamburger.click();
     await expect(sidebar).toHaveClass(/is-open/);
 
-    // On mobile the drawer (z-index 40) overlaps the topbar hamburger button
-    // (topbar z-index 20). The intended close path is the backdrop click.
+    // Backdrop click closes it
     const backdrop = page.locator('.admin-sidebar-backdrop');
     await expect(backdrop).toBeVisible();
     await backdrop.click();
     await expect(sidebar).not.toHaveClass(/is-open/);
   });
 
-  test('AC7b: mobile drawer footer (logout) is pinned to bottom and visible', async ({ page }) => {
+  test('AC7b: mobile drawer footer (logout) is visible inside the drawer', async ({ page }) => {
     const hamburger = page.locator('.admin-menu-toggle');
     const sidebar = page.locator('.admin-sidebar');
 
     await hamburger.click();
     await expect(sidebar).toHaveClass(/is-open/);
 
-    // Footer with logout must be present inside the drawer
     const footer = page.locator('.admin-sidebar-footer');
     await expect(footer).toBeVisible();
 
-    // The logout button must be in the footer
     const logoutBtn = page.locator('.admin-sidebar-footer .admin-nav-btn');
     await expect(logoutBtn).toBeVisible();
   });

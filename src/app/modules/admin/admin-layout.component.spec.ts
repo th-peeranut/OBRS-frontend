@@ -83,41 +83,63 @@ describe('AdminLayoutComponent', () => {
     expect(toggleBtn).withContext('dark mode toggle button should exist').toBeTruthy();
   });
 
-  // ── Hover-expand / pin behaviour (regression for #tbd) ─────────────────────
+  // ── Always-reserved-column toggle behaviour ─────────────────────────────────
 
-  it('sidebar is NOT expanded by default (hover model: icon rail)', () => {
+  it('sidebar starts EXPANDED by default (is-sidebar-pinned on shell, no localStorage entry)', () => {
+    // Default for new users: expanded 280px reserved column.
+    const shell = fixture.debugElement.query(By.css('.admin-shell'));
+    expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
+      .withContext('shell should carry is-sidebar-pinned by default (expanded is the default)')
+      .toBeTrue();
+  });
+
+  it('aside never carries is-expanded class (overlay model removed)', () => {
+    // The hover-overlay .is-expanded class must not appear in the always-reserved model.
     const aside = fixture.debugElement.query(By.css('.admin-sidebar'));
     expect(aside.nativeElement.classList.contains('is-expanded'))
-      .withContext('sidebar should not be expanded on load')
+      .withContext('is-expanded must not be bound in the always-reserved-column model')
       .toBeFalse();
   });
 
-  it('shell carries is-sidebar-pinned class when sidebar is pinned', () => {
+  it('shell loses is-sidebar-pinned after togglePin collapses the sidebar', () => {
+    // Default is expanded → one togglePin call collapses.
     const comp = fixture.componentInstance as AdminLayoutComponent & { togglePin: () => void };
     comp.togglePin();
     fixture.detectChanges();
     const shell = fixture.debugElement.query(By.css('.admin-shell'));
     expect(shell.nativeElement.classList.contains('is-sidebar-pinned'))
-      .withContext('shell should carry is-sidebar-pinned when pinned')
-      .toBeTrue();
+      .withContext('shell should lose is-sidebar-pinned when collapsed')
+      .toBeFalse();
   });
 
-  it('renders the pin button inside .admin-sidebar-panel', () => {
+  it('renders the toggle button inside .admin-sidebar-panel', () => {
     const pinBtn = fixture.debugElement.query(By.css('.admin-sidebar-panel .admin-sidebar-pin'));
-    expect(pinBtn).withContext('pin button should exist inside .admin-sidebar-panel').toBeTruthy();
+    expect(pinBtn).withContext('toggle button should exist inside .admin-sidebar-panel').toBeTruthy();
   });
 
-  it('the .admin-collapse-toggle button is absent (replaced by pin)', () => {
+  it('the .admin-collapse-toggle button is absent (replaced by sidebar-pin toggle)', () => {
     const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
   });
 
-  it('togglePin writes "0" to localStorage when pinned', () => {
+  it('togglePin collapses the sidebar and writes "1" to localStorage (default is expanded "0")', () => {
+    // On init (no storage entry), readPinPreference canonicalises to "0" (expanded).
+    // One togglePin flips to collapsed → writes "1".
     const comp = fixture.componentInstance as AdminLayoutComponent & { togglePin: () => void };
-    comp.togglePin();
+    comp.togglePin(); // expand → collapse
     fixture.detectChanges();
     expect(localStorage.getItem('obrs-sidebar-collapsed'))
-      .withContext('localStorage should be "0" when pinned')
+      .withContext('localStorage should be "1" when collapsed')
+      .toBe('1');
+  });
+
+  it('togglePin restores expanded state and writes "0" to localStorage', () => {
+    const comp = fixture.componentInstance as AdminLayoutComponent & { togglePin: () => void };
+    comp.togglePin(); // collapse
+    comp.togglePin(); // re-expand
+    fixture.detectChanges();
+    expect(localStorage.getItem('obrs-sidebar-collapsed'))
+      .withContext('localStorage should be "0" when expanded')
       .toBe('0');
   });
 });

@@ -43,3 +43,41 @@ Additionally, the original UX used a click-to-collapse chevron mounted on the to
 - Existing users who had the sidebar expanded (stored `'0'`) are silently migrated to "pinned." This is intentional and low-risk (the previous UX and the new pinned state are visually equivalent).
 - Mobile hamburger drawer (`is-sidebar-open`, `toggleSidebar`, `closeSidebar`) is unchanged.
 - The `COLLAPSE_MENU` / `EXPAND_MENU` i18n keys are kept for forward-compatibility; they are no longer referenced in the active templates but may be re-used by a future mobile-specific affordance.
+
+---
+
+## Amendment: Switched to Always-Reserved-Column Model
+
+**Date:** 2026-06-30
+**Status:** Supersedes the hover-overlay + pin model above for desktop ≥1101px.
+
+### Problem (what went wrong with the original decision)
+
+The hover-overlay expansion (`position: absolute`, `z-index: 30`) caused the sidebar panel to float over the page content. On `/admin/dashboard`:
+- The topbar page title ("Dashboard", z-index 35) rendered on top of the overlay panel.
+- KPI cards and the Recent Bookings table bled through the translucent `rgba(…, 0.95)` panel background.
+- The content column began at `76px` (the rail width) regardless of the expanded panel state — it was never reflowed, so the main area permanently lost space without the UI acknowledging it.
+
+The root cause is that an overlay model (absolute positioning, translucency, z-index stacking) is fundamentally incompatible with wanting "no visible overlap" — any opacity < 1, or any content behind a z-index-elevated panel, produces the bleed.
+
+### Decision (2026-06-30)
+
+**Switch to an always-reserved-column model.** The sidebar is ALWAYS an in-flow `flex` child. Two states, toggled by an explicit click:
+
+- **Expanded (default for new users):** `flex: 0 0 280px`, solid `var(--admin-surface-soft)` background, labels visible. `is-sidebar-pinned` class on `.admin-shell`. `localStorage('obrs-sidebar-collapsed') = '0'`.
+- **Collapsed (icon rail):** `flex: 0 0 76px`, labels hidden. No `is-sidebar-pinned`. `localStorage = '1'`.
+
+The hover-expand handlers (`onSidebarMouseEnter`, `onSidebarMouseLeave`, `onSidebarFocusIn`, `onSidebarFocusOut`), the collapse timer, and `isSidebarExpanded` are removed from `SidebarLayoutBaseComponent`. The `is-expanded` class is removed from both templates.
+
+The formerly "pin" button becomes the expand/collapse toggle. Its icon changes from `push_pin` to `chevron_left` / `chevron_right`; its aria-label uses the existing `COLLAPSE_MENU` / `EXPAND_MENU` i18n keys (which were already present for forward-compat as noted above).
+
+**Migration safety:** `'0'` = expanded and `'1'` = collapsed are unchanged. The only change is that an absent key now defaults to expanded (was: icon-rail). Old users who stored `'0'` (was "pinned") stay expanded. Old users who stored `'1'` stay on the rail. New users see expanded.
+
+### Consequences of the amendment
+
+- `isSidebarExpanded` field and all hover/focus handlers removed — no behaviour change risk (they only drove the overlay).
+- The `[class.is-expanded]` template binding is gone from both layouts.
+- CSS: `.admin-sidebar-panel` is now `position: relative` with `var(--admin-surface-soft)` (solid). The `.admin-sidebar.is-expanded` CSS rules are replaced with `.admin-shell.is-sidebar-pinned` rules (same selectors, same values — only the selector host changed).
+- Tests: the mouseenter/mouseleave async timer test is removed; new tests assert the expanded-by-default state and the toggle/persist cycle.
+- E2E: `e2e/tests/sidebar-hover-expand.spec.ts` rewritten to assert always-reserved-column ACs (no hover, content never overlapped, toggle visible in both states).
+- Mobile (`≤1100px`) hamburger drawer: **unchanged**.

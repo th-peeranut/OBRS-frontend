@@ -8,15 +8,16 @@ import { TranslateService } from '@ngx-translate/core';
 
 /**
  * Abstract base for the shared sidebar-shell chrome (AdminLayoutComponent
- * and StaffLayoutComponent). Holds all sidebar interaction state, hover-expand
- * logic, pin/localStorage, keyboard handlers, theme, route-title subscriptions,
- * and the profile-menu toggle.
+ * and StaffLayoutComponent). Holds all sidebar interaction state, the
+ * click-toggle expand/collapse mechanism, localStorage persistence, keyboard
+ * handlers, theme, route-title subscriptions, and the profile-menu toggle.
  *
  * Decorated with @Directive() (no selector) so @HostListener decorators and
  * Angular metadata are inherited by concrete child components. Uses Angular 18
  * inject() for deps so children do not need a large super(...) constructor call.
  *
- * See: docs/adr/0004-shared-sidebar-base-hover-expand.md
+ * See: docs/adr/0005-shared-sidebar-base-hover-expand.md
+ * (Amended 2026-06-30: switched from hover-overlay to always-reserved-column.)
  */
 @Directive()
 export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
@@ -41,19 +42,19 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Dark mode mirror ────────────────────────────────────────────────────────
   protected isDarkMode = false;
 
-  // ── Desktop hover-expand / pin state ───────────────────────────────────────
-  /** True when the sidebar is pinned open (reserved layout column, content reflows). */
-  protected isSidebarPinned = false;
-  /** True while hover or focus is inside the sidebar (overlay expansion). */
-  protected isSidebarExpanded = false;
-  private collapseTimer: ReturnType<typeof setTimeout> | null = null;
-
+  // ── Desktop always-reserved-column state ───────────────────────────────────
   /**
-   * Shared key with the old click-collapse behaviour:
-   *   '0' = was expanded → now means "pinned open"
-   *   '1' = was collapsed → now means "icon rail (unpinned)"
-   *   absent → icon rail (first-time users default to hover model)
+   * True = expanded 280px reserved column (labels visible); default for new
+   * users. False = collapsed 76px icon rail. Toggled by an explicit click on
+   * the toggle button — no hover/focus expansion in this model.
+   *
+   * localStorage semantics (migration-safe with the old pin model):
+   *   '0' = expanded (was "pinned open")
+   *   '1' = collapsed (was "icon rail")
+   *   absent → expanded (new default; old users who never toggled see expanded)
    */
+  protected isSidebarPinned = true;
+
   private static readonly SIDEBAR_STORAGE_KEY = 'obrs-sidebar-collapsed';
 
   // ── RxJS cleanup ────────────────────────────────────────────────────────────
@@ -68,19 +69,6 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   protected readonly themeService = inject(ThemeService);
   protected readonly elementRef = inject(ElementRef<HTMLElement>);
 
-  // ── Computed ────────────────────────────────────────────────────────────────
-
-  /**
-   * Font variation settings for the push_pin Material Symbol icon.
-   * Expressed as a getter to avoid double-quote escaping issues inside HTML
-   * attribute bindings — the raw `"FILL" 1` value is not safely embeddable
-   * inline in Angular template expressions (the HTML parser closes the attribute
-   * at the unescaped double-quote before Angular can interpret it).
-   */
-  protected get pinIconVariation(): string {
-    return this.isSidebarPinned ? '"FILL" 1' : '"FILL" 0';
-  }
-
   protected get userInitials(): string {
     const username = this.authService.getUsername() ?? '';
     const namePart = username.split('@')[0] ?? '';
@@ -88,6 +76,17 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     if (segments.length === 0) return 'XX';
     if (segments.length === 1) return segments[0].slice(0, 2).toUpperCase();
     return (segments[0][0] + segments[1][0]).toUpperCase();
+  }
+
+  // ── Computed ────────────────────────────────────────────────────────────────
+
+  /**
+   * Material Symbol icon name for the sidebar toggle button.
+   * Expanded state → show "collapse" affordance (chevron pointing left).
+   * Collapsed state → show "expand" affordance (chevron pointing right).
+   */
+  protected get toggleIconName(): string {
+    return this.isSidebarPinned ? 'chevron_left' : 'chevron_right';
   }
 
   // ── Lifecycle ───────────────────────────────────────────────────────────────
@@ -121,25 +120,28 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    this.cancelCollapseTimer();
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // ── localStorage: pin preference ────────────────────────────────────────────
+  // ── localStorage: expand/collapse preference ────────────────────────────────
   /**
-   * Reads the stored sidebar state. The key was written by the old collapse code
-   * as '1' = collapsed, '0' = expanded. Re-interpreted: '0' → pinned open;
-   * anything else (or absent) → icon-rail unpinned. Canonicalises on read.
+   * Reads the stored sidebar state and applies it. Semantics:
+   *   '0' = expanded (was "pinned") — continues to mean expanded.
+   *   '1' = collapsed (was "icon-rail") — continues to mean collapsed.
+   *   absent → expanded (new default; migration-safe: old users who never
+   *             toggled were on the hover model, which showed the rail —
+   *             giving them an expanded default is a safe, expected improvement).
+   * Canonicalises the stored value on read so later writes are consistent.
    */
   private readPinPreference(): void {
     try {
       const stored = localStorage.getItem(SidebarLayoutBaseComponent.SIDEBAR_STORAGE_KEY);
-      this.isSidebarPinned = stored === '0';
-      this.isSidebarExpanded = this.isSidebarPinned;
+      // Only '1' means collapsed; absent or '0' → expanded.
+      this.isSidebarPinned = stored !== '1';
       this.writePinPreference(this.isSidebarPinned);
     } catch {
-      // localStorage unavailable (private mode) — defaults apply for the session.
+      // localStorage unavailable (private mode) — field-initialiser default (true) applies.
     }
   }
 
@@ -154,72 +156,21 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ── Sidebar hover / focus expand handlers ──────────────────────────────────
-  protected onSidebarMouseEnter(): void {
-    this.cancelCollapseTimer();
-    this.isSidebarExpanded = true;
-  }
-
-  protected onSidebarMouseLeave(): void {
-    if (this.isSidebarPinned) return;
-    this.startCollapseTimer();
-  }
-
-  protected onSidebarFocusIn(): void {
-    this.cancelCollapseTimer();
-    this.isSidebarExpanded = true;
-  }
-
-  protected onSidebarFocusOut(e: FocusEvent): void {
-    if (this.isSidebarPinned) return;
-    const sidebar = this.elementRef.nativeElement.querySelector('.admin-sidebar');
-    // contains(null) returns false → collapse when focus leaves the window; acceptable.
-    if (sidebar && sidebar.contains(e.relatedTarget as Node)) return;
-    this.isSidebarExpanded = false;
-  }
-
-  // ── Pin toggle ──────────────────────────────────────────────────────────────
+  // ── Sidebar collapse/expand toggle ─────────────────────────────────────────
+  /**
+   * Toggles the sidebar between its two reserved-column widths (280px expanded
+   * / 76px collapsed). Persists the choice to localStorage. No hover/overlay
+   * mode exists in this model — only an explicit click causes a width change.
+   */
   protected togglePin(): void {
-    if (!this.isSidebarPinned) {
-      this.isSidebarPinned = true;
-      this.isSidebarExpanded = true;
-      this.writePinPreference(true);
-    } else {
-      this.isSidebarPinned = false;
-      // Keep expanded until pointer/focus leaves — mouseleave/focusout start the
-      // collapse timer, preventing an abrupt snap back on unpin.
-      this.isSidebarExpanded = true;
-      this.writePinPreference(false);
-    }
+    this.isSidebarPinned = !this.isSidebarPinned;
+    this.writePinPreference(this.isSidebarPinned);
   }
 
   // ── Nav link click ──────────────────────────────────────────────────────────
-  /**
-   * Closes the mobile drawer and, on desktop when unpinned, immediately
-   * collapses the hover-overlay so it does not linger after navigation.
-   */
+  /** Closes the mobile drawer on navigation. Desktop state is untouched. */
   protected onNavLinkClick(): void {
     this.isSidebarOpen = false;
-    if (!this.isSidebarPinned) {
-      this.cancelCollapseTimer();
-      this.isSidebarExpanded = false;
-    }
-  }
-
-  // ── Collapse timer helpers ──────────────────────────────────────────────────
-  private startCollapseTimer(): void {
-    this.cancelCollapseTimer();
-    this.collapseTimer = setTimeout(() => {
-      this.isSidebarExpanded = false;
-      this.collapseTimer = null;
-    }, 120);
-  }
-
-  private cancelCollapseTimer(): void {
-    if (this.collapseTimer !== null) {
-      clearTimeout(this.collapseTimer);
-      this.collapseTimer = null;
-    }
   }
 
   // ── Mobile sidebar ──────────────────────────────────────────────────────────
@@ -257,10 +208,6 @@ export abstract class SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   protected onEscape(): void {
     this.isSidebarOpen = false;
     this.isProfileMenuOpen = false;
-    if (this.isSidebarExpanded && !this.isSidebarPinned) {
-      this.cancelCollapseTimer();
-      this.isSidebarExpanded = false;
-    }
   }
 
   @HostListener('document:click', ['$event'])
