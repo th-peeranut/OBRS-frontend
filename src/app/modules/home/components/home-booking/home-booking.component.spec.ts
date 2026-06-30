@@ -18,4 +18,15 @@ describe('HomeBookingComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('defaults the passenger selection to 1 adult and 0 kids', () => {
+    expect(component.bookingForm.get('passengerInfo')?.value).toEqual([
+      { type: 'ADULT', count: 1 },
+      { type: 'KIDS', count: 0 },
+    ]);
+  });
+
+  it('is searchable by default because a passenger is pre-selected', () => {
+    expect(component.isPassengerSelected).toBe(true);
+  });
 });

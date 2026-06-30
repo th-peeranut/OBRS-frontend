@@ -80,7 +80,15 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   createForm() {
     this.bookingForm = this.fb.group({
       roundTrip: [1],
-      passengerInfo: [null],
+      // Default to 1 adult so a fresh search is immediately valid; the user can
+      // still adjust via the passenger dropdown. Types/casing match
+      // DropdownObrsPassengerComponent ('ADULT'/'KIDS') and getPayload().
+      passengerInfo: [
+        [
+          { type: 'ADULT', count: 1 },
+          { type: 'KIDS', count: 0 },
+        ],
+      ],
 
       startStationId: [''],
       stopStationId: [''],
