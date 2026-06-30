@@ -274,7 +274,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       frequency: 'Daily',
       status: this.getDefaultScheduleStatusCode(),
       route: this.routeOptions[0]?.code ?? '',
-      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
     });
 
     this.isFormModalOpen = true;
@@ -292,7 +292,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       departureDate: this.toDateControlValue(this.toDateInputValue(now)),
       departureTime: this.toTimeControlValue(this.toTimeInputValue(now)),
       route: this.routeOptions[0]?.code ?? '',
-      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
       driverId: '',
     });

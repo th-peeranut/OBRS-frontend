@@ -320,3 +320,33 @@ describe('SchedulesPageComponent confirmDelete — optimistic removal by kind br
     }
   );
 });
+
+// design-system §3.1: a form select starts on its placeholder; the create modals must
+// NOT pre-seed vehicleType with the first option (the Figure 2 "Van by default" bug).
+// route still defaults (it's a sensible first-option default), proving the lock is
+// scoped to vehicleType, not a blanket "no defaults".
+describe('SchedulesPageComponent create modals — vehicleType starts blank (design-system §3.1)', () => {
+  function makeReady() {
+    const component = makeComponent({});
+    (component as any).routeOptions = [{ code: 'bkk-cm', label: 'BKK-CM' }];
+    (component as any).vehicleTypeOptions = [
+      { code: 'bus', label: 'Bus' },
+      { code: 'van', label: 'Van' },
+    ];
+    return component;
+  }
+
+  it('schedule-set create modal leaves vehicleType empty and still defaults route', () => {
+    const component = makeReady();
+    (component as any).openCreateModal();
+    expect((component as any).scheduleForm.get('vehicleType')?.value).toBe('');
+    expect((component as any).scheduleForm.get('route')?.value).toBe('bkk-cm');
+  });
+
+  it('per-trip create modal leaves vehicleType empty and still defaults route', () => {
+    const component = makeReady();
+    (component as any).openCreateScheduleModal();
+    expect((component as any).scheduleItemForm.get('vehicleType')?.value).toBe('');
+    expect((component as any).scheduleItemForm.get('route')?.value).toBe('bkk-cm');
+  });
+});
