@@ -709,11 +709,13 @@ describe('SellPageComponent', () => {
     });
   });
 
-  // Regression: AC-1/AC-6 cold-open "Add schedule" has blank route/vehicleType.
-  // When the store hasn't loaded yet on first modal open, scheduleRouteOptions and
-  // scheduleVehicleTypeOptions are empty — so the form.reset() defaults to ''.
-  // Fix: applyScheduleLocalization now applies first-option defaults to pristine
-  // blank controls when the create form is open and no user pick has been made.
+  // Regression: AC-1/AC-6 cold-open "Add schedule" has a blank route.
+  // When the store hasn't loaded yet on first modal open, scheduleRouteOptions is
+  // empty — so the form.reset() defaults route to ''. Fix: applyScheduleLocalization
+  // applies the first-option default to the pristine blank ROUTE control when the
+  // create form is open and no user pick has been made.
+  // vehicleType is deliberately NOT defaulted (design-system §3.1): a form select
+  // starts on its placeholder and the user picks explicitly, like Vehicle/Driver.
   describe('schedule management — cold-open first-option defaults (regression AC-1/AC-6)', () => {
     function makeStoreData(): any {
       return {
@@ -725,7 +727,7 @@ describe('SellPageComponent', () => {
       };
     }
 
-    it('applies first-option defaults to route/vehicleType when store loads while create modal is open', () => {
+    it('applies the first-option default to route (but NOT vehicleType) when store loads while create modal is open', () => {
       const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
       const comp = new SellPageComponent(
         createRouterStub(), createStoreStub(), createStaffApiStub(),
@@ -744,9 +746,10 @@ describe('SellPageComponent', () => {
       hasValueRef.value = true;
       subject.next(makeStoreData());
 
-      // First-option defaults must now be applied to the still-pristine blank controls
+      // Route's first-option default is now applied to the still-pristine blank control...
       expect((comp as any).scheduleItemForm.get('route')?.value).toBe('bkk-cm');
-      expect((comp as any).scheduleItemForm.get('vehicleType')?.value).toBe('bus');
+      // ...but vehicleType stays on its placeholder (design-system §3.1): no silent default.
+      expect((comp as any).scheduleItemForm.get('vehicleType')?.value).toBe('');
 
       comp.ngOnDestroy();
     });
