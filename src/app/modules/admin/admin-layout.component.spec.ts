@@ -107,6 +107,20 @@ describe('AdminLayoutComponent', () => {
     expect(pinBtn).withContext('pin button should exist inside .admin-sidebar-panel').toBeTruthy();
   });
 
+  it('keeps the desktop hover rail structure CSS depends on', () => {
+    const shell = fixture.debugElement.query(By.css('.admin-shell.theme-admin'));
+    const aside = fixture.debugElement.query(By.css('.admin-sidebar'));
+    const panel = fixture.debugElement.query(By.css('.admin-sidebar .admin-sidebar-panel'));
+    const pinBtn = fixture.debugElement.query(By.css('.admin-sidebar-panel .admin-sidebar-pin'));
+    const navLinks = fixture.debugElement.queryAll(By.css('.admin-sidebar-panel .admin-nav-link'));
+
+    expect(shell).withContext('admin theme shell should exist').toBeTruthy();
+    expect(aside).withContext('sidebar rail host should exist').toBeTruthy();
+    expect(panel).withContext('sidebar panel should exist inside the rail host').toBeTruthy();
+    expect(pinBtn).withContext('pin affordance should stay inside the overlay panel').toBeTruthy();
+    expect(navLinks.length).withContext('admin nav links should render in the panel').toBeGreaterThan(0);
+  });
+
   it('the .admin-collapse-toggle button is absent (replaced by pin)', () => {
     const collapseBtn = fixture.debugElement.query(By.css('.admin-collapse-toggle'));
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
