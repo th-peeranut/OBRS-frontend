@@ -10,18 +10,25 @@ import {
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
-import { catchError, of, switchMap, takeUntil } from 'rxjs';
+import { catchError, of, takeUntil } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import {
   PickupDropoffConfirmedEvent,
+  RouteListItem,
   RouteMeta,
   RoutePickupDropoffData,
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
 
 type LoadState = 'loading' | 'loaded' | 'error' | 'empty';
+type ErrorRetryTarget = 'directions' | 'pickupDropoff';
+
+interface DirectionOption {
+  label: string;
+  value: string;
+}
 
 @Component({
   selector: 'app-route-map-home',
@@ -41,13 +48,18 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   selectedPickupSlug: string | null = null;
   selectedDropoffSlug: string | null = null;
-
   selectedPickupStop: RouteStop | null = null;
   selectedDropoffStop: RouteStop | null = null;
+
+  // Direction selector
+  directionOptions: DirectionOption[] = [];
+  selectedRouteSlug: string = environment.homeRouteSlug ?? '';
 
   isDesktop = true;
   mapsApiKey = environment.mapsApiKey;
 
+  private errorRetryTarget: ErrorRetryTarget = 'directions';
+  private activeRoutes: RouteListItem[] = [];
   private destroy$ = new Subject<void>();
 
   constructor(
@@ -65,7 +77,13 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
         this.isDesktop = state.matches;
       });
 
-    this.loadRouteData();
+    this.translateService.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => {
+        this.buildDirectionOptions();
+      });
+
+    this.loadDirections();
   }
 
   ngOnDestroy(): void {
@@ -73,24 +91,41 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  loadRouteData(): void {
+  loadDirections(): void {
     this.loadState = 'loading';
-    const slug = environment.homeRouteSlug;
-
-    const source$ = slug
-      ? of(slug)
-      : this.routeMapService.getFirstActiveRouteSlug();
-
-    source$
+    this.routeMapService
+      .getActiveRoutes()
       .pipe(
-        switchMap((resolvedSlug) => {
-          if (!resolvedSlug) {
-            return of(null);
-          }
-          return this.routeMapService.getPickupDropoff(resolvedSlug);
-        }),
         catchError(() => {
           this.loadState = 'error';
+          this.errorRetryTarget = 'directions';
+          return of<RouteListItem[]>([]);
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((routes) => {
+        if (this.loadState === 'error') {
+          return;
+        }
+        this.activeRoutes = routes;
+        this.buildDirectionOptions();
+        this.setDefaultRoute();
+        if (this.selectedRouteSlug) {
+          this.loadPickupDropoff(this.selectedRouteSlug);
+        } else {
+          this.loadState = 'empty';
+        }
+      });
+  }
+
+  loadPickupDropoff(slug: string): void {
+    this.loadState = 'loading';
+    this.routeMapService
+      .getPickupDropoff(slug)
+      .pipe(
+        catchError(() => {
+          this.loadState = 'error';
+          this.errorRetryTarget = 'pickupDropoff';
           return of(null);
         }),
         takeUntil(this.destroy$)
@@ -99,14 +134,55 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
         if (this.loadState === 'error') {
           return;
         }
-
         if (!response) {
           this.loadState = 'empty';
           return;
         }
-
         this.applyRouteData(response.data);
       });
+  }
+
+  onDirectionChange(value: string): void {
+    if (!value) {
+      return;
+    }
+    this.selectedPickupSlug = null;
+    this.selectedDropoffSlug = null;
+    this.selectedPickupStop = null;
+    this.selectedDropoffStop = null;
+    this.routeMeta = null;
+    this.pickupStops = [];
+    this.dropoffStops = [];
+    this.loadState = 'loading';
+    this.loadPickupDropoff(value);
+  }
+
+  onRetry(): void {
+    if (this.errorRetryTarget === 'directions') {
+      this.loadDirections();
+    } else {
+      this.loadPickupDropoff(this.selectedRouteSlug);
+    }
+  }
+
+  private buildDirectionOptions(): void {
+    const lang = this.translateService.currentLang ?? 'th';
+    this.directionOptions = this.activeRoutes.map((route) => ({
+      label:
+        route.translations[lang as 'en' | 'th' | 'zh']?.label ??
+        route.translations['en']?.label ??
+        route.slug,
+      value: route.slug,
+    }));
+  }
+
+  private setDefaultRoute(): void {
+    const envSlug = environment.homeRouteSlug;
+    if (envSlug && this.activeRoutes.some((r) => r.slug === envSlug)) {
+      this.selectedRouteSlug = envSlug;
+    } else if (this.activeRoutes.length > 0) {
+      this.selectedRouteSlug = this.activeRoutes[0].slug;
+    }
   }
 
   private applyRouteData(data: RoutePickupDropoffData): void {

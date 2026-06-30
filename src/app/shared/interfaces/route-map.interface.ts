@@ -36,10 +36,18 @@ export interface RoutePickupDropoffResponse {
   data: RoutePickupDropoffData;
 }
 
+export interface RouteListItemTranslation {
+  label: string;
+  description?: string | null;
+}
+
 export interface RouteListItem {
+  id: number;
   slug: string;
   status: RouteStatusValue;
-  [key: string]: unknown;
+  translations: Partial<Record<'en' | 'th' | 'zh', RouteListItemTranslation>>;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type RouteStatusValue =
