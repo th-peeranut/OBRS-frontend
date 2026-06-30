@@ -9,6 +9,7 @@ import { ButtonModule } from 'primeng/button';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { CardModule } from 'primeng/card';
+import { SelectButtonModule } from 'primeng/selectbutton';
 
 // Components
 import { HomeComponent } from './home.component';
@@ -67,6 +68,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     BadgeModule,
     ProgressSpinnerModule,
     CardModule,
+    SelectButtonModule,
 
     // Components
     DropdownObrsComponent,

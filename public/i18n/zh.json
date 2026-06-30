@@ -644,7 +644,8 @@
       "CONTACT_TITLE": "咨询",
       "CONTACT_PHONE": "02-xxx-xxxx",
       "CONTACT_HOURS": "08:00 - 20:00",
-      "BACK_ARIA": "返回"
+      "BACK_ARIA": "返回",
+      "DIRECTION_GROUP_LABEL": "出行方向"
     }
   },
   "STEPPER": {

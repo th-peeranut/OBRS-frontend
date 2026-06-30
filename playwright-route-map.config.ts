@@ -17,6 +17,14 @@ export default defineConfig({
     baseURL: 'http://localhost:4201',
     trace: 'on-first-retry',
     viewport: { width: 1280, height: 720 },
+    // The direction selector added GET /api/routes before GET /api/routes/{slug}/pickup-dropoff.
+    // Without this flag, the /api/routes call fails CORS on port 4201 (SIT CORS allows :4200 only).
+    launchOptions: {
+      args: [
+        '--disable-web-security',
+        '--disable-features=IsolateOrigins,site-per-process',
+      ],
+    },
   },
   projects: [
     {

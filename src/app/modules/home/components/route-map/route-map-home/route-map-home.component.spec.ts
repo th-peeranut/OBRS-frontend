@@ -1,89 +1,149 @@
 import { of, Subject } from 'rxjs';
 import { RouteMapHomeComponent } from './route-map-home.component';
 import {
+  RouteListItem,
   RoutePickupDropoffResponse,
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
+import { RouteMapService } from '../../../../../services/route-map/route-map.service';
+import { AlertService } from '../../../../../shared/services/alert.service';
+import { TranslateService } from '@ngx-translate/core';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
-function createRouteMapServiceStub(): any {
-  const mockResponse: RoutePickupDropoffResponse = {
-    status: 'success',
-    message: 'ok',
-    data: {
-      route: {
-        slug: 'chonburi_bangkok',
-        titleLocalized: { en: 'Chonburi-Bangkok', th: 'ชลบุรี-กรุงเทพ', zh: '春武里-曼谷' },
-        totalDistanceKm: 120,
-        durationMinMinutes: 90,
-        durationMaxMinutes: 150,
-        originProvinceLabel: 'Chonburi',
-        destinationProvinceLabel: 'Bangkok',
-      },
-      pickup: [
-        {
-          order: 1,
-          slug: 'pickup-1',
-          name: 'Pickup 1',
-          address: 'Addr 1',
-          approxTime: '08:00',
-          latitude: null,
-          longitude: null,
-          primaryPhotoUrl: null,
-          googleMapsUrl: null,
-        },
-      ],
-      dropoff: [
-        {
-          order: 1,
-          slug: 'dropoff-1',
-          name: 'Dropoff 1',
-          address: 'Addr 1',
-          approxTime: '10:00',
-          latitude: null,
-          longitude: null,
-          primaryPhotoUrl: null,
-          googleMapsUrl: null,
-        },
-      ],
+const mockPickupDropoffResponse: RoutePickupDropoffResponse = {
+  status: 'success',
+  message: 'ok',
+  data: {
+    route: {
+      slug: 'chonburi_bangkok',
+      titleLocalized: { en: 'Chonburi-Bangkok', th: 'ชลบุรี-กรุงเทพ', zh: '春武里-曼谷' },
+      totalDistanceKm: 120,
+      durationMinMinutes: 90,
+      durationMaxMinutes: 150,
+      originProvinceLabel: 'Chonburi',
+      destinationProvinceLabel: 'Bangkok',
     },
-  };
+    pickup: [
+      {
+        order: 1,
+        slug: 'pickup-1',
+        name: 'Pickup 1',
+        address: 'Addr 1',
+        approxTime: '08:00',
+        latitude: null,
+        longitude: null,
+        primaryPhotoUrl: null,
+        googleMapsUrl: null,
+      },
+    ],
+    dropoff: [
+      {
+        order: 1,
+        slug: 'dropoff-1',
+        name: 'Dropoff 1',
+        address: 'Addr 1',
+        approxTime: '10:00',
+        latitude: null,
+        longitude: null,
+        primaryPhotoUrl: null,
+        googleMapsUrl: null,
+      },
+    ],
+  },
+};
 
+const mockActiveRoutes: RouteListItem[] = [
+  {
+    id: 1,
+    slug: 'chonburi_bangkok',
+    status: { code: 'active' },
+    translations: {
+      en: { label: 'Chonburi → Bangkok' },
+      th: { label: 'ชลบุรี → กรุงเทพ' },
+    },
+  },
+  {
+    id: 2,
+    slug: 'bangkok_chonburi',
+    status: { code: 'active' },
+    translations: {
+      en: { label: 'Bangkok → Chonburi' },
+      th: { label: 'กรุงเทพ → ชลบุรี' },
+    },
+  },
+];
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyStub = any;
+
+function createRouteMapServiceStub(overrides?: {
+  getActiveRoutes?: () => unknown;
+  getPickupDropoff?: (slug: string) => unknown;
+}): AnyStub {
   return {
-    getPickupDropoff: () => of(mockResponse),
-    getFirstActiveRouteSlug: () => of('chonburi_bangkok'),
+    getActiveRoutes: jasmine
+      .createSpy('getActiveRoutes')
+      .and.callFake(overrides?.getActiveRoutes ?? (() => of(mockActiveRoutes))),
+    getPickupDropoff: jasmine
+      .createSpy('getPickupDropoff')
+      .and.callFake(
+        overrides?.getPickupDropoff ?? (() => of(mockPickupDropoffResponse))
+      ),
+    getFirstActiveRouteSlug: jasmine
+      .createSpy('getFirstActiveRouteSlug')
+      .and.returnValue(of('chonburi_bangkok')),
   };
 }
 
-function createAlertServiceStub(): any {
+function createAlertServiceStub(): AnyStub {
   return {
     warning: jasmine.createSpy('warning'),
     error: jasmine.createSpy('error'),
   };
 }
 
-function createTranslateServiceStub(): any {
+function createTranslateServiceStub(): AnyStub {
   return {
     currentLang: 'th',
     instant: (key: string) => key,
+    onLangChange: new Subject<{ lang: string; translations: object }>(),
   };
 }
 
-function createBreakpointObserverStub(): any {
+function createBreakpointObserverStub(): AnyStub {
   return {
     observe: () => of({ matches: true }),
   };
 }
 
+function makeComponent(
+  serviceStub: AnyStub,
+  alertStub: AnyStub,
+  translateStub: AnyStub,
+  breakpointStub: AnyStub
+): RouteMapHomeComponent {
+  return new RouteMapHomeComponent(
+    serviceStub as RouteMapService,
+    alertStub as AlertService,
+    translateStub as TranslateService,
+    breakpointStub as BreakpointObserver
+  );
+}
+
 describe('RouteMapHomeComponent', () => {
   let component: RouteMapHomeComponent;
-  let alertServiceStub: any;
+  let alertServiceStub: AnyStub;
+  let routeMapServiceStub: AnyStub;
+  let translateServiceStub: AnyStub;
 
   beforeEach(() => {
     alertServiceStub = createAlertServiceStub();
-    component = new RouteMapHomeComponent(
-      createRouteMapServiceStub(),
+    translateServiceStub = createTranslateServiceStub();
+    routeMapServiceStub = createRouteMapServiceStub();
+    component = makeComponent(
+      routeMapServiceStub,
       alertServiceStub,
-      createTranslateServiceStub(),
+      translateServiceStub,
       createBreakpointObserverStub()
     );
   });
@@ -99,6 +159,145 @@ describe('RouteMapHomeComponent', () => {
     expect(component.dropoffStops.length).toBe(1);
   });
 
+  it('calls getActiveRoutes on init (not getFirstActiveRouteSlug)', () => {
+    component.ngOnInit();
+    expect(routeMapServiceStub.getActiveRoutes).toHaveBeenCalled();
+  });
+
+  // ── Direction selector: default ──────────────────────────────────────────
+  it('defaults selectedRouteSlug to chonburi_bangkok (environment.homeRouteSlug)', () => {
+    component.ngOnInit();
+    expect(component.selectedRouteSlug).toBe('chonburi_bangkok');
+  });
+
+  it('builds two direction options from active routes', () => {
+    component.ngOnInit();
+    expect(component.directionOptions.length).toBe(2);
+    expect(component.directionOptions[0].value).toBe('chonburi_bangkok');
+    expect(component.directionOptions[1].value).toBe('bangkok_chonburi');
+  });
+
+  it('uses env homeRouteSlug as default when it exists regardless of list order', () => {
+    const reorderedRoutes: RouteListItem[] = [
+      {
+        id: 2,
+        slug: 'bangkok_chonburi',
+        status: { code: 'active' },
+        translations: { en: { label: 'Bangkok → Chonburi' }, th: { label: 'กรุงเทพ → ชลบุรี' } },
+      },
+      {
+        id: 1,
+        slug: 'chonburi_bangkok',
+        status: { code: 'active' },
+        translations: { en: { label: 'Chonburi → Bangkok' }, th: { label: 'ชลบุรี → กรุงเทพ' } },
+      },
+    ];
+    const comp = makeComponent(
+      createRouteMapServiceStub({ getActiveRoutes: () => of(reorderedRoutes) }),
+      alertServiceStub,
+      translateServiceStub,
+      createBreakpointObserverStub()
+    );
+    comp.ngOnInit();
+    expect(comp.selectedRouteSlug).toBe('chonburi_bangkok');
+  });
+
+  // ── Direction selector: switching ────────────────────────────────────────
+  it('switching to bangkok_chonburi triggers getPickupDropoff with new slug', () => {
+    component.ngOnInit();
+    routeMapServiceStub.getPickupDropoff.calls.reset();
+
+    component.selectedRouteSlug = 'bangkok_chonburi';
+    component.onDirectionChange('bangkok_chonburi');
+
+    expect(routeMapServiceStub.getPickupDropoff).toHaveBeenCalledWith('bangkok_chonburi');
+  });
+
+  it('switching direction resets all four selection fields', () => {
+    component.ngOnInit();
+    component.selectedPickupSlug = 'pickup-1';
+    component.selectedDropoffSlug = 'dropoff-1';
+    component.selectedPickupStop = { slug: 'pickup-1' } as RouteStop;
+    component.selectedDropoffStop = { slug: 'dropoff-1' } as RouteStop;
+
+    component.selectedRouteSlug = 'bangkok_chonburi';
+    component.onDirectionChange('bangkok_chonburi');
+
+    expect(component.selectedPickupSlug).toBeNull();
+    expect(component.selectedDropoffSlug).toBeNull();
+    expect(component.selectedPickupStop).toBeNull();
+    expect(component.selectedDropoffStop).toBeNull();
+  });
+
+  it('onDirectionChange with empty value is a no-op', () => {
+    component.ngOnInit();
+    routeMapServiceStub.getPickupDropoff.calls.reset();
+    component.onDirectionChange('');
+    expect(routeMapServiceStub.getPickupDropoff).not.toHaveBeenCalled();
+  });
+
+  // ── Label fallback ───────────────────────────────────────────────────────
+  it('uses en label fallback when current locale (zh) label is missing', () => {
+    const routesWithoutZh: RouteListItem[] = [
+      {
+        id: 1,
+        slug: 'chonburi_bangkok',
+        status: { code: 'active' },
+        translations: {
+          en: { label: 'Chonburi → Bangkok' },
+          th: { label: 'ชลบุรี → กรุงเทพ' },
+          // zh intentionally absent
+        },
+      },
+    ];
+    const translateStub = { ...createTranslateServiceStub(), currentLang: 'zh' };
+    const comp = makeComponent(
+      createRouteMapServiceStub({ getActiveRoutes: () => of(routesWithoutZh) }),
+      alertServiceStub,
+      translateStub,
+      createBreakpointObserverStub()
+    );
+    comp.ngOnInit();
+    expect(comp.directionOptions[0].label).toBe('Chonburi → Bangkok');
+  });
+
+  it('falls back to slug when both locale and en label are missing', () => {
+    const routesNoLabel: RouteListItem[] = [
+      {
+        id: 1,
+        slug: 'chonburi_bangkok',
+        status: { code: 'active' },
+        translations: {},
+      },
+    ];
+    const comp = makeComponent(
+      createRouteMapServiceStub({ getActiveRoutes: () => of(routesNoLabel) }),
+      alertServiceStub,
+      translateServiceStub,
+      createBreakpointObserverStub()
+    );
+    comp.ngOnInit();
+    expect(comp.directionOptions[0].label).toBe('chonburi_bangkok');
+  });
+
+  // ── Retry logic ──────────────────────────────────────────────────────────
+  it('onRetry calls loadDirections when error context is directions', () => {
+    const loadDirectionsSpy = spyOn(component, 'loadDirections');
+    // Force the private errorRetryTarget
+    (component as AnyStub).errorRetryTarget = 'directions';
+    component.onRetry();
+    expect(loadDirectionsSpy).toHaveBeenCalled();
+  });
+
+  it('onRetry calls loadPickupDropoff when error context is pickupDropoff', () => {
+    const loadPickupDropoffSpy = spyOn(component, 'loadPickupDropoff');
+    (component as AnyStub).errorRetryTarget = 'pickupDropoff';
+    component.selectedRouteSlug = 'chonburi_bangkok';
+    component.onRetry();
+    expect(loadPickupDropoffSpy).toHaveBeenCalledWith('chonburi_bangkok');
+  });
+
+  // ── Existing tests (preserved) ───────────────────────────────────────────
   it('shows warning when confirming without selection', () => {
     component.ngOnInit();
     component.selectedPickupSlug = null;
@@ -112,12 +311,12 @@ describe('RouteMapHomeComponent', () => {
     component.selectedPickupSlug = 'pickup-1';
     component.selectedDropoffSlug = 'dropoff-1';
 
-    let emitted: any = null;
-    component.pickupDropoffConfirmed.subscribe((e) => (emitted = e));
+    const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
+    component.pickupDropoffConfirmed.subscribe(emitSpy);
 
     component.onConfirmDropoff();
 
-    expect(emitted).toEqual({
+    expect(emitSpy).toHaveBeenCalledWith({
       pickupSlug: 'pickup-1',
       dropoffSlug: 'dropoff-1',
     });

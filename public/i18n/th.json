@@ -645,7 +645,8 @@
       "CONTACT_TITLE": "สอบถามเพิ่มเติม",
       "CONTACT_PHONE": "02-xxx-xxxx",
       "CONTACT_HOURS": "08:00 - 20:00 น.",
-      "BACK_ARIA": "กลับ"
+      "BACK_ARIA": "กลับ",
+      "DIRECTION_GROUP_LABEL": "ทิศทางการเดินทาง"
     }
   },
   "STEPPER": {

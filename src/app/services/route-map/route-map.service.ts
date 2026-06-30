@@ -32,7 +32,7 @@ export class RouteMapService {
     );
   }
 
-  getFirstActiveRouteSlug(): Observable<string | null> {
+  getActiveRoutes(): Observable<RouteListItem[]> {
     return this.http
       .get<RouteListResponse>(`${environment.apiUrl}/api/routes`, {
         context: this.selfHandledContext(),
@@ -40,12 +40,15 @@ export class RouteMapService {
       .pipe(
         map((response) => {
           const routes = response?.data ?? [];
-          const active = routes.find((r) =>
-            this.isActiveStatus(r.status)
-          );
-          return active?.slug ?? null;
+          return routes.filter((r) => this.isActiveStatus(r.status));
         })
       );
+  }
+
+  getFirstActiveRouteSlug(): Observable<string | null> {
+    return this.getActiveRoutes().pipe(
+      map((routes) => routes[0]?.slug ?? null)
+    );
   }
 
   // The route-map component renders its own loading spinner and inline error

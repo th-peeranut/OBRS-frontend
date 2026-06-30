@@ -1,6 +1,23 @@
 <section class="route-map-section py-4">
   <div class="container-fluid px-3">
 
+    <!-- ==================== DIRECTION SELECTOR ==================== -->
+    <div *ngIf="directionOptions.length > 0" class="mb-3">
+      <div
+        role="group"
+        [attr.aria-label]="'HOME.ROUTE_MAP.DIRECTION_GROUP_LABEL' | translate"
+      >
+        <p-selectButton
+          [options]="directionOptions"
+          [(ngModel)]="selectedRouteSlug"
+          optionLabel="label"
+          optionValue="value"
+          [allowEmpty]="false"
+          (onChange)="onDirectionChange($event.value)"
+        ></p-selectButton>
+      </div>
+    </div>
+
     <!-- ==================== LOADING ==================== -->
     <ng-container *ngIf="loadState === 'loading'">
       <div class="d-flex justify-content-center align-items-center py-5">
@@ -19,7 +36,7 @@
           severity="danger"
           size="small"
           [label]="'HOME.ROUTE_MAP.RETRY' | translate"
-          (onClick)="loadRouteData()"
+          (onClick)="onRetry()"
         ></p-button>
       </div>
     </ng-container>
