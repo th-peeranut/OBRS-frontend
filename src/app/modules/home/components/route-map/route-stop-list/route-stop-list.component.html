@@ -1,7 +1,7 @@
 <div class="route-stop-list">
   <!-- LIST HEADER -->
   <div class="mb-2 px-2">
-    <span class="fw-semibold text-sm">
+    <span class="list-header">
       <ng-container *ngIf="type === 'pickup'">
         {{ 'HOME.ROUTE_MAP.PICKUP_LIST_HEADER' | translate: { province: province, count: stops.length } }}
       </ng-container>
@@ -35,11 +35,11 @@
       <!-- INFO -->
       <div class="flex-grow-1 overflow-hidden">
         <div class="stop-name text-truncate">{{ stop.name }}</div>
-        <div class="stop-address text-muted text-truncate small">{{ stop.address }}</div>
+        <div class="stop-address text-truncate">{{ stop.address }}</div>
       </div>
 
       <!-- APPROX TIME -->
-      <span class="stop-time flex-shrink-0 small text-muted">{{ stop.approxTime }}</span>
+      <span class="stop-time flex-shrink-0">{{ stop.approxTime }}</span>
     </div>
   </div>
 
