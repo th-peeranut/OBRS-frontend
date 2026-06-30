@@ -22,14 +22,14 @@
     <ng-container *ngIf="loadState === 'loading'">
       <div class="d-flex justify-content-center align-items-center py-5">
         <p-progressSpinner strokeWidth="4" animationDuration=".8s"></p-progressSpinner>
-        <span class="ms-3 text-muted">{{ 'HOME.ROUTE_MAP.LOADING' | translate }}</span>
+        <span class="ms-3 route-loading-text">{{ 'HOME.ROUTE_MAP.LOADING' | translate }}</span>
       </div>
     </ng-container>
 
     <!-- ==================== ERROR ==================== -->
     <ng-container *ngIf="loadState === 'error'">
-      <div class="alert alert-danger d-flex align-items-center gap-3" role="alert">
-        <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+      <div class="route-error" role="alert">
+        <i class="bi bi-exclamation-triangle-fill route-error-icon"></i>
         <span>{{ 'HOME.ROUTE_MAP.LOAD_FAILED' | translate }}</span>
         <p-button
           styleClass="ms-auto"
@@ -43,8 +43,8 @@
 
     <!-- ==================== EMPTY ==================== -->
     <ng-container *ngIf="loadState === 'empty'">
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-geo-alt fs-1 mb-3 d-block"></i>
+      <div class="text-center py-5 route-empty">
+        <i class="bi bi-geo-alt fs-1 mb-3 d-block route-empty-icon"></i>
         <p>{{ 'HOME.ROUTE_MAP.EMPTY_STATE' | translate }}</p>
       </div>
     </ng-container>
@@ -61,8 +61,8 @@
             <div class="panel-card h-100">
               <!-- PANEL HEADER -->
               <div class="panel-header d-flex align-items-center gap-2 mb-3">
-                <span class="fw-bold">{{ getRouteTitle() }}</span>
-                <span class="text-muted small ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
+                <span class="panel-title">{{ getRouteTitle() }}</span>
+                <span class="panel-meta ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
               </div>
 
               <p-tabView>
@@ -109,9 +109,9 @@
           <div class="col-xl-6">
             <div class="panel-card h-100">
               <div class="mb-2">
-                <div class="fw-bold">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
-                <div class="small text-muted">{{ getRouteTitle() }}</div>
-                <div class="small text-muted">
+                <div class="map-title">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
+                <div class="small panel-meta">{{ getRouteTitle() }}</div>
+                <div class="small panel-meta">
                   {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
                     distance: routeMeta.totalDistanceKm,
                     min: routeMeta.durationMinMinutes,
@@ -134,7 +134,7 @@
           <!-- RIGHT PANEL: Dropoff detail + summary -->
           <div class="col-xl-3">
             <div class="panel-card h-100 d-flex flex-column gap-3">
-              <div class="small text-muted fst-italic">
+              <div class="small panel-meta fst-italic">
                 <i class="bi bi-clock me-1"></i>
                 {{ 'HOME.ROUTE_MAP.TIME_APPROX_NOTE' | translate }}
               </div>
@@ -206,7 +206,7 @@
               {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
             </ng-template>
 
-            <div class="mb-2 small text-muted">
+            <div class="mb-2 small panel-meta">
               {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
                 distance: routeMeta.totalDistanceKm,
                 min: routeMeta.durationMinMinutes,

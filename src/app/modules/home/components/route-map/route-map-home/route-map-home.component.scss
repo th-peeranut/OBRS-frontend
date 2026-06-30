@@ -1,23 +1,129 @@
+@import "../../../../../../styles/variables.scss";
+
 .route-map-section {
-  background-color: var(--surface-ground, #f5f7fa);
+  background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
 }
 
 .panel-card {
-  background: #fff;
-  border-radius: 12px;
+  background: $primary-white;
+  border-radius: 24px;
+  border: 1px solid $secondary-light-blue;
   padding: 1.25rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
 }
 
 .panel-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  border-bottom: 1px solid $secondary-light-blue;
   padding-bottom: 0.75rem;
 }
 
+.panel-title,
+.map-title {
+  font-weight: 600;
+  color: $text-black;
+}
+
+.panel-meta {
+  color: $text-lightblack;
+  font-size: 0.875rem;
+}
+
+.route-loading-text {
+  color: $text-softblack;
+}
+
+// ---- Error (themed; แทน bootstrap .alert.alert-danger) ----
+.route-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: $primary-white;
+  border: 1px solid $secondary-light-blue;
+  border-radius: 24px;
+  padding: 1rem 1.25rem;
+  color: $text-softblack;
+}
+
+.route-error-icon {
+  color: $text-red;
+  font-size: 1.25rem;
+}
+
+// ---- Empty ----
+.route-empty {
+  color: $text-lightblack;
+}
+
+.route-empty-icon {
+  color: $primary-blue;
+}
+
+// ---- Spinner → brand cyan (ทับ color-cycle keyframe ของ PrimeNG) ----
+:host ::ng-deep .p-progress-spinner-circle {
+  stroke: $primary-blue !important;
+  animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
+}
+
+// ---- Direction selector (p-selectButton) → brand pill toggle ----
+:host ::ng-deep .p-selectbutton {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: $secondary-lightgrey;
+  border-radius: 999px;
+}
+
+:host ::ng-deep .p-selectbutton .p-button {
+  border: 0 !important;
+  background: transparent !important;
+  color: $text-softblack !important;
+  border-radius: 999px !important;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+}
+
+:host ::ng-deep .p-selectbutton .p-button.p-highlight {
+  background: $primary-blue !important;
+  color: $text-white !important;
+}
+
+// ---- TabView → brand ----
 :host ::ng-deep .p-tabview-nav {
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 1px solid $primary-lightgrey;
+  background: transparent;
+}
+
+:host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
+  color: $text-lightblack;
+  background: transparent;
+}
+
+:host ::ng-deep .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: $text-primary;
+  border-color: $primary-blue;
+}
+
+:host ::ng-deep .p-tabview-ink-bar {
+  background-color: $primary-blue;
 }
 
 :host ::ng-deep .p-tabview-panels {
   padding: 1rem 0 0;
+  background: transparent;
+}
+
+// ---- Count badges (info=pickup, danger=dropoff) → brand ----
+:host ::ng-deep .p-badge.p-badge-info {
+  background: $primary-blue;
+}
+
+:host ::ng-deep .p-badge.p-badge-danger {
+  background: $secondary-blue;
+}
+
+// ---- Retry button (severity danger) → brand cyan ----
+:host ::ng-deep .route-error .p-button {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  border-radius: 16px;
 }
