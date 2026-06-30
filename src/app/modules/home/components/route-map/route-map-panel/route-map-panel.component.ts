@@ -1,14 +1,26 @@
 import {
   Component,
   ElementRef,
+  EventEmitter,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
+  Output,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
+import { GoogleMap } from '@angular/google-maps';
 import { RouteMeta, RouteStop } from '../../../../../shared/interfaces/route-map.interface';
+
+/** Payload emitted once the user's current location has been resolved. */
+export interface UserLocatedEvent {
+  /** Slug of the pickup stop closest to the user, or null when none have coords. */
+  nearestPickupSlug: string | null;
+  /** Map of pickup-stop slug -> straight-line distance from the user, in km. */
+  distancesKm: Record<string, number>;
+}
 
 interface GoogleWindow {
   google?: {
@@ -79,11 +91,34 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedDropoffSlug: string | null = null;
   @Input() mapsApiKey = '';
   @Input() routeMeta: RouteMeta | null = null;
+  /** Localized title for the user marker; supplied by the parent. */
+  @Input() userMarkerTitle = 'You are here';
+
+  // Emitted after geolocation resolves so the parent can auto-select the nearest
+  // pickup and feed straight-line distances into the stop list.
+  @Output() userLocated = new EventEmitter<UserLocatedEvent>();
 
   @ViewChild('mapContainer') mapContainer!: ElementRef;
+  @ViewChild(GoogleMap) map?: GoogleMap;
 
   mapsLoaded = false;
   mapsError = false;
+
+  // ---------------------------------------------------------------------------
+  // "Use my location" state
+  // ---------------------------------------------------------------------------
+
+  /** True while a geolocation request is in flight (drives the button spinner). */
+  locating = false;
+
+  /** Last geolocation failure reason, surfaced to the user. Null when none. */
+  locationError: 'denied' | 'unavailable' | null = null;
+
+  /** The user's resolved position, or null before they tap "Use my location". */
+  userLocation: google.maps.LatLngLiteral | null = null;
+
+  /** Stable marker options for the user pin — only reassigned when userLocation changes. */
+  userMarkerOptions: google.maps.MarkerOptions | null = null;
 
   // Precomputed stable fields — only reassigned when the underlying inputs change.
   // Keeping them as fields (not getters) prevents @angular/google-maps from seeing
@@ -144,6 +179,8 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
    */
   private dirReqDispatchedSeq = -1;
 
+  constructor(private zone: NgZone) {}
+
   get showMap(): boolean {
     return this.mapsLoaded && !!this.mapsApiKey && this.hasCoordinates;
   }
@@ -161,6 +198,139 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   stopHasCoords(stop: RouteStop): boolean {
     return stop.latitude !== null && stop.longitude !== null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // "Use my location" → nearest pickup
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the user's current position via the browser Geolocation API, drop a
+   * "you are here" marker, frame the map around the user + pickup stops, and emit
+   * straight-line distances (plus the nearest pickup slug) to the parent.
+   *
+   * Geolocation callbacks may fire outside Angular's zone depending on the
+   * browser, so the handlers are re-entered via NgZone.run to guarantee change
+   * detection picks up the state changes.
+   */
+  useMyLocation(): void {
+    if (!('geolocation' in navigator)) {
+      this.locationError = 'unavailable';
+      return;
+    }
+
+    this.locating = true;
+    this.locationError = null;
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) =>
+        this.zone.run(() =>
+          this.onLocationResolved(pos.coords.latitude, pos.coords.longitude)
+        ),
+      (err) =>
+        this.zone.run(() => {
+          this.locating = false;
+          this.locationError =
+            err.code === err.PERMISSION_DENIED ? 'denied' : 'unavailable';
+        }),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }
+
+  private onLocationResolved(lat: number, lng: number): void {
+    this.locating = false;
+    this.userLocation = { lat, lng };
+    this.userMarkerOptions = this.buildUserMarkerOptions(this.userLocation);
+    this.emitDistances();
+    this.frameUserAndPickups();
+  }
+
+  /**
+   * Compute straight-line (haversine) distances from the user to every pickup
+   * stop with coordinates, find the nearest, and emit both to the parent.
+   * No-op when the user hasn't located yet — lets ngOnChanges re-emit safely
+   * after a direction toggle changes the pickup set.
+   */
+  private emitDistances(): void {
+    if (!this.userLocation) {
+      return;
+    }
+    const distancesKm: Record<string, number> = {};
+    let nearestPickupSlug: string | null = null;
+    let nearestDist = Number.POSITIVE_INFINITY;
+
+    for (const stop of this.pickupStops) {
+      if (stop.latitude === null || stop.longitude === null) {
+        continue;
+      }
+      const km = this.haversineKm(this.userLocation, {
+        lat: stop.latitude,
+        lng: stop.longitude,
+      });
+      distancesKm[stop.slug] = km;
+      if (km < nearestDist) {
+        nearestDist = km;
+        nearestPickupSlug = stop.slug;
+      }
+    }
+
+    this.userLocated.emit({ nearestPickupSlug, distancesKm });
+  }
+
+  /** Frame the map to include the user and all pickup stops with coordinates. */
+  private frameUserAndPickups(): void {
+    const win = window as unknown as GoogleWindow;
+    if (!this.userLocation || !this.map || !win.google?.maps) {
+      return;
+    }
+    const bounds = new google.maps.LatLngBounds();
+    bounds.extend(this.userLocation);
+    for (const stop of this.pickupStops) {
+      if (stop.latitude !== null && stop.longitude !== null) {
+        bounds.extend({ lat: stop.latitude, lng: stop.longitude });
+      }
+    }
+    this.map.fitBounds(bounds, 48);
+  }
+
+  /** Great-circle distance between two lat/lng points, in kilometres. */
+  private haversineKm(
+    a: google.maps.LatLngLiteral,
+    b: google.maps.LatLngLiteral
+  ): number {
+    const R = 6371; // Earth radius in km
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const lat1 = toRad(a.lat);
+    const lat2 = toRad(b.lat);
+    const h =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+  }
+
+  private buildUserMarkerOptions(
+    pos: google.maps.LatLngLiteral
+  ): google.maps.MarkerOptions {
+    return {
+      position: pos,
+      icon: {
+        url: this.buildUserMarkerUrl(),
+        scaledSize: new google.maps.Size(28, 28),
+        anchor: new google.maps.Point(14, 14),
+      },
+      title: this.userMarkerTitle,
+      zIndex: 200, // above stop markers
+    };
+  }
+
+  private buildUserMarkerUrl(): string {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+      <circle cx="14" cy="14" r="13" fill="#4285F4" fill-opacity="0.2"/>
+      <circle cx="14" cy="14" r="7" fill="#4285F4" stroke="#ffffff" stroke-width="3"/>
+    </svg>`;
+    return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
   }
 
   ngOnInit(): void {
@@ -202,6 +372,10 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       // Stop changes affect map center, polyline path, AND all markers.
       this.recomputeMapData();
       this.recomputeMarkers();
+      // If the user has already located, the pickup set just changed (e.g. a
+      // direction toggle) — recompute distances against the new stops so the
+      // list badges and nearest-pickup highlight stay correct.
+      this.emitDistances();
     } else {
       // Selection-only changes: update only the affected marker array.
       // mapOptions/mapCenter must NOT be touched — unnecessary center re-apply would

@@ -1,5 +1,25 @@
 <!-- LIVE MAP (only when API loaded + key set + coordinates exist) -->
 <ng-container *ngIf="showMap; else mapPlaceholder">
+  <!-- USE MY LOCATION -->
+  <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+    <p-button
+      size="small"
+      severity="secondary"
+      [outlined]="true"
+      icon="bi bi-geo-fill"
+      [loading]="locating"
+      [label]="'HOME.ROUTE_MAP.USE_MY_LOCATION' | translate"
+      (onClick)="useMyLocation()"
+    ></p-button>
+    <span *ngIf="locating" class="small text-muted">
+      {{ 'HOME.ROUTE_MAP.LOCATING' | translate }}
+    </span>
+    <span *ngIf="locationError" class="small text-danger">
+      <i class="bi bi-exclamation-circle me-1"></i>
+      {{ (locationError === 'denied' ? 'HOME.ROUTE_MAP.LOCATION_DENIED' : 'HOME.ROUTE_MAP.LOCATION_UNAVAILABLE') | translate }}
+    </span>
+  </div>
+
   <google-map
     class="route-google-map"
     [options]="mapOptions"
@@ -16,6 +36,12 @@
     <map-marker
       *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
       [options]="m.options"
+    ></map-marker>
+
+    <!-- USER LOCATION MARKER -->
+    <map-marker
+      *ngIf="userMarkerOptions"
+      [options]="userMarkerOptions"
     ></map-marker>
 
     <!-- ROUTE POLYLINE -->

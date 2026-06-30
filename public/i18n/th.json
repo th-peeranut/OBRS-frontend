@@ -673,7 +673,13 @@
       "CONTACT_PHONE": "02-xxx-xxxx",
       "CONTACT_HOURS": "08:00 - 20:00 น.",
       "BACK_ARIA": "กลับ",
-      "DIRECTION_GROUP_LABEL": "ทิศทางการเดินทาง"
+      "DIRECTION_GROUP_LABEL": "ทิศทางการเดินทาง",
+      "USE_MY_LOCATION": "ใช้ตำแหน่งของฉัน",
+      "LOCATING": "กำลังค้นหาตำแหน่ง…",
+      "LOCATION_DENIED": "ไม่ได้รับอนุญาตให้เข้าถึงตำแหน่ง กรุณาอนุญาตเพื่อค้นหาจุดรับที่ใกล้ที่สุด",
+      "LOCATION_UNAVAILABLE": "ไม่สามารถระบุตำแหน่งของคุณได้ กรุณาลองใหม่อีกครั้ง",
+      "YOU_ARE_HERE": "ตำแหน่งของคุณ",
+      "DISTANCE_AWAY": "{{km}} กม."
     }
   },
   "STEPPER": {

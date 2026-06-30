@@ -1,6 +1,9 @@
-import { SimpleChange, SimpleChanges } from '@angular/core';
-import { RouteMapPanelComponent } from './route-map-panel.component';
+import { NgZone, SimpleChange, SimpleChanges } from '@angular/core';
+import { RouteMapPanelComponent, UserLocatedEvent } from './route-map-panel.component';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
+
+/** NgZone stub that runs callbacks synchronously (tests don't need real zones). */
+const zoneStub = { run: <T>(fn: () => T): T => fn() } as unknown as NgZone;
 
 function makeStop(order: number, withCoords = false): RouteStop {
   return {
@@ -57,7 +60,7 @@ describe('RouteMapPanelComponent', () => {
   let component: RouteMapPanelComponent;
 
   beforeEach(() => {
-    component = new RouteMapPanelComponent();
+    component = new RouteMapPanelComponent(zoneStub);
   });
 
   it('should create', () => {
@@ -503,6 +506,101 @@ describe('RouteMapPanelComponent', () => {
       expect(component.polylinePath[0].lat).toBeCloseTo(20.0, 3);
     });
 
+  });
+
+  // -------------------------------------------------------------------------
+  // "Use my location" → nearest pickup (requires google.maps stub for the
+  // user marker; navigator.geolocation is spied on per test)
+  // -------------------------------------------------------------------------
+  describe('Use my location (nearest pickup)', () => {
+    beforeEach(() => {
+      installGoogleMock();
+    });
+
+    afterEach(() => {
+      removeGoogleMock();
+    });
+
+    it('emits the nearest pickup slug and per-stop distances, and drops a user marker', () => {
+      // user sits exactly on stop-1 (lat 13.1, lng 100.1); stop-2 is further away
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      const userPos = {
+        coords: { latitude: 13.1, longitude: 100.1 },
+      } as GeolocationPosition;
+      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+        (success: PositionCallback) => success(userPos)
+      );
+
+      let emitted: UserLocatedEvent | undefined;
+      component.userLocated.subscribe((e) => (emitted = e));
+
+      component.useMyLocation();
+
+      expect(emitted).toBeDefined();
+      expect(emitted!.nearestPickupSlug).toBe('stop-1');
+      expect(emitted!.distancesKm['stop-1']).toBeCloseTo(0, 1);
+      expect(emitted!.distancesKm['stop-2']).toBeGreaterThan(
+        emitted!.distancesKm['stop-1']
+      );
+      expect(component.userMarkerOptions).not.toBeNull();
+      expect(component.locating).toBeFalse();
+      expect(component.locationError).toBeNull();
+    });
+
+    it('skips stops without coordinates when finding the nearest', () => {
+      component.pickupStops = [makeStop(1, false), makeStop(2, true)];
+      const userPos = {
+        coords: { latitude: 13.2, longitude: 100.2 },
+      } as GeolocationPosition;
+      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+        (success: PositionCallback) => success(userPos)
+      );
+
+      let emitted: UserLocatedEvent | undefined;
+      component.userLocated.subscribe((e) => (emitted = e));
+
+      component.useMyLocation();
+
+      expect(emitted!.nearestPickupSlug).toBe('stop-2');
+      expect(emitted!.distancesKm['stop-1']).toBeUndefined();
+    });
+
+    it('sets locationError to "denied" when permission is refused', () => {
+      const err = {
+        code: 1,
+        PERMISSION_DENIED: 1,
+      } as GeolocationPositionError;
+      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+        (_s: PositionCallback, error?: PositionErrorCallback | null) =>
+          error?.(err)
+      );
+
+      component.useMyLocation();
+
+      expect(component.locationError).toBe('denied');
+      expect(component.locating).toBeFalse();
+    });
+
+    it('re-emits distances against the new pickup set on a stops change after locating', () => {
+      const userPos = {
+        coords: { latitude: 13.1, longitude: 100.1 },
+      } as GeolocationPosition;
+      spyOn(navigator.geolocation, 'getCurrentPosition').and.callFake(
+        (success: PositionCallback) => success(userPos)
+      );
+      component.pickupStops = [makeStop(1, true)];
+      component.useMyLocation();
+
+      const emissions: UserLocatedEvent[] = [];
+      component.userLocated.subscribe((e) => emissions.push(e));
+
+      // Direction toggle → different pickup set
+      component.pickupStops = [makeStop(5, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, [makeStop(1, true)]));
+
+      expect(emissions.length).toBe(1);
+      expect(emissions[0].nearestPickupSlug).toBe('stop-5');
+    });
   });
 
 });

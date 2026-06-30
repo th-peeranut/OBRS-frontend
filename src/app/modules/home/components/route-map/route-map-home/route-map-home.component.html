@@ -79,6 +79,7 @@
                     type="pickup"
                     [selectedSlug]="selectedPickupSlug"
                     [province]="routeMeta.originProvinceLabel"
+                    [distancesKm]="pickupDistancesKm"
                     (stopSelected)="onPickupStopSelected($event)"
                     (confirmClicked)="onConfirmPickup()"
                   ></app-route-stop-list>
@@ -110,14 +111,6 @@
             <div class="panel-card h-100">
               <div class="mb-2">
                 <div class="fw-bold">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
-                <div class="small text-muted">{{ getRouteTitle() }}</div>
-                <div class="small text-muted">
-                  {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
-                    distance: routeMeta.totalDistanceKm,
-                    min: routeMeta.durationMinMinutes,
-                    max: routeMeta.durationMaxMinutes
-                  } }}
-                </div>
               </div>
 
               <app-route-map-panel
@@ -127,6 +120,8 @@
                 [selectedDropoffSlug]="selectedDropoffSlug"
                 [mapsApiKey]="mapsApiKey"
                 [routeMeta]="routeMeta"
+                [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
+                (userLocated)="onUserLocated($event)"
               ></app-route-map-panel>
             </div>
           </div>
@@ -185,6 +180,7 @@
               type="pickup"
               [selectedSlug]="selectedPickupSlug"
               [province]="routeMeta.originProvinceLabel"
+              [distancesKm]="pickupDistancesKm"
               (stopSelected)="onPickupStopSelected($event)"
               (confirmClicked)="onConfirmPickup()"
             ></app-route-stop-list>
@@ -206,14 +202,6 @@
               {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
             </ng-template>
 
-            <div class="mb-2 small text-muted">
-              {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
-                distance: routeMeta.totalDistanceKm,
-                min: routeMeta.durationMinMinutes,
-                max: routeMeta.durationMaxMinutes
-              } }}
-            </div>
-
             <div>
               <app-route-map-panel
                 [pickupStops]="pickupStops"
@@ -222,6 +210,8 @@
                 [selectedDropoffSlug]="selectedDropoffSlug"
                 [mapsApiKey]="mapsApiKey"
                 [routeMeta]="routeMeta"
+                [userMarkerTitle]="'HOME.ROUTE_MAP.YOU_ARE_HERE' | translate"
+                (userLocated)="onUserLocated($event)"
               ></app-route-map-panel>
             </div>
 

@@ -40,7 +40,9 @@ export class RouteMapService {
       .pipe(
         map((response) => {
           const routes = response?.data ?? [];
-          return routes.filter((r) => this.isActiveStatus(r.status));
+          return routes.filter(
+            (r) => this.isActiveStatus(r.status) && !this.isTestRoute(r.slug)
+          );
         })
       );
   }
@@ -58,6 +60,13 @@ export class RouteMapService {
     return new HttpContext()
       .set(SKIP_GLOBAL_LOADING_ALERT, true)
       .set(SKIP_GLOBAL_ERROR_ALERT, true);
+  }
+
+  // Guard against E2E test fixtures leaking into the public direction selector.
+  // Test runs occasionally seed routes whose slug is prefixed/marked as a test
+  // (e.g. "TEST-e2e-schedules-route") and leave them active; never show those.
+  private isTestRoute(slug: string | undefined | null): boolean {
+    return /(^test[-_])|e2e/i.test(String(slug ?? ''));
   }
 
   private isActiveStatus(status: RouteStatusValue | undefined | null): boolean {

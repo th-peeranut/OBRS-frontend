@@ -19,6 +19,7 @@ import {
   RoutePickupDropoffResponse,
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
+import { UserLocatedEvent } from '../route-map-panel/route-map-panel.component';
 
 type LoadState = 'loading' | 'loaded' | 'error' | 'empty';
 type ErrorRetryTarget = 'directions' | 'pickupDropoff';
@@ -53,6 +54,13 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   isDesktop = true;
   mapsApiKey = environment.mapsApiKey;
+
+  /**
+   * Straight-line distance (km) from the user's location to each pickup stop,
+   * keyed by slug. Null until the user taps "Use my location"; reset when the
+   * route changes since the pickup set is then different.
+   */
+  pickupDistancesKm: Record<string, number> | null = null;
 
   private errorRetryTarget: ErrorRetryTarget = 'directions';
   private activeRoutes: RouteListItem[] = [];
@@ -175,6 +183,9 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
     this.routeMeta = null;
     this.pickupStops = [];
     this.dropoffStops = [];
+    // Distances belong to the previous route's pickup set — clear them; the
+    // panel re-emits fresh distances if the user has already located.
+    this.pickupDistancesKm = null;
     this.loadState = 'loading';
     this.loadPickupDropoff(value);
   }
@@ -222,6 +233,25 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   onPickupStopSelected(stop: RouteStop): void {
     this.selectedPickupSlug = stop.slug;
     this.selectedPickupStop = stop;
+  }
+
+  /**
+   * The map panel resolved the user's location: store the per-stop distances
+   * for the pickup list badges and auto-select the nearest pickup so the user
+   * immediately sees which one is closest.
+   */
+  onUserLocated(event: UserLocatedEvent): void {
+    this.pickupDistancesKm = event.distancesKm;
+
+    if (event.nearestPickupSlug) {
+      const nearest = this.pickupStops.find(
+        (s) => s.slug === event.nearestPickupSlug
+      );
+      if (nearest) {
+        this.selectedPickupSlug = nearest.slug;
+        this.selectedPickupStop = nearest;
+      }
+    }
   }
 
   onDropoffStopSelected(stop: RouteStop): void {

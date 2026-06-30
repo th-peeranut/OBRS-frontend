@@ -64,4 +64,24 @@ describe('RouteMapService', () => {
       done();
     });
   });
+
+  it('getActiveRoutes excludes leaked E2E test routes even when active', (done) => {
+    const mockResponse = {
+      status: 'success',
+      message: 'ok',
+      data: [
+        { slug: 'chonburi_bangkok', status: 'active' },
+        { slug: 'TEST-e2e-schedules-route', status: 'active' },
+        { slug: 'bangkok_chonburi', status: 'active' },
+      ],
+    };
+    const service = new RouteMapService(createHttpStub(mockResponse));
+    service.getActiveRoutes().subscribe((routes) => {
+      expect(routes.map((r) => r.slug)).toEqual([
+        'chonburi_bangkok',
+        'bangkok_chonburi',
+      ]);
+      done();
+    });
+  });
 });

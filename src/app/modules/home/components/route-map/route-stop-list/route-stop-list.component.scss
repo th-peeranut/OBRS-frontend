@@ -72,3 +72,14 @@
   font-size: 0.75rem;
   white-space: nowrap;
 }
+
+.stop-distance {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: #3bb0e7;
+  font-weight: 600;
+
+  &--nearest {
+    color: #1b7fb8;
+  }
+}
