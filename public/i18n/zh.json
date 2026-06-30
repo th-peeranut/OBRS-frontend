@@ -671,7 +671,13 @@
       "CONTACT_PHONE": "02-xxx-xxxx",
       "CONTACT_HOURS": "08:00 - 20:00",
       "BACK_ARIA": "返回",
-      "DIRECTION_GROUP_LABEL": "出行方向"
+      "DIRECTION_GROUP_LABEL": "出行方向",
+      "USE_MY_LOCATION": "使用我的位置",
+      "LOCATING": "正在定位…",
+      "LOCATION_DENIED": "位置访问被拒绝。请允许定位以查找最近的上车点。",
+      "LOCATION_UNAVAILABLE": "无法获取您的位置，请重试。",
+      "YOU_ARE_HERE": "您的位置",
+      "DISTANCE_AWAY": "{{km}} 公里"
     }
   },
   "STEPPER": {

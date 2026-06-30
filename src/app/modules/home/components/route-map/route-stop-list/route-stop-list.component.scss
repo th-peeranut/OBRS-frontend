@@ -115,3 +115,15 @@
   background: #355a9c;
   border-color: #355a9c;
 }
+
+// Per-stop distance (ฟีเจอร์จาก origin/dev) — ปรับสีเข้า token ธีม customer
+.stop-distance {
+  font-size: 0.75rem;
+  white-space: nowrap;
+  color: $text-blue;
+  font-weight: 600;
+
+  &--nearest {
+    color: $secondary-blue;
+  }
+}

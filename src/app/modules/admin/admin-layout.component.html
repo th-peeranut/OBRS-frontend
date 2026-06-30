@@ -9,11 +9,6 @@
   <aside
     class="admin-sidebar"
     [class.is-open]="isSidebarOpen"
-    [class.is-expanded]="isSidebarExpanded"
-    (mouseenter)="onSidebarMouseEnter()"
-    (mouseleave)="onSidebarMouseLeave()"
-    (focusin)="onSidebarFocusIn()"
-    (focusout)="onSidebarFocusOut($event)"
   >
     <div class="admin-sidebar-panel">
       <div class="admin-brand">
@@ -31,18 +26,18 @@
         </a>
       </div>
 
-      <!-- PIN BUTTON — placed after the brand in the flex column (gap:20px puts
-           it at y≈88px, below the topbar band). align-self:flex-end in expanded
-           mode moves it to the panel's top-right corner. Hidden in rail mode. -->
+      <!-- TOGGLE BUTTON — collapses the expanded 280px column to a 76px icon
+           rail (or vice-versa) on explicit click. Always visible in both states.
+           align-self: controlled by CSS (centred in rail, right-aligned in expanded). -->
       <button
         type="button"
         class="admin-sidebar-pin"
         (click)="togglePin()"
-        [attr.aria-pressed]="isSidebarPinned"
-        [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.UNPIN_MENU' : 'ADMIN.LAYOUT.PIN_MENU') | translate"
-        [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.UNPIN_MENU' : 'ADMIN.LAYOUT.PIN_MENU') | translate"
+        [attr.aria-expanded]="isSidebarPinned"
+        [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
+        [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
       >
-        <span class="material-symbols-outlined" [style.fontVariationSettings]="pinIconVariation">push_pin</span>
+        <span class="material-symbols-outlined">{{ toggleIconName }}</span>
       </button>
 
       <nav class="admin-nav">

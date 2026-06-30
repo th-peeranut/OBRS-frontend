@@ -1,30 +1,66 @@
 <!-- LIVE MAP (only when API loaded + key set + coordinates exist) -->
 <ng-container *ngIf="showMap; else mapPlaceholder">
-  <google-map
-    class="route-google-map"
-    [options]="mapOptions"
-    width="100%"
-    height="480px"
+  <!-- MAP + OVERLAY CONTROLS -->
+  <div class="route-map-wrap">
+    <google-map
+      class="route-google-map"
+      [options]="mapOptions"
+      width="100%"
+      height="480px"
+    >
+      <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
+      <map-marker
+        *ngFor="let m of pickupMarkers; trackBy: trackBySlug"
+        [options]="m.options"
+        (mapClick)="onPickupMarkerClick(m.slug)"
+      ></map-marker>
+
+      <!-- DROPOFF MARKERS -->
+      <map-marker
+        *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
+        [options]="m.options"
+        (mapClick)="onDropoffMarkerClick(m.slug)"
+      ></map-marker>
+
+      <!-- USER LOCATION MARKER -->
+      <map-marker
+        *ngIf="userMarkerOptions"
+        [options]="userMarkerOptions"
+      ></map-marker>
+
+      <!-- ROUTE POLYLINE -->
+      <map-polyline
+        *ngIf="polylinePath.length > 1"
+        [path]="polylinePath"
+        [options]="polylineOptions"
+      ></map-polyline>
+    </google-map>
+
+    <!-- LOCATE-ME CONTROL — icon-only overlay in the map corner, the convention
+         users know from Google Maps / ride-hailing apps. Crosshair turns blue
+         once the location is active; shows a spinner while resolving. -->
+    <button
+      type="button"
+      class="locate-me-btn"
+      [class.locate-me-btn--active]="userLocation && !locating"
+      [disabled]="locating"
+      [title]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
+      [attr.aria-label]="'HOME.ROUTE_MAP.USE_MY_LOCATION' | translate"
+      (click)="useMyLocation()"
+    >
+      <i *ngIf="!locating" class="bi bi-crosshair"></i>
+      <i *ngIf="locating" class="bi bi-arrow-repeat locate-spin"></i>
+    </button>
+  </div>
+
+  <!-- GEOLOCATION ERROR (subtle, below the map) -->
+  <div
+    *ngIf="locationError"
+    class="small text-danger mt-2 d-flex align-items-center gap-1"
   >
-    <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
-    <map-marker
-      *ngFor="let m of pickupMarkers; trackBy: trackBySlug"
-      [options]="m.options"
-    ></map-marker>
-
-    <!-- DROPOFF MARKERS -->
-    <map-marker
-      *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
-      [options]="m.options"
-    ></map-marker>
-
-    <!-- ROUTE POLYLINE -->
-    <map-polyline
-      *ngIf="polylinePath.length > 1"
-      [path]="polylinePath"
-      [options]="polylineOptions"
-    ></map-polyline>
-  </google-map>
+    <i class="bi bi-exclamation-circle"></i>
+    <span>{{ (locationError === 'denied' ? 'HOME.ROUTE_MAP.LOCATION_DENIED' : 'HOME.ROUTE_MAP.LOCATION_UNAVAILABLE') | translate }}</span>
+  </div>
 
   <!-- LEGEND -->
   <div class="map-legend mt-2 p-2 rounded border d-flex flex-wrap gap-3 align-items-center">

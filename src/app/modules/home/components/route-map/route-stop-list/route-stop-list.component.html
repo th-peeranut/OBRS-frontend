@@ -38,6 +38,15 @@
         <div class="stop-address text-truncate">{{ stop.address }}</div>
       </div>
 
+      <!-- DISTANCE FROM USER (after "Use my location") -->
+      <span
+        *ngIf="distanceLabel(stop) as dist"
+        class="stop-distance flex-shrink-0 small"
+        [class.stop-distance--nearest]="stop.slug === selectedSlug"
+      >
+        <i class="bi bi-geo-alt-fill me-1"></i>{{ 'HOME.ROUTE_MAP.DISTANCE_AWAY' | translate: { km: dist } }}
+      </span>
+
       <!-- APPROX TIME -->
       <span class="stop-time flex-shrink-0">{{ stop.approxTime }}</span>
     </div>

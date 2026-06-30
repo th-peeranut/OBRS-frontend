@@ -124,8 +124,8 @@
 
 .admin-sidebar {
   width: 280px;
-  background: rgba(250, 252, 253, 0.96);
-  border-right: 1px solid rgba(189, 200, 207, 0.58);
+  background: rgba(237, 243, 246, 0.95);
+  border-right: 1px solid rgba(189, 200, 207, 0.5);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -168,19 +168,14 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  color: #43525b;
-  font-weight: 650;
+  padding: 11px 12px;
+  border-radius: 14px;
+  color: #49575f;
+  font-weight: 600;
   font-size: 14px;
   text-decoration: none;
   border: 1px solid transparent;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+  transition: all 0.2s ease;
 }
 
 .is-dark .admin-nav-link {
@@ -200,10 +195,9 @@
 }
 
 .admin-nav-link.active {
-  background: linear-gradient(90deg, var(--accent-soft), rgba(255, 255, 255, 0));
+  background: var(--accent-soft);
   color: var(--accent-text);
-  border-color: var(--accent-soft);
-  box-shadow: inset 3px 0 0 var(--accent-strong);
+  border-color: rgba(0, 102, 135, 0.2);
 }
 
 .is-dark .admin-nav-link.active {
@@ -352,8 +346,8 @@
 
 /* ── Sidebar panel — base flex layout (mobile + desktop share this) ───────────
    On mobile the panel is normal in-flow flex content inside the off-canvas
-   drawer; on desktop (min-width: 1101px below) it becomes an absolutely
-   positioned overlay that expands on hover. The footer margin-top:auto and
+   drawer; on desktop (min-width: 1101px below) it is an in-flow column of
+   either 76px (collapsed) or 280px (expanded). The footer margin-top:auto and
    gap are defined here so they work in both contexts. */
 .admin-sidebar-panel {
   display: flex;
@@ -1209,156 +1203,113 @@ textarea.admin-field {
   text-align: right;
 }
 
-/* ── Desktop sidebar: hover-expand overlay + pin ── */
+/* ── Desktop sidebar: always-reserved column, two widths, click-toggled ── */
 @media (min-width: 1101px) {
-  /* Keep the desktop topbar below the hover panel so the expanded brand/logo
-     is not clipped by the sticky topbar while the sidebar overlays content. */
+  /* Topbar: keep z-index so it clears the mobile drawer in the max-width block. */
   .admin-topbar {
     z-index: 35;
   }
 
-  /* The sidebar shrinks to a 76px icon rail in the normal layout flow.
-     It acts as a sticky anchor for the absolutely positioned panel; its own
-     background/border/padding are stripped (the panel owns those). */
+  /* The sidebar is ALWAYS an in-flow flex column. Two states:
+     collapsed (default when stored '1') → 76px icon rail;
+     expanded (default for new users / '0') → 280px reserved column.
+     Never position:absolute; never floats over content. */
   .admin-sidebar {
     flex: 0 0 76px;
     width: 76px;
     min-width: 76px;
-    overflow: visible;
+    overflow: hidden;
     background: transparent;
     border-right: none;
     padding: 0;
   }
 
-  /* ── Overlay panel — the visible sidebar chrome ──
-     Absolutely positioned over the sticky rail so it can expand without
-     reflowing the main content. */
+  /* ── Visible sidebar chrome — solid, always in-flow ──
+     position:relative (not absolute) so the panel is part of the flex row.
+     Background uses the surface-soft token (solid, theme-aware — no translucency
+     needed when in-flow content cannot bleed through an opaque sibling column). */
   .admin-sidebar-panel {
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: relative;
     height: 100%;
     width: 76px;
     overflow: hidden;
-    background: rgba(250, 252, 253, 0.97);
-    border-right: 1px solid rgba(189, 200, 207, 0.54);
-    padding: 24px 12px;
-    z-index: 45;
-    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.72);
-    will-change: width, box-shadow;
-    transition:
-      width 240ms cubic-bezier(.2, 0, .2, 1),
-      padding 200ms cubic-bezier(.2, 0, .2, 1),
-      box-shadow 200ms ease,
-      background-color 160ms ease;
+    background: var(--admin-surface-soft);
+    border-right: 1px solid var(--admin-outline);
+    padding: 28px 12px;
+    transition: width 220ms cubic-bezier(.4, 0, .2, 1),
+                padding 180ms cubic-bezier(.4, 0, .2, 1);
   }
 
-  .is-dark .admin-sidebar-panel {
-    background: rgba(29, 34, 38, 0.98);
-    border-right-color: rgba(58, 68, 75, 0.68);
-    box-shadow: 1px 0 0 rgba(255, 255, 255, 0.04);
-  }
-
-  /* ── HOVER/FOCUS OVERLAY EXPANSION ── */
-  .admin-sidebar.is-expanded .admin-sidebar-panel {
-    width: 280px;
-    padding: 24px 16px;
-    box-shadow: 10px 0 32px rgba(25, 28, 30, 0.12);
-  }
-
-  .is-dark .admin-sidebar.is-expanded .admin-sidebar-panel {
-    box-shadow: 10px 0 32px rgba(0, 0, 0, 0.34);
-  }
-
-  /* ── PINNED — reserved layout column (content reflows) ── */
+  /* ── EXPANDED — full 280px reserved column (shell carries is-sidebar-pinned) ── */
   .admin-shell.is-sidebar-pinned .admin-sidebar {
     flex: 0 0 280px;
     width: 280px;
   }
 
   .admin-shell.is-sidebar-pinned .admin-sidebar-panel {
-    position: relative;
     width: 280px;
+    padding: 28px 16px;
   }
 
-  /* ── NAV LINK RAIL vs EXPANDED states ── */
+  /* ── NAV LINK: collapsed (icon rail) vs expanded states ── */
 
-  /* Rail: icons centred, labels hidden */
+  /* Collapsed: icons centred, labels hidden */
   .admin-nav-link,
   .admin-nav-btn {
     justify-content: center;
     white-space: nowrap;
-    padding: 10px 0;
-  }
-
-  .admin-nav-link .material-symbols-outlined,
-  .admin-nav-btn .material-symbols-outlined {
-    flex: 0 0 24px;
-    text-align: center;
+    padding: 11px 0;
   }
 
   .admin-nav-link > span:not(.material-symbols-outlined),
   .admin-nav-btn > span:not(.material-symbols-outlined) {
-    display: inline-block;
-    max-width: 0;
     opacity: 0;
-    transform: translateX(-6px);
+    width: 0;
     overflow: hidden;
-    transition:
-      opacity 120ms ease,
-      transform 160ms ease,
-      max-width 0ms linear 140ms;
+    transition: opacity 80ms ease, width 0ms ease 80ms;
   }
 
   /* Expanded: left-aligned with padding, labels visible */
-  .admin-sidebar.is-expanded .admin-nav-link,
-  .admin-sidebar.is-expanded .admin-nav-btn {
+  .admin-shell.is-sidebar-pinned .admin-nav-link,
+  .admin-shell.is-sidebar-pinned .admin-nav-btn {
     justify-content: flex-start;
-    padding: 10px 12px;
+    padding: 11px 12px;
   }
 
-  .admin-sidebar.is-expanded .admin-nav-link > span:not(.material-symbols-outlined),
-  .admin-sidebar.is-expanded .admin-nav-btn > span:not(.material-symbols-outlined) {
-    max-width: 190px;
+  .admin-shell.is-sidebar-pinned .admin-nav-link > span:not(.material-symbols-outlined),
+  .admin-shell.is-sidebar-pinned .admin-nav-btn > span:not(.material-symbols-outlined) {
     opacity: 1;
-    transform: translateX(0);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    transition:
-      opacity 160ms ease 70ms,
-      transform 180ms ease 60ms,
-      max-width 0ms linear;
+    width: auto;
+    overflow: visible;
+    transition: opacity 150ms ease 80ms, width 0ms ease;
   }
 
   /* ── BRAND ── */
   .admin-brand {
     display: flex;
-    min-height: 42px;
-    align-items: center;
     justify-content: center;
   }
 
-  .admin-sidebar.is-expanded .admin-brand {
+  .admin-shell.is-sidebar-pinned .admin-brand {
     justify-content: flex-start;
   }
 
   .admin-brand-logo {
     height: 30px;
-    max-width: 168px;
-    transition:
-      height 220ms cubic-bezier(.2, 0, .2, 1),
-      transform 180ms ease;
+    transition: height 220ms cubic-bezier(.4, 0, .2, 1);
   }
 
-  .admin-sidebar.is-expanded .admin-brand-logo {
+  .admin-shell.is-sidebar-pinned .admin-brand-logo {
     height: 40px;
   }
 
-  /* ── PIN BUTTON ── */
+  /* ── TOGGLE BUTTON (repurposed from pin button) — always visible ──
+     Collapsed: centred in the 76px rail (shows expand chevron).
+     Expanded: right-aligned at the top of the panel (shows collapse chevron). */
   .admin-sidebar-pin {
-    width: 30px;
-    height: 30px;
-    border: 1px solid transparent;
+    width: 28px;
+    height: 28px;
+    border: 0;
     background: transparent;
     color: var(--admin-muted);
     border-radius: 8px;
@@ -1367,35 +1318,23 @@ textarea.admin-field {
     justify-content: center;
     cursor: pointer;
     font-size: 18px;
-    /* Hidden in rail mode — only revealed when the panel is expanded */
-    opacity: 0;
-    pointer-events: none;
-    /* In rail mode: centred within the 76px column */
+    opacity: 1;
+    pointer-events: auto;
     align-self: center;
-    transform: translateY(-2px);
-    transition:
-      opacity 120ms ease,
-      transform 160ms ease,
-      background-color 160ms ease,
-      border-color 160ms ease,
-      color 160ms ease;
+    transition: background 0.15s ease, color 0.15s ease;
   }
 
   .admin-sidebar-pin .material-symbols-outlined {
     font-size: 18px;
   }
 
-  .admin-sidebar.is-expanded .admin-sidebar-pin {
-    opacity: 1;
-    pointer-events: auto;
-    /* In expanded mode: pinned to the right edge of the panel */
+  /* Expanded: right-aligned at the top of the panel */
+  .admin-shell.is-sidebar-pinned .admin-sidebar-pin {
     align-self: flex-end;
-    transform: translateY(0);
   }
 
   .admin-sidebar-pin:hover {
     background: var(--accent-soft);
-    border-color: var(--accent-soft);
     color: var(--accent-strong);
   }
 
@@ -1404,7 +1343,7 @@ textarea.admin-field {
     outline-offset: 2px;
   }
 
-  .admin-sidebar-pin[aria-pressed="true"] {
+  .admin-sidebar-pin[aria-expanded="true"] {
     color: var(--accent-strong);
   }
 
@@ -1413,8 +1352,6 @@ textarea.admin-field {
     .admin-sidebar-panel,
     .admin-brand-logo,
     .admin-sidebar-pin,
-    .admin-nav-link,
-    .admin-nav-btn,
     .admin-nav-link > span:not(.material-symbols-outlined),
     .admin-nav-btn > span:not(.material-symbols-outlined) {
       transition: none;

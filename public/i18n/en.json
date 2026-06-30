@@ -672,7 +672,13 @@
       "CONTACT_PHONE": "02-xxx-xxxx",
       "CONTACT_HOURS": "08:00 - 20:00",
       "BACK_ARIA": "Back",
-      "DIRECTION_GROUP_LABEL": "Travel direction"
+      "DIRECTION_GROUP_LABEL": "Travel direction",
+      "USE_MY_LOCATION": "Use my location",
+      "LOCATING": "Locating…",
+      "LOCATION_DENIED": "Location access denied. Please allow location to find your nearest pickup.",
+      "LOCATION_UNAVAILABLE": "Unable to get your location. Please try again.",
+      "YOU_ARE_HERE": "You are here",
+      "DISTANCE_AWAY": "{{km}} km"
     }
   },
   "STEPPER": {
