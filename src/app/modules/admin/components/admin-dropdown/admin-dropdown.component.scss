@@ -16,7 +16,7 @@
   min-height: 40px;
   gap: 12px;
   border: 1px solid rgba(189, 200, 207, 0.35);
-  border-radius: 8px;
+  border-radius: 999px; // design-system §5: single input shape = pill, matches date/time fields
   background: #ffffff;
   color: #191c1e;
   cursor: pointer;

@@ -18,3 +18,20 @@ $text-white: #ffffff;
 $text-blue: #3c9bc6;
 $text-lightgrey: #989ba4;
 $text-primary: #4069B8;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-shell brand tokens (design-system §2)
+// The app has three shell identities; this is the single semantic source for them.
+// Aliased to the existing values — additive, no visual change. New/touched UI
+// references the shell token instead of a raw hex; existing raw usages migrate
+// incrementally (per design-system §13).
+//   • customer (home/booking): the cyan-blue primary
+//   • admin: runtime-themed via the CSS var --accent / --accent-strong
+//     (src/styles/admin-theme.scss) so light/dark switch for free — not a SCSS var
+//   • staff: the brand green lives in the staff shell layout topbar (the staff
+//     Sell/Walk-in surfaces); tracked for extraction into $brand-staff (§13)
+// ─────────────────────────────────────────────────────────────────────────────
+$brand-customer: $primary-blue;            // #4bc2f7
+$brand-customer-strong: $secondary-blue;   // #4069b8
+// $brand-staff:  <pending extraction from staff shell layout> (design-system §13)
+// $brand-admin:  use CSS var var(--accent) / var(--accent-strong) on admin surfaces

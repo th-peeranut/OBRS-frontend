@@ -65,13 +65,28 @@ rather than inlining a hex.
 
 | Role | Meaning | Current binding |
 |---|---|---|
-| `brand` | the product's primary identity color | **staff green (to be tokenized, §13)** |
+| `brand` | the shell's primary identity color (**per-shell**, §2.3) | customer `$brand-customer`; admin `var(--accent)`; staff shell-layout green |
 | `accent` | interactive/affordance color on themed shells | `--accent` / `--accent-strong` |
 | `surface` | page & card background | `$primary-white`, `--surface*` |
 | `text` | body text | `$text-black`, `$text-softblack` |
 | `muted` | secondary/placeholder text | `$text-lightgrey` |
 | `danger` | destructive / error | `$text-red: #cb393a` |
 | `border` | hairlines, input borders | `$primary-grey` |
+
+### 2.3 Brand is per-shell (decision)
+
+The app has **three shell identities** and intentionally keeps them distinct —
+customer (cyan-blue), admin (teal `--accent`), staff (green). There is **one
+semantic token per shell**, defined in `src/styles/variables.scss`:
+- `$brand-customer` / `$brand-customer-strong` — the home/booking blue.
+- **admin** — runtime-themed via `var(--accent)` / `var(--accent-strong)` in
+  `admin-theme.scss` (so light/dark switch for free); not a SCSS var.
+- **staff** — the brand green lives in the staff shell-layout topbar; pending
+  extraction into `$brand-staff` (§13).
+
+New/touched UI references the shell token; raw hexes migrate incrementally (§13).
+This was a deliberate choice over one global brand color — the shells are meant to
+look different.
 
 ### 2.2 Rules
 
@@ -145,10 +160,12 @@ One color = one meaning. Never pick a button color for looks.
 
 ## 5. Inputs, shape, spacing
 
-- **One input shape.** Pick the rounded-rectangle used by the dropdowns and apply it
-  to text inputs, date, and time too. The pill-shaped date/time fields next to
-  square dropdowns (Create Schedule) is a **drift** — new/touched inputs use the
-  single shape; don't add a second.
+- **One input shape: pill (decision).** Form controls are fully-rounded **pills**
+  (`border-radius: 999px`), matching the date/time fields. `app-admin-dropdown` now
+  renders its trigger as a pill (`admin-dropdown.component.scss`). New/touched inputs
+  (text, date, time, select) use the pill shape — don't reintroduce a square-cornered
+  control. (Open dropdown *menus*/popups stay rounded-rectangles; only the resting
+  control is a pill.)
 - Hairlines/dividers use `$primary-grey` via the shared `hr` rule (already global in
   `styles.scss`) — don't redefine border colors per component.
 - Font is **Sarabun** globally (set on `*` in `styles.scss`); icons are **Material
@@ -260,14 +277,22 @@ These are the known fragmentations. Each should be closed by a future change tha
 promotes a value into a token and points existing call sites at it — **don't** big-bang
 rewrite, but **do** resolve the relevant item whenever you touch a screen that hits it.
 
-- [ ] **Unify the three "primary" blues** (`#4bc2f7` / `#4dbeef` / `#0d6efd`) into one
-      accent token; repoint staff-module raw Bootstrap usages.
-- [ ] **Tokenize the staff brand green** (Sell button / "Walk-in Sales" heading) — it's
-      the actual brand color and currently exists only as inline values.
+- [x] **Brand model decided: per-shell** (§2.3). Semantic tokens added in
+      `variables.scss` (`$brand-customer*`); admin uses `var(--accent)`. The three
+      "primary" colors are kept distinct **by design** — not unified into one.
+- [ ] **Repoint the remaining raw hexes** to shell tokens (3× `#0d6efd` staff borders,
+      non-admin `btn-primary`). Deferred deliberately: component SCSS doesn't import
+      `variables.scss` (it's a global stylesheet, no `includePaths`), so each repoint
+      needs a per-file `@use` — incremental "when you touch the file" work, not a sweep.
+- [ ] **Tokenize the staff brand green** into `$brand-staff` — it lives in the staff
+      shell-layout topbar (not the sell page); extract when next touching that layout.
 - [ ] **Converge dropdowns** on `app-admin-dropdown`; retire ad-hoc selects, keep
       `app-dropdown-obrs` only for localized-name pickers.
-- [ ] **One input shape** — reconcile pill date/time vs rectangular dropdowns.
-- [ ] Add the locking specs called out in §3.1, §7, §8.
+- [x] **One input shape decided: pill** (§5). `app-admin-dropdown` trigger now
+      `border-radius: 999px`, matching date/time. Migrate any remaining square inputs
+      incrementally.
+- [x] **§3.1 locking specs added** (sell-page cold-open + admin create modals). §7/§8
+      locks: verify/​add when next touching those shells.
 
 ---
 
