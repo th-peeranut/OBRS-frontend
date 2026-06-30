@@ -127,6 +127,8 @@
                 [selectedDropoffSlug]="selectedDropoffSlug"
                 [mapsApiKey]="mapsApiKey"
                 [routeMeta]="routeMeta"
+                (pickupStopSelected)="onPickupStopSelected($event)"
+                (dropoffStopSelected)="onDropoffStopSelected($event)"
               ></app-route-map-panel>
             </div>
           </div>
@@ -222,6 +224,8 @@
                 [selectedDropoffSlug]="selectedDropoffSlug"
                 [mapsApiKey]="mapsApiKey"
                 [routeMeta]="routeMeta"
+                (pickupStopSelected)="onPickupStopSelected($event)"
+                (dropoffStopSelected)="onDropoffStopSelected($event)"
               ></app-route-map-panel>
             </div>
 

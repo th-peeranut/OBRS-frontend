@@ -1,10 +1,12 @@
 import {
   Component,
   ElementRef,
+  EventEmitter,
   Input,
   OnChanges,
   OnDestroy,
   OnInit,
+  Output,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
@@ -79,6 +81,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedDropoffSlug: string | null = null;
   @Input() mapsApiKey = '';
   @Input() routeMeta: RouteMeta | null = null;
+
+  // Marker clicks drive selection the same way the left-hand list does — the
+  // parent (route-map-home) feeds these back in as selectedPickupSlug/Stop, so
+  // the map and the list stay in sync regardless of which one the user clicks.
+  @Output() pickupStopSelected = new EventEmitter<RouteStop>();
+  @Output() dropoffStopSelected = new EventEmitter<RouteStop>();
 
   @ViewChild('mapContainer') mapContainer!: ElementRef;
 
@@ -161,6 +169,20 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   stopHasCoords(stop: RouteStop): boolean {
     return stop.latitude !== null && stop.longitude !== null;
+  }
+
+  onPickupMarkerClick(slug: string): void {
+    const stop = this.pickupStops.find((s) => s.slug === slug);
+    if (stop) {
+      this.pickupStopSelected.emit(stop);
+    }
+  }
+
+  onDropoffMarkerClick(slug: string): void {
+    const stop = this.dropoffStops.find((s) => s.slug === slug);
+    if (stop) {
+      this.dropoffStopSelected.emit(stop);
+    }
   }
 
   ngOnInit(): void {
