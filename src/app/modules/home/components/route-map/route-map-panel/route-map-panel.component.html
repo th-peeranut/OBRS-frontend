@@ -6,16 +6,16 @@
     width="100%"
     height="480px"
   >
-    <!-- PICKUP MARKERS -->
+    <!-- PICKUP MARKERS — iterate precomputed stable array; trackBy prevents destruction on reorder -->
     <map-marker
-      *ngFor="let stop of pickupStops"
-      [options]="getPickupMarkerOptions(stop)"
+      *ngFor="let m of pickupMarkers; trackBy: trackBySlug"
+      [options]="m.options"
     ></map-marker>
 
     <!-- DROPOFF MARKERS -->
     <map-marker
-      *ngFor="let stop of dropoffStops"
-      [options]="getDropoffMarkerOptions(stop)"
+      *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
+      [options]="m.options"
     ></map-marker>
 
     <!-- ROUTE POLYLINE -->
