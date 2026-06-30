@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
@@ -26,6 +26,11 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
   protected thumbnailUrls: string[] = [];
   protected categoryOptions: SelectOption[] = [];
 
+  private readonly trimmedRequired = (control: AbstractControl): ValidationErrors | null => {
+    const val: string = control.value ?? '';
+    return val.trim().length > 0 ? null : { required: true };
+  };
+
   protected readonly MAX_FILES = 5;
   protected readonly MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
   protected readonly ALLOWED_MIME_TYPES = [
@@ -50,7 +55,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.form = this.fb.group({
       category: ['bug'],
-      description: ['', Validators.required],
+      description: ['', this.trimmedRequired],
     });
 
     this.buildCategoryOptions();

@@ -72,6 +72,34 @@ describe('ReportUsabilityFabComponent', () => {
       .toBeTrue();
   });
 
+  // (b2) Whitespace-only description: no HTTP dispatched AND the required message is rendered in the DOM
+  it('should block submit and render the required error message for whitespace-only description', () => {
+    component['isModalOpen'] = true;
+    fixture.detectChanges();
+
+    // Set whitespace-only value — Validators.required would pass this, trimmedRequired must not
+    component['form'].get('description')?.setValue('   ');
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(usabilityReportServiceSpy.submitReport)
+      .withContext('submitReport must NOT be called for whitespace-only description')
+      .not.toHaveBeenCalled();
+
+    expect(component['descriptionInvalid'])
+      .withContext('descriptionInvalid must be true for whitespace-only input')
+      .toBeTrue();
+
+    // The REQUIRED message must be rendered in the DOM (not just in component state)
+    const errorEls = fixture.nativeElement.querySelectorAll('.report-field__error') as NodeListOf<HTMLElement>;
+    const requiredMsgEl = Array.from(errorEls).find((el) =>
+      el.textContent?.includes('USABILITY_REPORT.DESCRIPTION.REQUIRED')
+    );
+    expect(requiredMsgEl)
+      .withContext('The description required error element must be visible in the DOM')
+      .toBeTruthy();
+  });
+
   // (c) Error code mapping: known → specific key; unknown → GENERIC; reads err?.error?.errorCode
   it('should map known errorCode to specific i18n key and unknown to GENERIC', () => {
     const translateService = TestBed.inject(TranslateService);
