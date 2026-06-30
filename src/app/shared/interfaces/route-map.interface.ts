@@ -4,6 +4,11 @@ export interface RouteStop {
   name: string;
   address: string;
   approxTime: string;
+  /** Distance (km) of this stop along the route from the origin. Used to
+   *  derive the segment distance/time between a selected pickup and dropoff.
+   *  Optional so older fixtures/consumers remain valid; the component treats a
+   *  missing value the same as null (falls back to whole-route figures). */
+  distanceKmFromOrigin?: number | null;
   latitude: number | null;
   longitude: number | null;
   primaryPhotoUrl: string | null;

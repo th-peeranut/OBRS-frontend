@@ -657,6 +657,7 @@
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} จุด",
       "SUMMARY_DISTANCE": "ระยะทางประมาณ {{distance}} กม.",
       "SUMMARY_DURATION": "ใช้เวลาเดินทางประมาณ {{min}} - {{max}} นาที",
+      "SUMMARY_SEGMENT_NOTE": "สำหรับจุดรับและจุดส่งที่คุณเลือก",
       "DETAIL_PICKUP_TITLE": "รายละเอียดจุดรับ ({{province}})",
       "DETAIL_DROPOFF_TITLE": "รายละเอียดจุดส่ง ({{province}})",
       "DETAIL_TIME": "เวลาโดยประมาณ {{time}} น.",

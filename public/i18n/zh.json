@@ -655,6 +655,7 @@
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} 站",
       "SUMMARY_DISTANCE": "约 {{distance}} 公里",
       "SUMMARY_DURATION": "行程约 {{min}} - {{max}} 分钟",
+      "SUMMARY_SEGMENT_NOTE": "针对您所选的上车点和下车点",
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",

@@ -24,14 +24,21 @@
   <div class="summary-row">
     <i class="bi bi-map text-muted small me-1"></i>
     <span class="small">
-      {{ 'HOME.ROUTE_MAP.SUMMARY_DISTANCE' | translate: { distance: routeMeta.totalDistanceKm } }}
+      {{ 'HOME.ROUTE_MAP.SUMMARY_DISTANCE' | translate: { distance: displayDistanceKm } }}
     </span>
   </div>
 
   <div class="summary-row">
     <i class="bi bi-clock text-muted small me-1"></i>
     <span class="small">
-      {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION' | translate: { min: routeMeta.durationMinMinutes, max: routeMeta.durationMaxMinutes } }}
+      {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION' | translate: { min: displayDurationMin, max: displayDurationMax } }}
+    </span>
+  </div>
+
+  <div *ngIf="isSegment" class="summary-row mt-1">
+    <i class="bi bi-info-circle text-muted small me-1"></i>
+    <span class="small text-muted fst-italic">
+      {{ 'HOME.ROUTE_MAP.SUMMARY_SEGMENT_NOTE' | translate }}
     </span>
   </div>
 </div>
