@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Route-Map Customer-Theme Re-skin Implementation Plan</title>
+<style>
+  body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.55;
+         max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #1f2933;
+         background: #f5f7fa; }
+  code, pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  pre { background: #1f2933; color: #e4e7eb; padding: .9rem 1rem;
+        border-radius: 6px; overflow-x: auto; }
+  code { background: #e4e7eb; padding: .1rem .35rem; border-radius: 4px; }
+  pre code { background: none; padding: 0; color: inherit; }
+  .frame { border-left: 6px solid; border-radius: 8px; padding: 1rem 1.25rem;
+           margin: 1.25rem 0; background: #ffffff;
+           box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .frame-header     { border-color: #2563eb; background: #eff6ff; }  /* blue  */
+  .frame-constraints{ border-color: #d97706; background: #fffbeb; }  /* amber */
+  .frame-task       { border-color: #059669; background: #ecfdf5; }  /* green */
+  .frame h1, .frame h2, .frame h3 { margin-top: 0; }
+  .note { border-color: #7c3aed; background: #f5f3ff; }              /* violet */
+  .step { display: flex; gap: .5rem; align-items: baseline;
+          margin: .75rem 0 .25rem; }
+  .step input { transform: scale(1.2); margin-top: .15rem; }
+  .meta { color: #52606d; font-size: .9rem; }
+  table.swatch { border-collapse: collapse; font-size: .85rem; }
+  table.swatch td { border: 1px solid #cbd2d9; padding: .25rem .5rem; }
+</style>
+</head>
+<body>
+
+<div class="frame frame-header">
+  <h1>Route-Map Customer-Theme Re-skin Implementation Plan</h1>
+  <p><strong>เป้าหมาย:</strong> Re-skin เฉพาะส่วนแผนที่เส้นทาง (<code>route-map-home</code> + คอมโพเนนต์ลูก) บนหน้า /home ให้เข้าธีม customer (cyan-blue) แทนสไตล์ default ของ PrimeNG/Bootstrap ที่หลุดธีมและอ่านยาก โดยคงเลย์เอาต์และฟังก์ชันเดิมทั้งหมด</p>
+  <p><strong>สถาปัตยกรรม:</strong> เปลี่ยนเฉพาะเลเยอร์ภาพ — ค่าสีใน SCSS, ค่าสี marker/polyline ใน TypeScript, และ class ใน template ของ 5 คอมโพเนนต์ใต้ <code>home/components/route-map/</code>. ดึง design token จาก <code>src/styles/variables.scss</code> ที่มีอยู่แล้ว ทับสไตล์ PrimeNG ผ่าน <code>:host ::ng-deep</code> แบบ scoped. ไม่แตะ logic, NgRx, API, layout (3-คอลัมน์/3-แท็บ) หรือ Google Map</p>
+  <p><strong>Tech Stack:</strong> Angular 18 (module-based), SCSS component-scoped, PrimeNG 17, Bootstrap 5 (utilities), Jasmine + Karma (ChromeHeadless)</p>
+</div>
+
+<div class="frame note">
+  <strong>For agentic workers:</strong> REQUIRED SUB-SKILL: Use
+  thaibev-subagent-driven-development (recommended) or
+  thaibev-executing-plans to implement this plan task-by-task. Steps keep
+  the <code>- [ ]</code> marker next to each checkbox for tracking.
+</div>
+
+<div class="frame frame-constraints">
+  <h2>Global Constraints</h2>
+  <ul>
+    <li>ทุกคำสั่ง terminal รันจากโฟลเดอร์ <code>OBRS-frontend/</code> (ไม่ใช่ repo root)</li>
+    <li>เปลี่ยนเฉพาะเลเยอร์ภาพ — <strong>ห้ามแตะ</strong> layout 3-คอลัมน์/3-แท็บ, Google Map logic, NgRx, API, และ flow auth/payment/booking</li>
+    <li>ใช้สีจาก design token ใน <code>src/styles/variables.scss</code> เท่านั้น (ห้าม hardcode hex สุ่ม); token หลักที่ใช้:
+      <table class="swatch">
+        <tr><td><code>$primary-blue</code></td><td>#4bc2f7</td><td>= สี pickup (จุดรับ)</td></tr>
+        <tr><td><code>$secondary-blue</code></td><td>#4069b8</td><td>= สี dropoff (จุดส่ง)</td></tr>
+        <tr><td><code>$secondary-lightgrey</code></td><td>#edf9fe</td><td>= พื้น section</td></tr>
+        <tr><td><code>$secondary-light-blue</code></td><td>#d9e1f1</td><td>= เส้นขอบการ์ด</td></tr>
+        <tr><td><code>$text-black</code></td><td>#353c44</td><td>= หัวข้อ</td></tr>
+        <tr><td><code>$text-softblack</code></td><td>#535968</td><td>= เนื้อหา</td></tr>
+        <tr><td><code>$text-lightblack</code></td><td>#757a86</td><td>= ป้าย/meta</td></tr>
+        <tr><td><code>$text-primary</code></td><td>#4069B8</td><td>= tab/ลิงก์ active</td></tr>
+        <tr><td><code>$text-red</code></td><td>#cb393a</td><td>= ไอคอน error เท่านั้น</td></tr>
+      </table>
+    </li>
+    <li>โทน monochrome ฟ้าล้วน: pickup = <code>$primary-blue</code>, dropoff = <code>$secondary-blue</code>; แยกความต่างด้วยไอคอน (<code>bi-geo-alt</code> รับ / <code>bi-geo-alt-fill</code> ส่ง) + ป้าย "จุดรับ/จุดส่ง" + อ่อน-เข้มของฟ้า ไม่พึ่งเฉดสีอย่างเดียว</li>
+    <li>การ์ดทุกใบ: ขอบมน <code>24px</code> (เท่าการ์ดค้นหาด้านบน), เงา <code>0 8px 24px rgba(64,105,184,.08)</code>, ขอบ <code>1px solid $secondary-light-blue</code></li>
+    <li>ตัวอักษรขั้นต่ำ <code>0.875rem</code> สำหรับเนื้อหา และ <code>0.8125rem</code> สำหรับ meta (เลิกใช้ <code>0.75rem</code>); แทน Bootstrap <code>.text-muted</code> ที่ลอย ๆ ด้วยสี token จริง</li>
+    <li>ทับสไตล์ PrimeNG ผ่าน <code>:host ::ng-deep</code> แบบ scoped ในไฟล์ <code>.scss</code> ของคอมโพเนนต์นั้นเท่านั้น (ห้ามไปแก้ global)</li>
+    <li><strong>ไม่มี i18n key ใหม่</strong> (เปลี่ยนแค่ภาพ) — ไม่ต้องแตะ <code>public/i18n/*.json</code></li>
+    <li>Path import variables ในคอมโพเนนต์ใต้ <code>route-map/</code> (ลึก 6 ชั้น) คือ <code>@import "../../../../../../styles/variables.scss";</code> (หก <code>../</code>)</li>
+    <li>เฝ้า budget: component style warning ที่ 6kB / error ที่ 10kB ต่อไฟล์ (ระบุใน CLAUDE.md §7)</li>
+    <li>Risk = R2 (UI ล้วน) — commit ได้ทันที, แต่ <strong>ห้าม push เอง</strong> เว้นแต่ผู้ใช้สั่ง</li>
+    <li>Type gate ที่เชื่อถือได้คือ <code>npx tsc --noEmit -p tsconfig.app.json</code> (dev build เขียว ≠ type ผ่าน ตาม CLAUDE.md §10)</li>
+  </ul>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 1: สีบนแผนที่ (marker / polyline / legend) + ขอบแผนที่ — route-map-panel</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong></p>
+  <ul class="meta">
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.ts</code> (บรรทัด 107, 298, 309)</li>
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.scss</code> (legend dots + ขอบแผนที่)</li>
+    <li>เทสต์: <code>src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.spec.ts</code> (บรรทัด 291–305)</li>
+  </ul>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): token สีจาก Global Constraints — pickup <code>#4BC2F7</code>, dropoff <code>#4069B8</code></li>
+    <li>ส่งต่อ (Produces): สี marker/legend ฟ้า-น้ำเงิน ที่ task อื่น (stop-list, detail-card) จะใช้โทนเดียวกัน — pickup <code>$primary-blue</code>, dropoff <code>$secondary-blue</code></li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: แก้ assertion สีใน spec ให้คาดหวังสีใหม่ (จะ fail ก่อน)</strong></span></p>
+  <p>ในไฟล์ <code>route-map-panel.component.spec.ts</code> แทนที่บล็อกบรรทัด 291–305 ด้วย:</p>
+<pre><code>    it('dropoffMarkers uses dark blue (#4069B8) color in SVG url', () =&gt; {
+      component.dropoffStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
+
+      const icon = component.dropoffMarkers[0].options.icon as google.maps.Icon;
+      expect(icon.url).toContain('%234069B8'); // URL-encoded #4069B8
+    });
+
+    it('pickupMarkers uses cyan (#4BC2F7) color in SVG url', () =&gt; {
+      component.pickupStops = [makeStop(1, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const icon = component.pickupMarkers[0].options.icon as google.maps.Icon;
+      expect(icon.url).toContain('%234BC2F7'); // URL-encoded #4BC2F7
+    });</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: รัน spec เพื่อยืนยันว่า fail</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-map-panel.component.spec.ts'</code><br>
+     คาดหวัง: FAIL — 2 เทสต์สีคาดหวัง <code>%234BC2F7</code>/<code>%234069B8</code> แต่โค้ดยังคืน <code>%233BB0E7</code>/<code>%23DC3545</code><br>
+     <span class="meta">หมายเหตุ: ถ้าไม่มี ChromeHeadless ให้ escalate ตาม CLAUDE.md §7 ("ChromeHeadless not available — ng test skipped, manual verification required") แล้วไปต่อ Step 3 โดยพึ่ง tsc + browser แทน</span></p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: เปลี่ยนค่าสีใน .ts</strong></span></p>
+  <p>ใน <code>route-map-panel.component.ts</code> แก้ 3 จุด:</p>
+  <p>(ก) <code>polylineOptions</code> บรรทัด ~107 — <code>strokeColor: '#3BB0E7'</code> เป็น:</p>
+<pre><code>  readonly polylineOptions: google.maps.PolylineOptions = {
+    strokeColor: '#4BC2F7',
+    strokeWeight: 4,
+    strokeOpacity: 0.85,
+  };</code></pre>
+  <p>(ข) <code>recomputePickupMarkers()</code> บรรทัด ~298 — เปลี่ยน argument สี:</p>
+<pre><code>      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, '#4BC2F7'),</code></pre>
+  <p>(ค) <code>recomputeDropoffMarkers()</code> บรรทัด ~309 — เปลี่ยน argument สี:</p>
+<pre><code>      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, '#4069B8'),</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: เปลี่ยนสี legend + ขอบแผนที่ใน .scss</strong></span></p>
+  <p>แทนที่ทั้งไฟล์ <code>route-map-panel.component.scss</code> ด้วย:</p>
+<pre><code>.route-map-placeholder {
+  height: 480px;
+  min-height: 240px;
+}
+
+.route-google-map {
+  display: block;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.map-legend {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+
+  &amp;--pickup {
+    background-color: #4bc2f7;
+  }
+
+  &amp;--dropoff {
+    background-color: #4069b8;
+  }
+}
+
+/* Responsive map heights */
+@media (max-width: 1199px) {
+  .route-map-placeholder,
+  :host ::ng-deep google-map .map-container {
+    height: 300px !important;
+  }
+
+  .route-map-placeholder {
+    height: 300px;
+  }
+}
+
+@media (max-width: 767px) {
+  .route-map-placeholder,
+  :host ::ng-deep google-map .map-container {
+    height: 240px !important;
+  }
+
+  .route-map-placeholder {
+    height: 240px;
+  }
+}</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 5: รัน spec + type check เพื่อยืนยันว่า pass</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-map-panel.component.spec.ts'</code> → คาดหวัง PASS ทั้งหมด<br>
+     รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0 ไม่มี error</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 6: Commit</strong></span></p>
+<pre><code>git add src/app/modules/home/components/route-map/route-map-panel/
+git commit -m "style(home): brand map markers, polyline, legend to customer cyan-blue"</code></pre>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 2: Re-skin รายการจุดจอด — route-stop-list (badge/row/ปุ่ม/typography)</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong></p>
+  <ul class="meta">
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-stop-list/route-stop-list.component.scss</code> (แทนทั้งไฟล์)</li>
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-stop-list/route-stop-list.component.html</code> (สลับ class อ่านยาก)</li>
+    <li>เทสต์: <code>src/app/modules/home/components/route-map/route-stop-list/route-stop-list.component.spec.ts</code> (มีอยู่แล้ว — ต้องยัง pass)</li>
+  </ul>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): token สีจาก Global Constraints; <code>severity="info"</code> (pickup) / <code>severity="danger"</code> (dropoff) บนปุ่ม <code>p-button</code> ถูกคงไว้ใน template แล้วทับสีผ่าน CSS</li>
+    <li>ส่งต่อ (Produces): คลาส <code>.stop-row--pickup/--dropoff</code>, <code>.stop-order-badge--pickup/--dropoff</code> โทนฟ้า/น้ำเงิน ที่ detail-card (Task 3) จะทำ badge สอดคล้องกัน</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: แทนทั้งไฟล์ route-stop-list.component.scss</strong></span></p>
+<pre><code>@import "../../../../../../styles/variables.scss";
+
+.route-stop-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.list-header {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $text-black;
+}
+
+.stop-list-scroll {
+  overflow-y: auto;
+  max-height: 340px;
+  flex: 1;
+}
+
+.stop-row {
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition: background 0.15s, border-color 0.15s;
+
+  &amp;:hover {
+    background-color: rgba(75, 194, 247, 0.08);
+    cursor: pointer;
+  }
+
+  &amp;--selected.stop-row--pickup {
+    background-color: rgba(75, 194, 247, 0.12);
+    border-color: rgba(75, 194, 247, 0.45);
+  }
+
+  &amp;--selected.stop-row--dropoff {
+    background-color: rgba(64, 105, 184, 0.10);
+    border-color: rgba(64, 105, 184, 0.40);
+  }
+}
+
+.stop-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+
+  &amp;--pickup {
+    background-color: $primary-blue;
+  }
+
+  &amp;--dropoff {
+    background-color: $secondary-blue;
+  }
+
+  &amp;--selected {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9375rem;
+  }
+
+  &amp;--pickup#{&amp;}--selected {
+    box-shadow: 0 0 0 3px rgba(75, 194, 247, 0.35);
+  }
+
+  &amp;--dropoff#{&amp;}--selected {
+    box-shadow: 0 0 0 3px rgba(64, 105, 184, 0.30);
+  }
+}
+
+.stop-name {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $text-black;
+}
+
+.stop-address {
+  font-size: 0.8125rem;
+  color: $text-lightblack;
+}
+
+.stop-time {
+  font-size: 0.8125rem;
+  color: $text-lightblack;
+  white-space: nowrap;
+}
+
+// Confirm buttons — brand monochrome (pickup ฟ้า / dropoff น้ำเงิน) ทับ severity ของ PrimeNG
+:host ::ng-deep .p-button.p-button-info {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  border-radius: 24px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .p-button.p-button-info:enabled:hover {
+  background: $text-blue;
+  border-color: $text-blue;
+}
+
+:host ::ng-deep .p-button.p-button-danger {
+  background: $secondary-blue;
+  border-color: $secondary-blue;
+  border-radius: 24px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .p-button.p-button-danger:enabled:hover {
+  background: #355a9c;
+  border-color: #355a9c;
+}</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: สลับ class อ่านยากใน route-stop-list.component.html</strong></span></p>
+  <p>(ก) หัวลิสต์ — เปลี่ยน <code>class="fw-semibold text-sm"</code> เป็น <code>class="list-header"</code>:</p>
+<pre><code>    &lt;span class="list-header"&gt;</code></pre>
+  <p>(ข) ที่อยู่จุดจอด — เปลี่ยน <code>class="stop-address text-muted text-truncate small"</code> เป็น:</p>
+<pre><code>        &lt;div class="stop-address text-truncate"&gt;{{ stop.address }}&lt;/div&gt;</code></pre>
+  <p>(ค) เวลาโดยประมาณ — เปลี่ยน <code>class="stop-time flex-shrink-0 small text-muted"</code> เป็น:</p>
+<pre><code>      &lt;span class="stop-time flex-shrink-0"&gt;{{ stop.approxTime }}&lt;/span&gt;</code></pre>
+  <p><span class="meta">ปุ่ม <code>p-button</code> ทั้งสองคง <code>severity="info"</code>/<code>severity="danger"</code> และ <code>styleClass="w-100"</code> ไว้เหมือนเดิม — สีถูกทับใน SCSS แล้ว ไม่ต้องแก้ template ปุ่ม</span></p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: รัน spec + type check</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-stop-list.component.spec.ts'</code> → คาดหวัง PASS (spec เดิมไม่ผูกกับ class สี/severity จึงไม่กระทบ)<br>
+     รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: Commit</strong></span></p>
+<pre><code>git add src/app/modules/home/components/route-map/route-stop-list/
+git commit -m "style(home): re-skin route stop list to customer theme (badges, rows, confirm buttons, readable type)"</code></pre>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 3: Re-skin การ์ดรายละเอียดจุด — route-stop-detail-card</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong></p>
+  <ul class="meta">
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-stop-detail-card/route-stop-detail-card.component.scss</code> (แทนทั้งไฟล์)</li>
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-stop-detail-card/route-stop-detail-card.component.html</code> (สลับ class)</li>
+    <li>เทสต์: <code>src/app/modules/home/components/route-map/route-stop-detail-card/route-stop-detail-card.component.spec.ts</code> (มีอยู่แล้ว — ต้องยัง pass)</li>
+  </ul>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): token สี + รัศมีการ์ด 24px จาก Global Constraints; PrimeNG <code>p-card</code> root ได้ class <code>route-stop-detail-card</code> จาก <code>styleClass</code></li>
+    <li>ส่งต่อ (Produces): — (คอมโพเนนต์ใบสุดท้ายในชุด detail; ไม่มี task อื่นพึ่งพา output ทางสไตล์)</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: แทนทั้งไฟล์ route-stop-detail-card.component.scss</strong></span></p>
+<pre><code>@import "../../../../../../styles/variables.scss";
+
+.detail-order-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+
+  &amp;--pickup {
+    background-color: $primary-blue;
+  }
+
+  &amp;--dropoff {
+    background-color: $secondary-blue;
+  }
+}
+
+.detail-name {
+  font-weight: 600;
+  color: $text-black;
+}
+
+.detail-sub,
+.detail-meta {
+  color: $text-lightblack;
+}
+
+.detail-photo {
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 16px !important;
+}
+
+.detail-empty {
+  min-height: 120px;
+  color: $text-lightgrey;
+}
+
+:host ::ng-deep .route-stop-detail-card.p-card {
+  border-radius: 24px;
+  border: 1px solid $secondary-light-blue;
+  box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
+}
+
+:host ::ng-deep .route-stop-detail-card .p-card-content {
+  padding: 0.75rem;
+}
+
+// Action buttons — soft brand outline (ทับ severity="secondary")
+:host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary {
+  background: $secondary-lightgrey;
+  border-color: $secondary-light-blue;
+  color: $text-primary;
+  border-radius: 16px;
+}
+
+:host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary:enabled:hover {
+  background: $primary-lightblue;
+  border-color: $primary-blue;
+  color: $text-primary;
+}</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: สลับ class ใน route-stop-detail-card.component.html</strong></span></p>
+  <p>(ก) placeholder ว่าง — เปลี่ยน <code>class="detail-empty d-flex flex-column align-items-center justify-content-center py-4 text-muted"</code> เป็น (ตัด <code>text-muted</code>):</p>
+<pre><code>    &lt;div class="detail-empty d-flex flex-column align-items-center justify-content-center py-4"&gt;</code></pre>
+  <p>(ข) ชื่อจุด — เปลี่ยน <code>&lt;div class="fw-semibold"&gt;{{ stop.name }}&lt;/div&gt;</code> เป็น:</p>
+<pre><code>        &lt;div class="detail-name"&gt;{{ stop.name }}&lt;/div&gt;</code></pre>
+  <p>(ค) คำบรรยายใต้ชื่อ — เปลี่ยน <code>&lt;div class="text-muted small"&gt;</code> เป็น:</p>
+<pre><code>        &lt;div class="detail-sub small"&gt;</code></pre>
+  <p>(ง) แถวเวลา — เปลี่ยน <code>&lt;i class="bi bi-clock me-1 text-muted"&gt;&lt;/i&gt;</code> เป็น:</p>
+<pre><code>      &lt;i class="bi bi-clock me-1 detail-meta"&gt;&lt;/i&gt;</code></pre>
+  <p>(จ) แถวที่อยู่ — เปลี่ยน <code>&lt;div class="mb-3 small text-muted"&gt;</code> เป็น:</p>
+<pre><code>    &lt;div class="mb-3 small detail-meta"&gt;</code></pre>
+  <p><span class="meta">ปุ่ม action ทั้งสองคง <code>severity="secondary"</code> ไว้ — สีถูกทับใน SCSS แล้ว</span></p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: รัน spec + type check</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-stop-detail-card.component.spec.ts'</code> → คาดหวัง PASS<br>
+     รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: Commit</strong></span></p>
+<pre><code>git add src/app/modules/home/components/route-map/route-stop-detail-card/
+git commit -m "style(home): re-skin stop detail card to customer theme (badge, card surface, buttons, type)"</code></pre>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 4: Re-skin สรุปการเดินทาง — route-travel-summary</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong></p>
+  <ul class="meta">
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-travel-summary/route-travel-summary.component.scss</code> (แทนทั้งไฟล์)</li>
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-travel-summary/route-travel-summary.component.html</code> (เลิก bg-light/border ของ Bootstrap → มินิการ์ดธีม)</li>
+    <li>เทสต์: <code>src/app/modules/home/components/route-map/route-travel-summary/route-travel-summary.component.spec.ts</code> (มีอยู่แล้ว — ต้องยัง pass)</li>
+  </ul>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): token สี + รัศมี/เงาการ์ดจาก Global Constraints</li>
+    <li>ส่งต่อ (Produces): — (คอมโพเนนต์ leaf; ไม่มี task อื่นพึ่งพา)</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: แทนทั้งไฟล์ route-travel-summary.component.scss</strong></span></p>
+<pre><code>@import "../../../../../../styles/variables.scss";
+
+.route-travel-summary {
+  font-size: 0.9375rem;
+  background: $primary-white;
+  border: 1px solid $secondary-light-blue;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
+}
+
+.summary-title {
+  font-weight: 600;
+  color: $text-black;
+}
+
+.summary-icon {
+  color: $primary-blue;
+}
+
+.summary-meta {
+  color: $text-lightblack;
+}
+
+.summary-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.875rem;
+}
+
+.summary-label {
+  min-width: 64px;
+  flex-shrink: 0;
+  color: $text-lightblack;
+}
+
+.summary-value {
+  color: $text-softblack;
+}</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: แก้ route-travel-summary.component.html</strong></span></p>
+  <p>(ก) root — เปลี่ยน <code>class="route-travel-summary p-3 rounded border bg-light"</code> เป็น (ตัด <code>rounded border bg-light</code>):</p>
+<pre><code>&lt;div *ngIf="routeMeta" class="route-travel-summary p-3"&gt;</code></pre>
+  <p>(ข) ไอคอนหัวข้อ — เปลี่ยน <code>&lt;i class="bi bi-bus-front fs-5 text-info"&gt;&lt;/i&gt;</code> เป็น:</p>
+<pre><code>    &lt;i class="bi bi-bus-front fs-5 summary-icon"&gt;&lt;/i&gt;</code></pre>
+  <p>(ค) ชื่อหัวข้อ — เปลี่ยน <code>&lt;span class="fw-semibold"&gt;</code> เป็น:</p>
+<pre><code>    &lt;span class="summary-title"&gt;{{ 'HOME.ROUTE_MAP.SUMMARY_TITLE' | translate }}&lt;/span&gt;</code></pre>
+  <p>(ง) ป้าย pickup/dropoff (2 จุด) — เปลี่ยน <code>class="summary-label text-muted small"</code> เป็น <code>class="summary-label small"</code>:</p>
+<pre><code>    &lt;span class="summary-label small"&gt;{{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_LABEL' | translate }}&lt;/span&gt;</code></pre>
+<pre><code>    &lt;span class="summary-label small"&gt;{{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_LABEL' | translate }}&lt;/span&gt;</code></pre>
+  <p>(จ) ไอคอน distance/duration (2 จุด) — เปลี่ยน <code>text-muted</code> เป็น <code>summary-meta</code>:</p>
+<pre><code>    &lt;i class="bi bi-map summary-meta small me-1"&gt;&lt;/i&gt;</code></pre>
+<pre><code>    &lt;i class="bi bi-clock summary-meta small me-1"&gt;&lt;/i&gt;</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: รัน spec + type check</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-travel-summary.component.spec.ts'</code> → คาดหวัง PASS<br>
+     รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: Commit</strong></span></p>
+<pre><code>git add src/app/modules/home/components/route-map/route-travel-summary/
+git commit -m "style(home): re-skin travel summary to customer themed card"</code></pre>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 5: Re-skin คอนเทนเนอร์หลัก — route-map-home (section/panel/tabs/selectButton/badge/spinner/states)</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong></p>
+  <ul class="meta">
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-map-home/route-map-home.component.scss</code> (แทนทั้งไฟล์)</li>
+    <li>แก้ไข: <code>src/app/modules/home/components/route-map/route-map-home/route-map-home.component.html</code> (สลับ class loading/error/empty/header/meta)</li>
+    <li>เทสต์: <code>src/app/modules/home/components/route-map/route-map-home/route-map-home.component.spec.ts</code> (มีอยู่แล้ว — ต้องยัง pass)</li>
+  </ul>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): token สี/พื้น/การ์ดจาก Global Constraints; count badge ใช้ <code>severity="info"</code> (pickup) / <code>severity="danger"</code> (dropoff) ที่ทับสีผ่าน <code>.p-badge-info</code>/<code>.p-badge-danger</code></li>
+    <li>ส่งต่อ (Produces): — (คอนเทนเนอร์ระดับบนสุดของส่วน route-map; รวมงานทุก task)</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: แทนทั้งไฟล์ route-map-home.component.scss</strong></span></p>
+<pre><code>@import "../../../../../../styles/variables.scss";
+
+.route-map-section {
+  background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
+}
+
+.panel-card {
+  background: $primary-white;
+  border-radius: 24px;
+  border: 1px solid $secondary-light-blue;
+  padding: 1.25rem;
+  box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
+}
+
+.panel-header {
+  border-bottom: 1px solid $secondary-light-blue;
+  padding-bottom: 0.75rem;
+}
+
+.panel-title,
+.map-title {
+  font-weight: 600;
+  color: $text-black;
+}
+
+.panel-meta {
+  color: $text-lightblack;
+  font-size: 0.875rem;
+}
+
+.route-loading-text {
+  color: $text-softblack;
+}
+
+// ---- Error (themed; แทน bootstrap .alert.alert-danger) ----
+.route-error {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: $primary-white;
+  border: 1px solid $secondary-light-blue;
+  border-radius: 24px;
+  padding: 1rem 1.25rem;
+  color: $text-softblack;
+}
+
+.route-error-icon {
+  color: $text-red;
+  font-size: 1.25rem;
+}
+
+// ---- Empty ----
+.route-empty {
+  color: $text-lightblack;
+}
+
+.route-empty-icon {
+  color: $primary-blue;
+}
+
+// ---- Spinner → brand cyan (ทับ color-cycle keyframe ของ PrimeNG) ----
+:host ::ng-deep .p-progress-spinner-circle {
+  stroke: $primary-blue !important;
+  animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
+}
+
+// ---- Direction selector (p-selectButton) → brand pill toggle ----
+:host ::ng-deep .p-selectbutton {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: $secondary-lightgrey;
+  border-radius: 999px;
+}
+
+:host ::ng-deep .p-selectbutton .p-button {
+  border: 0 !important;
+  background: transparent !important;
+  color: $text-softblack !important;
+  border-radius: 999px !important;
+  font-weight: 600;
+  padding: 0.5rem 1.1rem;
+}
+
+:host ::ng-deep .p-selectbutton .p-button.p-highlight {
+  background: $primary-blue !important;
+  color: $text-white !important;
+}
+
+// ---- TabView → brand ----
+:host ::ng-deep .p-tabview-nav {
+  border-bottom: 1px solid $primary-lightgrey;
+  background: transparent;
+}
+
+:host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
+  color: $text-lightblack;
+  background: transparent;
+}
+
+:host ::ng-deep .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+  color: $text-primary;
+  border-color: $primary-blue;
+}
+
+:host ::ng-deep .p-tabview-ink-bar {
+  background-color: $primary-blue;
+}
+
+:host ::ng-deep .p-tabview-panels {
+  padding: 1rem 0 0;
+  background: transparent;
+}
+
+// ---- Count badges (info=pickup, danger=dropoff) → brand ----
+:host ::ng-deep .p-badge.p-badge-info {
+  background: $primary-blue;
+}
+
+:host ::ng-deep .p-badge.p-badge-danger {
+  background: $secondary-blue;
+}
+
+// ---- Retry button (severity danger) → brand cyan ----
+:host ::ng-deep .route-error .p-button {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  border-radius: 16px;
+}</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: สลับ class ใน route-map-home.component.html (สถานะ loading/error/empty)</strong></span></p>
+  <p>(ก) LOADING — เปลี่ยน <code>&lt;span class="ms-3 text-muted"&gt;</code> เป็น:</p>
+<pre><code>        &lt;span class="ms-3 route-loading-text"&gt;{{ 'HOME.ROUTE_MAP.LOADING' | translate }}&lt;/span&gt;</code></pre>
+  <p>(ข) ERROR — เปลี่ยน wrapper <code>&lt;div class="alert alert-danger d-flex align-items-center gap-3" role="alert"&gt;</code> เป็น:</p>
+<pre><code>      &lt;div class="route-error" role="alert"&gt;</code></pre>
+  <p>และไอคอน <code>&lt;i class="bi bi-exclamation-triangle-fill fs-5"&gt;&lt;/i&gt;</code> เป็น:</p>
+<pre><code>        &lt;i class="bi bi-exclamation-triangle-fill route-error-icon"&gt;&lt;/i&gt;</code></pre>
+  <p>ปุ่ม retry คง <code>severity="danger"</code> + <code>styleClass="ms-auto"</code> ไว้ (สีถูกทับใน SCSS)</p>
+  <p>(ค) EMPTY — เปลี่ยน <code>&lt;div class="text-center py-5 text-muted"&gt;</code> เป็น:</p>
+<pre><code>      &lt;div class="text-center py-5 route-empty"&gt;</code></pre>
+  <p>และไอคอน <code>&lt;i class="bi bi-geo-alt fs-1 mb-3 d-block"&gt;&lt;/i&gt;</code> เป็น:</p>
+<pre><code>        &lt;i class="bi bi-geo-alt fs-1 mb-3 d-block route-empty-icon"&gt;&lt;/i&gt;</code></pre>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: สลับ class header/meta ใน route-map-home.component.html (โซน loaded)</strong></span></p>
+  <p>(ก) panel header ซ้าย — <code>&lt;span class="fw-bold"&gt;{{ getRouteTitle() }}&lt;/span&gt;</code> เป็น:</p>
+<pre><code>                &lt;span class="panel-title"&gt;{{ getRouteTitle() }}&lt;/span&gt;</code></pre>
+  <p>และ <code>&lt;span class="text-muted small ms-auto"&gt;</code> เป็น:</p>
+<pre><code>                &lt;span class="panel-meta ms-auto"&gt;{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}&lt;/span&gt;</code></pre>
+  <p>(ข) คอลัมน์แผนที่ — <code>&lt;div class="fw-bold"&gt;{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}&lt;/div&gt;</code> เป็น:</p>
+<pre><code>                &lt;div class="map-title"&gt;{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}&lt;/div&gt;</code></pre>
+  <p>และ <code>&lt;div class="small text-muted"&gt;</code> ทั้ง 2 จุด (route title + ระยะทาง) เปลี่ยนเป็น <code>&lt;div class="small panel-meta"&gt;</code></p>
+  <p>(ค) โน้ตเวลาในคอลัมน์ขวา — <code>&lt;div class="small text-muted fst-italic"&gt;</code> เป็น:</p>
+<pre><code>              &lt;div class="small panel-meta fst-italic"&gt;</code></pre>
+  <p>(ง) โน้ตระยะทางใน TabView มือถือ — <code>&lt;div class="mb-2 small text-muted"&gt;</code> เป็น <code>&lt;div class="mb-2 small panel-meta"&gt;</code></p>
+  <p><span class="meta">count badge ทั้ง 2 (pickup <code>severity="info"</code> / dropoff <code>severity="danger"</code>) คงไว้เหมือนเดิม — สีถูกทับใน SCSS</span></p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: รัน spec + type check + build (เฝ้า budget)</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-map-home.component.spec.ts'</code> → คาดหวัง PASS<br>
+     รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0<br>
+     รัน: <code>ng build --configuration production</code> → คาดหวังสำเร็จ ไม่มี budget error (ดู warning component style ของ route-map-home.scss ต้อง &lt; 6kB)</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 5: Commit</strong></span></p>
+<pre><code>git add src/app/modules/home/components/route-map/route-map-home/
+git commit -m "style(home): re-skin route map container to customer theme (section, panels, tabs, toggle, badges, states)"</code></pre>
+</div>
+
+<!-- ===================================================================== -->
+<div class="frame frame-task">
+  <h3>Task 6: ตรวจรวม (build + test + live browser verification)</h3>
+
+  <p class="meta"><strong>ไฟล์:</strong> ไม่มีไฟล์ใหม่ — เป็น gate ตรวจคุณภาพรวมทั้งส่วน route-map</p>
+
+  <p class="meta"><strong>Interfaces:</strong></p>
+  <ul class="meta">
+    <li>ใช้จาก (Consumes): ผลลัพธ์ทางสไตล์จาก Task 1–5 ทั้งหมด</li>
+    <li>ส่งต่อ (Produces): หลักฐานยืนยันว่า re-skin เข้าธีม customer ครบ ทั้ง desktop (≥1200px) และ mobile/tablet (&lt;1200px) โดยฟังก์ชันไม่พัง</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 1: Full type check + production build</strong></span></p>
+  <p>รัน: <code>npx tsc --noEmit -p tsconfig.app.json</code> → คาดหวัง exit 0<br>
+     รัน: <code>ng build --configuration production</code> → คาดหวังสำเร็จ ไม่มี error/budget error</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 2: รัน spec ของ home ทั้งหมด</strong></span></p>
+  <p>รัน: <code>ng test --watch=false --browsers ChromeHeadless --include='**/route-map/**/*.spec.ts'</code><br>
+     คาดหวัง: PASS ทั้งหมด<br>
+     <span class="meta">ถ้าไม่มี ChromeHeadless → escalate ตาม CLAUDE.md §7 แล้วพึ่ง tsc + build + browser แทน</span></p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 3: Live browser verification — desktop</strong></span></p>
+  <p>รัน dev server: <code>npm start</code> แล้วเปิด <code>http://localhost:4200</code> ที่ความกว้าง ≥1200px ตรวจ checklist:</p>
+  <ul>
+    <li>พื้นส่วน route-map เป็นฟ้าอ่อน <code>#edf9fe</code> ต่อเนื่องกับการ์ดค้นหาด้านบน (ไม่มีแถบเทา <code>#f5f7fa</code> ตัด)</li>
+    <li>การ์ด panel ทั้ง 3 ขอบมน 24px + เงานุ่มโทนน้ำเงิน (ไม่ใช่เงาเทา/ขอบ 12px)</li>
+    <li>ปุ่มสลับทิศทาง (p-selectButton) เป็น pill toggle ฟ้า ตัวที่เลือกพื้นฟ้า <code>#4bc2f7</code> ตัวอักษรขาว</li>
+    <li>แท็บ pickup/dropoff: เส้น ink-bar + label active เป็นฟ้า/น้ำเงินแบรนด์; badge นับจำนวนเป็นฟ้า (pickup) / น้ำเงิน (dropoff) ไม่ใช่ฟ้า-แดง default</li>
+    <li>order badge ในลิสต์: pickup ฟ้า <code>#4bc2f7</code>, dropoff น้ำเงิน <code>#4069b8</code>; แถวที่เลือกมี tint + ขอบโทนเดียวกัน</li>
+    <li>marker บนแผนที่ (ถ้ามี <code>mapsApiKey</code>) + legend dots: pickup ฟ้า, dropoff น้ำเงิน (ไม่มีแดง <code>#dc3545</code> เหลือ)</li>
+    <li>ตัวอักษร meta อ่านออกชัด (ไม่ใช่เทาจาง 0.75rem)</li>
+    <li>การ์ดสรุปการเดินทางเป็นการ์ดขาวขอบมน (ไม่ใช่ <code>bg-light</code> เทา)</li>
+  </ul>
+  <p>ทดสอบฟังก์ชัน: เลือกจุดรับ → กดยืนยัน → เลือกจุดส่ง → กดยืนยัน → ต้อง pre-fill ฟอร์มค้นหาและเริ่มค้นหาได้เหมือนเดิม (ฟังก์ชันไม่พัง)</p>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 4: Live browser verification — mobile/tablet (&lt;1200px)</strong></span></p>
+  <p>ย่อหน้าต่าง/ใช้ devtools responsive ที่ &lt;1200px ตรวจ:</p>
+  <ul>
+    <li>สลับเป็น 3 แท็บ (จุดรับ / แผนที่ / จุดส่ง) — สไตล์แท็บฟ้าแบรนด์เหมือน desktop</li>
+    <li>การ์ด/badge/ปุ่ม/ตัวอักษร เข้าธีมและอ่านง่ายเหมือนกัน</li>
+    <li>ไม่มี element ล้นขอบ/ทับกัน</li>
+  </ul>
+
+  <p class="step"><input type="checkbox"> <span>- [ ] <strong>Step 5: บันทึกหลักฐาน + commit (ถ้ามีไฟล์ต้อง add)</strong></span></p>
+  <p>ถ่าย screenshot desktop + mobile แนบในรายงานให้ผู้ใช้. ขั้นนี้โดยปกติไม่มีไฟล์โค้ดเปลี่ยน (เป็น verification ล้วน) — ถ้าพบ defect ย้อนกลับไปแก้ task ที่เกี่ยวข้องแล้ว commit ในชื่อ task นั้น</p>
+  <p><span class="meta">ถ้าผู้ใช้ต้องการ ผมจะอัปเดต ADR 0005 (หมายเหตุว่า route-map ถูก re-skin เข้าธีม customer แล้ว) เป็น follow-up — ไม่บังคับในแผนนี้</span></p>
+</div>
+
+</body>
+</html>
