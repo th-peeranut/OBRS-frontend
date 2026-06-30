@@ -279,10 +279,11 @@ test.describe('Route Map – Success State', () => {
     await confirmDropoffBtn.waitFor({ state: 'visible' });
     await confirmDropoffBtn.click();
 
-    // Should show SEARCH_VALIDATION warning (not navigate)
+    // Should show PASSENGER_VALIDATION warning (not navigate) — origin/dest are
+    // already set by the map picks, so only the passenger count can be missing.
     await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
     await expect(page.locator('.swal2-title')).toContainText(
-      'Please select an origin, a destination, and at least one passenger before searching.'
+      'Please select at least one passenger before searching.'
     );
     expect(page.url()).toContain('/home');
 
