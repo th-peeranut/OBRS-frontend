@@ -21,6 +21,49 @@ interface MarkerEntry {
   options: google.maps.MarkerOptions;
 }
 
+/**
+ * Load the Google Maps JS API once per page using Google's recommended
+ * `loading=async` bootstrap + a `callback`. Loading the API the legacy
+ * (synchronous) way keeps the browser's tab-loading indicator spinning and logs
+ * the "loaded directly without loading=async" console warning; the async
+ * bootstrap lets the page settle to idle and silences the warning.
+ *
+ * Shared across every RouteMapPanelComponent instance (the /home page renders a
+ * desktop and a mobile panel) via a module-level promise, so the script is
+ * injected at most once and both panels resolve off the same load.
+ */
+let googleMapsLoad: Promise<void> | null = null;
+
+function loadGoogleMapsApi(apiKey: string): Promise<void> {
+  if (googleMapsLoad) {
+    return googleMapsLoad;
+  }
+
+  const win = window as unknown as GoogleWindow;
+  if (win.google?.maps) {
+    googleMapsLoad = Promise.resolve();
+    return googleMapsLoad;
+  }
+
+  googleMapsLoad = new Promise<void>((resolve, reject) => {
+    const callbackName = '__obrsGoogleMapsReady';
+    (window as unknown as Record<string, () => void>)[callbackName] = () =>
+      resolve();
+
+    const script = document.createElement('script');
+    script.setAttribute('data-maps-api', 'true');
+    script.src =
+      `https://maps.googleapis.com/maps/api/js?key=${apiKey}` +
+      `&loading=async&libraries=marker&callback=${callbackName}`;
+    script.async = true;
+    script.onerror = () =>
+      reject(new Error('Google Maps JS API failed to load'));
+    document.head.appendChild(script);
+  });
+
+  return googleMapsLoad;
+}
+
 @Component({
   selector: 'app-route-map-panel',
   templateUrl: './route-map-panel.component.html',
@@ -90,35 +133,18 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    const win = window as unknown as GoogleWindow;
-    if (win.google?.maps) {
-      this.mapsLoaded = true;
-      this.recomputeMarkers();
-      return;
-    }
-
-    const existing = document.querySelector('script[data-maps-api]');
-    if (existing) {
-      existing.addEventListener('load', () => {
+    // `loadGoogleMapsApi` is called from inside the Angular zone here, so the
+    // promise continuations below run in-zone too (zone.js patches Promise) —
+    // the `mapsLoaded` flip is picked up by change detection without an explicit
+    // NgZone.run, matching the original `script.onload` behaviour.
+    loadGoogleMapsApi(this.mapsApiKey)
+      .then(() => {
         this.mapsLoaded = true;
         this.recomputeMarkers();
+      })
+      .catch(() => {
+        this.mapsError = true;
       });
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.setAttribute('data-maps-api', 'true');
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${this.mapsApiKey}`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      this.mapsLoaded = true;
-      this.recomputeMarkers();
-    };
-    script.onerror = () => {
-      this.mapsError = true;
-    };
-    document.head.appendChild(script);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
