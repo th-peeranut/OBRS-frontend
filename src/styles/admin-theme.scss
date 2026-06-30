@@ -1343,7 +1343,7 @@ textarea.admin-field {
     outline-offset: 2px;
   }
 
-  .admin-sidebar-pin[aria-pressed="true"] {
+  .admin-sidebar-pin[aria-expanded="true"] {
     color: var(--accent-strong);
   }
 

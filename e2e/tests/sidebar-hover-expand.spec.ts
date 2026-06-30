@@ -18,7 +18,7 @@
  *   AC5a — Same always-reserved-column behavior on /staff/schedules
  *   AC5b — Same always-reserved-column behavior on /admin/dashboard
  *   AC6  — Toggle button is visible in BOTH states (not hidden in rail)
- *   AC6b — Toggle button aria-pressed reflects expanded/collapsed state
+ *   AC6b — Toggle button aria-expanded reflects expanded/collapsed state
  *   AC7  — Mobile ≤1100px: hamburger drawer unchanged; desktop toggle hidden
  *   AC8  — Logo is Home link in both collapsed and expanded states (staff + admin)
  *   AC9  — ESC closes mobile drawer and profile menu; desktop sidebar state unchanged
@@ -191,20 +191,20 @@ test.describe('Sidebar always-reserved-column — staff layout', () => {
     await expect(page.locator('.admin-shell')).toHaveClass(/is-sidebar-pinned/);
   });
 
-  // ── AC6b: Toggle button aria-pressed reflects state ──────────────────────────
+  // ── AC6b: Toggle button aria-expanded reflects state ─────────────────────────
 
-  test('AC6b: toggle button aria-pressed is "true" when expanded and "false" when collapsed', async ({ page }) => {
+  test('AC6b: toggle button aria-expanded is "true" when expanded and "false" when collapsed', async ({ page }) => {
     const toggleBtn = page.locator('.admin-sidebar-pin');
 
-    // Expanded: aria-pressed="true"
-    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'true');
+    // Expanded: aria-expanded="true"
+    await expect(toggleBtn).toHaveAttribute('aria-expanded', 'true');
 
     // Collapse
     await clickToggle(page);
     await page.waitForTimeout(250);
 
-    // Collapsed: aria-pressed="false"
-    await expect(toggleBtn).toHaveAttribute('aria-pressed', 'false');
+    // Collapsed: aria-expanded="false"
+    await expect(toggleBtn).toHaveAttribute('aria-expanded', 'false');
   });
 
   // ── AC8: Logo is Home link in both states (staff) ────────────────────────────

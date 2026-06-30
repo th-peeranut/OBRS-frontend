@@ -33,7 +33,7 @@
         type="button"
         class="admin-sidebar-pin"
         (click)="togglePin()"
-        [attr.aria-pressed]="isSidebarPinned"
+        [attr.aria-expanded]="isSidebarPinned"
         [attr.aria-label]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
         [attr.title]="(isSidebarPinned ? 'ADMIN.LAYOUT.COLLAPSE_MENU' : 'ADMIN.LAYOUT.EXPAND_MENU') | translate"
       >
