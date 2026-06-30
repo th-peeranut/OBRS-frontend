@@ -9,8 +9,7 @@ import {
 } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslateService } from '@ngx-translate/core';
-import { Subject } from 'rxjs';
-import { catchError, of, takeUntil } from 'rxjs';
+import { catchError, forkJoin, Observable, of, Subject, takeUntil } from 'rxjs';
 import { environment } from '../../../../../../environments/environment';
 import { RouteMapService } from '../../../../../services/route-map/route-map.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
@@ -19,6 +18,7 @@ import {
   RouteListItem,
   RouteMeta,
   RoutePickupDropoffData,
+  RoutePickupDropoffResponse,
   RouteStop,
 } from '../../../../../shared/interfaces/route-map.interface';
 
@@ -93,27 +93,53 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   loadDirections(): void {
     this.loadState = 'loading';
-    this.routeMapService
-      .getActiveRoutes()
-      .pipe(
+    const homeSlug = environment.homeRouteSlug || null;
+
+    // Pre-fetch pickup-dropoff concurrently when the slug is already known from
+    // the environment config.  When homeSlug is absent, prefetch$ emits null
+    // immediately so forkJoin degrades to the original sequential behaviour.
+    const prefetch$: Observable<RoutePickupDropoffResponse | null> = homeSlug
+      ? this.routeMapService
+          .getPickupDropoff(homeSlug)
+          .pipe(catchError(() => of<RoutePickupDropoffResponse | null>(null)))
+      : of<RoutePickupDropoffResponse | null>(null);
+
+    forkJoin({
+      routes: this.routeMapService.getActiveRoutes().pipe(
         catchError(() => {
           this.loadState = 'error';
           this.errorRetryTarget = 'directions';
           return of<RouteListItem[]>([]);
-        }),
-        takeUntil(this.destroy$)
-      )
-      .subscribe((routes) => {
+        })
+      ),
+      prefetchedPickupDropoff: prefetch$,
+    })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ routes, prefetchedPickupDropoff }) => {
         if (this.loadState === 'error') {
           return;
         }
         this.activeRoutes = routes;
         this.buildDirectionOptions();
         this.setDefaultRoute();
-        if (this.selectedRouteSlug) {
-          this.loadPickupDropoff(this.selectedRouteSlug);
-        } else {
+
+        if (!this.selectedRouteSlug) {
           this.loadState = 'empty';
+          return;
+        }
+
+        if (homeSlug && this.selectedRouteSlug === homeSlug) {
+          // We pre-fetched for this exact slug — use it or surface the error.
+          if (prefetchedPickupDropoff) {
+            this.applyRouteData(prefetchedPickupDropoff.data);
+          } else {
+            this.loadState = 'error';
+            this.errorRetryTarget = 'pickupDropoff';
+          }
+        } else {
+          // homeSlug absent, or the default route resolved to a different slug
+          // than what we pre-fetched — fetch the correct slug now.
+          this.loadPickupDropoff(this.selectedRouteSlug);
         }
       });
   }
