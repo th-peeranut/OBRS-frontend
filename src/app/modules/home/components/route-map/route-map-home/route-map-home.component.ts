@@ -1,11 +1,9 @@
 import {
   Component,
-  ElementRef,
   EventEmitter,
   OnDestroy,
   OnInit,
   Output,
-  ViewChild,
 } from '@angular/core';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { TranslateService } from '@ngx-translate/core';
@@ -38,8 +36,6 @@ interface DirectionOption {
 export class RouteMapHomeComponent implements OnInit, OnDestroy {
   @Output() pickupDropoffConfirmed =
     new EventEmitter<PickupDropoffConfirmedEvent>();
-
-  @ViewChild('mapPanelRef') mapPanelRef!: ElementRef;
 
   loadState: LoadState = 'loading';
   routeMeta: RouteMeta | null = null;
@@ -231,15 +227,6 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   onDropoffStopSelected(stop: RouteStop): void {
     this.selectedDropoffSlug = stop.slug;
     this.selectedDropoffStop = stop;
-  }
-
-  onViewMapClicked(): void {
-    if (this.mapPanelRef?.nativeElement) {
-      this.mapPanelRef.nativeElement.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-    }
   }
 
   onConfirmPickup(): void {

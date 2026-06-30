@@ -80,17 +80,8 @@
                     [selectedSlug]="selectedPickupSlug"
                     [province]="routeMeta.originProvinceLabel"
                     (stopSelected)="onPickupStopSelected($event)"
-                    (viewMapClicked)="onViewMapClicked()"
                     (confirmClicked)="onConfirmPickup()"
                   ></app-route-stop-list>
-
-                  <!-- CONTACT FOOTER -->
-                  <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
-                    <i class="bi bi-headset me-1"></i>
-                    <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
-                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
-                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
-                  </div>
                 </p-tabPanel>
 
                 <!-- TAB: DROPOFF -->
@@ -107,17 +98,8 @@
                     [selectedSlug]="selectedDropoffSlug"
                     [province]="routeMeta.destinationProvinceLabel"
                     (stopSelected)="onDropoffStopSelected($event)"
-                    (viewMapClicked)="onViewMapClicked()"
                     (confirmClicked)="onConfirmDropoff()"
                   ></app-route-stop-list>
-
-                  <!-- CONTACT FOOTER -->
-                  <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
-                    <i class="bi bi-headset me-1"></i>
-                    <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
-                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
-                    <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
-                  </div>
                 </p-tabPanel>
               </p-tabView>
             </div>
@@ -125,7 +107,7 @@
 
           <!-- CENTER PANEL: Map -->
           <div class="col-xl-6">
-            <div class="panel-card h-100" #mapPanelRef>
+            <div class="panel-card h-100">
               <div class="mb-2">
                 <div class="fw-bold">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
                 <div class="small text-muted">{{ getRouteTitle() }}</div>
@@ -204,7 +186,6 @@
               [selectedSlug]="selectedPickupSlug"
               [province]="routeMeta.originProvinceLabel"
               (stopSelected)="onPickupStopSelected($event)"
-              (viewMapClicked)="onViewMapClicked()"
               (confirmClicked)="onConfirmPickup()"
             ></app-route-stop-list>
 
@@ -215,13 +196,6 @@
                 [province]="routeMeta.originProvinceLabel"
                 [mapsApiKey]="mapsApiKey"
               ></app-route-stop-detail-card>
-            </div>
-
-            <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
-              <i class="bi bi-headset me-1"></i>
-              <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
-              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
-              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
             </div>
           </p-tabPanel>
 
@@ -240,7 +214,7 @@
               } }}
             </div>
 
-            <div #mapPanelRef>
+            <div>
               <app-route-map-panel
                 [pickupStops]="pickupStops"
                 [dropoffStops]="dropoffStops"
@@ -273,7 +247,6 @@
               [selectedSlug]="selectedDropoffSlug"
               [province]="routeMeta.destinationProvinceLabel"
               (stopSelected)="onDropoffStopSelected($event)"
-              (viewMapClicked)="onViewMapClicked()"
               (confirmClicked)="onConfirmDropoff()"
             ></app-route-stop-list>
 
@@ -284,13 +257,6 @@
                 [province]="routeMeta.destinationProvinceLabel"
                 [mapsApiKey]="mapsApiKey"
               ></app-route-stop-detail-card>
-            </div>
-
-            <div class="contact-footer mt-3 pt-3 border-top small text-muted text-center">
-              <i class="bi bi-headset me-1"></i>
-              <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.CONTACT_TITLE' | translate }}</span>
-              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_PHONE' | translate }}</span>
-              <span class="ms-2">{{ 'HOME.ROUTE_MAP.CONTACT_HOURS' | translate }}</span>
             </div>
           </p-tabPanel>
 

@@ -20,17 +20,12 @@ export class RouteStopListComponent implements OnChanges {
   @Input() province = '';
 
   @Output() stopSelected = new EventEmitter<RouteStop>();
-  @Output() viewMapClicked = new EventEmitter<void>();
   @Output() confirmClicked = new EventEmitter<void>();
 
   ngOnChanges(_changes: SimpleChanges): void {}
 
   onStopClick(stop: RouteStop): void {
     this.stopSelected.emit(stop);
-  }
-
-  onViewMap(): void {
-    this.viewMapClicked.emit();
   }
 
   onConfirm(): void {

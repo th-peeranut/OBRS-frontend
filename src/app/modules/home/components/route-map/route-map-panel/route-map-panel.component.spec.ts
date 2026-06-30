@@ -306,4 +306,203 @@ describe('RouteMapPanelComponent', () => {
 
   });
 
+  // -------------------------------------------------------------------------
+  // Directions road-snapping tests
+  //
+  // (a) On stops change, polylinePath is initially the straight ordered path.
+  // (b) When DirectionsService returns a route, polylinePath becomes the road path.
+  // (c) When DirectionsService errors / returns non-OK status, polylinePath
+  //     stays as the straight path (fallback).
+  // -------------------------------------------------------------------------
+
+  describe('Directions road-snapping', () => {
+    /**
+     * Minimal LatLng mock: exposes .lat() and .lng() methods as the real API
+     * does, allowing the component to read overview_path entries correctly.
+     */
+    class MockLatLng {
+      constructor(private _lat: number, private _lng: number) {}
+      lat(): number { return this._lat; }
+      lng(): number { return this._lng; }
+    }
+
+    /**
+     * Build a mock DirectionsResult with a simple two-point overview_path.
+     */
+    function mockDirectionsResult(
+      overviewPoints: Array<{ lat: number; lng: number }>
+    ): google.maps.DirectionsResult {
+      return {
+        routes: [
+          {
+            overview_path: overviewPoints.map(
+              (p) => new MockLatLng(p.lat, p.lng) as unknown as google.maps.LatLng
+            ),
+          } as unknown as google.maps.DirectionsRoute,
+        ],
+      } as unknown as google.maps.DirectionsResult;
+    }
+
+    /**
+     * Install a google.maps mock that includes a DirectionsService whose
+     * `route()` callback is controlled by `respondWith`.
+     *
+     * @param respondWith  Null ⇒ call callback with (null, errorStatus).
+     *                     DirectionsResult ⇒ call callback with (result, 'OK').
+     * @param errorStatus  Status string used when respondWith is null.
+     */
+    function installMockWithDirections(
+      respondWith: google.maps.DirectionsResult | null,
+      errorStatus = 'REQUEST_DENIED'
+    ): void {
+      const routeSpy = jasmine
+        .createSpy('route')
+        .and.callFake(
+          (
+            _req: google.maps.DirectionsRequest,
+            cb: (
+              r: google.maps.DirectionsResult | null,
+              s: google.maps.DirectionsStatus
+            ) => void
+          ) => {
+            if (respondWith) {
+              cb(respondWith, 'OK' as google.maps.DirectionsStatus);
+            } else {
+              cb(null, errorStatus as google.maps.DirectionsStatus);
+            }
+          }
+        );
+
+      (window as unknown as Record<string, unknown>)['google'] = {
+        maps: {
+          ...mockMapsLib,
+          DirectionsService: class {
+            route = routeSpy;
+          },
+        },
+      };
+    }
+
+    afterEach(() => {
+      removeGoogleMock();
+    });
+
+    it('(a) polylinePath is immediately set to the straight ordered path on stops change', () => {
+      // No Directions mock installed — falls back to straight path.
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Synchronous check: straight path is assigned before any async resolves.
+      expect(component.polylinePath.length).toBe(2);
+      expect(component.polylinePath[0].lat).toBeCloseTo(13.1, 3);
+      expect(component.polylinePath[1].lat).toBeCloseTo(13.2, 3);
+    });
+
+    it('(a) straight path preserves pickup-then-dropoff order sorted by stop.order', () => {
+      component.pickupStops = [makeStop(2, true), makeStop(1, true)]; // unsorted
+      component.dropoffStops = [makeStop(1, true)]; // dropoff order 1 → lat 13.1
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Pickup stops sorted by order: stop-1 (lat 13.1), stop-2 (lat 13.2)
+      // Then dropoff stop-1 (lat 13.1)
+      expect(component.polylinePath.length).toBe(3);
+      expect(component.polylinePath[0].lat).toBeCloseTo(13.1, 3); // pickup order 1
+      expect(component.polylinePath[1].lat).toBeCloseTo(13.2, 3); // pickup order 2
+      expect(component.polylinePath[2].lat).toBeCloseTo(13.1, 3); // dropoff order 1
+    });
+
+    it('(b) polylinePath is upgraded to road-snapped path when DirectionsService returns OK', async () => {
+      const roadResult = mockDirectionsResult([
+        { lat: 14.0, lng: 101.0 },
+        { lat: 14.5, lng: 101.5 },
+      ]);
+      installMockWithDirections(roadResult);
+
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Straight path is set immediately.
+      expect(component.polylinePath.length).toBe(2);
+      expect(component.polylinePath[0].lat).toBeCloseTo(13.1, 3);
+
+      // Wait for the Directions promise chain to settle.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      // Road-snapped path replaces the straight path.
+      expect(component.polylinePath.length).toBe(2);
+      expect(component.polylinePath[0].lat).toBeCloseTo(14.0, 3);
+      expect(component.polylinePath[1].lat).toBeCloseTo(14.5, 3);
+    });
+
+    it('(c) polylinePath stays as straight path when DirectionsService returns REQUEST_DENIED', async () => {
+      installMockWithDirections(null, 'REQUEST_DENIED');
+
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Capture straight path before async settles.
+      const straightLat0 = component.polylinePath[0].lat;
+      const straightLen = component.polylinePath.length;
+
+      // Wait for the Directions promise chain to settle.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      // polylinePath must remain the straight path.
+      expect(component.polylinePath.length).toBe(straightLen);
+      expect(component.polylinePath[0].lat).toBeCloseTo(straightLat0, 5);
+    });
+
+    it('(c) polylinePath stays as straight path when DirectionsService returns ZERO_RESULTS', async () => {
+      installMockWithDirections(null, 'ZERO_RESULTS');
+
+      component.pickupStops = [makeStop(1, true), makeStop(3, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      const straightLat0 = component.polylinePath[0].lat;
+
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      expect(component.polylinePath[0].lat).toBeCloseTo(straightLat0, 5);
+    });
+
+    it('(c) polylinePath stays as straight path when google.maps is unavailable (no API key env)', () => {
+      // No mock installed — window.google is absent.
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Straight path immediately and no crash.
+      expect(component.polylinePath.length).toBe(2);
+    });
+
+    it('stale-response guard: direction toggle discards slow response for previous direction', async () => {
+      // First direction: two pickup stops.
+      const roadResult1 = mockDirectionsResult([
+        { lat: 10.0, lng: 100.0 },
+        { lat: 10.5, lng: 100.5 },
+      ]);
+      installMockWithDirections(roadResult1);
+
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Immediately change direction (new stops) before first response settles.
+      const roadResult2 = mockDirectionsResult([
+        { lat: 20.0, lng: 100.0 },
+        { lat: 20.5, lng: 100.5 },
+      ]);
+      // Update mock to return the second road result.
+      installMockWithDirections(roadResult2);
+
+      component.pickupStops = [makeStop(3, true), makeStop(4, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+
+      // Both promises settle.
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      // The second direction's road path must win.
+      expect(component.polylinePath[0].lat).toBeCloseTo(20.0, 3);
+    });
+
+  });
+
 });

@@ -1,6 +1,6 @@
 <div class="route-stop-list">
   <!-- LIST HEADER -->
-  <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+  <div class="mb-2 px-2">
     <span class="fw-semibold text-sm">
       <ng-container *ngIf="type === 'pickup'">
         {{ 'HOME.ROUTE_MAP.PICKUP_LIST_HEADER' | translate: { province: province, count: stops.length } }}
@@ -9,15 +9,6 @@
         {{ 'HOME.ROUTE_MAP.DROPOFF_LIST_HEADER' | translate: { province: province, count: stops.length } }}
       </ng-container>
     </span>
-    <button
-      type="button"
-      class="btn btn-link btn-sm p-0 text-info"
-      (click)="onViewMap()"
-      [attr.aria-label]="'HOME.ROUTE_MAP.VIEW_MAP' | translate"
-    >
-      <i class="bi bi-map me-1"></i>
-      {{ 'HOME.ROUTE_MAP.VIEW_MAP' | translate }}
-    </button>
   </div>
 
   <!-- STOP ROWS -->

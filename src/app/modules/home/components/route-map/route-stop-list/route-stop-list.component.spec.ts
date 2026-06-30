@@ -34,13 +34,6 @@ describe('RouteStopListComponent', () => {
     expect(emitted as RouteStop).toEqual(stop);
   });
 
-  it('emits viewMapClicked when onViewMap is called', () => {
-    let called = false;
-    component.viewMapClicked.subscribe(() => (called = true));
-    component.onViewMap();
-    expect(called).toBeTrue();
-  });
-
   it('emits confirmClicked when onConfirm is called', () => {
     let called = false;
     component.confirmClicked.subscribe(() => (called = true));
