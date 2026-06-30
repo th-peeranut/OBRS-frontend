@@ -427,17 +427,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
         label: u.fullName?.trim() || u.email?.trim() || `#${u.id}`,
       }));
 
-    // Cold-open fix: if the create form is open and route/vehicleType are still
-    // blank+pristine (store wasn't loaded yet when the modal opened), apply the
-    // first-option defaults now — but never overwrite a user's manual pick.
+    // Cold-open fix: if the create form is open and route is still blank+pristine
+    // (store wasn't loaded yet when the modal opened), apply the first-option default
+    // now — but never overwrite a user's manual pick. vehicleType is intentionally
+    // NOT defaulted: per design-system §3.1 a form select starts on its placeholder
+    // and the user picks explicitly (like Vehicle/Driver). Validators.required blocks
+    // Confirm until they do.
     if (this.isScheduleFormOpen && !this.isScheduleEditMode) {
       const routeCtrl = this.scheduleItemForm.get('route');
-      const vtCtrl = this.scheduleItemForm.get('vehicleType');
       if (routeCtrl?.pristine && !routeCtrl.value && this.scheduleRouteOptions[0]?.code) {
         routeCtrl.setValue(this.scheduleRouteOptions[0].code);
-      }
-      if (vtCtrl?.pristine && !vtCtrl.value && this.scheduleVehicleTypeOptions[0]?.code) {
-        vtCtrl.setValue(this.scheduleVehicleTypeOptions[0].code);
       }
     }
   }
@@ -464,7 +463,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       departureDate: this.selectedDate,
       departureTime: now,
       route: this.scheduleRouteOptions[0]?.code ?? '',
-      vehicleType: this.scheduleVehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
       driverId: '',
     });
@@ -481,7 +480,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       departureDate: event.date,
       departureTime: now,
       route: event.routeSlug,
-      vehicleType: this.scheduleVehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
       driverId: '',
     });

@@ -154,7 +154,7 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
       departureDate: now,
       departureTime: now,
       route: this.routeOptions[0]?.code ?? '',
-      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
       driverId: '',
     });
