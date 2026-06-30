@@ -110,14 +110,6 @@
             <div class="panel-card h-100">
               <div class="mb-2">
                 <div class="fw-bold">{{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}</div>
-                <div class="small text-muted">{{ getRouteTitle() }}</div>
-                <div class="small text-muted">
-                  {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
-                    distance: routeMeta.totalDistanceKm,
-                    min: routeMeta.durationMinMinutes,
-                    max: routeMeta.durationMaxMinutes
-                  } }}
-                </div>
               </div>
 
               <app-route-map-panel
@@ -207,14 +199,6 @@
               <i class="bi bi-map me-1"></i>
               {{ 'HOME.ROUTE_MAP.MAP_TITLE' | translate }}
             </ng-template>
-
-            <div class="mb-2 small text-muted">
-              {{ 'HOME.ROUTE_MAP.ROUTE_DISTANCE' | translate: {
-                distance: routeMeta.totalDistanceKm,
-                min: routeMeta.durationMinMinutes,
-                max: routeMeta.durationMaxMinutes
-              } }}
-            </div>
 
             <div>
               <app-route-map-panel
