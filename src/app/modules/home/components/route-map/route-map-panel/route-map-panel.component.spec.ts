@@ -288,20 +288,20 @@ describe('RouteMapPanelComponent', () => {
       installGoogleMock(); // Restore so afterEach removeGoogleMock has something to remove
     });
 
-    it('dropoffMarkers uses red (#DC3545) color in SVG url', () => {
+    it('dropoffMarkers uses dark blue (#4069B8) color in SVG url', () => {
       component.dropoffStops = [makeStop(1, true)];
       component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
 
       const icon = component.dropoffMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%23DC3545'); // URL-encoded #DC3545
+      expect(icon.url).toContain('%234069B8'); // URL-encoded #4069B8
     });
 
-    it('pickupMarkers uses blue (#3BB0E7) color in SVG url', () => {
+    it('pickupMarkers uses cyan (#4BC2F7) color in SVG url', () => {
       component.pickupStops = [makeStop(1, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
 
       const icon = component.pickupMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%233BB0E7'); // URL-encoded #3BB0E7
+      expect(icon.url).toContain('%234BC2F7'); // URL-encoded #4BC2F7
     });
 
   });

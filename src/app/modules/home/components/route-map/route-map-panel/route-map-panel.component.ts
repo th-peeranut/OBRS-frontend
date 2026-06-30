@@ -103,7 +103,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   // Constant — never changes, so safe as a readonly field.
   readonly polylineOptions: google.maps.PolylineOptions = {
-    strokeColor: '#3BB0E7',
+    strokeColor: '#4BC2F7',
     strokeWeight: 4,
     strokeOpacity: 0.85,
   };
@@ -295,7 +295,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     }
     this.pickupMarkers = this.pickupStops.map((stop) => ({
       slug: stop.slug,
-      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, '#3BB0E7'),
+      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, '#4BC2F7'),
     }));
   }
 
@@ -306,7 +306,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     }
     this.dropoffMarkers = this.dropoffStops.map((stop) => ({
       slug: stop.slug,
-      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, '#DC3545'),
+      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, '#4069B8'),
     }));
   }
 

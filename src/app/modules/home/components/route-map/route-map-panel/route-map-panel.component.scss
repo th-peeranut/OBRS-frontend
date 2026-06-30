@@ -5,7 +5,7 @@
 
 .route-google-map {
   display: block;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -20,11 +20,11 @@
   border-radius: 50%;
 
   &--pickup {
-    background-color: #3bb0e7;
+    background-color: #4bc2f7;
   }
 
   &--dropoff {
-    background-color: #dc3545;
+    background-color: #4069b8;
   }
 }
 
