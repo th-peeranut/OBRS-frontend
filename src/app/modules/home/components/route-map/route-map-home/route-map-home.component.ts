@@ -292,4 +292,22 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       this.routeMeta.titleLocalized['th']
     );
   }
+
+  /**
+   * Distance span of the route in stop-distance units (max − min of every
+   * stop's distanceKmFromOrigin). The travel summary uses this to express the
+   * selected pickup→dropoff segment as a fraction of the whole route, since the
+   * per-stop distances are offset-derived proxies on a different scale than
+   * routeMeta.totalDistanceKm. Null until distances are known for ≥2 stops.
+   */
+  get routeSpanKm(): number | null {
+    const dists = [...this.pickupStops, ...this.dropoffStops]
+      .map((s) => s.distanceKmFromOrigin)
+      .filter((d): d is number => d != null);
+    if (dists.length < 2) {
+      return null;
+    }
+    const span = Math.max(...dists) - Math.min(...dists);
+    return span > 0 ? span : null;
+  }
 }

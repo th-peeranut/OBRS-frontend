@@ -19,10 +19,18 @@ export class RouteTravelSummaryComponent {
   @Input() selectedPickupStop: RouteStop | null = null;
   @Input() selectedDropoffStop: RouteStop | null = null;
 
+  /** The route's total distance span in the same units as each stop's
+   *  distanceKmFromOrigin (max − min across all stops). The per-stop values are
+   *  offset-derived proxies whose scale differs from routeMeta.totalDistanceKm,
+   *  so the selected segment is expressed as a fraction of this span and then
+   *  projected onto totalDistanceKm — keeping the summary self-consistent (a
+   *  full pickup→dropoff selection equals the whole-route figures). */
+  @Input() routeSpanKm: number | null = null;
+
   /** True when the figures below reflect the selected pickup→dropoff segment
    *  (not the whole route). Drives a small hint in the template. */
   get isSegment(): boolean {
-    return this.segmentDistanceKm !== null;
+    return this.segmentRatio !== null;
   }
 
   /** Along-route distance (km) between the selected pickup and dropoff, or null
@@ -38,24 +46,24 @@ export class RouteTravelSummaryComponent {
   }
 
   /** Fraction of the whole route covered by the selected segment, clamped to
-   *  (0, 1]. Used to scale the route's duration band down to the segment. */
+   *  (0, 1]. Scales both the distance and the duration band onto the route's
+   *  stated totals. Null (→ whole-route figures) when the span is unknown. */
   private get segmentRatio(): number | null {
     const segKm = this.segmentDistanceKm;
-    const total = this.routeMeta?.totalDistanceKm;
-    if (segKm == null || !total || total <= 0) {
+    const span = this.routeSpanKm;
+    if (segKm == null || !span || span <= 0) {
       return null;
     }
-    return Math.min(segKm / total, 1);
+    return Math.min(segKm / span, 1);
   }
 
-  /** Distance shown in the summary: the selected segment when available, else
-   *  the whole-route total. Rounded to a whole km (min 1 for a real segment). */
+  /** Distance shown in the summary: the selected segment projected onto the
+   *  route's stated total when available, else the whole-route total. Rounded
+   *  to a whole km (min 1 for a real segment). */
   get displayDistanceKm(): number {
-    const segKm = this.segmentDistanceKm;
-    if (segKm != null) {
-      return Math.max(1, Math.round(segKm));
-    }
-    return this.routeMeta?.totalDistanceKm ?? 0;
+    const ratio = this.segmentRatio;
+    const total = this.routeMeta?.totalDistanceKm ?? 0;
+    return ratio == null ? total : Math.max(1, Math.round(ratio * total));
   }
 
   get displayDurationMin(): number {
