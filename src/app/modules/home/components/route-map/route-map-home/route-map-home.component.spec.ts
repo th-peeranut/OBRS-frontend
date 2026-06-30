@@ -1,4 +1,4 @@
-import { of, Subject } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { RouteMapHomeComponent } from './route-map-home.component';
 import {
   RouteListItem,
@@ -365,5 +365,58 @@ describe('RouteMapHomeComponent', () => {
     const spy = spyOn(component['destroy$'], 'complete');
     component.ngOnDestroy();
     expect(spy).toHaveBeenCalled();
+  });
+
+  // ── Parallelisation ──────────────────────────────────────────────────────
+  it('fires getPickupDropoff in parallel and does NOT re-fetch when homeRouteSlug matches the default route', () => {
+    component.ngOnInit();
+    // The pre-fetch (fired concurrently with getActiveRoutes) counts as the
+    // one and only getPickupDropoff call; no second call should happen after
+    // directions resolve because the slug matches.
+    expect(routeMapServiceStub.getPickupDropoff).toHaveBeenCalledOnceWith('chonburi_bangkok');
+    expect(component.loadState).toBe('loaded');
+  });
+
+  it('re-fetches pickup-dropoff for the resolved default slug when active routes do not include homeRouteSlug', () => {
+    // Routes list does NOT contain 'chonburi_bangkok', so setDefaultRoute()
+    // will fall back to the first active route ('bangkok_chonburi').
+    const routesWithoutHome: RouteListItem[] = [
+      {
+        id: 2,
+        slug: 'bangkok_chonburi',
+        status: { code: 'active' },
+        translations: { en: { label: 'Bangkok → Chonburi' }, th: { label: 'กรุงเทพ → ชลบุรี' } },
+      },
+    ];
+    const serviceStub = createRouteMapServiceStub({
+      getActiveRoutes: () => of(routesWithoutHome),
+    });
+    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    comp.ngOnInit();
+    // First call: parallel pre-fetch for homeRouteSlug ('chonburi_bangkok').
+    // Second call: fallback fetch for the actual default ('bangkok_chonburi').
+    expect(serviceStub.getPickupDropoff).toHaveBeenCalledWith('chonburi_bangkok');
+    expect(serviceStub.getPickupDropoff).toHaveBeenCalledWith('bangkok_chonburi');
+    expect(serviceStub.getPickupDropoff).toHaveBeenCalledTimes(2);
+  });
+
+  it('sets loadState to error with directions target when getActiveRoutes fails on init', () => {
+    const serviceStub = createRouteMapServiceStub({
+      getActiveRoutes: () => throwError(() => new Error('Network error')),
+    });
+    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    comp.ngOnInit();
+    expect(comp.loadState).toBe('error');
+    expect((comp as AnyStub).errorRetryTarget).toBe('directions');
+  });
+
+  it('sets loadState to error with pickupDropoff target when pre-fetch fails and slug matches homeRouteSlug', () => {
+    const serviceStub = createRouteMapServiceStub({
+      getPickupDropoff: () => throwError(() => new Error('Network error')),
+    });
+    const comp = makeComponent(serviceStub, alertServiceStub, translateServiceStub, createBreakpointObserverStub());
+    comp.ngOnInit();
+    expect(comp.loadState).toBe('error');
+    expect((comp as AnyStub).errorRetryTarget).toBe('pickupDropoff');
   });
 });
