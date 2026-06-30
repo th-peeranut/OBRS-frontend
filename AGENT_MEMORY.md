@@ -1,5 +1,40 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-30 — Frontend: home-route-road-snap (issue #74) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-home-route-road-snap` (diff vs `origin/dev`)
+
+**Finding 1 (self-fixed) — duplicate Directions API call on /home re-navigation.**
+Angular runs `ngOnChanges` (initial inputs) *before* `ngOnInit`. In
+`route-map-panel.component.ts`, when `window.google.maps` is already loaded at
+`ngOnChanges` time (any 2nd+ visit to /home after the Maps script loaded once),
+`recomputeMapData()` fires `requestDirectionsPath(seq=1)`, and then `ngOnInit`'s
+`.then()` deferred re-fire also fired it again with the *same* `seq=1`. Both pass
+the stale guard and both hit the (billed) Directions API. Not a correctness bug
+(same result, no stale overwrite) but a doubled API cost on every revisit.
+**Fix:** added `private dirReqDispatchedSeq = -1;` — set to the seq whenever a
+request is actually dispatched (in `recomputeMapData` and in the `ngOnInit`
+re-fire), and the `ngOnInit` re-fire now only fires when
+`dirReqDispatchedSeq !== dirReqSeq`. So the deferred re-fire only runs for the
+genuine "stops arrived before maps loaded" case. 30/30 panel specs still pass.
+
+**Finding 2 (self-fixed) — orphaned CSS.** `.contact-footer` rule remained in
+`route-map-home.component.scss` after all three `.contact-footer` blocks were
+removed from the template. Deleted the dead rule.
+
+**Lesson for the developer:** `ngOnChanges` fires before `ngOnInit`. Any
+"deferred until async resource ready" re-fire scheduled in `ngOnInit` must be
+guarded against the case where the resource was *already* ready during
+`ngOnChanges` (which then already did the work) — otherwise you double-dispatch.
+A dispatched-seq marker is the cheap fix.
+
+**Left for the developer (NOT self-fixed):** dead i18n keys now unused after the
+removals — `HOME.ROUTE_MAP.VIEW_MAP` and the placeholder
+`HOME.ROUTE_MAP.CONTACT_TITLE/CONTACT_PHONE/CONTACT_HOURS` ("Enquiries" /
+"02-xxx-xxxx") in en/th/zh.json. Harmless but dead; remove if you want hygiene
+(spans 3 locale files). The global `shared/components/footer` uses the separate
+`HOME.FOOTER.*` keys and is untouched.
+
 ## 2026-06-30 — Frontend: ao/report-usability-issue (SELF-FIXED)
 
 **Branch:** `ao/report-usability-issue` (commit `b004343`)
