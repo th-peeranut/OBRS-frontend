@@ -1,4 +1,13 @@
 {
+  "USABILITY_REPORT": {
+    "FAB": { "LABEL": "Report Issue", "ARIA_LABEL": "Report a usability issue" },
+    "MODAL": { "TITLE": "Report a Usability Issue", "SUBTITLE": "Help us improve by reporting bugs or suggestions.", "CLOSE": "Close", "SUBMIT": "Submit Report", "SUBMITTING": "Submitting..." },
+    "CATEGORY": { "LABEL": "Category", "BUG": "Bug", "UX_UI_IMPROVEMENT": "UX/UI Improvement", "SUGGESTION": "Suggestion" },
+    "DESCRIPTION": { "LABEL": "Description", "PLACEHOLDER": "Describe the issue or suggestion in detail...", "REQUIRED": "Description is required." },
+    "IMAGES": { "LABEL": "Attach Images (optional)", "HINT": "Up to 5 images, max 5 MB each. JPEG, PNG, WebP, GIF.", "ADD": "Add Images", "REMOVE": "Remove", "TOO_MANY": "You can attach up to 5 images only.", "TOO_LARGE": "One or more images exceed the 5 MB limit.", "INVALID_TYPE": "Only JPEG, PNG, WebP, and GIF images are allowed." },
+    "SUBMIT_SUCCESS": "Your report has been submitted. Thank you!",
+    "ERROR": { "REPORT_INVALID_CATEGORY": "Invalid category selected.", "REPORT_TOO_MANY_IMAGES": "Too many images attached.", "REPORT_UNSUPPORTED_MEDIA_TYPE": "One or more image types are not supported.", "REPORT_IMAGE_TOO_LARGE": "One or more images are too large.", "REPORT_PAYLOAD_TOO_LARGE": "The total upload size is too large.", "REPORT_RATE_LIMITED": "You have submitted too many reports recently. Please wait before trying again.", "VALIDATION_FAILED": "Please check your input and try again.", "GENERIC": "Something went wrong. Please try again." }
+  },
   "MY_BOOKINGS": {
     "TITLE": "My Bookings",
     "SUBTITLE": "View your trips and cancel a booking if your plans change.",
@@ -128,7 +137,8 @@
       "VEHICLE_MANAGEMENT": "Vehicles",
       "ROUTE_MANAGEMENT": "Routes",
       "SCHEDULES": "Schedules",
-      "BOOKINGS_MANAGEMENT": "Bookings"
+      "BOOKINGS_MANAGEMENT": "Bookings",
+      "USABILITY_REPORTS": "Usability Reports"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -434,6 +444,22 @@
       "LOAD_FAILED": "Unable to load dashboard data.",
       "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded.",
       "UPDATING": "Updating…"
+    },
+    "USABILITY_REPORTS": {
+      "TITLE": "Usability Reports",
+      "SUBTITLE": "Review and triage usability issues reported by users.",
+      "TABLE_TITLE": "All Reports",
+      "FILTER_STATUS": "Filter by Status",
+      "SEARCH_PLACEHOLDER": "Search reports...",
+      "COL": { "ID": "ID", "CATEGORY": "Category", "STATUS": "Status", "USER": "User", "DESCRIPTION": "Description", "IMAGES": "Images", "CREATED_AT": "Submitted At" },
+      "VIEW": "View",
+      "EMPTY": "No usability reports found.",
+      "LOAD_FAILED": "Failed to load reports. Please refresh.",
+      "UNITS": "reports",
+      "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "CLOSE": "Close" },
+      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "resolved": "Resolved", "wont_fix": "Won't Fix" },
+      "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
+      "STATUS_UPDATE_FAILED": "Failed to update status. Please try again."
     }
   },
   "LOGIN": {

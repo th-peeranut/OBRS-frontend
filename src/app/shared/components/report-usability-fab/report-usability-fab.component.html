@@ -1,0 +1,152 @@
+<!-- Floating Action Button -->
+<button
+  class="report-fab"
+  type="button"
+  [attr.aria-label]="'USABILITY_REPORT.FAB.ARIA_LABEL' | translate"
+  (click)="openModal()"
+>
+  <span class="material-symbols-outlined">flag</span>
+  <span class="report-fab__label">{{ 'USABILITY_REPORT.FAB.LABEL' | translate }}</span>
+</button>
+
+<!-- Modal Backdrop -->
+<div
+  *ngIf="isModalOpen"
+  class="report-modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'USABILITY_REPORT.MODAL.TITLE' | translate"
+  (click)="closeModal()"
+>
+  <div class="report-modal" (click)="$event.stopPropagation()">
+    <!-- Header -->
+    <div class="report-modal__header">
+      <div>
+        <h5 class="report-modal__title">{{ 'USABILITY_REPORT.MODAL.TITLE' | translate }}</h5>
+        <p class="report-modal__subtitle">{{ 'USABILITY_REPORT.MODAL.SUBTITLE' | translate }}</p>
+      </div>
+      <button
+        type="button"
+        class="report-modal__close"
+        [attr.aria-label]="'USABILITY_REPORT.MODAL.CLOSE' | translate"
+        (click)="closeModal()"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="report-modal__body">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <!-- Category -->
+        <div class="report-field">
+          <label class="report-field__label">
+            {{ 'USABILITY_REPORT.CATEGORY.LABEL' | translate }}
+          </label>
+          <p-selectButton
+            [options]="categoryOptions"
+            formControlName="category"
+            optionLabel="label"
+            optionValue="value"
+          ></p-selectButton>
+        </div>
+
+        <!-- Description -->
+        <div class="report-field mt-3">
+          <label class="report-field__label" for="report-description">
+            {{ 'USABILITY_REPORT.DESCRIPTION.LABEL' | translate }}
+          </label>
+          <textarea
+            id="report-description"
+            class="report-textarea"
+            [class.is-invalid]="descriptionInvalid"
+            rows="5"
+            formControlName="description"
+            [placeholder]="'USABILITY_REPORT.DESCRIPTION.PLACEHOLDER' | translate"
+          ></textarea>
+          <div *ngIf="descriptionInvalid" class="report-field__error">
+            {{ 'USABILITY_REPORT.DESCRIPTION.REQUIRED' | translate }}
+          </div>
+        </div>
+
+        <!-- Images -->
+        <div class="report-field mt-3">
+          <label class="report-field__label">
+            {{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}
+          </label>
+          <p class="report-field__hint">{{ 'USABILITY_REPORT.IMAGES.HINT' | translate }}</p>
+
+          <input
+            #fileInput
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            class="report-file-input"
+            (change)="onFilesSelected($event)"
+          />
+
+          <button
+            type="button"
+            class="admin-btn mt-1"
+            (click)="triggerFileInput(fileInput)"
+            [disabled]="attachedFiles.length >= MAX_FILES"
+          >
+            <span class="material-symbols-outlined">attach_file</span>
+            <span>{{ 'USABILITY_REPORT.IMAGES.ADD' | translate }}</span>
+          </button>
+
+          <div *ngIf="imageError" class="report-field__error mt-1">{{ imageError }}</div>
+
+          <!-- Previews -->
+          <div *ngIf="attachedFiles.length > 0" class="report-previews mt-2">
+            <div
+              *ngFor="let file of attachedFiles; let i = index"
+              class="report-preview-item"
+            >
+              <img
+                [src]="thumbnailUrls[i]"
+                [alt]="file.name"
+                class="report-preview-thumb"
+              />
+              <span class="report-preview-name">{{ file.name }}</span>
+              <button
+                type="button"
+                class="report-preview-remove"
+                [attr.aria-label]="'USABILITY_REPORT.IMAGES.REMOVE' | translate"
+                (click)="removeFile(i)"
+              >
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Error -->
+        <div *ngIf="submitError" class="report-submit-error mt-3">{{ submitError }}</div>
+
+        <!-- Footer Actions -->
+        <div class="report-modal__footer mt-3">
+          <button
+            type="button"
+            class="admin-btn"
+            (click)="closeModal()"
+            [disabled]="isSubmitting"
+          >
+            {{ 'USABILITY_REPORT.MODAL.CLOSE' | translate }}
+          </button>
+          <button
+            type="submit"
+            class="admin-btn admin-btn-primary"
+            [disabled]="isSubmitting"
+          >
+            {{
+              isSubmitting
+                ? ('USABILITY_REPORT.MODAL.SUBMITTING' | translate)
+                : ('USABILITY_REPORT.MODAL.SUBMIT' | translate)
+            }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

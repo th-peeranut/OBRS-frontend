@@ -1,0 +1,212 @@
+<section class="admin-page-intro" *ngIf="isLoading || errorMessage || isRefreshing || refreshFailed">
+  <div>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.USABILITY_REPORTS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-page-filters">
+    <app-admin-dropdown
+      [value]="selectedStatusFilter"
+      [options]="statusFilterOptions"
+      valueKey="value"
+      labelKey="label"
+      [placeholder]="'ADMIN.USABILITY_REPORTS.FILTER_STATUS' | translate"
+      (valueChange)="onStatusFilterChange($event)"
+    ></app-admin-dropdown>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.ID' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.USER' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}</th>
+          <th>{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</th>
+          <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr
+            *ngFor="let report of filteredReports; let i = index; trackBy: trackById"
+            [class.zebra]="i % 2 === 1"
+          >
+            <td class="admin-emphasis">{{ report.id }}</td>
+            <td>{{ categoryLabel(report.category) }}</td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(report.status)">
+                {{ statusLabel(report.status) }}
+              </span>
+            </td>
+            <td>
+              <ng-container *ngIf="report.userId !== null; else anonCell">
+                {{ report.userId }}
+              </ng-container>
+              <ng-template #anonCell>
+                <span class="admin-muted">
+                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
+                </span>
+              </ng-template>
+            </td>
+            <td class="ur-description-cell">{{ report.descriptionPreview }}</td>
+            <td>{{ report.imageCount }}</td>
+            <td>{{ report.createdAt }}</td>
+            <td>
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                (click)="openDetail(report.id)"
+              >
+                {{ 'ADMIN.USABILITY_REPORTS.VIEW' | translate }}
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="filteredReports.length === 0 && !errorMessage" class="admin-empty-row">
+            <td colspan="8">{{ 'ADMIN.USABILITY_REPORTS.EMPTY' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-table-footer">
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredReports.length }}
+      {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
+    </span>
+  </div>
+</section>
+
+<!-- Detail Modal -->
+<div
+  class="admin-modal-backdrop"
+  *ngIf="selectedReportId !== null"
+  adminModalBackdrop
+  (dismiss)="closeDetail()"
+>
+  <div class="admin-modal ur-detail-modal">
+    <div class="admin-modal-header">
+      <h4 class="admin-modal-title">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TITLE' | translate }}</h4>
+      <button
+        type="button"
+        class="admin-btn"
+        (click)="closeDetail()"
+      >
+        {{ 'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate }}
+      </button>
+    </div>
+
+    <div *ngIf="isDetailLoading" class="ur-detail-loading">
+      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    </div>
+
+    <ng-container *ngIf="!isDetailLoading && detailReport">
+      <div class="ur-detail-body">
+        <!-- Meta fields -->
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</span>
+          <span>{{ categoryLabel(detailReport.category) }}</span>
+        </div>
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.ROUTE' | translate }}</span>
+          <span class="admin-emphasis">{{ detailReport.routeUrl }}</span>
+        </div>
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_ID' | translate }}</span>
+          <span *ngIf="detailReport.userId !== null">{{ detailReport.userId }}</span>
+          <span *ngIf="detailReport.userId === null" class="admin-muted">
+            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.ANONYMOUS' | translate }}
+          </span>
+        </div>
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CREATED_AT' | translate }}</span>
+          <span>{{ detailReport.createdAt }}</span>
+        </div>
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_AGENT' | translate }}</span>
+          <span class="ur-user-agent">{{ detailReport.userAgent }}</span>
+        </div>
+
+        <!-- Description -->
+        <div class="ur-detail-description mt-3">
+          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</p>
+          <p class="ur-description-text">{{ detailReport.description }}</p>
+        </div>
+
+        <!-- Images -->
+        <div class="mt-3">
+          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}</p>
+          <p *ngIf="detailReport.images.length === 0" class="admin-muted">
+            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.NO_IMAGES' | translate }}
+          </p>
+          <div *ngIf="detailReport.images.length > 0" class="ur-images-grid">
+            <div *ngFor="let img of detailReport.images" class="ur-image-item">
+              <img [src]="img.publicUrl" [alt]="'Image ' + img.position" class="ur-image-thumb" />
+              <div class="ur-image-meta">
+                <span>
+                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_POSITION' | translate }}:
+                  {{ img.position }}
+                </span>
+                <span>
+                  {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_SIZE' | translate }}:
+                  {{ formatBytes(img.sizeBytes) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status update -->
+        <div class="ur-status-update mt-3">
+          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>
+          <div class="ur-status-controls">
+            <app-admin-dropdown
+              [value]="selectedDetailStatus"
+              [options]="detailStatusOptions"
+              valueKey="value"
+              labelKey="label"
+              [placeholder]="'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate"
+              (valueChange)="onDetailStatusChange($event)"
+            ></app-admin-dropdown>
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary"
+              [disabled]="isSavingStatus || !selectedDetailStatus"
+              (click)="saveStatus()"
+            >
+              {{ 'ADMIN.USABILITY_REPORTS.STATUS.SAVE' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+</div>

@@ -13,6 +13,8 @@ import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
+import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
+import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
   {
@@ -60,6 +62,16 @@ const routes: Routes = [
         component: BookingsPageComponent,
         data: { titleKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', subtitleKey: 'ADMIN.BOOKINGS.SUBTITLE' },
       },
+      {
+        path: 'usability-reports',
+        component: UsabilityReportsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.USABILITY_REPORTS',
+          subtitleKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -81,6 +93,7 @@ const routes: Routes = [
     SchedulesPageComponent,
     BookingsPageComponent,
     AdminModalBackdropDirective,
+    UsabilityReportsPageComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })

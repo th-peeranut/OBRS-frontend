@@ -1,5 +1,29 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-06-30 — Frontend: ao/report-usability-issue (SELF-FIXED)
+
+**Branch:** `ao/report-usability-issue` (commit `b004343`)
+
+**Finding (self-fixed):** In `usability-reports-page.component.ts` the two
+`app-admin-dropdown` option arrays (`statusFilterOptions`, `detailStatusOptions`)
+were initialized with **hardcoded English labels** (`'New'`, `'In Review'`,
+`'Resolved'`, `"Won't Fix"`). `app-admin-dropdown` renders `option[labelKey]`
+verbatim with no translate pipe, so a Thai/Chinese admin saw English status
+labels in the filter dropdown and the detail status selector — while the same
+statuses rendered translated in the table via `statusLabel()`
+(`ADMIN.USABILITY_REPORTS.STATUS.<status>`). Inconsistent + an i18n violation.
+
+**Fix:** Build both option arrays from i18n in `ngOnInit` via a private
+`buildStatusOptions()` that maps `statusValues` → `translate.instant('ADMIN.USABILITY_REPORTS.STATUS.<value>')`,
+and rebuild on `translate.onLangChange` (takeUntil(destroy$)). The translated
+STATUS keys already existed in en/th/zh, so no new i18n keys were needed.
+
+**Lesson for the developer:** `app-admin-dropdown` does NOT translate labels —
+whenever you feed it `{value,label}` options, the `label` must already be a
+translated string. Never hardcode user-facing option labels; build them from
+existing i18n keys (and rebuild on `onLangChange` so the dropdown follows the
+language switcher like the rest of the page).
+
 ## 2026-06-26 — Frontend: ao/route-pickup-dropoff-map
 
 **Branch:** `ao/route-pickup-dropoff-map`

@@ -1,4 +1,13 @@
 {
+  "USABILITY_REPORT": {
+    "FAB": { "LABEL": "รายงานปัญหา", "ARIA_LABEL": "รายงานปัญหาการใช้งาน" },
+    "MODAL": { "TITLE": "รายงานปัญหาการใช้งาน", "SUBTITLE": "ช่วยเราปรับปรุงโดยรายงานข้อบกพร่องหรือข้อเสนอแนะ", "CLOSE": "ปิด", "SUBMIT": "ส่งรายงาน", "SUBMITTING": "กำลังส่ง..." },
+    "CATEGORY": { "LABEL": "หมวดหมู่", "BUG": "ข้อบกพร่อง", "UX_UI_IMPROVEMENT": "การปรับปรุง UX/UI", "SUGGESTION": "ข้อเสนอแนะ" },
+    "DESCRIPTION": { "LABEL": "คำอธิบาย", "PLACEHOLDER": "อธิบายปัญหาหรือข้อเสนอแนะโดยละเอียด...", "REQUIRED": "กรุณาระบุคำอธิบาย" },
+    "IMAGES": { "LABEL": "แนบรูปภาพ (ไม่บังคับ)", "HINT": "สูงสุด 5 รูป ขนาดสูงสุด 5 MB ต่อรูป รองรับ JPEG, PNG, WebP, GIF", "ADD": "เพิ่มรูปภาพ", "REMOVE": "ลบ", "TOO_MANY": "สามารถแนบได้สูงสุด 5 รูปเท่านั้น", "TOO_LARGE": "รูปภาพบางรูปมีขนาดเกิน 5 MB", "INVALID_TYPE": "รองรับเฉพาะไฟล์ JPEG, PNG, WebP และ GIF เท่านั้น" },
+    "SUBMIT_SUCCESS": "ส่งรายงานเรียบร้อยแล้ว ขอบคุณ!",
+    "ERROR": { "REPORT_INVALID_CATEGORY": "หมวดหมู่ที่เลือกไม่ถูกต้อง", "REPORT_TOO_MANY_IMAGES": "แนบรูปภาพมากเกินไป", "REPORT_UNSUPPORTED_MEDIA_TYPE": "ประเภทไฟล์รูปภาพบางรายการไม่รองรับ", "REPORT_IMAGE_TOO_LARGE": "รูปภาพบางรายการมีขนาดใหญ่เกินไป", "REPORT_PAYLOAD_TOO_LARGE": "ขนาดไฟล์ที่อัปโหลดรวมกันใหญ่เกินไป", "REPORT_RATE_LIMITED": "คุณส่งรายงานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่", "VALIDATION_FAILED": "กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง", "GENERIC": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" }
+  },
   "MY_BOOKINGS": {
     "TITLE": "การจองของฉัน",
     "SUBTITLE": "ดูการเดินทางของคุณ และยกเลิกการจองได้หากแผนเปลี่ยนแปลง",
@@ -128,7 +137,8 @@
       "VEHICLE_MANAGEMENT": "ยานพาหนะ",
       "ROUTE_MANAGEMENT": "เส้นทาง",
       "SCHEDULES": "ตารางเดินรถ",
-      "BOOKINGS_MANAGEMENT": "การจอง"
+      "BOOKINGS_MANAGEMENT": "การจอง",
+      "USABILITY_REPORTS": "รายงานการใช้งาน"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -434,6 +444,22 @@
       "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้",
       "PARTIAL_LOAD_FAILED": "ข้อมูลแดชบอร์ดบางส่วนไม่สามารถโหลดได้",
       "UPDATING": "กำลังอัปเดต…"
+    },
+    "USABILITY_REPORTS": {
+      "TITLE": "รายงานการใช้งาน",
+      "SUBTITLE": "ตรวจสอบและจัดการปัญหาการใช้งานที่ผู้ใช้รายงาน",
+      "TABLE_TITLE": "รายงานทั้งหมด",
+      "FILTER_STATUS": "กรองตามสถานะ",
+      "SEARCH_PLACEHOLDER": "ค้นหารายงาน...",
+      "COL": { "ID": "รหัส", "CATEGORY": "หมวดหมู่", "STATUS": "สถานะ", "USER": "ผู้ใช้", "DESCRIPTION": "คำอธิบาย", "IMAGES": "รูปภาพ", "CREATED_AT": "เวลาที่ส่ง" },
+      "VIEW": "ดูรายละเอียด",
+      "EMPTY": "ไม่พบรายงานการใช้งาน",
+      "LOAD_FAILED": "โหลดรายงานไม่สำเร็จ กรุณารีเฟรช",
+      "UNITS": "รายงาน",
+      "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "CLOSE": "ปิด" },
+      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึกสถานะ", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "resolved": "แก้ไขแล้ว", "wont_fix": "ไม่แก้ไข" },
+      "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
+      "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่"
     }
   },
   "LOGIN": {

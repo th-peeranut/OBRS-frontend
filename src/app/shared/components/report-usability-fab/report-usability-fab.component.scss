@@ -1,0 +1,231 @@
+@use 'sass:color';
+
+// ── FAB ─────────────────────────────────────────────────────────────────────
+
+.report-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 900;
+
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 28px;
+  cursor: pointer;
+
+  // Use admin accent token so the FAB themes with the admin shell
+  background-color: var(--accent, #4dbeef);
+  color: var(--accent-contrast, #fff);
+
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  transition: box-shadow 0.2s, background-color 0.2s;
+
+  &:hover {
+    background-color: var(--accent-strong, #006687);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  }
+
+  .material-symbols-outlined {
+    font-size: 22px;
+  }
+}
+
+// Mobile: icon-only pill collapses to 48 × 48 touch target
+@media (max-width: 576px) {
+  .report-fab {
+    padding: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .report-fab__label {
+    display: none;
+  }
+}
+
+// ── Modal backdrop ──────────────────────────────────────────────────────────
+
+.report-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1350;
+  background: rgba(0, 0, 0, 0.5);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+// ── Modal shell ─────────────────────────────────────────────────────────────
+
+.report-modal {
+  background: var(--bs-body-bg, #fff);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 560px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.report-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 0;
+}
+
+.report-modal__title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.report-modal__subtitle {
+  margin: 4px 0 0;
+  font-size: 0.875rem;
+  color: var(--bs-secondary-color, #6c757d);
+}
+
+.report-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--bs-secondary-color, #6c757d);
+  padding: 0;
+  line-height: 1;
+
+  .material-symbols-outlined {
+    font-size: 22px;
+  }
+
+  &:hover {
+    color: var(--bs-body-color, #212529);
+  }
+}
+
+.report-modal__body {
+  padding: 16px 20px 20px;
+}
+
+.report-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+// ── Form fields ─────────────────────────────────────────────────────────────
+
+.report-field__label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.report-field__hint {
+  font-size: 0.8rem;
+  color: var(--bs-secondary-color, #6c757d);
+  margin-bottom: 6px;
+}
+
+.report-field__error {
+  font-size: 0.8rem;
+  color: var(--bs-danger, #dc3545);
+  margin-top: 4px;
+}
+
+.report-textarea {
+  width: 100%;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+
+  &.is-invalid {
+    border-color: var(--bs-danger, #dc3545);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--accent, #4dbeef);
+    box-shadow: 0 0 0 2px rgba(77, 190, 239, 0.2);
+  }
+}
+
+// ── File input ──────────────────────────────────────────────────────────────
+
+.report-file-input {
+  display: none;
+}
+
+// ── Image previews ──────────────────────────────────────────────────────────
+
+.report-previews {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.report-preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bs-tertiary-bg, #f8f9fa);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.report-preview-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.report-preview-name {
+  flex: 1;
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-preview-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: var(--bs-secondary-color, #6c757d);
+  flex-shrink: 0;
+  line-height: 1;
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  &:hover {
+    color: var(--bs-danger, #dc3545);
+  }
+}
+
+// ── Submit error ─────────────────────────────────────────────────────────────
+
+.report-submit-error {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: rgba(220, 53, 69, 0.08);
+  color: var(--bs-danger, #dc3545);
+  font-size: 0.875rem;
+}
