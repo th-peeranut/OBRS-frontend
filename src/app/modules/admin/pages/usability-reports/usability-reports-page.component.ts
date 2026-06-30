@@ -29,11 +29,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected readonly skeletonRows = Array.from({ length: 5 });
 
   protected selectedStatusFilter = '';
-  protected readonly statusFilterOptions: StatusOption[] = [
-    { value: 'new', label: 'New' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'resolved', label: 'Resolved' },
-    { value: 'wont_fix', label: "Won't Fix" },
+  // Built from i18n in ngOnInit (and rebuilt on language change) so the admin
+  // dropdowns match the translated status labels shown in the table.
+  protected statusFilterOptions: StatusOption[] = [];
+  private readonly statusValues: UsabilityReportStatus[] = [
+    'new',
+    'in_review',
+    'resolved',
+    'wont_fix',
   ];
 
   // Detail modal
@@ -53,6 +56,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    this.buildStatusOptions();
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.buildStatusOptions());
+
     this.store.data$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
@@ -195,10 +203,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
-  protected readonly detailStatusOptions: StatusOption[] = [
-    { value: 'new', label: 'New' },
-    { value: 'in_review', label: 'In Review' },
-    { value: 'resolved', label: 'Resolved' },
-    { value: 'wont_fix', label: "Won't Fix" },
-  ];
+  protected detailStatusOptions: StatusOption[] = [];
+
+  private buildStatusOptions(): void {
+    this.statusFilterOptions = this.statusValues.map((value) => ({
+      value,
+      label: this.translate.instant(`ADMIN.USABILITY_REPORTS.STATUS.${value}`),
+    }));
+    this.detailStatusOptions = this.statusFilterOptions;
+  }
 }
