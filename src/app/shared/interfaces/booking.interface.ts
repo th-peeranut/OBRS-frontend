@@ -47,15 +47,3 @@ export interface BookingState {
   bookingId: number | null;
   bookingNumber: string | null;
 }
-
-export interface BookingCreationResponse {
-  bookingId?: number;
-  id?: number;
-  bookingNumber?: string;
-  bookingNo?: string;
-  number?: string;
-  booking?: {
-    id?: number;
-    bookingNumber?: string;
-  };
-}

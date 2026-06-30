@@ -16,9 +16,9 @@ import { BookerInfoFormComponent } from './components/booker-info-form/booker-in
 import { selectScheduleBooking } from '../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
 import { BookingService } from '../../services/booking/booking.service';
+import { parsePricePerSeat } from '../../shared/lib/trip-format';
 import {
   BookingPayload,
-  BookingCreationResponse,
   BookingSchedulePayload,
 } from '../../shared/interfaces/booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
@@ -113,8 +113,10 @@ export class PassengerInfoComponent {
           this.bookingService.createBooking(bookingPayload).pipe(take(1))
         );
         if (response?.code === 200 || response?.code === 201) {
-          const bookingId = this.extractBookingId(response?.data);
-          const bookingNumber = this.extractBookingNumber(response?.data);
+          // createBooking already normalizes the intake response to the canonical
+          // { bookingId, bookingNumber }; 0/'' mean "not created".
+          const bookingId = response.data?.bookingId || null;
+          const bookingNumber = response.data?.bookingNumber || null;
           this.bookingService.setActiveBookingId(bookingId);
           this.setBookingStore(bookingId, bookingNumber);
           this.alertService.success(
@@ -260,7 +262,7 @@ export class PassengerInfoComponent {
     passengers: PassengerInfo[],
     pricePerSeat?: string | number | null
   ): number {
-    const costPerPassenger = this.getPricePerSeat(pricePerSeat);
+    const costPerPassenger = parsePricePerSeat(pricePerSeat);
     const passengerCount = passengers.length;
     return passengerCount * costPerPassenger;
   }
@@ -285,11 +287,6 @@ export class PassengerInfoComponent {
     if (match) return match.slug || String(raw);
 
     return String(raw);
-  }
-
-  private getPricePerSeat(value: string | number | null | undefined): number {
-    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private buildContactPayload(booker: PassengerInfo): BookingPayload['contact'] {
@@ -364,22 +361,6 @@ export class PassengerInfoComponent {
     }
 
     return normalized || 'male';
-  }
-
-  private extractBookingId(data: BookingCreationResponse | null | undefined): number | null {
-    const candidate = data?.bookingId ?? data?.id ?? data?.booking?.id;
-    const bookingId = Number(candidate);
-    return Number.isFinite(bookingId) && bookingId > 0 ? bookingId : null;
-  }
-
-  private extractBookingNumber(data: BookingCreationResponse | null | undefined): string | null {
-    const candidate =
-      data?.bookingNumber ??
-      data?.bookingNo ??
-      data?.number ??
-      data?.booking?.bookingNumber;
-    const bookingNumber = String(candidate ?? '').trim();
-    return bookingNumber.length > 0 ? bookingNumber : null;
   }
 
   private setBookingStore(

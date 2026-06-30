@@ -14,6 +14,7 @@ import { distinctUntilChanged, map, take, takeUntil } from 'rxjs/operators';
 import QRCode from 'qrcode';
 import { environment } from '../../../../../environments/environment';
 import { Schedule } from '../../../../shared/interfaces/schedule.interface';
+import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
 import { ScheduleFilter } from '../../../../shared/interfaces/schedule.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
@@ -261,14 +262,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   private sumScheduleFare(items?: Schedule[] | null): number {
     return (
-      items?.reduce((total, item) => total + this.getPricePerSeat(item?.pricePerSeat), 0) ??
+      items?.reduce((total, item) => total + parsePricePerSeat(item?.pricePerSeat), 0) ??
       0
     );
-  }
-
-  private getPricePerSeat(value: string | number | null | undefined): number {
-    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private sumPassengers(items?: { type: string; count: number }[]): number {

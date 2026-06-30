@@ -4,6 +4,7 @@ import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
+import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
 import {
   Schedule,
   ScheduleFilter,
@@ -56,8 +57,7 @@ export class ReviewScheduleBookingTotalComponent {
   }
 
   getPricePerSeat(value: string | number | null | undefined): number {
-    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return Number.isFinite(parsed) ? parsed : 0;
+    return parsePricePerSeat(value);
   }
 
   onConfirm(): void {

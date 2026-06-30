@@ -3,7 +3,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   BookingPayload,
-  BookingCreationResponse,
+  CreateBookingResponse,
 } from '../../shared/interfaces/booking.interface';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import {
@@ -17,7 +17,7 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -27,11 +27,40 @@ export class BookingService {
 
   constructor(private http: HttpClient) {}
 
-  createBooking(payload: BookingPayload): Observable<ResponseAPI<BookingCreationResponse>> {
-    return this.http.post<ResponseAPI<BookingCreationResponse>>(
-      `${environment.apiUrl}/api/private/bookings`,
-      payload
-    );
+  /**
+   * Create a booking and reserve seats. This is the single seam that resolves the
+   * booking-intake response: the raw payload is normalized to the canonical
+   * `CreateBookingResponse` ({ bookingId, bookingNumber }) here, so callers never
+   * guess at field names or coerce types. Contract: POST /api/private/bookings →
+   * 201, data = CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   */
+  createBooking(
+    payload: BookingPayload
+  ): Observable<ResponseAPI<CreateBookingResponse>> {
+    return this.http
+      .post<ResponseAPI<CreateBookingResponse>>(
+        `${environment.apiUrl}/api/private/bookings`,
+        payload
+      )
+      .pipe(
+        map((response) => ({
+          ...response,
+          data: this.normalizeCreateBooking(response.data),
+        }))
+      );
+  }
+
+  // Coerce the intake response to the canonical shape in one place. bookingId
+  // resolves to 0 and bookingNumber to '' when absent/invalid; callers treat
+  // those as "not created".
+  private normalizeCreateBooking(
+    data: CreateBookingResponse | null | undefined
+  ): CreateBookingResponse {
+    const bookingId = Number(data?.bookingId);
+    return {
+      bookingId: Number.isFinite(bookingId) && bookingId > 0 ? bookingId : 0,
+      bookingNumber: String(data?.bookingNumber ?? '').trim(),
+    };
   }
 
   getBookingTickets(

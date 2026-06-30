@@ -21,6 +21,13 @@ import {
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { Station } from '../../../../shared/interfaces/station.interface';
 import dayjs from 'dayjs';
+import {
+  capitalizeVehicleType,
+  durationHours,
+  durationMinutes,
+  formatTimeHHMM,
+  parsePricePerSeat,
+} from '../../../../shared/lib/trip-format';
 
 @Component({
   selector: 'app-passenger-info-summary',
@@ -76,14 +83,11 @@ export class PassengerInfoSummaryComponent {
   }
 
   getPricePerSeat(value: string | number | null | undefined): number {
-    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return Number.isFinite(parsed) ? parsed : 0;
+    return parsePricePerSeat(value);
   }
 
   formatDateTimeToHHMM(dateTime: string): string {
-    if (!dateTime) return '';
-    const parsed = dayjs(dateTime);
-    return parsed.isValid() ? parsed.format('HH:mm') : '';
+    return formatTimeHHMM(dateTime);
   }
 
   formatDateFromDateTime(dateTime: string): string {
@@ -143,18 +147,15 @@ export class PassengerInfoSummaryComponent {
   }
 
   getDurationHours(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return Math.floor(totalMinutes / 60);
+    return durationHours(startDateTime, endDateTime);
   }
 
   getDurationMinutes(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return totalMinutes % 60;
+    return durationMinutes(startDateTime, endDateTime);
   }
 
   formatVehicleType(type: string | null | undefined): string {
-    if (!type) return '';
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return capitalizeVehicleType(type);
   }
 
   findStationById(
@@ -215,15 +216,6 @@ export class PassengerInfoSummaryComponent {
 
   onBack(): void {
     this.back.emit();
-  }
-
-  private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {
-    if (!startDateTime || !endDateTime) return 0;
-    const start = dayjs(startDateTime);
-    const end = dayjs(endDateTime);
-    if (!start.isValid() || !end.isValid()) return 0;
-    const diff = end.diff(start, 'minute');
-    return diff >= 0 ? diff : 0;
   }
 }
 

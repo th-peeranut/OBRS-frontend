@@ -21,6 +21,12 @@ import {
 } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import dayjs from 'dayjs';
+import {
+  capitalizeVehicleType,
+  durationHours,
+  durationMinutes,
+  formatTimeHHMM,
+} from '../../../../shared/lib/trip-format';
 
 @Component({
   selector: 'app-review-schedule-booking-summary',
@@ -58,9 +64,7 @@ export class ReviewScheduleBookingSummaryComponent {
   }
 
   formatDateTimeToHHMM(dateTime: string): string {
-    if (!dateTime) return '';
-    const parsed = dayjs(dateTime);
-    return parsed.isValid() ? parsed.format('HH:mm') : '';
+    return formatTimeHHMM(dateTime);
   }
 
   formatDateFromDateTime(dateTime: string): string {
@@ -120,18 +124,15 @@ export class ReviewScheduleBookingSummaryComponent {
   }
 
   getDurationHours(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return Math.floor(totalMinutes / 60);
+    return durationHours(startDateTime, endDateTime);
   }
 
   getDurationMinutes(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return totalMinutes % 60;
+    return durationMinutes(startDateTime, endDateTime);
   }
 
   formatVehicleType(type: string | null | undefined): string {
-    if (!type) return '';
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return capitalizeVehicleType(type);
   }
 
   findStationById(stationId: number | string): Observable<ProvinceStationReview | null> {
@@ -186,15 +187,6 @@ export class ReviewScheduleBookingSummaryComponent {
 
   onChangeData() {
     this.router.navigate(['/schedule-booking']);
-  }
-
-  private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {
-    if (!startDateTime || !endDateTime) return 0;
-    const start = dayjs(startDateTime);
-    const end = dayjs(endDateTime);
-    if (!start.isValid() || !end.isValid()) return 0;
-    const diff = end.diff(start, 'minute');
-    return diff >= 0 ? diff : 0;
   }
 }
 

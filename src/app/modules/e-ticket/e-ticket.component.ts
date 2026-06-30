@@ -11,6 +11,7 @@ import {
   takeUntil,
 } from 'rxjs';
 import dayjs from 'dayjs';
+import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
@@ -249,7 +250,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     this.origin = fromName || '-';
     this.destination = toName || '-';
     this.vehicleType =
-      this.formatVehicleType(departureSchedule?.vehicleType) || '-';
+      capitalizeVehicleType(departureSchedule?.vehicleType) || '-';
     this.vehiclePlate = '-';
     this.seats = this.buildSeatList(ticketPassengers);
     this.passengers = ticketPassengers;
@@ -405,7 +406,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     fallbackPassengerCount: number
   ): number {
     const scheduleFareSum = schedules.reduce(
-      (total, schedule) => total + this.getPricePerSeat(schedule.pricePerSeat),
+      (total, schedule) => total + parsePricePerSeat(schedule.pricePerSeat),
       0
     );
 
@@ -415,11 +416,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
       configuredPassengerCount > 0 ? configuredPassengerCount : fallbackPassengerCount;
 
     return scheduleFareSum * passengerCount;
-  }
-
-  private getPricePerSeat(value: string | number | null | undefined): number {
-    const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
-    return Number.isFinite(parsed) ? parsed : 0;
   }
 
   private getStationLabelById(
@@ -493,14 +489,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const datePart = this.formatDate(date.toISOString(), locale);
     const timePart = date.format('HH:mm');
     return `${datePart} ${timePart}`.trim();
-  }
-
-  private formatVehicleType(type: string | null | undefined): string {
-    if (!type) {
-      return '';
-    }
-
-    return type.charAt(0).toUpperCase() + type.slice(1);
   }
 
   private normalizeLocale(locale: string | null | undefined): Locale {
@@ -605,7 +593,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
     const vehicleType = outbound?.vehicle?.vehicleType?.label?.trim();
     if (vehicleType) {
-      this.vehicleType = this.formatVehicleType(vehicleType);
+      this.vehicleType = capitalizeVehicleType(vehicleType);
     }
 
     const vehiclePlate = this.buildVehiclePlate(

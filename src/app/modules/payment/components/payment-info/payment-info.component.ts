@@ -24,6 +24,12 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
 import dayjs from 'dayjs';
+import {
+  capitalizeVehicleType,
+  durationHours,
+  durationMinutes,
+  formatTimeHHMM,
+} from '../../../../shared/lib/trip-format';
 
 @Component({
   selector: 'app-payment-info',
@@ -80,9 +86,7 @@ export class PaymentInfoComponent {
   }
 
   formatDateTimeToHHMM(dateTime: string): string {
-    if (!dateTime) return '';
-    const parsed = dayjs(dateTime);
-    return parsed.isValid() ? parsed.format('HH:mm') : '';
+    return formatTimeHHMM(dateTime);
   }
 
   formatDateFromDateTime(dateTime: string): string {
@@ -142,18 +146,15 @@ export class PaymentInfoComponent {
   }
 
   getDurationHours(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return Math.floor(totalMinutes / 60);
+    return durationHours(startDateTime, endDateTime);
   }
 
   getDurationMinutes(startDateTime: string, endDateTime: string): number {
-    const totalMinutes = this.getDurationMinutesTotal(startDateTime, endDateTime);
-    return totalMinutes % 60;
+    return durationMinutes(startDateTime, endDateTime);
   }
 
   formatVehicleType(type: string | null | undefined): string {
-    if (!type) return '';
-    return type.charAt(0).toUpperCase() + type.slice(1);
+    return capitalizeVehicleType(type);
   }
 
   findStationById(
@@ -260,14 +261,5 @@ export class PaymentInfoComponent {
 
   onChangeData() {
     this.router.navigate(['/schedule-booking']);
-  }
-
-  private getDurationMinutesTotal(startDateTime: string, endDateTime: string): number {
-    if (!startDateTime || !endDateTime) return 0;
-    const start = dayjs(startDateTime);
-    const end = dayjs(endDateTime);
-    if (!start.isValid() || !end.isValid()) return 0;
-    const diff = end.diff(start, 'minute');
-    return diff >= 0 ? diff : 0;
   }
 }
