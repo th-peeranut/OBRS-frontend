@@ -212,6 +212,48 @@ describe('RouteMapPanelComponent', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Marker-click selection — clicking a map marker must drive selection the
+  // same way the left-hand stop list does (the bug: markers had no click wire,
+  // so only the list could select a stop).
+  // -------------------------------------------------------------------------
+
+  describe('marker click drives selection', () => {
+
+    it('clicking a pickup marker emits the matching pickup stop', () => {
+      const stops = [makeStop(1, true), makeStop(2, true)];
+      component.pickupStops = stops;
+      let emitted: RouteStop | undefined;
+      component.pickupStopSelected.subscribe((s) => (emitted = s));
+
+      component.onPickupMarkerClick('stop-2');
+
+      expect(emitted).toBe(stops[1]);
+    });
+
+    it('clicking a dropoff marker emits the matching dropoff stop', () => {
+      const stops = [makeStop(1, true), makeStop(2, true)];
+      component.dropoffStops = stops;
+      let emitted: RouteStop | undefined;
+      component.dropoffStopSelected.subscribe((s) => (emitted = s));
+
+      component.onDropoffMarkerClick('stop-1');
+
+      expect(emitted).toBe(stops[0]);
+    });
+
+    it('clicking a marker with an unknown slug emits nothing (no crash)', () => {
+      component.pickupStops = [makeStop(1, true)];
+      const spy = jasmine.createSpy('pickupStopSelected');
+      component.pickupStopSelected.subscribe(spy);
+
+      component.onPickupMarkerClick('does-not-exist');
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
+  });
+
+  // -------------------------------------------------------------------------
   // Marker regression tests — require google.maps stub
   // -------------------------------------------------------------------------
 

@@ -98,6 +98,12 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   // pickup and feed straight-line distances into the stop list.
   @Output() userLocated = new EventEmitter<UserLocatedEvent>();
 
+  // Marker clicks drive selection the same way the left-hand list does — the
+  // parent (route-map-home) feeds these back in as selectedPickupSlug/Stop, so
+  // the map and the list stay in sync regardless of which one the user clicks.
+  @Output() pickupStopSelected = new EventEmitter<RouteStop>();
+  @Output() dropoffStopSelected = new EventEmitter<RouteStop>();
+
   @ViewChild('mapContainer') mapContainer!: ElementRef;
   @ViewChild(GoogleMap) map?: GoogleMap;
 
@@ -331,6 +337,24 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       <circle cx="14" cy="14" r="7" fill="#4285F4" stroke="#ffffff" stroke-width="3"/>
     </svg>`;
     return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Marker click → selection (map markers mirror the list)
+  // ---------------------------------------------------------------------------
+
+  onPickupMarkerClick(slug: string): void {
+    const stop = this.pickupStops.find((s) => s.slug === slug);
+    if (stop) {
+      this.pickupStopSelected.emit(stop);
+    }
+  }
+
+  onDropoffMarkerClick(slug: string): void {
+    const stop = this.dropoffStops.find((s) => s.slug === slug);
+    if (stop) {
+      this.dropoffStopSelected.emit(stop);
+    }
   }
 
   ngOnInit(): void {

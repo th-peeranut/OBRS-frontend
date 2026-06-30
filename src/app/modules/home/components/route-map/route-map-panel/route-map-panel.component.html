@@ -12,12 +12,14 @@
       <map-marker
         *ngFor="let m of pickupMarkers; trackBy: trackBySlug"
         [options]="m.options"
+        (mapClick)="onPickupMarkerClick(m.slug)"
       ></map-marker>
 
       <!-- DROPOFF MARKERS -->
       <map-marker
         *ngFor="let m of dropoffMarkers; trackBy: trackBySlug"
         [options]="m.options"
+        (mapClick)="onDropoffMarkerClick(m.slug)"
       ></map-marker>
 
       <!-- USER LOCATION MARKER -->
