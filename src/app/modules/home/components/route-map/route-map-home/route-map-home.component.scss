@@ -87,24 +87,38 @@
   color: $text-white !important;
 }
 
-// ---- TabView → brand ----
+// ---- TabView → brand (เนียนขึ้น: active ชัด, ระยะสบายตา) ----
 :host ::ng-deep .p-tabview-nav {
-  border-bottom: 1px solid $primary-lightgrey;
+  border-bottom: 1px solid $secondary-light-blue;
   background: transparent;
+  gap: 6px;
 }
 
 :host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
   color: $text-lightblack;
   background: transparent;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.8rem 1.1rem;
+  border: 0;
+  border-radius: 14px 14px 0 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+:host ::ng-deep .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+  color: $text-primary;
+  background: rgba(75, 194, 247, 0.08);
 }
 
 :host ::ng-deep .p-tabview-nav li.p-highlight .p-tabview-nav-link {
   color: $text-primary;
-  border-color: $primary-blue;
+  background: $secondary-lightgrey;
 }
 
 :host ::ng-deep .p-tabview-ink-bar {
   background-color: $primary-blue;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
 }
 
 :host ::ng-deep .p-tabview-panels {
@@ -112,13 +126,25 @@
   background: transparent;
 }
 
-// ---- Count badges (info=pickup, danger=dropoff) → brand ----
+// ---- Count badges → soft pill (อ่านชัด: พื้นอ่อน + เลขสีเข้ม, คุม hue ฟ้า/น้ำเงิน) ----
+:host ::ng-deep .p-badge {
+  font-weight: 700;
+  font-size: 0.72rem;
+  min-width: 1.45rem;
+  height: 1.45rem;
+  line-height: 1.45rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+}
+
 :host ::ng-deep .p-badge.p-badge-info {
-  background: $primary-blue;
+  background: rgba(75, 194, 247, 0.22);
+  color: $text-primary;
 }
 
 :host ::ng-deep .p-badge.p-badge-danger {
-  background: $secondary-blue;
+  background: rgba(64, 105, 184, 0.16);
+  color: $secondary-blue;
 }
 
 // ---- Retry button (severity danger) → brand cyan ----
