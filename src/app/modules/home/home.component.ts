@@ -61,7 +61,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     if (!this.homeBookingRef.isPassengerSelected) {
       const msg = this.translateService.instant(
-        'HOME.HOME_BOOKING.SEARCH_VALIDATION'
+        'HOME.HOME_BOOKING.PASSENGER_VALIDATION'
       );
       this.alertService.warning(msg);
       return;

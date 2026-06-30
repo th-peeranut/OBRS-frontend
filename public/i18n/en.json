@@ -603,6 +603,7 @@
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
       "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
+      "PASSENGER_VALIDATION": "Please select at least one passenger before searching.",
       "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
     },
     "STATION": {
