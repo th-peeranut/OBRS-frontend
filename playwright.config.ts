@@ -7,18 +7,26 @@ export default defineConfig({
   retries: 0,
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:4200',
+    baseURL: 'http://localhost:4202',
     trace: 'on-first-retry',
   },
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: [
+            '--disable-web-security',
+            '--disable-features=IsolateOrigins,site-per-process',
+          ],
+        },
+      },
     },
   ],
   webServer: {
-    command: 'ng serve --configuration sit',
-    url: 'http://localhost:4200',
+    command: 'ng serve --configuration sit --port 4202',
+    url: 'http://localhost:4202',
     reuseExistingServer: true,
     timeout: 120 * 1000,
   },
