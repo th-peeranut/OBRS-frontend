@@ -13,7 +13,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "e2e": "playwright test",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "e2e:route-coverage": "node e2e/route-coverage.mjs"
   },
   "private": true,
   "dependencies": {
