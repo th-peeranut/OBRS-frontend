@@ -1,6 +1,19 @@
+@import "../../../../../../styles/variables.scss";
+
 .route-map-placeholder {
   height: 480px;
   min-height: 240px;
+  background: $secondary-lightgrey;
+  border: 1px solid $secondary-light-blue;
+  border-radius: 24px;
+}
+
+.placeholder-icon {
+  color: $primary-blue;
+}
+
+.placeholder-text {
+  color: $text-lightblack;
 }
 
 .route-map-wrap {
@@ -9,7 +22,7 @@
 
 .route-google-map {
   display: block;
-  border-radius: 8px;
+  border-radius: 16px;
   overflow: hidden;
 }
 
@@ -80,11 +93,11 @@
   border-radius: 50%;
 
   &--pickup {
-    background-color: #3bb0e7;
+    background-color: #4bc2f7;
   }
 
   &--dropoff {
-    background-color: #dc3545;
+    background-color: #4069b8;
   }
 }
 

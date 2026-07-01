@@ -1,7 +1,15 @@
+@import "../../../../../../styles/variables.scss";
+
 .route-stop-list {
   display: flex;
   flex-direction: column;
   height: 100%;
+}
+
+.list-header {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $text-black;
 }
 
 .stop-list-scroll {
@@ -12,21 +20,22 @@
 
 .stop-row {
   border: 1px solid transparent;
+  border-radius: 12px;
   transition: background 0.15s, border-color 0.15s;
 
   &:hover {
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: rgba(75, 194, 247, 0.08);
     cursor: pointer;
   }
 
-  &--selected {
-    background-color: rgba(59, 176, 231, 0.12);
-    border-color: rgba(59, 176, 231, 0.4);
+  &--selected.stop-row--pickup {
+    background-color: rgba(75, 194, 247, 0.12);
+    border-color: rgba(75, 194, 247, 0.45);
   }
 
   &--selected.stop-row--dropoff {
-    background-color: rgba(220, 53, 69, 0.1);
-    border-color: rgba(220, 53, 69, 0.3);
+    background-color: rgba(64, 105, 184, 0.10);
+    border-color: rgba(64, 105, 184, 0.40);
   }
 }
 
@@ -37,49 +46,84 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: #fff;
-  background-color: #3bb0e7;
   flex-shrink: 0;
 
+  &--pickup {
+    background-color: $primary-blue;
+  }
+
   &--dropoff {
-    background-color: #dc3545;
+    background-color: $secondary-blue;
   }
 
   &--selected {
     width: 32px;
     height: 32px;
-    font-size: 0.85rem;
-    box-shadow: 0 0 0 3px rgba(59, 176, 231, 0.35);
+    font-size: 0.9375rem;
+  }
+
+  &--pickup#{&}--selected {
+    box-shadow: 0 0 0 3px rgba(75, 194, 247, 0.35);
   }
 
   &--dropoff#{&}--selected {
-    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.3);
+    box-shadow: 0 0 0 3px rgba(64, 105, 184, 0.30);
   }
 }
 
 .stop-name {
-  font-size: 0.875rem;
-  font-weight: 500;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: $text-black;
 }
 
 .stop-address {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  color: $text-lightblack;
 }
 
 .stop-time {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
+  color: $text-lightblack;
   white-space: nowrap;
 }
 
+// Confirm buttons — brand monochrome (pickup ฟ้า / dropoff น้ำเงิน) ทับ severity ของ PrimeNG
+:host ::ng-deep .p-button.p-button-info {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  border-radius: 24px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .p-button.p-button-info:enabled:hover {
+  background: $text-blue;
+  border-color: $text-blue;
+}
+
+:host ::ng-deep .p-button.p-button-danger {
+  background: $secondary-blue;
+  border-color: $secondary-blue;
+  border-radius: 24px;
+  font-weight: 600;
+}
+
+:host ::ng-deep .p-button.p-button-danger:enabled:hover {
+  background: #355a9c;
+  border-color: #355a9c;
+}
+
+// Per-stop distance (ฟีเจอร์จาก origin/dev) — ปรับสีเข้า token ธีม customer
 .stop-distance {
   font-size: 0.75rem;
   white-space: nowrap;
-  color: #3bb0e7;
+  color: $text-blue;
   font-weight: 600;
 
   &--nearest {
-    color: #1b7fb8;
+    color: $secondary-blue;
   }
 }

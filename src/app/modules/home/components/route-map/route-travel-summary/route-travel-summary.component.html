@@ -1,19 +1,19 @@
-<div *ngIf="routeMeta" class="route-travel-summary p-3 rounded border bg-light">
+<div *ngIf="routeMeta" class="route-travel-summary p-3">
   <!-- TITLE -->
   <div class="d-flex align-items-center gap-2 mb-3">
-    <i class="bi bi-bus-front fs-5 text-info"></i>
-    <span class="fw-semibold">{{ 'HOME.ROUTE_MAP.SUMMARY_TITLE' | translate }}</span>
+    <i class="bi bi-bus-front fs-5 summary-icon"></i>
+    <span class="summary-title">{{ 'HOME.ROUTE_MAP.SUMMARY_TITLE' | translate }}</span>
   </div>
 
   <div class="summary-row">
-    <span class="summary-label text-muted small">{{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_LABEL' | translate }}</span>
+    <span class="summary-label small">{{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_LABEL' | translate }}</span>
     <span class="summary-value small">
       {{ 'HOME.ROUTE_MAP.SUMMARY_PICKUP_VALUE' | translate: { province: routeMeta.originProvinceLabel, count: pickupCount } }}
     </span>
   </div>
 
   <div class="summary-row">
-    <span class="summary-label text-muted small">{{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_LABEL' | translate }}</span>
+    <span class="summary-label small">{{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_LABEL' | translate }}</span>
     <span class="summary-value small">
       {{ 'HOME.ROUTE_MAP.SUMMARY_DROPOFF_VALUE' | translate: { province: routeMeta.destinationProvinceLabel, count: dropoffCount } }}
     </span>
@@ -22,14 +22,14 @@
   <hr class="my-2" />
 
   <div class="summary-row">
-    <i class="bi bi-map text-muted small me-1"></i>
+    <i class="bi bi-map summary-meta small me-1"></i>
     <span class="small">
       {{ 'HOME.ROUTE_MAP.SUMMARY_DISTANCE' | translate: { distance: displayDistanceKm } }}
     </span>
   </div>
 
   <div class="summary-row">
-    <i class="bi bi-clock text-muted small me-1"></i>
+    <i class="bi bi-clock summary-meta small me-1"></i>
     <span class="small">
       {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION' | translate: { min: displayDurationMin, max: displayDurationMax } }}
     </span>

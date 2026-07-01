@@ -1,3 +1,5 @@
+@import "../../../../../../styles/variables.scss";
+
 .detail-order-badge {
   display: inline-flex;
   align-items: center;
@@ -5,26 +7,61 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #fff;
-  background-color: #3bb0e7;
   flex-shrink: 0;
 
-  &--dropoff {
-    background-color: #dc3545;
+  &--pickup {
+    background-color: $primary-blue;
   }
+
+  &--dropoff {
+    background-color: $secondary-blue;
+  }
+}
+
+.detail-name {
+  font-weight: 600;
+  color: $text-black;
+}
+
+.detail-sub,
+.detail-meta {
+  color: $text-lightblack;
 }
 
 .detail-photo {
   max-height: 140px;
   object-fit: cover;
+  border-radius: 16px !important;
 }
 
 .detail-empty {
   min-height: 120px;
+  color: $text-lightgrey;
+}
+
+:host ::ng-deep .route-stop-detail-card.p-card {
+  border-radius: 24px;
+  border: 1px solid $secondary-light-blue;
+  box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
 }
 
 :host ::ng-deep .route-stop-detail-card .p-card-content {
   padding: 0.75rem;
+}
+
+// Action buttons — soft brand outline (ทับ severity="secondary")
+:host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary {
+  background: $secondary-lightgrey;
+  border-color: $secondary-light-blue;
+  color: $text-primary;
+  border-radius: 16px;
+}
+
+:host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary:enabled:hover {
+  background: $primary-lightblue;
+  border-color: $primary-blue;
+  color: $text-primary;
 }
