@@ -671,8 +671,8 @@
     },
     "ROUTE_MAP": {
       "SUBTITLE": "选择上下车地点",
-      "TAB_PICKUP_LABEL": "上车 ({{province}})",
-      "TAB_DROPOFF_LABEL": "下车 ({{province}})",
+      "TAB_PICKUP_LABEL": "上车",
+      "TAB_DROPOFF_LABEL": "下车",
       "PICKUP_LIST_HEADER": "{{province}}上车点 ({{count}} 站)",
       "DROPOFF_LIST_HEADER": "{{province}}下车点 ({{count}} 站)",
       "VIEW_MAP": "查看地图",

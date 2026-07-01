@@ -673,8 +673,8 @@
     },
     "ROUTE_MAP": {
       "SUBTITLE": "เลือกจุดรับ-ส่ง",
-      "TAB_PICKUP_LABEL": "จุดรับ ({{province}})",
-      "TAB_DROPOFF_LABEL": "จุดส่ง ({{province}})",
+      "TAB_PICKUP_LABEL": "จุดรับ",
+      "TAB_DROPOFF_LABEL": "จุดส่ง",
       "PICKUP_LIST_HEADER": "จุดรับใน{{province}} ({{count}} จุด)",
       "DROPOFF_LIST_HEADER": "จุดส่งใน{{province}} ({{count}} จุด)",
       "VIEW_MAP": "ดูแผนที่",
