@@ -1,5 +1,5 @@
 [build]
-  command = "npm run build -- --configuration sit"
+  command = "node scripts/inject-sit-env.js && npm run build -- --configuration sit"
   publish = "dist/obrs/browser"
 
 [[redirects]]

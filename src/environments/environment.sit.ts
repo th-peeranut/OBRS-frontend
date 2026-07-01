@@ -9,6 +9,6 @@ export const environment = {
   useMockPayments: false,
   useDevApiEndpoints: false,
   homeRouteSlug: 'chonburi_bangkok',
-  mapsApiKey: '',
-  googleClientId: '',
+  mapsApiKey: '__MAPS_API_KEY__',
+  googleClientId: '__GOOGLE_CLIENT_ID__',
 };
