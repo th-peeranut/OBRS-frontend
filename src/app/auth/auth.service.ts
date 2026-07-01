@@ -119,7 +119,7 @@ export class AuthService {
     sessionStorage.setItem(this.RETURN_URL_KEY, url);
   }
 
-  consumePostLoginRedirectUrl(defaultUrl: string = '/home'): string {
+  consumePostLoginRedirectUrl(defaultUrl: string = '/'): string {
     const url = sessionStorage.getItem(this.RETURN_URL_KEY);
     sessionStorage.removeItem(this.RETURN_URL_KEY);
 
@@ -130,7 +130,7 @@ export class AuthService {
     return url;
   }
 
-  navigateAfterLogin(defaultUrl: string = '/home'): Promise<boolean> {
+  navigateAfterLogin(defaultUrl: string = '/'): Promise<boolean> {
     const targetUrl = this.consumePostLoginRedirectUrl(defaultUrl);
     return this.router.navigateByUrl(targetUrl);
   }

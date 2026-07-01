@@ -188,7 +188,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
     );
     // Mirror the admin topbar: signing out navigates away rather than
     // leaving the user on the current (possibly auth-gated) page. The public
-    // navbar lands on /home; the admin shell uses /login.
-    await this.router.navigate(['/home']);
+    // navbar lands on the home page (/); the admin shell uses /login.
+    await this.router.navigate(['/']);
   }
 }

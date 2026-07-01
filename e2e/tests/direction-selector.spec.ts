@@ -72,7 +72,7 @@ test.describe('AC1 + AC8: Default Chonburi→Bangkok, map degradation', () => {
   });
 
   test('AC1: first load defaults to Chonburi→Bangkok; pickup list shows Chonburi stops, dropoff shows Bangkok stops', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Direction selector must exist and default to Chonburi→Bangkok
@@ -106,7 +106,7 @@ test.describe('AC1 + AC8: Default Chonburi→Bangkok, map degradation', () => {
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Map placeholder must be visible (mapsApiKey is blank in environment.sit.ts)
@@ -135,7 +135,7 @@ test.describe('AC2: Both direction options present, labels from API', () => {
   });
 
   test('AC2: selector shows exactly 2 options; labels are human-readable EN strings from API translations (not raw slugs)', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     const buttons = directionButtons(page);
@@ -167,7 +167,7 @@ test.describe('AC3: Switch direction reloads correct stops from live API', () =>
   });
 
   test('AC3: switching to Bangkok→Chonburi reloads pickup to Bangkok stops and dropoff to Chonburi stops', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Find the Bangkok→Chonburi button (second option)
@@ -212,7 +212,7 @@ test.describe('AC3: Switch direction reloads correct stops from live API', () =>
       if (msg.type() === 'error') consoleErrors.push(msg.text());
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Switch to Bangkok→Chonburi
@@ -245,7 +245,7 @@ test.describe('AC4: Selections cleared on direction switch', () => {
   });
 
   test('AC4: selecting pickup + dropoff then switching direction clears both selections', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Select first pickup stop
@@ -296,7 +296,7 @@ test.describe('AC5: Clicking already-selected direction is a no-op', () => {
       await route.continue();
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     const countAfterLoad = pickupDropoffRequestCount;
@@ -327,7 +327,7 @@ test.describe('AC6: i18n — labels localize live, zh falls back to EN, no raw k
   });
 
   test('AC6-TH: Thai locale shows correct DIRECTION_GROUP_LABEL and direction labels; no raw keys', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Switch to Thai
@@ -357,7 +357,7 @@ test.describe('AC6: i18n — labels localize live, zh falls back to EN, no raw k
   });
 
   test('AC6-ZH: Chinese locale shows correct DIRECTION_GROUP_LABEL, direction labels fall back to EN (not blank, not raw slug)', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Switch to Chinese
@@ -400,7 +400,7 @@ test.describe('AC6: i18n — labels localize live, zh falls back to EN, no raw k
   });
 
   test('AC6-EN: English locale shows DIRECTION_GROUP_LABEL correctly, no raw keys', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Group aria-label should be English
@@ -435,7 +435,7 @@ test.describe('AC7: Loading and error states function per direction', () => {
       await route.continue();
     });
 
-    await page.goto('/home');
+    await page.goto('/');
 
     // Loading spinner should appear before data arrives
     const spinner = page.locator('.route-map-section p-progressspinner');
@@ -451,7 +451,7 @@ test.describe('AC7: Loading and error states function per direction', () => {
       route.fulfill({ status: 500, body: 'Internal Server Error' })
     );
 
-    await page.goto('/home');
+    await page.goto('/');
 
     const errorAlert = page.locator('.route-map-section .alert-danger');
     await errorAlert.waitFor({ state: 'visible', timeout: 20_000 });
@@ -480,7 +480,7 @@ test.describe('AC7: Loading and error states function per direction', () => {
       }
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Switch to Bangkok→Chonburi
@@ -505,7 +505,7 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
   });
 
   test('AC9: selecting pickup + dropoff in Chonburi→Bangkok then confirming emits correctly (warning when 0 passengers)', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapReady(page);
 
     // Confirm we are on Chonburi→Bangkok (default direction, unchanged)
@@ -533,8 +533,8 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     // (this is the existing confirm guard that should still work)
     await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Must still be on /home (no navigation without passengers)
-    expect(page.url()).toContain('/home');
+    // Must still be on the home page (no navigation without passengers)
+    expect(new URL(page.url()).pathname).toBe('/');
 
     await page.locator('.swal2-confirm').click();
     await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 5_000 });

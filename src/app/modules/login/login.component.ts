@@ -106,7 +106,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
           this.alertService.success(
             this.translate.instant('LOGIN.LOGIN_SUCCESS')
           );
-          void this.service.navigateAfterLogin('/home');
+          void this.service.navigateAfterLogin('/');
         }
       })
       .catch((err: unknown) => {
@@ -175,7 +175,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
         this.alertService.success(
           this.translate.instant('LOGIN.LOGIN_SUCCESS')
         );
-        await this.service.navigateAfterLogin('/home');
+        await this.service.navigateAfterLogin('/');
       } else if (typeof res?.code === 'number') {
         this.alertService.error(this.translate.instant('LOGIN.LOGIN_FAIL'));
       }

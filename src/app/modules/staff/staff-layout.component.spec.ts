@@ -60,19 +60,19 @@ describe('StaffLayoutComponent', () => {
   });
 
   it('renders a link back to the public home page', () => {
-    // Regression for #16: the staff shell must always provide a UI path to /home.
-    // Per #20 that path is the brand logo itself.
-    const homeLink = fixture.debugElement.query(By.css('a[href="/home"]'));
+    // Regression for #16: the staff shell must always provide a UI path to the
+    // home page (/). Per #20 that path is the brand logo itself.
+    const homeLink = fixture.debugElement.query(By.css('a[href="/"]'));
     expect(homeLink).withContext('home link should exist').toBeTruthy();
   });
 
-  it('renders the brand as the logo image linking to /home', () => {
+  it('renders the brand as the logo image linking to the home page', () => {
     // Regression for #20: the brand logo is the home navigation (links to
-    // /home), replacing the separate Home button.
+    // /), replacing the separate Home button.
     // After the staff-shell restructure the brand lives inside .admin-brand
     // (shared shell); the link uses .admin-brand-link and the logo .admin-brand-logo.
     const logo = fixture.debugElement.query(
-      By.css('a.admin-brand-link[href="/home"] img.admin-brand-logo'),
+      By.css('a.admin-brand-link[href="/"] img.admin-brand-logo'),
     );
     expect(logo).withContext('brand logo image should exist').toBeTruthy();
     expect(logo.nativeElement.getAttribute('src')).toBe('images/logo.svg');
@@ -82,7 +82,7 @@ describe('StaffLayoutComponent', () => {
     // Regression for #20: home navigation lives on the brand logo only; the
     // dedicated Home nav-item must not exist inside the .admin-nav list.
     const menuHomeLink = fixture.debugElement.query(
-      By.css('.admin-nav a[href="/home"]'),
+      By.css('.admin-nav a[href="/"]'),
     );
     expect(menuHomeLink)
       .withContext('separate Home menu link should be removed')

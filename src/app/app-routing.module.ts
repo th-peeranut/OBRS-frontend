@@ -4,11 +4,6 @@ import { AuthGuard } from './auth/auth.guard';
 
 const routes: Routes = [
   {
-    path: 'home',
-    loadChildren: () =>
-      import('./modules/home/home.module').then((m) => m.HomeModule),
-  },
-  {
     path: 'admin',
     canActivate: [AuthGuard],
     data: { requiredRoles: ['admin'] },
@@ -135,8 +130,12 @@ const routes: Routes = [
         (m) => m.VerifyEmailModule
       ),
   },
-  { path: '', redirectTo: '/home', pathMatch: 'full' },
-  { path: '**', redirectTo: '/home' },
+  {
+    path: '',
+    loadChildren: () =>
+      import('./modules/home/home.module').then((m) => m.HomeModule),
+  },
+  { path: '**', redirectTo: '/' },
 ];
 
 @NgModule({
