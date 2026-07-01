@@ -128,6 +128,13 @@ const routes: Routes = [
       import('./modules/staff/staff.module').then((m) => m.StaffModule),
   },
 
+  {
+    path: 'verify-email',
+    loadChildren: () =>
+      import('./modules/verify-email/verify-email.module').then(
+        (m) => m.VerifyEmailModule
+      ),
+  },
   { path: '', redirectTo: '/home', pathMatch: 'full' },
   { path: '**', redirectTo: '/home' },
 ];

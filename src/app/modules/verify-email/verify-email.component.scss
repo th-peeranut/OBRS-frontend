@@ -1,0 +1,143 @@
+@import "../../../styles/variables.scss";
+
+.login-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  padding: 20px;
+  margin: auto;
+  background: $primary-white;
+
+  .change-language {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .left-section {
+    width: 60%;
+
+    .bg-img {
+      width: 100%;
+      height: 100%;
+      border-radius: 24px;
+      object-fit: cover;
+    }
+  }
+
+  .right-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 40%;
+    padding-left: 80px;
+    padding-right: 80px;
+
+    .logo-section {
+      display: flex;
+      justify-content: center;
+
+      .logo-img {
+        width: 200px;
+        height: 87px;
+      }
+    }
+
+    .state-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .state-icon {
+        font-size: 64px;
+      }
+
+      .success-icon {
+        color: $brand-customer;
+      }
+
+      .fail-icon {
+        color: $text-red;
+      }
+
+      .state-title {
+        font-size: 24px;
+        font-weight: bold;
+        color: $text-black;
+      }
+
+      .state-text {
+        font-size: 16px;
+        color: $text-softblack;
+      }
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 24px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      background-color: $primary-blue;
+      color: #fff;
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    .resend-section {
+      .resend-hint {
+        font-size: 15px;
+        color: $text-softblack;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .login-container {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    padding: 16px;
+    gap: 24px;
+  }
+
+  .login-container .left-section {
+    width: 100%;
+
+    .bg-img {
+      height: 240px;
+      object-fit: cover;
+    }
+  }
+
+  .login-container .right-section {
+    width: 100%;
+    padding: 0 16px 24px;
+  }
+
+  .login-container .change-language {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-container {
+    padding: 12px;
+  }
+
+  .login-container .right-section {
+    padding: 0 8px 20px;
+  }
+
+  .login-container .logo-section .logo-img {
+    width: 160px;
+    height: auto;
+  }
+}

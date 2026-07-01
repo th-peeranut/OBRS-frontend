@@ -10,4 +10,5 @@ export const environment = {
   useDevApiEndpoints: true,
   homeRouteSlug: 'chonburi_bangkok',
   mapsApiKey: '',
+  googleClientId: '',
 };
