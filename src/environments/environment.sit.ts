@@ -1,14 +1,15 @@
+import { environmentBase } from './environment.base';
+import { localEnv } from './environment.local';
+
+// Only the fields that differ from the common defaults in ./environment.base.ts.
 export const environment = {
-  production: false,
+  ...environmentBase,
   apiUrl: 'https://sit-obrs-backend.koyeb.app',
   promptpay: {
-    baseUrl: '',
+    ...environmentBase.promptpay,
     id: '0850951898',
   },
-  omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
-  useMockPayments: false,
   useDevApiEndpoints: false,
-  homeRouteSlug: 'chonburi_bangkok',
-  mapsApiKey: '__MAPS_API_KEY__',
-  googleClientId: '__GOOGLE_CLIENT_ID__',
+  mapsApiKey: localEnv.mapsApiKey,
+  googleClientId: localEnv.googleClientId,
 };

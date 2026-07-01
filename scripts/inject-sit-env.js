@@ -1,19 +1,23 @@
 const fs = require('fs');
 const path = require('path');
 
-const filePath = path.join(__dirname, '..', 'src', 'environments', 'environment.sit.ts');
-let content = fs.readFileSync(filePath, 'utf8');
+const filePath = path.join(__dirname, '..', 'src', 'environments', 'environment.local.ts');
 
-const replacements = {
-  __MAPS_API_KEY__: process.env.MAPS_API_KEY,
-  __GOOGLE_CLIENT_ID__: process.env.GOOGLE_CLIENT_ID,
+const values = {
+  mapsApiKey: process.env.MAPS_API_KEY,
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
 };
 
-for (const [placeholder, value] of Object.entries(replacements)) {
+for (const [name, value] of Object.entries(values)) {
   if (!value) {
-    throw new Error(`inject-sit-env: missing required env var for ${placeholder}`);
+    throw new Error(`inject-sit-env: missing required env var for ${name}`);
   }
-  content = content.split(placeholder).join(value);
 }
+
+const content = `export const localEnv = {
+  mapsApiKey: '${values.mapsApiKey}',
+  googleClientId: '${values.googleClientId}',
+};
+`;
 
 fs.writeFileSync(filePath, content);

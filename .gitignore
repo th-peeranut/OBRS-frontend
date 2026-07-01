@@ -52,3 +52,8 @@ e2e/*.png
 
 # Graphify code-graph output — locally generated AST artifact, not versioned
 graphify-out/
+
+# Real Maps/Google client secrets for local dev — never commit (public repo).
+# Netlify generates this file at build time from env vars; see scripts/inject-sit-env.js
+# and src/environments/environment.local.example.ts.
+src/environments/environment.local.ts
