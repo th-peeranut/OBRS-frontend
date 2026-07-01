@@ -9,7 +9,7 @@
       {{ "SCHEDULE_BOOKING.NO_RESULTS" | translate }}
     </p>
 
-    <!-- ขาไป -->
+    <!-- Outbound leg -->
     <ng-container *ngIf="schedules.departureSchedules as departureList">
       <h3 class="title" *ngIf="schedules.arrivalSchedules?.length">
         {{ "SCHEDULE_BOOKING.SUBHEADER_DEPARTURE" | translate }}
@@ -90,7 +90,7 @@
       </div>
     </ng-container>
 
-    <!-- ขาไป-ขากลับ -->
+    <!-- Outbound and return legs -->
     <ng-container *ngIf="schedules.arrivalSchedules as returnList">
       <!-- Return search found outbound trips but no inbound (return) schedules -->
       <p class="no-results" *ngIf="schedules.departureSchedules?.length && !returnList.length">

@@ -1,12 +1,12 @@
 @import "../../../../../../styles/variables.scss";
 
 .route-map-section {
-  background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
+  background-color: $secondary-lightgrey; // #edf9fe, continues from the booking section above
 }
 
-// จัดคอนเทนต์ให้เป็นคอลัมน์กว้างเท่า booking-card (min(100%, 1200px) จัดกลาง)
-// max-width เผื่อ 1rem ของ .row.g-3 gutter แล้วหัก padding 0.5rem กลับ เพื่อให้ขอบ
-// panel ตรงกับขอบการ์ดค้นหาด้านบนเป๊ะ (ไม่เหลื่อม 8px จาก negative margin ของ row)
+// Align the content column to the booking-card width: min(100%, 1200px), centered.
+// max-width includes the 1rem .row.g-3 gutter, then padding removes 0.5rem per side.
+// This keeps panel edges aligned with the search card above despite the row negative margin.
 .route-map-container {
   width: 100%;
   max-width: calc(1200px + 1rem);
@@ -16,7 +16,7 @@
 
 @media (max-width: 992px) {
   .route-map-container {
-    padding-inline: 16px; // ให้ตรงกับ booking-section ตอนจอเล็ก
+    padding-inline: 16px; // Align with booking-section on small screens
   }
 }
 
@@ -48,7 +48,7 @@
   color: $text-softblack;
 }
 
-// ---- Error (themed; แทน bootstrap .alert.alert-danger) ----
+// ---- Error (themed; replaces bootstrap .alert.alert-danger) ----
 .route-error {
   display: flex;
   align-items: center;
@@ -74,7 +74,7 @@
   color: $primary-blue;
 }
 
-// ---- Spinner → brand cyan (ทับ color-cycle keyframe ของ PrimeNG) ----
+// ---- Spinner -> brand cyan (overrides PrimeNG color-cycle keyframe) ----
 :host ::ng-deep .p-progress-spinner-circle {
   stroke: $primary-blue !important;
   animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
@@ -103,7 +103,7 @@
   color: $text-white !important;
 }
 
-// ---- TabView → brand (เนียนขึ้น: active ชัด, ระยะสบายตา) ----
+// ---- TabView -> brand styling with clearer active state and comfortable spacing ----
 :host ::ng-deep .p-tabview-nav-container,
 :host ::ng-deep .p-tabview-nav-content {
   width: 100%;
@@ -117,11 +117,11 @@
   padding: 0;
   border-bottom: 1px solid $secondary-light-blue;
   background: transparent;
-  gap: 0; // ไม่มี gap เพื่อให้แต่ละแท็บกว้าง 50% เป๊ะ เต็มขอบ
+  gap: 0; // No gap so each tab takes an exact 50% width edge to edge
 }
 
-// แท็บ จุดรับ/จุดส่ง = 50% เท่ากันเป๊ะ เต็มความกว้าง (มือถือ 3 แท็บ = 1/3 เท่า ๆ กัน)
-// (ยกเว้น ink-bar ที่ PrimeNG จัดตำแหน่งเอง)
+// Pickup/dropoff tabs each take exactly 50% width; mobile with 3 tabs gets equal thirds.
+// The ink-bar is excluded because PrimeNG positions it.
 :host ::ng-deep .p-tabview-nav li:not(.p-tabview-ink-bar) {
   flex: 1 1 0;
   margin: 0;
@@ -178,7 +178,7 @@
   background: transparent;
 }
 
-// ---- Count badges → soft pill (อ่านชัด: พื้นอ่อน + เลขสีเข้ม, คุม hue ฟ้า/น้ำเงิน) ----
+// ---- Count badges -> soft pill with light background and high-contrast numbers ----
 :host ::ng-deep .p-badge {
   font-weight: 700;
   font-size: 0.72rem;

@@ -1143,7 +1143,7 @@ test.describe('Stop filter — searchable input above จาก/ถึง lists'
 //
 // AC mapping:
 //   PS-a  Popular section renders top-3 stops in rank order above each list with
-//          STAFF.SELL.POPULAR_LABEL header. Header localises (en "Popular", th "นิยม").
+//          STAFF.SELL.POPULAR_LABEL header. Header localises in English and Thai.
 //   PS-b  Selecting a pinned stop emits the selection; pickup change re-derives
 //          dropoff via route-pair logic; pinned dropoff intersects valid dropoffs.
 //   PS-c  Active search filter ALSO filters the pinned section; the whole Popular

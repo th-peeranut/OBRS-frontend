@@ -26,7 +26,7 @@
     <!-- FORM SECTION -->
     <form class="login-form mt-3" [formGroup]="registerForm">
       <div class="row form-row">
-        <!-- คำนำหน้า -->
+        <!-- Title -->
         <div class="col-12">
           <label
             for="title"
@@ -59,7 +59,7 @@
       </div>
       <div class="row form-row">
         <div class="col-12 col-md-4">
-          <!-- ชื่อจริง -->
+          <!-- First name -->
           <label
             for="firstName"
             [class.label-error]="
@@ -94,7 +94,7 @@
         </div>
 
         <div class="col-12 col-md-4">
-          <!-- ชื่อกลาง -->
+          <!-- Middle name -->
           <label for="middleName">
             {{ "REGISTER.MIDDLENAME" | translate }}
           </label>
@@ -108,7 +108,7 @@
         </div>
 
         <div class="col-12 col-md-4">
-          <!-- นามสกุล -->
+          <!-- Last name -->
           <label
             for="lastName"
             [class.label-error]="
@@ -145,7 +145,7 @@
       <div class="row form-row">
         <div class="col-12">
           <div class="label-with-icon">
-            <!-- ชื่อผู้ใช้งาน -->
+            <!-- Username -->
             <label
               for="username"
               [class.label-error]="
@@ -214,7 +214,7 @@
       </div>
       <div class="row form-row">
         <div class="col-12 col-md-6">
-          <!-- อีเมล -->
+          <!-- Email -->
           <label
             for="email"
             [class.label-error]="
@@ -262,7 +262,7 @@
         </div>
 
         <div class="col-12 col-md-6">
-          <!-- หมายเลขโทรศัพท์ -->
+          <!-- Phone number -->
           <label
             for="phoneNumber"
             [class.label-error]="
@@ -310,7 +310,7 @@
       <div class="row form-row">
         <div class="col-12 col-md-6">
           <div class="label-with-icon">
-            <!-- รหัสผ่าน -->
+            <!-- Password -->
             <label
               class="mt-3"
               for="password"
@@ -394,7 +394,7 @@
         </div>
 
         <div class="col-12 col-md-6">
-          <!-- ยืนยันรหัสผ่าน -->
+          <!-- Confirm password -->
           <label
             class="mt-3"
             for="confirmPassword"

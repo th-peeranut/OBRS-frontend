@@ -383,7 +383,7 @@ test.describe('Route Map – Success State', () => {
     // Wait for Angular to re-render translations
     await page.waitForTimeout(800);
 
-    // Pickup tab label in Thai: "จุดรับ (Chonburi)"
+    // Pickup tab label in Thai.
     const pickupTabTh = page.locator('.p-tabview-nav li').filter({ hasText: 'จุดรับ' }).first();
     await expect(pickupTabTh).toBeVisible();
 

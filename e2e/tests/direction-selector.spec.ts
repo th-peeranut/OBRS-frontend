@@ -7,8 +7,8 @@
  *
  * Live SIT data as of 2026-06-30:
  *   Routes:
- *     chonburi_bangkok  – EN "Chonburi-bangkok", TH "ชลบุรี-กรุงเทพฯ", no zh
- *     bangkok_chonburi  – EN "Bangkok-chonburi",  TH "กรุงเทพฯ-ชลบุรี",  no zh
+ *     chonburi_bangkok  - EN "Chonburi-bangkok", TH Chonburi-Bangkok, no zh
+ *     bangkok_chonburi  - EN "Bangkok-chonburi",  TH Bangkok-Chonburi, no zh
  *   chonburi_bangkok pickup-dropoff:
  *     19 pickup stops – first "Nong chak"
  *      6 dropoff stops – first "Airport link lat krabang"
