@@ -104,13 +104,28 @@
 }
 
 // ---- TabView → brand (เนียนขึ้น: active ชัด, ระยะสบายตา) ----
+:host ::ng-deep .p-tabview-nav-container,
+:host ::ng-deep .p-tabview-nav-content {
+  width: 100%;
+}
+
 :host ::ng-deep .p-tabview-nav {
+  display: flex;
+  width: 100%;
   border-bottom: 1px solid $secondary-light-blue;
   background: transparent;
   gap: 6px;
 }
 
+// แท็บ จุดรับ/จุดส่ง แบ่งกว้างเท่ากัน (ครึ่ง-ครึ่ง); มือถือ 3 แท็บ = เท่า ๆ กัน
+// (ยกเว้น ink-bar ที่ PrimeNG จัดตำแหน่งเอง)
+:host ::ng-deep .p-tabview-nav li:not(.p-tabview-ink-bar) {
+  flex: 1 1 0;
+}
+
 :host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
+  width: 100%;
+  justify-content: center;
   color: $text-lightblack;
   background: transparent;
   font-weight: 600;
