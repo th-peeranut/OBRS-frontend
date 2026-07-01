@@ -346,6 +346,23 @@ describe('RouteMapHomeComponent', () => {
     expect(component.activeTabIndex).toBe(1);
   });
 
+  it('switches activeTabIndex to the drop-off tab index when only pickup is selected (mobile)', () => {
+    // mobile breakpoint stub: matches: false → isDesktop = false → dropoff tab index = 2
+    const mobileComponent = makeComponent(
+      routeMapServiceStub,
+      alertServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: false }) }
+    );
+    mobileComponent.ngOnInit();
+    mobileComponent.selectedPickupSlug = 'pickup-1';
+    mobileComponent.selectedDropoffSlug = null;
+
+    mobileComponent.onConfirmPickup();
+
+    expect(mobileComponent.activeTabIndex).toBe(2);
+  });
+
   it('emits pickupDropoffConfirmed when both slugs are selected', () => {
     component.ngOnInit();
     component.selectedPickupSlug = 'pickup-1';
