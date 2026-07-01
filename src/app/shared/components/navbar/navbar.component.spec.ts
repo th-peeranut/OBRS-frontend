@@ -170,7 +170,7 @@ describe('NavbarComponent', () => {
     await comp.onLogout();
 
     expect(clearSpy).toHaveBeenCalled();
-    expect(navSpy).toHaveBeenCalledWith(['/home']);
+    expect(navSpy).toHaveBeenCalledWith(['/']);
   });
 
   it('scrolls to the footer contact section', () => {
@@ -272,13 +272,13 @@ describe('NavbarComponent template', () => {
     fixture.detectChanges();
   });
 
-  it('makes the logo navigate to /home', () => {
+  it('makes the logo navigate to the home page', () => {
     // Regression for #20: the logo is the home navigation, replacing the
     // separate Home menu link.
     const logoLink = fixture.debugElement.query(
-      By.css('a.logo[href="/home"] img.logo'),
+      By.css('a.logo[href="/"] img.logo'),
     );
-    expect(logoLink).withContext('logo should link to /home').toBeTruthy();
+    expect(logoLink).withContext('logo should link to /').toBeTruthy();
     expect(logoLink.nativeElement.getAttribute('src')).toBe('images/logo.svg');
   });
 
@@ -286,7 +286,7 @@ describe('NavbarComponent template', () => {
     // Regression for #20: home navigation lives on the logo only; the
     // dedicated Home menu link must be gone.
     const menuHomeLink = fixture.debugElement.query(
-      By.css('a.menu-font[href="/home"]'),
+      By.css('a.menu-font[href="/"]'),
     );
     expect(menuHomeLink)
       .withContext('separate Home menu link should be removed')

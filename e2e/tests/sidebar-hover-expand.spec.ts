@@ -209,18 +209,18 @@ test.describe('Sidebar always-reserved-column — staff layout', () => {
 
   // ── AC8: Logo is Home link in both states (staff) ────────────────────────────
 
-  test('AC8: brand logo links to /home in both collapsed and expanded states (staff)', async ({ page }) => {
+  test('AC8: brand logo links to the home page in both collapsed and expanded states (staff)', async ({ page }) => {
     const brandLink = page.locator('.admin-brand-link');
 
     // Expanded
-    await expect(brandLink).toHaveAttribute('href', '/home');
+    await expect(brandLink).toHaveAttribute('href', '/');
 
     // Collapse
     await clickToggle(page);
     await page.waitForTimeout(250);
 
     // Collapsed
-    await expect(brandLink).toHaveAttribute('href', '/home');
+    await expect(brandLink).toHaveAttribute('href', '/');
   });
 
   // ── AC9: ESC closes mobile drawer / profile menu; desktop sidebar unchanged ───
@@ -307,15 +307,15 @@ test.describe('Sidebar always-reserved-column — admin layout', () => {
 
   // ── AC8b: Logo links to /home (admin) ────────────────────────────────────────
 
-  test('AC8b: brand logo links to /home in both collapsed and expanded states (admin)', async ({ page }) => {
+  test('AC8b: brand logo links to the home page in both collapsed and expanded states (admin)', async ({ page }) => {
     const brandLink = page.locator('.admin-brand-link');
 
-    await expect(brandLink).toHaveAttribute('href', '/home');
+    await expect(brandLink).toHaveAttribute('href', '/');
 
     await clickToggle(page);
     await page.waitForTimeout(250);
 
-    await expect(brandLink).toHaveAttribute('href', '/home');
+    await expect(brandLink).toHaveAttribute('href', '/');
   });
 });
 

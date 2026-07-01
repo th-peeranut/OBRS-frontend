@@ -52,7 +52,7 @@
   padding: 0.75rem;
 }
 
-// Action buttons — soft brand outline (ทับ severity="secondary")
+// Action buttons - soft brand outline overriding severity="secondary"
 :host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary {
   background: $secondary-lightgrey;
   border-color: $secondary-light-blue;

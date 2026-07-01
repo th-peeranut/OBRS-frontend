@@ -672,8 +672,8 @@
     },
     "ROUTE_MAP": {
       "SUBTITLE": "Select pickup / drop-off",
-      "TAB_PICKUP_LABEL": "Pickup ({{province}})",
-      "TAB_DROPOFF_LABEL": "Drop-off ({{province}})",
+      "TAB_PICKUP_LABEL": "Pickup",
+      "TAB_DROPOFF_LABEL": "Drop-off",
       "PICKUP_LIST_HEADER": "Pickup points in {{province}} ({{count}})",
       "DROPOFF_LIST_HEADER": "Drop-off points in {{province}} ({{count}})",
       "VIEW_MAP": "View map",

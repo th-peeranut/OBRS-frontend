@@ -48,7 +48,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
     if (this.validateRouteError()) {
       this.alertService.error('พบข้อผิดพลาด');
-      this.router.navigateByUrl('/home');
+      this.router.navigateByUrl('/');
     }
 
     this.sendOtp();
@@ -146,7 +146,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
             }
           } else if (this.option === 'login') {
             this.alertService.success('succ');
-            await this.authService.navigateAfterLogin('/home');
+            await this.authService.navigateAfterLogin('/');
           }
         } else if (typeof resVerify?.code === 'number') {
           this.alertService.error('error');

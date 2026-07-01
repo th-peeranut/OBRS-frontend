@@ -11,9 +11,9 @@
 
     <!-- Tab 1: Ticket Sales (seat map) -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
-      <!-- จาก / ถึง stop selection lists (above passenger type tiles) -->
+      <!-- From/to stop selection lists, above passenger type tiles -->
       <div class="row g-2 mb-3" *ngIf="pickupOptions.length > 0 || isLoadingSegments">
-        <!-- จาก (From / Pickup) -->
+        <!-- From / pickup -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.FROM_LABEL' | translate }}</div>
           <div class="input-group input-group-sm mb-1">
@@ -61,7 +61,7 @@
           </div>
         </div>
 
-        <!-- ถึง (To / Drop-off) -->
+        <!-- To / drop-off -->
         <div class="col-6">
           <div class="fw-semibold small mb-1">{{ 'STAFF.SELL.TO_LABEL' | translate }}</div>
           <div class="input-group input-group-sm mb-1">

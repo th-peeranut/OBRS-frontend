@@ -1,5 +1,5 @@
 <section class="route-map-section py-4">
-  <div class="container-fluid px-3">
+  <div class="route-map-container">
 
     <!-- ==================== DIRECTION SELECTOR ==================== -->
     <div *ngIf="directionOptions.length > 0" class="mb-3">
@@ -171,7 +171,7 @@
       <ng-container *ngIf="!isDesktop">
         <p-tabView [(activeIndex)]="activeTabIndex">
 
-          <!-- TAB 1: จุดรับ (Pickup) -->
+          <!-- TAB 1: Pickup -->
           <p-tabPanel>
             <ng-template pTemplate="header">
               <i class="bi bi-geo-alt me-1"></i>
@@ -197,7 +197,7 @@
             </div>
           </p-tabPanel>
 
-          <!-- TAB 2: แผนที่ (Map) -->
+          <!-- TAB 2: Map -->
           <p-tabPanel>
             <ng-template pTemplate="header">
               <i class="bi bi-map me-1"></i>
@@ -231,7 +231,7 @@
             </div>
           </p-tabPanel>
 
-          <!-- TAB 3: จุดส่ง (Dropoff) -->
+          <!-- TAB 3: Dropoff -->
           <p-tabPanel>
             <ng-template pTemplate="header">
               <i class="bi bi-geo-alt-fill me-1"></i>

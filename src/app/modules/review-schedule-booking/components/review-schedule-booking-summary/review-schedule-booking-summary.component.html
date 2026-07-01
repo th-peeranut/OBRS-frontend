@@ -21,7 +21,7 @@
           <ng-container
             *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
           >
-            <!-- รอบการเดินทาง -->
+            <!-- Travel schedule -->
             <div class="header-text">
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
             </div>
@@ -29,14 +29,14 @@
           <ng-container
             *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
           >
-            <!-- รอบการเดินทาง: ขาไป -->
+            <!-- Travel schedule: outbound leg -->
             <div class="header-text">
               {{
                 "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate
               }}
             </div>
           </ng-container>
-          <!-- วันที่ xx x.x. 20xx | ชลบุรี-กรุงเทพฯ | roundTrip -->
+          <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
           <div class="subheader-text">
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
@@ -49,7 +49,7 @@
               formatVehicleType(departureSchedule.vehicleType)
             }}
             |
-            <!-- เที่ยวเดียว -->
+            <!-- One-way -->
             <ng-container
               *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
             >
@@ -57,7 +57,7 @@
                 "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
               }}
             </ng-container>
-            <!-- ไป-กลับ -->
+            <!-- Round trip -->
             <ng-container
               *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
             >
@@ -68,7 +68,7 @@
           </div>
         </div>
       </div>
-      <!-- เปลี่ยนข้อมูล -->
+      <!-- Change details -->
       <div class="card-header-button">
         <button class="btn-change-info" type="button" (click)="onChangeData()">
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
@@ -84,7 +84,7 @@
 
       <div class="card-body-detail">
         <div class="card-body-detail-station">
-          <!-- xx:xx น. -->
+          <!-- xx:xx time -->
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
@@ -111,7 +111,7 @@
             </ng-container>
           </div>
         </div>
-        <!-- xx ชั่วโมง xx นาที -->
+        <!-- xx hours xx minutes -->
         <div class="body-subheader-text">
           {{
             getDurationHours(
@@ -128,7 +128,7 @@
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
         </div>
-        <!-- xx:xx น. -->
+        <!-- xx:xx time -->
         <div class="card-body-detail-station mt-2">
           <div class="body-header-text">
             {{
@@ -178,7 +178,7 @@
           <ng-container
             *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
           >
-            <!-- รอบการเดินทาง -->
+            <!-- Travel schedule -->
             <div class="header-text">
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP" | translate }}
             </div>
@@ -186,14 +186,14 @@
           <ng-container
             *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
           >
-            <!-- รอบการเดินทาง: ขากลับ -->
+            <!-- Travel schedule: return leg -->
             <div class="header-text">
               {{
                 "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_RETURN" | translate
               }}
             </div>
           </ng-container>
-          <!-- วันที่ xx x.x. 20xx | ชลบุรี-กรุงเทพฯ | roundTrip -->
+          <!-- Date xx x.x. 20xx | Chonburi-Bangkok | roundTrip -->
           <div class="subheader-text">
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             {{
@@ -206,7 +206,7 @@
               formatVehicleType(returnSchedule.vehicleType)
             }}
             |
-            <!-- เที่ยวเดียว -->
+            <!-- One-way -->
             <ng-container
               *ngIf="getScheduleBooking(bookingData?.schedule).length == 1"
             >
@@ -214,7 +214,7 @@
                 "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_ONEWAY" | translate
               }}
             </ng-container>
-            <!-- ไป-กลับ -->
+            <!-- Round trip -->
             <ng-container
               *ngIf="getScheduleBooking(bookingData?.schedule).length == 2"
             >
@@ -225,7 +225,7 @@
           </div>
         </div>
       </div>
-      <!-- เปลี่ยนข้อมูล -->
+      <!-- Change details -->
       <div class="card-header-button">
         <button class="btn-change-info" type="button" (click)="onChangeData()">
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.CHANGE_DATA" | translate }}
@@ -241,7 +241,7 @@
 
       <div class="card-body-detail">
         <div class="card-body-detail-station">
-          <!-- xx:xx น. -->
+          <!-- xx:xx time -->
           <div class="body-header-text">
             {{
               formatDateTimeToHHMM(
@@ -268,7 +268,7 @@
             </ng-container>
           </div>
         </div>
-        <!-- xx ชั่วโมง xx นาที -->
+        <!-- xx hours xx minutes -->
         <div class="body-subheader-text">
           {{
             getDurationHours(
@@ -285,7 +285,7 @@
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
         </div>
-        <!-- xx:xx น. -->
+        <!-- xx:xx time -->
         <div class="card-body-detail-station mt-2">
           <div class="body-header-text">
             {{

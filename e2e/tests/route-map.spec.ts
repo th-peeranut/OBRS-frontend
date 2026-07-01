@@ -143,7 +143,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 1: pickup tab badge = 1, dropoff tab badge = 1, stop list renders in order', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // Left panel pickup tab should be active (first tab) — verify pickup list renders
@@ -184,7 +184,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 2: selecting pickup+dropoff rows updates detail cards with photo/name/address/buttons', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // Select pickup stop (in first/active tab)
@@ -229,7 +229,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 3: confirm guard — only pickup selected → VALIDATION_SELECT_DROPOFF, switches to Drop-off tab, no navigation', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // Select only pickup (do NOT switch to dropoff tab or select dropoff)
@@ -247,8 +247,8 @@ test.describe('Route Map – Success State', () => {
       'Please select a drop-off point before confirming'
     );
 
-    // Must NOT navigate away from /home
-    expect(page.url()).toContain('/home');
+    // Must NOT navigate away from the home page
+    expect(new URL(page.url()).pathname).toBe('/');
 
     await dismissSweetAlert(page);
 
@@ -260,7 +260,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 3b: confirm guard — only dropoff selected → VALIDATION_SELECT_PICKUP, switches to Pickup tab, no navigation', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // Switch to dropoff tab and select only dropoff (pickup stays unselected)
@@ -278,7 +278,7 @@ test.describe('Route Map – Success State', () => {
       'Please select a pickup point before confirming'
     );
 
-    expect(page.url()).toContain('/home');
+    expect(new URL(page.url()).pathname).toBe('/');
 
     await dismissSweetAlert(page);
 
@@ -292,7 +292,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 4 A1: 0 passengers → SEARCH_VALIDATION warning; set passenger → navigates to /schedule-booking', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // Select pickup stop
@@ -317,7 +317,7 @@ test.describe('Route Map – Success State', () => {
     await expect(page.locator('.swal2-title')).toContainText(
       'Please select at least one passenger before searching.'
     );
-    expect(page.url()).toContain('/home');
+    expect(new URL(page.url()).pathname).toBe('/');
 
     await dismissSweetAlert(page);
 
@@ -345,7 +345,7 @@ test.describe('Route Map – Success State', () => {
       }
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // The map placeholder should be visible (mapsApiKey is '' in environment.sit.ts)
@@ -371,7 +371,7 @@ test.describe('Route Map – Success State', () => {
   test('Criterion 7: tri-locale — TH shows Thai labels, ZH shows Chinese labels, no raw i18n keys', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
     await waitForRouteMapLoaded(page);
 
     // ── Switch to Thai ──────────────────────────────────────────────────────
@@ -381,7 +381,7 @@ test.describe('Route Map – Success State', () => {
     // Wait for Angular to re-render translations
     await page.waitForTimeout(800);
 
-    // Pickup tab label in Thai: "จุดรับ (Chonburi)"
+    // Pickup tab label in Thai.
     const pickupTabTh = page.locator('.p-tabview-nav li').filter({ hasText: 'จุดรับ' }).first();
     await expect(pickupTabTh).toBeVisible();
 
@@ -431,7 +431,7 @@ test.describe('Route Map – Empty State', () => {
   test('Criterion 5a: empty pickup+dropoff arrays render EMPTY_STATE message', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
 
     // Wait for empty state — stops won't appear
     const emptyState = page.locator('.route-map-section .text-center.py-5');
@@ -456,7 +456,7 @@ test.describe('Route Map – Error State', () => {
   test('Criterion 5b: 500 response renders LOAD_FAILED message and Retry button', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
 
     // Wait for error state
     const errorAlert = page.locator('.route-map-section .alert-danger');
@@ -487,7 +487,7 @@ test.describe('Regression – Home Booking Search', () => {
   test('Criterion 8 regression: existing home-booking form search navigates to /schedule-booking', async ({
     page,
   }) => {
-    await page.goto('/home');
+    await page.goto('/');
 
     // Wait for station dropdowns to render
     await page

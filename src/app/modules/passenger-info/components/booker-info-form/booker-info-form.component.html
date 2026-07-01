@@ -5,21 +5,21 @@
       <!-- BODY -->
       <div class="card-body">
         <div class="row form-row">
-          <!-- คนที่จอง -->
+          <!-- Booker -->
           <div class="col-12">
             <div class="passenget-badge">
               {{ "PASSENGER_INFO.BOOKER.BADGE" | translate }}
             </div>
           </div>
 
-          <!-- ข้อมูลส่วนตัว -->
+          <!-- Personal information -->
           <div class="col-12 my-3">
             <div class="subtitle">
               {{ "PASSENGER_INFO.FORM.SECTION_TITLE" | translate }}
             </div>
           </div>
 
-          <!-- คำนำหน้า -->
+          <!-- Title -->
           <div class="col-12 col-md-6">
             <label
               for="booker-title"
@@ -49,7 +49,7 @@
             </div>
           </div>
 
-          <!-- ชื่อจริง -->
+          <!-- First name -->
           <div class="col-12 col-md-6">
             <label
               for="booker-firstName"
@@ -84,7 +84,7 @@
             </div>
           </div>
 
-          <!-- ชื่อกลาง (ถ้ามี) -->
+          <!-- Middle name, when present -->
           <div class="col-12 col-md-6">
             <label for="booker-middleName">
               {{ "PASSENGER_INFO.FORM.MIDDLE_NAME_OPTIONAL" | translate }}
@@ -96,7 +96,7 @@
             />
           </div>
 
-          <!-- นามสกุล -->
+          <!-- Last name -->
           <div class="col-12 col-md-6">
             <label
               for="booker-lastName"
@@ -132,7 +132,7 @@
           </div>
 
           <div class="col-12 col-md-6">
-            <!-- หมายเลขโทรศัพท์ -->
+            <!-- Phone number -->
             <label
               for="booker-phoneNumber"
               [class.label-error]="
@@ -180,7 +180,7 @@
             </div>
           </div>
 
-          <!-- เพศ/สถานะสภาพ -->
+          <!-- Gender/status -->
           <div class="col-6">
             <label
               [class.label-error]="
@@ -192,7 +192,7 @@
               <span class="form-required">*</span>
             </label>
 
-            <!-- ชาย -->
+            <!-- Male -->
             <div class="form-check form-check-inline">
               <input
                 class="form-check-input"
@@ -211,7 +211,7 @@
               </label>
             </div>
 
-            <!-- หญิง -->
+            <!-- Female -->
             <div class="form-check form-check-inline">
               <input
                 class="form-check-input"
@@ -230,7 +230,7 @@
               </label>
             </div>
 
-            <!-- พระ -->
+            <!-- Monk -->
             <div class="form-check form-check-inline">
               <input
                 class="form-check-input"

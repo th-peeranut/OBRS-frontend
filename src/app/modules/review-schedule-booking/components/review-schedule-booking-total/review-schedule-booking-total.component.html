@@ -3,7 +3,7 @@
   *ngIf="this.scheduleBooking | async as scheduleBooking"
 >
   <ng-container *ngIf="this.scheduleFilter | async as scheduleFilter">
-    <!-- รายละเอียดราคา -->
+    <!-- Price details -->
     <div class="card-header">
       {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.HEADER" | translate }}
     </div>
@@ -39,7 +39,7 @@
         </span>
       </div>
 
-      <!-- ราคาตั๋ว -->
+      <!-- Ticket price -->
       <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 1">
         <span>
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE" | translate }}
@@ -50,7 +50,7 @@
         </span>
       </div>
 
-      <!-- ราคาตั๋วไป-กลับ -->
+      <!-- Round-trip ticket price -->
       <div class="card-body-content" *ngIf="getScheduleBooking(scheduleBooking?.schedule).length == 2">
         <span>
           {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TICKET_PRICE_RETURN" | translate }}
@@ -67,7 +67,7 @@
 
     <hr class="dotted-line" />
 
-    <!-- ราคารวม -->
+    <!-- Total price -->
     <div class="card-footer">
       <span>
         {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
