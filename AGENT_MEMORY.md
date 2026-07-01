@@ -1237,6 +1237,44 @@ added `this.isDetailFetching = false;` to `closeDetail()`.
   en/th/zh; `COMMON.UPDATING`/`COMMON.CLOSE` exist. Backdrop directive reused, not
   forked. One primary (Save Status); × is a themed icon affordance.
 
+## 2026-07-01 — Frontend: confirm-guidance-flow (OBRS-73) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-confirm-guidance-flow` (diff vs `origin/dev`)
+
+**Finding (self-fixed) — `jasmine.clock()` uninstall could leak on throw.**
+The new happy-path test in `home.component.spec.ts` called
+`jasmine.clock().install()` then `uninstall()` inline at the end of the `it`.
+Jasmine's clock is a *global* mock shared across every spec file in a Karma run.
+Failed `expect()`s don't throw (so those were safe), but any real exception
+between install and the inline uninstall (e.g. a future refactor making
+`onPickupDropoffConfirmed` throw, or `tick` erroring) would skip uninstall and
+leak the fake clock into later spec files — where the next `install()` throws
+"clock already installed" and cascades unrelated failures. **Fix:** wrapped the
+body in `try { … } finally { jasmine.clock().uninstall() }` so cleanup is
+guaranteed. **Lesson:** any inline `jasmine.clock().install()` must pair its
+`uninstall()` with `finally` (or an `afterEach`), never a trailing statement.
+
+**Confirmed safe (no action needed):**
+- All 3 `onConfirm()` branches (neither / pickup-missing / dropoff-missing) call
+  `alertService.toast(msg, 'warning')` — icon explicitly overrides the method's
+  `'info'` default. Tab-switch + early-return logic is byte-for-byte unchanged
+  (`activeTabIndex = 0`; `= isDesktop ? 1 : 2`).
+- `onSearch()` removal is correctly scoped to the *caller*
+  (`home.component.onPickupDropoffConfirmed`); `HomeBookingComponent.onSearch()`
+  and its `(click)="onSearch()"` button binding are untouched and still reachable.
+- Error branch still fires `alertService.error(SHARED.ERROR_GENERAL)` when a slug
+  doesn't resolve. No new i18n keys added.
+- `scrollIntoView` guarded with optional chaining + `setTimeout` (runs after CD
+  applies the prefilled values). Safe.
+
+**Non-blocking note (left for developer, not fixed):**
+- `HomeBookingComponent.isPassengerSelected` getter is now dead production code —
+  its only former caller (the removed passenger guard) is gone; only a unit test
+  still references it. Harmless, but a candidate for a future cleanup PR.
+- `AlertService.toast()` does not reset `isLoadingVisible = false` like the other
+  methods. Irrelevant to this flow (no loading spinner during map-confirm), but be
+  aware: SweetAlert2 shows one popup at a time, so firing a toast while a blocking
+  loading modal is open would replace/close it. Out of scope here.
 
 ## 2026-07-01 — Frontend: stop-detail-card-cleanup (OBRS-72) (SELF-FIXED)
 

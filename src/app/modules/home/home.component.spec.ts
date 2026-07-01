@@ -60,16 +60,17 @@ describe('HomeComponent', () => {
     (component as any).homeBookingEl = { nativeElement: { scrollIntoView: scrollSpy } };
 
     jasmine.clock().install();
+    try {
+      component.onPickupDropoffConfirmed({ pickupSlug: 'pickup-slug', dropoffSlug: 'dropoff-slug' });
 
-    component.onPickupDropoffConfirmed({ pickupSlug: 'pickup-slug', dropoffSlug: 'dropoff-slug' });
+      expect(startStationSpy).toHaveBeenCalledWith(pickupStation);
+      expect(endStationSpy).toHaveBeenCalledWith(dropoffStation);
 
-    expect(startStationSpy).toHaveBeenCalledWith(pickupStation);
-    expect(endStationSpy).toHaveBeenCalledWith(dropoffStation);
+      jasmine.clock().tick(0);
 
-    jasmine.clock().tick(0);
-
-    expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
-
-    jasmine.clock().uninstall();
+      expect(scrollSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    } finally {
+      jasmine.clock().uninstall();
+    }
   });
 });
