@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { select, Store } from '@ngrx/store';
 import { Subject, takeUntil } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
@@ -16,6 +16,7 @@ import { PickupDropoffConfirmedEvent } from '../../shared/interfaces/route-map.i
 })
 export class HomeComponent implements OnInit, OnDestroy {
   @ViewChild(HomeBookingComponent) homeBookingRef!: HomeBookingComponent;
+  @ViewChild('homeBookingEl', { read: ElementRef }) homeBookingEl!: ElementRef;
 
   allStations: StationApi[] = [];
 
@@ -59,15 +60,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.homeBookingRef.onStartStationChange(pickupStation);
     this.homeBookingRef.onEndStationChange(dropoffStation);
 
-    if (!this.homeBookingRef.isPassengerSelected) {
-      const msg = this.translateService.instant(
-        'HOME.HOME_BOOKING.PASSENGER_VALIDATION'
-      );
-      this.alertService.warning(msg);
-      return;
-    }
-
-    this.homeBookingRef.onSearch();
+    setTimeout(() => {
+      this.homeBookingEl?.nativeElement?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
   }
 }
 

@@ -182,6 +182,9 @@ One color = one meaning. Never pick a button color for looks.
 - Alerts go through **`AlertService`**, never `Swal.fire()` directly. The global
   `.swal2-container { z-index: 1400 }` rule keeps alerts above modals — don't
   override it downward.
+- **Non-blocking transient hints** (e.g. validation guidance where the user should
+  stay in place) use `AlertService.toast()`. Components must not call
+  `Swal.mixin()` or `Swal.fire()` directly.
 - One primary button (§4); close affordance top-right (`×`) **and** a secondary
   Back/Cancel.
 

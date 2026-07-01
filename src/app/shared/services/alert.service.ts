@@ -28,6 +28,23 @@ export class AlertService {
     return Swal.fire({ icon: 'warning', title: message });
   }
 
+  toast(message: string, icon: SweetAlertIcon = 'info'): void {
+    const Toast = Swal.mixin({
+      toast: true,
+      position: 'top-end',
+      icon,
+      title: message,
+      showConfirmButton: false,
+      timer: 3000,
+      timerProgressBar: true,
+      didOpen: (toast) => {
+        toast.onmouseenter = Swal.stopTimer;
+        toast.onmouseleave = Swal.resumeTimer;
+      },
+    });
+    void Toast.fire();
+  }
+
   async confirm(options: {
     title: string;
     text: string;

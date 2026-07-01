@@ -273,7 +273,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       const msg = this.translateService.instant(
         'HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH'
       );
-      this.alertService.warning(msg);
+      this.alertService.toast(msg, 'warning');
       return;
     }
 
@@ -281,7 +281,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       const msg = this.translateService.instant(
         'HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP'
       );
-      this.alertService.warning(msg);
+      this.alertService.toast(msg, 'warning');
       this.activeTabIndex = 0;
       return;
     }
@@ -290,7 +290,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
       const msg = this.translateService.instant(
         'HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF'
       );
-      this.alertService.warning(msg);
+      this.alertService.toast(msg, 'warning');
       this.activeTabIndex = this.isDesktop ? 1 : 2;
       return;
     }
