@@ -1,4 +1,4 @@
-import { AfterViewInit, Component } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
@@ -10,12 +10,15 @@ import { environment } from '../../../environments/environment';
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent implements AfterViewInit {
+export class LoginComponent implements AfterViewInit, OnDestroy {
   isShowPassword: boolean = false;
   isGoogleLoading: boolean = false;
 
   loginForm: FormGroup;
   pdpaGoogleConsent = new FormControl(false);
+
+  private gisReadyInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly GIS_POLL_MAX_TRIES = 100; // ~10 s at 100 ms intervals
 
   constructor(
     private translate: TranslateService,
@@ -27,6 +30,36 @@ export class LoginComponent implements AfterViewInit {
   }
 
   ngAfterViewInit(): void {
+    let tries = 0;
+    this.gisReadyInterval = setInterval(() => {
+      tries++;
+      const isLoaded = !!(
+        (window as unknown as Record<string, unknown>)['google'] as
+          | { accounts?: { id?: unknown } }
+          | undefined
+      )?.accounts?.id;
+
+      if (isLoaded) {
+        this.clearGisReadyInterval();
+        this.initGis();
+      } else if (tries >= this.GIS_POLL_MAX_TRIES) {
+        this.clearGisReadyInterval();
+      }
+    }, 100);
+  }
+
+  ngOnDestroy(): void {
+    this.clearGisReadyInterval();
+  }
+
+  private clearGisReadyInterval(): void {
+    if (this.gisReadyInterval !== null) {
+      clearInterval(this.gisReadyInterval);
+      this.gisReadyInterval = null;
+    }
+  }
+
+  private initGis(): void {
     const container = document.getElementById('google-signin-btn-container');
     if (!container) return;
 
