@@ -4,6 +4,22 @@
   background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
 }
 
+// จัดคอนเทนต์ให้เป็นคอลัมน์กว้างเท่า booking-card (min(100%, 1200px) จัดกลาง)
+// max-width เผื่อ 1rem ของ .row.g-3 gutter แล้วหัก padding 0.5rem กลับ เพื่อให้ขอบ
+// panel ตรงกับขอบการ์ดค้นหาด้านบนเป๊ะ (ไม่เหลื่อม 8px จาก negative margin ของ row)
+.route-map-container {
+  width: 100%;
+  max-width: calc(1200px + 1rem);
+  margin-inline: auto;
+  padding-inline: 0.5rem;
+}
+
+@media (max-width: 992px) {
+  .route-map-container {
+    padding-inline: 16px; // ให้ตรงกับ booking-section ตอนจอเล็ก
+  }
+}
+
 .panel-card {
   background: $primary-white;
   border-radius: 24px;
