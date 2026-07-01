@@ -749,3 +749,22 @@ drop-in that closes the zh gap on registration and removes the duplication.
 **Pattern for next time:** when localizing a shared option list, grep for *all* render sites
 of that list — duplicated/hardcoded copies of a shared constant won't inherit the new field.
 Prefer `[...SHARED_CONSTANT]` over re-declaring the array per component.
+
+## Scrutinize self-fix: global error alert double-toast on new auth HTTP calls (ao/google-signin-email-verify)
+
+`loginWithGoogle()` / `verifyEmail()` / `resendVerification()` in `auth.service.ts` were posting
+WITHOUT the `SKIP_GLOBAL_ERROR_ALERT` HttpContext token. Because the global `errorInterceptor`
+(registered in `app.module.ts` via `withInterceptors([authInterceptor, errorInterceptor])`) fires
+`alertService.error(extractApiErrorMessage(...))` on every `/api/` error, and these components then
+ALSO show their own errorCode-mapped alert (or, for verify-email, an inline "failed" panel), the user
+saw TWO error surfaces — a generic interceptor toast plus the specific one. For verify-email this even
+fired a toast on `VERIFICATION_TOKEN_ALREADY_USED`, which the component intentionally treats as success.
+
+Fix: added `{ context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }` to all three posts —
+the same opt-out convention already used by booking/admin/staff/route-map/usability-report services
+that do their own inline error handling.
+
+**Pattern for next time:** any service method whose call-sites branch on `error.error.errorCode` and
+render their own alert/inline error MUST opt out of the global error alert with `SKIP_GLOBAL_ERROR_ALERT`,
+otherwise you get a double-toast. The existing `callLogin` avoids this only because it swallows the error
+(returns `err`) and the component never re-alerts — that is NOT the pattern to copy for errorCode-branching flows.

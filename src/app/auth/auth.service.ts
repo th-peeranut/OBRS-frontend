@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { SKIP_GLOBAL_ERROR_ALERT } from '../shared/interceptors/http-context-tokens';
 import {
   LoginResponseData,
   PasswordResetConfirmResponse,
@@ -293,7 +294,8 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<LoginResponseData>>(
         `${environment.apiUrl}/api/auth/social/google`,
-        payload
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise()
       .then((response) => {
@@ -313,7 +315,8 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<unknown>>(
         `${environment.apiUrl}/api/auth/verify-email`,
-        payload
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise();
   }
@@ -324,7 +327,8 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<unknown>>(
         `${environment.apiUrl}/api/auth/verify-email/resend`,
-        payload
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise();
   }
