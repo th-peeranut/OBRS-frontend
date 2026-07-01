@@ -69,9 +69,9 @@
                 <!-- TAB: PICKUP -->
                 <p-tabPanel>
                   <ng-template pTemplate="header">
-                    <span>
-                      {{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}
-                      <p-badge [value]="pickupStops.length.toString()" severity="info" styleClass="ms-1"></p-badge>
+                    <span class="tab-header-content">
+                      <span class="tab-header-label">{{ 'HOME.ROUTE_MAP.TAB_PICKUP_LABEL' | translate: { province: routeMeta.originProvinceLabel } }}</span>
+                      <p-badge [value]="pickupStops.length.toString()" severity="info" styleClass="tab-header-badge"></p-badge>
                     </span>
                   </ng-template>
                   <app-route-stop-list
@@ -88,9 +88,9 @@
                 <!-- TAB: DROPOFF -->
                 <p-tabPanel>
                   <ng-template pTemplate="header">
-                    <span>
-                      {{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}
-                      <p-badge [value]="dropoffStops.length.toString()" severity="danger" styleClass="ms-1"></p-badge>
+                    <span class="tab-header-content">
+                      <span class="tab-header-label">{{ 'HOME.ROUTE_MAP.TAB_DROPOFF_LABEL' | translate: { province: routeMeta.destinationProvinceLabel } }}</span>
+                      <p-badge [value]="dropoffStops.length.toString()" severity="danger" styleClass="tab-header-badge"></p-badge>
                     </span>
                   </ng-template>
                   <app-route-stop-list
