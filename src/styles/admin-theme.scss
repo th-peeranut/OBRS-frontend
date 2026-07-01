@@ -142,7 +142,9 @@
 }
 
 .admin-brand {
-  padding: 0 10px;
+  /* 13px = the nav-link's 12px padding + 1px transparent border, so the logo's
+     left edge lines up exactly with the menu icon column below it. */
+  padding: 0 13px;
 }
 
 .admin-brand-link {
