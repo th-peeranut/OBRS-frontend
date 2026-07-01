@@ -104,10 +104,25 @@
               </div>
             </td>
             <td>
-              <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
+              <div class="admin-cell-stack">
+                <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
+                <span class="admin-status is-warning admin-status--icon" *ngIf="user.locked">
+                  <span class="material-symbols-outlined">lock</span>
+                  {{ 'ADMIN.USERS.LOCKED_BADGE' | translate }}
+                </span>
+              </div>
             </td>
             <td class="text-right">
               <div class="admin-inline-actions">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.USERS.UNLOCK_ACTION' | translate"
+                  (click)="openUnlockModal(user)"
+                  *ngIf="user.locked && hasAdminRole()"
+                >
+                  <span class="material-symbols-outlined">lock_open</span>
+                </button>
                 <button
                   type="button"
                   class="admin-icon-btn"
@@ -350,6 +365,24 @@
       </button>
       <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
         {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isUnlockModalOpen" adminModalBackdrop (dismiss)="closeUnlockModal()">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.USERS.UNLOCK_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.USERS.UNLOCK_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedUser">{{ selectedUser.fullName }}</strong>
+    </p>
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeUnlockModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isUnlocking" (click)="confirmUnlock()">
+        {{ isUnlocking ? ('ADMIN.USERS.UNLOCKING' | translate) : ('ADMIN.USERS.UNLOCK_BTN' | translate) }}
       </button>
     </div>
   </div>

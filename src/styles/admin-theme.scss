@@ -855,6 +855,14 @@
   color: var(--admin-danger-text);
 }
 
+.admin-status--icon {
+  gap: 4px;
+
+  .material-symbols-outlined {
+    font-size: 13px;
+  }
+}
+
 .admin-page-filters {
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid rgba(189, 200, 207, 0.4);

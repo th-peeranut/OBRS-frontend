@@ -215,7 +215,9 @@
       "LOAD_ROUTES_FAILED": "无法加载路线。",
       "LOAD_SCHEDULES_FAILED": "无法加载班次。",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
-      "DELETE_BTN": "删除"
+      "DELETE_BTN": "删除",
+      "UNLOCK_SUCCESS": "账户解锁成功。",
+      "UNLOCK_FAILED": "无法解锁账户。"
     },
     "LOOKUP": {
       "TITLE": "查找设置",
@@ -297,7 +299,13 @@
       "PHONE": "电话号码",
       "PASSWORD": "密码",
       "CONFIRM_PASSWORD": "确认密码",
-      "LOCALE": "首选语言"
+      "LOCALE": "首选语言",
+      "LOCKED_BADGE": "已锁定",
+      "UNLOCK_ACTION": "解锁账户",
+      "UNLOCK_CONFIRM_TITLE": "确认解锁账户",
+      "UNLOCK_CONFIRM_MESSAGE": "解锁此账户后，以下用户将可立即登录：",
+      "UNLOCK_BTN": "解锁",
+      "UNLOCKING": "解锁中..."
     },
     "VEHICLES": {
       "MONITORING": "车队监控已启用",

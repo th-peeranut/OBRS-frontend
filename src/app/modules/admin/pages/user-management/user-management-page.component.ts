@@ -26,6 +26,7 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { UsersStore } from './users.store';
+import { AuthService } from '../../../../auth/auth.service';
 
 interface UserRow {
   id: number;
@@ -37,6 +38,7 @@ interface UserRow {
   status: string;
   statusCode: string;
   lastActive: string;
+  locked: boolean;
 }
 
 interface RoleOption {
@@ -71,8 +73,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
 
   protected isFormModalOpen = false;
   protected isDeleteModalOpen = false;
+  protected isUnlockModalOpen = false;
   protected isSubmitting = false;
   protected isDeleting = false;
+  protected isUnlocking = false;
   protected isEditMode = false;
   protected isEditDetailLoading = false;
   protected selectedUser: UserRow | null = null;
@@ -98,7 +102,8 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: UsersStore
+    private readonly store: UsersStore,
+    private readonly authService: AuthService
   ) {
     this.userForm = this.formBuilder.group({
       title: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
@@ -326,6 +331,58 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.selectedUser = null;
   }
 
+  protected hasAdminRole(): boolean {
+    return this.authService.hasAnyRole(['admin']);
+  }
+
+  protected openUnlockModal(user: UserRow): void {
+    this.selectedUser = user;
+    this.isUnlockModalOpen = true;
+  }
+
+  protected closeUnlockModal(force = false): void {
+    if (this.isUnlocking && !force) {
+      return;
+    }
+
+    this.isUnlockModalOpen = false;
+    if (!this.isDeleteModalOpen) {
+      this.selectedUser = null;
+    }
+  }
+
+  protected async confirmUnlock(): Promise<void> {
+    if (!this.selectedUser) {
+      return;
+    }
+
+    const id = this.selectedUser.id;
+    this.isUnlocking = true;
+    try {
+      await firstValueFrom(this.adminApiService.unlockUser(id));
+      this.store.mutate((data) => ({
+        ...data,
+        users: data.users.map((u) =>
+          u.id === id ? { ...u, locked: false, accountLockedUntil: null } : u
+        ),
+      }));
+      this.closeUnlockModal(true);
+      const refreshPromise = this.store.refresh();
+      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UNLOCK_SUCCESS'));
+      await refreshPromise;
+    } catch (error) {
+      this.closeUnlockModal(true);
+      const errorCode = (error as { error?: { errorCode?: string } })?.error?.errorCode;
+      this.alertService.error(
+        this.translate.instant(
+          errorCode ? 'ADMIN.MESSAGES.UNLOCK_FAILED' : 'ADMIN.MESSAGES.UNLOCK_FAILED'
+        )
+      );
+    } finally {
+      this.isUnlocking = false;
+    }
+  }
+
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.userForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
@@ -511,6 +568,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       status: status.name,
       statusCode: status.code,
       lastActive: this.formatDateTime(user.updatedAt ?? user.createdAt),
+      locked: user.locked ?? false,
     };
   }
 

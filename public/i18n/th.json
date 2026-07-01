@@ -215,7 +215,9 @@
       "LOAD_ROUTES_FAILED": "ไม่สามารถโหลดข้อมูลเส้นทางได้",
       "LOAD_SCHEDULES_FAILED": "ไม่สามารถโหลดข้อมูลตารางเดินรถได้",
       "DELETE_CONFIRM_BODY": "การดำเนินการนี้ไม่สามารถยกเลิกได้ คุณต้องการดำเนินการต่อหรือไม่?",
-      "DELETE_BTN": "ลบ"
+      "DELETE_BTN": "ลบ",
+      "UNLOCK_SUCCESS": "ปลดล็อกบัญชีสำเร็จ",
+      "UNLOCK_FAILED": "ไม่สามารถปลดล็อกบัญชีได้"
     },
     "LOOKUP": {
       "TITLE": "ตั้งค่า Lookup",
@@ -297,7 +299,13 @@
       "PHONE": "เบอร์โทรศัพท์",
       "PASSWORD": "รหัสผ่าน",
       "CONFIRM_PASSWORD": "ยืนยันรหัสผ่าน",
-      "LOCALE": "ภาษาที่ต้องการ"
+      "LOCALE": "ภาษาที่ต้องการ",
+      "LOCKED_BADGE": "ถูกล็อก",
+      "UNLOCK_ACTION": "ปลดล็อกบัญชี",
+      "UNLOCK_CONFIRM_TITLE": "ยืนยันการปลดล็อก",
+      "UNLOCK_CONFIRM_MESSAGE": "การปลดล็อกบัญชีนี้จะอนุญาตให้เข้าสู่ระบบได้ทันที:",
+      "UNLOCK_BTN": "ปลดล็อก",
+      "UNLOCKING": "กำลังปลดล็อก..."
     },
     "VEHICLES": {
       "MONITORING": "กำลังติดตามกองรถ",

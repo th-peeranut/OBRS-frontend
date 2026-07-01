@@ -79,6 +79,8 @@ export interface AdminUserDto {
   createdAt?: string;
   updatedAt?: string;
   roles: Array<string | AdminRoleDto>;
+  locked?: boolean;
+  accountLockedUntil?: string | null;
 }
 
 export interface LayoutResponse {
@@ -614,6 +616,10 @@ export class AdminApiService {
 
   deleteUser(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/users/${id}`);
+  }
+
+  unlockUser(id: number): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/users/${id}/unlock`, {});
   }
 
   getVehicles(): Observable<ResponseAPI<AdminVehicleDto[]>> {

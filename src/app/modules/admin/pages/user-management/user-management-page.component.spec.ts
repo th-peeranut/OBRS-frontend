@@ -15,6 +15,7 @@ const USER_ROW = {
   status: 'Active',
   statusCode: 'active',
   lastActive: '-',
+  locked: false,
 };
 
 function makeStoreStub() {
@@ -37,12 +38,16 @@ function makeComponent(getUserById$: Subject<ResponseAPI<AdminUserDto>>) {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
   };
+  const authService = {
+    hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(true),
+  };
   return new UserManagementPageComponent(
     adminApi as any,
     new FormBuilder(),
     alert as any,
     createTranslateStub(),
-    makeStoreStub() as any
+    makeStoreStub() as any,
+    authService as any
   );
 }
 

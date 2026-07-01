@@ -215,7 +215,9 @@
       "LOAD_ROUTES_FAILED": "Unable to load routes.",
       "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
-      "DELETE_BTN": "Delete"
+      "DELETE_BTN": "Delete",
+      "UNLOCK_SUCCESS": "Account unlocked successfully.",
+      "UNLOCK_FAILED": "Unable to unlock the account."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -297,7 +299,13 @@
       "PHONE": "Phone Number",
       "PASSWORD": "Password",
       "CONFIRM_PASSWORD": "Confirm Password",
-      "LOCALE": "Preferred Locale"
+      "LOCALE": "Preferred Locale",
+      "LOCKED_BADGE": "Locked",
+      "UNLOCK_ACTION": "Unlock account",
+      "UNLOCK_CONFIRM_TITLE": "Unlock Account",
+      "UNLOCK_CONFIRM_MESSAGE": "Unlocking this account will grant immediate login access to",
+      "UNLOCK_BTN": "Unlock",
+      "UNLOCKING": "Unlocking..."
     },
     "VEHICLES": {
       "MONITORING": "Fleet Monitoring Active",
