@@ -107,20 +107,24 @@
 :host ::ng-deep .p-tabview-nav-container,
 :host ::ng-deep .p-tabview-nav-content {
   width: 100%;
+  padding: 0;
 }
 
 :host ::ng-deep .p-tabview-nav {
   display: flex;
   width: 100%;
+  margin: 0;
+  padding: 0;
   border-bottom: 1px solid $secondary-light-blue;
   background: transparent;
-  gap: 6px;
+  gap: 0; // ไม่มี gap เพื่อให้แต่ละแท็บกว้าง 50% เป๊ะ เต็มขอบ
 }
 
-// แท็บ จุดรับ/จุดส่ง แบ่งกว้างเท่ากัน (ครึ่ง-ครึ่ง); มือถือ 3 แท็บ = เท่า ๆ กัน
+// แท็บ จุดรับ/จุดส่ง = 50% เท่ากันเป๊ะ เต็มความกว้าง (มือถือ 3 แท็บ = 1/3 เท่า ๆ กัน)
 // (ยกเว้น ink-bar ที่ PrimeNG จัดตำแหน่งเอง)
 :host ::ng-deep .p-tabview-nav li:not(.p-tabview-ink-bar) {
   flex: 1 1 0;
+  margin: 0;
 }
 
 :host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
