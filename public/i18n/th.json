@@ -664,6 +664,8 @@
       "BTN_VIEW_PHOTO": "ดูรูปภาพ",
       "BTN_OPEN_MAPS": "เปิดใน Google Maps",
       "VALIDATION_SELECT_BOTH": "กรุณาเลือกทั้งจุดรับและจุดส่งก่อนยืนยัน",
+      "VALIDATION_SELECT_PICKUP": "กรุณาเลือกจุดรับก่อนยืนยัน",
+      "VALIDATION_SELECT_DROPOFF": "กรุณาเลือกจุดส่งก่อนยืนยัน",
       "MAP_UNAVAILABLE": "ไม่สามารถแสดงแผนที่ได้ในขณะนี้",
       "EMPTY_STATE": "ไม่มีจุดรับ-ส่งในเส้นทางนี้",
       "LOADING": "กำลังโหลดข้อมูลเส้นทาง...",

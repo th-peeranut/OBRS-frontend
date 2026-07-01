@@ -65,7 +65,7 @@
                 <span class="panel-meta ms-auto">{{ 'HOME.ROUTE_MAP.SUBTITLE' | translate }}</span>
               </div>
 
-              <p-tabView>
+              <p-tabView [(activeIndex)]="activeTabIndex">
                 <!-- TAB: PICKUP -->
                 <p-tabPanel>
                   <ng-template pTemplate="header">
@@ -171,7 +171,7 @@
 
       <!-- ===== MOBILE/TABLET (<1200px): TabView with 3 tabs ===== -->
       <ng-container *ngIf="!isDesktop">
-        <p-tabView>
+        <p-tabView [(activeIndex)]="activeTabIndex">
 
           <!-- TAB 1: จุดรับ (Pickup) -->
           <p-tabPanel>

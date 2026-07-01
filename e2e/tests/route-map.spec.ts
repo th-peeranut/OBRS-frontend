@@ -228,7 +228,7 @@ test.describe('Route Map – Success State', () => {
 
   // ── Criterion 3 ──────────────────────────────────────────────────────────
 
-  test('Criterion 3: confirm guard — only pickup selected → VALIDATION_SELECT_BOTH, no navigation', async ({
+  test('Criterion 3: confirm guard — only pickup selected → VALIDATION_SELECT_DROPOFF, switches to Drop-off tab, no navigation', async ({
     page,
   }) => {
     await page.goto('/home');
@@ -243,16 +243,50 @@ test.describe('Route Map – Success State', () => {
     await confirmPickupBtn.waitFor({ state: 'visible' });
     await confirmPickupBtn.click();
 
-    // SweetAlert2 warning should appear with VALIDATION_SELECT_BOTH message
+    // SweetAlert2 warning should appear with the drop-off-specific message
     await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
     await expect(page.locator('.swal2-title')).toContainText(
-      'Please select both a pickup and a drop-off point before confirming'
+      'Please select a drop-off point before confirming'
     );
 
     // Must NOT navigate away from /home
     expect(page.url()).toContain('/home');
 
     await dismissSweetAlert(page);
+
+    // The active tab should have switched to Drop-off to guide the user there
+    const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
+    await expect(dropoffTab).toHaveClass(/p-highlight/);
+  });
+
+  test('Criterion 3b: confirm guard — only dropoff selected → VALIDATION_SELECT_PICKUP, switches to Pickup tab, no navigation', async ({
+    page,
+  }) => {
+    await page.goto('/home');
+    await waitForRouteMapLoaded(page);
+
+    // Switch to dropoff tab and select only dropoff (pickup stays unselected)
+    await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
+    const dropoffRow = page.locator('.stop-row--dropoff').first();
+    await dropoffRow.waitFor({ state: 'visible' });
+    await dropoffRow.click();
+
+    const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
+    await confirmDropoffBtn.waitFor({ state: 'visible' });
+    await confirmDropoffBtn.click();
+
+    await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
+    await expect(page.locator('.swal2-title')).toContainText(
+      'Please select a pickup point before confirming'
+    );
+
+    expect(page.url()).toContain('/home');
+
+    await dismissSweetAlert(page);
+
+    // The active tab should have switched back to Pickup to guide the user there
+    const pickupTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first();
+    await expect(pickupTab).toHaveClass(/p-highlight/);
   });
 
   // ── Criterion 4 (A1 BLOCKER) ─────────────────────────────────────────────

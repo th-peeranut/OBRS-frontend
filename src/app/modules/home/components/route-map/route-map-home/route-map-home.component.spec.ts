@@ -303,7 +303,64 @@ describe('RouteMapHomeComponent', () => {
     component.selectedPickupSlug = null;
     component.selectedDropoffSlug = null;
     component.onConfirmPickup();
-    expect(alertServiceStub.warning).toHaveBeenCalled();
+    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH');
+  });
+
+  // ── Differentiated validation messages ──────────────────────────────────
+  it('warns with VALIDATION_SELECT_DROPOFF and does not emit when only pickup is selected', () => {
+    component.ngOnInit();
+    component.selectedPickupSlug = 'pickup-1';
+    component.selectedDropoffSlug = null;
+
+    const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
+    component.pickupDropoffConfirmed.subscribe(emitSpy);
+
+    component.onConfirmPickup();
+
+    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF');
+    expect(emitSpy).not.toHaveBeenCalled();
+  });
+
+  it('warns with VALIDATION_SELECT_PICKUP and does not emit when only drop-off is selected', () => {
+    component.ngOnInit();
+    component.selectedPickupSlug = null;
+    component.selectedDropoffSlug = 'dropoff-1';
+
+    const emitSpy = jasmine.createSpy('pickupDropoffConfirmed');
+    component.pickupDropoffConfirmed.subscribe(emitSpy);
+
+    component.onConfirmDropoff();
+
+    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP');
+    expect(emitSpy).not.toHaveBeenCalled();
+  });
+
+  it('switches activeTabIndex to the drop-off tab index when only pickup is selected (desktop)', () => {
+    // breakpointObserverStub returns matches: true → isDesktop = true → dropoff tab index = 1
+    component.ngOnInit();
+    component.selectedPickupSlug = 'pickup-1';
+    component.selectedDropoffSlug = null;
+
+    component.onConfirmPickup();
+
+    expect(component.activeTabIndex).toBe(1);
+  });
+
+  it('switches activeTabIndex to the drop-off tab index when only pickup is selected (mobile)', () => {
+    // mobile breakpoint stub: matches: false → isDesktop = false → dropoff tab index = 2
+    const mobileComponent = makeComponent(
+      routeMapServiceStub,
+      alertServiceStub,
+      translateServiceStub,
+      { observe: () => of({ matches: false }) }
+    );
+    mobileComponent.ngOnInit();
+    mobileComponent.selectedPickupSlug = 'pickup-1';
+    mobileComponent.selectedDropoffSlug = null;
+
+    mobileComponent.onConfirmPickup();
+
+    expect(mobileComponent.activeTabIndex).toBe(2);
   });
 
   it('emits pickupDropoffConfirmed when both slugs are selected', () => {

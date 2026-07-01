@@ -54,6 +54,7 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
 
   isDesktop = true;
   mapsApiKey = environment.mapsApiKey;
+  activeTabIndex: number = 0;
 
   /**
    * Straight-line distance (km) from the user's location to each pickup stop,
@@ -268,11 +269,29 @@ export class RouteMapHomeComponent implements OnInit, OnDestroy {
   }
 
   private onConfirm(): void {
-    if (!this.selectedPickupSlug || !this.selectedDropoffSlug) {
+    if (!this.selectedPickupSlug && !this.selectedDropoffSlug) {
       const msg = this.translateService.instant(
         'HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH'
       );
       this.alertService.warning(msg);
+      return;
+    }
+
+    if (!this.selectedPickupSlug) {
+      const msg = this.translateService.instant(
+        'HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP'
+      );
+      this.alertService.warning(msg);
+      this.activeTabIndex = 0;
+      return;
+    }
+
+    if (!this.selectedDropoffSlug) {
+      const msg = this.translateService.instant(
+        'HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF'
+      );
+      this.alertService.warning(msg);
+      this.activeTabIndex = this.isDesktop ? 1 : 2;
       return;
     }
 
