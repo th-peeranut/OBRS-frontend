@@ -219,10 +219,8 @@ test.describe('Route Map – Success State', () => {
     await expect(dropoffCard).toContainText('456 Bangkok Road');
     await expect(dropoffCard).toContainText('06:30');
 
-    // Action buttons visible: "View photo" and "Open in Google Maps"
-    await expect(pickupCard.locator('button', { hasText: 'View photo' })).toBeVisible();
+    // Action button visible: "Open in Google Maps" (the "View photo" button was removed in OBRS-72)
     await expect(pickupCard.locator('button', { hasText: 'Open in Google Maps' })).toBeVisible();
-    await expect(dropoffCard.locator('button', { hasText: 'View photo' })).toBeVisible();
     await expect(dropoffCard.locator('button', { hasText: 'Open in Google Maps' })).toBeVisible();
   });
 

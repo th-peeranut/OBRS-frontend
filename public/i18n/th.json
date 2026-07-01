@@ -697,7 +697,6 @@
       "DETAIL_PICKUP_TITLE": "รายละเอียดจุดรับ ({{province}})",
       "DETAIL_DROPOFF_TITLE": "รายละเอียดจุดส่ง ({{province}})",
       "DETAIL_TIME": "เวลาโดยประมาณ {{time}} น.",
-      "BTN_VIEW_PHOTO": "ดูรูปภาพ",
       "BTN_OPEN_MAPS": "เปิดใน Google Maps",
       "VALIDATION_SELECT_BOTH": "กรุณาเลือกทั้งจุดรับและจุดส่งก่อนยืนยัน",
       "VALIDATION_SELECT_PICKUP": "กรุณาเลือกจุดรับก่อนยืนยัน",

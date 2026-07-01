@@ -38,15 +38,6 @@
       loading="lazy"
     />
 
-    <!-- MINI STATIC MAP (only when key + coords available) -->
-    <img
-      *ngIf="staticMapUrl"
-      [src]="staticMapUrl"
-      class="detail-photo w-100 rounded mb-2"
-      [alt]="stop.name"
-      loading="lazy"
-    />
-
     <!-- APPROX TIME -->
     <div class="mb-2 small">
       <i class="bi bi-clock me-1 detail-meta"></i>
@@ -54,23 +45,12 @@
     </div>
 
     <!-- ADDRESS -->
-    <div class="mb-3 small detail-meta">
+    <div *ngIf="stop.address" class="mb-3 small detail-meta">
       <i class="bi bi-geo-alt me-1"></i>{{ stop.address }}
     </div>
 
     <!-- ACTION BUTTONS -->
     <div class="d-flex gap-2 flex-wrap">
-      <p-button
-        severity="secondary"
-        size="small"
-        [label]="'HOME.ROUTE_MAP.BTN_VIEW_PHOTO' | translate"
-        [disabled]="!stop.primaryPhotoUrl"
-        (onClick)="openPhoto()"
-      >
-        <ng-template pTemplate="icon">
-          <i class="bi bi-image me-1"></i>
-        </ng-template>
-      </p-button>
       <p-button
         severity="secondary"
         size="small"
