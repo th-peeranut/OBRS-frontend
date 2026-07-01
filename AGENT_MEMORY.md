@@ -1,5 +1,31 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-01 — Frontend: stop-detail-card-cleanup (OBRS-72) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-stop-detail-card-cleanup` (diff vs `origin/dev`)
+
+**Finding (self-fixed) — e2e test still asserted the removed "View photo" button.**
+The diff removed the "View photo" `p-button` from `route-stop-detail-card`, but
+`e2e/tests/route-map.spec.ts` (lines 223 & 225) still asserted
+`button hasText: 'View photo'` was visible on both the pickup and dropoff cards.
+`ng test` (Karma unit) passed 606/606 and was the only suite the implementing
+agent ran, so this regression went unnoticed — Playwright e2e is a separate
+suite. **Lesson:** when deleting a UI element, grep the `e2e/` folder (and any
+`.spec.ts`) for its label/text, not just the component unit spec. `ng test`
+green does not cover e2e. **Fix:** removed the two "View photo" assertions and
+updated the comment on line 222 to note OBRS-72 removed the button.
+
+**Confirmed safe (no action needed):**
+- `mapsApiKey` — still used by the *sibling* `route-map-panel` component (live
+  interactive map) and its 2 parent bindings + `environment.mapsApiKey`. Removal
+  was correctly scoped to the detail card only.
+- `.detail-photo` SCSS class — still used by the inline photo `<img>`, not dead.
+- `*ngIf="stop.address"` — truthy check correctly guards both `null` and `''`
+  (empty string is falsy), so no separate empty-string check is needed. (Note:
+  `RouteStop.address` is typed `string` but is null at runtime — a pre-existing
+  interface inaccuracy, out of scope for this hotfix.)
+- No other orphaned i18n keys; en/th/zh remain valid JSON.
+
 ## 2026-06-30 — Frontend: home-route-road-snap (issue #74) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-home-route-road-snap` (diff vs `origin/dev`)

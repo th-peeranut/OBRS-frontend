@@ -696,7 +696,6 @@
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
       "DETAIL_TIME": "Approx. {{time}}",
-      "BTN_VIEW_PHOTO": "View photo",
       "BTN_OPEN_MAPS": "Open in Google Maps",
       "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
       "VALIDATION_SELECT_PICKUP": "Please select a pickup point before confirming",
