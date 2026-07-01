@@ -99,6 +99,7 @@ function createAlertServiceStub(): AnyStub {
   return {
     warning: jasmine.createSpy('warning'),
     error: jasmine.createSpy('error'),
+    toast: jasmine.createSpy('toast'),
   };
 }
 
@@ -303,7 +304,7 @@ describe('RouteMapHomeComponent', () => {
     component.selectedPickupSlug = null;
     component.selectedDropoffSlug = null;
     component.onConfirmPickup();
-    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH');
+    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_BOTH', 'warning');
   });
 
   // ── Differentiated validation messages ──────────────────────────────────
@@ -317,7 +318,7 @@ describe('RouteMapHomeComponent', () => {
 
     component.onConfirmPickup();
 
-    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF');
+    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_DROPOFF', 'warning');
     expect(emitSpy).not.toHaveBeenCalled();
   });
 
@@ -331,7 +332,7 @@ describe('RouteMapHomeComponent', () => {
 
     component.onConfirmDropoff();
 
-    expect(alertServiceStub.warning).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP');
+    expect(alertServiceStub.toast).toHaveBeenCalledWith('HOME.ROUTE_MAP.VALIDATION_SELECT_PICKUP', 'warning');
     expect(emitSpy).not.toHaveBeenCalled();
   });
 
