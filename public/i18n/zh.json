@@ -695,7 +695,6 @@
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",
-      "BTN_VIEW_PHOTO": "查看照片",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
       "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
       "VALIDATION_SELECT_PICKUP": "请先选择上车点再确认",
