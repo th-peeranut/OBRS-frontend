@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
+import { Subscription } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
 import { environment } from '../../../environments/environment';
@@ -19,6 +20,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   private gisReadyInterval: ReturnType<typeof setInterval> | null = null;
   private readonly GIS_POLL_MAX_TRIES = 100; // ~10 s at 100 ms intervals
+  private langChangeSubscription?: Subscription;
 
   constructor(
     private translate: TranslateService,
@@ -50,6 +52,7 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.clearGisReadyInterval();
+    this.langChangeSubscription?.unsubscribe();
   }
 
   private clearGisReadyInterval(): void {
@@ -74,6 +77,14 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       theme: 'outline',
       size: 'large',
       width: '100%',
+    });
+
+    // GIS bakes its rendered button's language into the gsi/client script it already
+    // loaded (see index.html) - there's no supported way to re-localize an already-
+    // rendered button in place, so a live language switch needs a full reload to pick
+    // up the new `hl` on the next script load.
+    this.langChangeSubscription = this.translate.onLangChange.subscribe(() => {
+      window.location.reload();
     });
   }
 
