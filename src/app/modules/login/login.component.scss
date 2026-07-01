@@ -102,6 +102,16 @@
         color: $primary-blue;
       }
 
+      .gis-btn-wrapper {
+        position: relative;
+
+        .gis-disabled-overlay {
+          position: absolute;
+          inset: 0;
+          cursor: not-allowed;
+        }
+      }
+
       .register-link {
         text-align: center;
         font-size: 16px;

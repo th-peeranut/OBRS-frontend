@@ -286,6 +286,49 @@ export class AuthService {
     );
   }
 
+  loginWithGoogle(payload: {
+    idToken: string;
+    pdpaConsent: boolean;
+  }): Promise<ResponseAPI<LoginResponseData> | undefined> {
+    return this.http
+      .post<ResponseAPI<LoginResponseData>>(
+        `${environment.apiUrl}/api/auth/social/google`,
+        payload
+      )
+      .toPromise()
+      .then((response) => {
+        if (response?.code === 200) {
+          const token = response?.data?.accessToken;
+          const username = response?.data?.user?.email;
+          const roles = response?.data?.user?.roles;
+          this.storeAuthData(token, username, roles);
+        }
+        return response;
+      });
+  }
+
+  verifyEmail(payload: {
+    token: string;
+  }): Promise<ResponseAPI<unknown> | undefined> {
+    return this.http
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/verify-email`,
+        payload
+      )
+      .toPromise();
+  }
+
+  resendVerification(payload: {
+    email: string;
+  }): Promise<ResponseAPI<unknown> | undefined> {
+    return this.http
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/verify-email/resend`,
+        payload
+      )
+      .toPromise();
+  }
+
   forgetPassword(payload: {
     email: string;
   }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
@@ -319,7 +362,8 @@ export class AuthService {
       path.startsWith('/login-mobile') ||
       path.startsWith('/register') ||
       path.startsWith('/otp') ||
-      path.startsWith('/forget-password')
+      path.startsWith('/forget-password') ||
+      path.startsWith('/verify-email')
     );
   }
 }

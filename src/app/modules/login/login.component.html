@@ -132,6 +132,37 @@
       >
         {{ "LOGIN.LOGINMOBILE" | translate }}
       </button>
+      <!-- GOOGLE SIGN-IN PDPA CONSENT -->
+      <div class="form-check mt-3">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="pdpaGoogleConsent"
+          [formControl]="pdpaGoogleConsent"
+        />
+        <label class="form-check-label" for="pdpaGoogleConsent">
+          {{ "LOGIN.GOOGLE_SIGNIN_PDPA" | translate }}
+        </label>
+      </div>
+      <div
+        class="text-error"
+        *ngIf="pdpaGoogleConsent.touched && !pdpaGoogleConsent.value"
+      >
+        {{ "LOGIN.GOOGLE_SIGNIN_PDPA_REQUIRED" | translate }}
+      </div>
+      <!-- GOOGLE SIGN-IN BUTTON -->
+      <div class="gis-btn-wrapper mt-2">
+        <div id="google-signin-btn-container"></div>
+        <div
+          class="gis-disabled-overlay"
+          *ngIf="!pdpaGoogleConsent.value"
+          (click)="pdpaGoogleConsent.markAsTouched()"
+        ></div>
+      </div>
+      <!-- LOADING STATE FOR GOOGLE -->
+      <div class="text-center mt-2" *ngIf="isGoogleLoading">
+        <small class="text-muted">{{ "LOGIN.GOOGLE_SIGNIN_LOADING" | translate }}</small>
+      </div>
       <!-- REGISTER LINK -->
       <p class="register-link mt-4">
         {{ "LOGIN.REGISTERLINK" | translate }}

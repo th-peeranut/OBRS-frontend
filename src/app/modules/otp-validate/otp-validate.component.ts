@@ -19,6 +19,7 @@ import { AlertService } from '../../shared/services/alert.service';
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
   isShowPassword: boolean = false;
+  registrationEmailSent: boolean = false;
 
   option: string | undefined = 'login';
 
@@ -135,11 +136,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               const resRegister = await this.service.register(registerValue);
 
               if (resRegister?.code === 201) {
-                this.alertService.success(
-                  this.translate.instant('REGISTER.REGISTER_SUCCESS')
-                );
                 this.service.clearRegisterValue();
-                this.router.navigateByUrl('/login');
+                this.registrationEmailSent = true;
               } else if (typeof resRegister?.code === 'number') {
                 this.alertService.error(
                   this.translate.instant('REGISTER.REGISTER_FAIL')
