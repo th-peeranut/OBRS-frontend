@@ -48,8 +48,8 @@ async function stubSupportEndpoints(page: Page): Promise<void> {
 async function waitForRouteMapReady(page: Page): Promise<void> {
   await page.waitForTimeout(400);
   await Promise.race([
-    page.locator('.stop-row').first().waitFor({ state: 'visible', timeout: 20_000 }),
-    page.locator('.route-map-section .alert-danger').waitFor({ state: 'visible', timeout: 20_000 }),
+    page.locator('.stop-row').first().waitFor({ state: 'attached', timeout: 20_000 }),
+    page.locator('.route-map-section .route-error').waitFor({ state: 'visible', timeout: 20_000 }),
     page.locator('.route-map-section .text-center.py-5').waitFor({ state: 'visible', timeout: 20_000 }),
   ]);
 }
@@ -453,7 +453,8 @@ test.describe('AC7: Loading and error states function per direction', () => {
 
     await page.goto('/home');
 
-    const errorAlert = page.locator('.route-map-section .alert-danger');
+    // .route-error is the component's error div class (not Bootstrap .alert-danger)
+    const errorAlert = page.locator('.route-map-section .route-error');
     await errorAlert.waitFor({ state: 'visible', timeout: 20_000 });
     await expect(errorAlert).toContainText('Unable to load stop data');
     await expect(errorAlert.locator('button', { hasText: 'Retry' })).toBeVisible();
@@ -486,7 +487,8 @@ test.describe('AC7: Loading and error states function per direction', () => {
     // Switch to Bangkok→Chonburi
     await directionButtons(page).nth(1).click();
 
-    const errorAlert = page.locator('.route-map-section .alert-danger');
+    // .route-error is the component's error div class (not Bootstrap .alert-danger)
+    const errorAlert = page.locator('.route-map-section .route-error');
     await errorAlert.waitFor({ state: 'visible', timeout: 20_000 });
     await expect(errorAlert).toContainText('Unable to load stop data');
 
@@ -504,7 +506,58 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     await stubSupportEndpoints(page);
   });
 
-  test('AC9: selecting pickup + dropoff in Chonburi→Bangkok then confirming emits correctly (warning when 0 passengers)', async ({ page }) => {
+  test('AC9: selecting pickup + dropoff in Chonburi→Bangkok then confirming prefills hero bar and stays on /home (OBRS-73)', async ({ page }) => {
+    // AC9 uses mocked pickup-dropoff data so that stop slugs match the mocked
+    // stations fixture (nong-sak / bangkok).  Real SIT slugs differ from the
+    // fixture, causing onPickupDropoffConfirmed() to fail slug-lookup and show
+    // an error modal rather than prefilling the hero bar.
+    const confirmPayload = {
+      code: 200,
+      message: 'OK',
+      data: {
+        route: {
+          slug: 'chonburi_bangkok',
+          titleLocalized: { en: 'Chonburi to Bangkok', th: 'ชลบุรี ถึง กรุงเทพฯ', zh: '春武里至曼谷' },
+          totalDistanceKm: 80,
+          durationMinMinutes: 90,
+          durationMaxMinutes: 120,
+          originProvinceLabel: 'Chonburi',
+          destinationProvinceLabel: 'Bangkok',
+        },
+        pickup: [
+          {
+            order: 1,
+            slug: 'nong-sak',
+            name: 'Nong Sak Station',
+            address: '123 Test Road, Nong Sak',
+            approxTime: '05:00',
+            latitude: 13.0,
+            longitude: 101.0,
+            primaryPhotoUrl: 'https://placehold.co/640x360?text=nong-sak',
+            googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.0,101.0',
+            distanceKmFromOrigin: 0,
+          },
+        ],
+        dropoff: [
+          {
+            order: 2,
+            slug: 'bangkok',
+            name: 'Bangkok Station',
+            address: '456 Bangkok Road',
+            approxTime: '06:30',
+            latitude: 13.76,
+            longitude: 100.5,
+            primaryPhotoUrl: 'https://placehold.co/640x360?text=bangkok',
+            googleMapsUrl: 'https://www.google.com/maps/search/?api=1&query=13.76,100.5',
+            distanceKmFromOrigin: 80,
+          },
+        ],
+      },
+    };
+    await page.route('**/api/routes/*/pickup-dropoff', (route) =>
+      route.fulfill({ json: confirmPayload })
+    );
+
     await page.goto('/home');
     await waitForRouteMapReady(page);
 
@@ -529,14 +582,18 @@ test.describe('AC9: Regression — existing pickup/dropoff confirm path', () => 
     await confirmDropoffBtn.waitFor({ state: 'visible' });
     await confirmDropoffBtn.click();
 
-    // Without passengers set, the home-booking form should show SEARCH_VALIDATION warning
-    // (this is the existing confirm guard that should still work)
-    await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 8_000 });
-
-    // Must still be on /home (no navigation without passengers)
+    // OBRS-73: both stops confirmed → prefill hero bar + scroll up, NO navigation, NO modal
+    await page.waitForTimeout(600);
     expect(page.url()).toContain('/home');
+    expect(page.url()).not.toContain('schedule-booking');
 
-    await page.locator('.swal2-confirm').click();
-    await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 5_000 });
+    // No blocking SweetAlert dialog
+    await expect(page.locator('.swal2-backdrop-show')).toHaveCount(0);
+
+    // Hero bar source field should show the picked pickup station name
+    const sourceDropdown = page.locator(
+      '[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]'
+    );
+    await expect(sourceDropdown.locator('.value-text')).not.toContainText('Source');
   });
 });

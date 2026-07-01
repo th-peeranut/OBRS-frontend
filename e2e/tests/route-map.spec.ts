@@ -118,12 +118,22 @@ async function waitForRouteMapLoaded(page: Page): Promise<void> {
   ]);
 }
 
-/** Dismiss a SweetAlert2 popup by clicking its confirm button. */
+/** Dismiss a SweetAlert2 modal popup by clicking its confirm button. */
 async function dismissSweetAlert(page: Page): Promise<void> {
   const confirmBtn = page.locator('.swal2-confirm');
   await confirmBtn.waitFor({ state: 'visible', timeout: 5_000 });
   await confirmBtn.click();
   await page.locator('.swal2-container').waitFor({ state: 'hidden', timeout: 5_000 });
+}
+
+/**
+ * Wait for a SweetAlert2 toast to appear (non-blocking, no confirm button).
+ * Toasts render at .swal2-top-end with .swal2-toast on the popup element.
+ */
+async function waitForToast(page: Page): Promise<void> {
+  await page
+    .locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast')
+    .waitFor({ state: 'visible', timeout: 5_000 });
 }
 
 // ---------------------------------------------------------------------------
@@ -226,7 +236,7 @@ test.describe('Route Map – Success State', () => {
 
   // ── Criterion 3 ──────────────────────────────────────────────────────────
 
-  test('Criterion 3: confirm guard — only pickup selected → VALIDATION_SELECT_DROPOFF, switches to Drop-off tab, no navigation', async ({
+  test('Criterion 3: confirm guard — only pickup selected → non-blocking toast, tab switches to Drop-off immediately', async ({
     page,
   }) => {
     await page.goto('/home');
@@ -241,23 +251,32 @@ test.describe('Route Map – Success State', () => {
     await confirmPickupBtn.waitFor({ state: 'visible' });
     await confirmPickupBtn.click();
 
-    // SweetAlert2 warning should appear with the drop-off-specific message
-    await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
-    await expect(page.locator('.swal2-title')).toContainText(
+    // Non-blocking toast (not a modal) should appear at top-end position
+    await waitForToast(page);
+    const toast = page.locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast');
+    await expect(toast.locator('.swal2-title')).toContainText(
       'Please select a drop-off point before confirming'
     );
+
+    // Toast must NOT have an OK/confirm button
+    await expect(toast.locator('.swal2-confirm')).toHaveCount(0);
 
     // Must NOT navigate away from /home
     expect(page.url()).toContain('/home');
 
-    await dismissSweetAlert(page);
-
-    // The active tab should have switched to Drop-off to guide the user there
+    // The active tab should have ALREADY switched to Drop-off (no dismiss needed)
     const dropoffTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first();
     await expect(dropoffTab).toHaveClass(/p-highlight/);
+
+    // Toast interaction does NOT block the page — we can click the dropoff list immediately
+    const dropoffRow = page.locator('.stop-row--dropoff').first();
+    await dropoffRow.waitFor({ state: 'visible' });
+    // Clicking the dropoff row should succeed without dismissing anything first
+    await dropoffRow.click();
+    await expect(dropoffRow).toHaveClass(/stop-row--selected/);
   });
 
-  test('Criterion 3b: confirm guard — only dropoff selected → VALIDATION_SELECT_PICKUP, switches to Pickup tab, no navigation', async ({
+  test('Criterion 3b: confirm guard — only dropoff selected → non-blocking toast, tab switches to Pickup immediately', async ({
     page,
   }) => {
     await page.goto('/home');
@@ -273,23 +292,35 @@ test.describe('Route Map – Success State', () => {
     await confirmDropoffBtn.waitFor({ state: 'visible' });
     await confirmDropoffBtn.click();
 
-    await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
-    await expect(page.locator('.swal2-title')).toContainText(
+    // Non-blocking toast (not a modal) should appear at top-end position
+    await waitForToast(page);
+    const toast = page.locator('.swal2-container.swal2-top-end .swal2-popup.swal2-toast');
+    await expect(toast.locator('.swal2-title')).toContainText(
       'Please select a pickup point before confirming'
     );
 
+    // Toast must NOT have an OK/confirm button
+    await expect(toast.locator('.swal2-confirm')).toHaveCount(0);
+
     expect(page.url()).toContain('/home');
 
-    await dismissSweetAlert(page);
-
-    // The active tab should have switched back to Pickup to guide the user there
+    // The active tab should have ALREADY switched back to Pickup (no dismiss needed)
     const pickupTab = page.locator('.p-tabview-nav li').filter({ hasText: 'Pickup' }).first();
     await expect(pickupTab).toHaveClass(/p-highlight/);
+
+    // Page is not blocked — can click pickup row immediately
+    const pickupRow = page.locator('.stop-row--pickup').first();
+    await pickupRow.waitFor({ state: 'visible' });
+    await pickupRow.click();
+    await expect(pickupRow).toHaveClass(/stop-row--selected/);
   });
 
-  // ── Criterion 4 (A1 BLOCKER) ─────────────────────────────────────────────
+  // ── Criterion 4 (prefill-and-stay) ─────────────────────────────────────────
+  //
+  // Behavior changed in OBRS-73: confirming both stops no longer navigates to
+  // /schedule-booking. Instead, it prefills the hero search bar and scrolls up.
 
-  test('Criterion 4 A1: 0 passengers → SEARCH_VALIDATION warning; set passenger → navigates to /schedule-booking', async ({
+  test('Criterion 4: both stops selected → prefills hero bar, stays on /home, no auto-navigate', async ({
     page,
   }) => {
     await page.goto('/home');
@@ -301,36 +332,30 @@ test.describe('Route Map – Success State', () => {
 
     // Switch to dropoff tab and select dropoff stop
     await page.locator('.p-tabview-nav li').filter({ hasText: 'Drop-off' }).first().click();
-    // Use .stop-row--dropoff to avoid matching the hidden pickup row still in DOM
     const dropoffRow = page.locator('.stop-row--dropoff').first();
     await dropoffRow.waitFor({ state: 'visible' });
     await dropoffRow.click();
 
-    // Click "Confirm drop-off" with 0 passengers in the booking form
+    // Click "Confirm drop-off" with both stops selected
     const confirmDropoffBtn = page.locator('button', { hasText: 'Confirm drop-off' }).first();
     await confirmDropoffBtn.waitFor({ state: 'visible' });
     await confirmDropoffBtn.click();
 
-    // Should show PASSENGER_VALIDATION warning (not navigate) — origin/dest are
-    // already set by the map picks, so only the passenger count can be missing.
-    await page.locator('.swal2-container').waitFor({ state: 'visible', timeout: 5_000 });
-    await expect(page.locator('.swal2-title')).toContainText(
-      'Please select at least one passenger before searching.'
-    );
+    // Must NOT navigate — page stays on /home
+    await page.waitForTimeout(500);
     expect(page.url()).toContain('/home');
+    expect(page.url()).not.toContain('schedule-booking');
 
-    await dismissSweetAlert(page);
+    // Hero search bar source field should now show the picked pickup station ("Nong Sak")
+    const sourceDropdown = page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]');
+    await expect(sourceDropdown.locator('.value-text')).toContainText('Nong Sak');
 
-    // Now set at least 1 passenger in the home-booking form
-    await page.locator('#dropdownObrsPassenger').click();
-    await page.getByAltText('Passenger Add Icon').first().click();
-    await page.locator('body').click({ position: { x: 10, y: 10 } });
+    // Hero search bar destination field should now show the picked dropoff station ("Bangkok")
+    const destDropdown = page.locator('[id="dropdownObrsHOME.HOME_BOOKING.END_STATION"]');
+    await expect(destDropdown.locator('.value-text')).toContainText('Bangkok');
 
-    // Click "Confirm drop-off" again — both slugs still selected
-    await confirmDropoffBtn.click();
-
-    // Should navigate to /schedule-booking
-    await page.waitForURL('**/schedule-booking', { timeout: 10_000 });
+    // No SweetAlert modal/blocking popup should appear
+    await expect(page.locator('.swal2-backdrop-show')).toHaveCount(0);
   });
 
   // ── Criterion 6 ──────────────────────────────────────────────────────────
@@ -458,8 +483,8 @@ test.describe('Route Map – Error State', () => {
   }) => {
     await page.goto('/home');
 
-    // Wait for error state
-    const errorAlert = page.locator('.route-map-section .alert-danger');
+    // Wait for error state (.route-error is the component's error div class)
+    const errorAlert = page.locator('.route-map-section .route-error');
     await errorAlert.waitFor({ state: 'visible', timeout: 15_000 });
 
     await expect(errorAlert).toContainText('Unable to load stop data. Please try again.');
