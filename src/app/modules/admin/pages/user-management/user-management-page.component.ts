@@ -370,14 +370,11 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       const refreshPromise = this.store.refresh();
       this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UNLOCK_SUCCESS'));
       await refreshPromise;
-    } catch (error) {
+    } catch {
+      // Controlled i18n key (not extractApiErrorMessage) per AC7. The spec
+      // defines a single failure key, so there is nothing to branch on.
       this.closeUnlockModal(true);
-      const errorCode = (error as { error?: { errorCode?: string } })?.error?.errorCode;
-      this.alertService.error(
-        this.translate.instant(
-          errorCode ? 'ADMIN.MESSAGES.UNLOCK_FAILED' : 'ADMIN.MESSAGES.UNLOCK_FAILED'
-        )
-      );
+      this.alertService.error(this.translate.instant('ADMIN.MESSAGES.UNLOCK_FAILED'));
     } finally {
       this.isUnlocking = false;
     }

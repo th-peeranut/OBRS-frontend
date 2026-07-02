@@ -749,3 +749,25 @@ drop-in that closes the zh gap on registration and removes the duplication.
 **Pattern for next time:** when localizing a shared option list, grep for *all* render sites
 of that list — duplicated/hardcoded copies of a shared constant won't inherit the new field.
 Prefer `[...SHARED_CONSTANT]` over re-declaring the array per component.
+
+---
+
+## Scrutinize self-fix — admin-unlock-account (ao/admin-unlock-account, base commit 0a83175)
+
+**What I changed:** `user-management-page.component.ts` `confirmUnlock()` error branch.
+The original read `errorCode` via typed cast and fed it into
+`this.translate.instant(errorCode ? 'ADMIN.MESSAGES.UNLOCK_FAILED' : 'ADMIN.MESSAGES.UNLOCK_FAILED')`
+— a vacuous ternary whose two branches are identical, plus a now-unused `errorCode` read.
+Collapsed to a single controlled key:
+`this.alertService.error(this.translate.instant('ADMIN.MESSAGES.UNLOCK_FAILED'))`.
+
+**Why it matters:** a ternary with identical branches is dead/misleading code — it implies
+two outcomes when there is one. AC7's intent (a controlled i18n key, NOT
+`extractApiErrorMessage`) is still fully satisfied. AC7 said "branch on error.error.errorCode",
+but the spec defines a single failure key, so there is genuinely nothing to branch on — the
+typed access served no purpose.
+
+**Pattern for next time:** don't scaffold a `cond ? A : B` when A === B "for future error codes".
+Wire the branch only when a second key actually exists; otherwise it reads as an unfinished TODO.
+If distinct backend errorCodes (e.g. USER_NOT_LOCKED) later need distinct messages, reintroduce
+the typed read + a real branch at that point. tsc --noEmit stays clean (0) after the change.
