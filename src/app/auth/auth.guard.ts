@@ -34,7 +34,7 @@ export class AuthGuard implements CanActivate {
     const routeRoles = Array.isArray(requiredRoles) ? requiredRoles : [];
     if (!this.authService.hasAnyRole(routeRoles)) {
       this.alertService.error(this.translate.instant('LOGIN.NO_ADMIN_PERMISSION'));
-      this.router.navigate(['/home']);
+      this.router.navigate(['/']);
       return false;
     }
 

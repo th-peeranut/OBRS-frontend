@@ -135,8 +135,8 @@ test.describe('/home stop card regression', () => {
     });
   });
 
-  test('/home page loads and renders the direction selector panel', async ({ page }) => {
-    await page.goto('/home');
+  test('home page loads and renders the direction selector panel', async ({ page }) => {
+    await page.goto('/');
 
     // The route map panel should become visible
     await page.locator('app-route-map-home, app-route-map-panel, [class*="route-map"]').first()
@@ -213,7 +213,7 @@ test.describe('/home stop card regression', () => {
       });
     });
 
-    await page.goto('/home');
+    await page.goto('/');
 
     // App root must be visible (no crash)
     await expect(page.locator('app-root')).toBeVisible({ timeout: 20_000 });
@@ -231,7 +231,7 @@ test.describe('/home stop card regression', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     // Route all API calls through normally (no mock) — this hits SIT
-    await page.goto('/home');
+    await page.goto('/');
 
     // Wait for Angular bootstrap
     await page.locator('app-root').waitFor({ state: 'visible', timeout: 30_000 });

@@ -63,7 +63,7 @@ describe('AdminLayoutComponent', () => {
     // Regression for #15: the admin shell had no UI path to /home.
     const brandLink = fixture.debugElement.query(By.css('.admin-brand-link'));
     expect(brandLink).withContext('brand link should exist').toBeTruthy();
-    expect(brandLink.nativeElement.getAttribute('href')).toBe('/home');
+    expect(brandLink.nativeElement.getAttribute('href')).toBe('/');
   });
 
   it('renders the brand home link as the logo image', () => {

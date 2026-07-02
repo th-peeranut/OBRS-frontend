@@ -1,5 +1,31 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-01 — Frontend: stop-detail-card-cleanup (OBRS-72) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-stop-detail-card-cleanup` (diff vs `origin/dev`)
+
+**Finding (self-fixed) — e2e test still asserted the removed "View photo" button.**
+The diff removed the "View photo" `p-button` from `route-stop-detail-card`, but
+`e2e/tests/route-map.spec.ts` (lines 223 & 225) still asserted
+`button hasText: 'View photo'` was visible on both the pickup and dropoff cards.
+`ng test` (Karma unit) passed 606/606 and was the only suite the implementing
+agent ran, so this regression went unnoticed — Playwright e2e is a separate
+suite. **Lesson:** when deleting a UI element, grep the `e2e/` folder (and any
+`.spec.ts`) for its label/text, not just the component unit spec. `ng test`
+green does not cover e2e. **Fix:** removed the two "View photo" assertions and
+updated the comment on line 222 to note OBRS-72 removed the button.
+
+**Confirmed safe (no action needed):**
+- `mapsApiKey` — still used by the *sibling* `route-map-panel` component (live
+  interactive map) and its 2 parent bindings + `environment.mapsApiKey`. Removal
+  was correctly scoped to the detail card only.
+- `.detail-photo` SCSS class — still used by the inline photo `<img>`, not dead.
+- `*ngIf="stop.address"` — truthy check correctly guards both `null` and `''`
+  (empty string is falsy), so no separate empty-string check is needed. (Note:
+  `RouteStop.address` is typed `string` but is null at runtime — a pre-existing
+  interface inaccuracy, out of scope for this hotfix.)
+- No other orphaned i18n keys; en/th/zh remain valid JSON.
+
 ## 2026-06-30 — Frontend: home-route-road-snap (issue #74) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-home-route-road-snap` (diff vs `origin/dev`)
@@ -752,6 +778,27 @@ Prefer `[...SHARED_CONSTANT]` over re-declaring the array per component.
 
 ---
 
+## Scrutinize self-fix: global error alert double-toast on new auth HTTP calls (ao/google-signin-email-verify)
+
+`loginWithGoogle()` / `verifyEmail()` / `resendVerification()` in `auth.service.ts` were posting
+WITHOUT the `SKIP_GLOBAL_ERROR_ALERT` HttpContext token. Because the global `errorInterceptor`
+(registered in `app.module.ts` via `withInterceptors([authInterceptor, errorInterceptor])`) fires
+`alertService.error(extractApiErrorMessage(...))` on every `/api/` error, and these components then
+ALSO show their own errorCode-mapped alert (or, for verify-email, an inline "failed" panel), the user
+saw TWO error surfaces — a generic interceptor toast plus the specific one. For verify-email this even
+fired a toast on `VERIFICATION_TOKEN_ALREADY_USED`, which the component intentionally treats as success.
+
+Fix: added `{ context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }` to all three posts —
+the same opt-out convention already used by booking/admin/staff/route-map/usability-report services
+that do their own inline error handling.
+
+**Pattern for next time:** any service method whose call-sites branch on `error.error.errorCode` and
+render their own alert/inline error MUST opt out of the global error alert with `SKIP_GLOBAL_ERROR_ALERT`,
+otherwise you get a double-toast. The existing `callLogin` avoids this only because it swallows the error
+(returns `err`) and the component never re-alerts — that is NOT the pattern to copy for errorCode-branching flows.
+
+---
+
 ## Scrutinize self-fix — admin-unlock-account (ao/admin-unlock-account, base commit 0a83175)
 
 **What I changed:** `user-management-page.component.ts` `confirmUnlock()` error branch.
@@ -771,3 +818,12 @@ typed access served no purpose.
 Wire the branch only when a second key actually exists; otherwise it reads as an unfinished TODO.
 If distinct backend errorCodes (e.g. USER_NOT_LOCKED) later need distinct messages, reintroduce
 the typed read + a real branch at that point. tsc --noEmit stays clean (0) after the change.
+
+**QA follow-up (this session):** the Thai-locale i18n E2E test (`AC7-i18n-th`) initially
+clicked `page.locator('button[aria-label]').first()` on the whole page, which matched the
+sidebar's menu-toggle button (also aria-labelled, rendered before the table) instead of the
+row's Unlock button — the confirm dialog never opened, and the test timed out. Scoped the
+click to the locked row instead. Also confirmed the shared `node_modules` environment
+(broken by an earlier QA run's stray `npm install` outside its worktree) was repaired via
+`npm ci`; all 607 unit tests and all 7 Playwright E2E specs in `admin-unlock-account.spec.ts`
+pass clean.

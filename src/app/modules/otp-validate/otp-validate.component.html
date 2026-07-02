@@ -1,75 +1,105 @@
-<div class="login-container">
-  <!-- LEFT SECTION -->
-  <div class="left-section">
-    <!-- BACKGROUND IMAGE -->
-    <img class="bg-img" src="images/login.svg" alt="Tickets" />
+<ng-container *ngIf="!registrationEmailSent">
+  <div class="login-container">
+    <!-- LEFT SECTION -->
+    <div class="left-section">
+      <!-- BACKGROUND IMAGE -->
+      <img class="bg-img" src="images/login.svg" alt="Tickets" />
+    </div>
+    <!-- RIGHT SECTION -->
+    <div class="right-section">
+      <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE — shared components (same as home navbar) -->
+      <div class="change-language">
+        <app-theme-toggle></app-theme-toggle>
+        <app-lang-switcher></app-lang-switcher>
+      </div>
+      <!-- LOGO WEBSITE -->
+      <div class="logo-section mt-5">
+        <img
+          *ngIf="option === 'login'"
+          class="logo-img"
+          src="images/logo.svg"
+          alt="Phuyaipu Logo"
+        />
+        <img
+          *ngIf="option === 'forget-password'"
+          class="logo-img"
+          src="images/forget-password-logo.svg"
+          alt="Forget Password Logo"
+        />
+      </div>
+      <!-- HEADER TITLE -->
+      <div class="welcome-text mt-3">
+        <ng-container *ngIf="option === 'login'">
+          {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
+        </ng-container>
+        <ng-container *ngIf="option === 'forget-password'">
+          {{ "FORGET_PASSWORD.WELCOME" | translate }}
+        </ng-container>
+        <ng-container *ngIf="option === 'register'">
+          {{ "REGISTER.VERIFY_OTP" | translate }}
+        </ng-container>
+      </div>
+      <!-- SUB HEADER TITLE -->
+      <div class="hint-text mt-3">
+        {{ "LOGIN_BY_PHONE_NO.HINT" | translate }} {{ phoneNo }}
+      </div>
+      <!-- FORM SECTION -->
+      <form class="login-form mt-3">
+        <!-- OTP REMAINING TIMES -->
+        <p class="text-center otp-time">
+          {{ "LOGIN_BY_PHONE_NO.OTP_TIME" | translate }} {{ displayTime }})
+        </p>
+        <!-- OTP INPUT -->
+        <div class="d-flex justify-content-center align-items-center">
+          <app-otp
+            [disabled]="remainingTime === 0"
+            (otpCode)="setOTPCode($event)"
+          ></app-otp>
+        </div>
+        <!-- OTP REFERENCE -->
+        <div class="otp-ref-text">
+          {{ "LOGIN_BY_PHONE_NO.OTP_REF" | translate }} : {{ token }}
+        </div>
+        <!-- SUBMIT OTP -->
+        <button type="submit" class="login-btn mt-3" (click)="verifyOtp()">
+          {{ "LOGIN_BY_PHONE_NO.OTP_LOGIN" | translate }}
+        </button>
+        <!-- RESENT OTP -->
+        <p class="register-link text-center mt-4">
+          {{ "LOGIN_BY_PHONE_NO.NO_OTP" | translate }}
+          <a class="obrs-link" (click)="sendOtp()">
+            {{ "LOGIN_BY_PHONE_NO.NO_OTP_LINK" | translate }}
+          </a>
+        </p>
+      </form>
+    </div>
   </div>
-  <!-- RIGHT SECTION -->
-  <div class="right-section">
-    <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE — shared components (same as home navbar) -->
-    <div class="change-language">
-      <app-theme-toggle></app-theme-toggle>
-      <app-lang-switcher></app-lang-switcher>
+</ng-container>
+
+<ng-container *ngIf="registrationEmailSent">
+  <div class="login-container">
+    <div class="left-section">
+      <img class="bg-img" src="images/login.svg" alt="Tickets" />
     </div>
-    <!-- LOGO WEBSITE -->
-    <div class="logo-section mt-5">
-      <img
-        *ngIf="option === 'login'"
-        class="logo-img"
-        src="images/logo.svg"
-        alt="Phuyaipu Logo"
-      />
-      <img
-        *ngIf="option === 'forget-password'"
-        class="logo-img"
-        src="images/forget-password-logo.svg"
-        alt="Forget Password Logo"
-      />
-    </div>
-    <!-- HEADER TITLE -->
-    <div class="welcome-text mt-3">
-      <ng-container *ngIf="option === 'login'">
-        {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
-      </ng-container>
-      <ng-container *ngIf="option === 'forget-password'">
-        {{ "FORGET_PASSWORD.WELCOME" | translate }}
-      </ng-container>
-      <ng-container *ngIf="option === 'register'">
-        {{ "REGISTER.VERIFY_OTP" | translate }}
-      </ng-container>
-    </div>
-    <!-- SUB HEADER TITLE -->
-    <div class="hint-text mt-3">
-      {{ "LOGIN_BY_PHONE_NO.HINT" | translate }} {{ phoneNo }}
-    </div>
-    <!-- FORM SECTION -->
-    <form class="login-form mt-3">
-      <!-- OTP REMAINING TIMES -->
-      <p class="text-center otp-time">
-        {{ "LOGIN_BY_PHONE_NO.OTP_TIME" | translate }} {{ displayTime }})
-      </p>
-      <!-- OTP INPUT -->
-      <div class="d-flex justify-content-center align-items-center">
-        <app-otp
-          [disabled]="remainingTime === 0"
-          (otpCode)="setOTPCode($event)"
-        ></app-otp>
+    <div class="right-section email-verify-panel">
+      <div class="change-language">
+        <app-theme-toggle></app-theme-toggle>
+        <app-lang-switcher></app-lang-switcher>
       </div>
-      <!-- OTP REFERENCE -->
-      <div class="otp-ref-text">
-        {{ "LOGIN_BY_PHONE_NO.OTP_REF" | translate }} : {{ token }}
+      <div class="logo-section mt-5">
+        <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
       </div>
-      <!-- SUBMIT OTP -->
-      <button type="submit" class="login-btn mt-3" (click)="verifyOtp()">
-        {{ "LOGIN_BY_PHONE_NO.OTP_LOGIN" | translate }}
-      </button>
-      <!-- RESENT OTP -->
-      <p class="register-link text-center mt-4">
-        {{ "LOGIN_BY_PHONE_NO.NO_OTP" | translate }}
-        <a class="obrs-link" (click)="sendOtp()">
-          {{ "LOGIN_BY_PHONE_NO.NO_OTP_LINK" | translate }}
+      <div class="text-center mt-5">
+        <span class="material-symbols-outlined email-verify-icon">
+          mark_email_read
+        </span>
+        <p class="email-verify-message mt-3">
+          {{ "REGISTER.EMAIL_VERIFY_SENT" | translate }}
+        </p>
+        <a class="btn btn-link" [routerLink]="'/login'">
+          {{ "REGISTER.EMAIL_VERIFY_SIGNIN" | translate }}
         </a>
-      </p>
-    </form>
+      </div>
+    </div>
   </div>
-</div>
+</ng-container>

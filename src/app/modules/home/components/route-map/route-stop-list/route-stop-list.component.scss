@@ -91,7 +91,7 @@
   white-space: nowrap;
 }
 
-// Confirm buttons — brand monochrome (pickup ฟ้า / dropoff น้ำเงิน) ทับ severity ของ PrimeNG
+// Confirm buttons - brand monochrome, overriding PrimeNG severity styles
 :host ::ng-deep .p-button.p-button-info {
   background: $primary-blue;
   border-color: $primary-blue;
@@ -116,7 +116,7 @@
   border-color: #355a9c;
 }
 
-// Per-stop distance (ฟีเจอร์จาก origin/dev) — ปรับสีเข้า token ธีม customer
+// Per-stop distance from origin/dev, aligned with customer theme color tokens
 .stop-distance {
   font-size: 0.75rem;
   white-space: nowrap;

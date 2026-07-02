@@ -6,6 +6,19 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/svg+xml" href="images/logo.svg?v=2" sizes="any">
+  <script>
+    // GIS only localizes its rendered button text via the `hl` query param on this
+    // script URL (not via any renderButton()/initialize() option) - see LanguageService's
+    // APP_LANGUAGE_KEY, which is the same localStorage key this must stay in sync with.
+    (function () {
+      var lang = localStorage.getItem('app_language') || 'th';
+      var s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client?hl=' + encodeURIComponent(lang);
+      s.async = true;
+      s.defer = true;
+      document.head.appendChild(s);
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

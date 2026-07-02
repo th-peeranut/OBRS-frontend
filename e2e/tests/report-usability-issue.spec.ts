@@ -125,7 +125,7 @@ test.describe('FAB — visibility on all routes', () => {
   });
 
   test('FAB is visible on the home page (anonymous)', async ({ page }) => {
-    await page.goto('/home');
+    await page.goto('/');
     const fab = page.locator('.report-fab');
     await fab.waitFor({ state: 'visible', timeout: 15_000 });
     await expect(fab).toBeVisible();
@@ -133,7 +133,7 @@ test.describe('FAB — visibility on all routes', () => {
 
   test('FAB is visible on the schedule-booking page (anonymous)', async ({ page }) => {
     // Navigate through the booking funnel so Angular's router lands on /schedule-booking
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
     await page.locator('#dropdownObrsPassenger').click();
     await page.getByAltText('Passenger Add Icon').first().click();
@@ -164,7 +164,7 @@ test.describe('FAB modal — open, defaults, close', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
   });
 
@@ -229,7 +229,7 @@ test.describe('FAB modal — description validation', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
@@ -281,7 +281,7 @@ test.describe('FAB modal — image client-side pre-checks', () => {
 
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
@@ -341,7 +341,7 @@ test.describe('FAB modal — errorCode mapping (stubbed)', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
@@ -403,7 +403,7 @@ test.describe('FAB modal — success flow (stubbed)', () => {
       });
     });
 
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
     await page.locator('.report-fab').click();
     await page.locator('.report-modal').waitFor({ state: 'visible' });
@@ -431,7 +431,7 @@ test.describe('FAB + modal — i18n translations', () => {
 
   test('Thai (th): FAB label and modal title are translated', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'th'); });
-    await page.goto('/home');
+    await page.goto('/');
 
     const fab = page.locator('.report-fab');
     await fab.waitFor({ state: 'visible', timeout: 15_000 });
@@ -450,7 +450,7 @@ test.describe('FAB + modal — i18n translations', () => {
 
   test('Chinese (zh): FAB label and modal title are translated', async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'zh'); });
-    await page.goto('/home');
+    await page.goto('/');
 
     const fab = page.locator('.report-fab');
     await fab.waitFor({ state: 'visible', timeout: 15_000 });
@@ -661,7 +661,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
 
   test('FAB (z-900) does not obstruct the lang switcher on home (desktop)', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
 
     // Lang switcher should be clickable — verify it exists and is not hidden behind FAB
@@ -678,7 +678,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
 
   test('FAB does not obstruct seat picker (mobile viewport 375×667)', async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 667 });
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('.report-fab').waitFor({ state: 'visible', timeout: 15_000 });
 
     // Navigate to schedule-booking
@@ -727,7 +727,7 @@ test.describe('Regression — FAB z-index / overlap', () => {
     // and does not block the schedule-booking page's "Select" button.
     // (The full end-to-end booking flow including review/passenger-info is already covered
     // by e2e/tests/b2c-critical-path.spec.ts which passed in the regression suite.)
-    await page.goto('/home');
+    await page.goto('/');
     await page.locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]').waitFor();
 
     // FAB must be present on home

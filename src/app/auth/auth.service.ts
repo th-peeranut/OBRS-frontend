@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
+import { SKIP_GLOBAL_ERROR_ALERT } from '../shared/interceptors/http-context-tokens';
 import {
   LoginResponseData,
   PasswordResetConfirmResponse,
@@ -118,7 +119,7 @@ export class AuthService {
     sessionStorage.setItem(this.RETURN_URL_KEY, url);
   }
 
-  consumePostLoginRedirectUrl(defaultUrl: string = '/home'): string {
+  consumePostLoginRedirectUrl(defaultUrl: string = '/'): string {
     const url = sessionStorage.getItem(this.RETURN_URL_KEY);
     sessionStorage.removeItem(this.RETURN_URL_KEY);
 
@@ -129,7 +130,7 @@ export class AuthService {
     return url;
   }
 
-  navigateAfterLogin(defaultUrl: string = '/home'): Promise<boolean> {
+  navigateAfterLogin(defaultUrl: string = '/'): Promise<boolean> {
     const targetUrl = this.consumePostLoginRedirectUrl(defaultUrl);
     return this.router.navigateByUrl(targetUrl);
   }
@@ -286,6 +287,52 @@ export class AuthService {
     );
   }
 
+  loginWithGoogle(payload: {
+    idToken: string;
+    pdpaConsent: boolean;
+  }): Promise<ResponseAPI<LoginResponseData> | undefined> {
+    return this.http
+      .post<ResponseAPI<LoginResponseData>>(
+        `${environment.apiUrl}/api/auth/social/google`,
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+      )
+      .toPromise()
+      .then((response) => {
+        if (response?.code === 200) {
+          const token = response?.data?.accessToken;
+          const username = response?.data?.user?.email;
+          const roles = response?.data?.user?.roles;
+          this.storeAuthData(token, username, roles);
+        }
+        return response;
+      });
+  }
+
+  verifyEmail(payload: {
+    token: string;
+  }): Promise<ResponseAPI<unknown> | undefined> {
+    return this.http
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/verify-email`,
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+      )
+      .toPromise();
+  }
+
+  resendVerification(payload: {
+    email: string;
+  }): Promise<ResponseAPI<unknown> | undefined> {
+    return this.http
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/verify-email/resend`,
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+      )
+      .toPromise();
+  }
+
   forgetPassword(payload: {
     email: string;
   }): Promise<ResponseAPI<PasswordResetRequestResponse> | undefined> {
@@ -319,7 +366,8 @@ export class AuthService {
       path.startsWith('/login-mobile') ||
       path.startsWith('/register') ||
       path.startsWith('/otp') ||
-      path.startsWith('/forget-password')
+      path.startsWith('/forget-password') ||
+      path.startsWith('/verify-email')
     );
   }
 }

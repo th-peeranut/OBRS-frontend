@@ -494,7 +494,16 @@
     "SEND_OTP": "发送验证码",
     "LOGIN_SUCCESS": "登录成功",
     "LOGIN_FAIL": "遇到错误，登录失败",
-    "NO_ADMIN_PERMISSION": "您没有访问管理员页面的权限。"
+    "NO_ADMIN_PERMISSION": "您没有访问管理员页面的权限。",
+    "GOOGLE_SIGNIN": "使用 Google 登录",
+    "GOOGLE_SIGNIN_PDPA": "我同意收集和使用我的个人数据（PDPA）用于 Google 登录",
+    "GOOGLE_SIGNIN_PDPA_REQUIRED": "请接受同意以使用 Google 登录",
+    "GOOGLE_SIGNIN_LOADING": "正在使用 Google 登录...",
+    "ERROR": {
+      "GOOGLE_TOKEN_INVALID": "Google 登录令牌无效，请重试。",
+      "ACCOUNT_DISABLED": "您的帐户已被禁用，请联系客服。",
+      "GENERIC": "发生错误，请重试。"
+    }
   },
   "REGISTER": {
     "WELCOME": "注册",
@@ -548,7 +557,34 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "VERIFY OTP": "请通过您的手机号码验证您的订阅。"
+    "VERIFY OTP": "请通过您的手机号码验证您的订阅。",
+    "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
+    "EMAIL_VERIFY_SIGNIN": "登录"
+  },
+  "VERIFY_EMAIL": {
+    "VERIFYING": "正在验证您的电子邮件...",
+    "SUCCESS_TITLE": "电子邮件验证成功！",
+    "SUCCESS_MESSAGE": "您的电子邮件已成功验证，现在可以登录了。",
+    "SUCCESS_SIGNIN": "登录",
+    "SUCCESS_HOME": "前往主页",
+    "FAIL_TITLE": "验证失败",
+    "RESEND_HINT": "请在下方输入您的电子邮件地址以重新发送验证链接。",
+    "RESEND_EMAIL_LABEL": "电子邮件",
+    "RESEND_EMAIL_PLACEHOLDER": "请输入您的电子邮件",
+    "RESEND_EMAIL_REQUIRED": "请输入您的电子邮件",
+    "RESEND_EMAIL_INVALID": "请输入有效的电子邮件",
+    "RESEND_BUTTON": "重新发送验证邮件",
+    "RESEND_LOADING": "发送中...",
+    "RESEND_SUCCESS": "验证邮件已重新发送，请检查您的收件箱。",
+    "ERROR": {
+      "TOKEN_MISSING": "未找到验证令牌，请检查邮件中的链接。",
+      "VERIFICATION_TOKEN_EXPIRED": "验证链接已过期，请申请新的链接。",
+      "VERIFICATION_TOKEN_INVALID": "验证链接无效，请申请新的链接。",
+      "USER_NOT_FOUND": "未找到使用此电子邮件的账户。",
+      "VERIFICATION_ALREADY_VERIFIED": "此电子邮件已完成验证。",
+      "RESEND_RATE_LIMITED": "发送请求过于频繁，请稍候再试。",
+      "GENERIC": "发生错误，请重试。"
+    }
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "欢迎登录",
@@ -643,8 +679,8 @@
     },
     "ROUTE_MAP": {
       "SUBTITLE": "选择上下车地点",
-      "TAB_PICKUP_LABEL": "上车 ({{province}})",
-      "TAB_DROPOFF_LABEL": "下车 ({{province}})",
+      "TAB_PICKUP_LABEL": "上车",
+      "TAB_DROPOFF_LABEL": "下车",
       "PICKUP_LIST_HEADER": "{{province}}上车点 ({{count}} 站)",
       "DROPOFF_LIST_HEADER": "{{province}}下车点 ({{count}} 站)",
       "VIEW_MAP": "查看地图",
@@ -667,7 +703,6 @@
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",
-      "BTN_VIEW_PHOTO": "查看照片",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
       "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
       "VALIDATION_SELECT_PICKUP": "请先选择上车点再确认",

@@ -19,6 +19,7 @@ import { AlertService } from '../../shared/services/alert.service';
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
   isShowPassword: boolean = false;
+  registrationEmailSent: boolean = false;
 
   option: string | undefined = 'login';
 
@@ -47,7 +48,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
 
     if (this.validateRouteError()) {
       this.alertService.error('พบข้อผิดพลาด');
-      this.router.navigateByUrl('/home');
+      this.router.navigateByUrl('/');
     }
 
     this.sendOtp();
@@ -135,11 +136,8 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               const resRegister = await this.service.register(registerValue);
 
               if (resRegister?.code === 201) {
-                this.alertService.success(
-                  this.translate.instant('REGISTER.REGISTER_SUCCESS')
-                );
                 this.service.clearRegisterValue();
-                this.router.navigateByUrl('/login');
+                this.registrationEmailSent = true;
               } else if (typeof resRegister?.code === 'number') {
                 this.alertService.error(
                   this.translate.instant('REGISTER.REGISTER_FAIL')
@@ -148,7 +146,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
             }
           } else if (this.option === 'login') {
             this.alertService.success('succ');
-            await this.authService.navigateAfterLogin('/home');
+            await this.authService.navigateAfterLogin('/');
           }
         } else if (typeof resVerify?.code === 'number') {
           this.alertService.error('error');

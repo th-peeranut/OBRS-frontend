@@ -494,7 +494,16 @@
     "SEND_OTP": "Send OTP",
     "LOGIN_SUCCESS": "Signin successful",
     "LOGIN_FAIL": "Error encountered. Signin failed",
-    "NO_ADMIN_PERMISSION": "You do not have permission to access the admin page."
+    "NO_ADMIN_PERMISSION": "You do not have permission to access the admin page.",
+    "GOOGLE_SIGNIN": "Sign in with Google",
+    "GOOGLE_SIGNIN_PDPA": "I agree to the collection and use of my personal data (PDPA) for Google sign-in",
+    "GOOGLE_SIGNIN_PDPA_REQUIRED": "Please accept the consent to sign in with Google",
+    "GOOGLE_SIGNIN_LOADING": "Signing in with Google...",
+    "ERROR": {
+      "GOOGLE_TOKEN_INVALID": "Invalid Google sign-in token. Please try again.",
+      "ACCOUNT_DISABLED": "Your account has been disabled. Please contact support.",
+      "GENERIC": "An error occurred. Please try again."
+    }
   },
   "REGISTER": {
     "WELCOME": "Register",
@@ -548,7 +557,34 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "VERIFY OTP": "Please verify your subscription via your phone number."
+    "VERIFY OTP": "Please verify your subscription via your phone number.",
+    "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
+    "EMAIL_VERIFY_SIGNIN": "Sign in"
+  },
+  "VERIFY_EMAIL": {
+    "VERIFYING": "Verifying your email address...",
+    "SUCCESS_TITLE": "Email verified!",
+    "SUCCESS_MESSAGE": "Your email has been verified successfully. You can now sign in.",
+    "SUCCESS_SIGNIN": "Sign in",
+    "SUCCESS_HOME": "Go to home",
+    "FAIL_TITLE": "Verification failed",
+    "RESEND_HINT": "Enter your email address below to resend the verification link.",
+    "RESEND_EMAIL_LABEL": "Email",
+    "RESEND_EMAIL_PLACEHOLDER": "Please enter your email",
+    "RESEND_EMAIL_REQUIRED": "Please enter your email",
+    "RESEND_EMAIL_INVALID": "Please enter a valid email",
+    "RESEND_BUTTON": "Resend verification email",
+    "RESEND_LOADING": "Sending...",
+    "RESEND_SUCCESS": "Verification email resent. Please check your inbox.",
+    "ERROR": {
+      "TOKEN_MISSING": "No verification token found. Please check the link in your email.",
+      "VERIFICATION_TOKEN_EXPIRED": "The verification link has expired. Please request a new one.",
+      "VERIFICATION_TOKEN_INVALID": "The verification link is invalid. Please request a new one.",
+      "USER_NOT_FOUND": "No account found with this email address.",
+      "VERIFICATION_ALREADY_VERIFIED": "This email address has already been verified.",
+      "RESEND_RATE_LIMITED": "Too many resend attempts. Please wait before trying again.",
+      "GENERIC": "Something went wrong. Please try again."
+    }
   },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "Welcome to signin",
@@ -644,8 +680,8 @@
     },
     "ROUTE_MAP": {
       "SUBTITLE": "Select pickup / drop-off",
-      "TAB_PICKUP_LABEL": "Pickup ({{province}})",
-      "TAB_DROPOFF_LABEL": "Drop-off ({{province}})",
+      "TAB_PICKUP_LABEL": "Pickup",
+      "TAB_DROPOFF_LABEL": "Drop-off",
       "PICKUP_LIST_HEADER": "Pickup points in {{province}} ({{count}})",
       "DROPOFF_LIST_HEADER": "Drop-off points in {{province}} ({{count}})",
       "VIEW_MAP": "View map",
@@ -668,7 +704,6 @@
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
       "DETAIL_TIME": "Approx. {{time}}",
-      "BTN_VIEW_PHOTO": "View photo",
       "BTN_OPEN_MAPS": "Open in Google Maps",
       "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
       "VALIDATION_SELECT_PICKUP": "Please select a pickup point before confirming",

@@ -24,7 +24,7 @@ test('B2C happy path: search → schedule → review → passenger info ready to
 }) => {
   // ── Step 1: Home page ────────────────────────────────────────────────────
 
-  await page.goto('/home');
+  await page.goto('/');
 
   // Wait for station dropdowns to render (stations loaded from mocked API)
   await page

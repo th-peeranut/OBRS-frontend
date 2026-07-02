@@ -1,7 +1,23 @@
 @import "../../../../../../styles/variables.scss";
 
 .route-map-section {
-  background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
+  background-color: $secondary-lightgrey; // #edf9fe, continues from the booking section above
+}
+
+// Align the content column to the booking-card width: min(100%, 1200px), centered.
+// max-width includes the 1rem .row.g-3 gutter, then padding removes 0.5rem per side.
+// This keeps panel edges aligned with the search card above despite the row negative margin.
+.route-map-container {
+  width: 100%;
+  max-width: calc(1200px + 1rem);
+  margin-inline: auto;
+  padding-inline: 0.5rem;
+}
+
+@media (max-width: 992px) {
+  .route-map-container {
+    padding-inline: 16px; // Align with booking-section on small screens
+  }
 }
 
 .panel-card {
@@ -32,7 +48,7 @@
   color: $text-softblack;
 }
 
-// ---- Error (themed; แทน bootstrap .alert.alert-danger) ----
+// ---- Error (themed; replaces bootstrap .alert.alert-danger) ----
 .route-error {
   display: flex;
   align-items: center;
@@ -58,7 +74,7 @@
   color: $primary-blue;
 }
 
-// ---- Spinner → brand cyan (ทับ color-cycle keyframe ของ PrimeNG) ----
+// ---- Spinner -> brand cyan (overrides PrimeNG color-cycle keyframe) ----
 :host ::ng-deep .p-progress-spinner-circle {
   stroke: $primary-blue !important;
   animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
@@ -87,14 +103,33 @@
   color: $text-white !important;
 }
 
-// ---- TabView → brand (เนียนขึ้น: active ชัด, ระยะสบายตา) ----
+// ---- TabView -> brand styling with clearer active state and comfortable spacing ----
+:host ::ng-deep .p-tabview-nav-container,
+:host ::ng-deep .p-tabview-nav-content {
+  width: 100%;
+  padding: 0;
+}
+
 :host ::ng-deep .p-tabview-nav {
+  display: flex;
+  width: 100%;
+  margin: 0;
+  padding: 0;
   border-bottom: 1px solid $secondary-light-blue;
   background: transparent;
-  gap: 6px;
+  gap: 0; // No gap so each tab takes an exact 50% width edge to edge
+}
+
+// Pickup/dropoff tabs each take exactly 50% width; mobile with 3 tabs gets equal thirds.
+// The ink-bar is excluded because PrimeNG positions it.
+:host ::ng-deep .p-tabview-nav li:not(.p-tabview-ink-bar) {
+  flex: 1 1 0;
+  margin: 0;
 }
 
 :host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
+  width: 100%;
+  justify-content: center;
   color: $text-lightblack;
   background: transparent;
   font-weight: 600;
@@ -143,7 +178,7 @@
   background: transparent;
 }
 
-// ---- Count badges → soft pill (อ่านชัด: พื้นอ่อน + เลขสีเข้ม, คุม hue ฟ้า/น้ำเงิน) ----
+// ---- Count badges -> soft pill with light background and high-contrast numbers ----
 :host ::ng-deep .p-badge {
   font-weight: 700;
   font-size: 0.72rem;
