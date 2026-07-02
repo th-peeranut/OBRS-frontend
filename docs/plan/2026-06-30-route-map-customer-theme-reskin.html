@@ -302,7 +302,7 @@ git commit -m "style(home): brand map markers, polyline, legend to customer cyan
   white-space: nowrap;
 }
 
-// Confirm buttons — brand monochrome (pickup ฟ้า / dropoff น้ำเงิน) ทับ severity ของ PrimeNG
+// Confirm buttons — brand monochrome (pickup light blue / dropoff dark blue) overriding PrimeNG severity
 :host ::ng-deep .p-button.p-button-info {
   background: $primary-blue;
   border-color: $primary-blue;
@@ -417,7 +417,7 @@ git commit -m "style(home): re-skin route stop list to customer theme (badges, r
   padding: 0.75rem;
 }
 
-// Action buttons — soft brand outline (ทับ severity="secondary")
+// Action buttons — soft brand outline (overriding severity="secondary")
 :host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary {
   background: $secondary-lightgrey;
   border-color: $secondary-light-blue;
@@ -556,7 +556,7 @@ git commit -m "style(home): re-skin travel summary to customer themed card"</cod
 <pre><code>@import "../../../../../../styles/variables.scss";
 
 .route-map-section {
-  background-color: $secondary-lightgrey; // #edf9fe — ต่อเนื่องกับ booking section ด้านบน
+  background-color: $secondary-lightgrey; // #edf9fe — continues from the booking section above
 }
 
 .panel-card {
@@ -587,7 +587,7 @@ git commit -m "style(home): re-skin travel summary to customer themed card"</cod
   color: $text-softblack;
 }
 
-// ---- Error (themed; แทน bootstrap .alert.alert-danger) ----
+// ---- Error (themed; replaces bootstrap .alert.alert-danger) ----
 .route-error {
   display: flex;
   align-items: center;
@@ -613,7 +613,7 @@ git commit -m "style(home): re-skin travel summary to customer themed card"</cod
   color: $primary-blue;
 }
 
-// ---- Spinner → brand cyan (ทับ color-cycle keyframe ของ PrimeNG) ----
+// ---- Spinner → brand cyan (overriding PrimeNG's color-cycle keyframe) ----
 :host ::ng-deep .p-progress-spinner-circle {
   stroke: $primary-blue !important;
   animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
