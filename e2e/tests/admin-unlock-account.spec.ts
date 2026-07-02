@@ -342,13 +342,14 @@ test.describe('Admin — User Lock Status & Unlock Action', () => {
     await navigateToUsersAndWait(page);
 
     // Thai badge text: "ถูกล็อก"
-    const badge = page
-      .locator('table.admin-table tbody tr', { hasText: 'Locked TestUser' })
-      .locator('.admin-status.is-warning.admin-status--icon');
+    const lockedRow = page.locator('table.admin-table tbody tr', { hasText: 'Locked TestUser' });
+    const badge = lockedRow.locator('.admin-status.is-warning.admin-status--icon');
     await expect(badge).toContainText('ถูกล็อก'); // ถูกล็อก
 
     // Open dialog — Thai title: "ยืนยันการปลดล็อก"
-    await page.locator('button[aria-label]').first().click();
+    // Scoped to the row (not page-wide) so the sidebar's aria-labelled
+    // menu-toggle button, which renders before the table, isn't matched.
+    await lockedRow.locator('button[aria-label]').first().click();
     const dialog = page.locator('.admin-modal-confirm');
     await expect(dialog).toBeVisible();
     await expect(dialog.locator('h4')).toContainText(
