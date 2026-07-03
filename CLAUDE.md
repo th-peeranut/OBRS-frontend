@@ -166,17 +166,6 @@ Keep the following in sync with relevant code changes:
 
 ## 13. AI Action Protocol
 
-### Skills & AI Agent Precedence
-
-When using AI for coding in this repo (Claude Code, Codex, etc.), **read this repo's own skills first, then align to the `obrs-agent-office` skills as the canonical source of truth.**
-
-- **This repo's own skills** — `.claude/skills/` (`run-obrs-frontend`) and `.codex/skills/`. These are the day-to-day, repo-scoped mechanics (how to build/serve/test this app); start here.
-- **Office skills (canonical)** — `agent-office` and `sit-hotfix-loop` are mirrored into `.claude/skills/` and `.codex/skills/` for reference. The **source of truth** is the sibling `obrs-agent-office` repo (`../obrs-agent-office/.claude/skills/`). They define the cross-repo orchestration: the git-worktree model, the Jira merge gate, and the `dev`/`sit` deploy flow.
-- **Precedence when they conflict:** the office skill wins on cross-repo *process* (worktrees, branch/merge/deploy, Jira gate); the local skill / this `CLAUDE.md` wins on repo-specific *mechanics* (how to build/serve/test this Angular app).
-- **Do not edit the mirrored office skills here** — they carry `obrs-agent-office`-relative paths (`../OBRS-backend`, `.claude/agent-office/…`) that only resolve from that repo. Change them in `obrs-agent-office` and re-mirror.
-
----
-
 ### Risk Levels (General)
 
 Classify **every action** before proceeding, regardless of whether it touches the backend contract:
