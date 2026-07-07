@@ -38,24 +38,25 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
-/* "Locate me" control — crosshair icon, Google grey-800 for a bolder/darker
-   look than the default control chrome. */
+/* "Locate me" control — crosshair icon. Sizing/color measured directly off
+   google.com/maps' own controls (29px buttons, #1f1f1f near-black glyphs) so
+   this matches the reference rather than approximating it. */
 .locate-me-btn {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   border-radius: 50%;
   background: #ffffff;
-  color: #3c4043;
+  color: #1f1f1f;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.4rem;
+  font-size: 1.05rem;
   line-height: 1;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
@@ -91,9 +92,9 @@
    size/theming). Matches Google's own reference look: rounded white pill,
    bold dark +/- glyphs, thin divider between the two buttons. */
 .map-zoom-control {
-  width: 44px;
+  width: 30px;
   background: #ffffff;
-  border-radius: 10px;
+  border-radius: 8px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -101,13 +102,13 @@
 }
 
 .map-zoom-btn {
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: none;
   background: transparent;
-  color: #3c4043;
-  font-size: 1.5rem;
+  color: #1f1f1f;
+  font-size: 1.25rem;
   font-weight: 500;
   line-height: 1;
   display: inline-flex;
