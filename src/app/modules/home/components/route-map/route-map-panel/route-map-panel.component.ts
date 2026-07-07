@@ -138,6 +138,8 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: false,
+    cameraControl: false,
+    zoomControl: false,
   };
 
   polylinePath: google.maps.LatLngLiteral[] = [];
@@ -204,6 +206,31 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   stopHasCoords(stop: RouteStop): boolean {
     return stop.latitude !== null && stop.longitude !== null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Custom zoom control (replaces Google's un-styleable default zoomControl)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Increment the map's zoom level by one. Google clamps the result to the
+   * map's min/max zoom automatically, so no bounds-checking is needed here.
+   */
+  zoomIn(): void {
+    const gm = this.map?.googleMap;
+    if (!gm) {
+      return;
+    }
+    gm.setZoom((gm.getZoom() ?? 10) + 1);
+  }
+
+  /** Decrement the map's zoom level by one. See {@link zoomIn} for clamping notes. */
+  zoomOut(): void {
+    const gm = this.map?.googleMap;
+    if (!gm) {
+      return;
+    }
+    gm.setZoom((gm.getZoom() ?? 10) - 1);
   }
 
   // ---------------------------------------------------------------------------
@@ -444,6 +471,8 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
+      cameraControl: false,
+      zoomControl: false,
     };
 
     const pickupCoords = this.pickupStops

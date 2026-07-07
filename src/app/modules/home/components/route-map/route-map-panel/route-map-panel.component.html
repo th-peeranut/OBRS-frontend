@@ -36,21 +36,40 @@
       ></map-polyline>
     </google-map>
 
-    <!-- LOCATE-ME CONTROL — icon-only overlay in the map corner, the convention
-         users know from Google Maps / ride-hailing apps. Crosshair turns blue
-         once the location is active; shows a spinner while resolving. -->
-    <button
-      type="button"
-      class="locate-me-btn"
-      [class.locate-me-btn--active]="userLocation && !locating"
-      [disabled]="locating"
-      [title]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
-      [attr.aria-label]="'HOME.ROUTE_MAP.USE_MY_LOCATION' | translate"
-      (click)="useMyLocation()"
-    >
-      <i *ngIf="!locating" class="bi bi-crosshair"></i>
-      <i *ngIf="locating" class="bi bi-arrow-repeat locate-spin"></i>
-    </button>
+    <!-- MAP OVERLAY CONTROLS — stacked bottom-right, the convention users know
+         from Google Maps / ride-hailing apps: "locate me" on top, zoom pill below. -->
+    <div class="map-overlay-controls">
+      <!-- LOCATE-ME CONTROL — crosshair turns blue once the location is
+           active; shows a spinner while resolving. -->
+      <button
+        type="button"
+        class="locate-me-btn"
+        [class.locate-me-btn--active]="userLocation && !locating"
+        [disabled]="locating"
+        [title]="(locating ? 'HOME.ROUTE_MAP.LOCATING' : 'HOME.ROUTE_MAP.USE_MY_LOCATION') | translate"
+        [attr.aria-label]="'HOME.ROUTE_MAP.USE_MY_LOCATION' | translate"
+        (click)="useMyLocation()"
+      >
+        <i *ngIf="!locating" class="bi bi-crosshair"></i>
+        <i *ngIf="locating" class="bi bi-arrow-repeat locate-spin"></i>
+      </button>
+
+      <!-- ZOOM CONTROL — replaces Google's default (un-styleable) zoomControl;
+           wired directly to the GoogleMap instance via zoomIn()/zoomOut(). -->
+      <div class="map-zoom-control">
+        <button type="button" class="map-zoom-btn map-zoom-btn--in"
+          [attr.aria-label]="'HOME.ROUTE_MAP.ZOOM_IN' | translate"
+          [title]="'HOME.ROUTE_MAP.ZOOM_IN' | translate" (click)="zoomIn()">
+          <span aria-hidden="true">+</span>
+        </button>
+        <span class="map-zoom-divider" aria-hidden="true"></span>
+        <button type="button" class="map-zoom-btn map-zoom-btn--out"
+          [attr.aria-label]="'HOME.ROUTE_MAP.ZOOM_OUT' | translate"
+          [title]="'HOME.ROUTE_MAP.ZOOM_OUT' | translate" (click)="zoomOut()">
+          <span aria-hidden="true">−</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- GEOLOCATION ERROR (subtle, below the map) -->
