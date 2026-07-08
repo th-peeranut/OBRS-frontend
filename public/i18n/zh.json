@@ -121,7 +121,6 @@
         "OCCUPIED": "已占用",
         "SELECTED": "已选择"
       },
-      "NO_SEATS": "该班次没有可用座位。",
       "CONFIRM_BUTTON": "确认新座位",
       "BACK_BUTTON": "返回",
       "SUCCESS": "座位已更改。",
@@ -130,6 +129,7 @@
         "MAX_COUNT": "此预订已更改过一次座位，无法再次更改。",
         "WINDOW_CLOSED": "该班次距离现在太近，无法再更改座位。",
         "SEAT_UNAVAILABLE": "该座位已不可用，请另选一个。",
+        "NO_SEATS": "该班次没有可用座位。",
         "SEAT_NOT_IN_MAP": "该座位不在此车辆的座位图中，请另选一个。",
         "TICKET_MISMATCH": "自打开此窗口以来您的车票已发生变化，请重试。",
         "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改座位。",

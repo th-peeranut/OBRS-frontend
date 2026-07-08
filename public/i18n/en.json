@@ -121,7 +121,6 @@
         "OCCUPIED": "Occupied",
         "SELECTED": "Selected"
       },
-      "NO_SEATS": "No seats are available on this departure.",
       "CONFIRM_BUTTON": "Confirm new seat",
       "BACK_BUTTON": "Back",
       "SUCCESS": "Your seat has been changed.",
@@ -130,6 +129,7 @@
         "MAX_COUNT": "This booking has already had its seat changed once and can't be changed again.",
         "WINDOW_CLOSED": "That departure is too close to now — seats can no longer be changed.",
         "SEAT_UNAVAILABLE": "That seat is no longer available. Please choose another.",
+        "NO_SEATS": "No seats are available on this departure.",
         "SEAT_NOT_IN_MAP": "That seat doesn't exist on this vehicle's map. Please choose another.",
         "TICKET_MISMATCH": "Your tickets have changed since this dialog opened. Please try again.",
         "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't have their seat changed.",
