@@ -116,20 +116,36 @@ An **Unlock action** button (`.admin-icon-btn` with a `lock_open` icon) appears 
 
 Both the `/admin/*` and `/staff/*` shells share one sidebar implemented by the abstract `SidebarLayoutBaseComponent` (`src/app/shared/sidebar-layout/`) that `AdminLayoutComponent` and `StaffLayoutComponent` extend — put any sidebar behaviour change there, not in one layout. On desktop (≥ 1101px) the sidebar rests as a 76px icon rail and **expands on hover or keyboard focus** as an overlay (it floats over content, no reflow), collapsing ~120ms after the pointer leaves. A **pin** button (`push_pin`) locks it open; while pinned the sidebar becomes a reserved 280px column (content reflows). The pin preference persists in `localStorage` under `obrs-sidebar-collapsed` (`'0'` = pinned open, `'1'`/absent = hover rail) — note this key's meaning was repurposed from the old click-to-collapse toggle. Mobile (≤ 1100px) is unchanged: a hamburger off-canvas drawer, no hover/rail behaviour, pin hidden. See `docs/adr/0005-shared-sidebar-base-hover-expand.md`.
 
-## My Bookings — Reschedule dialog
+## My Bookings — action menu & reschedule dialog
 
-`/my-bookings` (`src/app/modules/my-bookings/`) renders a **Reschedule**
-action on every booking card, alongside the existing "View e-ticket" /
-"Cancel booking" actions. Per design-system §6/§11, the button is **always
-present in the DOM** — it is `[disabled]` (with a `.tooltip-container`/
-`.tooltip-box` reason, same convention as `register.component.html`) rather
-than `*ngIf`'d away, whenever any client-side eligibility check fails:
-status isn't `confirmed`, the booking isn't one-way/single-leg, it has
-already been rescheduled once (`rescheduleCount >= 1`), or the departure is
-inside the 4h reschedule window. These mirror the backend's own prerequisites
-(`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`) so the action
-is never presented as available when the server would reject it — the server
-remains the final authority.
+`/my-bookings` (`src/app/modules/my-bookings/`) collapses each booking
+card's three actions — View e-ticket, Reschedule, Cancel booking (in that
+order) — behind a single overflow trigger: a kebab (`bi-three-dots-vertical`)
+icon button with an `aria-label` (`MY_BOOKINGS.ACTIONS_MENU.LABEL`), opening a
+PrimeNG `p-menu` popup. This reuses the exact same pattern already
+established by `WalkInTripBrowserComponent` (staff module) — a single shared
+`#actionMenu` instance whose `MenuItem[]` model is rebuilt per row on open
+(`openActionMenu()`), rather than introducing a second menu/dropdown
+convention. PrimeNG's Menu popup already handles Escape/outside-click-to-close
+and keyboard navigation, so no bespoke overlay logic was needed. Cancel
+booking renders as the menu's one destructive item (`item.danger` →
+`.action-menu-item--danger`, red per design-system §4); View e-ticket only
+appears when the booking is paid/confirmed and Cancel booking only when it's
+cancellable — the same conditional presence the old inline buttons had.
+
+**Reschedule is the one item that is never omitted.** Per design-system
+§6/§11, "shown but disabled, never hidden" now applies to a *menu item*
+instead of an inline button: it always appears in the opened menu, `disabled`
+whenever any client-side eligibility check fails — status isn't `confirmed`,
+the booking isn't one-way/single-leg, it has already been rescheduled once
+(`rescheduleCount >= 1`), or the departure is inside the 4h reschedule window
+— with the localized reason rendered as visible subtext directly under the
+label (`item.reasonText`, via `<p-menu>`'s custom `pTemplate="item"` — not a
+hover-only tooltip, so it's unconditionally present once the menu is open,
+not dependent on a simulated hover in tests). These mirror the backend's own
+prerequisites (`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`)
+so the action is never presented as available when the server would reject
+it — the server remains the final authority.
 
 Clicking an enabled action dispatches `openRescheduleDialog({ bookingId })`,
 which the module-local `myBookings` NgRx state reflects **synchronously** —
@@ -143,7 +159,7 @@ success. See `docs/adr/0008-my-bookings-reschedule-dialog.md` for the modal
 chrome, payment-leaf reuse, and stop-ID resolution decisions behind this
 component family (`src/app/modules/my-bookings/components/reschedule-dialog/`).
 
-**Testing note:** `MockStore.overrideSelector()` (`@ngrx/store/testing`)
+**Testing note (NgRx):** `MockStore.overrideSelector()` (`@ngrx/store/testing`)
 permanently pins the shared, module-singleton selector's memoized result
 (`resultSelector.setResult(value)`) until `store.resetSelectors()` is called.
 Because Karma bundles every spec file into one run, an override left
@@ -152,3 +168,14 @@ file that happens to import the same selector later in the same run. Any new
 spec using `overrideSelector` should pair it with `afterEach(() =>
 store.resetSelectors())` — see `reschedule.effect.spec.ts` and
 `my-bookings.component.reschedule-dom.spec.ts` for the pattern.
+
+**Testing note (PrimeNG `p-menu`):** the popup content (including the custom
+`pTemplate="item"` markup) is asynchronous and, with `appendTo="body"`,
+rendered outside the fixture's own root node — the same conditions
+`walk-in-trip-browser.component.spec.ts` already worked around. Don't try to
+open the real popup and query its rendered DOM in a unit test; instead stub
+the `@ViewChild` (`component.actionMenu = { toggle: jasmine.createSpy() }`,
+assigned **after** the first `fixture.detectChanges()` — assigning before
+gets clobbered by Angular's own view-query resolution pass) and assert
+against the built `actionMenuItems` array, which is exactly what the item
+template renders. See `my-bookings.component.reschedule-dom.spec.ts`.

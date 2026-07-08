@@ -94,6 +94,32 @@ the field genuinely isn't missing, it's just not the shape this screen wants,
 and the existing `/api/stops` endpoint already resolves it without needing
 backend involvement.
 
+## Decision 4: consolidate the card's three actions behind one `p-menu`, not three inline buttons
+
+The My Bookings card originally rendered View e-ticket / Cancel booking /
+Reschedule as three separate inline buttons. A later UX pass replaced these
+with a single kebab overflow trigger opening a PrimeNG `p-menu` popup listing
+all three — reusing the exact `MenuItem[]`-rebuilt-per-row pattern already
+established by `WalkInTripBrowserComponent` (staff module), rather than
+inventing a new menu/dropdown convention (design-system §12 requires
+justifying and reusing rather than introducing).
+
+**The eligibility affordance survives the move.** Decision-critical: moving
+Reschedule from an inline `[disabled]` button (with a hover tooltip) into a
+menu item could easily have regressed "shown but disabled, never hidden"
+into "omitted when ineligible" — the whole point of this feature. It didn't:
+the item is still always pushed into `actionMenuItems`, just with
+`disabled: true` and a `reasonText` when ineligible. The reason moved from a
+hover-only `.tooltip-box` to **inline subtext rendered via `p-menu`'s custom
+`pTemplate="item"`** — a deliberate choice over PrimeNG's own built-in
+`item.tooltip`/`tooltipOptions` (which *is* natively supported and would have
+avoided a custom template): a hover-triggered tooltip is harder to assert in
+a fast unit test (PrimeNG's `Tooltip` directive shows on a real
+mouseenter/focus event into a separately-appended DOM node) and easier to
+miss on first glance than subtext that's simply *there* once the menu is
+open. Cancel booking is the menu's one destructive item (`item.danger`,
+red), consistent with design-system §4 (one color = one meaning).
+
 ## Considered alternatives
 
 - **Add `fromStopId`/`toStopId` to `BookingRespDto`** — rejected: would be a
@@ -105,3 +131,8 @@ backend involvement.
   reschedule-specific copies** — rejected: violates design-system §10 and
   would drift from the original components' Omise/idempotency-key logic
   (R0-adjacent payment code) over time.
+- **PrimeNG's built-in `item.tooltip`/`tooltipOptions` for the disabled
+  Reschedule reason** — rejected in favor of inline subtext (see Decision 4);
+  noted here rather than silently swapped in later since it's the more
+  "native" PrimeNG option and a future contributor may reasonably wonder why
+  it wasn't used.

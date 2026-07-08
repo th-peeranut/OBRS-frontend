@@ -21,6 +21,9 @@
     "VIEW_TICKET": "View e-ticket",
     "LOAD_FAILED": "Unable to load your bookings. Please try again.",
     "NOT_CANCELLABLE": "Cannot be cancelled",
+    "ACTIONS_MENU": {
+      "LABEL": "Actions"
+    },
     "TICKET_MODAL": {
       "LOADING": "Loading your e-ticket…",
       "LOAD_FAILED": "Unable to load the e-ticket. Please try again.",

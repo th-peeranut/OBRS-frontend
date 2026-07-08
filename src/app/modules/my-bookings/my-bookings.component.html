@@ -90,53 +90,45 @@
         </dl>
 
         <footer class="booking-card__actions">
+          <!-- Single overflow trigger replaces the old three inline buttons.
+               Reschedule always appears in the opened menu (disabled + its
+               reason when ineligible) — see openActionMenu(). -->
           <button
-            *ngIf="booking.paid"
             type="button"
-            class="btn-ticket"
-            (click)="onViewTicket(booking)"
+            class="actions-menu-btn"
+            [attr.aria-label]="'MY_BOOKINGS.ACTIONS_MENU.LABEL' | translate"
+            aria-haspopup="true"
+            (click)="openActionMenu($event, booking, vm.cancellingBookingId)"
+            (keydown.space)="$event.preventDefault(); openActionMenu($event, booking, vm.cancellingBookingId)"
+            (keydown.enter)="$event.preventDefault(); openActionMenu($event, booking, vm.cancellingBookingId)"
           >
-            <i class="bi bi-qr-code-scan"></i>
-            {{ "MY_BOOKINGS.VIEW_TICKET" | translate }}
+            <i class="bi bi-three-dots-vertical"></i>
           </button>
-          <button
-            *ngIf="booking.cancellable"
-            type="button"
-            class="btn-cancel"
-            [disabled]="vm.cancellingBookingId !== null"
-            (click)="onCancel(booking)"
-          >
-            <span
-              *ngIf="vm.cancellingBookingId === booking.id"
-              class="spinner"
-              aria-hidden="true"
-            ></span>
-            {{ "MY_BOOKINGS.CANCEL.ACTION" | translate }}
-          </button>
-          <span class="not-cancellable" *ngIf="!booking.cancellable && !booking.paid">
-            {{ "MY_BOOKINGS.NOT_CANCELLABLE" | translate }}
-          </span>
-
-          <!-- Reschedule is always rendered (disabled + tooltip reason when
-               ineligible) — it must never be hidden (design-system §6). -->
-          <div class="tooltip-container reschedule-tooltip">
-            <button
-              type="button"
-              class="btn-reschedule"
-              [disabled]="!booking.rescheduleEligible"
-              (click)="onReschedule(booking)"
-            >
-              {{ "MY_BOOKINGS.RESCHEDULE.ACTION" | translate }}
-            </button>
-            <div class="tooltip-box" *ngIf="!booking.rescheduleEligible">
-              {{ booking.rescheduleReasonKey ?? '' | translate }}
-            </div>
-          </div>
         </footer>
       </article>
     </ng-container>
   </div>
 </section>
+
+<!-- Single shared popup menu for every card's actions; items rebuilt per
+     row on open (same pattern as WalkInTripBrowserComponent.tripActionMenu). -->
+<p-menu
+  #actionMenu
+  [popup]="true"
+  [model]="actionMenuItems"
+  appendTo="body"
+  (onHide)="onActionMenuHide()"
+>
+  <ng-template pTemplate="item" let-item>
+    <div class="action-menu-item" [class.action-menu-item--danger]="item.danger">
+      <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
+      <span class="action-menu-item__label">{{ item.label }}</span>
+      <span class="action-menu-item__reason" *ngIf="item.disabled && item.reasonText">
+        {{ item.reasonText }}
+      </span>
+    </div>
+  </ng-template>
+</p-menu>
 
 <app-my-booking-ticket-modal
   *ngIf="activeTicketBookingId"

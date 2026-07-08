@@ -3,6 +3,7 @@ import { RouterModule, Routes } from '@angular/router';
 import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { CalendarModule } from 'primeng/calendar';
+import { MenuModule } from 'primeng/menu';
 import { SharedModule } from '../../shared/shared.module';
 import { ETicketCardModule } from '../../shared/components/e-ticket-card/e-ticket-card.module';
 import { PaymentMethodsModule } from '../../shared/components/payment-methods/payment-methods.module';
@@ -38,6 +39,10 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     // into this (also lazily-routed) module's route config.
     PaymentMethodsModule,
     CalendarModule,
+    // Per-card overflow action menu (View e-ticket / Reschedule / Cancel
+    // booking) — same PrimeNG p-menu popup pattern already used by
+    // WalkInTripBrowserComponent in the staff module.
+    MenuModule,
     RouterModule.forChild(routes),
     StoreModule.forFeature(MY_BOOKINGS_FEATURE_KEY, myBookingsReducer),
     EffectsModule.forFeature([MyBookingsEffect, RescheduleEffect]),

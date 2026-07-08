@@ -21,6 +21,9 @@
     "VIEW_TICKET": "查看电子票",
     "LOAD_FAILED": "无法加载您的预订，请重试。",
     "NOT_CANCELLABLE": "无法取消",
+    "ACTIONS_MENU": {
+      "LABEL": "操作"
+    },
     "TICKET_MODAL": {
       "LOADING": "正在加载您的电子票…",
       "LOAD_FAILED": "无法加载电子票，请重试。",

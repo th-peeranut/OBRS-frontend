@@ -1,6 +1,8 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { MenuItem } from 'primeng/api';
+import { Menu } from 'primeng/menu';
 import dayjs from 'dayjs';
 import { Observable, combineLatest, map, startWith } from 'rxjs';
 import {
@@ -37,6 +39,18 @@ interface RescheduleEligibility {
   reasonKey: string | null;
 }
 
+/** A single card's overflow menu item. Reschedule is always included
+ * (disabled + `reasonText` when ineligible — never omitted); View e-ticket /
+ * Cancel booking keep their existing conditional presence. */
+export interface ActionMenuItem extends MenuItem {
+  /** Localized disabled-reason, rendered as subtext under the label. */
+  reasonText?: string;
+  /** Destructive item (Cancel booking) — styled distinctly from the rest. */
+  danger?: boolean;
+  /** This specific row's cancel is in flight — shows an inline spinner. */
+  submitting?: boolean;
+}
+
 interface StatusFilterOption {
   /** API status slug, or '' for "all". */
   value: string;
@@ -58,6 +72,12 @@ export class MyBookingsComponent implements OnInit {
   /** Booking whose reschedule dialog is open — NgRx-driven so the dialog
    * opens optimistically the instant `openRescheduleDialog` dispatches. */
   rescheduleDialogBookingId$!: Observable<number | null>;
+
+  /** Single shared popup menu, rebuilt per row on open — same pattern as
+   * `WalkInTripBrowserComponent.tripActionMenu` (staff module). */
+  @ViewChild('actionMenu') actionMenu!: Menu;
+  actionMenuItems: ActionMenuItem[] = [];
+  private lastActionMenuTrigger: HTMLButtonElement | null = null;
 
   readonly statusFilters: StatusFilterOption[] = [
     { value: '', labelKey: 'MY_BOOKINGS.FILTERS.ALL' },
@@ -115,6 +135,58 @@ export class MyBookingsComponent implements OnInit {
 
   onCancel(booking: MyBookingView): void {
     this.store.dispatch(requestCancelBooking({ booking }));
+  }
+
+  /**
+   * Builds and opens the single per-card overflow menu (View e-ticket,
+   * Reschedule, Cancel booking). Reschedule is always included — disabled
+   * with its localized reason as `reasonText` when ineligible, never
+   * omitted, since presenting *some* Reschedule affordance (even a disabled
+   * one explaining why) is the whole point of OBRS-83. View e-ticket / Cancel
+   * booking keep their existing conditional presence (only shown when
+   * applicable), same as the previous inline-button layout.
+   */
+  openActionMenu(event: Event, booking: MyBookingView, cancellingBookingId: number | null): void {
+    event.stopPropagation();
+
+    const items: ActionMenuItem[] = [];
+
+    if (booking.paid) {
+      items.push({
+        label: this.translate.instant('MY_BOOKINGS.VIEW_TICKET'),
+        command: () => this.onViewTicket(booking),
+      });
+    }
+
+    items.push({
+      label: this.translate.instant('MY_BOOKINGS.RESCHEDULE.ACTION'),
+      disabled: !booking.rescheduleEligible,
+      reasonText: booking.rescheduleEligible
+        ? undefined
+        : this.translate.instant(booking.rescheduleReasonKey ?? ''),
+      command: () => this.onReschedule(booking),
+    });
+
+    if (booking.cancellable) {
+      items.push({
+        label: this.translate.instant('MY_BOOKINGS.CANCEL.ACTION'),
+        danger: true,
+        disabled: cancellingBookingId !== null,
+        submitting: cancellingBookingId === booking.id,
+        command: () => this.onCancel(booking),
+      });
+    }
+
+    this.actionMenuItems = items;
+    this.lastActionMenuTrigger = event.currentTarget as HTMLButtonElement;
+    this.actionMenu.toggle(event);
+  }
+
+  /** Restores focus to the trigger button that opened the menu — same
+   * pattern as `WalkInTripBrowserComponent.onTripMenuHide`. */
+  onActionMenuHide(): void {
+    this.lastActionMenuTrigger?.focus();
+    this.lastActionMenuTrigger = null;
   }
 
   /** Opens the reschedule dialog optimistically — the dialog itself owns its

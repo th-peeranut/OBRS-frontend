@@ -4,6 +4,7 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
+import { Menu } from 'primeng/menu';
 import dayjs from 'dayjs';
 
 import { MyBookingsComponent } from './my-bookings.component';
@@ -17,12 +18,21 @@ import { openRescheduleDialog } from './store/my-bookings.action';
 
 /**
  * Locks design-system §6/§11's "shown but disabled, never hidden" rule for
- * the Reschedule action, and the optimistic-open contract for its dialog —
- * both assert against the real, compiled DOM rather than just the view-model
- * (see my-bookings.component.spec.ts for the exhaustive eligibility-reason
- * matrix at the logic level).
+ * the Reschedule action (now a menu item, not an inline button — see the
+ * OBRS-83 action-menu consolidation), and the optimistic-open contract for
+ * its dialog. See my-bookings.component.spec.ts for the exhaustive
+ * eligibility-reason matrix at the logic level.
+ *
+ * `<p-menu>` is an unknown element under `NO_ERRORS_SCHEMA` (its content is
+ * also asynchronously overlaid via `appendTo="body"`), so — following the
+ * exact same pattern already established for
+ * `WalkInTripBrowserComponent`/`walk-in-trip-browser.component.spec.ts`
+ * (staff module, the only other `p-menu` consumer in this codebase) — these
+ * tests stub `actionMenu.toggle` and assert against the built
+ * `actionMenuItems` array (what the menu's custom item template renders)
+ * rather than the rendered popup DOM.
  */
-describe('MyBookingsComponent (reschedule action — DOM)', () => {
+describe('MyBookingsComponent (reschedule action — action menu)', () => {
   let fixture: ComponentFixture<MyBookingsComponent>;
   let store: MockStore;
 
@@ -57,15 +67,30 @@ describe('MyBookingsComponent (reschedule action — DOM)', () => {
     store.overrideSelector(selectRescheduleDialogBookingId, null);
     fixture = TestBed.createComponent(MyBookingsComponent);
     fixture.detectChanges();
+    // ViewChild p-menu is an unknown element under NO_ERRORS_SCHEMA, so it
+    // resolves to undefined; stub toggle AFTER the first detectChanges (same
+    // workaround as walk-in-trip-browser.component.spec.ts) — assigning
+    // before detectChanges gets clobbered by Angular's own view-query
+    // resolution pass.
+    fixture.componentInstance.actionMenu = { toggle: jasmine.createSpy('toggle') } as unknown as Menu;
   }
 
-  function rescheduleButton(): HTMLButtonElement {
-    return fixture.debugElement.query(By.css('.btn-reschedule')).nativeElement as HTMLButtonElement;
+  function actionsMenuButton(): HTMLButtonElement {
+    return fixture.debugElement.query(By.css('.actions-menu-btn')).nativeElement as HTMLButtonElement;
   }
 
-  function tooltipText(): string | null {
-    const el = fixture.debugElement.query(By.css('.tooltip-box'));
-    return el ? (el.nativeElement.textContent || '').trim() : null;
+  function openMenu(): void {
+    actionsMenuButton().click();
+  }
+
+  function rescheduleItem() {
+    const item = fixture.componentInstance.actionMenuItems.find(
+      (candidate) => candidate.label === 'MY_BOOKINGS.RESCHEDULE.ACTION'
+    );
+    if (!item) {
+      throw new Error('Reschedule item not found in actionMenuItems — it must never be omitted.');
+    }
+    return item;
   }
 
   beforeEach(async () => {
@@ -87,41 +112,66 @@ describe('MyBookingsComponent (reschedule action — DOM)', () => {
     store.resetSelectors();
   });
 
-  it('renders Reschedule disabled, but still present in the DOM, for an ineligible booking', () => {
+  it('the action menu trigger is a real, always-present button with an aria-label', () => {
     render(buildBooking({ status: 'pending' }));
 
-    const button = rescheduleButton();
-    expect(button).withContext('the button must never be *ngIf-removed').not.toBeNull();
-    expect(button.disabled).toBeTrue();
-    expect(tooltipText()).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_CONFIRMED');
+    const button = actionsMenuButton();
+    expect(button).withContext('the trigger must never be *ngIf-removed').not.toBeNull();
+    expect(button.getAttribute('aria-label')).toBe('MY_BOOKINGS.ACTIONS_MENU.LABEL');
+    expect(button.getAttribute('aria-haspopup')).toBe('true');
   });
 
-  it('renders Reschedule enabled for an eligible booking, with no tooltip', () => {
+  it('includes Reschedule in the opened menu, disabled with its localized reason, for an ineligible booking', () => {
+    render(buildBooking({ status: 'pending' }));
+
+    openMenu();
+
+    const item = rescheduleItem();
+    expect(item.disabled)
+      .withContext('disabled, never omitted — this is the whole point of OBRS-83')
+      .toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_CONFIRMED');
+  });
+
+  it('includes Reschedule enabled, with no reason text, for an eligible booking', () => {
     render(buildBooking());
 
-    const button = rescheduleButton();
-    expect(button.disabled).toBeFalse();
-    expect(tooltipText()).toBeNull();
+    openMenu();
+
+    const item = rescheduleItem();
+    expect(item.disabled).toBeFalse();
+    expect(item.reasonText).toBeUndefined();
   });
 
-  it('dispatches openRescheduleDialog when the enabled action is clicked', () => {
+  it('dispatches openRescheduleDialog when the enabled Reschedule item is activated', () => {
     render(buildBooking());
     const dispatchSpy = spyOn(store, 'dispatch');
 
-    rescheduleButton().click();
+    openMenu();
+    rescheduleItem().command?.({});
 
     expect(dispatchSpy).toHaveBeenCalledWith(openRescheduleDialog({ bookingId: 42 }));
   });
 
-  it('does nothing when a disabled Reschedule button is clicked', () => {
+  it('does nothing when the disabled Reschedule item is activated', () => {
     render(buildBooking({ status: 'pending' }));
     const dispatchSpy = spyOn(store, 'dispatch');
 
-    // Disabled native buttons don't fire click handlers via a real click, but
-    // the host binding also guards defensively — assert the guard directly.
-    rescheduleButton().click();
+    openMenu();
+    // PrimeNG's own Menu.itemClick() short-circuits on item.disabled before
+    // ever invoking command() — component.onReschedule() also guards
+    // defensively, asserted directly here.
+    rescheduleItem().command?.({});
 
     expect(dispatchSpy).not.toHaveBeenCalled();
+  });
+
+  it('opens the popup via actionMenu.toggle when the trigger is clicked', () => {
+    render(buildBooking());
+
+    openMenu();
+
+    expect(fixture.componentInstance.actionMenu.toggle).toHaveBeenCalled();
   });
 
   it('opens the dialog optimistically — it renders as soon as the store reflects the open, synchronously', () => {
@@ -133,5 +183,58 @@ describe('MyBookingsComponent (reschedule action — DOM)', () => {
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('app-reschedule-dialog'))).not.toBeNull();
+  });
+
+  describe('View e-ticket / Cancel booking items (menu consolidation)', () => {
+    it('lists View e-ticket, Reschedule, Cancel booking in that order for a confirmed booking', () => {
+      render(buildBooking());
+
+      openMenu();
+
+      expect(fixture.componentInstance.actionMenuItems.map((item) => item.label)).toEqual([
+        'MY_BOOKINGS.VIEW_TICKET',
+        'MY_BOOKINGS.RESCHEDULE.ACTION',
+        'MY_BOOKINGS.CANCEL.ACTION',
+      ]);
+    });
+
+    it('omits View e-ticket and Cancel booking (but still includes Reschedule, disabled) for a non-confirmed booking', () => {
+      render(buildBooking({ status: 'pending' }));
+
+      openMenu();
+
+      const labels = fixture.componentInstance.actionMenuItems.map((item) => item.label);
+      expect(labels).not.toContain('MY_BOOKINGS.VIEW_TICKET');
+      expect(labels).not.toContain('MY_BOOKINGS.CANCEL.ACTION');
+      expect(labels).toContain('MY_BOOKINGS.RESCHEDULE.ACTION');
+    });
+
+    it('styles Cancel booking as the destructive item and reuses the existing cancel handler', () => {
+      render(buildBooking());
+      const dispatchSpy = spyOn(store, 'dispatch');
+
+      openMenu();
+      const cancelItem = fixture.componentInstance.actionMenuItems.find(
+        (item) => item.label === 'MY_BOOKINGS.CANCEL.ACTION'
+      );
+
+      expect(cancelItem?.danger).toBeTrue();
+      cancelItem?.command?.({});
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        jasmine.objectContaining({ booking: jasmine.objectContaining({ id: 42 }) })
+      );
+    });
+
+    it('reuses the existing ticket-modal handler for View e-ticket', () => {
+      render(buildBooking());
+
+      openMenu();
+      const ticketItem = fixture.componentInstance.actionMenuItems.find(
+        (item) => item.label === 'MY_BOOKINGS.VIEW_TICKET'
+      );
+      ticketItem?.command?.({});
+
+      expect(fixture.componentInstance.activeTicketBookingId).toBe(42);
+    });
   });
 });

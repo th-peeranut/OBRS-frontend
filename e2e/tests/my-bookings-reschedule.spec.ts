@@ -13,7 +13,7 @@ import { test, expect, Page, Locator } from '@playwright/test';
  *                                               with RESCHEDULE_ERROR_MAX_COUNT — used for the
  *                                               Thai rejection-message check (fast, no live mutation).
  *   id=2 B-RDE6PG  seat 4  2026-07-09 15:00  -> CANCELLED (consumed last session): NOT_CONFIRMED
- *                                               disabled-button check.
+ *                                               disabled-menu-item check.
  *   id=3 B-X3F5ML  seat 4  2026-07-09 21:00  -> fresh/eligible: options-list / empty-date checks,
  *                                               plus a REAL non-destructive NO_SEATS repro — on
  *                                               2026-07-17 the only candidate is scheduleId=7
@@ -53,6 +53,39 @@ function cardByBookingNumber(page: Page, bookingNumber: string) {
   return page.locator('.booking-card').filter({ hasText: bookingNumber });
 }
 
+/**
+ * OBRS-83 action-menu consolidation: the card's three actions (View
+ * e-ticket / Reschedule / Cancel booking) now live behind a single kebab
+ * trigger (`.actions-menu-btn`) opening a PrimeNG `p-menu` popup
+ * (`appendTo="body"`, so the menu itself is queried from `page`, not scoped
+ * under `card`). Each item is `.action-menu-item` with a `.action-menu-item__label`
+ * and, when disabled, a `.action-menu-item__reason` subtext (replaces the old
+ * per-button `.tooltip-box` hover tooltip).
+ */
+async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
+  await card.locator('.actions-menu-btn').click();
+  const menu = page.locator('.p-menu');
+  await menu.waitFor({ state: 'visible', timeout: 10_000 });
+  return menu;
+}
+
+/** The `<li class="p-menuitem">` (carries `aria-disabled`) for a given item's
+ * label text — use this for both disabled-state and reason-text assertions. */
+function menuItem(menu: Locator, labelPattern: RegExp): Locator {
+  return menu.locator('li.p-menuitem').filter({ hasText: labelPattern });
+}
+
+async function clickMenuItem(menu: Locator, labelPattern: RegExp): Promise<void> {
+  await menuItem(menu, labelPattern).locator('.action-menu-item__label').click();
+}
+
+/** Opens the card's action menu and clicks Reschedule — the replacement for
+ * the old direct `card.locator('.btn-reschedule').click()`. */
+async function openRescheduleFromCard(page: Page, card: Locator): Promise<void> {
+  const menu = await openActionsMenu(page, card);
+  await clickMenuItem(menu, /^Reschedule$/);
+}
+
 /** Opens the PrimeNG p-calendar panel. Prefers the icon trigger button (more
  * reliably re-toggles on a second open than clicking the already-focused
  * input) and falls back to a forced click on the input itself. */
@@ -66,25 +99,29 @@ async function openCalendar(dialog: Locator): Promise<void> {
 }
 
 test.describe('My Bookings — Reschedule (OBRS-83)', () => {
-  test('AC1/AC2: eligible card shows Reschedule alongside View e-ticket / Cancel booking', async ({ page }) => {
+  test('AC1/AC2: the action menu lists View e-ticket, Reschedule, Cancel booking (in that order)', async ({ page }) => {
     await loginAsCustomer(page);
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-X3F5ML');
     await expect(card).toBeVisible();
-    await expect(card.locator('.btn-ticket')).toBeVisible();
-    await expect(card.locator('.btn-cancel')).toBeVisible();
-    await expect(card.locator('.btn-reschedule')).toBeVisible();
-    await expect(card.locator('.btn-reschedule')).toBeEnabled();
-    await expect(card.locator('.tooltip-box')).toHaveCount(0);
+    await expect(card.locator('.actions-menu-btn')).toBeVisible();
+
+    const menu = await openActionsMenu(page, card);
+    const labels = await menu.locator('.action-menu-item__label').allTextContents();
+    expect(labels.map((l) => l.trim())).toEqual(['View e-ticket', 'Reschedule', 'Cancel booking']);
+
+    const rescheduleItem = menuItem(menu, /^Reschedule$/);
+    await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'false');
+    await expect(rescheduleItem.locator('.action-menu-item__reason')).toHaveCount(0);
 
     await page.screenshot({
       path: 'e2e-evidence/after-eligible-card.png',
       fullPage: true,
     });
 
-    // Regression: View e-ticket still works on this same card.
-    await card.locator('.btn-ticket').click();
+    // Regression: View e-ticket still works on this same card, via the menu.
+    await clickMenuItem(menu, /View e-ticket/);
     await expect(page.locator('.ticket-modal')).toBeVisible({ timeout: 15_000 });
     await page.locator('.ticket-modal__close').click();
     await expect(page.locator('.ticket-modal')).toHaveCount(0);
@@ -97,7 +134,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-X3F5ML');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     // Dialog appears immediately (optimistic open) — date step interactive.
     const dialog = page.locator('.reschedule-modal');
@@ -139,7 +176,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-X3F5ML');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await expect(dialog).toBeVisible({ timeout: 5_000 });
@@ -171,7 +208,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     const card = cardByBookingNumber(page, 'B-74DW6T'); // id=5, seat 7, 07-09 15:00
     await expect(card.locator('.booking-card__meta dd').first()).toContainText('9 Jul 2026');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await openCalendar(dialog);
@@ -227,7 +264,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     // exercises the real seat-collision path server-side. Non-destructive:
     // the endpoint 400s and neither booking is changed.
     const card = cardByBookingNumber(page, 'B-X3F5ML');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await openCalendar(dialog);
@@ -274,10 +311,12 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     // Consume booking B-RDE6PG (already used for the NO_SEATS attempt above,
-    // which did not change its state) via the existing Cancel flow. The
-    // confirmation step is a SweetAlert2 popup, not a native browser dialog.
+    // which did not change its state) via the existing Cancel flow, now
+    // reached through the action menu. The confirmation step is a
+    // SweetAlert2 popup, not a native browser dialog.
     const card = cardByBookingNumber(page, 'B-RDE6PG');
-    await card.locator('.btn-cancel').click();
+    const cardMenu = await openActionsMenu(page, card);
+    await clickMenuItem(cardMenu, /Cancel booking/);
     await page.locator('.swal2-confirm').click({ timeout: 30_000 });
     await expect(cardByBookingNumber(page, 'B-RDE6PG').locator('.status-badge')).toHaveText(
       /Cancelled/i,
@@ -285,10 +324,14 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     );
 
     const cancelledCard = cardByBookingNumber(page, 'B-RDE6PG');
-    const rescheduleBtn = cancelledCard.locator('.btn-reschedule');
-    await expect(rescheduleBtn).toBeVisible(); // never hidden, even when ineligible
-    await expect(rescheduleBtn).toBeDisabled();
-    await expect(cancelledCard.locator('.tooltip-box')).toContainText(
+    await expect(cancelledCard.locator('.actions-menu-btn')).toBeVisible();
+    const cancelledMenu = await openActionsMenu(page, cancelledCard);
+    const rescheduleItem = menuItem(cancelledMenu, /^Reschedule$/);
+    await expect(rescheduleItem)
+      .withContext('never hidden, even when ineligible')
+      .toBeVisible();
+    await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
+    await expect(rescheduleItem.locator('.action-menu-item__reason')).toContainText(
       /Only confirmed bookings can be rescheduled/i
     );
 
@@ -302,7 +345,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-P4HPH6'); // id=4, seat 4, untouched
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await openCalendar(dialog);
@@ -370,7 +413,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-P4HPH6');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await openCalendar(dialog);
@@ -420,19 +463,26 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-X3F5ML');
-    await expect(card.locator('.btn-reschedule')).toHaveText(/Reschedule/i);
+    const enMenu = await openActionsMenu(page, card);
+    await expect(menuItem(enMenu, /Reschedule/)).toHaveText(/Reschedule/i);
+    // Close the menu (Escape — PrimeNG p-menu popup) before switching language.
+    await page.keyboard.press('Escape');
+    await expect(enMenu).toHaveCount(0);
 
     await page.locator('.navbar-lang-trigger').click();
     await page.locator('.navbar-lang-item', { hasText: 'ไทย' }).click();
     // Instant re-render, same page (no navigation/reload) — the label flips languages.
-    await expect(card.locator('.btn-reschedule')).toHaveText(/เลื่อนการเดินทาง/);
+    const thMenu = await openActionsMenu(page, card);
+    await expect(menuItem(thMenu, /เลื่อนการเดินทาง/)).toHaveText(/เลื่อนการเดินทาง/);
+    await page.keyboard.press('Escape');
+    await expect(thMenu).toHaveCount(0);
     // The lang change also re-fetches the (server-localized) booking list
     // (my-bookings.component.ts subscribes to translate.onLangChange), which
     // shows a blocking SweetAlert2 loading overlay for the round trip — let it
     // clear before interacting further, otherwise it intercepts the next click.
     await expect(page.locator('.swal2-container')).toHaveCount(0, { timeout: 30_000 });
 
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
     const dialog = page.locator('.reschedule-modal');
     await expect(dialog.locator('.reschedule-modal__title')).toHaveText(/เลื่อนการเดินทางของคุณ/);
     await expect(dialog).not.toContainText('MY_BOOKINGS.RESCHEDULE');
@@ -466,7 +516,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await gotoMyBookings(page);
 
     const card = cardByBookingNumber(page, 'B-74DW6T');
-    await card.locator('.btn-reschedule').click();
+    await openRescheduleFromCard(page, card);
 
     const dialog = page.locator('.reschedule-modal');
     await openCalendar(dialog);
