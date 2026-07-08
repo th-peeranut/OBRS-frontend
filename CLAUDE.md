@@ -5,7 +5,7 @@ OBRS (Online Bus Reservation System) frontend is an Angular 18 single-page appli
 
 ### Core Goals:
 - **Reactive State**: All cross-page state flows through NgRx; local component state is for UI-only concerns (loading toggles, form state, visibility flags).
-- **Localization**: Full TH, EN, and ZH support via `ngx-translate`. ZH is currently a gap — every new i18n key must include all three locales.
+- **Localization**: Full TH, EN, and ZH support via `ngx-translate`. All three locale files exist and are kept in sync — every new i18n key must be added to all three (`en`/`th`/`zh`) in the same commit.
 - **API Transparency**: All backend communication goes through typed services using the `ResponseAPI<T>` envelope; no raw HTTP calls in components.
 
 ## 2. Tech Stack
@@ -46,6 +46,18 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 - `src/app/shared/services/`: Cross-module services (e.g., `AlertService`).
 - `src/app/shared/lib/`: Pure utility functions (e.g., `generateIdempotencyKey()`).
 
+### Module map (by shell)
+The app has three shell identities (see `docs/design-system.md` §2.3). Feature modules live under `src/app/modules/`:
+
+| Shell | Modules |
+|---|---|
+| **Customer (B2C)** | `home`, `schedule-booking`, `review-schedule-booking`, `passenger-info`, `payment`, `e-ticket`, `my-bookings`, `how-to-book`, `business-policy`, `privacy-policy`, `refund-policy` |
+| **Admin** (`/admin`) | `admin` |
+| **Staff** (`/staff`) | `staff` (sell / schedules / driver / boarding) |
+| **Auth** (standalone pages) | `login`, `login-mobile`, `register`, `forget-password`, `otp-validate`, `verify-email` |
+
+Global NgRx slices live in `src/app/shared/stores/` (`booking`, `station`, `schedule-booking`, `schedule-filter`, `schedule-list`, `passenger-info`, plus root `app`); only `my-bookings` has a module-local store. For deeper structure and cross-file relationships, query the knowledge graph (`graphify query "..."` / `graphify-out/GRAPH_REPORT.md`) rather than maintaining a duplicate map here.
+
 ## 4. Coding Conventions
 
 ### Naming:
@@ -83,9 +95,12 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 - For payment-related or booking-submission requests, use `generateIdempotencyKey()` from `shared/lib/idempotency-key.ts`.
 
 ## 5. UI & Design System
+> **Read `docs/design-system.md` before any UI work.** It is the governed source of
+> truth (tokens, the `app-admin-dropdown` contract, button roles, input shape, the §11
+> review rubric). This section is the quick reference; `design-system.md` is the contract.
 - **Layout**: Bootstrap 5 grid and utilities (not component library — just CSS).
 - **Complex widgets**: PrimeNG 17 (Calendar, Dropdown, DataTable, Dialog, etc.).
-- **Icons**: Bootstrap Icons.
+- **Icons**: **Material Symbols Outlined** (`.material-symbols-outlined`) is canonical (see `design-system.md` §5). Some legacy Bootstrap Icons remain in older components (consolidation debt) — don't add new ones.
 - **Typography**: Sarabun font (handles Thai script).
 - **SCSS**: Component-scoped `.component.scss` files. Global variables in `src/styles/`.
 - **Alerts/Toasts**: Always via `AlertService` — never call `Swal.fire()` directly.
@@ -93,7 +108,7 @@ One-way data flow: **Component → Store (dispatch) → Effect → Service (HTTP
 
 ## 6. Internationalization (i18n)
 - **Translation files**: `public/i18n/en.json`, `public/i18n/th.json`, `public/i18n/zh.json`.
-- **ZH gap**: `zh.json` does not exist yet and must be created. Every new i18n key must be added to **all three** files.
+- **ZH**: `zh.json` exists and is actively maintained. Every new i18n key must be added to **all three** files in the same commit (a missing key renders as its raw string with no build error).
 - **Default locale**: Thai (`'th'`).
 - **In templates**: `{{ 'KEY' | translate }}` only — never hardcode user-facing strings.
 - **In components/services**: `TranslateService.instant('KEY')` for synchronous use, `.get('KEY')` (with `takeUntil`) for reactive use.
