@@ -50,6 +50,11 @@ playwright-report/
 e2e/manual-admin-login.mjs
 e2e/*.png
 
+# QA/Playwright evidence screenshots and run artifacts — throwaway, kept on
+# the Jira card instead of the repo (see OBRS-83 cleanup)
+e2e-evidence/
+test-results/
+
 # Graphify code-graph output — locally generated AST artifact, not versioned
 graphify-out/
 
