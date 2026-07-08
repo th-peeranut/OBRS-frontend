@@ -122,7 +122,9 @@
       }
 
       // PDPA consent (legal, required) — kept but made compact so the whole
-      // form still fits a laptop viewport.
+      // form still fits a laptop viewport. The Thai copy is trimmed to wrap to
+      // 2 lines like EN/ZH, so the card is the same height in every language
+      // (no reserved dead space, no resize/jump on language switch).
       .form-check-label {
         font-size: $font-size-sm;
         line-height: $line-height-tight;
