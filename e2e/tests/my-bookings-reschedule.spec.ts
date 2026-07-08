@@ -210,18 +210,12 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
   test('AC7: NO_SEATS bounces back to the options list with an inline error, spinner not stuck', async ({
     page,
   }) => {
-    // KNOWN BUG (see QA report, OBRS-83 AC7): confirmed via live network trace
-    // that POST /bookings/3/reschedule -> 400 RESCHEDULE_ERROR_NO_SEATS
-    // completes fine, and the re-triggered GET /reschedule-options 200s ~2s
-    // later, yet the dialog's options-list view stays stuck on
-    // "Looking for available departures…" indefinitely (45s+) instead of
-    // showing the rejection message. Root cause in
-    // reschedule-dialog.component.ts's selectRescheduleConfirmErrorCode
-    // subscription: it re-dispatches loadRescheduleOptions directly instead of
-    // surfacing rescheduleConfirmError into the options-list's error state,
-    // and the fresh dispatch's reducer clears rescheduleOptionsError to null
-    // before the intended message can ever be read. This test encodes the
-    // CORRECT/expected behaviour and is left failing until that's fixed.
+    // FIXED in commit a4842ab: the NO_SEATS handler no longer re-dispatches
+    // loadRescheduleOptions (which used to reset rescheduleOptionsError->null
+    // and re-arm the spinner). It now bounces to 'options', clears the stale
+    // selection, and surfaces rescheduleConfirmError as a banner
+    // (.reschedule-options-list__confirm-error) alongside the still-loaded
+    // options list, via reschedule-options-list's new [confirmError] input.
     await loginAsCustomer(page);
     await gotoMyBookings(page);
 
@@ -250,16 +244,22 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await dialog.locator('.reschedule-step__actions .btn-primary').click();
 
     // Bounced back to the options list (not a silent failure, not a dead dialog).
-    // Confirm re-fetches the estimate before submitting, so this is two
-    // sequential Koyeb round trips — give it generous headroom.
-    await expect(dialog.locator('.reschedule-options-list')).toBeVisible({ timeout: 45_000 });
-    await expect(dialog.locator('.reschedule-options-list__state')).toContainText(
+    // Confirm re-fetches the estimate before submitting, so this is one
+    // sequential Koyeb round trip before the 400 — should resolve quickly
+    // (a few seconds), not hang. No options re-fetch happens anymore, so
+    // this must NOT take anywhere near the old 45s ceiling.
+    await expect(dialog.locator('.reschedule-options-list')).toBeVisible({ timeout: 15_000 });
+    await expect(dialog.locator('.reschedule-options-list__confirm-error')).toContainText(
       /no longer available/i,
-      { timeout: 45_000 }
+      { timeout: 15_000 }
     );
-    // The bounce-back must clear the options-loading spinner, not leave it spinning.
+    // The options list itself must still be shown alongside the banner —
+    // not replaced by it.
+    await expect(dialog.locator('.reschedule-option-card')).toHaveCount(1);
+    // No stuck/re-armed spinner.
     await expect(dialog.locator('.reschedule-spinner')).toHaveCount(0);
-    await page.screenshot({ path: 'e2e-evidence/no-seats-error.png', fullPage: true });
+    await expect(dialog.locator('.reschedule-options-list__state')).toHaveCount(0);
+    await page.screenshot({ path: 'e2e-evidence/no-seats-error-FIXED.png', fullPage: true });
 
     await dialog.locator('.reschedule-modal__close').click();
 
