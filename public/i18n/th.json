@@ -464,8 +464,8 @@
       "EMPTY": "ไม่พบรายงานการใช้งาน",
       "LOAD_FAILED": "โหลดรายงานไม่สำเร็จ กรุณารีเฟรช",
       "UNITS": "รายงาน",
-      "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "IMAGE_ENLARGE": "ขยายรูปภาพ {{position}}", "CLOSE": "ปิด" },
-      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึกสถานะ", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "resolved": "แก้ไขแล้ว", "wont_fix": "ไม่แก้ไข" },
+      "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "IMAGE_ENLARGE": "ขยายรูปภาพ {{position}}", "CLOSE": "ปิด", "TRIAGE_NOTE_LABEL": "บันทึกการจัดการ", "TRIAGE_NOTE_PLACEHOLDER": "เพิ่มบันทึกสำหรับรายงานนี้...", "TRIAGED_BY": "จัดการโดย", "TRIAGED_AT": "จัดการเมื่อ", "JIRA_LINK_LABEL": "ปัญหาใน Jira", "JIRA_LINK_ARIA": "เปิดปัญหา Jira {{key}} ในแท็บใหม่" },
+      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึกสถานะ", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "accepted": "ยอมรับแล้ว", "resolved": "แก้ไขแล้ว", "wont_fix": "ไม่แก้ไข" },
       "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
       "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่",
       "NEW_BADGE_ARIA": "มีรายงานปัญหาการใช้งานใหม่ {{count}} รายการ"

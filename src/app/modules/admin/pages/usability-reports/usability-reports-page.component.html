@@ -207,6 +207,43 @@
           </div>
         </div>
 
+        <div class="ur-detail-row" *ngIf="detailReport.triagedBy !== null && detailReport.triagedBy !== undefined">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_BY' | translate }}</span>
+          <span>{{ detailReport.triagedBy }}</span>
+        </div>
+        <div class="ur-detail-row" *ngIf="detailReport.triagedAt">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_AT' | translate }}</span>
+          <span>{{ detailReport.triagedAt }}</span>
+        </div>
+        <div class="ur-detail-row" *ngIf="detailReport.jiraIssueKey">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_LABEL' | translate }}</span>
+          <a
+            class="btn btn-link p-0"
+            [href]="jiraIssueUrl(detailReport.jiraIssueKey)"
+            target="_blank"
+            rel="noopener noreferrer"
+            [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_ARIA' | translate:{ key: detailReport.jiraIssueKey }"
+          >
+            {{ detailReport.jiraIssueKey }}
+            <span class="material-symbols-outlined" aria-hidden="true">open_in_new</span>
+          </a>
+        </div>
+
+        <!-- Triage note -->
+        <div class="admin-form-field mt-3">
+          <label class="admin-form-label" for="ur-triage-note">
+            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_LABEL' | translate }}
+          </label>
+          <textarea
+            id="ur-triage-note"
+            class="admin-field"
+            rows="3"
+            [ngModel]="selectedTriageNote"
+            (ngModelChange)="onTriageNoteChange($event)"
+            [placeholder]="'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGE_NOTE_PLACEHOLDER' | translate"
+          ></textarea>
+        </div>
+
         <!-- Status update -->
         <div class="ur-status-update mt-3">
           <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>

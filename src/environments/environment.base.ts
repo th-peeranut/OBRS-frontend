@@ -9,6 +9,9 @@ export const environmentBase = {
     baseUrl: '',
     id: '0123456789',
   },
+  jira: {
+    browseBaseUrl: 'https://nj-phuyaipu.atlassian.net/browse/',
+  },
   omisePublicKey: 'pkey_test_5rd059u8cgynfe12lds',
   useMockPayments: false,
   useDevApiEndpoints: true,

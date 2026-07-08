@@ -1,7 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
+import { environment } from '../../../../../environments/environment';
 import { UsabilityReportsPageComponent } from './usability-reports-page.component';
 import { UsabilityReportsStore } from './usability-reports.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
@@ -48,7 +50,7 @@ describe('UsabilityReportsPageComponent', () => {
     alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error']);
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot(), AdminSharedModule],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
       declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },
@@ -117,6 +119,10 @@ describe('UsabilityReportsPageComponent', () => {
       imageCount: 0,
       images: [],
       createdAt: '2026-01-01T00:00:00Z',
+      triageNote: null,
+      triagedBy: null,
+      triagedAt: null,
+      jiraIssueKey: null,
     };
 
     const detailResponse: ResponseAPI<UsabilityReportDetail> = {
@@ -187,6 +193,10 @@ describe('UsabilityReportsPageComponent', () => {
       },
     ],
     createdAt: '2026-01-01T00:00:00Z',
+    triageNote: null,
+    triagedBy: null,
+    triagedAt: null,
+    jiraIssueKey: null,
   };
 
   function primeReportList(): void {
@@ -384,5 +394,119 @@ describe('UsabilityReportsPageComponent', () => {
     expect(openSpy)
       .withContext('View button opens once; the row handler must bail on button-origin clicks')
       .toHaveBeenCalledOnceWith('rep-1');
+  });
+
+  // ── OBRS-86 regression specs: triage workflow ───────────────────────────
+
+  it('sends the triage note in the PUT payload when saving status', () => {
+    primeReportList();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: mockFullDetail,
+    }));
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      of({ code: 200, message: 'OK', data: null })
+    );
+    storeSpy.mutate.and.callFake((transformFn: (current: UsabilityReportPage) => UsabilityReportPage) => {
+      transformFn(mockSummaryPage);
+    });
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    component['onTriageNoteChange']('Investigated — reproduced on iOS Safari.');
+    component['selectedDetailStatus'] = 'accepted';
+    component.saveStatus();
+
+    expect(adminApiServiceSpy.updateUsabilityReportStatus)
+      .withContext('the triage note must be sent alongside the status in the PUT payload')
+      .toHaveBeenCalledOnceWith('rep-1', 'accepted', 'Investigated — reproduced on iOS Safari.');
+  });
+
+  it('renders the accepted status as .admin-status.is-accepted in the table', () => {
+    const acceptedPage: UsabilityReportPage = {
+      content: [{ ...mockSummaryPage.content[0], status: 'accepted' }],
+      totalElements: 1,
+    };
+    storeSpy.data$.next(acceptedPage);
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+
+    const statusEl: HTMLElement = fixture.nativeElement.querySelector('tr.ur-report-row .admin-status');
+    expect(statusEl).withContext('status pill must render').not.toBeNull();
+    expect(statusEl.classList.contains('is-accepted'))
+      .withContext('accepted status must render with the is-accepted class')
+      .toBeTrue();
+  });
+
+  it('renders the Jira link with the correct href when jiraIssueKey is present, and renders nothing when absent', () => {
+    primeReportList();
+    const detailWithJira: UsabilityReportDetail = { ...mockFullDetail, jiraIssueKey: 'OBRS-123' };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: detailWithJira,
+    }));
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    const jiraLink: HTMLAnchorElement = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
+    expect(jiraLink).withContext('Jira link must render when jiraIssueKey is present').not.toBeNull();
+    expect(jiraLink.getAttribute('href')).toBe(`${environment.jira.browseBaseUrl}OBRS-123`);
+
+    component['closeDetail']();
+    fixture.detectChanges();
+
+    // A different report id with no jiraIssueKey — avoids resurfacing the
+    // first report's cached (with-Jira) detail.
+    const detailNoJira: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', jiraIssueKey: null };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: detailNoJira,
+    }));
+    component['openDetail']('rep-2');
+    fixture.detectChanges();
+
+    const noJiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
+    expect(noJiraLink).withContext('Jira link must not render when jiraIssueKey is absent').toBeNull();
+  });
+
+  it('does not let a late detail fetch overwrite a triage note the admin already typed, and a cache-hit reopen shows the cached note', () => {
+    primeReportList();
+
+    const detail$ = new Subject<{ code: number; message: string; data: UsabilityReportDetail }>();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(detail$.asObservable());
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    // Admin types a note during the optimistic-open window (before detail arrives).
+    component['onTriageNoteChange']('Draft note from admin');
+    expect(component['selectedTriageNote']).toBe('Draft note from admin');
+
+    // Detail resolves carrying a DIFFERENT (server) triage note — must not clobber.
+    const serverDetail: UsabilityReportDetail = { ...mockFullDetail, triageNote: 'Server note' };
+    detail$.next({ code: 200, message: 'OK', data: serverDetail });
+    detail$.complete();
+    fixture.detectChanges();
+
+    expect(component['selectedTriageNote'])
+      .withContext('an in-progress triage note edit must survive the detail GET resolving')
+      .toBe('Draft note from admin');
+
+    // Close and reopen the same report — cache hit must surface the cached
+    // (server) note, not the previous session's leftover draft.
+    component['closeDetail']();
+    fixture.detectChanges();
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    expect(component['selectedTriageNote'])
+      .withContext('cache-hit reopen must show the cached triage note')
+      .toBe('Server note');
   });
 });

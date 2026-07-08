@@ -819,11 +819,12 @@ export class AdminApiService {
 
   updateUsabilityReportStatus(
     id: string,
-    status: UsabilityReportStatus
+    status: UsabilityReportStatus,
+    triageNote: string | null
   ): Observable<ResponseAPI<unknown>> {
     return this.putRequest<unknown>(
       `${this.baseUrl}/private/admin/usability-reports/${id}/status`,
-      { status }
+      { status, triageNote }
     );
   }
 }

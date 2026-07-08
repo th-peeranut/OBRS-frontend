@@ -464,8 +464,8 @@
       "EMPTY": "未找到可用性报告。",
       "LOAD_FAILED": "加载报告失败，请刷新。",
       "UNITS": "份报告",
-      "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "IMAGE_ENLARGE": "放大图片 {{position}}", "CLOSE": "关闭" },
-      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "resolved": "已解决", "wont_fix": "不修复" },
+      "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "IMAGE_ENLARGE": "放大图片 {{position}}", "CLOSE": "关闭", "TRIAGE_NOTE_LABEL": "处理备注", "TRIAGE_NOTE_PLACEHOLDER": "为此报告添加备注...", "TRIAGED_BY": "处理人", "TRIAGED_AT": "处理时间", "JIRA_LINK_LABEL": "Jira 问题", "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}" },
+      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "accepted": "已接受", "resolved": "已解决", "wont_fix": "不修复" },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
