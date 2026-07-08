@@ -465,7 +465,7 @@
       "LOAD_FAILED": "Failed to load reports. Please refresh.",
       "UNITS": "reports",
       "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "IMAGE_ENLARGE": "Enlarge image {{position}}", "CLOSE": "Close", "TRIAGE_NOTE_LABEL": "Triage Note", "TRIAGE_NOTE_PLACEHOLDER": "Add a note for this report...", "TRIAGED_BY": "Triaged By", "TRIAGED_AT": "Triaged At", "JIRA_LINK_LABEL": "Jira Issue", "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab" },
-      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "wont_fix": "Won't Fix" },
+      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "wont_fix": "Rejected" },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
       "NEW_BADGE_ARIA": "{{count}} new usability reports"
