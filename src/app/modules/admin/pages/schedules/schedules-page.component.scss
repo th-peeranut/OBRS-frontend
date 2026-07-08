@@ -1,3 +1,4 @@
+@import "../../../../../styles/variables.scss";
 :host {
   display: block;
 }
@@ -13,7 +14,7 @@
 .schedule-tab {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: $space-2xs;
   border: 0;
   border-radius: 10px;
   background: transparent;
@@ -21,11 +22,11 @@
   cursor: pointer;
   padding: 9px 16px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: $font-weight-bold;
 }
 
 .schedule-tab .material-symbols-outlined {
-  font-size: 18px;
+  font-size: $font-size-md;
 }
 
 .schedule-tab.is-active {
@@ -40,11 +41,11 @@
   min-width: 22px;
   height: 20px;
   padding: 0 7px;
-  border-radius: 999px;
+  border-radius: $radius-pill;
   background: rgba(0, 102, 135, 0.12);
   color: #006687;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: $font-weight-extrabold;
 }
 
 .schedule-tab.is-active .schedule-tab-count {
@@ -63,31 +64,31 @@
   background: rgba(0, 102, 135, 0.06);
   color: #0a3f58;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
 }
 
 .schedule-focus-banner .material-symbols-outlined {
-  font-size: 18px;
+  font-size: $font-size-md;
   color: #006687;
 }
 
 .schedule-focus-clear {
   margin-left: auto;
   border: 0;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background: #ffffff;
   color: #006687;
   cursor: pointer;
   padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
   box-shadow: 0 0 0 1px rgba(0, 102, 135, 0.25);
 }
 
 .schedule-form-backdrop {
   background: rgba(45, 49, 51, 0.4);
   backdrop-filter: blur(5px);
-  padding: 24px;
+  padding: $space-lg;
 }
 
 .schedule-form-modal {
@@ -97,7 +98,7 @@
   gap: 0;
   padding: 0;
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 12px;
+  border-radius: $radius-md;
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(20px);
   box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
@@ -106,8 +107,8 @@
 .schedule-form-header {
   display: flex;
   justify-content: space-between;
-  gap: 20px;
-  padding: 32px 40px;
+  gap: $space-md;
+  padding: $space-xl 40px;
   border-bottom: 1px solid #eceef0;
 }
 
@@ -118,7 +119,7 @@
   height: 36px;
   flex: 0 0 auto;
   border: 0;
-  border-radius: 999px;
+  border-radius: $radius-pill;
   background: transparent;
   color: #6e797f;
 }
@@ -136,15 +137,15 @@
 .schedule-form-body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: $space-lg;
   overflow-y: auto;
-  padding: 40px;
+  padding: $space-2xl;
 }
 
 .schedule-form-modal .admin-form-label {
   color: #191c1e;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
 }
 
 .schedule-form-message {
@@ -156,9 +157,9 @@
 .schedule-form-modal .admin-field {
   min-height: 40px;
   border: 0;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   caret-color: #191c1e;
-  padding: 8px 12px;
+  padding: $space-2xs 12px;
   box-shadow: 0 0 0 1px rgba(110, 121, 127, 0.4);
 }
 
@@ -176,17 +177,17 @@
 
 .schedule-form-actions {
   margin-top: 0;
-  padding: 24px 40px;
+  padding: $space-lg 40px;
   border-top: 1px solid #eceef0;
   background: rgba(242, 244, 246, 0.56);
-  gap: 12px;
+  gap: $space-xs;
 }
 
 .schedule-form-actions .admin-btn {
   min-height: 40px;
   border-radius: 10px;
   padding: 10px 28px;
-  font-weight: 800;
+  font-weight: $font-weight-extrabold;
 }
 
 .schedule-form-actions .admin-btn-primary {
@@ -210,7 +211,7 @@
   color: #191c1e;
   font: inherit;
   font-size: 13px;
-  padding: 8px 10px;
+  padding: $space-2xs 10px;
   outline: 0;
 }
 
@@ -235,7 +236,7 @@
   left: 0 !important;
   width: 280px !important;
   min-width: 280px !important;
-  padding: 8px;
+  padding: $space-2xs;
   transform-origin: top left !important;
 }
 
@@ -249,7 +250,7 @@
 
 :host ::ng-deep .schedule-calendar-filter-panel table {
   margin: 0;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 :host ::ng-deep .schedule-calendar-filter-panel table th,
@@ -268,12 +269,12 @@
 
 :host ::ng-deep .schedule-calendar-filter-panel .p-button {
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 @media (max-width: 640px) {
   .schedule-form-backdrop {
-    padding: 12px;
+    padding: $space-xs;
   }
 
   .schedule-form-header,

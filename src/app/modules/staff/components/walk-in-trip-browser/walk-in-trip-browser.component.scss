@@ -1,3 +1,4 @@
+@import "../../../../../styles/variables.scss";
 // Lay the calendar out as a flex row so the input grows and the date-trigger
 // button keeps its natural width. The old `.p-inputtext { width: 100% }` made the
 // input consume the whole inline-flex container, crushing the trigger button into
@@ -30,7 +31,7 @@
   left: 0 !important;
   width: 280px !important;
   min-width: 280px !important;
-  padding: 8px;
+  padding: $space-2xs;
   transform-origin: top left !important;
 }
 
@@ -44,7 +45,7 @@
 
 :host ::ng-deep .booking-calendar-panel table {
   margin: 0;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 :host ::ng-deep .booking-calendar-panel table th,
@@ -63,7 +64,7 @@
 
 :host ::ng-deep .booking-calendar-panel .p-button {
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 @media (max-width: 640px) {

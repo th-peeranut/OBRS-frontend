@@ -1,3 +1,4 @@
+@import "../../../../../styles/variables.scss";
 :host {
   display: block;
 }
@@ -14,7 +15,7 @@
   max-height: 95vh;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 12px;
+  border-radius: $radius-md;
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
 }
@@ -23,7 +24,7 @@
 .user-editor-footer {
   display: flex;
   align-items: center;
-  padding: 24px 40px;
+  padding: $space-lg 40px;
   background: rgba(242, 244, 246, 0.7);
 }
 
@@ -37,21 +38,21 @@
   margin: 0;
   color: #003f58;
   font-size: 26px;
-  font-weight: 800;
+  font-weight: $font-weight-extrabold;
 }
 
 .user-editor-subtitle {
-  margin: 8px 0 0;
+  margin: $space-2xs 0 0;
   color: var(--muted);
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
 }
 
 .user-editor-close {
   width: 36px;
   height: 36px;
   border: 0;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background: transparent;
   color: #6e797f;
   cursor: pointer;
@@ -59,19 +60,19 @@
 
 .user-editor-body {
   overflow-y: auto;
-  padding: 40px;
+  padding: $space-2xl;
 }
 
 .user-editor-form {
   display: flex;
   flex-direction: column;
-  gap: 40px;
+  gap: $space-2xl;
 }
 
 .user-editor-section-title {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: $space-xs;
   margin-bottom: 24px;
   color: var(--muted);
 }
@@ -83,14 +84,14 @@
 .user-editor-section-title h5 {
   margin: 0;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: $font-weight-extrabold;
   text-transform: uppercase;
 }
 
 .user-editor-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 24px;
+  gap: $space-lg;
 }
 
 .user-editor-grid.is-two-column {
@@ -100,7 +101,7 @@
 .user-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: $space-2xs;
   grid-column: span 12;
 }
 
@@ -118,33 +119,33 @@
 
 .user-field label {
   color: var(--text);
-  font-size: 12px;
-  font-weight: 800;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-extrabold;
 }
 
 .user-input {
   min-height: 46px;
   border: 0;
-  border-radius: 8px;
-  padding: 12px 16px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: $radius-sm;
+  padding: $space-xs 16px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   box-shadow: inset 0 0 0 1px rgba(189, 200, 207, 0.48);
 }
 
 .user-role-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: $space-xs;
 }
 
 .user-role-chip {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: $space-xs;
   min-height: 44px;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background: #f2f4f6;
   color: var(--muted);
   cursor: pointer;
@@ -169,13 +170,13 @@
 .user-role-chip span,
 .user-editor-cancel,
 .user-editor-save {
-  font-size: 14px;
-  font-weight: 800;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-extrabold;
 }
 
 .user-editor-footer {
   justify-content: flex-end;
-  gap: 16px;
+  gap: $space-sm;
   border-top: 1px solid var(--line);
 }
 
@@ -183,7 +184,7 @@
 .user-editor-save {
   min-height: 44px;
   border: 0;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   cursor: pointer;
 }
 
@@ -202,13 +203,13 @@
 
 @media (max-width: 768px) {
   .user-editor-modal {
-    border-radius: 8px;
+    border-radius: $radius-sm;
   }
 
   .user-editor-header,
   .user-editor-body,
   .user-editor-footer {
-    padding: 24px;
+    padding: $space-lg;
   }
 
   .user-editor-grid,
