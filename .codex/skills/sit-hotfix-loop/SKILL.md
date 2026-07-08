@@ -3,8 +3,6 @@ name: sit-hotfix-loop
 description: Debug → fix → review → deploy → verify loop for bugs found while manually testing the OBRS app (local frontend against the live SIT backend). Trigger each time the user reports/pastes a SIT issue in chat. Leads with debug-mantra, reuses the obrs-* agents for the fix, scrutinizes, applies live Supabase DB migrations directly when needed, pushes to the `sit` branch (CI auto-deploys to Koyeb), verifies against live SIT, and records each fix in a local retrospective. NOT the feature pipeline — for building features use agent-office.
 ---
 
-> **Mirrored from the `obrs-agent-office` repo — canonical source of truth.** This copy lives here as an *alignment reference* for AI coding in this repo; edit the skill in `obrs-agent-office`, not here. Paths such as `../OBRS-backend`, `../OBRS-frontend`, and `.claude/agent-office/…` are relative to the **obrs-agent-office** repo (a sibling of this one), not to this repo — do not run the cross-repo orchestration from here. When coding with AI in this repo: read this repo's own skills first, then align to this office skill as the source of truth.
-
 # sit-hotfix-loop — OBRS SIT Bug Hotfix Loop
 
 You (Claude Code, the orchestrator) run this loop **once per issue the user reports in chat**.
@@ -178,11 +176,11 @@ Run this **only after** (a) verification passes (Step 6) **and** (b) the user ha
   git -C ../OBRS-frontend merge --no-ff sit/$SLUG -m "fix(sit): <summary>"
   git -C ../OBRS-frontend push origin dev
   ```
-- **Remove the worktree** once the merge is pushed — never leave one behind:
+- **Remove the worktree** once the merge is pushed — never leave one behind. **Use the guarded wrapper** — a PreToolUse hook DENIES raw `git worktree remove` because it can silently follow the `node_modules` junction and wipe the main clone (CORE.md, 5 occurrences). The wrapper deletes the junction first, verifies, removes, then post-checks `node_modules`:
   ```bash
-  git -C ../OBRS-<repo> worktree remove ../OBRS-<repo>-wt-$SLUG && git -C ../OBRS-<repo> branch -d sit/$SLUG
+  powershell -NoProfile -ExecutionPolicy Bypass -File .claude/agent-office/scripts/safe-worktree-remove.ps1 -Worktree ../OBRS-<repo>-wt-$SLUG && git -C ../OBRS-<repo> branch -d sit/$SLUG
   ```
-  If `worktree remove` reports residual changes, commit/merge them first — do **not** `--force` work away.
+  If the wrapper's `git worktree remove` exits non-zero (residual changes), commit/merge them first — do **not** pass `-Force` to work away real changes.
 
 The Jira card is already at Done (the user set it, which is what unblocked this step) — no further transition needed here.
 

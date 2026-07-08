@@ -3,8 +3,6 @@ name: agent-office
 description: Run the OBRS Agent Office — a full-stack multi-agent pipeline: PM → SA → UX → (Frontend ∥ Backend) → QA → Reporter, each with Scrutinize review and retry logic. Use when the user submits a feature requirement or bug fix for the OBRS project.
 ---
 
-> **Mirrored from the `obrs-agent-office` repo — canonical source of truth.** This copy lives here as an *alignment reference* for AI coding in this repo; edit the skill in `obrs-agent-office`, not here. Paths such as `../OBRS-backend`, `../OBRS-frontend`, and `.claude/agent-office/…` are relative to the **obrs-agent-office** repo (a sibling of this one), not to this repo — do not run the cross-repo orchestration from here. When coding with AI in this repo: read this repo's own skills first, then align to this office skill as the source of truth.
-
 # Agent Office — OBRS Team
 
 You (Claude Code, the orchestrator) drive this pipeline using the `Agent` tool.
@@ -185,12 +183,12 @@ Run this **only after** (a) QA verification passes (Step 6) **and** (b) the user
    git -C ../OBRS-frontend push origin dev
    ```
 
-4. **Remove the worktree(s)** once the merge is pushed (and, for backend, CI is green) — never leave one behind:
+4. **Remove the worktree(s)** once the merge is pushed (and, for backend, CI is green) — never leave one behind. **Use the guarded wrapper** — a PreToolUse hook DENIES raw `git worktree remove` because it can silently follow the `node_modules` junction and wipe the main clone's packages (CORE.md, 5 occurrences). The wrapper deletes the junction first, verifies it is gone, removes the worktree, then post-checks that the main clone's `node_modules` survived:
    ```bash
-   git -C ../OBRS-backend  worktree remove ../OBRS-backend-wt-$SLUG  && git -C ../OBRS-backend  branch -d ao/$SLUG
-   git -C ../OBRS-frontend worktree remove ../OBRS-frontend-wt-$SLUG && git -C ../OBRS-frontend branch -d ao/$SLUG
+   powershell -NoProfile -ExecutionPolicy Bypass -File .claude/agent-office/scripts/safe-worktree-remove.ps1 -Worktree ../OBRS-backend-wt-$SLUG  && git -C ../OBRS-backend  branch -d ao/$SLUG
+   powershell -NoProfile -ExecutionPolicy Bypass -File .claude/agent-office/scripts/safe-worktree-remove.ps1 -Worktree ../OBRS-frontend-wt-$SLUG && git -C ../OBRS-frontend branch -d ao/$SLUG
    ```
-   If `worktree remove` reports residual changes, you skipped sub-step 1 — commit/merge them first; do **not** `--force` work away.
+   If the wrapper reports residual changes (its `git worktree remove` exits non-zero), you skipped sub-step 1 — commit/merge them first; do **not** pass `-Force` to work away real changes.
 
 5. Record the `dev` merge commit(s), the SIT push + CI/smoke result, and the worktree removal for the final report (Step 10). The Jira card is already at Done (the user set it, which is what unblocked this step) — no further transition needed here.
 
