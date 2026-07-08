@@ -164,6 +164,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           category: summary.category,
           status: summary.status,
           userId: summary.userId,
+          reporterEmail: null,
           description: summary.descriptionPreview,
           descriptionPreview: summary.descriptionPreview,
           routeUrl: '',

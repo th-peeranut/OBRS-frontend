@@ -100,6 +100,85 @@ describe('ReportUsabilityFabComponent', () => {
       .toBeTruthy();
   });
 
+  // (b3) OBRS-108: optional reporter email — field exists, empty submits, valid email is sent
+  it('should render an optional email field and submit successfully with no email', () => {
+    component['isModalOpen'] = true;
+    fixture.detectChanges();
+
+    const emailInput = fixture.nativeElement.querySelector(
+      '#report-email'
+    ) as HTMLInputElement;
+    expect(emailInput).withContext('optional email input should be in the DOM').toBeTruthy();
+
+    const receipt: UsabilityReportReceipt = {
+      id: '1',
+      category: 'bug',
+      status: 'new',
+      imageCount: 0,
+      createdAt: '',
+    };
+    usabilityReportServiceSpy.submitReport.and.returnValue(of(receipt));
+
+    component['form'].get('description')?.setValue('Some description');
+    component['form'].get('reporterEmail')?.setValue('');
+    component.onSubmit();
+
+    expect(usabilityReportServiceSpy.submitReport)
+      .withContext('submit must succeed with an empty (anonymous) email')
+      .toHaveBeenCalledTimes(1);
+    const sentFormData = usabilityReportServiceSpy.submitReport.calls.mostRecent()
+      .args[0] as FormData;
+    expect(sentFormData.get('reporterEmail')).toBe('');
+  });
+
+  it('should include a valid reporter email in the submit payload', () => {
+    component['isModalOpen'] = true;
+    fixture.detectChanges();
+
+    const receipt: UsabilityReportReceipt = {
+      id: '1',
+      category: 'bug',
+      status: 'new',
+      imageCount: 0,
+      createdAt: '',
+    };
+    usabilityReportServiceSpy.submitReport.and.returnValue(of(receipt));
+
+    component['form'].get('description')?.setValue('Some description');
+    component['form'].get('reporterEmail')?.setValue('reporter@example.com');
+    component.onSubmit();
+
+    expect(usabilityReportServiceSpy.submitReport).toHaveBeenCalledTimes(1);
+    const sentFormData = usabilityReportServiceSpy.submitReport.calls.mostRecent()
+      .args[0] as FormData;
+    expect(sentFormData.get('reporterEmail')).toBe('reporter@example.com');
+  });
+
+  it('should block submit on an invalid (non-empty) reporter email and show an inline hint', () => {
+    component['isModalOpen'] = true;
+    fixture.detectChanges();
+
+    component['form'].get('description')?.setValue('Some description');
+    component['form'].get('reporterEmail')?.setValue('not-an-email');
+    component.onSubmit();
+    fixture.detectChanges();
+
+    expect(usabilityReportServiceSpy.submitReport)
+      .withContext('submitReport must NOT be called with an invalid email')
+      .not.toHaveBeenCalled();
+    expect(component['emailInvalid'])
+      .withContext('emailInvalid should be true for a malformed, non-empty email')
+      .toBeTrue();
+
+    const errorEls = fixture.nativeElement.querySelectorAll('.report-field__error') as NodeListOf<HTMLElement>;
+    const invalidMsgEl = Array.from(errorEls).find((el) =>
+      el.textContent?.includes('USABILITY_REPORT.EMAIL.INVALID')
+    );
+    expect(invalidMsgEl)
+      .withContext('the invalid-email hint must be visible in the DOM')
+      .toBeTruthy();
+  });
+
   // (c) Error code mapping: known → specific key; unknown → GENERIC; reads err?.error?.errorCode
   it('should map known errorCode to specific i18n key and unknown to GENERIC', () => {
     const translateService = TestBed.inject(TranslateService);

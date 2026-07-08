@@ -69,6 +69,24 @@
           </div>
         </div>
 
+        <!-- Reporter Email (optional) -->
+        <div class="report-field mt-3">
+          <label class="report-field__label" for="report-email">
+            {{ 'USABILITY_REPORT.EMAIL.LABEL' | translate }}
+          </label>
+          <input
+            id="report-email"
+            type="email"
+            class="report-textarea"
+            [class.is-invalid]="emailInvalid"
+            formControlName="reporterEmail"
+            [placeholder]="'USABILITY_REPORT.EMAIL.PLACEHOLDER' | translate"
+          />
+          <div *ngIf="emailInvalid" class="report-field__error">
+            {{ 'USABILITY_REPORT.EMAIL.INVALID' | translate }}
+          </div>
+        </div>
+
         <!-- Images -->
         <div class="report-field mt-3">
           <label class="report-field__label">
