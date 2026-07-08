@@ -33,6 +33,11 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isSelling = false;
   /** Per-seat fare from sell-page (after segment resolution). */
   @Input() pricePerSeat = 0;
+  // OBRS-85: parity/forward-compat input for a future walk-in round-trip
+  // discount. Dormant today — sell-page.component.ts hardcodes
+  // bookingType:'one_way' for every walk-in sale, so this can never be > 0
+  // under current functionality (see AGENT_MEMORY.md Finding 2).
+  @Input() discountAmount: number | null = null;
 
   @Output() sell = new EventEmitter<WalkInCheckoutPayload>();
 
@@ -90,8 +95,15 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     return this.pricePerSeat * this.selectedSeats.length;
   }
 
+  // OBRS-85: netAmount === totalAmount while discountAmount is null/0 (today,
+  // always — see the @Input() comment above), so this is a no-op today and
+  // only takes effect once a future walk-in round-trip flow can populate it.
+  protected get netAmount(): number {
+    return this.totalAmount - (this.discountAmount ?? 0);
+  }
+
   protected get changeDue(): number {
-    return this.cashReceived - this.totalAmount;
+    return this.cashReceived - this.netAmount;
   }
 
   protected get canSell(): boolean {
@@ -99,7 +111,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
       this.contactForm.valid &&
       this.selectedSeats.length >= 1 &&
       this.pricePerSeat > 0 &&
-      this.cashReceived >= this.totalAmount
+      this.cashReceived >= this.netAmount
     );
   }
 

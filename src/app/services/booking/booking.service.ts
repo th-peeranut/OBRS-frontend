@@ -52,15 +52,35 @@ export class BookingService {
 
   // Coerce the intake response to the canonical shape in one place. bookingId
   // resolves to 0 and bookingNumber to '' when absent/invalid; callers treat
-  // those as "not created".
+  // those as "not created". OBRS-85: also forward the server-computed
+  // totalAmount/discountAmountSnapshot/netAmount snapshot when present — these
+  // are omitted (undefined) rather than coerced to 0, so callers can tell
+  // "no discount data returned" apart from "discount is zero".
   private normalizeCreateBooking(
     data: CreateBookingResponse | null | undefined
   ): CreateBookingResponse {
     const bookingId = Number(data?.bookingId);
-    return {
+    const result: CreateBookingResponse = {
       bookingId: Number.isFinite(bookingId) && bookingId > 0 ? bookingId : 0,
       bookingNumber: String(data?.bookingNumber ?? '').trim(),
     };
+
+    const totalAmount = Number(data?.totalAmount);
+    if (Number.isFinite(totalAmount)) {
+      result.totalAmount = totalAmount;
+    }
+
+    const discountAmountSnapshot = Number(data?.discountAmountSnapshot);
+    if (Number.isFinite(discountAmountSnapshot)) {
+      result.discountAmountSnapshot = discountAmountSnapshot;
+    }
+
+    const netAmount = Number(data?.netAmount);
+    if (Number.isFinite(netAmount)) {
+      result.netAmount = netAmount;
+    }
+
+    return result;
   }
 
   getBookingTickets(

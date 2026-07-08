@@ -138,6 +138,7 @@
       "ROUTE_MANAGEMENT": "เส้นทาง",
       "SCHEDULES": "ตารางเดินรถ",
       "BOOKINGS_MANAGEMENT": "การจอง",
+      "PROMOTIONS": "โปรโมชั่น",
       "USABILITY_REPORTS": "รายงานการใช้งาน"
     },
     "LAYOUT": {
@@ -238,6 +239,23 @@
       "TH_LABEL": "ชื่อภาษาไทย",
       "EN_DESCRIPTION": "คำอธิบายภาษาอังกฤษ",
       "TH_DESCRIPTION": "คำอธิบายภาษาไทย"
+    },
+    "PROMOTIONS": {
+      "SUBTITLE": "จัดการส่วนลดสำหรับการจองแบบไป-กลับ",
+      "DISCOUNT_TYPE": "ประเภทส่วนลด",
+      "CODE": "รหัส",
+      "SLUG": "Slug",
+      "TIMES_USED": "จำนวนครั้งที่ใช้",
+      "USAGE_LIMIT": "จำนวนครั้งที่ใช้ได้สูงสุด",
+      "DISCOUNT_AMOUNT": "จำนวนส่วนลด",
+      "STATUS": "สถานะ",
+      "STATUS_ACTIVE": "ใช้งาน",
+      "STATUS_INACTIVE": "ไม่ใช้งาน",
+      "START_DATE": "วันที่เริ่มต้น",
+      "END_DATE": "วันที่สิ้นสุด",
+      "MIN_BOOKING_AMOUNT": "ยอดจองขั้นต่ำ",
+      "DATE_RANGE_VALIDATION": "วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มต้น",
+      "LOAD_FAILED": "ไม่สามารถโหลดโปรโมชั่นไป-กลับได้"
     },
     "ROLES": {
       "TITLE": "คลังการควบคุมสิทธิ์",
@@ -842,6 +860,8 @@
       "TICKET_PRICE_ONEWAY": "ราคาตั๋วเที่ยวเดียว",
       "TICKET_PRICE_ROUNDTRIP": "ราคาตั๋วไป-กลับ",
       "TICKET_UNIT": "บาท/คน",
+      "SUBTOTAL": "ยอดรวมก่อนหักส่วนลด",
+      "DISCOUNT_ROUND_TRIP": "ส่วนลดไป-กลับ",
       "TOTAL": "รวมทั้งหมด",
       "TOTAL_UNIT": "บาท",
       "CONFIRM": "ยืนยันการชำระเงิน"
@@ -1074,6 +1094,8 @@
       "CONTACT_PHONE": "เบอร์ผู้ติดต่อ",
       "CONTACT_EMAIL": "อีเมลผู้ติดต่อ",
       "TOTAL_AMOUNT": "ยอดรวม",
+      "SUBTOTAL": "ยอดรวมก่อนหักส่วนลด",
+      "DISCOUNT_ROUND_TRIP": "ส่วนลดไป-กลับ",
       "CASH_ONLY_BADGE": "ชำระด้วยเงินสด",
       "CASH_ONLY_NOTE": "การขาย Walk-in รับเฉพาะเงินสด กรุณาเก็บเงินก่อนยืนยัน",
       "BADGE_AVAILABLE": "ว่าง",

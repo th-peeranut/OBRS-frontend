@@ -117,6 +117,13 @@ export interface WalkInBookingReqDto {
 export interface WalkInBookingRespDto {
   bookingId: number;
   bookingNumber: string;
+  // OBRS-85: parity with CreateBookingResponse (booking.interface.ts). Dormant
+  // today — every walk-in sale is bookingType:'one_way', so the backend never
+  // populates a discount here; kept for forward-compat with a future walk-in
+  // round-trip flow.
+  totalAmount?: number;
+  discountAmountSnapshot?: number;
+  netAmount?: number;
 }
 
 export interface WalkInPaymentReqDto {
@@ -131,6 +138,10 @@ export interface WalkInPaymentRespDto {
   status: string;
   paymentMethod: string;
   amount: number;
+  // OBRS-85: same parity/dormant fields as WalkInBookingRespDto.
+  totalAmount?: number;
+  discountAmountSnapshot?: number;
+  netAmount?: number;
 }
 
 export interface BoardingListItemDto {

@@ -138,6 +138,7 @@
       "ROUTE_MANAGEMENT": "Routes",
       "SCHEDULES": "Schedules",
       "BOOKINGS_MANAGEMENT": "Bookings",
+      "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports"
     },
     "LAYOUT": {
@@ -238,6 +239,23 @@
       "TH_LABEL": "Thai Label",
       "EN_DESCRIPTION": "English Description",
       "TH_DESCRIPTION": "Thai Description"
+    },
+    "PROMOTIONS": {
+      "SUBTITLE": "Manage the round-trip booking discount.",
+      "DISCOUNT_TYPE": "Discount Type",
+      "CODE": "Code",
+      "SLUG": "Slug",
+      "TIMES_USED": "Times Used",
+      "USAGE_LIMIT": "Usage Limit",
+      "DISCOUNT_AMOUNT": "Discount Amount",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "Active",
+      "STATUS_INACTIVE": "Inactive",
+      "START_DATE": "Start Date",
+      "END_DATE": "End Date",
+      "MIN_BOOKING_AMOUNT": "Minimum Booking Amount",
+      "DATE_RANGE_VALIDATION": "End date must be on or after the start date.",
+      "LOAD_FAILED": "Unable to load the round-trip promotion."
     },
     "ROLES": {
       "TITLE": "Access Control Archive",
@@ -841,6 +859,8 @@
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
       "TICKET_UNIT": "baht/person",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "TOTAL": "Total",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"
@@ -1073,6 +1093,8 @@
       "CONTACT_PHONE": "Contact Phone",
       "CONTACT_EMAIL": "Contact Email",
       "TOTAL_AMOUNT": "Total",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "CASH_ONLY_BADGE": "Cash Payment",
       "CASH_ONLY_NOTE": "Walk-in sales accept cash only. Collect payment before confirming.",
       "BADGE_AVAILABLE": "Available",
