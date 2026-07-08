@@ -46,6 +46,35 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
+**Affected endpoints**:
+- `POST /api/usability-reports`
+- `GET /api/private/admin/usability-reports/{id}`
+
+**Request type**: Add field
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `reporterEmail` (text, optional) | Multipart form part on `POST /api/usability-reports` | Lets a reporter optionally leave contact info while the submission stays anonymous when blank |
+| `reporterEmail` (string, nullable) | Response body of `GET /api/private/admin/usability-reports/{id}` | Admin detail modal displays it (only when present) so triage can follow up |
+
+### What the frontend implemented (additive-safe)
+- `ReportUsabilityFabComponent` adds an optional email input; client-side validation only blocks submit on a non-empty, malformed value — empty always submits (anonymous stays supported).
+- `formData.append('reporterEmail', reporterEmail)` is always sent (trimmed value; empty string when left blank) alongside the existing `category`/`description`/`routeUrl` parts.
+- `UsabilityReportDetail.reporterEmail: string | null` added to the shared interface; the admin detail modal renders it as a new `.ur-detail-row` (reusing `.ur-detail-label`) near "User ID", gated on `*ngIf="detailReport.reporterEmail"` so it degrades gracefully (no broken UI) until the backend returns the field.
+
+### Suggested contract change
+- Accept an optional `reporterEmail` multipart text part on `POST /api/usability-reports` (blank/absent → store `null`, matching how `userId` is already nullable for anonymous submissions).
+- Add a nullable `reporter_email` column to the usability_report table, returned as `reporterEmail` in the admin detail GET response. No new endpoint needed — this is additive to the existing shapes documented in `usability-reports.md`.
+
+### Impact if not addressed
+The email field renders and validates client-side regardless, but the value is dropped: the backend will silently ignore the unknown `reporterEmail` form part (or reject the request, depending on parser strictness) until the endpoint accepts it, and the admin detail row will always stay hidden (conditionally rendered on null/undefined, so no broken UI — just missing data) until the GET response includes it.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, this is R1 (additive, nullable field) — proceeding with the frontend implementation per that rule, flagging here so the backend implementation (if not already in flight on a paired branch) closes the loop before this branch merges to `dev`/`sit`.
+
+---
+
 ### [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
 **Affected endpoints**:
 - `PUT /api/private/admin/usability-reports/{id}/status`

@@ -112,6 +112,7 @@ describe('UsabilityReportsPageComponent', () => {
       category: 'bug',
       status: 'new',
       userId: null,
+      reporterEmail: null,
       description: 'Full description',
       descriptionPreview: 'Test',
       routeUrl: '/home',
@@ -179,6 +180,7 @@ describe('UsabilityReportsPageComponent', () => {
     category: 'bug',
     status: 'new',
     userId: 42,
+    reporterEmail: null,
     description: 'Full fetched description',
     descriptionPreview: 'Summary preview text',
     routeUrl: '/booking',
@@ -474,6 +476,42 @@ describe('UsabilityReportsPageComponent', () => {
 
     const noJiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
     expect(noJiraLink).withContext('Jira link must not render when jiraIssueKey is absent').toBeNull();
+  });
+
+  it('renders the reporter email row when present, and nothing when absent (OBRS-108)', () => {
+    primeReportList();
+    const emailRow = () => (Array.from(
+      fixture.nativeElement.querySelectorAll('.ur-detail-modal .ur-detail-row')
+    ) as HTMLElement[]).find((r) => r.textContent?.includes('reporter@example.com'));
+
+    const withEmail: UsabilityReportDetail = { ...mockFullDetail, reporterEmail: 'reporter@example.com' };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: withEmail,
+    }));
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+    expect(emailRow())
+      .withContext('reporter email row must render when reporterEmail is present')
+      .toBeTruthy();
+
+    component['closeDetail']();
+    fixture.detectChanges();
+
+    // A different report id with no reporterEmail — avoids resurfacing the
+    // first report's cached (with-email) detail.
+    const noEmail: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', reporterEmail: null };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: noEmail,
+    }));
+    component['openDetail']('rep-2');
+    fixture.detectChanges();
+    expect(emailRow())
+      .withContext('reporter email row must not render when reporterEmail is absent')
+      .toBeFalsy();
   });
 
   it('shows triagedByName when present and falls back to the numeric triagedBy id when absent (OBRS-106)', () => {
