@@ -1,5 +1,22 @@
 @import "../../../../../../styles/variables.scss";
 
+.reschedule-options-list__confirm-error {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: $space-xs $space-sm;
+  margin-bottom: $space-sm;
+  border-radius: $radius-md;
+  background-color: #fde7e7;
+  color: $text-red;
+  font-size: $font-size-sm;
+
+  i {
+    font-size: $font-size-lg;
+    flex-shrink: 0;
+  }
+}
+
 .reschedule-options-list__state {
   text-align: center;
   padding: $space-xl $space-md;

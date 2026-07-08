@@ -25,6 +25,7 @@
         [options]="rescheduleOptions"
         [loading]="rescheduleOptionsLoading"
         [error]="rescheduleOptionsError"
+        [confirmError]="confirmError"
         [selectedScheduleId]="selectedOption?.scheduleId ?? null"
         (select)="onOptionSelect($event)"
       ></app-reschedule-options-list>

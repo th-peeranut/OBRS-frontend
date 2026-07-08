@@ -72,4 +72,30 @@ describe('RescheduleOptionsListComponent', () => {
 
     expect(selectSpy).toHaveBeenCalledWith(sampleOption);
   });
+
+  it('shows a confirm-time error banner ALONGSIDE the (still-valid) options list — never in place of it', () => {
+    component.loading = false;
+    component.error = null;
+    component.options = [sampleOption];
+    component.confirmError = 'MY_BOOKINGS.RESCHEDULE.ERROR.NO_SEATS';
+    fixture.detectChanges();
+
+    expect(textOf('.reschedule-options-list__confirm-error')).toBe(
+      'MY_BOOKINGS.RESCHEDULE.ERROR.NO_SEATS'
+    );
+    // The list itself must still render — a confirm-time failure bounces the
+    // traveler back to pick a different candidate, it doesn't invalidate the
+    // whole list the way a load `error` does.
+    expect(fixture.debugElement.query(By.css('.reschedule-option-card'))).not.toBeNull();
+  });
+
+  it('renders no confirm-error banner when confirmError is null', () => {
+    component.loading = false;
+    component.error = null;
+    component.options = [sampleOption];
+    component.confirmError = null;
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.reschedule-options-list__confirm-error'))).toBeNull();
+  });
 });

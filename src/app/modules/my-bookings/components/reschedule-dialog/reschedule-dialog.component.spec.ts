@@ -9,6 +9,7 @@ import { RescheduleOption } from '../../../../shared/interfaces/reschedule.inter
 import {
   closeRescheduleDialog,
   confirmReschedule,
+  loadRescheduleOptions,
   openRescheduleDialog,
   rescheduleAbandoned,
 } from '../../store/my-bookings.action';
@@ -177,5 +178,58 @@ describe('RescheduleDialogComponent', () => {
     component.close();
 
     expect(store.dispatch).toHaveBeenCalledWith(closeRescheduleDialog());
+  });
+
+  describe('NO_SEATS confirm failure (regression)', () => {
+    // Locks the QA-reported bug: bouncing back to the options step must NOT
+    // force a fresh loadRescheduleOptions dispatch (that reducer case wipes
+    // rescheduleConfirmError and re-arms rescheduleOptionsLoading), which
+    // both erased the localized message before it could render and left the
+    // options spinner looking permanently stuck.
+    it('returns to the options step with the error visible, the already-loaded options intact, and the spinner not stuck', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          rescheduleOptions: [sampleOption],
+          rescheduleOptionsLoading: false,
+        })
+      );
+      component.ngOnInit();
+      // Go through the real date-selection path first so `selectedDateIso`
+      // is set — the old buggy code only re-dispatched loadRescheduleOptions
+      // when a date had been picked, so this is required for the assertion
+      // below to actually exercise (and fail against) the old behavior.
+      component.onDateSelected('2026-07-20');
+      component.step = 'estimate';
+      component.selectedOption = sampleOption;
+      store.dispatch.calls.reset();
+
+      // Simulate the reducer's confirmRescheduleFailure handling for a
+      // RESCHEDULE_ERROR_NO_SEATS response.
+      store.next({
+        myBookings: buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          rescheduleOptions: [sampleOption],
+          rescheduleOptionsLoading: false,
+          rescheduleConfirmError: 'MY_BOOKINGS.RESCHEDULE.ERROR.NO_SEATS',
+          rescheduleConfirmErrorCode: 'RESCHEDULE_ERROR_NO_SEATS',
+        }),
+      });
+
+      expect(component.step).toBe('options');
+      expect(component.confirmError)
+        .withContext('the localized NO_SEATS message must survive, not be wiped')
+        .toBe('MY_BOOKINGS.RESCHEDULE.ERROR.NO_SEATS');
+      expect(component.rescheduleOptionsLoading)
+        .withContext('the spinner must resolve, never stay stuck')
+        .toBeFalse();
+      expect(component.rescheduleOptions).toEqual([sampleOption]);
+      expect(component.selectedOption).toBeNull();
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        jasmine.objectContaining({ type: loadRescheduleOptions.type })
+      );
+    });
   });
 });

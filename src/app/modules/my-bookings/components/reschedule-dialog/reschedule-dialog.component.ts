@@ -153,12 +153,18 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
       .pipe(select(selectRescheduleConfirmErrorCode), takeUntil(this.destroy$))
       .subscribe((errorCode) => {
         if (errorCode === 'RESCHEDULE_ERROR_NO_SEATS') {
+          // Bounce back to the (still-valid, already-loaded) options list.
+          // Deliberately do NOT re-dispatch loadRescheduleOptions here: that
+          // reducer case resets rescheduleOptionsLoading=true and
+          // rescheduleOptionsError=null, which would both wipe the NO_SEATS
+          // message before it renders and re-arm the loading spinner for a
+          // reload nothing actually needs (the candidate that failed is the
+          // only stale entry; the rest of the list is still accurate, and
+          // the booking itself is unchanged server-side). The confirm error
+          // is surfaced via rescheduleConfirmError/-ErrorCode instead, a
+          // channel this reducer case never touches, so it survives.
           this.step = 'options';
-          if (this.selectedDateIso) {
-            this.store.dispatch(
-              loadRescheduleOptions({ bookingId: this.bookingId, date: this.selectedDateIso })
-            );
-          }
+          this.selectedOption = null;
         }
       });
 
@@ -207,6 +213,11 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
     this.selectedOption = option;
     this.pendingOptionSelection = option;
     this.step = 'estimate';
+    // Picking a (new) candidate supersedes any prior confirm failure (e.g.
+    // NO_SEATS) — clear the local copy so its banner doesn't linger once the
+    // traveler has acted on it. The store's own copy is cleared for real on
+    // the next confirmReschedule dispatch (see the reducer).
+    this.confirmError = null;
     this.tryDispatchEstimate();
   }
 

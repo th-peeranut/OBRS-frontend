@@ -1,4 +1,9 @@
 <div class="reschedule-step reschedule-options-list">
+  <div class="reschedule-options-list__confirm-error" *ngIf="confirmError" role="alert">
+    <i class="bi bi-exclamation-triangle"></i>
+    <span>{{ confirmError }}</span>
+  </div>
+
   <div class="reschedule-options-list__state" *ngIf="loading">
     <span class="reschedule-spinner" aria-hidden="true"></span>
     <p>{{ "MY_BOOKINGS.RESCHEDULE.OPTIONS_LOADING" | translate }}</p>
