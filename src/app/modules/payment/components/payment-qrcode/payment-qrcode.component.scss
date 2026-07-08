@@ -2,7 +2,7 @@
 
 .card-container {
   width: 100%;
-  padding: 32px;
+  padding: $space-xl;
   border-radius: 18px;
   border: 1px solid $primary-lightgrey;
   background: $primary-white;
@@ -13,7 +13,7 @@
 .payment-card {
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
   margin-top: 96px;
 }
@@ -22,7 +22,7 @@
   display: flex;
 
   flex-direction: row;
-  gap: 12px;
+  gap: $space-xs;
 
   button {
     width: 100%;
@@ -40,14 +40,14 @@
   align-items: center;
   justify-content: center;
   
-  gap: 4px;
+  gap: $space-3xs;
   height: 54px;
   border-radius: 14px;
   border: 1px solid $primary-lightblue;
   background: $primary-white;
   color: $text-lightblack;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 
@@ -59,20 +59,20 @@
   &.is-active {
     background: $primary-lightblue;
     color: $primary-blue;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     border-color: $primary-blue;
     box-shadow: inset 0 0 0 1px rgba(64, 105, 184, 0.2);
   }
 }
 
 .qr-panel {
-  border-radius: 16px;
+  border-radius: $radius-lg;
   border: 1px solid $secondary-light-blue;
   background: $secondary-grey;
-  padding: 24px;
+  padding: $space-lg;
   display: flex;
   flex-direction: column;
-  row-gap: 16px;
+  row-gap: $space-sm;
 }
 
 .qr-header {
@@ -86,14 +86,14 @@
   }
 
   .qr-title {
-    font-size: 14px;
-    font-weight: 700;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-bold;
     color: $primary-black;
   }
 
   .qr-subtitle {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
     color: $text-blue;
   }
 
@@ -107,13 +107,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  row-gap: 12px;
+  row-gap: $space-xs;
 }
 
 .qr-frame {
   width: min(240px, 100%);
   aspect-ratio: 1 / 1;
-  border-radius: 16px;
+  border-radius: $radius-lg;
   border: 10px solid $primary-white;
   box-shadow: inset 0 0 0 1px rgba(13, 21, 37, 0.08);
   background: $primary-white;
@@ -126,7 +126,7 @@
 .qr-placeholder {
   width: 100%;
   height: 100%;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background-image: linear-gradient(
       90deg,
       rgba(13, 21, 37, 0.08) 50%,
@@ -140,12 +140,12 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: $radius-sm;
 }
 
 .qr-amount {
   font-size: clamp(24px, 8vw, 32px);
-  font-weight: 700;
+  font-weight: $font-weight-bold;
   color: $primary-black;
   text-align: center;
 }
@@ -153,8 +153,8 @@
 .qr-countdown {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: $space-2xs;
+  font-size: $font-size-sm;
   color: $text-blue;
 
   img {
@@ -168,17 +168,17 @@
   align-items: center;
   justify-content: space-between;
   margin-top: 4px;
-  gap: 12px;
+  gap: $space-xs;
 }
 
 .btn-refresh {
   border: 1px solid $primary-lightblue;
   background: $primary-white;
   color: $primary-blue;
-  border-radius: 24px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: $radius-xl;
+  padding: $space-2xs 16px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 
@@ -195,19 +195,19 @@
 }
 
 .refresh-hint {
-  font-size: 12px;
+  font-size: $font-size-xs;
   color: $text-lightgrey;
 }
 
 .qr-footer {
   display: flex;
   flex-direction: column;
-  row-gap: 4px;
-  font-size: 14px;
+  row-gap: $space-3xs;
+  font-size: $font-size-sm;
   color: $text-softblack;
 
   .merchant-name {
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     color: $primary-black;
   }
 
@@ -220,13 +220,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: $space-2xs;
   height: 48px;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   background: $primary-blue;
   color: $text-white;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
   border: none;
   cursor: pointer;
   transition: opacity 0.2s ease-in-out;
@@ -253,7 +253,7 @@
 }
 
 .payment-btn {
-  background: #4bc2f7;
+  background: $primary-blue;
   color: white;
   border: none;
   border-radius: 26px;
@@ -270,11 +270,11 @@
   }
 
   &-diabled {
-    background: #dddee1;
+    background: $primary-lightgrey;
     cursor: not-allowed;
 
     &:hover {
-      background: #dddee1;
+      background: $primary-lightgrey;
     }
   }
 }
@@ -296,7 +296,7 @@
 .payment-actions {
   display: flex;
   width: 100%;
-  gap: 8px;
+  gap: $space-2xs;
   margin-top: 16px;
 }
 
@@ -322,7 +322,7 @@
 
 @media (max-width: 768px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
     box-shadow: 0 10px 24px rgba(64, 105, 184, 0.06);
   }
 
@@ -333,7 +333,7 @@
 
 @media (max-width: 576px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .tab-group {
@@ -345,7 +345,7 @@
   }
 
   .qr-panel {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .qr-frame {
@@ -354,7 +354,7 @@
 
   .payment-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .payment-action-item,

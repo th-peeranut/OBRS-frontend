@@ -1,7 +1,7 @@
 @import "../../../styles/variables.scss";
 
 .policy-container {
-  padding: 32px clamp(16px, 8vw, 360px);
+  padding: $space-xl clamp(16px, 8vw, 360px);
   background-color: $primary-white;
 }
 
@@ -12,14 +12,14 @@
 
   h1 {
     margin: 0 0 20px;
-    font-size: 30px;
-    font-weight: 700;
-    line-height: 1.2;
+    font-size: $font-size-2xl;
+    font-weight: $font-weight-bold;
+    line-height: $line-height-tight;
   }
 
   p {
     margin: 0;
-    font-size: 16px;
+    font-size: $font-size-base;
     line-height: 1.9;
     white-space: normal;
   }
@@ -33,13 +33,13 @@
 
   .policy-card {
     h1 {
-      font-size: 24px;
+      font-size: $font-size-xl;
       margin-bottom: 16px;
     }
 
     p {
-      font-size: 14px;
-      line-height: 1.8;
+      font-size: $font-size-sm;
+      line-height: $line-height-relaxed;
     }
   }
 }

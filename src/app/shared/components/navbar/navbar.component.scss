@@ -3,14 +3,14 @@
 %mat-icon {
   font-family: "Material Symbols Outlined";
   font-style: normal;
-  font-weight: 400;
+  font-weight: $font-weight-regular;
   line-height: 1;
 }
 
 .navbar-container {
   display: flex;
   align-items: center;
-  column-gap: 40px;
+  column-gap: $space-2xl;
   width: 100%;
   height: 80px;
   padding: 0 clamp(16px, 5vw, 48px);
@@ -26,13 +26,13 @@
 }
 
 .menu-font {
-  font-size: 18px;
-  font-weight: 400;
+  font-size: $font-size-md;
+  font-weight: $font-weight-regular;
   color: $text-black;
   text-decoration: none;
   white-space: nowrap;
 
-  &-active { color: $primary-blue; font-weight: 500; }
+  &-active { color: $primary-blue; font-weight: $font-weight-medium; }
 
   &-action {
     cursor: pointer;
@@ -55,23 +55,23 @@
 .btn-signin {
   min-width: 140px;
   height: 52px;
-  padding: 8px 30px;
-  font-size: 18px;
-  font-weight: 500;
+  padding: $space-2xs 30px;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
   color: $text-black;
   border: 1px solid $primary-lightgrey;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   background-color: transparent;
 }
 
 .btn-signup {
   min-width: 160px;
   height: 52px;
-  padding: 8px 30px;
-  font-size: 18px;
-  font-weight: 500;
+  padding: $space-2xs 30px;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
   color: $text-white;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   background-color: $primary-blue;
 }
 
@@ -80,11 +80,11 @@
 .navbar-avatar {
   width: 38px;
   height: 38px;
-  border-radius: 999px;
+  border-radius: $radius-pill;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: $font-weight-bold;
   font-size: 13px;
   background: linear-gradient(135deg, #006687, #4dbeef);
   color: #fff;
@@ -111,16 +111,16 @@
   background: transparent;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 9px;
-  border-radius: 8px;
+  gap: $space-2xs;
+  padding: $space-2xs 9px;
+  border-radius: $radius-sm;
   color: #3f4f57;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   text-decoration: none;
 
-  .material-symbols-outlined { @extend %mat-icon; font-size: 18px; }
+  .material-symbols-outlined { @extend %mat-icon; font-size: $font-size-md; }
   &:hover { background: rgba(77, 190, 239, 0.12); color: #005f7e; }
 }
 
@@ -147,7 +147,7 @@
   flex-direction: column;
   background-color: $primary-white;
   border-top: 1px solid rgba(189, 200, 207, 0.5);
-  padding: 12px 16px 16px;
+  padding: $space-xs 16px 16px;
   box-shadow: 0 8px 20px rgba(25, 28, 30, 0.1);
   z-index: 40;
 }
@@ -156,7 +156,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 8px 0;
+  padding: $space-2xs 0;
   & + & { border-top: 1px solid rgba(189, 200, 207, 0.4); }
 }
 
@@ -165,19 +165,19 @@
   align-items: center;
   gap: 10px;
   padding: 10px 8px;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   border: 0;
   background: transparent;
   color: #3f4f57;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
   font-family: inherit;
   text-decoration: none;
   cursor: pointer;
   width: 100%;
   text-align: left;
 
-  .material-symbols-outlined { @extend %mat-icon; font-size: 20px; color: #506068; flex-shrink: 0; }
+  .material-symbols-outlined { @extend %mat-icon; font-size: $font-size-lg; color: #506068; flex-shrink: 0; }
   &:hover { background: rgba(77, 190, 239, 0.1); color: #005f7e; }
 }
 
@@ -187,13 +187,13 @@
 }
 
 @media (max-width: 1200px) {
-  .navbar-container { column-gap: 24px; padding: 0 20px; }
+  .navbar-container { column-gap: $space-lg; padding: 0 20px; }
   .logo { margin-right: 72px; }
-  .menu-font { font-size: 16px; }
+  .menu-font { font-size: $font-size-base; }
 }
 
 @media (max-width: 992px) {
-  .navbar-container { height: auto; justify-content: space-between; column-gap: 16px; padding: 12px 16px; }
+  .navbar-container { height: auto; justify-content: space-between; column-gap: $space-sm; padding: $space-xs 16px; }
   .logo { margin-right: 0; width: 72px; height: 32px; }
   .navbar-desktop-only { display: none !important; }
   .navbar-hamburger { display: inline-flex; }
@@ -201,5 +201,5 @@
 }
 
 @media (max-width: 576px) {
-  .navbar-container { column-gap: 12px; padding: 10px 12px; }
+  .navbar-container { column-gap: $space-xs; padding: 10px 12px; }
 }

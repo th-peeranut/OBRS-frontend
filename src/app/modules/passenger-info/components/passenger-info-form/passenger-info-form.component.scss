@@ -2,13 +2,13 @@
 
 .card-container {
   background: $primary-white;
-  padding: 24px;
+  padding: $space-lg;
   padding-top: 0px;
-  border-radius: 8px;
+  border-radius: $radius-sm;
 
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
   border: 1px solid $primary-lightgrey;
   width: 100%;
@@ -16,21 +16,21 @@
 }
 
 .card-body {
-  padding: 8px;
+  padding: $space-2xs;
 }
 
 .subtitle {
-  font-size: 16px;
-  font-weight: 600;
-  color: #757a86;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $text-lightblack;
 }
 
 .passenget-badge {
   background: $secondary-light-blue;
-  border-radius: 8px;
-  padding: 4px 8px;
-  font-size: 14px;
-  font-weight: 500;
+  border-radius: $radius-sm;
+  padding: $space-3xs 8px;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
   color: $text-primary;
 
   width: 70px;
@@ -41,7 +41,7 @@
 
 .form-row {
   display: flex;
-  row-gap: 8px;
+  row-gap: $space-2xs;
 }
 
 .form-control {
@@ -51,13 +51,13 @@
 .line {
   flex: 1;
   height: 1px;
-  background: #dddee1;
+  background: $primary-lightgrey;
   margin: 0 8px;
 }
 
 .seat-leg-label {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   color: $text-primary;
 }
 
@@ -73,7 +73,7 @@
 
 @media (max-width: 992px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
     padding-top: 0;
   }
 
@@ -85,7 +85,7 @@
 
 @media (max-width: 768px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
     padding-top: 0;
   }
 

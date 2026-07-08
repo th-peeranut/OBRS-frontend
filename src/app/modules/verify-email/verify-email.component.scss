@@ -4,7 +4,7 @@
   display: flex;
   width: 100%;
   height: 100vh;
-  padding: 20px;
+  padding: $space-md;
   margin: auto;
   background: $primary-white;
 
@@ -12,7 +12,7 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: $space-2xs;
   }
 
   .left-section {
@@ -21,7 +21,7 @@
     .bg-img {
       width: 100%;
       height: 100%;
-      border-radius: 24px;
+      border-radius: $radius-xl;
       object-fit: cover;
     }
   }
@@ -62,23 +62,23 @@
       }
 
       .state-title {
-        font-size: 24px;
+        font-size: $font-size-xl;
         font-weight: bold;
         color: $text-black;
       }
 
       .state-text {
-        font-size: 16px;
+        font-size: $font-size-base;
         color: $text-softblack;
       }
     }
 
     .login-btn {
       width: 100%;
-      padding: 12px;
+      padding: $space-xs;
       border: none;
-      border-radius: 24px;
-      font-size: 16px;
+      border-radius: $radius-xl;
+      font-size: $font-size-base;
       font-weight: bold;
       cursor: pointer;
       background-color: $primary-blue;
@@ -104,8 +104,8 @@
     flex-direction: column;
     align-items: stretch;
     height: auto;
-    padding: 16px;
-    gap: 24px;
+    padding: $space-sm;
+    gap: $space-lg;
   }
 
   .login-container .left-section {
@@ -129,7 +129,7 @@
 
 @media (max-width: 576px) {
   .login-container {
-    padding: 12px;
+    padding: $space-xs;
   }
 
   .login-container .right-section {

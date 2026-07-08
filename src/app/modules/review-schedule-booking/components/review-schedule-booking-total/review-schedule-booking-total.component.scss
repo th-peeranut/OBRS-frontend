@@ -2,12 +2,12 @@
 
 .card-container {
   background: $primary-white;
-  padding: 24px;
+  padding: $space-lg;
   border-radius: 10px;
 
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
   margin-top: clamp(24px, 7vw, 90px);
   width: 100%;
@@ -17,33 +17,33 @@
 }
 
 .card-header {
-  font-size: 20px;
-  font-weight: 500;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-medium;
 }
 
 .card-body {
-  font-size: 18px;
+  font-size: $font-size-md;
 
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: $space-xs;
  
   &-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: $space-xs;
   }
 }
 
 .card-footer {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-weight: bold;
 
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: $space-xs;
 }
 
 hr {
@@ -65,14 +65,14 @@ hr {
   height: 52px;
 
   background: $primary-blue;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   border: transparent;
 
   margin-top: 24px;
   padding: 25.5px 8px;
 
   color: $text-white;
-  font-size: 16px;
+  font-size: $font-size-base;
   font-weight: bold;
   text-align: center;
 
@@ -92,30 +92,30 @@ hr {
 @media (max-width: 768px) {
   .card-container {
     margin-top: 16px;
-    padding: 20px;
+    padding: $space-md;
   }
 
   .card-header {
-    font-size: 18px;
+    font-size: $font-size-md;
   }
 
   .card-body {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   .card-footer {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   .btn-confirm {
     height: 52px;
-    padding: 16px 8px;
+    padding: $space-sm 8px;
   }
 }
 
 @media (max-width: 576px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .card-body-content,

@@ -2,12 +2,12 @@
 
 .card-container {
   background: $primary-white;
-  padding: 24px;
+  padding: $space-lg;
   border-radius: 10px;
   border: 1px solid $primary-lightgrey;
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
   width: 100%;
   box-sizing: border-box;
 }
@@ -15,12 +15,12 @@
 .card-header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: $space-xs;
 
   &-text {
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: $space-sm;
     align-content: center;
     min-width: 0;
 
@@ -33,7 +33,7 @@
     &-details {
       display: flex;
       flex-direction: column;
-      row-gap: 4px;
+      row-gap: $space-3xs;
       min-width: 0;
     }
   }
@@ -49,7 +49,7 @@
   display: flex;
   align-items: center;
   width: 100%;
-  padding: 24px clamp(16px, 4vw, 100px);
+  padding: $space-lg clamp(16px, 4vw, 100px);
 
   &-detail {
     display: flex;
@@ -66,7 +66,7 @@
       &-info {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: $space-3xs;
         min-width: 0;
       }
     }
@@ -76,30 +76,30 @@
 .title {
   margin-top: 32px;
   margin-bottom: 32px;
-  font-size: 20px;
+  font-size: $font-size-lg;
   font-weight: bold;
 }
 
 .header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   color: $text-lightblack;
 }
 
 .subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
   overflow-wrap: anywhere;
 }
 
 .body-header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-weight: bold;
   color: $text-lightblack;
   overflow-wrap: anywhere;
 }
 
 .body-subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
 }
 
@@ -111,10 +111,10 @@
   height: 41px;
   background: $primary-white;
   border: 1px solid $primary-lightgrey;
-  border-radius: 24px;
-  padding: 8px 12px;
+  border-radius: $radius-xl;
+  padding: $space-2xs 12px;
   color: $text-softblack;
-  font-size: 16px;
+  font-size: $font-size-base;
   font-weight: bold;
   text-align: center;
   cursor: pointer;
@@ -126,7 +126,7 @@
 
 @media (max-width: 992px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
   }
 
   .card-header {
@@ -135,12 +135,12 @@
   }
 
   .card-body {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .card-body-detail-station {
     flex-direction: column;
-    gap: 8px;
+    gap: $space-2xs;
   }
 }
 
@@ -148,7 +148,7 @@
   .card-body {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .card-body > img {
@@ -173,16 +173,16 @@
   .title {
     margin-top: 24px;
     margin-bottom: 20px;
-    font-size: 18px;
+    font-size: $font-size-md;
   }
 
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .header-text,
   .body-header-text {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   .subheader-text,

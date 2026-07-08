@@ -3,7 +3,7 @@
 .content-container {
   display: flex;
   justify-content: center;
-  column-gap: 24px;
+  column-gap: $space-lg;
   align-items: flex-start;
   padding: 0 clamp(16px, 8vw, 360px);
   width: 100%;
@@ -13,7 +13,7 @@
 .title {
   margin-top: 32px;
   margin-bottom: 32px;
-  font-size: 20px;
+  font-size: $font-size-lg;
   font-weight: bold;
 }
 
@@ -36,7 +36,7 @@
 @media (max-width: 768px) {
   .content-container {
     flex-direction: column;
-    row-gap: 16px;
+    row-gap: $space-sm;
   }
 
   .form-container,

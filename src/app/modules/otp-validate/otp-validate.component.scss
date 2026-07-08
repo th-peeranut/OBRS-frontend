@@ -2,13 +2,13 @@
 @import "../login/login.component.scss";
 
 .otp-time {
-  font-size: 16px;
+  font-size: $font-size-base;
   color: $text-blue;
   margin-bottom: 24px;
 }
 
 .otp-ref-text {
-  font-size: 16px;
+  font-size: $font-size-base;
   color: $text-lightblack;
   text-align: center;
   margin-top: 24px;
@@ -21,7 +21,7 @@
   }
 
   .email-verify-message {
-    font-size: 16px;
+    font-size: $font-size-base;
     color: $text-softblack;
   }
 }

@@ -8,7 +8,7 @@
 
 .list-header {
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: $text-black;
 }
 
@@ -20,7 +20,7 @@
 
 .stop-row {
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: $radius-md;
   transition: background 0.15s, border-color 0.15s;
 
   &:hover {
@@ -45,9 +45,9 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   font-size: 0.8125rem;
-  font-weight: 700;
+  font-weight: $font-weight-bold;
   color: #fff;
   flex-shrink: 0;
 
@@ -76,7 +76,7 @@
 
 .stop-name {
   font-size: 0.9375rem;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: $text-black;
 }
 
@@ -95,8 +95,8 @@
 :host ::ng-deep .p-button.p-button-info {
   background: $primary-blue;
   border-color: $primary-blue;
-  border-radius: 24px;
-  font-weight: 600;
+  border-radius: $radius-xl;
+  font-weight: $font-weight-semibold;
 }
 
 :host ::ng-deep .p-button.p-button-info:enabled:hover {
@@ -107,8 +107,8 @@
 :host ::ng-deep .p-button.p-button-danger {
   background: $secondary-blue;
   border-color: $secondary-blue;
-  border-radius: 24px;
-  font-weight: 600;
+  border-radius: $radius-xl;
+  font-weight: $font-weight-semibold;
 }
 
 :host ::ng-deep .p-button.p-button-danger:enabled:hover {
@@ -121,7 +121,7 @@
   font-size: 0.75rem;
   white-space: nowrap;
   color: $text-blue;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
 
   &--nearest {
     color: $secondary-blue;

@@ -28,15 +28,15 @@
     width: min(100%, 1200px);
     box-sizing: border-box;
 
-    padding: 24px 32px;
+    padding: $space-lg 32px;
     margin-top: -80px;
 
     background-color: $primary-white;
-    border-radius: 24px;
+    border-radius: $radius-xl;
 
     > .d-flex {
       flex-wrap: wrap;
-      gap: 16px 24px;
+      gap: $space-sm 24px;
     }
   }
 }
@@ -46,14 +46,14 @@
   align-items: center;
   flex-direction: row;
   flex-wrap: wrap;
-  column-gap: 20px;
-  row-gap: 12px;
+  column-gap: $space-md;
+  row-gap: $space-xs;
 
   .station-group {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: $space-xs;
 
     .station-icon {
       margin-top: 30px;
@@ -82,7 +82,7 @@
   left: 0 !important;
   width: 280px !important;
   min-width: 280px !important;
-  padding: 8px;
+  padding: $space-2xs;
   transform-origin: top left !important;
 }
 
@@ -96,7 +96,7 @@
 
 :host ::ng-deep .booking-calendar-panel table {
   margin: 0;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 :host ::ng-deep .booking-calendar-panel table th,
@@ -115,7 +115,7 @@
 
 :host ::ng-deep .booking-calendar-panel .p-button {
   padding: 6px 8px;
-  font-size: 12px;
+  font-size: $font-size-xs;
 }
 
 @media (max-width: 640px) {
@@ -137,12 +137,12 @@
 
   margin-top: 30px;
 
-  font-size: 18px;
-  font-weight: 500;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
   color: $text-white;
 
   background-color: $primary-blue;
-  border-radius: 24px;
+  border-radius: $radius-xl;
 
   img {
     width: 20px;
@@ -151,12 +151,12 @@
 }
 
 .label-return {
-  font-size: 16px;
-  color: #989ba4;
+  font-size: $font-size-base;
+  color: $text-lightgrey;
 }
 
 .label-schedule-booking {
-  font-size: 16px;
+  font-size: $font-size-base;
   color: $text-black;
 }
 
@@ -173,7 +173,7 @@
 
   .booking-section .booking-card {
     margin-top: -40px;
-    padding: 20px;
+    padding: $space-md;
   }
 
   .station-section {
@@ -186,7 +186,7 @@
     justify-content: space-between;
 
     .station-icon {
-      margin: 12px auto 0;
+      margin: $space-xs auto 0;
     }
   }
 
@@ -197,7 +197,7 @@
 
 @media (max-width: 576px) {
   .booking-section .booking-card {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .booking-container .home-bg {

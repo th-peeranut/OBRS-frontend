@@ -2,12 +2,12 @@
 
 .card-container {
   background: $primary-white;
-  padding: 24px;
+  padding: $space-lg;
   border-radius: 10px;
   border: 1px solid $primary-lightgrey;
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
   width: 100%;
   box-sizing: border-box;
 }
@@ -15,12 +15,12 @@
 .card-header {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: $space-xs;
 
   &-text {
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: $space-sm;
     align-content: center;
     min-width: 0;
 
@@ -33,7 +33,7 @@
     &-details {
       display: flex;
       flex-direction: column;
-      row-gap: 4px;
+      row-gap: $space-3xs;
       min-width: 0;
     }
   }
@@ -59,7 +59,7 @@
       &-info {
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: $space-3xs;
         min-width: 0;
       }
     }
@@ -67,26 +67,26 @@
 }
 
 .card-body-summary {
-  font-size: 18px;
+  font-size: $font-size-md;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: $space-xs;
 
   &-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: $space-xs;
   }
 }
 
 .card-footer {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-weight: bold;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: $space-xs;
 }
 
 hr {
@@ -100,36 +100,36 @@ hr {
 }
 
 .header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   color: $text-lightblack;
 }
 
 .subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
   display: flex;
   flex-direction: row;
-  column-gap: 8px;
+  column-gap: $space-2xs;
   flex-wrap: wrap;
   overflow-wrap: anywhere;
 }
 
 .body-header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-weight: bold;
   color: $text-lightblack;
   overflow-wrap: anywhere;
 }
 
 .body-subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
 }
 
 .summary-actions {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: $space-2xs;
   margin-top: 16px;
 }
 
@@ -144,11 +144,11 @@ hr {
   min-width: 100%;
   height: 52px;
   background: $primary-blue;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   border: transparent;
-  padding: 8px;
+  padding: $space-2xs;
   color: $text-white;
-  font-size: 16px;
+  font-size: $font-size-base;
   font-weight: bold;
   text-align: center;
   cursor: pointer;
@@ -158,7 +158,7 @@ hr {
   }
 
   &:disabled {
-    background: #dddee1;
+    background: $primary-lightgrey;
     color: $text-white;
     cursor: not-allowed;
   }
@@ -171,11 +171,11 @@ hr {
   min-width: 100%;
   height: 52px;
   background: $primary-white;
-  border: 1px solid #dddee1;
-  border-radius: 24px;
-  padding: 8px;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-xl;
+  padding: $space-2xs;
   color: $text-softblack;
-  font-size: 16px;
+  font-size: $font-size-base;
   font-weight: bold;
   text-align: center;
   cursor: pointer;
@@ -187,13 +187,13 @@ hr {
 
 @media (max-width: 992px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
   }
 
   .card-body {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .card-body > img {
@@ -208,14 +208,14 @@ hr {
 
   .card-body-detail-station {
     flex-direction: column;
-    gap: 8px;
+    gap: $space-2xs;
   }
 }
 
 @media (max-width: 768px) {
   .card-body-summary,
   .card-footer {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   .card-body-summary-content,
@@ -225,18 +225,18 @@ hr {
 
   .summary-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: $space-xs;
   }
 }
 
 @media (max-width: 576px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .header-text,
   .body-header-text {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   .subheader-text,

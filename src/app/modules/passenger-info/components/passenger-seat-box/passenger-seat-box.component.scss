@@ -2,9 +2,9 @@
 
 .seat-box {
   background: $primary-white;
-  border-radius: 8px;
+  border-radius: $radius-sm;
 
-  border: 1px solid #4bc2f7;
+  border: 1px solid $primary-blue;
 
   width: var(--seat-size, 80px);
   height: var(--seat-size, 80px);
@@ -13,7 +13,7 @@
 
   position: relative;
 
-  font-size: 12px;
+  font-size: $font-size-xs;
   font-weight: bold;
 
   img {

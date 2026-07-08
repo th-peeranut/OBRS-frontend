@@ -9,7 +9,7 @@
 
 .map-section {
   width: 100%;
-  border-radius: 24px 24px 0 0;
+  border-radius: $radius-xl 24px 0 0;
   background: linear-gradient(180deg, rgba(14, 40, 66, 0.94) 0%, rgba(15, 58, 64, 0.9) 100%);
 }
 
@@ -18,7 +18,7 @@
   background-image: url('/images/station-bg.svg');
   background-size: cover;
   background-position: center;
-  border-radius: 24px 24px 0 0;
+  border-radius: $radius-xl 24px 0 0;
 }
 
 .station-section {
@@ -30,7 +30,7 @@
   text-align: center;
   color: $text-white;
   font-size: clamp(24px, 3vw, 32px);
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
 }
 
 .route-switch-wrap {
@@ -42,19 +42,19 @@
 .route-switch {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 4px;
-  padding: 4px;
-  border-radius: 999px;
+  gap: $space-3xs;
+  padding: $space-3xs;
+  border-radius: $radius-pill;
   background: #edf2f6;
   max-width: min(780px, calc(100% - 24px));
 }
 
 .route-chip {
   border: 0;
-  border-radius: 999px;
+  border-radius: $radius-pill;
   padding: 11px 16px;
   font-size: clamp(12px, 1.5vw, 18px);
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: #334155;
   background: transparent;
   cursor: pointer;
@@ -72,7 +72,7 @@
   width: calc(100% - 24px);
   max-width: 1220px;
   margin: 14px auto 0;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   background: #c8deea;
   position: relative;
   overflow: hidden;
@@ -108,12 +108,12 @@
   position: absolute;
   top: -30px;
   left: 12%;
-  border-radius: 12px;
+  border-radius: $radius-md;
   border: 2px solid #e2ecff;
   background: #2f5db1;
   color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   padding: 6px 12px;
 }
 
@@ -126,7 +126,7 @@
 
 .timeline {
   position: relative;
-  padding: 8px 0 18px;
+  padding: $space-2xs 0 18px;
 }
 
 .timeline::before {
@@ -179,10 +179,10 @@
   box-shadow: inset 0 0 0 2px #496db8;
   background: #2f5db1;
   color: #ffffff;
-  border-radius: 999px;
-  padding: 8px 14px;
-  font-size: 16px;
-  line-height: 1.2;
+  border-radius: $radius-pill;
+  padding: $space-2xs 14px;
+  font-size: $font-size-base;
+  line-height: $line-height-tight;
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -222,7 +222,7 @@
   width: 18px;
   height: 18px;
   transform: translate(-50%, -50%);
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: #dce8fb;
   border: 3px solid #3c63ad;
 }

@@ -2,12 +2,12 @@
 
 .card-container {
   background: $primary-white;
-  padding: 24px;
+  padding: $space-lg;
   border-radius: 10px;
 
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
   border: 1px solid $primary-lightgrey;
 }
@@ -19,7 +19,7 @@
   &-text {
     display: flex;
     flex-direction: row;
-    gap: 16px;
+    gap: $space-sm;
     align-content: center;
     min-width: 0;
 
@@ -32,7 +32,7 @@
     &-details {
       display: flex;
       flex-direction: column;
-      row-gap: 4px;
+      row-gap: $space-3xs;
       min-width: 0;
     }
   }
@@ -46,45 +46,45 @@
 .title {
   margin-top: 32px;
   margin-bottom: 32px;
-  font-size: 20px;
+  font-size: $font-size-lg;
   font-weight: bold;
 }
 
 .header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   color: $text-lightblack;
 }
 
 .subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
   overflow-wrap: anywhere;
 }
 
 .body-header-text {
-  font-size: 18px;
+  font-size: $font-size-md;
   font-weight: bold;
   color: $text-lightblack;
 }
 
 .body-subheader-text {
-  font-size: 14px;
+  font-size: $font-size-sm;
   color: $text-lightblack;
 }
 
 .card-body {
   background: $primary-white;
-  padding: 16px;
+  padding: $space-sm;
   display: flex;
   align-items: center;
   width: 100%;
-  gap: 16px;
+  gap: $space-sm;
 
   .schedule-info {
     display: flex;
     align-items: center;
     flex-direction: row;
-    column-gap: 32px;
+    column-gap: $space-xl;
     width: 100%;
 
     .icon {
@@ -97,8 +97,8 @@
     }
 
     .time {
-      font-size: 16px;
-      font-weight: 500;
+      font-size: $font-size-base;
+      font-weight: $font-weight-medium;
       color: $text-softblack;
     }
 
@@ -110,7 +110,7 @@
       min-width: 0;
 
       .route {
-        font-size: 14px;
+        font-size: $font-size-sm;
         color: $text-softblack;
         text-align: center;
         white-space: nowrap;
@@ -124,13 +124,13 @@
 
 hr {
   border: 0;
-  border-top: 1px solid #babdc3;
+  border-top: 1px solid $primary-grey;
   width: 100%;
 }
 
 .passenger-header {
   color: $text-lightblack;
-  font-size: 16px;
+  font-size: $font-size-base;
   font-weight: bold;
 }
 
@@ -142,20 +142,20 @@ hr {
 
 .passenger-info {
   color: $text-softblack;
-  font-size: 18px;
-  font-weight: 500;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
   overflow-wrap: anywhere;
 }
 
 @media (max-width: 992px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
   }
 
   .card-header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .card-body {
@@ -166,7 +166,7 @@ hr {
   .card-body .schedule-info {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .card-body .schedule-info .time-info {
@@ -183,7 +183,7 @@ hr {
   .passenger-section {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
+    gap: $space-2xs;
   }
 
   .passenger-section > .w-50 {
@@ -193,11 +193,11 @@ hr {
 
 @media (max-width: 576px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .card-body {
-    padding: 12px;
+    padding: $space-xs;
   }
 
   .card-body .schedule-info .icon img {
@@ -206,6 +206,6 @@ hr {
   }
 
   .passenger-info {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 }

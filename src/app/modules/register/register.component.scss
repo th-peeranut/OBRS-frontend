@@ -30,12 +30,12 @@
   transform: translateX(-95%);
   background-color: $secondary-grey;
   color: $text-black;
-  padding: 20px;
+  padding: $space-md;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   border-radius: 6px;
   z-index: 999;
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: $font-size-sm;
+  line-height: $line-height-relaxed;
   width: 320px;
   text-align: justify;
   text-justify: inter-word;

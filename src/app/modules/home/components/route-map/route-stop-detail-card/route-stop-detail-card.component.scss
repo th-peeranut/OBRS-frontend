@@ -6,9 +6,9 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: $font-weight-bold;
   color: #fff;
   flex-shrink: 0;
 
@@ -22,7 +22,7 @@
 }
 
 .detail-name {
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: $text-black;
 }
 
@@ -34,7 +34,7 @@
 .detail-photo {
   max-height: 140px;
   object-fit: cover;
-  border-radius: 16px !important;
+  border-radius: $radius-lg !important;
 }
 
 .detail-empty {
@@ -43,7 +43,7 @@
 }
 
 :host ::ng-deep .route-stop-detail-card.p-card {
-  border-radius: 24px;
+  border-radius: $radius-xl;
   border: 1px solid $secondary-light-blue;
   box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
 }
@@ -57,7 +57,7 @@
   background: $secondary-lightgrey;
   border-color: $secondary-light-blue;
   color: $text-primary;
-  border-radius: 16px;
+  border-radius: $radius-lg;
 }
 
 :host ::ng-deep .route-stop-detail-card .p-button.p-button-secondary:enabled:hover {

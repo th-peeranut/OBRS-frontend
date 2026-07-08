@@ -5,7 +5,7 @@
   min-height: 240px;
   background: $secondary-lightgrey;
   border: 1px solid $secondary-light-blue;
-  border-radius: 24px;
+  border-radius: $radius-xl;
 }
 
 .placeholder-icon {
@@ -22,7 +22,7 @@
 
 .route-google-map {
   display: block;
-  border-radius: 16px;
+  border-radius: $radius-lg;
   overflow: hidden;
 }
 
@@ -38,7 +38,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: $space-2xs;
 }
 
 /* "Locate me" control — crosshair icon. Sizing/color measured directly off
@@ -49,7 +49,7 @@
   height: 30px;
   padding: 0;
   border: none;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   background: #ffffff;
   color: #1f1f1f;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
@@ -94,7 +94,7 @@
 .map-zoom-control {
   width: 30px;
   background: #ffffff;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
@@ -109,7 +109,7 @@
   background: transparent;
   color: #1f1f1f;
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: $font-weight-medium;
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -147,14 +147,14 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  border-radius: 50%;
+  border-radius: $radius-circle;
 
   &--pickup {
-    background-color: #4bc2f7;
+    background-color: $primary-blue;
   }
 
   &--dropoff {
-    background-color: #4069b8;
+    background-color: $secondary-blue;
   }
 }
 

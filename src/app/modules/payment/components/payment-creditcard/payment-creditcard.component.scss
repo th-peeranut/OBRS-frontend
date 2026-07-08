@@ -6,7 +6,7 @@
 
 .card-container {
   width: 100%;
-  padding: 32px;
+  padding: $space-xl;
   border-radius: 18px;
   border: 1px solid $primary-lightgrey;
   background: $primary-white;
@@ -17,7 +17,7 @@
 .payment-card {
   display: flex;
   flex-direction: column;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
   margin-top: 96px;
 }
@@ -26,7 +26,7 @@
   display: flex;
 
   flex-direction: row;
-  gap: 12px;
+  gap: $space-xs;
 
   button {
     width: 100%;
@@ -44,14 +44,14 @@
   align-items: center;
   justify-content: center;
 
-  gap: 4px;
+  gap: $space-3xs;
   height: 54px;
   border-radius: 14px;
   border: 1px solid $primary-lightblue;
   background: $primary-white;
   color: $text-lightblack;
-  font-size: 12px;
-  font-weight: 500;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
   cursor: pointer;
   transition: all 0.2s ease-in-out;
 
@@ -63,7 +63,7 @@
   &.is-active {
     background: $primary-lightblue;
     color: $primary-blue;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
     border-color: $primary-blue;
     box-shadow: inset 0 0 0 1px rgba(64, 105, 184, 0.2);
   }
@@ -76,7 +76,7 @@
   border: 1px solid $primary-lightgrey;
   background: $primary-white;
   padding: 0 18px;
-  font-size: 16px;
+  font-size: $font-size-base;
   color: $text-black;
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 
@@ -114,11 +114,11 @@
 
 .countdown {
   text-align: center;
-  font-size: 16px;
+  font-size: $font-size-base;
   color: $text-blue;
 
   .countdown-value {
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
   }
 }
 
@@ -145,7 +145,7 @@
   left: 0 !important;
   width: 240px !important;
   min-width: 240px !important;
-  padding: 8px;
+  padding: $space-2xs;
   transform-origin: top left !important;
 }
 
@@ -158,12 +158,12 @@
 }
 
 :host ::ng-deep .payment-card-calendar-panel .p-monthpicker {
-  gap: 4px;
+  gap: $space-3xs;
 }
 
 :host ::ng-deep .payment-card-calendar-panel .p-monthpicker-month {
-  padding: 8px;
-  font-size: 12px;
+  padding: $space-2xs;
+  font-size: $font-size-xs;
 }
 
 @media (max-width: 640px) {
@@ -174,7 +174,7 @@
 }
 
 .payment-btn {
-  background: #4bc2f7;
+  background: $primary-blue;
   color: white;
   border: none;
   border-radius: 26px;
@@ -191,11 +191,11 @@
   }
 
   &-diabled {
-    background: #dddee1;
+    background: $primary-lightgrey;
     cursor: not-allowed;
 
     &:hover {
-      background: #dddee1;
+      background: $primary-lightgrey;
     }
   }
 }
@@ -217,7 +217,7 @@
 .payment-actions {
   display: flex;
   width: 100%;
-  gap: 8px;
+  gap: $space-2xs;
   margin-top: 16px;
 }
 
@@ -243,7 +243,7 @@
 
 @media (max-width: 768px) {
   .card-container {
-    padding: 20px;
+    padding: $space-md;
     box-shadow: 0 10px 24px rgba(64, 105, 184, 0.06);
   }
 
@@ -254,7 +254,7 @@
 
 @media (max-width: 576px) {
   .card-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .tab-group {
@@ -267,7 +267,7 @@
 
   .payment-actions {
     flex-direction: column;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .payment-action-item,

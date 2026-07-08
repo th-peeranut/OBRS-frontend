@@ -2,7 +2,7 @@
 
 .my-bookings {
   min-height: 60vh;
-  padding: 32px clamp(16px, 6vw, 120px);
+  padding: $space-xl clamp(16px, 6vw, 120px);
   background-color: $secondary-grey;
 }
 
@@ -17,7 +17,7 @@
   h1 {
     margin: 0 0 6px;
     font-size: 28px;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
     color: $text-black;
   }
 
@@ -32,17 +32,17 @@
 .filter-pills {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: $space-2xs;
   margin-bottom: 20px;
 }
 
 .filter-pill {
   padding: 7px 16px;
   border: 1px solid $primary-lightgrey;
-  border-radius: 999px;
+  border-radius: $radius-pill;
   background-color: $primary-white;
   color: $text-softblack;
-  font-size: 14px;
+  font-size: $font-size-sm;
   cursor: pointer;
   transition: all 0.15s ease;
 
@@ -54,7 +54,7 @@
     background-color: $secondary-blue;
     border-color: $secondary-blue;
     color: $text-white;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
   }
 }
 
@@ -72,29 +72,29 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: $space-xs;
 
   .booking-card__ref {
     display: flex;
     flex-direction: column;
 
     .label {
-      font-size: 12px;
+      font-size: $font-size-xs;
       color: $text-lightgrey;
     }
 
     strong {
-      font-size: 18px;
+      font-size: $font-size-md;
       color: $text-black;
     }
   }
 }
 
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: $space-3xs 12px;
+  border-radius: $radius-pill;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
   text-transform: capitalize;
   white-space: nowrap;
 
@@ -125,12 +125,12 @@
   gap: 10px;
   margin: 14px 0;
   font-size: 17px;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: $text-black;
 
   i {
     color: $primary-blue;
-    font-size: 20px;
+    font-size: $font-size-lg;
   }
 
   .route-text {
@@ -138,8 +138,8 @@
   }
 
   .trip-type {
-    font-size: 12px;
-    font-weight: 500;
+    font-size: $font-size-xs;
+    font-weight: $font-weight-medium;
     color: $text-blue;
     background-color: $secondary-lightgrey;
     padding: 3px 10px;
@@ -150,7 +150,7 @@
 .booking-card__meta {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: $space-xs;
   margin: 0 0 16px;
   padding: 14px 0;
   border-top: 1px dashed $primary-lightgrey;
@@ -161,17 +161,17 @@
   }
 
   dt {
-    font-size: 12px;
+    font-size: $font-size-xs;
     color: $text-lightgrey;
     margin-bottom: 4px;
-    font-weight: 400;
+    font-weight: $font-weight-regular;
   }
 
   dd {
     margin: 0;
     font-size: 15px;
     color: $text-softblack;
-    font-weight: 600;
+    font-weight: $font-weight-semibold;
   }
 
   .amount {
@@ -194,19 +194,19 @@
 .btn-ticket {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: $space-2xs;
   padding: 9px 20px;
   border: 1px solid $secondary-blue;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background-color: $secondary-blue;
   color: $text-white;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   transition: all 0.15s ease;
 
   i {
-    font-size: 16px;
+    font-size: $font-size-base;
   }
 
   &:hover {
@@ -218,14 +218,14 @@
 .btn-cancel {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: $space-2xs;
   padding: 9px 20px;
   border: 1px solid $text-red;
-  border-radius: 8px;
+  border-radius: $radius-sm;
   background-color: $primary-white;
   color: $text-red;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   transition: all 0.15s ease;
 
@@ -245,7 +245,7 @@
   height: 14px;
   border: 2px solid currentColor;
   border-top-color: transparent;
-  border-radius: 50%;
+  border-radius: $radius-circle;
   animation: my-bookings-spin 0.7s linear infinite;
 }
 
@@ -261,7 +261,7 @@
   background-color: $primary-white;
   border: 1px solid $primary-lightgrey;
   border-radius: 14px;
-  padding: 40px 24px;
+  padding: $space-2xl 24px;
 
   i {
     font-size: 40px;
@@ -279,9 +279,9 @@
 .btn-secondary {
   display: inline-block;
   padding: 10px 22px;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
   cursor: pointer;
   text-decoration: none;
 }
@@ -302,7 +302,7 @@
 .booking-card--skeleton {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: $space-xs;
 }
 
 .skeleton {

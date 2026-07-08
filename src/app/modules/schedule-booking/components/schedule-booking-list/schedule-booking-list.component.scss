@@ -2,36 +2,36 @@
 
 .booking-container {
   background: #f6fcff;
-  padding: 24px 32px;
-  border-radius: 12px;
+  padding: $space-lg 32px;
+  border-radius: $radius-md;
   box-sizing: border-box;
   width: min(100%, 1200px);
 
   display: flex;
   justify-content: center;
   flex-direction: column;
-  gap: 12px;
+  gap: $space-xs;
 
   margin: 0 auto 72px;
 
   .title {
     margin-bottom: 16px;
-    font-size: 18px;
+    font-size: $font-size-md;
     font-weight: bold;
   }
 
   .no-results {
-    margin: 8px 0;
-    padding: 24px 16px;
+    margin: $space-2xs 0;
+    padding: $space-lg 16px;
     text-align: center;
     font-size: 15px;
-    color: #757a86;
+    color: $text-lightblack;
   }
 
   .schedule-item {
     background: $primary-white;
     border-radius: 10px;
-    padding: 16px;
+    padding: $space-sm;
     margin-bottom: 12px;
     display: flex;
     justify-content: space-between;
@@ -44,7 +44,7 @@
       display: flex;
       align-items: center;
       flex-direction: row;
-      column-gap: 32px;
+      column-gap: $space-xl;
       min-width: 0;
 
       .icon {
@@ -57,8 +57,8 @@
       }
 
       .time {
-        font-size: 16px;
-        font-weight: 500;
+        font-size: $font-size-base;
+        font-weight: $font-weight-medium;
         color: $text-softblack;
       }
 
@@ -70,7 +70,7 @@
         min-width: 0;
 
         .route {
-          font-size: 14px;
+          font-size: $font-size-sm;
           color: $text-softblack;
           text-align: center;
           white-space: nowrap;
@@ -84,7 +84,7 @@
     .right {
       display: flex;
       justify-content: space-between;
-      column-gap: 24px;
+      column-gap: $space-lg;
 
       text-align: right;
 
@@ -96,26 +96,26 @@
       }
 
       .price {
-        font-size: 18px;
+        font-size: $font-size-md;
         font-weight: bold;
         color: $text-softblack;
       }
 
       .availability {
-        font-size: 14px;
-        font-weight: 400;
-        color: #757a86;
+        font-size: $font-size-sm;
+        font-weight: $font-weight-regular;
+        color: $text-lightblack;
 
         display: flex;
         flex-direction: row;
         align-items: center;
-        column-gap: 8px;
+        column-gap: $space-2xs;
         flex-wrap: wrap;
         justify-content: flex-end;
       }
 
       .select-btn {
-        background: #4bc2f7;
+        background: $primary-blue;
         color: white;
         border: none;
         border-radius: 26px;
@@ -132,11 +132,11 @@
         }
 
         &-diabled {
-          background: #dddee1;
+          background: $primary-lightgrey;
           cursor: not-allowed;
 
           &:hover {
-            background: #dddee1;
+            background: $primary-lightgrey;
           }
         }
       }
@@ -155,11 +155,11 @@
         height: 52px;
 
         &-diabled {
-          background: #dddee1;
+          background: $primary-lightgrey;
           cursor: not-allowed;
 
           &:hover {
-            background: #dddee1;
+            background: $primary-lightgrey;
           }
         }
       }
@@ -171,26 +171,26 @@
   .booking-container {
     width: calc(100% - 32px);
     margin: 0 16px 72px;
-    padding: 16px 24px;
+    padding: $space-sm 24px;
   }
 }
 
 @media (max-width: 768px) {
   .booking-container {
-    padding: 16px;
+    padding: $space-sm;
   }
 
   .booking-container .schedule-item {
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: $space-xs;
   }
 
   .booking-container .schedule-item .left {
     flex-direction: column;
     align-items: flex-start;
     column-gap: 0;
-    row-gap: 8px;
+    row-gap: $space-2xs;
   }
 
   .booking-container .schedule-item .left .time-info {
@@ -213,8 +213,8 @@
     width: 100%;
     justify-content: flex-start;
     align-items: center;
-    column-gap: 12px;
-    row-gap: 12px;
+    column-gap: $space-xs;
+    row-gap: $space-xs;
     flex-wrap: wrap;
   }
 
@@ -231,6 +231,6 @@
   }
 
   .booking-container .schedule-item .right {
-    column-gap: 8px;
+    column-gap: $space-2xs;
   }
 }

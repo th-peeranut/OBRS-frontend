@@ -4,9 +4,9 @@
   display: flex;
   flex-wrap: wrap;
   column-gap: 72px;
-  row-gap: 24px;
+  row-gap: $space-lg;
 
-  padding: 40px clamp(16px, 8vw, 360px) 24px;
+  padding: $space-2xl clamp(16px, 8vw, 360px) 24px;
 
   background-color: $primary-white;
 }
@@ -23,21 +23,21 @@
   }
 
   .address-title {
-    font-size: 16px;
+    font-size: $font-size-base;
     color: $text-softblack;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
   }
 
   .address-subtitle {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
   }
 
   .address-text {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 400;
+    font-weight: $font-weight-regular;
   }
 }
 
@@ -48,9 +48,9 @@
   min-width: 200px;
 
   .sales-title {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
   }
 
   .sales-item {
@@ -76,15 +76,15 @@
     }
 
     .sales-name {
-      font-size: 14px;
+      font-size: $font-size-sm;
       color: $text-softblack;
-      font-weight: 600;
+      font-weight: $font-weight-semibold;
     }
 
     .sales-sub {
       font-size: 13px;
       color: $text-softblack;
-      font-weight: 400;
+      font-weight: $font-weight-regular;
     }
 
     &:hover .sales-name {
@@ -100,15 +100,15 @@
   min-width: 160px;
 
   .menu-title {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
   }
 
   .menu-text {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 400;
+    font-weight: $font-weight-regular;
     text-decoration: none;
     display: inline-block;
 
@@ -123,9 +123,9 @@
   min-width: 200px;
 
   .contact-title {
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 700;
+    font-weight: $font-weight-bold;
   }
 
   .contact-text {
@@ -135,9 +135,9 @@
     column-gap: 10px;
     line-height: 1.45;
 
-    font-size: 14px;
+    font-size: $font-size-sm;
     color: $text-softblack;
-    font-weight: 400;
+    font-weight: $font-weight-regular;
     text-decoration: none;
     cursor: pointer;
 
@@ -170,16 +170,16 @@
   padding: 0px clamp(16px, 8vw, 360px) 40px;
 
   .copyright-text {
-    font-size: 12px;
+    font-size: $font-size-xs;
     color: $text-softblack;
-    font-weight: 400;
+    font-weight: $font-weight-regular;
   }
 }
 
 @media (max-width: 1024px) {
   .footer-container {
-    column-gap: 40px;
-    row-gap: 20px;
+    column-gap: $space-2xl;
+    row-gap: $space-md;
     padding-top: 32px;
   }
 
@@ -230,7 +230,7 @@
     }
 
     .sales-sub {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
   }
 
@@ -273,19 +273,19 @@
     }
 
     .address-title {
-      font-size: 14px;
+      font-size: $font-size-sm;
     }
 
     .address-subtitle,
     .address-text {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
   }
 
   .sales-container {
     .sales-title,
     .sales-name {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
 
     .sales-sub {
@@ -296,15 +296,15 @@
   .menu-container {
     .menu-title,
     .menu-text {
-      font-size: 12px;
+      font-size: $font-size-xs;
     }
   }
 
   .contact-container {
     .contact-title,
     .contact-text {
-      font-size: 12px;
-      column-gap: 8px;
+      font-size: $font-size-xs;
+      column-gap: $space-2xs;
     }
 
     .contact-text {
