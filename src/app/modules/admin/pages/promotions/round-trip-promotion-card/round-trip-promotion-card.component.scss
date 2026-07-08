@@ -1,4 +1,4 @@
-@import "../../../../../styles/variables.scss";
+@import "../../../../../../styles/variables.scss";
 
 :host {
   display: block;
@@ -9,27 +9,6 @@
 // (existing pages keep the 10px shared default — see design-system §13).
 .admin-field {
   border-radius: $radius-pill;
-}
-
-// The create/edit form has many fields (incl. 3 locales x label+description)
-// — a bit wider than the shared 720px `.admin-modal` default, scoped to this
-// component only (same "when you touch a screen, resolve locally" pattern
-// used by round-trip-promotion-card's own scoped overrides).
-.admin-modal-lg {
-  width: min(880px, 100%);
-}
-
-.admin-hint {
-  display: block;
-  color: var(--admin-muted);
-  font-size: 11px;
-}
-
-.admin-form-subheading {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--admin-text);
 }
 
 :host ::ng-deep .promotion-calendar .p-inputtext {

@@ -215,6 +215,7 @@
       "LOAD_VEHICLES_FAILED": "无法加载车辆。",
       "LOAD_ROUTES_FAILED": "无法加载路线。",
       "LOAD_SCHEDULES_FAILED": "无法加载班次。",
+      "LOAD_PROMOTIONS_FAILED": "无法加载促销活动。",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -255,7 +256,31 @@
       "END_DATE": "结束日期",
       "MIN_BOOKING_AMOUNT": "最低订票金额",
       "DATE_RANGE_VALIDATION": "结束日期不能早于开始日期。",
-      "LOAD_FAILED": "无法加载往返促销活动。"
+      "LOAD_FAILED": "无法加载往返促销活动。",
+      "ADD": "添加促销代码",
+      "ADD_TITLE": "添加促销代码",
+      "EDIT_TITLE": "编辑促销代码",
+      "MODAL_HINT": "设置此促销活动的代码、折扣和有效期。",
+      "TABLE_TITLE": "促销代码",
+      "MAX_DISCOUNT_AMOUNT": "最高折扣金额",
+      "MAX_DISCOUNT_HINT": "仅在折扣类型为百分比时适用。",
+      "AUTO_APPLY": "自动应用",
+      "AUTO_APPLY_YES": "是",
+      "AUTO_APPLY_NO": "否",
+      "DISCOUNT_TYPE_PERCENTAGE": "百分比",
+      "DISCOUNT_TYPE_FIXED_AMOUNT": "固定金额",
+      "TRANSLATIONS_SECTION": "翻译",
+      "LABEL_EN": "名称（英文）",
+      "LABEL_TH": "名称（泰文）",
+      "LABEL_ZH": "名称（中文）",
+      "DESCRIPTION_EN": "描述（英文）",
+      "DESCRIPTION_TH": "描述（泰文）",
+      "DESCRIPTION_ZH": "描述（中文）",
+      "MANAGED_ABOVE": "已在上方管理",
+      "DEACTIVATE_CONFIRM_TITLE": "停用此促销活动？",
+      "DEACTIVATE_CONFIRM_MESSAGE": "此促销活动将被标记为停用，而不会被删除。您之后可以通过编辑重新启用它。",
+      "DEACTIVATE": "停用",
+      "DEACTIVATING": "正在停用..."
     },
     "ROLES": {
       "TITLE": "访问控制档案",
@@ -794,9 +819,27 @@
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
       "TICKET_UNIT": "泰铢/人",
+      "SUBTOTAL": "小计",
+      "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
       "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
+    }
+  },
+  "PROMO_CODE": {
+    "LABEL": "促销代码",
+    "PLACEHOLDER": "输入促销代码",
+    "APPLY": "应用",
+    "APPLYING": "正在应用...",
+    "REMOVE": "移除促销代码",
+    "APPLY_FAILED": "无法应用此代码，请重试。",
+    "ERROR": {
+      "NOT_FOUND": "此代码不存在。",
+      "INACTIVE": "此代码已停用。",
+      "EXPIRED": "此代码已过期。",
+      "NOT_YET_ACTIVE": "此代码尚未生效。",
+      "MIN_AMOUNT_NOT_MET": "您的订票总额未达到此代码的最低金额要求。",
+      "USAGE_LIMIT_REACHED": "此代码已达到使用次数上限。"
     }
   },
   "PASSENGER_INFO": {
@@ -839,7 +882,8 @@
       "MONK": "僧侣"
     },
     "ALERT": {
-      "CREATE_SUCCESS": "预订保存成功"
+      "CREATE_SUCCESS": "预订保存成功",
+      "CREATE_FAILED": "无法创建预订，请重试。"
     }
   },
   "PAYMENT": {
@@ -860,6 +904,7 @@
       "TICKET_UNIT": "泰铢/人",
       "SUBTOTAL": "小计",
       "DISCOUNT_ROUND_TRIP": "往返折扣",
+      "DISCOUNT": "折扣",
       "TOTAL": "总计",
       "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"

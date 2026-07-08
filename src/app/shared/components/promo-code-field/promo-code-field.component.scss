@@ -1,0 +1,105 @@
+@import "../../../../styles/variables.scss";
+
+:host {
+  display: block;
+}
+
+.promo-code-field {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3xs;
+}
+
+.promo-code-row {
+  display: flex;
+  gap: $space-2xs;
+}
+
+// Matches the customer-shell input radius already used on this page (e.g.
+// booker-info-form) rather than the admin pill shape — this field lives on a
+// public booking surface, not an admin form (design-system.md §5 pill rule
+// targets admin/touched form controls; sibling inputs here are $radius-sm).
+.promo-code-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 44px;
+  padding: 0 $space-sm;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-sm;
+  font: inherit;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+
+  &:disabled {
+    background: $primary-lightgrey;
+    cursor: not-allowed;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $primary-blue;
+  }
+}
+
+.promo-code-apply-btn {
+  flex: 0 0 auto;
+  height: 44px;
+  padding: 0 $space-md;
+  border: none;
+  border-radius: $radius-sm;
+  background: $primary-blue;
+  color: $text-white;
+  font-size: $font-size-sm;
+  font-weight: bold;
+  cursor: pointer;
+
+  &:disabled {
+    background: $primary-lightgrey;
+    cursor: not-allowed;
+  }
+}
+
+.promo-code-error {
+  margin: 0;
+  font-size: $font-size-xs;
+  color: $text-red;
+}
+
+.promo-code-chip {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  width: fit-content;
+  max-width: 100%;
+  padding: $space-3xs $space-sm;
+  border: 1px solid $primary-blue;
+  border-radius: $radius-pill;
+  background: rgba($primary-blue, 0.08);
+  color: $text-softblack;
+}
+
+.promo-code-chip-icon {
+  font-size: $font-size-md;
+  color: $primary-blue;
+}
+
+.promo-code-chip-code {
+  font-weight: bold;
+  font-size: $font-size-sm;
+  overflow-wrap: anywhere;
+}
+
+.promo-code-chip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  color: $text-lightblack;
+
+  .material-symbols-outlined {
+    font-size: $font-size-md;
+  }
+}

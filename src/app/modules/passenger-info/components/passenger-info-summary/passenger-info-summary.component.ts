@@ -1,8 +1,12 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewChild } from '@angular/core';
 import {
   Schedule,
   ScheduleFilter,
 } from '../../../../shared/interfaces/schedule.interface';
+import {
+  PromoCodeAppliedEvent,
+  PromoCodeFieldComponent,
+} from '../../../../shared/components/promo-code-field/promo-code-field.component';
 import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
@@ -38,9 +42,18 @@ export class PassengerInfoSummaryComponent {
   @Input() isNextDisabled = true;
   @Output() next = new EventEmitter<void>();
   @Output() back = new EventEmitter<void>();
+  // OBRS-109 (#37): bubble the confirmed/removed promo code up to the page,
+  // which owns sending it on the create-booking call.
+  @Output() promoApplied = new EventEmitter<PromoCodeAppliedEvent>();
+  @Output() promoRemoved = new EventEmitter<void>();
+  @ViewChild(PromoCodeFieldComponent) promoCodeFieldComponent?: PromoCodeFieldComponent;
+
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
   rawProvinceStationList: Observable<StationApi[]>;
+  // Local view state only, so the Subtotal/Discount/Total breakdown can
+  // replace the plain Total row while a code is applied.
+  protected appliedPromo: PromoCodeAppliedEvent | null = null;
 
   constructor(
     private store: Store,
@@ -216,6 +229,22 @@ export class PassengerInfoSummaryComponent {
 
   onBack(): void {
     this.back.emit();
+  }
+
+  protected onPromoApplied(result: PromoCodeAppliedEvent): void {
+    this.appliedPromo = result;
+    this.promoApplied.emit(result);
+  }
+
+  protected onPromoRemoved(): void {
+    this.appliedPromo = null;
+    this.promoRemoved.emit();
+  }
+
+  /** Forwarded from the page after a booking-submit rejection tied to this
+   * already-applied code (see PassengerInfoComponent.onSubmitPassengerInfo). */
+  revertPromoWithError(errorCode: string): void {
+    this.promoCodeFieldComponent?.applyExternalError(errorCode);
   }
 }
 

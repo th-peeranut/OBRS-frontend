@@ -1,5 +1,144 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-08 — Frontend implementation: promo code system (OBRS-109 / #37)
+
+**Worktree:** `OBRS-frontend-wt-promo-codes` (branch `ao/promo-codes`, off `dev`, on top of
+#36's shipped round-trip admin page). Implements the UX spec below end to end. `ng test`:
+675/675 PASS. `ng build --configuration production`: PASS (1.42 MB initial, under budget).
+
+**Backend does not exist yet for either half of this feature — built against the SA/UX-locked
+shape, flagged in `docs/handoff.md`, same pattern as OBRS-85.** Checked
+`OBRS-backend-wt-promo-codes`: still at `origin/dev` HEAD, no promo-code commits. Neither
+`POST /api/private/promotions/validate` nor the general `/api/private/admin/promotions`
+CRUD exist. Filed one consolidated Contract Request covering both. Until the backend lands:
+the customer promo field will show a generic apply-failed error on every attempt, and the
+admin list/CRUD calls will 404 (skeleton/error states render gracefully, no crash).
+
+**Split of responsibility between `PromoCodeFieldComponent` and `PassengerInfoSummaryComponent`
+was a judgment call — the field does NOT render Subtotal/Discount/Total.** The UX spec bundles
+"collapse to a chip + show Subtotal/Promo discount/Total" as one bullet, but the required i18n
+keys (`REVIEW_SCHEDULE_BOOKING.TOTAL.SUBTOTAL`/`PROMO_DISCOUNT`) live in the *summary's own*
+existing i18n namespace, not a `PROMO_CODE.*` one — strong signal the breakdown belongs to the
+consuming summary component, which already owns the "Total" row. Went with:
+`PromoCodeFieldComponent` = input/apply/chip/inline-error only (generic, portable, its own
+`PROMO_CODE.*` keys); `PassengerInfoSummaryComponent` owns swapping its existing plain "Total"
+row for Subtotal/Discount/Total once `(applied)` fires. Keeps the shared component reusable
+without dragging a page-specific i18n namespace into `shared/components/`.
+
+**Preview→submit race handled via a ViewChild chain, not a shared store.** `PromoCodeFieldComponent`
+exposes `applyExternalError(errorCode)` (reverts to input state, keeps the typed code visible,
+shows the mapped error, re-emits `(removed)`). `PassengerInfoSummaryComponent.revertPromoWithError()`
+forwards to it via `@ViewChild`. `PassengerInfoComponent.handleBookingCreationError()` calls that
+via its own `@ViewChild(PassengerInfoSummaryComponent)` — same hand-off pattern already used for
+the passenger/booker form ViewChildren in this component, just one level deeper.
+
+**`createBooking`'s new `suppressGlobalErrorAlert` param opts out of the error alert ONLY, not the
+loading dialog.** `booking.service.ts` builds a context with just `SKIP_GLOBAL_ERROR_ALERT` (a new
+private `silentErrorContext()`, separate from the existing `silentContext()` used by cancel/list
+calls which also skips the loading alert) — the spec only asked to suppress the *error* alert for
+this call. `PassengerInfoComponent.handleBookingCreationError()` then branches on
+`error.error.errorCode`: a `PROMO_CODE_*` code reverts the field inline (no alert at all); any other
+error manually calls `alertService.error(...)` with a new `PASSENGER_INFO.ALERT.CREATE_FAILED` key,
+replicating what the (now-opted-out) global interceptor would have shown. The no-promo-code path is
+byte-identical to before (`suppressGlobalErrorAlert` defaults `false`).
+
+**Two `admin-btn-primary` buttons now coexist on one page (Save on `RoundTripPromotionCardComponent`,
+Add Promotion Code on the list below) — a deliberate reading of design-system §4, not an oversight.**
+The UX spec explicitly labels the new Add button "(primary)" while also requiring the round-trip
+card's existing Save button preserved verbatim. Treated as two independently-scoped cards (each
+with its own bounded action), analogous to how `vehicles-page` already has one primary "+Add" for
+the table plus a separate primary "Save" inside its own modal — just both visible on-screen
+simultaneously here instead of one being inside a modal. Flagging for Scrutinize/UX in case the
+rule is meant to bind at the page level, not the card level.
+
+**`RoundTripPromotionCardComponent` is a verbatim extraction — `RoundTripPromotionStore` and its
+partial-PATCH/pristine-patch contract are untouched.** Moved `promotions-page.component.{ts,html,scss,spec.ts}`
+to `round-trip-promotion-card/round-trip-promotion-card.component.*` unchanged except the class/selector
+name and import path depth (+1 level). `PromotionsPageComponent` is a new file: hosts the card at the
+top, then a `PromotionsListStore extends AdminCollectionStore<PromotionRespDto[]>` (sibling to
+`VehiclesStore`) backing a list + create/edit modal (optimistic open, pristine-only late-patch from
+`GET /{id}`, `PUT /{id}` full-replace) + soft-delete confirm modal, modeled on `vehicles-page`'s
+skeleton. A row with `slug === 'round_trip'` renders "Managed above" instead of Edit/Delete icons —
+one edit surface per entity, no risk of two forms fighting over PATCH-partial vs PUT-full-replace.
+
+**Soft-delete keeps the row, just flips `status` to `'inactive'` locally (optimistic) — does not
+filter it out of the list**, unlike `vehicles-page`'s hard-delete `confirmDelete()` which does
+`list.filter(...)`. This was the one place I deliberately did NOT copy the vehicles skeleton
+verbatim, per the UX spec's explicit "becomes Inactive, not removed" copy requirement.
+
+**`discountType`/`status`/`autoApply` dropdowns start empty on create, pre-fill on edit — the
+create-modal pre-seed anti-pattern in `vehicles-page.component.ts::openCreateModal()`
+(`vehicleType: this.vehicleTypeOptions[0]?.code ?? ''`) was NOT copied here.** That pre-seed looks
+like a live violation of design-system §3.1 despite the doc citing the Vehicle Type bug as the
+motivating example — flagging for Scrutinize/tech-lead rather than silently fixing an unrelated
+page in this PR.
+
+## 2026-07-08 — UX spec: promo code system (OBRS-109) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-promo-codes` (branch `ao/promo-codes`, off `dev`, includes
+#36's shipped `/admin/promotions` singleton page + payment-summary discount line). No
+code written this pass — this is the UX/UI spec handoff. Full spec is in the OBRS-109
+ticket thread; load-bearing findings below.
+
+**Key decision — customer promo entry is INSTANT PREVIEW, not apply-at-submit — and it
+needs a new backend endpoint.** The locked backend only validates/applies a
+`promotionCode` inside `POST /api/private/bookings` (no preview exists). I'm
+recommending backend add a small stateless `POST /api/private/promotions/validate
+{code, amount}` (reuses the same validation logic, persists nothing, no usage
+increment) so the customer can see "Code XYZ applied: -50 THB" before committing to the
+booking — standard checkout expectation, and avoids a submit → reject → retype loop
+where the "Next" button doubles as "create the whole booking." Tradeoff stated in the
+spec: apply-at-submit needs zero new backend but gives worse UX (blind submit, and a
+wrong code fails the entire booking-creation call, not just the coupon). If backend
+cannot add the endpoint in this increment, fall back to (a) apply-at-submit with the
+same entry field/errorCode-mapping, just remove the live preview call and forward
+`promotionCode` straight into `buildBookingPayload()`.
+
+**Placement: `passenger-info-summary` sidebar, not `review-schedule-booking` or
+`payment`.** Traced the flow like OBRS-85 did: `review-schedule-booking-total` and
+`passenger-info-summary` both compute totals client-side from the same selectors: only
+`passenger-info-summary` sits directly above the "Next" button that actually calls
+`createBooking()` (in `passenger-info.component.ts::onSubmitPassengerInfo`) — the
+natural "review order + apply code + place order" moment. This is a **deliberate,
+scoped reversal of OBRS-85 Finding 1** ("review/passenger-info structurally cannot show
+a real discount") — that finding was about the *auto-apply round-trip* discount, which
+still has no preview path and still only surfaces on `payment-summary` post-booking,
+unchanged. The new validate endpoint only covers the *manually typed* code, so
+`passenger-info-summary` can show a real, server-validated (not client-guessed) preview
+for that case only.
+
+**`payment-summary.component.html` line 84's `PAYMENT.SUMMARY.DISCOUNT_ROUND_TRIP` label
+needs a generic replacement.** Post-#37 the discount snapshot on a booking can come from
+either the round-trip auto-apply OR a manually typed code — the backend gives no
+`discountSource` field to distinguish them, so a round-trip-specific label is now
+wrong half the time. Spec adds a generic `PAYMENT.SUMMARY.DISCOUNT` key and repoints
+that one template binding; leaves `DISCOUNT_ROUND_TRIP` in the i18n files as harmless
+dead weight rather than chasing every locale file for a delete.
+
+**Admin list/CRUD reuses the `vehicles-page` skeleton almost verbatim** (list +
+create/edit modal + soft-delete confirm modal, `AdminCollectionStore<PromotionRespDto[]>`
+sibling to `VehiclesStore`). The existing `PromotionsPageComponent` (today: a single
+round-trip edit form, `RoundTripPromotionStore`) gets extracted unchanged into a new
+`RoundTripPromotionCardComponent` child — pure move, not a rewrite, to protect the
+already-tested partial-PATCH/pristine-patch logic. The round-trip row still appears in
+the general list (backend's `GET /admin/promotions` returns it as a normal row), but its
+Edit/Delete icons are replaced with a muted "managed above" label — one edit surface per
+entity, no risk of two divergent forms fighting over the same PATCH-partial vs
+PUT-full-replace contract.
+
+**`autoApply` (boolean) is modeled as a 2-option `app-admin-dropdown` (Yes/No), not a new
+toggle-switch component** — no toggle pattern exists anywhere in this admin module yet,
+and the round-trip form already sets the precedent of representing a boolean
+(`active`) as a string-valued canonical dropdown. Reuses the canonical control instead
+of introducing a 4th form-control type.
+
+**Translations sub-form covers en/th/zh (3 locales), not en/th (2) like
+`lookup-settings`.** `lookup-settings-page` only has `enLabel/thLabel` fields — but that
+predates the ZH locale rollout on the customer site. Promotion labels/descriptions are
+the trilingual site's actual customer-facing content, so the create/edit modal gets 6
+translation inputs (EN/TH/ZH × label/description), matching `AdminTranslationReqDto[]`
+already defined in `admin-api.service.ts` (reused type, not a new one).
+
 ## 2026-07-08 — Frontend: usability-report-triage (OBRS-86) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-usability-report-triage` (branch `ao/usability-report-triage`, diff vs `origin/dev`)

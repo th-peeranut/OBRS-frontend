@@ -1,46 +1,147 @@
-<section class="admin-page-intro" *ngIf="errorMessage || (isRefreshing && !isLoading)">
+<app-round-trip-promotion-card></app-round-trip-promotion-card>
+
+<section class="admin-page-intro mt-3">
   <div>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
-    <p class="admin-muted" *ngIf="isRefreshing && !isLoading">{{ 'ADMIN.COMMON.UPDATING' | translate }}</p>
+    <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.PROMOTIONS.ADD' | translate }}</span>
+  </button>
 </section>
 
 <section class="admin-card mt-3">
   <div class="admin-card-head">
-    <h4>{{ 'ADMIN.PAGES.PROMOTIONS' | translate }}</h4>
+    <h4>{{ 'ADMIN.PROMOTIONS.TABLE_TITLE' | translate }}</h4>
   </div>
 
-  <ng-container *ngIf="isLoading">
-    <div class="admin-skeleton admin-skeleton--sm mb-2" *ngFor="let row of [1, 2, 3, 4, 5]"></div>
-  </ng-container>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.PROMOTIONS.CODE' | translate }}</th>
+          <th>{{ 'ADMIN.PROMOTIONS.SLUG' | translate }}</th>
+          <th>{{ 'ADMIN.PROMOTIONS.DISCOUNT_AMOUNT' | translate }}</th>
+          <th>{{ 'ADMIN.PROMOTIONS.STATUS' | translate }}</th>
+          <th>{{ 'ADMIN.PROMOTIONS.AUTO_APPLY' | translate }}</th>
+          <th>{{ 'ADMIN.PROMOTIONS.USAGE_LIMIT' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
 
-  <ng-container *ngIf="!isLoading && promotion">
-    <div class="admin-form-grid mb-3">
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate }}</label>
-        <p class="admin-emphasis">{{ discountTypeLabel }}</p>
-      </div>
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.CODE' | translate }}</label>
-        <p class="admin-emphasis">{{ promotion.code || '-' }}</p>
-      </div>
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.SLUG' | translate }}</label>
-        <p class="admin-emphasis">{{ promotion.slug || '-' }}</p>
-      </div>
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.TIMES_USED' | translate }}</label>
-        <p class="admin-emphasis">{{ promotion.currentUsage ?? 0 }}</p>
-      </div>
-      <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.USAGE_LIMIT' | translate }}</label>
-        <p class="admin-emphasis">{{ promotion.usageLimit ?? '-' }}</p>
-      </div>
-    </div>
+        <ng-container *ngIf="!isLoading">
+          <tr *ngFor="let row of rows; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
+            <td class="admin-emphasis"><code>{{ row.code }}</code></td>
+            <td>{{ row.slug || '-' }}</td>
+            <td>
+              <div class="admin-cell-stack">
+                <span>{{ row.discountTypeLabel }}</span>
+                <span class="admin-muted">{{ row.discountValue ?? '-' }}{{ row.discountTypeCode === 'percentage' ? '%' : '' }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(row.statusCode)">{{ row.statusLabel }}</span>
+            </td>
+            <td>
+              {{ row.autoApply ? ('ADMIN.PROMOTIONS.AUTO_APPLY_YES' | translate) : ('ADMIN.PROMOTIONS.AUTO_APPLY_NO' | translate) }}
+            </td>
+            <td>{{ row.currentUsage }} / {{ row.usageLimit && row.usageLimit > 0 ? row.usageLimit : '∞' }}</td>
+            <td class="text-right">
+              <span class="admin-muted" *ngIf="row.isRoundTrip">{{ 'ADMIN.PROMOTIONS.MANAGED_ABOVE' | translate }}</span>
+              <div class="admin-inline-actions" *ngIf="!row.isRoundTrip">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="openEditModal(row)"
+                >
+                  <span class="material-symbols-outlined">edit_square</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn danger"
+                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                  (click)="openDeactivateModal(row)"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
 
-    <hr />
+          <tr *ngIf="rows.length === 0 && !errorMessage" class="admin-empty-row">
+            <td colspan="7">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>
 
-    <form [formGroup]="promotionForm" class="admin-form-grid mt-3" (ngSubmit)="save()">
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
+  <div class="admin-modal admin-modal-lg">
+    <h4 class="admin-modal-title">
+      {{
+        isEditMode
+          ? ('ADMIN.PROMOTIONS.EDIT_TITLE' | translate)
+          : ('ADMIN.PROMOTIONS.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.PROMOTIONS.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
+
+    <form [formGroup]="promotionForm" class="admin-form-grid" (ngSubmit)="submitPromotion()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.SLUG' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="slug" />
+        <small class="admin-error" *ngIf="isFieldInvalid('slug')">
+          {{ 'ADMIN.VALIDATION.SLUG_FORMAT' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.CODE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="code" />
+        <small class="admin-error" *ngIf="isFieldInvalid('code')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="discountType"
+          [options]="discountTypeOptions"
+          valueKey="value"
+          labelKey="label"
+          [placeholder]="'ADMIN.PROMOTIONS.DISCOUNT_TYPE' | translate"
+        ></app-admin-dropdown>
+      </div>
+
       <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.PROMOTIONS.DISCOUNT_AMOUNT' | translate }} <span class="admin-required">*</span>
@@ -58,16 +159,26 @@
       </div>
 
       <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.PROMOTIONS.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="status"
-          [options]="statusOptions"
-          valueKey="value"
-          labelKey="label"
-          [placeholder]="'ADMIN.PROMOTIONS.STATUS' | translate"
-        ></app-admin-dropdown>
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_AMOUNT' | translate }}</label>
+        <input
+          class="admin-field"
+          type="number"
+          min="0"
+          step="0.01"
+          formControlName="maxDiscountAmount"
+        />
+        <small class="admin-hint">{{ 'ADMIN.PROMOTIONS.MAX_DISCOUNT_HINT' | translate }}</small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MIN_BOOKING_AMOUNT' | translate }}</label>
+        <input
+          class="admin-field"
+          type="number"
+          min="0"
+          step="0.01"
+          formControlName="minBookingAmount"
+        />
       </div>
 
       <div class="admin-form-field">
@@ -104,28 +215,113 @@
       </div>
 
       <div class="admin-form-field">
-        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.MIN_BOOKING_AMOUNT' | translate }}</label>
-        <input
-          class="admin-field"
-          type="number"
-          min="0"
-          step="0.01"
-          formControlName="minBookingAmount"
-        />
-        <small class="admin-error" *ngIf="isFieldInvalid('minBookingAmount')">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.USAGE_LIMIT' | translate }}</label>
+        <input class="admin-field" type="number" min="0" formControlName="usageLimit" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="status"
+          [options]="statusOptions"
+          valueKey="value"
+          labelKey="label"
+          [placeholder]="'ADMIN.PROMOTIONS.STATUS' | translate"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.AUTO_APPLY' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="autoApply"
+          [options]="autoApplyOptions"
+          valueKey="value"
+          labelKey="label"
+          [placeholder]="'ADMIN.PROMOTIONS.AUTO_APPLY' | translate"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field" *ngIf="isEditMode">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.TIMES_USED' | translate }}</label>
+        <p class="admin-emphasis">{{ selectedPromotion?.currentUsage ?? 0 }}</p>
+      </div>
+
+      <div class="admin-form-field full">
+        <hr />
+        <h5 class="admin-form-subheading">{{ 'ADMIN.PROMOTIONS.TRANSLATIONS_SECTION' | translate }}</h5>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.PROMOTIONS.LABEL_EN' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="enLabel" />
+        <small class="admin-error" *ngIf="isFieldInvalid('enLabel')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
       </div>
 
-      <div class="admin-form-field full">
-        <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSaving">
-          {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-        </button>
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_EN' | translate }}</label>
+        <textarea class="admin-field" formControlName="enDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_TH' | translate }}</label>
+        <input class="admin-field" formControlName="thLabel" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_TH' | translate }}</label>
+        <textarea class="admin-field" formControlName="thDescription"></textarea>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.LABEL_ZH' | translate }}</label>
+        <input class="admin-field" formControlName="zhLabel" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.PROMOTIONS.DESCRIPTION_ZH' | translate }}</label>
+        <textarea class="admin-field" formControlName="zhDescription"></textarea>
       </div>
     </form>
-  </ng-container>
 
-  <p class="admin-muted" *ngIf="!isLoading && !promotion && !errorMessage">
-    {{ 'ADMIN.COMMON.NO_DATA' | translate }}
-  </p>
-</section>
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitPromotion()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-modal-backdrop" *ngIf="isDeactivateModalOpen" adminModalBackdrop (dismiss)="closeDeactivateModal()">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.PROMOTIONS.DEACTIVATE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="selectedPromotion">{{ selectedPromotion.code }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDeactivateModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isDeactivating"
+        (click)="confirmDeactivate()"
+      >
+        {{ isDeactivating ? ('ADMIN.PROMOTIONS.DEACTIVATING' | translate) : ('ADMIN.PROMOTIONS.DEACTIVATE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

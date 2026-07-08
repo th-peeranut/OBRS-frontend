@@ -87,6 +87,16 @@
   justify-content: space-between;
   align-items: center;
   gap: $space-xs;
+
+  // OBRS-109 (#37): Subtotal/Promo discount rows shown above Total once a
+  // promo code is applied — same modifier pattern as payment-summary.
+  &--subtle {
+    font-weight: normal;
+  }
+
+  &--discount {
+    color: $text-red;
+  }
 }
 
 hr {

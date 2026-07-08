@@ -36,6 +36,10 @@ export interface BookingPayload {
   contact: BookingContact;
   departureSchedule: BookingSchedulePayload;
   arrivalSchedule?: BookingSchedulePayload | null;
+  // OBRS-109 (#37): only a code the customer confirmed via the instant
+  // preview (PromoCodeFieldComponent) is ever sent — never precomputed or
+  // guessed client-side.
+  promotionCode?: string | null;
 }
 
 export interface CreateBookingResponse {

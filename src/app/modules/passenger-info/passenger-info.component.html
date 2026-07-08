@@ -27,6 +27,8 @@
       [isNextDisabled]="!isPassengerFormValid || !isBookerFormValid"
       (next)="onSubmitPassengerInfo()"
       (back)="onBack()"
+      (promoApplied)="onPromoApplied($event)"
+      (promoRemoved)="onPromoRemoved()"
     ></app-passenger-info-summary>
   </div>
 </div>

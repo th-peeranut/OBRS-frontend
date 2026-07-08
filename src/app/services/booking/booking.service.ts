@@ -33,14 +33,22 @@ export class BookingService {
    * `CreateBookingResponse` ({ bookingId, bookingNumber }) here, so callers never
    * guess at field names or coerce types. Contract: POST /api/private/bookings →
    * 201, data = CreateBookingResponse (see OBRS-backend/docs/api/booking.md).
+   *
+   * @param suppressGlobalErrorAlert OBRS-109 (#37): pass `true` only when
+   *   `payload.promotionCode` is set — the caller then owns rendering a
+   *   PROMO_CODE_* rejection inline on the reverted promo field instead of
+   *   the generic global alert (and must show its own fallback alert for any
+   *   other error, since the interceptor is opted out for this call).
    */
   createBooking(
-    payload: BookingPayload
+    payload: BookingPayload,
+    suppressGlobalErrorAlert = false
   ): Observable<ResponseAPI<CreateBookingResponse>> {
     return this.http
       .post<ResponseAPI<CreateBookingResponse>>(
         `${environment.apiUrl}/api/private/bookings`,
-        payload
+        payload,
+        suppressGlobalErrorAlert ? { context: this.silentErrorContext() } : {}
       )
       .pipe(
         map((response) => ({
@@ -48,6 +56,12 @@ export class BookingService {
           data: this.normalizeCreateBooking(response.data),
         }))
       );
+  }
+
+  // Opts out of the global error alert only (the loading dialog behavior is
+  // unchanged) so the caller can handle a PROMO_CODE_* rejection inline.
+  private silentErrorContext(): HttpContext {
+    return new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true);
   }
 
   // Coerce the intake response to the canonical shape in one place. bookingId
