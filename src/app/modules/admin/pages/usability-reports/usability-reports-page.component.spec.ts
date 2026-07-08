@@ -125,6 +125,7 @@ describe('UsabilityReportsPageComponent', () => {
       triagedByName: null,
       triagedAt: null,
       jiraIssueKey: null,
+      reporterNotifiedAt: null,
     };
 
     const detailResponse: ResponseAPI<UsabilityReportDetail> = {
@@ -201,6 +202,7 @@ describe('UsabilityReportsPageComponent', () => {
     triagedByName: null,
     triagedAt: null,
     jiraIssueKey: null,
+    reporterNotifiedAt: null,
   };
 
   function primeReportList(): void {
@@ -511,6 +513,39 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
     expect(emailRow())
       .withContext('reporter email row must not render when reporterEmail is absent')
+      .toBeFalsy();
+  });
+
+  it('renders the reporter-notified pill when reporterNotifiedAt is present, and nothing when absent (OBRS-115)', () => {
+    primeReportList();
+    const notifiedPill = () =>
+      fixture.nativeElement.querySelector('.ur-detail-modal .ur-notified-pill') as HTMLElement | null;
+
+    const notified: UsabilityReportDetail = {
+      ...mockFullDetail,
+      reporterEmail: 'reporter@example.com',
+      reporterNotifiedAt: '2026-07-08T10:15:00Z',
+    };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: notified }));
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+    expect(notifiedPill())
+      .withContext('notified pill must render when reporterNotifiedAt is present')
+      .toBeTruthy();
+    expect(notifiedPill()?.textContent)
+      .withContext('notified pill shows the dispatch timestamp')
+      .toContain('2026-07-08T10:15:00Z');
+
+    component['closeDetail']();
+    fixture.detectChanges();
+
+    // A different report id, never notified — pill must be absent.
+    const notNotified: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-3', reporterNotifiedAt: null };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: notNotified }));
+    component['openDetail']('rep-3');
+    fixture.detectChanges();
+    expect(notifiedPill())
+      .withContext('notified pill must not render when reporterNotifiedAt is absent')
       .toBeFalsy();
   });
 

@@ -81,6 +81,32 @@
   word-break: break-all;
 }
 
+// OBRS-115: "reporter notified" indicator — a soft success pill next to the
+// dispatch timestamp. Uses the admin success tokens (with graceful hex fallbacks
+// matching this file's `var(--…, #hex)` convention) so it reads positive and
+// stays theme-aware in dark mode.
+.ur-notified-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--admin-success-text, #0f5132);
+}
+
+.ur-notified-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--admin-success-soft, #d1e7dd);
+  color: var(--admin-success-text, #0f5132);
+  font-size: 0.7rem;
+  font-weight: $font-weight-semibold;
+}
+
 .ur-detail-description {
   p.ur-detail-label {
     font-weight: $font-weight-semibold;

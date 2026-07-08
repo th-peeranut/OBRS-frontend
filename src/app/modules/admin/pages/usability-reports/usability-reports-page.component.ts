@@ -38,7 +38,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     'in_review',
     'accepted',
     'resolved',
-    'wont_fix',
+    'rejected',
   ];
 
   // Detail modal
@@ -177,6 +177,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           triagedByName: null,
           triagedAt: null,
           jiraIssueKey: null,
+          reporterNotifiedAt: null,
         }
       : null;
     this.selectedDetailStatus = summary?.status ?? '';
@@ -330,7 +331,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     if (status === 'in_review') return 'is-info';
     if (status === 'accepted') return 'is-accepted';
     if (status === 'resolved') return 'is-success';
-    if (status === 'wont_fix') return 'is-danger';
+    if (status === 'rejected') return 'is-danger';
     return '';
   }
 
