@@ -13,6 +13,8 @@
   --admin-warning-text: #673a00;
   --admin-danger-bg: #ffdad6;
   --admin-danger-text: #93000a;
+  --admin-accepted-bg: #b7f3c0;
+  --admin-accepted-text: #0a3d1d;
 
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
@@ -61,6 +63,7 @@
   --admin-outline: #3a444b;
   --admin-text: #e7edf1;
   --admin-muted: #9fb0bb;
+  --admin-accepted-text: #6fe08a;
 
   background: radial-gradient(circle at 90% 5%, rgba(255, 122, 69, 0.08), transparent 48%),
     var(--admin-surface);
@@ -879,6 +882,11 @@
 .admin-status.is-danger {
   background: var(--admin-danger-bg);
   color: var(--admin-danger-text);
+}
+
+.admin-status.is-accepted {
+  background: var(--admin-accepted-bg);
+  color: var(--admin-accepted-text);
 }
 
 .admin-status--icon {

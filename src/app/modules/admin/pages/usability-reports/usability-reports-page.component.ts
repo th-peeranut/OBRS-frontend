@@ -2,6 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
+import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { UsabilityReportsStore } from './usability-reports.store';
@@ -35,6 +36,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private readonly statusValues: UsabilityReportStatus[] = [
     'new',
     'in_review',
+    'accepted',
     'resolved',
     'wont_fix',
   ];
@@ -47,6 +49,10 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected isDetailFetching = false;
   protected selectedDetailStatus: UsabilityReportStatus | '' = '';
   protected isSavingStatus = false;
+  // Triage note — a free-text field on the detail modal, independent from the
+  // status dropdown's pristine-patch tracking below (its own dirty flag).
+  protected selectedTriageNote = '';
+  private isTriageNoteDirty = false;
 
   // Lightbox overlay — a layer above the detail modal, tracked independently
   // so dismissing it never closes the detail modal underneath.
@@ -137,12 +143,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected openDetail(id: string): void {
     this.selectedReportId = id;
     this.lightboxImageUrl = null;
+    this.isTriageNoteDirty = false;
 
     const cached = this.detailCache.get(id);
     if (cached) {
       // Cache hit — render the full detail immediately, no spinner, no refetch.
       this.detailReport = cached;
       this.selectedDetailStatus = cached.status;
+      this.selectedTriageNote = cached.triageNote ?? '';
       this.isDetailFetching = false;
       return;
     }
@@ -163,9 +171,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           imageCount: summary.imageCount,
           images: [],
           createdAt: summary.createdAt,
+          triageNote: null,
+          triagedBy: null,
+          triagedAt: null,
+          jiraIssueKey: null,
         }
       : null;
     this.selectedDetailStatus = summary?.status ?? '';
+    this.selectedTriageNote = '';
     this.isDetailFetching = true;
 
     this.adminApiService
@@ -190,6 +203,9 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           if (!this.selectedDetailStatus) {
             this.selectedDetailStatus = detail?.status ?? '';
           }
+          if (!this.isTriageNoteDirty) {
+            this.selectedTriageNote = detail?.triageNote ?? '';
+          }
         },
         error: () => {
           if (this.selectedReportId === id) {
@@ -203,6 +219,8 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.selectedReportId = null;
     this.detailReport = null;
     this.selectedDetailStatus = '';
+    this.selectedTriageNote = '';
+    this.isTriageNoteDirty = false;
     this.isSavingStatus = false;
     this.isDetailFetching = false;
     this.lightboxImageUrl = null;
@@ -244,6 +262,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.selectedDetailStatus = value as UsabilityReportStatus;
   }
 
+  protected onTriageNoteChange(value: string): void {
+    this.selectedTriageNote = value;
+    this.isTriageNoteDirty = true;
+  }
+
+  // Display-only helper — the frontend never calls Jira directly, it just
+  // deep-links the admin to the issue Jira already associated with this report.
+  protected jiraIssueUrl(key: string): string {
+    return `${environment.jira.browseBaseUrl}${encodeURIComponent(key)}`;
+  }
+
   saveStatus(): void {
     if (!this.selectedReportId || !this.selectedDetailStatus) {
       return;
@@ -262,7 +291,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
 
     this.isSavingStatus = true;
     this.adminApiService
-      .updateUsabilityReportStatus(id, status)
+      .updateUsabilityReportStatus(id, status, this.selectedTriageNote || null)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
@@ -297,6 +326,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected statusClass(status: string): string {
     if (status === 'new') return 'is-warning';
     if (status === 'in_review') return 'is-info';
+    if (status === 'accepted') return 'is-accepted';
     if (status === 'resolved') return 'is-success';
     if (status === 'wont_fix') return 'is-danger';
     return '';

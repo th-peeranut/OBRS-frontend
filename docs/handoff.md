@@ -46,6 +46,38 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
+**Affected endpoints**:
+- `PUT /api/private/admin/usability-reports/{id}/status`
+- `GET /api/private/admin/usability-reports/{id}`
+
+**Request type**: Add field / Add enum value
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `accepted` status value | Both endpoints — status enum (currently `new`, `in_review`, `resolved`, `wont_fix`) | New triage state between `in_review` and `resolved` |
+| `triageNote` (string, nullable) | Request body of the `PUT .../status` endpoint | Admin-entered free-text note captured alongside a status change |
+| `triageNote` (string, nullable) | Response body of `GET .../{id}` (and the `PUT .../status` response, which per the current doc mirrors the GET shape) | So a reopened/refetched detail modal can show the previously saved note |
+| `triagedBy` (integer, nullable — admin user id) | Response body of `GET .../{id}` | Displayed as "Triaged By" in the detail modal |
+| `triagedAt` (string/ISO-8601, nullable) | Response body of `GET .../{id}` | Displayed as "Triaged At" in the detail modal |
+| `jiraIssueKey` (string, nullable) | Response body of `GET .../{id}` | Frontend renders a display-only deep link to `https://nj-phuyaipu.atlassian.net/browse/{key}`; frontend never creates/writes this field |
+
+### Suggested contract change
+- Extend the status enum/DB check-constraint with `accepted` (see the existing ADR `0020-usability-report-status-as-varchar-check-enum.md` for the pattern used when `wont_fix`/etc. were added).
+- Add `triage_note`, `triaged_by`, `triaged_at` columns to the usability_report table (or equivalent), populated when the `PUT .../status` endpoint is called with a non-null `triageNote`. `triaged_by`/`triaged_at` should be set server-side from the authenticated admin + current time whenever a status-updating PUT is accepted, not client-supplied.
+- Add `jira_issue_key` as a nullable column, presumably populated by an out-of-band integration — the frontend only reads and links to it, no write path is being requested here.
+
+### Impact if not addressed
+The frontend UI for OBRS-86 (triage note textarea, Triaged By/At rows, Jira link, "Accepted" status pill/filter) is implemented and additive-safe (new nullable fields, no existing behavior removed), but functionally inert against the current backend:
+- Saving a triage note will PUT `{ status, triageNote }` — the backend will silently ignore the unknown `triageNote` field (or reject it, depending on DTO strictness) until the request DTO is extended.
+- Selecting `accepted` as a status will likely be rejected with `REPORT_INVALID_STATUS` until the enum is extended.
+- `triagedBy`, `triagedAt`, `jiraIssueKey` will always render as absent (their UI rows are conditionally hidden on null/undefined, so this degrades gracefully — no broken UI, just missing data) until the backend returns them.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, assuming an undocumented field/enum value is R0. This entry exists so the backend implementation (or an explicit decision to change the frontend spec) happens before this branch is merged/deployed — do not merge to `dev`/`sit` until this is resolved or a maintainer explicitly accepts the temporary contract drift.
+
+---
+
 ### [Frontend] 2026-06-15 — Admin booking list endpoint missing from API docs
 **Affected endpoint**: `GET /api/private/admin/bookings`
 **Request type**: New endpoint (or documentation of existing endpoint)
