@@ -1,12 +1,28 @@
 @import "../../../styles/variables.scss";
 
+// Centered auth-card layout (Atlassian-style): a single card floating on a soft
+// brand gradient, so the whole form (incl. Google sign-in) fits a laptop
+// viewport without the old 60/40 split pushing options below the fold.
 .login-container {
+  position: relative;
   display: flex;
-  width: 100%;
-  height: 100vh;
-  padding: $space-md;
-  margin: auto;
-  background: $primary-white;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: $space-sm;
+  background: linear-gradient(160deg, $primary-lightblue 0%, $primary-white 60%);
+
+  // AMBIENT BRAND BACKDROP — faded illustration behind the card (decorative).
+  .login-bg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.1;
+    pointer-events: none;
+    z-index: 0;
+  }
 
   // CHANGE LANGUAGE SWITCH + THEME TOGGLE — wraps shared components
   .change-language {
@@ -16,58 +32,32 @@
     gap: $space-2xs;
   }
 
-  // LEFT SECTION
-  .left-section {
-    width: 60%;
-
-    .bg-img {
-      width: 100%;
-      height: 100%;
-      border-radius: $radius-xl;
-      object-fit: cover;
-    }
-  }
-
-  // RIGHT SECTION
-  .right-section {
+  // CENTERED AUTH CARD
+  .login-card {
+    position: relative;
+    z-index: 1;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    width: 40%;
-    padding-left: 80px;
-    padding-right: 80px;
-
-    .language-switch {
-      display: flex;
-      justify-content: flex-end;
-      width: 100%;
-
-      span {
-        margin-right: 10px;
-        font-size: $font-size-base;
-        color: $text-black;
-      }
-    }
+    width: 100%;
+    max-width: 440px;
+    padding: $space-md $space-2xl;
+    background: $primary-white;
+    border-radius: $radius-lg;
+    box-shadow: $shadow-lg;
 
     .logo-section {
       display: flex;
       justify-content: center;
 
       .logo-img {
-        width: 200px;
-        height: 87px;
+        width: 130px;
+        height: 56px;
       }
     }
 
     .welcome-text {
       text-align: center;
-      font-size: 28px;
-      color: $text-black;
-    }
-
-    .hint-text {
-      text-align: center;
-      font-size: $font-size-md;
+      font-size: 22px;
       color: $text-black;
     }
 
@@ -80,7 +70,7 @@
     .login-form {
       .login-btn {
         width: 100%;
-        padding: $space-xs;
+        padding: $space-2xs $space-xs;
         border: none;
         border-radius: $radius-xl;
         font-size: $font-size-base;
@@ -92,7 +82,7 @@
 
       .login-by-phone-no-btn {
         width: 100%;
-        padding: $space-xs;
+        padding: $space-2xs $space-xs;
         border: 1px solid $text-blue;
         border-radius: $radius-xl;
         font-size: $font-size-base;
@@ -130,49 +120,28 @@
         display: flex;
         align-items: center;
       }
+
+      // PDPA consent (legal, required) — kept but made compact so the whole
+      // form still fits a laptop viewport.
+      .form-check-label {
+        font-size: $font-size-sm;
+        line-height: $line-height-tight;
+      }
     }
-  }
-}
-
-@media (max-width: 992px) {
-  .login-container {
-    flex-direction: column;
-    align-items: stretch;
-    height: auto;
-    padding: $space-sm;
-    gap: $space-lg;
-  }
-
-  .login-container .left-section {
-    width: 100%;
-
-    .bg-img {
-      height: 240px;
-      object-fit: cover;
-    }
-  }
-
-  .login-container .right-section {
-    width: 100%;
-    padding: 0 16px 24px;
-  }
-
-  .login-container .change-language {
-    justify-content: flex-start;
   }
 }
 
 @media (max-width: 576px) {
   .login-container {
-    padding: $space-xs;
-  }
+    padding: $space-sm;
 
-  .login-container .right-section {
-    padding: 0 8px 20px;
-  }
+    .login-card {
+      padding: $space-lg $space-md $space-md;
+    }
 
-  .login-container .logo-section .logo-img {
-    width: 160px;
-    height: auto;
+    .login-card .logo-section .logo-img {
+      width: 150px;
+      height: auto;
+    }
   }
 }

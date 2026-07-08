@@ -1,32 +1,26 @@
 <div class="login-container">
-  <!-- LEFT SECTION -->
-  <div class="left-section">
-    <!-- BACKGROUND IMAGE -->
-    <img class="bg-img" src="images/login.svg" alt="Tickets" />
-  </div>
-  <!-- RIGHT SECTION -->
-  <div class="right-section">
+  <!-- AMBIENT BRAND BACKDROP — the bus illustration, faded, fills the space
+       around the card so the gradient doesn't read as empty. Decorative only. -->
+  <img class="login-bg" src="images/login.svg" alt="" aria-hidden="true" />
+  <!-- CENTERED AUTH CARD -->
+  <div class="login-card">
     <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE — shared components (same as home navbar) -->
     <div class="change-language">
       <app-theme-toggle></app-theme-toggle>
       <app-lang-switcher></app-lang-switcher>
     </div>
     <!-- LOGO WEBSITE -->
-    <div class="logo-section mt-5">
+    <div class="logo-section mt-2">
       <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
     </div>
     <!-- HEADER TITLE -->
-    <div class="welcome-text mt-3">
+    <div class="welcome-text mt-2">
       {{ "LOGIN.WELCOME" | translate }}
     </div>
-    <!-- SUB HEADER TITLE -->
-    <div class="hint-text mt-3">
-      {{ "LOGIN.HINT" | translate }}
-    </div>
     <!-- FORM SECTION -->
-    <form class="login-form mt-3" [formGroup]="loginForm">
+    <form class="login-form mt-2" [formGroup]="loginForm">
       <!-- INPUT FIELD -> Email -->
-      <div class="mt-3">
+      <div class="mt-2">
         <label
           for="email"
           [class.label-error]="
@@ -58,7 +52,7 @@
         </div>
       </div>
       <!-- INPUT FIELD -> Password -->
-      <div class="mt-3">
+      <div class="mt-2">
         <label
           for="password"
           [class.label-error]="
@@ -106,18 +100,18 @@
         </div>
       </div>
       <!-- OPTIONS SECTION -->
-      <div class="option-section mt-3">
+      <div class="option-section mt-2">
         <!-- FORGET PASSWORD -->
         <a class="obrs-link" [routerLink]="'/forget-password'">
           {{ "LOGIN.FORGETPASSWORD" | translate }}
         </a>
       </div>
       <!-- LOGIN BUTTON -->
-      <button type="submit" class="login-btn mt-3" (click)="login()">
+      <button type="submit" class="login-btn mt-2" (click)="login()">
         {{ "LOGIN.LOGIN" | translate }}
       </button>
       <!-- OR -->
-      <div class="or-section gap-3 mt-3">
+      <div class="or-section gap-3 mt-2">
         <hr />
         <span>
           {{ "LOGIN.OR" | translate }}
@@ -127,13 +121,13 @@
       <!-- LOGIN BY PHONE NUMBER BUTTON -->
       <button
         type="button"
-        class="login-by-phone-no-btn mt-3"
+        class="login-by-phone-no-btn mt-2"
         [routerLink]="'/login-mobile'"
       >
         {{ "LOGIN.LOGINMOBILE" | translate }}
       </button>
       <!-- GOOGLE SIGN-IN PDPA CONSENT -->
-      <div class="form-check mt-3">
+      <div class="form-check mt-2">
         <input
           class="form-check-input"
           type="checkbox"
@@ -164,7 +158,7 @@
         <small class="text-muted">{{ "LOGIN.GOOGLE_SIGNIN_LOADING" | translate }}</small>
       </div>
       <!-- REGISTER LINK -->
-      <p class="register-link mt-4">
+      <p class="register-link mt-2">
         {{ "LOGIN.REGISTERLINK" | translate }}
         <a class="obrs-link" [routerLink]="'/register'">
           {{ "LOGIN.REGISTERLINK_CLICK" | translate }}
