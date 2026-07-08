@@ -14,6 +14,28 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-07-08 — `rescheduleCount` added to `GET /api/private/bookings/me` (`BookingRespDto`)
+**Risk level**: R1 (additive)
+**Triggered by**: OBRS-83 — surfacing the reschedule flow in the customer My Bookings page needed up-front, no-fetch eligibility gating (don't wait for a `RESCHEDULE_ERROR_MAX_COUNT` response to know a booking can't be rescheduled again).
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `GET /api/private/bookings/me` | Field added | `BookingRespDto.rescheduleCount` (int, `0` or `1`) — number of times the booking has been rescheduled; max one reschedule per booking |
+
+### Response shapes before / after
+- **Before**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", ... }` (no `rescheduleCount`)
+- **After**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", "rescheduleCount": 0, ... }`
+
+### Action required in frontend
+- [x] Add `rescheduleCount?: number` to `MyBookingDto` (`shared/interfaces/my-booking.interface.ts`)
+- [x] Gate the Reschedule card action on `rescheduleCount >= 1` as one of four up-front eligibility checks (`MyBookingsComponent.computeRescheduleEligibility`)
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/booking.md` `GET /bookings/me`.
+
+---
+
 ## [Backend] 2026-06-15 — `payment.status` value renamed from `"success"` to `"paid"`
 **Risk level**: R0 (breaking)
 **Triggered by**: Terminology alignment — `"success"` described an operation outcome; `"paid"` describes the object's state, consistent with `booking.status = "confirmed"` and `ticket.status = "confirmed"`.

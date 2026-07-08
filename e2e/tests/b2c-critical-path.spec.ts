@@ -31,9 +31,16 @@ test('B2C happy path: search → schedule → review → passenger info ready to
     .locator('[id="dropdownObrsHOME.HOME_BOOKING.START_STATION"]')
     .waitFor();
 
-  // Open passenger dropdown and add 1 adult
+  // The home-booking form now defaults passengerInfo to 1 adult already
+  // (commit 33ee1b0, already on origin/dev, unrelated to the reschedule
+  // branch under QA — "so a fresh search is immediately valid"). Clicking
+  // Add here on top of that default silently produced a 2nd, unfilled
+  // passenger form later on /passenger-info, which is what was tripping
+  // .btn-next (disabled because passenger index 1's required fields were
+  // never filled) — a pre-existing test/product drift, not a regression.
+  // Just open+close the dropdown to keep the UI-interaction coverage without
+  // double-counting.
   await page.locator('#dropdownObrsPassenger').click();
-  await page.getByAltText('Passenger Add Icon').first().click();
   // Click outside to close the passenger dropdown
   await page.locator('body').click({ position: { x: 10, y: 10 } });
 

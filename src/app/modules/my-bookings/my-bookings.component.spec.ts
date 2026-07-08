@@ -1,6 +1,7 @@
 import { Subject } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
+import dayjs from 'dayjs';
 
 import { MyBookingsComponent } from './my-bookings.component';
 import {
@@ -15,6 +16,7 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     totalAmount: '1290.00',
     status: 'confirmed',
     bookingType: 'one_way',
+    rescheduleCount: 0,
     createdAt: '2026-06-01T10:00:00',
     bookingSchedules: [
       {
@@ -40,6 +42,7 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     ...overrides,
   };
 }
+
 
 describe('MyBookingsComponent', () => {
   let component: MyBookingsComponent;
@@ -118,5 +121,123 @@ describe('MyBookingsComponent', () => {
     expect(dispatchSpy).toHaveBeenCalledWith(
       jasmine.objectContaining({ booking: view })
     );
+  });
+
+  describe('reschedule eligibility (card gating)', () => {
+    // A departure comfortably clear of the 4h reschedule window, computed
+    // relative to "now" so the test never goes stale.
+    const eligibleDeparture = dayjs().add(10, 'day').toISOString();
+
+    it('is eligible when confirmed, one-way/single-leg, never rescheduled, and outside the window', () => {
+      const view = toView(
+        buildBooking({
+          status: 'confirmed',
+          bookingType: 'one_way',
+          rescheduleCount: 0,
+          bookingSchedules: [
+            {
+              id: 1,
+              departureDateTime: eligibleDeparture,
+              tickets: [{}],
+            },
+          ],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeTrue();
+      expect(view.rescheduleReasonKey).toBeNull();
+    });
+
+    it('REASON.NOT_CONFIRMED — status is not confirmed', () => {
+      const view = toView(
+        buildBooking({
+          status: 'pending',
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_CONFIRMED');
+    });
+
+    it('REASON.NOT_ONE_WAY — return booking (bookingType)', () => {
+      const view = toView(
+        buildBooking({
+          bookingType: 'return',
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY');
+    });
+
+    it('REASON.NOT_ONE_WAY — more than one leg even if bookingType says one_way', () => {
+      const view = toView(
+        buildBooking({
+          bookingType: 'one_way',
+          bookingSchedules: [
+            { id: 1, departureDateTime: eligibleDeparture, tickets: [{}] },
+            { id: 2, departureDateTime: eligibleDeparture, tickets: [{}] },
+          ],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY');
+    });
+
+    it('REASON.ALREADY_USED — rescheduleCount >= 1', () => {
+      const view = toView(
+        buildBooking({
+          rescheduleCount: 1,
+          bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED');
+    });
+
+    it('REASON.NO_WINDOW — departure is within the 4h reschedule window', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [
+            {
+              id: 1,
+              departureDateTime: dayjs().add(1, 'hour').toISOString(),
+              tickets: [{}],
+            },
+          ],
+        })
+      );
+
+      expect(view.rescheduleEligible).toBeFalse();
+      expect(view.rescheduleReasonKey).toBe('MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW');
+    });
+
+    it('does not dispatch openRescheduleDialog when the booking is ineligible', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ status: 'pending', bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onReschedule(view);
+
+      expect(dispatchSpy).not.toHaveBeenCalled();
+    });
+
+    it('dispatches openRescheduleDialog for an eligible booking', () => {
+      const dispatchSpy = spyOn(storeStub, 'dispatch');
+      const view = toView(
+        buildBooking({ bookingSchedules: [{ id: 1, departureDateTime: eligibleDeparture, tickets: [{}] }] })
+      );
+
+      component.onReschedule(view);
+
+      expect(dispatchSpy).toHaveBeenCalledWith(
+        jasmine.objectContaining({ bookingId: view.id })
+      );
+    });
   });
 });

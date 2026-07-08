@@ -21,6 +21,9 @@
     "VIEW_TICKET": "查看电子票",
     "LOAD_FAILED": "无法加载您的预订，请重试。",
     "NOT_CANCELLABLE": "无法取消",
+    "ACTIONS_MENU": {
+      "LABEL": "操作"
+    },
     "TICKET_MODAL": {
       "LOADING": "正在加载您的电子票…",
       "LOAD_FAILED": "无法加载电子票，请重试。",
@@ -56,6 +59,50 @@
       "SUCCESS": "您的预订已取消，正在处理 {{refund}} 的退款。",
       "SUCCESS_MANUAL": "您的预订已取消，工作人员将为您转账退款 {{refund}}。",
       "FAILED": "无法取消预订，请重试。"
+    },
+    "RESCHEDULE": {
+      "ACTION": "改签",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能改签",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能改签",
+        "ALREADY_USED": "此预订已改签过一次",
+        "NO_WINDOW": "距离出发时间太近，无法改签"
+      },
+      "DIALOG_TITLE": "改签您的行程",
+      "DATE_LABEL": "新的出发日期",
+      "STOPS_FIXED_NOTE": "上车点和下车点保持不变，只能更改日期和时间。",
+      "OPTIONS_LOADING": "正在查找可用班次…",
+      "OPTIONS_EMPTY": "该日期没有可用班次，请尝试其他日期。",
+      "OPTIONS_ERROR": "无法加载可用班次，请重试。",
+      "SEATS": "余票",
+      "ESTIMATE": {
+        "OLD_FARE": "原票价",
+        "NEW_FARE": "新票价",
+        "FEE": "改签手续费",
+        "TOP_UP": "您需要补付 {{amount}}",
+        "REFUND": "您将获得退款 {{amount}}",
+        "NO_PAYMENT": "无需额外付款"
+      },
+      "CONFIRM_BUTTON": "确认改签",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "您的预订已改签成功。",
+      "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成改签。",
+      "PAYMENT_ABANDONED": "改签尚未完成——在支付完成之前，您原来的预订不会改变。",
+      "PRICE_CHANGED": "自您上次查看以来价格已发生变化，请查看最新票价并重新确认。",
+      "ERROR": {
+        "NOT_CONFIRMED": "此预订已无法改签（状态不是已确认）。",
+        "MAX_COUNT": "此预订已改签过一次，无法再次改签。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法改签。",
+        "SAME_SCHEDULE": "请选择其他班次。",
+        "BOOKING_NOT_FOUND": "该班次已不可用。",
+        "WINDOW_CLOSED": "该班次距离现在太近，请选择更晚的时间。",
+        "DATE_TOO_FAR": "该日期与您原定行程相差太远，请选择更接近的日期。",
+        "ROUTE_MISMATCH": "改签时无法更改路线。",
+        "NO_SEATS": "您的座位在该班次上已不可用，请另选一个。",
+        "NET_AMOUNT_CHANGED": "价格已发生变化，请重试。",
+        "UNAUTHORIZED": "您无权改签此预订。",
+        "GENERIC": "无法改签此预订，请重试。"
+      }
     }
   },
   "CALENDAR": {
