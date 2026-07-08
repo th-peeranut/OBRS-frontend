@@ -344,4 +344,45 @@ describe('UsabilityReportsPageComponent', () => {
       .withContext('clicking the × must close the detail modal')
       .toBeNull();
   });
+
+  // ── OBRS-82 regression specs: the whole row opens the detail (mouse) ───────
+  // The row-click is a mouse convenience only; keyboard/AT users use the View
+  // button (so the <tr> carries no role/tabindex/keydown — it would orphan the
+  // cells and add a redundant tab stop).
+
+  it('opens the detail modal when a non-interactive cell in the row is clicked', () => {
+    primeReportList();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('tr.ur-report-row');
+    expect(row).withContext('clickable report row must render').not.toBeNull();
+    // Deliberately NOT a button-role row — table semantics stay intact.
+    expect(row.getAttribute('role')).withContext('row keeps its implicit row semantics').toBeNull();
+
+    const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail').and.callThrough();
+
+    // The Category cell is non-interactive text.
+    const categoryCell: HTMLElement = row.querySelectorAll('td')[1] as HTMLElement;
+    categoryCell.click();
+    fixture.detectChanges();
+
+    expect(openSpy).withContext('clicking a row cell opens the detail').toHaveBeenCalledOnceWith('rep-1');
+    expect(component['selectedReportId']).toBe('rep-1');
+  });
+
+  it('opens the detail exactly once when the View button is clicked (no double-open from row bubbling)', () => {
+    primeReportList();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    const row: HTMLElement = fixture.nativeElement.querySelector('tr.ur-report-row');
+    const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail').and.callThrough();
+
+    const viewBtn: HTMLButtonElement = row.querySelector('button.admin-btn-small') as HTMLButtonElement;
+    viewBtn.click();
+    fixture.detectChanges();
+
+    expect(openSpy)
+      .withContext('View button opens once; the row handler must bail on button-origin clicks')
+      .toHaveBeenCalledOnceWith('rep-1');
+  });
 });

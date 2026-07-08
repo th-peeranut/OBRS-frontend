@@ -6,6 +6,13 @@
   white-space: nowrap;
 }
 
+// The whole row is a mouse affordance for opening Report Detail (keyboard/AT
+// users use the View button). The hover background is already provided globally
+// by `.admin-table tbody tr:hover`; here we only add the pointer cursor.
+.ur-report-row {
+  cursor: pointer;
+}
+
 // ── Detail modal ──────────────────────────────────────────────────────────────
 
 .ur-detail-modal {
