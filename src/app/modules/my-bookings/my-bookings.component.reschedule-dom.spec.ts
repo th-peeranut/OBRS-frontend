@@ -186,7 +186,12 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
   });
 
   describe('View e-ticket / Cancel booking items (menu consolidation)', () => {
-    it('lists View e-ticket, Reschedule, Cancel booking in that order for a confirmed booking', () => {
+    it('lists View e-ticket, Reschedule, Change seat, Change stop, Cancel booking in that order for a confirmed booking', () => {
+      // Change seat (OBRS-110 wave 1) and Change stop (OBRS-110 wave 2) were
+      // added as the menu's 4th and 5th items, between Reschedule and Cancel
+      // booking — see my-bookings.component.change-seat-dom.spec.ts /
+      // my-bookings.component.change-stop-dom.spec.ts for their own
+      // dedicated eligibility/dispatch coverage.
       render(buildBooking());
 
       openMenu();
@@ -194,6 +199,8 @@ describe('MyBookingsComponent (reschedule action — action menu)', () => {
       expect(fixture.componentInstance.actionMenuItems.map((item) => item.label)).toEqual([
         'MY_BOOKINGS.VIEW_TICKET',
         'MY_BOOKINGS.RESCHEDULE.ACTION',
+        'MY_BOOKINGS.CHANGE_SEAT.ACTION',
+        'MY_BOOKINGS.CHANGE_STOP.ACTION',
         'MY_BOOKINGS.CANCEL.ACTION',
       ]);
     });

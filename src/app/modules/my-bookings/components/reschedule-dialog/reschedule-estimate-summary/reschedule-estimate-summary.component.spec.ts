@@ -104,4 +104,39 @@ describe('RescheduleEstimateSummaryComponent', () => {
 
     expect(backSpy).toHaveBeenCalled();
   });
+
+  describe('hideFee / i18nPrefix (OBRS-110 wave 2 — change-stop reuse)', () => {
+    it('defaults hideFee to false and i18nPrefix to the reschedule namespace — existing reschedule call site stays byte-identical', () => {
+      expect(component.hideFee).toBeFalse();
+      expect(component.i18nPrefix).toBe('MY_BOOKINGS.RESCHEDULE');
+      expect(component.confirmButtonLabelKey).toBe('MY_BOOKINGS.RESCHEDULE.CONFIRM_BUTTON');
+      expect(component.backButtonLabelKey).toBe('MY_BOOKINGS.RESCHEDULE.BACK_BUTTON');
+      expect(component.feeLabelKey).toBe('MY_BOOKINGS.RESCHEDULE.ESTIMATE.FEE');
+    });
+
+    it('resolves every label under a custom i18nPrefix (e.g. the change-stop dialog)', () => {
+      component.i18nPrefix = 'MY_BOOKINGS.CHANGE_STOP';
+      component.estimate = buildEstimate({ paymentDirection: 'REFUND' });
+
+      expect(component.oldFareLabelKey).toBe('MY_BOOKINGS.CHANGE_STOP.ESTIMATE.OLD_FARE');
+      expect(component.newFareLabelKey).toBe('MY_BOOKINGS.CHANGE_STOP.ESTIMATE.NEW_FARE');
+      expect(component.paymentDirectionLabelKey).toBe('MY_BOOKINGS.CHANGE_STOP.ESTIMATE.REFUND');
+      expect(component.confirmButtonLabelKey).toBe('MY_BOOKINGS.CHANGE_STOP.CONFIRM_BUTTON');
+      expect(component.backButtonLabelKey).toBe('MY_BOOKINGS.CHANGE_STOP.BACK_BUTTON');
+    });
+
+    it('accepts a ChangeStopEstimate-shaped object with no rescheduleFee field when hideFee is true', () => {
+      component.hideFee = true;
+      component.estimate = {
+        oldFare: '100',
+        newFare: '120',
+        fareDiff: '20',
+        netAmount: '20',
+        paymentDirection: 'TOP_UP',
+      };
+
+      expect(component.estimate.rescheduleFee).toBeUndefined();
+      expect(component.netAmountAbsLabel).toContain('20');
+    });
+  });
 });

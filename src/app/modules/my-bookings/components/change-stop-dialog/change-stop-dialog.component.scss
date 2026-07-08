@@ -1,0 +1,169 @@
+@import "../../../../../styles/variables.scss";
+
+// Same modal chrome as reschedule-dialog.component.scss / change-seat-dialog
+// (backdrop, floating close button, fade-in) — kept consistent rather than
+// reintroducing a third modal pattern (design-system §6).
+.change-stop-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+  animation: change-stop-modal-fade 0.15s ease;
+}
+
+.change-stop-modal {
+  position: relative;
+  width: min(520px, 100%);
+  margin: auto;
+}
+
+.change-stop-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: $radius-circle;
+  background: $primary-white;
+  color: $text-black;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.change-stop-modal__body {
+  width: 100%;
+  background: $primary-white;
+  border-radius: 18px;
+  padding: $space-lg;
+}
+
+.change-stop-modal__title {
+  margin: 0 0 $space-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-black;
+}
+
+@keyframes change-stop-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.change-stop-step {
+  text-align: center;
+}
+
+.change-stop-step__hint {
+  margin: 0 0 $space-sm;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+  text-align: left;
+}
+
+.change-stop-step--error {
+  padding: $space-lg $space-md;
+  color: $text-lightblack;
+
+  i {
+    font-size: 28px;
+    color: $text-red;
+  }
+
+  p {
+    margin: $space-xs 0 $space-sm;
+    font-size: $font-size-sm;
+  }
+}
+
+// Same banner color as reschedule-options-list.component.scss's
+// `.reschedule-options-list__confirm-error` / change-seat-map-step's
+// equivalent — reused rather than inventing a new value for the same
+// "confirm-time failure" role (design-system §2.2).
+.change-stop-step__confirm-error {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  margin-bottom: $space-sm;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  background-color: #fde7e7;
+  color: $text-red;
+  font-size: $font-size-sm;
+  text-align: left;
+
+  i {
+    font-size: $font-size-lg;
+    flex-shrink: 0;
+  }
+}
+
+.change-stop-step__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+.change-stop-step__actions--start {
+  justify-content: flex-start;
+}
+
+.change-stop-payment-step {
+  ::ng-deep .payment-actions {
+    margin-top: $space-sm;
+  }
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $primary-white;
+  color: $secondary-blue;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: $radius-circle;
+  animation: change-stop-spin 0.7s linear infinite;
+}
+
+@keyframes change-stop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

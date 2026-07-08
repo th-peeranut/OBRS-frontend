@@ -179,3 +179,89 @@ assigned **after** the first `fixture.detectChanges()` — assigning before
 gets clobbered by Angular's own view-query resolution pass) and assert
 against the built `actionMenuItems` array, which is exactly what the item
 template renders. See `my-bookings.component.reschedule-dom.spec.ts`.
+
+### My Bookings — Change seat dialog (OBRS-110)
+
+`ChangeSeatDialogComponent` (`src/app/modules/my-bookings/components/change-seat-dialog/`)
+adds a **Change seat** action as the action menu's 4th item — after
+Reschedule, before Cancel booking — following the exact "always present,
+disabled with a localized reason when ineligible" contract Reschedule
+established (`computeChangeSeatEligibility()` alongside
+`computeRescheduleEligibility()` in `my-bookings.component.ts`: not
+confirmed → not one-way/single-leg → already used
+(`seatChangeCount >= 1`) → inside the 4h window → eligible, first-failing-wins,
+no 30-day/TOO_FAR check since change-seat doesn't move the departure date).
+
+The dialog itself is a single seat-map step (a ticket stepper — "Passenger
+{{index}} of {{total}}" — appears only for multi-ticket bookings) rather than
+reschedule's multi-step date→options→estimate→payment flow, because the
+change-seat contract is simpler: `POST .../change-seat` always resolves
+`CONFIRMED` with no payment step. It opens optimistically
+(`openChangeSeatDialog` dispatches synchronously; `ChangeSeatEffect` loads
+the seat-map availability and the booking's current tickets in parallel in
+the background) and reuses the same fixed-layout
+`app-passenger-seat-bus`/`app-passenger-seat-van` components the
+passenger-info and walk-in-sell flows already use, in their existing
+multi-select mode (`[seatGenders]` + `(seatClicked)`). The one addition:
+`passenger-seat-box.component.html` gained a `gender === 'SELECTED'` branch
+rendering a neutral `check_circle` marker (no gender icon) for "this is the
+picked seat" — additive, every existing MALE/FEMALE/MONK call site
+unchanged. See `docs/adr/0009-change-seat-dialog.md` for the full reasoning,
+including why `rowIndex`/`columnIndex` on the availability contract are
+intentionally unused (the seat components are fixed-layout, not
+row/column-driven) and how the OBRS-83 NO_SEATS lesson (never let a
+background re-fetch wipe an inline error or re-arm a spinner) was applied to
+change-seat's own non-terminal errors (`SEAT_UNAVAILABLE`/`NO_SEATS`/
+`SEAT_NOT_IN_MAP`/`TICKET_MISMATCH` re-fetch availability and stay on the
+map with the banner visible; `NOT_CONFIRMED`/`MAX_COUNT`/`WINDOW_CLOSED`/
+`MULTI_LEG_NOT_SUPPORTED`/`UNAUTHORIZED`/`BOOKING_NOT_FOUND` are terminal —
+close + toast).
+
+### My Bookings — Change stop dialog (OBRS-110 wave 2)
+
+`ChangeStopDialogComponent` (`src/app/modules/my-bookings/components/change-stop-dialog/`)
+adds a **Change stop** action as the action menu's 5th item — after Change
+seat, before Cancel booking — following the same "always present, disabled
+with a localized reason when ineligible" contract
+(`computeChangeStopEligibility()` alongside the other two `compute*Eligibility`
+methods in `my-bookings.component.ts`: not confirmed → not one-way/single-leg
+→ already used (`stopChangeCount >= 1`) → inside the 4h window → eligible,
+first-failing-wins; no 30-day/TOO_FAR check, same as change-seat, since
+change-stop doesn't move the departure date).
+
+Unlike change-seat, this dialog's shape is much closer to reschedule's: it
+steps through **pickup → drop-off → estimate → (an embedded payment step,
+only if a top-up is owed)**. It opens optimistically
+(`openChangeStopDialog` dispatches synchronously) and resolves the booking's
+`routeSlug` (`MyBookingScheduleDto.routeSlug`, added alongside `stopChangeCount`
+on `GET /bookings/me`) to call `RouteMapService.getPickupDropoff(routeSlug)`
+in the background — a missing/failed lookup renders a full-step error card
+with Retry rather than falling back to a broken picker. Both steps reuse
+`app-route-stop-list` (the exact same pickup/drop-off picker the home route
+map uses) **as-is**, extracted into its own `RouteStopListModule` so
+importing it here doesn't fold `HomeModule`'s own route into this module's
+route config (mirrors `PaymentMethodsModule`'s extraction from
+`PaymentModule`).
+
+Before any network call, a client-side guard checks the picked segment:
+`pickup.order < dropoff.order` (else `INVALID_SEGMENT`, shown inline on the
+drop-off step) and the new segment differs from the booking's current one
+(else `SAME_SEGMENT`). Only once both pass does `loadChangeStopEstimate`
+fire, rendering the cost preview via `app-reschedule-estimate-summary` —
+reused with a new optional `[hideFee]="true"` input (change-stop charges no
+fee, unlike reschedule) and `i18nPrefix="MY_BOOKINGS.CHANGE_STOP"` (so its
+labels resolve under change-stop's own translated copy instead of leaking
+reschedule's — the existing reschedule call site omits both inputs and
+renders byte-identically). Confirming posts
+`{ newFromStopId, newToStopId, seatAssignments (current seats unchanged),
+clientNetAmount }`; `CONFIRMED` (refund or no additional payment) settles
+immediately, `PENDING_PAYMENT` hands off to the embedded payment step with
+the exact same `setActiveBookingId` + `[successRedirect]="null"` +
+`(paymentCompleted)` wiring reschedule's dialog uses. A confirm-time
+non-terminal `errorCode` stays inline on the estimate step and is
+deliberately **not** cleared by a re-dispatched `loadChangeStopEstimate` —
+mirroring change-seat's (not reschedule's) OBRS-83 NO_SEATS lesson, since
+change-stop has no options-list step to bounce back to; only
+`NOT_CONFIRMED`/`MAX_COUNT` are terminal (close + toast). See
+`docs/adr/0010-change-stop-dialog.md` for the full reasoning behind all
+three reuse decisions and the confirm-error persistence rule.

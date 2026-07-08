@@ -117,6 +117,35 @@ The email field renders and validates client-side regardless, but the value is d
 
 ---
 
+### [Frontend] 2026-07-08 — Change seat (OBRS-110, wave 1): built against a not-yet-documented backend contract, please verify on merge
+**Affected endpoints**:
+- `GET /api/private/bookings/me` (`BookingRespDto.seatChangeCount`)
+- `GET /api/private/bookings/{id}/change-seat/availability` (new)
+- `POST /api/private/bookings/{id}/change-seat` (new)
+
+**Request type**: New endpoints + additive field (contract built in parallel by the backend track; not yet present in `../OBRS-backend/docs/api/booking.md` at the time this branch was implemented)
+
+### What the frontend coded against
+| Shape | Assumed contract |
+|---|---|
+| `BookingRespDto.seatChangeCount` | `int`, `0` or `1` — mirrors `rescheduleCount`'s "max one per booking" gating pattern above |
+| `BookingRespDto.stopChangeCount` | `int` — carried on `MyBookingDto` for shape parity only; **not yet consumed** by any frontend logic (a future wave) |
+| `GET .../change-seat/availability` → `ChangeSeatAvailabilityRespDto` | `{ scheduleId, vehicleType, fromStopId, toStopId, seats: [{seatNumber, rowIndex, columnIndex}], occupiedSeatNumbers: string[], currentSeatNumbers: string[] }` — only `vehicleType`/`occupiedSeatNumbers`/`currentSeatNumbers` are consumed client-side (the seat components are fixed-layout by `vehicleType`, not row/column-driven; see `docs/adr/0009-change-seat-dialog.md` Decision 2) |
+| `POST .../change-seat` body `{ seatAssignments: { [ticketId:number]: string } }` → `ChangeSeatBookingRespDto { bookingId, bookingNumber, status:"CONFIRMED", paymentIntentId:null }` — always `CONFIRMED`, no payment step |
+| Error codes | `CHANGE_SEAT_ERROR_{NOT_CONFIRMED,MAX_COUNT,WINDOW_CLOSED,SEAT_UNAVAILABLE,NO_SEATS,SEAT_NOT_IN_MAP,TICKET_MISMATCH,MULTI_LEG_NOT_SUPPORTED,UNAUTHORIZED,BOOKING_NOT_FOUND}` on `error.error.errorCode` |
+
+### What the frontend implemented
+- `MyBookingDto.seatChangeCount?: number` / `.stopChangeCount?: number` added (`shared/interfaces/my-booking.interface.ts`), mirroring `rescheduleCount`.
+- `shared/interfaces/change-seat.interface.ts`, `shared/lib/change-seat-error.ts`, `BookingService.getChangeSeatAvailability()`/`.confirmChangeSeat()`, the `ChangeSeatEffect`/reducer/selectors, and `ChangeSeatDialogComponent`/`ChangeSeatMapComponent` (`src/app/modules/my-bookings/components/change-seat-dialog/`) — full detail in `docs/adr/0009-change-seat-dialog.md`.
+- `MyBookingsComponent.computeChangeSeatEligibility()` gates the card action the same way `computeRescheduleEligibility()` does (first-failing-wins: not confirmed → not one-way → `seatChangeCount >= 1` → inside the 4h window), so the action is never presented as available when the server would reject it.
+
+### Impact if not addressed
+Everything above degrades gracefully if the live contract differs in shape (TypeScript interfaces just won't match at runtime — no compile-time coupling to the backend), but functionally: a shape mismatch on `GET .../change-seat/availability` would surface as the dialog's `step: 'error'` card (a real HTTP/parse failure), and a mismatch on `POST .../change-seat`'s response would surface as a generic `confirmChangeSeatFailure({errorCode: 'GENERIC'})`. Please cross-check this section against the landed `OBRS-backend/docs/api/booking.md` change-seat entry once merged, and flag any divergence back here.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, this would ordinarily be R0 ("call an endpoint not yet documented") — proceeding anyway because this branch was explicitly tasked to build against this contract in parallel with the backend track (same OBRS-110 wave), per the assigning agent's instruction. Flagging here per the R1 "update shared interfaces after a backend contract change" notification duty so the two sides reconcile before this branch merges to `dev`/`sit`.
+
+---
+
 ### [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
 **Affected endpoints**:
 - `PUT /api/private/admin/usability-reports/{id}/status`

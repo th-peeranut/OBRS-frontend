@@ -1176,3 +1176,25 @@ click to the locked row instead. Also confirmed the shared `node_modules` enviro
 (broken by an earlier QA run's stray `npm install` outside its worktree) was repaired via
 `npm ci`; all 607 unit tests and all 7 Playwright E2E specs in `admin-unlock-account.spec.ts`
 pass clean.
+
+---
+
+## OBRS-110 change-seat — Scrutinize self-fix: i18n key placed OUTSIDE its ERROR block
+
+**What I changed:** In all three locale files (`public/i18n/{en,th,zh}.json`), the
+`CHANGE_SEAT.NO_SEATS` string was defined at the *top level* of `MY_BOOKINGS.CHANGE_SEAT`,
+but `change-seat-error.ts` maps `CHANGE_SEAT_ERROR_NO_SEATS → MY_BOOKINGS.CHANGE_SEAT.ERROR.NO_SEATS`.
+So `translate.instant('...ERROR.NO_SEATS')` resolved to `undefined` and the confirm banner
+would render the raw key `MY_BOOKINGS.CHANGE_SEAT.ERROR.NO_SEATS` to the user. I moved the
+already-translated string into the `ERROR` block (next to `SEAT_UNAVAILABLE`) in all three files.
+
+**Why it matters:** NO_SEATS is a RETURN_TO_MAP confirm error — the exact OBRS-83 lesson path.
+A raw i18n key on that banner is precisely the "looks broken to the user" failure the ticket
+called out. Unit tests did NOT catch it because `TranslateModule.forRoot()` with no loaded
+translations returns the key for BOTH a correct-but-untranslated key and a missing key — so
+`expect(...).toBe('MY_BOOKINGS.CHANGE_SEAT.ERROR.NO_SEATS')` passes either way.
+
+**Pattern for next time:** when adding an error-code→i18n map, verify each target key path
+against the actual JSON nesting, not just that *some* key with that leaf name exists. A quick
+`node -e "require('./en.json').MY_BOOKINGS.CHANGE_SEAT.ERROR.NO_SEATS"` per locale catches
+misplacement that key-presence greps and unit tests both miss.

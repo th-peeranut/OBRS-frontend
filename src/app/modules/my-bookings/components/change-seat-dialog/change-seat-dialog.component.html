@@ -1,0 +1,80 @@
+<div class="change-seat-modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="change-seat-modal" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="change-seat-modal__close"
+      (click)="close()"
+      [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
+    >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="change-seat-modal__body">
+      <h2 class="change-seat-modal__title">{{ "MY_BOOKINGS.CHANGE_SEAT.DIALOG_TITLE" | translate }}</h2>
+
+      <div class="change-seat-step" *ngIf="step === 'loading'">
+        <span class="change-seat-spinner" aria-hidden="true"></span>
+        <p>{{ "MY_BOOKINGS.CHANGE_SEAT.MAP_LOADING" | translate }}</p>
+      </div>
+
+      <div class="change-seat-step change-seat-step--error" *ngIf="step === 'error'">
+        <i class="bi bi-exclamation-triangle"></i>
+        <p>{{ availabilityError }}</p>
+        <button type="button" class="btn-secondary" [disabled]="availabilityLoading" (click)="onRetry()">
+          <span *ngIf="availabilityLoading" class="spinner" aria-hidden="true"></span>
+          {{ "MY_BOOKINGS.RETRY" | translate }}
+        </button>
+      </div>
+
+      <div class="change-seat-step change-seat-map-step" *ngIf="step === 'map'">
+        <div class="change-seat-map-step__stepper" *ngIf="tickets.length > 1">
+          <button
+            type="button"
+            class="change-seat-stepper-btn"
+            [disabled]="activeTicketIndex === 0"
+            (click)="onPrevTicket()"
+          >
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          <span class="change-seat-map-step__stepper-label">
+            {{
+              "MY_BOOKINGS.CHANGE_SEAT.PASSENGER_STEP"
+                | translate: { index: activeTicketIndex + 1, total: tickets.length }
+            }}
+          </span>
+          <button
+            type="button"
+            class="change-seat-stepper-btn"
+            [disabled]="activeTicketIndex === tickets.length - 1"
+            (click)="onNextTicket()"
+          >
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+
+        <div class="change-seat-map-step__confirm-error" *ngIf="confirmError" role="alert">
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ confirmError }}</span>
+        </div>
+
+        <app-change-seat-map
+          [vehicleType]="vehicleType"
+          [availableSeatNumbers]="availableSeatNumbers"
+          [takenSeats]="activeTakenSeats"
+          [pickedSeat]="activePickedSeat"
+          (seatPicked)="onSeatPicked($event)"
+        ></app-change-seat-map>
+
+        <div class="change-seat-step__actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            {{ "MY_BOOKINGS.CHANGE_SEAT.BACK_BUTTON" | translate }}
+          </button>
+          <button type="button" class="btn-primary" [disabled]="submitting" (click)="onConfirm()">
+            <span *ngIf="submitting" class="spinner" aria-hidden="true"></span>
+            {{ "MY_BOOKINGS.CHANGE_SEAT.CONFIRM_BUTTON" | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

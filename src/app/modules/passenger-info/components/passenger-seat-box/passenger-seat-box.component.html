@@ -29,4 +29,11 @@
     src="icons/passenger-monk.svg"
     alt="Passenger Monk Icon"
   />
+
+  <!-- Selected (neutral marker — no gender, e.g. the change-seat dialog) -->
+  <span
+    *ngIf="!isDisabled && gender == 'SELECTED'"
+    class="material-symbols-outlined passenger-selected-icon"
+    aria-hidden="true"
+  >check_circle</span>
 </div>

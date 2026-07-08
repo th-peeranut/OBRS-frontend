@@ -26,6 +26,15 @@
     left: 50%;
     transform: translate(-50%, -50%);
   }
+
+  .passenger-selected-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: calc(var(--seat-size, 80px) * 0.45);
+    color: $brand-customer-strong;
+  }
 }
 
 .disabled {

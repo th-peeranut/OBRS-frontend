@@ -128,7 +128,13 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     const menu = await openActionsMenu(page, card);
     const labels = await menu.locator('.action-menu-item__label').allTextContents();
-    expect(labels.map((l) => l.trim())).toEqual(['View e-ticket', 'Reschedule', 'Cancel booking']);
+    expect(labels.map((l) => l.trim())).toEqual([
+      'View e-ticket',
+      'Reschedule',
+      'Change seat',
+      'Change stop',
+      'Cancel booking',
+    ]);
 
     const rescheduleItem = menuItem(menu, /^Reschedule$/);
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'false');
@@ -646,7 +652,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     const menu = await openActionsMenu(page, eligibleCard);
     const labels = (await menu.locator('.action-menu-item__label').allTextContents()).map((l) => l.trim());
-    expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'ยกเลิกการจอง']);
+    expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'เปลี่ยนที่นั่ง', 'เปลี่ยนจุดขึ้น-ลง', 'ยกเลิกการจอง']);
     await expect(menu).not.toContainText('MY_BOOKINGS.');
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
