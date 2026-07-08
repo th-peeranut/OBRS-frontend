@@ -1,5 +1,37 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-08 — Frontend: report-row-clickable (OBRS-82) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-report-row-clickable` (branch `sit/report-row-clickable`, diff vs `origin/dev`)
+
+**Finding (self-fixed) — keyboard path lacked the interactive-target guard the mouse path has.**
+The whole `<tr>` is now clickable/activatable. `onRowActivate` (mouse) correctly bails
+when the click originates from an inner control via `target.closest('button, a, …')`,
+so the View button opens the detail exactly once. But `onRowKeydown` (keyboard) had NO
+equivalent guard: a keydown bubbling up from the focused View button on Enter/Space
+was handled by the row too — it called `preventDefault()` + `openDetail()`. Combined
+with the button's own native activation this double-fires the detail GET (or, when
+`preventDefault` suppresses the button, hijacks the button's activation through the
+row handler — browser-dependent, non-deterministic). The two activation paths must
+stay symmetric.
+**Fix:** guard `onRowKeydown` with `if (event.target !== event.currentTarget) return;`
+so only a keydown on the row *itself* (not an inner focused control) activates it.
+Added a regression spec: Enter bubbling from `button.admin-btn-small` must NOT call
+`openDetail` from the row handler. Pattern to remember: **whenever you add a row/card-level
+click handler alongside inner controls, the keyboard handler needs the same
+origin guard as the mouse handler — don't guard one path and leave the other open.**
+
+**Returned to developer/UX (not self-fixed — design decision) — `role="button"` on `<tr>`.**
+Overriding the row's implicit `role="row"` with `role="button"` breaks the table's
+accessibility structure (its `<td>` cells lose their valid `row` parent) and adds a
+second tab stop per row that duplicates the already-accessible View button. Since every
+row already has a keyboard-reachable View button that opens the same modal, the row-level
+`role`/`tabindex`/`aria-label`/`keydown` are redundant for AT+keyboard users. Simpler,
+more accessible option: keep row-click as a pure *mouse* affordance (`(click)` +
+`cursor:pointer` only), drop the row-level ARIA/keyboard surface and the `ROW_ARIA` key.
+Flagging for UX rather than unilaterally removing declared a11y scope.
+
+
 ## 2026-07-08 — Frontend: report-detail-ux (OBRS-77) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-report-detail-ux` (branch `sit/report-detail-ux`, diff vs `origin/dev`)

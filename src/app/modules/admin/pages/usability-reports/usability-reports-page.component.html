@@ -56,7 +56,9 @@
         <ng-container *ngIf="!isLoading">
           <tr
             *ngFor="let report of filteredReports; let i = index; trackBy: trackById"
+            class="ur-report-row"
             [class.zebra]="i % 2 === 1"
+            (click)="onRowActivate(report.id, $event)"
           >
             <td class="admin-emphasis">{{ report.id }}</td>
             <td>{{ categoryLabel(report.category) }}</td>

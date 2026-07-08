@@ -116,6 +116,24 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.selectedStatusFilter = value ?? '';
   }
 
+  // Whole-row click is a MOUSE convenience for opening the detail modal. The
+  // per-row View button remains the keyboard/AT-accessible affordance, so the
+  // row deliberately carries no role/tabindex/keyboard handler (a role="button"
+  // on a <tr> would orphan its cells and add a redundant tab stop). Ignore
+  // clicks that originate from an interactive control in the row (the View
+  // button opens it itself — don't double-fire) and clicks made while the admin
+  // is selecting text.
+  protected onRowActivate(id: string, event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea')) {
+      return;
+    }
+    if (window.getSelection()?.toString()) {
+      return;
+    }
+    this.openDetail(id);
+  }
+
   protected openDetail(id: string): void {
     this.selectedReportId = id;
     this.lightboxImageUrl = null;
