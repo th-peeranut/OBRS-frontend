@@ -146,7 +146,7 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
             }
           } else if (this.option === 'login') {
             this.alertService.success('succ');
-            await this.authService.navigateAfterLogin('/');
+            await this.authService.navigateAfterLogin();
           }
         } else if (typeof resVerify?.code === 'number') {
           this.alertService.error('error');

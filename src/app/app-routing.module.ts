@@ -45,6 +45,8 @@ const routes: Routes = [
   },
   {
     path: 'schedule-booking',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/schedule-booking/schedule-booking.module').then(
         (m) => m.ScheduleBookingModule
@@ -52,6 +54,8 @@ const routes: Routes = [
   },
   {
     path: 'review-schedule-booking',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/review-schedule-booking/review-schedule-booking.module').then(
         (m) => m.ReviewScheduleBookingModule
@@ -59,6 +63,8 @@ const routes: Routes = [
   },
   {
     path: 'passenger-info',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
         (m) => m.PassengerInfoModule
@@ -66,6 +72,8 @@ const routes: Routes = [
   },
   {
     path: 'payment',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(
         (m) => m.PaymentModule
@@ -73,6 +81,8 @@ const routes: Routes = [
   },
   {
     path: 'e-ticket',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/e-ticket/e-ticket.module').then(
         (m) => m.ETicketModule
@@ -81,6 +91,7 @@ const routes: Routes = [
   {
     path: 'my-bookings',
     canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
     loadChildren: () =>
       import('./modules/my-bookings/my-bookings.module').then(
         (m) => m.MyBookingsModule
@@ -88,6 +99,8 @@ const routes: Routes = [
   },
   {
     path: 'refund-policy',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/refund-policy/refund-policy.module').then(
         (m) => m.RefundPolicyModule
@@ -95,6 +108,8 @@ const routes: Routes = [
   },
   {
     path: 'privacy-policy',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/privacy-policy/privacy-policy.module').then(
         (m) => m.PrivacyPolicyModule
@@ -102,6 +117,8 @@ const routes: Routes = [
   },
   {
     path: 'business-policy',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/business-policy/business-policy.module').then(
         (m) => m.BusinessPolicyModule
@@ -109,6 +126,8 @@ const routes: Routes = [
   },
   {
     path: 'how-to-book',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/how-to-book/how-to-book.module').then(
         (m) => m.HowToBookModule
@@ -132,6 +151,8 @@ const routes: Routes = [
   },
   {
     path: '',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
     loadChildren: () =>
       import('./modules/home/home.module').then((m) => m.HomeModule),
   },
