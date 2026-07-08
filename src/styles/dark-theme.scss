@@ -214,9 +214,9 @@ body.is-dark {
     background: $dk-bg;
 
     // Ambient brand backdrop — fainter on the dark page so the light-blue
-    // illustration doesn't read as a muddy patch.
+    // illustration doesn't read as a muddy patch (blur dilutes it further).
     .login-bg {
-      opacity: 0.05;
+      opacity: 0.08;
     }
 
     // Centered auth card (design-system §12 login pattern) — a dark surface

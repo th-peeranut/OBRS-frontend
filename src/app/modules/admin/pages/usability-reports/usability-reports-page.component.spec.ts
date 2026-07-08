@@ -121,6 +121,7 @@ describe('UsabilityReportsPageComponent', () => {
       createdAt: '2026-01-01T00:00:00Z',
       triageNote: null,
       triagedBy: null,
+      triagedByName: null,
       triagedAt: null,
       jiraIssueKey: null,
     };
@@ -195,6 +196,7 @@ describe('UsabilityReportsPageComponent', () => {
     createdAt: '2026-01-01T00:00:00Z',
     triageNote: null,
     triagedBy: null,
+    triagedByName: null,
     triagedAt: null,
     jiraIssueKey: null,
   };
@@ -472,6 +474,28 @@ describe('UsabilityReportsPageComponent', () => {
 
     const noJiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
     expect(noJiraLink).withContext('Jira link must not render when jiraIssueKey is absent').toBeNull();
+  });
+
+  it('shows triagedByName when present and falls back to the numeric triagedBy id when absent (OBRS-106)', () => {
+    primeReportList();
+    const triagedRow = () => (Array.from(
+      fixture.nativeElement.querySelectorAll('.ur-detail-modal .ur-detail-row')
+    ) as HTMLElement[]).find((r) => r.textContent?.includes('TRIAGED_BY'));
+
+    const withName: UsabilityReportDetail = { ...mockFullDetail, triagedBy: 7, triagedByName: 'admin@system.local' };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: withName }));
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+    expect(triagedRow()?.textContent).withContext('shows the resolved name').toContain('admin@system.local');
+
+    component['closeDetail']();
+    fixture.detectChanges();
+
+    const noName: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', triagedBy: 777, triagedByName: null };
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: noName }));
+    component['openDetail']('rep-2');
+    fixture.detectChanges();
+    expect(triagedRow()?.textContent).withContext('falls back to the numeric id').toContain('777');
   });
 
   it('does not let a late detail fetch overwrite a triage note the admin already typed, and a cache-hit reopen shows the cached note', () => {

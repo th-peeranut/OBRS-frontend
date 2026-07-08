@@ -209,7 +209,7 @@
 
         <div class="ur-detail-row" *ngIf="detailReport.triagedBy !== null && detailReport.triagedBy !== undefined">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_BY' | translate }}</span>
-          <span>{{ detailReport.triagedBy }}</span>
+          <span>{{ detailReport.triagedByName || detailReport.triagedBy }}</span>
         </div>
         <div class="ur-detail-row" *ngIf="detailReport.triagedAt">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_AT' | translate }}</span>

@@ -38,6 +38,7 @@ export interface UsabilityReportDetail {
   createdAt: string;
   triageNote: string | null;
   triagedBy: number | null;
+  triagedByName: string | null;
   triagedAt: string | null;
   jiraIssueKey: string | null;
 }

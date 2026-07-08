@@ -64,4 +64,26 @@ describe('LoginComponent', () => {
       expect(card?.querySelector('#google-signin-btn-container')).toBeTruthy();
     });
   });
+
+  // Locks OBRS-90: a language change re-localizes the Google button by
+  // re-injecting the gsi/client script with the new `hl` — NOT via a full
+  // window.location.reload(). Regressing to a reload would drop entered form
+  // state on every language toggle.
+  describe('GSI language switch (OBRS-90)', () => {
+    afterEach(() => {
+      document
+        .querySelectorAll('script[src*="gsi/client"]')
+        .forEach((s) => s.remove());
+    });
+
+    it('re-injects the gsi/client script with the new hl (no page reload)', () => {
+      // The old behavior was window.location.reload() with no script injection;
+      // asserting a fresh gsi/client script with the new hl locks the re-init path.
+      (component as unknown as { reloadGisForLanguage(l: string): void })
+        .reloadGisForLanguage('en');
+
+      const script = document.querySelector('script[src*="gsi/client"]');
+      expect(script?.getAttribute('src')).toContain('hl=en');
+    });
+  });
 });
