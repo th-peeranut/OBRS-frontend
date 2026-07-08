@@ -1,7 +1,7 @@
 @import "../../../../../../styles/variables.scss";
 
 .route-map-section {
-  background-color: $secondary-lightgrey; // #edf9fe, continues from the booking section above
+  background-color: $secondary-lightgrey; // $secondary-lightgrey, continues from the booking section above
 }
 
 // Align the content column to the booking-card width: min(100%, 1200px), centered.
@@ -22,7 +22,7 @@
 
 .panel-card {
   background: $primary-white;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   border: 1px solid $secondary-light-blue;
   padding: 1.25rem;
   box-shadow: 0 8px 24px rgba(64, 105, 184, 0.08);
@@ -35,7 +35,7 @@
 
 .panel-title,
 .map-title {
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   color: $text-black;
 }
 
@@ -55,7 +55,7 @@
   gap: 0.75rem;
   background: $primary-white;
   border: 1px solid $secondary-light-blue;
-  border-radius: 24px;
+  border-radius: $radius-xl;
   padding: 1rem 1.25rem;
   color: $text-softblack;
 }
@@ -83,18 +83,18 @@
 // ---- Direction selector (p-selectButton) → brand pill toggle ----
 :host ::ng-deep .p-selectbutton {
   display: inline-flex;
-  gap: 4px;
-  padding: 4px;
+  gap: $space-3xs;
+  padding: $space-3xs;
   background: $secondary-lightgrey;
-  border-radius: 999px;
+  border-radius: $radius-pill;
 }
 
 :host ::ng-deep .p-selectbutton .p-button {
   border: 0 !important;
   background: transparent !important;
   color: $text-softblack !important;
-  border-radius: 999px !important;
-  font-weight: 600;
+  border-radius: $radius-pill !important;
+  font-weight: $font-weight-semibold;
   padding: 0.5rem 1.1rem;
 }
 
@@ -132,7 +132,7 @@
   justify-content: center;
   color: $text-lightblack;
   background: transparent;
-  font-weight: 600;
+  font-weight: $font-weight-semibold;
   font-size: 0.95rem;
   padding: 0.8rem 1.1rem;
   border: 0;
@@ -180,13 +180,13 @@
 
 // ---- Count badges -> soft pill with light background and high-contrast numbers ----
 :host ::ng-deep .p-badge {
-  font-weight: 700;
+  font-weight: $font-weight-bold;
   font-size: 0.72rem;
   min-width: 1.45rem;
   height: 1.45rem;
   line-height: 1.45rem;
   padding: 0 0.45rem;
-  border-radius: 999px;
+  border-radius: $radius-pill;
 }
 
 :host ::ng-deep .p-badge.p-badge-info {
@@ -203,5 +203,5 @@
 :host ::ng-deep .route-error .p-button {
   background: $primary-blue;
   border-color: $primary-blue;
-  border-radius: 16px;
+  border-radius: $radius-lg;
 }
