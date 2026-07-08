@@ -71,12 +71,17 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
       callback: this.handleGoogleCredential.bind(this),
     });
 
+    // GIS expects a pixel width (max 400), not a percentage — passing '100%'
+    // logs "Provided button width is invalid" and is ignored. Measure the
+    // container and clamp to GIS's 400px max so the button spans the card.
+    const containerWidth = Math.round(container.getBoundingClientRect().width);
+    const buttonWidth = Math.min(containerWidth || 400, 400);
     google.accounts.id.renderButton(container, {
       type: 'standard',
       shape: 'pill',
       theme: 'outline',
       size: 'large',
-      width: '100%',
+      width: String(buttonWidth),
     });
 
     // GIS bakes its rendered button's language into the gsi/client script it already
