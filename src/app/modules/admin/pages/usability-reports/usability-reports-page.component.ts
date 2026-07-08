@@ -173,6 +173,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           createdAt: summary.createdAt,
           triageNote: null,
           triagedBy: null,
+          triagedByName: null,
           triagedAt: null,
           jiraIssueKey: null,
         }
