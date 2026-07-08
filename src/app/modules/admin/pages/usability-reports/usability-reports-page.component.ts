@@ -42,9 +42,19 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // Detail modal
   protected selectedReportId: string | null = null;
   protected detailReport: UsabilityReportDetail | null = null;
-  protected isDetailLoading = false;
+  // True only while the full detail (description/images/userAgent) is still
+  // being fetched in the background — the modal itself is never gated on this.
+  protected isDetailFetching = false;
   protected selectedDetailStatus: UsabilityReportStatus | '' = '';
   protected isSavingStatus = false;
+
+  // Lightbox overlay — a layer above the detail modal, tracked independently
+  // so dismissing it never closes the detail modal underneath.
+  protected lightboxImageUrl: string | null = null;
+
+  // In-memory cache of full report detail, keyed by report id, so reopening
+  // the same report doesn't re-issue the GET. Invalidated on status save.
+  private readonly detailCache = new Map<string, UsabilityReportDetail>();
 
   private readonly destroy$ = new Subject<void>();
 
@@ -108,21 +118,65 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
 
   protected openDetail(id: string): void {
     this.selectedReportId = id;
-    this.detailReport = null;
-    this.selectedDetailStatus = '';
-    this.isDetailLoading = true;
+    this.lightboxImageUrl = null;
+
+    const cached = this.detailCache.get(id);
+    if (cached) {
+      // Cache hit — render the full detail immediately, no spinner, no refetch.
+      this.detailReport = cached;
+      this.selectedDetailStatus = cached.status;
+      this.isDetailFetching = false;
+      return;
+    }
+
+    // Open optimistically: populate from the summary row already in hand
+    // (design-system.md §6) instead of gating the modal on the awaited fetch.
+    const summary = this.allReports.find((r) => r.id === id) ?? null;
+    this.detailReport = summary
+      ? {
+          id: summary.id,
+          category: summary.category,
+          status: summary.status,
+          userId: summary.userId,
+          description: summary.descriptionPreview,
+          descriptionPreview: summary.descriptionPreview,
+          routeUrl: '',
+          userAgent: '',
+          imageCount: summary.imageCount,
+          images: [],
+          createdAt: summary.createdAt,
+        }
+      : null;
+    this.selectedDetailStatus = summary?.status ?? '';
+    this.isDetailFetching = true;
 
     this.adminApiService
       .getUsabilityReportById(id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
-          this.isDetailLoading = false;
-          this.detailReport = response.data ?? null;
-          this.selectedDetailStatus = this.detailReport?.status ?? '';
+          const detail = response.data ?? null;
+          if (detail) {
+            this.detailCache.set(id, detail);
+          }
+          // Ignore a stale response if the admin already moved to another report.
+          if (this.selectedReportId !== id) {
+            return;
+          }
+          this.isDetailFetching = false;
+          this.detailReport = detail;
+          // Pristine-only patch (design-system.md §6): don't clobber a status
+          // the admin may have already changed during the optimistic-open
+          // window. The summary seeded selectedDetailStatus on open, so only
+          // adopt the fetched status when nothing is selected yet.
+          if (!this.selectedDetailStatus) {
+            this.selectedDetailStatus = detail?.status ?? '';
+          }
         },
         error: () => {
-          this.isDetailLoading = false;
+          if (this.selectedReportId === id) {
+            this.isDetailFetching = false;
+          }
         },
       });
   }
@@ -132,6 +186,40 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.detailReport = null;
     this.selectedDetailStatus = '';
     this.isSavingStatus = false;
+    this.isDetailFetching = false;
+    this.lightboxImageUrl = null;
+  }
+
+  // The detail modal's backdrop directive routes both ESC and backdrop-click
+  // here. When the lightbox is open it sits above the detail modal, so it
+  // must be dismissed first without closing the detail modal underneath.
+  protected onDetailBackdropDismiss(): void {
+    if (this.lightboxImageUrl) {
+      this.closeLightbox();
+      return;
+    }
+    this.closeDetail();
+  }
+
+  protected openLightbox(url: string): void {
+    this.lightboxImageUrl = url;
+  }
+
+  protected closeLightbox(): void {
+    this.lightboxImageUrl = null;
+  }
+
+  protected onLightboxBackdropClick(event: MouseEvent): void {
+    if (event.target === event.currentTarget) {
+      this.closeLightbox();
+    }
+  }
+
+  protected onThumbnailKeydown(event: KeyboardEvent, url: string): void {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.openLightbox(url);
+    }
   }
 
   protected onDetailStatusChange(value: string): void {
@@ -161,6 +249,9 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.isSavingStatus = false;
+          // Invalidate the cached detail — status changed, so the next open
+          // must refetch rather than resurface stale cached data.
+          this.detailCache.delete(id);
           this.alertService.success(
             this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_SUCCESS')
           );

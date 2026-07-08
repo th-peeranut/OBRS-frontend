@@ -464,7 +464,7 @@
       "EMPTY": "No usability reports found.",
       "LOAD_FAILED": "Failed to load reports. Please refresh.",
       "UNITS": "reports",
-      "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "CLOSE": "Close" },
+      "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "IMAGE_ENLARGE": "Enlarge image {{position}}", "CLOSE": "Close" },
       "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "resolved": "Resolved", "wont_fix": "Won't Fix" },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again."
