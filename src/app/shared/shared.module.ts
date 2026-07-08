@@ -4,6 +4,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
+import { MenuModule } from 'primeng/menu';
 
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -12,6 +13,7 @@ import { StepperComponent } from './components/stepper/stepper.component';
 import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
+import { ExportButtonComponent } from './components/export-button/export-button.component';
 
 @NgModule({
   declarations: [
@@ -21,6 +23,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     LangSwitcherComponent,
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
+    ExportButtonComponent,
   ],
   imports: [
     CommonModule,
@@ -29,6 +32,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     TranslateModule,
     ReactiveFormsModule,
     SelectButtonModule,
+    MenuModule,
   ],
   exports: [
     // Modules
@@ -38,6 +42,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     TranslateModule,
     ReactiveFormsModule,
     SelectButtonModule,
+    MenuModule,
 
     // Components
     FooterComponent,
@@ -46,6 +51,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     LangSwitcherComponent,
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
+    ExportButtonComponent,
   ],
 })
 export class SharedModule {}
