@@ -35,3 +35,62 @@ $brand-customer: $primary-blue;            // #4bc2f7
 $brand-customer-strong: $secondary-blue;   // #4069b8
 // $brand-staff:  <pending extraction from staff shell layout> (design-system §13)
 // $brand-admin:  use CSS var var(--accent) / var(--accent-strong) on admin surfaces
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scale tokens — the reference catalog is docs/design-tokens.md.
+// Derived from a 2026-07-08 audit of the hardcoded values across src/**/*.scss.
+// Additive (no visual change): new/touched code references these instead of a raw
+// px/hex; existing hardcoded values migrate incrementally (design-system §13).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Typography — font size
+$font-size-xs:   12px;
+$font-size-sm:   14px;
+$font-size-base: 16px;
+$font-size-md:   18px;
+$font-size-lg:   20px;
+$font-size-xl:   24px;
+$font-size-2xl:  30px;
+
+// Typography — font weight
+$font-weight-regular:   400;
+$font-weight-medium:    500;
+$font-weight-semibold:  600;
+$font-weight-bold:      700;
+$font-weight-extrabold: 800;
+
+// Typography — line height
+$line-height-tight:   1.2;
+$line-height-base:    1.5;
+$line-height-relaxed: 1.8;
+
+// Spacing — 4px grid
+$space-3xs: 4px;
+$space-2xs: 8px;
+$space-xs:  12px;
+$space-sm:  16px;
+$space-md:  20px;
+$space-lg:  24px;
+$space-xl:  32px;
+$space-2xl: 40px;
+
+// Radius
+$radius-sm:     8px;
+$radius-md:     12px;
+$radius-lg:     16px;
+$radius-xl:     24px;
+$radius-pill:   999px;   // the single input shape (design-system §5)
+$radius-circle: 50%;
+
+// Elevation — focus ring + neutral drop shadows (admin focus uses var(--accent-soft))
+$shadow-focus: 0 0 0 3px rgba(75, 194, 247, 0.2);
+$shadow-sm:    0 1px 2px rgba(13, 21, 37, 0.06);
+$shadow-md:    0 4px 12px rgba(13, 21, 37, 0.08);
+$shadow-lg:    0 10px 22px rgba(0, 102, 135, 0.18);
+
+// Motion
+$duration-fast: 150ms;
+$duration-base: 200ms;
+$duration-slow: 300ms;
+$easing-standard:   ease;
+$easing-emphasized: cubic-bezier(0.2, 0, 0, 1);

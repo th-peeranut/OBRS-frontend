@@ -53,6 +53,11 @@ button is green, and the date/time fields are **pill-shaped** while the dropdown
 
 ## 2. Design tokens
 
+> **The full value catalog is [`design-tokens.md`](./design-tokens.md)** — the concrete
+> color, **type, spacing, radius, elevation, and motion** scales (seeded in
+> `variables.scss`). This section defines the *color roles*; that file is the lookup
+> table for every scale. New/touched code references a token there, never a raw px/hex.
+
 **Rule:** components reference **tokens**, never raw hex. SCSS uses the
 `variables.scss` `$vars`; runtime-themed surfaces (admin/dark) use the
 `--accent*` CSS custom properties so light/dark switch for free.
