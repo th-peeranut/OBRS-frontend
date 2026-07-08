@@ -80,6 +80,7 @@
         "OLD_FARE": "原票价",
         "NEW_FARE": "新票价",
         "FEE": "改签手续费",
+        "LOADING": "正在查找可用班次…",
         "TOP_UP": "您需要补付 {{amount}}",
         "REFUND": "您将获得退款 {{amount}}",
         "NO_PAYMENT": "无需额外付款"
@@ -136,6 +137,46 @@
         "UNAUTHORIZED": "您无权更改此预订的座位。",
         "BOOKING_NOT_FOUND": "此预订已不可用。",
         "GENERIC": "无法更改座位，请重试。"
+      }
+    },
+    "CHANGE_STOP": {
+      "ACTION": "更改上下车点",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能更改上下车点",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改上下车点",
+        "ALREADY_USED": "此预订已更改过一次上下车点",
+        "NO_WINDOW": "距离出发时间太近，无法更改上下车点"
+      },
+      "DIALOG_TITLE": "更改您的上下车点",
+      "PICKUP_STEP_TITLE": "选择新的上车点",
+      "DROPOFF_STEP_TITLE": "选择新的下车点",
+      "STOPS_LOAD_ERROR": "无法加载该路线的站点，请重试。",
+      "ESTIMATE": {
+        "OLD_FARE": "原票价",
+        "NEW_FARE": "新票价",
+        "LOADING": "正在计算新票价…",
+        "TOP_UP": "您需要补付 {{amount}}",
+        "REFUND": "您将获得退款 {{amount}}",
+        "NO_PAYMENT": "无需额外付款"
+      },
+      "CONFIRM_BUTTON": "确认新的上下车点",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "您的上下车点已更新。",
+      "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成上下车点的更改。",
+      "PAYMENT_ABANDONED": "上下车点更改尚未完成——在支付完成之前，您原来的预订不会改变。",
+      "ERROR": {
+        "INVALID_SEGMENT": "下车点必须在上车点之后，请重新选择。",
+        "SAME_SEGMENT": "请选择不同的上车点或下车点。",
+        "NOT_CONFIRMED": "此预订已无法更改上下车点（状态不是已确认）。",
+        "MAX_COUNT": "此预订已更改过一次上下车点，无法再次更改。",
+        "WINDOW_CLOSED": "该班次距离现在太近，无法再更改上下车点。",
+        "ROUTE_MISMATCH": "更改上下车点时无法更改路线。",
+        "NO_SEATS": "您的座位在新的上下车点上已不可用，请重试。",
+        "NET_AMOUNT_CHANGED": "价格已发生变化，请重试。",
+        "UNAUTHORIZED": "您无权更改此预订的上下车点。",
+        "BOOKING_NOT_FOUND": "此预订已不可用。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改上下车点。",
+        "GENERIC": "无法更改上下车点，请重试。"
       }
     }
   },

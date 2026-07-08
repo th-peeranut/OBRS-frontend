@@ -20,6 +20,10 @@ import {
   ChangeSeatAvailability,
   ChangeSeatResult,
 } from '../../shared/interfaces/change-seat.interface';
+import {
+  ChangeStopEstimate,
+  ChangeStopResult,
+} from '../../shared/interfaces/change-stop.interface';
 import { PageResponse } from '../../shared/interfaces/payment.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
@@ -42,6 +46,21 @@ export interface ConfirmReschedulePayload {
   /** Existing `Ticket.id` → new seat number on the new schedule. */
   seatAssignments: Record<number, string>;
   clientNetAmount?: number;
+}
+
+export interface ChangeStopEstimateParams {
+  newFromStopId: number;
+  newToStopId: number;
+  seats: string[];
+}
+
+export interface ConfirmChangeStopPayload {
+  newFromStopId: number;
+  newToStopId: number;
+  /** Existing `Ticket.id` → its (unchanged) seat number — change-stop never
+   * reassigns seats, only the pickup/drop-off stops. */
+  seatAssignments: Record<number, string>;
+  clientNetAmount: number;
 }
 
 @Injectable({
@@ -221,6 +240,38 @@ export class BookingService {
     return this.http.post<ResponseAPI<ChangeSeatResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/change-seat`,
       { seatAssignments },
+      { context: this.silentContext() }
+    );
+  }
+
+  /** Preview the fare difference for switching to a new pickup/drop-off
+   * segment (OBRS-110 wave 2). The dialog renders its own inline states. */
+  getChangeStopEstimate(
+    bookingId: number,
+    query: ChangeStopEstimateParams
+  ): Observable<ResponseAPI<ChangeStopEstimate>> {
+    let params = new HttpParams()
+      .set('newFromStopId', query.newFromStopId)
+      .set('newToStopId', query.newToStopId);
+    for (const seat of query.seats) {
+      params = params.append('seats', seat);
+    }
+
+    return this.http.get<ResponseAPI<ChangeStopEstimate>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/change-stop/estimate`,
+      { params, context: this.silentContext() }
+    );
+  }
+
+  /** Confirm the stop change; `CONFIRMED` settles immediately (refund/no
+   * payment), `PENDING_PAYMENT` hands off to the embedded payment step. */
+  confirmChangeStop(
+    bookingId: number,
+    payload: ConfirmChangeStopPayload
+  ): Observable<ResponseAPI<ChangeStopResult>> {
+    return this.http.post<ResponseAPI<ChangeStopResult>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/change-stop/confirm`,
+      payload,
       { context: this.silentContext() }
     );
   }

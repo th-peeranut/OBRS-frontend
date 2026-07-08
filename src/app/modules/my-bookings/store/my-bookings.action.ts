@@ -15,6 +15,12 @@ import {
   ChangeSeatResult,
   ChangeSeatTicket,
 } from '../../../shared/interfaces/change-seat.interface';
+import {
+  ChangeStopEstimate,
+  ChangeStopResult,
+  ChangeStopSeatAssignment,
+} from '../../../shared/interfaces/change-stop.interface';
+import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.interface';
 
 // --- Load my bookings ---
 export const invokeLoadMyBookingsApi = createAction(
@@ -228,3 +234,101 @@ export const confirmChangeSeatFailure = createAction(
 /** `POST .../change-seat` settled (CONFIRMED) — success toast + list refresh
  * + close, never gated behind the refresh. */
 export const changeSeatSettled = createAction('[MyBookings API] Change seat settled');
+
+// --- Change stop dialog (OBRS-110 wave 2) ---
+
+/** Opens the dialog optimistically (synchronous, no awaited fetch). */
+export const openChangeStopDialog = createAction(
+  '[MyBookings API] Open change stop dialog',
+  props<{ bookingId: number }>()
+);
+
+export const closeChangeStopDialog = createAction(
+  '[MyBookings API] Close change stop dialog'
+);
+
+export const loadChangeStopRouteStops = createAction(
+  '[MyBookings API] Invoke to load change stop route stops',
+  props<{ bookingId: number; routeSlug: string }>()
+);
+
+export const loadChangeStopRouteStopsSuccess = createAction(
+  '[MyBookings API] Load change stop route stops success',
+  props<{ pickup: RouteStop[]; dropoff: RouteStop[]; route: RouteMeta | null }>()
+);
+
+export const loadChangeStopRouteStopsFailure = createAction(
+  '[MyBookings API] Load change stop route stops failure',
+  props<{ error: string }>()
+);
+
+export const loadChangeStopTickets = createAction(
+  '[MyBookings API] Invoke to load change stop tickets',
+  props<{ bookingId: number }>()
+);
+
+export const loadChangeStopTicketsSuccess = createAction(
+  '[MyBookings API] Load change stop tickets success',
+  props<{ tickets: ChangeStopSeatAssignment[] }>()
+);
+
+export const loadChangeStopTicketsFailure = createAction(
+  '[MyBookings API] Load change stop tickets failure',
+  props<{ error: string }>()
+);
+
+export const loadChangeStopEstimate = createAction(
+  '[MyBookings API] Invoke to load change stop estimate',
+  props<{
+    bookingId: number;
+    newFromStopId: number;
+    newToStopId: number;
+    seats: string[];
+  }>()
+);
+
+export const loadChangeStopEstimateSuccess = createAction(
+  '[MyBookings API] Load change stop estimate success',
+  props<{ estimate: ChangeStopEstimate }>()
+);
+
+export const loadChangeStopEstimateFailure = createAction(
+  '[MyBookings API] Load change stop estimate failure',
+  props<{ error: string }>()
+);
+
+export const confirmChangeStop = createAction(
+  '[MyBookings API] Invoke to confirm change stop',
+  props<{
+    bookingId: number;
+    newFromStopId: number;
+    newToStopId: number;
+    seatAssignments: Record<number, string>;
+    clientNetAmount: number;
+  }>()
+);
+
+export const confirmChangeStopSuccess = createAction(
+  '[MyBookings API] Confirm change stop success',
+  props<{ result: ChangeStopResult }>()
+);
+
+export const confirmChangeStopFailure = createAction(
+  '[MyBookings API] Confirm change stop failure',
+  props<{ errorCode: string; error: string }>()
+);
+
+/** `POST .../change-stop/confirm` returned `PENDING_PAYMENT` — a top-up is owed. */
+export const changeStopRequiresPayment = createAction(
+  '[MyBookings API] Change stop requires payment',
+  props<{ bookingId: number; paymentIntentId: number | null }>()
+);
+
+/** The embedded payment step completed successfully — settle the dialog. */
+export const changeStopSettled = createAction('[MyBookings API] Change stop settled');
+
+/** The traveler abandoned/closed the dialog while a top-up payment was
+ * pending — the booking is left as `PENDING_PAYMENT` server-side. */
+export const changeStopAbandoned = createAction(
+  '[MyBookings API] Change stop abandoned during payment'
+);

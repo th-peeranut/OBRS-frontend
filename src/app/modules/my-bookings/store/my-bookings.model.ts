@@ -8,6 +8,11 @@ import {
   ChangeSeatAvailability,
   ChangeSeatTicket,
 } from '../../../shared/interfaces/change-seat.interface';
+import {
+  ChangeStopEstimate,
+  ChangeStopSeatAssignment,
+} from '../../../shared/interfaces/change-stop.interface';
+import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.interface';
 
 export interface MyBookingsState {
   bookings: MyBookingDto[];
@@ -79,6 +84,45 @@ export interface MyBookingsState {
    * the spinner looking perpetually stuck). */
   changeSeatConfirmError: string | null;
   changeSeatConfirmErrorCode: string | null;
+
+  // --- Change stop dialog (OBRS-110 wave 2) ---
+  /** Booking id whose change-stop dialog is open, or null when closed. Set
+   * synchronously on open — the dialog surfaces optimistically. */
+  changeStopDialogBookingId: number | null;
+
+  /** `RouteMapService.getPickupDropoff(routeSlug)` result for the open
+   * booking's route — resolved from `MyBookingScheduleDto.routeSlug`. */
+  changeStopRouteMeta: RouteMeta | null;
+  changeStopPickupStops: RouteStop[];
+  changeStopDropoffStops: RouteStop[];
+  changeStopRouteStopsLoading: boolean;
+  /** Total-failure message for the pickup/drop-off GET itself (incl. a
+   * missing `routeSlug`) — drives the dialog's full-step error card + Retry. */
+  changeStopRouteStopsError: string | null;
+
+  /** The open booking's current tickets (existing seat numbers) — carried
+   * through unchanged in `seatAssignments` (change-stop never reassigns
+   * seats, only stops). */
+  changeStopTickets: ChangeStopSeatAssignment[];
+  changeStopTicketsLoading: boolean;
+  changeStopTicketsError: string | null;
+
+  changeStopEstimate: ChangeStopEstimate | null;
+  changeStopEstimateLoading: boolean;
+  changeStopEstimateError: string | null;
+
+  changeStopSubmitting: boolean;
+  /** A confirm-time failure, rendered as an inline banner on the estimate
+   * step. Deliberately NOT reset by a re-dispatched `loadChangeStopEstimate`
+   * (OBRS-83 NO_SEATS lesson, same as `ChangeSeatEffect`'s
+   * `loadChangeSeatAvailability` case) — only a fresh `confirmChangeStop`
+   * attempt clears it. */
+  changeStopConfirmError: string | null;
+  changeStopConfirmErrorCode: string | null;
+
+  /** Set when `POST .../change-stop/confirm` returns `PENDING_PAYMENT` — the
+   * dialog switches to the embedded payment step. */
+  changeStopPendingPayment: { bookingId: number; paymentIntentId: number | null } | null;
 }
 
 export const initialMyBookingsState: MyBookingsState = {
@@ -126,4 +170,26 @@ export const initialMyBookingsState: MyBookingsState = {
   changeSeatSubmitting: false,
   changeSeatConfirmError: null,
   changeSeatConfirmErrorCode: null,
+
+  changeStopDialogBookingId: null,
+
+  changeStopRouteMeta: null,
+  changeStopPickupStops: [],
+  changeStopDropoffStops: [],
+  changeStopRouteStopsLoading: false,
+  changeStopRouteStopsError: null,
+
+  changeStopTickets: [],
+  changeStopTicketsLoading: false,
+  changeStopTicketsError: null,
+
+  changeStopEstimate: null,
+  changeStopEstimateLoading: false,
+  changeStopEstimateError: null,
+
+  changeStopSubmitting: false,
+  changeStopConfirmError: null,
+  changeStopConfirmErrorCode: null,
+
+  changeStopPendingPayment: null,
 };

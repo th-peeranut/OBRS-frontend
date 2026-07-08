@@ -15,11 +15,14 @@ import { RescheduleOptionsListComponent } from './components/reschedule-dialog/r
 import { RescheduleEstimateSummaryComponent } from './components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component';
 import { ChangeSeatDialogComponent } from './components/change-seat-dialog/change-seat-dialog.component';
 import { ChangeSeatMapComponent } from './components/change-seat-dialog/change-seat-map/change-seat-map.component';
+import { ChangeStopDialogComponent } from './components/change-stop-dialog/change-stop-dialog.component';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
+import { RouteStopListModule } from '../home/components/route-map/route-stop-list/route-stop-list.module';
 import { myBookingsReducer } from './store/my-bookings.reducer';
 import { MyBookingsEffect } from './store/my-bookings.effect';
 import { RescheduleEffect } from './store/reschedule.effect';
 import { ChangeSeatEffect } from './store/change-seat.effect';
+import { ChangeStopEffect } from './store/change-stop.effect';
 import { MY_BOOKINGS_FEATURE_KEY } from './store/my-bookings.selector';
 
 const routes: Routes = [{ path: '', component: MyBookingsComponent }];
@@ -34,6 +37,7 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     RescheduleEstimateSummaryComponent,
     ChangeSeatDialogComponent,
     ChangeSeatMapComponent,
+    ChangeStopDialogComponent,
   ],
   imports: [
     SharedModule,
@@ -54,9 +58,15 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     // same components the passenger-info flow and walk-in sell flow already
     // use (design-system §10/§12: extend, don't fork).
     PassengerSeatModule,
+    // Reuses app-route-stop-list (the same pickup/drop-off picker the home
+    // route map uses) as-is for the change-stop dialog's pickup/drop-off
+    // steps — extracted into its own module so importing it here doesn't
+    // fold HomeModule's own routes into this module's route config (same
+    // reasoning as PaymentMethodsModule above).
+    RouteStopListModule,
     RouterModule.forChild(routes),
     StoreModule.forFeature(MY_BOOKINGS_FEATURE_KEY, myBookingsReducer),
-    EffectsModule.forFeature([MyBookingsEffect, RescheduleEffect, ChangeSeatEffect]),
+    EffectsModule.forFeature([MyBookingsEffect, RescheduleEffect, ChangeSeatEffect, ChangeStopEffect]),
   ],
 })
 export class MyBookingsModule {}

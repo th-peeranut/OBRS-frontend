@@ -165,3 +165,90 @@ export const selectChangeSeatConfirmErrorCode = createSelector(
   selectMyBookings,
   (state) => state.changeSeatConfirmErrorCode
 );
+
+// --- Change stop dialog (OBRS-110 wave 2) ---
+
+export const selectChangeStopDialogBookingId = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopDialogBookingId
+);
+
+export const selectChangeStopBooking = createSelector(
+  selectMyBookings,
+  (state) => state.bookings.find((b) => b.id === state.changeStopDialogBookingId) ?? null
+);
+
+export const selectChangeStopRouteMeta = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopRouteMeta
+);
+
+export const selectChangeStopPickupStops = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopPickupStops
+);
+
+export const selectChangeStopDropoffStops = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopDropoffStops
+);
+
+export const selectChangeStopRouteStopsLoading = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopRouteStopsLoading
+);
+
+export const selectChangeStopRouteStopsError = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopRouteStopsError
+);
+
+export const selectChangeStopTickets = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopTickets
+);
+
+export const selectChangeStopTicketsLoading = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopTicketsLoading
+);
+
+export const selectChangeStopTicketsError = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopTicketsError
+);
+
+export const selectChangeStopEstimate = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopEstimate
+);
+
+export const selectChangeStopEstimateLoading = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopEstimateLoading
+);
+
+export const selectChangeStopEstimateError = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopEstimateError
+);
+
+export const selectChangeStopSubmitting = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopSubmitting
+);
+
+export const selectChangeStopConfirmError = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopConfirmError
+);
+
+export const selectChangeStopConfirmErrorCode = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopConfirmErrorCode
+);
+
+export const selectChangeStopPendingPayment = createSelector(
+  selectMyBookings,
+  (state) => state.changeStopPendingPayment
+);

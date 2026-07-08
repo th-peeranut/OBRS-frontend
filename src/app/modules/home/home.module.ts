@@ -21,7 +21,7 @@ import { DropdownGroupObrsComponent } from '../../shared/components/dropdown-gro
 
 // Route-Map Components
 import { RouteMapHomeComponent } from './components/route-map/route-map-home/route-map-home.component';
-import { RouteStopListComponent } from './components/route-map/route-stop-list/route-stop-list.component';
+import { RouteStopListModule } from './components/route-map/route-stop-list/route-stop-list.module';
 import { RouteMapPanelComponent } from './components/route-map/route-map-panel/route-map-panel.component';
 import { RouteStopDetailCardComponent } from './components/route-map/route-stop-detail-card/route-stop-detail-card.component';
 import { RouteTravelSummaryComponent } from './components/route-map/route-travel-summary/route-travel-summary.component';
@@ -42,7 +42,6 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     HomeBookingComponent,
     StationHomeComponent,
     RouteMapHomeComponent,
-    RouteStopListComponent,
     RouteMapPanelComponent,
     RouteStopDetailCardComponent,
     RouteTravelSummaryComponent,
@@ -74,6 +73,7 @@ const routes: Routes = [{ path: '', component: HomeComponent }];
     DropdownObrsComponent,
     DropdownGroupObrsComponent,
     DropdownObrsPassengerComponent,
+    RouteStopListModule,
   ],
   exports: [
     HomeBookingComponent,

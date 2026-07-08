@@ -148,4 +148,10 @@
   (closed)="onChangeSeatDialogClosed()"
 ></app-change-seat-dialog>
 
+<app-change-stop-dialog
+  *ngIf="changeStopDialogBookingId$ | async as changeStopBookingId"
+  [bookingId]="changeStopBookingId"
+  (closed)="onChangeStopDialogClosed()"
+></app-change-stop-dialog>
+
 <app-footer></app-footer>

@@ -12,19 +12,20 @@ import { MyBookingDto } from '../../shared/interfaces/my-booking.interface';
 import { initialMyBookingsState } from './store/my-bookings.model';
 import {
   selectChangeSeatDialogBookingId,
+  selectChangeStopDialogBookingId,
   selectMyBookings,
   selectRescheduleDialogBookingId,
 } from './store/my-bookings.selector';
-import { openChangeSeatDialog } from './store/my-bookings.action';
+import { openChangeStopDialog } from './store/my-bookings.action';
 
 /**
  * Locks design-system §6/§11's "shown but disabled, never hidden" rule for
- * the Change seat action (OBRS-110), and the optimistic-open contract for
- * its dialog — mirrors `my-bookings.component.reschedule-dom.spec.ts` for
- * the sibling Reschedule action. See my-bookings.component.spec.ts for the
- * exhaustive eligibility-reason matrix at the logic level.
+ * the Change stop action (OBRS-110 wave 2), and the optimistic-open contract
+ * for its dialog — mirrors `my-bookings.component.change-seat-dom.spec.ts`
+ * for the sibling Change seat action. See my-bookings.component.spec.ts for
+ * the exhaustive eligibility-reason matrix at the logic level.
  */
-describe('MyBookingsComponent (change seat action — action menu)', () => {
+describe('MyBookingsComponent (change stop action — action menu)', () => {
   let fixture: ComponentFixture<MyBookingsComponent>;
   let store: MockStore;
 
@@ -37,6 +38,7 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
       bookingType: 'one_way',
       rescheduleCount: 0,
       seatChangeCount: 0,
+      stopChangeCount: 0,
       createdAt: dayjs().toISOString(),
       bookingSchedules: [
         {
@@ -45,6 +47,7 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
           fromStop: { code: 'a', display: { en: { label: 'A' } } },
           toStop: { code: 'b', display: { en: { label: 'B' } } },
           tickets: [{ id: 1, seatNumber: '1' }],
+          routeSlug: 'bkk-cnx',
         },
       ],
       ...overrides,
@@ -59,6 +62,7 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
     });
     store.overrideSelector(selectRescheduleDialogBookingId, null);
     store.overrideSelector(selectChangeSeatDialogBookingId, null);
+    store.overrideSelector(selectChangeStopDialogBookingId, null);
     fixture = TestBed.createComponent(MyBookingsComponent);
     fixture.detectChanges();
     // ViewChild p-menu is an unknown element under NO_ERRORS_SCHEMA — stub
@@ -75,12 +79,12 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
     actionsMenuButton().click();
   }
 
-  function changeSeatItem() {
+  function changeStopItem() {
     const item = fixture.componentInstance.actionMenuItems.find(
-      (candidate) => candidate.label === 'MY_BOOKINGS.CHANGE_SEAT.ACTION'
+      (candidate) => candidate.label === 'MY_BOOKINGS.CHANGE_STOP.ACTION'
     );
     if (!item) {
-      throw new Error('Change seat item not found in actionMenuItems — it must never be omitted.');
+      throw new Error('Change stop item not found in actionMenuItems — it must never be omitted.');
     }
     return item;
   }
@@ -102,81 +106,93 @@ describe('MyBookingsComponent (change seat action — action menu)', () => {
     store.resetSelectors();
   });
 
-  it('includes Change seat in the opened menu, disabled with its localized reason, for an ineligible booking', () => {
+  it('includes Change stop in the opened menu, disabled with its localized reason, for an ineligible booking', () => {
     render(buildBooking({ status: 'pending' }));
 
     openMenu();
 
-    const item = changeSeatItem();
+    const item = changeStopItem();
     expect(item.disabled)
-      .withContext('disabled, never omitted — same contract as Reschedule')
+      .withContext('disabled, never omitted — same contract as Reschedule/Change seat')
       .toBeTrue();
-    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_CONFIRMED');
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NOT_CONFIRMED');
   });
 
-  it('includes Change seat enabled, with no reason text, for an eligible booking', () => {
+  it('is disabled with NOT_ONE_WAY when the booking is not one-way/single-leg', () => {
+    render(buildBooking({ bookingType: 'return' }));
+
+    openMenu();
+
+    expect(changeStopItem().reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NOT_ONE_WAY');
+  });
+
+  it('is disabled with ALREADY_USED when stopChangeCount is already 1', () => {
+    render(buildBooking({ stopChangeCount: 1 }));
+
+    openMenu();
+
+    expect(changeStopItem().reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.ALREADY_USED');
+  });
+
+  it('is disabled with NO_WINDOW when departure is inside the 4h window', () => {
+    render(
+      buildBooking({
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(1, 'hour').toISOString(),
+            fromStop: { code: 'a' },
+            toStop: { code: 'b' },
+            tickets: [{ id: 1, seatNumber: '1' }],
+            routeSlug: 'bkk-cnx',
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    expect(changeStopItem().reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NO_WINDOW');
+  });
+
+  it('includes Change stop enabled, with no reason text, for an eligible booking', () => {
     render(buildBooking());
 
     openMenu();
 
-    const item = changeSeatItem();
+    const item = changeStopItem();
     expect(item.disabled).toBeFalse();
     expect(item.reasonText).toBeUndefined();
   });
 
-  it('dispatches openChangeSeatDialog when the enabled Change seat item is activated', () => {
+  it('dispatches openChangeStopDialog when the enabled Change stop item is activated', () => {
     render(buildBooking());
     const dispatchSpy = spyOn(store, 'dispatch');
 
     openMenu();
-    changeSeatItem().command?.({});
+    changeStopItem().command?.({});
 
-    expect(dispatchSpy).toHaveBeenCalledWith(openChangeSeatDialog({ bookingId: 42 }));
+    expect(dispatchSpy).toHaveBeenCalledWith(openChangeStopDialog({ bookingId: 42 }));
   });
 
-  it('does nothing when the disabled Change seat item is activated', () => {
+  it('does nothing when the disabled Change stop item is activated', () => {
     render(buildBooking({ status: 'pending' }));
     const dispatchSpy = spyOn(store, 'dispatch');
 
     openMenu();
-    changeSeatItem().command?.({});
+    changeStopItem().command?.({});
 
     expect(dispatchSpy).not.toHaveBeenCalled();
   });
 
-  it('lists View e-ticket, Reschedule, Change seat, Change stop, Cancel booking in that order for a confirmed booking', () => {
+  it('opens the change-stop dialog optimistically — it renders as soon as the store reflects the open, synchronously', () => {
     render(buildBooking());
+    expect(fixture.debugElement.query(By.css('app-change-stop-dialog'))).toBeNull();
 
-    openMenu();
-
-    expect(fixture.componentInstance.actionMenuItems.map((item) => item.label)).toEqual([
-      'MY_BOOKINGS.VIEW_TICKET',
-      'MY_BOOKINGS.RESCHEDULE.ACTION',
-      'MY_BOOKINGS.CHANGE_SEAT.ACTION',
-      'MY_BOOKINGS.CHANGE_STOP.ACTION',
-      'MY_BOOKINGS.CANCEL.ACTION',
-    ]);
-  });
-
-  it('omits View e-ticket and Cancel booking (but still includes Change seat, disabled) for a non-confirmed booking', () => {
-    render(buildBooking({ status: 'pending' }));
-
-    openMenu();
-
-    const labels = fixture.componentInstance.actionMenuItems.map((item) => item.label);
-    expect(labels).not.toContain('MY_BOOKINGS.VIEW_TICKET');
-    expect(labels).not.toContain('MY_BOOKINGS.CANCEL.ACTION');
-    expect(labels).toContain('MY_BOOKINGS.CHANGE_SEAT.ACTION');
-  });
-
-  it('opens the change-seat dialog optimistically — it renders as soon as the store reflects the open, synchronously', () => {
-    render(buildBooking());
-    expect(fixture.debugElement.query(By.css('app-change-seat-dialog'))).toBeNull();
-
-    store.overrideSelector(selectChangeSeatDialogBookingId, 42);
+    store.overrideSelector(selectChangeStopDialogBookingId, 42);
     store.refreshState();
     fixture.detectChanges();
 
-    expect(fixture.debugElement.query(By.css('app-change-seat-dialog'))).not.toBeNull();
+    expect(fixture.debugElement.query(By.css('app-change-stop-dialog'))).not.toBeNull();
   });
 });

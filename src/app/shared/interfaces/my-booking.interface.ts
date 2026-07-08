@@ -33,6 +33,12 @@ export interface MyBookingScheduleDto {
   fromStop?: BookingStopLookup;
   toStop?: BookingStopLookup;
   tickets?: MyBookingScheduleTicketDto[];
+  /**
+   * Slug of the route this leg runs on — resolves `RouteMapService.getPickupDropoff(slug)`
+   * for the change-stop dialog's pickup/drop-off pickers (OBRS-110 wave 2).
+   * See OBRS-backend/docs/api/booking.md `GET /bookings/me`.
+   */
+  routeSlug?: string;
 }
 
 export interface MyBookingContactDto {
@@ -64,9 +70,12 @@ export interface MyBookingDto {
    * OBRS-backend/docs/api/booking.md `GET /bookings/me`.
    */
   seatChangeCount?: number;
-  /** Stop-change counterpart of `seatChangeCount` — not yet consumed by the
-   * frontend (a future wave); carried here only so the DTO shape matches the
-   * backend response. */
+  /**
+   * Stop-change counterpart of `seatChangeCount` (0 or 1 — a booking can
+   * only have its pickup/drop-off stops changed once). Drives up-front
+   * eligibility gating for the Change stop action (OBRS-110 wave 2). See
+   * OBRS-backend/docs/api/booking.md `GET /bookings/me`.
+   */
   stopChangeCount?: number;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
@@ -116,6 +125,10 @@ export interface MyBookingView {
   changeSeatEligible: boolean;
   /** i18n key for the disabled-reason tooltip; null when `changeSeatEligible`. */
   changeSeatReasonKey: string | null;
+  /** Change stop action is enabled — the card MUST still render it (disabled) otherwise. */
+  changeStopEligible: boolean;
+  /** i18n key for the disabled-reason tooltip; null when `changeStopEligible`. */
+  changeStopReasonKey: string | null;
 }
 
 /** A booking can only be cancelled by the traveler while it is `confirmed`. */

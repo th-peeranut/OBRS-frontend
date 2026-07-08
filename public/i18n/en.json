@@ -80,6 +80,7 @@
         "OLD_FARE": "Current fare",
         "NEW_FARE": "New fare",
         "FEE": "Reschedule fee",
+        "LOADING": "Looking for available departures…",
         "TOP_UP": "You pay {{amount}}",
         "REFUND": "You'll be refunded {{amount}}",
         "NO_PAYMENT": "No additional charge"
@@ -136,6 +137,46 @@
         "UNAUTHORIZED": "You don't have permission to change the seat on this booking.",
         "BOOKING_NOT_FOUND": "This booking is no longer available.",
         "GENERIC": "Unable to change seat. Please try again."
+      }
+    },
+    "CHANGE_STOP": {
+      "ACTION": "Change stop",
+      "REASON": {
+        "NOT_CONFIRMED": "Only confirmed bookings can change their stops",
+        "NOT_ONE_WAY": "Only one-way, single-leg bookings can change their stops",
+        "ALREADY_USED": "This booking has already changed its stops once",
+        "NO_WINDOW": "Too close to departure to change stops"
+      },
+      "DIALOG_TITLE": "Change your pickup and drop-off",
+      "PICKUP_STEP_TITLE": "Choose a new pickup stop",
+      "DROPOFF_STEP_TITLE": "Choose a new drop-off stop",
+      "STOPS_LOAD_ERROR": "Unable to load stops for this route. Please try again.",
+      "ESTIMATE": {
+        "OLD_FARE": "Current fare",
+        "NEW_FARE": "New fare",
+        "LOADING": "Calculating your new fare…",
+        "TOP_UP": "You pay {{amount}}",
+        "REFUND": "You'll be refunded {{amount}}",
+        "NO_PAYMENT": "No additional charge"
+      },
+      "CONFIRM_BUTTON": "Confirm new stops",
+      "BACK_BUTTON": "Back",
+      "SUCCESS": "Your pickup and drop-off have been updated.",
+      "PAYMENT_REQUIRED_NOTE": "Complete a payment of {{amount}} to finish updating your stops.",
+      "PAYMENT_ABANDONED": "Stop change not complete — your original booking is unchanged until payment is completed.",
+      "ERROR": {
+        "INVALID_SEGMENT": "The drop-off must come after the pickup stop. Please choose again.",
+        "SAME_SEGMENT": "Please choose a different pickup or drop-off stop.",
+        "NOT_CONFIRMED": "This booking can no longer change its stops (not confirmed).",
+        "MAX_COUNT": "This booking has already changed its stops once and can't be changed again.",
+        "WINDOW_CLOSED": "That departure is too close to now — stops can no longer be changed.",
+        "ROUTE_MISMATCH": "The route can't be changed when updating stops.",
+        "NO_SEATS": "Your seat is no longer available for this stop change. Please try again.",
+        "NET_AMOUNT_CHANGED": "The price changed. Please try again.",
+        "UNAUTHORIZED": "You don't have permission to change stops on this booking.",
+        "BOOKING_NOT_FOUND": "This booking is no longer available.",
+        "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't change their stops.",
+        "GENERIC": "Unable to change stops. Please try again."
       }
     }
   },

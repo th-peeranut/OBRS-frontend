@@ -132,6 +132,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
       'View e-ticket',
       'Reschedule',
       'Change seat',
+      'Change stop',
       'Cancel booking',
     ]);
 
@@ -651,7 +652,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     const menu = await openActionsMenu(page, eligibleCard);
     const labels = (await menu.locator('.action-menu-item__label').allTextContents()).map((l) => l.trim());
-    expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'เปลี่ยนที่นั่ง', 'ยกเลิกการจอง']);
+    expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'เปลี่ยนที่นั่ง', 'เปลี่ยนจุดขึ้น-ลง', 'ยกเลิกการจอง']);
     await expect(menu).not.toContainText('MY_BOOKINGS.');
     await page.keyboard.press('Escape');
     await expect(menu).toHaveCount(0);
