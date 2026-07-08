@@ -79,6 +79,130 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
 /** Maximum number of points per Directions API request (origin + N-2 waypoints + destination). */
 const DIRECTIONS_CHUNK_SIZE = 25;
 
+// ---------------------------------------------------------------------------
+// Road-snapped path cache (OBRS-91)
+//
+// The road-snapped polyline for a fixed, ordered stop-set is deterministic
+// (roads don't change), yet today a billable Directions API request fires on
+// every /home visit, reload, and new session because the in-session dedupe
+// (`lastDirReqKey`) lives only on a single component instance. Persisting the
+// result and serving it on repeat views cuts Directions calls to ~once per
+// unique route per browser. Two tiers:
+//   1. Module-level Map — shared across every RouteMapPanelComponent instance
+//      within the SPA session (survives in-app navigation; no storage I/O).
+//   2. localStorage — survives full reloads and new sessions.
+// The cache key (see buildRequestKey) includes rounded stop coordinates, so an
+// admin coordinate edit naturally invalidates the entry.
+// ---------------------------------------------------------------------------
+
+/** Bump when the cached value shape (or key format) changes to drop old entries. */
+const DIR_CACHE_VERSION = 1;
+const DIR_CACHE_STORAGE_KEY = `obrs.dirPathCache.v${DIR_CACHE_VERSION}`;
+/** Entries older than this are treated as stale and ignored/pruned. */
+const DIR_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+/** Cap stored entries to keep localStorage bounded (the route set is small). */
+const DIR_CACHE_MAX_ENTRIES = 50;
+
+interface CachedDirEntry {
+  path: google.maps.LatLngLiteral[];
+  ts: number;
+}
+
+/** In-memory tier, shared across all panel instances within the SPA session. */
+const dirPathMemCache = new Map<string, CachedDirEntry>();
+
+/** Validate that a value is a non-trivial array of {lat,lng} literals. */
+function isValidDirPath(path: unknown): path is google.maps.LatLngLiteral[] {
+  return (
+    Array.isArray(path) &&
+    path.length > 1 &&
+    path.every(
+      (p) =>
+        p != null &&
+        typeof (p as { lat?: unknown }).lat === 'number' &&
+        typeof (p as { lng?: unknown }).lng === 'number'
+    )
+  );
+}
+
+/** Read + parse the localStorage cache object; returns {} on any failure. */
+function readDirStore(): Record<string, CachedDirEntry> {
+  try {
+    const raw = window.localStorage.getItem(DIR_CACHE_STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+    const parsed = JSON.parse(raw) as Record<string, CachedDirEntry>;
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    // localStorage unavailable (private mode / SSR) or corrupt JSON.
+    return {};
+  }
+}
+
+/** Persist the store, pruning expired entries and capping total size. */
+function writeDirStore(store: Record<string, CachedDirEntry>): void {
+  try {
+    const now = Date.now();
+    let entries = Object.entries(store).filter(
+      ([, e]) => e && now - e.ts < DIR_CACHE_TTL_MS
+    );
+    if (entries.length > DIR_CACHE_MAX_ENTRIES) {
+      // Keep the most-recently-written entries.
+      entries = entries
+        .sort((a, b) => b[1].ts - a[1].ts)
+        .slice(0, DIR_CACHE_MAX_ENTRIES);
+    }
+    window.localStorage.setItem(
+      DIR_CACHE_STORAGE_KEY,
+      JSON.stringify(Object.fromEntries(entries))
+    );
+  } catch {
+    // localStorage unavailable/full (private mode, quota) — the in-memory tier
+    // still serves this session; nothing else to do.
+  }
+}
+
+/** Look up a cached road path by key. Checks memory first, then localStorage. */
+function readDirPathCache(key: string): google.maps.LatLngLiteral[] | null {
+  const now = Date.now();
+  const mem = dirPathMemCache.get(key);
+  if (mem && now - mem.ts < DIR_CACHE_TTL_MS && isValidDirPath(mem.path)) {
+    return mem.path;
+  }
+  const stored = readDirStore()[key];
+  if (stored && now - stored.ts < DIR_CACHE_TTL_MS && isValidDirPath(stored.path)) {
+    dirPathMemCache.set(key, stored); // hydrate the memory tier
+    return stored.path;
+  }
+  return null;
+}
+
+/** Store a computed road path under key in both tiers. */
+function writeDirPathCache(
+  key: string,
+  path: google.maps.LatLngLiteral[]
+): void {
+  if (!isValidDirPath(path)) {
+    return;
+  }
+  const entry: CachedDirEntry = { path, ts: Date.now() };
+  dirPathMemCache.set(key, entry);
+  const store = readDirStore();
+  store[key] = entry;
+  writeDirStore(store);
+}
+
+/** Clear both cache tiers. Exposed for tests and future cache-busting. */
+export function clearDirectionsPathCache(): void {
+  dirPathMemCache.clear();
+  try {
+    window.localStorage.removeItem(DIR_CACHE_STORAGE_KEY);
+  } catch {
+    // ignore — nothing to clear if storage is unavailable.
+  }
+}
+
 @Component({
   selector: 'app-route-map-panel',
   templateUrl: './route-map-panel.component.html',
@@ -398,15 +522,15 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
         this.mapsLoaded = true;
         this.recomputeMarkers();
         // Stops may have arrived before maps finished loading. If a straight path
-        // is already set and a Directions key was registered, fire the road-snap
-        // request now that the DirectionsService is available.
+        // is already set and a Directions key was registered, resolve the
+        // road-snap now that the DirectionsService is available — from cache if
+        // possible, otherwise via a Directions request.
         if (
           this.straightPath.length > 1 &&
           this.lastDirReqKey &&
           this.dirReqDispatchedSeq !== this.dirReqSeq
         ) {
-          this.dirReqDispatchedSeq = this.dirReqSeq;
-          void this.requestDirectionsPath(this.straightPath, this.dirReqSeq);
+          this.resolveDirections(this.dirReqSeq);
         }
       })
       .catch(() => {
@@ -499,12 +623,22 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     this.dirReqSeq++;
     const seqId = this.dirReqSeq;
 
-    // Fire Directions only when maps is already loaded. If maps hasn't loaded
-    // yet, ngOnInit's .then() will re-fire using the captured straightPath.
+    // Cache hit → use the stored road-snapped path immediately and skip the
+    // billable Directions call entirely (no maps script needed). Marking the
+    // request dispatched also stops ngOnInit's deferred re-fire from querying.
+    const cached = readDirPathCache(reqKey);
+    if (cached) {
+      this.polylinePath = cached;
+      this.dirReqDispatchedSeq = seqId;
+      return;
+    }
+
+    // Cache miss: fire Directions only when maps is already loaded. If maps
+    // hasn't loaded yet, ngOnInit's .then() will re-fire using straightPath.
     const win = window as unknown as GoogleWindow;
     if (this.straightPath.length > 1 && win.google?.maps) {
       this.dirReqDispatchedSeq = seqId;
-      void this.requestDirectionsPath(this.straightPath, seqId);
+      void this.requestDirectionsPath(this.straightPath, reqKey, seqId);
     }
   }
 
@@ -586,20 +720,24 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   // ---------------------------------------------------------------------------
 
   /**
-   * Build a deduplication key from the ordered stop slugs. Two calls with the
-   * same pickup and dropoff stops (same order) produce the same key, so the
-   * Directions request is skipped when stops haven't actually changed.
+   * Build a deduplication / cache key from the ordered stops. Each stop token
+   * includes its slug AND rounded coordinates, so two calls with the same stops
+   * (same order, same position) produce the same key — but an admin coordinate
+   * edit changes the token and naturally invalidates any cached road path. The
+   * version prefix lets us bust all keys when the format changes.
    */
   private buildRequestKey(): string {
-    const pickupSlugs = this.pickupStops
+    const token = (s: RouteStop): string =>
+      `${s.slug}@${(s.latitude as number).toFixed(5)},${(s.longitude as number).toFixed(5)}`;
+    const pickupTokens = this.pickupStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
       .sort((a, b) => a.order - b.order)
-      .map((s) => s.slug);
-    const dropoffSlugs = this.dropoffStops
+      .map(token);
+    const dropoffTokens = this.dropoffStops
       .filter((s) => s.latitude !== null && s.longitude !== null)
       .sort((a, b) => a.order - b.order)
-      .map((s) => s.slug);
-    return [...pickupSlugs, ...dropoffSlugs].join('|');
+      .map(token);
+    return `v${DIR_CACHE_VERSION}|${[...pickupTokens, ...dropoffTokens].join('|')}`;
   }
 
   /**
@@ -671,17 +809,36 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   /**
+   * Resolve the road-snapped path for the current request key: serve it from
+   * the persistent cache when present (skipping the billable Directions call),
+   * otherwise dispatch a Directions request. Marks the request dispatched for
+   * `seqId` either way, so ngOnInit's deferred re-fire won't duplicate it.
+   * Callers must ensure the maps script is loaded before invoking.
+   */
+  private resolveDirections(seqId: number): void {
+    this.dirReqDispatchedSeq = seqId;
+    const cached = readDirPathCache(this.lastDirReqKey);
+    if (cached) {
+      this.polylinePath = cached;
+      return;
+    }
+    void this.requestDirectionsPath(this.straightPath, this.lastDirReqKey, seqId);
+  }
+
+  /**
    * Request road-snapped geometry for `straightPath` from the Directions API,
    * chunking if needed to stay within the waypoint limit.
    *
-   * - Sets `polylinePath` to the road-snapped path on full success.
+   * - Sets `polylinePath` to the road-snapped path on full success and caches
+   *   it under `cacheKey` so repeat views skip the API (OBRS-91).
    * - Falls back to `straightPath` (already assigned) on any error — the map
-   *   is never left blank.
+   *   is never left blank — and does NOT cache a failed/partial result.
    * - Discards stale responses via the `seqId` guard: if `dirReqSeq` has
    *   advanced since this request was fired, the result is silently dropped.
    */
   private async requestDirectionsPath(
     straightPath: google.maps.LatLngLiteral[],
+    cacheKey: string,
     seqId: number
   ): Promise<void> {
     // Guard: DirectionsService might not exist in the current maps stub (tests).
@@ -733,6 +890,8 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
       }
 
       this.polylinePath = combined;
+      // Persist the deterministic road path so repeat views skip the API.
+      writeDirPathCache(cacheKey, combined);
     } catch (e) {
       // Covers: DirectionsService constructor unavailable, network failures,
       // API not enabled on this key, quota exceeded, etc.
