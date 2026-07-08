@@ -1,4 +1,5 @@
 import { NgZone, SimpleChange, SimpleChanges } from '@angular/core';
+import { GoogleMap } from '@angular/google-maps';
 import { RouteMapPanelComponent, UserLocatedEvent } from './route-map-panel.component';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 
@@ -110,6 +111,54 @@ describe('RouteMapPanelComponent', () => {
   it('stopHasCoords returns true for a stop with coordinates', () => {
     const stop = makeStop(1, true);
     expect(component.stopHasCoords(stop)).toBeTrue();
+  });
+
+  // -------------------------------------------------------------------------
+  // Custom zoom control — replaces Google's un-styleable default zoomControl.
+  // -------------------------------------------------------------------------
+
+  describe('zoomIn / zoomOut', () => {
+    it('zoomIn calls setZoom with the current zoom + 1', () => {
+      const setZoom = jasmine.createSpy('setZoom');
+      component.map = {
+        googleMap: { getZoom: () => 10, setZoom },
+      } as unknown as GoogleMap;
+
+      component.zoomIn();
+
+      expect(setZoom).toHaveBeenCalledWith(11);
+    });
+
+    it('zoomOut calls setZoom with the current zoom - 1', () => {
+      const setZoom = jasmine.createSpy('setZoom');
+      component.map = {
+        googleMap: { getZoom: () => 10, setZoom },
+      } as unknown as GoogleMap;
+
+      component.zoomOut();
+
+      expect(setZoom).toHaveBeenCalledWith(9);
+    });
+
+    it('zoomIn no-ops when map is undefined', () => {
+      component.map = undefined;
+      expect(() => component.zoomIn()).not.toThrow();
+    });
+
+    it('zoomOut no-ops when map is undefined', () => {
+      component.map = undefined;
+      expect(() => component.zoomOut()).not.toThrow();
+    });
+
+    it('zoomIn no-ops when map.googleMap is undefined', () => {
+      component.map = {} as unknown as GoogleMap;
+      expect(() => component.zoomIn()).not.toThrow();
+    });
+
+    it('zoomOut no-ops when map.googleMap is undefined', () => {
+      component.map = {} as unknown as GoogleMap;
+      expect(() => component.zoomOut()).not.toThrow();
+    });
   });
 
   // -------------------------------------------------------------------------

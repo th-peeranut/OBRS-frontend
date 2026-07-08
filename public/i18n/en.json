@@ -724,7 +724,9 @@
       "LOCATION_DENIED": "Location access denied. Please allow location to find your nearest pickup.",
       "LOCATION_UNAVAILABLE": "Unable to get your location. Please try again.",
       "YOU_ARE_HERE": "You are here",
-      "DISTANCE_AWAY": "{{km}} km"
+      "DISTANCE_AWAY": "{{km}} km",
+      "ZOOM_IN": "Zoom in",
+      "ZOOM_OUT": "Zoom out"
     }
   },
   "STEPPER": {
