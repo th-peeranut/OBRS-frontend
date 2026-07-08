@@ -33,14 +33,16 @@
   cursor: pointer;
   transition: border-color 0.15s, background-color 0.15s;
 
+  // design-system §13: staff surface uses the shell accent (theme-staff --accent*
+  // cascades from .admin-shell), never raw Bootstrap #0d6efd.
   &:hover {
-    border-color: #0d6efd;
-    background-color: rgba(13, 110, 253, 0.05);
+    border-color: var(--accent-strong);
+    background-color: var(--accent-soft);
   }
 
   &--active {
-    border-color: #0d6efd !important;
-    background-color: rgba(13, 110, 253, 0.1) !important;
+    border-color: var(--accent-strong) !important;
+    background-color: var(--accent-soft) !important;
   }
 }
 

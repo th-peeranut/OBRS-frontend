@@ -13,6 +13,9 @@
   --admin-warning-text: #673a00;
   --admin-danger-bg: #ffdad6;
   --admin-danger-text: #93000a;
+  /* danger role border (design-system §2 danger): used by invalid form fields.
+     Runtime CSS var so it themes with the shell and isn't a raw hex per §13. */
+  --admin-danger-border: rgba(186, 26, 26, 0.8);
   --admin-accepted-bg: #b7f3c0;
   --admin-accepted-text: #0a3d1d;
   /* in_review: neutral slate — distinct from new(orange)/accepted(green)/
@@ -1106,13 +1109,17 @@
 }
 
 .admin-required {
-  color: #93000a;
+  color: var(--admin-danger-text);
 }
 
+/* design-system §5 — single input shape: pill (999px), matching app-admin-dropdown
+   and the date/time controls. Single-line inputs (text/date/number/email/…) render
+   as pills; the multi-line exception is textarea.admin-field below. 14px inline
+   padding keeps text off the pill's rounded ends (mirrors the dropdown trigger). */
 .admin-field {
   border: 1px solid rgba(189, 200, 207, 0.9);
-  border-radius: 10px;
-  padding: 9px 10px;
+  border-radius: 999px;
+  padding: 9px 14px;
   outline: 0;
   background: var(--admin-surface-card);
 }
@@ -1122,9 +1129,12 @@
   color: var(--admin-text);
 }
 
+/* Multi-line exception to the pill shape (§5): a literal 999px pill reads wrong on
+   a tall textarea, so multi-line controls use a moderate rounded radius instead. */
 textarea.admin-field {
   min-height: 86px;
   resize: vertical;
+  border-radius: 12px;
 }
 
 .admin-field:focus {
@@ -1133,11 +1143,11 @@ textarea.admin-field {
 }
 
 .admin-field.is-invalid {
-  border-color: rgba(186, 26, 26, 0.8);
+  border-color: var(--admin-danger-border);
 }
 
 .admin-error {
-  color: #93000a;
+  color: var(--admin-danger-text);
   font-size: 11px;
   font-weight: 600;
 }

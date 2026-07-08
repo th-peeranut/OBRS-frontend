@@ -82,9 +82,11 @@
     background-color: rgba(0, 0, 0, 0.04);
   }
 
+  // design-system §13: staff surface uses the shell accent (theme-staff --accent*
+  // cascades from .admin-shell), never raw Bootstrap #0d6efd.
   &--selected {
-    background-color: rgba(13, 110, 253, 0.08);
-    border-left: 3px solid #0d6efd !important;
+    background-color: var(--accent-soft);
+    border-left: 3px solid var(--accent-strong) !important;
   }
 }
 
