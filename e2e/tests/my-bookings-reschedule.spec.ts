@@ -61,8 +61,16 @@ function cardByBookingNumber(page: Page, bookingNumber: string) {
  * under `card`). Each item is `.action-menu-item` with a `.action-menu-item__label`
  * and, when disabled, a `.action-menu-item__reason` subtext (replaces the old
  * per-button `.tooltip-box` hover tooltip).
+ *
+ * PrimeNG's popup `p-menu` binds a `ConnectedOverlayScrollHandler` (see
+ * node_modules/primeng/fesm2022/primeng-menu.mjs) that closes the menu on
+ * ANY ancestor/window scroll — so the card must already be fully in view
+ * BEFORE clicking the trigger (a scroll-into-view triggered by the click
+ * itself, or any scroll afterward — including a `fullPage` screenshot's
+ * internal scroll — will silently dismiss it).
  */
 async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
+  await card.locator('.actions-menu-btn').scrollIntoViewIfNeeded();
   await card.locator('.actions-menu-btn').click();
   const menu = page.locator('.p-menu');
   await menu.waitFor({ state: 'visible', timeout: 10_000 });
@@ -70,9 +78,17 @@ async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
 }
 
 /** The `<li class="p-menuitem">` (carries `aria-disabled`) for a given item's
- * label text — use this for both disabled-state and reason-text assertions. */
+ * label text — use this for both disabled-state and reason-text assertions.
+ * Filters on the `.action-menu-item__label` descendant specifically (not the
+ * `<li>`'s whole text via a plain `hasText` filter): a disabled item appends
+ * its `.action-menu-item__reason` subtext inside the SAME `<li>`, so an
+ * anchored pattern like `/^Reschedule$/` would never match the combined
+ * "Reschedule Only confirmed bookings can be rescheduled" text — it must
+ * match only the label span. */
 function menuItem(menu: Locator, labelPattern: RegExp): Locator {
-  return menu.locator('li.p-menuitem').filter({ hasText: labelPattern });
+  return menu.locator('li.p-menuitem').filter({
+    has: menu.page().locator('.action-menu-item__label', { hasText: labelPattern }),
+  });
 }
 
 async function clickMenuItem(menu: Locator, labelPattern: RegExp): Promise<void> {
@@ -80,10 +96,13 @@ async function clickMenuItem(menu: Locator, labelPattern: RegExp): Promise<void>
 }
 
 /** Opens the card's action menu and clicks Reschedule — the replacement for
- * the old direct `card.locator('.btn-reschedule').click()`. */
+ * the old direct `card.locator('.btn-reschedule').click()`. Locale-agnostic
+ * (matches either the English or Thai label): AC8 switches the page to Thai
+ * before its own call to this helper, so a pattern hardcoded to "Reschedule"
+ * would never match there. */
 async function openRescheduleFromCard(page: Page, card: Locator): Promise<void> {
   const menu = await openActionsMenu(page, card);
-  await clickMenuItem(menu, /^Reschedule$/);
+  await clickMenuItem(menu, /^(Reschedule|เลื่อนการเดินทาง)$/);
 }
 
 /** Opens the PrimeNG p-calendar panel. Prefers the icon trigger button (more
@@ -115,9 +134,12 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'false');
     await expect(rescheduleItem.locator('.action-menu-item__reason')).toHaveCount(0);
 
+    // fullPage:false deliberately — a fullPage capture scrolls the page,
+    // which trips PrimeNG's ConnectedOverlayScrollHandler and silently
+    // dismisses the still-needed-open popup menu (see openActionsMenu doc).
     await page.screenshot({
       path: 'e2e-evidence/after-eligible-card.png',
-      fullPage: true,
+      fullPage: false,
     });
 
     // Regression: View e-ticket still works on this same card, via the menu.
@@ -531,6 +553,113 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     await page.screenshot({ path: 'e2e-evidence/thai-locale-max-count.png', fullPage: true });
 
     await dialog.locator('.reschedule-modal__close').click();
+  });
+
+  test('Menu (2fd9153): keyboard access (Enter/Space open, Escape closes), Cancel item is danger-styled, disabled Reschedule item shown for a cancelled booking', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page);
+    await gotoMyBookings(page);
+
+    const card = cardByBookingNumber(page, 'B-P4HPH6');
+    const trigger = card.locator('.actions-menu-btn');
+    await expect(trigger).toHaveAttribute('aria-label', 'Actions');
+
+    // Keyboard: focus + Enter opens.
+    await trigger.focus();
+    await trigger.press('Enter');
+    let menu = page.locator('.p-menu');
+    await expect(menu).toBeVisible({ timeout: 5_000 });
+    // fullPage:false — see openActionsMenu doc: a fullPage capture's scroll
+    // trips PrimeNG's scroll-dismiss handler and closes the menu we still
+    // need open for the Escape check right after.
+    await page.screenshot({ path: 'e2e-evidence/menu-open-keyboard.png', fullPage: false });
+
+    // Escape closes, and focus returns to the trigger (onActionMenuHide()).
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+
+    // Keyboard: Space also opens (re-open, then close via Escape again).
+    await trigger.press(' ');
+    menu = page.locator('.p-menu');
+    await expect(menu).toBeVisible({ timeout: 5_000 });
+
+    // Cancel booking item is danger-styled on a cancellable, confirmed booking.
+    const cancelItem = menuItem(menu, /Cancel booking/);
+    await expect(cancelItem).toBeVisible();
+    await expect(cancelItem.locator('.action-menu-item--danger')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+
+    // Disabled Reschedule item is still present (not omitted) on the
+    // already-cancelled B-RDE6PG, with the NOT_CONFIRMED reason visible
+    // (not hover-only) — checked directly since RDE6PG was already consumed
+    // by an earlier session's cancel-flow run.
+    const cancelledCard = cardByBookingNumber(page, 'B-RDE6PG');
+    await expect(cancelledCard.locator('.status-badge')).toHaveText(/Cancelled/i);
+    const cancelledMenu = await openActionsMenu(page, cancelledCard);
+    await expect(cancelledMenu.locator('.action-menu-item').filter({ hasText: 'Cancel booking' })).toHaveCount(0);
+    const rescheduleItem = menuItem(cancelledMenu, /^Reschedule$/);
+    await expect(rescheduleItem).toBeVisible();
+    await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
+    await expect(rescheduleItem.locator('.action-menu-item__reason')).toContainText(
+      /Only confirmed bookings can be rescheduled/i
+    );
+    await page.screenshot({ path: 'e2e-evidence/menu-disabled-reschedule-reason.png', fullPage: true });
+    await page.keyboard.press('Escape');
+  });
+
+  test('Menu (2fd9153): Cancel booking via the menu reaches the confirm dialog; backing out leaves the booking unchanged', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page);
+    await gotoMyBookings(page);
+
+    // B-P4HPH6 is confirmed/cancellable — reach the SweetAlert2 confirm via
+    // the menu, then back OUT (click the swal2 cancel button, not confirm)
+    // so the booking is left untouched for other tests/sessions.
+    const card = cardByBookingNumber(page, 'B-P4HPH6');
+    const menu = await openActionsMenu(page, card);
+    await clickMenuItem(menu, /Cancel booking/);
+
+    const swalPopup = page.locator('.swal2-popup');
+    await expect(swalPopup).toBeVisible({ timeout: 10_000 });
+    await expect(swalPopup.locator('.swal2-confirm')).toBeVisible();
+    await page.screenshot({ path: 'e2e-evidence/menu-cancel-confirm-dialog.png', fullPage: true });
+
+    await page.locator('.swal2-cancel').click();
+    await expect(swalPopup).toHaveCount(0);
+
+    // Unchanged: still confirmed, still cancellable via the menu.
+    await expect(cardByBookingNumber(page, 'B-P4HPH6').locator('.status-badge')).toHaveText(/Confirmed/i);
+  });
+
+  test('Menu (2fd9153) Thai: trigger aria-label, item labels, and the disabled-Reschedule reason all localize with no raw keys', async ({
+    page,
+  }) => {
+    await loginAsCustomer(page, 'th');
+    await gotoMyBookings(page);
+
+    const eligibleCard = cardByBookingNumber(page, 'B-P4HPH6');
+    await expect(eligibleCard.locator('.actions-menu-btn')).toHaveAttribute('aria-label', 'การดำเนินการ');
+
+    const menu = await openActionsMenu(page, eligibleCard);
+    const labels = (await menu.locator('.action-menu-item__label').allTextContents()).map((l) => l.trim());
+    expect(labels).toEqual(['ดูตั๋ว', 'เลื่อนการเดินทาง', 'ยกเลิกการจอง']);
+    await expect(menu).not.toContainText('MY_BOOKINGS.');
+    await page.keyboard.press('Escape');
+    await expect(menu).toHaveCount(0);
+
+    const cancelledCard = cardByBookingNumber(page, 'B-RDE6PG');
+    const cancelledMenu = await openActionsMenu(page, cancelledCard);
+    const rescheduleItem = menuItem(cancelledMenu, /เลื่อนการเดินทาง/);
+    await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
+    await expect(rescheduleItem.locator('.action-menu-item__reason')).toContainText(
+      'เลื่อนได้เฉพาะการจองที่ยืนยันแล้วเท่านั้น'
+    );
+    await expect(cancelledMenu).not.toContainText('MY_BOOKINGS.');
+    await page.screenshot({ path: 'e2e-evidence/menu-thai-disabled-reason.png', fullPage: true });
   });
 });
 
