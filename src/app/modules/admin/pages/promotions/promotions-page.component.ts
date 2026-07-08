@@ -1,108 +1,167 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { firstValueFrom, Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
-import { TranslateService } from '@ngx-translate/core';
+import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminStatusDto,
+  AdminTranslationCollection,
+  AdminTranslationReqDto,
+  PromotionReqDto,
   PromotionRespDto,
-  UpdateRoundTripPromotionPayload,
+  getAdminTranslationDescription,
+  getAdminTranslationLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { RoundTripPromotionStore } from './promotions.store';
+import { TranslateService } from '@ngx-translate/core';
+import { PromotionsListStore } from './promotions-list.store';
 
-interface StatusOption {
+const ROUND_TRIP_SLUG = 'round_trip';
+
+interface PromotionRow {
+  id: number;
+  slug: string;
+  code: string;
+  discountTypeCode: string;
+  discountTypeLabel: string;
+  discountValue: number | null;
+  maxDiscountAmount: number | null;
+  minBookingAmount: number | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
+  usageLimit: number | null;
+  currentUsage: number;
+  statusCode: string;
+  statusLabel: string;
+  autoApply: boolean;
+  isRoundTrip: boolean;
+  translations?: AdminTranslationCollection;
+}
+
+interface Option {
   value: string;
   label: string;
 }
 
-// Round-trip promotion is a singleton config row (design-system §3.1: the
-// Status select is explicitly allowed to pre-seed the current value — this is
-// the documented exception, not a violation).
+/**
+ * Promotions list + CRUD (OBRS-109 / #37). Hosts RoundTripPromotionCardComponent
+ * (unchanged singleton edit surface, moved verbatim) at the top, and the
+ * general promotions list/create/edit/soft-delete below — modeled on
+ * VehiclesPageComponent's skeleton (list + create/edit modal + confirm modal,
+ * AdminCollectionStore-backed).
+ */
 @Component({
   selector: 'app-promotions-page',
   templateUrl: './promotions-page.component.html',
   styleUrl: './promotions-page.component.scss',
 })
 export class PromotionsPageComponent implements OnInit, OnDestroy {
-  protected promotion: PromotionRespDto | null = null;
+  protected rows: PromotionRow[] = [];
+  protected discountTypeOptions: Option[] = [];
+  protected statusOptions: Option[] = [];
+  protected autoApplyOptions: Option[] = [];
+
   protected isRefreshing = false;
   protected refreshFailed = false;
+  protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
-  protected isSaving = false;
-  protected statusOptions: StatusOption[] = [];
+
+  protected isFormModalOpen = false;
+  protected isDeactivateModalOpen = false;
+  protected isSubmitting = false;
+  protected isDeactivating = false;
+  protected isEditMode = false;
+  protected isEditDetailLoading = false;
+  protected selectedPromotion: PromotionRow | null = null;
 
   protected readonly promotionForm: FormGroup;
+  private readonly subscriptions = new Subscription();
 
-  private readonly statusValues: Array<'active' | 'inactive'> = ['active', 'inactive'];
-  // First store emission gets a full form reset; later emissions (a background
-  // revalidate while the admin may be mid-edit) only patch pristine controls —
-  // same contract as the schedules edit modal (design-system.md §6).
-  private hasLoadedOnce = false;
-  private readonly destroy$ = new Subject<void>();
+  private rawPromotions: PromotionRespDto[] = [];
 
   constructor(
-    private readonly store: RoundTripPromotionStore,
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly store: PromotionsListStore
   ) {
     this.promotionForm = this.formBuilder.group({
+      slug: ['', [Validators.required, Validators.pattern(/^[a-z0-9_-]+$/)]],
+      code: ['', [Validators.required, Validators.maxLength(50)]],
+      discountType: ['', [Validators.required]],
       discountValue: [null, [Validators.required, Validators.min(0)]],
-      status: ['', [Validators.required]],
-      startDateTime: [null],
-      endDateTime: [null],
+      maxDiscountAmount: [null, [Validators.min(0)]],
+      // Backend @NotNull: minBookingAmount/usageLimit always send a number
+      // (blank -> 0, their natural "no minimum"/"unlimited" value — see
+      // toPromotionPayload); startDateTime has no natural default, so it's
+      // Validators.required instead.
       minBookingAmount: [null, [Validators.min(0)]],
+      startDateTime: [null, [Validators.required]],
+      endDateTime: [null],
+      usageLimit: [null, [Validators.min(0)]],
+      status: ['', [Validators.required]],
+      autoApply: ['', [Validators.required]],
+      enLabel: ['', [Validators.required, Validators.maxLength(255)]],
+      enDescription: ['', [Validators.maxLength(500)]],
+      thLabel: ['', [Validators.maxLength(255)]],
+      thDescription: ['', [Validators.maxLength(500)]],
+      zhLabel: ['', [Validators.maxLength(255)]],
+      zhDescription: ['', [Validators.maxLength(500)]],
     });
+
+    // Language change only swaps displayed translations; data is already
+    // loaded, so re-derive the view locally instead of re-fetching.
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        this.buildOptionLists();
+        this.applyLocalization();
+      })
+    );
   }
 
   ngOnInit(): void {
-    this.buildStatusOptions();
-    this.translate.onLangChange
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => this.buildStatusOptions());
+    this.buildOptionLists();
 
-    this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
-      if (data) {
-        this.promotion = data;
-        this.applyFormValues(data, this.hasLoadedOnce);
-        this.hasLoadedOnce = true;
-      }
-    });
-
-    this.store.refreshing$
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((refreshing) => (this.isRefreshing = refreshing));
-
-    this.store.error$.pipe(takeUntil(this.destroy$)).subscribe((failed) => {
-      this.refreshFailed = failed && this.store.hasValue;
-      this.errorMessage =
-        failed && !this.store.hasValue
-          ? this.translate.instant('ADMIN.PROMOTIONS.LOAD_FAILED')
-          : '';
-    });
-
+    this.subscriptions.add(
+      this.store.data$.subscribe((data) => {
+        if (data) {
+          this.rawPromotions = data;
+          this.applyLocalization();
+        }
+      })
+    );
+    this.subscriptions.add(
+      this.store.refreshing$.subscribe((refreshing) => (this.isRefreshing = refreshing))
+    );
+    this.subscriptions.add(
+      this.store.error$.subscribe((failed) => {
+        this.refreshFailed = failed && this.store.hasValue;
+        this.errorMessage =
+          failed && !this.store.hasValue
+            ? this.translate.instant('ADMIN.MESSAGES.LOAD_PROMOTIONS_FAILED')
+            : '';
+      })
+    );
     void this.store.refresh();
   }
 
   ngOnDestroy(): void {
-    this.destroy$.next();
-    this.destroy$.complete();
+    this.subscriptions.unsubscribe();
   }
 
+  /** Skeletons only while loading with no cached data yet. */
   protected get isLoading(): boolean {
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected get discountTypeLabel(): string {
-    if (!this.promotion?.discountType) {
-      return '-';
-    }
-    return this.parseStatus(this.promotion.discountType).name;
+  protected trackById(_index: number, row: PromotionRow): number {
+    return row.id;
+  }
+
+  protected statusClass(statusCode: string): string {
+    return statusCode.trim().toLowerCase() === 'active' ? 'is-success' : 'is-danger';
   }
 
   protected isFieldInvalid(fieldName: string): boolean {
@@ -117,100 +176,257 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
     return !!start && !!end && end.getTime() < start.getTime();
   }
 
-  protected async save(): Promise<void> {
-    if (this.promotionForm.invalid || this.hasDateRangeError()) {
-      this.promotionForm.markAllAsTouched();
-      this.alertService.warning(this.translate.instant('ADMIN.VALIDATION.FORM_INVALID'));
-      return;
-    }
+  // design-system.md §3.1: create starts every select empty (field-name
+  // placeholder) — no pre-seeded default, unlike the round-trip card's
+  // documented singleton-edit exception above.
+  protected openCreateModal(): void {
+    this.isEditMode = false;
+    this.selectedPromotion = null;
+    this.promotionForm.reset({
+      slug: '',
+      code: '',
+      discountType: '',
+      discountValue: null,
+      maxDiscountAmount: null,
+      minBookingAmount: null,
+      startDateTime: null,
+      endDateTime: null,
+      usageLimit: null,
+      status: '',
+      autoApply: '',
+      enLabel: '',
+      enDescription: '',
+      thLabel: '',
+      thDescription: '',
+      zhLabel: '',
+      zhDescription: '',
+    });
+    this.isFormModalOpen = true;
+  }
 
-    if (!this.promotion) {
-      return;
-    }
-
-    const payload = this.buildPartialPayload();
-    if (Object.keys(payload).length === 0) {
-      return;
-    }
-
-    this.isSaving = true;
-    // Optimistic: reflect the change locally before the background revalidate
-    // lands, so re-entering this page (SWR cache) shows it immediately. The
-    // store holds PromotionRespDto (status: string) while the wire payload
-    // carries `active: boolean` (RoundTripPromotionReqDto) — translate here.
-    const optimisticPatch = this.toOptimisticPatch(payload);
-    this.store.mutate((current) => ({ ...current, ...optimisticPatch }));
+  protected async openEditModal(row: PromotionRow): Promise<void> {
+    // Open immediately with the row data already in hand, then patch in the
+    // server detail once it arrives (pristine controls only) — same pattern
+    // as VehiclesPageComponent.openEditModal.
+    this.isEditMode = true;
+    this.selectedPromotion = row;
+    this.isEditDetailLoading = true;
+    this.applyPromotionFormValues(this.toFallbackDto(row), row);
+    this.isFormModalOpen = true;
 
     try {
-      await firstValueFrom(this.adminApiService.updateRoundTripPromotion(payload));
-      // Values now match what was just saved — clear dirty so the next
-      // background refresh patches these controls again without a visual jump.
-      this.promotionForm.markAsPristine();
-      this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      const response = await firstValueFrom(this.adminApiService.getPromotionById(row.id));
+      const detail = response?.data ?? null;
+      if (detail && this.isFormModalOpen && this.selectedPromotion?.id === row.id) {
+        this.applyPromotionFormValues(detail, row, true);
+      }
+    } catch {
+      // Keep the fallback values already shown in the open modal.
+    } finally {
+      if (this.isFormModalOpen && this.selectedPromotion?.id === row.id) {
+        this.isEditDetailLoading = false;
+      }
+    }
+  }
+
+  protected closeFormModal(force = false): void {
+    if (this.isSubmitting && !force) {
+      return;
+    }
+
+    this.isFormModalOpen = false;
+    this.isEditDetailLoading = false;
+    this.selectedPromotion = null;
+    this.promotionForm.reset();
+  }
+
+  protected openDeactivateModal(row: PromotionRow): void {
+    this.selectedPromotion = row;
+    this.isDeactivateModalOpen = true;
+  }
+
+  protected closeDeactivateModal(force = false): void {
+    if (this.isDeactivating && !force) {
+      return;
+    }
+
+    this.isDeactivateModalOpen = false;
+    this.selectedPromotion = null;
+  }
+
+  protected async submitPromotion(): Promise<void> {
+    if (this.promotionForm.invalid || this.hasDateRangeError()) {
+      this.promotionForm.markAllAsTouched();
+      await this.alertService.warning(this.translate.instant('ADMIN.VALIDATION.FORM_INVALID'));
+      return;
+    }
+
+    this.isSubmitting = true;
+    try {
+      const payload = this.toPromotionPayload();
+
+      if (this.isEditMode && this.selectedPromotion) {
+        await firstValueFrom(
+          this.adminApiService.updatePromotion(this.selectedPromotion.id, payload)
+        );
+        this.closeFormModal(true);
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      } else {
+        await firstValueFrom(this.adminApiService.createPromotion(payload));
+        this.closeFormModal(true);
+        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
+      }
+
       await this.store.refresh();
     } catch (error) {
-      // Revert the optimistic mutate; keep the admin's in-progress edits in
-      // the form untouched so they don't have to retype anything to retry.
-      this.store.mutate(() => this.promotion as PromotionRespDto);
+      this.closeFormModal(true);
       const message =
         extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
-      this.alertService.error(message);
+      await this.alertService.error(message);
     } finally {
-      this.isSaving = false;
+      this.isSubmitting = false;
     }
   }
 
-  // Only a control the admin actually touched (dirty) is sent — the backend
-  // PATCH is partial, so untouched fields must never be forced back to their
-  // currently-displayed value. NOTE: the wire contract is
-  // RoundTripPromotionReqDto, which reads `active: boolean` — NOT `status` —
-  // so the Status dropdown's string value is translated to a boolean here.
-  private buildPartialPayload(): UpdateRoundTripPromotionPayload {
-    const raw = this.promotionForm.getRawValue();
-    const payload: UpdateRoundTripPromotionPayload = {};
-
-    if (this.promotionForm.get('discountValue')?.dirty) {
-      payload.discountValue = this.toNumber(raw.discountValue) ?? 0;
-    }
-    if (this.promotionForm.get('status')?.dirty) {
-      payload.active = String(raw.status ?? '').trim().toLowerCase() === 'active';
-    }
-    if (this.promotionForm.get('startDateTime')?.dirty) {
-      payload.startDateTime = this.toIsoString(raw.startDateTime);
-    }
-    if (this.promotionForm.get('endDateTime')?.dirty) {
-      payload.endDateTime = this.toIsoString(raw.endDateTime);
-    }
-    if (this.promotionForm.get('minBookingAmount')?.dirty) {
-      payload.minBookingAmount = this.toNumber(raw.minBookingAmount) ?? 0;
+  // Soft-delete: DELETE /{id} flips the row to Inactive server-side — the
+  // row is never removed from the list (see docs/handoff.md Contract
+  // Request). Optimistically reflect that locally before the background
+  // revalidate lands.
+  protected async confirmDeactivate(): Promise<void> {
+    if (!this.selectedPromotion) {
+      return;
     }
 
-    return payload;
+    this.isDeactivating = true;
+    try {
+      const id = this.selectedPromotion.id;
+      await firstValueFrom(this.adminApiService.deletePromotion(id));
+      this.store.mutate((list) =>
+        list.map((promotion) => (promotion.id === id ? { ...promotion, status: 'inactive' } : promotion))
+      );
+      this.closeDeactivateModal(true);
+      const refresh = this.store.refresh();
+      await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
+      await refresh;
+    } catch (error) {
+      this.closeDeactivateModal(true);
+      const message =
+        extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      await this.alertService.error(message);
+    } finally {
+      this.isDeactivating = false;
+    }
   }
 
-  // The store holds PromotionRespDto (status: 'active' | 'inactive' string);
-  // the wire payload holds RoundTripPromotionReqDto's `active: boolean`. This
-  // translates the latter back to the former ONLY for the optimistic local
-  // update — the real value is confirmed by the store.refresh() that follows.
-  private toOptimisticPatch(
-    payload: UpdateRoundTripPromotionPayload
-  ): Partial<PromotionRespDto> {
-    const { active, ...rest } = payload;
-    const patch: Partial<PromotionRespDto> = { ...rest };
-    if (active !== undefined) {
-      patch.status = active ? 'active' : 'inactive';
-    }
-    return patch;
+  // Re-derive every locale-dependent view field from the DTOs already in
+  // memory. Runs on initial load and on each language change — no backend
+  // round-trip.
+  private applyLocalization(): void {
+    this.rows = this.rawPromotions.map((promotion) => this.toRow(promotion));
   }
 
-  private applyFormValues(promotion: PromotionRespDto, onlyPristine: boolean): void {
+  private buildOptionLists(): void {
+    this.discountTypeOptions = [
+      {
+        value: 'percentage',
+        label: this.translate.instant('ADMIN.PROMOTIONS.DISCOUNT_TYPE_PERCENTAGE'),
+      },
+      {
+        value: 'fixed_amount',
+        label: this.translate.instant('ADMIN.PROMOTIONS.DISCOUNT_TYPE_FIXED_AMOUNT'),
+      },
+    ];
+    this.statusOptions = [
+      { value: 'active', label: this.translate.instant('ADMIN.PROMOTIONS.STATUS_ACTIVE') },
+      { value: 'inactive', label: this.translate.instant('ADMIN.PROMOTIONS.STATUS_INACTIVE') },
+    ];
+    this.autoApplyOptions = [
+      { value: 'true', label: this.translate.instant('ADMIN.PROMOTIONS.AUTO_APPLY_YES') },
+      { value: 'false', label: this.translate.instant('ADMIN.PROMOTIONS.AUTO_APPLY_NO') },
+    ];
+  }
+
+  private toRow(promotion: PromotionRespDto): PromotionRow {
+    const discountType = this.parseStatus(promotion.discountType);
     const status = this.parseStatus(promotion.status);
-    const values = {
+    const slug = String(promotion.slug ?? '').trim();
+    // Prefer the FE's own known-option label ("Percentage"/"Fixed Amount")
+    // over parseAdminStatus's generic ALL-CAPS fallback, for a plain-string
+    // discountType (see PromotionRespDto's comment on Jackson number/string
+    // duality — discountType itself is always a lookup slug string here).
+    const discountTypeLabel =
+      this.discountTypeOptions.find((option) => option.value === discountType.code)?.label ??
+      discountType.name;
+
+    return {
+      id: promotion.id,
+      slug,
+      code: promotion.code ?? '-',
+      discountTypeCode: discountType.code,
+      discountTypeLabel,
       discountValue: this.toNumber(promotion.discountValue),
-      status: status.code,
-      startDateTime: this.toDateValue(promotion.startDateTime),
-      endDateTime: this.toDateValue(promotion.endDateTime),
+      maxDiscountAmount: this.toNumber(promotion.maxDiscountAmount),
       minBookingAmount: this.toNumber(promotion.minBookingAmount),
+      startDateTime: promotion.startDateTime ?? null,
+      endDateTime: promotion.endDateTime ?? null,
+      usageLimit: promotion.usageLimit ?? null,
+      currentUsage: promotion.currentUsage ?? 0,
+      statusCode: status.code,
+      statusLabel: status.name,
+      autoApply: !!promotion.autoApply,
+      isRoundTrip: slug.toLowerCase() === ROUND_TRIP_SLUG,
+      translations: promotion.translations,
+    };
+  }
+
+  private toFallbackDto(row: PromotionRow): PromotionRespDto {
+    return {
+      id: row.id,
+      slug: row.slug,
+      code: row.code,
+      discountType: row.discountTypeCode,
+      status: row.statusCode,
+      discountValue: row.discountValue ?? undefined,
+      maxDiscountAmount: row.maxDiscountAmount,
+      minBookingAmount: row.minBookingAmount ?? undefined,
+      startDateTime: row.startDateTime,
+      endDateTime: row.endDateTime,
+      usageLimit: row.usageLimit,
+      currentUsage: row.currentUsage,
+      autoApply: row.autoApply,
+      translations: row.translations,
+    };
+  }
+
+  // Populate the promotion form from a DTO. When `onlyPristine` is set (the
+  // late detail patch), only controls the admin hasn't started editing are
+  // filled, so the arriving server data never clobbers in-progress input.
+  private applyPromotionFormValues(
+    dto: PromotionRespDto,
+    row: PromotionRow,
+    onlyPristine = false
+  ): void {
+    const discountType = this.parseStatus(dto.discountType ?? row.discountTypeCode);
+    const status = this.parseStatus(dto.status ?? row.statusCode);
+
+    const values = {
+      slug: String(dto.slug ?? row.slug).trim(),
+      code: String(dto.code ?? row.code).trim(),
+      discountType: discountType.code,
+      discountValue: this.toNumber(dto.discountValue) ?? row.discountValue,
+      maxDiscountAmount: this.toNumber(dto.maxDiscountAmount) ?? row.maxDiscountAmount,
+      minBookingAmount: this.toNumber(dto.minBookingAmount) ?? row.minBookingAmount,
+      startDateTime: this.toDateValue(dto.startDateTime ?? row.startDateTime),
+      endDateTime: this.toDateValue(dto.endDateTime ?? row.endDateTime),
+      usageLimit: dto.usageLimit ?? row.usageLimit,
+      status: status.code,
+      autoApply: String(dto.autoApply ?? row.autoApply),
+      enLabel: this.getTranslationLabel(dto.translations, 'en') ?? '',
+      enDescription: this.getTranslationDescription(dto.translations, 'en') ?? '',
+      thLabel: this.getTranslationLabel(dto.translations, 'th') ?? '',
+      thDescription: this.getTranslationDescription(dto.translations, 'th') ?? '',
+      zhLabel: this.getTranslationLabel(dto.translations, 'zh') ?? '',
+      zhDescription: this.getTranslationDescription(dto.translations, 'zh') ?? '',
     };
 
     if (!onlyPristine) {
@@ -226,11 +442,49 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private buildStatusOptions(): void {
-    this.statusOptions = this.statusValues.map((value) => ({
-      value,
-      label: this.translate.instant(`ADMIN.PROMOTIONS.STATUS_${value.toUpperCase()}`),
-    }));
+  private toPromotionPayload(): PromotionReqDto {
+    const raw = this.promotionForm.getRawValue();
+
+    const translations: AdminTranslationReqDto[] = [
+      {
+        locale: 'en',
+        label: String(raw.enLabel ?? '').trim(),
+        description: String(raw.enDescription ?? '').trim() || undefined,
+      },
+    ];
+    const thLabel = String(raw.thLabel ?? '').trim();
+    if (thLabel) {
+      translations.push({
+        locale: 'th',
+        label: thLabel,
+        description: String(raw.thDescription ?? '').trim() || undefined,
+      });
+    }
+    const zhLabel = String(raw.zhLabel ?? '').trim();
+    if (zhLabel) {
+      translations.push({
+        locale: 'zh',
+        label: zhLabel,
+        description: String(raw.zhDescription ?? '').trim() || undefined,
+      });
+    }
+
+    return {
+      slug: String(raw.slug ?? '').trim().toLowerCase(),
+      code: String(raw.code ?? '').trim(),
+      discountType: String(raw.discountType ?? '').trim().toLowerCase(),
+      discountValue: this.toNumber(raw.discountValue) ?? 0,
+      maxDiscountAmount: this.toNumber(raw.maxDiscountAmount),
+      // Backend @NotNull — blank means "no minimum" / "unlimited", not
+      // absent, so default to 0 rather than sending null.
+      minBookingAmount: this.toNumber(raw.minBookingAmount) ?? 0,
+      startDateTime: this.toIsoString(raw.startDateTime),
+      endDateTime: this.toIsoString(raw.endDateTime),
+      usageLimit: this.toNumber(raw.usageLimit) ?? 0,
+      status: String(raw.status ?? '').trim().toLowerCase(),
+      autoApply: String(raw.autoApply ?? '').trim().toLowerCase() === 'true',
+      translations,
+    };
   }
 
   private toNumber(value: unknown): number | null {
@@ -257,18 +511,32 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
     return date ? date.toISOString() : null;
   }
 
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
-  }
-
   private getCurrentLocale(): string {
     const rawLocale = String(
       this.translate.currentLang || this.translate.getDefaultLang() || 'th'
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
+  }
+
+  private getTranslationLabel(
+    translations: AdminTranslationCollection | null | undefined,
+    locale?: string
+  ): string | null {
+    return getAdminTranslationLabel(translations, locale);
+  }
+
+  private getTranslationDescription(
+    translations: AdminTranslationCollection | null | undefined,
+    locale?: string
+  ): string | null {
+    return getAdminTranslationDescription(translations, locale);
+  }
+
+  private parseStatus(value: string | AdminStatusDto | null | undefined): {
+    code: string;
+    name: string;
+  } {
+    return parseAdminStatus(value, this.getCurrentLocale());
   }
 }

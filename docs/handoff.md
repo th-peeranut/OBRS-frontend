@@ -68,6 +68,14 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
+**Affected endpoints**:
+- `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)
+- `GET /api/private/admin/promotions` (new — full list, all promotions including the round-trip singleton row)
+- `GET /api/private/admin/promotions/{id}`, `POST /api/private/admin/promotions`, `PUT /api/private/admin/promotions/{id}`, `DELETE /api/private/admin/promotions/{id}` (new — full CRUD)
+- `POST /api/private/bookings` — new optional request field `promotionCode`
+
+**Request type**: New endpoints + new request field. `docs/api/admin.md`'s `AdminPromotionController` section explicitly scopes itself to the round-trip singleton only and calls out "full promotion CRUD across every promotion is a separate, not-yet-built feature (#37)" — this is that feature. Checked `OBRS-backend-wt-promo-codes` (the paired backend worktree): still at `origin/dev` HEAD, no promo-code commits yet, so none of this exists server-side at time of writing.
 ### [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
 **Affected endpoints**:
 - `POST /api/usability-reports`
@@ -78,6 +86,18 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 ### What the frontend needs
 | Field / Change | Location | Reason |
 |---|---|---|
+| `POST /api/private/promotions/validate` — body `{ code, amount }`, response `{ code, discountAmount, netAmount, label? }` or a `PROMO_CODE_*` errorCode | New endpoint | Customer-facing instant preview before submitting the booking — see AGENT_MEMORY.md's OBRS-109 UX finding for why apply-at-submit alone is worse UX |
+| `errorCode` values `PROMO_CODE_NOT_FOUND`, `PROMO_CODE_INACTIVE`, `PROMO_CODE_EXPIRED`, `PROMO_CODE_NOT_YET_ACTIVE`, `PROMO_CODE_MIN_AMOUNT_NOT_MET`, `PROMO_CODE_USAGE_LIMIT_REACHED` | Validate endpoint's error response, and `POST /api/private/bookings`'s error response when a `promotionCode` was submitted | Frontend maps each to a `PROMO_CODE.ERROR.*` i18n key per `CLAUDE.md`'s errorCode-not-message rule; assumed names, not confirmed against a real `deriveErrorCode()` output |
+| `promotionCode` (string, optional, nullable) | Request body of `POST /api/private/bookings` | Only sent when the customer confirmed a typed code via the preview; lets the backend re-validate and apply it atomically at booking-creation time (closing the preview→submit race) |
+| `GET /api/private/admin/promotions` → `PromotionRespDto[]` (same shape as the existing round-trip `PromotionRespDto`, plus `translations`) | New endpoint | Backs the new admin promotions list table (all rows, not just `round_trip`) |
+| `GET/POST/PUT/DELETE /api/private/admin/promotions/{id}` | New endpoints | Full CRUD for admin-managed promotion codes. `PUT` assumed full-replace (not the round-trip endpoint's partial-PATCH contract) per the UX spec; `DELETE` assumed **soft**-delete (flips `status` to `inactive`, row is not removed) |
+
+### Suggested contract change
+- `PromotionReqDto` (request body for `POST`/`PUT`): `slug`, `code`, `discountType` ('percentage'\|'fixed_amount'), `discountValue`, `maxDiscountAmount` (nullable, percentage-only), `minBookingAmount`, `startDateTime`/`endDateTime`, `usageLimit`, `status`, `autoApply` (boolean), `translations: AdminTranslationReqDto[]` (reusing the existing DTO already used by lookups/roles/routes).
+- `DELETE` should look up the promotion, set `status='inactive'`, and return success — never hard-delete the row (usage history / bookings may reference it via `promotionId`).
+
+### Impact if not addressed
+The frontend UI (customer promo-code field + admin list/CRUD) is implemented and additive-safe, but functionally inert against the current backend until these land — the customer field will show a generic apply-failed error on every attempt, and the admin list/create/edit/delete calls will 404. Do not merge to `dev`/`sit` until the backend implements this feature (or an explicit decision accepts the temporary contract drift), per `CLAUDE.md`'s R0 rule for undocumented endpoints.
 | `reporterEmail` (text, optional) | Multipart form part on `POST /api/usability-reports` | Lets a reporter optionally leave contact info while the submission stays anonymous when blank |
 | `reporterEmail` (string, nullable) | Response body of `GET /api/private/admin/usability-reports/{id}` | Admin detail modal displays it (only when present) so triage can follow up |
 

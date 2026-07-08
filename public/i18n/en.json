@@ -263,6 +263,7 @@
       "LOAD_VEHICLES_FAILED": "Unable to load vehicles.",
       "LOAD_ROUTES_FAILED": "Unable to load routes.",
       "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
+      "LOAD_PROMOTIONS_FAILED": "Unable to load promotions.",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -303,7 +304,31 @@
       "END_DATE": "End Date",
       "MIN_BOOKING_AMOUNT": "Minimum Booking Amount",
       "DATE_RANGE_VALIDATION": "End date must be on or after the start date.",
-      "LOAD_FAILED": "Unable to load the round-trip promotion."
+      "LOAD_FAILED": "Unable to load the round-trip promotion.",
+      "ADD": "Add Promotion Code",
+      "ADD_TITLE": "Add Promotion Code",
+      "EDIT_TITLE": "Edit Promotion Code",
+      "MODAL_HINT": "Set the code, discount, and active window for this promotion.",
+      "TABLE_TITLE": "Promotion Codes",
+      "MAX_DISCOUNT_AMOUNT": "Max Discount Amount",
+      "MAX_DISCOUNT_HINT": "Only applies when Discount Type is Percentage.",
+      "AUTO_APPLY": "Auto Apply",
+      "AUTO_APPLY_YES": "Yes",
+      "AUTO_APPLY_NO": "No",
+      "DISCOUNT_TYPE_PERCENTAGE": "Percentage",
+      "DISCOUNT_TYPE_FIXED_AMOUNT": "Fixed Amount",
+      "TRANSLATIONS_SECTION": "Translations",
+      "LABEL_EN": "Label (English)",
+      "LABEL_TH": "Label (Thai)",
+      "LABEL_ZH": "Label (Chinese)",
+      "DESCRIPTION_EN": "Description (English)",
+      "DESCRIPTION_TH": "Description (Thai)",
+      "DESCRIPTION_ZH": "Description (Chinese)",
+      "MANAGED_ABOVE": "Managed above",
+      "DEACTIVATE_CONFIRM_TITLE": "Deactivate promotion?",
+      "DEACTIVATE_CONFIRM_MESSAGE": "This promotion will be marked Inactive, not removed. You can reactivate it later by editing it.",
+      "DEACTIVATE": "Deactivate",
+      "DEACTIVATING": "Deactivating..."
     },
     "ROLES": {
       "TITLE": "Access Control Archive",
@@ -843,9 +868,27 @@
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
       "TICKET_UNIT": "baht/person",
+      "SUBTOTAL": "Subtotal",
+      "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
+    }
+  },
+  "PROMO_CODE": {
+    "LABEL": "Promo code",
+    "PLACEHOLDER": "Enter promo code",
+    "APPLY": "Apply",
+    "APPLYING": "Applying...",
+    "REMOVE": "Remove promo code",
+    "APPLY_FAILED": "Unable to apply this code. Please try again.",
+    "ERROR": {
+      "NOT_FOUND": "This code does not exist.",
+      "NOT_APPLICABLE": "This code isn't applicable to your booking.",
+      "INACTIVE": "This code is no longer active.",
+      "OUT_OF_WINDOW": "This code is not available right now.",
+      "BELOW_MINIMUM": "Your booking total does not meet the minimum amount for this code.",
+      "USAGE_LIMIT_REACHED": "This code has reached its usage limit."
     }
   },
   "PASSENGER_INFO": {
@@ -888,7 +931,8 @@
       "MONK": "Monk"
     },
     "ALERT": {
-      "CREATE_SUCCESS": "Booking saved successfully"
+      "CREATE_SUCCESS": "Booking saved successfully",
+      "CREATE_FAILED": "Unable to create the booking. Please try again."
     }
   },
   "PAYMENT": {
@@ -909,6 +953,7 @@
       "TICKET_UNIT": "baht/person",
       "SUBTOTAL": "Subtotal",
       "DISCOUNT_ROUND_TRIP": "Round-trip discount",
+      "DISCOUNT": "Discount",
       "TOTAL": "Total",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"

@@ -84,4 +84,81 @@ describe('AdminApiService', () => {
       req.flush({ code: 200, message: 'OK', data: null });
     });
   });
+
+  // OBRS-109 (#37): full promotion CRUD, distinct from the round-trip
+  // singleton endpoints above.
+  describe('getPromotions', () => {
+    it('issues a GET to /api/private/admin/promotions', () => {
+      service.getPromotions().subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/admin/promotions`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: [] });
+    });
+  });
+
+  describe('getPromotionById', () => {
+    it('issues a GET to /api/private/admin/promotions/{id}', () => {
+      service.getPromotionById(7).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/admin/promotions/7`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
+  describe('createPromotion', () => {
+    it('issues a POST to /api/private/admin/promotions with the full payload', () => {
+      const payload = {
+        slug: 'summer-sale',
+        code: 'SUMMER10',
+        discountType: 'percentage',
+        discountValue: 10,
+        status: 'active',
+        autoApply: false,
+        translations: [{ locale: 'en', label: 'Summer Sale' }],
+      };
+      service.createPromotion(payload).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/admin/promotions`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(payload);
+
+      req.flush({ code: 201, message: 'Created', data: null });
+    });
+  });
+
+  describe('updatePromotion', () => {
+    it('issues a PUT (full-replace) to /api/private/admin/promotions/{id}', () => {
+      const payload = {
+        slug: 'summer-sale',
+        code: 'SUMMER10',
+        discountType: 'percentage',
+        discountValue: 15,
+        status: 'active',
+        autoApply: false,
+        translations: [{ locale: 'en', label: 'Summer Sale' }],
+      };
+      service.updatePromotion(7, payload).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/admin/promotions/7`);
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual(payload);
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
+  describe('deletePromotion', () => {
+    it('issues a DELETE to /api/private/admin/promotions/{id}', () => {
+      service.deletePromotion(7).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/admin/promotions/7`);
+      expect(req.request.method).toBe('DELETE');
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
 });

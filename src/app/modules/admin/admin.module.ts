@@ -15,6 +15,7 @@ import { BookingsPageComponent } from './pages/bookings/bookings-page.component'
 import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
+import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -101,6 +102,7 @@ const routes: Routes = [
     AdminModalBackdropDirective,
     UsabilityReportsPageComponent,
     PromotionsPageComponent,
+    RoundTripPromotionCardComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })

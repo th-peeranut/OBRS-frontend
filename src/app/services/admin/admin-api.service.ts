@@ -495,11 +495,35 @@ export interface PromotionRespDto {
   discountType?: string | AdminStatusDto;
   status?: string | AdminStatusDto;
   discountValue?: number | string;
+  // OBRS-109 (#37): full CRUD adds these — always present on the general
+  // list/detail endpoints, but optional here since the round-trip singleton
+  // endpoint (OBRS-85) predates them and this DTO is shared by both.
+  maxDiscountAmount?: number | string | null;
   minBookingAmount?: number | string;
   startDateTime?: string | null;
   endDateTime?: string | null;
   usageLimit?: number | null;
   currentUsage?: number;
+  autoApply?: boolean;
+  translations?: AdminTranslationCollection;
+}
+
+// OBRS-109 (#37): full-replace payload for the general promotion CRUD
+// endpoints (distinct from UpdateRoundTripPromotionPayload's partial PATCH
+// contract, which stays scoped to the round-trip singleton row).
+export interface PromotionReqDto {
+  slug: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  maxDiscountAmount?: number | null;
+  minBookingAmount?: number | null;
+  startDateTime?: string | null;
+  endDateTime?: string | null;
+  usageLimit?: number | null;
+  status: string;
+  autoApply: boolean;
+  translations: AdminTranslationReqDto[];
 }
 
 // Partial payload — the promotions page only sends fields the admin actually
@@ -878,5 +902,30 @@ export class AdminApiService {
       `${this.baseUrl}/private/admin/promotions/round-trip`,
       payload
     );
+  }
+
+  // OBRS-109 (#37): full promotion CRUD across every promotion row (the
+  // round-trip singleton above is a separate, narrower endpoint and is left
+  // untouched). Contract not yet documented in OBRS-backend/docs/api — built
+  // against the SA-locked shape and flagged in docs/handoff.md, same pattern
+  // used for the round-trip endpoints in OBRS-85 before they landed.
+  getPromotions(): Observable<ResponseAPI<PromotionRespDto[]>> {
+    return this.getRequest<PromotionRespDto[]>(`${this.baseUrl}/private/admin/promotions`);
+  }
+
+  getPromotionById(id: number): Observable<ResponseAPI<PromotionRespDto>> {
+    return this.getRequest<PromotionRespDto>(`${this.baseUrl}/private/admin/promotions/${id}`);
+  }
+
+  createPromotion(payload: PromotionReqDto): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(`${this.baseUrl}/private/admin/promotions`, payload);
+  }
+
+  updatePromotion(id: number, payload: PromotionReqDto): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/admin/promotions/${id}`, payload);
+  }
+
+  deletePromotion(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/admin/promotions/${id}`);
   }
 }

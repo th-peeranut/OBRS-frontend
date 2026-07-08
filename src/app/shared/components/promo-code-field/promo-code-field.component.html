@@ -1,0 +1,40 @@
+<div class="promo-code-field">
+  <ng-container *ngIf="!appliedResult; else appliedChip">
+    <div class="promo-code-row">
+      <input
+        type="text"
+        class="promo-code-input"
+        name="promoCode"
+        [(ngModel)]="code"
+        (ngModelChange)="onInputChange()"
+        [disabled]="disabled || isApplying"
+        [placeholder]="'PROMO_CODE.PLACEHOLDER' | translate"
+        [attr.aria-label]="'PROMO_CODE.LABEL' | translate"
+      />
+      <button
+        type="button"
+        class="promo-code-apply-btn"
+        [disabled]="isApplyDisabled"
+        (click)="apply()"
+      >
+        {{ isApplying ? ('PROMO_CODE.APPLYING' | translate) : ('PROMO_CODE.APPLY' | translate) }}
+      </button>
+    </div>
+    <p class="promo-code-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+  </ng-container>
+
+  <ng-template #appliedChip>
+    <div class="promo-code-chip">
+      <span class="material-symbols-outlined promo-code-chip-icon">local_offer</span>
+      <span class="promo-code-chip-code">{{ appliedResult?.code }}</span>
+      <button
+        type="button"
+        class="promo-code-chip-remove"
+        [attr.aria-label]="'PROMO_CODE.REMOVE' | translate"
+        (click)="remove()"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+  </ng-template>
+</div>

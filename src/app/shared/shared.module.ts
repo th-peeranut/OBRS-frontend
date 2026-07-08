@@ -12,6 +12,7 @@ import { StepperComponent } from './components/stepper/stepper.component';
 import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.component';
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
+import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 
 @NgModule({
   declarations: [
@@ -21,6 +22,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     LangSwitcherComponent,
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
+    PromoCodeFieldComponent,
   ],
   imports: [
     CommonModule,
@@ -46,6 +48,7 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
     LangSwitcherComponent,
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
+    PromoCodeFieldComponent,
   ],
 })
 export class SharedModule {}
