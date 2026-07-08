@@ -110,25 +110,22 @@
   class="admin-modal-backdrop"
   *ngIf="selectedReportId !== null"
   adminModalBackdrop
-  (dismiss)="closeDetail()"
+  (dismiss)="onDetailBackdropDismiss()"
 >
   <div class="admin-modal ur-detail-modal">
     <div class="admin-modal-header">
       <h4 class="admin-modal-title">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TITLE' | translate }}</h4>
       <button
         type="button"
-        class="admin-btn"
+        class="ur-detail-close"
+        [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate"
         (click)="closeDetail()"
       >
-        {{ 'ADMIN.USABILITY_REPORTS.DETAIL.CLOSE' | translate }}
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
       </button>
     </div>
 
-    <div *ngIf="isDetailLoading" class="ur-detail-loading">
-      <p class="admin-muted">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
-    </div>
-
-    <ng-container *ngIf="!isDetailLoading && detailReport">
+    <ng-container *ngIf="detailReport">
       <div class="ur-detail-body">
         <!-- Meta fields -->
         <div class="ur-detail-row">
@@ -152,24 +149,48 @@
         </div>
         <div class="ur-detail-row">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.USER_AGENT' | translate }}</span>
-          <span class="ur-user-agent">{{ detailReport.userAgent }}</span>
+          <span class="ur-user-agent">
+            {{ detailReport.userAgent }}
+            <span *ngIf="isDetailFetching" class="ur-inline-updating">
+              {{ 'ADMIN.COMMON.UPDATING' | translate }}
+            </span>
+          </span>
         </div>
 
         <!-- Description -->
         <div class="ur-detail-description mt-3">
-          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}</p>
+          <p class="ur-detail-label">
+            {{ 'ADMIN.USABILITY_REPORTS.COL.DESCRIPTION' | translate }}
+            <span *ngIf="isDetailFetching" class="ur-inline-updating">
+              {{ 'ADMIN.COMMON.UPDATING' | translate }}
+            </span>
+          </p>
           <p class="ur-description-text">{{ detailReport.description }}</p>
         </div>
 
         <!-- Images -->
         <div class="mt-3">
-          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}</p>
-          <p *ngIf="detailReport.images.length === 0" class="admin-muted">
+          <p class="ur-detail-label">
+            {{ 'ADMIN.USABILITY_REPORTS.COL.IMAGES' | translate }}
+            <span *ngIf="isDetailFetching" class="ur-inline-updating">
+              {{ 'ADMIN.COMMON.UPDATING' | translate }}
+            </span>
+          </p>
+          <p *ngIf="!isDetailFetching && detailReport.images.length === 0" class="admin-muted">
             {{ 'ADMIN.USABILITY_REPORTS.DETAIL.NO_IMAGES' | translate }}
           </p>
           <div *ngIf="detailReport.images.length > 0" class="ur-images-grid">
             <div *ngFor="let img of detailReport.images" class="ur-image-item">
-              <img [src]="img.publicUrl" [alt]="'Image ' + img.position" class="ur-image-thumb" />
+              <img
+                [src]="img.publicUrl"
+                [alt]="'Image ' + img.position"
+                class="ur-image-thumb"
+                role="button"
+                tabindex="0"
+                [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_ENLARGE' | translate:{ position: img.position }"
+                (click)="openLightbox(img.publicUrl)"
+                (keydown)="onThumbnailKeydown($event, img.publicUrl)"
+              />
               <div class="ur-image-meta">
                 <span>
                   {{ 'ADMIN.USABILITY_REPORTS.DETAIL.IMAGE_POSITION' | translate }}:
@@ -208,5 +229,22 @@
         </div>
       </div>
     </ng-container>
+  </div>
+
+  <!-- Lightbox — a separate overlay layer above the detail modal. -->
+  <div
+    class="admin-modal-backdrop ur-lightbox-backdrop"
+    *ngIf="lightboxImageUrl"
+    (click)="onLightboxBackdropClick($event)"
+  >
+    <button
+      type="button"
+      class="ur-lightbox-close"
+      [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
+      (click)="closeLightbox()"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+    <img [src]="lightboxImageUrl" alt="" class="ur-lightbox-image" />
   </div>
 </div>

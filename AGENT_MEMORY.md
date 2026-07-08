@@ -1,5 +1,52 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-08 — Frontend: report-detail-ux (OBRS-77) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-report-detail-ux` (branch `sit/report-detail-ux`, diff vs `origin/dev`)
+
+**Finding (self-fixed) — optimistic-open clobbered the admin's in-progress status edit.**
+`openDetail()` now opens the modal optimistically and seeds `selectedDetailStatus`
+from the summary row, then fires the detail GET (~2s on SIT). The GET's `next`
+callback unconditionally re-assigned `this.selectedDetailStatus = detail.status`.
+If the admin changed the status dropdown during that ~2s window, the resolving
+GET silently reverted their selection to the server value. This is exactly the
+hazard design-system.md §6 names: *"patch detail into pristine-only controls."*
+The status dropdown is the one user-editable control that gets patched, and it
+was not pristine-guarded. **Fix:** only adopt the fetched status when nothing is
+selected yet (`if (!this.selectedDetailStatus)`) — the summary already seeded it
+for the normal case, and the guard preserves an in-flight edit. Added a locking
+spec ("does not clobber an in-progress status selection…") that drives the GET
+through a `Subject`, changes status mid-flight, then resolves — it fails on the
+old code (`Expected 'new' to be 'resolved'`) and passes on the fixed code.
+**Lesson:** whenever a modal goes optimistic-open, audit *every* subscribe
+callback that writes to a user-editable control — seed-on-open + patch-on-arrive
+must be pristine-guarded or it becomes a silent edit-clobber race.
+
+**Also self-fixed (state hygiene):** `closeDetail()` didn't reset `isDetailFetching`,
+leaving it stuck `true` after closing mid-fetch. Currently invisible (every
+`openDetail` path re-sets the flag), but it left the state machine incoherent —
+added `this.isDetailFetching = false;` to `closeDetail()`.
+
+**Confirmed correct (no action needed):**
+- **Lightbox ESC/backdrop routing.** Only the detail modal carries
+  `adminModalBackdrop`; the lightbox is a plain child overlay. The single ESC
+  listener routes through `onDetailBackdropDismiss()`, which closes the lightbox
+  first when open, else the detail modal — no double-ESC dismiss, no path that
+  strands the lightbox or closes the modal underneath. Backdrop-click on the
+  lightbox is handled by its own `(click)` (target===currentTarget) and does not
+  reach the detail directive's host-click (target ≠ detail backdrop element).
+- **Cache stores only full detail.** The summary skeleton is only assigned to
+  `detailReport`, never to `detailCache`; only the GET response is cached. Stale
+  guard (`selectedReportId !== id`) protects the view-write in `next`; `saveStatus`
+  invalidates the entry via `detailCache.delete(id)`. Optimistic `store.mutate` +
+  AlertService + `store.refresh()` preserved.
+- **Colors are tokens/established ink.** Lightbox close bg `rgba(25,28,30,.55/.75)`
+  is the admin ink used throughout (base `#191c1e`); the scrim is inherited from
+  `.admin-modal-backdrop`. No new raw hex. i18n keys (`IMAGE_ENLARGE`) present in
+  en/th/zh; `COMMON.UPDATING`/`COMMON.CLOSE` exist. Backdrop directive reused, not
+  forked. One primary (Save Status); × is a themed icon affordance.
+
+
 ## 2026-07-01 — Frontend: stop-detail-card-cleanup (OBRS-72) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-stop-detail-card-cleanup` (diff vs `origin/dev`)
