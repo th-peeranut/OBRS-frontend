@@ -1,0 +1,121 @@
+@import "../../../../../../styles/variables.scss";
+
+.reschedule-estimate__state,
+.reschedule-estimate__error {
+  text-align: center;
+  padding: $space-lg $space-md;
+  color: $text-lightblack;
+
+  i {
+    font-size: 28px;
+    color: $text-red;
+  }
+
+  p {
+    margin: $space-xs 0 0;
+    font-size: $font-size-sm;
+  }
+}
+
+.reschedule-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid $primary-lightgrey;
+  border-top-color: $primary-blue;
+  border-radius: $radius-circle;
+  animation: reschedule-estimate-spin 0.8s linear infinite;
+}
+
+@keyframes reschedule-estimate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reschedule-estimate__rows {
+  margin: 0 0 $space-sm;
+
+  div {
+    display: flex;
+    justify-content: space-between;
+    padding: $space-2xs 0;
+    border-bottom: 1px dashed $primary-lightgrey;
+  }
+
+  dt {
+    font-size: $font-size-sm;
+    color: $text-lightblack;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+  }
+}
+
+.reschedule-estimate__net {
+  text-align: center;
+  padding: $space-sm;
+  border-radius: $radius-md;
+  font-weight: $font-weight-semibold;
+  background-color: $secondary-lightgrey;
+  color: $text-blue;
+
+  &.is-topup {
+    background-color: #fff4e0;
+    color: #b9750a;
+  }
+
+  &.is-refund {
+    background-color: #e3f9ec;
+    color: #1f9254;
+  }
+}
+
+.reschedule-step__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: $secondary-blue;
+  color: $text-white;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $secondary-blue;
+  border: 1px solid $secondary-blue;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: $radius-circle;
+  animation: reschedule-estimate-spin 0.7s linear infinite;
+}

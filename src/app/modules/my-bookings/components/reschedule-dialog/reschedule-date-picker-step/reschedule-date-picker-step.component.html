@@ -1,0 +1,19 @@
+<div class="reschedule-step reschedule-date-step">
+  <p class="reschedule-step__hint">
+    {{ "MY_BOOKINGS.RESCHEDULE.STOPS_FIXED_NOTE" | translate }}
+  </p>
+
+  <label class="reschedule-date-step__label" for="reschedule-date-input">
+    {{ "MY_BOOKINGS.RESCHEDULE.DATE_LABEL" | translate }}
+  </label>
+
+  <p-calendar
+    inputId="reschedule-date-input"
+    dateFormat="dd/mm/yy"
+    [showIcon]="true"
+    [minDate]="minDate"
+    [maxDate]="maxDate"
+    [ngModel]="selectedDate"
+    (onSelect)="onSelect($event)"
+  ></p-calendar>
+</div>

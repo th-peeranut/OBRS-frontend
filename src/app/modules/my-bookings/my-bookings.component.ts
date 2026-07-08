@@ -1,23 +1,29 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ViewChild } from '@angular/core';
 import { Store } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { MenuItem } from 'primeng/api';
+import { Menu } from 'primeng/menu';
 import dayjs from 'dayjs';
 import { Observable, combineLatest, map, startWith } from 'rxjs';
 import {
   CANCELLABLE_BOOKING_STATUS,
   MyBookingDto,
   MyBookingView,
+  RESCHEDULE_WINDOW_HOURS,
   SupportedLocale,
   getStopLabel,
   normalizeStatusCode,
   toAmountNumber,
 } from '../../shared/interfaces/my-booking.interface';
 import {
+  closeRescheduleDialog,
   invokeLoadMyBookingsApi,
+  openRescheduleDialog,
   requestCancelBooking,
 } from './store/my-bookings.action';
 import {
   selectMyBookings,
+  selectRescheduleDialogBookingId,
 } from './store/my-bookings.selector';
 
 interface MyBookingsVm {
@@ -26,6 +32,23 @@ interface MyBookingsVm {
   loaded: boolean;
   error: string | null;
   cancellingBookingId: number | null;
+}
+
+interface RescheduleEligibility {
+  eligible: boolean;
+  reasonKey: string | null;
+}
+
+/** A single card's overflow menu item. Reschedule is always included
+ * (disabled + `reasonText` when ineligible — never omitted); View e-ticket /
+ * Cancel booking keep their existing conditional presence. */
+export interface ActionMenuItem extends MenuItem {
+  /** Localized disabled-reason, rendered as subtext under the label. */
+  reasonText?: string;
+  /** Destructive item (Cancel booking) — styled distinctly from the rest. */
+  danger?: boolean;
+  /** This specific row's cancel is in flight — shows an inline spinner. */
+  submitting?: boolean;
 }
 
 interface StatusFilterOption {
@@ -45,6 +68,16 @@ export class MyBookingsComponent implements OnInit {
 
   /** Booking whose e-ticket modal is open, or null when closed. */
   activeTicketBookingId: number | null = null;
+
+  /** Booking whose reschedule dialog is open — NgRx-driven so the dialog
+   * opens optimistically the instant `openRescheduleDialog` dispatches. */
+  rescheduleDialogBookingId$!: Observable<number | null>;
+
+  /** Single shared popup menu, rebuilt per row on open — same pattern as
+   * `WalkInTripBrowserComponent.tripActionMenu` (staff module). */
+  @ViewChild('actionMenu') actionMenu!: Menu;
+  actionMenuItems: ActionMenuItem[] = [];
+  private lastActionMenuTrigger: HTMLButtonElement | null = null;
 
   readonly statusFilters: StatusFilterOption[] = [
     { value: '', labelKey: 'MY_BOOKINGS.FILTERS.ALL' },
@@ -83,6 +116,8 @@ export class MyBookingsComponent implements OnInit {
       }))
     );
 
+    this.rescheduleDialogBookingId$ = this.store.select(selectRescheduleDialogBookingId);
+
     this.store.dispatch(invokeLoadMyBookingsApi({ status: null }));
   }
 
@@ -100,6 +135,72 @@ export class MyBookingsComponent implements OnInit {
 
   onCancel(booking: MyBookingView): void {
     this.store.dispatch(requestCancelBooking({ booking }));
+  }
+
+  /**
+   * Builds and opens the single per-card overflow menu (View e-ticket,
+   * Reschedule, Cancel booking). Reschedule is always included — disabled
+   * with its localized reason as `reasonText` when ineligible, never
+   * omitted, since presenting *some* Reschedule affordance (even a disabled
+   * one explaining why) is the whole point of OBRS-83. View e-ticket / Cancel
+   * booking keep their existing conditional presence (only shown when
+   * applicable), same as the previous inline-button layout.
+   */
+  openActionMenu(event: Event, booking: MyBookingView, cancellingBookingId: number | null): void {
+    event.stopPropagation();
+
+    const items: ActionMenuItem[] = [];
+
+    if (booking.paid) {
+      items.push({
+        label: this.translate.instant('MY_BOOKINGS.VIEW_TICKET'),
+        command: () => this.onViewTicket(booking),
+      });
+    }
+
+    items.push({
+      label: this.translate.instant('MY_BOOKINGS.RESCHEDULE.ACTION'),
+      disabled: !booking.rescheduleEligible,
+      reasonText: booking.rescheduleEligible
+        ? undefined
+        : this.translate.instant(booking.rescheduleReasonKey ?? ''),
+      command: () => this.onReschedule(booking),
+    });
+
+    if (booking.cancellable) {
+      items.push({
+        label: this.translate.instant('MY_BOOKINGS.CANCEL.ACTION'),
+        danger: true,
+        disabled: cancellingBookingId !== null,
+        submitting: cancellingBookingId === booking.id,
+        command: () => this.onCancel(booking),
+      });
+    }
+
+    this.actionMenuItems = items;
+    this.lastActionMenuTrigger = event.currentTarget as HTMLButtonElement;
+    this.actionMenu.toggle(event);
+  }
+
+  /** Restores focus to the trigger button that opened the menu — same
+   * pattern as `WalkInTripBrowserComponent.onTripMenuHide`. */
+  onActionMenuHide(): void {
+    this.lastActionMenuTrigger?.focus();
+    this.lastActionMenuTrigger = null;
+  }
+
+  /** Opens the reschedule dialog optimistically — the dialog itself owns its
+   * own background data loads (design-system §6: modals open optimistically,
+   * never gated on an awaited fetch). */
+  onReschedule(booking: MyBookingView): void {
+    if (!booking.rescheduleEligible) {
+      return;
+    }
+    this.store.dispatch(openRescheduleDialog({ bookingId: booking.id }));
+  }
+
+  onRescheduleDialogClosed(): void {
+    this.store.dispatch(closeRescheduleDialog());
   }
 
   /** Open the e-ticket modal for a paid booking. */
@@ -150,6 +251,7 @@ export class MyBookingsComponent implements OnInit {
 
     const statusCode = normalizeStatusCode(booking.status);
     const totalAmount = toAmountNumber(booking.totalAmount);
+    const rescheduleEligibility = this.computeRescheduleEligibility(booking, statusCode, schedules);
 
     return {
       id: booking.id,
@@ -164,7 +266,41 @@ export class MyBookingsComponent implements OnInit {
       createdLabel: this.formatDateTime(booking.createdAt, locale),
       cancellable: statusCode === CANCELLABLE_BOOKING_STATUS,
       paid: statusCode === CANCELLABLE_BOOKING_STATUS,
+      rescheduleEligible: rescheduleEligibility.eligible,
+      rescheduleReasonKey: rescheduleEligibility.reasonKey,
     };
+  }
+
+  /**
+   * Mirrors the backend's reschedule prerequisites (see
+   * OBRS-backend/docs/api/booking.md) so the card never presents Reschedule
+   * as available when the server would reject it (acceptance criterion #3).
+   * First failing check wins; the server remains the final authority.
+   */
+  private computeRescheduleEligibility(
+    booking: MyBookingDto,
+    statusCode: string,
+    schedules: MyBookingDto['bookingSchedules']
+  ): RescheduleEligibility {
+    if (statusCode !== CANCELLABLE_BOOKING_STATUS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NOT_CONFIRMED' };
+    }
+
+    const bookingType = normalizeStatusCode(booking.bookingType) || 'one_way';
+    if (bookingType !== 'one_way' || (schedules?.length ?? 0) !== 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY' };
+    }
+
+    if (Number(booking.rescheduleCount ?? 0) >= 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED' };
+    }
+
+    const departure = dayjs(schedules?.[0]?.departureDateTime);
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= RESCHEDULE_WINDOW_HOURS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW' };
+    }
+
+    return { eligible: true, reasonKey: null };
   }
 
   private formatDateTime(

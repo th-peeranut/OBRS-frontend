@@ -184,59 +184,64 @@
   justify-content: flex-end;
   align-items: center;
   gap: 10px;
-
-  .not-cancellable {
-    font-size: 13px;
-    color: $text-lightgrey;
-  }
 }
 
-.btn-ticket {
+// Single per-card overflow trigger — replaces the old three inline buttons
+// (View e-ticket / Cancel booking / Reschedule), all now items in the popup
+// menu below. Kebab icon matches the existing convention in
+// WalkInTripBrowserComponent (staff module) — reused, not reinvented.
+.actions-menu-btn {
   display: inline-flex;
   align-items: center;
-  gap: $space-2xs;
-  padding: 9px 20px;
-  border: 1px solid $secondary-blue;
-  border-radius: $radius-sm;
-  background-color: $secondary-blue;
-  color: $text-white;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  i {
-    font-size: $font-size-base;
-  }
-
-  &:hover {
-    background-color: $text-primary;
-    border-color: $text-primary;
-  }
-}
-
-.btn-cancel {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-2xs;
-  padding: 9px 20px;
-  border: 1px solid $text-red;
-  border-radius: $radius-sm;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-pill;
   background-color: $primary-white;
-  color: $text-red;
-  font-size: $font-size-sm;
-  font-weight: $font-weight-semibold;
+  color: $text-softblack;
+  font-size: $font-size-lg;
   cursor: pointer;
   transition: all 0.15s ease;
 
-  &:hover:not(:disabled) {
-    background-color: $text-red;
-    color: $text-white;
+  &:hover,
+  &:focus-visible {
+    border-color: $secondary-blue;
+    color: $secondary-blue;
+  }
+}
+
+// Rendered inside <p-menu>'s custom item template (PrimeNG appends the
+// popup to <body>, but Angular's view-encapsulation attribute still scopes
+// this component's styles to it — the same mechanism WalkInTripBrowser
+// relies on for its own p-menu). One primary role per menu: Reschedule/View
+// e-ticket are neutral text items; Cancel booking is the only destructive
+// (danger) one, per design-system §4.
+.action-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: $space-2xs $space-sm;
+  width: 100%;
+
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-2xs;
+    font-size: $font-size-sm;
+    color: $text-black;
   }
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  &__reason {
+    font-size: $font-size-xs;
+    color: $text-lightgrey;
+    line-height: $line-height-tight;
+    white-space: normal;
+  }
+
+  &--danger &__label {
+    color: $text-red;
   }
 }
 

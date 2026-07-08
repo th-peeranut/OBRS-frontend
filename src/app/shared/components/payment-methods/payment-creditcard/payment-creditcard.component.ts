@@ -32,8 +32,17 @@ type PaymentTab = 'creditcard' | 'qrcode';
 })
 export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   @Input() activeTab: PaymentTab = 'creditcard';
+  /**
+   * Route to navigate to on a completed payment. Defaults to the existing
+   * `/e-ticket` behavior so every current call site stays byte-identical
+   * (design-system §10 "extend, don't fork"). Pass `null` to suppress
+   * navigation entirely — e.g. the reschedule dialog embeds this component
+   * as an inline step and reacts to `(paymentCompleted)` instead.
+   */
+  @Input() successRedirect: string[] | null = ['/e-ticket'];
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
+  @Output() paymentCompleted = new EventEmitter<void>();
 
   readonly cardBrands = [
     { name: 'Visa', icon: 'icons/payment-brand-visa.svg' },
@@ -319,7 +328,10 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.isWaitingForConfirmation = false;
     this.clearPaymentPolling();
     this.alertService.success('Payment success');
-    this.router.navigate(['/e-ticket']);
+    this.paymentCompleted.emit();
+    if (this.successRedirect) {
+      this.router.navigate(this.successRedirect);
+    }
   }
 
   private isSuccessfulResponse(code: number | null | undefined): boolean {

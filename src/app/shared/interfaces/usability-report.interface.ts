@@ -29,6 +29,7 @@ export interface UsabilityReportDetail {
   category: UsabilityReportCategory;
   status: UsabilityReportStatus;
   userId: number | null;
+  reporterEmail: string | null;
   description: string;
   descriptionPreview: string;
   routeUrl: string;

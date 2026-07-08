@@ -14,6 +14,28 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-07-08 — `rescheduleCount` added to `GET /api/private/bookings/me` (`BookingRespDto`)
+**Risk level**: R1 (additive)
+**Triggered by**: OBRS-83 — surfacing the reschedule flow in the customer My Bookings page needed up-front, no-fetch eligibility gating (don't wait for a `RESCHEDULE_ERROR_MAX_COUNT` response to know a booking can't be rescheduled again).
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `GET /api/private/bookings/me` | Field added | `BookingRespDto.rescheduleCount` (int, `0` or `1`) — number of times the booking has been rescheduled; max one reschedule per booking |
+
+### Response shapes before / after
+- **Before**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", ... }` (no `rescheduleCount`)
+- **After**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", "rescheduleCount": 0, ... }`
+
+### Action required in frontend
+- [x] Add `rescheduleCount?: number` to `MyBookingDto` (`shared/interfaces/my-booking.interface.ts`)
+- [x] Gate the Reschedule card action on `rescheduleCount >= 1` as one of four up-front eligibility checks (`MyBookingsComponent.computeRescheduleEligibility`)
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/booking.md` `GET /bookings/me`.
+
+---
+
 ## [Backend] 2026-06-15 — `payment.status` value renamed from `"success"` to `"paid"`
 **Risk level**: R0 (breaking)
 **Triggered by**: Terminology alignment — `"success"` described an operation outcome; `"paid"` describes the object's state, consistent with `booking.status = "confirmed"` and `ticket.status = "confirmed"`.
@@ -54,6 +76,12 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 - `POST /api/private/bookings` — new optional request field `promotionCode`
 
 **Request type**: New endpoints + new request field. `docs/api/admin.md`'s `AdminPromotionController` section explicitly scopes itself to the round-trip singleton only and calls out "full promotion CRUD across every promotion is a separate, not-yet-built feature (#37)" — this is that feature. Checked `OBRS-backend-wt-promo-codes` (the paired backend worktree): still at `origin/dev` HEAD, no promo-code commits yet, so none of this exists server-side at time of writing.
+### [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
+**Affected endpoints**:
+- `POST /api/usability-reports`
+- `GET /api/private/admin/usability-reports/{id}`
+
+**Request type**: Add field
 
 ### What the frontend needs
 | Field / Change | Location | Reason |
@@ -70,6 +98,22 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ### Impact if not addressed
 The frontend UI (customer promo-code field + admin list/CRUD) is implemented and additive-safe, but functionally inert against the current backend until these land — the customer field will show a generic apply-failed error on every attempt, and the admin list/create/edit/delete calls will 404. Do not merge to `dev`/`sit` until the backend implements this feature (or an explicit decision accepts the temporary contract drift), per `CLAUDE.md`'s R0 rule for undocumented endpoints.
+| `reporterEmail` (text, optional) | Multipart form part on `POST /api/usability-reports` | Lets a reporter optionally leave contact info while the submission stays anonymous when blank |
+| `reporterEmail` (string, nullable) | Response body of `GET /api/private/admin/usability-reports/{id}` | Admin detail modal displays it (only when present) so triage can follow up |
+
+### What the frontend implemented (additive-safe)
+- `ReportUsabilityFabComponent` adds an optional email input; client-side validation only blocks submit on a non-empty, malformed value — empty always submits (anonymous stays supported).
+- `formData.append('reporterEmail', reporterEmail)` is always sent (trimmed value; empty string when left blank) alongside the existing `category`/`description`/`routeUrl` parts.
+- `UsabilityReportDetail.reporterEmail: string | null` added to the shared interface; the admin detail modal renders it as a new `.ur-detail-row` (reusing `.ur-detail-label`) near "User ID", gated on `*ngIf="detailReport.reporterEmail"` so it degrades gracefully (no broken UI) until the backend returns the field.
+
+### Suggested contract change
+- Accept an optional `reporterEmail` multipart text part on `POST /api/usability-reports` (blank/absent → store `null`, matching how `userId` is already nullable for anonymous submissions).
+- Add a nullable `reporter_email` column to the usability_report table, returned as `reporterEmail` in the admin detail GET response. No new endpoint needed — this is additive to the existing shapes documented in `usability-reports.md`.
+
+### Impact if not addressed
+The email field renders and validates client-side regardless, but the value is dropped: the backend will silently ignore the unknown `reporterEmail` form part (or reject the request, depending on parser strictness) until the endpoint accepts it, and the admin detail row will always stay hidden (conditionally rendered on null/undefined, so no broken UI — just missing data) until the GET response includes it.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, this is R1 (additive, nullable field) — proceeding with the frontend implementation per that rule, flagging here so the backend implementation (if not already in flight on a paired branch) closes the loop before this branch merges to `dev`/`sit`.
 
 ---
 
