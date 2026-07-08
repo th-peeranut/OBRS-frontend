@@ -255,6 +255,18 @@ Run this against any UI diff (and during the live-verify screenshot glance):
       `errorCode` (§9).
 - [ ] **Shared components:** extended (optional null-default input), not forked;
       `@Input` arrays not mutated (§10).
+- [ ] **Status/state colors:** a new status/state pill color must read **distinctly**
+      against the **active accent variant's** resolved values (the admin shell is always
+      `theme-admin`, so `--accent*` resolves to *orange* there — it collides with
+      `new`/`is-warning`) **and** against the full existing status legend — never trust a
+      token's literal name (`--admin-success-*` is actually blue). Use a **fixed
+      `--admin-*` status token**, not the runtime `--accent*`; light bg + dark text with
+      **no one-sided dark-mode override** (overriding only the text kills contrast on the
+      unchanged bg). (OBRS-86 accent-collision + dark-contrast bugs.)
+- [ ] **Optimistic-open modals:** every control the modal patches after the fetch/cache
+      resolves is **pristine-guarded** (dirty-flag reset at the top of open, seeded on the
+      cache-hit branch, gated by the stale-response guard) so a late response can't clobber
+      an in-progress edit. (§6; CORE.md — recurred 3× on the usability-report detail modal.)
 - [ ] **New pattern?** justified in the UX spec and locked with a spec test (§12).
 
 ---
