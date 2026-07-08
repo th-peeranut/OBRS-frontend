@@ -1,9 +1,9 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 
 // localStorage shim — keeps spec storage isolated
 function clearSidebarStorage(): void {
@@ -17,6 +17,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
+import { AdminApiService } from '../../services/admin/admin-api.service';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -46,6 +47,10 @@ describe('AdminLayoutComponent', () => {
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: ThemeService, useValue: themeServiceStub },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
+        {
+          provide: AdminApiService,
+          useValue: { getNewUsabilityReportCount: () => of(0) },
+        },
       ],
     }).compileComponents();
 
@@ -142,4 +147,116 @@ describe('AdminLayoutComponent', () => {
       .withContext('localStorage should be "0" when expanded')
       .toBe('0');
   });
+});
+
+// ── Usability Reports nav badge ───────────────────────────────────────────────
+// Separate top-level describe (not nested) so its own beforeEach — which needs
+// to run entirely inside fakeAsync to deterministically flush the component's
+// timer(0, 60_000) initial fetch — does not also inherit/duplicate the outer
+// describe's non-fakeAsync beforeEach above.
+describe('AdminLayoutComponent — usability report badge', () => {
+  let fixture: ComponentFixture<AdminLayoutComponent>;
+
+  const authStub = {
+    getUsername: () => 'admin@obrs.test',
+    logout: jasmine.createSpy('logout'),
+    hasAnyRole: (_roles: string[]) => false,
+  };
+
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
+  };
+
+  beforeEach(async () => {
+    clearSidebarStorage();
+    await TestBed.configureTestingModule({
+      declarations: [AdminLayoutComponent, LangSwitcherComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: ThemeService, useValue: themeServiceStub },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        // Placeholder — each test overrides this with its own count source
+        // via TestBed.overrideProvider before creating the component, so the
+        // resulting timer(0, ...) subscription is registered inside that
+        // test's own fakeAsync zone and can be flushed deterministically.
+        { provide: AdminApiService, useValue: { getNewUsabilityReportCount: () => of(0) } },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => { clearSidebarStorage(); });
+
+  function createWithCountSource(
+    source: () => Observable<number>
+  ): ComponentFixture<AdminLayoutComponent> {
+    TestBed.overrideProvider(AdminApiService, {
+      useValue: { getNewUsabilityReportCount: jasmine.createSpy('getNewUsabilityReportCount').and.callFake(source) },
+    });
+    const f = TestBed.createComponent(AdminLayoutComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  it('hides the badge when the fetched count is 0', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(0));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge).withContext('badge should not render when count is 0').toBeNull();
+  }));
+
+  it('shows the badge with the fetched numeric count when > 0', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(5));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge).withContext('badge should render when count > 0').toBeTruthy();
+    expect(badge.nativeElement.textContent.trim()).toBe('5');
+  }));
+
+  it('caps the displayed badge text at "99+" when the count exceeds 99', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(150));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim()).toBe('99+');
+  }));
+
+  it('keeps the last known count (does not throw / reset to 0) when a later poll fails', fakeAsync(() => {
+    let callCount = 0;
+    fixture = createWithCountSource(() => {
+      callCount++;
+      return callCount === 1 ? of(3) : throwError(() => new Error('network error'));
+    });
+
+    tick(); // initial fetch (dueTime 0) succeeds -> count = 3
+    fixture.detectChanges();
+    let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim()).toBe('3');
+
+    expect(() => {
+      tick(60_000); // next periodic tick fails; must be swallowed, not thrown
+    }).not.toThrow();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge).withContext('previous count should be retained after a failed poll').toBeTruthy();
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('failed poll must not reset the badge to 0')
+      .toBe('3');
+  }));
 });

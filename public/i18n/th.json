@@ -467,7 +467,8 @@
       "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "CLOSE": "ปิด" },
       "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึกสถานะ", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "resolved": "แก้ไขแล้ว", "wont_fix": "ไม่แก้ไข" },
       "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
-      "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่"
+      "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่",
+      "NEW_BADGE_ARIA": "มีรายงานปัญหาการใช้งานใหม่ {{count}} รายการ"
     }
   },
   "LOGIN": {

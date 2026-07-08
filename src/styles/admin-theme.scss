@@ -167,6 +167,7 @@
 }
 
 .admin-nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -204,6 +205,31 @@
 
 .is-dark .admin-nav-link.active {
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ── NAV BADGE — "Usability Reports" new-report count ──
+   Default (mobile drawer + expanded 280px column): a small pill sitting in
+   normal flex flow after the label, pushed to the row's trailing edge via
+   margin-left: auto. The min-width(1101px) block below re-anchors it as an
+   absolutely-positioned corner badge when the sidebar is collapsed to the
+   76px icon rail (labels hidden). Uses the existing danger token (this is
+   an attention-needed indicator, not a decorative accent) + the accent
+   contrast token for the numeral — no new hex introduced. */
+.admin-nav-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: var(--admin-danger-text);
+  color: var(--accent-contrast);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  flex: 0 0 auto;
 }
 
 .admin-sidebar-footer {
@@ -1271,12 +1297,23 @@ textarea.admin-field {
     padding: 11px 0;
   }
 
-  .admin-nav-link > span:not(.material-symbols-outlined),
+  .admin-nav-link > span:not(.material-symbols-outlined):not(.admin-nav-badge),
   .admin-nav-btn > span:not(.material-symbols-outlined) {
     opacity: 0;
     width: 0;
     overflow: hidden;
     transition: opacity 80ms ease, width 0ms ease 80ms;
+  }
+
+  /* Collapsed rail: re-anchor the badge as a small corner badge on the icon
+     instead of letting it collapse away with the (now hidden) label. Stays
+     within the nav-link's own box (top/right are small positive offsets) so
+     it is not clipped by the sidebar panel's overflow: hidden. */
+  .admin-shell:not(.is-sidebar-pinned) .admin-nav-link > .admin-nav-badge {
+    position: absolute;
+    top: 4px;
+    right: 10px;
+    margin-left: 0;
   }
 
   /* Expanded: left-aligned with padding, labels visible */
