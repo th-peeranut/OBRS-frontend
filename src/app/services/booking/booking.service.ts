@@ -11,6 +11,11 @@ import {
   CancellationPolicy,
   MyBookingDto,
 } from '../../shared/interfaces/my-booking.interface';
+import {
+  RescheduleEstimate,
+  RescheduleOption,
+  RescheduleResult,
+} from '../../shared/interfaces/reschedule.interface';
 import { PageResponse } from '../../shared/interfaces/payment.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
@@ -18,6 +23,22 @@ import {
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
 import { map, Observable } from 'rxjs';
+
+export interface RescheduleEstimateParams {
+  newScheduleId: number;
+  newFromStopId: number;
+  newToStopId: number;
+  seats: string[];
+}
+
+export interface ConfirmReschedulePayload {
+  newScheduleId: number;
+  newFromStopId: number;
+  newToStopId: number;
+  /** Existing `Ticket.id` → new seat number on the new schedule. */
+  seatAssignments: Record<number, string>;
+  clientNetAmount?: number;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -110,6 +131,49 @@ export class BookingService {
     return this.http.post<ResponseAPI<CancelBookingResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel`,
       {},
+      { context: this.silentContext() }
+    );
+  }
+
+  /** List alternative schedules for a given date (same route segment). */
+  getRescheduleOptions(
+    bookingId: number,
+    date: string
+  ): Observable<ResponseAPI<RescheduleOption[]>> {
+    const params = new HttpParams().set('date', date);
+    return this.http.get<ResponseAPI<RescheduleOption[]>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule-options`,
+      { params, context: this.silentContext() }
+    );
+  }
+
+  /** Preview the fare difference/fee for switching to a candidate schedule. */
+  getRescheduleEstimate(
+    bookingId: number,
+    query: RescheduleEstimateParams
+  ): Observable<ResponseAPI<RescheduleEstimate>> {
+    let params = new HttpParams()
+      .set('newScheduleId', query.newScheduleId)
+      .set('newFromStopId', query.newFromStopId)
+      .set('newToStopId', query.newToStopId);
+    for (const seat of query.seats) {
+      params = params.append('seats', seat);
+    }
+
+    return this.http.get<ResponseAPI<RescheduleEstimate>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule-estimate`,
+      { params, context: this.silentContext() }
+    );
+  }
+
+  /** Confirm the reschedule; the dialog renders its own inline states. */
+  confirmReschedule(
+    bookingId: number,
+    payload: ConfirmReschedulePayload
+  ): Observable<ResponseAPI<RescheduleResult>> {
+    return this.http.post<ResponseAPI<RescheduleResult>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule`,
+      payload,
       { context: this.silentContext() }
     );
   }

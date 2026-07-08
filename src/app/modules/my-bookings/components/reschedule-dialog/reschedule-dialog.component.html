@@ -1,0 +1,66 @@
+<div class="reschedule-modal-backdrop" (click)="onBackdropClick($event)">
+  <div class="reschedule-modal" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="reschedule-modal__close"
+      (click)="close()"
+      [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
+    >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="reschedule-modal__body">
+      <h2 class="reschedule-modal__title">{{ "MY_BOOKINGS.RESCHEDULE.DIALOG_TITLE" | translate }}</h2>
+
+      <app-reschedule-date-picker-step
+        *ngIf="step === 'date'"
+        [minDate]="minDate"
+        [maxDate]="maxDate"
+        [selectedDate]="selectedDate"
+        (dateSelected)="onDateSelected($event)"
+      ></app-reschedule-date-picker-step>
+
+      <app-reschedule-options-list
+        *ngIf="step === 'options'"
+        [options]="rescheduleOptions"
+        [loading]="rescheduleOptionsLoading"
+        [error]="rescheduleOptionsError"
+        [selectedScheduleId]="selectedOption?.scheduleId ?? null"
+        (select)="onOptionSelect($event)"
+      ></app-reschedule-options-list>
+
+      <app-reschedule-estimate-summary
+        *ngIf="step === 'estimate'"
+        [estimate]="rescheduleEstimate$ | async"
+        [loading]="estimateLoading"
+        [error]="confirmError"
+        [submitting]="submitting"
+        (confirm)="onConfirm()"
+        (back)="onEstimateBack()"
+      ></app-reschedule-estimate-summary>
+
+      <div class="reschedule-step reschedule-payment-step" *ngIf="step === 'payment'">
+        <p class="reschedule-step__hint">
+          {{ "MY_BOOKINGS.RESCHEDULE.PAYMENT_REQUIRED_NOTE" | translate: { amount: paymentAmountLabel } }}
+        </p>
+
+        <app-payment-creditcard
+          *ngIf="paymentTab === 'creditcard'"
+          [activeTab]="paymentTab"
+          [successRedirect]="null"
+          (tabChange)="onPaymentTabChange($event)"
+          (back)="onPaymentBack()"
+          (paymentCompleted)="onPaymentCompleted()"
+        ></app-payment-creditcard>
+        <app-payment-qrcode
+          *ngIf="paymentTab === 'qrcode'"
+          [activeTab]="paymentTab"
+          [successRedirect]="null"
+          (tabChange)="onPaymentTabChange($event)"
+          (back)="onPaymentBack()"
+          (paymentCompleted)="onPaymentCompleted()"
+        ></app-payment-qrcode>
+      </div>
+    </div>
+  </div>
+</div>

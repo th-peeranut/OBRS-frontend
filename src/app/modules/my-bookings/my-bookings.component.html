@@ -116,6 +116,22 @@
           <span class="not-cancellable" *ngIf="!booking.cancellable && !booking.paid">
             {{ "MY_BOOKINGS.NOT_CANCELLABLE" | translate }}
           </span>
+
+          <!-- Reschedule is always rendered (disabled + tooltip reason when
+               ineligible) — it must never be hidden (design-system §6). -->
+          <div class="tooltip-container reschedule-tooltip">
+            <button
+              type="button"
+              class="btn-reschedule"
+              [disabled]="!booking.rescheduleEligible"
+              (click)="onReschedule(booking)"
+            >
+              {{ "MY_BOOKINGS.RESCHEDULE.ACTION" | translate }}
+            </button>
+            <div class="tooltip-box" *ngIf="!booking.rescheduleEligible">
+              {{ booking.rescheduleReasonKey ?? '' | translate }}
+            </div>
+          </div>
         </footer>
       </article>
     </ng-container>
@@ -127,5 +143,11 @@
   [bookingId]="activeTicketBookingId"
   (closed)="onCloseTicket()"
 ></app-my-booking-ticket-modal>
+
+<app-reschedule-dialog
+  *ngIf="rescheduleDialogBookingId$ | async as rescheduleBookingId"
+  [bookingId]="rescheduleBookingId"
+  (closed)="onRescheduleDialogClosed()"
+></app-reschedule-dialog>
 
 <app-footer></app-footer>

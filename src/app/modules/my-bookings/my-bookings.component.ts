@@ -7,17 +7,21 @@ import {
   CANCELLABLE_BOOKING_STATUS,
   MyBookingDto,
   MyBookingView,
+  RESCHEDULE_WINDOW_HOURS,
   SupportedLocale,
   getStopLabel,
   normalizeStatusCode,
   toAmountNumber,
 } from '../../shared/interfaces/my-booking.interface';
 import {
+  closeRescheduleDialog,
   invokeLoadMyBookingsApi,
+  openRescheduleDialog,
   requestCancelBooking,
 } from './store/my-bookings.action';
 import {
   selectMyBookings,
+  selectRescheduleDialogBookingId,
 } from './store/my-bookings.selector';
 
 interface MyBookingsVm {
@@ -26,6 +30,11 @@ interface MyBookingsVm {
   loaded: boolean;
   error: string | null;
   cancellingBookingId: number | null;
+}
+
+interface RescheduleEligibility {
+  eligible: boolean;
+  reasonKey: string | null;
 }
 
 interface StatusFilterOption {
@@ -45,6 +54,10 @@ export class MyBookingsComponent implements OnInit {
 
   /** Booking whose e-ticket modal is open, or null when closed. */
   activeTicketBookingId: number | null = null;
+
+  /** Booking whose reschedule dialog is open — NgRx-driven so the dialog
+   * opens optimistically the instant `openRescheduleDialog` dispatches. */
+  rescheduleDialogBookingId$!: Observable<number | null>;
 
   readonly statusFilters: StatusFilterOption[] = [
     { value: '', labelKey: 'MY_BOOKINGS.FILTERS.ALL' },
@@ -83,6 +96,8 @@ export class MyBookingsComponent implements OnInit {
       }))
     );
 
+    this.rescheduleDialogBookingId$ = this.store.select(selectRescheduleDialogBookingId);
+
     this.store.dispatch(invokeLoadMyBookingsApi({ status: null }));
   }
 
@@ -100,6 +115,20 @@ export class MyBookingsComponent implements OnInit {
 
   onCancel(booking: MyBookingView): void {
     this.store.dispatch(requestCancelBooking({ booking }));
+  }
+
+  /** Opens the reschedule dialog optimistically — the dialog itself owns its
+   * own background data loads (design-system §6: modals open optimistically,
+   * never gated on an awaited fetch). */
+  onReschedule(booking: MyBookingView): void {
+    if (!booking.rescheduleEligible) {
+      return;
+    }
+    this.store.dispatch(openRescheduleDialog({ bookingId: booking.id }));
+  }
+
+  onRescheduleDialogClosed(): void {
+    this.store.dispatch(closeRescheduleDialog());
   }
 
   /** Open the e-ticket modal for a paid booking. */
@@ -150,6 +179,7 @@ export class MyBookingsComponent implements OnInit {
 
     const statusCode = normalizeStatusCode(booking.status);
     const totalAmount = toAmountNumber(booking.totalAmount);
+    const rescheduleEligibility = this.computeRescheduleEligibility(booking, statusCode, schedules);
 
     return {
       id: booking.id,
@@ -164,7 +194,41 @@ export class MyBookingsComponent implements OnInit {
       createdLabel: this.formatDateTime(booking.createdAt, locale),
       cancellable: statusCode === CANCELLABLE_BOOKING_STATUS,
       paid: statusCode === CANCELLABLE_BOOKING_STATUS,
+      rescheduleEligible: rescheduleEligibility.eligible,
+      rescheduleReasonKey: rescheduleEligibility.reasonKey,
     };
+  }
+
+  /**
+   * Mirrors the backend's reschedule prerequisites (see
+   * OBRS-backend/docs/api/booking.md) so the card never presents Reschedule
+   * as available when the server would reject it (acceptance criterion #3).
+   * First failing check wins; the server remains the final authority.
+   */
+  private computeRescheduleEligibility(
+    booking: MyBookingDto,
+    statusCode: string,
+    schedules: MyBookingDto['bookingSchedules']
+  ): RescheduleEligibility {
+    if (statusCode !== CANCELLABLE_BOOKING_STATUS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NOT_CONFIRMED' };
+    }
+
+    const bookingType = normalizeStatusCode(booking.bookingType) || 'one_way';
+    if (bookingType !== 'one_way' || (schedules?.length ?? 0) !== 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NOT_ONE_WAY' };
+    }
+
+    if (Number(booking.rescheduleCount ?? 0) >= 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.ALREADY_USED' };
+    }
+
+    const departure = dayjs(schedules?.[0]?.departureDateTime);
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= RESCHEDULE_WINDOW_HOURS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW' };
+    }
+
+    return { eligible: true, reasonKey: null };
   }
 
   private formatDateTime(

@@ -1,0 +1,50 @@
+<div class="reschedule-step reschedule-estimate">
+  <div class="reschedule-estimate__state" *ngIf="loading">
+    <span class="reschedule-spinner" aria-hidden="true"></span>
+    <p>{{ "MY_BOOKINGS.RESCHEDULE.OPTIONS_LOADING" | translate }}</p>
+  </div>
+
+  <ng-container *ngIf="!loading && estimate as est">
+    <dl class="reschedule-estimate__rows">
+      <div>
+        <dt>{{ "MY_BOOKINGS.RESCHEDULE.ESTIMATE.OLD_FARE" | translate }}</dt>
+        <dd>{{ formatCurrency(est.oldFare) }}</dd>
+      </div>
+      <div>
+        <dt>{{ "MY_BOOKINGS.RESCHEDULE.ESTIMATE.NEW_FARE" | translate }}</dt>
+        <dd>{{ formatCurrency(est.newFare) }}</dd>
+      </div>
+      <div>
+        <dt>{{ "MY_BOOKINGS.RESCHEDULE.ESTIMATE.FEE" | translate }}</dt>
+        <dd>{{ formatCurrency(est.rescheduleFee) }}</dd>
+      </div>
+    </dl>
+
+    <p class="reschedule-estimate__net" [ngClass]="{
+      'is-topup': est.paymentDirection === 'TOP_UP',
+      'is-refund': est.paymentDirection === 'REFUND'
+    }">
+      {{ paymentDirectionLabelKey | translate: { amount: netAmountAbsLabel } }}
+    </p>
+  </ng-container>
+
+  <div class="reschedule-estimate__error" *ngIf="!loading && error">
+    <i class="bi bi-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+  </div>
+
+  <div class="reschedule-step__actions">
+    <button type="button" class="btn-secondary" (click)="onBack()">
+      {{ "MY_BOOKINGS.RESCHEDULE.BACK_BUTTON" | translate }}
+    </button>
+    <button
+      type="button"
+      class="btn-primary"
+      [disabled]="loading || submitting || !estimate"
+      (click)="onConfirm()"
+    >
+      <span *ngIf="submitting" class="spinner" aria-hidden="true"></span>
+      {{ "MY_BOOKINGS.RESCHEDULE.CONFIRM_BUTTON" | translate }}
+    </button>
+  </div>
+</div>

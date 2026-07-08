@@ -17,6 +17,14 @@ export interface BookingStopLookup {
   display?: Record<string, LookupTranslation | null | undefined>;
 }
 
+/** A ticket as it appears nested under a `BookingScheduleRespDto` leg. */
+export interface MyBookingScheduleTicketDto {
+  id?: number;
+  ticketNumber?: string;
+  seatNumber?: string;
+  status?: string;
+}
+
 export interface MyBookingScheduleDto {
   id?: number;
   departureDateTime?: string;
@@ -24,7 +32,7 @@ export interface MyBookingScheduleDto {
   legType?: string;
   fromStop?: BookingStopLookup;
   toStop?: BookingStopLookup;
-  tickets?: unknown[];
+  tickets?: MyBookingScheduleTicketDto[];
 }
 
 export interface MyBookingContactDto {
@@ -41,6 +49,13 @@ export interface MyBookingDto {
   bookingType?: string;
   bookingChannel?: string;
   createdAt?: string;
+  /**
+   * Number of times this booking has already been rescheduled (0 or 1 — a
+   * booking can only be rescheduled once). Drives up-front eligibility gating
+   * for the Reschedule action without waiting for a `RESCHEDULE_ERROR_MAX_COUNT`
+   * response. See OBRS-backend/docs/api/booking.md `GET /bookings/me`.
+   */
+  rescheduleCount?: number;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
 }
@@ -81,10 +96,20 @@ export interface MyBookingView {
   cancellable: boolean;
   /** Paid/confirmed booking — its e-ticket can be viewed. */
   paid: boolean;
+  /** Reschedule action is enabled — the card MUST still render it (disabled) otherwise. */
+  rescheduleEligible: boolean;
+  /** i18n key for the disabled-reason tooltip; null when `rescheduleEligible`. */
+  rescheduleReasonKey: string | null;
 }
 
 /** A booking can only be cancelled by the traveler while it is `confirmed`. */
 export const CANCELLABLE_BOOKING_STATUS = 'confirmed';
+
+/** Backend defaults mirrored client-side for up-front reschedule eligibility
+ * gating (see OBRS-backend/docs/api/booking.md, `reschedule_window_hours`).
+ * The server is always the source of truth — these only avoid presenting an
+ * action the backend would reject outright (acceptance criterion #3). */
+export const RESCHEDULE_WINDOW_HOURS = 4;
 
 /** Refund methods that the gateway cannot auto-refund (handled manually). */
 export const MANUAL_REFUND_METHOD = 'MANUAL_REFUND_REQUIRED';

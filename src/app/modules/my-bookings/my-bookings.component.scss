@@ -240,6 +240,62 @@
   }
 }
 
+.btn-reschedule {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border: 1px solid $secondary-blue;
+  border-radius: $radius-sm;
+  background-color: $primary-white;
+  color: $secondary-blue;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background-color: $secondary-blue;
+    color: $text-white;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: $primary-grey;
+    color: $text-lightgrey;
+  }
+}
+
+// Same hover-reveal tooltip convention as register.component.scss (design
+// system §6/§11) — the disabled Reschedule button stays in the DOM and its
+// reason is always present in .tooltip-box, just visually revealed on hover.
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip-box {
+  display: none;
+  position: absolute;
+  bottom: 130%;
+  right: 0;
+  background-color: $secondary-grey;
+  color: $text-black;
+  padding: $space-xs;
+  box-shadow: $shadow-md;
+  border-radius: 6px;
+  z-index: 999;
+  font-size: $font-size-xs;
+  line-height: $line-height-relaxed;
+  width: 220px;
+  text-align: left;
+}
+
+.tooltip-container:hover .tooltip-box {
+  display: block;
+}
+
 .spinner {
   width: 14px;
   height: 14px;

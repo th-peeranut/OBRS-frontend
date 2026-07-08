@@ -1,0 +1,41 @@
+<div class="reschedule-step reschedule-options-list">
+  <div class="reschedule-options-list__state" *ngIf="loading">
+    <span class="reschedule-spinner" aria-hidden="true"></span>
+    <p>{{ "MY_BOOKINGS.RESCHEDULE.OPTIONS_LOADING" | translate }}</p>
+  </div>
+
+  <div class="reschedule-options-list__state" *ngIf="!loading && error">
+    <i class="bi bi-exclamation-triangle"></i>
+    <p>{{ error }}</p>
+  </div>
+
+  <div
+    class="reschedule-options-list__state"
+    *ngIf="!loading && !error && options.length === 0"
+  >
+    <i class="bi bi-calendar-x"></i>
+    <p>{{ "MY_BOOKINGS.RESCHEDULE.OPTIONS_EMPTY" | translate }}</p>
+  </div>
+
+  <ul class="reschedule-options-list__items" *ngIf="!loading && !error && options.length > 0">
+    <li *ngFor="let option of options; trackBy: trackByScheduleId">
+      <button
+        type="button"
+        class="reschedule-option-card"
+        role="radio"
+        [attr.aria-checked]="selectedScheduleId === option.scheduleId"
+        [class.is-selected]="selectedScheduleId === option.scheduleId"
+        (click)="onSelect(option)"
+      >
+        <span class="reschedule-option-card__time">
+          {{ formatTime(option.departureDateTime) }} – {{ formatTime(option.arrivalDateTime) }}
+        </span>
+        <span class="reschedule-option-card__vehicle">{{ option.vehicleTypeName }}</span>
+        <span class="reschedule-option-card__price">{{ formatCurrency(option.pricePerSeat) }}</span>
+        <span class="reschedule-option-card__seats">
+          {{ "MY_BOOKINGS.RESCHEDULE.SEATS" | translate }}: {{ option.availableSeats }}
+        </span>
+      </button>
+    </li>
+  </ul>
+</div>

@@ -115,3 +115,40 @@ An **Unlock action** button (`.admin-icon-btn` with a `lock_open` icon) appears 
 ### Shared sidebar shell (staff + admin)
 
 Both the `/admin/*` and `/staff/*` shells share one sidebar implemented by the abstract `SidebarLayoutBaseComponent` (`src/app/shared/sidebar-layout/`) that `AdminLayoutComponent` and `StaffLayoutComponent` extend — put any sidebar behaviour change there, not in one layout. On desktop (≥ 1101px) the sidebar rests as a 76px icon rail and **expands on hover or keyboard focus** as an overlay (it floats over content, no reflow), collapsing ~120ms after the pointer leaves. A **pin** button (`push_pin`) locks it open; while pinned the sidebar becomes a reserved 280px column (content reflows). The pin preference persists in `localStorage` under `obrs-sidebar-collapsed` (`'0'` = pinned open, `'1'`/absent = hover rail) — note this key's meaning was repurposed from the old click-to-collapse toggle. Mobile (≤ 1100px) is unchanged: a hamburger off-canvas drawer, no hover/rail behaviour, pin hidden. See `docs/adr/0005-shared-sidebar-base-hover-expand.md`.
+
+## My Bookings — Reschedule dialog
+
+`/my-bookings` (`src/app/modules/my-bookings/`) renders a **Reschedule**
+action on every booking card, alongside the existing "View e-ticket" /
+"Cancel booking" actions. Per design-system §6/§11, the button is **always
+present in the DOM** — it is `[disabled]` (with a `.tooltip-container`/
+`.tooltip-box` reason, same convention as `register.component.html`) rather
+than `*ngIf`'d away, whenever any client-side eligibility check fails:
+status isn't `confirmed`, the booking isn't one-way/single-leg, it has
+already been rescheduled once (`rescheduleCount >= 1`), or the departure is
+inside the 4h reschedule window. These mirror the backend's own prerequisites
+(`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`) so the action
+is never presented as available when the server would reject it — the server
+remains the final authority.
+
+Clicking an enabled action dispatches `openRescheduleDialog({ bookingId })`,
+which the module-local `myBookings` NgRx state reflects **synchronously** —
+`RescheduleDialogComponent` opens optimistically (its date-picker step is
+interactive immediately; the stops lookup and the booking's current tickets
+load in the background via `RescheduleEffect.loadStopsLookup$` /
+`.loadRescheduleTickets$`, both triggered off the same `openRescheduleDialog`
+action). The flow then steps through date → available-departures →
+cost-estimate → (an embedded payment step, only if a top-up is owed) →
+success. See `docs/adr/0008-my-bookings-reschedule-dialog.md` for the modal
+chrome, payment-leaf reuse, and stop-ID resolution decisions behind this
+component family (`src/app/modules/my-bookings/components/reschedule-dialog/`).
+
+**Testing note:** `MockStore.overrideSelector()` (`@ngrx/store/testing`)
+permanently pins the shared, module-singleton selector's memoized result
+(`resultSelector.setResult(value)`) until `store.resetSelectors()` is called.
+Because Karma bundles every spec file into one run, an override left
+un-reset in one spec's `beforeEach` can leak into a completely unrelated spec
+file that happens to import the same selector later in the same run. Any new
+spec using `overrideSelector` should pair it with `afterEach(() =>
+store.resetSelectors())` — see `reschedule.effect.spec.ts` and
+`my-bookings.component.reschedule-dom.spec.ts` for the pattern.

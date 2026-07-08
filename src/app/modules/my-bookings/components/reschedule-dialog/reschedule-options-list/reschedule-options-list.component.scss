@@ -1,0 +1,95 @@
+@import "../../../../../../styles/variables.scss";
+
+.reschedule-options-list__state {
+  text-align: center;
+  padding: $space-xl $space-md;
+  color: $text-lightblack;
+
+  i {
+    font-size: 32px;
+    color: $primary-grey;
+  }
+
+  p {
+    margin: $space-xs 0 0;
+    font-size: $font-size-sm;
+  }
+}
+
+.reschedule-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid $primary-lightgrey;
+  border-top-color: $primary-blue;
+  border-radius: $radius-circle;
+  animation: reschedule-options-spin 0.8s linear infinite;
+}
+
+@keyframes reschedule-options-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.reschedule-options-list__items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.reschedule-option-card {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: $space-3xs $space-sm;
+  text-align: left;
+  padding: $space-sm;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-md;
+  background-color: $primary-white;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:hover {
+    border-color: $primary-blue;
+  }
+
+  &.is-selected {
+    border-color: $secondary-blue;
+    background-color: $secondary-lightgrey;
+  }
+
+  &__time {
+    grid-column: 1 / 2;
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+  }
+
+  &__vehicle {
+    grid-column: 1 / 2;
+    font-size: $font-size-xs;
+    color: $text-lightgrey;
+  }
+
+  &__price {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    font-weight: $font-weight-semibold;
+    color: $secondary-blue;
+    text-align: right;
+  }
+
+  &__seats {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+    font-size: $font-size-xs;
+    color: $text-lightgrey;
+    text-align: right;
+  }
+}
