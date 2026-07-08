@@ -1,5 +1,22 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-08 — Frontend: usability-report-triage (OBRS-86) (SELF-FIXED)
+
+**Worktree:** `OBRS-frontend-wt-usability-report-triage` (branch `ao/usability-report-triage`, diff vs `origin/dev`)
+
+**Finding (self-fixed) — dark-mode `.admin-status.is-accepted` was light-green-on-light-green (~1.3:1, unreadable).**
+The new accepted pill added `--admin-accepted-text: #6fe08a` inside the `.admin-shell.is-dark`
+block, while leaving `--admin-accepted-bg: #b7f3c0` (a light pastel green) unchanged. Every
+OTHER status pill (success/warning/danger) is a self-contained pastel chip: light bg + dark
+text in BOTH themes — none override their text color in dark mode. The lone dark-mode text
+override put a light green (#6fe08a) on a light green bg → ~1.31:1 contrast, effectively invisible.
+**Fix:** removed the dark-mode `--admin-accepted-text` override so the pill keeps its light-mode
+dark-green text (#0a3d1d) on #b7f3c0 in dark mode too — ~9.8:1, readable, and consistent with
+the other pills. Still a distinct green vs the blue `is-success` "resolved" pill, so intent holds.
+**Pattern to remember:** the admin status pills are theme-agnostic pastel chips — do NOT add a
+dark-mode color override for a new status unless you override the *background* to a dark surface
+too. Match the existing token pattern (bg + text defined once in the light `.admin-shell` block).
+
 ## 2026-07-08 — Frontend: report-row-clickable (OBRS-82) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-report-row-clickable` (branch `sit/report-row-clickable`, diff vs `origin/dev`)
