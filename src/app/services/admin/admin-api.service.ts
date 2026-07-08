@@ -3,6 +3,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { Observable, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
@@ -793,6 +794,21 @@ export class AdminApiService {
     return this.getRequest<UsabilityReportPage>(
       `${this.baseUrl}/private/admin/usability-reports`
     );
+  }
+
+  // Backs the admin sidebar's "Usability Reports" nav badge — reuses the
+  // existing list endpoint with size=1 so only the pagination envelope
+  // (data.totalElements) is needed, not the report rows themselves.
+  getNewUsabilityReportCount(): Observable<number> {
+    const params = new HttpParams()
+      .set('status', 'new')
+      .set('size', '1')
+      .set('page', '0');
+
+    return this.getRequest<UsabilityReportPage>(
+      `${this.baseUrl}/private/admin/usability-reports`,
+      params
+    ).pipe(map((response) => response.data?.totalElements ?? 0));
   }
 
   getUsabilityReportById(id: string): Observable<ResponseAPI<UsabilityReportDetail>> {

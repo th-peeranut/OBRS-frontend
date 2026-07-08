@@ -1,11 +1,21 @@
 import { Component, OnInit } from '@angular/core';
+import { NavigationEnd } from '@angular/router';
+import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
+import { AdminApiService } from '../../services/admin/admin-api.service';
 
 interface AdminNavItem {
   path: string;
   labelKey: string;
   icon: string;
+  showBadge?: boolean;
 }
+
+// Cadence for the "Usability Reports" nav badge count. Separate from
+// ADMIN_POLL_INTERVAL_MS (admin-auto-refresh.ts) — that constant tunes the
+// operational list pages (bookings/dashboard); this is a lightweight,
+// always-on sidebar indicator with its own, deliberately slower cadence.
+const NEW_REPORT_COUNT_POLL_MS = 60_000;
 
 @Component({
   selector: 'app-admin-layout',
@@ -30,8 +40,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
     { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
     { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
-    { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report' },
+    { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
   ];
+
+  // Count of usability reports with status 'new'. Plain field (not a getter)
+  // so it doesn't churn change detection like navItems above — assigned once
+  // per fetch/poll tick.
+  protected newReportCount = 0;
+
+  constructor(private readonly adminApiService: AdminApiService) {
+    super();
+  }
 
   // Gate the Staff Area shortcut in the profile menu on the salesperson/driver
   // roles so admins who are not also staff don't see a link they cannot use.
@@ -41,5 +60,27 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
 
   override ngOnInit(): void {
     super.ngOnInit();
+    this.watchNewReportCount();
+  }
+
+  // Fetches the new-usability-report count on entering the admin area, then
+  // re-fetches every 60s and on every in-admin NavigationEnd (so triaging a
+  // report — new -> resolved — updates the badge promptly). A failed tick is
+  // swallowed via catchError so the outer subscription (and therefore the
+  // 60s interval) survives; the last known count is kept on error.
+  private watchNewReportCount(): void {
+    merge(
+      timer(0, NEW_REPORT_COUNT_POLL_MS),
+      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+    )
+      .pipe(
+        switchMap(() =>
+          this.adminApiService.getNewUsabilityReportCount().pipe(catchError(() => EMPTY))
+        ),
+        takeUntil(this.destroy$)
+      )
+      .subscribe((count) => {
+        this.newReportCount = count;
+      });
   }
 }

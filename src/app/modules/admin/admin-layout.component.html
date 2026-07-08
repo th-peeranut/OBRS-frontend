@@ -51,6 +51,11 @@
         >
           <span class="material-symbols-outlined">{{ item.icon }}</span>
           <span>{{ item.labelKey | translate }}</span>
+          <span
+            *ngIf="item.showBadge && newReportCount > 0"
+            class="admin-nav-badge"
+            [attr.aria-label]="'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA' | translate: { count: newReportCount }"
+          >{{ newReportCount > 99 ? '99+' : newReportCount }}</span>
         </a>
       </nav>
 
