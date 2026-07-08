@@ -836,10 +836,10 @@
     "APPLY_FAILED": "Unable to apply this code. Please try again.",
     "ERROR": {
       "NOT_FOUND": "This code does not exist.",
+      "NOT_APPLICABLE": "This code isn't applicable to your booking.",
       "INACTIVE": "This code is no longer active.",
-      "EXPIRED": "This code has expired.",
-      "NOT_YET_ACTIVE": "This code is not active yet.",
-      "MIN_AMOUNT_NOT_MET": "Your booking total does not meet the minimum amount for this code.",
+      "OUT_OF_WINDOW": "This code is not available right now.",
+      "BELOW_MINIMUM": "Your booking total does not meet the minimum amount for this code.",
       "USAGE_LIMIT_REACHED": "This code has reached its usage limit."
     }
   },

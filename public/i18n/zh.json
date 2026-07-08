@@ -835,10 +835,10 @@
     "APPLY_FAILED": "无法应用此代码，请重试。",
     "ERROR": {
       "NOT_FOUND": "此代码不存在。",
+      "NOT_APPLICABLE": "此代码不适用于您的预订。",
       "INACTIVE": "此代码已停用。",
-      "EXPIRED": "此代码已过期。",
-      "NOT_YET_ACTIVE": "此代码尚未生效。",
-      "MIN_AMOUNT_NOT_MET": "您的订票总额未达到此代码的最低金额要求。",
+      "OUT_OF_WINDOW": "此代码目前不可用。",
+      "BELOW_MINIMUM": "您的订票总额未达到此代码的最低金额要求。",
       "USAGE_LIMIT_REACHED": "此代码已达到使用次数上限。"
     }
   },

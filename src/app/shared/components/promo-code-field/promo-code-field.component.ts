@@ -14,16 +14,16 @@ export interface PromoCodeAppliedEvent {
   netAmount: number;
 }
 
-// The 6 recognized failure reasons the backend can return for a promo code
-// (see docs/handoff.md Contract Request — the validate endpoint doesn't
-// exist yet, so these are the frontend's assumed errorCode names). Anything
-// else falls back to a generic apply-failed message.
+// The exact 6 errorCode values the (locked) backend contract emits for a
+// promo code rejection. Note the backend COLLAPSES "expired" and "not yet
+// active" into a single OUT_OF_WINDOW code/message — there is no separate
+// EXPIRED code. Anything else falls back to a generic apply-failed message.
 const PROMO_ERROR_SUFFIXES = [
   'NOT_FOUND',
+  'NOT_APPLICABLE',
   'INACTIVE',
-  'EXPIRED',
-  'NOT_YET_ACTIVE',
-  'MIN_AMOUNT_NOT_MET',
+  'OUT_OF_WINDOW',
+  'BELOW_MINIMUM',
   'USAGE_LIMIT_REACHED',
 ] as const;
 

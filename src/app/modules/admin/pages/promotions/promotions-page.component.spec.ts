@@ -25,6 +25,7 @@ const SUMMER_SALE: PromotionRespDto = {
   discountValue: 10,
   maxDiscountAmount: 100,
   minBookingAmount: 500,
+  startDateTime: '2026-01-01T00:00:00+07:00',
   autoApply: false,
   usageLimit: 100,
   currentUsage: 3,
@@ -154,6 +155,7 @@ describe('PromotionsPageComponent', () => {
       code: 'WINTER10',
       discountType: 'percentage',
       discountValue: 10,
+      startDateTime: new Date('2026-06-01'),
       status: 'active',
       autoApply: 'false',
       enLabel: 'Winter Sale',
@@ -166,8 +168,36 @@ describe('PromotionsPageComponent', () => {
     expect(payload.slug).toBe('winter-sale');
     expect(payload.autoApply).toBeFalse();
     expect(payload.translations).toEqual([{ locale: 'en', label: 'Winter Sale', description: undefined }]);
+    // Backend @NotNull on minBookingAmount/usageLimit: blank -> 0 (their
+    // natural "no minimum"/"unlimited" value), never null.
+    expect(payload.minBookingAmount).toBe(0);
+    expect(payload.usageLimit).toBe(0);
     expect(alert.success).toHaveBeenCalled();
     expect(store.refresh).toHaveBeenCalled();
+  });
+
+  it('submitPromotion() warns and does not call the API when startDateTime is blank (backend @NotNull)', async () => {
+    const createSpy = jasmine.createSpy('createPromotion');
+    const { component, alert } = makeComponent({ createPromotion: createSpy });
+    component.ngOnInit();
+
+    component.openCreateModal();
+    component.promotionForm.patchValue({
+      slug: 'winter-sale',
+      code: 'WINTER10',
+      discountType: 'percentage',
+      discountValue: 10,
+      status: 'active',
+      autoApply: 'false',
+      enLabel: 'Winter Sale',
+      // startDateTime deliberately left blank.
+    });
+
+    await component.submitPromotion();
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect(alert.warning).toHaveBeenCalled();
+    expect(component.promotionForm.get('startDateTime')?.touched).toBeTrue();
   });
 
   it('submitPromotion() updates via PUT (full-replace) when in edit mode', async () => {

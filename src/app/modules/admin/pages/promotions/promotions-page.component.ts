@@ -93,8 +93,12 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
       discountType: ['', [Validators.required]],
       discountValue: [null, [Validators.required, Validators.min(0)]],
       maxDiscountAmount: [null, [Validators.min(0)]],
+      // Backend @NotNull: minBookingAmount/usageLimit always send a number
+      // (blank -> 0, their natural "no minimum"/"unlimited" value — see
+      // toPromotionPayload); startDateTime has no natural default, so it's
+      // Validators.required instead.
       minBookingAmount: [null, [Validators.min(0)]],
-      startDateTime: [null],
+      startDateTime: [null, [Validators.required]],
       endDateTime: [null],
       usageLimit: [null, [Validators.min(0)]],
       status: ['', [Validators.required]],
@@ -471,10 +475,12 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
       discountType: String(raw.discountType ?? '').trim().toLowerCase(),
       discountValue: this.toNumber(raw.discountValue) ?? 0,
       maxDiscountAmount: this.toNumber(raw.maxDiscountAmount),
-      minBookingAmount: this.toNumber(raw.minBookingAmount),
+      // Backend @NotNull — blank means "no minimum" / "unlimited", not
+      // absent, so default to 0 rather than sending null.
+      minBookingAmount: this.toNumber(raw.minBookingAmount) ?? 0,
       startDateTime: this.toIsoString(raw.startDateTime),
       endDateTime: this.toIsoString(raw.endDateTime),
-      usageLimit: this.toNumber(raw.usageLimit),
+      usageLimit: this.toNumber(raw.usageLimit) ?? 0,
       status: String(raw.status ?? '').trim().toLowerCase(),
       autoApply: String(raw.autoApply ?? '').trim().toLowerCase() === 'true',
       translations,
