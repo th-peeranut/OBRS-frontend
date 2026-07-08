@@ -504,9 +504,13 @@ export interface PromotionRespDto {
 
 // Partial payload — the promotions page only sends fields the admin actually
 // changed (design-system.md: don't overwrite fields the user didn't touch).
+// NOTE: the backend's RoundTripPromotionReqDto reads `active: boolean`, NOT a
+// `status` string — Spring silently drops unknown fields, so this must match
+// the wire contract exactly, even though PromotionRespDto (and the store) use
+// `status`. The page translates active<->status at its edges.
 export interface UpdateRoundTripPromotionPayload {
   discountValue?: number;
-  status?: string;
+  active?: boolean;
   startDateTime?: string | null;
   endDateTime?: string | null;
   minBookingAmount?: number;
@@ -861,17 +865,16 @@ export class AdminApiService {
   }
 
   // OBRS-85: the round-trip promotion is a singleton config row (slug
-  // 'round_trip'), so there is no {id} in the path — see docs/handoff.md
-  // Contract Requests for the assumed shape (not yet in OBRS-backend/docs/api).
+  // 'round_trip'), so there is no {id} in the path.
   getRoundTripPromotion(): Observable<ResponseAPI<PromotionRespDto>> {
-    return this.getRequest<PromotionRespDto>(`${this.baseUrl}/private/promotions/round-trip`);
+    return this.getRequest<PromotionRespDto>(`${this.baseUrl}/private/admin/promotions/round-trip`);
   }
 
   updateRoundTripPromotion(
     payload: UpdateRoundTripPromotionPayload
   ): Observable<ResponseAPI<unknown>> {
     return this.patchRequest<unknown>(
-      `${this.baseUrl}/private/promotions/round-trip`,
+      `${this.baseUrl}/private/admin/promotions/round-trip`,
       payload
     );
   }

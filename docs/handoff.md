@@ -46,38 +46,20 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
-### [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85)
-**Affected endpoint**: `GET /api/private/promotions/round-trip`, `PATCH /api/private/promotions/round-trip`
-**Request type**: New endpoint (not yet in `../OBRS-backend/docs/api/` or implemented in the backend worktree at time of writing)
+### [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85) — RESOLVED after Scrutinize
+**Affected endpoint**: `GET /api/private/admin/promotions/round-trip`, `PATCH /api/private/admin/promotions/round-trip`
+**Request type**: Corrected the frontend's assumed contract to match the real backend implementation (`AdminPromotionController`, `RoundTripPromotionReqDto`, `PromotionRespDto` — found in `OBRS-backend-wt-round-trip-discount`, which had landed since this entry was first written).
 
-### What the frontend needs
-| Field / Change | Location | Reason |
-|---|---|---|
-| `GET /api/private/promotions/round-trip` → `PromotionRespDto` | New endpoint | New `/admin/promotions` page (`AdminApiService.getRoundTripPromotion()`) reads the singleton round-trip promotion row (`Promotion` entity, `slug='round_trip'`, code `RT20` per `data.sql`). |
-| `PATCH /api/private/promotions/round-trip` accepting a **partial** body `{ discountValue?, status?, startDateTime?, endDateTime?, minBookingAmount? }` | New endpoint | The edit form only sends fields the admin actually changed. |
-| `status` value contract: `active` / `inactive` | Lookup category `promotion_status` | `data.sql` currently only seeds `('promotion_status', 'active')` — the UX spec calls for an Active/Inactive dropdown, so an `inactive` lookup row is also needed. |
+Scrutinize caught two contract breaks against the real backend and both are now fixed:
+1. **URL was missing `/admin`.** The frontend called `/api/private/promotions/round-trip`; the real path (per `EndpointConstant.PRIVATE_ADMIN_PROMOTIONS_ROUND_TRIP`) is `/api/private/admin/promotions/round-trip`. Fixed in `AdminApiService.getRoundTripPromotion()`/`updateRoundTripPromotion()`.
+2. **PATCH body sent `status: string`; the real `RoundTripPromotionReqDto` reads `active: Boolean`.** Spring silently drops unknown JSON fields, so the Status toggle was a no-op despite a success toast. Fixed: `UpdateRoundTripPromotionPayload.status` → `.active: boolean`; `promotions-page.component.ts` translates the Status dropdown's string value to a boolean at the wire boundary, and translates it back (`active` → `'active'|'inactive'`) only for the local optimistic `store.mutate` (the store's `PromotionRespDto` still models `status` as a string).
 
-### Suggested contract change
-`PromotionRespDto` shape assumed by the frontend (mirrors the `Promotion` JPA entity in `OBRS-backend/src/main/java/com/example/demo/model/Promotion.java`):
-```json
-{
-  "id": 1,
-  "slug": "round_trip",
-  "code": "RT20",
-  "discountType": { "slug": "percentage", "translations": { "en": { "label": "Percentage" } } },
-  "status": { "slug": "active", "translations": { "en": { "label": "Active" } } },
-  "discountValue": 20.00,
-  "minBookingAmount": 200.00,
-  "startDateTime": "2026-01-01T00:00:00+07:00",
-  "endDateTime": "2026-12-31T23:59:59+07:00",
-  "usageLimit": 10000,
-  "currentUsage": 25
-}
-```
-Authorization per the UX spec's Finding 4: ADMIN and OWNER should both be able to PATCH this, but today the `/admin` route guard only admits `admin` — see the frontend's `AGENT_MEMORY.md` (2026-07-08 entry) for the flagged gap; not resolved by this ticket.
+**Also confirmed from the real backend (not yet acted on — flagging for awareness):**
+- `AdminPromotionController` guards both GET and PATCH with `@PreAuthorize("hasRole('OWNER')")` — **ADMIN cannot call this endpoint, only OWNER can.** Combined with the frontend's Finding 4 (the `/admin` route guard only admits `requiredRoles: ['admin']`, and role-hierarchy expansion only goes *downward* from admin, not up from owner to admin), **no session can currently reach a working `/admin/promotions` page**: an ADMIN session can open the page but every save gets a 403; an OWNER session can't open `/admin` at all. This is a real end-to-end gap, not just the two items Scrutinize flagged — recommend the SA/PM decide whether the route guard should admit `owner` for this page, or the backend should also allow `ADMIN`.
+- `PromotionRespDto` (backend, actual): `status` and `discountType` are plain `String`, not `{slug, translations}` objects as this frontend's `PromotionRespDto` type optimistically allowed for (`string | AdminStatusDto` — the union still works at runtime via `parseAdminStatus`, so no frontend change was needed here). The backend response also carries `maxDiscountAmount` and `autoApply`, which this frontend does not read (not required by the UX spec's field list).
 
 ### Impact if not addressed
-`/admin/promotions` calls an endpoint that doesn't exist yet; the page shows its load-failed state (`ADMIN.PROMOTIONS.LOAD_FAILED`) until the backend implements it. The frontend code is otherwise complete and was built directly against this assumed contract.
+The two Scrutinize-flagged breaks made `/admin/promotions` completely non-functional end-to-end (wrong URL = 404 on load; wrong PATCH field = silent no-op save) — both are now fixed and covered by `admin-api.service.spec.ts` (exact URL + exact PATCH body assertions). The OWNER/ADMIN role-guard mismatch above is a separate, still-open gap.
 
 ---
 

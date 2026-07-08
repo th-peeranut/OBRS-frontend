@@ -135,8 +135,11 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     // Optimistic: reflect the change locally before the background revalidate
-    // lands, so re-entering this page (SWR cache) shows it immediately.
-    this.store.mutate((current) => ({ ...current, ...payload }));
+    // lands, so re-entering this page (SWR cache) shows it immediately. The
+    // store holds PromotionRespDto (status: string) while the wire payload
+    // carries `active: boolean` (RoundTripPromotionReqDto) — translate here.
+    const optimisticPatch = this.toOptimisticPatch(payload);
+    this.store.mutate((current) => ({ ...current, ...optimisticPatch }));
 
     try {
       await firstValueFrom(this.adminApiService.updateRoundTripPromotion(payload));
@@ -159,7 +162,9 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
 
   // Only a control the admin actually touched (dirty) is sent — the backend
   // PATCH is partial, so untouched fields must never be forced back to their
-  // currently-displayed value.
+  // currently-displayed value. NOTE: the wire contract is
+  // RoundTripPromotionReqDto, which reads `active: boolean` — NOT `status` —
+  // so the Status dropdown's string value is translated to a boolean here.
   private buildPartialPayload(): UpdateRoundTripPromotionPayload {
     const raw = this.promotionForm.getRawValue();
     const payload: UpdateRoundTripPromotionPayload = {};
@@ -168,7 +173,7 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
       payload.discountValue = this.toNumber(raw.discountValue) ?? 0;
     }
     if (this.promotionForm.get('status')?.dirty) {
-      payload.status = String(raw.status ?? '').trim().toLowerCase();
+      payload.active = String(raw.status ?? '').trim().toLowerCase() === 'active';
     }
     if (this.promotionForm.get('startDateTime')?.dirty) {
       payload.startDateTime = this.toIsoString(raw.startDateTime);
@@ -181,6 +186,21 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
     }
 
     return payload;
+  }
+
+  // The store holds PromotionRespDto (status: 'active' | 'inactive' string);
+  // the wire payload holds RoundTripPromotionReqDto's `active: boolean`. This
+  // translates the latter back to the former ONLY for the optimistic local
+  // update — the real value is confirmed by the store.refresh() that follows.
+  private toOptimisticPatch(
+    payload: UpdateRoundTripPromotionPayload
+  ): Partial<PromotionRespDto> {
+    const { active, ...rest } = payload;
+    const patch: Partial<PromotionRespDto> = { ...rest };
+    if (active !== undefined) {
+      patch.status = active ? 'active' : 'inactive';
+    }
+    return patch;
   }
 
   private applyFormValues(promotion: PromotionRespDto, onlyPristine: boolean): void {

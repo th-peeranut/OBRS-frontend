@@ -115,6 +115,50 @@ describe('PromotionsPageComponent', () => {
     expect(updateSpy).toHaveBeenCalledOnceWith({ discountValue: 25 });
   });
 
+  it('toggling Status sends `{ active: boolean }` on the wire, matching RoundTripPromotionReqDto — NOT `status`', async () => {
+    const updateSpy = jasmine
+      .createSpy('updateRoundTripPromotion')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+    const { component, store } = makeComponent({ updateRoundTripPromotion: updateSpy });
+
+    component.ngOnInit();
+    store.data$.next({ ...PROMOTION }); // status: 'active'
+
+    component.promotionForm.get('status')?.markAsDirty();
+    component.promotionForm.get('status')?.setValue('inactive');
+
+    await component.save();
+
+    expect(updateSpy).toHaveBeenCalledOnceWith({ active: false });
+
+    // Reset and flip the other way.
+    updateSpy.calls.reset();
+    component.promotionForm.get('status')?.markAsDirty();
+    component.promotionForm.get('status')?.setValue('active');
+    await component.save();
+
+    expect(updateSpy).toHaveBeenCalledOnceWith({ active: true });
+  });
+
+  it('optimistically writes the store status (string) even though the wire payload sent `active` (boolean)', async () => {
+    const updateSpy = jasmine
+      .createSpy('updateRoundTripPromotion')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+    const { component, store } = makeComponent({ updateRoundTripPromotion: updateSpy });
+
+    component.ngOnInit();
+    store.data$.next({ ...PROMOTION }); // status: 'active'
+
+    component.promotionForm.get('status')?.markAsDirty();
+    component.promotionForm.get('status')?.setValue('inactive');
+
+    await component.save();
+
+    const optimisticValue = store.data$.value as PromotionRespDto;
+    expect(optimisticValue.status).toBe('inactive');
+    expect((optimisticValue as unknown as { active?: boolean }).active).toBeUndefined();
+  });
+
   it('on save success: shows the success alert, marks the form pristine, and refreshes the store', async () => {
     const updateSpy = jasmine
       .createSpy('updateRoundTripPromotion')
