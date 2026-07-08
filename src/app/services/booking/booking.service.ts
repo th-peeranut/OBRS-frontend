@@ -16,6 +16,10 @@ import {
   RescheduleOption,
   RescheduleResult,
 } from '../../shared/interfaces/reschedule.interface';
+import {
+  ChangeSeatAvailability,
+  ChangeSeatResult,
+} from '../../shared/interfaces/change-seat.interface';
 import { PageResponse } from '../../shared/interfaces/payment.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
@@ -194,6 +198,29 @@ export class BookingService {
     return this.http.post<ResponseAPI<RescheduleResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/reschedule`,
       payload,
+      { context: this.silentContext() }
+    );
+  }
+
+  /** Load the candidate seat map for a booking's (single, one-way) leg ahead
+   * of picking new seats. The dialog handles its own inline error states. */
+  getChangeSeatAvailability(
+    bookingId: number
+  ): Observable<ResponseAPI<ChangeSeatAvailability>> {
+    return this.http.get<ResponseAPI<ChangeSeatAvailability>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/change-seat/availability`,
+      { context: this.silentContext() }
+    );
+  }
+
+  /** Confirm the seat change; always resolves `CONFIRMED` — no payment step. */
+  confirmChangeSeat(
+    bookingId: number,
+    seatAssignments: Record<number, string>
+  ): Observable<ResponseAPI<ChangeSeatResult>> {
+    return this.http.post<ResponseAPI<ChangeSeatResult>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/change-seat`,
+      { seatAssignments },
       { context: this.silentContext() }
     );
   }

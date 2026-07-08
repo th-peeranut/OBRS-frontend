@@ -104,6 +104,39 @@
         "UNAUTHORIZED": "您无权改签此预订。",
         "GENERIC": "无法改签此预订，请重试。"
       }
+    },
+    "CHANGE_SEAT": {
+      "ACTION": "更改座位",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能更改座位",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改座位",
+        "ALREADY_USED": "此预订已更改过一次座位",
+        "NO_WINDOW": "距离出发时间太近，无法更改座位"
+      },
+      "DIALOG_TITLE": "更改您的座位",
+      "MAP_LOADING": "正在加载座位图…",
+      "PASSENGER_STEP": "乘客 {{index}}／{{total}}",
+      "LEGEND": {
+        "AVAILABLE": "可选",
+        "OCCUPIED": "已占用",
+        "SELECTED": "已选择"
+      },
+      "NO_SEATS": "该班次没有可用座位。",
+      "CONFIRM_BUTTON": "确认新座位",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "座位已更改。",
+      "ERROR": {
+        "NOT_CONFIRMED": "此预订已无法更改座位（状态不是已确认）。",
+        "MAX_COUNT": "此预订已更改过一次座位，无法再次更改。",
+        "WINDOW_CLOSED": "该班次距离现在太近，无法再更改座位。",
+        "SEAT_UNAVAILABLE": "该座位已不可用，请另选一个。",
+        "SEAT_NOT_IN_MAP": "该座位不在此车辆的座位图中，请另选一个。",
+        "TICKET_MISMATCH": "自打开此窗口以来您的车票已发生变化，请重试。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改座位。",
+        "UNAUTHORIZED": "您无权更改此预订的座位。",
+        "BOOKING_NOT_FOUND": "此预订已不可用。",
+        "GENERIC": "无法更改座位，请重试。"
+      }
     }
   },
   "CALENDAR": {

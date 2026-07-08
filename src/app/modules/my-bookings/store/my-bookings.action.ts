@@ -10,6 +10,11 @@ import {
   RescheduleResult,
   RescheduleSeatAssignment,
 } from '../../../shared/interfaces/reschedule.interface';
+import {
+  ChangeSeatAvailability,
+  ChangeSeatResult,
+  ChangeSeatTicket,
+} from '../../../shared/interfaces/change-seat.interface';
 
 // --- Load my bookings ---
 export const invokeLoadMyBookingsApi = createAction(
@@ -162,3 +167,64 @@ export const rescheduleSettled = createAction('[MyBookings API] Reschedule settl
 export const rescheduleAbandoned = createAction(
   '[MyBookings API] Reschedule abandoned during payment'
 );
+
+// --- Change seat dialog (OBRS-110) ---
+
+/** Opens the dialog optimistically (synchronous, no awaited fetch). */
+export const openChangeSeatDialog = createAction(
+  '[MyBookings API] Open change seat dialog',
+  props<{ bookingId: number }>()
+);
+
+export const closeChangeSeatDialog = createAction(
+  '[MyBookings API] Close change seat dialog'
+);
+
+export const loadChangeSeatAvailability = createAction(
+  '[MyBookings API] Invoke to load change seat availability',
+  props<{ bookingId: number }>()
+);
+
+export const loadChangeSeatAvailabilitySuccess = createAction(
+  '[MyBookings API] Load change seat availability success',
+  props<{ availability: ChangeSeatAvailability }>()
+);
+
+export const loadChangeSeatAvailabilityFailure = createAction(
+  '[MyBookings API] Load change seat availability failure',
+  props<{ error: string }>()
+);
+
+export const loadChangeSeatTickets = createAction(
+  '[MyBookings API] Invoke to load change seat tickets',
+  props<{ bookingId: number }>()
+);
+
+export const loadChangeSeatTicketsSuccess = createAction(
+  '[MyBookings API] Load change seat tickets success',
+  props<{ tickets: ChangeSeatTicket[] }>()
+);
+
+export const loadChangeSeatTicketsFailure = createAction(
+  '[MyBookings API] Load change seat tickets failure',
+  props<{ error: string }>()
+);
+
+export const confirmChangeSeat = createAction(
+  '[MyBookings API] Invoke to confirm change seat',
+  props<{ bookingId: number; seatAssignments: Record<number, string> }>()
+);
+
+export const confirmChangeSeatSuccess = createAction(
+  '[MyBookings API] Confirm change seat success',
+  props<{ result: ChangeSeatResult }>()
+);
+
+export const confirmChangeSeatFailure = createAction(
+  '[MyBookings API] Confirm change seat failure',
+  props<{ errorCode: string; error: string }>()
+);
+
+/** `POST .../change-seat` settled (CONFIRMED) — success toast + list refresh
+ * + close, never gated behind the refresh. */
+export const changeSeatSettled = createAction('[MyBookings API] Change seat settled');

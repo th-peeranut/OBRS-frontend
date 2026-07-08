@@ -1,0 +1,37 @@
+<div class="change-seat-map">
+  <div class="change-seat-map__grid">
+    <app-passenger-seat-van
+      *ngIf="isVan"
+      [gender]="'SELECTED'"
+      [takenSeats]="takenSeats"
+      [currentSeat]="pickedSeat"
+      [availableSeatNumbers]="availableSeatNumbers"
+      [seatGenders]="seatGenders"
+      (seatClicked)="onSeatClicked($event)"
+    ></app-passenger-seat-van>
+
+    <app-passenger-seat-bus
+      *ngIf="!isVan"
+      [gender]="'SELECTED'"
+      [takenSeats]="takenSeats"
+      [currentSeat]="pickedSeat"
+      [seatGenders]="seatGenders"
+      (seatClicked)="onSeatClicked($event)"
+    ></app-passenger-seat-bus>
+  </div>
+
+  <ul class="change-seat-map__legend">
+    <li>
+      <span class="legend-swatch legend-swatch--available"></span>
+      {{ "MY_BOOKINGS.CHANGE_SEAT.LEGEND.AVAILABLE" | translate }}
+    </li>
+    <li>
+      <span class="legend-swatch legend-swatch--occupied"></span>
+      {{ "MY_BOOKINGS.CHANGE_SEAT.LEGEND.OCCUPIED" | translate }}
+    </li>
+    <li>
+      <span class="legend-swatch legend-swatch--selected"></span>
+      {{ "MY_BOOKINGS.CHANGE_SEAT.LEGEND.SELECTED" | translate }}
+    </li>
+  </ul>
+</div>

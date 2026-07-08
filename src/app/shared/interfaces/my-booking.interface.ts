@@ -56,6 +56,18 @@ export interface MyBookingDto {
    * response. See OBRS-backend/docs/api/booking.md `GET /bookings/me`.
    */
   rescheduleCount?: number;
+  /**
+   * Number of times this booking has already had a seat changed (0 or 1 — a
+   * booking can only have its seat changed once). Drives up-front
+   * eligibility gating for the Change seat action without waiting for a
+   * `CHANGE_SEAT_ERROR_MAX_COUNT` response. See
+   * OBRS-backend/docs/api/booking.md `GET /bookings/me`.
+   */
+  seatChangeCount?: number;
+  /** Stop-change counterpart of `seatChangeCount` — not yet consumed by the
+   * frontend (a future wave); carried here only so the DTO shape matches the
+   * backend response. */
+  stopChangeCount?: number;
   contact?: MyBookingContactDto;
   bookingSchedules?: MyBookingScheduleDto[];
 }
@@ -100,6 +112,10 @@ export interface MyBookingView {
   rescheduleEligible: boolean;
   /** i18n key for the disabled-reason tooltip; null when `rescheduleEligible`. */
   rescheduleReasonKey: string | null;
+  /** Change seat action is enabled — the card MUST still render it (disabled) otherwise. */
+  changeSeatEligible: boolean;
+  /** i18n key for the disabled-reason tooltip; null when `changeSeatEligible`. */
+  changeSeatReasonKey: string | null;
 }
 
 /** A booking can only be cancelled by the traveler while it is `confirmed`. */

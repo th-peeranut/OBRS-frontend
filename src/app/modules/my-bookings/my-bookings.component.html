@@ -142,4 +142,10 @@
   (closed)="onRescheduleDialogClosed()"
 ></app-reschedule-dialog>
 
+<app-change-seat-dialog
+  *ngIf="changeSeatDialogBookingId$ | async as changeSeatBookingId"
+  [bookingId]="changeSeatBookingId"
+  (closed)="onChangeSeatDialogClosed()"
+></app-change-seat-dialog>
+
 <app-footer></app-footer>

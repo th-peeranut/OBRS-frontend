@@ -15,13 +15,17 @@ import {
   normalizeStatusCode,
   toAmountNumber,
 } from '../../shared/interfaces/my-booking.interface';
+import { CHANGE_SEAT_WINDOW_HOURS } from '../../shared/interfaces/change-seat.interface';
 import {
+  closeChangeSeatDialog,
   closeRescheduleDialog,
   invokeLoadMyBookingsApi,
+  openChangeSeatDialog,
   openRescheduleDialog,
   requestCancelBooking,
 } from './store/my-bookings.action';
 import {
+  selectChangeSeatDialogBookingId,
   selectMyBookings,
   selectRescheduleDialogBookingId,
 } from './store/my-bookings.selector';
@@ -35,6 +39,11 @@ interface MyBookingsVm {
 }
 
 interface RescheduleEligibility {
+  eligible: boolean;
+  reasonKey: string | null;
+}
+
+interface ChangeSeatEligibility {
   eligible: boolean;
   reasonKey: string | null;
 }
@@ -72,6 +81,10 @@ export class MyBookingsComponent implements OnInit {
   /** Booking whose reschedule dialog is open — NgRx-driven so the dialog
    * opens optimistically the instant `openRescheduleDialog` dispatches. */
   rescheduleDialogBookingId$!: Observable<number | null>;
+
+  /** Booking whose change-seat dialog is open — same optimistic-open
+   * contract as `rescheduleDialogBookingId$` (OBRS-110). */
+  changeSeatDialogBookingId$!: Observable<number | null>;
 
   /** Single shared popup menu, rebuilt per row on open — same pattern as
    * `WalkInTripBrowserComponent.tripActionMenu` (staff module). */
@@ -117,6 +130,7 @@ export class MyBookingsComponent implements OnInit {
     );
 
     this.rescheduleDialogBookingId$ = this.store.select(selectRescheduleDialogBookingId);
+    this.changeSeatDialogBookingId$ = this.store.select(selectChangeSeatDialogBookingId);
 
     this.store.dispatch(invokeLoadMyBookingsApi({ status: null }));
   }
@@ -167,6 +181,15 @@ export class MyBookingsComponent implements OnInit {
       command: () => this.onReschedule(booking),
     });
 
+    items.push({
+      label: this.translate.instant('MY_BOOKINGS.CHANGE_SEAT.ACTION'),
+      disabled: !booking.changeSeatEligible,
+      reasonText: booking.changeSeatEligible
+        ? undefined
+        : this.translate.instant(booking.changeSeatReasonKey ?? ''),
+      command: () => this.onChangeSeat(booking),
+    });
+
     if (booking.cancellable) {
       items.push({
         label: this.translate.instant('MY_BOOKINGS.CANCEL.ACTION'),
@@ -201,6 +224,19 @@ export class MyBookingsComponent implements OnInit {
 
   onRescheduleDialogClosed(): void {
     this.store.dispatch(closeRescheduleDialog());
+  }
+
+  /** Opens the change-seat dialog optimistically — the dialog itself owns
+   * its own background data loads (design-system §6). */
+  onChangeSeat(booking: MyBookingView): void {
+    if (!booking.changeSeatEligible) {
+      return;
+    }
+    this.store.dispatch(openChangeSeatDialog({ bookingId: booking.id }));
+  }
+
+  onChangeSeatDialogClosed(): void {
+    this.store.dispatch(closeChangeSeatDialog());
   }
 
   /** Open the e-ticket modal for a paid booking. */
@@ -252,6 +288,7 @@ export class MyBookingsComponent implements OnInit {
     const statusCode = normalizeStatusCode(booking.status);
     const totalAmount = toAmountNumber(booking.totalAmount);
     const rescheduleEligibility = this.computeRescheduleEligibility(booking, statusCode, schedules);
+    const changeSeatEligibility = this.computeChangeSeatEligibility(booking, statusCode, schedules);
 
     return {
       id: booking.id,
@@ -268,6 +305,8 @@ export class MyBookingsComponent implements OnInit {
       paid: statusCode === CANCELLABLE_BOOKING_STATUS,
       rescheduleEligible: rescheduleEligibility.eligible,
       rescheduleReasonKey: rescheduleEligibility.reasonKey,
+      changeSeatEligible: changeSeatEligibility.eligible,
+      changeSeatReasonKey: changeSeatEligibility.reasonKey,
     };
   }
 
@@ -298,6 +337,39 @@ export class MyBookingsComponent implements OnInit {
     const departure = dayjs(schedules?.[0]?.departureDateTime);
     if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= RESCHEDULE_WINDOW_HOURS) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.RESCHEDULE.REASON.NO_WINDOW' };
+    }
+
+    return { eligible: true, reasonKey: null };
+  }
+
+  /**
+   * Mirrors the backend's change-seat prerequisites (OBRS-110; see
+   * OBRS-backend/docs/api/booking.md) so the card never presents Change seat
+   * as available when the server would reject it. First failing check wins;
+   * the server remains the final authority. Unlike reschedule, there is no
+   * 30-day/TOO_FAR check — change-seat only cares about the 4h window.
+   */
+  private computeChangeSeatEligibility(
+    booking: MyBookingDto,
+    statusCode: string,
+    schedules: MyBookingDto['bookingSchedules']
+  ): ChangeSeatEligibility {
+    if (statusCode !== CANCELLABLE_BOOKING_STATUS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_CONFIRMED' };
+    }
+
+    const bookingType = normalizeStatusCode(booking.bookingType) || 'one_way';
+    if (bookingType !== 'one_way' || (schedules?.length ?? 0) !== 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_ONE_WAY' };
+    }
+
+    if (Number(booking.seatChangeCount ?? 0) >= 1) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.ALREADY_USED' };
+    }
+
+    const departure = dayjs(schedules?.[0]?.departureDateTime);
+    if (!departure.isValid() || departure.diff(dayjs(), 'hour', true) <= CHANGE_SEAT_WINDOW_HOURS) {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NO_WINDOW' };
     }
 
     return { eligible: true, reasonKey: null };

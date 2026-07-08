@@ -4,13 +4,23 @@ import {
   cancelBookingDismissed,
   cancelBookingFailure,
   cancelBookingSuccess,
+  closeChangeSeatDialog,
   closeRescheduleDialog,
+  confirmChangeSeat,
+  confirmChangeSeatFailure,
+  confirmChangeSeatSuccess,
   confirmReschedule,
   confirmRescheduleFailure,
   confirmRescheduleSuccess,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
+  loadChangeSeatAvailability,
+  loadChangeSeatAvailabilityFailure,
+  loadChangeSeatAvailabilitySuccess,
+  loadChangeSeatTickets,
+  loadChangeSeatTicketsFailure,
+  loadChangeSeatTicketsSuccess,
   loadRescheduleEstimate,
   loadRescheduleEstimateFailure,
   loadRescheduleEstimateSuccess,
@@ -23,6 +33,7 @@ import {
   loadStopsLookup,
   loadStopsLookupFailure,
   loadStopsLookupSuccess,
+  openChangeSeatDialog,
   openRescheduleDialog,
   requestCancelBooking,
   rescheduleRequiresPayment,
@@ -193,5 +204,85 @@ export const myBookingsReducer = createReducer(
   on(rescheduleRequiresPayment, (state, { bookingId, paymentIntentId }) => ({
     ...state,
     reschedulePendingPayment: { bookingId, paymentIntentId },
+  })),
+
+  // --- Change seat dialog (OBRS-110) ---
+  on(openChangeSeatDialog, (state, { bookingId }) => ({
+    ...state,
+    changeSeatDialogBookingId: bookingId,
+    // Reset any leftover state from a previous dialog session.
+    changeSeatAvailability: null,
+    changeSeatAvailabilityLoading: true,
+    changeSeatAvailabilityError: null,
+    changeSeatTickets: [],
+    changeSeatTicketsLoading: true,
+    changeSeatTicketsError: null,
+    changeSeatSubmitting: false,
+    changeSeatConfirmError: null,
+    changeSeatConfirmErrorCode: null,
+  })),
+  on(closeChangeSeatDialog, (state) => ({
+    ...state,
+    changeSeatDialogBookingId: null,
+    changeSeatAvailability: null,
+    changeSeatAvailabilityLoading: false,
+    changeSeatAvailabilityError: null,
+    changeSeatTickets: [],
+    changeSeatTicketsLoading: false,
+    changeSeatTicketsError: null,
+    changeSeatSubmitting: false,
+    changeSeatConfirmError: null,
+    changeSeatConfirmErrorCode: null,
+  })),
+
+  on(loadChangeSeatAvailability, (state) => ({
+    ...state,
+    changeSeatAvailabilityLoading: true,
+    changeSeatAvailabilityError: null,
+  })),
+  on(loadChangeSeatAvailabilitySuccess, (state, { availability }) => ({
+    ...state,
+    changeSeatAvailability: availability,
+    changeSeatAvailabilityLoading: false,
+    changeSeatAvailabilityError: null,
+  })),
+  on(loadChangeSeatAvailabilityFailure, (state, { error }) => ({
+    ...state,
+    changeSeatAvailabilityLoading: false,
+    changeSeatAvailabilityError: error,
+  })),
+
+  on(loadChangeSeatTickets, (state) => ({
+    ...state,
+    changeSeatTicketsLoading: true,
+    changeSeatTicketsError: null,
+  })),
+  on(loadChangeSeatTicketsSuccess, (state, { tickets }) => ({
+    ...state,
+    changeSeatTickets: tickets,
+    changeSeatTicketsLoading: false,
+    changeSeatTicketsError: null,
+  })),
+  on(loadChangeSeatTicketsFailure, (state, { error }) => ({
+    ...state,
+    changeSeatTicketsLoading: false,
+    changeSeatTicketsError: error,
+  })),
+
+  on(confirmChangeSeat, (state) => ({
+    ...state,
+    changeSeatSubmitting: true,
+    changeSeatConfirmError: null,
+    changeSeatConfirmErrorCode: null,
+  })),
+  on(confirmChangeSeatSuccess, (state) => ({
+    ...state,
+    changeSeatSubmitting: false,
+  })),
+  on(confirmChangeSeatFailure, (state, { errorCode, error }) => ({
+    ...state,
+    changeSeatSubmitting: false,
+    changeSeatConfirmError: error,
+    changeSeatConfirmErrorCode: errorCode,
   }))
 );

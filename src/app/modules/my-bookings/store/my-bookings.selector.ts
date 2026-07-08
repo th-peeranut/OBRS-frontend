@@ -108,3 +108,60 @@ export const selectReschedulePendingPayment = createSelector(
   selectMyBookings,
   (state) => state.reschedulePendingPayment
 );
+
+// --- Change seat dialog (OBRS-110) ---
+
+export const selectChangeSeatDialogBookingId = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatDialogBookingId
+);
+
+export const selectChangeSeatBooking = createSelector(
+  selectMyBookings,
+  (state) => state.bookings.find((b) => b.id === state.changeSeatDialogBookingId) ?? null
+);
+
+export const selectChangeSeatAvailability = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatAvailability
+);
+
+export const selectChangeSeatAvailabilityLoading = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatAvailabilityLoading
+);
+
+export const selectChangeSeatAvailabilityError = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatAvailabilityError
+);
+
+export const selectChangeSeatTickets = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatTickets
+);
+
+export const selectChangeSeatTicketsLoading = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatTicketsLoading
+);
+
+export const selectChangeSeatTicketsError = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatTicketsError
+);
+
+export const selectChangeSeatSubmitting = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatSubmitting
+);
+
+export const selectChangeSeatConfirmError = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatConfirmError
+);
+
+export const selectChangeSeatConfirmErrorCode = createSelector(
+  selectMyBookings,
+  (state) => state.changeSeatConfirmErrorCode
+);
