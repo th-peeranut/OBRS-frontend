@@ -10,16 +10,29 @@
   justify-content: center;
   min-height: 100vh;
   padding: $space-sm;
+  // Clip the blurred/scaled brand backdrop to the viewport. The language
+  // dropdown opens downward inside the card, well within these bounds, so it
+  // is not affected.
+  overflow: hidden;
   background: linear-gradient(160deg, $primary-lightblue 0%, $primary-white 60%);
 
-  // AMBIENT BRAND BACKDROP — faded illustration behind the card (decorative).
+  // AMBIENT BRAND BACKDROP — the bus-station illustration, blurred and anchored
+  // to the bottom, fading out toward the top. Reads as a soft brand "ground"
+  // under the card without the detailed scene (TICKETS sign, figures) competing
+  // for attention. Decorative only. scale() pushes the blur halo off-screen so
+  // no transparent edge shows.
   .login-bg {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.1;
+    object-position: bottom;
+    opacity: 0.22;
+    filter: blur(4px);
+    transform: scale(1.06);
+    -webkit-mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 78%);
+    mask-image: linear-gradient(to top, #000 0%, #000 30%, transparent 78%);
     pointer-events: none;
     z-index: 0;
   }
