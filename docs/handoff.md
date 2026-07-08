@@ -46,6 +46,41 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85)
+**Affected endpoint**: `GET /api/private/promotions/round-trip`, `PATCH /api/private/promotions/round-trip`
+**Request type**: New endpoint (not yet in `../OBRS-backend/docs/api/` or implemented in the backend worktree at time of writing)
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/promotions/round-trip` → `PromotionRespDto` | New endpoint | New `/admin/promotions` page (`AdminApiService.getRoundTripPromotion()`) reads the singleton round-trip promotion row (`Promotion` entity, `slug='round_trip'`, code `RT20` per `data.sql`). |
+| `PATCH /api/private/promotions/round-trip` accepting a **partial** body `{ discountValue?, status?, startDateTime?, endDateTime?, minBookingAmount? }` | New endpoint | The edit form only sends fields the admin actually changed. |
+| `status` value contract: `active` / `inactive` | Lookup category `promotion_status` | `data.sql` currently only seeds `('promotion_status', 'active')` — the UX spec calls for an Active/Inactive dropdown, so an `inactive` lookup row is also needed. |
+
+### Suggested contract change
+`PromotionRespDto` shape assumed by the frontend (mirrors the `Promotion` JPA entity in `OBRS-backend/src/main/java/com/example/demo/model/Promotion.java`):
+```json
+{
+  "id": 1,
+  "slug": "round_trip",
+  "code": "RT20",
+  "discountType": { "slug": "percentage", "translations": { "en": { "label": "Percentage" } } },
+  "status": { "slug": "active", "translations": { "en": { "label": "Active" } } },
+  "discountValue": 20.00,
+  "minBookingAmount": 200.00,
+  "startDateTime": "2026-01-01T00:00:00+07:00",
+  "endDateTime": "2026-12-31T23:59:59+07:00",
+  "usageLimit": 10000,
+  "currentUsage": 25
+}
+```
+Authorization per the UX spec's Finding 4: ADMIN and OWNER should both be able to PATCH this, but today the `/admin` route guard only admits `admin` — see the frontend's `AGENT_MEMORY.md` (2026-07-08 entry) for the flagged gap; not resolved by this ticket.
+
+### Impact if not addressed
+`/admin/promotions` calls an endpoint that doesn't exist yet; the page shows its load-failed state (`ADMIN.PROMOTIONS.LOAD_FAILED`) until the backend implements it. The frontend code is otherwise complete and was built directly against this assumed contract.
+
+---
+
 ### [Frontend] 2026-06-15 — Admin booking list endpoint missing from API docs
 **Affected endpoint**: `GET /api/private/admin/bookings`
 **Request type**: New endpoint (or documentation of existing endpoint)

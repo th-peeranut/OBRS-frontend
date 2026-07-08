@@ -67,15 +67,51 @@
 
     <hr class="dotted-line" />
 
-    <div class="card-footer">
-      <span>
-        {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
-      </span>
-      <span>
-        {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
-        {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
-      </span>
-    </div>
+    <ng-container *ngIf="this.booking | async as booking; else totalOnly">
+      <ng-container *ngIf="hasDiscount(booking); else totalOnly">
+        <div class="card-footer card-footer--subtle">
+          <span>
+            {{ "PAYMENT.SUMMARY.SUBTOTAL" | translate }}
+          </span>
+          <span>
+            {{ booking.totalAmount }}
+            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+          </span>
+        </div>
+
+        <div class="card-footer card-footer--subtle card-footer--discount">
+          <span>
+            {{ "PAYMENT.SUMMARY.DISCOUNT_ROUND_TRIP" | translate }}
+          </span>
+          <span>
+            -{{ booking.discountAmountSnapshot }}
+            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+          </span>
+        </div>
+
+        <div class="card-footer">
+          <span>
+            {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+          </span>
+          <span>
+            {{ booking.netAmount }}
+            {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+          </span>
+        </div>
+      </ng-container>
+    </ng-container>
+
+    <ng-template #totalOnly>
+      <div class="card-footer">
+        <span>
+          {{ "PAYMENT.SUMMARY.TOTAL" | translate }}
+        </span>
+        <span>
+          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+          {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}
+        </span>
+      </div>
+    </ng-template>
   </ng-container>
 </div>
 

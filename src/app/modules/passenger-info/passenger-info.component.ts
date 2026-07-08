@@ -20,6 +20,7 @@ import { parsePricePerSeat } from '../../shared/lib/trip-format';
 import {
   BookingPayload,
   BookingSchedulePayload,
+  CreateBookingResponse,
 } from '../../shared/interfaces/booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
@@ -118,7 +119,7 @@ export class PassengerInfoComponent {
           const bookingId = response.data?.bookingId || null;
           const bookingNumber = response.data?.bookingNumber || null;
           this.bookingService.setActiveBookingId(bookingId);
-          this.setBookingStore(bookingId, bookingNumber);
+          this.setBookingStore(bookingId, bookingNumber, response.data);
           this.alertService.success(
             this.translateService.instant(
               'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
@@ -365,13 +366,20 @@ export class PassengerInfoComponent {
 
   private setBookingStore(
     bookingId: number | null,
-    bookingNumber: string | null
+    bookingNumber: string | null,
+    createBookingData?: CreateBookingResponse
   ): void {
     this.store.dispatch(
       invokeSetBookingApi({
         booking: {
           bookingId,
           bookingNumber,
+          // OBRS-85: forward the server-computed discount snapshot as-is; the
+          // booking store is the single seam PaymentSummaryComponent reads
+          // from, so no other component needs to know about these fields.
+          totalAmount: createBookingData?.totalAmount,
+          discountAmountSnapshot: createBookingData?.discountAmountSnapshot,
+          netAmount: createBookingData?.netAmount,
         },
       })
     );

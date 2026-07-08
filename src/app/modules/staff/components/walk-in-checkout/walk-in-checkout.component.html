@@ -102,9 +102,22 @@
   <div class="checkout-actions d-flex flex-column gap-3">
     <!-- Totals section -->
     <div class="border rounded p-3 bg-light">
+      <!-- OBRS-85: dormant today — sell-page.component.ts always sends
+           bookingType:'one_way' for walk-in sales, so discountAmount stays
+           null/0 under current functionality. Kept for parity with the
+           online checkout summary and forward-compat with a future walk-in
+           round-trip flow. -->
+      <div class="d-flex justify-content-between mb-2" *ngIf="discountAmount && discountAmount > 0">
+        <span class="small">{{ 'STAFF.SELL.SUBTOTAL' | translate }}</span>
+        <span class="small">{{ totalAmount | currency:'THB':'symbol' }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-2" *ngIf="discountAmount && discountAmount > 0">
+        <span class="small">{{ 'STAFF.SELL.DISCOUNT_ROUND_TRIP' | translate }}</span>
+        <span class="small text-danger">-{{ discountAmount | currency:'THB':'symbol' }}</span>
+      </div>
       <div class="d-flex justify-content-between mb-2">
         <span class="fw-semibold">{{ 'STAFF.SELL.TOTAL_AMOUNT' | translate }}</span>
-        <span class="fw-bold">{{ totalAmount | currency:'THB':'symbol' }}</span>
+        <span class="fw-bold">{{ netAmount | currency:'THB':'symbol' }}</span>
       </div>
 
       <div class="mb-2">

@@ -1,5 +1,120 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-08 — Frontend implementation: round-trip discount UI (OBRS-85)
+
+**Worktree:** `OBRS-frontend-wt-round-trip-discount` (branch `ao/round-trip-discount`).
+Implements the UX spec below (Findings 1-4) end to end. `ng test`: 631/631 PASS.
+`ng build --configuration production`: PASS (1.41 MB initial, under the 1.5 MB budget).
+
+**Backend contract does not exist yet — built against the SA-locked shape, flagged in
+`docs/handoff.md`.** Neither `OBRS-backend` (main) nor its `-wt-round-trip-discount`
+worktree has a controller/DTO for `GET|PATCH /api/private/promotions/round-trip` at
+time of writing — only the `Promotion`/`PromotionTranslation` JPA entities exist. Built
+`AdminApiService.getRoundTripPromotion()` / `updateRoundTripPromotion()` directly against
+the `Promotion` entity's fields (`discountValue`, `minBookingAmount`, `startDateTime`,
+`endDateTime`, `status`, `discountType`, `usageLimit`, `currentUsage`, `slug='round_trip'`,
+`code='RT20'` per `data.sql`), and filed a Contract Request in `docs/handoff.md` with the
+assumed `PromotionRespDto` shape. The `/admin/promotions` page will show its
+`ADMIN.PROMOTIONS.LOAD_FAILED` state until the backend implements the endpoint. Also
+flagged there: `data.sql` only seeds a `promotion_status` lookup value of `active` — the
+Active/Inactive dropdown needs an `inactive` value added too (worked around client-side by
+building the two options from i18n rather than fetching a lookup category, so the FE isn't
+blocked by that gap).
+
+**Partial PATCH is driven by FormControl `dirty`, not value-diffing.** The edit form is a
+single `FormGroup`; `buildPartialPayload()` includes a field only when its own control is
+`.dirty` (regardless of whether the value is textually unchanged). This was chosen over
+diffing the raw value against `this.promotion` because the date fields round-trip through
+`Date.prototype.toISOString()` — a fetched `"2026-01-01T00:00:00+07:00"` and the
+re-serialized value are the *same instant* but different strings, so string-equality
+diffing would spuriously include an untouched date field on every save. `dirty` sidesteps
+that entirely. After a successful save, `promotionForm.markAsPristine()` (which Angular
+cascades to every child control) clears dirty state so the next background SWR revalidate
+patches those controls again without a visual jump.
+
+**Reused the schedules-edit-modal pristine-patch contract (design-system §6) for the
+SWR case, not just the modal case.** `AdminCollectionStore` re-emits in the background
+(`refresh()`) while the admin may be mid-edit on this single-form page (no modal open/close
+boundary here). First `data$` emission → full `.reset()`; subsequent emissions → patch only
+controls where `control.pristine` — same guard as the schedules edit modal's late-arriving
+detail fetch, just triggered by the SWR revalidate instead of an async detail GET.
+
+**Design-system §5 (pill inputs) applied narrowly, not by editing `admin-theme.scss`.**
+The shared `.admin-field`/`p-calendar` classes used by every other admin page are still the
+10px-radius pre-pill shape (tracked debt, §13) — I did not touch that global file. Instead
+`promotions-page.component.scss` overrides `.admin-field { border-radius: $radius-pill; }`
+and adds a `.promotion-calendar` `::ng-deep` override, both scoped to this component only
+(Angular's emulated encapsulation confines the plain `.admin-field` rule; `::ng-deep` was
+only needed for the PrimeNG-rendered calendar internals). No raw hex was introduced — the
+calendar override reads `var(--admin-surface-card)`/`var(--admin-text)`/`var(--accent-strong)`/
+`var(--accent-soft)`, matching `.admin-field`'s own tokens instead of copying the raw-hex
+`schedule-calendar-filter` styles from `schedules-page.component.scss`.
+
+**PaymentSummaryComponent footer: two `*ngIf ... else totalOnly` pointing at the same
+template ref.** `booking$` (via `selectBooking`) and `hasDiscount(booking)` are two
+independent conditions, but both "no" branches must render byte-identical `totalOnly`
+markup ("no visual change" is a UX requirement, not just a suggestion). Angular allows
+multiple `*ngIf/else` directives in the same template to reference one `<ng-template
+#totalOnly>`, so the "no discount" path (booking absent OR discount not `>0`) only exists
+once in the DOM output regardless of which condition was false. If you touch this template,
+keep both `else totalOnly` pointers — collapsing to a single flag is fine, just don't
+duplicate the total-only markup (a copy-paste would drift the two silently).
+
+**Walk-in checkout discount plumbing is genuinely inert — verified, not just asserted.**
+`WalkInCheckoutComponent.@Input() discountAmount` defaults to `null`; `netAmount` getter
+returns `totalAmount - (discountAmount ?? 0)`, so with the default every existing getter
+(`changeDue`, `canSell`) and the 5 pre-existing spec assertions on them are byte-identical
+to before. Confirmed via `ng test` (no walk-in-checkout regressions) — this was a forward-
+compat/parity addition per the UX spec's Finding 2, not something exercisable today.
+
+## 2026-07-08 — UX spec: round-trip discount (OBRS-85) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-round-trip-discount` (branch `ao/round-trip-discount`). No
+code written this pass — this is the UX/UI spec handoff. Full spec is in the OBRS-85 ticket
+thread; the load-bearing findings that will surprise whoever implements are below.
+
+**Finding 1 — only `payment-summary` can show a REAL discount line; review/passenger-info
+cannot, by construction.** Traced the actual booking flow: `review-schedule-booking-total`
+and `passenger-info-summary` both compute their totals *entirely client-side* from
+`selectScheduleBooking`/`selectScheduleFilter` (schedule `pricePerSeat` × passenger count) —
+neither makes a server call. The booking is only created (`POST /api/private/bookings`) at
+the END of `passenger-info.component.ts::onSubmitPassengerInfo`, and `discount_amount_snapshot`
+is a server-computed field that only exists *after* that call. So the review page and the
+passenger-info sidebar are pre-booking *estimates*; they structurally cannot carry a real
+discount without the FE precomputing one, which the backend spec explicitly forbids. Do NOT
+add a discount line there — the spec calls this out and scopes the real change to
+`payment-summary.component.ts` (used inline by `payment-creditcard`/`payment-qrcode`, the only
+summary that renders AFTER booking creation, reading from the NgRx `booking` store).
+
+**Finding 2 — `walk-in-checkout`'s discount line will be dormant on ship.** Two independent
+reasons: (a) `sell-page.component.ts` hardcodes `bookingType: 'one_way'` for every walk-in
+sale — round-trip walk-in booking doesn't exist in the UI yet, so the discount can never
+trigger; (b) even if it did, `WalkInCheckoutComponent.totalAmount` is a pre-sale client getter
+(`pricePerSeat * selectedSeats.length`) computed before `createWalkInBooking`/`payWalkIn` are
+ever called — same pre-transaction timing gap as Finding 1. The spec adds the `@Input()
+discountAmount` plumbing there anyway (parity + forward-compat with a future walk-in
+round-trip feature) but flags explicitly that it cannot render under current functionality —
+don't spend QA time trying to trigger it via walk-in.
+
+**Finding 3 — `CreateBookingResponse`/`BookingState` currently only carry `{bookingId,
+bookingNumber}`.** `booking.service.ts::normalizeCreateBooking` is the single seam that
+resolves the booking-intake response — it needs the three new optional fields
+(`totalAmount`/`discountAmountSnapshot`/`netAmount`) added there, in the `CreateBookingResponse`
+and `BookingState` interfaces (`shared/interfaces/booking.interface.ts`), and forwarded through
+`passenger-info.component.ts::setBookingStore`. No new NgRx actions/reducers needed —
+`invokeSetBookingApi`/`invokeSetBookingApiSuccess` already carry the whole `BookingState`
+generically, so extending the interface is sufficient plumbing.
+
+**Finding 4 — OWNER cannot reach `/admin` today, full stop.** The top-level route guard
+(`app-routing.module.ts`) gates the whole `/admin` module on `requiredRoles: ['admin']`, and
+`AuthService.hasAnyRole`'s hierarchy expansion (admin > owner > salesperson > driver > customer)
+only expands a role *downward* — an `owner` session's effective roles are
+`{owner,salesperson,driver,customer}`, which does not include `'admin'`. So today, an OWNER
+literally cannot open any admin page, even though the backend's round-trip promotion PATCH
+allows OWNER/ADMIN. This is a pre-existing gap, not something this light UI ticket should
+silently patch by loosening the global admin gate — flagged in the spec as a call-out for
+the SA/PM to decide, not resolved here.
+
 ## 2026-07-08 — Frontend: report-row-clickable (OBRS-82) (SELF-FIXED)
 
 **Worktree:** `OBRS-frontend-wt-report-row-clickable` (branch `sit/report-row-clickable`, diff vs `origin/dev`)

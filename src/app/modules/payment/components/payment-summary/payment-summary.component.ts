@@ -3,10 +3,12 @@ import { Router } from '@angular/router';
 import { Store, select } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 import { Observable } from 'rxjs';
+import { BookingState } from '../../../../shared/interfaces/booking.interface';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { parsePricePerSeat } from '../../../../shared/lib/trip-format';
 import { ScheduleFilter, Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { Appstate } from '../../../../shared/stores/appstate';
+import { selectBooking } from '../../../../shared/stores/booking/booking.selector';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 
@@ -19,6 +21,10 @@ export class PaymentSummaryComponent {
   @Input() variant: 'default' | 'inline' = 'default';
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
+  // OBRS-85: only the post-booking-creation payment summary can show a real
+  // discount — the server computes discountAmountSnapshot/netAmount only once
+  // the booking exists (see AGENT_MEMORY.md Finding 1). Never precompute one.
+  booking: Observable<BookingState | null>;
 
   constructor(
     private store: Store,
@@ -28,6 +34,11 @@ export class PaymentSummaryComponent {
   ) {
     this.scheduleBooking = this.store.pipe(select(selectScheduleBooking));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
+    this.booking = this.store.pipe(select(selectBooking));
+  }
+
+  hasDiscount(booking: BookingState | null | undefined): boolean {
+    return Number(booking?.discountAmountSnapshot ?? 0) > 0;
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {

@@ -138,6 +138,7 @@
       "ROUTE_MANAGEMENT": "路线",
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
+      "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告"
     },
     "LAYOUT": {
@@ -238,6 +239,23 @@
       "TH_LABEL": "泰文标签",
       "EN_DESCRIPTION": "英文描述",
       "TH_DESCRIPTION": "泰文描述"
+    },
+    "PROMOTIONS": {
+      "SUBTITLE": "管理往返订票折扣。",
+      "DISCOUNT_TYPE": "折扣类型",
+      "CODE": "代码",
+      "SLUG": "Slug",
+      "TIMES_USED": "已使用次数",
+      "USAGE_LIMIT": "使用次数上限",
+      "DISCOUNT_AMOUNT": "折扣金额",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "启用",
+      "STATUS_INACTIVE": "停用",
+      "START_DATE": "开始日期",
+      "END_DATE": "结束日期",
+      "MIN_BOOKING_AMOUNT": "最低订票金额",
+      "DATE_RANGE_VALIDATION": "结束日期不能早于开始日期。",
+      "LOAD_FAILED": "无法加载往返促销活动。"
     },
     "ROLES": {
       "TITLE": "访问控制档案",
@@ -840,6 +858,8 @@
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
       "TICKET_UNIT": "泰铢/人",
+      "SUBTOTAL": "小计",
+      "DISCOUNT_ROUND_TRIP": "往返折扣",
       "TOTAL": "总计",
       "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"
@@ -1072,6 +1092,8 @@
       "CONTACT_PHONE": "联系电话",
       "CONTACT_EMAIL": "联系邮箱",
       "TOTAL_AMOUNT": "合计",
+      "SUBTOTAL": "小计",
+      "DISCOUNT_ROUND_TRIP": "往返折扣",
       "CASH_ONLY_BADGE": "现金支付",
       "CASH_ONLY_NOTE": "现场售票仅接受现金，请先收款再确认。",
       "BADGE_AVAILABLE": "可用",
