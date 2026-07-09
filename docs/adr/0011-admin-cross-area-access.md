@@ -81,6 +81,26 @@ narrower than the system it fronts.
   from "admin browsing as a customer" (e.g. hiding booking-purchase UI from
   staff identities), that is a new, separate decision — not addressed here.
 
+## Invariant & future direction (do not re-confine admin)
+
+Durable domain rule established by this decision:
+
+- **`admin` is a permanent, platform-wide full superset.** It is the platform
+  operator role and must see/reach everything in the frontend. Never
+  re-introduce FE navigation confinement for `admin` (no adding `'admin'` back
+  to `PORTAL_ONLY_ROLES`, no narrowing `ROLE_GRANTS.admin`). If a change makes
+  admin unable to reach some area, that is a regression, not a feature.
+- **`owner` is a per-tenant (per-company) role, not a platform role.** When the
+  company **group** feature lands (OBRS-148 "Group entity with ownership
+  relationships + access control", OBRS-150 "multi-group membership with
+  per-group roles"), `owner` will be **scoped to its own group** (an owner is
+  the head of one company's queue, with its `salesperson`/`driver` staff under
+  it, and sees only that group). `admin` stays **unscoped** — it sees across
+  **all** groups. So the admin/owner symmetry in this ADR is temporary: owner
+  narrows later, admin does not.
+- This mirrors the backend `ROLE_ADMIN > ROLE_OWNER` hierarchy, which already
+  puts admin above owner globally.
+
 ## Considered alternatives
 
 - **Leave admin confined, only fix the comments** — rejected per the task
