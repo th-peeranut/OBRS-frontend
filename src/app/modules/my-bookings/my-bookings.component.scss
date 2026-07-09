@@ -225,39 +225,36 @@
 // dead margin (OBRS-170).
 .action-menu-item {
   display: flex;
-  align-items: flex-start;
-  gap: $space-3xs; // tight icon↔text so the icon reads as part of the label, not a floating gutter
-  padding: $space-3xs $space-xs; // tight + equal vertical (top==bottom); a little leading breathing room (was jammed at the edge)
+  flex-direction: column; // label-row on top, disabled reason (if any) below it
+  gap: 2px;
+  padding: $space-3xs $space-xs; // tight + equal vertical (top==bottom)
   width: 100%;
+
+  // Icon + label share ONE centered row so they always sit on the same line
+  // (was flex-start with a line-height mismatch that floated the icon high).
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: $space-2xs;
+  }
 
   &__icon-slot {
     flex: 0 0 auto;
-    width: 16px;
+    width: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: $text-lightblack;
-    font-size: $font-size-sm;
-    line-height: $line-height-tight; // match the label line box so the row is vertically symmetric (the old margin-top pushed the bottom 2px out)
-  }
-
-  &__text {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-    // Cap the text column so labels + the (now concise) disabled reasons stay on
-    // one line; the menu sizes to content (see .p-menu width below), and this is
-    // just a safety ceiling so an unexpectedly long string can't over-widen it.
-    max-width: 160px;
+    // Icons sit a step above the text, matching the app convention (nav/dropdown
+    // icons are ~$font-size-md while body text is $font-size-sm).
+    font-size: $font-size-md;
+    line-height: 1;
   }
 
   &__label {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-2xs;
     font-size: $font-size-sm;
     color: $text-black;
+    line-height: $line-height-base;
   }
 
   &__reason {
@@ -265,6 +262,8 @@
     color: $text-lightgrey;
     line-height: $line-height-tight;
     white-space: normal;
+    max-width: 176px;
+    padding-left: calc(20px + #{$space-2xs}); // align under the label (past the icon column)
   }
 
   &--danger &__icon-slot,
