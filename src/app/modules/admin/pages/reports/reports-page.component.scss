@@ -10,3 +10,14 @@
   text-transform: none;
   letter-spacing: normal;
 }
+
+// State messages (invalid range / fetch error / empty range) that stand in for
+// the tiles+table or the table — centered and padded so the message reads as
+// the body's content, not a stray line above a table of zeros.
+.reports-state-card,
+.reports-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+

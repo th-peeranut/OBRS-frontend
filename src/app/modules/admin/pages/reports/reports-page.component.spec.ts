@@ -135,6 +135,49 @@ describe('ReportsPageComponent', () => {
     expect((component as any).isEmptyRange).toBeFalse();
   });
 
+  // contentState drives the body so a message never renders beside a stale/zero
+  // table. Priority: invalid > loading > error > empty > data.
+  it('contentState is "data" for a non-zero summary', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, createTranslateStub());
+    component.ngOnInit();
+    expect((component as any).contentState).toBe('data');
+  });
+
+  it('contentState is "empty" for a valid all-zero range (tiles stay, table is replaced)', () => {
+    const store = makeStoreStub(
+      makeSummary({
+        tiles: { bookingCount: 0, ticketsSold: 0, occupancyRatePct: 0 },
+        daily: [{ date: '2026-07-01', bookingCount: 0, ticketsSold: 0, occupancyRatePct: 0, seatsSold: 0, seatCapacity: 12 }],
+      })
+    );
+    const component = new ReportsPageComponent(store as any, createTranslateStub());
+    component.ngOnInit();
+    expect((component as any).contentState).toBe('empty');
+  });
+
+  it('contentState is "invalid" (over cached data) when the range guard trips', () => {
+    const store = makeStoreStub(makeSummary());
+    const component = new ReportsPageComponent(store as any, createTranslateStub());
+    component.ngOnInit();
+
+    component['onFromDateChange'](new Date(2026, 6, 10));
+    component['onToDateChange'](new Date(2026, 6, 1));
+
+    expect((component as any).contentState).toBe('invalid');
+  });
+
+  it('contentState is "error" when a fetch fails with no cached value', () => {
+    const store = makeStoreStub(null);
+    store.lastErrorCode = 'SOMETHING_ELSE';
+    const component = new ReportsPageComponent(store as any, createTranslateStub());
+    component.ngOnInit();
+
+    store.error$.next(true);
+
+    expect((component as any).contentState).toBe('error');
+  });
+
   // Client guard: from > to must show the inline warning and must NOT dispatch.
   it('shows RANGE_INVALID and does not call store.setRange when from > to', () => {
     const store = makeStoreStub(makeSummary());

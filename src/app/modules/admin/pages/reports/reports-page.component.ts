@@ -93,6 +93,29 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     return !!t && t.bookingCount === 0 && t.ticketsSold === 0 && t.occupancyRatePct === 0;
   }
 
+  /**
+   * Single source of truth for what the body renders, so a state message never
+   * shows ALONGSIDE a stale/zero table (which reads as "there is data"). Priority:
+   * an invalid range (client guard) or a fetch error replaces the tiles+table
+   * entirely with the message; an empty (but valid) range keeps the zero tiles as
+   * a summary but replaces the daily table with the "no activity" note.
+   */
+  protected get contentState(): 'loading' | 'invalid' | 'error' | 'empty' | 'data' {
+    if (this.rangeError) {
+      return 'invalid';
+    }
+    if (this.isLoading) {
+      return 'loading';
+    }
+    if (this.loadError) {
+      return 'error';
+    }
+    if (this.isEmptyRange) {
+      return 'empty';
+    }
+    return 'data';
+  }
+
   protected onFromDateChange(value: Date | null): void {
     this.fromDate = value;
     this.applyRange();
