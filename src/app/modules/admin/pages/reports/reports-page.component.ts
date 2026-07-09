@@ -81,10 +81,16 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
     return !!this.tiles?.revenue;
   }
 
-  /** A 200 with an all-zero range is not an error — a friendly note, not a warning. */
+  /**
+   * A 200 with a genuinely empty range is not an error — a friendly note, not a
+   * warning. "Empty" means NO activity of any kind: no bookings created and no
+   * seats sold on any departure in range. Occupancy keys on departure-date, so a
+   * range can have real occupancy while bookingCount/ticketsSold (booking-date
+   * basis) are 0 — that is NOT empty, and must not show the "no activity" note.
+   */
   protected get isEmptyRange(): boolean {
     const t = this.tiles;
-    return !!t && t.bookingCount === 0 && t.ticketsSold === 0;
+    return !!t && t.bookingCount === 0 && t.ticketsSold === 0 && t.occupancyRatePct === 0;
   }
 
   protected onFromDateChange(value: Date | null): void {

@@ -117,6 +117,24 @@ describe('ReportsPageComponent', () => {
     expect((component as any).isEmptyRange).toBeTrue();
   });
 
+  it('does NOT flag a range with departure-date occupancy but zero bookings as empty', () => {
+    // Occupancy keys on departure-date; a range can have real occupancy while
+    // bookingCount/ticketsSold (booking-date basis) are 0 — that is NOT empty.
+    const store = makeStoreStub(
+      makeSummary({
+        tiles: { bookingCount: 0, ticketsSold: 0, occupancyRatePct: 21.4 },
+        daily: [
+          { date: '2026-07-17', bookingCount: 0, ticketsSold: 0, occupancyRatePct: 21.4, seatsSold: 3, seatCapacity: 14 },
+        ],
+      })
+    );
+    const component = new ReportsPageComponent(store as any, createTranslateStub());
+
+    component.ngOnInit();
+
+    expect((component as any).isEmptyRange).toBeFalse();
+  });
+
   // Client guard: from > to must show the inline warning and must NOT dispatch.
   it('shows RANGE_INVALID and does not call store.setRange when from > to', () => {
     const store = makeStoreStub(makeSummary());
