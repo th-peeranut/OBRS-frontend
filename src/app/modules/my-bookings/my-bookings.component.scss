@@ -227,7 +227,7 @@
   display: flex;
   align-items: flex-start;
   gap: $space-3xs; // tight icon↔text so the icon reads as part of the label, not a floating gutter
-  padding: $space-3xs $space-sm $space-3xs $space-2xs; // tight vertical (was 8px) + trimmed leading inset so text hugs the icon
+  padding: $space-3xs $space-xs; // tight + equal vertical (top==bottom); a little leading breathing room (was jammed at the edge)
   width: 100%;
 
   &__icon-slot {
@@ -236,9 +236,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-top: 2px; // optically aligns with the label's first line
     color: $text-lightblack;
     font-size: $font-size-sm;
+    line-height: $line-height-tight; // match the label line box so the row is vertically symmetric (the old margin-top pushed the bottom 2px out)
   }
 
   &__text {
@@ -246,6 +246,11 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
+    // Cap the text column so labels stay one line but the long disabled reason
+    // wraps instead of stretching the row; combined with the min-width override
+    // below this keeps the menu close to content width (short rows get far less
+    // trailing).
+    max-width: 100px;
   }
 
   &__label {
@@ -276,6 +281,16 @@
 // tight vertical rhythm. `!important` beats the theme's normal padding rule.
 ::ng-deep .my-bookings-action-menu .p-menu-list {
   padding: $space-3xs 0 !important;
+}
+
+// PrimeNG hard-sets `.p-menu { width: 12.5rem }` (200px) — THAT fixed width (not
+// the reason text or a min-width) is what left short rows with a big trailing
+// gap. Size to content instead (capped by `.action-menu-item__text` max-width),
+// so the menu hugs its widest row and short rows no longer stretch to 200px.
+::ng-deep .my-bookings-action-menu.p-menu {
+  width: max-content !important;
+  min-width: 0 !important;
+  max-width: 260px; // safety cap so an unexpectedly long label can't blow it out
 }
 
 // PrimeNG's own `<li class="p-menuitem">` wrapper is rendered by the p-menu
