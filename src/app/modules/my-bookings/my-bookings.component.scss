@@ -226,13 +226,13 @@
 .action-menu-item {
   display: flex;
   align-items: flex-start;
-  gap: $space-2xs;
-  padding: $space-2xs $space-sm;
+  gap: $space-3xs; // tight icon↔text so the icon reads as part of the label, not a floating gutter
+  padding: $space-2xs $space-sm $space-2xs $space-2xs; // trim the leading inset (was symmetric 16px) so text sits close to the icon
   width: 100%;
 
   &__icon-slot {
     flex: 0 0 auto;
-    width: 18px;
+    width: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
