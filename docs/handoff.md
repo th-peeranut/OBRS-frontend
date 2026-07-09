@@ -56,10 +56,12 @@ Full contract reference: `../OBRS-backend/docs/api/`
 The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแล้ว`, ZH: `已支付`) have been updated. All other status values (`pending`, `failed`, `cancelled`, `expired`, `refunded`, `manual_refund_required`) are unchanged.
 
 ### Action required in frontend
-- [ ] Update any `PaymentStatus` enum / type that has a `SUCCESS = "success"` entry → `PAID = "paid"`
-- [ ] Update display strings / badge labels that check `status === "success"`
-- [ ] Update any filter/query params that send `status=success` → `status=paid`
-- [ ] Search for hardcoded string `"success"` in payment-status contexts
+- [x] Update any `PaymentStatus` enum / type that has a `SUCCESS = "success"` entry → `PAID = "paid"` — `PaymentStatus` union in `shared/interfaces/payment.interface.ts` now uses `'paid'` (OBRS-177).
+- [x] Update display strings / badge labels that check `status === "success"` — badge/label sites (`admin/pages/bookings/bookings-page.component.ts`, `admin/pages/dashboard/*`) already normalized to `'PAID'`; no `success`-keyed labels remained.
+- [x] Update any filter/query params that send `status=success` → `status=paid` — none existed (full `src/` sweep; only the Omise mock-scenario header `X-Omise-Mock-Scenario: success` uses the word, and that is a gateway simulation knob, not a status filter — left as-is).
+- [x] Search for hardcoded string `"success"` in payment-status contexts — three broken sites fixed via an `isPaidStatus()` predicate (accepts `'paid'`+`'success'`, case-insensitive, mirroring `payment-qrcode.component.ts`'s `isSuccessStatus()`): `payment-creditcard.component.ts` `handlePaymentResponse()`+`isPaymentConfirmed()`, `payment-result.component.ts` `isPaymentConfirmed()`. `payment-qrcode.component.ts` already accepted `'paid'`.
+
+**Resolved 2026-07-09 (OBRS-177).** Verified live: SIT `GET /api/private/bookings/{id}/payments` returns `txn.status = "paid"`, which the fixed predicate now matches (old `=== 'success'` survived only via the `summaryStatus === 'fully_paid'` fallback). 7 new regression specs; full FE suite green.
 
 ### Still unfinished on backend
 - None — all source, SQL seeds, and API docs are updated.
