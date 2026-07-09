@@ -30,7 +30,7 @@ export interface PaymentPayload {
 
 export type PaymentStatus =
   | 'pending'
-  | 'success'
+  | 'paid'
   | 'failed'
   | 'cancelled'
   | 'expired'
