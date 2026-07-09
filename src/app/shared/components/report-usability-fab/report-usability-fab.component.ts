@@ -159,16 +159,20 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
       .subscribe({
         next: () => {
           this.isSubmitting = false;
-          this.alertService.success(
-            this.translate.instant('USABILITY_REPORT.SUBMIT_SUCCESS')
-          );
+          this.translate
+            .get('USABILITY_REPORT.SUBMIT_SUCCESS')
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((msg: string) => this.alertService.success(msg));
           this.closeModal();
         },
         error: (err: unknown) => {
           this.isSubmitting = false;
           const errorCode =
             (err as { error?: { errorCode?: string } })?.error?.errorCode;
-          this.submitError = this.mapErrorCode(errorCode);
+          this.translate
+            .get(this.mapErrorCodeKey(errorCode))
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((msg: string) => (this.submitError = msg));
         },
       });
   }
@@ -178,7 +182,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     return !!(ctrl?.invalid && ctrl.touched);
   }
 
-  private mapErrorCode(errorCode: string | undefined): string {
+  private mapErrorCodeKey(errorCode: string | undefined): string {
     const knownCodes: Record<string, string> = {
       REPORT_INVALID_CATEGORY: 'USABILITY_REPORT.ERROR.REPORT_INVALID_CATEGORY',
       REPORT_TOO_MANY_IMAGES: 'USABILITY_REPORT.ERROR.REPORT_TOO_MANY_IMAGES',
@@ -189,8 +193,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
       VALIDATION_FAILED: 'USABILITY_REPORT.ERROR.VALIDATION_FAILED',
     };
 
-    const key = errorCode ? (knownCodes[errorCode] ?? 'USABILITY_REPORT.ERROR.GENERIC') : 'USABILITY_REPORT.ERROR.GENERIC';
-    return this.translate.instant(key);
+    return errorCode ? (knownCodes[errorCode] ?? 'USABILITY_REPORT.ERROR.GENERIC') : 'USABILITY_REPORT.ERROR.GENERIC';
   }
 
   private buildCategoryOptions(): void {
