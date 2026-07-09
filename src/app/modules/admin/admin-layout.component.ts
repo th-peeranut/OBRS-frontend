@@ -54,9 +54,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   // Gate the Staff Area shortcut in the profile menu on the salesperson/driver
-  // grant. Under the area-based access model (see AuthService) only the owner
-  // holds both admin and staff access, so a plain admin — confined to this
-  // portal — correctly does not see a link they cannot use.
+  // grant. Under the area-based access model (see AuthService) both owner and
+  // admin hold cross-portal access (OBRS-176), so an admin correctly sees and
+  // can use this link, alongside owner and actual staff (salesperson/driver).
   protected get isStaffUser(): boolean {
     return this.authService.hasAnyRole(['salesperson', 'driver']);
   }

@@ -127,6 +127,29 @@ describe('AdminLayoutComponent', () => {
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
   });
 
+  // OBRS-176: admin is now a cross-portal superset (see AuthService
+  // ROLE_GRANTS), so the profile menu's Staff Area shortcut must render for
+  // an admin identity, not just for owner/salesperson/driver.
+  it('shows the Staff Area link in the profile menu for an admin identity', () => {
+    const original = authStub.hasAnyRole;
+    authStub.hasAnyRole = (_roles: string[]) => true; // admin now satisfies salesperson/driver
+    try {
+      const f = TestBed.createComponent(AdminLayoutComponent);
+      f.detectChanges();
+
+      const comp = f.componentInstance as AdminLayoutComponent & { toggleProfileMenu: () => void };
+      comp.toggleProfileMenu();
+      f.detectChanges();
+
+      const staffAreaLink = f.debugElement.query(By.css('.admin-profile-menu a[href="/staff"]'));
+      expect(staffAreaLink)
+        .withContext('admin should see the Staff Area link in the profile menu')
+        .toBeTruthy();
+    } finally {
+      authStub.hasAnyRole = original;
+    }
+  });
+
   it('togglePin collapses the sidebar and writes "1" to localStorage (default is expanded "0")', () => {
     // On init (no storage entry), readPinPreference canonicalises to "0" (expanded).
     // One togglePin flips to collapsed → writes "1".

@@ -80,11 +80,28 @@ describe('AuthService', () => {
     const setRoles = (roles: string[]) =>
       localStorage.setItem('auth_roles', JSON.stringify(roles));
 
-    // Under the area model admin is confined to the admin portal — it is NOT a
-    // superset of the staff portal the way the old linear hierarchy made it.
-    it('does NOT grant an admin access to staff-only routes (admin is admin-only)', () => {
+    // OBRS-176: admin is now a cross-portal superset mirroring the backend
+    // admin > owner hierarchy — it grants staff, customer, and owner access,
+    // reversing the FE's earlier (undocumented) confinement of admin.
+    it('grants an admin access to staff-only routes (admin is a cross-portal superset)', () => {
       setRoles(['admin']);
-      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(false);
+      expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(true);
+    });
+
+    it('grants an admin access to owner and customer routes too', () => {
+      setRoles(['admin']);
+      expect(service.hasAnyRole(['salesperson'])).toBe(true);
+      expect(service.hasAnyRole(['driver'])).toBe(true);
+      expect(service.hasAnyRole(['customer'])).toBe(true);
+      expect(service.hasAnyRole(['owner'])).toBe(true);
+    });
+
+    // Control: a customer must NOT gain admin/staff access (the widening is
+    // specific to admin/owner, not a general loosening of hasAnyRole).
+    it('does not grant a customer access to admin or staff routes', () => {
+      setRoles(['customer']);
+      expect(service.hasAnyRole(['admin'])).toBe(false);
+      expect(service.hasAnyRole(['salesperson'])).toBe(false);
     });
 
     it('still matches a staff user on their own role', () => {
@@ -152,17 +169,18 @@ describe('AuthService', () => {
     const setRoles = (roles: string[]) =>
       localStorage.setItem('auth_roles', JSON.stringify(roles));
 
-    it('allows guests, customers and owners on public pages', () => {
+    it('allows guests, customers, owners and admins on public pages', () => {
       expect(service.canAccessCustomerArea()).toBe(true); // guest
       setRoles(['customer']);
       expect(service.canAccessCustomerArea()).toBe(true);
       setRoles(['owner']);
       expect(service.canAccessCustomerArea()).toBe(true);
+      // OBRS-176: admin is no longer confined to the admin portal.
+      setRoles(['admin']);
+      expect(service.canAccessCustomerArea()).toBe(true);
     });
 
-    it('bounces portal-confined admin and staff off public pages', () => {
-      setRoles(['admin']);
-      expect(service.canAccessCustomerArea()).toBe(false);
+    it('bounces portal-confined staff (salesperson/driver) off public pages', () => {
       setRoles(['salesperson']);
       expect(service.canAccessCustomerArea()).toBe(false);
       setRoles(['driver']);
@@ -170,7 +188,7 @@ describe('AuthService', () => {
     });
 
     it('lets a user who is also a customer stay on public pages', () => {
-      setRoles(['admin', 'customer']);
+      setRoles(['salesperson', 'customer']);
       expect(service.canAccessCustomerArea()).toBe(true);
     });
   });

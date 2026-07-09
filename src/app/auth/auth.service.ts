@@ -25,28 +25,32 @@ export class AuthService {
   private readonly RETURN_URL_KEY = 'auth_return_url';
 
   // Area-based access model (frontend routing only — the backend keeps its own
-  // WebSecurityConfig#roleHierarchy). Each role is granted the set of roles it
-  // may satisfy:
+  // WebSecurityConfig#roleHierarchy, where admin > owner > salesperson >
+  // driver > user). Each role is granted the set of roles it may satisfy:
   //   - owner       → all-access superset (admin + staff + customer)
-  //   - admin       → the admin portal only (NOT a superset of staff/customer)
+  //   - admin       → cross-portal superset mirroring the backend hierarchy
+  //                   (admin + owner + staff + customer) — near-owner reach
   //   - salesperson → the staff portal; still outranks driver within it
   //   - driver      → the staff portal (driver pages)
   //   - customer    → the public/customer area only
-  // NOTE: this intentionally gates ADMIN *more tightly* than the backend
-  // hierarchy (where admin still outranks staff). That is a deliberate UX
-  // confinement — the FE never grants access the backend would deny, it only
-  // narrows navigation, so no security boundary is weakened.
+  // NOTE (OBRS-176): the FE previously narrowed admin to the admin portal
+  // only, a deliberate UX confinement introduced with no backing card. That
+  // confinement is now reversed — admin is a cross-portal superset, matching
+  // the fact that the backend already authorizes admin on every endpoint
+  // (staff, customer, even owner-only). See docs/adr/0011-admin-cross-area-access.md.
   private static readonly ROLE_GRANTS: Record<string, readonly string[]> = {
     owner: ['owner', 'admin', 'salesperson', 'driver', 'customer'],
-    admin: ['admin'],
+    admin: ['admin', 'owner', 'salesperson', 'driver', 'customer'],
     salesperson: ['salesperson', 'driver'],
     driver: ['driver'],
     customer: ['customer'],
   };
 
   // Roles that are confined to a non-public portal. A logged-in user holding
-  // only these (and not owner/customer) must be bounced out of customer pages.
-  private static readonly PORTAL_ONLY_ROLES = ['admin', 'salesperson', 'driver'];
+  // only these (and not owner/customer) must be bounced out of customer
+  // pages. Admin is deliberately NOT in this list (OBRS-176): admin now has
+  // cross-area access and may reach the customer area, mirroring owner.
+  private static readonly PORTAL_ONLY_ROLES = ['salesperson', 'driver'];
 
   // Observable to track authentication status
   private authStatusSubject = new BehaviorSubject<boolean>(
@@ -181,9 +185,9 @@ export class AuthService {
     }
 
     // Expand each held role into the set of roles it is granted (see
-    // ROLE_GRANTS): owner satisfies everything, admin satisfies only admin,
-    // salesperson still covers driver within the staff portal. An unrecognised
-    // role only matches itself.
+    // ROLE_GRANTS): owner and admin both satisfy everything (cross-portal
+    // superset), salesperson still covers driver within the staff portal. An
+    // unrecognised role only matches itself.
     const effectiveRoles = new Set<string>();
     for (const role of this.getRoles()) {
       const grants = AuthService.ROLE_GRANTS[role];
@@ -217,9 +221,10 @@ export class AuthService {
   }
 
   // Whether the current identity may sit on public/customer pages. Guests and
-  // customers/owners belong there; a user with no recognised portal role fails
-  // open to the public site. Only users confined to a portal (admin/staff and
-  // not also owner/customer) are excluded — the guard bounces them home.
+  // customers/owners/admins belong there; a user with no recognised portal
+  // role fails open to the public site. Only users confined to a staff
+  // portal (salesperson/driver and not also owner/customer/admin) are
+  // excluded — the guard bounces them home.
   canAccessCustomerArea(): boolean {
     const roles = this.getRoles();
     if (roles.length === 0) {
