@@ -67,6 +67,9 @@ export interface ActionMenuItem extends MenuItem {
   danger?: boolean;
   /** This specific row's cancel is in flight — shows an inline spinner. */
   submitting?: boolean;
+  // `icon` (inherited from PrimeNG's `MenuItem`) is a leading `bi bi-*`
+  // bootstrap-icon class — every item sets one so the menu never renders
+  // PrimeNG's blank icon-slot gutter (OBRS-170).
 }
 
 interface StatusFilterOption {
@@ -182,12 +185,14 @@ export class MyBookingsComponent implements OnInit {
     if (booking.paid) {
       items.push({
         label: this.translate.instant('MY_BOOKINGS.VIEW_TICKET'),
+        icon: 'bi-ticket-perforated',
         command: () => this.onViewTicket(booking),
       });
     }
 
     items.push({
       label: this.translate.instant('MY_BOOKINGS.RESCHEDULE.ACTION'),
+      icon: 'bi-arrow-repeat',
       disabled: !booking.rescheduleEligible,
       reasonText: booking.rescheduleEligible
         ? undefined
@@ -197,6 +202,7 @@ export class MyBookingsComponent implements OnInit {
 
     items.push({
       label: this.translate.instant('MY_BOOKINGS.CHANGE_SEAT.ACTION'),
+      icon: 'bi-grid-3x3-gap',
       disabled: !booking.changeSeatEligible,
       reasonText: booking.changeSeatEligible
         ? undefined
@@ -206,6 +212,7 @@ export class MyBookingsComponent implements OnInit {
 
     items.push({
       label: this.translate.instant('MY_BOOKINGS.CHANGE_STOP.ACTION'),
+      icon: 'bi-geo-alt',
       disabled: !booking.changeStopEligible,
       reasonText: booking.changeStopEligible
         ? undefined
@@ -216,6 +223,7 @@ export class MyBookingsComponent implements OnInit {
     if (booking.cancellable) {
       items.push({
         label: this.translate.instant('MY_BOOKINGS.CANCEL.ACTION'),
+        icon: 'bi-x-circle',
         danger: true,
         disabled: cancellingBookingId !== null,
         submitting: cancellingBookingId === booking.id,

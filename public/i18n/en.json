@@ -120,7 +120,8 @@
       "LEGEND": {
         "AVAILABLE": "Available",
         "OCCUPIED": "Occupied",
-        "SELECTED": "Selected"
+        "SELECTED": "Selected",
+        "CURRENT": "Current seat"
       },
       "CONFIRM_BUTTON": "Confirm new seat",
       "BACK_BUTTON": "Back",
@@ -136,7 +137,9 @@
         "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't have their seat changed.",
         "UNAUTHORIZED": "You don't have permission to change the seat on this booking.",
         "BOOKING_NOT_FOUND": "This booking is no longer available.",
-        "GENERIC": "Unable to change seat. Please try again."
+        "GENERIC": "Unable to change seat. Please try again.",
+        "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
+        "ACTION_UNAVAILABLE": "This action can't be completed right now."
       }
     },
     "CHANGE_STOP": {
@@ -176,7 +179,9 @@
         "UNAUTHORIZED": "You don't have permission to change stops on this booking.",
         "BOOKING_NOT_FOUND": "This booking is no longer available.",
         "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't change their stops.",
-        "GENERIC": "Unable to change stops. Please try again."
+        "GENERIC": "Unable to change stops. Please try again.",
+        "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
+        "ACTION_UNAVAILABLE": "This action can't be completed right now."
       }
     }
   },

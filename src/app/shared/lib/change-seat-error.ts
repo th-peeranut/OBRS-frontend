@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeSeatErrorCode } from '../interfaces/change-seat.interface';
+import { HttpFallbackTier } from './http-error-fallback';
 
 /**
  * Maps a change-seat endpoint's `error.error.errorCode` (stable UPPER_SNAKE,
@@ -7,8 +8,16 @@ import { ChangeSeatErrorCode } from '../interfaces/change-seat.interface';
  * `MY_BOOKINGS.CHANGE_SEAT.ERROR.*`. Mirrors `reschedule-error.ts`'s
  * `mapRescheduleErrorCode()` — branch on the stable code, never the localized
  * `message` (design-system §9).
+ *
+ * When there is NO recognized `errorCode` (network failure, backend outage,
+ * or a rejected-but-code-less 4xx), `fallbackTier` picks between the two
+ * generic-copy keys instead of one vague message (OBRS-170) — see
+ * `classifyHttpFallback` in `http-error-fallback.ts`.
  */
-export function mapChangeSeatErrorCode(errorCode: string | null | undefined): string {
+export function mapChangeSeatErrorCode(
+  errorCode: string | null | undefined,
+  fallbackTier: HttpFallbackTier = 'ACTION_UNAVAILABLE'
+): string {
   const knownCodes: Record<string, string> = {
     CHANGE_SEAT_ERROR_NOT_CONFIRMED: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.NOT_CONFIRMED',
     CHANGE_SEAT_ERROR_MAX_COUNT: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.MAX_COUNT',
@@ -23,9 +32,13 @@ export function mapChangeSeatErrorCode(errorCode: string | null | undefined): st
     CHANGE_SEAT_ERROR_BOOKING_NOT_FOUND: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.BOOKING_NOT_FOUND',
   };
 
-  return errorCode && knownCodes[errorCode]
-    ? knownCodes[errorCode]
-    : 'MY_BOOKINGS.CHANGE_SEAT.ERROR.GENERIC';
+  if (errorCode && knownCodes[errorCode]) {
+    return knownCodes[errorCode];
+  }
+
+  return fallbackTier === 'SERVICE_UNAVAILABLE'
+    ? 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE'
+    : 'MY_BOOKINGS.CHANGE_SEAT.ERROR.ACTION_UNAVAILABLE';
 }
 
 /** `errorCode`s that are terminal for the current dialog session — the

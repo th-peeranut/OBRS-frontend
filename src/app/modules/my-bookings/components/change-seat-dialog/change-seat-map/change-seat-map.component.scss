@@ -54,4 +54,12 @@
     background: $brand-customer-strong;
     border: 1px solid $brand-customer-strong;
   }
+
+  // Distinct from --selected (a muted outline rather than a solid brand
+  // fill) — mirrors the corner-badge marker `passenger-seat-box` renders on
+  // the actual map for `gender='ORIGINAL'` (OBRS-170).
+  &--original {
+    background: $primary-white;
+    border: 1px dashed $text-lightblack;
+  }
 }

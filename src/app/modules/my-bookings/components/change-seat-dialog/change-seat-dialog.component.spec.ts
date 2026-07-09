@@ -278,6 +278,67 @@ describe('ChangeSeatDialogComponent', () => {
     });
   });
 
+  describe('originalSeats (OBRS-170: persistent marker for the traveler\'s original seat)', () => {
+    it('exposes the active ticket\'s original seat, letter-labeled, even after a different seat is picked', () => {
+      const { component } = create(
+        buildState({
+          changeSeatDialogBookingId: 5,
+          changeSeatAvailability: sampleAvailability,
+          changeSeatTickets: [{ ticketId: 11, seatNumber: 'B1' }],
+        })
+      );
+      component.ngOnInit();
+
+      expect(component.originalSeats).toEqual(['B1']);
+
+      component.onSeatPicked('B4');
+
+      // The original seat stays exposed regardless of the in-progress pick —
+      // `activePickedSeat` moves to 'B4' but `originalSeats` never does.
+      expect(component.originalSeats).toEqual(['B1']);
+      expect(component.activePickedSeat).toBe('B4');
+    });
+
+    it('tracks the ACTIVE ticket only, switching when the ticket stepper moves', () => {
+      const { component } = create(
+        buildState({
+          changeSeatDialogBookingId: 5,
+          changeSeatAvailability: sampleAvailability,
+          changeSeatTickets: [
+            { ticketId: 11, seatNumber: 'B1' },
+            { ticketId: 12, seatNumber: 'B3' },
+          ],
+        })
+      );
+      component.ngOnInit();
+      component.activeTicketIndex = 0;
+      expect(component.originalSeats).toEqual(['B1']);
+
+      component.activeTicketIndex = 1;
+      expect(component.originalSeats).toEqual(['B3']);
+    });
+
+    it('normalizes the bare-numeric ticket.seatNumber to the seat-map\'s letter-prefixed label (OBRS-171)', () => {
+      const { component } = create(
+        buildState({
+          changeSeatDialogBookingId: 5,
+          changeSeatAvailability: sampleVanAvailabilityNumeric,
+          changeSeatTickets: [{ ticketId: 21, seatNumber: '1' }],
+        })
+      );
+      component.ngOnInit();
+
+      expect(component.originalSeats).toEqual(['A1']);
+    });
+
+    it('returns an empty array before any ticket has loaded', () => {
+      const { component } = create(buildState({ changeSeatDialogBookingId: 5 }));
+      component.ngOnInit();
+
+      expect(component.originalSeats).toEqual([]);
+    });
+  });
+
   it('does not confirm before availability has loaded', () => {
     const { component, store } = create(buildState({ changeSeatDialogBookingId: 5 }));
     component.ngOnInit();

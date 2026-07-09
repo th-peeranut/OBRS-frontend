@@ -10,6 +10,7 @@ import { normalizeStatusCode } from '../../../shared/interfaces/my-booking.inter
 import { ChangeSeatTicket } from '../../../shared/interfaces/change-seat.interface';
 import { BookingTicketJourney } from '../../../shared/interfaces/booking-ticket.interface';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
+import { classifyHttpFallback } from '../../../shared/lib/http-error-fallback';
 import {
   extractChangeSeatErrorCode,
   isTerminalChangeSeatError,
@@ -84,11 +85,15 @@ export class ChangeSeatEffect {
           }),
           // Branch on `error.error.errorCode`, never the message string
           // (design-system §9) — works identically regardless of the
-          // request's Accept-Language.
+          // request's Accept-Language. With no recognized code, `fallbackTier`
+          // further splits "backend unreachable" from "rejected, no code"
+          // (OBRS-170) instead of one vague GENERIC message.
           catchError((error: unknown) =>
             of(
               loadChangeSeatAvailabilityFailure({
-                error: this.translate.instant(mapChangeSeatErrorCode(extractChangeSeatErrorCode(error))),
+                error: this.translate.instant(
+                  mapChangeSeatErrorCode(extractChangeSeatErrorCode(error), classifyHttpFallback(error))
+                ),
               })
             )
           )
@@ -110,7 +115,13 @@ export class ChangeSeatEffect {
               loadChangeSeatTicketsFailure({
                 error:
                   extractApiErrorMessage(error) ||
-                  this.translate.instant('MY_BOOKINGS.CHANGE_SEAT.ERROR.GENERIC'),
+                  // Same code-less tiering as availability/confirm above (and
+                  // change-stop's own tickets load) — a backend-down 5xx says
+                  // "try again later", a code-less rejection says "can't do
+                  // this right now", instead of one vague GENERIC (OBRS-170).
+                  this.translate.instant(
+                    mapChangeSeatErrorCode(extractChangeSeatErrorCode(error), classifyHttpFallback(error))
+                  ),
               })
             )
           )
@@ -139,7 +150,9 @@ export class ChangeSeatEffect {
             return of(
               confirmChangeSeatFailure({
                 errorCode,
-                error: this.translate.instant(mapChangeSeatErrorCode(errorCode)),
+                error: this.translate.instant(
+                  mapChangeSeatErrorCode(errorCode, classifyHttpFallback(error))
+                ),
               })
             );
           })

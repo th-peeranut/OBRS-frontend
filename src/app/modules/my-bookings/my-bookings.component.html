@@ -117,14 +117,20 @@
   [popup]="true"
   [model]="actionMenuItems"
   appendTo="body"
+  styleClass="my-bookings-action-menu"
   (onHide)="onActionMenuHide()"
 >
   <ng-template pTemplate="item" let-item>
     <div class="action-menu-item" [class.action-menu-item--danger]="item.danger">
-      <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
-      <span class="action-menu-item__label">{{ item.label }}</span>
-      <span class="action-menu-item__reason" *ngIf="item.disabled && item.reasonText">
-        {{ item.reasonText }}
+      <span class="action-menu-item__icon-slot">
+        <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
+        <i *ngIf="!item.submitting" class="bi" [ngClass]="item.icon" aria-hidden="true"></i>
+      </span>
+      <span class="action-menu-item__text">
+        <span class="action-menu-item__label">{{ item.label }}</span>
+        <span class="action-menu-item__reason" *ngIf="item.disabled && item.reasonText">
+          {{ item.reasonText }}
+        </span>
       </span>
     </div>
   </ng-template>

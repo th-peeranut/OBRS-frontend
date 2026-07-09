@@ -20,6 +20,7 @@ import {
   confirmChangeSeatSuccess,
   invokeLoadMyBookingsApi,
   loadChangeSeatAvailability,
+  loadChangeSeatAvailabilityFailure,
   loadChangeSeatTicketsFailure,
   loadChangeSeatTicketsSuccess,
   openChangeSeatDialog,
@@ -148,7 +149,7 @@ describe('ChangeSeatEffect', () => {
       ]);
     });
 
-    it('still surfaces a failure when the API call itself fails', () => {
+    it('still surfaces a failure when the API call itself fails, tiered on HTTP status (OBRS-170)', () => {
       bookingService.getBookingTickets.and.returnValue(
         throwError(() => new HttpErrorResponse({ error: null, status: 500 }))
       );
@@ -159,7 +160,60 @@ describe('ChangeSeatEffect', () => {
       actionsSubject.next(openChangeSeatDialog({ bookingId: 4 }));
 
       expect(emitted).toEqual([
-        loadChangeSeatTicketsFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.GENERIC' }),
+        loadChangeSeatTicketsFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE' }),
+      ]);
+    });
+  });
+
+  describe('loadChangeSeatAvailability$ code-less failure branching (OBRS-170)', () => {
+    it('maps a 5xx/network failure with no errorCode to the SERVICE_UNAVAILABLE key', () => {
+      bookingService.getChangeSeatAvailability.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 503 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatAvailability$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('maps a code-less 4xx failure to the ACTION_UNAVAILABLE key', () => {
+      bookingService.getChangeSeatAvailability.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 403 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatAvailability$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.ACTION_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('still prefers a recognized errorCode over the status-based fallback', () => {
+      bookingService.getChangeSeatAvailability.and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              error: { errorCode: 'CHANGE_SEAT_ERROR_WINDOW_CLOSED' },
+              status: 400,
+            })
+        )
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatAvailability$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(loadChangeSeatAvailability({ bookingId: 5 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatAvailabilityFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.WINDOW_CLOSED' }),
       ]);
     });
   });
@@ -201,6 +255,23 @@ describe('ChangeSeatEffect', () => {
         confirmChangeSeatFailure({
           errorCode: 'CHANGE_SEAT_ERROR_SEAT_UNAVAILABLE',
           error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SEAT_UNAVAILABLE',
+        }),
+      ]);
+    });
+
+    it('maps a code-less 5xx confirm failure to the SERVICE_UNAVAILABLE key (OBRS-170)', () => {
+      const httpError = new HttpErrorResponse({ error: null, status: 500 });
+      bookingService.confirmChangeSeat.and.returnValue(throwError(() => httpError));
+
+      const emitted: Action[] = [];
+      effect.confirmChangeSeat$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(confirmChangeSeat(CONFIRM_PAYLOAD));
+
+      expect(emitted).toEqual([
+        confirmChangeSeatFailure({
+          errorCode: 'GENERIC',
+          error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.SERVICE_UNAVAILABLE',
         }),
       ]);
     });

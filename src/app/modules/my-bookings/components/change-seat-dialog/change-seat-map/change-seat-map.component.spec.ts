@@ -66,10 +66,56 @@ describe('ChangeSeatMapComponent', () => {
     expect(spy).toHaveBeenCalledWith('B7');
   });
 
-  it('renders the legend with available/occupied/selected entries', () => {
+  it('renders the legend with available/occupied/selected/current entries', () => {
     fixture.detectChanges();
 
     const legendItems = fixture.debugElement.queryAll(By.css('.change-seat-map__legend li'));
-    expect(legendItems.length).toBe(3);
+    expect(legendItems.length).toBe(4);
+  });
+
+  describe('originalSeats (OBRS-170: distinct marker for the traveler\'s original seat)', () => {
+    it('defaults to null and does not mark any seat ORIGINAL when unset — booking/walk-in flows are unaffected', () => {
+      component.pickedSeat = 'B4';
+      expect(component.originalSeats).toBeNull();
+      expect(component.seatGenders).toEqual({ B4: 'SELECTED' });
+    });
+
+    it('marks a seat ORIGINAL when it differs from the currently picked seat', () => {
+      component.originalSeats = ['B1'];
+      component.pickedSeat = 'B4';
+
+      expect(component.seatGenders).toEqual({ B1: 'ORIGINAL', B4: 'SELECTED' });
+    });
+
+    it('keeps the SELECTED marker (not ORIGINAL) when the original seat is still the picked one', () => {
+      component.originalSeats = ['B1'];
+      component.pickedSeat = 'B1';
+
+      expect(component.seatGenders).toEqual({ B1: 'SELECTED' });
+    });
+
+    it('still marks ORIGINAL even when nothing is picked yet', () => {
+      component.originalSeats = ['B1'];
+      component.pickedSeat = '';
+
+      expect(component.seatGenders).toEqual({ B1: 'ORIGINAL' });
+    });
+
+    it('ignores empty-string entries in originalSeats', () => {
+      component.originalSeats = [''];
+      component.pickedSeat = 'B4';
+
+      expect(component.seatGenders).toEqual({ B4: 'SELECTED' });
+    });
+
+    it('does NOT mark the original seat when another ticket has taken it (multi-passenger) — it renders occupied, not a misleading ORIGINAL', () => {
+      // Active ticket moved off B1 (picked B5); another ticket now holds B1,
+      // so B1 arrives in takenSeats. B1 must not carry the ORIGINAL marker.
+      component.originalSeats = ['B1'];
+      component.pickedSeat = 'B5';
+      component.takenSeats = ['B1'];
+
+      expect(component.seatGenders).toEqual({ B5: 'SELECTED' });
+    });
   });
 });

@@ -15,7 +15,7 @@ import {
 export class PassengerSeatBoxComponent implements OnChanges {
   @Input() label: string = '';
   @Input() isDisabled: boolean = false;
-  @Input() gender: string = ''; // MALE, FEMALE, MONK, SELECTED
+  @Input() gender: string = ''; // MALE, FEMALE, MONK, SELECTED, ORIGINAL
 
   @Output() passengerSeatOutput = new EventEmitter<string>();
 

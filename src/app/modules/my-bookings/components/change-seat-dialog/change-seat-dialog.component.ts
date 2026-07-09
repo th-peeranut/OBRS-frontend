@@ -215,6 +215,18 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
     return this.seatAssignments[ticket.ticketId] ?? toSeatLabel(this.vehicleType, ticket.seatNumber);
   }
 
+  /** The active ticket's ORIGINAL seat — its `seatNumber` as seeded from the
+   * booking, independent of any in-progress pick — feeding
+   * `app-change-seat-map`'s `originalSeats` input so the traveler keeps a
+   * persistent marker on their original seat even after picking a different
+   * one (OBRS-170). Same letter-prefixed normalization as `activePickedSeat`
+   * (OBRS-171: `ticket.seatNumber` itself is the backend's bare-numeric
+   * form). */
+  get originalSeats(): string[] {
+    const ticket = this.activeTicket;
+    return ticket ? [toSeatLabel(this.vehicleType, ticket.seatNumber)] : [];
+  }
+
   /** Every other ticket's own draft pick, unioned with `occupiedSeatNumbers`
    * — none of these are selectable for the active ticket. `occupiedSeatNumbers`
    * comes straight off the backend's bare-numeric availability response, so it's

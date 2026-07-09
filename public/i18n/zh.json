@@ -120,7 +120,8 @@
       "LEGEND": {
         "AVAILABLE": "可选",
         "OCCUPIED": "已占用",
-        "SELECTED": "已选择"
+        "SELECTED": "已选择",
+        "CURRENT": "当前座位"
       },
       "CONFIRM_BUTTON": "确认新座位",
       "BACK_BUTTON": "返回",
@@ -136,7 +137,9 @@
         "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改座位。",
         "UNAUTHORIZED": "您无权更改此预订的座位。",
         "BOOKING_NOT_FOUND": "此预订已不可用。",
-        "GENERIC": "无法更改座位，请重试。"
+        "GENERIC": "无法更改座位，请重试。",
+        "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
+        "ACTION_UNAVAILABLE": "目前无法完成此操作。"
       }
     },
     "CHANGE_STOP": {
@@ -176,7 +179,9 @@
         "UNAUTHORIZED": "您无权更改此预订的上下车点。",
         "BOOKING_NOT_FOUND": "此预订已不可用。",
         "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改上下车点。",
-        "GENERIC": "无法更改上下车点，请重试。"
+        "GENERIC": "无法更改上下车点，请重试。",
+        "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
+        "ACTION_UNAVAILABLE": "目前无法完成此操作。"
       }
     }
   },

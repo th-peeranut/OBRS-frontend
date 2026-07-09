@@ -23,8 +23,11 @@ import {
   confirmChangeStopFailure,
   confirmChangeStopSuccess,
   invokeLoadMyBookingsApi,
+  loadChangeStopEstimate,
+  loadChangeStopEstimateFailure,
   loadChangeStopRouteStops,
   loadChangeStopRouteStopsFailure,
+  loadStopsLookupFailure,
   openChangeStopDialog,
 } from './my-bookings.action';
 import { initialMyBookingsState } from './my-bookings.model';
@@ -128,6 +131,111 @@ describe('ChangeStopEffect', () => {
 
       expect(emitted).toEqual([
         loadChangeStopRouteStopsFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR' }),
+      ]);
+    });
+  });
+
+  describe('code-less failure branching (OBRS-170)', () => {
+    it('loadStopsLookupOnOpen$ maps a 5xx/network failure with no backend message to the SERVICE_UNAVAILABLE key', () => {
+      const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
+      stationService.getAll.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 502 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadStopsLookupOnOpen$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 5 }));
+
+      expect(emitted).toEqual([
+        loadStopsLookupFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.SERVICE_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('loadStopsLookupOnOpen$ maps a code-less 4xx failure to the ACTION_UNAVAILABLE key', () => {
+      const stationService = TestBed.inject(StationService) as jasmine.SpyObj<StationService>;
+      stationService.getAll.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 403 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadStopsLookupOnOpen$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 5 }));
+
+      expect(emitted).toEqual([
+        loadStopsLookupFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.ACTION_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('loadChangeStopRouteStops$ maps a 5xx/network failure to the SERVICE_UNAVAILABLE key', () => {
+      const routeMapService = TestBed.inject(RouteMapService) as jasmine.SpyObj<RouteMapService>;
+      routeMapService.getPickupDropoff.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 0 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopRouteStops$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(loadChangeStopRouteStops({ bookingId: 5, routeSlug: 'bkk-cnx' }));
+
+      expect(emitted).toEqual([
+        loadChangeStopRouteStopsFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.SERVICE_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('loadChangeStopEstimate$ maps a code-less 5xx failure to the SERVICE_UNAVAILABLE key', () => {
+      bookingService.getChangeStopEstimate.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 500 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopEstimate$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        loadChangeStopEstimate({ bookingId: 5, newFromStopId: 10, newToStopId: 30, seats: ['B4'] })
+      );
+
+      expect(emitted).toEqual([
+        loadChangeStopEstimateFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.SERVICE_UNAVAILABLE' }),
+      ]);
+    });
+
+    it('loadChangeStopEstimate$ still prefers a recognized errorCode over the status-based fallback', () => {
+      bookingService.getChangeStopEstimate.and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({ error: { errorCode: 'CHANGE_STOP_ERROR_ROUTE_MISMATCH' }, status: 400 })
+        )
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopEstimate$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        loadChangeStopEstimate({ bookingId: 5, newFromStopId: 10, newToStopId: 30, seats: ['B4'] })
+      );
+
+      expect(emitted).toEqual([
+        loadChangeStopEstimateFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.ROUTE_MISMATCH' }),
+      ]);
+    });
+
+    it('confirmChangeStop$ maps a code-less 4xx failure to the ACTION_UNAVAILABLE key', () => {
+      bookingService.confirmChangeStop.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 403 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.confirmChangeStop$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(confirmChangeStop(CONFIRM_PAYLOAD));
+
+      expect(emitted).toEqual([
+        confirmChangeStopFailure({
+          errorCode: 'GENERIC',
+          error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.ACTION_UNAVAILABLE',
+        }),
       ]);
     });
   });

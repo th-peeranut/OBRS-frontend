@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeStopErrorCode } from '../interfaces/change-stop.interface';
+import { classifyHttpFallback, HttpFallbackTier } from './http-error-fallback';
 
 /**
  * Maps a change-stop endpoint's `error.error.errorCode` (stable UPPER_SNAKE,
@@ -7,8 +8,16 @@ import { ChangeStopErrorCode } from '../interfaces/change-stop.interface';
  * `MY_BOOKINGS.CHANGE_STOP.ERROR.*`. Mirrors `reschedule-error.ts`'s
  * `mapRescheduleErrorCode()` — branch on the stable code, never the
  * localized `message` (design-system §9).
+ *
+ * When there is NO recognized `errorCode` (network failure, backend outage,
+ * or a rejected-but-code-less 4xx), `fallbackTier` picks between the two
+ * generic-copy keys instead of one vague message (OBRS-170) — see
+ * `classifyHttpFallback` in `http-error-fallback.ts`.
  */
-export function mapChangeStopErrorCode(errorCode: string | null | undefined): string {
+export function mapChangeStopErrorCode(
+  errorCode: string | null | undefined,
+  fallbackTier: HttpFallbackTier = 'ACTION_UNAVAILABLE'
+): string {
   const knownCodes: Record<string, string> = {
     CHANGE_STOP_ERROR_NOT_CONFIRMED: 'MY_BOOKINGS.CHANGE_STOP.ERROR.NOT_CONFIRMED',
     CHANGE_STOP_ERROR_MAX_COUNT: 'MY_BOOKINGS.CHANGE_STOP.ERROR.MAX_COUNT',
@@ -24,9 +33,30 @@ export function mapChangeStopErrorCode(errorCode: string | null | undefined): st
       'MY_BOOKINGS.CHANGE_STOP.ERROR.MULTI_LEG_NOT_SUPPORTED',
   };
 
-  return errorCode && knownCodes[errorCode]
-    ? knownCodes[errorCode]
-    : 'MY_BOOKINGS.CHANGE_STOP.ERROR.GENERIC';
+  if (errorCode && knownCodes[errorCode]) {
+    return knownCodes[errorCode];
+  }
+
+  return fallbackTier === 'SERVICE_UNAVAILABLE'
+    ? 'MY_BOOKINGS.CHANGE_STOP.ERROR.SERVICE_UNAVAILABLE'
+    : 'MY_BOOKINGS.CHANGE_STOP.ERROR.ACTION_UNAVAILABLE';
+}
+
+/**
+ * Resolves the fallback key for a failed **background load** on the
+ * change-stop dialog (station list / route stops / tickets) — these
+ * endpoints carry no domain `errorCode` of their own, so every failure used
+ * to collapse into the single vague `STOPS_LOAD_ERROR` message regardless of
+ * whether the backend was down or just rejected the call (OBRS-170). Reuses
+ * the same `ERROR.SERVICE_UNAVAILABLE` / `ERROR.ACTION_UNAVAILABLE` copy as
+ * `mapChangeStopErrorCode`'s fallback — the message is intentionally generic
+ * either way, so a separate key set would just duplicate the same two
+ * strings.
+ */
+export function mapChangeStopStopsLoadError(error: unknown): string {
+  return classifyHttpFallback(error) === 'SERVICE_UNAVAILABLE'
+    ? 'MY_BOOKINGS.CHANGE_STOP.ERROR.SERVICE_UNAVAILABLE'
+    : 'MY_BOOKINGS.CHANGE_STOP.ERROR.ACTION_UNAVAILABLE';
 }
 
 /** `errorCode`s that are terminal for the current dialog session — the

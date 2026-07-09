@@ -32,6 +32,19 @@ export class ChangeSeatMapComponent {
    * marker (`passenger-seat-box`'s `gender='SELECTED'` branch), not a
    * gender icon. */
   @Input() pickedSeat = '';
+  /**
+   * The active ticket's ORIGINAL seat(s), in the seat-map's letter-prefixed
+   * label form (`toSeatLabel`) — same as `pickedSeat`. Optional and
+   * `null`-default (OBRS-170): every other consumer of the shared
+   * `app-passenger-seat-van`/`app-passenger-seat-bus`/`app-passenger-seat-box`
+   * chain (booking flow, staff walk-in) never sets this, so their rendering
+   * is byte-identical to before (design-system §10 — extend, don't fork, a
+   * shared component's contract). When set, renders a persistent `ORIGINAL`
+   * marker on that seat, distinct from the `SELECTED` marker, so the
+   * traveler doesn't lose track of their original seat once they pick a
+   * different one.
+   */
+  @Input() originalSeats: string[] | null = null;
 
   @Output() readonly seatPicked = new EventEmitter<string>();
 
@@ -43,10 +56,30 @@ export class ChangeSeatMapComponent {
   /** Multi-select mode is always on (an object, never null) so the very
    * first click registers — see `passenger-seat-bus/van`'s
    * `setPassengerSeatPosition()`, which only treats clicks as no-ops when
-   * `seatGenders === null`. Only the active ticket's picked seat carries the
-   * `SELECTED` token; every other seat renders with no icon. */
+   * `seatGenders === null`. Every seat in `originalSeats` is marked
+   * `ORIGINAL` first; the active ticket's picked seat then overwrites its own
+   * entry with `SELECTED` — so a seat that is BOTH the original and the
+   * current pick (the common "nothing changed yet" case) still renders as
+   * `SELECTED` exactly as before, and only a seat that stops being the pick
+   * keeps its distinct `ORIGINAL` marker. Every other seat renders with no
+   * icon. */
   get seatGenders(): Record<string, string> {
-    return this.pickedSeat ? { [this.pickedSeat]: 'SELECTED' } : {};
+    const genders: Record<string, string> = {};
+    const taken = this.takenSeats ?? [];
+    for (const seat of this.originalSeats ?? []) {
+      // Skip a seat that another ticket has since taken (multi-passenger:
+      // once the active ticket vacates its original seat, another ticket can
+      // pick it — it must then render as occupied, not as a misleading
+      // available-looking ORIGINAL bookmark). `isSeatTakenByOther` still
+      // blocks picking it, so this is purely the correct visual state.
+      if (seat && !taken.includes(seat)) {
+        genders[seat] = 'ORIGINAL';
+      }
+    }
+    if (this.pickedSeat) {
+      genders[this.pickedSeat] = 'SELECTED';
+    }
+    return genders;
   }
 
   onSeatClicked(seatNumber: string): void {

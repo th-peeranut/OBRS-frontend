@@ -9,10 +9,12 @@ import { StationService } from '../../../services/station/station.service';
 import { RouteMapService } from '../../../services/route-map/route-map.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
+import { classifyHttpFallback } from '../../../shared/lib/http-error-fallback';
 import {
   extractChangeStopErrorCode,
   isTerminalChangeStopError,
   mapChangeStopErrorCode,
+  mapChangeStopStopsLoadError,
 } from '../../../shared/lib/change-stop-error';
 import { normalizeStatusCode } from '../../../shared/interfaces/my-booking.interface';
 import { ChangeStopSeatAssignment } from '../../../shared/interfaces/change-stop.interface';
@@ -72,12 +74,15 @@ export class ChangeStopEffect {
       switchMap(() =>
         this.stationService.getAll().pipe(
           map((response) => loadStopsLookupSuccess({ stopsLookup: this.toStopsLookup(response.data) })),
+          // No domain errorCode exists for this endpoint — with no backend
+          // message either, branch the generic copy on HTTP status (OBRS-170)
+          // instead of always showing the same vague STOPS_LOAD_ERROR text.
           catchError((error: unknown) =>
             of(
               loadStopsLookupFailure({
                 error:
                   extractApiErrorMessage(error) ||
-                  this.translate.instant('MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR'),
+                  this.translate.instant(mapChangeStopStopsLoadError(error)),
               })
             )
           )
@@ -99,7 +104,7 @@ export class ChangeStopEffect {
               loadChangeStopTicketsFailure({
                 error:
                   extractApiErrorMessage(error) ||
-                  this.translate.instant('MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR'),
+                  this.translate.instant(mapChangeStopStopsLoadError(error)),
               })
             )
           )
@@ -141,10 +146,10 @@ export class ChangeStopEffect {
               route: response.data?.route ?? null,
             })
           ),
-          catchError(() =>
+          catchError((error: unknown) =>
             of(
               loadChangeStopRouteStopsFailure({
-                error: this.translate.instant('MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR'),
+                error: this.translate.instant(mapChangeStopStopsLoadError(error)),
               })
             )
           )
@@ -170,7 +175,9 @@ export class ChangeStopEffect {
           catchError((error: unknown) =>
             of(
               loadChangeStopEstimateFailure({
-                error: this.translate.instant(mapChangeStopErrorCode(extractChangeStopErrorCode(error))),
+                error: this.translate.instant(
+                  mapChangeStopErrorCode(extractChangeStopErrorCode(error), classifyHttpFallback(error))
+                ),
               })
             )
           )
@@ -203,7 +210,9 @@ export class ChangeStopEffect {
               return of(
                 confirmChangeStopFailure({
                   errorCode,
-                  error: this.translate.instant(mapChangeStopErrorCode(errorCode)),
+                  error: this.translate.instant(
+                    mapChangeStopErrorCode(errorCode, classifyHttpFallback(error))
+                  ),
                 })
               );
             })

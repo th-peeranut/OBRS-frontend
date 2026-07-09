@@ -77,6 +77,41 @@ describe('PassengerSeatBoxComponent', () => {
     });
   });
 
+  describe("gender='ORIGINAL' (OBRS-170 change-seat original-seat marker)", () => {
+    it('renders a distinct bookmark marker, not the SELECTED check-marker or a gender image', () => {
+      component.label = 'B1';
+      component.gender = 'ORIGINAL';
+      fixture.detectChanges();
+
+      const marker = fixture.debugElement.query(By.css('.passenger-original-icon'));
+      expect(marker).not.toBeNull();
+      expect(marker.nativeElement.textContent.trim()).toBe('bookmark');
+      expect(fixture.debugElement.query(By.css('.passenger-selected-icon'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('img'))).toBeNull();
+    });
+
+    it('does not render the ORIGINAL marker when the seat is disabled', () => {
+      component.label = 'B1';
+      component.gender = 'ORIGINAL';
+      component.isDisabled = true;
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.passenger-original-icon'))).toBeNull();
+    });
+
+    it('existing MALE/FEMALE/MONK/SELECTED/empty call sites never render the ORIGINAL marker', () => {
+      for (const gender of ['MALE', 'FEMALE', 'MONK', 'SELECTED', '']) {
+        component.label = 'B1';
+        component.gender = gender;
+        fixture.detectChanges();
+
+        expect(fixture.debugElement.query(By.css('.passenger-original-icon')))
+          .withContext(`gender=${gender}`)
+          .toBeNull();
+      }
+    });
+  });
+
   it('emits the label on click when enabled', () => {
     component.label = 'B7';
     const spy = spyOn(component.passengerSeatOutput, 'emit');

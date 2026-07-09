@@ -36,4 +36,14 @@
     class="material-symbols-outlined passenger-selected-icon"
     aria-hidden="true"
   >check_circle</span>
+
+  <!-- Original/current seat (persistent marker, distinct from Selected —
+       the change-seat dialog keeps this visible on the traveler's original
+       seat even after a different seat is picked, OBRS-170). A corner badge
+       rather than a centered overlay so it never hides the seat label. -->
+  <span
+    *ngIf="!isDisabled && gender == 'ORIGINAL'"
+    class="material-symbols-outlined passenger-original-icon"
+    aria-hidden="true"
+  >bookmark</span>
 </div>
