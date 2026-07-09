@@ -4,6 +4,7 @@
     "MODAL": { "TITLE": "报告可用性问题", "SUBTITLE": "通过报告错误或建议帮助我们改进。", "CLOSE": "关闭", "SUBMIT": "提交报告", "SUBMITTING": "提交中..." },
     "CATEGORY": { "LABEL": "类别", "BUG": "错误", "UX_UI_IMPROVEMENT": "UX/UI 改进", "SUGGESTION": "建议" },
     "DESCRIPTION": { "LABEL": "描述", "PLACEHOLDER": "详细描述问题或建议...", "REQUIRED": "描述为必填项。" },
+    "EMAIL": { "LABEL": "邮箱（可选）", "PLACEHOLDER": "you@example.com", "INVALID": "请输入有效的邮箱地址，或留空。" },
     "IMAGES": { "LABEL": "附加图片（可选）", "HINT": "最多5张图片，每张最大5 MB。支持 JPEG、PNG、WebP、GIF。", "ADD": "添加图片", "REMOVE": "删除", "TOO_MANY": "最多只能附加5张图片。", "TOO_LARGE": "一张或多张图片超过5 MB限制。", "INVALID_TYPE": "仅支持 JPEG、PNG、WebP 和 GIF 格式的图片。" },
     "SUBMIT_SUCCESS": "您的报告已提交。谢谢！",
     "ERROR": { "REPORT_INVALID_CATEGORY": "所选类别无效。", "REPORT_TOO_MANY_IMAGES": "附加的图片过多。", "REPORT_UNSUPPORTED_MEDIA_TYPE": "一种或多种图片类型不受支持。", "REPORT_IMAGE_TOO_LARGE": "一张或多张图片过大。", "REPORT_PAYLOAD_TOO_LARGE": "上传总大小过大。", "REPORT_RATE_LIMITED": "您最近提交报告过于频繁，请稍后再试。", "VALIDATION_FAILED": "请检查您的输入后重试。", "GENERIC": "出现错误，请重试。" }
@@ -21,6 +22,9 @@
     "VIEW_TICKET": "查看电子票",
     "LOAD_FAILED": "无法加载您的预订，请重试。",
     "NOT_CANCELLABLE": "无法取消",
+    "ACTIONS_MENU": {
+      "LABEL": "操作"
+    },
     "TICKET_MODAL": {
       "LOADING": "正在加载您的电子票…",
       "LOAD_FAILED": "无法加载电子票，请重试。",
@@ -56,6 +60,124 @@
       "SUCCESS": "您的预订已取消，正在处理 {{refund}} 的退款。",
       "SUCCESS_MANUAL": "您的预订已取消，工作人员将为您转账退款 {{refund}}。",
       "FAILED": "无法取消预订，请重试。"
+    },
+    "RESCHEDULE": {
+      "ACTION": "改签",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能改签",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能改签",
+        "ALREADY_USED": "此预订已改签过一次",
+        "NO_WINDOW": "距离出发时间太近，无法改签"
+      },
+      "DIALOG_TITLE": "改签您的行程",
+      "DATE_LABEL": "新的出发日期",
+      "STOPS_FIXED_NOTE": "上车点和下车点保持不变，只能更改日期和时间。",
+      "OPTIONS_LOADING": "正在查找可用班次…",
+      "OPTIONS_EMPTY": "该日期没有可用班次，请尝试其他日期。",
+      "OPTIONS_ERROR": "无法加载可用班次，请重试。",
+      "SEATS": "余票",
+      "ESTIMATE": {
+        "OLD_FARE": "原票价",
+        "NEW_FARE": "新票价",
+        "FEE": "改签手续费",
+        "LOADING": "正在查找可用班次…",
+        "TOP_UP": "您需要补付 {{amount}}",
+        "REFUND": "您将获得退款 {{amount}}",
+        "NO_PAYMENT": "无需额外付款"
+      },
+      "CONFIRM_BUTTON": "确认改签",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "您的预订已改签成功。",
+      "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成改签。",
+      "PAYMENT_ABANDONED": "改签尚未完成——在支付完成之前，您原来的预订不会改变。",
+      "PRICE_CHANGED": "自您上次查看以来价格已发生变化，请查看最新票价并重新确认。",
+      "ERROR": {
+        "NOT_CONFIRMED": "此预订已无法改签（状态不是已确认）。",
+        "MAX_COUNT": "此预订已改签过一次，无法再次改签。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法改签。",
+        "SAME_SCHEDULE": "请选择其他班次。",
+        "BOOKING_NOT_FOUND": "该班次已不可用。",
+        "WINDOW_CLOSED": "该班次距离现在太近，请选择更晚的时间。",
+        "DATE_TOO_FAR": "该日期与您原定行程相差太远，请选择更接近的日期。",
+        "ROUTE_MISMATCH": "改签时无法更改路线。",
+        "NO_SEATS": "您的座位在该班次上已不可用，请另选一个。",
+        "NET_AMOUNT_CHANGED": "价格已发生变化，请重试。",
+        "UNAUTHORIZED": "您无权改签此预订。",
+        "GENERIC": "无法改签此预订，请重试。"
+      }
+    },
+    "CHANGE_SEAT": {
+      "ACTION": "更改座位",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能更改座位",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改座位",
+        "ALREADY_USED": "此预订已更改过一次座位",
+        "NO_WINDOW": "距离出发时间太近，无法更改座位"
+      },
+      "DIALOG_TITLE": "更改您的座位",
+      "MAP_LOADING": "正在加载座位图…",
+      "PASSENGER_STEP": "乘客 {{index}}／{{total}}",
+      "LEGEND": {
+        "AVAILABLE": "可选",
+        "OCCUPIED": "已占用",
+        "SELECTED": "已选择"
+      },
+      "CONFIRM_BUTTON": "确认新座位",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "座位已更改。",
+      "ERROR": {
+        "NOT_CONFIRMED": "此预订已无法更改座位（状态不是已确认）。",
+        "MAX_COUNT": "此预订已更改过一次座位，无法再次更改。",
+        "WINDOW_CLOSED": "该班次距离现在太近，无法再更改座位。",
+        "SEAT_UNAVAILABLE": "该座位已不可用，请另选一个。",
+        "NO_SEATS": "该班次没有可用座位。",
+        "SEAT_NOT_IN_MAP": "该座位不在此车辆的座位图中，请另选一个。",
+        "TICKET_MISMATCH": "自打开此窗口以来您的车票已发生变化，请重试。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改座位。",
+        "UNAUTHORIZED": "您无权更改此预订的座位。",
+        "BOOKING_NOT_FOUND": "此预订已不可用。",
+        "GENERIC": "无法更改座位，请重试。"
+      }
+    },
+    "CHANGE_STOP": {
+      "ACTION": "更改上下车点",
+      "REASON": {
+        "NOT_CONFIRMED": "只有已确认的预订才能更改上下车点",
+        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改上下车点",
+        "ALREADY_USED": "此预订已更改过一次上下车点",
+        "NO_WINDOW": "距离出发时间太近，无法更改上下车点"
+      },
+      "DIALOG_TITLE": "更改您的上下车点",
+      "PICKUP_STEP_TITLE": "选择新的上车点",
+      "DROPOFF_STEP_TITLE": "选择新的下车点",
+      "STOPS_LOAD_ERROR": "无法加载该路线的站点，请重试。",
+      "ESTIMATE": {
+        "OLD_FARE": "原票价",
+        "NEW_FARE": "新票价",
+        "LOADING": "正在计算新票价…",
+        "TOP_UP": "您需要补付 {{amount}}",
+        "REFUND": "您将获得退款 {{amount}}",
+        "NO_PAYMENT": "无需额外付款"
+      },
+      "CONFIRM_BUTTON": "确认新的上下车点",
+      "BACK_BUTTON": "返回",
+      "SUCCESS": "您的上下车点已更新。",
+      "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成上下车点的更改。",
+      "PAYMENT_ABANDONED": "上下车点更改尚未完成——在支付完成之前，您原来的预订不会改变。",
+      "ERROR": {
+        "INVALID_SEGMENT": "下车点必须在上车点之后，请重新选择。",
+        "SAME_SEGMENT": "请选择不同的上车点或下车点。",
+        "NOT_CONFIRMED": "此预订已无法更改上下车点（状态不是已确认）。",
+        "MAX_COUNT": "此预订已更改过一次上下车点，无法再次更改。",
+        "WINDOW_CLOSED": "该班次距离现在太近，无法再更改上下车点。",
+        "ROUTE_MISMATCH": "更改上下车点时无法更改路线。",
+        "NO_SEATS": "您的座位在新的上下车点上已不可用，请重试。",
+        "NET_AMOUNT_CHANGED": "价格已发生变化，请重试。",
+        "UNAUTHORIZED": "您无权更改此预订的上下车点。",
+        "BOOKING_NOT_FOUND": "此预订已不可用。",
+        "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改上下车点。",
+        "GENERIC": "无法更改上下车点，请重试。"
+      }
     }
   },
   "CALENDAR": {
@@ -150,6 +272,7 @@
       "ROUTE_MANAGEMENT": "路线",
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
+      "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告"
     },
     "LAYOUT": {
@@ -226,6 +349,7 @@
       "LOAD_VEHICLES_FAILED": "无法加载车辆。",
       "LOAD_ROUTES_FAILED": "无法加载路线。",
       "LOAD_SCHEDULES_FAILED": "无法加载班次。",
+      "LOAD_PROMOTIONS_FAILED": "无法加载促销活动。",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -250,6 +374,47 @@
       "TH_LABEL": "泰文标签",
       "EN_DESCRIPTION": "英文描述",
       "TH_DESCRIPTION": "泰文描述"
+    },
+    "PROMOTIONS": {
+      "SUBTITLE": "管理往返订票折扣。",
+      "DISCOUNT_TYPE": "折扣类型",
+      "CODE": "代码",
+      "SLUG": "Slug",
+      "TIMES_USED": "已使用次数",
+      "USAGE_LIMIT": "使用次数上限",
+      "DISCOUNT_AMOUNT": "折扣金额",
+      "STATUS": "状态",
+      "STATUS_ACTIVE": "启用",
+      "STATUS_INACTIVE": "停用",
+      "START_DATE": "开始日期",
+      "END_DATE": "结束日期",
+      "MIN_BOOKING_AMOUNT": "最低订票金额",
+      "DATE_RANGE_VALIDATION": "结束日期不能早于开始日期。",
+      "LOAD_FAILED": "无法加载往返促销活动。",
+      "ADD": "添加促销代码",
+      "ADD_TITLE": "添加促销代码",
+      "EDIT_TITLE": "编辑促销代码",
+      "MODAL_HINT": "设置此促销活动的代码、折扣和有效期。",
+      "TABLE_TITLE": "促销代码",
+      "MAX_DISCOUNT_AMOUNT": "最高折扣金额",
+      "MAX_DISCOUNT_HINT": "仅在折扣类型为百分比时适用。",
+      "AUTO_APPLY": "自动应用",
+      "AUTO_APPLY_YES": "是",
+      "AUTO_APPLY_NO": "否",
+      "DISCOUNT_TYPE_PERCENTAGE": "百分比",
+      "DISCOUNT_TYPE_FIXED_AMOUNT": "固定金额",
+      "TRANSLATIONS_SECTION": "翻译",
+      "LABEL_EN": "名称（英文）",
+      "LABEL_TH": "名称（泰文）",
+      "LABEL_ZH": "名称（中文）",
+      "DESCRIPTION_EN": "描述（英文）",
+      "DESCRIPTION_TH": "描述（泰文）",
+      "DESCRIPTION_ZH": "描述（中文）",
+      "MANAGED_ABOVE": "已在上方管理",
+      "DEACTIVATE_CONFIRM_TITLE": "停用此促销活动？",
+      "DEACTIVATE_CONFIRM_MESSAGE": "此促销活动将被标记为停用，而不会被删除。您之后可以通过编辑重新启用它。",
+      "DEACTIVATE": "停用",
+      "DEACTIVATING": "正在停用..."
     },
     "ROLES": {
       "TITLE": "访问控制档案",
@@ -476,8 +641,8 @@
       "EMPTY": "未找到可用性报告。",
       "LOAD_FAILED": "加载报告失败，请刷新。",
       "UNITS": "份报告",
-      "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "IMAGE_ENLARGE": "放大图片 {{position}}", "CLOSE": "关闭", "TRIAGE_NOTE_LABEL": "处理备注", "TRIAGE_NOTE_PLACEHOLDER": "为此报告添加备注...", "TRIAGED_BY": "处理人", "TRIAGED_AT": "处理时间", "JIRA_LINK_LABEL": "Jira 问题", "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}" },
-      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "accepted": "已接受", "resolved": "已解决", "wont_fix": "不修复" },
+      "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "REPORTER_EMAIL": "报告人邮箱", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "IMAGE_ENLARGE": "放大图片 {{position}}", "CLOSE": "关闭", "TRIAGE_NOTE_LABEL": "处理备注", "TRIAGE_NOTE_PLACEHOLDER": "为此报告添加备注...", "TRIAGED_BY": "处理人", "TRIAGED_AT": "处理时间", "JIRA_LINK_LABEL": "Jira 问题", "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}" },
+      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "accepted": "已接受", "resolved": "已解决", "wont_fix": "已拒绝" },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
@@ -788,9 +953,27 @@
       "TICKET_PRICE": "票价",
       "TICKET_PRICE_RETURN": "往返票价",
       "TICKET_UNIT": "泰铢/人",
+      "SUBTOTAL": "小计",
+      "PROMO_DISCOUNT": "促销折扣",
       "TOTAL": "总价",
       "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认信息"
+    }
+  },
+  "PROMO_CODE": {
+    "LABEL": "促销代码",
+    "PLACEHOLDER": "输入促销代码",
+    "APPLY": "应用",
+    "APPLYING": "正在应用...",
+    "REMOVE": "移除促销代码",
+    "APPLY_FAILED": "无法应用此代码，请重试。",
+    "ERROR": {
+      "NOT_FOUND": "此代码不存在。",
+      "NOT_APPLICABLE": "此代码不适用于您的预订。",
+      "INACTIVE": "此代码已停用。",
+      "OUT_OF_WINDOW": "此代码目前不可用。",
+      "BELOW_MINIMUM": "您的订票总额未达到此代码的最低金额要求。",
+      "USAGE_LIMIT_REACHED": "此代码已达到使用次数上限。"
     }
   },
   "PASSENGER_INFO": {
@@ -833,7 +1016,8 @@
       "MONK": "僧侣"
     },
     "ALERT": {
-      "CREATE_SUCCESS": "预订保存成功"
+      "CREATE_SUCCESS": "预订保存成功",
+      "CREATE_FAILED": "无法创建预订，请重试。"
     }
   },
   "PAYMENT": {
@@ -852,6 +1036,9 @@
       "TICKET_PRICE_ONEWAY": "票价",
       "TICKET_PRICE_ROUNDTRIP": "往返票价",
       "TICKET_UNIT": "泰铢/人",
+      "SUBTOTAL": "小计",
+      "DISCOUNT_ROUND_TRIP": "往返折扣",
+      "DISCOUNT": "折扣",
       "TOTAL": "总计",
       "TOTAL_UNIT": "泰铢",
       "CONFIRM": "确认付款"
@@ -1084,6 +1271,8 @@
       "CONTACT_PHONE": "联系电话",
       "CONTACT_EMAIL": "联系邮箱",
       "TOTAL_AMOUNT": "合计",
+      "SUBTOTAL": "小计",
+      "DISCOUNT_ROUND_TRIP": "往返折扣",
       "CASH_ONLY_BADGE": "现金支付",
       "CASH_ONLY_NOTE": "现场售票仅接受现金，请先收款再确认。",
       "BADGE_AVAILABLE": "可用",

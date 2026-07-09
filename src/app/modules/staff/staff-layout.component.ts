@@ -19,10 +19,10 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
   protected readonly defaultSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
 
   // Whether to surface the Admin Dashboard shortcut in the profile menu.
-  // Admins satisfy the /staff route guard via the backend role hierarchy
-  // (see AuthService.hasAnyRole), so they can land here; gate the link on the
-  // admin role so non-admin staff don't get a dead link the /admin AuthGuard
-  // would only bounce.
+  // Under the area-based access model (see AuthService) only the owner reaches
+  // both portals, so this is effectively an "owner is here" check: gate the
+  // shortcut on the admin grant so plain salespersons/drivers — who cannot
+  // enter /admin — don't see a dead link.
   protected isAdmin = false;
 
   // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:

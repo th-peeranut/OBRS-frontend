@@ -13,6 +13,8 @@ import { invokeSetPassengerInfo } from '../../shared/stores/passenger-info/passe
 import { invokeSetBookingApi } from '../../shared/stores/booking/booking.action';
 import { PassengerInfoFormComponent } from './components/passenger-info-form/passenger-info-form.component';
 import { BookerInfoFormComponent } from './components/booker-info-form/booker-info-form.component';
+import { PassengerInfoSummaryComponent } from './components/passenger-info-summary/passenger-info-summary.component';
+import { PromoCodeAppliedEvent } from '../../shared/components/promo-code-field/promo-code-field.component';
 import { selectScheduleBooking } from '../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../shared/stores/schedule-filter/schedule-filter.selector';
 import { BookingService } from '../../services/booking/booking.service';
@@ -20,6 +22,7 @@ import { parsePricePerSeat } from '../../shared/lib/trip-format';
 import {
   BookingPayload,
   BookingSchedulePayload,
+  CreateBookingResponse,
 } from '../../shared/interfaces/booking.interface';
 import { Schedule, ScheduleFilter } from '../../shared/interfaces/schedule.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
@@ -44,8 +47,14 @@ export class PassengerInfoComponent {
   passengerInfoFormComponent?: PassengerInfoFormComponent;
   @ViewChild(BookerInfoFormComponent)
   bookerInfoFormComponent?: BookerInfoFormComponent;
+  @ViewChild(PassengerInfoSummaryComponent)
+  passengerInfoSummaryComponent?: PassengerInfoSummaryComponent;
   isPassengerFormValid = false;
   isBookerFormValid = false;
+  // OBRS-109 (#37): the confirmed-applied promo code (from the summary
+  // sidebar's instant preview). Only this value — never a guessed/typed one
+  // that wasn't confirmed — is ever sent on the create-booking call.
+  private appliedPromoCode: string | null = null;
   rawProvinceStationList: Observable<StationApi[]>;
   private readonly titleMap: Record<number, string> = {
     1: 'Mr.',
@@ -92,6 +101,14 @@ export class PassengerInfoComponent {
     }
   }
 
+  onPromoApplied(event: PromoCodeAppliedEvent): void {
+    this.appliedPromoCode = event.code;
+  }
+
+  onPromoRemoved(): void {
+    this.appliedPromoCode = null;
+  }
+
   async onSubmitPassengerInfo(): Promise<void> {
     const passengerInfo =
       this.passengerInfoFormComponent?.validateAndGetPassengerInfo();
@@ -108,9 +125,18 @@ export class PassengerInfoComponent {
     let isBookingCreated = false;
 
     if (bookingPayload) {
+      // OBRS-109 (#37): when a confirmed promo code is being sent, opt out of
+      // the global error alert so a PROMO_CODE_* rejection (the preview ->
+      // submit race) can be shown inline on the reverted field instead —
+      // handleBookingCreationError replicates the generic alert for any
+      // other error on this call.
+      const suppressGlobalErrorAlert = !!this.appliedPromoCode;
+
       try {
         const response = await firstValueFrom(
-          this.bookingService.createBooking(bookingPayload).pipe(take(1))
+          this.bookingService
+            .createBooking(bookingPayload, suppressGlobalErrorAlert)
+            .pipe(take(1))
         );
         if (response?.code === 200 || response?.code === 201) {
           // createBooking already normalizes the intake response to the canonical
@@ -118,7 +144,7 @@ export class PassengerInfoComponent {
           const bookingId = response.data?.bookingId || null;
           const bookingNumber = response.data?.bookingNumber || null;
           this.bookingService.setActiveBookingId(bookingId);
-          this.setBookingStore(bookingId, bookingNumber);
+          this.setBookingStore(bookingId, bookingNumber, response.data);
           this.alertService.success(
             this.translateService.instant(
               'PASSENGER_INFO.ALERT.CREATE_SUCCESS'
@@ -131,6 +157,7 @@ export class PassengerInfoComponent {
         if (error instanceof HttpErrorResponse && error.status === 401) {
           return;
         }
+        this.handleBookingCreationError(error);
         return;
       }
     }
@@ -142,6 +169,28 @@ export class PassengerInfoComponent {
 
   onBack(): void {
     this.router.navigate(['/review-schedule-booking']);
+  }
+
+  // OBRS-109 (#37): createBooking was called with the global error alert
+  // suppressed only when a promo code was applied. A PROMO_CODE_* rejection
+  // is the expected preview->submit race — surface it inline on the reverted
+  // field. Any other error on that same (silenced) call still needs an
+  // alert, since the interceptor won't show one for this request.
+  private handleBookingCreationError(error: unknown): void {
+    if (!this.appliedPromoCode || !(error instanceof HttpErrorResponse)) {
+      return;
+    }
+
+    const errorCode = String(error.error?.errorCode ?? '');
+    if (errorCode.startsWith('PROMO_CODE')) {
+      this.passengerInfoSummaryComponent?.revertPromoWithError(errorCode);
+      this.appliedPromoCode = null;
+      return;
+    }
+
+    this.alertService.error(
+      this.translateService.instant('PASSENGER_INFO.ALERT.CREATE_FAILED')
+    );
   }
 
   private async buildBookingPayload(
@@ -198,6 +247,9 @@ export class PassengerInfoComponent {
         stopStationCode,
         departurePassengers
       ),
+      // Only a code confirmed via the summary sidebar's instant preview is
+      // ever sent — never a typed-but-unconfirmed value.
+      promotionCode: this.appliedPromoCode ?? null,
     };
 
     if (arrivalPassengers.length && arrivalSchedule) {
@@ -365,13 +417,20 @@ export class PassengerInfoComponent {
 
   private setBookingStore(
     bookingId: number | null,
-    bookingNumber: string | null
+    bookingNumber: string | null,
+    createBookingData?: CreateBookingResponse
   ): void {
     this.store.dispatch(
       invokeSetBookingApi({
         booking: {
           bookingId,
           bookingNumber,
+          // OBRS-85: forward the server-computed discount snapshot as-is; the
+          // booking store is the single seam PaymentSummaryComponent reads
+          // from, so no other component needs to know about these fields.
+          totalAmount: createBookingData?.totalAmount,
+          discountAmountSnapshot: createBookingData?.discountAmountSnapshot,
+          netAmount: createBookingData?.netAmount,
         },
       })
     );

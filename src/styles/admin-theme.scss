@@ -15,6 +15,11 @@
   --admin-danger-text: #93000a;
   --admin-accepted-bg: #b7f3c0;
   --admin-accepted-text: #0a3d1d;
+  /* in_review: neutral slate — distinct from new(orange)/accepted(green)/
+     resolved(blue,--admin-success-*)/wont_fix(red). Light bg + dark text works
+     in both themes, so no dark-mode override (see the --admin-accepted-text note). */
+  --admin-inreview-bg: #e2e5ea;
+  --admin-inreview-text: #3a4250;
 
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
@@ -891,6 +896,11 @@
 .admin-status.is-accepted {
   background: var(--admin-accepted-bg);
   color: var(--admin-accepted-text);
+}
+
+.admin-status.is-info {
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
 }
 
 .admin-status--icon {

@@ -36,14 +36,26 @@ export interface BookingPayload {
   contact: BookingContact;
   departureSchedule: BookingSchedulePayload;
   arrivalSchedule?: BookingSchedulePayload | null;
+  // OBRS-109 (#37): only a code the customer confirmed via the instant
+  // preview (PromoCodeFieldComponent) is ever sent — never precomputed or
+  // guessed client-side.
+  promotionCode?: string | null;
 }
 
 export interface CreateBookingResponse {
   bookingId: number;
   bookingNumber: string;
+  // OBRS-85: server-computed round-trip discount snapshot. Only present once
+  // the booking is created — never precompute a discount client-side.
+  totalAmount?: number;
+  discountAmountSnapshot?: number;
+  netAmount?: number;
 }
 
 export interface BookingState {
   bookingId: number | null;
   bookingNumber: string | null;
+  totalAmount?: number;
+  discountAmountSnapshot?: number;
+  netAmount?: number;
 }

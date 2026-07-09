@@ -1,6 +1,10 @@
 import { NgZone, SimpleChange, SimpleChanges } from '@angular/core';
 import { GoogleMap } from '@angular/google-maps';
-import { RouteMapPanelComponent, UserLocatedEvent } from './route-map-panel.component';
+import {
+  RouteMapPanelComponent,
+  UserLocatedEvent,
+  clearDirectionsPathCache,
+} from './route-map-panel.component';
 import { RouteStop } from '../../../../../shared/interfaces/route-map.interface';
 
 /** NgZone stub that runs callbacks synchronously (tests don't need real zones). */
@@ -61,6 +65,9 @@ describe('RouteMapPanelComponent', () => {
   let component: RouteMapPanelComponent;
 
   beforeEach(() => {
+    // Reset the module-level + localStorage road-path cache so each test starts
+    // from a clean miss (the cache is shared across component instances).
+    clearDirectionsPathCache();
     component = new RouteMapPanelComponent(zoneStub);
   });
 
@@ -448,7 +455,7 @@ describe('RouteMapPanelComponent', () => {
     function installMockWithDirections(
       respondWith: google.maps.DirectionsResult | null,
       errorStatus = 'REQUEST_DENIED'
-    ): void {
+    ): jasmine.Spy {
       const routeSpy = jasmine
         .createSpy('route')
         .and.callFake(
@@ -475,6 +482,8 @@ describe('RouteMapPanelComponent', () => {
           },
         },
       };
+
+      return routeSpy;
     }
 
     afterEach(() => {
@@ -595,6 +604,71 @@ describe('RouteMapPanelComponent', () => {
 
       // The second direction's road path must win.
       expect(component.polylinePath[0].lat).toBeCloseTo(20.0, 3);
+    });
+
+    // -----------------------------------------------------------------------
+    // Road-path cache (OBRS-91) — the deterministic road-snapped path is
+    // persisted so repeat views skip the billable Directions API call.
+    // -----------------------------------------------------------------------
+
+    it('caches the road-snapped path so a later panel skips the Directions call', async () => {
+      const roadResult = mockDirectionsResult([
+        { lat: 14.0, lng: 101.0 },
+        { lat: 14.5, lng: 101.5 },
+      ]);
+
+      // First instance: cache miss → dispatches Directions and caches the result.
+      const spy1 = installMockWithDirections(roadResult);
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(spy1).toHaveBeenCalledTimes(1);
+      expect(component.polylinePath[0].lat).toBeCloseTo(14.0, 3);
+
+      // Second, fresh instance with the same stops: cache hit → NO Directions call.
+      const spy2 = installMockWithDirections(roadResult);
+      const second = new RouteMapPanelComponent(zoneStub);
+      second.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      second.ngOnChanges(changes('pickupStops', second.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(spy2).not.toHaveBeenCalled();
+      expect(second.polylinePath.length).toBe(2);
+      expect(second.polylinePath[0].lat).toBeCloseTo(14.0, 3);
+    });
+
+    it('a changed stop coordinate invalidates the cache and re-queries Directions', async () => {
+      const roadResult = mockDirectionsResult([
+        { lat: 14.0, lng: 101.0 },
+        { lat: 14.5, lng: 101.5 },
+      ]);
+      installMockWithDirections(roadResult);
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+      // Same slug set, but stop-2 nudged to a new position → different cache key.
+      const spy = installMockWithDirections(roadResult);
+      const moved = makeStop(2, true);
+      moved.latitude = 13.95;
+      const second = new RouteMapPanelComponent(zoneStub);
+      second.pickupStops = [makeStop(1, true), moved];
+      second.ngOnChanges(changes('pickupStops', second.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(spy).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a corrupt localStorage cache entry and still road-snaps', async () => {
+      window.localStorage.setItem('obrs.dirPathCache.v1', '{ not valid json');
+      const roadResult = mockDirectionsResult([
+        { lat: 14.0, lng: 101.0 },
+        { lat: 14.5, lng: 101.5 },
+      ]);
+      const spy = installMockWithDirections(roadResult);
+      component.pickupStops = [makeStop(1, true), makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      expect(spy).toHaveBeenCalledTimes(1);
+      expect(component.polylinePath[0].lat).toBeCloseTo(14.0, 3);
     });
 
   });

@@ -31,6 +31,18 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     return val.trim().length > 0 ? null : { required: true };
   };
 
+  // Reporter email is OPTIONAL — an empty value is always valid (anonymous
+  // submission stays supported). Only a non-empty value is checked against a
+  // simple email shape.
+  private static readonly EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  private readonly optionalEmail = (control: AbstractControl): ValidationErrors | null => {
+    const val: string = (control.value ?? '').trim();
+    if (!val) {
+      return null;
+    }
+    return ReportUsabilityFabComponent.EMAIL_PATTERN.test(val) ? null : { email: true };
+  };
+
   protected readonly MAX_FILES = 5;
   protected readonly MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
   protected readonly ALLOWED_MIME_TYPES = [
@@ -56,6 +68,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     this.form = this.fb.group({
       category: ['bug'],
       description: ['', this.trimmedRequired],
+      reporterEmail: ['', this.optionalEmail],
     });
 
     this.buildCategoryOptions();
@@ -135,9 +148,12 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     this.submitError = '';
     const descriptionRaw: string = this.form.get('description')?.value ?? '';
     const description = descriptionRaw.trim();
+    const emailCtrl = this.form.get('reporterEmail');
+    const reporterEmail: string = (emailCtrl?.value ?? '').trim();
 
-    if (!description) {
+    if (!description || emailCtrl?.invalid) {
       this.form.get('description')?.markAsTouched();
+      emailCtrl?.markAsTouched();
       return;
     }
 
@@ -148,6 +164,9 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     formData.append('category', category);
     formData.append('description', description);
     formData.append('routeUrl', routeUrl);
+    // Optional — empty string is fine and keeps the submission anonymous;
+    // the backend treats a blank value as null.
+    formData.append('reporterEmail', reporterEmail);
     for (const file of this.attachedFiles) {
       formData.append('images', file);
     }
@@ -182,6 +201,11 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
     return !!(ctrl?.invalid && ctrl.touched);
   }
 
+  protected get emailInvalid(): boolean {
+    const ctrl = this.form.get('reporterEmail');
+    return !!(ctrl?.invalid && ctrl.touched);
+  }
+
   private mapErrorCodeKey(errorCode: string | undefined): string {
     const knownCodes: Record<string, string> = {
       REPORT_INVALID_CATEGORY: 'USABILITY_REPORT.ERROR.REPORT_INVALID_CATEGORY',
@@ -211,7 +235,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
   }
 
   private resetForm(): void {
-    this.form.reset({ category: 'bug', description: '' });
+    this.form.reset({ category: 'bug', description: '', reporterEmail: '' });
     this.submitError = '';
     this.imageError = '';
     this.revokeThumbnails();

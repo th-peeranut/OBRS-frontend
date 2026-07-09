@@ -1,0 +1,53 @@
+@import "../../../../../styles/variables.scss";
+
+:host {
+  display: block;
+}
+
+// design-system.md §5: new/touched inputs use the single pill shape. This
+// component only overrides `.admin-field` inside its own scoped template
+// (existing pages keep the 10px shared default — see design-system §13).
+.admin-field {
+  border-radius: $radius-pill;
+}
+
+// The create/edit form has many fields (incl. 3 locales x label+description)
+// — a bit wider than the shared 720px `.admin-modal` default, scoped to this
+// component only (same "when you touch a screen, resolve locally" pattern
+// used by round-trip-promotion-card's own scoped overrides).
+.admin-modal-lg {
+  width: min(880px, 100%);
+}
+
+.admin-hint {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
+.admin-form-subheading {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+:host ::ng-deep .promotion-calendar .p-inputtext {
+  border-radius: $radius-pill;
+  border: 1px solid rgba(189, 200, 207, 0.9);
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+  font: inherit;
+  font-size: 13px;
+  padding: 9px 14px;
+  outline: 0;
+}
+
+:host ::ng-deep .promotion-calendar .p-inputtext:focus {
+  border-color: var(--accent-strong);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+:host ::ng-deep .promotion-calendar .p-datepicker-trigger {
+  border-radius: 0 999px 999px 0;
+}

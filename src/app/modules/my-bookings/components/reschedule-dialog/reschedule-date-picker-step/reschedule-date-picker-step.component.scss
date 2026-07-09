@@ -1,0 +1,24 @@
+@import "../../../../../../styles/variables.scss";
+
+.reschedule-step__hint {
+  margin: 0 0 $space-sm;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+.reschedule-date-step__label {
+  display: block;
+  margin-bottom: $space-2xs;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+:host ::ng-deep .p-calendar {
+  width: 100%;
+
+  .p-inputtext {
+    width: 100%;
+    border-radius: $radius-pill;
+  }
+}

@@ -8,18 +8,16 @@ import { SharedModule } from '../../shared/shared.module';
 import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownObrsPassengerComponent } from '../home/components/dropdown-obrs-passenger/dropdown-obrs-passenger.component';
 import { PaymentInfoComponent } from './components/payment-info/payment-info.component';
-import { PaymentSummaryComponent } from './components/payment-summary/payment-summary.component';
-import { PaymentCreditcardComponent } from './components/payment-creditcard/payment-creditcard.component';
-import { PaymentQrcodeComponent } from './components/payment-qrcode/payment-qrcode.component';
 import { PaymentResultComponent } from './components/payment-result/payment-result.component';
+// PaymentCreditcardComponent/PaymentQrcodeComponent/PaymentSummaryComponent now
+// live in shared/components/payment-methods (reused by the my-bookings
+// reschedule dialog without pulling in this module's own routes — see
+// PaymentMethodsModule and docs/adr).
+import { PaymentMethodsModule } from '../../shared/components/payment-methods/payment-methods.module';
 
 /// store
 import { EffectsModule } from '@ngrx/effects';
 import { StoreModule } from '@ngrx/store';
-import { ScheduleBookingEffect } from '../../shared/stores/schedule-booking/schedule-booking.effect';
-import { ScheduleBookingReducer } from '../../shared/stores/schedule-booking/schedule-booking.reducer';
-import { ScheduleFilterEffect } from '../../shared/stores/schedule-filter/schedule-filter.effect';
-import { ScheduleFilterReducer } from '../../shared/stores/schedule-filter/schedule-filter.reducer';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
 import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 import { PassengerInfoReducer } from '../../shared/stores/passenger-info/passenger-info.reducer';
@@ -36,38 +34,30 @@ const routes: Routes = [
   declarations: [
     PaymentComponent,
     PaymentInfoComponent,
-    PaymentSummaryComponent,
-    PaymentCreditcardComponent,
-    PaymentQrcodeComponent,
     PaymentResultComponent
   ],
   imports: [
       SharedModule,
       RouterModule.forChild(routes),
-  
+
       // Add-ons
       CalendarModule,
-  
+      PaymentMethodsModule,
+
       // Store
       StoreModule.forFeature('provinceWithStationList', ProvinceReducer),
-      StoreModule.forFeature('scheduleBooking', ScheduleBookingReducer),
-      StoreModule.forFeature('scheduleFilter', ScheduleFilterReducer),
       StoreModule.forFeature('passengerInfo', PassengerInfoReducer),
       StoreModule.forFeature('booking', BookingReducer),
-  
+
       EffectsModule.forFeature([
         ProvinceEffect,
-        ScheduleFilterEffect,
-        ScheduleBookingEffect,
         PassengerInfoEffect,
         BookingEffect,
       ]),
-  
+
       // Components
       DropdownObrsComponent,
       DropdownObrsPassengerComponent,
     ],
 })
 export class PaymentModule { }
-
-

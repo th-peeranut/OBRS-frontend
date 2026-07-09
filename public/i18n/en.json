@@ -4,6 +4,7 @@
     "MODAL": { "TITLE": "Report a Usability Issue", "SUBTITLE": "Help us improve by reporting bugs or suggestions.", "CLOSE": "Close", "SUBMIT": "Submit Report", "SUBMITTING": "Submitting..." },
     "CATEGORY": { "LABEL": "Category", "BUG": "Bug", "UX_UI_IMPROVEMENT": "UX/UI Improvement", "SUGGESTION": "Suggestion" },
     "DESCRIPTION": { "LABEL": "Description", "PLACEHOLDER": "Describe the issue or suggestion in detail...", "REQUIRED": "Description is required." },
+    "EMAIL": { "LABEL": "Email (optional)", "PLACEHOLDER": "you@example.com", "INVALID": "Enter a valid email address, or leave it blank." },
     "IMAGES": { "LABEL": "Attach Images (optional)", "HINT": "Up to 5 images, max 5 MB each. JPEG, PNG, WebP, GIF.", "ADD": "Add Images", "REMOVE": "Remove", "TOO_MANY": "You can attach up to 5 images only.", "TOO_LARGE": "One or more images exceed the 5 MB limit.", "INVALID_TYPE": "Only JPEG, PNG, WebP, and GIF images are allowed." },
     "SUBMIT_SUCCESS": "Your report has been submitted. Thank you!",
     "ERROR": { "REPORT_INVALID_CATEGORY": "Invalid category selected.", "REPORT_TOO_MANY_IMAGES": "Too many images attached.", "REPORT_UNSUPPORTED_MEDIA_TYPE": "One or more image types are not supported.", "REPORT_IMAGE_TOO_LARGE": "One or more images are too large.", "REPORT_PAYLOAD_TOO_LARGE": "The total upload size is too large.", "REPORT_RATE_LIMITED": "You have submitted too many reports recently. Please wait before trying again.", "VALIDATION_FAILED": "Please check your input and try again.", "GENERIC": "Something went wrong. Please try again." }
@@ -21,6 +22,9 @@
     "VIEW_TICKET": "View e-ticket",
     "LOAD_FAILED": "Unable to load your bookings. Please try again.",
     "NOT_CANCELLABLE": "Cannot be cancelled",
+    "ACTIONS_MENU": {
+      "LABEL": "Actions"
+    },
     "TICKET_MODAL": {
       "LOADING": "Loading your e-ticket…",
       "LOAD_FAILED": "Unable to load the e-ticket. Please try again.",
@@ -56,6 +60,124 @@
       "SUCCESS": "Your booking has been cancelled. A refund of {{refund}} is being processed.",
       "SUCCESS_MANUAL": "Your booking has been cancelled. A refund of {{refund}} will be transferred to you by our staff.",
       "FAILED": "Unable to cancel the booking. Please try again."
+    },
+    "RESCHEDULE": {
+      "ACTION": "Reschedule",
+      "REASON": {
+        "NOT_CONFIRMED": "Only confirmed bookings can be rescheduled",
+        "NOT_ONE_WAY": "Only one-way, single-leg bookings can be rescheduled",
+        "ALREADY_USED": "This booking has already been rescheduled once",
+        "NO_WINDOW": "Too close to departure to reschedule"
+      },
+      "DIALOG_TITLE": "Reschedule your trip",
+      "DATE_LABEL": "New departure date",
+      "STOPS_FIXED_NOTE": "Your pickup and drop-off stops stay the same — only the date and time can change.",
+      "OPTIONS_LOADING": "Looking for available departures…",
+      "OPTIONS_EMPTY": "No available departures on this date. Try another date.",
+      "OPTIONS_ERROR": "Unable to load available departures. Please try again.",
+      "SEATS": "Seats",
+      "ESTIMATE": {
+        "OLD_FARE": "Current fare",
+        "NEW_FARE": "New fare",
+        "FEE": "Reschedule fee",
+        "LOADING": "Looking for available departures…",
+        "TOP_UP": "You pay {{amount}}",
+        "REFUND": "You'll be refunded {{amount}}",
+        "NO_PAYMENT": "No additional charge"
+      },
+      "CONFIRM_BUTTON": "Confirm reschedule",
+      "BACK_BUTTON": "Back",
+      "SUCCESS": "Your booking has been rescheduled.",
+      "PAYMENT_REQUIRED_NOTE": "Complete a payment of {{amount}} to finish rescheduling your booking.",
+      "PAYMENT_ABANDONED": "Reschedule not complete — your original booking is unchanged until payment is completed.",
+      "PRICE_CHANGED": "The price has changed since you last checked. Please review the updated fare and confirm again.",
+      "ERROR": {
+        "NOT_CONFIRMED": "This booking can no longer be rescheduled (not confirmed).",
+        "MAX_COUNT": "This booking has already been rescheduled once and can't be rescheduled again.",
+        "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't be rescheduled.",
+        "SAME_SCHEDULE": "Please choose a different departure.",
+        "BOOKING_NOT_FOUND": "That departure is no longer available.",
+        "WINDOW_CLOSED": "That departure is too close to now — please choose a later time.",
+        "DATE_TOO_FAR": "That date is too far from your original trip. Please choose a closer date.",
+        "ROUTE_MISMATCH": "The route can't be changed when rescheduling.",
+        "NO_SEATS": "Your seat is no longer available on this departure. Please choose another.",
+        "NET_AMOUNT_CHANGED": "The price changed. Please try again.",
+        "UNAUTHORIZED": "You don't have permission to reschedule this booking.",
+        "GENERIC": "Unable to reschedule this booking. Please try again."
+      }
+    },
+    "CHANGE_SEAT": {
+      "ACTION": "Change seat",
+      "REASON": {
+        "NOT_CONFIRMED": "Only confirmed bookings can have their seat changed",
+        "NOT_ONE_WAY": "Only one-way, single-leg bookings can have their seat changed",
+        "ALREADY_USED": "This booking has already had its seat changed once",
+        "NO_WINDOW": "Too close to departure to change seat"
+      },
+      "DIALOG_TITLE": "Change your seat",
+      "MAP_LOADING": "Loading the seat map…",
+      "PASSENGER_STEP": "Passenger {{index}} of {{total}}",
+      "LEGEND": {
+        "AVAILABLE": "Available",
+        "OCCUPIED": "Occupied",
+        "SELECTED": "Selected"
+      },
+      "CONFIRM_BUTTON": "Confirm new seat",
+      "BACK_BUTTON": "Back",
+      "SUCCESS": "Your seat has been changed.",
+      "ERROR": {
+        "NOT_CONFIRMED": "This booking can no longer have its seat changed (not confirmed).",
+        "MAX_COUNT": "This booking has already had its seat changed once and can't be changed again.",
+        "WINDOW_CLOSED": "That departure is too close to now — seats can no longer be changed.",
+        "SEAT_UNAVAILABLE": "That seat is no longer available. Please choose another.",
+        "NO_SEATS": "No seats are available on this departure.",
+        "SEAT_NOT_IN_MAP": "That seat doesn't exist on this vehicle's map. Please choose another.",
+        "TICKET_MISMATCH": "Your tickets have changed since this dialog opened. Please try again.",
+        "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't have their seat changed.",
+        "UNAUTHORIZED": "You don't have permission to change the seat on this booking.",
+        "BOOKING_NOT_FOUND": "This booking is no longer available.",
+        "GENERIC": "Unable to change seat. Please try again."
+      }
+    },
+    "CHANGE_STOP": {
+      "ACTION": "Change stop",
+      "REASON": {
+        "NOT_CONFIRMED": "Only confirmed bookings can change their stops",
+        "NOT_ONE_WAY": "Only one-way, single-leg bookings can change their stops",
+        "ALREADY_USED": "This booking has already changed its stops once",
+        "NO_WINDOW": "Too close to departure to change stops"
+      },
+      "DIALOG_TITLE": "Change your pickup and drop-off",
+      "PICKUP_STEP_TITLE": "Choose a new pickup stop",
+      "DROPOFF_STEP_TITLE": "Choose a new drop-off stop",
+      "STOPS_LOAD_ERROR": "Unable to load stops for this route. Please try again.",
+      "ESTIMATE": {
+        "OLD_FARE": "Current fare",
+        "NEW_FARE": "New fare",
+        "LOADING": "Calculating your new fare…",
+        "TOP_UP": "You pay {{amount}}",
+        "REFUND": "You'll be refunded {{amount}}",
+        "NO_PAYMENT": "No additional charge"
+      },
+      "CONFIRM_BUTTON": "Confirm new stops",
+      "BACK_BUTTON": "Back",
+      "SUCCESS": "Your pickup and drop-off have been updated.",
+      "PAYMENT_REQUIRED_NOTE": "Complete a payment of {{amount}} to finish updating your stops.",
+      "PAYMENT_ABANDONED": "Stop change not complete — your original booking is unchanged until payment is completed.",
+      "ERROR": {
+        "INVALID_SEGMENT": "The drop-off must come after the pickup stop. Please choose again.",
+        "SAME_SEGMENT": "Please choose a different pickup or drop-off stop.",
+        "NOT_CONFIRMED": "This booking can no longer change its stops (not confirmed).",
+        "MAX_COUNT": "This booking has already changed its stops once and can't be changed again.",
+        "WINDOW_CLOSED": "That departure is too close to now — stops can no longer be changed.",
+        "ROUTE_MISMATCH": "The route can't be changed when updating stops.",
+        "NO_SEATS": "Your seat is no longer available for this stop change. Please try again.",
+        "NET_AMOUNT_CHANGED": "The price changed. Please try again.",
+        "UNAUTHORIZED": "You don't have permission to change stops on this booking.",
+        "BOOKING_NOT_FOUND": "This booking is no longer available.",
+        "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't change their stops.",
+        "GENERIC": "Unable to change stops. Please try again."
+      }
     }
   },
   "CALENDAR": {
@@ -150,6 +272,7 @@
       "ROUTE_MANAGEMENT": "Routes",
       "SCHEDULES": "Schedules",
       "BOOKINGS_MANAGEMENT": "Bookings",
+      "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports"
     },
     "LAYOUT": {
@@ -226,6 +349,7 @@
       "LOAD_VEHICLES_FAILED": "Unable to load vehicles.",
       "LOAD_ROUTES_FAILED": "Unable to load routes.",
       "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
+      "LOAD_PROMOTIONS_FAILED": "Unable to load promotions.",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -250,6 +374,47 @@
       "TH_LABEL": "Thai Label",
       "EN_DESCRIPTION": "English Description",
       "TH_DESCRIPTION": "Thai Description"
+    },
+    "PROMOTIONS": {
+      "SUBTITLE": "Manage the round-trip booking discount.",
+      "DISCOUNT_TYPE": "Discount Type",
+      "CODE": "Code",
+      "SLUG": "Slug",
+      "TIMES_USED": "Times Used",
+      "USAGE_LIMIT": "Usage Limit",
+      "DISCOUNT_AMOUNT": "Discount Amount",
+      "STATUS": "Status",
+      "STATUS_ACTIVE": "Active",
+      "STATUS_INACTIVE": "Inactive",
+      "START_DATE": "Start Date",
+      "END_DATE": "End Date",
+      "MIN_BOOKING_AMOUNT": "Minimum Booking Amount",
+      "DATE_RANGE_VALIDATION": "End date must be on or after the start date.",
+      "LOAD_FAILED": "Unable to load the round-trip promotion.",
+      "ADD": "Add Promotion Code",
+      "ADD_TITLE": "Add Promotion Code",
+      "EDIT_TITLE": "Edit Promotion Code",
+      "MODAL_HINT": "Set the code, discount, and active window for this promotion.",
+      "TABLE_TITLE": "Promotion Codes",
+      "MAX_DISCOUNT_AMOUNT": "Max Discount Amount",
+      "MAX_DISCOUNT_HINT": "Only applies when Discount Type is Percentage.",
+      "AUTO_APPLY": "Auto Apply",
+      "AUTO_APPLY_YES": "Yes",
+      "AUTO_APPLY_NO": "No",
+      "DISCOUNT_TYPE_PERCENTAGE": "Percentage",
+      "DISCOUNT_TYPE_FIXED_AMOUNT": "Fixed Amount",
+      "TRANSLATIONS_SECTION": "Translations",
+      "LABEL_EN": "Label (English)",
+      "LABEL_TH": "Label (Thai)",
+      "LABEL_ZH": "Label (Chinese)",
+      "DESCRIPTION_EN": "Description (English)",
+      "DESCRIPTION_TH": "Description (Thai)",
+      "DESCRIPTION_ZH": "Description (Chinese)",
+      "MANAGED_ABOVE": "Managed above",
+      "DEACTIVATE_CONFIRM_TITLE": "Deactivate promotion?",
+      "DEACTIVATE_CONFIRM_MESSAGE": "This promotion will be marked Inactive, not removed. You can reactivate it later by editing it.",
+      "DEACTIVATE": "Deactivate",
+      "DEACTIVATING": "Deactivating..."
     },
     "ROLES": {
       "TITLE": "Access Control Archive",
@@ -476,8 +641,8 @@
       "EMPTY": "No usability reports found.",
       "LOAD_FAILED": "Failed to load reports. Please refresh.",
       "UNITS": "reports",
-      "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "IMAGE_ENLARGE": "Enlarge image {{position}}", "CLOSE": "Close", "TRIAGE_NOTE_LABEL": "Triage Note", "TRIAGE_NOTE_PLACEHOLDER": "Add a note for this report...", "TRIAGED_BY": "Triaged By", "TRIAGED_AT": "Triaged At", "JIRA_LINK_LABEL": "Jira Issue", "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab" },
-      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "wont_fix": "Won't Fix" },
+      "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "REPORTER_EMAIL": "Reporter Email", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "IMAGE_ENLARGE": "Enlarge image {{position}}", "CLOSE": "Close", "TRIAGE_NOTE_LABEL": "Triage Note", "TRIAGE_NOTE_PLACEHOLDER": "Add a note for this report...", "TRIAGED_BY": "Triaged By", "TRIAGED_AT": "Triaged At", "JIRA_LINK_LABEL": "Jira Issue", "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab" },
+      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "wont_fix": "Rejected" },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
       "NEW_BADGE_ARIA": "{{count}} new usability reports"
@@ -789,9 +954,27 @@
       "TICKET_PRICE": "Ticket Price",
       "TICKET_PRICE_RETURN": "Round-trip ticket price",
       "TICKET_UNIT": "baht/person",
+      "SUBTOTAL": "Subtotal",
+      "PROMO_DISCOUNT": "Promo discount",
       "TOTAL": "Total price",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm information"
+    }
+  },
+  "PROMO_CODE": {
+    "LABEL": "Promo code",
+    "PLACEHOLDER": "Enter promo code",
+    "APPLY": "Apply",
+    "APPLYING": "Applying...",
+    "REMOVE": "Remove promo code",
+    "APPLY_FAILED": "Unable to apply this code. Please try again.",
+    "ERROR": {
+      "NOT_FOUND": "This code does not exist.",
+      "NOT_APPLICABLE": "This code isn't applicable to your booking.",
+      "INACTIVE": "This code is no longer active.",
+      "OUT_OF_WINDOW": "This code is not available right now.",
+      "BELOW_MINIMUM": "Your booking total does not meet the minimum amount for this code.",
+      "USAGE_LIMIT_REACHED": "This code has reached its usage limit."
     }
   },
   "PASSENGER_INFO": {
@@ -834,7 +1017,8 @@
       "MONK": "Monk"
     },
     "ALERT": {
-      "CREATE_SUCCESS": "Booking saved successfully"
+      "CREATE_SUCCESS": "Booking saved successfully",
+      "CREATE_FAILED": "Unable to create the booking. Please try again."
     }
   },
   "PAYMENT": {
@@ -853,6 +1037,9 @@
       "TICKET_PRICE_ONEWAY": "Ticket price",
       "TICKET_PRICE_ROUNDTRIP": "Round-trip ticket price",
       "TICKET_UNIT": "baht/person",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT_ROUND_TRIP": "Round-trip discount",
+      "DISCOUNT": "Discount",
       "TOTAL": "Total",
       "TOTAL_UNIT": "baht",
       "CONFIRM": "Confirm payment"
@@ -1085,6 +1272,8 @@
       "CONTACT_PHONE": "Contact Phone",
       "CONTACT_EMAIL": "Contact Email",
       "TOTAL_AMOUNT": "Total",
+      "SUBTOTAL": "Subtotal",
+      "DISCOUNT_ROUND_TRIP": "Round-trip discount",
       "CASH_ONLY_BADGE": "Cash Payment",
       "CASH_ONLY_NOTE": "Walk-in sales accept cash only. Collect payment before confirming.",
       "BADGE_AVAILABLE": "Available",

@@ -14,6 +14,28 @@ Full contract reference: `../OBRS-backend/docs/api/`
 
 ## Pending Changes (Backend → Frontend)
 
+## [Backend] 2026-07-08 — `rescheduleCount` added to `GET /api/private/bookings/me` (`BookingRespDto`)
+**Risk level**: R1 (additive)
+**Triggered by**: OBRS-83 — surfacing the reschedule flow in the customer My Bookings page needed up-front, no-fetch eligibility gating (don't wait for a `RESCHEDULE_ERROR_MAX_COUNT` response to know a booking can't be rescheduled again).
+
+### What changed in the contract
+| Endpoint | Change type | Detail |
+|---|---|---|
+| `GET /api/private/bookings/me` | Field added | `BookingRespDto.rescheduleCount` (int, `0` or `1`) — number of times the booking has been rescheduled; max one reschedule per booking |
+
+### Response shapes before / after
+- **Before**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", ... }` (no `rescheduleCount`)
+- **After**: `{ "id": 7, "bookingNumber": "...", "status": "confirmed", "rescheduleCount": 0, ... }`
+
+### Action required in frontend
+- [x] Add `rescheduleCount?: number` to `MyBookingDto` (`shared/interfaces/my-booking.interface.ts`)
+- [x] Gate the Reschedule card action on `rescheduleCount >= 1` as one of four up-front eligibility checks (`MyBookingsComponent.computeRescheduleEligibility`)
+
+### Still unfinished on backend
+- None — see `../OBRS-backend/docs/api/booking.md` `GET /bookings/me`.
+
+---
+
 ## [Backend] 2026-06-15 — `payment.status` value renamed from `"success"` to `"paid"`
 **Risk level**: R0 (breaking)
 **Triggered by**: Terminology alignment — `"success"` described an operation outcome; `"paid"` describes the object's state, consistent with `booking.status = "confirmed"` and `ticket.status = "confirmed"`.
@@ -46,6 +68,84 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
+**Affected endpoints**:
+- `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)
+- `GET /api/private/admin/promotions` (new — full list, all promotions including the round-trip singleton row)
+- `GET /api/private/admin/promotions/{id}`, `POST /api/private/admin/promotions`, `PUT /api/private/admin/promotions/{id}`, `DELETE /api/private/admin/promotions/{id}` (new — full CRUD)
+- `POST /api/private/bookings` — new optional request field `promotionCode`
+
+**Request type**: New endpoints + new request field. `docs/api/admin.md`'s `AdminPromotionController` section explicitly scopes itself to the round-trip singleton only and calls out "full promotion CRUD across every promotion is a separate, not-yet-built feature (#37)" — this is that feature. Checked `OBRS-backend-wt-promo-codes` (the paired backend worktree): still at `origin/dev` HEAD, no promo-code commits yet, so none of this exists server-side at time of writing.
+### [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
+**Affected endpoints**:
+- `POST /api/usability-reports`
+- `GET /api/private/admin/usability-reports/{id}`
+
+**Request type**: Add field
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `POST /api/private/promotions/validate` — body `{ code, amount }`, response `{ code, discountAmount, netAmount, label? }` or a `PROMO_CODE_*` errorCode | New endpoint | Customer-facing instant preview before submitting the booking — see AGENT_MEMORY.md's OBRS-109 UX finding for why apply-at-submit alone is worse UX |
+| `errorCode` values `PROMO_CODE_NOT_FOUND`, `PROMO_CODE_INACTIVE`, `PROMO_CODE_EXPIRED`, `PROMO_CODE_NOT_YET_ACTIVE`, `PROMO_CODE_MIN_AMOUNT_NOT_MET`, `PROMO_CODE_USAGE_LIMIT_REACHED` | Validate endpoint's error response, and `POST /api/private/bookings`'s error response when a `promotionCode` was submitted | Frontend maps each to a `PROMO_CODE.ERROR.*` i18n key per `CLAUDE.md`'s errorCode-not-message rule; assumed names, not confirmed against a real `deriveErrorCode()` output |
+| `promotionCode` (string, optional, nullable) | Request body of `POST /api/private/bookings` | Only sent when the customer confirmed a typed code via the preview; lets the backend re-validate and apply it atomically at booking-creation time (closing the preview→submit race) |
+| `GET /api/private/admin/promotions` → `PromotionRespDto[]` (same shape as the existing round-trip `PromotionRespDto`, plus `translations`) | New endpoint | Backs the new admin promotions list table (all rows, not just `round_trip`) |
+| `GET/POST/PUT/DELETE /api/private/admin/promotions/{id}` | New endpoints | Full CRUD for admin-managed promotion codes. `PUT` assumed full-replace (not the round-trip endpoint's partial-PATCH contract) per the UX spec; `DELETE` assumed **soft**-delete (flips `status` to `inactive`, row is not removed) |
+
+### Suggested contract change
+- `PromotionReqDto` (request body for `POST`/`PUT`): `slug`, `code`, `discountType` ('percentage'\|'fixed_amount'), `discountValue`, `maxDiscountAmount` (nullable, percentage-only), `minBookingAmount`, `startDateTime`/`endDateTime`, `usageLimit`, `status`, `autoApply` (boolean), `translations: AdminTranslationReqDto[]` (reusing the existing DTO already used by lookups/roles/routes).
+- `DELETE` should look up the promotion, set `status='inactive'`, and return success — never hard-delete the row (usage history / bookings may reference it via `promotionId`).
+
+### Impact if not addressed
+The frontend UI (customer promo-code field + admin list/CRUD) is implemented and additive-safe, but functionally inert against the current backend until these land — the customer field will show a generic apply-failed error on every attempt, and the admin list/create/edit/delete calls will 404. Do not merge to `dev`/`sit` until the backend implements this feature (or an explicit decision accepts the temporary contract drift), per `CLAUDE.md`'s R0 rule for undocumented endpoints.
+| `reporterEmail` (text, optional) | Multipart form part on `POST /api/usability-reports` | Lets a reporter optionally leave contact info while the submission stays anonymous when blank |
+| `reporterEmail` (string, nullable) | Response body of `GET /api/private/admin/usability-reports/{id}` | Admin detail modal displays it (only when present) so triage can follow up |
+
+### What the frontend implemented (additive-safe)
+- `ReportUsabilityFabComponent` adds an optional email input; client-side validation only blocks submit on a non-empty, malformed value — empty always submits (anonymous stays supported).
+- `formData.append('reporterEmail', reporterEmail)` is always sent (trimmed value; empty string when left blank) alongside the existing `category`/`description`/`routeUrl` parts.
+- `UsabilityReportDetail.reporterEmail: string | null` added to the shared interface; the admin detail modal renders it as a new `.ur-detail-row` (reusing `.ur-detail-label`) near "User ID", gated on `*ngIf="detailReport.reporterEmail"` so it degrades gracefully (no broken UI) until the backend returns the field.
+
+### Suggested contract change
+- Accept an optional `reporterEmail` multipart text part on `POST /api/usability-reports` (blank/absent → store `null`, matching how `userId` is already nullable for anonymous submissions).
+- Add a nullable `reporter_email` column to the usability_report table, returned as `reporterEmail` in the admin detail GET response. No new endpoint needed — this is additive to the existing shapes documented in `usability-reports.md`.
+
+### Impact if not addressed
+The email field renders and validates client-side regardless, but the value is dropped: the backend will silently ignore the unknown `reporterEmail` form part (or reject the request, depending on parser strictness) until the endpoint accepts it, and the admin detail row will always stay hidden (conditionally rendered on null/undefined, so no broken UI — just missing data) until the GET response includes it.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, this is R1 (additive, nullable field) — proceeding with the frontend implementation per that rule, flagging here so the backend implementation (if not already in flight on a paired branch) closes the loop before this branch merges to `dev`/`sit`.
+
+---
+
+### [Frontend] 2026-07-08 — Change seat (OBRS-110, wave 1): built against a not-yet-documented backend contract, please verify on merge
+**Affected endpoints**:
+- `GET /api/private/bookings/me` (`BookingRespDto.seatChangeCount`)
+- `GET /api/private/bookings/{id}/change-seat/availability` (new)
+- `POST /api/private/bookings/{id}/change-seat` (new)
+
+**Request type**: New endpoints + additive field (contract built in parallel by the backend track; not yet present in `../OBRS-backend/docs/api/booking.md` at the time this branch was implemented)
+
+### What the frontend coded against
+| Shape | Assumed contract |
+|---|---|
+| `BookingRespDto.seatChangeCount` | `int`, `0` or `1` — mirrors `rescheduleCount`'s "max one per booking" gating pattern above |
+| `BookingRespDto.stopChangeCount` | `int` — carried on `MyBookingDto` for shape parity only; **not yet consumed** by any frontend logic (a future wave) |
+| `GET .../change-seat/availability` → `ChangeSeatAvailabilityRespDto` | `{ scheduleId, vehicleType, fromStopId, toStopId, seats: [{seatNumber, rowIndex, columnIndex}], occupiedSeatNumbers: string[], currentSeatNumbers: string[] }` — only `vehicleType`/`occupiedSeatNumbers`/`currentSeatNumbers` are consumed client-side (the seat components are fixed-layout by `vehicleType`, not row/column-driven; see `docs/adr/0009-change-seat-dialog.md` Decision 2) |
+| `POST .../change-seat` body `{ seatAssignments: { [ticketId:number]: string } }` → `ChangeSeatBookingRespDto { bookingId, bookingNumber, status:"CONFIRMED", paymentIntentId:null }` — always `CONFIRMED`, no payment step |
+| Error codes | `CHANGE_SEAT_ERROR_{NOT_CONFIRMED,MAX_COUNT,WINDOW_CLOSED,SEAT_UNAVAILABLE,NO_SEATS,SEAT_NOT_IN_MAP,TICKET_MISMATCH,MULTI_LEG_NOT_SUPPORTED,UNAUTHORIZED,BOOKING_NOT_FOUND}` on `error.error.errorCode` |
+
+### What the frontend implemented
+- `MyBookingDto.seatChangeCount?: number` / `.stopChangeCount?: number` added (`shared/interfaces/my-booking.interface.ts`), mirroring `rescheduleCount`.
+- `shared/interfaces/change-seat.interface.ts`, `shared/lib/change-seat-error.ts`, `BookingService.getChangeSeatAvailability()`/`.confirmChangeSeat()`, the `ChangeSeatEffect`/reducer/selectors, and `ChangeSeatDialogComponent`/`ChangeSeatMapComponent` (`src/app/modules/my-bookings/components/change-seat-dialog/`) — full detail in `docs/adr/0009-change-seat-dialog.md`.
+- `MyBookingsComponent.computeChangeSeatEligibility()` gates the card action the same way `computeRescheduleEligibility()` does (first-failing-wins: not confirmed → not one-way → `seatChangeCount >= 1` → inside the 4h window), so the action is never presented as available when the server would reject it.
+
+### Impact if not addressed
+Everything above degrades gracefully if the live contract differs in shape (TypeScript interfaces just won't match at runtime — no compile-time coupling to the backend), but functionally: a shape mismatch on `GET .../change-seat/availability` would surface as the dialog's `step: 'error'` card (a real HTTP/parse failure), and a mismatch on `POST .../change-seat`'s response would surface as a generic `confirmChangeSeatFailure({errorCode: 'GENERIC'})`. Please cross-check this section against the landed `OBRS-backend/docs/api/booking.md` change-seat entry once merged, and flag any divergence back here.
+
+**Classification**: per `CLAUDE.md` cross-repo governance, this would ordinarily be R0 ("call an endpoint not yet documented") — proceeding anyway because this branch was explicitly tasked to build against this contract in parallel with the backend track (same OBRS-110 wave), per the assigning agent's instruction. Flagging here per the R1 "update shared interfaces after a backend contract change" notification duty so the two sides reconcile before this branch merges to `dev`/`sit`.
+
+---
+
 ### [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
 **Affected endpoints**:
 - `PUT /api/private/admin/usability-reports/{id}/status`
@@ -75,6 +175,20 @@ The frontend UI for OBRS-86 (triage note textarea, Triaged By/At rows, Jira link
 - `triagedBy`, `triagedAt`, `jiraIssueKey` will always render as absent (their UI rows are conditionally hidden on null/undefined, so this degrades gracefully — no broken UI, just missing data) until the backend returns them.
 
 **Classification**: per `CLAUDE.md` cross-repo governance, assuming an undocumented field/enum value is R0. This entry exists so the backend implementation (or an explicit decision to change the frontend spec) happens before this branch is merged/deployed — do not merge to `dev`/`sit` until this is resolved or a maintainer explicitly accepts the temporary contract drift.
+### [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85) — RESOLVED after Scrutinize
+**Affected endpoint**: `GET /api/private/admin/promotions/round-trip`, `PATCH /api/private/admin/promotions/round-trip`
+**Request type**: Corrected the frontend's assumed contract to match the real backend implementation (`AdminPromotionController`, `RoundTripPromotionReqDto`, `PromotionRespDto` — found in `OBRS-backend-wt-round-trip-discount`, which had landed since this entry was first written).
+
+Scrutinize caught two contract breaks against the real backend and both are now fixed:
+1. **URL was missing `/admin`.** The frontend called `/api/private/promotions/round-trip`; the real path (per `EndpointConstant.PRIVATE_ADMIN_PROMOTIONS_ROUND_TRIP`) is `/api/private/admin/promotions/round-trip`. Fixed in `AdminApiService.getRoundTripPromotion()`/`updateRoundTripPromotion()`.
+2. **PATCH body sent `status: string`; the real `RoundTripPromotionReqDto` reads `active: Boolean`.** Spring silently drops unknown JSON fields, so the Status toggle was a no-op despite a success toast. Fixed: `UpdateRoundTripPromotionPayload.status` → `.active: boolean`; `promotions-page.component.ts` translates the Status dropdown's string value to a boolean at the wire boundary, and translates it back (`active` → `'active'|'inactive'`) only for the local optimistic `store.mutate` (the store's `PromotionRespDto` still models `status` as a string).
+
+**Also confirmed from the real backend (not yet acted on — flagging for awareness):**
+- `AdminPromotionController` guards both GET and PATCH with `@PreAuthorize("hasRole('OWNER')")` — **ADMIN cannot call this endpoint, only OWNER can.** Combined with the frontend's Finding 4 (the `/admin` route guard only admits `requiredRoles: ['admin']`, and role-hierarchy expansion only goes *downward* from admin, not up from owner to admin), **no session can currently reach a working `/admin/promotions` page**: an ADMIN session can open the page but every save gets a 403; an OWNER session can't open `/admin` at all. This is a real end-to-end gap, not just the two items Scrutinize flagged — recommend the SA/PM decide whether the route guard should admit `owner` for this page, or the backend should also allow `ADMIN`.
+- `PromotionRespDto` (backend, actual): `status` and `discountType` are plain `String`, not `{slug, translations}` objects as this frontend's `PromotionRespDto` type optimistically allowed for (`string | AdminStatusDto` — the union still works at runtime via `parseAdminStatus`, so no frontend change was needed here). The backend response also carries `maxDiscountAmount` and `autoApply`, which this frontend does not read (not required by the UX spec's field list).
+
+### Impact if not addressed
+The two Scrutinize-flagged breaks made `/admin/promotions` completely non-functional end-to-end (wrong URL = 404 on load; wrong PATCH field = silent no-op save) — both are now fixed and covered by `admin-api.service.spec.ts` (exact URL + exact PATCH body assertions). The OWNER/ADMIN role-guard mismatch above is a separate, still-open gap.
 
 ---
 

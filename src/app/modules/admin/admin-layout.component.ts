@@ -40,6 +40,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
     { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
     { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
+    { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
     { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
   ];
 
@@ -53,7 +54,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   // Gate the Staff Area shortcut in the profile menu on the salesperson/driver
-  // roles so admins who are not also staff don't see a link they cannot use.
+  // grant. Under the area-based access model (see AuthService) only the owner
+  // holds both admin and staff access, so a plain admin — confined to this
+  // portal — correctly does not see a link they cannot use.
   protected get isStaffUser(): boolean {
     return this.authService.hasAnyRole(['salesperson', 'driver']);
   }

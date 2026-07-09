@@ -1,4 +1,18 @@
 import { MyBookingDto } from '../../../shared/interfaces/my-booking.interface';
+import {
+  RescheduleEstimate,
+  RescheduleOption,
+  RescheduleSeatAssignment,
+} from '../../../shared/interfaces/reschedule.interface';
+import {
+  ChangeSeatAvailability,
+  ChangeSeatTicket,
+} from '../../../shared/interfaces/change-seat.interface';
+import {
+  ChangeStopEstimate,
+  ChangeStopSeatAssignment,
+} from '../../../shared/interfaces/change-stop.interface';
+import { RouteMeta, RouteStop } from '../../../shared/interfaces/route-map.interface';
 
 export interface MyBookingsState {
   bookings: MyBookingDto[];
@@ -9,6 +23,106 @@ export interface MyBookingsState {
   cancellingBookingId: number | null;
   /** Active status filter, echoed back so a post-cancel reload preserves it. */
   statusFilter: string | null;
+
+  // --- Reschedule dialog (OBRS-83) ---
+  /** Booking id whose reschedule dialog is open, or null when closed. Set
+   * synchronously on open — the dialog surfaces optimistically. */
+  rescheduleDialogBookingId: number | null;
+
+  /** Stop slug → numeric stop id (`StationApi.slug`/`.id`), loaded once and
+   * cached for the life of the page (`GET /api/stops`). */
+  stopsLookup: Record<string, number>;
+  stopsLookupLoading: boolean;
+  stopsLookupError: string | null;
+
+  /** The open booking's current tickets (existing seat numbers), used to
+   * build `seatAssignments` (`GET /bookings/{id}/tickets`). */
+  rescheduleTickets: RescheduleSeatAssignment[];
+  rescheduleTicketsLoading: boolean;
+  rescheduleTicketsError: string | null;
+
+  rescheduleOptions: RescheduleOption[];
+  rescheduleOptionsLoading: boolean;
+  /** Translated, ready-to-render message; null when there is no error. */
+  rescheduleOptionsError: string | null;
+
+  rescheduleEstimate: RescheduleEstimate | null;
+  rescheduleEstimateLoading: boolean;
+  rescheduleEstimateError: string | null;
+
+  rescheduleSubmitting: boolean;
+  /** Translated inline message shown on the estimate step (e.g. NO_SEATS,
+   * PRICE_CHANGED); null when there is no error. */
+  rescheduleConfirmError: string | null;
+  rescheduleConfirmErrorCode: string | null;
+
+  /** Set when `POST .../reschedule` returns `PENDING_PAYMENT` — the dialog
+   * switches to the embedded payment step. */
+  reschedulePendingPayment: { bookingId: number; paymentIntentId: number | null } | null;
+
+  // --- Change seat dialog (OBRS-110) ---
+  /** Booking id whose change-seat dialog is open, or null when closed. Set
+   * synchronously on open — the dialog surfaces optimistically. */
+  changeSeatDialogBookingId: number | null;
+
+  changeSeatAvailability: ChangeSeatAvailability | null;
+  changeSeatAvailabilityLoading: boolean;
+  /** Total-failure message for the availability GET itself (drives the
+   * dialog's full-step error card + Retry). */
+  changeSeatAvailabilityError: string | null;
+
+  /** The open booking's current tickets (existing seat numbers), the basis
+   * for `seatAssignments` (`GET /bookings/{id}/tickets`). */
+  changeSeatTickets: ChangeSeatTicket[];
+  changeSeatTicketsLoading: boolean;
+  changeSeatTicketsError: string | null;
+
+  changeSeatSubmitting: boolean;
+  /** A confirm-time failure, rendered as an inline banner on the map step.
+   * Deliberately NOT reset by a re-dispatched availability load (OBRS-83
+   * NO_SEATS lesson — a reducer case that wipes this on every load can leave
+   * the spinner looking perpetually stuck). */
+  changeSeatConfirmError: string | null;
+  changeSeatConfirmErrorCode: string | null;
+
+  // --- Change stop dialog (OBRS-110 wave 2) ---
+  /** Booking id whose change-stop dialog is open, or null when closed. Set
+   * synchronously on open — the dialog surfaces optimistically. */
+  changeStopDialogBookingId: number | null;
+
+  /** `RouteMapService.getPickupDropoff(routeSlug)` result for the open
+   * booking's route — resolved from `MyBookingScheduleDto.routeSlug`. */
+  changeStopRouteMeta: RouteMeta | null;
+  changeStopPickupStops: RouteStop[];
+  changeStopDropoffStops: RouteStop[];
+  changeStopRouteStopsLoading: boolean;
+  /** Total-failure message for the pickup/drop-off GET itself (incl. a
+   * missing `routeSlug`) — drives the dialog's full-step error card + Retry. */
+  changeStopRouteStopsError: string | null;
+
+  /** The open booking's current tickets (existing seat numbers) — carried
+   * through unchanged in `seatAssignments` (change-stop never reassigns
+   * seats, only stops). */
+  changeStopTickets: ChangeStopSeatAssignment[];
+  changeStopTicketsLoading: boolean;
+  changeStopTicketsError: string | null;
+
+  changeStopEstimate: ChangeStopEstimate | null;
+  changeStopEstimateLoading: boolean;
+  changeStopEstimateError: string | null;
+
+  changeStopSubmitting: boolean;
+  /** A confirm-time failure, rendered as an inline banner on the estimate
+   * step. Deliberately NOT reset by a re-dispatched `loadChangeStopEstimate`
+   * (OBRS-83 NO_SEATS lesson, same as `ChangeSeatEffect`'s
+   * `loadChangeSeatAvailability` case) — only a fresh `confirmChangeStop`
+   * attempt clears it. */
+  changeStopConfirmError: string | null;
+  changeStopConfirmErrorCode: string | null;
+
+  /** Set when `POST .../change-stop/confirm` returns `PENDING_PAYMENT` — the
+   * dialog switches to the embedded payment step. */
+  changeStopPendingPayment: { bookingId: number; paymentIntentId: number | null } | null;
 }
 
 export const initialMyBookingsState: MyBookingsState = {
@@ -18,4 +132,64 @@ export const initialMyBookingsState: MyBookingsState = {
   error: null,
   cancellingBookingId: null,
   statusFilter: null,
+
+  rescheduleDialogBookingId: null,
+
+  stopsLookup: {},
+  stopsLookupLoading: false,
+  stopsLookupError: null,
+
+  rescheduleTickets: [],
+  rescheduleTicketsLoading: false,
+  rescheduleTicketsError: null,
+
+  rescheduleOptions: [],
+  rescheduleOptionsLoading: false,
+  rescheduleOptionsError: null,
+
+  rescheduleEstimate: null,
+  rescheduleEstimateLoading: false,
+  rescheduleEstimateError: null,
+
+  rescheduleSubmitting: false,
+  rescheduleConfirmError: null,
+  rescheduleConfirmErrorCode: null,
+
+  reschedulePendingPayment: null,
+
+  changeSeatDialogBookingId: null,
+
+  changeSeatAvailability: null,
+  changeSeatAvailabilityLoading: false,
+  changeSeatAvailabilityError: null,
+
+  changeSeatTickets: [],
+  changeSeatTicketsLoading: false,
+  changeSeatTicketsError: null,
+
+  changeSeatSubmitting: false,
+  changeSeatConfirmError: null,
+  changeSeatConfirmErrorCode: null,
+
+  changeStopDialogBookingId: null,
+
+  changeStopRouteMeta: null,
+  changeStopPickupStops: [],
+  changeStopDropoffStops: [],
+  changeStopRouteStopsLoading: false,
+  changeStopRouteStopsError: null,
+
+  changeStopTickets: [],
+  changeStopTicketsLoading: false,
+  changeStopTicketsError: null,
+
+  changeStopEstimate: null,
+  changeStopEstimateLoading: false,
+  changeStopEstimateError: null,
+
+  changeStopSubmitting: false,
+  changeStopConfirmError: null,
+  changeStopConfirmErrorCode: null,
+
+  changeStopPendingPayment: null,
 };

@@ -334,9 +334,18 @@
 
     <hr class="dotted-line" />
 
-    
-    <!-- Total price -->
-    <div class="card-footer">
+    <!-- Promo code (OBRS-109 / #37): instant preview against the client-side
+         subtotal above; only a confirmed-applied code is ever sent to the
+         booking-submit call (see PassengerInfoComponent). -->
+    <app-promo-code-field
+      [amount]="sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo)"
+      [disabled]="isNextDisabled"
+      (applied)="onPromoApplied($event)"
+      (removed)="onPromoRemoved()"
+    ></app-promo-code-field>
+
+    <!-- Total price (no promo applied) -->
+    <div class="card-footer" *ngIf="!appliedPromo">
       <span>
         {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
       </span>
@@ -345,6 +354,37 @@
         {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
       </span>
     </div>
+
+    <!-- Subtotal / Promo discount / Total (promo applied) -->
+    <ng-container *ngIf="appliedPromo">
+      <div class="card-footer card-footer--subtle">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.SUBTOTAL" | translate }}
+        </span>
+        <span>
+          {{ sumFare(scheduleBooking?.schedule, scheduleFilter?.passengerInfo) }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+        </span>
+      </div>
+      <div class="card-footer card-footer--subtle card-footer--discount">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.PROMO_DISCOUNT" | translate }}
+        </span>
+        <span>
+          -{{ appliedPromo.discountAmount }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+        </span>
+      </div>
+      <div class="card-footer">
+        <span>
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL" | translate }}
+        </span>
+        <span>
+          {{ appliedPromo.netAmount }}
+          {{ "REVIEW_SCHEDULE_BOOKING.TOTAL.TOTAL_UNIT" | translate }}
+        </span>
+      </div>
+    </ng-container>
   </ng-container>
 </div>
 

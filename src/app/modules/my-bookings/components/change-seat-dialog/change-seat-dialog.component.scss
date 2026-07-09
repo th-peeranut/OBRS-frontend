@@ -1,0 +1,210 @@
+@import "../../../../../styles/variables.scss";
+
+// Same modal chrome as reschedule-dialog.component.scss / my-booking-ticket-modal
+// (backdrop, floating close button, fade-in) — kept consistent rather than
+// reintroducing a second modal pattern (design-system §6).
+.change-seat-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+  animation: change-seat-modal-fade 0.15s ease;
+}
+
+.change-seat-modal {
+  position: relative;
+  width: min(480px, 100%);
+  margin: auto;
+}
+
+.change-seat-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: $radius-circle;
+  background: $primary-white;
+  color: $text-black;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.change-seat-modal__body {
+  width: 100%;
+  background: $primary-white;
+  border-radius: 18px;
+  padding: $space-lg;
+}
+
+.change-seat-modal__title {
+  margin: 0 0 $space-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-black;
+}
+
+@keyframes change-seat-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.change-seat-step {
+  text-align: center;
+}
+
+.change-seat-step--error {
+  padding: $space-lg $space-md;
+  color: $text-lightblack;
+
+  i {
+    font-size: 28px;
+    color: $text-red;
+  }
+
+  p {
+    margin: $space-xs 0 $space-sm;
+    font-size: $font-size-sm;
+  }
+}
+
+.change-seat-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid $primary-lightgrey;
+  border-top-color: $primary-blue;
+  border-radius: $radius-circle;
+  animation: change-seat-spin 0.8s linear infinite;
+  margin-bottom: $space-xs;
+}
+
+@keyframes change-seat-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.change-seat-map-step__stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  margin-bottom: $space-sm;
+}
+
+.change-seat-stepper-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-circle;
+  border: 1px solid $primary-lightgrey;
+  background: $primary-white;
+  color: $text-black;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.change-seat-map-step__stepper-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+  min-width: 140px;
+}
+
+// Same banner color as reschedule-options-list.component.scss's
+// `.reschedule-options-list__confirm-error` — reused rather than inventing a
+// new value for the same "confirm-time failure" role (design-system §2.2).
+.change-seat-map-step__confirm-error {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  margin-bottom: $space-sm;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  background-color: #fde7e7;
+  color: $text-red;
+  font-size: $font-size-sm;
+  text-align: left;
+
+  i {
+    font-size: $font-size-lg;
+    flex-shrink: 0;
+  }
+}
+
+.change-seat-step__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: $secondary-blue;
+  color: $text-white;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $secondary-blue;
+  border: 1px solid $secondary-blue;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: $radius-circle;
+  animation: change-seat-spin 0.7s linear infinite;
+}

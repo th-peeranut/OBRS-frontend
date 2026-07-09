@@ -14,6 +14,7 @@ import { LangSwitcherComponent } from './components/lang-switcher/lang-switcher.
 import { ThemeToggleComponent } from './components/theme-toggle/theme-toggle.component';
 import { ReportUsabilityFabComponent } from './components/report-usability-fab/report-usability-fab.component';
 import { ExportButtonComponent } from './components/export-button/export-button.component';
+import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,7 @@ import { ExportButtonComponent } from './components/export-button/export-button.
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    PromoCodeFieldComponent,
   ],
   imports: [
     CommonModule,
@@ -52,6 +54,7 @@ import { ExportButtonComponent } from './components/export-button/export-button.
     ThemeToggleComponent,
     ReportUsabilityFabComponent,
     ExportButtonComponent,
+    PromoCodeFieldComponent,
   ],
 })
 export class SharedModule {}
