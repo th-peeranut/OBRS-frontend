@@ -87,4 +87,41 @@ describe('BookingService', () => {
       });
     });
   });
+
+  describe('confirmChangeSeat (OBRS-171)', () => {
+    it('normalizes letter-prefixed seat labels to bare digits before POSTing — defense in depth alongside the dialog\'s own normalization', () => {
+      service.confirmChangeSeat(5, { 11: 'A5', 12: 'B12' }).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/5/change-seat`
+      );
+      expect(req.request.method).toBe('POST');
+      // The backend's change-seat API takes bare numeric seat numbers
+      // ("1".."N"), never the seat-map's letter-prefixed labels — an
+      // un-normalized payload 400'd every confirm
+      // (CHANGE_SEAT_ERROR_SEAT_NOT_IN_MAP/CHANGE_SEAT_ERROR_TICKET_MISMATCH).
+      expect(req.request.body).toEqual({ seatAssignments: { 11: '5', 12: '12' } });
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { bookingId: 5, bookingNumber: 'BK5', status: 'CONFIRMED', paymentIntentId: null },
+      });
+    });
+
+    it('is a no-op on an already bare-numeric seatAssignments map', () => {
+      service.confirmChangeSeat(5, { 11: '5' }).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/5/change-seat`
+      );
+      expect(req.request.body).toEqual({ seatAssignments: { 11: '5' } });
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { bookingId: 5, bookingNumber: 'BK5', status: 'CONFIRMED', paymentIntentId: null },
+      });
+    });
+  });
 });
