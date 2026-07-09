@@ -8,10 +8,10 @@ import {
   AdminLookupDto,
   AdminRouteDto,
   AdminScheduleDto,
-  AdminUserDto,
   AdminVehicleDto,
   AdminVehicleTypeDto,
   CreateSchedulePayload,
+  DriverDto,
   getAdminLookupLabel,
   getAdminTranslationLabel,
   parseAdminStatus,
@@ -81,7 +81,7 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   private rawRoutes: AdminRouteDto[] = [];
   private rawVehicles: AdminVehicleDto[] = [];
   private rawVehicleTypes: AdminVehicleTypeDto[] = [];
-  private rawUsers: AdminUserDto[] = [];
+  private rawDrivers: DriverDto[] = [];
   private rawLookups: AdminLookupDto[] = [];
 
   constructor(
@@ -114,7 +114,7 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
           this.rawRoutes = data.routes;
           this.rawVehicles = data.vehicles;
           this.rawVehicleTypes = data.vehicleTypes;
-          this.rawUsers = data.users;
+          this.rawDrivers = data.drivers;
           this.rawLookups = data.lookups;
           this.applyLocalization();
         }
@@ -293,17 +293,12 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
       code: String(v.id),
       label: v.vehicleNumber ?? v.numberPlate ?? `#${v.id}`,
     }));
-    this.driverOptions = this.rawUsers
-      .filter((u) =>
-        (u.roles ?? []).some((role) => {
-          const slug = typeof role === 'string' ? role : role.slug;
-          return String(slug ?? '').trim().toLowerCase() === 'driver';
-        })
-      )
-      .map((u) => ({
-        code: String(u.id),
-        label: u.fullName?.trim() || u.email?.trim() || `#${u.id}`,
-      }));
+    // Drivers already come pre-filtered from /private/users/drivers (OBRS-175);
+    // no role filtering needed here.
+    this.driverOptions = this.rawDrivers.map((d) => ({
+      code: String(d.id),
+      label: d.name?.trim() || `#${d.id}`,
+    }));
     this.statusOptions = this.rawLookups
       .filter((l) => l.category === 'schedule_status')
       .map((l) => ({
