@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 
@@ -113,5 +114,10 @@ export class BoardingEntryPageComponent implements OnInit, OnDestroy {
       this.translate.currentLang || this.translate.getDefaultLang() || 'th'
     ).toLowerCase();
     return raw.startsWith('en') ? 'en' : 'th';
+  }
+
+  // Formats a raw backend ISO timestamp for display, in the current UI language.
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.currentLocale);
   }
 }
