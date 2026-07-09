@@ -56,11 +56,11 @@
             <ng-container *ngIf="!isLoading">
               <tr *ngFor="let row of filteredRows">
                 <td class="fw-semibold">{{ row.tripId }}</td>
-                <td>{{ row.departure }}</td>
+                <td>{{ displayDateTime(row.departure) }}</td>
                 <td>{{ row.route }} / {{ row.vehicle }}</td>
                 <td>{{ row.driver }}</td>
                 <td><span class="badge bg-secondary">{{ row.status }}</span></td>
-                <td>{{ row.updatedAt }}</td>
+                <td>{{ displayDateTime(row.updatedAt) }}</td>
                 <td>
                   <div class="d-flex gap-1">
                     <button class="btn btn-sm btn-outline-secondary" (click)="openEditModal(row)">

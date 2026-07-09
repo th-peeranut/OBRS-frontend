@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { DriverSchedulesStore } from './driver-schedules.store';
 
 interface DriverScheduleRow {
@@ -94,5 +95,10 @@ export class DriverSchedulesPageComponent implements OnInit, OnDestroy {
   private get currentLocale(): string {
     const raw = String(this.translate.currentLang || this.translate.getDefaultLang() || 'th').toLowerCase();
     return raw.startsWith('en') ? 'en' : 'th';
+  }
+
+  // Formats a raw backend ISO timestamp for display, in the current UI language.
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.currentLocale);
   }
 }

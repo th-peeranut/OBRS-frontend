@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
   UsabilityReportDetail,
@@ -337,6 +338,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
 
   protected trackById(_index: number, item: UsabilityReportSummary): string {
     return item.id;
+  }
+
+  // Renders a raw backend ISO timestamp as a human-readable date-time in the
+  // current UI language (Thai default). Called from the template so it re-runs
+  // on language change, matching categoryLabel/statusLabel above.
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.translate.currentLang);
   }
 
   protected formatBytes(bytes: number): string {

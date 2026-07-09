@@ -18,6 +18,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import { StaffSchedulesStore } from './staff-schedules.store';
 
@@ -445,5 +446,12 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
   private get currentLocale(): string {
     const raw = String(this.translate.currentLang || this.translate.getDefaultLang() || 'th').toLowerCase();
     return raw.startsWith('en') ? 'en' : 'th';
+  }
+
+  // Formats a raw backend ISO timestamp for display. Called from the template
+  // (not at row-mapping time) so `row.departure` stays a raw ISO string — the
+  // edit modal round-trips it back through toFallbackDto()/splitDateTime().
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.currentLocale);
   }
 }

@@ -34,7 +34,7 @@
             <ng-container *ngIf="!isLoading">
               <tr *ngFor="let row of rows">
                 <td class="fw-semibold">{{ row.tripId }}</td>
-                <td>{{ row.departure }}</td>
+                <td>{{ displayDateTime(row.departure) }}</td>
                 <td>{{ row.route }}</td>
                 <td>{{ row.vehicle }}</td>
                 <td><span class="badge bg-secondary">{{ row.status }}</span></td>

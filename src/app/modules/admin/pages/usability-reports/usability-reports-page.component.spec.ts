@@ -532,9 +532,14 @@ describe('UsabilityReportsPageComponent', () => {
     expect(notifiedPill())
       .withContext('notified pill must render when reporterNotifiedAt is present')
       .toBeTruthy();
+    // The dispatch timestamp is rendered human-readable (Thai default, Bangkok
+    // time: 10:15 UTC → 17:15), not the raw backend ISO string (OBRS-172).
     expect(notifiedPill()?.textContent)
-      .withContext('notified pill shows the dispatch timestamp')
-      .toContain('2026-07-08T10:15:00Z');
+      .withContext('notified pill shows the formatted dispatch time')
+      .toContain('17:15');
+    expect(notifiedPill()?.textContent)
+      .withContext('raw backend ISO must not leak into the pill')
+      .not.toContain('2026-07-08T10:15:00Z');
 
     component['closeDetail']();
     fixture.detectChanges();
