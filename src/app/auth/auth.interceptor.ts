@@ -12,6 +12,7 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, mergeMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { APP_LANGUAGE_KEY, DEFAULT_LANGUAGE } from '../shared/services/language.service';
+import { SKIP_GLOBAL_ERROR_ALERT } from '../shared/interceptors/http-context-tokens';
 
 let isHandlingAuthError = false;
 
@@ -28,6 +29,13 @@ export const authInterceptor: HttpInterceptorFn = (
   // switching. The key/default constants keep it centralized without the cycle.
   const appLanguage = localStorage.getItem(APP_LANGUAGE_KEY) || DEFAULT_LANGUAGE;
   const isAuthEndpoint = req.url.includes('/api/auth/');
+  // Silent calls (SKIP_GLOBAL_ERROR_ALERT) own their error handling and must not
+  // trigger a global logout. A silent preview like promo-code validate
+  // (POST /api/private/promotions/validate) can hit a transient 401 (e.g. a SIT
+  // cold-start blip); nuking the whole session + booking over a non-critical
+  // preview is wrong — surface the error to the caller instead. A genuinely dead
+  // session is still caught by the next non-silent request. (OBRS-181)
+  const suppressAuthLogout = req.context.get(SKIP_GLOBAL_ERROR_ALERT);
 
   let headers = req.headers;
 
@@ -45,7 +53,9 @@ export const authInterceptor: HttpInterceptorFn = (
     mergeMap((event: HttpEvent<unknown>) => {
       if (!isAuthEndpoint && event instanceof HttpResponse) {
         if (isUnauthorizedPayload(event.body)) {
-          handleUnauthorized(authService, router);
+          if (!suppressAuthLogout) {
+            handleUnauthorized(authService, router);
+          }
           return throwError(
             () =>
               new HttpErrorResponse({
@@ -61,7 +71,7 @@ export const authInterceptor: HttpInterceptorFn = (
       return of(event);
     }),
     catchError((error: HttpErrorResponse) => {
-      if (!isAuthEndpoint && error?.status === 401) {
+      if (!isAuthEndpoint && error?.status === 401 && !suppressAuthLogout) {
         handleUnauthorized(authService, router);
       }
 
