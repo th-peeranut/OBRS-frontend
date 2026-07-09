@@ -38,7 +38,7 @@ interface UserRow {
   roles: string[];
   status: string;
   statusCode: string;
-  lastActive: string;
+  lastUpdated: string;
   locked: boolean;
 }
 
@@ -565,7 +565,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       roles: roleLabels.length > 0 ? roleLabels : ['-'],
       status: status.name,
       statusCode: status.code,
-      lastActive: formatDisplayDateTime(user.updatedAt ?? user.createdAt, this.translate.currentLang),
+      // The user record's last-modified time (updatedAt, falling back to createdAt).
+      // NOT a real login/activity time — labeled "อัปเดตล่าสุด" accordingly; a true
+      // last_login_at is tracked as a backlog item (OBRS-182).
+      lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, this.translate.currentLang),
       locked: user.locked ?? false,
     };
   }
