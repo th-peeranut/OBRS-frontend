@@ -70,6 +70,13 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+> **⭐ RECONCILIATION — 2026-07-09 (FE↔BE handoff-gap sweep):** every Contract Request below has since **landed on `origin/dev` on both sides and is live on SIT** — verified end-to-end. These entries are kept for history; none is still open.
+> - **Promo code system (OBRS-109 / #37)** — RESOLVED. Backend `PromotionController` (`POST /api/private/promotions/validate`), `AdminPromotionCrudController` (full CRUD under `/api/private/admin/promotions`), `PromotionCodeService`, and the `promotionCode` booking field are all on `origin/dev`. FE `promotion.service.ts` + `promo-code-field.component` match (path + `PROMO_CODE_*` errorCodes). Live SIT: `validate` bogus code → `404 {errorCode: PROMO_CODE_NOT_FOUND}`; `GET /admin/promotions` → `403` for customer (exists + role-gated).
+> - **Usability report reporter email (OBRS-108)** — RESOLVED. Backend `reporterEmail` on `UsabilityReportController`/`UsabilityReportDetailRespDto`/model + `UsabilityReportSubmitReporterEmailIT`; FE UI (`report-usability-fab`, admin detail row) on `origin/dev`.
+> - **Change seat (OBRS-110)** — RESOLVED. Backend `ChangeSeatService` + `ChangeSeatReqDto`/`ChangeSeatAvailabilityRespDto`/`ChangeSeatException` on `origin/dev`; FE consumed it, and the label→numeric seat-number contract mismatch was fixed live under **OBRS-171** (`shared/lib/seat-number.ts`).
+> - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
+> - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
+
 ### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
 **Affected endpoints**:
 - `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)
