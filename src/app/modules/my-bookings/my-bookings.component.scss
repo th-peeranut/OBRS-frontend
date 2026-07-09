@@ -246,11 +246,10 @@
     flex-direction: column;
     gap: 2px;
     min-width: 0;
-    // Cap the text column so labels stay one line but the long disabled reason
-    // wraps instead of stretching the row; combined with the min-width override
-    // below this keeps the menu close to content width (short rows get far less
-    // trailing).
-    max-width: 100px;
+    // Cap the text column so labels + the (now concise) disabled reasons stay on
+    // one line; the menu sizes to content (see .p-menu width below), and this is
+    // just a safety ceiling so an unexpectedly long string can't over-widen it.
+    max-width: 160px;
   }
 
   &__label {

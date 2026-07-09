@@ -64,10 +64,10 @@
     "RESCHEDULE": {
       "ACTION": "改签",
       "REASON": {
-        "NOT_CONFIRMED": "只有已确认的预订才能改签",
-        "NOT_ONE_WAY": "只有单程、单程段的预订才能改签",
-        "ALREADY_USED": "此预订已改签过一次",
-        "NO_WINDOW": "距离出发时间太近，无法改签"
+        "NOT_CONFIRMED": "仅限已确认预订",
+        "NOT_ONE_WAY": "仅限单程",
+        "ALREADY_USED": "已改签过一次",
+        "NO_WINDOW": "临近发车"
       },
       "DIALOG_TITLE": "改签您的行程",
       "DATE_LABEL": "新的出发日期",
@@ -109,10 +109,10 @@
     "CHANGE_SEAT": {
       "ACTION": "更改座位",
       "REASON": {
-        "NOT_CONFIRMED": "只有已确认的预订才能更改座位",
-        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改座位",
-        "ALREADY_USED": "此预订已更改过一次座位",
-        "NO_WINDOW": "距离出发时间太近，无法更改座位"
+        "NOT_CONFIRMED": "仅限已确认预订",
+        "NOT_ONE_WAY": "仅限单程",
+        "ALREADY_USED": "已更改过一次",
+        "NO_WINDOW": "临近发车"
       },
       "DIALOG_TITLE": "更改您的座位",
       "MAP_LOADING": "正在加载座位图…",
@@ -145,10 +145,10 @@
     "CHANGE_STOP": {
       "ACTION": "更改上下车点",
       "REASON": {
-        "NOT_CONFIRMED": "只有已确认的预订才能更改上下车点",
-        "NOT_ONE_WAY": "只有单程、单程段的预订才能更改上下车点",
-        "ALREADY_USED": "此预订已更改过一次上下车点",
-        "NO_WINDOW": "距离出发时间太近，无法更改上下车点"
+        "NOT_CONFIRMED": "仅限已确认预订",
+        "NOT_ONE_WAY": "仅限单程",
+        "ALREADY_USED": "已更改过一次",
+        "NO_WINDOW": "临近发车"
       },
       "DIALOG_TITLE": "更改您的上下车点",
       "PICKUP_STEP_TITLE": "选择新的上车点",

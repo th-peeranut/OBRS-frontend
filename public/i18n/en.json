@@ -64,10 +64,10 @@
     "RESCHEDULE": {
       "ACTION": "Reschedule",
       "REASON": {
-        "NOT_CONFIRMED": "Only confirmed bookings can be rescheduled",
-        "NOT_ONE_WAY": "Only one-way, single-leg bookings can be rescheduled",
-        "ALREADY_USED": "This booking has already been rescheduled once",
-        "NO_WINDOW": "Too close to departure to reschedule"
+        "NOT_CONFIRMED": "Confirmed bookings only",
+        "NOT_ONE_WAY": "One-way trips only",
+        "ALREADY_USED": "Already rescheduled once",
+        "NO_WINDOW": "Too close to departure"
       },
       "DIALOG_TITLE": "Reschedule your trip",
       "DATE_LABEL": "New departure date",
@@ -109,10 +109,10 @@
     "CHANGE_SEAT": {
       "ACTION": "Change seat",
       "REASON": {
-        "NOT_CONFIRMED": "Only confirmed bookings can have their seat changed",
-        "NOT_ONE_WAY": "Only one-way, single-leg bookings can have their seat changed",
-        "ALREADY_USED": "This booking has already had its seat changed once",
-        "NO_WINDOW": "Too close to departure to change seat"
+        "NOT_CONFIRMED": "Confirmed bookings only",
+        "NOT_ONE_WAY": "One-way trips only",
+        "ALREADY_USED": "Already changed once",
+        "NO_WINDOW": "Too close to departure"
       },
       "DIALOG_TITLE": "Change your seat",
       "MAP_LOADING": "Loading the seat map…",
@@ -145,10 +145,10 @@
     "CHANGE_STOP": {
       "ACTION": "Change stop",
       "REASON": {
-        "NOT_CONFIRMED": "Only confirmed bookings can change their stops",
-        "NOT_ONE_WAY": "Only one-way, single-leg bookings can change their stops",
-        "ALREADY_USED": "This booking has already changed its stops once",
-        "NO_WINDOW": "Too close to departure to change stops"
+        "NOT_CONFIRMED": "Confirmed bookings only",
+        "NOT_ONE_WAY": "One-way trips only",
+        "ALREADY_USED": "Already changed once",
+        "NO_WINDOW": "Too close to departure"
       },
       "DIALOG_TITLE": "Change your pickup and drop-off",
       "PICKUP_STEP_TITLE": "Choose a new pickup stop",
