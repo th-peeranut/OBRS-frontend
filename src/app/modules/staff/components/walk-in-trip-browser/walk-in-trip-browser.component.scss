@@ -121,3 +121,20 @@
     opacity: 0.55;
   }
 }
+
+// dark-mode (OBRS-128): the sticky route-group header uses Bootstrap `.bg-light`
+// and the availability badge uses `.bg-white.text-dark` — both stay light on the
+// dark POS panel. Re-point them at the shell tokens (scoped to .admin-shell.is-dark
+// so other `.bg-light`/`.bg-white` usages are untouched).
+:host-context(.admin-shell.is-dark) {
+  .route-group-header.bg-light {
+    background-color: var(--admin-surface-card) !important;
+    border-bottom-color: var(--admin-outline) !important;
+  }
+  .badge.bg-white {
+    background-color: var(--admin-surface-soft) !important;
+  }
+  .badge.text-dark {
+    color: var(--admin-text) !important;
+  }
+}

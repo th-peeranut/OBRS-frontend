@@ -2,6 +2,14 @@
   transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
+// dark-mode (OBRS-128): the totals box uses Bootstrap's `.bg-light` utility
+// (`!important` white), which stays light on the dark POS card. Re-point just this
+// component's `.bg-light` at the shell surface — scoped here (not globally) so it
+// doesn't touch other `.bg-light`/badge usages elsewhere.
+:host-context(.admin-shell.is-dark) .bg-light {
+  background-color: var(--admin-surface-card) !important;
+}
+
 // Keep the totals + Sell button visible at the bottom of the scrolling checkout
 // card so the cashier never has to scroll to complete the sale. The card body
 // (in sell-page) is the scroll container; this footer sticks to its bottom edge.

@@ -63,3 +63,66 @@
   color: #212529;
   line-height: 1.2;
 }
+
+// dark-mode (OBRS-128): the passenger-type tiles + the shared seat map hardcode
+// light-mode colours (white/#f6f7f7 surfaces, dark label, light border) that stay
+// light on the dark POS card. dark-theme.scss themes .seat-box/.card-container for
+// the customer site but excludes `.admin-shell` (expecting the walk-in panel to
+// self-theme via .admin-shell.is-dark) — this is that missing self-theme. Mirror
+// the customer dark structure with the admin surface tokens for shell consistency.
+:host-context(.admin-shell.is-dark) {
+  // passenger-type selector tiles (inactive; --active keeps its teal accent-soft)
+  .ptype-tile {
+    background-color: var(--admin-surface-soft);
+    border-color: var(--admin-outline);
+  }
+  .ptype-label {
+    color: var(--admin-text);
+  }
+  .ptype-icon-fallback {
+    color: var(--admin-muted);
+  }
+
+  // PrimeNG TabView (styleClass="center-tabview") ships a white nav bar + white
+  // panels that ignore the theme — the big white strip at the top of the POS
+  // centre panel. Make its surfaces transparent so the dark `.card` shows through,
+  // and theme the tab labels; the active underline (PrimeNG border) is kept.
+  ::ng-deep .center-tabview {
+    .p-tabview-nav,
+    .p-tabview-nav li .p-tabview-nav-link,
+    .p-tabview-panels {
+      background: transparent !important;
+      background-color: transparent !important;
+    }
+    .p-tabview-nav {
+      border-bottom-color: var(--admin-outline) !important;
+    }
+    .p-tabview-nav li .p-tabview-nav-link {
+      color: var(--admin-muted) !important;
+    }
+    .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+      color: var(--admin-text) !important;
+    }
+  }
+
+  // shared seat map (passenger-seat-van/bus) — ::ng-deep to reach the child
+  // component's cells. Shade order frames the zone: container darkest, available
+  // seat lightest (reads as clickable), disabled mid + muted.
+  ::ng-deep app-passenger-seat-van,
+  ::ng-deep app-passenger-seat-bus {
+    .card-container {
+      background: var(--admin-surface);
+    }
+    .seat-box {
+      background: var(--admin-surface-soft);
+      border-color: var(--admin-outline);
+      color: var(--admin-text);
+    }
+    .seat-box.disabled {
+      background-color: var(--admin-surface-card);
+      border-color: var(--admin-outline);
+      color: var(--admin-muted);
+      opacity: 0.55;
+    }
+  }
+}

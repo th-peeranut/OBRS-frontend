@@ -8,6 +8,16 @@
 // container's own padding are absorbed by the flex column below, so spacing/heading
 // tweaks don't reopen the bug. The e2e test "fits the viewport" (issue #41) guards
 // this constant against future topbar/padding changes.
+// dark-mode (OBRS-128): the three POS panels use raw Bootstrap `.card`, whose
+// white background + dark body-text don't follow the shell theme — so in dark mode
+// they render as white cards (with the light `--admin-text` labels nearly invisible
+// on them). Re-point the card surface + inherited text at the shell tokens so the
+// panels match the rest of the admin/staff surfaces. Light mode is untouched.
+:host-context(.admin-shell.is-dark) .card {
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+}
+
 @media (min-width: 992px) {
   .container-fluid {
     height: calc(100vh - 156px);

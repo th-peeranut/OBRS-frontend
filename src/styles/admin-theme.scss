@@ -99,6 +99,40 @@
   --accent-text: #5eead4;
 }
 
+/* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels
+   (/staff/sell) use raw .form-control/.form-select, which default to a white bg +
+   dark text and don't follow the theme — leaving white input boxes on the dark
+   shell. Point them at the shell surface/text tokens so they match .admin-field in
+   dark mode. Light mode keeps Bootstrap's defaults (this block is dark-only). */
+.admin-shell.is-dark {
+  // `!important` is required: the global `.form-control` rule in styles.scss forces
+  // `background-color: white !important` + a white border, and dark-theme.scss
+  // deliberately excludes `.admin-shell .form-control` from the public dark palette
+  // (expecting the admin side to theme it) — so this is the rule that finally does.
+  .form-control,
+  .form-select {
+    background-color: var(--admin-surface-soft) !important;
+    color: var(--admin-text);
+    border-color: var(--admin-outline) !important;
+  }
+
+  .form-control::placeholder {
+    color: var(--admin-muted);
+  }
+
+  /* Bootstrap .text-muted (#6c757d) is too dim on the dark surfaces (e.g. the
+     staff POS empty-state + hints). Lift to the themed muted token. */
+  .text-muted {
+    color: var(--admin-muted) !important;
+  }
+
+  /* Bootstrap's default select chevron is a dark SVG data-URI — invisible on the
+     dark control; swap for a light-stroked one. */
+  .form-select {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e7edf1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  }
+}
+
 .admin-shell,
 .admin-shell * {
   font-family: "Sarabun", sans-serif;
