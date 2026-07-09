@@ -1,5 +1,5 @@
 export type UsabilityReportCategory = 'bug' | 'ux_ui_improvement' | 'suggestion';
-export type UsabilityReportStatus = 'new' | 'in_review' | 'accepted' | 'resolved' | 'wont_fix';
+export type UsabilityReportStatus = 'new' | 'in_review' | 'accepted' | 'resolved' | 'rejected';
 
 export interface UsabilityReportSummary {
   id: string;
@@ -42,6 +42,9 @@ export interface UsabilityReportDetail {
   triagedByName: string | null;
   triagedAt: string | null;
   jiraIssueKey: string | null;
+  // OBRS-115: when the reporter-outcome email was dispatched (resolved/rejected
+  // with a contact email). Null = reporter never notified.
+  reporterNotifiedAt: string | null;
 }
 
 export interface UsabilityReportReceipt {

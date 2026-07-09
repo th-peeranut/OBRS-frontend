@@ -19,7 +19,7 @@
   --admin-accepted-bg: #b7f3c0;
   --admin-accepted-text: #0a3d1d;
   /* in_review: neutral slate — distinct from new(orange)/accepted(green)/
-     resolved(blue,--admin-success-*)/wont_fix(red). Light bg + dark text works
+     resolved(blue,--admin-success-*)/rejected(red). Light bg + dark text works
      in both themes, so no dark-mode override (see the --admin-accepted-text note). */
   --admin-inreview-bg: #e2e5ea;
   --admin-inreview-text: #3a4250;
