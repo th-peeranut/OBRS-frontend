@@ -125,17 +125,13 @@
       class="action-menu-item"
       [class.action-menu-item--danger]="item.danger"
       [class.action-menu-item--disabled]="item.disabled"
+      [attr.title]="item.disabled && item.reasonText ? item.reasonText : null"
     >
-      <span class="action-menu-item__row">
-        <span class="action-menu-item__icon-slot">
-          <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
-          <i *ngIf="!item.submitting" class="bi" [ngClass]="item.icon" aria-hidden="true"></i>
-        </span>
-        <span class="action-menu-item__label">{{ item.label }}</span>
+      <span class="action-menu-item__icon-slot">
+        <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
+        <i *ngIf="!item.submitting" class="bi" [ngClass]="item.icon" aria-hidden="true"></i>
       </span>
-      <span class="action-menu-item__reason" *ngIf="item.disabled && item.reasonText">
-        {{ item.reasonText }}
-      </span>
+      <span class="action-menu-item__label">{{ item.label }}</span>
     </div>
   </ng-template>
 </p-menu>

@@ -223,20 +223,15 @@
 // reserves that gutter space for an icon regardless (icon-less items used to
 // render it blank); giving every item an icon fills it instead of leaving a
 // dead margin (OBRS-170).
+// Icon + label on a single centered row. The disabled reason is no longer inline
+// (it moved to the item's `title` tooltip, shown on hover) so every row is one
+// short line — the menu stays compact.
 .action-menu-item {
   display: flex;
-  flex-direction: column; // label-row on top, disabled reason (if any) below it
-  gap: 2px;
+  align-items: center;
+  gap: $space-2xs;
   padding: $space-3xs $space-xs; // tight + equal vertical (top==bottom)
   width: 100%;
-
-  // Icon + label share ONE centered row so they always sit on the same line
-  // (was flex-start with a line-height mismatch that floated the icon high).
-  &__row {
-    display: flex;
-    align-items: center;
-    gap: $space-2xs;
-  }
 
   &__icon-slot {
     flex: 0 0 auto;
@@ -255,15 +250,6 @@
     font-size: $font-size-sm;
     color: $text-black;
     line-height: $line-height-base;
-  }
-
-  &__reason {
-    font-size: $font-size-xs;
-    color: $text-lightgrey;
-    line-height: $line-height-tight;
-    white-space: normal;
-    max-width: 176px;
-    padding-left: calc(20px + #{$space-2xs}); // align under the label (past the icon column)
   }
 
   &--danger &__icon-slot,
