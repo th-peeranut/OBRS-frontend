@@ -16,6 +16,7 @@ import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.d
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
+import { ReportsPageComponent } from './pages/reports/reports-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -79,6 +80,16 @@ const routes: Routes = [
           requiredRoles: ['admin'],
         },
       },
+      {
+        path: 'reports',
+        component: ReportsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REPORTS',
+          subtitleKey: 'ADMIN.REPORTS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -103,6 +114,7 @@ const routes: Routes = [
     UsabilityReportsPageComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
+    ReportsPageComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })
