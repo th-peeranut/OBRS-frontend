@@ -8,6 +8,7 @@ import { UsabilityReportsPageComponent } from './usability-reports-page.componen
 import { UsabilityReportsStore } from './usability-reports.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../components/admin-modal-backdrop.directive';
 import {
@@ -661,6 +662,43 @@ describe('UsabilityReportsPageComponent', () => {
     expect(adminApiServiceSpy.updateUsabilityReportStatus)
       .withContext('opening a new report must silently promote it to in_review exactly once')
       .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
+  });
+
+  it('optimistically decrements the "new" badge by 1 on a successful auto-promote (instant, no GET round-trip)', () => {
+    const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+    const adjustSpy = spyOn(badge, 'adjustBy');
+    const triggerSpy = spyOn(badge, 'trigger');
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    component['openDetail']('rep-1'); // default updateUsabilityReportStatus mock resolves success
+
+    expect(adjustSpy)
+      .withContext('a successful promote nudges the badge by -1 immediately')
+      .toHaveBeenCalledOnceWith(-1);
+    expect(triggerSpy)
+      .withContext('the promote path must not fire a second authoritative GET (that was the lag)')
+      .not.toHaveBeenCalled();
+  });
+
+  it('reverts the optimistic badge decrement when the auto-promote fails (stale-row 400), leaving a net-zero change', () => {
+    const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+    const adjustSpy = spyOn(badge, 'adjustBy');
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      throwError(() => ({ status: 400, error: { errorCode: 'report.invalid-transition' } }))
+    );
+
+    component['openDetail']('rep-1');
+
+    expect(adjustSpy.calls.allArgs())
+      .withContext('optimistic -1 on open, then +1 reverted when the server rejects the promote')
+      .toEqual([[-1], [1]]);
   });
 
   (['in_review', 'accepted', 'resolved', 'rejected'] as UsabilityReportStatus[]).forEach((status) => {

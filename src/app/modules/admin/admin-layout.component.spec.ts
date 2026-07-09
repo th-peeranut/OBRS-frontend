@@ -18,6 +18,7 @@ import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { AdminApiService } from '../../services/admin/admin-api.service';
+import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -246,6 +247,26 @@ describe('AdminLayoutComponent — usability report badge', () => {
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge).withContext('badge should render when count > 0').toBeTruthy();
     expect(badge.nativeElement.textContent.trim()).toBe('5');
+  }));
+
+  it('applies an optimistic countAdjustments delta immediately (no refetch) and clamps at 0', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(3));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+    const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
+
+    badgeService.adjustBy(-1); // auto-promote on open: instant -1
+    fixture.detectChanges();
+    let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('optimistic delta must apply without a GET round-trip')
+      .toBe('2');
+
+    badgeService.adjustBy(-5); // never goes negative
+    fixture.detectChanges();
+    badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge).withContext('count clamps at 0 → badge hidden').toBeNull();
   }));
 
   it('caps the displayed badge text at "99+" when the count exceeds 99', fakeAsync(() => {

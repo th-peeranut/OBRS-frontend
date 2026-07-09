@@ -92,5 +92,16 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       .subscribe((count) => {
         this.newReportCount = count;
       });
+
+    // Optimistic same-tick badge adjustment (OBRS-174): the detail page's
+    // silent auto-promote knows it just moved one report out of 'new', so it
+    // nudges the count by -1 here instantly rather than waiting on the
+    // authoritative GET above (a second live round-trip after the promote PUT).
+    // Clamped at 0; the poll/navigation refetch reconciles any drift.
+    this.badgeRefreshService.countAdjustments$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((delta) => {
+        this.newReportCount = Math.max(0, this.newReportCount + delta);
+      });
   }
 }

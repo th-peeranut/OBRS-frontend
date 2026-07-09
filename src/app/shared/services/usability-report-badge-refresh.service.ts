@@ -16,7 +16,21 @@ export class UsabilityReportBadgeRefreshService {
   private readonly refresh$ = new Subject<void>();
   readonly refreshRequested$: Observable<void> = this.refresh$.asObservable();
 
+  private readonly adjust$ = new Subject<number>();
+  readonly countAdjustments$: Observable<number> = this.adjust$.asObservable();
+
+  // Full authoritative refetch of the "new" count (GET round-trip). Use when
+  // the resulting count isn't known client-side.
   trigger(): void {
     this.refresh$.next();
+  }
+
+  // Optimistic same-tick nudge to the badge — apply a known delta immediately
+  // (e.g. -1 when a 'new' report is promoted to 'in_review' on open) so the
+  // count drops instantly instead of waiting for a GET round-trip on the live
+  // backend (~seconds). The periodic poll / NavigationEnd refetch reconciles
+  // any drift from concurrent changes in another session.
+  adjustBy(delta: number): void {
+    this.adjust$.next(delta);
   }
 }

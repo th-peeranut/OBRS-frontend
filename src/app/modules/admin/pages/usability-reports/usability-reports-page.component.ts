@@ -253,27 +253,40 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // report.invalid-transition when another admin's session already advanced
   // this report between this admin's list fetch and opening it.
   private autoPromoteToInReview(id: string): void {
+    // Apply the promote OPTIMISTICALLY — before the PUT resolves — so the UI
+    // reacts instantly instead of waiting on the live round-trip (~2s): flip
+    // the table row to in_review and drop the sidebar "new" badge by one. Both
+    // are reverted if the server rejects the promote.
+    this.setRowStatus(id, 'in_review');
+    this.badgeRefreshService.adjustBy(-1);
+
     this.adminApiService
       .updateUsabilityReportStatus(id, 'in_review', null)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: () => {
-          this.store.mutate((current) => ({
-            ...current,
-            content: current.content.map((r) =>
-              r.id === id ? { ...r, status: 'in_review' as UsabilityReportStatus } : r
-            ),
-          }));
+          // Confirmed — the optimistic state stands; keep any cached detail in sync.
           const cachedDetail = this.detailCache.get(id);
           if (cachedDetail) {
             this.detailCache.set(id, { ...cachedDetail, status: 'in_review' });
           }
-          this.badgeRefreshService.trigger();
         },
         error: () => {
-          // Swallowed by design — see method doc.
+          // Revert the optimistic changes (toast-free, per method doc). The
+          // common failure is the stale cross-session 400 (the report was
+          // already advanced elsewhere); the periodic count poll / NavigationEnd
+          // refetch reconciles the exact number regardless.
+          this.setRowStatus(id, 'new');
+          this.badgeRefreshService.adjustBy(1);
         },
       });
+  }
+
+  private setRowStatus(id: string, status: UsabilityReportStatus): void {
+    this.store.mutate((current) => ({
+      ...current,
+      content: current.content.map((r) => (r.id === id ? { ...r, status } : r)),
+    }));
   }
 
   protected closeDetail(): void {
