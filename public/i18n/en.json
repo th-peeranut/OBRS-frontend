@@ -123,7 +123,7 @@
         "SELECTED": "Selected",
         "CURRENT": "Current seat"
       },
-      "CONFIRM_BUTTON": "Confirm new seat",
+      "CONFIRM_BUTTON": "Confirm",
       "BACK_BUTTON": "Back",
       "SUCCESS": "Your seat has been changed.",
       "ERROR": {

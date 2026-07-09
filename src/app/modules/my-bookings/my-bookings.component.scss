@@ -227,7 +227,7 @@
   display: flex;
   align-items: flex-start;
   gap: $space-3xs; // tight icon↔text so the icon reads as part of the label, not a floating gutter
-  padding: $space-2xs $space-sm $space-2xs $space-2xs; // trim the leading inset (was symmetric 16px) so text sits close to the icon
+  padding: $space-3xs $space-sm $space-3xs $space-2xs; // tight vertical (was 8px) + trimmed leading inset so text hugs the icon
   width: 100%;
 
   &__icon-slot {
@@ -267,6 +267,15 @@
   &--danger &__label {
     color: $text-red;
   }
+}
+
+// The PrimeNG menu list ships a 32px LEFT padding (0 on the right), which is
+// what pushed every row far off the left edge — the bulk of the "too much space
+// before the text" (leading ≈ 60px vs ~16px trailing). Zero the horizontal list
+// padding (rows then indent only by the item's own small padding) and keep a
+// tight vertical rhythm. `!important` beats the theme's normal padding rule.
+::ng-deep .my-bookings-action-menu .p-menu-list {
+  padding: $space-3xs 0 !important;
 }
 
 // PrimeNG's own `<li class="p-menuitem">` wrapper is rendered by the p-menu

@@ -123,7 +123,7 @@
         "SELECTED": "已选择",
         "CURRENT": "当前座位"
       },
-      "CONFIRM_BUTTON": "确认新座位",
+      "CONFIRM_BUTTON": "确认",
       "BACK_BUTTON": "返回",
       "SUCCESS": "座位已更改。",
       "ERROR": {
