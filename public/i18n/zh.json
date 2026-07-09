@@ -247,7 +247,19 @@
   },
   "COMMON": {
     "THEME_TOGGLE": "切换深色模式",
-    "CLEAR": "清除"
+    "CLEAR": "清除",
+    "EXPORT": {
+      "BUTTON_LABEL": "导出",
+      "FORMAT_CSV": "CSV",
+      "FORMAT_XLSX": "Excel (XLSX)",
+      "IN_PROGRESS": "正在导出...",
+      "ERROR_ACCESS_DENIED": "您没有权限导出此数据。",
+      "ERROR_UNKNOWN_DATASET": "此导出不可用。",
+      "ERROR_UNSUPPORTED_FORMAT": "此导出不支持该文件格式。",
+      "ERROR_ROW_LIMIT_EXCEEDED": "数据行数超出限制（最多 50,000 行），请缩小筛选范围后重试。",
+      "ERROR_GENERIC": "导出失败，请重试。",
+      "SUCCESS": "导出成功，请查看下载的文件。"
+    }
   },
   "ADMIN": {
     "PAGES": {

@@ -247,7 +247,19 @@
   },
   "COMMON": {
     "THEME_TOGGLE": "สลับโหมดมืด",
-    "CLEAR": "ล้าง"
+    "CLEAR": "ล้าง",
+    "EXPORT": {
+      "BUTTON_LABEL": "ส่งออกข้อมูล",
+      "FORMAT_CSV": "CSV",
+      "FORMAT_XLSX": "Excel (XLSX)",
+      "IN_PROGRESS": "กำลังส่งออก...",
+      "ERROR_ACCESS_DENIED": "คุณไม่มีสิทธิ์ส่งออกข้อมูลนี้",
+      "ERROR_UNKNOWN_DATASET": "ไม่พบชุดข้อมูลสำหรับส่งออกนี้",
+      "ERROR_UNSUPPORTED_FORMAT": "ไม่รองรับรูปแบบไฟล์นี้สำหรับการส่งออกนี้",
+      "ERROR_ROW_LIMIT_EXCEEDED": "ข้อมูลมีจำนวนแถวเกินกำหนด (สูงสุด 50,000 แถว) กรุณาปรับตัวกรองแล้วลองใหม่",
+      "ERROR_GENERIC": "ส่งออกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+      "SUCCESS": "ส่งออกข้อมูลสำเร็จ กรุณาตรวจสอบไฟล์ที่ดาวน์โหลด"
+    }
   },
   "ADMIN": {
     "PAGES": {

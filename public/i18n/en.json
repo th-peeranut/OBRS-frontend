@@ -247,7 +247,19 @@
   },
   "COMMON": {
     "THEME_TOGGLE": "Toggle dark mode",
-    "CLEAR": "Clear"
+    "CLEAR": "Clear",
+    "EXPORT": {
+      "BUTTON_LABEL": "Export",
+      "FORMAT_CSV": "CSV",
+      "FORMAT_XLSX": "Excel (XLSX)",
+      "IN_PROGRESS": "Exporting…",
+      "ERROR_ACCESS_DENIED": "You don't have permission to export this data.",
+      "ERROR_UNKNOWN_DATASET": "This export is not available.",
+      "ERROR_UNSUPPORTED_FORMAT": "This file format isn't supported for this export.",
+      "ERROR_ROW_LIMIT_EXCEEDED": "This export has too many rows (limit 50,000). Narrow your filters and try again.",
+      "ERROR_GENERIC": "Export failed. Please try again.",
+      "SUCCESS": "Export complete — check your downloads."
+    }
   },
   "ADMIN": {
     "PAGES": {
