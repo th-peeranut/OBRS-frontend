@@ -11,6 +11,7 @@ import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
 import { ChangeSeatResult } from '../../../shared/interfaces/change-seat.interface';
+import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
   changeSeatSettled,
   closeChangeSeatDialog,
@@ -19,6 +20,9 @@ import {
   confirmChangeSeatSuccess,
   invokeLoadMyBookingsApi,
   loadChangeSeatAvailability,
+  loadChangeSeatTicketsFailure,
+  loadChangeSeatTicketsSuccess,
+  openChangeSeatDialog,
 } from './my-bookings.action';
 import { initialMyBookingsState } from './my-bookings.model';
 import { selectMyBookings } from './my-bookings.selector';
@@ -66,6 +70,98 @@ describe('ChangeSeatEffect', () => {
     // result and leaks into other spec files in the same Karma bundle
     // unless released.
     store.resetSelectors();
+  });
+
+  describe('loadChangeSeatTickets$ (OBRS-171 follow-up: ticket-mismatch on stop-changed/rescheduled bookings)', () => {
+    it('excludes a CANCELLED leftover ticket that still carries a seatNumber, keeping only the CONFIRMED ticket — proving the change-seat keyset now matches the backend\'s confirmed-ticket set', () => {
+      // Mirrors the live-DB proof for B-P4HPH6 (bookingId 4): ticket 11 =
+      // seat "4" status=cancelled (leftover from a prior change-stop/
+      // reschedule, which cancel+recreate tickets), ticket 15 = seat "4"
+      // status=confirmed. Filtering on seatNumber alone used to seed both,
+      // so the dialog sent keys {11,15} while the backend's confirmed set
+      // was {15} → CHANGE_SEAT_ERROR_TICKET_MISMATCH.
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-P4HPH6',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 11,
+                    ticketNumber: 'T-11',
+                    seatNumber: '4',
+                    status: { code: 'cancelled', label: 'Cancelled' },
+                  },
+                  {
+                    id: 15,
+                    ticketNumber: 'T-15',
+                    seatNumber: '4',
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeSeatDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatTicketsSuccess({ tickets: [{ ticketId: 15, seatNumber: '4' }] }),
+      ]);
+    });
+
+    it('is case/whitespace-insensitive on the confirmed-status check, mirroring normalizeStatusCode', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 6,
+            bookingNumber: 'B-6',
+            journeys: [
+              {
+                tickets: [
+                  { id: 21, ticketNumber: 'T-21', seatNumber: '7', status: { code: ' CONFIRMED ', label: 'Confirmed' } },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeSeatDialog({ bookingId: 6 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatTicketsSuccess({ tickets: [{ ticketId: 21, seatNumber: '7' }] }),
+      ]);
+    });
+
+    it('still surfaces a failure when the API call itself fails', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        throwError(() => new HttpErrorResponse({ error: null, status: 500 }))
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeSeatDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeSeatTicketsFailure({ error: 'MY_BOOKINGS.CHANGE_SEAT.ERROR.GENERIC' }),
+      ]);
+    });
   });
 
   describe('confirmChangeSeat$', () => {
