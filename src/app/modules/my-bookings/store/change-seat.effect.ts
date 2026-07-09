@@ -200,7 +200,18 @@ export class ChangeSeatEffect {
     // Change seat only supports single-leg bookings — the first (only) journey.
     const tickets = journeys?.[0]?.tickets ?? [];
     return tickets
-      .filter((ticket) => !!ticket.seatNumber)
+      // `GET .../tickets` includes CANCELLED leftovers from a prior
+      // change-stop/reschedule (which cancel+recreate tickets) — those still
+      // carry a seatNumber, so filtering on seatNumber alone seeded
+      // `seatAssignments` with a cancelled ticket id too. The backend's
+      // change-seat confirm requires the payload's ticket-id set to match
+      // the CONFIRMED tickets exactly, else it 400s with
+      // CHANGE_SEAT_ERROR_TICKET_MISMATCH (OBRS-171 follow-up). Reuse the
+      // same confirmed-status normalization `confirmChangeSeatConfirmed$`
+      // already applies to `result.status`.
+      .filter(
+        (ticket) => !!ticket.seatNumber && normalizeStatusCode(ticket.status?.code) === 'confirmed'
+      )
       .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber as string }));
   }
 }

@@ -30,6 +30,7 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
+import { normalizeSeatAssignments } from '../../shared/lib/seat-number';
 import { map, Observable } from 'rxjs';
 
 export interface RescheduleEstimateParams {
@@ -246,14 +247,18 @@ export class BookingService {
     );
   }
 
-  /** Confirm the seat change; always resolves `CONFIRMED` — no payment step. */
+  /** Confirm the seat change; always resolves `CONFIRMED` — no payment step.
+   * `seatAssignments` is normalized to bare digits here too (defense in
+   * depth alongside the dialog's own normalization) — the backend's
+   * change-seat API never accepts the seat-map's letter-prefixed labels
+   * (`A5`/`B12`), only `"1".."N"` (OBRS-171). */
   confirmChangeSeat(
     bookingId: number,
     seatAssignments: Record<number, string>
   ): Observable<ResponseAPI<ChangeSeatResult>> {
     return this.http.post<ResponseAPI<ChangeSeatResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/change-seat`,
-      { seatAssignments },
+      { seatAssignments: normalizeSeatAssignments(seatAssignments) },
       { context: this.silentContext() }
     );
   }

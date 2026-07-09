@@ -11,6 +11,7 @@ import { Store, select } from '@ngrx/store';
 import { combineLatest, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { ChangeSeatAvailability, ChangeSeatTicket } from '../../../../shared/interfaces/change-seat.interface';
+import { normalizeSeatAssignments, toSeatLabel } from '../../../../shared/lib/seat-number';
 import {
   closeChangeSeatDialog,
   confirmChangeSeat,
@@ -56,9 +57,16 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
   tickets: ChangeSeatTicket[] = [];
   activeTicketIndex = 0;
 
-  /** ticketId → newly picked seat number; seeded once from `tickets`
-   * (pristine-guarded — a later background re-emit of the same tickets must
-   * never clobber an in-progress pick, design-system §11). */
+  /** ticketId → newly picked seat, in the seat-map's LETTER-prefixed label
+   * form (`A5`/`B12`, matching what the van/bus components render and
+   * emit — see `onSeatPicked`); seeded once from `tickets` (pristine-guarded
+   * — a later background re-emit of the same tickets must never clobber an
+   * in-progress pick, design-system §11). `ticket.seatNumber` itself is the
+   * backend's BARE NUMERIC form, so the seed converts it to a label via
+   * `toSeatLabel` (OBRS-171) — otherwise the ticket's current seat never
+   * matches a rendered label and its highlight is lost. Converted back to
+   * bare digits only at the confirm boundary (`onConfirm`), never stored
+   * here — the backend never sees a letter-prefixed seat number. */
   seatAssignments: Record<number, string> = {};
   private seatAssignmentsSeeded = false;
 
@@ -91,10 +99,10 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
           this.availabilityError = availabilityError;
           this.tickets = tickets;
 
-          if (!this.seatAssignmentsSeeded && tickets.length > 0) {
+          if (!this.seatAssignmentsSeeded && tickets.length > 0 && availability) {
             const seeded: Record<number, string> = {};
             for (const ticket of tickets) {
-              seeded[ticket.ticketId] = ticket.seatNumber;
+              seeded[ticket.ticketId] = toSeatLabel(availability.vehicleType, ticket.seatNumber);
             }
             this.seatAssignments = seeded;
             this.seatAssignmentsSeeded = true;
@@ -174,8 +182,16 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
     if (!this.availability || this.tickets.length === 0) {
       return;
     }
+    // `seatAssignments` carries the seat-map's letter-prefixed labels
+    // (`A5`/`B12`) — the backend's change-seat API takes bare numeric seat
+    // numbers (`"1".."N"`), so normalize right at the payload boundary
+    // (OBRS-171: the un-normalized label 400'd every confirm with
+    // CHANGE_SEAT_ERROR_SEAT_NOT_IN_MAP/CHANGE_SEAT_ERROR_TICKET_MISMATCH).
     this.store.dispatch(
-      confirmChangeSeat({ bookingId: this.bookingId, seatAssignments: this.seatAssignments })
+      confirmChangeSeat({
+        bookingId: this.bookingId,
+        seatAssignments: normalizeSeatAssignments(this.seatAssignments),
+      })
     );
   }
 
@@ -196,19 +212,27 @@ export class ChangeSeatDialogComponent implements OnInit, OnDestroy {
     if (!ticket) {
       return '';
     }
-    return this.seatAssignments[ticket.ticketId] ?? ticket.seatNumber;
+    return this.seatAssignments[ticket.ticketId] ?? toSeatLabel(this.vehicleType, ticket.seatNumber);
   }
 
   /** Every other ticket's own draft pick, unioned with `occupiedSeatNumbers`
-   * — none of these are selectable for the active ticket. Always a fresh
+   * — none of these are selectable for the active ticket. `occupiedSeatNumbers`
+   * comes straight off the backend's bare-numeric availability response, so it's
+   * converted to the seat-map's letter-prefixed label form here too — the van/bus
+   * components compare `takenSeats` against their rendered labels with plain
+   * string equality (no normalization on their end), so a mixed-form array would
+   * silently fail to disable already-occupied seats (OBRS-171). Always a fresh
    * array (never mutates `availability.occupiedSeatNumbers`, design-system
    * §10). */
   get activeTakenSeats(): string[] {
-    const occupied = this.availability?.occupiedSeatNumbers ?? [];
+    const vehicleType = this.vehicleType;
+    const occupied = (this.availability?.occupiedSeatNumbers ?? []).map((seat) =>
+      toSeatLabel(vehicleType, seat)
+    );
     const activeTicketId = this.activeTicket?.ticketId;
     const others = this.tickets
       .filter((ticket) => ticket.ticketId !== activeTicketId)
-      .map((ticket) => this.seatAssignments[ticket.ticketId] ?? ticket.seatNumber);
+      .map((ticket) => this.seatAssignments[ticket.ticketId] ?? toSeatLabel(vehicleType, ticket.seatNumber));
     return [...occupied, ...others];
   }
 }
