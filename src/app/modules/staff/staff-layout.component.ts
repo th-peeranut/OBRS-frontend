@@ -19,10 +19,10 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
   protected readonly defaultSubtitleKey = 'STAFF.LAYOUT.SUBTITLE';
 
   // Whether to surface the Admin Dashboard shortcut in the profile menu.
-  // Under the area-based access model (see AuthService) only the owner reaches
-  // both portals, so this is effectively an "owner is here" check: gate the
-  // shortcut on the admin grant so plain salespersons/drivers — who cannot
-  // enter /admin — don't see a dead link.
+  // Under the area-based access model (see AuthService) both owner and admin
+  // hold cross-portal access (OBRS-176), so this is an "owner/admin is here"
+  // check: gate the shortcut on the admin grant so plain salespersons/drivers
+  // — who cannot enter /admin — don't see a dead link.
   protected isAdmin = false;
 
   // Computed once in ngOnInit and held in a stable field. Must NOT be a getter:

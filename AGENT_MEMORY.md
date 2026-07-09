@@ -1,5 +1,23 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-09 — Scrutinize self-fix: OBRS-176 admin cross-area access
+
+**Worktree:** `OBRS-frontend-wt-admin-cross-area-access` (branch `ao/admin-cross-area-access`).
+
+**Fixed one stale comment the widening left behind.** `staff-layout.component.ts:22-25`
+still read "only the owner reaches both portals, so this is effectively an 'owner is here'
+check." After OBRS-176 admin is also a cross-portal superset, so admin reaches both portals
+too — the comment was factually wrong (the exact "leftover text claiming admin is confined"
+class of defect). The `isAdmin = hasAnyRole(['admin'])` gate was already correct (true for
+both owner and admin, false for plain salesperson/driver); only the prose was wrong. Rewrote
+it to "both owner and admin hold cross-portal access (OBRS-176) ... an 'owner/admin is here'
+check." Comment-only, no behavior change.
+
+**Pattern for next time:** when you widen `ROLE_GRANTS`, grep the whole `src/` tree for prose
+that asserts the OLD confinement (`only the owner`, `admin.*confin`, `both portals`,
+`cannot enter`), not just the file you edited. The sibling `admin-layout.component.ts` comment
+was updated in the same PR but this staff-side twin was missed.
+
 ## 2026-07-08 — Frontend implementation: promo code system (OBRS-109 / #37)
 
 **Worktree:** `OBRS-frontend-wt-promo-codes` (branch `ao/promo-codes`, off `dev`, on top of
