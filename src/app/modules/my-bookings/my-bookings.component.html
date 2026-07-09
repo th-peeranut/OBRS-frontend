@@ -121,7 +121,11 @@
   (onHide)="onActionMenuHide()"
 >
   <ng-template pTemplate="item" let-item>
-    <div class="action-menu-item" [class.action-menu-item--danger]="item.danger">
+    <div
+      class="action-menu-item"
+      [class.action-menu-item--danger]="item.danger"
+      [class.action-menu-item--disabled]="item.disabled"
+    >
       <span class="action-menu-item__icon-slot">
         <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
         <i *ngIf="!item.submitting" class="bi" [ngClass]="item.icon" aria-hidden="true"></i>

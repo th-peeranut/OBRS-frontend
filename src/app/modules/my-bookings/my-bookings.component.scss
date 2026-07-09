@@ -279,17 +279,42 @@
 // keeps the override from leaking onto unrelated p-menu instances elsewhere
 // in the app.
 //
-// `.p-disabled` sets `pointer-events: none`, which silently suppresses the
-// `cursor` declaration on it (no pointer events means no hover cursor at
-// all) — override back to `auto` so `not-allowed` actually paints (OBRS-170).
 // Enabled items get an explicit `pointer` rather than relying on PrimeNG's
-// default.
+// default. For disabled items PrimeNG puts `.p-disabled` (with its own
+// `cursor: default`) on the <li> AND `pointer-events: none` on the inner
+// `.p-menuitem-content` it renders — so `not-allowed` needs `!important` to
+// beat PrimeNG's rule, and pointer-events must be re-enabled on BOTH the <li>
+// and the content div (the topmost element under the pointer) for the cursor
+// to actually paint over the whole row (OBRS-170; verified live — the plain
+// rule computed to `default`).
 ::ng-deep .my-bookings-action-menu .p-menuitem {
   cursor: pointer;
 
-  &.p-disabled {
+  // Disabled items: PrimeNG puts `pointer-events: none` on the inner
+  // `.p-menuitem-content` (so a cursor set on it or the <li> never paints —
+  // the row hit-tests to whatever's behind it). Re-enable hit-testing on the
+  // content so our OWN `.action-menu-item` element (styled below) becomes the
+  // hovered target and can paint the cursor. We don't fight PrimeNG's
+  // `.p-disabled` cursor rule on the <li>/content (it beats even `!important`
+  // in this build — verified live); instead we paint on our view-encapsulated
+  // element, which nothing else targets.
+  &.p-disabled .p-menuitem-content {
     pointer-events: auto;
-    cursor: not-allowed;
+  }
+}
+
+// Paint the disabled cursor on our own row + its children, scoped to this menu.
+// PrimeNG ships `@layer primeng { .p-disabled, .p-disabled * { cursor: default
+// !important } }`. A cascade-LAYERED `!important` beats an unlayered one no
+// matter the specificity, so an ordinary override (even `!important`) loses —
+// verified live. We therefore add our override to the SAME `primeng` layer, where
+// the normal cascade resumes and our higher-specificity selector wins. `::ng-deep`
+// is required because the popup is `appendTo="body"` (detached from this
+// component's encapsulation); `.my-bookings-action-menu` keeps it scoped.
+@layer primeng {
+  ::ng-deep .my-bookings-action-menu .p-menuitem.p-disabled .action-menu-item,
+  ::ng-deep .my-bookings-action-menu .p-menuitem.p-disabled .action-menu-item * {
+    cursor: not-allowed !important;
   }
 }
 
