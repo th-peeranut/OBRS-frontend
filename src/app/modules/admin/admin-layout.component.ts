@@ -3,6 +3,7 @@ import { NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
+import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 
 interface AdminNavItem {
   path: string;
@@ -49,7 +50,10 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // per fetch/poll tick.
   protected newReportCount = 0;
 
-  constructor(private readonly adminApiService: AdminApiService) {
+  constructor(
+    private readonly adminApiService: AdminApiService,
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
+  ) {
     super();
   }
 
@@ -67,14 +71,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   // Fetches the new-usability-report count on entering the admin area, then
-  // re-fetches every 60s and on every in-admin NavigationEnd (so triaging a
-  // report — new -> resolved — updates the badge promptly). A failed tick is
-  // swallowed via catchError so the outer subscription (and therefore the
-  // 60s interval) survives; the last known count is kept on error.
+  // re-fetches every 60s, on every in-admin NavigationEnd, and whenever
+  // UsabilityReportBadgeRefreshService.trigger() fires (the detail page's
+  // silent auto-promote-on-open and decision-save both call it, so the badge
+  // updates immediately instead of waiting for the next poll/navigation).
+  // A failed tick is swallowed via catchError so the outer subscription (and
+  // therefore the 60s interval) survives; the last known count is kept on error.
   private watchNewReportCount(): void {
     merge(
       timer(0, NEW_REPORT_COUNT_POLL_MS),
-      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)),
+      this.badgeRefreshService.refreshRequested$
     )
       .pipe(
         switchMap(() =>

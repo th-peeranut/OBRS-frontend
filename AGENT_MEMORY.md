@@ -17,6 +17,74 @@ check." Comment-only, no behavior change.
 that asserts the OLD confinement (`only the owner`, `admin.*confin`, `both portals`,
 `cannot enter`), not just the file you edited. The sibling `admin-layout.component.ts` comment
 was updated in the same PR but this staff-side twin was missed.
+## 2026-07-09 — Frontend implementation: usability report detail triage-UX refinement (OBRS-174)
+
+**Worktree:** `OBRS-frontend-wt-usability-triage-ux` (branch `ao/usability-triage-ux`, off
+`origin/dev`). Refines the existing admin Usability Reports detail modal from OBRS-77/82/86/106/108/115.
+
+**Un-aliased `detailStatusOptions` from `statusFilterOptions`.** `buildStatusOptions()`
+previously set `this.detailStatusOptions = this.statusFilterOptions` (all 5 statuses,
+including `new`/`in_review`) — a decision-only dropdown should never let an admin "select"
+a triage state as if it were an outcome. Now built from its own `detailStatusValues =
+['accepted','resolved','rejected']`. The table filter above the table is untouched (still
+all 5 — an admin does want to filter by `new`/`in_review` there).
+
+**Added `seedStatus()` gate so the dropdown starts empty (design-system §3.1) unless the
+report already carries a terminal decision.** All three places that seeded
+`selectedDetailStatus` (cache-hit branch, optimistic-open, fetch-resolve pristine patch) now
+route through `seedStatus(status)`, which returns `''` for anything not in
+`accepted|resolved|rejected`. `new`/`in_review` reports now correctly leave Save disabled
+until the admin actively picks an outcome — previously a `new` report seeded
+`selectedDetailStatus = 'new'`, which is not even a selectable dropdown option once #1 above
+un-aliased the options, so Save would have silently rendered with an invalid/blank selection
+without this seeding fix.
+
+**Silent auto-promote (`new` → `in_review`) is a SEPARATE code path from `saveStatus()` —
+do not be tempted to unify them.** `openDetail()` calls a private `autoPromoteToInReview(id)`
+when the just-opened row's status is `'new'`. It calls the same
+`adminApiService.updateUsabilityReportStatus(id, 'in_review', null)` endpoint but has its
+own `subscribe({next, error})` with NO `alertService` calls in either branch — success
+silently updates the store row + `detailCache` entry (so it can't re-fire this session) and
+triggers the badge refresh; error is fully swallowed (covers the expected 400
+`report.invalid-transition` when another admin's session already advanced the row between
+this admin's list fetch and opening it). It must never block or close the modal — the modal
+render is driven entirely by the (separate) detail GET subscription, not by this promote
+call. Gate is strictly `summary?.status === 'new'` read from the row already in `allReports`
+— it does not fire from the cache-hit branch (a cache hit means this report's full detail
+was already fetched once this session, so it has either already been promoted or the admin
+already made a decision).
+
+**`saveStatus()`'s success branch now also calls `closeDetail()`** (after the existing
+`detailCache.delete`/`alertService.success`/`store.refresh()`) — a saved decision is a
+completed action, so the modal dismisses back to the table. The error branch is untouched;
+the modal stays open on failure so the admin can retry without re-opening.
+
+**Badge refresh: added `UsabilityReportBadgeRefreshService`** (`shared/services/`,
+`providedIn: 'root'`, a single `Subject<void>` + `trigger()`) rather than wiring the page
+directly to the layout (siblings, no existing channel). `AdminLayoutComponent
+.watchNewReportCount()`'s existing `merge(timer(...), router.events...)` gained this as a
+third source — same fetch, same error handling, no new code path. See
+`docs/adr/0011-usability-report-badge-refresh-trigger.md` for why this is scoped narrowly
+(not a general notification bus — that refactor is deliberately DEFERRED, see
+`notification-domain-deferred.md` in agent-office memory).
+
+**Test gotcha: an existing OBRS-86 spec (`sends the triage note in the PUT payload...`)
+asserted `toHaveBeenCalledOnceWith` on `updateUsabilityReportStatus`.** Since every fixture
+in this spec file opens a `status: 'new'` report, and opening now always fires the
+auto-promote call on that same spy, the assertion legitimately needed to change from "called
+once" to "assert on `calls.mostRecent().args`" — this is a real behavior change (the spy now
+does get called twice: once for the silent promote, once for the explicit save), not a test
+weakening. Also added a default `adminApiServiceSpy.updateUsabilityReportStatus.and
+.returnValue(of({code:200,...}))` in the shared `beforeEach` so every existing fixture (most
+of which open a `new`-status report and therefore now trigger the auto-promote) has a sane
+default response without each test needing to opt in.
+
+**i18n:** changed `ADMIN.USABILITY_REPORTS.STATUS.SAVE` value only (same key) in en/th/zh —
+`"Save Status"/"บันทึกสถานะ"/"保存状态"` → `"Save"/"บันทึก"/"保存"` (shorter label now that the
+button sits next to the status dropdown, whose own `LABEL` key already reads "Status").
+
+**Test results:** `ng test --watch=false --browsers ChromeHeadless` — see run output in the
+implementation report. `ng build --configuration production` — see run output.
 
 ## 2026-07-08 — Frontend implementation: promo code system (OBRS-109 / #37)
 
