@@ -273,7 +273,8 @@
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
       "PROMOTIONS": "促销活动",
-      "USABILITY_REPORTS": "可用性报告"
+      "USABILITY_REPORTS": "可用性报告",
+      "REPORTS": "报告"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -646,6 +647,35 @@
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
+    },
+    "REPORTS": {
+      "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "TILE": {
+        "BOOKINGS": "预订数",
+        "TICKETS_SOLD": "售出票数",
+        "OCCUPANCY": "座位使用率",
+        "REVENUE": "收入"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期",
+        "BOOKINGS": "预订数",
+        "SEATS_SOLD": "售出座位数",
+        "OCCUPANCY": "座位使用率 %",
+        "REVENUE": "收入"
+      },
+      "BASIS": {
+        "BOOKING_DATE": "按预订日期",
+        "DEPARTURE_DATE": "按出发日期"
+      },
+      "EMPTY_RANGE": "所选日期范围内没有活动。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      }
     }
   },
   "LOGIN": {

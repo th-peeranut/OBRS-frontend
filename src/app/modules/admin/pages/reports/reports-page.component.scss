@@ -1,0 +1,12 @@
+@import "../../../../../styles/variables.scss";
+
+// Small basis caption under a table header ("by booking date" / "by
+// departure date") — reuses `.admin-muted`'s color (theme-safe, no raw hex),
+// just smaller and non-bold so it doesn't compete with the header label.
+.reports-basis-caption {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}

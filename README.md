@@ -120,6 +120,29 @@ Both the `/admin/*` and `/staff/*` shells share one sidebar implemented by the a
 
 Any list screen that needs a "download this view as a file" action reuses the shared `app-export-button` component (`src/app/shared/components/export-button/`) and its companion `ExportService` (`src/app/services/export/export.service.ts`) rather than hand-rolling a button + menu + blob-download flow per screen. Inputs are `[datasetKey]`, `[requiredRole]` (lowercase role slug), and `[params]` (filter query params); it has no outputs and no NgRx — it is a fully self-sufficient presentational component. It renders a secondary `admin-btn` (never the primary role) that opens a `p-menu[popup]` with CSV / Excel(XLSX) options, is **hidden** (not disabled) when the current user lacks `requiredRole`, and shows a small rotating spinner + `Exporting…` label while the request is in flight. Errors branch on the backend's stable `errorCode` via `AlertService.error()`; success is silent (the browser's own download is the confirmation — no toast). See `docs/adr/0001-export-button-component.md` and `docs/design-system.md` §3.
 
+### Reports (`/admin/reports`)
+
+The MVP reporting page (OBRS-40) consumes one endpoint,
+`GET /api/private/admin/reports/summary?from&to`, and renders four KPI tiles
+(Bookings / Tickets Sold / Occupancy % / Revenue) plus a daily breakdown
+table. It stays under the existing `/admin` guard (`requiredRoles: ['admin']`)
+— admin/owner only for this MVP; salesperson access is deferred to OBRS-129.
+The tiles are the dashboard's existing inline `.admin-card.admin-kpi` markup
+(`admin-kpi-icon` / `admin-big-number` / skeleton), copy-pasted rather than
+extracted into a shared component — the smallest diff for a single consumer;
+extract a shared stat-tile component if/when OBRS-129 becomes a second one.
+
+The `revenue` field on `tiles`/each `daily` row is **optional** in the
+contract and the Revenue tile/column render off its **presence**
+(`*ngIf="showRevenue"`), never a client-side role check — so the UI is already
+correct for a future viewer the server omits `revenue` for, without a
+frontend change. `ReportsStore` (`src/app/modules/admin/pages/reports/reports.store.ts`)
+is the first `AdminCollectionStore` subclass parameterized by admin-chosen
+input (a `[from, to]` date range, defaulting to the last 7 days) rather than a
+fixed per-page query — `setRange()` updates the range and re-fetches in place,
+keeping the same stale-while-revalidate re-entry contract as every other admin
+store.
+
 ## My Bookings — action menu & reschedule dialog
 
 `/my-bookings` (`src/app/modules/my-bookings/`) collapses each booking

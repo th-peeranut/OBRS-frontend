@@ -1,5 +1,68 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-09 — Frontend implementation: `/admin/reports` MVP (OBRS-40)
+
+**Worktree:** `OBRS-frontend-wt-reporting-summaries` (branch `ao/reporting-summaries`).
+`ng test`: 882/882 PASS. `ng build --configuration production`: PASS (1.45 MB initial,
+under the 1.5 MB budget). Diff vs branch HEAD is scope-only (7 files modified, 2 new:
+`reports-summary.interface.ts` + the `pages/reports/` folder).
+
+**PO simplification applied — the whole ADR-0011 guard-relaxation was dropped, and I found
+(and reverted) a prior partial attempt at it already sitting in the worktree.** On starting,
+`README.md` had an uncommitted diff describing a salesperson cross-portal-access ADR, and
+`docs/adr/0011-admin-stat-tile-and-reports-cross-portal-access.md` existed as an untracked
+file proposing: relax the top-level `/admin` guard to `['admin','salesperson']`, then
+re-tighten every *other* existing child route with its own `canActivate`, plus a
+`StaffLayoutComponent` "Reports" shortcut and `isSalesperson` nav filtering. The task
+explicitly superseded this (salesperson access deferred to OBRS-129) — I ran
+`git checkout -- README.md` and deleted the ADR file before starting, so no trace of the
+dropped approach reached this commit. **Lesson: when a task says "apply these
+simplifications (they remove work done for an earlier version of this spec)," check the
+worktree for uncommitted/untracked leftovers from that earlier version before writing new
+code — don't just diff your own additions against a clean baseline.**
+
+**Inlined the KPI tiles — did not extract `AdminStatTileComponent`.** Copy-pasted
+`dashboard-page.component.html`'s `.admin-card.admin-kpi` markup (icon/big-number/skeleton)
+directly into `reports-page.component.html`, per the "smallest diff" instruction. Revenue
+tile uses `.admin-kpi-icon.is-success` (same visual role as the dashboard's Revenue tile).
+
+**Revenue gating is presence-based, not role-based — verified both the store and the
+component read it that way.** `ReportsTilesDto.revenue?` and `ReportsDailyRowDto.revenue?`
+are optional; `ReportsPageComponent.showRevenue = !!tiles?.revenue` gates both the tile
+(`*ngIf="showRevenue"`) and the table column. No `AuthService`/role check anywhere in this
+page — forward-compatible with OBRS-129 without a frontend change when the server starts
+omitting `revenue` for a salesperson viewer.
+
+**`ReportsStore` is the first range-parameterized `AdminCollectionStore` subclass — kept as
+a single root-scoped cache, not one per range.** `setRange(from, to)` mutates the store's
+own `fromDate`/`toDate` fields then calls `refresh()`; `fetch()` always reads the current
+range. This preserves the SWR contract (re-entering `/admin/reports` shows the
+last-fetched range immediately) without needing a cache keyed by range, since only one
+range is ever being viewed. Default range is last 7 days inclusive of today, computed via
+local (not UTC) date math — matches `schedules-page.component.ts`'s own
+`toDateInputValue`/date-filter convention, not `toISOString()` (which would shift a day near
+a local-midnight boundary in certain timezones — caught this while writing the store spec's
+"defaults to last 7 days" test, which originally used `toISOString()` and would have been
+flaky).
+
+**Server 400 backstop needed a way to surface `errorCode` without changing the shared
+`AdminCollectionStore` base class.** The base class's `error$` is a bare boolean (by design
+— it's shared by every admin store and none of the others need more). Added a
+store-local `lastErrorCode` getter to `ReportsStore` only: `fetch()` catches the raw error,
+extracts `error.error.errorCode` into a private field, then re-throws so the base class's
+existing error-swallowing/cache-retention behavior is unchanged. The page reads
+`store.lastErrorCode` inside its own `error$` subscription to pick between
+`RANGE_INVALID`/`RANGE_TOO_LARGE`/generic `LOAD_FAILED` — matches design-system §9 (branch
+on `errorCode`, never the localized `message`) without touching a class every other admin
+page depends on.
+
+**Client guard runs before every dispatch, blocks on `from > to` or a >366-day span, and
+does NOT call `store.setRange()` when it fires** — regression-tested directly (two specs
+assert `store.setRange` was never called after an invalid range change). The empty-range
+(all-zero 200) case is intentionally NOT routed through the error path at all — it's a
+`isEmptyRange` getter checked independently of `rangeError`/`loadError`, rendering a
+friendly `ADMIN.REPORTS.EMPTY_RANGE` note alongside the normal (zeroed) tiles/table.
+
 ## 2026-07-08 — Frontend implementation: promo code system (OBRS-109 / #37)
 
 **Worktree:** `OBRS-frontend-wt-promo-codes` (branch `ao/promo-codes`, off `dev`, on top of

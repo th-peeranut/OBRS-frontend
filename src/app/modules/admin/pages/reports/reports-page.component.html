@@ -1,0 +1,136 @@
+<section class="admin-page-intro" *ngIf="rangeError || loadError || isRefreshing || (isEmptyRange && !isLoading)">
+  <div>
+    <p class="admin-error" *ngIf="rangeError">{{ rangeError }}</p>
+    <p class="admin-muted" *ngIf="loadError">{{ loadError }}</p>
+    <p class="admin-muted" *ngIf="!rangeError && !loadError && isEmptyRange && !isLoading">
+      {{ 'ADMIN.REPORTS.EMPTY_RANGE' | translate }}
+    </p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="!!loadError"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <p-calendar
+    styleClass="schedule-calendar-filter"
+    inputStyleClass="schedule-calendar-filter-input"
+    panelStyleClass="schedule-calendar-filter-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="fromDate"
+    (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
+  ></p-calendar>
+
+  <p-calendar
+    styleClass="schedule-calendar-filter"
+    inputStyleClass="schedule-calendar-filter-input"
+    panelStyleClass="schedule-calendar-filter-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="toDate"
+    (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
+  ></p-calendar>
+</section>
+
+<section class="admin-grid admin-grid--4 mt-3">
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.BOOKINGS' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.bookingCount ?? 0 }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">event_seat</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.TICKETS_SOLD' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ tiles?.ticketsSold ?? 0 }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">donut_large</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.OCCUPANCY' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading">{{ occupancyDisplay(tiles?.occupancyRatePct ?? 0) }}</p>
+      <span class="admin-skeleton admin-skeleton--sm" *ngIf="isLoading"></span>
+    </div>
+  </article>
+
+  <article class="admin-card admin-kpi" *ngIf="showRevenue">
+    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.REPORTS.TILE.REVENUE' | translate }}</p>
+      <p class="admin-big-number">{{ revenueTileDisplay }}</p>
+    </div>
+  </article>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.REPORTS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.REPORTS.COL.DATE' | translate }}</th>
+          <th>
+            {{ 'ADMIN.REPORTS.COL.BOOKINGS' | translate }}
+            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+          </th>
+          <th>{{ 'ADMIN.REPORTS.COL.SEATS_SOLD' | translate }}</th>
+          <th>
+            {{ 'ADMIN.REPORTS.COL.OCCUPANCY' | translate }}
+            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.DEPARTURE_DATE' | translate }}</span>
+          </th>
+          <th *ngIf="showRevenue">
+            {{ 'ADMIN.REPORTS.COL.REVENUE' | translate }}
+            <span class="admin-muted reports-basis-caption">{{ 'ADMIN.REPORTS.BASIS.BOOKING_DATE' | translate }}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td *ngIf="showRevenue"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr
+            *ngFor="let row of dailyRows; let i = index; trackBy: trackByDate"
+            [class.zebra]="i % 2 === 1"
+          >
+            <td class="admin-emphasis">{{ row.date }}</td>
+            <td>{{ row.bookingCount }}</td>
+            <td>{{ row.seatsSold }} / {{ row.seatCapacity }}</td>
+            <td>{{ occupancyDisplay(row.occupancyRatePct) }}</td>
+            <td *ngIf="showRevenue">
+              {{ row.revenue ? formatMoney(row.revenue.net, row.revenue.currency) : '-' }}
+            </td>
+          </tr>
+
+          <tr *ngIf="dailyRows.length === 0 && !loadError" class="admin-empty-row">
+            <td [attr.colspan]="showRevenue ? 5 : 4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>
