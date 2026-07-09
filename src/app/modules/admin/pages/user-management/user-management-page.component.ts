@@ -24,6 +24,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { UsersStore } from './users.store';
 import { AuthService } from '../../../../auth/auth.service';
@@ -37,7 +38,7 @@ interface UserRow {
   roles: string[];
   status: string;
   statusCode: string;
-  lastActive: string;
+  lastUpdated: string;
   locked: boolean;
 }
 
@@ -564,7 +565,10 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
       roles: roleLabels.length > 0 ? roleLabels : ['-'],
       status: status.name,
       statusCode: status.code,
-      lastActive: this.formatDateTime(user.updatedAt ?? user.createdAt),
+      // The user record's last-modified time (updatedAt, falling back to createdAt).
+      // NOT a real login/activity time — labeled "อัปเดตล่าสุด" accordingly; a true
+      // last_login_at is tracked as a backlog item (OBRS-182).
+      lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, this.translate.currentLang),
       locked: user.locked ?? false,
     };
   }
@@ -623,28 +627,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     name: string;
   } {
     return parseAdminStatus(value, this.getCurrentLocale());
-  }
-
-  private formatDateTime(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    })
-      .format(date)
-      .replace(',', ' -');
   }
 
   private parseNameFromFullName(fullName: string | null | undefined): {

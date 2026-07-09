@@ -15,6 +15,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { RolesStore } from './roles.store';
 
@@ -463,7 +464,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       thDescription,
       status: status.name,
       statusCode: status.code,
-      updatedAt: this.formatDateTime(role.updatedAt ?? role.createdAt),
+      updatedAt: formatDisplayDateTime(role.updatedAt ?? role.createdAt, this.translate.currentLang),
     };
   }
 
@@ -485,7 +486,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
       return '-';
     }
 
-    return this.formatDateTime(new Date(Math.max(...values)).toISOString());
+    return formatDisplayDateTime(new Date(Math.max(...values)).toISOString(), this.translate.currentLang);
   }
 
   private sortRolesByLatestUpdated(roles: AdminRoleDto[]): AdminRoleDto[] {
@@ -503,23 +504,6 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
     const timestamp = new Date(value).getTime();
     return Number.isFinite(timestamp) ? timestamp : 0;
-  }
-
-  private formatDateTime(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-
-    return `${day}/${month}/${year}`;
   }
 
   private applyRoleFilter(): void {

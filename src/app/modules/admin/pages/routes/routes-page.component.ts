@@ -21,6 +21,7 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { RoutesStore } from './routes.store';
 
@@ -842,7 +843,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         '-',
       status: status.name,
       statusCode: status.code,
-      updatedAt: this.formatDateTime(route.updatedAt ?? route.createdAt),
+      updatedAt: formatDisplayDateTime(route.updatedAt ?? route.createdAt, this.translate.currentLang),
     };
   }
 
@@ -1058,23 +1059,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
 
     return true;
-  }
-
-  private formatDateTime(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-    }).format(date);
   }
 
   private formatDuration(minutes: number | null | undefined): string {
