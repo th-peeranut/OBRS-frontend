@@ -27,6 +27,7 @@ import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { StaffApiService } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import {
   TripDetailsEditFormComponent,
   Option,
@@ -244,10 +245,6 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
     return this.selectedSeats.length > 0 ? this.selectedSeats[0] : '';
   }
 
-  protected formatDateTime(dateTime: string): string {
-    return dayjs(dateTime).format('D MMM YYYY HH:mm');
-  }
-
   // ---------------------------------------------------------------------------
   // Edit mode
   // ---------------------------------------------------------------------------
@@ -294,7 +291,7 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
             this.routeSlugForForm = scheduleDetail.route?.slug ?? '';
             this.routeNameForForm = getAdminLookupLabel(scheduleDetail.route) ?? scheduleDetail.route?.slug ?? '';
             this.routeDateForForm = scheduleDetail.departureDateTime
-              ? dayjs(scheduleDetail.departureDateTime).format('D MMM YYYY')
+              ? formatDisplayDate(scheduleDetail.departureDateTime, this.translate.currentLang)
               : '';
 
             // If a vehicle type is known, load the seat-plan options.

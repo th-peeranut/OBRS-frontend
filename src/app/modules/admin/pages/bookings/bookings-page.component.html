@@ -74,8 +74,8 @@
             <td class="admin-emphasis">{{ booking.bookingId }}</td>
             <td>{{ booking.customer }}</td>
             <td>{{ booking.route }}</td>
-            <td>{{ booking.bookingDate }}</td>
-            <td>{{ booking.departureTime }}</td>
+            <td>{{ displayDateTime(booking.bookingDate) }}</td>
+            <td>{{ displayDateTime(booking.departureTime) }}</td>
             <td class="admin-emphasis">{{ booking.totalFare }}</td>
             <td>
               <span class="admin-status" [ngClass]="statusClass(booking.bookingStatus)">
