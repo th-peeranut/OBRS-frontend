@@ -722,7 +722,7 @@ describe('SellPageComponent', () => {
         routes: [{ slug: 'bkk-cm', label_th: 'BKK-CM', label_en: 'BKK-CM', translations: [] }],
         vehicleTypes: [{ slug: 'bus', label_th: 'บัส', label_en: 'Bus', translations: [] }],
         vehicles: [],
-        users: [],
+        drivers: [],
         lookups: [],
       };
     }
