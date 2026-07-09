@@ -329,10 +329,51 @@ describe('SellPageComponent', () => {
 
       const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
       const passengers: { passengerType: string; seatNumber: string }[] = callArg.departureSchedule.passengers;
-      const b1 = passengers.find((p) => p.seatNumber === 'B1');
-      const b2 = passengers.find((p) => p.seatNumber === 'B2');
+      // Booking payload seatNumber is normalized to bare digits (OBRS-179) — the
+      // label 'B1'/'B2' is UI-only, the backend contract is numeric.
+      const b1 = passengers.find((p) => p.seatNumber === '1');
+      const b2 = passengers.find((p) => p.seatNumber === '2');
       expect(b1?.passengerType).toBe('male');
       expect(b2?.passengerType).toBe('female');
+    });
+  });
+
+  describe('onSell seatNumber normalization (OBRS-179 regression)', () => {
+    it('sends the bare numeric seat for a van trip, not the letter label', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ vehicleType: 'van' });
+      (comp as any).onSeatToggled('A2'); // walk-in van seat map label
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { seatNumber: string }[] = callArg.departureSchedule.passengers;
+      // This is the exact regression witness for OBRS-179: the old behavior sent
+      // the raw label 'A2', which 400'd as BOOKING_ERROR_SEATS_NOT_FOUND: A2.
+      expect(passengers[0].seatNumber).toBe('2');
+      expect(passengers[0].seatNumber).not.toBe('A2');
+    });
+
+    it('sends the bare numeric seat for a bus trip label too', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ vehicleType: 'bus' });
+      (comp as any).onSeatToggled('B12');
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { seatNumber: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers[0].seatNumber).toBe('12');
+    });
+
+    it('leaves the displayed selectedSeats label untouched (chips/highlighting keep "A2")', () => {
+      const comp = makeComponent();
+      (comp as any).onSeatToggled('A2');
+      expect((comp as any).selectedSeats).toEqual(['A2']);
     });
   });
 
