@@ -1,12 +1,12 @@
 <div class="trip-browser d-flex flex-column h-100">
   <!-- Date picker -->
   <div class="mb-3">
-    <!-- Styled to match the home booking calendar: in-input calendar.svg icon
-         (iconDisplay='input'), and panelStyleClass="booking-calendar-panel" with
-         no appendTo so the component-scoped :host ::ng-deep panel styles apply. -->
+    <!-- OBRS-185: canonical shared date-field look (app-date-field / -panel /
+         -icon, defined globally in src/styles.scss) — in-input calendar.svg
+         icon (iconDisplay='input'), no separate trailing calendar button. -->
     <p-calendar
-      styleClass="trip-browser-calendar"
-      panelStyleClass="booking-calendar-panel"
+      styleClass="app-date-field"
+      panelStyleClass="app-date-field-panel"
       [(ngModel)]="selectedDate"
       dateFormat="dd/mm/yy"
       [minDate]="today"
@@ -14,7 +14,7 @@
       [iconDisplay]="'input'"
       (ngModelChange)="onDateChange($event)"
     >
-      <ng-template pTemplate="inputicon"><img class="calendar-icon" src="icons/calendar.svg" alt="Calendar Icon" /></ng-template>
+      <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" alt="Calendar Icon" /></ng-template>
     </p-calendar>
   </div>
 

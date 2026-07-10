@@ -139,6 +139,117 @@ label {
   padding-left: 50px;
 }
 
+// ============================================================================
+// OBRS-185 — canonical shared date/time picker look
+// ----------------------------------------------------------------------------
+// Locked design decision: base = the Home departure-date field. A full-width,
+// rounded PILL field with the calendar icon inline on the LEFT inside the
+// field (a custom `inputicon` template rendering `.app-date-field-icon`,
+// paired with `[iconDisplay]="'input'"` + `[showIcon]="true"` on the
+// `p-calendar`) — no separate trailing calendar button. Every in-scope
+// `p-calendar` in the app shares three classes:
+//   - `app-date-field`       → styleClass (outer field; also carries the
+//                              display:flex/width:100% layout fix previously
+//                              duplicated per-component, e.g. the walk-in
+//                              trip-browser "blue strip" fix)
+//   - `app-date-field-panel` → panelStyleClass (the popup date/time panel)
+//   - `.app-date-field-icon` → class on the custom `inputicon` <img>
+// Admin/staff surfaces read the runtime `--admin-*` / `--accent*` tokens set
+// by `.admin-shell` (admin-theme.scss) for per-shell accent + dark mode;
+// outside `.admin-shell` (the customer shell) the same declarations fall
+// back to the customer palette via `var(--token, fallback)` — one ruleset,
+// themed on every surface. `.p-inputtext` background/border/color in dark
+// mode is already handled globally by dark-theme.scss §13's
+// `body.is-dark .p-calendar .p-inputtext` override (`!important`, still wins
+// here — no duplicate dark rule needed).
+// ============================================================================
+.p-calendar.app-date-field {
+  position: relative;
+  display: flex;
+  width: 100%;
+}
+
+.app-date-field-icon {
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  top: 50%;
+  left: 16px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.p-calendar.app-date-field .p-inputtext {
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 0;
+  height: 48px;
+  min-height: 48px;
+  border-radius: $radius-pill;
+  border: 1px solid var(--admin-outline, #{$primary-lightgrey});
+  background: var(--admin-surface-card, #{$primary-white});
+  color: var(--admin-text, #{$text-black});
+  padding-left: 46px;
+  outline: 0;
+}
+
+.p-calendar.app-date-field .p-inputtext::placeholder {
+  color: var(--admin-muted, #{$text-lightgrey});
+}
+
+.p-calendar.app-date-field .p-inputtext:focus {
+  border-color: var(--accent-strong, #{$primary-blue});
+  box-shadow: 0 0 0 3px var(--accent-soft, #{rgba($primary-blue, 0.18)});
+}
+
+.app-date-field-panel {
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  width: 280px !important;
+  min-width: 280px !important;
+  padding: $space-2xs;
+  transform-origin: top left !important;
+}
+
+.app-date-field-panel .p-datepicker-header {
+  padding: 6px 8px;
+}
+
+.app-date-field-panel .p-datepicker-title {
+  font-size: 13px;
+}
+
+.app-date-field-panel table {
+  margin: 0;
+  font-size: $font-size-xs;
+}
+
+.app-date-field-panel table th,
+.app-date-field-panel table td {
+  padding: 2px;
+}
+
+.app-date-field-panel table td > span {
+  width: 28px;
+  height: 28px;
+}
+
+.app-date-field-panel .p-datepicker-buttonbar {
+  padding: 6px 8px 0;
+}
+
+.app-date-field-panel .p-button {
+  padding: 6px 8px;
+  font-size: $font-size-xs;
+}
+
+@media (max-width: 640px) {
+  .app-date-field-panel {
+    width: min(280px, 100vw - 32px) !important;
+    min-width: min(280px, 100vw - 32px) !important;
+  }
+}
+
 .p-input-icon-left > i,
 .p-input-icon-left > .p-icon-wrapper,
 .p-input-icon-right > i,

@@ -30,9 +30,15 @@
       [showTime]="true"
       [hourFormat]="'24'"
       [placeholder]="'STAFF.SELL.TRIP_DETAIL_EDIT_TIME_PH' | translate"
-      styleClass="w-100"
-      inputStyleClass="form-control form-control-sm"
-    ></p-calendar>
+      [showIcon]="true"
+      [iconDisplay]="'input'"
+      styleClass="app-date-field"
+      panelStyleClass="app-date-field-panel"
+    >
+      <ng-template pTemplate="inputicon">
+        <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+      </ng-template>
+    </p-calendar>
     <div *ngIf="isFieldInvalid('departureTime')" class="text-danger small mt-1">
       {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
     </div>

@@ -65,16 +65,20 @@
   </label>
 
   <p-calendar
-    styleClass="schedule-calendar-filter"
-    inputStyleClass="schedule-calendar-filter-input"
-    panelStyleClass="schedule-calendar-filter-panel"
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
     [ngModel]="selectedDateFilter"
     (ngModelChange)="onDateFilterChange($event)"
     [showIcon]="true"
+    [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.SCHEDULES.FILTER_DATE' | translate"
-  ></p-calendar>
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
 
   <app-admin-dropdown
     [value]="selectedRouteFilter"
@@ -483,14 +487,18 @@
           </label>
           <p-calendar
             formControlName="departureDate"
-            styleClass="schedule-calendar-filter"
-            inputStyleClass="schedule-calendar-filter-input"
-            panelStyleClass="schedule-calendar-filter-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
             [showIcon]="true"
+            [iconDisplay]="'input'"
             [showButtonBar]="true"
             [placeholder]="'ADMIN.SCHEDULES.DEPARTURE_DATE' | translate"
-          ></p-calendar>
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-calendar>
           <small class="schedule-form-message admin-error">
             {{ isScheduleFieldInvalid('departureDate') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
           </small>
@@ -502,15 +510,19 @@
           </label>
           <p-calendar
             formControlName="departureTime"
-            styleClass="schedule-calendar-filter"
-            inputStyleClass="schedule-calendar-filter-input"
-            panelStyleClass="schedule-calendar-filter-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             [timeOnly]="true"
             [hourFormat]="'24'"
             [showIcon]="true"
+            [iconDisplay]="'input'"
             [showButtonBar]="true"
             [placeholder]="'ADMIN.SCHEDULES.DEPARTURE_TIME' | translate"
-          ></p-calendar>
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-calendar>
           <small class="schedule-form-message admin-error">
             {{
               isScheduleFieldInvalid('departureTime')

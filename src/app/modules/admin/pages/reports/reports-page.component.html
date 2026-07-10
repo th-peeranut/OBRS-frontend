@@ -10,28 +10,36 @@
 
 <section class="admin-page-filters mt-3">
   <p-calendar
-    styleClass="schedule-calendar-filter"
-    inputStyleClass="schedule-calendar-filter-input"
-    panelStyleClass="schedule-calendar-filter-panel"
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
     [ngModel]="fromDate"
     (ngModelChange)="onFromDateChange($event)"
     [showIcon]="true"
+    [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate"
-  ></p-calendar>
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
 
   <p-calendar
-    styleClass="schedule-calendar-filter"
-    inputStyleClass="schedule-calendar-filter-input"
-    panelStyleClass="schedule-calendar-filter-panel"
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
     dateFormat="dd/mm/yy"
     [ngModel]="toDate"
     (ngModelChange)="onToDateChange($event)"
     [showIcon]="true"
+    [iconDisplay]="'input'"
     [showButtonBar]="true"
     [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate"
-  ></p-calendar>
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
 </section>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the tiles

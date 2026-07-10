@@ -294,6 +294,7 @@
   "COMMON": {
     "THEME_TOGGLE": "切换深色模式",
     "CLEAR": "清除",
+    "CALENDAR_ICON_ALT": "日历图标",
     "EXPORT": {
       "BUTTON_LABEL": "导出",
       "FORMAT_CSV": "CSV",

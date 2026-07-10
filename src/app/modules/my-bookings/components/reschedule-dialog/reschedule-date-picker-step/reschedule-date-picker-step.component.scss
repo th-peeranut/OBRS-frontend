@@ -14,11 +14,7 @@
   color: $text-black;
 }
 
-:host ::ng-deep .p-calendar {
-  width: 100%;
-
-  .p-inputtext {
-    width: 100%;
-    border-radius: $radius-pill;
-  }
-}
+// OBRS-185: the date p-calendar now uses the shared `.app-date-field` /
+// `.app-date-field-panel` classes defined globally in src/styles.scss
+// (full-width pill field), which already covers what this override used to
+// do — no component-scoped rule needed here anymore.

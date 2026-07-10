@@ -53,7 +53,8 @@
           </label>
           <!-- CALENDAR MAIN ELEMENT -->
           <p-calendar
-            panelStyleClass="booking-calendar-panel"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
             dateFormat="dd/mm/yy"
             [minDate]="minDate"
             [iconDisplay]="'input'"
@@ -64,7 +65,7 @@
             <!-- CUSTOM CALENDAR ICON -->
             <ng-template pTemplate="inputicon">
               <img
-                class="calendar-icon"
+                class="app-date-field-icon"
                 src="icons/calendar.svg"
                 alt="Calendar Icon"
               />
@@ -82,7 +83,8 @@
             </label>
             <!-- CALENDAR MAIN ELEMENT -->
             <p-calendar
-              panelStyleClass="booking-calendar-panel"
+              styleClass="app-date-field"
+              panelStyleClass="app-date-field-panel"
               dateFormat="dd/mm/yy"
               [minDate]="minDate"
               [iconDisplay]="'input'"
@@ -93,7 +95,7 @@
               <!-- CUSTOM CALENDAR ICON -->
               <ng-template pTemplate="inputicon">
                 <img
-                  class="calendar-icon"
+                  class="app-date-field-icon"
                   src="icons/calendar.svg"
                   alt="Calendar Icon"
                 />
