@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { TranslateService } from '@ngx-translate/core';
 import { Subject, catchError, forkJoin, map, of, takeUntil } from 'rxjs';
 import QRCode from 'qrcode';
 import { AuthService } from '../../../../auth/auth.service';
@@ -78,10 +78,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
     // re-fetches on a language switch (they don't re-render on their own).
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
-      .subscribe((event: LangChangeEvent) => {
-        void event;
-        this.load();
-      });
+      .subscribe(() => this.load());
   }
 
   ngOnDestroy(): void {
