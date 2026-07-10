@@ -105,6 +105,19 @@ export interface RouteSegmentsDto {
   popularDropoffStops: PopularStopDto[];
 }
 
+/** One canonical route stop with its order and cumulative time offset from the origin. */
+export interface RouteStopTimeDto {
+  stopOrder: number;
+  offsetMinutesFromOrigin: number;
+  distanceKmFromOrigin?: number;
+  /** LookupResponse — `code` is the stop slug used to join with segment stops. */
+  stop: { code: string };
+}
+
+export interface RouteStopsDto {
+  stops: RouteStopTimeDto[];
+}
+
 export interface WalkInBookingReqDto {
   bookingType: 'one_way' | 'return';
   totalAmount: number;
@@ -225,6 +238,17 @@ export class StaffApiService {
   getRouteSegments(routeSlug: string): Observable<ResponseAPI<RouteSegmentsDto>> {
     return this.http.get<ResponseAPI<RouteSegmentsDto>>(
       `${environment.apiUrl}/api/private/segments/${encodeURIComponent(routeSlug)}`,
+      { context: this.skipContext }
+    );
+  }
+
+  // Canonical ordered stops for a route with each stop's cumulative time offset
+  // from the origin (GET /api/private/route-stops/{slug}) — the authoritative
+  // source for stop ordering and estimated per-stop times on the walk-in sell
+  // page. Salesperson-authorized.
+  getRouteStops(routeSlug: string): Observable<ResponseAPI<RouteStopsDto>> {
+    return this.http.get<ResponseAPI<RouteStopsDto>>(
+      `${environment.apiUrl}/api/private/route-stops/${encodeURIComponent(routeSlug)}`,
       { context: this.skipContext }
     );
   }

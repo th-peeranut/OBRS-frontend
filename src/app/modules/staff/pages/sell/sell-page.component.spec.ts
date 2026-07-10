@@ -36,6 +36,7 @@ function createStaffApiStub(overrides: Partial<{
   createWalkInBooking: ReturnType<typeof jasmine.createSpy>;
   payWalkIn: ReturnType<typeof jasmine.createSpy>;
   getRouteSegments: ReturnType<typeof jasmine.createSpy>;
+  getRouteStops: ReturnType<typeof jasmine.createSpy>;
 }> = {}): any {
   return {
     getWalkInSchedules: jasmine.createSpy('getWalkInSchedules').and.returnValue(of({ data: [] })),
@@ -44,6 +45,7 @@ function createStaffApiStub(overrides: Partial<{
     ),
     payWalkIn: jasmine.createSpy('payWalkIn').and.returnValue(of({ data: {} })),
     getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of({ data: { stopPairs: [] } })),
+    getRouteStops: jasmine.createSpy('getRouteStops').and.returnValue(of({ data: { stops: [] } })),
     ...overrides,
   };
 }
@@ -679,56 +681,56 @@ describe('SellPageComponent', () => {
     });
   });
 
-  describe('_buildStopTimes — per-stop departure times (OBRS-191)', () => {
-    // A realistic multi-pickup route: two parallel pickup points (no segment
-    // connects one pickup to the other) feeding two drop-offs. Each origin -> X
-    // edge carries the CUMULATIVE minutes from the origin.
+  describe('per-stop times & ordering from route-stops (OBRS-191)', () => {
     const trip = makeTrip({ departureDateTime: '2026-07-01T08:00:00' });
-    const pair = (from: string, to: string, mins: number | undefined) => ({
-      segmentId: 0,
-      fromStop: { slug: from, name: from.toUpperCase() },
-      toStop: { slug: to, name: to.toUpperCase() },
-      vehicleType: { slug: 'bus', name: 'Bus' },
-      fare: '100',
-      estimatedDurationMinutes: mins,
-    });
-    const pairs = [
-      pair('pickup_1', 'drop_1', 40),
-      pair('pickup_1', 'drop_2', 70),
-      pair('pickup_2', 'drop_1', 30),
-      pair('pickup_2', 'drop_2', 60),
-    ];
 
-    it('gives the trunk origin the scheduled departure time', () => {
+    it('sets every stop time to departure + its offsetMinutesFromOrigin', () => {
       const comp = makeComponent();
-      (comp as any)._buildStopTimes(pairs, trip);
-      expect((comp as any).stopTime('pickup_1')).toBe('08:00');
+      (comp as any).stopOffsetMap = new Map([['origin', 0], ['mid', 40], ['dest', 70]]);
+      (comp as any)._buildStopTimes(trip);
+      expect((comp as any).stopTime('origin')).toBe('08:00');
+      expect((comp as any).stopTime('mid')).toBe('08:40');
+      expect((comp as any).stopTime('dest')).toBe('09:10');
     });
 
-    it('computes every reachable stop time as departure + origin→stop duration (no cascade blanking)', () => {
+    it('gives parallel origin-area stops sharing an offset the same time (not just one)', () => {
       const comp = makeComponent();
-      (comp as any)._buildStopTimes(pairs, trip);
-      // Regression (OBRS-191): previously only the origin got a time because the
-      // consecutive-chain walk broke at the second parallel pickup and blanked
-      // every stop after it — including all drop-offs.
-      expect((comp as any).stopTime('drop_1')).toBe('08:40');
-      expect((comp as any).stopTime('drop_2')).toBe('09:10');
+      // Regression (OBRS-191): the old segment-graph approach left only the origin
+      // with a time on multi-pickup routes; route offsets time every pickup point.
+      (comp as any).stopOffsetMap = new Map([['p1', 0], ['p2', 0], ['d1', 40]]);
+      (comp as any)._buildStopTimes(trip);
+      expect((comp as any).stopTime('p1')).toBe('08:00');
+      expect((comp as any).stopTime('p2')).toBe('08:00');
+      expect((comp as any).stopTime('d1')).toBe('08:40');
     });
 
-    it('blanks only stops the origin cannot reach directly (parallel pickup), never as a cascade', () => {
+    it('returns an empty time for a stop with no known offset', () => {
       const comp = makeComponent();
-      (comp as any)._buildStopTimes(pairs, trip);
-      // No pickup_1 → pickup_2 segment exists, so pickup_2's clock time is unknown…
-      expect((comp as any).stopTime('pickup_2')).toBe('');
-      // …but that gap must NOT blank the reachable drop-offs.
-      expect((comp as any).stopTime('drop_1')).toBe('08:40');
+      (comp as any).stopOffsetMap = new Map([['origin', 0]]);
+      (comp as any)._buildStopTimes(trip);
+      expect((comp as any).stopTime('ghost')).toBe('');
     });
 
-    it('anchors the origin but blanks a stop whose duration is missing', () => {
+    it('orders sellable stops by the route stop_order, not the segment-graph shape', () => {
       const comp = makeComponent();
-      (comp as any)._buildStopTimes([pair('a', 'b', undefined)] as any, trip);
-      expect((comp as any).stopTime('a')).toBe('08:00'); // origin still anchored
-      expect((comp as any).stopTime('b')).toBe('');
+      (comp as any).stopOrderMap = new Map([['a', 1], ['b', 2], ['c', 3]]);
+      const pairs = [
+        { fromStop: { slug: 'c', name: 'C' }, toStop: { slug: 'a', name: 'A' } },
+        { fromStop: { slug: 'a', name: 'A' }, toStop: { slug: 'b', name: 'B' } },
+      ];
+      const ordered = (comp as any)._buildOrderedStops(pairs);
+      expect(ordered.map((s: { slug: string }) => s.slug)).toEqual(['a', 'b', 'c']);
+    });
+
+    it('sorts stops missing from route-stops to the end', () => {
+      const comp = makeComponent();
+      (comp as any).stopOrderMap = new Map([['a', 1], ['b', 2]]);
+      const pairs = [
+        { fromStop: { slug: 'a', name: 'A' }, toStop: { slug: 'zzz', name: 'Z' } },
+        { fromStop: { slug: 'b', name: 'B' }, toStop: { slug: 'zzz', name: 'Z' } },
+      ];
+      const ordered = (comp as any)._buildOrderedStops(pairs);
+      expect(ordered.map((s: { slug: string }) => s.slug)).toEqual(['a', 'b', 'zzz']);
     });
   });
 
