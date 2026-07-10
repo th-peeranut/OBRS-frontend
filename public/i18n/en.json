@@ -1310,9 +1310,7 @@
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
       "LOAD_MY_SCHEDULES_FAILED": "Unable to load your schedules.",
-      "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
-      "CHECK_IN_SUCCESS": "Checked in successfully.",
-      "CHECK_IN_FAILED": "Unable to check in passenger."
+      "LOAD_SCHEDULES_FAILED": "Unable to load schedules."
     },
     "VALIDATION": {
       "FORM_INVALID": "Please complete all required fields.",
@@ -1334,10 +1332,32 @@
       "FROM": "From",
       "TO": "To",
       "STATUS": "Status",
-      "CHECKED_IN": "Checked in",
-      "CHECK_IN_BTN": "Check In",
       "EMPTY_TITLE": "No passengers yet",
       "EMPTY_BODY": "No boarding records found for this schedule.",
+      "BOARDED": "Boarded",
+      "NOT_BOARDED": "Not boarded",
+      "BOARD_BTN": "Board",
+      "BOARDING_IN_PROGRESS": "Boarding…",
+      "BOARDED_AT": "Boarded at",
+      "BOARDED_BY": "Boarded by",
+      "UNBOARD_BTN": "Un-board",
+      "UNBOARD_IN_PROGRESS": "Un-boarding…",
+      "UNBOARD_CONFIRM_TITLE": "Un-board this passenger?",
+      "UNBOARD_CONFIRM_TEXT": "This reverses the recorded boarding for this ticket.",
+      "UNBOARD_CONFIRM_CONFIRM": "Un-board",
+      "UNBOARD_CONFIRM_CANCEL": "Cancel",
+      "BOARD_SUCCESS": "Passenger boarded successfully.",
+      "BOARD_FAILED": "Unable to board passenger.",
+      "UNBOARD_SUCCESS": "Passenger un-boarded successfully.",
+      "UNBOARD_FAILED": "Unable to un-board passenger.",
+      "ACTION_ERROR": {
+        "ALREADY_BOARDED": "This ticket has already been boarded.",
+        "NOT_BOARDED": "This ticket has not been boarded yet.",
+        "TICKET_NOT_CONFIRMED": "This ticket can't be boarded (cancelled, refunded, no-show, or rescheduled away).",
+        "BOARDING_WINDOW_NOT_OPEN": "Boarding hasn't opened for this trip yet.",
+        "TICKET_ERROR_ID_NOT_FOUND": "No ticket was found.",
+        "GENERIC": "Action failed. Please try again."
+      },
       "SCAN": {
         "LABEL": "Boarding token",
         "PLACEHOLDER": "Paste or scan the boarding token",
@@ -1435,7 +1455,6 @@
       "TAB_TICKET_SALES": "Ticket Sales",
       "TAB_TRIP_DETAILS": "Trip Details",
       "TAB_BOARDING": "Boarding",
-      "BOARDING_TAB_HINT": "View the boarding list and check in passengers for this route.",
       "PAYMENT_CASH": "Cash",
       "PAYMENT_PROMPTPAY": "PromptPay",
       "PAYMENT_CREDIT": "Credit Card",

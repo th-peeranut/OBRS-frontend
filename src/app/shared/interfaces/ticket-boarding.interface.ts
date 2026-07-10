@@ -45,3 +45,21 @@ export const BOARDING_SCAN_ERROR_CODES = [
 ] as const;
 
 export type BoardingScanErrorCode = (typeof BOARDING_SCAN_ERROR_CODES)[number] | 'GENERIC';
+
+/** Stable UPPER_SNAKE error codes surfaced by the OBRS-130 board/unboard
+ * actions (`POST /tickets/{id}/board`, `POST /tickets/{id}/unboard`) — its
+ * own set, distinct from `BOARDING_SCAN_ERROR_CODES` above (no `INVALID_`/
+ * `EXPIRED_TICKET_TOKEN`/`WRONG_SCHEDULE_TICKET` here, since these actions
+ * take no token; `NOT_BOARDED` is unique to unboard). Branch on these, never
+ * on `error.message` (design-system §9). */
+export const BOARDING_ACTION_ERROR_CODES = [
+  'ALREADY_BOARDED',
+  'NOT_BOARDED',
+  'TICKET_NOT_CONFIRMED',
+  'BOARDING_WINDOW_NOT_OPEN',
+  // Deliberately kept as `TICKET_ERROR_ID_NOT_FOUND` (not tidied to
+  // `TICKET_NOT_FOUND`) — must match the backend's stable code exactly.
+  'TICKET_ERROR_ID_NOT_FOUND',
+] as const;
+
+export type BoardingActionErrorCode = (typeof BOARDING_ACTION_ERROR_CODES)[number] | 'GENERIC';

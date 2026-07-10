@@ -77,6 +77,31 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 > - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
 > - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
 
+### [Frontend] 2026-07-10 — Staff pre-departure boarding management (OBRS-130): board/unboard endpoints + manifest field not yet in contract
+**Affected endpoints/fields**:
+- `POST /api/private/tickets/{id}/board` (new — staff/operator manual board action, replaces `check-in` on this flow)
+- `POST /api/private/tickets/{id}/unboard` (new — salesperson/admin-only reversal of a boarding stamp)
+- `boardedBy` / `boardedByName` added to `BoardingListItemResponse` (`GET /api/private/schedules/{id}/boarding-list`)
+
+**Request type**: New endpoints + additive response fields.
+
+**Status at time of writing**: built against the locked OBRS-130 UX spec in parallel with the paired backend worktree `OBRS-backend-wt-obrs-130-boarding` — checked and confirmed still WIP there at time of writing (`TicketController` has `check-in`/`boarding-token`/`boarding-scan` only, no `board`/`unboard` mapping; `BoardingListItemResponse` has no `boardedBy`/`boardedByName` field; `Ticket.boardedBy` (a bare `Long` id) already exists from OBRS-96 but nothing resolves it to a display name yet). This is the same parallel-lane build pattern already used for OBRS-96/OBRS-129 below, not an assumption that an undocumented endpoint already exists.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `POST /api/private/tickets/{id}/board` → `204`/empty `data` on success; `409 {errorCode: ALREADY_BOARDED}`, `409 {errorCode: TICKET_NOT_CONFIRMED}`, `400 {errorCode: BOARDING_WINDOW_NOT_OPEN}`, `404 {errorCode: TICKET_ERROR_ID_NOT_FOUND}` on failure | New endpoint | Manual "Board" button per manifest row (retires the `check-in` action from this flow — `checkIn()` has no other frontend consumer, removed from `staff-api.service.ts`) |
+| `POST /api/private/tickets/{id}/unboard` → same success shape; `409 {errorCode: NOT_BOARDED}` plus the same set as `board` | New endpoint, **salesperson/admin only** (`@PreAuthorize`) | "Un-board" button, hidden client-side for `driver` via `authService.hasAnyRole(['salesperson'])` — the backend role check is still the actual authority, FE gating is UX-only |
+| `boardedBy: number \| null`, `boardedByName: string \| null` added to each `BoardingListItemResponse` row | `GET /api/private/schedules/{id}/boarding-list` | Backend-resolved display name survives a refresh; FE only self-seeds a display name (`authService.getUsername()`) on the one row *this* operator just boarded via an optimistic update, never on a pre-existing boarded row (that was flagged as a misattribution risk during scrutinize) |
+| Both `board`/`unboard` never return a bare `401` for a domain-rejected action (mirrors the `boarding-scan` contract, OBRS-187 trap) | Error contract | FE sets `SKIP_AUTH_LOGOUT` on both calls as defense-in-depth regardless, per the existing `boarding-scan`/`booking.service.ts`/`promotion.service.ts` precedent |
+
+### What the frontend implemented (additive-safe)
+- `StaffApiService.board()`/`unboard()` (new methods) and `BoardingListItemDto.boardedBy`/`boardedByName` (new optional fields) are additive — no existing endpoint or field was changed. `checkIn()` and its `/check-in` call were removed (dead code — confirmed no other consumer in the frontend).
+- `BoardingListComponent` (`shared/components/boarding-list/`) treats `boardedAt != null` as the boarded signal (status-neutral, matching the backend's OBRS-96 `docs/adr/0030-boarding-state-model.md` design) and is additive-safe against both mount points: the existing `/staff/boarding/:scheduleId` route (unchanged guard/roles) and the new Sell Tab-3 mount in `walk-in-center-panel.component`.
+
+### Impact if not addressed
+The boarding manifest's Board/Un-board buttons will both fail with a `404`/whatever the router returns for an unmapped path (degrades gracefully — the button re-enables and the optimistic stamp reverts, no broken UI), and every row's "Boarded by" line will stay blank until the backend adds `boardedByName`. Do not merge to `dev`/`sit` until the backend implements `board`/`unboard` and the manifest field — track against the paired backend worktree before promoting either side.
+
 ### [Frontend] 2026-07-10 — Starter operational dashboard (OBRS-129): endpoint not yet in `docs/api/`
 **Affected endpoint**: `GET /api/private/admin/dashboard/today` (new)
 

@@ -1,0 +1,159 @@
+<div class="container-fluid py-4">
+  <div *ngIf="errorMessage" class="alert alert-danger mb-3">{{ errorMessage }}</div>
+
+  <!-- OBRS-96: manual boarding-scan validation — text-entry token only
+       (camera scanning is out of scope for this card; the hint below
+       reserves the visual room for a future "Scan with camera" affordance).
+       New control, so it follows the canonical admin/staff-shell tokens
+       (design-system §3/§4/§11): .admin-field pill input, .admin-btn-primary
+       the one primary action here, .admin-status for the result banner. -->
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+      <div class="boarding-scan-box">
+        <label class="admin-form-label" for="boardingScanInput">
+          {{ 'STAFF.BOARDING.SCAN.LABEL' | translate }}
+        </label>
+        <div class="boarding-scan-input-row">
+          <input
+            id="boardingScanInput"
+            type="text"
+            class="admin-field boarding-scan-input"
+            name="boardingScanInput"
+            [(ngModel)]="scanToken"
+            [placeholder]="'STAFF.BOARDING.SCAN.PLACEHOLDER' | translate"
+            [disabled]="isScanning"
+            (keydown.enter)="validateScan()"
+            autocomplete="off"
+          />
+          <button
+            type="button"
+            class="admin-btn admin-btn-primary boarding-scan-btn"
+            [disabled]="!scanToken.trim() || isScanning"
+            (click)="validateScan()"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+            {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
+          </button>
+        </div>
+        <div class="boarding-scan-camera-hint text-muted small">
+          <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+          {{ 'STAFF.BOARDING.SCAN.CAMERA_SOON' | translate }}
+        </div>
+
+        <div class="boarding-scan-result" *ngIf="scanResult" role="status">
+          <span class="admin-status is-success admin-status--icon">
+            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+            {{ 'STAFF.BOARDING.SCAN.SUCCESS_TITLE' | translate }}
+          </span>
+          <div class="boarding-scan-result-detail">
+            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_NAME' | translate }}: {{ scanResult.passengerName }}</span>
+            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_SEAT' | translate }}: {{ scanResult.seatNumber }}</span>
+            <span>{{ 'STAFF.BOARDING.SCAN.RESULT_BOARDED_AT' | translate }}: {{ scanResult.boardedAt | date: 'HH:mm' }}</span>
+          </div>
+          <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
+            {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+          </button>
+        </div>
+
+        <div class="boarding-scan-result" *ngIf="scanError" role="alert">
+          <span
+            class="admin-status admin-status--icon"
+            [class.is-danger]="scanError.severity === 'danger'"
+            [class.is-warning]="scanError.severity === 'warning'"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">{{ scanError.icon }}</span>
+            {{ scanError.messageKey | translate }}
+          </span>
+          <button type="button" class="admin-btn admin-btn-small" (click)="dismissScanResult()">
+            {{ 'STAFF.BOARDING.SCAN.DISMISS' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <ng-container *ngIf="isLoading">
+              <tr *ngFor="let row of skeletonRows">
+                <td colspan="8"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading && items.length === 0 && !errorMessage">
+              <tr>
+                <td colspan="8" class="text-center py-5">
+                  <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:48px">people</span>
+                  <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
+                  <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
+                </td>
+              </tr>
+            </ng-container>
+            <ng-container *ngIf="!isLoading">
+              <tr *ngFor="let item of items">
+                <td class="fw-semibold">{{ item.ticketNumber }}</td>
+                <td>{{ item.seatNumber }}</td>
+                <td>{{ item.passengerName }}</td>
+                <td>{{ item.fromStop }}</td>
+                <td>{{ item.toStop }}</td>
+                <td>
+                  <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
+                    {{ item.status.label }}
+                  </span>
+                </td>
+                <td>
+                  <span
+                    class="admin-status admin-status--icon"
+                    [class.is-success]="isBoarded(item)"
+                    [class.is-neutral]="!isBoarded(item)"
+                  >
+                    <span class="material-symbols-outlined" aria-hidden="true">{{ isBoarded(item) ? 'check_circle' : 'radio_button_unchecked' }}</span>
+                    {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
+                  </span>
+                  <div class="text-muted small boarding-audit-line" *ngIf="isBoarded(item)">
+                    {{ 'STAFF.BOARDING.BOARDED_AT' | translate }}: {{ item.boardedAt | date: 'HH:mm' }}
+                    <ng-container *ngIf="item.boardedByName">
+                      &middot; {{ 'STAFF.BOARDING.BOARDED_BY' | translate }}: {{ item.boardedByName }}
+                    </ng-container>
+                  </div>
+                </td>
+                <td class="boarding-actions">
+                  <button
+                    *ngIf="!isBoarded(item)"
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    [disabled]="isBoarding(item)"
+                    (click)="board(item)">
+                    {{ (isBoarding(item) ? 'STAFF.BOARDING.BOARDING_IN_PROGRESS' : 'STAFF.BOARDING.BOARD_BTN') | translate }}
+                  </button>
+                  <button
+                    *ngIf="isBoarded(item) && canUnboard"
+                    type="button"
+                    class="admin-btn admin-btn-small admin-btn-danger"
+                    [disabled]="isUnboarding(item)"
+                    (click)="unboard(item)">
+                    {{ (isUnboarding(item) ? 'STAFF.BOARDING.UNBOARD_IN_PROGRESS' : 'STAFF.BOARDING.UNBOARD_BTN') | translate }}
+                  </button>
+                </td>
+              </tr>
+            </ng-container>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
