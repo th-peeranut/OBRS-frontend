@@ -679,6 +679,59 @@ describe('SellPageComponent', () => {
     });
   });
 
+  describe('_buildStopTimes — per-stop departure times (OBRS-191)', () => {
+    // A realistic multi-pickup route: two parallel pickup points (no segment
+    // connects one pickup to the other) feeding two drop-offs. Each origin -> X
+    // edge carries the CUMULATIVE minutes from the origin.
+    const trip = makeTrip({ departureDateTime: '2026-07-01T08:00:00' });
+    const pair = (from: string, to: string, mins: number | undefined) => ({
+      segmentId: 0,
+      fromStop: { slug: from, name: from.toUpperCase() },
+      toStop: { slug: to, name: to.toUpperCase() },
+      vehicleType: { slug: 'bus', name: 'Bus' },
+      fare: '100',
+      estimatedDurationMinutes: mins,
+    });
+    const pairs = [
+      pair('pickup_1', 'drop_1', 40),
+      pair('pickup_1', 'drop_2', 70),
+      pair('pickup_2', 'drop_1', 30),
+      pair('pickup_2', 'drop_2', 60),
+    ];
+
+    it('gives the trunk origin the scheduled departure time', () => {
+      const comp = makeComponent();
+      (comp as any)._buildStopTimes(pairs, trip);
+      expect((comp as any).stopTime('pickup_1')).toBe('08:00');
+    });
+
+    it('computes every reachable stop time as departure + origin→stop duration (no cascade blanking)', () => {
+      const comp = makeComponent();
+      (comp as any)._buildStopTimes(pairs, trip);
+      // Regression (OBRS-191): previously only the origin got a time because the
+      // consecutive-chain walk broke at the second parallel pickup and blanked
+      // every stop after it — including all drop-offs.
+      expect((comp as any).stopTime('drop_1')).toBe('08:40');
+      expect((comp as any).stopTime('drop_2')).toBe('09:10');
+    });
+
+    it('blanks only stops the origin cannot reach directly (parallel pickup), never as a cascade', () => {
+      const comp = makeComponent();
+      (comp as any)._buildStopTimes(pairs, trip);
+      // No pickup_1 → pickup_2 segment exists, so pickup_2's clock time is unknown…
+      expect((comp as any).stopTime('pickup_2')).toBe('');
+      // …but that gap must NOT blank the reachable drop-offs.
+      expect((comp as any).stopTime('drop_1')).toBe('08:40');
+    });
+
+    it('anchors the origin but blanks a stop whose duration is missing', () => {
+      const comp = makeComponent();
+      (comp as any)._buildStopTimes([pair('a', 'b', undefined)] as any, trip);
+      expect((comp as any).stopTime('a')).toBe('08:00'); // origin still anchored
+      expect((comp as any).stopTime('b')).toBe('');
+    });
+  });
+
   describe('schedule management — optimistic delete', () => {
     it('removes the deleted scheduleId from routeGroups immediately (optimistic)', () => {
       const comp = makeComponent();

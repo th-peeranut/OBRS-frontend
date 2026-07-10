@@ -24,6 +24,20 @@
   z-index: 1;
 }
 
+// A popular/pinned stop carries a warning-tinted left accent (matching the pin
+// icon in the header) so it reads as distinct from the plain rows in the
+// "All stops" group below.
+.popular-stop-item {
+  border-left: 3px solid var(--bs-warning, #ffc107);
+}
+
+// Divider that marks where the pinned "popular" group ends and the full stop
+// list begins, so the two groups are visually separable.
+.stop-list-subheader {
+  background-color: var(--bs-tertiary-bg, #f8f9fa);
+  border-top: 1px solid var(--bs-border-color, #dee2e6);
+}
+
 // Passenger type selector tiles
 .ptype-tile {
   width: 68px;
