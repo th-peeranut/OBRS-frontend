@@ -1354,9 +1354,7 @@
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "无法加载登车名单。",
       "LOAD_MY_SCHEDULES_FAILED": "无法加载您的班次。",
-      "LOAD_SCHEDULES_FAILED": "无法加载班次。",
-      "CHECK_IN_SUCCESS": "登机成功。",
-      "CHECK_IN_FAILED": "无法完成旅客值机。"
+      "LOAD_SCHEDULES_FAILED": "无法加载班次。"
     },
     "VALIDATION": {
       "FORM_INVALID": "请填写所有必填字段。",
@@ -1378,10 +1376,32 @@
       "FROM": "出发站",
       "TO": "到达站",
       "STATUS": "状态",
-      "CHECKED_IN": "已登车",
-      "CHECK_IN_BTN": "登车",
       "EMPTY_TITLE": "暂无旅客",
       "EMPTY_BODY": "本班次暂无登车记录。",
+      "BOARDED": "已登车",
+      "NOT_BOARDED": "未登车",
+      "BOARD_BTN": "登车",
+      "BOARDING_IN_PROGRESS": "登车处理中…",
+      "BOARDED_AT": "登车时间",
+      "BOARDED_BY": "登车登记人",
+      "UNBOARD_BTN": "取消登车",
+      "UNBOARD_IN_PROGRESS": "取消登车处理中…",
+      "UNBOARD_CONFIRM_TITLE": "确定要取消此旅客的登车记录吗？",
+      "UNBOARD_CONFIRM_TEXT": "此操作将撤销此票已记录的登车状态。",
+      "UNBOARD_CONFIRM_CONFIRM": "取消登车",
+      "UNBOARD_CONFIRM_CANCEL": "取消",
+      "BOARD_SUCCESS": "旅客登车登记成功。",
+      "BOARD_FAILED": "无法登记旅客登车。",
+      "UNBOARD_SUCCESS": "已成功取消旅客登车。",
+      "UNBOARD_FAILED": "无法取消旅客登车。",
+      "ACTION_ERROR": {
+        "ALREADY_BOARDED": "此票已登车。",
+        "NOT_BOARDED": "此票尚未登车。",
+        "TICKET_NOT_CONFIRMED": "此票无法用于登车（已取消、已退款、未出现或已改签）。",
+        "BOARDING_WINDOW_NOT_OPEN": "此班次尚未开放登车。",
+        "TICKET_ERROR_ID_NOT_FOUND": "未找到此票。",
+        "GENERIC": "操作失败，请重试。"
+      },
       "SCAN": {
         "LABEL": "登车令牌",
         "PLACEHOLDER": "粘贴或扫描登车令牌",
@@ -1479,7 +1499,6 @@
       "TAB_TICKET_SALES": "售票",
       "TAB_TRIP_DETAILS": "班次详情",
       "TAB_BOARDING": "登车",
-      "BOARDING_TAB_HINT": "查看登车名单并为该线路的乘客办理登机手续",
       "PAYMENT_CASH": "现金",
       "PAYMENT_PROMPTPAY": "PromptPay",
       "PAYMENT_CREDIT": "信用卡",

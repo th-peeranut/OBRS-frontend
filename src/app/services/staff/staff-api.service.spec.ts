@@ -45,13 +45,25 @@ describe('StaffApiService', () => {
     req.flush({ code: 200, message: 'OK', data: [] });
   });
 
-  it('checkIn() posts to the correct endpoint', () => {
-    service.checkIn(7).subscribe((res) => {
+  it('board() posts to the correct endpoint and sets SKIP_AUTH_LOGOUT', () => {
+    service.board(7).subscribe((res) => {
       expect(res).toBeTruthy();
     });
 
-    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/7/check-in`);
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/7/board`);
     expect(req.request.method).toBe('POST');
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: null });
+  });
+
+  it('unboard() posts to the correct endpoint and sets SKIP_AUTH_LOGOUT', () => {
+    service.unboard(7).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/7/unboard`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
     req.flush({ code: 200, message: 'OK', data: null });
   });
 

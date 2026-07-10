@@ -78,6 +78,21 @@ rather than inlining a hex.
 | `danger` | destructive / error | SCSS `$text-red: #cb393a`; admin runtime `--admin-danger-bg` / `--admin-danger-text` / `--admin-danger-border` |
 | `border` | hairlines, input borders | `$primary-grey` |
 
+### 2.4 Status/state color token inventory (the "status table")
+
+Every `.admin-status.is-*` role in the codebase, so a new status color can be
+checked for a collision against the **full** legend (§11 rubric), not just the
+token it's copied from:
+
+| Class | Tokens | Meaning | Notes |
+|---|---|---|---|
+| `.is-success` | `--admin-success-bg` / `--admin-success-text` | resolved / positive | name is historical — resolves to **blue**, not green (§13 debt). |
+| `.is-warning` | `--admin-warning-bg` / `--admin-warning-text` | needs attention | |
+| `.is-danger` | `--admin-danger-bg` / `--admin-danger-text` | rejected / error | also the §2.1 `danger` role's runtime binding. |
+| `.is-accepted` | `--admin-accepted-bg` / `--admin-accepted-text` | accepted (usability reports) | green. |
+| `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text, no dark-mode override. |
+| `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text, no dark-mode override. |
+
 ### 2.3 Brand is per-shell (decision)
 
 The app has **three shell identities** and intentionally keeps them distinct —
@@ -149,7 +164,7 @@ One color = one meaning. Never pick a button color for looks.
 |---|---|---|
 | **Primary** | the one main action of a screen/modal (Confirm, Save, Sell) | the **brand** filled button (`admin-btn admin-btn-primary` on admin; the brand-green primary on staff) |
 | **Secondary** | cancel / back / dismiss | outlined or neutral (`admin-btn`, or `btn-outline-*`) |
-| **Destructive** | delete / irreversible | `danger` role (red `$text-red`) |
+| **Destructive** | delete / irreversible | `danger` role (red `$text-red`); on an admin/staff themed surface use **`.admin-btn.admin-btn-danger`** (OBRS-130) — composes the existing `--admin-danger-text`/`--admin-danger-border` tokens (no new hex), same shape as `.admin-btn`, just themed to read as destructive. Used for a row-level reversal action (e.g. boarding-list "Un-board") that isn't a full delete-confirm. |
 | **Link** | inline navigation, low emphasis | `btn btn-link p-0` |
 
 **Rules**
@@ -309,8 +324,13 @@ rewrite, but **do** resolve the relevant item whenever you touch a screen that h
       `var(--accent-strong)` / `var(--accent-soft)`, which cascade from `.admin-shell`
       (theme-staff = teal-green, theme-admin = orange) — theme-safe, no raw hex.
       **Still open:** non-admin `btn-primary` (Bootstrap blue) on staff/customer surfaces
-      (sell, staff-schedules, my-bookings, boarding-list) — a per-template class swap,
+      (sell, staff-schedules, my-bookings) — a per-template class swap,
       incremental "when you touch the file" work, not a sweep.
+      **boarding-list closed** (OBRS-130): the row-level Board/Un-board actions now use
+      `.admin-btn.admin-btn-small` / `.admin-btn.admin-btn-small.admin-btn-danger` instead
+      of raw `btn-primary`/`btn-outline-secondary` — themed, no raw hex. Deliberately
+      **not** `.admin-btn-primary`: a repeated per-row action isn't "the one main action
+      of the screen" (§4), so it stays a neutral/danger row action, not a promoted primary.
 - [x] **Admin danger hexes tokenized** (OBRS-122): `.admin-error` / `.admin-required`
       → `var(--admin-danger-text)`, `.admin-field.is-invalid` → new
       `--admin-danger-border` CSS var (both in `admin-theme.scss`) — the §2 `danger`
@@ -330,6 +350,11 @@ rewrite, but **do** resolve the relevant item whenever you touch a screen that h
       inputs.
 - [x] **§3.1 locking specs added** (sell-page cold-open + admin create modals). §7/§8
       locks: verify/​add when next touching those shells.
+- [x] **`.admin-status.is-neutral` + `.admin-btn-danger` added** (OBRS-130): a plain-grey
+      `--admin-neutral-*` pair (distinct from the blue-grey `--admin-inreview-*`) for an
+      "unset/inactive" state, and a danger-role button composed from the existing
+      `--admin-danger-text`/`--admin-danger-border` tokens — both runtime-themed, no new
+      hex. See §2.4 and §4.
 
 ---
 

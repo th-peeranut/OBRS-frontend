@@ -201,6 +201,13 @@ describe('SellPageComponent', () => {
       (comp as any).onDateChanged(new Date());
       expect((comp as any).seatPassengerTypes).toEqual({});
     });
+
+    it('resets activeTabIndex to 0 on date change (OBRS-130 checkout/center layout follow-up)', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 2;
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).activeTabIndex).toBe(0);
+    });
   });
 
   describe('onPassengerTypeChanged', () => {
@@ -254,6 +261,13 @@ describe('SellPageComponent', () => {
       (comp as any).seatPassengerTypes = { B1: 'male' };
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+
+    it('resets activeTabIndex to 0 when a new trip is selected (the center panel\'s p-tabView remounts on tab 0)', () => {
+      const comp = makeComponent();
+      (comp as any).activeTabIndex = 1;
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).activeTabIndex).toBe(0);
     });
   });
 
@@ -399,6 +413,7 @@ describe('SellPageComponent', () => {
       const comp = makeComponent(api, alert);
       (comp as any).selectedTrip = makeTrip();
       (comp as any).selectedSeats = ['B1'];
+      (comp as any).activeTabIndex = 2;
       setSegmentFare(comp, 300);
       const loadTripsSpy = spyOn(comp as any, 'loadTrips');
 
@@ -411,6 +426,9 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedTrip).toBeNull();
       expect((comp as any).selectedSeats).toEqual([]);
       expect(loadTripsSpy).toHaveBeenCalled();
+      // OBRS-130 checkout/center layout follow-up: back to the Ticket Sales tab
+      // (index 0) so the checkout column reappears for the next sale.
+      expect((comp as any).activeTabIndex).toBe(0);
       // Staff get an in-place success toast instead of being bounced from the
       // customerArea /e-ticket route.
       expect(alert.success).toHaveBeenCalled();
@@ -796,12 +814,14 @@ describe('SellPageComponent', () => {
       (comp as any).selectedSeats = ['B1', 'B2'];
       (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
 
+      (comp as any).activeTabIndex = 1;
       (comp as any).onDeleteScheduleClicked({ trip: tripToDelete, routeSlug: 'r1' });
       void (comp as any).confirmDeleteSchedule();
 
       expect((comp as any).selectedTrip).toBeNull();
       expect((comp as any).selectedSeats).toEqual([]);
       expect((comp as any).seatPassengerTypes).toEqual({});
+      expect((comp as any).activeTabIndex).toBe(0);
     });
 
     it('does NOT clear selectedTrip when a different trip was deleted', () => {

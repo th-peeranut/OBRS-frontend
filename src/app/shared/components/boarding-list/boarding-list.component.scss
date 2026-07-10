@@ -50,3 +50,19 @@
   gap: 2px;
   font-size: 13px;
 }
+
+// OBRS-130: audit sub-line under the Boarded column badge ("Boarded at HH:mm
+// · Boarded by {name}").
+.boarding-audit-line {
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+// OBRS-130: Board/Un-board row actions — only one is ever rendered at a time
+// (see the *ngIf pair in the template), but keep a small gap in case both
+// wrap onto adjacent lines on a narrow viewport.
+.boarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

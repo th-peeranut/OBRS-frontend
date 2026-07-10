@@ -4,6 +4,7 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  OnInit,
   Output,
   SimpleChanges,
   ViewChild,
@@ -44,7 +45,7 @@ export interface TripDetailsUpdatedEvent {
   templateUrl: './walk-in-center-panel.component.html',
   styleUrl: './walk-in-center-panel.component.scss',
 })
-export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
+export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy {
   @Input() selectedTrip: WalkInTripDto | null = null;
   @Input() selectedSeats: string[] = [];
   /** passenger_type lookup slug (male|female|monk|nun); drives the seat-map icon for the NEXT seat. */
@@ -71,6 +72,12 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
   @Output() tripDetailsUpdated = new EventEmitter<TripDetailsUpdatedEvent>();
   /** Emitted after a successful save — parent should reload trips for the selected date. */
   @Output() refreshTripsRequested = new EventEmitter<void>();
+  /** OBRS-130 (product-owner follow-up): the active `p-tabView` tab index (0 =
+   * Ticket Sales, 1 = Trip Details, 2 = Boarding). The parent uses this to hide
+   * the checkout column and widen the center column on the non-Ticket-Sales
+   * tabs. Emitted from `onTabChange()` on every user-driven switch, and once
+   * on init so the parent starts in a known state (index 0). */
+  @Output() activeTabChange = new EventEmitter<number>();
 
   @ViewChild(TripDetailsEditFormComponent) editFormRef?: TripDetailsEditFormComponent;
 
@@ -159,6 +166,13 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
   /** Zero-based index of the "Trip Details" tab in the p-tabView. */
   private static readonly TRIP_DETAILS_TAB_INDEX = 1;
 
+  ngOnInit(): void {
+    // Tell the parent the starting tab (Ticket Sales, index 0) so it never
+    // renders a stale/undefined layout before the first user-driven tab
+    // switch — see `activeTabChange`'s doc comment.
+    this.activeTabChange.emit(0);
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
     // If the selected trip changes while the Trip Details tab is open, reload the
     // editable form for the newly selected trip (it stays directly editable).
@@ -178,6 +192,8 @@ export class WalkInCenterPanelComponent implements OnChanges, OnDestroy {
    * form state down so a stale in-flight load can't clobber the next open.
    */
   protected onTabChange(index: number): void {
+    this.activeTabChange.emit(index);
+
     if (index === WalkInCenterPanelComponent.TRIP_DETAILS_TAB_INDEX) {
       this.openEditMode();
     } else if (this.isEditMode) {

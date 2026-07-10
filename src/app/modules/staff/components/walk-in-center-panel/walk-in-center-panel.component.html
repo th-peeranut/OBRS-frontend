@@ -197,13 +197,13 @@
 
     </p-tabPanel>
 
-    <!-- Tab 3: Boarding -->
+    <!-- Tab 3: Boarding (OBRS-130) — the shared boarding-list component is
+         self-sufficient (owns its own store + API calls); this tab only
+         needs to pass the selected trip's scheduleId. The p-tabView is
+         already *ngIf="selectedTrip"-gated by the parent, so no extra
+         empty-state is needed here. -->
     <p-tabPanel [header]="'STAFF.SELL.TAB_BOARDING' | translate">
-      <p class="small text-muted mb-3">{{ 'STAFF.SELL.BOARDING_TAB_HINT' | translate }}</p>
-      <a [routerLink]="['/staff/boarding']" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-clipboard-check me-1"></i>
-        {{ 'STAFF.SELL.TAB_BOARDING' | translate }}
-      </a>
+      <app-boarding-list [scheduleId]="selectedTrip!.scheduleId"></app-boarding-list>
     </p-tabPanel>
 
   </p-tabView>

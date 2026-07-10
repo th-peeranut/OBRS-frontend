@@ -23,6 +23,14 @@
      in both themes, so no dark-mode override (see the --admin-accepted-text note). */
   --admin-inreview-bg: #e2e5ea;
   --admin-inreview-text: #3a4250;
+  /* OBRS-130: "not boarded" — a plain, un-tinted grey (no blue cast), so it
+     reads distinctly against --admin-inreview-* (blue-grey) and every other
+     status color, including the *resolved* theme-admin accent (orange), which
+     is always the active variant on the admin shell (design-system §11). Light
+     bg + dark text works in both themes, so — matching --admin-inreview-* and
+     --admin-accepted-* — there is no one-sided dark-mode override here either. */
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
 
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
@@ -559,6 +567,22 @@
   font-size: 12px;
 }
 
+/* OBRS-130: destructive row action (e.g. "Un-board") — composes the existing
+   danger-role tokens (design-system §2 `danger`), no new hex. Same shape as
+   `.admin-btn`, just a themed border/text so it reads as destructive without
+   introducing a fully-filled red button (that's reserved for a true
+   irreversible-delete confirm, matching the `.admin-required`/`.admin-field.is-invalid`
+   precedent for these tokens). */
+.admin-btn-danger {
+  color: var(--admin-danger-text);
+  border-color: var(--admin-danger-border);
+}
+
+.admin-btn-danger:hover {
+  background: var(--admin-danger-bg);
+  border-color: var(--admin-danger-border);
+}
+
 .admin-grid {
   display: grid;
   gap: 16px;
@@ -938,6 +962,14 @@
 .admin-status.is-info {
   background: var(--admin-inreview-bg);
   color: var(--admin-inreview-text);
+}
+
+/* OBRS-130: "Not boarded" state on the boarding manifest — see the
+   --admin-neutral-* token comment above for why this is a distinct grey
+   rather than reusing --admin-inreview-*. */
+.admin-status.is-neutral {
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
 }
 
 .admin-status--icon {

@@ -177,8 +177,19 @@ export interface BoardingListItemDto {
     label: string;
   };
   /** OBRS-96: populated once the ticket has been boarded via the manual
-   * boarding-scan box (undefined until then — additive, optional field). */
+   * boarding-scan box (undefined until then — additive, optional field).
+   * Status-neutral (docs/adr/0030-boarding-state-model.md, backend): a
+   * `confirmed` ticket can be boarded without its `status` changing. */
   boardedAt?: string;
+  /** OBRS-130: the staff user id who boarded this ticket (via scan or the
+   * manual Board button) — undefined until boarded. */
+  boardedBy?: number;
+  /** OBRS-130: display name for `boardedBy`, resolved server-side so it
+   * survives a refresh. Only the optimistic row for an action *this* operator
+   * just performed may be seeded client-side (see `boarding-list.component.ts`
+   * — never seed it onto a pre-existing boarded row, that was the
+   * misattribution bug). */
+  boardedByName?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -203,20 +214,16 @@ export class StaffApiService {
     );
   }
 
-  checkIn(ticketId: number): Observable<ResponseAPI<null>> {
-    return this.http.post<ResponseAPI<null>>(
-      `${environment.apiUrl}/api/private/tickets/${ticketId}/check-in`,
-      {},
-      { context: this.skipContext }
-    );
-  }
-
   // OBRS-96: manual boarding-scan validation (staff/operator, text-entry
   // token — camera scanning is out of scope for this card). SKIP_AUTH_LOGOUT
   // is set here in ADDITION to the shared skipContext, mirroring
   // booking.service.ts / promotion.service.ts, as defense-in-depth against
   // the OBRS-187 force-logout bug even though the backend guarantees a
   // domain 400/409 (never a bare 401) for every rejected scan.
+  //
+  // OBRS-130: `board()`/`unboard()` reuse this same context for the identical
+  // reason — a domain 409 (ALREADY_BOARDED/NOT_BOARDED) on a manual boarding
+  // action must never force-logout the operator (OBRS-187 trap).
   private readonly boardingScanContext = new HttpContext()
     .set(SKIP_GLOBAL_ERROR_ALERT, true)
     .set(SKIP_GLOBAL_LOADING_ALERT, true)
@@ -226,6 +233,27 @@ export class StaffApiService {
     return this.http.post<ResponseAPI<BoardingScanResultDto>>(
       `${environment.apiUrl}/api/private/tickets/boarding-scan`,
       request,
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-130: manually board a ticket from the boarding-list manifest
+   * (replaces the retired `checkIn()`/`/check-in` action on this flow). */
+  board(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/board`,
+      {},
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-130: reverse a boarding stamp (salesperson/admin only — enforced by
+   * the backend `@PreAuthorize` and mirrored client-side by hiding the
+   * control for drivers). */
+  unboard(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/unboard`,
+      {},
       { context: this.boardingScanContext }
     );
   }

@@ -31,6 +31,168 @@ together. Summary from the FE side:
   backend to match.
 
 Screenshots are in the QA agent's scratchpad, not committed to either repo.
+## 2026-07-10 — Follow-up fold-in: hide checkout / widen center on non-Ticket-Sales tabs (product-owner review)
+
+Small behavior-preserving addition to OBRS-130, folded into the same branch/commit series
+after the main boarding-management work above was already implemented and committed. The
+boarding manifest was landing in a squeezed `col-xl-5` center column with a dead-space
+`col-xl-4` checkout column next to it on the Trip Details/Boarding tabs — reclaimed that
+space.
+
+- **`WalkInCenterPanelComponent.activeTabChange` (new `@Output<number>`)** — emits the tab
+  index on every `onTabChange()` call, AND once from a new `ngOnInit()` (component didn't
+  implement `OnInit` before) so the parent starts at a known index-0 state without waiting
+  for a user click.
+- **Reset mechanism chosen: sell-page resets `activeTabIndex = 0` itself at every point
+  it already resets `selectedTrip`** (`onDateChanged`, `onTripSelected`, the post-sale
+  success handler in `onSell`, and the optimistic branch in `confirmDeleteSchedule`) —
+  NOT relying on the child re-emitting 0 on remount. Reasoning: `WalkInCenterPanelComponent`
+  itself is never destroyed/recreated (only its inner `p-tabView`, which is
+  `*ngIf="selectedTrip"`, toggles) — so `ngOnInit` fires exactly once for the component's
+  whole lifetime, not on every trip reselection. Coordinating "did the tabview just
+  remount" from inside `ngOnChanges` would require inferring PrimeNG's internal
+  activeIndex-reset behavior; driving it explicitly from the same call sites that already
+  reset every other per-trip UI state (`selectedSeats`, `seatPassengerTypes`,
+  `idempotencyKey`) is simpler and matches the existing pattern exactly. The child's
+  `ngOnInit` emit is kept too (per the literal spec ask) — harmless no-op since the parent
+  already defaults to 0.
+- **Deliberately did NOT reset `activeTabIndex`** in `onTripDetailsUpdated()` (the
+  `this.selectedTrip = {...this.selectedTrip, ...event.patch}` merge after a Trip-Details
+  save) — the user is actively on the Trip Details tab when that fires; resetting would
+  bounce them back to Ticket Sales right after their own save, a regression, not a fix.
+- **Layout**: center column `col-lg-5 col-md-12` (unchanged breakpoints) with
+  `[class.col-xl-5]="activeTabIndex === 0"` / `[class.col-xl-9]="activeTabIndex !== 0"`;
+  checkout column gets `*ngIf="activeTabIndex === 0"`. On Ticket Sales (default, index 0)
+  the DOM is byte-identical to before this change — same classes, same visibility.
+- Tests added: `sell-page.component.spec.ts` (4 new assertions on `activeTabIndex` at the
+  same 4 reset call sites) and `walk-in-center-panel.component.spec.ts` (new
+  `activeTabChange output` describe: initial emit-once-on-init via a fresh
+  `TestBed.createComponent`, and emits-per-`onTabChange()` call).
+- `ng test`: 1057 passing (was 1053; +4 new). `ng build --configuration production`:
+  initial bundle 1.48 MB (unchanged budget headroom), staff-module lazy chunk +0.5 kB.
+
+## 2026-07-10 — Frontend implementation notes: OBRS-130 staff pre-departure boarding management
+
+Implemented per the UX spec above. A few decisions made while building that the next
+reader (Scrutinize/QA) should know:
+
+- **`BoardingListStore` moved**, not just re-decorated: from
+  `modules/staff/pages/boarding-list/boarding-list.store.ts` to
+  `shared/components/boarding-list/boarding-list.store.ts`. The spec said "put
+  `providers: [BoardingListStore]` on this component" but didn't say to relocate the file;
+  moved it anyway so the shared component doesn't reach backward into a feature module's
+  page folder for its own store — keeps the dependency direction (`modules/*` → `shared/*`,
+  never the reverse) intact per `CLAUDE.md` §3's layer rules.
+- **Backend contract for `board`/`unboard` + `boardedBy`/`boardedByName` does NOT exist yet**
+  in the paired `OBRS-backend-wt-obrs-130-boarding` worktree at time of writing (`TicketController`
+  only has `check-in`/`boarding-token`/`boarding-scan`; `BoardingListItemResponse` has no
+  `boardedBy`/`boardedByName`). Built against the locked UX spec anyway — same parallel-lane
+  pattern as OBRS-96/OBRS-129 (see `docs/handoff.md` Contract Requests, new OBRS-130 entry
+  added this pass). **Do not merge to `dev`/`sit` until the backend lands both.**
+- **Board-button row action is NOT `.admin-btn-primary`.** Considered it (staff shell is
+  themed via `.admin-shell.theme-staff`), but rejected: design-system §4's "one primary
+  button per screen" reads oddly if reused N times per row in a table. Used plain
+  `.admin-btn.admin-btn-small` instead — this also closes the boarding-list entry in the
+  §13 "still open: non-admin `btn-primary`" consolidation-debt list (removed that surface
+  from the still-open bullet, added a "closed" note).
+- **`getUsername()` self-seeding applies to BOTH optimistic paths** (the Board button AND
+  the scan-success handler), not just the Board button as the literal spec wording
+  ("the OPTIMISTIC board YOU just clicked") could be read narrowly. Reasoning: a manual
+  scan is equally "an action the current operator just performed" — same non-misattribution
+  argument applies (only ever seeded onto the one row just acted on, never a pre-existing
+  boarded row). Flagging in case Scrutinize reads the spec more narrowly.
+- **`checkIn()` fully retired**: method removed from `staff-api.service.ts` (confirmed via
+  grep — no other frontend consumer), its spec test replaced with `board()`/`unboard()`
+  tests, and the now-dead `STAFF.BOARDING.CHECKED_IN`/`CHECK_IN_BTN`/
+  `STAFF.MESSAGES.CHECK_IN_SUCCESS`/`CHECK_IN_FAILED` i18n keys removed from all three
+  locale files. The ticket-status `Status` column is unchanged (still reads
+  `item.status.label`/`item.status.code === 'checked_in'` inline) — only the *boarding*
+  signal moved off status.
+- **ADR**: `docs/adr/0014-boarding-list-shared-component-dual-mount.md` covers the
+  self-sufficient dual-mount pattern, the store-scoping trade-off (loses cross-nav SWR
+  replay, a deliberate trade for live data), the single-owner `ngOnChanges` re-bind
+  contract, and the hidden-not-disabled Un-board gating.
+
+## 2026-07-10 — UX spec: staff pre-departure boarding management (OBRS-130) — key findings for the implementer
+
+## 2026-07-10 — UX spec: staff pre-departure boarding management (OBRS-130) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-130-boarding` (branch `ao/obrs-130-boarding`, off `dev`).
+No code written this pass — this is the UX/UI spec handoff. Full spec is in the OBRS-130
+ticket thread / the parent agent's transcript; load-bearing findings below.
+
+**Core extraction: `BoardingListPageComponent`'s current template/logic becomes a new shared
+`<app-boarding-list [scheduleId]>` component, mounted in two places — the driver route
+(thin wrapper, behavior-identical) and `walk-in-center-panel` Tab 3 (inline, no navigation,
+replacing the current hint+link-out at `:200-207`).** `BoardingListStore` should move from
+app-root `providedIn: 'root'` to component-level `providers:` on the new shared component so
+the driver page instance and a sell-page Tab-3 instance never share one cache (its existing
+`setScheduleId()` clear-on-change guard stays, just now scoped per mount instead of per app).
+
+**The key decision: boarding is now status-neutral (`boarded = boardedAt != null`, decoupled
+from ticket `status`). Recommended a THIRD column, not a repurposed one** — keep the existing
+`Status` column showing the ticket lifecycle badge unchanged, ADD a new `Boarded` column
+(icon+text+color chip: `check_circle`/green "Boarded" vs `radio_button_unchecked`/neutral-gray
+"Not boarded", plus an audit sub-line "Boarded at HH:mm" when set). Reusing `is-info` for
+"not boarded" was rejected — it would sit right next to the Status column's own `is-info`
+badge (e.g. "confirmed") with a different meaning, the exact same-color-different-meaning
+collision design-system §11 already warns about.
+
+**Two new tokens/classes needed, both flagged as "new pattern — needs design-system.md +
+ADR", not built yet:**
+1. `.admin-status.is-neutral` + `--admin-neutral-bg`/`--admin-neutral-text` in
+   `admin-theme.scss` — model directly on the existing `--admin-inreview-*` pair (self-
+   contained light-bg/dark-text, **no** dark-mode text-only override — that exact mistake
+   was already made once and reverted, see the OBRS-86 entry below in this file) but pick a
+   visually distinct grey from `--admin-inreview-*` so the two neutral-ish chips don't read
+   as the same color in adjacent columns.
+2. `.admin-btn-danger` (compose the already-tokenized `--admin-danger-text`/
+   `--admin-danger-border` — no new hex) for the Un-board button. §4 already names
+   "Destructive" as a button role but no class implements it yet; this closes part of the
+   §13 debt instead of inventing a one-off scoped style.
+
+**Data gap: the locked `BoardingListItemResponse` contract has NO "who boarded" field.**
+The card asks for an audit chip with "boarded time + who boarded." Spec's call: add
+`boardedByName?: string` as an additive optional field on `BoardingListItemDto` (mirrors the
+existing `boardedAt?: string` precedent from OBRS-96), seed it **optimistically** from
+`authService.getUsername()` at the moment of a successful Board click (this session only —
+it has nowhere else to come from until the backend adds it), and degrade gracefully to a
+time-only chip after a refresh/reload. **Flagged as a backend contract gap for a follow-up
+card** (add `boardedBy`/`boardedByName` to the boarding-list response) — do not block this
+card on it.
+
+**Board-button eligibility: deliberately did NOT hardcode a client-side status-code
+allow-list.** The SA spec only locks the `boarded = boardedAt != null` formula, not the full
+ticket-status enum. Board is disabled only when `boardedAt != null` (visibly already
+boarded) or a request is in-flight for that row; every other rejection reason
+(`TICKET_NOT_CONFIRMED`, `BOARDING_WINDOW_NOT_OPEN`, etc.) surfaces only after an attempt,
+via the errorCode-mapped alert — same "status-neutral" philosophy as the boarded formula
+itself, just applied to the button's disabled state too.
+
+**Un-board is role-gated HIDDEN (not disabled) via `authService.hasAnyRole(['salesperson'])`**
+— same "hidden, not disabled" precedent `app-export-button` already established
+(`ExportButtonComponent.ngOnInit`'s `canExport` flag). `admin` inherits `salesperson`'s grant
+transitively via `AuthService.ROLE_GRANTS`, so admin sees it too without a separate check.
+Un-board requires `AlertService.confirm()` before firing (existing `confirm()` method already
+supports this, no new alert-service API needed).
+
+**New error-code helper needed, NOT a reuse of `boarding-scan-error.ts`.** Board/Un-board
+share only some of the boarding-scan codes (`ALREADY_BOARDED`, `TICKET_NOT_CONFIRMED`,
+`BOARDING_WINDOW_NOT_OPEN`, `TICKET_ERROR_ID_NOT_FOUND`) plus a NEW one scan doesn't have
+(`NOT_BOARDED`, for an Un-board race). Spec'd a parallel `boarding-action-error.ts` +
+`STAFF.BOARDING.ACTION_ERROR.*` i18n keys rather than overloading `SCAN.ERROR.*` (that
+namespace is tied to the scan-box UI surface specifically).
+
+**Multi-select "Board Selected" scoped OUT of v1.** Per-row Board/Un-board is the baseline
+(matches how passengers actually arrive — staggered, one at a time). A bulk checkbox+"Board
+Selected" toolbar action is real but lower-value for the staggered-arrival case; spec'd it as
+an explicit phase-2 note only, not a build requirement.
+
+**Tab-3 empty-state needs NO new copy.** `walk-in-center-panel`'s whole `p-tabView` (all 3
+tabs) is already gated behind `*ngIf="selectedTrip"` one level up, with the existing
+`STAFF.SELL.CENTER_EMPTY` empty-state covering "no round selected" — Tab 3 itself is never
+reachable in that state. The *zero-passengers-in-this-round* empty state inside the shared
+component reuses the existing `STAFF.BOARDING.EMPTY_TITLE`/`EMPTY_BODY` keys verbatim.
 
 ## 2026-07-10 — QA re-verify: OBRS-129 PASSED — data path confirmed end-to-end at backend `70ff182`
 
@@ -1727,3 +1889,67 @@ boarding it early.
 - The `.p-monthpicker`/`.p-datepicker-calendar` selectors from the pre-existing booking-flow
   memory note (departure-date picker) worked fine as documented; it was specifically the credit
   card's `view="month"` variant that was unreliable to automate.
+
+## 2026-07-10 — QA verification: OBRS-130 staff pre-departure boarding management
+
+Verified LOCAL frontend (`ao/obrs-130-boarding`, this worktree, served on a fresh port against
+a **local backend**, not Koyeb SIT — the new `/board`/`/unboard` endpoints aren't deployed yet)
+paired with `OBRS-backend-wt-obrs-130-boarding` (branch `ao/obrs-130-boarding`) booted locally
+with `spring.profiles.active=sit` (real SIT Supabase), `TICKET_TOKEN_SECRET_KEY` given by the
+task + a locally-generated `JWT_SECRET_KEY` (any valid HS256 secret works — it only needs to be
+internally consistent for this process's own sign/verify, not match Koyeb's). Real SIT data
+found for the manifest: `scheduleId=10` (Chonburi-Bangkok, today) already had 6 confirmed
+tickets (mixed boarded/not-boarded) from prior QA/dev sessions — no fresh booking-flow seeding
+needed.
+
+**Confirmed via curl (API) + Playwright (browser) against the real local stack:**
+- Sell page Tab-3 ("ขึ้นรถ"/Boarding) renders the manifest **inline** — clicking the tab keeps
+  the URL at `/staff/sell` (no navigation).
+- Manifest columns: ticket #, seat, passenger, pickup stop, dropoff stop, a separate **Status**
+  column (`สถานะ` = ticket lifecycle, e.g. "ยืนยันแล้ว"/Confirmed) AND a **Boarded** column
+  (`ขึ้นรถแล้ว`/`ยังไม่ขึ้นรถ` with check-circle vs. empty-circle icon) — confirmed distinct,
+  matches spec. Boarded rows show the audit sub-line `เวลาขึ้นรถ: HH:mm · บันทึกโดย: <name>`.
+- Board → duplicate board → `409 ALREADY_BOARDED`. Unboard → duplicate unboard →
+  `409 NOT_BOARDED`. Re-board after unboard produces a **fresh** `boardedAt` (verified two
+  different timestamps on the same ticket across unboard/re-board) — no stale state.
+- `boardedByName` attribution: boarded as `salesperson@system.local`, then re-fetched the same
+  manifest as `admin@system.local` — still attributed to "Ms. Sales Person" (the real boarder),
+  not "Mr. Admin Admin" (the viewer). Misattribution guard holds at the API level.
+- Un-board is SALESPERSON-only server-side: driver token → `403 ACCESS_DENIED` on `/unboard`
+  regardless of the ticket's boarded state (the `@PreAuthorize` gate rejects before the service
+  layer even runs). Driver's own boarding page (`/staff/boarding/:scheduleId`) renders the full
+  manifest + scan box + Board button but **zero** Un-board affordance anywhere in the DOM
+  (`grep`'d the rendered body text for "ยกเลิกขึ้นรถ"/"Un-board" — zero matches).
+  Screenshot: `qa-obrs-130-screenshots/11-driver-boarding-page.png`.
+- i18n: `en.json`/`th.json`/`zh.json` all carry the full `STAFF.BOARDING.*` key set (`BOARDED`,
+  `NOT_BOARDED`, `BOARDED_AT`, `BOARDED_BY`, `UNBOARD_*`, `ALREADY_BOARDED`, `NOT_BOARDED` error
+  strings) — verified by direct key inspection in all three files; live browser-switch to
+  ZH wasn't exercised this pass (ran out of time-box) but the TH default render was live-verified
+  end-to-end with correct strings throughout.
+- 409-no-forced-logout (OBRS-187 regression): confirmed at the code level, not just by
+  observation — `auth.interceptor.ts` only force-logs-out on `error?.status === 401`, so a `409`
+  (both `ALREADY_BOARDED` and `NOT_BOARDED`) can never trip it, full stop.
+
+**One non-bug worth flagging for future readers (already anticipated in the code comment at
+`boarding-list.component.ts` `board()`, ~line 140-144):** immediately after a successful Board
+click, the row's "boarded by" optimistically shows `authService.getUsername()` — which in this
+build returns the **raw email** (e.g. `salesperson@system.local`), not the formatted display
+name ("Ms. Sales Person") the backend returns. It self-corrects within one `store.refresh()`
+cycle (confirmed: reloading/re-navigating to Tab-3 immediately after shows the correct full
+name). This IS the intended, commented tradeoff — not a defect — but it's a real few-hundred-ms
+window where the row's format is visibly inconsistent with every other row if a screenshot or a
+fast-clicking operator catches it mid-flight. Did not block QA; noting for anyone who sees it in
+a future capture and wonders if it's the misattribution bug reappearing (it isn't — that one
+is the *stale value across different viewers* case, which IS correct; this is a *this-operator,
+this-instant* cosmetic-only optimistic-UI artifact).
+
+**Residual gap (not exercised, disclosed rather than declared done):** driver-role **successful**
+Board click wasn't captured end-to-end — the only driver-assigned schedule in SIT seed data
+(`scheduleId=1`) departs 2026-12-20, outside the "boarding is only allowed on the day of
+departure" window (`400 BOARDING_WINDOW_NOT_OPEN`), and `scheduleId=10` (today, has confirmed
+tickets) has no `driver_id` assigned (`403` "not authorized to access this ticket"). Confirmed
+the *authorization* boundary (driver reaches the service layer, correctly blocked by legitimate
+business rules, not a blanket permission wall) but not a full driver board-success round-trip.
+Would need either a schedule with both `driver_id` set AND `departure_date_time` = today in SIT
+seed data, or a live DB write to create one — didn't do the latter to avoid mutating shared SIT
+state beyond what the QA pass itself needed.
