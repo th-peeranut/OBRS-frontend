@@ -1,5 +1,6 @@
-import { AfterViewInit, Component, OnDestroy } from '@angular/core';
+import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
@@ -11,12 +12,16 @@ import { environment } from '../../../environments/environment';
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent implements AfterViewInit, OnDestroy {
+export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   isShowPassword: boolean = false;
   isGoogleLoading: boolean = false;
 
   loginForm: FormGroup;
   pdpaGoogleConsent = new FormControl(false);
+
+  // OBRS-84: shown when landing here right after a confirmed email change
+  // (`?reason=email-changed`, optionally `&email=` to prefill the field).
+  showEmailChangedBanner = false;
 
   private gisReadyInterval: ReturnType<typeof setInterval> | null = null;
   private readonly GIS_POLL_MAX_TRIES = 100; // ~10 s at 100 ms intervals
@@ -27,8 +32,22 @@ export class LoginComponent implements AfterViewInit, OnDestroy {
     private fb: FormBuilder,
     private service: AuthService,
     private alertService: AlertService,
+    private route: ActivatedRoute,
   ) {
     this.createForm();
+  }
+
+  ngOnInit(): void {
+    const reason = this.route.snapshot.queryParamMap.get('reason');
+    const email = this.route.snapshot.queryParamMap.get('email');
+
+    if (reason === 'email-changed') {
+      this.showEmailChangedBanner = true;
+
+      if (email) {
+        this.loginForm.get('email')?.setValue(email);
+      }
+    }
   }
 
   ngAfterViewInit(): void {

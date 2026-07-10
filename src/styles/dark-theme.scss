@@ -235,6 +235,12 @@ body.is-dark {
       color: $dk-text;
     }
 
+    // OBRS-84 email-changed banner
+    .email-changed-banner {
+      background-color: $dk-bg-soft;
+      color: $dk-accent;
+    }
+
     .login-form {
       .login-btn {
         background-color: $dk-accent;

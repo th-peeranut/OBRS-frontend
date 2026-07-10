@@ -805,6 +805,7 @@
     "GOOGLE_SIGNIN_PDPA": "I agree to the collection and use of my personal data (PDPA) for Google sign-in",
     "GOOGLE_SIGNIN_PDPA_REQUIRED": "Please accept the consent to sign in with Google",
     "GOOGLE_SIGNIN_LOADING": "Signing in with Google...",
+    "EMAIL_CHANGED_BANNER": "Your login email has been changed. Please sign in with your new email.",
     "ERROR": {
       "GOOGLE_TOKEN_INVALID": "Invalid Google sign-in token. Please try again.",
       "ACCOUNT_DISABLED": "Your account has been disabled. Please contact support.",
@@ -892,6 +893,49 @@
       "GENERIC": "Something went wrong. Please try again."
     }
   },
+  "ACCOUNT": {
+    "TITLE": "Account",
+    "SUBTITLE": "Manage your login details.",
+    "EMAIL_SECTION_TITLE": "Login email",
+    "CHANGE_EMAIL_BUTTON": "Change email"
+  },
+  "EMAIL_CHANGE": {
+    "DIALOG_TITLE": "Change your email",
+    "CURRENT_PASSWORD_LABEL": "Current password",
+    "CURRENT_PASSWORD_PLACEHOLDER": "Please enter your current password",
+    "CURRENT_PASSWORD_REQUIRED": "Please enter your current password",
+    "NEW_EMAIL_LABEL": "New email",
+    "NEW_EMAIL_PLACEHOLDER": "Please enter your new email",
+    "NEW_EMAIL_REQUIRED": "Please enter a valid email",
+    "NEW_EMAIL_EXIST": "This email is already in use",
+    "SUBMIT": "Send verification link",
+    "SUBMIT_LOADING": "Sending...",
+    "CANCEL": "Cancel",
+    "CLOSE": "Close",
+    "SENT_TITLE": "Verification link sent",
+    "SENT_MESSAGE": "We sent a verification link to {{email}}.",
+    "SENT_NOTE": "Your login email will not change until you confirm via the link.",
+    "RESEND_BUTTON": "Resend link",
+    "RESEND_LOADING": "Sending...",
+    "RESEND_SUCCESS": "Verification link resent. Please check your inbox.",
+    "ERROR": {
+      "INVALID_PASSWORD": "Incorrect password. Please try again.",
+      "EMAIL_CONFLICT": "This email is already in use.",
+      "SAME_EMAIL": "This is already your current email.",
+      "RATE_LIMIT": "Too many resend attempts. Please wait before trying again.",
+      "GENERIC": "Something went wrong. Please try again."
+    }
+  },
+  "EMAIL_CHANGE_CONFIRM": {
+    "CONFIRMING": "Confirming your new email...",
+    "SUCCESS_TITLE": "Email changed!",
+    "SUCCESS_MESSAGE": "Your login email has been changed to {{email}}. Please sign in with your new email.",
+    "SUCCESS_SIGNIN": "Sign in",
+    "INVALID_TITLE": "Link already used or expired",
+    "INVALID_MESSAGE": "This confirmation link is no longer valid. If you already changed your email, just sign in.",
+    "TARGET_TAKEN_TITLE": "Email no longer available",
+    "TARGET_TAKEN_MESSAGE": "This email address was taken by another account in the meantime. Please restart from your account page."
+  },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "Welcome to signin",
     "HINT": "Please enter the OTP number from the SMS sent to the number",
@@ -936,7 +980,8 @@
       "MENU": "Menu",
       "PROFILE_MENU": "Open profile menu",
       "THEME_TOGGLE": "Toggle dark mode",
-      "MY_BOOKINGS": "My Bookings"
+      "MY_BOOKINGS": "My Bookings",
+      "ACCOUNT": "Account"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",

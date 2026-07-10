@@ -23,6 +23,18 @@ export type PasswordResetRequestResponse = unknown;
 
 export type PasswordResetConfirmResponse = unknown;
 
+// OBRS-84: verified self-service login-email change.
+export interface EmailChangeRequestPayload {
+  currentPassword: string;
+  newEmail: string;
+}
+
+export type EmailChangeRequestResponse = unknown;
+
+export interface EmailChangeConfirmResponse {
+  newEmail?: string;
+}
+
 export interface Register {
   title?: string | null;
   firstName: string;

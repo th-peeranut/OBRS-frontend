@@ -1,6 +1,7 @@
 import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule } from '@ngx-translate/core';
 
@@ -11,8 +12,21 @@ import { AlertService } from '../../shared/services/alert.service';
 describe('LoginComponent', () => {
   let component: LoginComponent;
   let fixture: ComponentFixture<LoginComponent>;
+  let queryParams: Record<string, string | null>;
+
+  function createActivatedRouteStub(): unknown {
+    return {
+      snapshot: {
+        queryParamMap: {
+          get: (key: string) => queryParams[key] ?? null,
+        },
+      },
+    };
+  }
 
   beforeEach(async () => {
+    queryParams = {};
+
     await TestBed.configureTestingModule({
       declarations: [LoginComponent],
       imports: [
@@ -23,6 +37,7 @@ describe('LoginComponent', () => {
       providers: [
         { provide: AuthService, useValue: {} },
         { provide: AlertService, useValue: {} },
+        { provide: ActivatedRoute, useFactory: createActivatedRouteStub },
       ],
       // app-theme-toggle / app-lang-switcher are exercised by their own specs;
       // ignore them here so this spec stays focused on the login layout.
@@ -85,5 +100,64 @@ describe('LoginComponent', () => {
       const script = document.querySelector('script[src*="gsi/client"]');
       expect(script?.getAttribute('src')).toContain('hl=en');
     });
+  });
+
+  it('does not show the email-changed banner without ?reason=email-changed', () => {
+    expect(component.showEmailChangedBanner).toBe(false);
+  });
+});
+
+describe('LoginComponent — email-changed banner (OBRS-84)', () => {
+  function setUp(routeQueryParams: Record<string, string | null>): {
+    component: LoginComponent;
+    fixture: ComponentFixture<LoginComponent>;
+  } {
+    TestBed.configureTestingModule({
+      declarations: [LoginComponent],
+      imports: [ReactiveFormsModule, RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            snapshot: {
+              queryParamMap: { get: (key: string) => routeQueryParams[key] ?? null },
+            },
+          },
+        },
+      ],
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    });
+
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    fixture.detectChanges();
+    return { component, fixture };
+  }
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('shows the banner when ?reason=email-changed is present', () => {
+    const { component } = setUp({ reason: 'email-changed' });
+    expect(component.showEmailChangedBanner).toBe(true);
+  });
+
+  it('prefills the email field from ?email= when present', () => {
+    const { component } = setUp({ reason: 'email-changed', email: 'new@example.com' });
+    expect(component.loginForm.get('email')?.value).toBe('new@example.com');
+  });
+
+  it('does not prefill the email field when ?email= is absent', () => {
+    const { component } = setUp({ reason: 'email-changed' });
+    expect(component.loginForm.get('email')?.value).toBe('');
+  });
+
+  it('renders the banner text in the template', () => {
+    const { fixture } = setUp({ reason: 'email-changed' });
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.email-changed-banner')).toBeTruthy();
   });
 });

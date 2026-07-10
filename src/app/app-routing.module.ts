@@ -98,6 +98,15 @@ const routes: Routes = [
       ),
   },
   {
+    path: 'account',
+    canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
+    loadChildren: () =>
+      import('./modules/account/account.module').then(
+        (m) => m.AccountModule
+      ),
+  },
+  {
     path: 'refund-policy',
     canActivate: [AuthGuard],
     data: { customerArea: true },
@@ -147,6 +156,15 @@ const routes: Routes = [
     loadChildren: () =>
       import('./modules/verify-email/verify-email.module').then(
         (m) => m.VerifyEmailModule
+      ),
+  },
+  {
+    // Public — no guard. Opened logged-out or with a stale token from the
+    // confirmation email; mirrors the /verify-email route shape.
+    path: 'change-email/confirm',
+    loadChildren: () =>
+      import('./modules/change-email-confirm/change-email-confirm.module').then(
+        (m) => m.ChangeEmailConfirmModule
       ),
   },
   {

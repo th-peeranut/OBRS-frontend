@@ -8,6 +8,11 @@ import { Router } from '@angular/router';
 
 import { AuthService } from './auth.service';
 import { Register } from '../shared/interfaces/auth.interface';
+import { environment } from '../../environments/environment';
+import {
+  SKIP_AUTH_LOGOUT,
+  SKIP_GLOBAL_ERROR_ALERT,
+} from '../shared/interceptors/http-context-tokens';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -190,6 +195,75 @@ describe('AuthService', () => {
     it('lets a user who is also a customer stay on public pages', () => {
       setRoles(['salesperson', 'customer']);
       expect(service.canAccessCustomerArea()).toBe(true);
+    });
+  });
+
+  // OBRS-84: verified self-service login-email change — the three new
+  // methods and their HttpContext tokens (OBRS-187 lesson: a wrong-password
+  // response on the initiate call must not force-logout).
+  describe('requestEmailChange', () => {
+    it('POSTs to /api/private/users/me/email/change-request with the payload', () => {
+      service.requestEmailChange({
+        currentPassword: 'oldpass1',
+        newEmail: 'new@example.com',
+      });
+
+      const req = httpTesting.expectOne(
+        `${environment.apiUrl}/api/private/users/me/email/change-request`
+      );
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({
+        currentPassword: 'oldpass1',
+        newEmail: 'new@example.com',
+      });
+      req.flush({ code: 200, message: 'OK' });
+    });
+
+    it('sets BOTH SKIP_AUTH_LOGOUT and SKIP_GLOBAL_ERROR_ALERT — a wrong-password response must not force-logout and must render inline, not as a global toast', () => {
+      service.requestEmailChange({ currentPassword: 'wrong', newEmail: 'new@example.com' });
+
+      const req = httpTesting.expectOne(
+        `${environment.apiUrl}/api/private/users/me/email/change-request`
+      );
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush(
+        { errorCode: 'AUTH_ERROR_INVALID_CREDENTIALS' },
+        { status: 400, statusText: 'Bad Request' }
+      );
+    });
+  });
+
+  describe('confirmEmailChange', () => {
+    it('POSTs to the public /api/auth/change-email/confirm endpoint with { token }', () => {
+      service.confirmEmailChange({ token: 'abc123' });
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/change-email/confirm`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ token: 'abc123' });
+      req.flush({ code: 200, message: 'OK', data: { newEmail: 'new@example.com' } });
+    });
+  });
+
+  describe('resendEmailChangeVerification', () => {
+    it('POSTs to /api/auth/change-email/resend with an empty body', () => {
+      service.resendEmailChangeVerification();
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/change-email/resend`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+      req.flush({ code: 200, message: 'OK' });
+    });
+
+    it('does not set SKIP_AUTH_LOGOUT — a real 401 here means a dead session, force-logout is correct', () => {
+      service.resendEmailChangeVerification();
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/change-email/resend`);
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeFalse();
+      req.flush(
+        { errorCode: 'AUTH_ERROR_RATE_LIMIT_EXCEEDED' },
+        { status: 429, statusText: 'Too Many Requests' }
+      );
     });
   });
 });

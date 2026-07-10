@@ -55,6 +55,15 @@
           <a
             class="navbar-profile-item"
             role="menuitem"
+            [routerLink]="'/account'"
+            (click)="isProfileDropdownOpen = false"
+          >
+            <span class="material-symbols-outlined">manage_accounts</span>
+            <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
+          </a>
+          <a
+            class="navbar-profile-item"
+            role="menuitem"
             [routerLink]="'/my-bookings'"
             (click)="isProfileDropdownOpen = false"
           >
@@ -160,6 +169,14 @@
     </ng-container>
 
     <ng-container *ngIf="isLogin">
+      <a
+        class="navbar-mobile-link"
+        routerLink="/account"
+        (click)="closeMobileMenu()"
+      >
+        <span class="material-symbols-outlined">manage_accounts</span>
+        <span>{{ "HOME.NAVBAR.ACCOUNT" | translate }}</span>
+      </a>
       <a
         class="navbar-mobile-link"
         routerLink="/my-bookings"

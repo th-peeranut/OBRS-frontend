@@ -1,0 +1,161 @@
+@import "../../../../../styles/variables.scss";
+
+// Same modal chrome as change-stop-dialog.component.scss (backdrop, floating
+// close button, fade-in) — kept consistent rather than reintroducing a third
+// modal pattern (design-system §6, ADR-0010).
+.change-email-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+  animation: change-email-modal-fade 0.15s ease;
+}
+
+.change-email-modal {
+  position: relative;
+  width: min(440px, 100%);
+  margin: auto;
+}
+
+.change-email-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: $radius-circle;
+  background: $primary-white;
+  color: $text-black;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.change-email-modal__body {
+  width: 100%;
+  background: $primary-white;
+  border-radius: 18px;
+  padding: $space-lg;
+}
+
+.change-email-modal__title {
+  margin: 0 0 $space-md;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-black;
+}
+
+@keyframes change-email-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.change-email-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+// Single primary action per dialog (design-system §4/§6) — the customer
+// shell's brand token, same value used by reschedule/change-stop's primary
+// button and the account page's own "Change email" trigger.
+.btn-primary,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background-color: $brand-customer-strong;
+  color: $text-white;
+  border: 1px solid $brand-customer-strong;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: $radius-circle;
+  animation: change-email-spin 0.7s linear infinite;
+}
+
+@keyframes change-email-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// SENT state
+.change-email-sent {
+  text-align: center;
+
+  &__icon {
+    font-size: 48px;
+    color: $brand-customer-strong;
+  }
+
+  h3 {
+    margin: $space-xs 0 $space-2xs;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+  }
+
+  p {
+    margin: 0 0 $space-xs;
+    font-size: $font-size-sm;
+    color: $text-softblack;
+  }
+
+  &__note {
+    color: $text-lightblack !important;
+    font-size: $font-size-xs !important;
+  }
+
+  .btn-secondary {
+    margin-top: $space-sm;
+  }
+}

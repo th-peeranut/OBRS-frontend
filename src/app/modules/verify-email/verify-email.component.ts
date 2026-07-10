@@ -1,22 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import {
-  AbstractControl,
-  FormBuilder,
-  FormGroup,
-  ValidationErrors,
-  Validators,
-} from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
 import { Subject } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
-
-export function trimmedRequiredValidator(
-  control: AbstractControl
-): ValidationErrors | null {
-  return control.value?.trim() ? null : { required: true };
-}
+import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
 
 @Component({
   selector: 'app-verify-email',
