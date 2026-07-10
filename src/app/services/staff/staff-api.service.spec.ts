@@ -2,6 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { StaffApiService } from './staff-api.service';
 import { environment } from '../../../environments/environment';
+import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
 
 describe('StaffApiService', () => {
   let service: StaffApiService;
@@ -69,6 +70,38 @@ describe('StaffApiService', () => {
     const req = httpMock.expectOne(`${environment.apiUrl}/api/public/schedules/search`);
     expect(req.request.method).toBe('POST');
     req.flush({ code: 200, message: 'OK', data: { departureSchedules: [], arrivalSchedules: [] } });
+  });
+
+  it('boardingScan() posts { token, scheduleId } to the boarding-scan endpoint', () => {
+    service.boardingScan({ token: 'signed.jwt.token', scheduleId: 42 }).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/boarding-scan`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ token: 'signed.jwt.token', scheduleId: 42 });
+    req.flush({
+      code: 200,
+      message: 'OK',
+      data: {
+        ticketId: 7,
+        ticketNumber: 'T-ABC123',
+        passengerName: 'Mr. Abc Def',
+        seatNumber: '3',
+        boardedAt: '2026-07-10T08:00:00Z',
+      },
+    });
+  });
+
+  it('boardingScan() sets SKIP_AUTH_LOGOUT (defense-in-depth against OBRS-187)', () => {
+    service.boardingScan({ token: 'bad-token', scheduleId: 42 }).subscribe({
+      next: () => undefined,
+      error: () => undefined,
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/boarding-scan`);
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+    req.flush({ errorCode: 'INVALID_TICKET_TOKEN' }, { status: 400, statusText: 'Bad Request' });
   });
 
   it('payWalkIn() sends Idempotency-Key header', () => {

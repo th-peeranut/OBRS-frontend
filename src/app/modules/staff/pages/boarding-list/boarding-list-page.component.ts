@@ -4,8 +4,25 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import {
+  boardingScanErrorIcon,
+  boardingScanErrorSeverity,
+  extractBoardingScanErrorCode,
+  mapBoardingScanErrorCode,
+} from '../../../../shared/lib/boarding-scan-error';
+import { BoardingScanResultDto } from '../../../../shared/interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../../services/staff/staff-api.service';
 import { BoardingListStore } from './boarding-list.store';
+
+/** Inline result of the manual boarding-scan box — success carries the
+ * boarded passenger/seat/time, failure carries the errorCode-derived i18n
+ * key + severity + icon (design-system §11: never distinguish by color
+ * alone). */
+export interface BoardingScanErrorResult {
+  messageKey: string;
+  severity: 'danger' | 'warning';
+  icon: string;
+}
 
 @Component({
   selector: 'app-boarding-list-page',
@@ -18,6 +35,13 @@ export class BoardingListPageComponent implements OnInit, OnDestroy {
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected checkingInIds = new Set<number>();
+
+  // Manual boarding-scan box (OBRS-96) — text-entry token only, camera
+  // scanning is out of scope for this card.
+  protected scanToken = '';
+  protected isScanning = false;
+  protected scanResult: BoardingScanResultDto | null = null;
+  protected scanError: BoardingScanErrorResult | null = null;
 
   private scheduleId = 0;
   private readonly subscriptions = new Subscription();
@@ -108,6 +132,63 @@ export class BoardingListPageComponent implements OnInit, OnDestroy {
     } finally {
       this.checkingInIds.delete(item.ticketId);
     }
+  }
+
+  /**
+   * OBRS-96: validate a manually-entered/pasted boarding token against this
+   * schedule and mark the ticket boarded. `scheduleId` always comes from the
+   * route, never user input. Errors branch on `error.error.errorCode`
+   * (never the localized message) via `boarding-scan-error.ts`.
+   */
+  protected async validateScan(): Promise<void> {
+    const token = this.scanToken.trim();
+    if (!token || this.isScanning) {
+      return;
+    }
+
+    this.isScanning = true;
+    this.scanResult = null;
+    this.scanError = null;
+
+    try {
+      const response = await firstValueFrom(
+        this.staffApiService.boardingScan({ token, scheduleId: this.scheduleId })
+      );
+      if (response?.data) {
+        this.scanResult = response.data;
+        this.scanToken = '';
+        this.reflectBoardedInList(response.data);
+      }
+    } catch (error) {
+      const errorCode = extractBoardingScanErrorCode(error);
+      this.scanError = {
+        messageKey: mapBoardingScanErrorCode(errorCode),
+        severity: boardingScanErrorSeverity(errorCode),
+        icon: boardingScanErrorIcon(errorCode),
+      };
+    } finally {
+      this.isScanning = false;
+    }
+  }
+
+  protected dismissScanResult(): void {
+    this.scanResult = null;
+    this.scanError = null;
+  }
+
+  private reflectBoardedInList(result: BoardingScanResultDto): void {
+    const boardedLabel = this.translate.instant('STAFF.BOARDING.CHECKED_IN');
+    this.store.mutate((items) =>
+      items.map((item) =>
+        item.ticketId === result.ticketId
+          ? {
+              ...item,
+              status: { code: 'checked_in', label: boardedLabel },
+              boardedAt: result.boardedAt,
+            }
+          : item
+      )
+    );
   }
 
   protected goBack(): void {

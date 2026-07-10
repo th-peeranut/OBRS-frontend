@@ -1232,6 +1232,7 @@
       "TOTAL_UNIT": "baht"
     },
     "QR_HINT": "QR code is used for identity verification before boarding only.",
+    "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",
     "DOWNLOAD": "Download e-ticket",
     "NOTE_LABEL": "Note:",
     "QR_ARIA_LABEL": "QR code",
@@ -1336,7 +1337,29 @@
       "CHECKED_IN": "Checked in",
       "CHECK_IN_BTN": "Check In",
       "EMPTY_TITLE": "No passengers yet",
-      "EMPTY_BODY": "No boarding records found for this schedule."
+      "EMPTY_BODY": "No boarding records found for this schedule.",
+      "SCAN": {
+        "LABEL": "Boarding token",
+        "PLACEHOLDER": "Paste or scan the boarding token",
+        "BUTTON": "Validate / Board",
+        "VALIDATING": "Validating…",
+        "CAMERA_SOON": "Camera scanning is coming soon — enter the token manually for now.",
+        "SUCCESS_TITLE": "Boarded",
+        "RESULT_NAME": "Passenger",
+        "RESULT_SEAT": "Seat",
+        "RESULT_BOARDED_AT": "Boarded at",
+        "DISMISS": "Dismiss",
+        "ERROR": {
+          "INVALID_TICKET_TOKEN": "This token isn't valid. Please check and try again.",
+          "EXPIRED_TICKET_TOKEN": "This token has expired. Ask the passenger to refresh their e-ticket.",
+          "WRONG_SCHEDULE_TICKET": "This ticket is for a different trip — do not board here.",
+          "BOARDING_WINDOW_NOT_OPEN": "Boarding hasn't opened for this trip yet.",
+          "TICKET_NOT_CONFIRMED": "This ticket can't be used to board (cancelled, refunded, no-show, or rescheduled away).",
+          "ALREADY_BOARDED": "This ticket has already been boarded.",
+          "TICKET_ERROR_ID_NOT_FOUND": "No ticket was found for this token.",
+          "GENERIC": "Validation failed. Please try again."
+        }
+      }
     },
     "DRIVER": {
       "TITLE": "My Assigned Schedules",
