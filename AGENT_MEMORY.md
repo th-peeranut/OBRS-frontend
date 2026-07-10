@@ -1,5 +1,81 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — QA re-verify: OBRS-129 PASSED — data path confirmed end-to-end at backend `70ff182`
+
+Backend fix (`70ff182`, Instant→OffsetDateTime projection conversion) rebuilt locally on the same
+:8000/:4407 setup as the earlier FAILED pass. Re-checked only what the 500 had blocked; role
+matrix / error-state handling were already proven and not re-run.
+
+**AC1 (tile parity, FE render):** confirmed. Tiles read `1 / 28.6% / 4 / THB 800.00`, matching
+the API response and `/reports/summary` byte-for-byte. Same for `owner@system.local`.
+
+**AC2 (departures table):** 1 row rendered — `ชลบุรี-กรุงเทพฯ` (Chonburi-Bangkok, th label found;
+falls back to the English route slug correctly when zh has no translation row — confirmed in the
+zh screenshot, not a bug), `10 ก.ค. 2026 15:00` (via `formatDisplayDateTime`, OBRS-178 formatter —
+NOT the raw `2026-07-10T15:00:00+07:00` ISO string), `4 / 14`, `28.6%`. `tiles.departuresCount(1)
+== 1` row. Per-row occupancy (28.6%) consistent with the tile (only one row, so trivially
+sum-equal — matches the backend-side sum-based math already verified).
+
+**AC3 dark-mode DOM probe on the now-reachable DATA surfaces:** `.admin-kpi` computed
+`background-color: rgb(29, 34, 38)`, `.admin-table` / table rows `rgba(0,0,0,0)` (transparent,
+inherits the dark card background, same shape as the light-mode empty-state card already
+checked) — none near-white, no light bleed on any of the newly-reachable surfaces.
+
+**AC4 (basis captions + i18n, no raw-key leak):** confirmed live for en/th/zh (cold `app_language`
+localStorage switch + reload) — captions render "by departure date"/"by booking date" (localized:
+"ตามวันที่ออกเดินทาง"/"ตามวันที่จอง" in th, "按发车日期"/"按预订日期" in zh) under the correct tiles;
+`/ADMIN\.DASHBOARD\./` regex found zero raw-key leaks in the rendered body in any of the 3
+languages.
+
+**AC5 (View full reports link):** `.admin-card-head a.admin-btn-small` → `href="/admin/reports"`,
+click navigates to `/admin/reports`. (First attempt used an over-broad `hasText: /report/i`
+Playwright locator that matched the sidebar's "Usability Reports" nav item instead — a test-script
+bug, not a product bug; re-verified with the scoped selector above and it's correct.)
+
+**AC6 (empty state):** not re-forced — today (2026-07-10) has 1 real departure, so the empty
+branch isn't reachable live. Already confirmed via `dashboard-page.component.spec.ts`'s
+`isEmptyDay`/`contentState` unit tests (`'empty' when departuresCount===0 && bookingCount===0 &&
+occupancyRatePct===0`) plus the static template review — no change since the prior FAILED pass.
+
+Fresh screenshots (light/dark, en default; th/zh; owner spot-check) captured after polling for a
+real (non-skeleton) tile + a real table row — see QA's transcript for the scratchpad paths.
+Verdict: **PASSED**. No frontend changes needed; the prior FAILED pass's frontend-side conclusions
+(graceful error handling, correct i18n plumbing) already held and are now moot since the backend
+supplies 200s.
+
+## 2026-07-10 — QA: OBRS-129 FAILED (blocked on a backend 500, not a frontend bug)
+
+**Verdict: FAILED**, blocking bug is backend-side (see backend worktree's `AGENT_MEMORY.md` for
+the full root cause: `GET /api/private/admin/dashboard/today` 500s via an `Instant→OffsetDateTime`
+native-query projection error whenever any departure exists on the given day — i.e. on every real
+day, not just an edge case). Live-verified against local FE (:4407) + local backend (:8000, `sit`
+profile / real SIT DB) as `admin@system.local`.
+
+**What this DID confirm about the frontend's own code (all good):**
+- `dashboard-page.component.html`'s `contentState === 'error'` branch degrades gracefully — no JS
+  crash, no console pageerror, a clean centered message replaces the tiles+table entirely, exactly
+  per the `dashboard-state-card` design intent (screenshot evidence: `dashboard-light.png` /
+  `dashboard-dark.png` in QA's scratchpad, see the QA agent's transcript for paths).
+- The error message is correctly localized (`ADMIN.DASHBOARD.LOAD_FAILED` rendered as
+  "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้" in Thai, no raw key leaked) — the admin account's
+  `preferredLocale` defaulted the UI to Thai on this run.
+- Dark mode probe on the one reachable new surface (`.dashboard-state-card`): computed
+  `background-color: rgb(29, 34, 38)`, `color: rgb(231, 237, 241)` — dark, no light-bleed.
+- Role gate (AC3) verified at the API level: ADMIN/OWNER reach the guarded route (get 500, not
+  403 — i.e. auth passes, only the data path is broken); SALESPERSON/DRIVER/CUSTOMER get 403,
+  anon gets 401.
+
+**What could NOT be verified this pass (all downstream of the backend bug, nothing here implies a
+frontend defect):** tile-parity rendering (AC1), departures table rendering + occupancy column
+(AC2), the empty-state note replacing the table (AC5) — never reached because "today" has real
+departures and the endpoint always 500s on that path, `.dashboard-basis-caption`/`.admin-kpi`/
+`.admin-table` dark-mode probe (never rendered), the "View full reports" link (AC7 — its wrapping
+`<section>` is `*ngIf="contentState !== 'error'"`, so it doesn't render in the error state either),
+tile-level i18n (en/zh switch of tile labels/captions never got past the error state to check).
+
+Re-run this worktree's own capture/regression once the backend fix lands — nothing here needs
+frontend changes.
+
 ## 2026-07-10 — Frontend implementation: `/admin/dashboard` rebuild-in-place (OBRS-129)
 
 **Worktree:** `OBRS-frontend-wt-starter-dashboards` (branch `ao/starter-dashboards`, off
