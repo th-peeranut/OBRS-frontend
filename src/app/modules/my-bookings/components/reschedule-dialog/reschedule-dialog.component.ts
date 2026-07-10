@@ -8,14 +8,18 @@ import {
   Output,
 } from '@angular/core';
 import { Store, select } from '@ngrx/store';
+import { TranslateService } from '@ngx-translate/core';
 import { combineLatest, Observable, Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import {
   MyBookingDto,
   RESCHEDULE_WINDOW_HOURS,
+  SupportedLocale,
+  getStopLabel,
   toAmountNumber,
 } from '../../../../shared/interfaces/my-booking.interface';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
   RESCHEDULE_MAX_DAYS_AHEAD,
   RescheduleEstimate,
@@ -94,8 +98,33 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
-  constructor(private readonly store: Store) {
+  constructor(
+    private readonly store: Store,
+    private readonly translate: TranslateService
+  ) {
     this.rescheduleEstimate$ = this.store.pipe(select(selectRescheduleEstimate));
+  }
+
+  /**
+   * The booking's CURRENT trip (route + departure), shown at the top of every
+   * step so the traveller always sees what they are moving *from* while they
+   * pick the new trip (OBRS-189). Null until the booking resolves.
+   */
+  get originalTrip(): { fromLabel: string; toLabel: string; departure: string } | null {
+    const leg = this.booking?.bookingSchedules?.[0];
+    if (!leg) {
+      return null;
+    }
+    const locale = this.normalizeLocale(this.translate.currentLang);
+    return {
+      fromLabel: getStopLabel(leg.fromStop, locale),
+      toLabel: getStopLabel(leg.toStop, locale),
+      departure: formatDisplayDateTime(leg.departureDateTime, locale),
+    };
+  }
+
+  private normalizeLocale(locale: string | null | undefined): SupportedLocale {
+    return locale === 'en' || locale === 'zh' ? locale : 'th';
   }
 
   ngOnInit(): void {

@@ -12,6 +12,14 @@
     <div class="reschedule-modal__body">
       <h2 class="reschedule-modal__title">{{ "MY_BOOKINGS.RESCHEDULE.DIALOG_TITLE" | translate }}</h2>
 
+      <!-- OBRS-189: always show the current trip so the traveller sees what they
+           are moving from while choosing the new one. -->
+      <div class="reschedule-current-trip" *ngIf="originalTrip as trip">
+        <span class="reschedule-current-trip__label">{{ "MY_BOOKINGS.RESCHEDULE.CURRENT_TRIP" | translate }}</span>
+        <span class="reschedule-current-trip__route">{{ trip.fromLabel }} → {{ trip.toLabel }}</span>
+        <span class="reschedule-current-trip__time">{{ trip.departure }}</span>
+      </div>
+
       <app-reschedule-date-picker-step
         *ngIf="step === 'date'"
         [minDate]="minDate"

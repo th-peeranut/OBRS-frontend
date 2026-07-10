@@ -143,7 +143,8 @@
         "NET_AMOUNT_CHANGED": "价格已发生变化，请重试。",
         "UNAUTHORIZED": "您无权改签此预订。",
         "GENERIC": "无法改签此预订，请重试。"
-      }
+      },
+      "CURRENT_TRIP": "当前行程"
     },
     "CHANGE_SEAT": {
       "ACTION": "更改座位",

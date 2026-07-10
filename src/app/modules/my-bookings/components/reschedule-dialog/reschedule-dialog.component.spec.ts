@@ -1,5 +1,6 @@
 import { BehaviorSubject } from 'rxjs';
 import { Store } from '@ngrx/store';
+import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 
 import { RescheduleDialogComponent } from './reschedule-dialog.component';
@@ -63,10 +64,24 @@ const sampleOption: RescheduleOption = {
 describe('RescheduleDialogComponent', () => {
   function create(state: MyBookingsState): { component: RescheduleDialogComponent; store: FakeStore } {
     const store = new FakeStore({ myBookings: state });
-    const component = new RescheduleDialogComponent(store as unknown as Store);
+    const translate = { currentLang: 'th' } as unknown as TranslateService;
+    const component = new RescheduleDialogComponent(store as unknown as Store, translate);
     component.bookingId = 5;
     return { component, store };
   }
+
+  it('exposes the current trip (route + departure) so the traveller sees what they move from (OBRS-189)', () => {
+    const { component } = create(
+      buildState({ bookings: [buildBooking()], rescheduleDialogBookingId: 5 })
+    );
+    component.ngOnInit();
+
+    const trip = component.originalTrip;
+    expect(trip).not.toBeNull();
+    expect(trip?.fromLabel).toBe('a');
+    expect(trip?.toLabel).toBe('b');
+    expect(trip?.departure).toBeTruthy();
+  });
 
   it('opens optimistically — dispatches openRescheduleDialog synchronously on init, before any data has loaded', () => {
     const { component, store } = create(
