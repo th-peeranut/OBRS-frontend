@@ -218,7 +218,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   }
 
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {
-    if (payment?.status === 'success') {
+    if (this.isPaidStatus(payment?.status)) {
       this.completePayment();
       return;
     }
@@ -317,10 +317,21 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     const summaryStatus = payment?.paymentSummary?.status?.toLowerCase();
     const hasSuccessfulTransaction =
       payment?.transactions?.some((transaction) =>
-        transaction.status?.toLowerCase() === 'success'
+        this.isPaidStatus(transaction.status)
       ) ?? false;
 
     return summaryStatus === 'fully_paid' || hasSuccessfulTransaction;
+  }
+
+  /**
+   * Backend renamed the settled payment status `'success'` -> `'paid'`
+   * (see docs/handoff.md 2026-06-15). Accept both, case-insensitively, so
+   * legacy rows and casing variants don't regress (OBRS-177).
+   */
+  private isPaidStatus(status: string | null | undefined): boolean {
+    return ['success', 'paid'].includes(
+      String(status ?? '').trim().toLowerCase()
+    );
   }
 
   private completePayment(): void {

@@ -22,6 +22,7 @@ import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { formatDisplayDate, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { SchedulesStore } from './schedules.store';
 
 interface ScheduleRow {
@@ -686,7 +687,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       frequency: scheduleSet.frequency ?? '-',
       status: status.name,
       statusCode: status.code,
-      updatedAt: this.formatDateTime(scheduleSet.updatedAt ?? scheduleSet.createdAt),
+      updatedAt: formatDisplayDateTime(scheduleSet.updatedAt ?? scheduleSet.createdAt, this.translate.currentLang),
     };
   }
 
@@ -728,7 +729,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       frequency: '-',
       status: status.name,
       statusCode: status.code,
-      updatedAt: this.formatDateTime(schedule.updatedAt ?? schedule.createdAt),
+      updatedAt: formatDisplayDateTime(schedule.updatedAt ?? schedule.createdAt, this.translate.currentLang),
     };
   }
 
@@ -983,34 +984,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private formatDateTime(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-    }).format(date);
-  }
-
+  // Date-only display (service window / departure date), standardized to the
+  // shared Style B format in the current language (OBRS-178).
   private formatDateForDisplay(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const [year, month, day] = value.split('-');
-    if (!year || !month || !day) {
-      return value;
-    }
-
-    return `${day}/${month}/${year}`;
+    return formatDisplayDate(value, this.translate.currentLang);
   }
 
   private splitDateTime(value: string | null | undefined): { date: string; time: string } {

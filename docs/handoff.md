@@ -56,10 +56,12 @@ Full contract reference: `../OBRS-backend/docs/api/`
 The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแล้ว`, ZH: `已支付`) have been updated. All other status values (`pending`, `failed`, `cancelled`, `expired`, `refunded`, `manual_refund_required`) are unchanged.
 
 ### Action required in frontend
-- [ ] Update any `PaymentStatus` enum / type that has a `SUCCESS = "success"` entry → `PAID = "paid"`
-- [ ] Update display strings / badge labels that check `status === "success"`
-- [ ] Update any filter/query params that send `status=success` → `status=paid`
-- [ ] Search for hardcoded string `"success"` in payment-status contexts
+- [x] Update any `PaymentStatus` enum / type that has a `SUCCESS = "success"` entry → `PAID = "paid"` — `PaymentStatus` union in `shared/interfaces/payment.interface.ts` now uses `'paid'` (OBRS-177).
+- [x] Update display strings / badge labels that check `status === "success"` — badge/label sites (`admin/pages/bookings/bookings-page.component.ts`, `admin/pages/dashboard/*`) already normalized to `'PAID'`; no `success`-keyed labels remained.
+- [x] Update any filter/query params that send `status=success` → `status=paid` — none existed (full `src/` sweep; only the Omise mock-scenario header `X-Omise-Mock-Scenario: success` uses the word, and that is a gateway simulation knob, not a status filter — left as-is).
+- [x] Search for hardcoded string `"success"` in payment-status contexts — three broken sites fixed via an `isPaidStatus()` predicate (accepts `'paid'`+`'success'`, case-insensitive, mirroring `payment-qrcode.component.ts`'s `isSuccessStatus()`): `payment-creditcard.component.ts` `handlePaymentResponse()`+`isPaymentConfirmed()`, `payment-result.component.ts` `isPaymentConfirmed()`. `payment-qrcode.component.ts` already accepted `'paid'`.
+
+**Resolved 2026-07-09 (OBRS-177).** Verified live: SIT `GET /api/private/bookings/{id}/payments` returns `txn.status = "paid"`, which the fixed predicate now matches (old `=== 'success'` survived only via the `summaryStatus === 'fully_paid'` fallback). 7 new regression specs; full FE suite green.
 
 ### Still unfinished on backend
 - None — all source, SQL seeds, and API docs are updated.
@@ -67,6 +69,13 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 ---
 
 ## Contract Requests (Frontend → Backend)
+
+> **⭐ RECONCILIATION — 2026-07-09 (FE↔BE handoff-gap sweep):** every Contract Request below has since **landed on `origin/dev` on both sides and is live on SIT** — verified end-to-end. These entries are kept for history; none is still open.
+> - **Promo code system (OBRS-109 / #37)** — RESOLVED. Backend `PromotionController` (`POST /api/private/promotions/validate`), `AdminPromotionCrudController` (full CRUD under `/api/private/admin/promotions`), `PromotionCodeService`, and the `promotionCode` booking field are all on `origin/dev`. FE `promotion.service.ts` + `promo-code-field.component` match (path + `PROMO_CODE_*` errorCodes). Live SIT: `validate` bogus code → `404 {errorCode: PROMO_CODE_NOT_FOUND}`; `GET /admin/promotions` → `403` for customer (exists + role-gated).
+> - **Usability report reporter email (OBRS-108)** — RESOLVED. Backend `reporterEmail` on `UsabilityReportController`/`UsabilityReportDetailRespDto`/model + `UsabilityReportSubmitReporterEmailIT`; FE UI (`report-usability-fab`, admin detail row) on `origin/dev`.
+> - **Change seat (OBRS-110)** — RESOLVED. Backend `ChangeSeatService` + `ChangeSeatReqDto`/`ChangeSeatAvailabilityRespDto`/`ChangeSeatException` on `origin/dev`; FE consumed it, and the label→numeric seat-number contract mismatch was fixed live under **OBRS-171** (`shared/lib/seat-number.ts`).
+> - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
+> - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
 
 ### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
 **Affected endpoints**:

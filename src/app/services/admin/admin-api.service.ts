@@ -18,6 +18,7 @@ import {
   UsabilityReportPage,
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
+import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -854,6 +855,14 @@ export class AdminApiService {
   getUsabilityReports(): Observable<ResponseAPI<UsabilityReportPage>> {
     return this.getRequest<UsabilityReportPage>(
       `${this.baseUrl}/private/admin/usability-reports`
+    );
+  }
+
+  getReportsSummary(from: string, to: string): Observable<ResponseAPI<ReportsSummaryDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<ReportsSummaryDto>(
+      `${this.baseUrl}/private/admin/reports/summary`,
+      params
     );
   }
 

@@ -1,0 +1,72 @@
+name: ADR gate — access-model changes require an ADR
+
+# Why this exists: the frontend area-based access model (ROLE_GRANTS /
+# PORTAL_ONLY_ROLES / canAccessCustomerArea / getHomeRoute in auth.service.ts,
+# and auth.guard.ts) has TWICE been changed without a decision record — first
+# the original confinement (commit 670862f, no card/ADR), then its reversal
+# (OBRS-176, ADR written retroactively). This gate fails any push/PR that
+# touches the access-model surface without an accompanying docs/adr/ change,
+# so the decision is documented at merge time, not archaeologically later.
+# See docs/adr/0012-admin-cross-area-access.md.
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  adr-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require an ADR when the access model changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+
+          # New branch / first push: github.event.before is all-zeros or missing.
+          # Fall back to the root commit so the whole history is the diff range.
+          if [ -z "${BASE:-}" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            BASE="$(git rev-list --max-parents=0 "$HEAD" | tail -1)"
+          fi
+
+          echo "Diff range: $BASE..$HEAD"
+          CHANGED="$(git diff --name-only "$BASE" "$HEAD")"
+          echo "Changed files:"; echo "$CHANGED"
+
+          # Did the change actually touch the access-model surface? Match only
+          # added/removed lines (not context) mentioning the gating symbols,
+          # limited to the two auth files, to avoid false positives on unrelated
+          # edits elsewhere in auth.service.ts.
+          ACCESS_HIT="$(git diff "$BASE" "$HEAD" -- \
+              src/app/auth/auth.service.ts src/app/auth/auth.guard.ts \
+            | grep -E '^[+-]' \
+            | grep -E 'ROLE_GRANTS|PORTAL_ONLY_ROLES|canAccessCustomerArea|getHomeRoute' \
+            || true)"
+
+          if [ -z "$ACCESS_HIT" ]; then
+            echo "No access-model surface change in this range — gate passes."
+            exit 0
+          fi
+
+          echo "Access-model surface changed:"; echo "$ACCESS_HIT"
+
+          if echo "$CHANGED" | grep -qE '^docs/adr/'; then
+            echo "An ADR changed in the same range — gate passes."
+            exit 0
+          fi
+
+          echo "::error::Access-model change (ROLE_GRANTS / PORTAL_ONLY_ROLES / canAccessCustomerArea / getHomeRoute, or auth.guard.ts) detected with NO docs/adr/ file changed in the same push/PR. Add an ADR documenting the decision (template: docs/adr/0012-admin-cross-area-access.md) before merging. This gate exists because the access model has twice been changed without a decision record."
+          exit 1

@@ -3,6 +3,7 @@ import { NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
+import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 
 interface AdminNavItem {
   path: string;
@@ -42,6 +43,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
     { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
     { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
+    { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
   ];
 
   // Count of usability reports with status 'new'. Plain field (not a getter)
@@ -49,14 +51,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // per fetch/poll tick.
   protected newReportCount = 0;
 
-  constructor(private readonly adminApiService: AdminApiService) {
+  constructor(
+    private readonly adminApiService: AdminApiService,
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
+  ) {
     super();
   }
 
   // Gate the Staff Area shortcut in the profile menu on the salesperson/driver
-  // grant. Under the area-based access model (see AuthService) only the owner
-  // holds both admin and staff access, so a plain admin — confined to this
-  // portal — correctly does not see a link they cannot use.
+  // grant. Under the area-based access model (see AuthService) both owner and
+  // admin hold cross-portal access (OBRS-176), so an admin correctly sees and
+  // can use this link, alongside owner and actual staff (salesperson/driver).
   protected get isStaffUser(): boolean {
     return this.authService.hasAnyRole(['salesperson', 'driver']);
   }
@@ -67,14 +72,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   // Fetches the new-usability-report count on entering the admin area, then
-  // re-fetches every 60s and on every in-admin NavigationEnd (so triaging a
-  // report — new -> resolved — updates the badge promptly). A failed tick is
-  // swallowed via catchError so the outer subscription (and therefore the
-  // 60s interval) survives; the last known count is kept on error.
+  // re-fetches every 60s, on every in-admin NavigationEnd, and whenever
+  // UsabilityReportBadgeRefreshService.trigger() fires (the detail page's
+  // silent auto-promote-on-open and decision-save both call it, so the badge
+  // updates immediately instead of waiting for the next poll/navigation).
+  // A failed tick is swallowed via catchError so the outer subscription (and
+  // therefore the 60s interval) survives; the last known count is kept on error.
   private watchNewReportCount(): void {
     merge(
       timer(0, NEW_REPORT_COUNT_POLL_MS),
-      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      this.router.events.pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd)),
+      this.badgeRefreshService.refreshRequested$
     )
       .pipe(
         switchMap(() =>
@@ -84,6 +92,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       )
       .subscribe((count) => {
         this.newReportCount = count;
+      });
+
+    // Optimistic same-tick badge adjustment (OBRS-174): the detail page's
+    // silent auto-promote knows it just moved one report out of 'new', so it
+    // nudges the count by -1 here instantly rather than waiting on the
+    // authoritative GET above (a second live round-trip after the promote PUT).
+    // Clamped at 0; the poll/navigation refetch reconciles any drift.
+    this.badgeRefreshService.countAdjustments$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((delta) => {
+        this.newReportCount = Math.max(0, this.newReportCount + delta);
       });
   }
 }

@@ -415,17 +415,11 @@ export class SellPageComponent implements OnInit, OnDestroy {
       code: String(v.id),
       label: v.vehicleNumber ?? v.numberPlate ?? `#${v.id}`,
     }));
-    this.scheduleDriverOptions = data.users
-      .filter((u) =>
-        (u.roles ?? []).some((role) => {
-          const slug = typeof role === 'string' ? role : role.slug;
-          return String(slug ?? '').trim().toLowerCase() === 'driver';
-        })
-      )
-      .map((u) => ({
-        code: String(u.id),
-        label: u.fullName?.trim() || u.email?.trim() || `#${u.id}`,
-      }));
+    // Drivers already come pre-filtered from /private/users/drivers (OBRS-175).
+    this.scheduleDriverOptions = data.drivers.map((d) => ({
+      code: String(d.id),
+      label: d.name?.trim() || `#${d.id}`,
+    }));
 
     // Cold-open fix: if the create form is open and route is still blank+pristine
     // (store wasn't loaded yet when the modal opened), apply the first-option default

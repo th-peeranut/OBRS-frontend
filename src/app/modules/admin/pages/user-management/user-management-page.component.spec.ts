@@ -14,7 +14,7 @@ const USER_ROW = {
   roles: ['Admin'],
   status: 'Active',
   statusCode: 'active',
-  lastActive: '-',
+  lastUpdated: '-',
   locked: false,
 };
 

@@ -1,5 +1,153 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-09 — Scrutinize self-fix: OBRS-176 admin cross-area access
+
+**Worktree:** `OBRS-frontend-wt-admin-cross-area-access` (branch `ao/admin-cross-area-access`).
+
+**Fixed one stale comment the widening left behind.** `staff-layout.component.ts:22-25`
+still read "only the owner reaches both portals, so this is effectively an 'owner is here'
+check." After OBRS-176 admin is also a cross-portal superset, so admin reaches both portals
+too — the comment was factually wrong (the exact "leftover text claiming admin is confined"
+class of defect). The `isAdmin = hasAnyRole(['admin'])` gate was already correct (true for
+both owner and admin, false for plain salesperson/driver); only the prose was wrong. Rewrote
+it to "both owner and admin hold cross-portal access (OBRS-176) ... an 'owner/admin is here'
+check." Comment-only, no behavior change.
+
+**Pattern for next time:** when you widen `ROLE_GRANTS`, grep the whole `src/` tree for prose
+that asserts the OLD confinement (`only the owner`, `admin.*confin`, `both portals`,
+`cannot enter`), not just the file you edited. The sibling `admin-layout.component.ts` comment
+was updated in the same PR but this staff-side twin was missed.
+## 2026-07-09 — Frontend implementation: usability report detail triage-UX refinement (OBRS-174)
+
+**Worktree:** `OBRS-frontend-wt-usability-triage-ux` (branch `ao/usability-triage-ux`, off
+`origin/dev`). Refines the existing admin Usability Reports detail modal from OBRS-77/82/86/106/108/115.
+
+**Un-aliased `detailStatusOptions` from `statusFilterOptions`.** `buildStatusOptions()`
+previously set `this.detailStatusOptions = this.statusFilterOptions` (all 5 statuses,
+including `new`/`in_review`) — a decision-only dropdown should never let an admin "select"
+a triage state as if it were an outcome. Now built from its own `detailStatusValues =
+['accepted','resolved','rejected']`. The table filter above the table is untouched (still
+all 5 — an admin does want to filter by `new`/`in_review` there).
+
+**Added `seedStatus()` gate so the dropdown starts empty (design-system §3.1) unless the
+report already carries a terminal decision.** All three places that seeded
+`selectedDetailStatus` (cache-hit branch, optimistic-open, fetch-resolve pristine patch) now
+route through `seedStatus(status)`, which returns `''` for anything not in
+`accepted|resolved|rejected`. `new`/`in_review` reports now correctly leave Save disabled
+until the admin actively picks an outcome — previously a `new` report seeded
+`selectedDetailStatus = 'new'`, which is not even a selectable dropdown option once #1 above
+un-aliased the options, so Save would have silently rendered with an invalid/blank selection
+without this seeding fix.
+
+**Silent auto-promote (`new` → `in_review`) is a SEPARATE code path from `saveStatus()` —
+do not be tempted to unify them.** `openDetail()` calls a private `autoPromoteToInReview(id)`
+when the just-opened row's status is `'new'`. It calls the same
+`adminApiService.updateUsabilityReportStatus(id, 'in_review', null)` endpoint but has its
+own `subscribe({next, error})` with NO `alertService` calls in either branch — success
+silently updates the store row + `detailCache` entry (so it can't re-fire this session) and
+triggers the badge refresh; error is fully swallowed (covers the expected 400
+`report.invalid-transition` when another admin's session already advanced the row between
+this admin's list fetch and opening it). It must never block or close the modal — the modal
+render is driven entirely by the (separate) detail GET subscription, not by this promote
+call. Gate is strictly `summary?.status === 'new'` read from the row already in `allReports`
+— it does not fire from the cache-hit branch (a cache hit means this report's full detail
+was already fetched once this session, so it has either already been promoted or the admin
+already made a decision).
+
+**`saveStatus()`'s success branch now also calls `closeDetail()`** (after the existing
+`detailCache.delete`/`alertService.success`/`store.refresh()`) — a saved decision is a
+completed action, so the modal dismisses back to the table. The error branch is untouched;
+the modal stays open on failure so the admin can retry without re-opening.
+
+**Badge refresh: added `UsabilityReportBadgeRefreshService`** (`shared/services/`,
+`providedIn: 'root'`, a single `Subject<void>` + `trigger()`) rather than wiring the page
+directly to the layout (siblings, no existing channel). `AdminLayoutComponent
+.watchNewReportCount()`'s existing `merge(timer(...), router.events...)` gained this as a
+third source — same fetch, same error handling, no new code path. See
+`docs/adr/0011-usability-report-badge-refresh-trigger.md` for why this is scoped narrowly
+(not a general notification bus — that refactor is deliberately DEFERRED, see
+`notification-domain-deferred.md` in agent-office memory).
+
+**Test gotcha: an existing OBRS-86 spec (`sends the triage note in the PUT payload...`)
+asserted `toHaveBeenCalledOnceWith` on `updateUsabilityReportStatus`.** Since every fixture
+in this spec file opens a `status: 'new'` report, and opening now always fires the
+auto-promote call on that same spy, the assertion legitimately needed to change from "called
+once" to "assert on `calls.mostRecent().args`" — this is a real behavior change (the spy now
+does get called twice: once for the silent promote, once for the explicit save), not a test
+weakening. Also added a default `adminApiServiceSpy.updateUsabilityReportStatus.and
+.returnValue(of({code:200,...}))` in the shared `beforeEach` so every existing fixture (most
+of which open a `new`-status report and therefore now trigger the auto-promote) has a sane
+default response without each test needing to opt in.
+
+**i18n:** changed `ADMIN.USABILITY_REPORTS.STATUS.SAVE` value only (same key) in en/th/zh —
+`"Save Status"/"บันทึกสถานะ"/"保存状态"` → `"Save"/"บันทึก"/"保存"` (shorter label now that the
+button sits next to the status dropdown, whose own `LABEL` key already reads "Status").
+
+**Test results:** `ng test --watch=false --browsers ChromeHeadless` — see run output in the
+implementation report. `ng build --configuration production` — see run output.
+## 2026-07-09 — Frontend implementation: `/admin/reports` MVP (OBRS-40)
+
+**Worktree:** `OBRS-frontend-wt-reporting-summaries` (branch `ao/reporting-summaries`).
+`ng test`: 882/882 PASS. `ng build --configuration production`: PASS (1.45 MB initial,
+under the 1.5 MB budget). Diff vs branch HEAD is scope-only (7 files modified, 2 new:
+`reports-summary.interface.ts` + the `pages/reports/` folder).
+
+**PO simplification applied — the whole ADR-0011 guard-relaxation was dropped, and I found
+(and reverted) a prior partial attempt at it already sitting in the worktree.** On starting,
+`README.md` had an uncommitted diff describing a salesperson cross-portal-access ADR, and
+`docs/adr/0011-admin-stat-tile-and-reports-cross-portal-access.md` existed as an untracked
+file proposing: relax the top-level `/admin` guard to `['admin','salesperson']`, then
+re-tighten every *other* existing child route with its own `canActivate`, plus a
+`StaffLayoutComponent` "Reports" shortcut and `isSalesperson` nav filtering. The task
+explicitly superseded this (salesperson access deferred to OBRS-129) — I ran
+`git checkout -- README.md` and deleted the ADR file before starting, so no trace of the
+dropped approach reached this commit. **Lesson: when a task says "apply these
+simplifications (they remove work done for an earlier version of this spec)," check the
+worktree for uncommitted/untracked leftovers from that earlier version before writing new
+code — don't just diff your own additions against a clean baseline.**
+
+**Inlined the KPI tiles — did not extract `AdminStatTileComponent`.** Copy-pasted
+`dashboard-page.component.html`'s `.admin-card.admin-kpi` markup (icon/big-number/skeleton)
+directly into `reports-page.component.html`, per the "smallest diff" instruction. Revenue
+tile uses `.admin-kpi-icon.is-success` (same visual role as the dashboard's Revenue tile).
+
+**Revenue gating is presence-based, not role-based — verified both the store and the
+component read it that way.** `ReportsTilesDto.revenue?` and `ReportsDailyRowDto.revenue?`
+are optional; `ReportsPageComponent.showRevenue = !!tiles?.revenue` gates both the tile
+(`*ngIf="showRevenue"`) and the table column. No `AuthService`/role check anywhere in this
+page — forward-compatible with OBRS-129 without a frontend change when the server starts
+omitting `revenue` for a salesperson viewer.
+
+**`ReportsStore` is the first range-parameterized `AdminCollectionStore` subclass — kept as
+a single root-scoped cache, not one per range.** `setRange(from, to)` mutates the store's
+own `fromDate`/`toDate` fields then calls `refresh()`; `fetch()` always reads the current
+range. This preserves the SWR contract (re-entering `/admin/reports` shows the
+last-fetched range immediately) without needing a cache keyed by range, since only one
+range is ever being viewed. Default range is last 7 days inclusive of today, computed via
+local (not UTC) date math — matches `schedules-page.component.ts`'s own
+`toDateInputValue`/date-filter convention, not `toISOString()` (which would shift a day near
+a local-midnight boundary in certain timezones — caught this while writing the store spec's
+"defaults to last 7 days" test, which originally used `toISOString()` and would have been
+flaky).
+
+**Server 400 backstop needed a way to surface `errorCode` without changing the shared
+`AdminCollectionStore` base class.** The base class's `error$` is a bare boolean (by design
+— it's shared by every admin store and none of the others need more). Added a
+store-local `lastErrorCode` getter to `ReportsStore` only: `fetch()` catches the raw error,
+extracts `error.error.errorCode` into a private field, then re-throws so the base class's
+existing error-swallowing/cache-retention behavior is unchanged. The page reads
+`store.lastErrorCode` inside its own `error$` subscription to pick between
+`RANGE_INVALID`/`RANGE_TOO_LARGE`/generic `LOAD_FAILED` — matches design-system §9 (branch
+on `errorCode`, never the localized `message`) without touching a class every other admin
+page depends on.
+
+**Client guard runs before every dispatch, blocks on `from > to` or a >366-day span, and
+does NOT call `store.setRange()` when it fires** — regression-tested directly (two specs
+assert `store.setRange` was never called after an invalid range change). The empty-range
+(all-zero 200) case is intentionally NOT routed through the error path at all — it's a
+`isEmptyRange` getter checked independently of `rangeError`/`loadError`, rendering a
+friendly `ADMIN.REPORTS.EMPTY_RANGE` note alongside the normal (zeroed) tiles/table.
+
 ## 2026-07-08 — Frontend implementation: promo code system (OBRS-109 / #37)
 
 **Worktree:** `OBRS-frontend-wt-promo-codes` (branch `ao/promo-codes`, off `dev`, on top of

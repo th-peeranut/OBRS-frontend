@@ -278,7 +278,8 @@
       "SCHEDULES": "ตารางเดินรถ",
       "BOOKINGS_MANAGEMENT": "การจอง",
       "PROMOTIONS": "โปรโมชั่น",
-      "USABILITY_REPORTS": "รายงานการใช้งาน"
+      "USABILITY_REPORTS": "รายงานการใช้งาน",
+      "REPORTS": "รายงาน"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -465,6 +466,7 @@
       "FILTER_ROLE": "บทบาท: ทั้งหมด",
       "FILTER_STATUS": "สถานะ: ทั้งหมด",
       "FULL_NAME": "ชื่อ-นามสกุล",
+      "LAST_UPDATED": "อัปเดตล่าสุด",
       "USERNAME": "ชื่อผู้ใช้",
       "EMAIL_PHONE": "อีเมลและเบอร์โทร",
       "ROLES": "บทบาท",
@@ -647,10 +649,39 @@
       "LOAD_FAILED": "โหลดรายงานไม่สำเร็จ กรุณารีเฟรช",
       "UNITS": "รายงาน",
       "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "REPORTER_EMAIL": "อีเมลผู้รายงาน", "REPORTER_NOTIFIED": "แจ้งผู้รายงานแล้ว", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "IMAGE_ENLARGE": "ขยายรูปภาพ {{position}}", "CLOSE": "ปิด", "TRIAGE_NOTE_LABEL": "บันทึกการจัดการ", "TRIAGE_NOTE_PLACEHOLDER": "เพิ่มบันทึกสำหรับรายงานนี้...", "TRIAGED_BY": "จัดการโดย", "TRIAGED_AT": "จัดการเมื่อ", "JIRA_LINK_LABEL": "ปัญหาใน Jira", "JIRA_LINK_ARIA": "เปิดปัญหา Jira {{key}} ในแท็บใหม่" },
-      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึกสถานะ", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "accepted": "ยอมรับแล้ว", "resolved": "แก้ไขแล้ว", "rejected": "ปฏิเสธ" },
+      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึก", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "accepted": "ยอมรับแล้ว", "resolved": "แก้ไขแล้ว", "rejected": "ปฏิเสธ" },
       "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
       "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่",
       "NEW_BADGE_ARIA": "มีรายงานปัญหาการใช้งานใหม่ {{count}} รายการ"
+    },
+    "REPORTS": {
+      "SUBTITLE": "จำนวนการจอง ตั๋วที่ขาย อัตราการเข้าใช้ที่นั่ง และรายได้ ตามช่วงวันที่",
+      "FILTER_FROM": "จากวันที่",
+      "FILTER_TO": "ถึงวันที่",
+      "TILE": {
+        "BOOKINGS": "การจอง",
+        "TICKETS_SOLD": "ตั๋วที่ขาย",
+        "OCCUPANCY": "อัตราการเข้าใช้ที่นั่ง",
+        "REVENUE": "รายได้"
+      },
+      "TABLE_TITLE": "สรุปรายวัน",
+      "COL": {
+        "DATE": "วันที่",
+        "BOOKINGS": "การจอง",
+        "SEATS_SOLD": "ที่นั่งที่ขาย",
+        "OCCUPANCY": "อัตราการเข้าใช้ที่นั่ง %",
+        "REVENUE": "รายได้"
+      },
+      "BASIS": {
+        "BOOKING_DATE": "ตามวันที่จอง",
+        "DEPARTURE_DATE": "ตามวันที่เดินทาง"
+      },
+      "EMPTY_RANGE": "ไม่มีกิจกรรมในช่วงวันที่ที่เลือก",
+      "LOAD_FAILED": "ไม่สามารถโหลดรายงานได้ กรุณาลองใหม่อีกครั้ง",
+      "ERROR": {
+        "RANGE_INVALID": "วันที่เริ่มต้นต้องมาก่อนหรือเท่ากับวันที่สิ้นสุด",
+        "RANGE_TOO_LARGE": "ช่วงวันที่ที่เลือกกว้างเกินไป กรุณาเลือกช่วงไม่เกิน 366 วัน"
+      }
     }
   },
   "LOGIN": {

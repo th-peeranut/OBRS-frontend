@@ -1,0 +1,23 @@
+@import "../../../../../styles/variables.scss";
+
+// Small basis caption under a table header ("by booking date" / "by
+// departure date") — reuses `.admin-muted`'s color (theme-safe, no raw hex),
+// just smaller and non-bold so it doesn't compete with the header label.
+.reports-basis-caption {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+// State messages (invalid range / fetch error / empty range) that stand in for
+// the tiles+table or the table — centered and padded so the message reads as
+// the body's content, not a stray line above a table of zeros.
+.reports-state-card,
+.reports-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+

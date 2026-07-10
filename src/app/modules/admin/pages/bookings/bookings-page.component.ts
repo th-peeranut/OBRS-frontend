@@ -3,6 +3,7 @@ import { Subscription } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingRow, BookingsStore, StatusOption } from './bookings.store';
 import { pollWhileVisible } from '../../shared/admin-auto-refresh';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 
 @Component({
   selector: 'app-bookings-page',
@@ -30,6 +31,13 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly store: BookingsStore
   ) {}
+
+  // Format a raw ISO timestamp for display in the current UI language. Called
+  // from the template (not the store) so the cached, locale-independent rows
+  // re-render on a live language switch (OBRS-178).
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.translate.currentLang);
+  }
 
   ngOnInit(): void {
     // Render the cached bookings instantly on re-entry (skipping the payment
@@ -190,8 +198,9 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
         row.bookingId,
         row.customer,
         row.route,
-        row.bookingDate,
-        row.departureTime,
+        // Rows carry raw ISO now (OBRS-178); format for the export too.
+        this.displayDateTime(row.bookingDate),
+        this.displayDateTime(row.departureTime),
         row.totalFare,
         row.bookingStatus,
         row.paymentStatus,

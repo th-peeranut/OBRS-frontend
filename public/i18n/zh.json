@@ -278,7 +278,8 @@
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
       "PROMOTIONS": "促销活动",
-      "USABILITY_REPORTS": "可用性报告"
+      "USABILITY_REPORTS": "可用性报告",
+      "REPORTS": "报告"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -465,6 +466,7 @@
       "FILTER_ROLE": "角色：所有角色",
       "FILTER_STATUS": "状态：全部",
       "FULL_NAME": "全名",
+      "LAST_UPDATED": "更新时间",
       "USERNAME": "用户名",
       "EMAIL_PHONE": "电子邮件和电话",
       "ROLES": "角色",
@@ -647,10 +649,39 @@
       "LOAD_FAILED": "加载报告失败，请刷新。",
       "UNITS": "份报告",
       "DETAIL": { "TITLE": "报告详情", "ROUTE": "报告来源页面", "USER_AGENT": "用户代理", "USER_ID": "用户编号", "REPORTER_EMAIL": "报告人邮箱", "REPORTER_NOTIFIED": "已通知报告人", "ANONYMOUS": "匿名", "NO_IMAGES": "没有附加图片。", "IMAGE_POSITION": "位置", "IMAGE_SIZE": "大小", "IMAGE_ENLARGE": "放大图片 {{position}}", "CLOSE": "关闭", "TRIAGE_NOTE_LABEL": "处理备注", "TRIAGE_NOTE_PLACEHOLDER": "为此报告添加备注...", "TRIAGED_BY": "处理人", "TRIAGED_AT": "处理时间", "JIRA_LINK_LABEL": "Jira 问题", "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}" },
-      "STATUS": { "LABEL": "状态", "SAVE": "保存状态", "new": "新建", "in_review": "审查中", "accepted": "已接受", "resolved": "已解决", "rejected": "已拒绝" },
+      "STATUS": { "LABEL": "状态", "SAVE": "保存", "new": "新建", "in_review": "审查中", "accepted": "已接受", "resolved": "已解决", "rejected": "已拒绝" },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
+    },
+    "REPORTS": {
+      "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "TILE": {
+        "BOOKINGS": "预订数",
+        "TICKETS_SOLD": "售出票数",
+        "OCCUPANCY": "座位使用率",
+        "REVENUE": "收入"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期",
+        "BOOKINGS": "预订数",
+        "SEATS_SOLD": "售出座位数",
+        "OCCUPANCY": "座位使用率 %",
+        "REVENUE": "收入"
+      },
+      "BASIS": {
+        "BOOKING_DATE": "按预订日期",
+        "DEPARTURE_DATE": "按出发日期"
+      },
+      "EMPTY_RANGE": "所选日期范围内没有活动。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      }
     }
   },
   "LOGIN": {

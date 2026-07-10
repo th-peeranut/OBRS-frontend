@@ -2,15 +2,20 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
-import { BehaviorSubject, Observable, Subject, of } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { UsabilityReportsPageComponent } from './usability-reports-page.component';
 import { UsabilityReportsStore } from './usability-reports.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
+import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../components/admin-modal-backdrop.directive';
-import { UsabilityReportPage, UsabilityReportDetail } from '../../../../shared/interfaces/usability-report.interface';
+import {
+  UsabilityReportPage,
+  UsabilityReportDetail,
+  UsabilityReportStatus,
+} from '../../../../shared/interfaces/usability-report.interface';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 
 describe('UsabilityReportsPageComponent', () => {
@@ -46,6 +51,13 @@ describe('UsabilityReportsPageComponent', () => {
       'getUsabilityReportById',
       'updateUsabilityReportStatus',
     ]);
+    // Default success response so the silent auto-promote-on-open path (fired
+    // whenever a 'new'-status report is opened, most fixtures below use one)
+    // has something sane to subscribe to; individual tests override this when
+    // they need to assert on the call or simulate a failure.
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      of({ code: 200, message: 'OK', data: null })
+    );
 
     alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error']);
 
@@ -425,9 +437,12 @@ describe('UsabilityReportsPageComponent', () => {
     component['selectedDetailStatus'] = 'accepted';
     component.saveStatus();
 
-    expect(adminApiServiceSpy.updateUsabilityReportStatus)
+    // openDetail() above also fired the silent auto-promote call ('new' ->
+    // 'in_review') on this same spy, so assert on the most recent call
+    // (the explicit saveStatus() PUT) rather than a single-call count.
+    expect(adminApiServiceSpy.updateUsabilityReportStatus.calls.mostRecent().args)
       .withContext('the triage note must be sent alongside the status in the PUT payload')
-      .toHaveBeenCalledOnceWith('rep-1', 'accepted', 'Investigated — reproduced on iOS Safari.');
+      .toEqual(['rep-1', 'accepted', 'Investigated — reproduced on iOS Safari.']);
   });
 
   it('renders the accepted status as .admin-status.is-accepted in the table', () => {
@@ -610,5 +625,183 @@ describe('UsabilityReportsPageComponent', () => {
     expect(component['selectedTriageNote'])
       .withContext('cache-hit reopen must show the cached triage note')
       .toBe('Server note');
+  });
+
+  // ── OBRS-174 regression specs: decision-only dropdown + silent auto-promote ──
+
+  function pageWithStatus(status: UsabilityReportStatus): UsabilityReportPage {
+    return {
+      content: [{ ...mockSummaryPage.content[0], status }],
+      totalElements: 1,
+    };
+  }
+
+  it('builds the detail dropdown from only accepted/resolved/rejected, while the table filter keeps all 5 statuses', () => {
+    primeReportList();
+
+    const detailValues = component['detailStatusOptions'].map((o) => o.value);
+    expect(detailValues)
+      .withContext('detail modal dropdown must be decision-only')
+      .toEqual(['accepted', 'resolved', 'rejected']);
+
+    const filterValues = component['statusFilterOptions'].map((o) => o.value);
+    expect(filterValues)
+      .withContext('the table filter above the table must still offer all 5 statuses')
+      .toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected']);
+  });
+
+  it('fires the silent auto-promote (new -> in_review) exactly once when opening a "new" report', () => {
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    expect(adminApiServiceSpy.updateUsabilityReportStatus)
+      .withContext('opening a new report must silently promote it to in_review exactly once')
+      .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
+  });
+
+  it('optimistically decrements the "new" badge by 1 on a successful auto-promote (instant, no GET round-trip)', () => {
+    const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+    const adjustSpy = spyOn(badge, 'adjustBy');
+    const triggerSpy = spyOn(badge, 'trigger');
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    component['openDetail']('rep-1'); // default updateUsabilityReportStatus mock resolves success
+
+    expect(adjustSpy)
+      .withContext('a successful promote nudges the badge by -1 immediately')
+      .toHaveBeenCalledOnceWith(-1);
+    expect(triggerSpy)
+      .withContext('the promote path must not fire a second authoritative GET (that was the lag)')
+      .not.toHaveBeenCalled();
+  });
+
+  it('reverts the optimistic badge decrement when the auto-promote fails (stale-row 400), leaving a net-zero change', () => {
+    const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+    const adjustSpy = spyOn(badge, 'adjustBy');
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      throwError(() => ({ status: 400, error: { errorCode: 'report.invalid-transition' } }))
+    );
+
+    component['openDetail']('rep-1');
+
+    expect(adjustSpy.calls.allArgs())
+      .withContext('optimistic -1 on open, then +1 reverted when the server rejects the promote')
+      .toEqual([[-1], [1]]);
+  });
+
+  (['in_review', 'accepted', 'resolved', 'rejected'] as UsabilityReportStatus[]).forEach((status) => {
+    it(`does not fire the auto-promote when opening a report already in status "${status}"`, () => {
+      storeSpy.data$.next(pageWithStatus(status));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      expect(adminApiServiceSpy.updateUsabilityReportStatus)
+        .withContext(`auto-promote must not fire for a report already in "${status}"`)
+        .not.toHaveBeenCalled();
+    });
+  });
+
+  it('swallows an auto-promote error (e.g. stale-row 400 report.invalid-transition) without a toast, without closing the modal, and without rethrowing', () => {
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      throwError(() => ({
+        status: 400,
+        error: { errorCode: 'report.invalid-transition' },
+      }))
+    );
+
+    expect(() => {
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+    })
+      .withContext('the promote error must not propagate out of openDetail()')
+      .not.toThrow();
+
+    expect(alertServiceSpy.error)
+      .withContext('auto-promote failures are silent — no error toast')
+      .not.toHaveBeenCalled();
+    expect(component['selectedReportId'])
+      .withContext('the modal must stay open even when the background promote fails')
+      .toBe('rep-1');
+  });
+
+  it('leaves the detail status selection empty (Save disabled) when opening a "new" report', () => {
+    storeSpy.data$.next(pageWithStatus('new'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    expect(component['selectedDetailStatus'])
+      .withContext('a new report must not pre-seed a decision — Save stays disabled')
+      .toBe('');
+
+    const saveBtn: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.ur-status-controls button.admin-btn-primary'
+    );
+    expect(saveBtn.disabled).withContext('Save must be disabled with no decision selected').toBeTrue();
+  });
+
+  it('pre-seeds the detail status selection when opening a report that already carries a terminal decision', () => {
+    storeSpy.data$.next(pageWithStatus('resolved'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+
+    expect(component['selectedDetailStatus'])
+      .withContext('an already-decided report pre-seeds its terminal status')
+      .toBe('resolved');
+  });
+
+  it('closes the detail modal on a successful status save, while still showing the success toast', () => {
+    storeSpy.data$.next(pageWithStatus('resolved'));
+    storeSpy.hasValue = true;
+    fixture.detectChanges();
+    adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: { ...mockFullDetail, status: 'resolved' },
+    }));
+    adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+      of({ code: 200, message: 'OK', data: null })
+    );
+
+    component['openDetail']('rep-1');
+    fixture.detectChanges();
+    component['selectedDetailStatus'] = 'rejected';
+
+    component.saveStatus();
+    fixture.detectChanges();
+
+    expect(alertServiceSpy.success)
+      .withContext('the success toast must still fire on save')
+      .toHaveBeenCalled();
+    expect(component['selectedReportId'])
+      .withContext('a successful save must close the detail modal')
+      .toBeNull();
   });
 });

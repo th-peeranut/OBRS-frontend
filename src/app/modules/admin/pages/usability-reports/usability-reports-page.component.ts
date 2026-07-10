@@ -6,6 +6,7 @@ import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
   UsabilityReportDetail,
@@ -65,11 +66,18 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
 
   private readonly destroy$ = new Subject<void>();
 
+  // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
+  // states, not outcomes an admin picks (design-system.md §3.1: no pre-seeded
+  // default; the admin must actively choose an outcome).
+  private static readonly DECISION_STATUSES: ReadonlySet<UsabilityReportStatus> =
+    new Set<UsabilityReportStatus>(['accepted', 'resolved', 'rejected']);
+
   constructor(
     private readonly store: UsabilityReportsStore,
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
   ) {}
 
   ngOnInit(): void {
@@ -150,7 +158,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     if (cached) {
       // Cache hit — render the full detail immediately, no spinner, no refetch.
       this.detailReport = cached;
-      this.selectedDetailStatus = cached.status;
+      this.selectedDetailStatus = this.seedStatus(cached.status);
       this.selectedTriageNote = cached.triageNote ?? '';
       this.isDetailFetching = false;
       return;
@@ -181,9 +189,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           reporterNotifiedAt: null,
         }
       : null;
-    this.selectedDetailStatus = summary?.status ?? '';
+    this.selectedDetailStatus = this.seedStatus(summary?.status ?? '');
     this.selectedTriageNote = '';
     this.isDetailFetching = true;
+
+    // Silent auto-promote: viewing a 'new' report advances it to 'in_review'
+    // so it drops out of the "new" triage queue just by being opened. This is
+    // a separate, toast-free, best-effort path — it must never gate or block
+    // the modal render below, which is driven entirely by the detail fetch.
+    if (summary?.status === 'new') {
+      this.autoPromoteToInReview(id);
+    }
 
     this.adminApiService
       .getUsabilityReportById(id)
@@ -205,7 +221,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           // window. The summary seeded selectedDetailStatus on open, so only
           // adopt the fetched status when nothing is selected yet.
           if (!this.selectedDetailStatus) {
-            this.selectedDetailStatus = detail?.status ?? '';
+            this.selectedDetailStatus = this.seedStatus(detail?.status ?? '');
           }
           if (!this.isTriageNoteDirty) {
             this.selectedTriageNote = detail?.triageNote ?? '';
@@ -217,6 +233,60 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           }
         },
       });
+  }
+
+  // Only a terminal decision (accepted/resolved/rejected) may pre-seed the
+  // decision-only dropdown. 'new'/'in_review' are triage states, not outcomes
+  // — the dropdown starts empty (placeholder, Save disabled) until the admin
+  // actively picks one (design-system.md §3.1).
+  private seedStatus(status: UsabilityReportStatus | ''): UsabilityReportStatus | '' {
+    return UsabilityReportsPageComponent.DECISION_STATUSES.has(status as UsabilityReportStatus)
+      ? (status as UsabilityReportStatus)
+      : '';
+  }
+
+  // Best-effort, toast-free promote of a freshly-opened 'new' report to
+  // 'in_review'. Deliberately NOT routed through saveStatus() — no success/
+  // error AlertService toasts, and it must never block or close the modal
+  // (the modal's render is driven by the detail fetch above, independent of
+  // this call). Errors are swallowed, including the expected 400
+  // report.invalid-transition when another admin's session already advanced
+  // this report between this admin's list fetch and opening it.
+  private autoPromoteToInReview(id: string): void {
+    // Apply the promote OPTIMISTICALLY — before the PUT resolves — so the UI
+    // reacts instantly instead of waiting on the live round-trip (~2s): flip
+    // the table row to in_review and drop the sidebar "new" badge by one. Both
+    // are reverted if the server rejects the promote.
+    this.setRowStatus(id, 'in_review');
+    this.badgeRefreshService.adjustBy(-1);
+
+    this.adminApiService
+      .updateUsabilityReportStatus(id, 'in_review', null)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          // Confirmed — the optimistic state stands; keep any cached detail in sync.
+          const cachedDetail = this.detailCache.get(id);
+          if (cachedDetail) {
+            this.detailCache.set(id, { ...cachedDetail, status: 'in_review' });
+          }
+        },
+        error: () => {
+          // Revert the optimistic changes (toast-free, per method doc). The
+          // common failure is the stale cross-session 400 (the report was
+          // already advanced elsewhere); the periodic count poll / NavigationEnd
+          // refetch reconciles the exact number regardless.
+          this.setRowStatus(id, 'new');
+          this.badgeRefreshService.adjustBy(1);
+        },
+      });
+  }
+
+  private setRowStatus(id: string, status: UsabilityReportStatus): void {
+    this.store.mutate((current) => ({
+      ...current,
+      content: current.content.map((r) => (r.id === id ? { ...r, status } : r)),
+    }));
   }
 
   protected closeDetail(): void {
@@ -307,6 +377,9 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
             this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_SUCCESS')
           );
           void this.store.refresh();
+          this.badgeRefreshService.trigger();
+          // A saved decision is a completed action — dismiss back to the table.
+          this.closeDetail();
         },
         error: () => {
           this.isSavingStatus = false;
@@ -354,12 +427,23 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   }
 
   protected detailStatusOptions: StatusOption[] = [];
+  // Decision-only subset for the detail modal's status dropdown — 'new' and
+  // 'in_review' are triage states an admin cannot select as an outcome, only
+  // land on automatically (list default / auto-promote-on-open above).
+  private readonly detailStatusValues: UsabilityReportStatus[] = [
+    'accepted',
+    'resolved',
+    'rejected',
+  ];
 
   private buildStatusOptions(): void {
     this.statusFilterOptions = this.statusValues.map((value) => ({
       value,
       label: this.translate.instant(`ADMIN.USABILITY_REPORTS.STATUS.${value}`),
     }));
-    this.detailStatusOptions = this.statusFilterOptions;
+    this.detailStatusOptions = this.detailStatusValues.map((value) => ({
+      value,
+      label: this.translate.instant(`ADMIN.USABILITY_REPORTS.STATUS.${value}`),
+    }));
   }
 }

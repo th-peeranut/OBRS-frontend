@@ -21,7 +21,7 @@ function buildBooking(overrides: Partial<MyBookingDto> = {}): MyBookingDto {
     bookingSchedules: [
       {
         id: 1,
-        departureDateTime: '2026-12-20T08:00:00',
+        departureDateTime: '2026-12-20T08:00:00+07:00',
         fromStop: {
           code: 'nong_chak',
           display: {
@@ -101,7 +101,7 @@ describe('MyBookingsComponent', () => {
   it('formats the departure, amount and passenger count', () => {
     const view = toView(buildBooking());
 
-    expect(view.departureLabel).toBe('20 Dec 2026 • 08:00');
+    expect(view.departureLabel).toBe('20 Dec 2026 08:00');
     expect(view.totalAmount).toBe(1290);
     expect(view.totalAmountLabel).toContain('1,290');
     expect(view.passengerCount).toBe(2);

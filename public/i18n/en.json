@@ -278,7 +278,8 @@
       "SCHEDULES": "Schedules",
       "BOOKINGS_MANAGEMENT": "Bookings",
       "PROMOTIONS": "Promotions",
-      "USABILITY_REPORTS": "Usability Reports"
+      "USABILITY_REPORTS": "Usability Reports",
+      "REPORTS": "Reports"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -465,6 +466,7 @@
       "FILTER_ROLE": "Role: All Roles",
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
+      "LAST_UPDATED": "Last updated",
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
@@ -647,10 +649,39 @@
       "LOAD_FAILED": "Failed to load reports. Please refresh.",
       "UNITS": "reports",
       "DETAIL": { "TITLE": "Report Detail", "ROUTE": "Reported From", "USER_AGENT": "User Agent", "USER_ID": "User ID", "REPORTER_EMAIL": "Reporter Email", "REPORTER_NOTIFIED": "Reporter Notified", "ANONYMOUS": "Anonymous", "NO_IMAGES": "No images attached.", "IMAGE_POSITION": "Position", "IMAGE_SIZE": "Size", "IMAGE_ENLARGE": "Enlarge image {{position}}", "CLOSE": "Close", "TRIAGE_NOTE_LABEL": "Triage Note", "TRIAGE_NOTE_PLACEHOLDER": "Add a note for this report...", "TRIAGED_BY": "Triaged By", "TRIAGED_AT": "Triaged At", "JIRA_LINK_LABEL": "Jira Issue", "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab" },
-      "STATUS": { "LABEL": "Status", "SAVE": "Save Status", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "rejected": "Rejected" },
+      "STATUS": { "LABEL": "Status", "SAVE": "Save", "new": "New", "in_review": "In Review", "accepted": "Accepted", "resolved": "Resolved", "rejected": "Rejected" },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
       "NEW_BADGE_ARIA": "{{count}} new usability reports"
+    },
+    "REPORTS": {
+      "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "TILE": {
+        "BOOKINGS": "Bookings",
+        "TICKETS_SOLD": "Tickets Sold",
+        "OCCUPANCY": "Occupancy",
+        "REVENUE": "Revenue"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date",
+        "BOOKINGS": "Bookings",
+        "SEATS_SOLD": "Seats Sold",
+        "OCCUPANCY": "Occupancy %",
+        "REVENUE": "Revenue"
+      },
+      "BASIS": {
+        "BOOKING_DATE": "by booking date",
+        "DEPARTURE_DATE": "by departure date"
+      },
+      "EMPTY_RANGE": "No activity in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
     }
   },
   "LOGIN": {

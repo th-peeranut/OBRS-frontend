@@ -156,8 +156,10 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
       customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
       route,
-      bookingDate: this.formatDateTime(booking.createdAt),
-      departureTime: this.formatDateTime(departureDateTimeRaw),
+      // Raw ISO, formatted in the template (OBRS-178) — keeps the cached rows
+      // locale-independent so a live language switch re-renders the dates.
+      bookingDate: booking.createdAt ?? '',
+      departureTime: departureDateTimeRaw ?? '',
       totalFare,
       bookingStatus: bookingStatus.name,
       paymentStatus: (
@@ -181,26 +183,6 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
     }
 
     return 'PENDING';
-  }
-
-  private formatDateTime(value: string | null | undefined): string {
-    if (!value) {
-      return '-';
-    }
-
-    const date = new Date(value);
-    if (!Number.isFinite(date.getTime())) {
-      return value;
-    }
-
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).format(date);
   }
 
   private getTranslationLabel(

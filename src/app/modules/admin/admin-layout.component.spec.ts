@@ -18,6 +18,7 @@ import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { AdminApiService } from '../../services/admin/admin-api.service';
+import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -127,6 +128,29 @@ describe('AdminLayoutComponent', () => {
     expect(collapseBtn).withContext('old collapse toggle must not exist').toBeNull();
   });
 
+  // OBRS-176: admin is now a cross-portal superset (see AuthService
+  // ROLE_GRANTS), so the profile menu's Staff Area shortcut must render for
+  // an admin identity, not just for owner/salesperson/driver.
+  it('shows the Staff Area link in the profile menu for an admin identity', () => {
+    const original = authStub.hasAnyRole;
+    authStub.hasAnyRole = (_roles: string[]) => true; // admin now satisfies salesperson/driver
+    try {
+      const f = TestBed.createComponent(AdminLayoutComponent);
+      f.detectChanges();
+
+      const comp = f.componentInstance as AdminLayoutComponent & { toggleProfileMenu: () => void };
+      comp.toggleProfileMenu();
+      f.detectChanges();
+
+      const staffAreaLink = f.debugElement.query(By.css('.admin-profile-menu a[href="/staff"]'));
+      expect(staffAreaLink)
+        .withContext('admin should see the Staff Area link in the profile menu')
+        .toBeTruthy();
+    } finally {
+      authStub.hasAnyRole = original;
+    }
+  });
+
   it('togglePin collapses the sidebar and writes "1" to localStorage (default is expanded "0")', () => {
     // On init (no storage entry), readPinPreference canonicalises to "0" (expanded).
     // One togglePin flips to collapsed → writes "1".
@@ -223,6 +247,26 @@ describe('AdminLayoutComponent — usability report badge', () => {
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge).withContext('badge should render when count > 0').toBeTruthy();
     expect(badge.nativeElement.textContent.trim()).toBe('5');
+  }));
+
+  it('applies an optimistic countAdjustments delta immediately (no refetch) and clamps at 0', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(3));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+    const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
+
+    badgeService.adjustBy(-1); // auto-promote on open: instant -1
+    fixture.detectChanges();
+    let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('optimistic delta must apply without a GET round-trip')
+      .toBe('2');
+
+    badgeService.adjustBy(-5); // never goes negative
+    fixture.detectChanges();
+    badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge).withContext('count clamps at 0 → badge hidden').toBeNull();
   }));
 
   it('caps the displayed badge text at "99+" when the count exceeds 99', fakeAsync(() => {

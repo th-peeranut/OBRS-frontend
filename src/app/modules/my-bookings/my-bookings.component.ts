@@ -4,6 +4,7 @@ import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { MenuItem } from 'primeng/api';
 import { Menu } from 'primeng/menu';
 import dayjs from 'dayjs';
+import { formatDisplayDateTime } from '../../shared/lib/display-date-time';
 import { Observable, combineLatest, map, startWith } from 'rxjs';
 import {
   CANCELLABLE_BOOKING_STATUS,
@@ -117,12 +118,6 @@ export class MyBookingsComponent implements OnInit {
   ];
 
   vm$!: Observable<MyBookingsVm>;
-
-  private readonly monthLabels: Record<SupportedLocale, readonly string[]> = {
-    en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-    th: ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'],
-    zh: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-  };
 
   constructor(
     private readonly store: Store,
@@ -341,11 +336,11 @@ export class MyBookingsComponent implements OnInit {
       statusCode,
       bookingType: normalizeStatusCode(booking.bookingType) || 'one_way',
       route,
-      departureLabel: this.formatDateTime(firstLeg?.departureDateTime, locale),
+      departureLabel: formatDisplayDateTime(firstLeg?.departureDateTime, locale),
       passengerCount: firstLeg?.tickets?.length ?? 0,
       totalAmount,
       totalAmountLabel: this.formatCurrency(totalAmount),
-      createdLabel: this.formatDateTime(booking.createdAt, locale),
+      createdLabel: formatDisplayDateTime(booking.createdAt, locale),
       cancellable: statusCode === CANCELLABLE_BOOKING_STATUS,
       paid: statusCode === CANCELLABLE_BOOKING_STATUS,
       rescheduleEligible: rescheduleEligibility.eligible,
@@ -456,20 +451,6 @@ export class MyBookingsComponent implements OnInit {
     return { eligible: true, reasonKey: null };
   }
 
-  private formatDateTime(
-    value: string | undefined,
-    locale: SupportedLocale
-  ): string {
-    if (!value) {
-      return '-';
-    }
-    const date = dayjs(value);
-    if (!date.isValid()) {
-      return '-';
-    }
-    const month = this.monthLabels[locale][date.month()];
-    return `${date.date()} ${month} ${date.year()} • ${date.format('HH:mm')}`;
-  }
 
   private formatCurrency(value: number): string {
     return new Intl.NumberFormat('th-TH', {

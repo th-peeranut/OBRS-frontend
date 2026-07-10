@@ -17,5 +17,6 @@ When coding with AI here, **read this repo's own skills first, then align to the
 - **i18n**: Every new key must include all three locales (TH, EN, ZH); ZH is a known gap — do not leave it empty.
 - **API contract**: The contract is owned by the backend (`../OBRS-backend/docs/api/`). Do not assume undocumented endpoints/fields; use `docs/handoff.md` for contract requests.
 - **Safety**: Never modify `auth.interceptor.ts` or `idempotency-key.ts` (payment/auth flows) without explicit confirmation. Never push to `main`.
+- **Access model**: `admin` is a permanent platform-wide superset — it must reach everything in the frontend. Never re-confine it (don't re-add `'admin'` to `PORTAL_ONLY_ROLES` or narrow `ROLE_GRANTS.admin` in `auth.service.ts`). `owner` will be group-scoped once the group feature lands; `admin` stays unscoped. See `docs/adr/0012-admin-cross-area-access.md`.
 
 Before making changes, read `CLAUDE.md` for the full rules (architecture, NgRx conventions, i18n, testing, security, and cross-repo governance).
