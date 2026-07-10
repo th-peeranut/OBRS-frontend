@@ -84,6 +84,10 @@ export interface AdminUserDto {
   roles: Array<string | AdminRoleDto>;
   locked?: boolean;
   accountLockedUntil?: string | null;
+  // OBRS-193: salesperson's assigned pickup stop (stop slug), used by the staff
+  // walk-in sell page to default the pickup selection. Null/absent = no assigned
+  // sales point (falls back to route origin, same as before this field existed).
+  salesPointStop?: string | null;
 }
 
 export interface LayoutResponse {

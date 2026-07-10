@@ -1,7 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
-import { catchError, takeUntil } from 'rxjs/operators';
+import { Observable, Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
+import { catchError, map, shareReplay, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -71,6 +71,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
   private stopOrderMap = new Map<string, number>();
   private stopOffsetMap = new Map<string, number>();
 
+  // OBRS-193: the salesperson's assigned pickup stop (from GET /users/me),
+  // fetched ONCE in ngOnInit and cached for the component lifetime — it does
+  // not change mid-session. `shareReplay(1)` means every later subscriber
+  // (each loadSegments() call, incl. on trip change / language-switch reload)
+  // reuses the cached result instead of re-fetching. A failed/empty /me is
+  // mapped to `null` here so callers never have to branch on the HTTP error.
+  private salesPointStop$: Observable<string | null> = of(null);
+  /** Latest resolved value of salesPointStop$, set when loadSegments' forkJoin resolves. */
+  private salesPointStop: string | null = null;
+
   private idempotencyKey: string | null = null;
   private readonly destroy$ = new Subject<void>();
 
@@ -110,6 +120,23 @@ export class SellPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // OBRS-193: fetch the salesperson's own profile ONCE for the component's
+    // lifetime — salesPointStop does not change mid-session, so there is no
+    // reason to refetch it per trip change or on a language-switch reload.
+    // shareReplay(1) caches the single emission; every loadSegments() forkJoin
+    // subscribes to this same observable and reuses the cached value instead
+    // of issuing a new HTTP request. A failed/empty /me resolves to `null`
+    // (no sales point) rather than blocking segment loading.
+    this.salesPointStop$ = this.staffApiService.getMe().pipe(
+      map((resp) => resp?.data?.salesPointStop ?? null),
+      catchError(() => of(null)),
+      shareReplay(1)
+    );
+    // Subscribe once here to kick the request off immediately (not lazily on
+    // first trip selection) — the shareReplay cache means loadSegments' later
+    // subscription just reuses this same result.
+    this.salesPointStop$.pipe(takeUntil(this.destroy$)).subscribe();
+
     this.loadTrips(this.selectedDate);
     // Stop/route names are server-localized (resolved from the Accept-Language
     // header) and cached in component state on fetch. The `| translate` pipes
@@ -760,11 +787,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
           of<ResponseAPI<RouteStopsDto>>({ code: 200, message: 'OK', data: { stops: [] } })
         )
       ),
+      // OBRS-193: joined here (not read separately) so the default pickup
+      // resolves in the SAME paint as segments/routeStops — never render the
+      // route origin first and then jump to the sales-point stop.
+      salesPointStop: this.salesPointStop$,
     })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: ({ segments, routeStops }) => {
+        next: ({ segments, routeStops, salesPointStop }) => {
           if (this.selectedRouteSlug !== routeSlug) return;
+          this.salesPointStop = salesPointStop;
           const allPairs = segments?.data?.stopPairs ?? [];
           const typed = vehicleType
             ? allPairs.filter((p) => p.vehicleType?.slug === vehicleType)
@@ -856,10 +888,17 @@ export class SellPageComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Default to the full route: origin (first) → destination (last). When
-   * `preserve` is given (e.g. a language-switch reload) and its slugs are still
-   * valid for the freshly-fetched stops, keep that selection instead — slugs are
-   * locale-invariant, so only the displayed names should change.
+   * Default pickup/drop-off. When `preserve` is given (e.g. a language-switch
+   * reload) and its slugs are still valid for the freshly-fetched stops, keep
+   * that selection instead — a manual pick always wins across a re-default;
+   * slugs are locale-invariant, so only the displayed names should change.
+   *
+   * Otherwise (cold open, or the preserved pickup is no longer valid): default
+   * pickup to the salesperson's assigned sales-point stop (OBRS-193) when one
+   * is cached AND it's actually on this route; else fall back to the route
+   * origin (first stop) exactly as before this feature — silently, no toast.
+   * Drop-off then defaults to the full route (destination) against whichever
+   * pickup was resolved, unchanged.
    */
   private _applyDefaultStops(preserve?: { pickup: string; dropoff: string }): void {
     if (this.orderedStops.length < 2) return;
@@ -871,7 +910,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
         : this.dropoffOptions[0]?.slug ?? '';
       return;
     }
-    this.pickupSlug = this.orderedStops[0].slug;
+    const salesPointOnRoute =
+      this.salesPointStop != null &&
+      this.orderedStops.some((s) => s.slug === this.salesPointStop);
+    this.pickupSlug = salesPointOnRoute
+      ? (this.salesPointStop as string)
+      : this.orderedStops[0].slug;
     const dest = this.orderedStops[this.orderedStops.length - 1].slug;
     this.dropoffSlug = this.fareMap.has(`${this.pickupSlug}|${dest}`)
       ? dest

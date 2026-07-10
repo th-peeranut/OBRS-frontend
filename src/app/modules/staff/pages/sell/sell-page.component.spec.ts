@@ -37,6 +37,7 @@ function createStaffApiStub(overrides: Partial<{
   payWalkIn: ReturnType<typeof jasmine.createSpy>;
   getRouteSegments: ReturnType<typeof jasmine.createSpy>;
   getRouteStops: ReturnType<typeof jasmine.createSpy>;
+  getMe: ReturnType<typeof jasmine.createSpy>;
 }> = {}): any {
   return {
     getWalkInSchedules: jasmine.createSpy('getWalkInSchedules').and.returnValue(of({ data: [] })),
@@ -46,6 +47,10 @@ function createStaffApiStub(overrides: Partial<{
     payWalkIn: jasmine.createSpy('payWalkIn').and.returnValue(of({ data: {} })),
     getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of({ data: { stopPairs: [] } })),
     getRouteStops: jasmine.createSpy('getRouteStops').and.returnValue(of({ data: { stops: [] } })),
+    // OBRS-193: default = no assigned sales point (salesPointStop: null), same as
+    // any account that hasn't been assigned one — origin-default behavior is
+    // unaffected for every pre-existing test that doesn't override this.
+    getMe: jasmine.createSpy('getMe').and.returnValue(of({ data: { salesPointStop: null } })),
     ...overrides,
   };
 }
@@ -750,6 +755,120 @@ describe('SellPageComponent', () => {
       ];
       const ordered = (comp as any)._buildOrderedStops(pairs);
       expect(ordered.map((s: { slug: string }) => s.slug)).toEqual(['a', 'b', 'zzz']);
+    });
+  });
+
+  // OBRS-193: salesperson sales-point default pickup. The pickup no longer
+  // always defaults to the route origin — it defaults to the salesperson's
+  // assigned salesPointStop (GET /users/me) when one is set AND it's on the
+  // current route; otherwise it falls back to the origin exactly as before.
+  describe('salesperson default pickup (OBRS-193)', () => {
+    function segPairsResponse() {
+      const pair = (from: string, to: string, fare: string) => ({
+        segmentId: 0,
+        fromStop: { slug: from, name: from.toUpperCase() },
+        toStop: { slug: to, name: to.toUpperCase() },
+        vehicleType: { slug: 'bus', name: 'Bus' },
+        fare,
+        estimatedDurationMinutes: 30,
+      });
+      return {
+        data: {
+          stopPairs: [
+            pair('stop_a', 'stop_b', '100'),
+            pair('stop_b', 'stop_c', '100'),
+            pair('stop_a', 'stop_c', '200'),
+          ],
+        },
+      };
+    }
+
+    function makeComponentWithSalesPoint(salesPointStop: string | null): {
+      comp: SellPageComponent;
+      api: any;
+      translate: any;
+    } {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+        getMe: jasmine.createSpy('getMe').and.returnValue(of({ data: { salesPointStop } })),
+      });
+      const translate = createTranslateStub();
+      const comp = new SellPageComponent(
+        api,
+        createAlertStub(),
+        translate,
+        new FormBuilder(),
+        createAdminApiStub(),
+        createScheduleStoreStub()
+      );
+      return { comp, api, translate };
+    }
+
+    it('(a) defaults pickup to salesPointStop when it is present AND on the route', () => {
+      const { comp } = makeComponentWithSalesPoint('stop_b');
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).pickupSlug).toBe('stop_b');
+    });
+
+    it('(b) falls back to the route origin when salesPointStop is present but NOT on the route', () => {
+      const { comp } = makeComponentWithSalesPoint('ghost_stop');
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).pickupSlug).toBe('stop_a');
+    });
+
+    it('(c) defaults pickup to the route origin when salesPointStop is null — regression, unchanged behavior', () => {
+      const { comp } = makeComponentWithSalesPoint(null);
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).pickupSlug).toBe('stop_a');
+    });
+
+    it('(d) preserves a manual pickup override across a reload even though it differs from salesPointStop', () => {
+      const { comp, translate } = makeComponentWithSalesPoint('stop_b');
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      // Sales point would default pickup to stop_b; staff manually overrides to
+      // the origin instead.
+      (comp as any).pickupSlug = 'stop_a';
+      (comp as any).dropoffSlug = 'stop_b';
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      // The existing preserve mechanism must still win — re-default must NOT
+      // silently reassert the sales-point stop over the manual choice.
+      expect((comp as any).pickupSlug).toBe('stop_a');
+      expect((comp as any).dropoffSlug).toBe('stop_b');
+    });
+
+    it('fetches /users/me only ONCE across ngOnInit + multiple trip selections (cached, not refetched)', () => {
+      const { comp, api } = makeComponentWithSalesPoint('stop_b');
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip({ scheduleId: 1 }), routeSlug: 'bkk-cm' });
+      (comp as any).onTripSelected({ trip: makeTrip({ scheduleId: 2 }), routeSlug: 'bkk-cm' });
+      expect(api.getMe).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not refetch /users/me on a language-switch reload', () => {
+      const { comp, api, translate } = makeComponentWithSalesPoint('stop_b');
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      (translate.onLangChange as Subject<unknown>).next({ lang: 'th' });
+      expect(api.getMe).toHaveBeenCalledTimes(1);
+    });
+
+    it('a /users/me error is treated as no sales point and does not block segment loading', () => {
+      const api = createStaffApiStub({
+        getRouteSegments: jasmine.createSpy('getRouteSegments').and.returnValue(of(segPairsResponse())),
+        getMe: jasmine.createSpy('getMe').and.returnValue(throwError(() => new Error('network error'))),
+      });
+      const comp = new SellPageComponent(
+        api, createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), createScheduleStoreStub()
+      );
+      comp.ngOnInit();
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).isLoadingSegments).toBeFalse();
+      expect((comp as any).pickupSlug).toBe('stop_a');
     });
   });
 
