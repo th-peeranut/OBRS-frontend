@@ -1,9 +1,10 @@
-import { of, Subject } from 'rxjs';
+import { of, throwError, Subject } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { TranslateService } from '@ngx-translate/core';
 
 import { ETicketComponent } from './e-ticket.component';
 import { BookingService } from '../../services/booking/booking.service';
+import { TicketService } from '../../services/ticket/ticket.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 
@@ -91,15 +92,25 @@ describe('ETicketComponent', () => {
     getBookingTickets: () => of(null),
   } as unknown as BookingService;
 
+  let ticketServiceStub: jasmine.SpyObj<TicketService>;
+
   const translateStub = {
     onLangChange: new Subject(),
     currentLang: 'en',
   } as unknown as TranslateService;
 
   beforeEach(() => {
+    ticketServiceStub = jasmine.createSpyObj<TicketService>('TicketService', [
+      'getBoardingToken',
+    ]);
+    ticketServiceStub.getBoardingToken.and.returnValue(
+      of(null) as unknown as ReturnType<TicketService['getBoardingToken']>
+    );
+
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
+      ticketServiceStub,
       translateStub
     );
   });
@@ -159,12 +170,23 @@ describe('ETicketComponent', () => {
       expect(component.vehiclePlate).toBe('12-34/กข 1234');
     });
 
-    it('maps passengers and seats, matching phone from the store by seat', () => {
+    it('maps passengers and seats, matching phone from the store by seat, and threads ticketId/ticketNumber through for the per-ticket QR fetch', () => {
       apply(buildTicketsData());
 
       expect(component.seats).toBe('1');
+      // The default ticketServiceStub resolves with no boardingToken, so the
+      // (synchronous, since the empty-token branch never awaits) QR fetch has
+      // already marked this ticket qrUnavailable by the time we assert here.
       expect(component.passengers).toEqual([
-        { name: 'Mr. Abc Def', phone: '0812345678', seat: '1' },
+        {
+          name: 'Mr. Abc Def',
+          phone: '0812345678',
+          seat: '1',
+          ticketId: 1,
+          ticketNumber: 'T-Q4QZXTZAFY',
+          qrDataUrl: '',
+          qrUnavailable: true,
+        },
       ]);
     });
 
@@ -196,6 +218,70 @@ describe('ETicketComponent', () => {
       (component as any).applyApiOverrides('en', storePassengers);
 
       expect(component.bookingNumber).toBe('STORE-REF');
+    });
+  });
+
+  describe('per-ticket boarding-token QR fetch (OBRS-96)', () => {
+    const storePassengers: PassengerInfo[] = [];
+
+    function twoTicketData(): BookingTicketsData {
+      const data = buildTicketsData();
+      data.journeys![0].tickets = [
+        {
+          id: 1,
+          ticketNumber: 'T-OK',
+          passengerName: 'Mr. Ok Passenger',
+          seatNumber: '1',
+          status: { code: 'confirmed', label: 'Confirmed' },
+        },
+        {
+          id: 2,
+          ticketNumber: 'T-CANCELLED',
+          passengerName: 'Mr. Cancelled Passenger',
+          seatNumber: '2',
+          status: { code: 'cancelled', label: 'Cancelled' },
+        },
+      ];
+      return data;
+    }
+
+    function apply(data: BookingTicketsData): void {
+      (component as any).ticketApiData = data;
+      (component as any).applyApiOverrides('en', storePassengers);
+    }
+
+    it('fetches one boarding token per ticketId', () => {
+      apply(buildTicketsData());
+
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1);
+    });
+
+    it('does not re-issue the GET for a ticket already fetched/in-flight (duplicate-fetch guard, e.g. a locale switch)', () => {
+      apply(buildTicketsData());
+      apply(buildTicketsData());
+
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(1);
+    });
+
+    it('isolates one ticket\'s failure via forkJoin + per-inner catchError — the other ticket\'s QR still renders, the page never blanks', async () => {
+      ticketServiceStub.getBoardingToken.and.callFake((ticketId: number) =>
+        ticketId === 1
+          ? (of({ code: 200, message: 'OK', data: { ticketId: 1, ticketNumber: 'T-OK', boardingToken: 'valid-token-1', expiresAt: '' } }) as never)
+          : (throwError(() => ({ error: { errorCode: 'TICKET_NOT_CONFIRMED' } })) as never)
+      );
+
+      apply(twoTicketData());
+      // Let the forkJoin subscription + the real QRCode.toDataURL promise settle.
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(component.passengers.length).toBe(2);
+      const okPassenger = component.passengers.find((p) => p.ticketId === 1);
+      const cancelledPassenger = component.passengers.find((p) => p.ticketId === 2);
+
+      expect(okPassenger?.qrUnavailable).toBeFalse();
+      expect(okPassenger?.qrDataUrl).toContain('data:image');
+      expect(cancelledPassenger?.qrUnavailable).toBeTrue();
+      expect(cancelledPassenger?.qrDataUrl).toBe('');
     });
   });
 });

@@ -77,6 +77,30 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 > - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
 > - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
 
+### [Frontend] 2026-07-10 — Digital e-ticket QR + manual boarding-scan (OBRS-96): endpoints not yet in contract
+**Affected endpoints**:
+- `GET /api/private/tickets/{id}/boarding-token` (new — customer-facing, per-ticket signed QR payload)
+- `POST /api/private/tickets/boarding-scan` (new — staff/operator-facing manual token validation + boarding)
+
+**Request type**: New endpoints (both).
+
+**Status at time of writing**: this frontend work (branch `ao/obrs-96-eticket-qr`) was built against the SA/UX-locked OBRS-96 spec in parallel with the paired backend worktree `OBRS-backend-wt-obrs-96-eticket-qr` (same branch name, same story) — checked and confirmed still WIP there (`IMPLEMENTATION_CHECKLIST.md` lists `[#52] OBRS-96` as 🔒 in-progress, no boarding-token/boarding-scan controller/service/DTO exists yet in that worktree's `src/` at time of writing). This is the standard parallel-lane build pattern for this codebase (see the promo-code / OBRS-109 entry below for precedent), not an assumption that an undocumented endpoint already exists.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/tickets/{id}/boarding-token` → `{ ticketId, ticketNumber, boardingToken, expiresAt }` | New endpoint | One QR per ticket on the customer e-ticket page, encoding the signed `boardingToken` (not the human-readable ticket number) — see `docs/adr/0013-per-ticket-qr-eticket-and-boarding-scan.md` |
+| `POST /api/private/tickets/boarding-scan` — body `{ token, scheduleId }`, success (200) `{ ticketId, ticketNumber, passengerName, seatNumber, boardedAt }` | New endpoint | Staff/operator manual boarding validation box on the boarding-list page |
+| `errorCode` values `INVALID_TICKET_TOKEN` (400), `EXPIRED_TICKET_TOKEN` (400), `WRONG_SCHEDULE_TICKET` (400), `BOARDING_WINDOW_NOT_OPEN` (400), `TICKET_NOT_CONFIRMED` (409), `ALREADY_BOARDED` (409), `TICKET_ERROR_ID_NOT_FOUND` (404 — kept exactly, not tidied to `TICKET_NOT_FOUND`) | `boarding-scan`'s error response | Frontend maps each to a `STAFF.BOARDING.SCAN.ERROR.*` i18n key + severity + icon via `shared/lib/boarding-scan-error.ts`, mirroring `reschedule-error.ts`; assumed names per the locked UX spec, not yet confirmed against a real `deriveErrorCode()` output |
+
+### What the frontend implemented (additive-safe)
+- `TicketService.getBoardingToken()` (new service, `src/app/services/ticket/ticket.service.ts`) and `StaffApiService.boardingScan()` (added method) are additive — no existing endpoint or field was changed.
+- E-ticket page: per-ticket QR cards render a placeholder (`E_TICKET.QR_UNAVAILABLE`) instead of blanking when a ticket's `boarding-token` GET fails for any reason (409/404/network) — `forkJoin` with a per-inner `catchError` isolates one ticket's failure from the rest (ADR 0013, Decision 2).
+- Boarding-list page: the scan box is additive UI inside the already-guarded `staff/boarding/:scheduleId` route (`requiredRoles: ['driver','salesperson']`, hierarchy covers OWNER/ADMIN) — no change to the existing `checkIn()` button/flow.
+
+### Impact if not addressed
+The e-ticket page will show every ticket's QR as the "unavailable" placeholder (a 404 on every `boarding-token` GET), and the boarding-list scan box will show the `GENERIC` error on every validation attempt (a 404 on `boarding-scan`) — both degrade gracefully (no broken UI, no blank page) but are functionally inert until the backend lands. Do not merge to `dev`/`sit` until the backend implements this feature (or an explicit decision accepts the temporary contract drift), per `CLAUDE.md`'s R0 rule for undocumented endpoints — track against the paired backend worktree before promoting either side.
+
 ### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
 **Affected endpoints**:
 - `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)

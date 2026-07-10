@@ -1,5 +1,72 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — Frontend implementation: digital e-ticket QR + manual boarding-scan (OBRS-96)
+
+**Worktree:** `OBRS-frontend-wt-obrs-96-eticket-qr` (branch `ao/obrs-96-eticket-qr`, off
+`dev`). `ng test`: 1020/1020 PASS. `ng build --configuration production`: PASS (1.47 MB
+initial, under the 1.5 MB budget).
+
+**Backend does not exist yet for either endpoint — built against the SA/UX-locked shape,
+flagged in `docs/handoff.md`, same pattern as OBRS-109/OBRS-85.** Checked the paired backend
+worktree `OBRS-backend-wt-obrs-96-eticket-qr` (same branch name): `git diff dev --stat` shows
+only `AGENT_MEMORY.md` + unrelated fixture fixes, no boarding-token/boarding-scan
+controller/service/DTO. `IMPLEMENTATION_CHECKLIST.md` confirms `[#52] OBRS-96` is still
+🔒 WIP. Filed a Contract Request in `docs/handoff.md` covering both
+`GET /api/private/tickets/{id}/boarding-token` and `POST /api/private/tickets/boarding-scan`.
+Until the backend lands: every ticket's e-ticket QR shows the `qrUnavailable` placeholder
+(404 on every `boarding-token` GET), and the boarding-scan box always shows the `GENERIC`
+error — both degrade gracefully, no broken UI.
+
+**Per-ticket QR state lives OUTSIDE the transient `passengers` array — this is the one
+non-obvious design point.** `ETicketComponent.mapTicketFields`/`applyApiOverrides` already
+re-ran on every `combineLatest` emission before this feature, including a bare locale switch
+(`translateService.onLangChange`). If the resolved `qrDataUrl`/`qrUnavailable` lived only on
+the `TicketPassenger` row objects, a language toggle would rebuild the array from scratch and
+either blank already-fetched QR codes or re-trigger duplicate `boarding-token` GETs per
+ticket. Fixed via two component-level, `ticketId`-keyed structures independent of the
+`passengers` array's lifetime: `qrStateByTicketId: Map<number,{qrDataUrl,qrUnavailable}>` and
+`fetchedTicketIds: Set<number>`. See `docs/adr/0013-per-ticket-qr-eticket-and-boarding-scan.md`
+Decision 3 for the full writeup. **Pattern to remember:** whenever a component's field-mapping
+function re-runs on a locale/language change (not just on new data), any per-item async state
+that must survive that re-run needs to live in a keyed side-map, not embedded in the
+regenerated array.
+
+**`forkJoin` isolation gotcha caught while writing the isolation test, not before.** The
+initial instinct was `catchError` around the whole `forkJoin(...)` call — that's wrong: it
+would make ONE ticket's 409 (`TICKET_NOT_CONFIRMED` on a cancelled/refunded leg) blank every
+other ticket's QR, since `forkJoin` never emits if any inner observable errors. Fix: put
+`catchError` **inside** each inner `.pipe()`, resolving to a `{ticketId, boardingToken: ''}`
+sentinel — every inner observable is then guaranteed to emit, so `forkJoin` always completes
+with one result per ticket regardless of how many failed. Also learned while writing the spec
+for this: the default `of(null)` boarding-token stub resolves the whole
+fetch→apply chain **synchronously** (the empty-token branch in `applyBoardingTokenResults`
+never hits an `await`), so a test asserting `component.passengers` right after calling
+`applyApiOverrides()` already sees the resolved (`qrUnavailable: true`) state, not a pending
+one — don't assume an async-looking method leaves state untouched by the time the next
+synchronous line runs; check whether every branch actually awaits something.
+
+**Boarding-scan `SKIP_AUTH_LOGOUT` is intentionally asymmetric between the two new calls** —
+the customer-side `TicketService.getBoardingToken()` does NOT set it (a 401 there is the
+customer's own expired session and should force-logout normally), but
+`StaffApiService.boardingScan()` DOES set it, mirroring `booking.service.ts`/
+`promotion.service.ts`'s defense-in-depth against OBRS-187. Don't copy one call's
+`SKIP_AUTH_LOGOUT` choice onto the other without re-checking who's making the call and what a
+stray 401 there should mean.
+
+**Boarding-scan error UI reuses `.admin-status`/`.admin-field`/`.admin-btn-primary` — no new
+control types.** The 7 documented `errorCode`s (`INVALID_TICKET_TOKEN`, `EXPIRED_TICKET_TOKEN`,
+`WRONG_SCHEDULE_TICKET`, `BOARDING_WINDOW_NOT_OPEN`, `TICKET_NOT_CONFIRMED`, `ALREADY_BOARDED`,
+`TICKET_ERROR_ID_NOT_FOUND`) plus `GENERIC` each map to a distinct i18n key + severity
+(`danger`/`warning`) + Material Symbol icon in `shared/lib/boarding-scan-error.ts` (mirrors
+`reschedule-error.ts`). `TICKET_ERROR_ID_NOT_FOUND` is kept exactly as specified — did NOT
+"clean up" to `TICKET_NOT_FOUND`, since it must match the backend's stable code verbatim.
+
+**`BoardingListItemDto.boardedAt?: string`** is a new, additive, optional field — every
+existing call site (the pre-existing `checkIn()` button flow) is untouched; only the new
+`reflectBoardedInList()` (fired after a successful `boardingScan()`) sets it via
+`store.mutate()`, the same optimistic-update pattern the existing `checkIn()` method already
+uses.
+
 ## 2026-07-09 — Scrutinize self-fix: OBRS-176 admin cross-area access
 
 **Worktree:** `OBRS-frontend-wt-admin-cross-area-access` (branch `ao/admin-cross-area-access`).

@@ -2,10 +2,13 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import {
+  catchError,
   combineLatest,
   firstValueFrom,
+  forkJoin,
   map,
   Observable,
+  of,
   startWith,
   Subject,
   takeUntil,
@@ -15,6 +18,7 @@ import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
+import { TicketService } from '../../services/ticket/ticket.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
 import {
   BookingTicketJourney,
@@ -42,6 +46,20 @@ interface TicketPassenger {
   name: string;
   phone: string;
   seat: string;
+  /** OBRS-96: threaded through from `BookingTicketItem.id` so each row can
+   * fetch its own boarding-token QR. `null` for rows built before the ticket
+   * API response lands (store-only passengers have no ticket id yet). */
+  ticketId: number | null;
+  /** This ticket's own human-readable number (was previously only shown
+   * joined across the whole booking in the header). */
+  ticketNumber: string;
+  /** Data-URL of the QR rendered from this ticket's `boardingToken` — empty
+   * until the per-ticket fetch resolves. */
+  qrDataUrl: string;
+  /** True when the boarding-token fetch failed for this ticket specifically
+   * (e.g. 409 TICKET_NOT_CONFIRMED on a cancelled/refunded leg) — renders a
+   * placeholder instead of blanking the whole page (OBRS-96). */
+  qrUnavailable: boolean;
 }
 type Locale = 'en' | 'th' | 'zh';
 
@@ -66,16 +84,26 @@ export class ETicketComponent implements OnInit, OnDestroy {
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
-  qrCodeDataUrl = '';
   isDownloadingTicket = false;
 
   passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
-  private latestQrPayload = '';
   private ticketApiData: BookingTicketsData | null = null;
   private latestLocale: Locale = 'en';
   private latestStorePassengers: PassengerInfo[] | null = null;
   private lastTicketRequestBookingId: number | null = null;
+  /** Resolved QR data-URL / unavailable-flag per `ticketId`, keyed outside the
+   * `passengers` array so it survives the array being rebuilt on every
+   * locale switch (`applyApiOverrides` re-runs on each `combineLatest`
+   * emission, including a bare language change). */
+  private readonly qrStateByTicketId = new Map<
+    number,
+    { qrDataUrl: string; qrUnavailable: boolean }
+  >();
+  /** Guards against re-issuing the boarding-token GET for a ticket that is
+   * already fetched or in flight (locale switches re-run `applyApiOverrides`
+   * on the same tickets). */
+  private readonly fetchedTicketIds = new Set<number>();
 
   private readonly destroy$ = new Subject<void>();
   private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
@@ -99,6 +127,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store,
     private bookingService: BookingService,
+    private ticketService: TicketService,
     private translateService: TranslateService
   ) {
     this.scheduleBooking$ = this.store.pipe(
@@ -239,7 +268,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
       this.bookingNumber !== '-'
         ? this.bookingNumber
         : this.buildTicketNumber(bookingId, departureSchedule);
-    void this.updateQrCode(this.ticketNumber);
     this.travelDate = this.buildTravelDate(
       departureSchedule?.departureDateTime,
       returnSchedule?.departureDateTime,
@@ -383,6 +411,13 @@ export class ETicketComponent implements OnInit, OnDestroy {
         name: nameParts.join(' ').trim() || '-',
         phone: passenger.phoneNumber?.trim() || '-',
         seat: passenger.passengerSeat?.trim() || '-',
+        // No ticket id exists yet at this stage — the store only carries the
+        // passenger-info form, not the created ticket. Real ticketId/QR data
+        // is filled in once `buildPassengersFromApi` runs (loadTicketFromApi).
+        ticketId: null,
+        ticketNumber: '-',
+        qrDataUrl: '',
+        qrUnavailable: false,
       };
     });
   }
@@ -562,7 +597,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const ticketNumber = this.collectTicketNumbers(journeys);
     if (ticketNumber) {
       this.ticketNumber = ticketNumber;
-      void this.updateQrCode(this.ticketNumber);
     }
 
     const fromName = outbound?.fromStop?.label?.trim() ?? '';
@@ -608,6 +642,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (apiPassengers.length > 0) {
       this.passengers = apiPassengers;
       this.seats = this.buildSeatList(apiPassengers);
+      this.fetchBoardingTokensForPassengers();
     }
 
     this.booker = this.buildBookerFromApi(data);
@@ -627,6 +662,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
       name: '-',
       phone,
       seat: '-',
+      ticketId: null,
+      ticketNumber: '-',
+      qrDataUrl: '',
+      qrUnavailable: false,
     };
   }
 
@@ -688,10 +727,17 @@ export class ETicketComponent implements OnInit, OnDestroy {
     const tickets = journey?.tickets ?? [];
     return tickets.map((ticket) => {
       const seat = ticket.seatNumber?.trim() || '-';
+      const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
+      const qrState = ticketId !== null ? this.qrStateByTicketId.get(ticketId) : undefined;
+
       return {
         name: ticket.passengerName?.trim() || '-',
         phone: this.findPhoneForSeat(seat, storePassengers),
         seat,
+        ticketId,
+        ticketNumber: ticket.ticketNumber?.trim() || '-',
+        qrDataUrl: qrState?.qrDataUrl ?? '',
+        qrUnavailable: qrState?.qrUnavailable ?? false,
       };
     });
   }
@@ -719,29 +765,80 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return vehicleNumber || numberPlate || '';
   }
 
-  private async updateQrCode(ticketNumber: string): Promise<void> {
-    const normalizedTicketNumber = ticketNumber?.trim();
-    this.latestQrPayload = normalizedTicketNumber;
+  /**
+   * OBRS-96: fetch one boarding token per ticket and render each as its own
+   * QR — replaces the old single booking-level QR. `forkJoin` with a
+   * per-inner `catchError` means one ticket's failure (e.g. 409
+   * `TICKET_NOT_CONFIRMED` on a cancelled/refunded/rescheduled-away leg)
+   * resolves to a "no token" sentinel instead of erroring the whole
+   * `forkJoin` — every other ticket's QR still renders. `fetchedTicketIds`
+   * guards against re-issuing the GET on a locale switch (`applyApiOverrides`
+   * re-runs on every `combineLatest` emission, including a bare language
+   * change) for a ticket already fetched or in flight.
+   */
+  private fetchBoardingTokensForPassengers(): void {
+    const pendingTicketIds = this.passengers
+      .map((passenger) => passenger.ticketId)
+      .filter(
+        (ticketId): ticketId is number =>
+          ticketId !== null && !this.fetchedTicketIds.has(ticketId)
+      );
 
-    if (!normalizedTicketNumber || normalizedTicketNumber === '-') {
-      this.qrCodeDataUrl = '';
+    if (pendingTicketIds.length === 0) {
       return;
     }
+    pendingTicketIds.forEach((ticketId) => this.fetchedTicketIds.add(ticketId));
 
-    try {
-      const qrDataUrl = await QRCode.toDataURL(normalizedTicketNumber, {
-        width: 140,
-        margin: 1,
-        errorCorrectionLevel: 'M',
+    forkJoin(
+      pendingTicketIds.map((ticketId) =>
+        this.ticketService.getBoardingToken(ticketId).pipe(
+          map((response) => ({
+            ticketId,
+            boardingToken: response?.data?.boardingToken?.trim() ?? '',
+          })),
+          // Isolate this ticket's failure (409 TICKET_NOT_CONFIRMED, 404, a
+          // transient network error, ...) so it can't blank the rest of the
+          // page — surfaced downstream as an empty boardingToken (placeholder).
+          catchError(() => of({ ticketId, boardingToken: '' }))
+        )
+      )
+    )
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((results) => {
+        void this.applyBoardingTokenResults(results);
       });
+  }
 
-      if (this.latestQrPayload === normalizedTicketNumber) {
-        this.qrCodeDataUrl = qrDataUrl;
+  private async applyBoardingTokenResults(
+    results: { ticketId: number; boardingToken: string }[]
+  ): Promise<void> {
+    for (const result of results) {
+      if (!result.boardingToken) {
+        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
+        continue;
       }
-    } catch {
-      if (this.latestQrPayload === normalizedTicketNumber) {
-        this.qrCodeDataUrl = '';
+
+      try {
+        const qrDataUrl = await QRCode.toDataURL(result.boardingToken, {
+          width: 140,
+          margin: 1,
+          errorCorrectionLevel: 'M',
+        });
+        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl, qrUnavailable: false });
+      } catch {
+        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
       }
     }
+
+    // Re-derive from the now-populated qrStateByTicketId map rather than
+    // mutating passenger objects in place, so a stray re-render always
+    // reflects the latest resolved state.
+    this.passengers = this.passengers.map((passenger) => {
+      if (passenger.ticketId === null) {
+        return passenger;
+      }
+      const qrState = this.qrStateByTicketId.get(passenger.ticketId);
+      return qrState ? { ...passenger, ...qrState } : passenger;
+    });
   }
 }

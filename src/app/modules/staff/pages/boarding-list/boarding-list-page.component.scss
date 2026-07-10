@@ -1,0 +1,52 @@
+// OBRS-96: manual boarding-scan validation box. Uses the shared admin/staff
+// shell tokens (design-system §2/§3/§4/§11) — .admin-field pill input,
+// .admin-btn/.admin-btn-primary, .admin-status result banner — since this is
+// a NEW control on this page (the surrounding table stays Bootstrap-styled,
+// existing/untouched).
+.boarding-scan-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.boarding-scan-input-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.boarding-scan-input {
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+
+.boarding-scan-btn {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.boarding-scan-camera-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+}
+
+.boarding-scan-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 0 0;
+}
+
+.boarding-scan-result-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}

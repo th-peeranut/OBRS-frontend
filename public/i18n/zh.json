@@ -1142,6 +1142,7 @@
       "TOTAL_UNIT": "泰铢"
     },
     "QR_HINT": "二维码仅用于登车前的身份验证。",
+    "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",
     "DOWNLOAD": "下载电子票",
     "NOTE_LABEL": "注意：",
     "QR_ARIA_LABEL": "二维码",
@@ -1246,7 +1247,29 @@
       "CHECKED_IN": "已登车",
       "CHECK_IN_BTN": "登车",
       "EMPTY_TITLE": "暂无旅客",
-      "EMPTY_BODY": "本班次暂无登车记录。"
+      "EMPTY_BODY": "本班次暂无登车记录。",
+      "SCAN": {
+        "LABEL": "登车令牌",
+        "PLACEHOLDER": "粘贴或扫描登车令牌",
+        "BUTTON": "验证 / 登车",
+        "VALIDATING": "验证中…",
+        "CAMERA_SOON": "摄像头扫描功能即将推出 — 目前请手动输入令牌。",
+        "SUCCESS_TITLE": "已登车",
+        "RESULT_NAME": "乘客",
+        "RESULT_SEAT": "座位",
+        "RESULT_BOARDED_AT": "登车时间",
+        "DISMISS": "关闭",
+        "ERROR": {
+          "INVALID_TICKET_TOKEN": "此令牌无效，请检查后重试。",
+          "EXPIRED_TICKET_TOKEN": "此令牌已过期，请让乘客刷新电子票。",
+          "WRONG_SCHEDULE_TICKET": "此票属于其他班次，请勿在此登车。",
+          "BOARDING_WINDOW_NOT_OPEN": "此班次尚未开放登车。",
+          "TICKET_NOT_CONFIRMED": "此票无法用于登车（已取消、已退款、未出现或已改签）。",
+          "ALREADY_BOARDED": "此票已登车。",
+          "TICKET_ERROR_ID_NOT_FOUND": "未找到与此令牌对应的票。",
+          "GENERIC": "验证失败，请重试。"
+        }
+      }
     },
     "DRIVER": {
       "TITLE": "我的分配班次",

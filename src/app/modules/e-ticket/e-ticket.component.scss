@@ -246,12 +246,69 @@
     linear-gradient(rgba(13, 21, 37, 0.12) 50%, transparent 50%);
   background-size: 18px 18px;
   background-color: $primary-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  // A per-ticket fetch failure (409 TICKET_NOT_CONFIRMED, etc.) — distinguish
+  // from the plain "still loading" placeholder above by icon, not color alone.
+  &.is-unavailable {
+    background-image: none;
+    background-color: $secondary-lightgrey;
+  }
+}
+
+.qr-unavailable-icon {
+  font-size: 32px;
+  color: $text-red;
+}
+
+.qr-unavailable-text {
+  font-size: 11px;
+  font-weight: $font-weight-semibold;
+  color: $text-red;
+  text-align: center;
+  max-width: 140px;
 }
 
 .qr-hint {
   font-size: 11px;
   color: $text-lightgrey;
   text-align: center;
+}
+
+// OBRS-96: one card per ticket — QR + ticket number + passenger name/seat —
+// replacing the old single booking-level QR footer. Vertical stack so an
+// N-passenger booking simply grows the (unbounded-height) .ticket-paper.
+.ticket-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.ticket-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2xs;
+  padding: $space-sm 0;
+
+  & + & {
+    border-top: 1px dashed $primary-lightgrey;
+  }
+}
+
+.ticket-card-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3xs;
+}
+
+.ticket-card-number {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-softblack;
 }
 
 .download-btn {

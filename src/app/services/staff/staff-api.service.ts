@@ -3,7 +3,15 @@ import { HttpClient, HttpContext, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { SKIP_GLOBAL_ERROR_ALERT, SKIP_GLOBAL_LOADING_ALERT } from '../../shared/interceptors/http-context-tokens';
+import {
+  SKIP_AUTH_LOGOUT,
+  SKIP_GLOBAL_ERROR_ALERT,
+  SKIP_GLOBAL_LOADING_ALERT,
+} from '../../shared/interceptors/http-context-tokens';
+import {
+  BoardingScanRequest,
+  BoardingScanResultDto,
+} from '../../shared/interfaces/ticket-boarding.interface';
 import { DriverDto } from '../admin/admin-api.service';
 
 export interface ScheduleSearchReqDto {
@@ -155,6 +163,9 @@ export interface BoardingListItemDto {
     code: string;
     label: string;
   };
+  /** OBRS-96: populated once the ticket has been boarded via the manual
+   * boarding-scan box (undefined until then — additive, optional field). */
+  boardedAt?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -184,6 +195,25 @@ export class StaffApiService {
       `${environment.apiUrl}/api/private/tickets/${ticketId}/check-in`,
       {},
       { context: this.skipContext }
+    );
+  }
+
+  // OBRS-96: manual boarding-scan validation (staff/operator, text-entry
+  // token — camera scanning is out of scope for this card). SKIP_AUTH_LOGOUT
+  // is set here in ADDITION to the shared skipContext, mirroring
+  // booking.service.ts / promotion.service.ts, as defense-in-depth against
+  // the OBRS-187 force-logout bug even though the backend guarantees a
+  // domain 400/409 (never a bare 401) for every rejected scan.
+  private readonly boardingScanContext = new HttpContext()
+    .set(SKIP_GLOBAL_ERROR_ALERT, true)
+    .set(SKIP_GLOBAL_LOADING_ALERT, true)
+    .set(SKIP_AUTH_LOGOUT, true);
+
+  boardingScan(request: BoardingScanRequest): Observable<ResponseAPI<BoardingScanResultDto>> {
+    return this.http.post<ResponseAPI<BoardingScanResultDto>>(
+      `${environment.apiUrl}/api/private/tickets/boarding-scan`,
+      request,
+      { context: this.boardingScanContext }
     );
   }
 
