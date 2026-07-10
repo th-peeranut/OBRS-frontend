@@ -227,6 +227,7 @@
 // (it moved to the item's `title` tooltip, shown on hover) so every row is one
 // short line — the menu stays compact.
 .action-menu-item {
+  position: relative; // anchor for the disabled-reason tooltip below
   display: flex;
   align-items: center;
   gap: $space-2xs;
@@ -256,15 +257,62 @@
   &--danger &__label {
     color: $text-red;
   }
+
+  // Disabled-reason tooltip. Mirrors the app's existing tooltip standard
+  // (register.component's `.tooltip-box`): same $secondary-grey surface, 6px
+  // radius, soft shadow, and an arrow — but shown INSTANTLY on hover
+  // (`display: block`, no delay) instead of the browser's native `title`. The
+  // menu is pinned to the right of each card, so the tooltip floats to the LEFT
+  // of the row (over the empty card body), vertically centered on the hovered
+  // row — never overlapping the menu box or its sibling rows. `.p-menu` has
+  // `overflow: visible`, so it isn't clipped. Dark-mode override lives in
+  // styles/dark-theme.scss beside the `.tooltip-box` one (same split register uses).
+  &__tooltip {
+    display: none;
+    position: absolute;
+    right: calc(100% + #{$space-2xs});
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+    padding: $space-3xs $space-xs;
+    border-radius: 6px;
+    background-color: $secondary-grey;
+    color: $text-black;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    font-size: $font-size-xs;
+    line-height: $line-height-base;
+    white-space: nowrap;
+    pointer-events: none; // a hint, never a hit target
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 100%; // right edge of the tooltip, arrow points right toward the menu
+      top: 50%;
+      transform: translateY(-50%);
+      border: 5px solid transparent;
+      border-left-color: $secondary-grey;
+    }
+  }
+
+  // Instant reveal on hover of the disabled row (its `pointer-events` is
+  // re-enabled below so the hover actually registers).
+  &--disabled:hover &__tooltip {
+    display: block;
+  }
 }
 
 // The PrimeNG menu list ships a 32px LEFT padding (0 on the right), which is
 // what pushed every row far off the left edge — the bulk of the "too much space
 // before the text" (leading ≈ 60px vs ~16px trailing). Zero the horizontal list
 // padding (rows then indent only by the item's own small padding) and keep a
-// tight vertical rhythm. `!important` beats the theme's normal padding rule.
+// tight vertical rhythm. It ALSO ships a `margin-bottom: 16px`, which made the
+// space after the last row (28px) far exceed the space before the first (12px) —
+// zero the margin so top and bottom breathing room match. `!important` beats the
+// theme's normal padding/margin rules.
 ::ng-deep .my-bookings-action-menu .p-menu-list {
   padding: $space-3xs 0 !important;
+  margin: 0 !important;
 }
 
 // PrimeNG hard-sets `.p-menu { width: 12.5rem }` (200px) — THAT fixed width (not
@@ -298,15 +346,20 @@
 ::ng-deep .my-bookings-action-menu .p-menuitem {
   cursor: pointer;
 
-  // Disabled items: PrimeNG puts `pointer-events: none` on the inner
-  // `.p-menuitem-content` (so a cursor set on it or the <li> never paints —
-  // the row hit-tests to whatever's behind it). Re-enable hit-testing on the
-  // content so our OWN `.action-menu-item` element (styled below) becomes the
-  // hovered target and can paint the cursor. We don't fight PrimeNG's
-  // `.p-disabled` cursor rule on the <li>/content (it beats even `!important`
-  // in this build — verified live); instead we paint on our view-encapsulated
-  // element, which nothing else targets.
-  &.p-disabled .p-menuitem-content {
+  // Disabled items: PrimeNG's `.p-disabled *` sets `pointer-events: none` on the
+  // inner `.p-menuitem-content` AND on our own `.action-menu-item` (and its
+  // children). Two things break as a result: (1) a cursor set on our row never
+  // paints, and (2) the native `title` tooltip — set on `.action-menu-item` —
+  // never fires, because hover falls THROUGH the pointer-events:none row down to
+  // `.p-menuitem-content` (which carries no title). Re-enable hit-testing on BOTH
+  // the content and our own row so `.action-menu-item` becomes the topmost hovered
+  // target: it can then paint the `not-allowed` cursor and surface its `title`
+  // tooltip. The item is still disabled in PrimeNG's model (aria-disabled + no
+  // command binding), so re-enabling pointer-events doesn't make it clickable —
+  // it only lets hover register (OBRS-170; verified live — itemPE was `none`, so
+  // the tooltip never showed until this).
+  &.p-disabled .p-menuitem-content,
+  &.p-disabled .action-menu-item {
     pointer-events: auto;
   }
 }

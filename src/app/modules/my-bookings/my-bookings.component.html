@@ -125,13 +125,22 @@
       class="action-menu-item"
       [class.action-menu-item--danger]="item.danger"
       [class.action-menu-item--disabled]="item.disabled"
-      [attr.title]="item.disabled && item.reasonText ? item.reasonText : null"
     >
       <span class="action-menu-item__icon-slot">
         <span *ngIf="item.submitting" class="spinner" aria-hidden="true"></span>
         <i *ngIf="!item.submitting" class="bi" [ngClass]="item.icon" aria-hidden="true"></i>
       </span>
       <span class="action-menu-item__label">{{ item.label }}</span>
+      <!-- Disabled reason as an in-app tooltip (instant on hover), matching the
+           app's tooltip standard (register's `.tooltip-box`) instead of the native
+           `title` (delayed, OS-styled). Only rendered when the item is disabled and
+           has a reason. -->
+      <span
+        *ngIf="item.disabled && item.reasonText"
+        class="action-menu-item__tooltip"
+        role="tooltip"
+        >{{ item.reasonText }}</span
+      >
     </div>
   </ng-template>
 </p-menu>

@@ -59,9 +59,12 @@ function cardByBookingNumber(page: Page, bookingNumber: string) {
  * trigger (`.actions-menu-btn`) opening a PrimeNG `p-menu` popup
  * (`appendTo="body"`, so the menu itself is queried from `page`, not scoped
  * under `card`). Each item is `.action-menu-item` with a `.action-menu-item__label`
- * and, when disabled, its ineligibility reason on the `.action-menu-item`
- * element's `title` attribute (a hover tooltip — OBRS-170; it used to be an
- * inline `.action-menu-item__reason` subtext).
+ * and, when disabled, its ineligibility reason in a `.action-menu-item__tooltip`
+ * element — an instant in-app hover tooltip matching register's `.tooltip-box`
+ * standard (OBRS-170; it was briefly a native `title`, and before that an inline
+ * `.action-menu-item__reason` subtext). The tooltip is `display:none` until hover
+ * but always present in the DOM for disabled items, so `toHaveText` can assert it
+ * without hovering; enabled items don't render it at all.
  *
  * PrimeNG's popup `p-menu` binds a `ConnectedOverlayScrollHandler` (see
  * node_modules/primeng/fesm2022/primeng-menu.mjs) that closes the menu on
@@ -79,7 +82,7 @@ async function openActionsMenu(page: Page, card: Locator): Promise<Locator> {
 }
 
 /** The `<li class="p-menuitem">` (carries `aria-disabled`) for a given item's
- * label text — use this for both disabled-state and reason (title) assertions.
+ * label text — use this for both disabled-state and reason (tooltip) assertions.
  * Filters on the `.action-menu-item__label` descendant specifically so an
  * anchored pattern like `/^Reschedule$/` matches only the label span. */
 function menuItem(menu: Locator, labelPattern: RegExp): Locator {
@@ -135,7 +138,8 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
 
     const rescheduleItem = menuItem(menu, /^Reschedule$/);
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'false');
-    await expect(rescheduleItem.locator('.action-menu-item')).not.toHaveAttribute('title', /.+/);
+    // Enabled items render no reason tooltip at all.
+    await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveCount(0);
 
     // fullPage:false deliberately — a fullPage capture scrolls the page,
     // which trips PrimeNG's ConnectedOverlayScrollHandler and silently
@@ -356,8 +360,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
       .withContext('never hidden, even when ineligible')
       .toBeVisible();
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
-    await expect(rescheduleItem.locator('.action-menu-item')).toHaveAttribute(
-      'title',
+    await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveText(
       /Confirmed bookings only/i
     );
 
@@ -607,8 +610,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     const rescheduleItem = menuItem(cancelledMenu, /^Reschedule$/);
     await expect(rescheduleItem).toBeVisible();
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
-    await expect(rescheduleItem.locator('.action-menu-item')).toHaveAttribute(
-      'title',
+    await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveText(
       /Confirmed bookings only/i
     );
     await page.screenshot({ path: 'e2e-evidence/menu-disabled-reschedule-reason.png', fullPage: true });
@@ -660,8 +662,7 @@ test.describe('My Bookings — Reschedule (OBRS-83)', () => {
     const cancelledMenu = await openActionsMenu(page, cancelledCard);
     const rescheduleItem = menuItem(cancelledMenu, /เลื่อนการเดินทาง/);
     await expect(rescheduleItem).toHaveAttribute('aria-disabled', 'true');
-    await expect(rescheduleItem.locator('.action-menu-item')).toHaveAttribute(
-      'title',
+    await expect(rescheduleItem.locator('.action-menu-item__tooltip')).toHaveText(
       'เฉพาะการจองที่ยืนยันแล้ว'
     );
     await expect(cancelledMenu).not.toContainText('MY_BOOKINGS.');

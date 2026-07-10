@@ -260,6 +260,19 @@ body.is-dark {
     color: $dk-text;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
   }
+
+  // My-bookings action-menu disabled-reason tooltip — same dark treatment as
+  // `.tooltip-box` above (the menu popup is appendTo="body", so it lives under
+  // `body.is-dark` here rather than inside the component's encapsulation).
+  .my-bookings-action-menu .action-menu-item__tooltip {
+    background-color: $dk-bg-card;
+    color: $dk-text;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+
+    &::after {
+      border-left-color: $dk-bg-card;
+    }
+  }
 }
 
 // =============================================================================
