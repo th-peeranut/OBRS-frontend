@@ -2,7 +2,7 @@ import { BehaviorSubject, of, throwError, Subject } from 'rxjs';
 import { FormBuilder } from '@angular/forms';
 import { SellPageComponent } from './sell-page.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
-import { createRouterStub, createStoreStub, createTranslateStub } from '../../../../testing/test-stubs';
+import { createTranslateStub } from '../../../../testing/test-stubs';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
@@ -102,8 +102,6 @@ function makeComponent(
   scheduleStore = createScheduleStoreStub()
 ): SellPageComponent {
   return new SellPageComponent(
-    createRouterStub(),
-    createStoreStub(),
     staffApi,
     alertService,
     createTranslateStub(),
@@ -395,6 +393,29 @@ describe('SellPageComponent', () => {
       expect('identityCardNumber' in passenger).toBeFalse();
     });
 
+    it('on a successful sale clears the selected trip, reloads trips, and confirms in place — no /e-ticket navigation (OBRS-188)', () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      const loadTripsSpy = spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+
+      expect(api.createWalkInBooking).toHaveBeenCalled();
+      expect(api.payWalkIn).toHaveBeenCalled();
+      // Seat map is closed so the just-sold seat can't still render as available,
+      // and the trip list is reloaded so the sold-count badge updates.
+      expect((comp as any).selectedTrip).toBeNull();
+      expect((comp as any).selectedSeats).toEqual([]);
+      expect(loadTripsSpy).toHaveBeenCalled();
+      // Staff get an in-place success toast instead of being bounced from the
+      // customerArea /e-ticket route.
+      expect(alert.success).toHaveBeenCalled();
+    });
+
     it('includes identityCardNumber in passenger when provided', () => {
       const api = createStaffApiStub();
       const comp = makeComponent(api);
@@ -596,8 +617,6 @@ describe('SellPageComponent', () => {
     } {
       const translate = createTranslateStub();
       const comp = new SellPageComponent(
-        createRouterStub(),
-        createStoreStub(),
         api,
         createAlertStub(),
         translate,
@@ -826,7 +845,7 @@ describe('SellPageComponent', () => {
     it('applies the first-option default to route (but NOT vehicleType) when store loads while create modal is open', () => {
       const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
       const comp = new SellPageComponent(
-        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
         createAdminApiStub(), store
       );
@@ -853,7 +872,7 @@ describe('SellPageComponent', () => {
     it('does NOT overwrite a user-picked route when store data arrives', () => {
       const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
       const comp = new SellPageComponent(
-        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
         createAdminApiStub(), store
       );
@@ -879,7 +898,7 @@ describe('SellPageComponent', () => {
     it('does NOT apply first-option defaults when the form is in edit mode', () => {
       const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
       const comp = new SellPageComponent(
-        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
         createAdminApiStub(), store
       );
@@ -903,7 +922,7 @@ describe('SellPageComponent', () => {
     it('does NOT apply defaults when the create form is closed', () => {
       const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
       const comp = new SellPageComponent(
-        createRouterStub(), createStoreStub(), createStaffApiStub(),
+        createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
         createAdminApiStub(), store
       );

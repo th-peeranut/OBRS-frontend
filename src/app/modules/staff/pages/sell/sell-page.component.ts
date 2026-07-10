@@ -1,7 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
-import { Store } from '@ngrx/store';
 import { Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
 import { catchError, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -26,7 +24,6 @@ import {
   getAdminLookupLabel,
   getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
-import { invokeSetBookingApi } from '../../../../shared/stores/booking/booking.action';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 import { WalkInTripSelection } from '../../components/walk-in-trip-browser/walk-in-trip-browser.component';
@@ -95,8 +92,6 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected scheduleDriverOptions: { code: string; label: string }[] = [];
 
   constructor(
-    private readonly router: Router,
-    private readonly store: Store,
     private readonly staffApiService: StaffApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
@@ -381,15 +376,18 @@ export class SellPageComponent implements OnInit, OnDestroy {
                 this.idempotencyKey = null;
                 this.selectedSeats = [];
                 this.seatPassengerTypes = {};
-                // Silently refresh trips list
+                // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
+                // route, so AuthGuard bounces staff to their home and leaves the
+                // just-sold seat showing as available on the now-stale seat map
+                // (OBRS-188). Confirm in place and reload so the seat map + the
+                // trip row's sold-count badge reflect the sale.
+                this.selectedTrip = null;
                 this.loadTrips(this.selectedDate);
-                // Navigate to e-ticket
-                this.store.dispatch(
-                  invokeSetBookingApi({
-                    booking: { bookingId: bId, bookingNumber: bNum ?? '' },
+                void this.alertService.success(
+                  this.translate.instant('STAFF.SELL.SOLD_SUCCESS', {
+                    bookingNumber: bNum ?? '',
                   })
                 );
-                void this.router.navigate(['/e-ticket']);
               },
               error: (err: unknown) => {
                 this.isSelling = false;
