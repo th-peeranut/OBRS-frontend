@@ -9,6 +9,7 @@ import {
   RouteStatusValue,
 } from '../../shared/interfaces/route-map.interface';
 import {
+  SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
@@ -56,10 +57,13 @@ export class RouteMapService {
   // The route-map component renders its own loading spinner and inline error
   // state, so opt out of the global loading/error interceptor (which would
   // otherwise pop a blocking SweetAlert over the home page on any failure).
+  // `/api/routes` is public (anonymous /home page) — SKIP_AUTH_LOGOUT (OBRS-187)
+  // ensures an unauthenticated visitor never gets bounced to /login by it.
   private selfHandledContext(): HttpContext {
     return new HttpContext()
       .set(SKIP_GLOBAL_LOADING_ALERT, true)
-      .set(SKIP_GLOBAL_ERROR_ALERT, true);
+      .set(SKIP_GLOBAL_ERROR_ALERT, true)
+      .set(SKIP_AUTH_LOGOUT, true);
   }
 
   // Guard against E2E test fixtures leaking into the public direction selector.

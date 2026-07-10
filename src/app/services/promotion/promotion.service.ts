@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
+  SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
@@ -47,6 +48,9 @@ export class PromotionService {
   private silentContext(): HttpContext {
     return new HttpContext()
       .set(SKIP_GLOBAL_LOADING_ALERT, true)
-      .set(SKIP_GLOBAL_ERROR_ALERT, true);
+      .set(SKIP_GLOBAL_ERROR_ALERT, true)
+      // OBRS-187: a 401 here can be a transient SIT cold-start blip on a
+      // non-critical preview — must not force-logout (see OBRS-181 above).
+      .set(SKIP_AUTH_LOGOUT, true);
   }
 }
