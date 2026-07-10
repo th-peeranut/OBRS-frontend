@@ -27,6 +27,7 @@ import {
 import { PageResponse } from '../../shared/interfaces/payment.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import {
+  SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
   SKIP_GLOBAL_LOADING_ALERT,
 } from '../../shared/interceptors/http-context-tokens';
@@ -104,9 +105,15 @@ export class BookingService {
   }
 
   // Opts out of the global error alert only (the loading dialog behavior is
-  // unchanged) so the caller can handle a PROMO_CODE_* rejection inline.
+  // unchanged) so the caller can handle a PROMO_CODE_* rejection inline. Also
+  // opts out of the force-logout (OBRS-187): a 401 here can be a transient
+  // blip on the promo-preview path bundled into this create call, and the
+  // caller already owns rendering the rejection inline — see silentContext()
+  // below for the ordinary (non-promo) booking calls, which do NOT opt out.
   private silentErrorContext(): HttpContext {
-    return new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true);
+    return new HttpContext()
+      .set(SKIP_GLOBAL_ERROR_ALERT, true)
+      .set(SKIP_AUTH_LOGOUT, true);
   }
 
   // Coerce the intake response to the canonical shape in one place. bookingId
