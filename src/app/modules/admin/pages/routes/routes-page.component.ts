@@ -5,68 +5,32 @@ import {
   AdminApiService,
   AdminLookupDto,
   AdminRouteDto,
-  AdminRouteStopDto,
-  AdminSegmentDto,
-  AdminSegmentReqDto,
-  AdminStopDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
-  AdminTranslationReqDto,
-  CreateRoutePayload,
-  getAdminLookupCode,
-  getAdminLookupLabel,
   getAdminTranslationDescription,
   getAdminTranslationLabel,
-  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { RoutesStore } from './routes.store';
-
-interface RouteRow {
-  id: number;
-  slug: string;
-  label: string;
-  description: string;
-  status: string;
-  statusCode: string;
-  updatedAt: string;
-}
-
-interface StopPoint {
-  slug: string;
-  name: string;
-  distance: string;
-  duration: string;
-  stopOrder: number;
-  offsetMinutesFromOrigin: number;
-  label?: string;
-}
-
-interface SegmentRow {
-  id: number;
-  origin: string;
-  destination: string;
-  fare: number;
-  duration: string;
-  estimatedDurationMinutes: number | null;
-  fromStopSlug: string;
-  toStopSlug: string;
-  vehicleTypeSlug: string;
-  vehicleTypeName: string;
-}
-
-interface Option {
-  code: string;
-  label: string;
-}
-
-interface VehicleTypeOption {
-  slug: string;
-  name: string;
-}
+import {
+  Option,
+  RouteRow,
+  SegmentRow,
+  StopPoint,
+  VehicleTypeOption,
+  formatFare as formatFareValue,
+  normalizeVehicleTypeKey,
+  parseStatus,
+  statusClass as statusClassValue,
+  toRouteDtoFallback,
+  toRoutePayload,
+  toRouteRow,
+  toRouteStatusOptions,
+  toSegmentUpdatePayload,
+  toSegments,
+  toStopPoints,
+  toVehicleTypeOptions,
+} from './routes.mappers';
 
 @Component({
   selector: 'app-routes-page',
@@ -256,17 +220,14 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected get segments(): SegmentRow[] {
-    const selectedVehicleTypeSlug = this.normalizeVehicleTypeKey(
-      this.selectedVehicleTypeSlug
-    );
+    const selectedVehicleTypeSlug = normalizeVehicleTypeKey(this.selectedVehicleTypeSlug);
 
     if (!selectedVehicleTypeSlug) {
       return this.allSegments;
     }
 
     return this.allSegments.filter(
-      (segment) =>
-        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) === selectedVehicleTypeSlug
+      (segment) => normalizeVehicleTypeKey(segment.vehicleTypeSlug) === selectedVehicleTypeSlug
     );
   }
 
@@ -329,21 +290,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected statusClass(status: string): string {
-    const normalizedStatus = status.trim().toUpperCase();
-
-    if (normalizedStatus === 'ACTIVE') {
-      return 'is-success';
-    }
-
-    if (
-      normalizedStatus === 'SUSPENDED' ||
-      normalizedStatus === 'TEMPORARILY_CLOSED' ||
-      normalizedStatus.includes('PENDING')
-    ) {
-      return 'is-warning';
-    }
-
-    return 'is-danger';
+    return statusClassValue(status);
   }
 
   protected onSearchKeywordChange(value: string): void {
@@ -361,11 +308,11 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected onVehicleTypeChange(value: string): void {
-    const normalizedValue = this.normalizeVehicleTypeKey(value);
+    const normalizedValue = normalizeVehicleTypeKey(value);
     const matchedOption = this.vehicleTypeOptions.find(
       (option) =>
-        this.normalizeVehicleTypeKey(option.slug) === normalizedValue ||
-        this.normalizeVehicleTypeKey(option.name) === normalizedValue
+        normalizeVehicleTypeKey(option.slug) === normalizedValue ||
+        normalizeVehicleTypeKey(option.name) === normalizedValue
     );
 
     this.selectedVehicleTypeSlug = matchedOption?.slug ?? String(value ?? '').trim();
@@ -439,7 +386,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.routeForEdit = route;
     this.isEditDetailLoading = true;
     this.routeForm.get('slug')?.enable();
-    this.applyRouteFormValues(this.toRouteDtoFallback(route), route);
+    this.applyRouteFormValues(toRouteDtoFallback(route), route);
     this.isRouteFormModalOpen = true;
 
     try {
@@ -472,11 +419,11 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   ): void {
     const values = {
       slug: routeDetail.slug,
-      status: this.parseStatus(routeDetail.status ?? route.statusCode).code,
-      enLabel: this.getTranslationLabel(routeDetail.translations, 'en') ?? route.label,
-      thLabel: this.getTranslationLabel(routeDetail.translations, 'th') ?? '',
-      enDescription: this.getTranslationDescription(routeDetail.translations, 'en') ?? '',
-      thDescription: this.getTranslationDescription(routeDetail.translations, 'th') ?? '',
+      status: parseStatus(routeDetail.status ?? route.statusCode, this.getCurrentLocale()).code,
+      enLabel: getAdminTranslationLabel(routeDetail.translations, 'en') ?? route.label,
+      thLabel: getAdminTranslationLabel(routeDetail.translations, 'th') ?? '',
+      enDescription: getAdminTranslationDescription(routeDetail.translations, 'en') ?? '',
+      thDescription: getAdminTranslationDescription(routeDetail.translations, 'th') ?? '',
     };
 
     if (!onlyPristine) {
@@ -542,7 +489,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     const routeIdForEdit = this.routeForEdit?.id ?? null;
 
     try {
-      const payload = this.toRoutePayload();
+      const payload = toRoutePayload(this.routeForm.getRawValue());
 
       if (this.isEditMode && routeIdForEdit !== null) {
         await firstValueFrom(this.adminApiService.updateRouteById(routeIdForEdit, payload));
@@ -647,12 +594,14 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload = this.toSegmentUpdatePayload(
+    const payload = toSegmentUpdatePayload(
       this.selectedSegment,
       editedFromStopSlug,
       editedToStopSlug,
       newFare,
-      estimatedDurationMinutes
+      estimatedDurationMinutes,
+      this.allSegments,
+      this.selectedRouteSlug
     );
     this.isSavingSegmentEdit = true;
     let isUpdated = false;
@@ -676,18 +625,16 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   }
 
   protected formatFare(fare: number): string {
-    return fare.toFixed(2);
+    return formatFareValue(fare);
   }
 
   // Re-derive the locale-dependent route list + status options from cached DTOs.
   private applyRouteListLocalization(): void {
     const currentLocale = this.getCurrentLocale();
-    this.routes = this.rawRouteDtos.map((route) => this.toRouteRow(route));
-    this.statusOptions = this.toRouteStatusOptions(
-      this.rawLookups,
-      this.rawRouteDtos,
-      currentLocale
+    this.routes = this.rawRouteDtos.map((route) =>
+      toRouteRow(route, currentLocale, this.translate.currentLang)
     );
+    this.statusOptions = toRouteStatusOptions(this.rawLookups, this.rawRouteDtos, currentLocale);
     this.syncStatusFilterWithAvailableOptions();
     this.applyRouteFilters();
   }
@@ -724,20 +671,25 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
         firstValueFrom(this.adminApiService.getSegments(routeSlug)),
       ]);
 
+      const currentLocale = this.getCurrentLocale();
+
       if (routeStopsResult.status === 'fulfilled') {
-        this.stops = this.toStopPoints(routeStopsResult.value.data);
+        this.stops = toStopPoints(routeStopsResult.value.data, currentLocale, {
+          origin: this.translate.instant('ADMIN.ROUTES.ORIGIN'),
+          terminal: this.translate.instant('ADMIN.ROUTES.TERMINAL'),
+        });
       }
 
       if (segmentsResult.status === 'fulfilled') {
-        this.allSegments = this.toSegments(segmentsResult.value.data);
-        this.vehicleTypeOptions = this.toVehicleTypeOptions(this.allSegments);
+        this.allSegments = toSegments(segmentsResult.value.data, currentLocale);
+        this.vehicleTypeOptions = toVehicleTypeOptions(this.allSegments);
 
         if (
           this.vehicleTypeOptions.length > 0 &&
           !this.vehicleTypeOptions.some(
             (option) =>
-              this.normalizeVehicleTypeKey(option.slug) ===
-              this.normalizeVehicleTypeKey(this.selectedVehicleTypeSlug)
+              normalizeVehicleTypeKey(option.slug) ===
+              normalizeVehicleTypeKey(this.selectedVehicleTypeSlug)
           )
         ) {
           this.selectedVehicleTypeSlug = this.vehicleTypeOptions[0].slug;
@@ -752,229 +704,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     } finally {
       this.isDetailLoading = false;
     }
-  }
-
-  private toRoutePayload(): CreateRoutePayload {
-    const raw = this.routeForm.getRawValue();
-    const translations: AdminTranslationReqDto[] = [
-      {
-        locale: 'en',
-        label: String(raw.enLabel ?? '').trim(),
-        description: String(raw.enDescription ?? '').trim() || undefined,
-      },
-    ];
-
-    const thLabel = String(raw.thLabel ?? '').trim();
-    if (thLabel) {
-      translations.push({
-        locale: 'th',
-        label: thLabel,
-        description: String(raw.thDescription ?? '').trim() || undefined,
-      });
-    }
-
-    return {
-      slug: String(raw.slug ?? '').trim().toLowerCase(),
-      status: String(raw.status ?? '').trim().toLowerCase(),
-      translations,
-    };
-  }
-
-  private toRouteStatusOptions(
-    lookups: AdminLookupDto[],
-    routes: AdminRouteDto[],
-    currentLocale: string
-  ): Option[] {
-    const options = new Map<string, string>();
-    const knownRouteStatuses = [
-      'active',
-      'suspended',
-      'temporarily_closed',
-      'decommissioned',
-    ];
-
-    for (const status of knownRouteStatuses) {
-      options.set(status, this.formatStatusLabel(status));
-    }
-
-    for (const lookup of lookups) {
-      if (lookup.category !== 'route_status') {
-        continue;
-      }
-
-      const code = String(lookup.slug ?? '').trim().toLowerCase();
-      if (!code) {
-        continue;
-      }
-
-      options.set(
-        code,
-        this.getTranslationLabel(lookup.translations, currentLocale) ??
-          this.getTranslationLabel(lookup.translations, 'en') ??
-          this.formatStatusLabel(code)
-      );
-    }
-
-    for (const route of routes) {
-      const status = this.parseStatus(route.status);
-      if (status.code && status.code !== 'unknown' && !options.has(status.code)) {
-        options.set(status.code, status.name);
-      }
-    }
-
-    return [...options.entries()].map(([code, label]) => ({ code, label }));
-  }
-
-  private toRouteRow(route: AdminRouteDto): RouteRow {
-    const status = this.parseStatus(route.status);
-    const currentLocale = this.getCurrentLocale();
-
-    return {
-      id: route.id,
-      slug: route.slug,
-      label:
-        getAdminLookupLabel(route, currentLocale) ??
-        this.getTranslationLabel(route.translations, currentLocale) ??
-        this.getTranslationLabel(route.translations, 'en') ??
-        route.slug,
-      description:
-        this.getTranslationDescription(route.translations, currentLocale) ??
-        this.getTranslationDescription(route.translations, 'en') ??
-        '-',
-      status: status.name,
-      statusCode: status.code,
-      updatedAt: formatDisplayDateTime(route.updatedAt ?? route.createdAt, this.translate.currentLang),
-    };
-  }
-
-  private toRouteDtoFallback(route: RouteRow): AdminRouteDto {
-    return {
-      id: route.id,
-      slug: route.slug,
-      status: route.statusCode,
-      translations: [
-        {
-          locale: 'en',
-          label: route.label,
-          description: route.description === '-' ? undefined : route.description,
-        },
-      ],
-    };
-  }
-
-  private toStopPoints(routeStops: AdminRouteStopDto | undefined): StopPoint[] {
-    const stops = routeStops?.stops ?? [];
-    if (stops.length === 0) {
-      return [];
-    }
-
-    const currentLocale = this.getCurrentLocale();
-
-    const sortedStops = [...stops].sort((a, b) => a.stopOrder - b.stopOrder);
-
-    return sortedStops.map((stop, index) => ({
-      slug: getAdminLookupCode(stop.stop),
-      name: this.toStopName(stop.stop, currentLocale),
-      distance: `${stop.distanceKmFromOrigin ?? 0} km`,
-      duration: `${stop.offsetMinutesFromOrigin ?? 0} mins`,
-      stopOrder: stop.stopOrder,
-      offsetMinutesFromOrigin: Number(stop.offsetMinutesFromOrigin ?? 0),
-      label:
-        index === 0
-          ? this.translate.instant('ADMIN.ROUTES.ORIGIN')
-          : index === sortedStops.length - 1
-            ? this.translate.instant('ADMIN.ROUTES.TERMINAL')
-            : undefined,
-    }));
-  }
-
-  private toSegments(segmentResponse: AdminSegmentDto | undefined): SegmentRow[] {
-    const stopPairs = segmentResponse?.stopPairs ?? [];
-    if (stopPairs.length === 0) {
-      return [];
-    }
-
-    return stopPairs.map((pair, index) => {
-      const parsedFare = Number(pair.fare ?? 0);
-
-      return {
-        id: pair.segmentId ?? index + 1,
-        origin: pair.fromStop?.name ?? pair.fromStop?.slug ?? '-',
-        destination: pair.toStop?.name ?? pair.toStop?.slug ?? '-',
-        fare: Number.isFinite(parsedFare) ? parsedFare : 0,
-        duration: this.formatDuration(pair.estimatedDurationMinutes),
-        estimatedDurationMinutes: this.normalizeDurationMinutes(
-          pair.estimatedDurationMinutes
-        ),
-        fromStopSlug: pair.fromStop?.slug ?? '',
-        toStopSlug: pair.toStop?.slug ?? '',
-        vehicleTypeSlug: String(pair.vehicleType?.slug ?? '').trim(),
-        vehicleTypeName: pair.vehicleType?.name ?? pair.vehicleType?.slug ?? '-',
-      };
-    });
-  }
-
-  private toStopName(stop: AdminStopDto | undefined, locale: string): string {
-    const name =
-      getAdminLookupLabel(stop, locale) ??
-      this.getTranslationLabel(stop?.translations, locale) ??
-      this.getTranslationLabel(stop?.translations, 'en') ??
-      getAdminLookupCode(stop);
-
-    return name || '-';
-  }
-
-  private toVehicleTypeOptions(segments: SegmentRow[]): VehicleTypeOption[] {
-    const options = new Map<string, VehicleTypeOption>();
-
-    for (const segment of segments) {
-      const normalizedSlug = this.normalizeVehicleTypeKey(segment.vehicleTypeSlug);
-      if (!normalizedSlug) {
-        continue;
-      }
-
-      if (!options.has(normalizedSlug)) {
-        options.set(normalizedSlug, {
-          slug: segment.vehicleTypeSlug,
-          name: segment.vehicleTypeName,
-        });
-      }
-    }
-
-    return [...options.values()];
-  }
-
-  private toSegmentUpdatePayload(
-    selectedSegment: SegmentRow,
-    editedFromStopSlug: string,
-    editedToStopSlug: string,
-    editedFare: number,
-    estimatedDurationMinutes: number
-  ): AdminSegmentReqDto {
-    const segmentsOfVehicleType = this.allSegments.filter(
-      (segment) =>
-        this.normalizeVehicleTypeKey(segment.vehicleTypeSlug) ===
-        this.normalizeVehicleTypeKey(selectedSegment.vehicleTypeSlug)
-    );
-
-    return {
-      route: this.selectedRouteSlug,
-      vehicleType: selectedSegment.vehicleTypeSlug,
-      stopPairs: segmentsOfVehicleType.map((segment) => {
-        const isEditedSegment = segment.id === selectedSegment.id;
-
-        return {
-          fromStop: isEditedSegment ? editedFromStopSlug : segment.fromStopSlug,
-          toStop: isEditedSegment ? editedToStopSlug : segment.toStopSlug,
-          fare: this.normalizeFareForSave(
-            isEditedSegment ? editedFare : segment.fare
-          ),
-          estimatedDurationMinutes: isEditedSegment
-            ? this.normalizeDurationForSave(estimatedDurationMinutes)
-            : undefined,
-        };
-      }),
-    };
   }
 
   private applyRouteFilters(): void {
@@ -1011,30 +740,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  private normalizeFareForSave(value: number): number {
-    if (!Number.isFinite(value) || value <= 0) {
-      return 0.01;
-    }
-
-    return Number(value.toFixed(2));
-  }
-
-  private normalizeDurationForSave(value: number): number {
-    if (!Number.isFinite(value) || value <= 0) {
-      return 1;
-    }
-
-    return Math.round(value);
-  }
-
-  private normalizeDurationMinutes(value: number | null | undefined): number | null {
-    if (!Number.isFinite(value) || value === null || value === undefined) {
-      return null;
-    }
-
-    return Math.max(0, Math.round(value));
-  }
-
   private validateSegmentStops(fromStopSlug: string, toStopSlug: string): boolean {
     const fromStop = this.getStopPointBySlug(fromStopSlug);
     const toStop = this.getStopPointBySlug(toStopSlug);
@@ -1061,47 +766,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return true;
   }
 
-  private formatDuration(minutes: number | null | undefined): string {
-    if (!Number.isFinite(minutes) || minutes === null || minutes === undefined) {
-      return '-';
-    }
-
-    const normalizedMinutes = Math.max(0, Math.round(minutes));
-    const hours = Math.floor(normalizedMinutes / 60);
-    const remainingMinutes = normalizedMinutes % 60;
-    const currentLocale = this.getCurrentLocale();
-
-    if (currentLocale === 'th') {
-      if (hours > 0 && remainingMinutes > 0) {
-        return `${hours} ชม. ${remainingMinutes} นาที`;
-      }
-
-      if (hours > 0) {
-        return `${hours} ชม.`;
-      }
-
-      return `${remainingMinutes} นาที`;
-    }
-
-    if (hours > 0 && remainingMinutes > 0) {
-      return `${hours} hr ${remainingMinutes} min`;
-    }
-
-    if (hours > 0) {
-      return `${hours} hr`;
-    }
-
-    return `${remainingMinutes} min`;
-  }
-
-  private formatStatusLabel(status: string): string {
-    return status.replace(/_/g, ' ').toUpperCase();
-  }
-
-  private normalizeVehicleTypeKey(value: string | null | undefined): string {
-    return String(value ?? '').trim().toLowerCase();
-  }
-
   private getStopPointBySlug(slug: string): StopPoint | undefined {
     const normalizedSlug = String(slug ?? '').trim();
     return this.stops.find((stop) => stop.slug === normalizedSlug);
@@ -1115,24 +779,4 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private getTranslationDescription(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationDescription(translations, locale);
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
-  }
 }
