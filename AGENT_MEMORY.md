@@ -1413,3 +1413,128 @@ translations returns the key for BOTH a correct-but-untranslated key and a missi
 against the actual JSON nesting, not just that *some* key with that leaf name exists. A quick
 `node -e "require('./en.json').MY_BOOKINGS.CHANGE_SEAT.ERROR.NO_SEATS"` per locale catches
 misplacement that key-presence greps and unit tests both miss.
+
+---
+
+## OBRS-96 QA (local-BE + local-FE against live SIT Supabase, 2026-07-10)
+
+**Setup that worked:** ran the backend worktree locally with `-Dspring-boot.run.profiles=sit`
+plus manually-exported env vars (DB_PASSWORD from `secrets.local.env`, TICKET_TOKEN_SECRET_KEY
+from the task brief, JWT/SendGrid/Omise/ThaiBulkSMS/Google values copied from the main clone's
+gitignored `application-local.yml`) — booted on port 8080 against the real SIT Supabase. FE
+served via bare `ng serve --port <random>` (NOT `npx playwright test`, whose own `webServer`
+tries `ng serve --configuration sit` on :4200 and fails — `environment.local.ts` doesn't exist
+in a fresh worktree, only the `.example`). `environment.base.ts`'s default `apiUrl` is
+`localhost:8000` but the backend's real default port is `8080` (docker-compose remaps to 8000,
+plain `mvn`/`spring-boot:run` does not) — edited `apiUrl` to 8080 for this run only, reverted
+after.
+
+**Real bug found — `boardedAt: null` in the boarding-scan success response:**
+`TicketRepository.updateBoardedByIdIfConfirmed` is a native `@Modifying` bulk UPDATE with no
+`clearAutomatically`/`flushAutomatically`. `TicketService.boardingScan` loads the `Ticket` via
+`findById` BEFORE the bulk update (to check `scheduleId`/status), so it's already in the
+persistence-context L1 cache; the immediately-following `findById` after the update returns the
+SAME stale managed instance instead of re-querying, so `boarded.getBoardedAt()` is `null` in the
+response even though the DB row is correctly stamped (verified directly via psql — `boarded_at`
+and `boarded_by` both set correctly). Reproduced twice (tickets 74 and 75, salesperson's own
+seed bookings on schedule 10 / today). Real user impact: `boarding-list-page.component.ts:187`
+merges `result.boardedAt` straight into the on-page row, so the just-scanned passenger's row
+shows a blank boarded-at until the list is refreshed/reloaded (a fresh GET re-queries and gets
+the right value). Fix would be `ticketRepository.flush()` + `entityManager.clear()` (or
+`@Modifying(clearAutomatically = true)`) between the update and the re-fetch in
+`TicketService.boardingScan`.
+
+**Confirmed via direct API (curl) against local-BE/live-SIT-DB, all matching contract:**
+happy-path scan 200 (passenger name + seat correct, boardedAt bug above), ALREADY_BOARDED 409,
+WRONG_SCHEDULE_TICKET 400, INVALID_TICKET_TOKEN 400, TICKET_NOT_CONFIRMED 409 (via real
+cancel-booking API on a sacrificial salesperson-owned booking, not raw SQL), customer role on
+`/boarding-scan` → 403 ACCESS_DENIED. Critically: **garbage/tampered token returns 400, never
+401** — the OBRS-187 regression guard holds at the API layer, and live-browser-confirmed too
+(staff stayed on `/staff/boarding/10`, no forced logout, after scanning a garbage token).
+
+**Scope correction — don't confuse the pre-existing `my-booking-ticket-modal` /
+`app-e-ticket-card` (My Bookings' "View e-ticket" action) with the actual OBRS-96 feature.**
+That modal is untouched by this branch (`git diff dev...HEAD --stat` confirms) and still passes
+ONE comma-joined `ticketNumber` string for the whole booking into a single QR — that is NOT a
+regression, it's just the wrong component to test. The real per-ticket QR lives in
+`e-ticket.component.html`'s `*ngFor="let passenger of passengers"` block, one `.ticket-card`
+per ticket with its own `passenger.qrDataUrl`/`ticketNumber`, and a `qrCardPlaceholder` template
+for `qrUnavailable` tickets (confirmed by source read) — but this page's `bookingId` comes from
+NgRx state set by `invokeSetBookingApi` during the live checkout/payment-result flow with NO
+localStorage persistence (`booking.effect.ts`'s `getBooking$` just echoes current store state,
+no HTTP call) — it cannot be deep-linked directly; reaching it live requires driving the full
+booking→payment flow. Did NOT complete that live within the 45-min box; verified structurally
+via source instead (see report). If a future session needs to live-verify this exact page,
+budget for the full search→seats→passenger-info→payment→e-ticket flow (see
+`obrs-booking-flow-playwright-capture` memory) rather than trying to reach it from
+"My Bookings".
+
+**`mapBoardingScanErrorCode`/`boardingScanErrorSeverity`/`boardingScanErrorIcon`
+(`boarding-scan-error.ts`) branch strictly on `error.error.errorCode`, never message text** —
+confirmed by source read, matches the live errorCodes observed above exactly (INVALID_TICKET_TOKEN,
+WRONG_SCHEDULE_TICKET, TICKET_NOT_CONFIRMED, ALREADY_BOARDED, plus EXPIRED_TICKET_TOKEN /
+BOARDING_WINDOW_NOT_OPEN which are time-dependent and not live-tested here — covered by BE unit
+tests per the task brief).
+
+---
+
+## OBRS-96 QA re-verify after the boardedAt fix (2026-07-10, second pass)
+
+**Both gaps from the first pass closed, live:**
+
+1. **boardedAt fix confirmed** (backend commit `20cc56f`, `@Modifying(clearAutomatically=true,
+   flushAutomatically=true)`): scanned a fresh ticket (id 81) via curl — response now returns
+   `"boardedAt":"2026-07-10T13:27:34..."` instead of `null`. Live-confirmed in the browser too:
+   scanned ticket 82 on the staff boarding-list page and the row showed `เช็คอินแล้ว` +
+   `เวลาขึ้นรถ: 13:28` **immediately, with no page reload** — screenshot
+   `05-scan-success-boardedAt-no-reload.png`.
+
+2. **Live-rendered the actual OBRS-96 per-ticket QR e-ticket page** (the headline feature, only
+   structurally verified in the first pass). Drove the full real booking flow as
+   `customer@system.local`: home search (หนองชาก → BTS หมอชิต, 2 adults) → seat selection (2
+   distinct seats, one per passenger, via the `.card-container.mt-3` per-passenger seat-van maps)
+   → passenger-info (booker + `useBookerInfo` copy for passenger 1, manual fill for passenger 2)
+   → payment with Omise test card `4242 4242 4242 4242` → landed on `/e-ticket`. Result: **2
+   passengers → 2 distinct QR codes**, each with its own `ticketNumber` (`T-2SPNB7S72Q` seat 6 /
+   `T-EES6CLCAHN` seat 7), passenger name, and a download button — screenshot
+   `06-e-ticket-page-HEADLINE.png`. Confirmed the QR encodes the real signed **boardingToken**
+   (not the ticket number) by re-fetching a token for the just-booked ticket 102 and scanning it
+   at the boarding-list endpoint — round-tripped correctly (see below).
+
+**Bonus finding — `BOARDING_WINDOW_NOT_OPEN` verified live** (was deferred as time-dependent in
+the first pass): the just-booked ticket 102 departs 2026-07-18 (today is 2026-07-10); scanning
+its real token on its real `scheduleId` (11) correctly rejected with 400
+`BOARDING_WINDOW_NOT_OPEN` ("Boarding is only allowed on the day of departure") rather than
+boarding it early.
+
+**Automation gotchas hit driving the full booking flow (useful for next time):**
+- **Seat inventory depletion across retries**: each abandoned/failed script attempt still
+  reserves seats on that schedule (no visible release), so repeated runs against the SAME
+  schedule burn through its free-seat count fast (schedule 10 today went from 7→0 free across a
+  few attempts; schedule 7 (2026-07-17) similarly). Pick a schedule with a healthy taken/free
+  ratio first — query `select count(*) from tickets where schedule_id=X and status in
+  (confirmed,checked_in,reserved)` vs. capacity — and expect to burn a few seats per debugging
+  iteration. Schedule 11 (2026-07-18) had only 3/13 taken and absorbed the successful run fine.
+- **Passenger seat maps**: `.card-container.mt-3` on the passenger-info page is NOT 1:1 with
+  passengers — index 0 is the booker card, index 1/2 are passenger 0/1's own seat-van maps.
+  Scope `.seat-box:not(.disabled)` inside the right card, re-querying live (not cached) right
+  before each click, since taking a seat in one map disables it in the other (shared inventory).
+- **The credit-card `p-calendar` (`view="month"`, `inputId="templatedisplay"`) resisted every
+  Playwright UI approach** (`#templatedisplay` click reported "element is not enabled"; the
+  panel's month cells were empty/unmatchable). Fastest reliable workaround: patch the Angular
+  reactive form directly via the dev-build's `window.ng.getComponent(...)` devtools API —
+  `ng.getComponent(document.querySelector('app-payment-creditcard')).creditCardForm.patchValue({expireDate: new Date(2027,11,1)})`
+  — then `markAsDirty()`/`updateValueAndValidity()`. This still exercises the REAL Omise
+  tokenization + real backend payment call + real e-ticket render; only the calendar-click UI
+  mechanic is bypassed. Legitimate for E2E capture, not for asserting the calendar widget itself
+  works (that's out of scope for a payment-flow smoke test).
+- **`FRONTEND_URL` env var on the local backend MUST match the FE's actual serve port** — Omise's
+  card 3DS flow (`.../authorize` → `.../complete`) redirects the real browser back to
+  `${app.frontend-url}/payment/result`; if `FRONTEND_URL` is stale (e.g. left at `:4200` from a
+  previous session while the FE is actually on a fresh random port like `:4267`), the post-3DS
+  redirect hits `ERR_CONNECTION_REFUSED` and the flow never reaches `/e-ticket`. Always set
+  `FRONTEND_URL` to the exact port the FE was just started on for this session, not a
+  remembered/default one.
+- The `.p-monthpicker`/`.p-datepicker-calendar` selectors from the pre-existing booking-flow
+  memory note (departure-date picker) worked fine as documented; it was specifically the credit
+  card's `view="month"` variant that was unreliable to automate.
