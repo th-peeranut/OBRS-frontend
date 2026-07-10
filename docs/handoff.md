@@ -77,6 +77,22 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 > - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
 > - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
 
+### [Frontend] 2026-07-10 — Starter operational dashboard (OBRS-129): endpoint not yet in `docs/api/`
+**Affected endpoint**: `GET /api/private/admin/dashboard/today` (new)
+
+**Request type**: New endpoint. Built against the contract given directly in the locked OBRS-129 UX spec (mirroring the OBRS-40 `reports/summary` shape) — `../OBRS-backend/docs/api/` has no `dashboard.md` at time of writing, and the paired backend worktree (`OBRS-backend-wt-starter-dashboards`) has no `Dashboard*` controller/service class yet, only planning-doc commits. Per `CLAUDE.md`'s R0 rule this would normally block, but the contract was supplied explicitly by the task orchestrator as already-locked, so the frontend proceeded — flagging here per the same rule's "coordinate with the backend first" spirit.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/admin/dashboard/today` → `{ date, timezone, basis: { volume, revenue, occupancy }, tiles: { departuresCount, occupancyRatePct, bookingCount, revenue? }, departures: [{ scheduleId, routeLabel, departureTime, seatsSold, capacity, occupancyRatePct }] }` | New endpoint, ADMIN/OWNER scope (same as `/admin` shell guard) | Backs the rebuilt `/admin/dashboard` KPI tiles + today's-departures table (`src/app/shared/interfaces/dashboard-today.interface.ts`) |
+| `tiles.revenue` omitted entirely (not zeroed/null) for a viewer without revenue visibility | Response shape | Forward-compat for a future salesperson role; FE already renders the Revenue tile off the field's presence (`showRevenue`), never a role check |
+| `occupancyRatePct` as a JSON number (1dp), `revenue.net/paid/refunded` as decimal strings | Response shape | Matches the `ReportsSummaryDto` convention already established by OBRS-40 — FE formats via `Number()`→`Intl.NumberFormat`, never arithmetic on the string |
+| `departures` pre-sorted by `departureTime` ascending | Response shape | FE trusts server order and does not re-sort |
+
+### Impact if not addressed
+The rebuilt dashboard page is implemented and additive-safe against the admin shell (route/guard/nav unchanged), but is functionally inert until the backend ships this endpoint — every load will show the error state (`ADMIN.DASHBOARD.LOAD_FAILED`) with a 404/whatever the router returns for an unmapped path. Do not merge to `dev`/`sit` until the backend implements `GET /api/private/admin/dashboard/today` (or confirms a shape mismatch requiring a frontend follow-up) — this is the counterpart change to `IMPLEMENTATION_CHECKLIST.md` entry `#44` (OBRS-129) in the backend repo, which was "claimed"/in-progress at the time this frontend work landed.
+
 ### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
 **Affected endpoints**:
 - `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)

@@ -626,16 +626,29 @@
     },
     "DASHBOARD": {
       "TITLE": "Dashboard",
-      "SUBTITLE": "Operational overview across bookings and fleet.",
-      "TOTAL_BOOKINGS": "Total Bookings",
-      "PENDING_PAYMENTS": "Pending Payments",
-      "REVENUE": "Revenue",
-      "ACTIVE_VEHICLES": "Active Vehicles",
-      "RECENT_BOOKINGS": "Recent Bookings",
-      "VIEW_ALL": "View all",
-      "LOAD_FAILED": "Unable to load dashboard data.",
-      "PARTIAL_LOAD_FAILED": "Some dashboard data could not be loaded.",
-      "UPDATING": "Updating…"
+      "SUBTITLE": "Today's operational snapshot (Bangkok time).",
+      "TILE": {
+        "DEPARTURES": "Departures Today",
+        "OCCUPANCY": "Seat Occupancy",
+        "BOOKINGS": "Bookings Today",
+        "REVENUE": "Revenue Today"
+      },
+      "BASIS": {
+        "DEPARTURE_DATE": "by departure date",
+        "BOOKING_DATE": "by booking date"
+      },
+      "DEPARTURES": {
+        "TITLE": "Today's Departures",
+        "EMPTY": "No departures scheduled for today.",
+        "COL": {
+          "ROUTE": "Route",
+          "DEPARTURE_TIME": "Departure Time",
+          "SEATS": "Seats Sold / Capacity",
+          "OCCUPANCY": "Occupancy %"
+        }
+      },
+      "VIEW_FULL_REPORTS": "View full reports",
+      "LOAD_FAILED": "Unable to load dashboard data."
     },
     "USABILITY_REPORTS": {
       "TITLE": "Usability Reports",

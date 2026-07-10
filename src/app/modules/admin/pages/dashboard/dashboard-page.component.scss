@@ -1,3 +1,26 @@
+@import "../../../../../styles/variables.scss";
+
 :host {
   display: block;
+}
+
+// Small basis caption under a KPI tile ("by departure date" / "by booking
+// date") — reuses `.admin-muted`'s color (theme-safe, no raw hex), just
+// smaller and non-bold so it doesn't compete with the tile's big number.
+.dashboard-basis-caption {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+// State messages (fetch error / empty day) that stand in for the tiles+table
+// or the table — centered and padded so the message reads as the body's
+// content, not a stray line above a table of zeros.
+.dashboard-state-card,
+.dashboard-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
 }

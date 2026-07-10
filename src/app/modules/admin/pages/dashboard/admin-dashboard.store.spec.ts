@@ -1,26 +1,39 @@
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { AdminDashboardStore, DashboardSnapshot } from './admin-dashboard.store';
-import {
-  AdminBookingDto,
-  AdminVehicleDto,
-} from '../../../../services/admin/admin-api.service';
-import { PageResponse } from '../../../../shared/interfaces/payment.interface';
+import { AdminDashboardStore } from './admin-dashboard.store';
+import { DashboardTodayDto } from '../../../../shared/interfaces/dashboard-today.interface';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 
 function ok<T>(data: T): ResponseAPI<T> {
   return { code: 200, message: 'OK', data };
 }
 
-function bookingsPage(bookings: AdminBookingDto[]): PageResponse<AdminBookingDto> {
+function makeSnapshot(overrides: Partial<DashboardTodayDto> = {}): DashboardTodayDto {
   return {
-    content: bookings,
-    totalElements: bookings.length,
-  } as PageResponse<AdminBookingDto>;
+    date: '2026-07-10',
+    timezone: 'Asia/Bangkok',
+    basis: { volume: 'booking_date', revenue: 'booking_date', occupancy: 'departure_date' },
+    tiles: {
+      departuresCount: 4,
+      occupancyRatePct: 55.5,
+      bookingCount: 20,
+      revenue: { net: '18425.00', paid: '18425.00', refunded: '0.00', currency: 'THB' },
+    },
+    departures: [
+      {
+        scheduleId: 1,
+        routeLabel: 'Bangkok -> Chiang Mai',
+        departureTime: '2026-07-10T08:00:00+07:00',
+        seatsSold: 6,
+        capacity: 12,
+        occupancyRatePct: 50,
+      },
+    ],
+    ...overrides,
+  };
 }
 
 interface FakeApi {
-  getBookings: jasmine.Spy<() => Observable<ResponseAPI<PageResponse<AdminBookingDto>>>>;
-  getVehicles: jasmine.Spy<() => Observable<ResponseAPI<AdminVehicleDto[]>>>;
+  getDashboardToday: jasmine.Spy<() => Observable<ResponseAPI<DashboardTodayDto>>>;
 }
 
 function makeStore(
@@ -28,131 +41,134 @@ function makeStore(
   authStatus$ = new BehaviorSubject<boolean>(true)
 ): AdminDashboardStore {
   const full: FakeApi = {
-    getBookings: jasmine.createSpy('getBookings').and.returnValue(of(ok(bookingsPage([])))),
-    getVehicles: jasmine.createSpy('getVehicles').and.returnValue(of(ok([]))),
+    getDashboardToday: jasmine
+      .createSpy('getDashboardToday')
+      .and.returnValue(of(ok(makeSnapshot()))),
     ...api,
   };
   return new AdminDashboardStore(full as any, { authStatus$ } as any);
 }
 
 describe('AdminDashboardStore', () => {
-  it('builds a snapshot from bookings and vehicles on first refresh', async () => {
+  it('builds a snapshot from the dashboard/today endpoint on first refresh', async () => {
     const store = makeStore({
-      getBookings: jasmine
-        .createSpy('getBookings')
-        .and.returnValue(of(ok(bookingsPage([{ id: 1, status: 'pending' } as AdminBookingDto])))),
-      getVehicles: jasmine
-        .createSpy('getVehicles')
-        .and.returnValue(of(ok([{ id: 1, status: 'active' } as AdminVehicleDto]))),
+      getDashboardToday: jasmine
+        .createSpy('getDashboardToday')
+        .and.returnValue(of(ok(makeSnapshot({ tiles: { departuresCount: 3, occupancyRatePct: 40, bookingCount: 9 } })))),
     });
 
     await store.refresh();
 
-    expect(store.snapshot?.totalBookings).toBe(1);
-    expect(store.snapshot?.pendingPayments).toBe(1);
-    expect(store.snapshot?.activeVehicles).toBe(1);
-    expect(store.snapshot?.partialFailure).toBeFalse();
+    expect(store.value?.tiles.departuresCount).toBe(3);
+    expect(store.value?.tiles.bookingCount).toBe(9);
+    expect(store.hasValue).toBeTrue();
   });
 
-  // The fix: re-entering /admin/dashboard must render the cached snapshot
-  // *synchronously* (no network wait). The root-scoped store survives the
-  // component's destruction, and snapshot$ is a BehaviorSubject, so a fresh
-  // subscriber (a recreated component) receives the cached value immediately.
-  it('replays the cached snapshot to a new subscriber synchronously (no refetch wait)', async () => {
+  // The fix carried over from ReportsStore/AdminCollectionStore: re-entering
+  // /admin/dashboard must render the cached value *synchronously* (no network
+  // wait). The root-scoped store survives the component's destruction, and
+  // data$ is a BehaviorSubject, so a fresh subscriber (a recreated component)
+  // receives the cached value immediately.
+  it('replays the cached value to a new subscriber synchronously (no refetch wait)', async () => {
     const store = makeStore({
-      getBookings: jasmine
-        .createSpy('getBookings')
-        .and.returnValue(of(ok(bookingsPage([{ id: 7 } as AdminBookingDto])))),
+      getDashboardToday: jasmine
+        .createSpy('getDashboardToday')
+        .and.returnValue(of(ok(makeSnapshot({ tiles: { departuresCount: 7, occupancyRatePct: 10, bookingCount: 1 } })))),
     });
     await store.refresh(); // first visit populates the cache
 
-    const cached = store.snapshot;
-    let receivedOnReentry: DashboardSnapshot | null | undefined;
-    store.snapshot$.subscribe((snapshot) => (receivedOnReentry = snapshot)); // re-entry
+    const cached = store.value;
+    let receivedOnReentry: DashboardTodayDto | null | undefined;
+    store.data$.subscribe((data) => (receivedOnReentry = data)); // re-entry
 
     expect(receivedOnReentry).toBe(cached); // delivered before any await
     expect(receivedOnReentry).not.toBeNull();
   });
 
-  it('reflects new data after a background revalidate (real-time on update)', async () => {
-    let bookings: AdminBookingDto[] = [{ id: 1 } as AdminBookingDto];
+  it('reflects new data after a background revalidate', async () => {
+    let bookingCount = 1;
     const store = makeStore({
-      getBookings: jasmine
-        .createSpy('getBookings')
-        .and.callFake(() => of(ok(bookingsPage(bookings)))),
+      getDashboardToday: jasmine
+        .createSpy('getDashboardToday')
+        .and.callFake(() => of(ok(makeSnapshot({ tiles: { departuresCount: 1, occupancyRatePct: 5, bookingCount } })))),
     });
 
     await store.refresh();
-    expect(store.snapshot?.totalBookings).toBe(1);
+    expect(store.value?.tiles.bookingCount).toBe(1);
 
-    bookings = [{ id: 1 } as AdminBookingDto, { id: 2 } as AdminBookingDto];
-    await store.refresh(); // background revalidate picks up the new row
+    bookingCount = 2;
+    await store.refresh(); // background revalidate picks up the new value
 
-    expect(store.snapshot?.totalBookings).toBe(2);
+    expect(store.value?.tiles.bookingCount).toBe(2);
   });
 
-  it('keeps the prior value and flags partialFailure when a source fails', async () => {
-    let vehiclesObservable: Observable<ResponseAPI<AdminVehicleDto[]>> = of(
-      ok([{ id: 1, status: 'active' } as AdminVehicleDto])
-    );
+  it('keeps the prior cached value and flags error$ when a fetch fails', async () => {
+    let response$: Observable<ResponseAPI<DashboardTodayDto>> = of(ok(makeSnapshot()));
     const store = makeStore({
-      getVehicles: jasmine.createSpy('getVehicles').and.callFake(() => vehiclesObservable),
+      getDashboardToday: jasmine.createSpy('getDashboardToday').and.callFake(() => response$),
     });
 
     await store.refresh();
-    expect(store.snapshot?.activeVehicles).toBe(1);
-    expect(store.snapshot?.partialFailure).toBeFalse();
+    expect(store.hasValue).toBeTrue();
 
-    vehiclesObservable = throwError(() => new Error('network'));
+    response$ = throwError(() => new Error('network'));
     await store.refresh();
 
-    expect(store.snapshot?.activeVehicles).toBe(1); // stale value retained, not blanked
-    expect(store.snapshot?.partialFailure).toBeTrue();
+    expect(store.value?.tiles.departuresCount).toBe(4); // stale value retained, not blanked
+    let failed = false;
+    store.error$.subscribe((v) => (failed = v));
+    expect(failed).toBeTrue();
   });
 
-  it('dedupes concurrent refreshes so rapid re-entry does not fan out fetches', async () => {
-    const getBookings = jasmine
-      .createSpy('getBookings')
-      .and.returnValue(of(ok(bookingsPage([]))));
-    const store = makeStore({ getBookings });
+  // Concurrent calls never fan out into unrelated fetch cycles — a call that
+  // arrives mid-flight collapses into the current cycle (requesting at most
+  // one extra rerun when it finishes), rather than each caller kicking off
+  // its own independent request. The exact rerun-count contract is the base
+  // class's responsibility and is covered in detail by
+  // admin-collection-store.spec.ts; here we only need the dashboard-specific
+  // wiring (getDashboardToday) to resolve cleanly under concurrent refresh().
+  it('resolves cleanly for concurrent refresh() callers without throwing', async () => {
+    const getDashboardToday = jasmine
+      .createSpy('getDashboardToday')
+      .and.returnValue(of(ok(makeSnapshot())));
+    const store = makeStore({ getDashboardToday });
 
     const first = store.refresh();
     const second = store.refresh(); // arrives while the first is in flight
     await Promise.all([first, second]);
 
-    expect(getBookings).toHaveBeenCalledTimes(1);
+    expect(store.hasValue).toBeTrue();
+    expect(getDashboardToday).toHaveBeenCalled();
   });
 
-  it('clears the cached snapshot on logout so the next session starts clean', async () => {
+  it('clears the cached value on logout so the next session starts clean', async () => {
     const authStatus$ = new BehaviorSubject<boolean>(true);
     const store = makeStore(
       {
-        getBookings: jasmine
-          .createSpy('getBookings')
-          .and.returnValue(of(ok(bookingsPage([{ id: 1 } as AdminBookingDto])))),
+        getDashboardToday: jasmine
+          .createSpy('getDashboardToday')
+          .and.returnValue(of(ok(makeSnapshot()))),
       },
       authStatus$
     );
     await store.refresh();
-    expect(store.snapshot).not.toBeNull();
+    expect(store.hasValue).toBeTrue();
 
     authStatus$.next(false); // logout / token expiry
 
-    expect(store.snapshot).toBeNull();
+    expect(store.hasValue).toBeFalse();
   });
 
-  it('leaves the snapshot null when the very first load fails entirely', async () => {
+  it('falls back to a zeroed empty snapshot when the API returns no data', async () => {
     const store = makeStore({
-      getBookings: jasmine
-        .createSpy('getBookings')
-        .and.returnValue(throwError(() => new Error('down'))),
-      getVehicles: jasmine
-        .createSpy('getVehicles')
-        .and.returnValue(throwError(() => new Error('down'))),
+      getDashboardToday: jasmine
+        .createSpy('getDashboardToday')
+        .and.returnValue(of({ code: 200, message: 'OK', data: undefined } as unknown as ResponseAPI<DashboardTodayDto>)),
     });
 
     await store.refresh();
 
-    expect(store.snapshot).toBeNull(); // component keeps its loading state, no empty zeros
+    expect(store.value?.tiles).toEqual({ departuresCount: 0, occupancyRatePct: 0, bookingCount: 0 });
+    expect(store.value?.departures).toEqual([]);
   });
 });

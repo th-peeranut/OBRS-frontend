@@ -1,5 +1,163 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — QA re-verify: OBRS-129 PASSED — data path confirmed end-to-end at backend `70ff182`
+
+Backend fix (`70ff182`, Instant→OffsetDateTime projection conversion) rebuilt locally on the same
+:8000/:4407 setup as the earlier FAILED pass. Re-checked only what the 500 had blocked; role
+matrix / error-state handling were already proven and not re-run.
+
+**AC1 (tile parity, FE render):** confirmed. Tiles read `1 / 28.6% / 4 / THB 800.00`, matching
+the API response and `/reports/summary` byte-for-byte. Same for `owner@system.local`.
+
+**AC2 (departures table):** 1 row rendered — `ชลบุรี-กรุงเทพฯ` (Chonburi-Bangkok, th label found;
+falls back to the English route slug correctly when zh has no translation row — confirmed in the
+zh screenshot, not a bug), `10 ก.ค. 2026 15:00` (via `formatDisplayDateTime`, OBRS-178 formatter —
+NOT the raw `2026-07-10T15:00:00+07:00` ISO string), `4 / 14`, `28.6%`. `tiles.departuresCount(1)
+== 1` row. Per-row occupancy (28.6%) consistent with the tile (only one row, so trivially
+sum-equal — matches the backend-side sum-based math already verified).
+
+**AC3 dark-mode DOM probe on the now-reachable DATA surfaces:** `.admin-kpi` computed
+`background-color: rgb(29, 34, 38)`, `.admin-table` / table rows `rgba(0,0,0,0)` (transparent,
+inherits the dark card background, same shape as the light-mode empty-state card already
+checked) — none near-white, no light bleed on any of the newly-reachable surfaces.
+
+**AC4 (basis captions + i18n, no raw-key leak):** confirmed live for en/th/zh (cold `app_language`
+localStorage switch + reload) — captions render "by departure date"/"by booking date" (localized:
+"ตามวันที่ออกเดินทาง"/"ตามวันที่จอง" in th, "按发车日期"/"按预订日期" in zh) under the correct tiles;
+`/ADMIN\.DASHBOARD\./` regex found zero raw-key leaks in the rendered body in any of the 3
+languages.
+
+**AC5 (View full reports link):** `.admin-card-head a.admin-btn-small` → `href="/admin/reports"`,
+click navigates to `/admin/reports`. (First attempt used an over-broad `hasText: /report/i`
+Playwright locator that matched the sidebar's "Usability Reports" nav item instead — a test-script
+bug, not a product bug; re-verified with the scoped selector above and it's correct.)
+
+**AC6 (empty state):** not re-forced — today (2026-07-10) has 1 real departure, so the empty
+branch isn't reachable live. Already confirmed via `dashboard-page.component.spec.ts`'s
+`isEmptyDay`/`contentState` unit tests (`'empty' when departuresCount===0 && bookingCount===0 &&
+occupancyRatePct===0`) plus the static template review — no change since the prior FAILED pass.
+
+Fresh screenshots (light/dark, en default; th/zh; owner spot-check) captured after polling for a
+real (non-skeleton) tile + a real table row — see QA's transcript for the scratchpad paths.
+Verdict: **PASSED**. No frontend changes needed; the prior FAILED pass's frontend-side conclusions
+(graceful error handling, correct i18n plumbing) already held and are now moot since the backend
+supplies 200s.
+
+## 2026-07-10 — QA: OBRS-129 FAILED (blocked on a backend 500, not a frontend bug)
+
+**Verdict: FAILED**, blocking bug is backend-side (see backend worktree's `AGENT_MEMORY.md` for
+the full root cause: `GET /api/private/admin/dashboard/today` 500s via an `Instant→OffsetDateTime`
+native-query projection error whenever any departure exists on the given day — i.e. on every real
+day, not just an edge case). Live-verified against local FE (:4407) + local backend (:8000, `sit`
+profile / real SIT DB) as `admin@system.local`.
+
+**What this DID confirm about the frontend's own code (all good):**
+- `dashboard-page.component.html`'s `contentState === 'error'` branch degrades gracefully — no JS
+  crash, no console pageerror, a clean centered message replaces the tiles+table entirely, exactly
+  per the `dashboard-state-card` design intent (screenshot evidence: `dashboard-light.png` /
+  `dashboard-dark.png` in QA's scratchpad, see the QA agent's transcript for paths).
+- The error message is correctly localized (`ADMIN.DASHBOARD.LOAD_FAILED` rendered as
+  "ไม่สามารถโหลดข้อมูลแดชบอร์ดได้" in Thai, no raw key leaked) — the admin account's
+  `preferredLocale` defaulted the UI to Thai on this run.
+- Dark mode probe on the one reachable new surface (`.dashboard-state-card`): computed
+  `background-color: rgb(29, 34, 38)`, `color: rgb(231, 237, 241)` — dark, no light-bleed.
+- Role gate (AC3) verified at the API level: ADMIN/OWNER reach the guarded route (get 500, not
+  403 — i.e. auth passes, only the data path is broken); SALESPERSON/DRIVER/CUSTOMER get 403,
+  anon gets 401.
+
+**What could NOT be verified this pass (all downstream of the backend bug, nothing here implies a
+frontend defect):** tile-parity rendering (AC1), departures table rendering + occupancy column
+(AC2), the empty-state note replacing the table (AC5) — never reached because "today" has real
+departures and the endpoint always 500s on that path, `.dashboard-basis-caption`/`.admin-kpi`/
+`.admin-table` dark-mode probe (never rendered), the "View full reports" link (AC7 — its wrapping
+`<section>` is `*ngIf="contentState !== 'error'"`, so it doesn't render in the error state either),
+tile-level i18n (en/zh switch of tile labels/captions never got past the error state to check).
+
+Re-run this worktree's own capture/regression once the backend fix lands — nothing here needs
+frontend changes.
+
+## 2026-07-10 — Frontend implementation: `/admin/dashboard` rebuild-in-place (OBRS-129)
+
+**Worktree:** `OBRS-frontend-wt-starter-dashboards` (branch `ao/starter-dashboards`, off
+`origin/dev` which already has OBRS-40). `ng test`: 996/996 PASS. `ng build --configuration
+production`: PASS (1.45 MB initial, under the 1.5 MB budget). `npx tsc --noEmit -p
+tsconfig.app.json`: clean.
+
+**Rebuild-in-place, not a new page.** Kept the route (`/admin/dashboard`), sidebar nav item,
+topbar title mechanism (`data.titleKey: 'ADMIN.PAGES.DASHBOARD'`, `subtitleKey:
+'ADMIN.DASHBOARD.SUBTITLE'` — no in-body `<h3>`), and `pollWhileVisible` auto-refresh
+untouched. Only `AdminDashboardStore`'s internals and the page's rendering changed.
+
+**`AdminDashboardStore` re-based onto `AdminCollectionStore<DashboardTodayDto>`, deleting the
+old bespoke two-source (`getBookings()` + `getVehicles()`) merge entirely** — same move
+`ReportsStore` made for OBRS-40. `fetch()` is one `firstValueFrom(adminApiService
+.getDashboardToday())` call; `emptySnapshot()` covers the no-`data` edge. See
+`docs/adr/0013-dashboard-rebase-on-admin-collection-store.md` for the full rationale
+(business logic — pending-payment/active-vehicle detection, revenue summation — now lives
+server-side in the new endpoint instead of being re-derived client-side).
+
+**Backend endpoint does not exist yet — built directly against the contract supplied in the
+locked task spec (mirrors `ReportsSummaryDto`'s shape convention), flagged in
+`docs/handoff.md`.** Checked the paired backend worktree
+(`OBRS-backend-wt-starter-dashboards`): `IMPLEMENTATION_CHECKLIST.md` shows `#44` (OBRS-129)
+"claimed"/in-progress but no `Dashboard*` controller/service exists yet, only planning-doc
+commits. `../OBRS-backend/docs/api/` has no `dashboard.md`. Filed a Contract Request per
+`CLAUDE.md`'s R0/R1 rule — every load will show `ADMIN.DASHBOARD.LOAD_FAILED` until the
+backend ships `GET /api/private/admin/dashboard/today`.
+
+**`contentState` has one fewer branch than `ReportsPageComponent`'s.** No date picker on this
+page (the endpoint is always "today" in Bangkok time), so no `'invalid'` state —
+`'loading' | 'error' | 'empty' | 'data'` only. `isEmptyDay` carries forward the OBRS-40
+`e41e88e` divergent-basis reasoning (occupancy keys on departure-date, `bookingCount` keys on
+booking-date, so a day can have real occupancy with zero bookings and that is NOT empty) —
+renamed for this page but same logic shape as `isEmptyRange`.
+
+**Revenue tile gates on `showRevenue = !!tiles?.revenue` (presence), never a role check** —
+same forward-compat pattern as Reports, now literally realized: the interface comment on
+`DashboardTilesDto.revenue` says this is for "a future viewer (e.g. salesperson) without
+revenue visibility," which is exactly what OBRS-129's own deferred salesperson-access scope
+describes.
+
+**Split `loadError` (gated on `!store.hasValue`, drives the full-replace error card) from a
+new raw `hasFailed` flag (ungated, drives `app-admin-refresh-hint`'s "failed, showing saved
+data" line) — Reports doesn't need this split because it hardcodes `[failed]="false"` on its
+refresh-hint and has no such requirement.** The task spec explicitly asked for
+`app-admin-refresh-hint` to cover "background-refresh/failed-with-cache," which needs to fire
+precisely when there **is** a cache (the opposite gating condition from the error card). The
+outer `<section class="admin-page-intro">`'s `*ngIf` combines
+`(contentState === 'data' || contentState === 'empty') && (isRefreshing || hasFailed)` so the
+hint only ever appears over an already-rendered tiles/table view, never doubled up with the
+error-state-card.
+
+**Test gotcha: a naive `dedupes concurrent refreshes ... toHaveBeenCalledTimes(1)` assertion
+is WRONG for `AdminCollectionStore` subclasses when the fetch resolves via `firstValueFrom(of(...))`.**
+`AdminCollectionStore.refresh()`'s actual contract (see its own doc comment) is "a call that
+arrives mid-flight requests one more fetch when the current one finishes" — with an
+already-resolved-but-microtask-deferred observable, both the initial fetch AND the
+one-rerun fire before `Promise.all([first, second])` settles, so the spy legitimately gets
+called twice. Verified via a throwaway Node repro (`rxjs`'s `firstValueFrom(of(x))` still
+defers the `await` continuation to a microtask, same as any promise). Rewrote the test to
+assert the store resolves cleanly + `hasValue` afterward, not a specific call count — the
+exact rerun-count contract is already covered in detail by the base class's own
+`admin-collection-store.spec.ts` (using a manually-controlled `deferred<T>()` to actually hold
+a fetch "in flight" across the assertion, which `of()` cannot model).
+
+**i18n:** added `ADMIN.DASHBOARD.{TILE.*, BASIS.*, DEPARTURES.*, VIEW_FULL_REPORTS}` (12 keys)
+to en/th/zh, changed `SUBTITLE`, deleted the now-dead flat keys
+(`TOTAL_BOOKINGS`/`PENDING_PAYMENTS`/`ACTIVE_VEHICLES`/`REVENUE`/`RECENT_BOOKINGS`/`VIEW_ALL`/
+`PARTIAL_LOAD_FAILED`/`UPDATING`) after grep-confirming none were referenced outside the
+dashboard files being rewritten. Kept `LOAD_FAILED` (reused) and `TITLE` (not in the
+task's deletion list, left as harmless unused weight rather than guessing it's safe to
+remove).
+
+**Docs:** `README.md` "Admin UI Conventions" gained a "Dashboard (`/admin/dashboard`)"
+section (mirrors the existing "Reports" section's structure/tone) explicitly noting this is
+now the **second** `.admin-card.admin-kpi` tile-markup consumer the Reports section already
+predicted, and that extraction into a shared stat-tile component was deliberately NOT done
+here (tracked as debt, out of scope for a task with a fully prescribed file list).
+`docs/handoff.md` got a new Contract Request entry (2026-07-10); `docs/adr/0013-...md` covers
+the store-rebase decision.
+
 ## 2026-07-09 — Scrutinize self-fix: OBRS-176 admin cross-area access
 
 **Worktree:** `OBRS-frontend-wt-admin-cross-area-access` (branch `ao/admin-cross-area-access`).
