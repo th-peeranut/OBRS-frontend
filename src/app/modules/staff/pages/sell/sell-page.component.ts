@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
+import { normalizeSeatNumber } from '../../../../shared/lib/seat-number';
 import {
   PopularStopDto,
   SegmentStopPairDto,
@@ -274,7 +275,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
         // Use the per-seat type captured at click time; fall back to the current
         // global type if somehow the seat isn't in the map.
         passengerType: this.seatPassengerTypes[seat] ?? this.selectedPassengerType,
-        seatNumber: seat,
+        // The seat maps render/select letter-prefixed labels (van "A1".."A13", bus
+        // "B1".."B21" — see `selectedSeats` / `busSeatLabels` in
+        // WalkInCenterPanelComponent), but the booking endpoint's
+        // `availableSeatNumbers`/`tickets.seat_number` are bare digits (OBRS-179:
+        // the walk-in van path 400'd with BOOKING_ERROR_SEATS_NOT_FOUND because the
+        // raw label was sent as-is). Normalize here, at the payload boundary, the
+        // same way the customer booking flow already does
+        // (`PassengerInfoComponent.normalizeSeatNumber`) — display state
+        // (`selectedSeats`, seat-map highlighting) keeps the label form.
+        seatNumber: normalizeSeatNumber(seat),
         title: payload.contact.title,
         firstName: payload.contact.firstName,
         lastName: payload.contact.lastName,
