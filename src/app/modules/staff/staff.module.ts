@@ -19,6 +19,7 @@ import { ProvinceEffect } from '../../shared/stores/station/station.effect';
 
 import { StaffLayoutComponent } from './staff-layout.component';
 import { SellPageComponent } from './pages/sell/sell-page.component';
+import { SellReceiptPageComponent } from './pages/sell-receipt/sell-receipt-page.component';
 import { StaffSchedulesPageComponent } from './pages/staff-schedules/staff-schedules-page.component';
 import { DriverSchedulesPageComponent } from './pages/driver-schedules/driver-schedules-page.component';
 import { BoardingListPageComponent } from './pages/boarding-list/boarding-list-page.component';
@@ -48,6 +49,17 @@ export const staffRoutes: Routes = [
         component: SellPageComponent,
         canActivate: [AuthGuard],
         data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.SELL', subtitleKey: 'STAFF.SELL.SUBTITLE' },
+      },
+      {
+        // OBRS-195/OBRS-188: a staff-owned, printable proof of a walk-in sale.
+        // Deliberately NOT `data: { customerArea: true }` — that would route
+        // through AuthGuard's public/customer branch and bounce staff off a
+        // portal-confined account the same way the old `/e-ticket` redirect
+        // did (OBRS-188). This is a normal staff-portal route instead.
+        path: 'sell/receipt/:bookingId',
+        component: SellReceiptPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.SELL_RECEIPT', subtitleKey: 'STAFF.SELL_RECEIPT.SUBTITLE' },
       },
       {
         path: 'schedules',
@@ -81,6 +93,7 @@ export const staffRoutes: Routes = [
   declarations: [
     StaffLayoutComponent,
     SellPageComponent,
+    SellReceiptPageComponent,
     StaffSchedulesPageComponent,
     DriverSchedulesPageComponent,
     BoardingListPageComponent,

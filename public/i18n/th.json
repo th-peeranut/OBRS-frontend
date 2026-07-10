@@ -1326,6 +1326,7 @@
   "STAFF": {
     "PAGES": {
       "SELL": "ขายตั๋ว Walk-in",
+      "SELL_RECEIPT": "พิมพ์ตั๋ว",
       "SCHEDULES": "จัดการตารางเดินรถ",
       "DRIVER": "ตารางของฉัน",
       "BOARDING": "รายชื่อผู้โดยสาร"
@@ -1566,7 +1567,29 @@
       "SCHEDULE_DELETE_ITEM": "ลบตาราง",
       "BACK_BTN": "กลับ",
       "CONFIRM_BTN": "ยืนยัน",
-      "SOLD_SUCCESS": "ขายตั๋วสำเร็จ — {{bookingNumber}}"
+      "SOLD_SUCCESS_TITLE": "ขายสำเร็จ",
+      "SOLD_SUCCESS": "ขายตั๋วสำเร็จ — {{bookingNumber}}",
+      "PRINT_TICKET": "พิมพ์ตั๋ว"
+    },
+    "SELL_RECEIPT": {
+      "SUBTITLE": "หลักฐานการขายตั๋ว Walk-in ที่พิมพ์ได้",
+      "DOCUMENT_TITLE": "ใบเสร็จรับเงิน",
+      "BACK_TO_SELL": "กลับไปหน้าขายตั๋ว",
+      "LOADING": "กำลังโหลดใบเสร็จ...",
+      "LOAD_ERROR": "ไม่สามารถโหลดใบเสร็จนี้ได้",
+      "RETRY": "ลองใหม่",
+      "PAYMENT_METHOD_OTHER": "อื่นๆ",
+      "LABEL": {
+        "BOOKING_REF": "เลขที่การจอง",
+        "ROUTE": "เส้นทาง",
+        "DEPARTURE": "เวลาออกเดินทาง",
+        "ARRIVAL": "เวลาถึงปลายทาง",
+        "PAYMENT_METHOD": "วิธีชำระเงิน",
+        "PAID_AT": "เวลาชำระเงิน",
+        "AMOUNT_PAID": "จำนวนเงินที่ชำระ",
+        "SOLD_BY": "ผู้ขาย",
+        "PASSENGERS": "ผู้โดยสาร"
+      }
     },
     "BOARDING_ENTRY": {
       "TITLE": "เลือกรอบเดินทาง",

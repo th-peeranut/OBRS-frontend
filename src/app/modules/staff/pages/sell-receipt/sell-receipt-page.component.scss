@@ -1,0 +1,208 @@
+@import "../../../../../styles/variables.scss";
+
+.receipt-page {
+  padding: $space-md 0;
+}
+
+.receipt-paper {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  background: $primary-white;
+  border-radius: $radius-lg;
+  border: 1px solid $primary-lightgrey;
+  padding: $space-lg;
+  box-shadow: 0 12px 32px rgba(13, 21, 37, 0.08);
+}
+
+.receipt-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2xs;
+  margin-bottom: $space-md;
+}
+
+.receipt-logo {
+  display: block;
+  width: min(104px, 38%);
+  height: auto;
+  max-width: 100%;
+  aspect-ratio: 200 / 87;
+  object-fit: contain;
+}
+
+.receipt-subtitle {
+  font-size: $font-size-xs;
+  color: $text-lightblack;
+}
+
+.receipt-divider {
+  height: 1px;
+  background: $primary-lightgrey;
+  margin: $space-sm 0;
+
+  &.dotted {
+    background: none;
+    border-top: 2px dashed $primary-lightgrey;
+  }
+}
+
+.receipt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-xs 16px;
+}
+
+.receipt-item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3xs;
+
+  &.full {
+    grid-column: 1 / -1;
+  }
+
+  .label {
+    font-size: 11px;
+    color: $text-lightgrey;
+  }
+
+  .value {
+    font-size: 13px;
+    font-weight: $font-weight-semibold;
+    color: $text-softblack;
+  }
+}
+
+.receipt-tickets {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.receipt-ticket-list {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.receipt-ticket-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2xs;
+  padding: $space-sm 0;
+
+  & + & {
+    border-top: 1px dashed $primary-lightgrey;
+  }
+}
+
+.receipt-ticket-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3xs;
+}
+
+.receipt-ticket-number {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-softblack;
+}
+
+.receipt-passenger-detail {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-2xs 12px;
+  width: 100%;
+
+  .passenger-index {
+    font-size: $font-size-xs;
+    font-weight: $font-weight-semibold;
+    color: $text-lightblack;
+  }
+
+  .passenger-field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-3xs;
+
+    .label {
+      font-size: 11px;
+      color: $text-lightgrey;
+    }
+
+    .value {
+      font-size: $font-size-xs;
+      font-weight: $font-weight-semibold;
+      color: $text-softblack;
+    }
+  }
+}
+
+.qr-code {
+  width: 140px;
+  height: 140px;
+  border-radius: $radius-md;
+  border: 8px solid $primary-white;
+  display: block;
+  object-fit: contain;
+  background-color: $primary-white;
+}
+
+.qr-code-placeholder {
+  box-shadow: inset 0 0 0 1px rgba(13, 21, 37, 0.1);
+  background-image:
+    linear-gradient(90deg, rgba(13, 21, 37, 0.12) 50%, transparent 50%),
+    linear-gradient(rgba(13, 21, 37, 0.12) 50%, transparent 50%);
+  background-size: 18px 18px;
+  background-color: $primary-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &.is-unavailable {
+    background-image: none;
+    background-color: $secondary-lightgrey;
+  }
+}
+
+.qr-unavailable-icon {
+  font-size: 32px;
+  color: $text-red;
+}
+
+.qr-hint {
+  font-size: 11px;
+  color: $text-lightgrey;
+  text-align: center;
+}
+
+// Print surface (A4 default — 80mm thermal is a deferred follow-up, not built
+// here). Only `.receipt-paper` renders on paper; the on-screen toolbar/loading/
+// error states (`.no-print`) never print.
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .receipt-page {
+    padding: 0;
+  }
+
+  .receipt-paper {
+    width: 100%;
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+  }
+}

@@ -1325,6 +1325,7 @@
   "STAFF": {
     "PAGES": {
       "SELL": "Walk-in Sales",
+      "SELL_RECEIPT": "Print Ticket",
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
       "BOARDING": "Boarding List"
@@ -1565,7 +1566,29 @@
       "SCHEDULE_DELETE_ITEM": "Delete schedule",
       "BACK_BTN": "Back",
       "CONFIRM_BTN": "Confirm",
-      "SOLD_SUCCESS": "Sold successfully — {{bookingNumber}}"
+      "SOLD_SUCCESS_TITLE": "Sale complete",
+      "SOLD_SUCCESS": "Sold successfully — {{bookingNumber}}",
+      "PRINT_TICKET": "Print ticket"
+    },
+    "SELL_RECEIPT": {
+      "SUBTITLE": "Printable proof of a walk-in sale",
+      "DOCUMENT_TITLE": "Sales Receipt",
+      "BACK_TO_SELL": "Back to Sell",
+      "LOADING": "Loading receipt...",
+      "LOAD_ERROR": "Unable to load this receipt.",
+      "RETRY": "Retry",
+      "PAYMENT_METHOD_OTHER": "Other",
+      "LABEL": {
+        "BOOKING_REF": "Booking ref",
+        "ROUTE": "Route",
+        "DEPARTURE": "Departure",
+        "ARRIVAL": "Arrival",
+        "PAYMENT_METHOD": "Payment method",
+        "PAID_AT": "Paid at",
+        "AMOUNT_PAID": "Amount paid",
+        "SOLD_BY": "Sold by",
+        "PASSENGERS": "Passengers"
+      }
     },
     "BOARDING_ENTRY": {
       "TITLE": "Select a Schedule",

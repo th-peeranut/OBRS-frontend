@@ -1324,6 +1324,7 @@
   "STAFF": {
     "PAGES": {
       "SELL": "现场售票",
+      "SELL_RECEIPT": "打印车票",
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
       "BOARDING": "登车名单"
@@ -1564,7 +1565,29 @@
       "SCHEDULE_DELETE_ITEM": "删除班次",
       "BACK_BTN": "返回",
       "CONFIRM_BTN": "确认",
-      "SOLD_SUCCESS": "售票成功 — {{bookingNumber}}"
+      "SOLD_SUCCESS_TITLE": "售票成功",
+      "SOLD_SUCCESS": "售票成功 — {{bookingNumber}}",
+      "PRINT_TICKET": "打印车票"
+    },
+    "SELL_RECEIPT": {
+      "SUBTITLE": "现场售票的可打印凭证",
+      "DOCUMENT_TITLE": "销售收据",
+      "BACK_TO_SELL": "返回售票页面",
+      "LOADING": "正在加载收据...",
+      "LOAD_ERROR": "无法加载此收据。",
+      "RETRY": "重试",
+      "PAYMENT_METHOD_OTHER": "其他",
+      "LABEL": {
+        "BOOKING_REF": "订单编号",
+        "ROUTE": "路线",
+        "DEPARTURE": "出发时间",
+        "ARRIVAL": "到达时间",
+        "PAYMENT_METHOD": "付款方式",
+        "PAID_AT": "付款时间",
+        "AMOUNT_PAID": "已付金额",
+        "SOLD_BY": "售票员",
+        "PASSENGERS": "乘客"
+      }
     },
     "BOARDING_ENTRY": {
       "TITLE": "选择班次",

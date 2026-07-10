@@ -2,7 +2,7 @@ import { BehaviorSubject, of, throwError, Subject } from 'rxjs';
 import { FormBuilder } from '@angular/forms';
 import { SellPageComponent } from './sell-page.component';
 import { WalkInTripDto, WalkInRouteGroupDto } from '../../../../services/staff/staff-api.service';
-import { createTranslateStub } from '../../../../testing/test-stubs';
+import { createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
 import { WalkInCheckoutPayload } from '../../components/walk-in-checkout/walk-in-checkout.component';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
@@ -97,6 +97,11 @@ function createAlertStub(): any {
     error: jasmine.createSpy('error').and.returnValue(Promise.resolve()),
     warning: jasmine.createSpy('warning').and.returnValue(Promise.resolve()),
     success: jasmine.createSpy('success').and.returnValue(Promise.resolve()),
+    // OBRS-195: the post-sale success prompt now offers a "Print ticket"
+    // choice via AlertService.confirm(); default to "not confirmed" (staff
+    // dismissed/closed) so existing tests that don't care about printing are
+    // unaffected — tests that DO care override this per-call.
+    confirm: jasmine.createSpy('confirm').and.returnValue(Promise.resolve(false)),
   };
 }
 
@@ -104,7 +109,8 @@ function makeComponent(
   staffApi = createStaffApiStub(),
   alertService = createAlertStub(),
   adminApi = createAdminApiStub(),
-  scheduleStore = createScheduleStoreStub()
+  scheduleStore = createScheduleStoreStub(),
+  router = createRouterStub()
 ): SellPageComponent {
   return new SellPageComponent(
     staffApi,
@@ -112,7 +118,8 @@ function makeComponent(
     createTranslateStub(),
     new FormBuilder(),
     adminApi,
-    scheduleStore
+    scheduleStore,
+    router
   );
 }
 
@@ -434,9 +441,48 @@ describe('SellPageComponent', () => {
       // OBRS-130 checkout/center layout follow-up: back to the Ticket Sales tab
       // (index 0) so the checkout column reappears for the next sale.
       expect((comp as any).activeTabIndex).toBe(0);
-      // Staff get an in-place success toast instead of being bounced from the
-      // customerArea /e-ticket route.
-      expect(alert.success).toHaveBeenCalled();
+      // OBRS-195: staff get an in-place success prompt (via AlertService.confirm,
+      // never a direct Swal.fire()) offering to print — not a bounce to the
+      // customerArea /e-ticket route (OBRS-188).
+      expect(alert.confirm).toHaveBeenCalled();
+    });
+
+    it('navigates to the staff receipt route (never /e-ticket) when staff confirms "Print ticket" (OBRS-195/OBRS-188)', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const router = createRouterStub();
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+      const comp = makeComponent(api, alert, createAdminApiStub(), createScheduleStoreStub(), router);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+      // Let the confirm() promise resolve before asserting the navigation.
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(navigateSpy).toHaveBeenCalledWith(['/staff/sell/receipt', 99]);
+    });
+
+    it('does NOT navigate when staff dismisses the print prompt', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub(); // confirm() defaults to resolving false
+      const router = createRouterStub();
+      const navigateSpy = spyOn(router, 'navigate').and.callThrough();
+      const comp = makeComponent(api, alert, createAdminApiStub(), createScheduleStoreStub(), router);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(navigateSpy).not.toHaveBeenCalled();
     });
 
     it('includes identityCardNumber in passenger when provided', () => {
@@ -645,7 +691,8 @@ describe('SellPageComponent', () => {
         translate,
         new FormBuilder(),
         createAdminApiStub(),
-        createScheduleStoreStub()
+        createScheduleStoreStub(),
+        createRouterStub()
       );
       return { comp, translate };
     }
@@ -986,7 +1033,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store
+        createAdminApiStub(), store, createRouterStub()
       );
       comp.ngOnInit();
 
@@ -1013,7 +1060,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store
+        createAdminApiStub(), store, createRouterStub()
       );
       comp.ngOnInit();
 
@@ -1039,7 +1086,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store
+        createAdminApiStub(), store, createRouterStub()
       );
       comp.ngOnInit();
 
@@ -1063,7 +1110,7 @@ describe('SellPageComponent', () => {
       const comp = new SellPageComponent(
         createStaffApiStub(),
         createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), store
+        createAdminApiStub(), store, createRouterStub()
       );
       comp.ngOnInit();
 

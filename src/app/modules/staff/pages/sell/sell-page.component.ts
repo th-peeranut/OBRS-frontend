@@ -1,5 +1,6 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Observable, Subject, firstValueFrom, forkJoin, of, take } from 'rxjs';
 import { catchError, map, shareReplay, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -116,7 +117,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly formBuilder: FormBuilder,
     private readonly adminApiService: AdminApiService,
-    readonly scheduleStore: StaffSchedulesStore
+    readonly scheduleStore: StaffSchedulesStore,
+    private readonly router: Router
   ) {
     this.scheduleItemForm = this.formBuilder.group({
       departureDate: [null, [Validators.required]],
@@ -422,11 +424,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
                 this.selectedTrip = null;
                 this.activeTabIndex = 0;
                 this.loadTrips(this.selectedDate);
-                void this.alertService.success(
-                  this.translate.instant('STAFF.SELL.SOLD_SUCCESS', {
-                    bookingNumber: bNum ?? '',
-                  })
-                );
+                void this.offerPrintTicket(bId, bNum);
               },
               error: (err: unknown) => {
                 this.isSelling = false;
@@ -445,6 +443,33 @@ export class SellPageComponent implements OnInit, OnDestroy {
           void this.alertService.error(message);
         },
       });
+  }
+
+  /**
+   * OBRS-195/OBRS-188: replaces the old post-sale success toast with an
+   * actionable "Print ticket" choice. AlertService.confirm (already the
+   * generic yes/no primitive — not forked/extended) is reused so this still
+   * routes through AlertService rather than a direct Swal.fire(). Confirming
+   * navigates to the staff-owned receipt route (never `/e-ticket`, which is
+   * `customerArea` and bounces staff — OBRS-188).
+   */
+  private async offerPrintTicket(
+    bookingId: number | null,
+    bookingNumber: string | null
+  ): Promise<void> {
+    const shouldPrint = await this.alertService.confirm({
+      title: this.translate.instant('STAFF.SELL.SOLD_SUCCESS_TITLE'),
+      text: this.translate.instant('STAFF.SELL.SOLD_SUCCESS', {
+        bookingNumber: bookingNumber ?? '',
+      }),
+      confirmButtonText: this.translate.instant('STAFF.SELL.PRINT_TICKET'),
+      cancelButtonText: this.translate.instant('COMMON.CLOSE'),
+      icon: 'success',
+    });
+
+    if (shouldPrint && bookingId) {
+      void this.router.navigate(['/staff/sell/receipt', bookingId]);
+    }
   }
 
   // ─── Schedule management ───────────────────────────────────────────────────

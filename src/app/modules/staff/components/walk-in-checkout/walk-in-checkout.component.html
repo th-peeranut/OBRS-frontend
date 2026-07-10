@@ -43,9 +43,13 @@
       <div class="invalid-feedback d-block" *ngIf="fieldError('phoneNumber') as key">{{ key | translate }}</div>
     </div>
 
-    <!-- Email (required for walk-in: the e-ticket is delivered by email) -->
+    <!-- Email (OBRS-197: optional for walk-in — the printed receipt/QR is the
+         proof of purchase, no e-ticket email is required for this channel) -->
     <div class="mb-2">
-      <label class="form-label small fw-semibold mb-1">{{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}</label>
+      <label class="form-label small fw-semibold mb-1">
+        {{ 'STAFF.SELL.CONTACT_EMAIL' | translate }}
+        <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
+      </label>
       <input class="form-control form-control-sm"
              formControlName="email"
              type="email"

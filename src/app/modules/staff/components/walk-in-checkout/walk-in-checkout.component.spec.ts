@@ -76,13 +76,24 @@ describe('WalkInCheckoutComponent', () => {
       expect((comp as any).canSell).toBeFalse();
     });
 
-    it('returns false when email is missing (required for walk-in)', () => {
+    it('returns true when email is missing (OBRS-197: optional for walk-in)', () => {
       const comp = makeComponent();
       comp.selectedSeats = ['B1'];
       comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
         title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: '',
+      });
+      expect((comp as any).canSell).toBeTrue();
+    });
+
+    it('returns false when email is filled but not a valid email format', () => {
+      const comp = makeComponent();
+      comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      comp['contactForm'].patchValue({
+        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: 'not-an-email',
       });
       expect((comp as any).canSell).toBeFalse();
     });
@@ -180,19 +191,37 @@ describe('WalkInCheckoutComponent', () => {
       expect(('pricePerSeat' as string) in emitted!).toBeFalse();
     });
 
-    it('does not emit when the form is invalid (blank email)', () => {
+    it('does not emit when the form is invalid (malformed email)', () => {
       const comp = makeComponent();
       comp.selectedSeats = ['B1'];
       comp.pricePerSeat = 300;
       comp['cashReceived'] = 300;
       comp['contactForm'].patchValue({
-        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: '',
+        title: 'Mr.', firstName: 'A', lastName: 'B', phoneNumber: '0812345678', email: 'not-an-email',
       });
 
       let emitted: unknown;
       comp.sell.subscribe((p) => { emitted = p; });
       (comp as any).onSell();
       expect(emitted).toBeUndefined();
+    });
+
+    it('emits and omits contact.email when the email field is left blank (OBRS-197)', () => {
+      const comp = makeComponent();
+      comp.selectedSeats = ['B1'];
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      comp['contactForm'].setValue({
+        title: 'Mr.', firstName: 'Somchai', lastName: 'Rakdee',
+        phoneNumber: '0812345678', identityCardNumber: '', email: '',
+      });
+
+      let emitted: Parameters<typeof comp['sell']['emit']>[0] | undefined;
+      comp.sell.subscribe((p) => { emitted = p; });
+      (comp as any).onSell();
+
+      expect(emitted).toBeDefined();
+      expect('email' in emitted!.contact).toBeFalse();
     });
 
     it('includes identityCardNumber when provided', () => {

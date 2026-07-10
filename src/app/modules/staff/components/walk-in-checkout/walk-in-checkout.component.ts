@@ -60,9 +60,11 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
       lastName: ['', [Validators.required, Validators.maxLength(100)]],
       phoneNumber: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
       identityCardNumber: ['', [Validators.pattern(this.idCardPattern)]],
-      // Email is REQUIRED for walk-in: the backend rejects walk-in/agent/kiosk
-      // bookings with a blank contact email (BookingReqDtoValidator).
-      email: ['', [Validators.required, Validators.email]],
+      // OBRS-197: email is now OPTIONAL for walk-in/offline channels — the
+      // backend accepts a blank contact email (contact_email_snapshot is
+      // nullable). Keep Validators.email so a typed-in value must still look
+      // like an email; just stop forcing one to exist.
+      email: ['', [Validators.email]],
     });
   }
 
