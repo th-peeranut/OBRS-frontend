@@ -47,6 +47,15 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected isLoadingTrips = false;
   protected routeGroups: WalkInRouteGroupDto[] = [];
   protected selectedTrip: WalkInTripDto | null = null;
+  /** Mirrors `WalkInCenterPanelComponent`'s active `p-tabView` tab (0 = Ticket
+   * Sales, 1 = Trip Details, 2 = Boarding) — drives the checkout column's
+   * visibility and the center column's width (product-owner request during
+   * OBRS-130 review). Reset to 0 at every point below that resets
+   * `selectedTrip` itself, since the center panel's `p-tabView` is
+   * `*ngIf="selectedTrip"` and always (re)mounts on tab 0 with no persisted
+   * PrimeNG state — this keeps the tracked index in sync without depending on
+   * child-component remount timing. */
+  protected activeTabIndex = 0;
   protected selectedRouteSlug: string | null = null;
   protected selectedSeats: string[] = [];
   /** passenger_type lookup slug chosen by staff via the center-panel tiles. */
@@ -159,6 +168,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedSeats = [];
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
+    this.activeTabIndex = 0;
     this._resetSegments();
     this.loadTrips(date);
   }
@@ -169,6 +179,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedSeats = [];
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
+    this.activeTabIndex = 0;
     this.loadSegments(selection.routeSlug, selection.trip);
   }
 
@@ -382,6 +393,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
                 // (OBRS-188). Confirm in place and reload so the seat map + the
                 // trip row's sold-count badge reflect the sale.
                 this.selectedTrip = null;
+                this.activeTabIndex = 0;
                 this.loadTrips(this.selectedDate);
                 void this.alertService.success(
                   this.translate.instant('STAFF.SELL.SOLD_SUCCESS', {
@@ -610,6 +622,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       this.selectedSeats = [];
       this.seatPassengerTypes = {};
       this.idempotencyKey = null;
+      this.activeTabIndex = 0;
       this._resetSegments();
     }
 

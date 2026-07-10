@@ -634,4 +634,37 @@ describe('WalkInCenterPanelComponent', () => {
       expect(internals().isEditMode).toBeTrue();
     });
   });
+
+  // OBRS-130 follow-up (product-owner request): the sell-page hides the
+  // checkout column and widens the center column on any tab other than
+  // Ticket Sales (index 0). This component reports the active tab via
+  // `activeTabChange` so the parent can drive that layout.
+  describe('activeTabChange output (OBRS-130 checkout/center layout follow-up)', () => {
+    const TICKET_SALES_TAB = 0;
+    const TRIP_DETAILS_TAB = 1;
+    const BOARDING_TAB = 2;
+
+    it('emits the initial tab index (0) once on init, so the parent starts in a known state', () => {
+      // A fresh instance is needed here — the shared `component`/`fixture` from
+      // the outer beforeEach already ran ngOnInit before this spec could subscribe.
+      const freshFixture = TestBed.createComponent(WalkInCenterPanelComponent);
+      const emitted: number[] = [];
+      freshFixture.componentInstance.activeTabChange.subscribe((i) => emitted.push(i));
+
+      freshFixture.detectChanges(); // triggers ngOnInit
+
+      expect(emitted).toEqual([0]);
+    });
+
+    it('emits the new index on every onTabChange() call', () => {
+      const emitted: number[] = [];
+      component.activeTabChange.subscribe((i) => emitted.push(i));
+
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(TICKET_SALES_TAB);
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(TRIP_DETAILS_TAB);
+      (component as unknown as { onTabChange: (i: number) => void }).onTabChange(BOARDING_TAB);
+
+      expect(emitted).toEqual([TICKET_SALES_TAB, TRIP_DETAILS_TAB, BOARDING_TAB]);
+    });
+  });
 });

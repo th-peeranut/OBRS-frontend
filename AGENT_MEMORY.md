@@ -1,5 +1,45 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — Follow-up fold-in: hide checkout / widen center on non-Ticket-Sales tabs (product-owner review)
+
+Small behavior-preserving addition to OBRS-130, folded into the same branch/commit series
+after the main boarding-management work above was already implemented and committed. The
+boarding manifest was landing in a squeezed `col-xl-5` center column with a dead-space
+`col-xl-4` checkout column next to it on the Trip Details/Boarding tabs — reclaimed that
+space.
+
+- **`WalkInCenterPanelComponent.activeTabChange` (new `@Output<number>`)** — emits the tab
+  index on every `onTabChange()` call, AND once from a new `ngOnInit()` (component didn't
+  implement `OnInit` before) so the parent starts at a known index-0 state without waiting
+  for a user click.
+- **Reset mechanism chosen: sell-page resets `activeTabIndex = 0` itself at every point
+  it already resets `selectedTrip`** (`onDateChanged`, `onTripSelected`, the post-sale
+  success handler in `onSell`, and the optimistic branch in `confirmDeleteSchedule`) —
+  NOT relying on the child re-emitting 0 on remount. Reasoning: `WalkInCenterPanelComponent`
+  itself is never destroyed/recreated (only its inner `p-tabView`, which is
+  `*ngIf="selectedTrip"`, toggles) — so `ngOnInit` fires exactly once for the component's
+  whole lifetime, not on every trip reselection. Coordinating "did the tabview just
+  remount" from inside `ngOnChanges` would require inferring PrimeNG's internal
+  activeIndex-reset behavior; driving it explicitly from the same call sites that already
+  reset every other per-trip UI state (`selectedSeats`, `seatPassengerTypes`,
+  `idempotencyKey`) is simpler and matches the existing pattern exactly. The child's
+  `ngOnInit` emit is kept too (per the literal spec ask) — harmless no-op since the parent
+  already defaults to 0.
+- **Deliberately did NOT reset `activeTabIndex`** in `onTripDetailsUpdated()` (the
+  `this.selectedTrip = {...this.selectedTrip, ...event.patch}` merge after a Trip-Details
+  save) — the user is actively on the Trip Details tab when that fires; resetting would
+  bounce them back to Ticket Sales right after their own save, a regression, not a fix.
+- **Layout**: center column `col-lg-5 col-md-12` (unchanged breakpoints) with
+  `[class.col-xl-5]="activeTabIndex === 0"` / `[class.col-xl-9]="activeTabIndex !== 0"`;
+  checkout column gets `*ngIf="activeTabIndex === 0"`. On Ticket Sales (default, index 0)
+  the DOM is byte-identical to before this change — same classes, same visibility.
+- Tests added: `sell-page.component.spec.ts` (4 new assertions on `activeTabIndex` at the
+  same 4 reset call sites) and `walk-in-center-panel.component.spec.ts` (new
+  `activeTabChange output` describe: initial emit-once-on-init via a fresh
+  `TestBed.createComponent`, and emits-per-`onTabChange()` call).
+- `ng test`: 1057 passing (was 1053; +4 new). `ng build --configuration production`:
+  initial bundle 1.48 MB (unchanged budget headroom), staff-module lazy chunk +0.5 kB.
+
 ## 2026-07-10 — Frontend implementation notes: OBRS-130 staff pre-departure boarding management
 
 Implemented per the UX spec above. A few decisions made while building that the next
@@ -1818,3 +1858,67 @@ boarding it early.
 - The `.p-monthpicker`/`.p-datepicker-calendar` selectors from the pre-existing booking-flow
   memory note (departure-date picker) worked fine as documented; it was specifically the credit
   card's `view="month"` variant that was unreliable to automate.
+
+## 2026-07-10 — QA verification: OBRS-130 staff pre-departure boarding management
+
+Verified LOCAL frontend (`ao/obrs-130-boarding`, this worktree, served on a fresh port against
+a **local backend**, not Koyeb SIT — the new `/board`/`/unboard` endpoints aren't deployed yet)
+paired with `OBRS-backend-wt-obrs-130-boarding` (branch `ao/obrs-130-boarding`) booted locally
+with `spring.profiles.active=sit` (real SIT Supabase), `TICKET_TOKEN_SECRET_KEY` given by the
+task + a locally-generated `JWT_SECRET_KEY` (any valid HS256 secret works — it only needs to be
+internally consistent for this process's own sign/verify, not match Koyeb's). Real SIT data
+found for the manifest: `scheduleId=10` (Chonburi-Bangkok, today) already had 6 confirmed
+tickets (mixed boarded/not-boarded) from prior QA/dev sessions — no fresh booking-flow seeding
+needed.
+
+**Confirmed via curl (API) + Playwright (browser) against the real local stack:**
+- Sell page Tab-3 ("ขึ้นรถ"/Boarding) renders the manifest **inline** — clicking the tab keeps
+  the URL at `/staff/sell` (no navigation).
+- Manifest columns: ticket #, seat, passenger, pickup stop, dropoff stop, a separate **Status**
+  column (`สถานะ` = ticket lifecycle, e.g. "ยืนยันแล้ว"/Confirmed) AND a **Boarded** column
+  (`ขึ้นรถแล้ว`/`ยังไม่ขึ้นรถ` with check-circle vs. empty-circle icon) — confirmed distinct,
+  matches spec. Boarded rows show the audit sub-line `เวลาขึ้นรถ: HH:mm · บันทึกโดย: <name>`.
+- Board → duplicate board → `409 ALREADY_BOARDED`. Unboard → duplicate unboard →
+  `409 NOT_BOARDED`. Re-board after unboard produces a **fresh** `boardedAt` (verified two
+  different timestamps on the same ticket across unboard/re-board) — no stale state.
+- `boardedByName` attribution: boarded as `salesperson@system.local`, then re-fetched the same
+  manifest as `admin@system.local` — still attributed to "Ms. Sales Person" (the real boarder),
+  not "Mr. Admin Admin" (the viewer). Misattribution guard holds at the API level.
+- Un-board is SALESPERSON-only server-side: driver token → `403 ACCESS_DENIED` on `/unboard`
+  regardless of the ticket's boarded state (the `@PreAuthorize` gate rejects before the service
+  layer even runs). Driver's own boarding page (`/staff/boarding/:scheduleId`) renders the full
+  manifest + scan box + Board button but **zero** Un-board affordance anywhere in the DOM
+  (`grep`'d the rendered body text for "ยกเลิกขึ้นรถ"/"Un-board" — zero matches).
+  Screenshot: `qa-obrs-130-screenshots/11-driver-boarding-page.png`.
+- i18n: `en.json`/`th.json`/`zh.json` all carry the full `STAFF.BOARDING.*` key set (`BOARDED`,
+  `NOT_BOARDED`, `BOARDED_AT`, `BOARDED_BY`, `UNBOARD_*`, `ALREADY_BOARDED`, `NOT_BOARDED` error
+  strings) — verified by direct key inspection in all three files; live browser-switch to
+  ZH wasn't exercised this pass (ran out of time-box) but the TH default render was live-verified
+  end-to-end with correct strings throughout.
+- 409-no-forced-logout (OBRS-187 regression): confirmed at the code level, not just by
+  observation — `auth.interceptor.ts` only force-logs-out on `error?.status === 401`, so a `409`
+  (both `ALREADY_BOARDED` and `NOT_BOARDED`) can never trip it, full stop.
+
+**One non-bug worth flagging for future readers (already anticipated in the code comment at
+`boarding-list.component.ts` `board()`, ~line 140-144):** immediately after a successful Board
+click, the row's "boarded by" optimistically shows `authService.getUsername()` — which in this
+build returns the **raw email** (e.g. `salesperson@system.local`), not the formatted display
+name ("Ms. Sales Person") the backend returns. It self-corrects within one `store.refresh()`
+cycle (confirmed: reloading/re-navigating to Tab-3 immediately after shows the correct full
+name). This IS the intended, commented tradeoff — not a defect — but it's a real few-hundred-ms
+window where the row's format is visibly inconsistent with every other row if a screenshot or a
+fast-clicking operator catches it mid-flight. Did not block QA; noting for anyone who sees it in
+a future capture and wonders if it's the misattribution bug reappearing (it isn't — that one
+is the *stale value across different viewers* case, which IS correct; this is a *this-operator,
+this-instant* cosmetic-only optimistic-UI artifact).
+
+**Residual gap (not exercised, disclosed rather than declared done):** driver-role **successful**
+Board click wasn't captured end-to-end — the only driver-assigned schedule in SIT seed data
+(`scheduleId=1`) departs 2026-12-20, outside the "boarding is only allowed on the day of
+departure" window (`400 BOARDING_WINDOW_NOT_OPEN`), and `scheduleId=10` (today, has confirmed
+tickets) has no `driver_id` assigned (`403` "not authorized to access this ticket"). Confirmed
+the *authorization* boundary (driver reaches the service layer, correctly blocked by legitimate
+business rules, not a blanket permission wall) but not a full driver board-success round-trip.
+Would need either a schedule with both `driver_id` set AND `departure_date_time` = today in SIT
+seed data, or a live DB write to create one — didn't do the latter to avoid mutating shared SIT
+state beyond what the QA pass itself needed.
