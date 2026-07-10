@@ -17,6 +17,11 @@
     <div class="welcome-text mt-2">
       {{ "LOGIN.WELCOME" | translate }}
     </div>
+    <!-- EMAIL-CHANGED BANNER (OBRS-84) -->
+    <div class="email-changed-banner mt-2" *ngIf="showEmailChangedBanner" role="status">
+      <span class="material-symbols-outlined">check_circle</span>
+      <span>{{ "LOGIN.EMAIL_CHANGED_BANNER" | translate }}</span>
+    </div>
     <!-- FORM SECTION -->
     <form class="login-form mt-2" [formGroup]="loginForm">
       <!-- INPUT FIELD -> Email -->

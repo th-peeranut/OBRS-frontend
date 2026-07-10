@@ -1,0 +1,145 @@
+@import "../../../styles/variables.scss";
+
+// Same page shell as verify-email.component.scss (design-system §6/§12:
+// reuse the existing public-confirmation-page pattern).
+.login-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  padding: $space-md;
+  margin: auto;
+  background: $primary-white;
+
+  .change-language {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-2xs;
+  }
+
+  .left-section {
+    width: 60%;
+
+    .bg-img {
+      width: 100%;
+      height: 100%;
+      border-radius: $radius-xl;
+      object-fit: cover;
+    }
+  }
+
+  .right-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 40%;
+    padding-left: 80px;
+    padding-right: 80px;
+
+    .logo-section {
+      display: flex;
+      justify-content: center;
+
+      .logo-img {
+        width: 200px;
+        height: 87px;
+      }
+    }
+
+    .state-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+
+      .state-icon {
+        font-size: 64px;
+      }
+
+      .success-icon {
+        color: $brand-customer;
+      }
+
+      // Deliberately NOT $text-red — an already-used/expired link is a
+      // normal, expected state (the user may have already confirmed via
+      // another tab), not a failure. Uses the same muted tone as body copy.
+      .neutral-icon {
+        color: $text-lightblack;
+      }
+
+      .fail-icon {
+        color: $text-red;
+      }
+
+      .state-title {
+        font-size: $font-size-xl;
+        font-weight: bold;
+        color: $text-black;
+      }
+
+      .state-text {
+        font-size: $font-size-base;
+        color: $text-softblack;
+      }
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: $space-xs;
+      border: none;
+      border-radius: $radius-xl;
+      font-size: $font-size-base;
+      font-weight: bold;
+      cursor: pointer;
+      background-color: $primary-blue;
+      color: #fff;
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+  }
+}
+
+@media (max-width: 992px) {
+  .login-container {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    padding: $space-sm;
+    gap: $space-lg;
+  }
+
+  .login-container .left-section {
+    width: 100%;
+
+    .bg-img {
+      height: 240px;
+      object-fit: cover;
+    }
+  }
+
+  .login-container .right-section {
+    width: 100%;
+    padding: 0 16px 24px;
+  }
+
+  .login-container .change-language {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-container {
+    padding: $space-xs;
+  }
+
+  .login-container .right-section {
+    padding: 0 8px 20px;
+  }
+
+  .login-container .logo-section .logo-img {
+    width: 160px;
+    height: auto;
+  }
+}

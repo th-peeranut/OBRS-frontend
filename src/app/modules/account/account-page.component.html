@@ -1,0 +1,23 @@
+<app-navbar></app-navbar>
+
+<section class="account-page">
+  <div class="account-page__inner">
+    <header class="account-page__header">
+      <h1>{{ "ACCOUNT.TITLE" | translate }}</h1>
+      <p>{{ "ACCOUNT.SUBTITLE" | translate }}</p>
+    </header>
+
+    <div class="account-card">
+      <h2 class="account-card__title">{{ "ACCOUNT.EMAIL_SECTION_TITLE" | translate }}</h2>
+      <p class="account-card__email">{{ currentEmail }}</p>
+      <button type="button" class="btn-primary" (click)="openChangeEmailDialog()">
+        {{ "ACCOUNT.CHANGE_EMAIL_BUTTON" | translate }}
+      </button>
+    </div>
+  </div>
+</section>
+
+<app-change-email-dialog
+  *ngIf="isChangeEmailDialogOpen"
+  (closed)="closeChangeEmailDialog()"
+></app-change-email-dialog>

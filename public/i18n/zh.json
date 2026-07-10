@@ -805,6 +805,7 @@
     "GOOGLE_SIGNIN_PDPA": "我同意收集和使用我的个人数据（PDPA）用于 Google 登录",
     "GOOGLE_SIGNIN_PDPA_REQUIRED": "请接受同意以使用 Google 登录",
     "GOOGLE_SIGNIN_LOADING": "正在使用 Google 登录...",
+    "EMAIL_CHANGED_BANNER": "您的登录邮箱已更改，请使用新邮箱登录。",
     "ERROR": {
       "GOOGLE_TOKEN_INVALID": "Google 登录令牌无效，请重试。",
       "ACCOUNT_DISABLED": "您的帐户已被禁用，请联系客服。",
@@ -892,6 +893,49 @@
       "GENERIC": "发生错误，请重试。"
     }
   },
+  "ACCOUNT": {
+    "TITLE": "我的账户",
+    "SUBTITLE": "管理您的登录信息。",
+    "EMAIL_SECTION_TITLE": "登录邮箱",
+    "CHANGE_EMAIL_BUTTON": "更改邮箱"
+  },
+  "EMAIL_CHANGE": {
+    "DIALOG_TITLE": "更改您的邮箱",
+    "CURRENT_PASSWORD_LABEL": "当前密码",
+    "CURRENT_PASSWORD_PLACEHOLDER": "请输入您的当前密码",
+    "CURRENT_PASSWORD_REQUIRED": "请输入您的当前密码",
+    "NEW_EMAIL_LABEL": "新邮箱",
+    "NEW_EMAIL_PLACEHOLDER": "请输入您的新邮箱",
+    "NEW_EMAIL_REQUIRED": "请输入有效的电子邮件",
+    "NEW_EMAIL_EXIST": "此电子邮件已被使用",
+    "SUBMIT": "发送验证链接",
+    "SUBMIT_LOADING": "发送中...",
+    "CANCEL": "取消",
+    "CLOSE": "关闭",
+    "SENT_TITLE": "验证链接已发送",
+    "SENT_MESSAGE": "我们已向 {{email}} 发送了验证链接。",
+    "SENT_NOTE": "在您通过链接确认之前，您的登录邮箱不会更改。",
+    "RESEND_BUTTON": "重新发送链接",
+    "RESEND_LOADING": "发送中...",
+    "RESEND_SUCCESS": "验证链接已重新发送，请检查您的收件箱。",
+    "ERROR": {
+      "INVALID_PASSWORD": "密码不正确，请重试。",
+      "EMAIL_CONFLICT": "此电子邮件已被使用。",
+      "SAME_EMAIL": "这已经是您当前的邮箱。",
+      "RATE_LIMIT": "发送请求过于频繁，请稍候再试。",
+      "GENERIC": "发生错误，请重试。"
+    }
+  },
+  "EMAIL_CHANGE_CONFIRM": {
+    "CONFIRMING": "正在确认您的新邮箱...",
+    "SUCCESS_TITLE": "邮箱更改成功！",
+    "SUCCESS_MESSAGE": "您的登录邮箱已更改为 {{email}}。请使用新邮箱登录。",
+    "SUCCESS_SIGNIN": "登录",
+    "INVALID_TITLE": "链接已被使用或已过期",
+    "INVALID_MESSAGE": "此确认链接已失效。如果您已经更改了邮箱，请直接登录。",
+    "TARGET_TAKEN_TITLE": "此邮箱已不可用",
+    "TARGET_TAKEN_MESSAGE": "此邮箱在此期间已被其他账户使用。请从您的账户页面重新开始。"
+  },
   "LOGIN_BY_PHONE_NO": {
     "WELCOME": "欢迎登录",
     "HINT": "请输入发送至该号码短信中的OTP验证码",
@@ -936,7 +980,8 @@
       "MENU": "菜单",
       "PROFILE_MENU": "打开个人资料菜单",
       "THEME_TOGGLE": "切换深色模式",
-      "MY_BOOKINGS": "我的预订"
+      "MY_BOOKINGS": "我的预订",
+      "ACCOUNT": "我的账户"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",

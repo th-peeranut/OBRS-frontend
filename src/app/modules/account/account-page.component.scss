@@ -1,0 +1,66 @@
+@import "../../../styles/variables.scss";
+
+// Page shell mirrors my-bookings.component.scss (design-system §6/§12: reuse
+// the existing customer-shell page pattern rather than a new one).
+.account-page {
+  min-height: 60vh;
+  padding: $space-xl clamp(16px, 6vw, 120px);
+  background-color: $secondary-grey;
+}
+
+.account-page__inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.account-page__header {
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: $font-weight-bold;
+    color: $text-black;
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    color: $text-lightblack;
+  }
+}
+
+.account-card {
+  background-color: $primary-white;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: 0 2px 10px rgba(13, 21, 37, 0.04);
+}
+
+.account-card__title {
+  margin: 0 0 $space-2xs;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.account-card__email {
+  margin: 0 0 $space-md;
+  font-size: $font-size-base;
+  color: $text-softblack;
+}
+
+// Single primary action on this screen (design-system §4) — the shell's
+// brand token, same value as reschedule/change-stop's primary button.
+.btn-primary {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $brand-customer-strong;
+  color: $text-white;
+}

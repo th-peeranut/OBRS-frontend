@@ -168,6 +168,36 @@ with departure-date occupancy but zero booking-date bookings is **not**
 empty (same divergent-basis reasoning as Reports' `isEmptyRange`, carried
 over as `isEmptyDay`).
 
+## Customer Account Page & Email-Change Flow
+
+`/account` (OBRS-84) is the first customer "account settings" page — a
+minimal card showing the signed-in user's login email (read from
+`AuthService.getUsername()`, no new GET) with a single "Change email"
+action. It uses the same guard shape as `/my-bookings`
+(`AuthGuard`, `data: { customerArea: true, requireAuth: true }`) and does
+**not** touch the area-based access model.
+
+"Change email" opens `ChangeEmailDialogComponent` — the same hand-rolled
+modal chrome as `ChangeStopDialogComponent` (backdrop, `role="dialog"`,
+top-right ×, Escape-to-close; ADR-0010) — which POSTs the current password +
+new email to `AuthService.requestEmailChange()`. The new email is **not**
+applied yet: the backend emails a confirmation link to the new address, and
+only applies the change once that link is opened. The dialog's new-email
+field reuses `register.component.ts`'s debounced duplicate-check pipeline
+(`debounceTime(500)` → `distinctUntilChanged()` → `switchMap(userService.checkExistEmail)`).
+
+The confirmation link opens the new public route `/change-email/confirm`
+(no guard — mirrors `/verify-email`'s shape), which reads `?token=` and
+calls `AuthService.confirmEmailChange()`. Because the backend's old JWT
+stops authenticating once the change is confirmed, a successful confirm
+calls `authService.clearAuthData()` before redirecting to
+`/login?reason=email-changed` (+ `&email=` when returned), so no stale token
+lingers to 401 with a confusing toast. `LoginComponent` reads that query pair
+to show `LOGIN.EMAIL_CHANGED_BANNER` and prefill the email field. An
+already-used/expired confirmation token renders a **neutral** (not red)
+state — the link is expected to be opened twice in normal use. See
+`docs/adr/0014-account-identity-settings-page.md`.
+
 This page is the **second** `.admin-card.admin-kpi` tile consumer the Reports
 section above predicted — the markup is still copy-pasted rather than
 extracted into a shared stat-tile component (out of scope for this rebuild;

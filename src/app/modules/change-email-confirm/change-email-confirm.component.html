@@ -1,0 +1,69 @@
+<div class="login-container">
+  <!-- LEFT SECTION -->
+  <div class="left-section">
+    <img class="bg-img" src="images/login.svg" alt="Tickets" />
+  </div>
+  <!-- RIGHT SECTION -->
+  <div class="right-section">
+    <!-- CHANGE LANGUAGE SWITCH + THEME TOGGLE -->
+    <div class="change-language">
+      <app-theme-toggle></app-theme-toggle>
+      <app-lang-switcher></app-lang-switcher>
+    </div>
+    <!-- LOGO -->
+    <div class="logo-section mt-5">
+      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
+    </div>
+
+    <!-- CONFIRMING STATE -->
+    <ng-container *ngIf="confirmState === 'confirming'">
+      <div class="state-container mt-5 text-center">
+        <p-progressSpinner
+          styleClass="confirm-spinner"
+          strokeWidth="4"
+          animationDuration=".8s"
+        ></p-progressSpinner>
+        <p class="state-text mt-3">{{ "EMAIL_CHANGE_CONFIRM.CONFIRMING" | translate }}</p>
+      </div>
+    </ng-container>
+
+    <!-- SUCCESS STATE -->
+    <ng-container *ngIf="confirmState === 'success'">
+      <div class="state-container mt-5 text-center">
+        <span class="material-symbols-outlined state-icon success-icon">check_circle</span>
+        <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.SUCCESS_TITLE" | translate }}</h2>
+        <p class="state-text mt-2">
+          {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_MESSAGE" | translate: { email: newEmail } }}
+        </p>
+        <button type="button" class="login-btn mt-4" (click)="navigateToLogin()">
+          {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- INVALID/EXPIRED STATE — deliberately NEUTRAL, not red: a link the -->
+    <!-- user may have already used, or arrived at stale, is not an error. -->
+    <ng-container *ngIf="confirmState === 'invalid'">
+      <div class="state-container mt-5 text-center">
+        <span class="material-symbols-outlined state-icon neutral-icon">info</span>
+        <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.INVALID_TITLE" | translate }}</h2>
+        <p class="state-text mt-2">{{ "EMAIL_CHANGE_CONFIRM.INVALID_MESSAGE" | translate }}</p>
+        <button type="button" class="login-btn mt-4" (click)="navigateToLogin()">
+          {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- TARGET-TAKEN STATE -->
+    <ng-container *ngIf="confirmState === 'targetTaken'">
+      <div class="state-container mt-5 text-center">
+        <span class="material-symbols-outlined state-icon fail-icon">error</span>
+        <h2 class="state-title mt-3">{{ "EMAIL_CHANGE_CONFIRM.TARGET_TAKEN_TITLE" | translate }}</h2>
+        <p class="state-text mt-2">{{ "EMAIL_CHANGE_CONFIRM.TARGET_TAKEN_MESSAGE" | translate }}</p>
+        <button type="button" class="login-btn mt-4" (click)="navigateToLogin()">
+          {{ "EMAIL_CHANGE_CONFIRM.SUCCESS_SIGNIN" | translate }}
+        </button>
+      </div>
+    </ng-container>
+  </div>
+</div>

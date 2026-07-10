@@ -74,6 +74,24 @@
       color: $text-black;
     }
 
+    // OBRS-84: shown after a confirmed email change (?reason=email-changed).
+    // Uses existing customer-shell tokens — no new raw hex.
+    .email-changed-banner {
+      display: flex;
+      align-items: center;
+      gap: $space-2xs;
+      padding: $space-xs $space-sm;
+      border-radius: $radius-md;
+      background-color: $primary-lightblue;
+      color: $brand-customer-strong;
+      font-size: $font-size-sm;
+      text-align: left;
+
+      .material-symbols-outlined {
+        font-size: 20px;
+      }
+    }
+
     .option-section {
       display: flex;
       align-items: center;

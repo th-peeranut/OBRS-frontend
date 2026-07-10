@@ -3,8 +3,13 @@ import { HttpClient, HttpContext } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { BehaviorSubject } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { SKIP_GLOBAL_ERROR_ALERT } from '../shared/interceptors/http-context-tokens';
 import {
+  SKIP_AUTH_LOGOUT,
+  SKIP_GLOBAL_ERROR_ALERT,
+} from '../shared/interceptors/http-context-tokens';
+import {
+  EmailChangeConfirmResponse,
+  EmailChangeRequestResponse,
   LoginResponseData,
   PasswordResetConfirmResponse,
   PasswordResetRequestResponse,
@@ -404,6 +409,60 @@ export class AuthService {
       )
       .toPromise()
       .then((response) => response);
+  }
+
+  // OBRS-84: verified self-service login-email change. `newEmail` is not yet
+  // applied to the account — the backend only flips it once the user clicks
+  // the emailed confirmation link (confirmEmailChange below).
+  requestEmailChange(payload: {
+    currentPassword: string;
+    newEmail: string;
+  }): Promise<ResponseAPI<EmailChangeRequestResponse> | undefined> {
+    return this.http
+      .post<ResponseAPI<EmailChangeRequestResponse>>(
+        `${environment.apiUrl}/api/private/users/me/email/change-request`,
+        payload,
+        {
+          // SKIP_AUTH_LOGOUT: a wrong-current-password response must NOT
+          // force-logout the user out of their own account settings
+          // (OBRS-187 lesson). SKIP_GLOBAL_ERROR_ALERT: the dialog renders
+          // the error inline under the relevant field instead of a global
+          // toast.
+          context: new HttpContext()
+            .set(SKIP_AUTH_LOGOUT, true)
+            .set(SKIP_GLOBAL_ERROR_ALERT, true),
+        }
+      )
+      .toPromise();
+  }
+
+  // Public endpoint (the confirmation link is opened logged-out or with a
+  // stale token) — mirrors verifyEmail() above for SKIP_GLOBAL_ERROR_ALERT:
+  // the confirm page renders its own inline state (including a deliberately
+  // NEUTRAL, non-scary "already used/expired" state), so the global toast is
+  // suppressed rather than stacking on top of it.
+  confirmEmailChange(payload: {
+    token: string;
+  }): Promise<ResponseAPI<EmailChangeConfirmResponse> | undefined> {
+    return this.http
+      .post<ResponseAPI<EmailChangeConfirmResponse>>(
+        `${environment.apiUrl}/api/auth/change-email/confirm`,
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+      )
+      .toPromise();
+  }
+
+  // No SKIP_AUTH_LOGOUT: unlike requestEmailChange, a real 401 here means the
+  // session is genuinely dead — force-logout is the correct behavior.
+  resendEmailChangeVerification(): Promise<ResponseAPI<unknown> | undefined> {
+    return this.http
+      .post<ResponseAPI<unknown>>(
+        `${environment.apiUrl}/api/auth/change-email/resend`,
+        {},
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
+      )
+      .toPromise();
   }
 
   private isAuthPage(url: string): boolean {
