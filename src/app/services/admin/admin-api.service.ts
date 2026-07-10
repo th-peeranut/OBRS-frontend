@@ -19,6 +19,7 @@ import {
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
+import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -864,6 +865,10 @@ export class AdminApiService {
       `${this.baseUrl}/private/admin/reports/summary`,
       params
     );
+  }
+
+  getDashboardToday(): Observable<ResponseAPI<DashboardTodayDto>> {
+    return this.getRequest<DashboardTodayDto>(`${this.baseUrl}/private/admin/dashboard/today`);
   }
 
   // Backs the admin sidebar's "Usability Reports" nav badge — reuses the

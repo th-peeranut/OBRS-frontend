@@ -1,5 +1,87 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — Frontend implementation: `/admin/dashboard` rebuild-in-place (OBRS-129)
+
+**Worktree:** `OBRS-frontend-wt-starter-dashboards` (branch `ao/starter-dashboards`, off
+`origin/dev` which already has OBRS-40). `ng test`: 996/996 PASS. `ng build --configuration
+production`: PASS (1.45 MB initial, under the 1.5 MB budget). `npx tsc --noEmit -p
+tsconfig.app.json`: clean.
+
+**Rebuild-in-place, not a new page.** Kept the route (`/admin/dashboard`), sidebar nav item,
+topbar title mechanism (`data.titleKey: 'ADMIN.PAGES.DASHBOARD'`, `subtitleKey:
+'ADMIN.DASHBOARD.SUBTITLE'` — no in-body `<h3>`), and `pollWhileVisible` auto-refresh
+untouched. Only `AdminDashboardStore`'s internals and the page's rendering changed.
+
+**`AdminDashboardStore` re-based onto `AdminCollectionStore<DashboardTodayDto>`, deleting the
+old bespoke two-source (`getBookings()` + `getVehicles()`) merge entirely** — same move
+`ReportsStore` made for OBRS-40. `fetch()` is one `firstValueFrom(adminApiService
+.getDashboardToday())` call; `emptySnapshot()` covers the no-`data` edge. See
+`docs/adr/0013-dashboard-rebase-on-admin-collection-store.md` for the full rationale
+(business logic — pending-payment/active-vehicle detection, revenue summation — now lives
+server-side in the new endpoint instead of being re-derived client-side).
+
+**Backend endpoint does not exist yet — built directly against the contract supplied in the
+locked task spec (mirrors `ReportsSummaryDto`'s shape convention), flagged in
+`docs/handoff.md`.** Checked the paired backend worktree
+(`OBRS-backend-wt-starter-dashboards`): `IMPLEMENTATION_CHECKLIST.md` shows `#44` (OBRS-129)
+"claimed"/in-progress but no `Dashboard*` controller/service exists yet, only planning-doc
+commits. `../OBRS-backend/docs/api/` has no `dashboard.md`. Filed a Contract Request per
+`CLAUDE.md`'s R0/R1 rule — every load will show `ADMIN.DASHBOARD.LOAD_FAILED` until the
+backend ships `GET /api/private/admin/dashboard/today`.
+
+**`contentState` has one fewer branch than `ReportsPageComponent`'s.** No date picker on this
+page (the endpoint is always "today" in Bangkok time), so no `'invalid'` state —
+`'loading' | 'error' | 'empty' | 'data'` only. `isEmptyDay` carries forward the OBRS-40
+`e41e88e` divergent-basis reasoning (occupancy keys on departure-date, `bookingCount` keys on
+booking-date, so a day can have real occupancy with zero bookings and that is NOT empty) —
+renamed for this page but same logic shape as `isEmptyRange`.
+
+**Revenue tile gates on `showRevenue = !!tiles?.revenue` (presence), never a role check** —
+same forward-compat pattern as Reports, now literally realized: the interface comment on
+`DashboardTilesDto.revenue` says this is for "a future viewer (e.g. salesperson) without
+revenue visibility," which is exactly what OBRS-129's own deferred salesperson-access scope
+describes.
+
+**Split `loadError` (gated on `!store.hasValue`, drives the full-replace error card) from a
+new raw `hasFailed` flag (ungated, drives `app-admin-refresh-hint`'s "failed, showing saved
+data" line) — Reports doesn't need this split because it hardcodes `[failed]="false"` on its
+refresh-hint and has no such requirement.** The task spec explicitly asked for
+`app-admin-refresh-hint` to cover "background-refresh/failed-with-cache," which needs to fire
+precisely when there **is** a cache (the opposite gating condition from the error card). The
+outer `<section class="admin-page-intro">`'s `*ngIf` combines
+`(contentState === 'data' || contentState === 'empty') && (isRefreshing || hasFailed)` so the
+hint only ever appears over an already-rendered tiles/table view, never doubled up with the
+error-state-card.
+
+**Test gotcha: a naive `dedupes concurrent refreshes ... toHaveBeenCalledTimes(1)` assertion
+is WRONG for `AdminCollectionStore` subclasses when the fetch resolves via `firstValueFrom(of(...))`.**
+`AdminCollectionStore.refresh()`'s actual contract (see its own doc comment) is "a call that
+arrives mid-flight requests one more fetch when the current one finishes" — with an
+already-resolved-but-microtask-deferred observable, both the initial fetch AND the
+one-rerun fire before `Promise.all([first, second])` settles, so the spy legitimately gets
+called twice. Verified via a throwaway Node repro (`rxjs`'s `firstValueFrom(of(x))` still
+defers the `await` continuation to a microtask, same as any promise). Rewrote the test to
+assert the store resolves cleanly + `hasValue` afterward, not a specific call count — the
+exact rerun-count contract is already covered in detail by the base class's own
+`admin-collection-store.spec.ts` (using a manually-controlled `deferred<T>()` to actually hold
+a fetch "in flight" across the assertion, which `of()` cannot model).
+
+**i18n:** added `ADMIN.DASHBOARD.{TILE.*, BASIS.*, DEPARTURES.*, VIEW_FULL_REPORTS}` (12 keys)
+to en/th/zh, changed `SUBTITLE`, deleted the now-dead flat keys
+(`TOTAL_BOOKINGS`/`PENDING_PAYMENTS`/`ACTIVE_VEHICLES`/`REVENUE`/`RECENT_BOOKINGS`/`VIEW_ALL`/
+`PARTIAL_LOAD_FAILED`/`UPDATING`) after grep-confirming none were referenced outside the
+dashboard files being rewritten. Kept `LOAD_FAILED` (reused) and `TITLE` (not in the
+task's deletion list, left as harmless unused weight rather than guessing it's safe to
+remove).
+
+**Docs:** `README.md` "Admin UI Conventions" gained a "Dashboard (`/admin/dashboard`)"
+section (mirrors the existing "Reports" section's structure/tone) explicitly noting this is
+now the **second** `.admin-card.admin-kpi` tile-markup consumer the Reports section already
+predicted, and that extraction into a shared stat-tile component was deliberately NOT done
+here (tracked as debt, out of scope for a task with a fully prescribed file list).
+`docs/handoff.md` got a new Contract Request entry (2026-07-10); `docs/adr/0013-...md` covers
+the store-rebase decision.
+
 ## 2026-07-09 — Scrutinize self-fix: OBRS-176 admin cross-area access
 
 **Worktree:** `OBRS-frontend-wt-admin-cross-area-access` (branch `ao/admin-cross-area-access`).

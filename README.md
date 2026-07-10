@@ -143,6 +143,38 @@ fixed per-page query — `setRange()` updates the range and re-fetches in place,
 keeping the same stale-while-revalidate re-entry contract as every other admin
 store.
 
+### Dashboard (`/admin/dashboard`)
+
+The starter operational dashboard (OBRS-129) consumes one endpoint,
+`GET /api/private/admin/dashboard/today`, and renders four KPI tiles
+(Departures Today / Seat Occupancy / Bookings Today / Revenue Today) plus a
+today's-departures table (Route / Departure Time / Seats Sold-Capacity /
+Occupancy %). It stays under the existing `/admin` guard — no access-model
+change. `AdminDashboardStore`
+(`src/app/modules/admin/pages/dashboard/admin-dashboard.store.ts`) was
+re-based onto `AdminCollectionStore<DashboardTodayDto>` (previously a bespoke
+two-source cache merging `getBookings()` + `getVehicles()`), following the
+exact pattern `ReportsStore` established: `fetch()` calls the single typed
+endpoint and `emptySnapshot()` covers the API-returns-no-data edge. See
+`docs/adr/0013-dashboard-rebase-on-admin-collection-store.md`.
+
+Like Reports, the `revenue` field on `tiles` is **optional** and the Revenue
+tile renders off its **presence** (`showRevenue`), never a client-side role
+check — forward-compat for a future viewer (e.g. salesperson) the server
+omits `revenue` for. Unlike Reports, "empty" has no date-range guard (there's
+no picker — the endpoint is always "today" in Bangkok time) and is defined as
+`departuresCount === 0 && bookingCount === 0 && occupancyRatePct === 0`; a day
+with departure-date occupancy but zero booking-date bookings is **not**
+empty (same divergent-basis reasoning as Reports' `isEmptyRange`, carried
+over as `isEmptyDay`).
+
+This page is the **second** `.admin-card.admin-kpi` tile consumer the Reports
+section above predicted — the markup is still copy-pasted rather than
+extracted into a shared stat-tile component (out of scope for this rebuild;
+tracked as consolidation debt, not actioned here since the two screens'
+tile sets don't fully overlap in count/basis-caption shape). Extract a shared
+component the next time a third dashboard-style screen needs KPI tiles.
+
 ## My Bookings — action menu & reschedule dialog
 
 `/my-bookings` (`src/app/modules/my-bookings/`) collapses each booking
