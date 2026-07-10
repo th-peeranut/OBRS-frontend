@@ -1,13 +1,52 @@
 {
   "USABILITY_REPORT": {
-    "FAB": { "LABEL": "รายงานปัญหา", "ARIA_LABEL": "รายงานปัญหาการใช้งาน" },
-    "MODAL": { "TITLE": "รายงานปัญหาการใช้งาน", "SUBTITLE": "ช่วยเราปรับปรุงโดยรายงานข้อบกพร่องหรือข้อเสนอแนะ", "CLOSE": "ปิด", "SUBMIT": "ส่งรายงาน", "SUBMITTING": "กำลังส่ง..." },
-    "CATEGORY": { "LABEL": "หมวดหมู่", "BUG": "ข้อบกพร่อง", "UX_UI_IMPROVEMENT": "การปรับปรุง UX/UI", "SUGGESTION": "ข้อเสนอแนะ" },
-    "DESCRIPTION": { "LABEL": "คำอธิบาย", "PLACEHOLDER": "อธิบายปัญหาหรือข้อเสนอแนะโดยละเอียด...", "REQUIRED": "กรุณาระบุคำอธิบาย" },
-    "EMAIL": { "LABEL": "อีเมล (ไม่บังคับ)", "PLACEHOLDER": "you@example.com", "INVALID": "กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้" },
-    "IMAGES": { "LABEL": "แนบรูปภาพ (ไม่บังคับ)", "HINT": "สูงสุด 5 รูป ขนาดสูงสุด 5 MB ต่อรูป รองรับ JPEG, PNG, WebP, GIF", "ADD": "เพิ่มรูปภาพ", "REMOVE": "ลบ", "TOO_MANY": "สามารถแนบได้สูงสุด 5 รูปเท่านั้น", "TOO_LARGE": "รูปภาพบางรูปมีขนาดเกิน 5 MB", "INVALID_TYPE": "รองรับเฉพาะไฟล์ JPEG, PNG, WebP และ GIF เท่านั้น" },
+    "FAB": {
+      "LABEL": "รายงานปัญหา",
+      "ARIA_LABEL": "รายงานปัญหาการใช้งาน"
+    },
+    "MODAL": {
+      "TITLE": "รายงานปัญหาการใช้งาน",
+      "SUBTITLE": "ช่วยเราปรับปรุงโดยรายงานข้อบกพร่องหรือข้อเสนอแนะ",
+      "CLOSE": "ปิด",
+      "SUBMIT": "ส่งรายงาน",
+      "SUBMITTING": "กำลังส่ง..."
+    },
+    "CATEGORY": {
+      "LABEL": "หมวดหมู่",
+      "BUG": "ข้อบกพร่อง",
+      "UX_UI_IMPROVEMENT": "การปรับปรุง UX/UI",
+      "SUGGESTION": "ข้อเสนอแนะ"
+    },
+    "DESCRIPTION": {
+      "LABEL": "คำอธิบาย",
+      "PLACEHOLDER": "อธิบายปัญหาหรือข้อเสนอแนะโดยละเอียด...",
+      "REQUIRED": "กรุณาระบุคำอธิบาย"
+    },
+    "EMAIL": {
+      "LABEL": "อีเมล (ไม่บังคับ)",
+      "PLACEHOLDER": "you@example.com",
+      "INVALID": "กรุณากรอกอีเมลให้ถูกต้อง หรือเว้นว่างไว้"
+    },
+    "IMAGES": {
+      "LABEL": "แนบรูปภาพ (ไม่บังคับ)",
+      "HINT": "สูงสุด 5 รูป ขนาดสูงสุด 5 MB ต่อรูป รองรับ JPEG, PNG, WebP, GIF",
+      "ADD": "เพิ่มรูปภาพ",
+      "REMOVE": "ลบ",
+      "TOO_MANY": "สามารถแนบได้สูงสุด 5 รูปเท่านั้น",
+      "TOO_LARGE": "รูปภาพบางรูปมีขนาดเกิน 5 MB",
+      "INVALID_TYPE": "รองรับเฉพาะไฟล์ JPEG, PNG, WebP และ GIF เท่านั้น"
+    },
     "SUBMIT_SUCCESS": "ส่งรายงานเรียบร้อยแล้ว ขอบคุณ!",
-    "ERROR": { "REPORT_INVALID_CATEGORY": "หมวดหมู่ที่เลือกไม่ถูกต้อง", "REPORT_TOO_MANY_IMAGES": "แนบรูปภาพมากเกินไป", "REPORT_UNSUPPORTED_MEDIA_TYPE": "ประเภทไฟล์รูปภาพบางรายการไม่รองรับ", "REPORT_IMAGE_TOO_LARGE": "รูปภาพบางรายการมีขนาดใหญ่เกินไป", "REPORT_PAYLOAD_TOO_LARGE": "ขนาดไฟล์ที่อัปโหลดรวมกันใหญ่เกินไป", "REPORT_RATE_LIMITED": "คุณส่งรายงานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่", "VALIDATION_FAILED": "กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง", "GENERIC": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง" }
+    "ERROR": {
+      "REPORT_INVALID_CATEGORY": "หมวดหมู่ที่เลือกไม่ถูกต้อง",
+      "REPORT_TOO_MANY_IMAGES": "แนบรูปภาพมากเกินไป",
+      "REPORT_UNSUPPORTED_MEDIA_TYPE": "ประเภทไฟล์รูปภาพบางรายการไม่รองรับ",
+      "REPORT_IMAGE_TOO_LARGE": "รูปภาพบางรายการมีขนาดใหญ่เกินไป",
+      "REPORT_PAYLOAD_TOO_LARGE": "ขนาดไฟล์ที่อัปโหลดรวมกันใหญ่เกินไป",
+      "REPORT_RATE_LIMITED": "คุณส่งรายงานบ่อยเกินไป กรุณารอสักครู่แล้วลองใหม่",
+      "VALIDATION_FAILED": "กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง",
+      "GENERIC": "เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
+    }
   },
   "MY_BOOKINGS": {
     "TITLE": "การจองของฉัน",
@@ -656,13 +695,48 @@
       "TABLE_TITLE": "รายงานทั้งหมด",
       "FILTER_STATUS": "กรองตามสถานะ",
       "SEARCH_PLACEHOLDER": "ค้นหารายงาน...",
-      "COL": { "ID": "รหัส", "CATEGORY": "หมวดหมู่", "STATUS": "สถานะ", "USER": "ผู้ใช้", "DESCRIPTION": "คำอธิบาย", "IMAGES": "รูปภาพ", "CREATED_AT": "เวลาที่ส่ง" },
+      "COL": {
+        "ID": "รหัส",
+        "CATEGORY": "หมวดหมู่",
+        "STATUS": "สถานะ",
+        "USER": "ผู้ใช้",
+        "DESCRIPTION": "คำอธิบาย",
+        "IMAGES": "รูปภาพ",
+        "CREATED_AT": "เวลาที่ส่ง"
+      },
       "VIEW": "ดูรายละเอียด",
       "EMPTY": "ไม่พบรายงานการใช้งาน",
       "LOAD_FAILED": "โหลดรายงานไม่สำเร็จ กรุณารีเฟรช",
       "UNITS": "รายงาน",
-      "DETAIL": { "TITLE": "รายละเอียดรายงาน", "ROUTE": "รายงานจากหน้า", "USER_AGENT": "User Agent", "USER_ID": "รหัสผู้ใช้", "REPORTER_EMAIL": "อีเมลผู้รายงาน", "REPORTER_NOTIFIED": "แจ้งผู้รายงานแล้ว", "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน", "NO_IMAGES": "ไม่มีรูปภาพแนบ", "IMAGE_POSITION": "ลำดับ", "IMAGE_SIZE": "ขนาด", "IMAGE_ENLARGE": "ขยายรูปภาพ {{position}}", "CLOSE": "ปิด", "TRIAGE_NOTE_LABEL": "บันทึกการจัดการ", "TRIAGE_NOTE_PLACEHOLDER": "เพิ่มบันทึกสำหรับรายงานนี้...", "TRIAGED_BY": "จัดการโดย", "TRIAGED_AT": "จัดการเมื่อ", "JIRA_LINK_LABEL": "ปัญหาใน Jira", "JIRA_LINK_ARIA": "เปิดปัญหา Jira {{key}} ในแท็บใหม่" },
-      "STATUS": { "LABEL": "สถานะ", "SAVE": "บันทึก", "new": "ใหม่", "in_review": "กำลังตรวจสอบ", "accepted": "ยอมรับแล้ว", "resolved": "แก้ไขแล้ว", "rejected": "ปฏิเสธ" },
+      "DETAIL": {
+        "TITLE": "รายละเอียดรายงาน",
+        "ROUTE": "รายงานจากหน้า",
+        "USER_AGENT": "User Agent",
+        "USER_ID": "รหัสผู้ใช้",
+        "REPORTER_EMAIL": "อีเมลผู้รายงาน",
+        "REPORTER_NOTIFIED": "แจ้งผู้รายงานแล้ว",
+        "ANONYMOUS": "ผู้ใช้ไม่ระบุตัวตน",
+        "NO_IMAGES": "ไม่มีรูปภาพแนบ",
+        "IMAGE_POSITION": "ลำดับ",
+        "IMAGE_SIZE": "ขนาด",
+        "IMAGE_ENLARGE": "ขยายรูปภาพ {{position}}",
+        "CLOSE": "ปิด",
+        "TRIAGE_NOTE_LABEL": "บันทึกการจัดการ",
+        "TRIAGE_NOTE_PLACEHOLDER": "เพิ่มบันทึกสำหรับรายงานนี้...",
+        "TRIAGED_BY": "จัดการโดย",
+        "TRIAGED_AT": "จัดการเมื่อ",
+        "JIRA_LINK_LABEL": "ปัญหาใน Jira",
+        "JIRA_LINK_ARIA": "เปิดปัญหา Jira {{key}} ในแท็บใหม่"
+      },
+      "STATUS": {
+        "LABEL": "สถานะ",
+        "SAVE": "บันทึก",
+        "new": "ใหม่",
+        "in_review": "กำลังตรวจสอบ",
+        "accepted": "ยอมรับแล้ว",
+        "resolved": "แก้ไขแล้ว",
+        "rejected": "ปฏิเสธ"
+      },
       "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
       "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่",
       "NEW_BADGE_ARIA": "มีรายงานปัญหาการใช้งานใหม่ {{count}} รายการ"
@@ -1401,7 +1475,8 @@
       "SCHEDULE_EDIT_ITEM": "แก้ไขตาราง",
       "SCHEDULE_DELETE_ITEM": "ลบตาราง",
       "BACK_BTN": "กลับ",
-      "CONFIRM_BTN": "ยืนยัน"
+      "CONFIRM_BTN": "ยืนยัน",
+      "SOLD_SUCCESS": "ขายตั๋วสำเร็จ — {{bookingNumber}}"
     },
     "BOARDING_ENTRY": {
       "TITLE": "เลือกรอบเดินทาง",
