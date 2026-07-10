@@ -796,28 +796,53 @@ export class SellPageComponent implements OnInit, OnDestroy {
     if (ordered.length === 0) return;
 
     const departure = dayjs(trip.departureDateTime);
-    let cumulativeMinutes = 0;
-    // Once a leg's duration is missing, every downstream time becomes unreliable
-    // (we'd under-count by the skipped leg), so blank the rest of the chain.
-    let chainBroken = false;
-    this.stopTimeMap.set(ordered[0].slug, departure.format('HH:mm'));
 
-    for (let i = 1; i < ordered.length; i++) {
-      const prev = ordered[i - 1];
-      const curr = ordered[i];
-      // Find a direct consecutive pair.
-      const pair = pairs.find(
-        (p) => p.fromStop.slug === prev.slug && p.toStop.slug === curr.slug
-      );
-      if (!chainBroken && pair && typeof pair.estimatedDurationMinutes === 'number' && pair.estimatedDurationMinutes > 0) {
-        cumulativeMinutes += pair.estimatedDurationMinutes;
-        this.stopTimeMap.set(curr.slug, departure.add(cumulativeMinutes, 'minute').format('HH:mm'));
-      } else {
-        // Can't determine this leg's duration → drop this stop's time and all
-        // downstream ones rather than showing a too-early (under-counted) time.
-        chainBroken = true;
-        this.stopTimeMap.set(curr.slug, '');
+    // Anchor: the route's trunk origin — the earliest stop (minimum in-degree),
+    // breaking ties toward the one reaching the most destinations. The schedule's
+    // departureDateTime is the clock time at this stop.
+    const inDeg = new Map<string, number>();
+    const outDeg = new Map<string, number>();
+    for (const p of pairs) {
+      inDeg.set(p.toStop.slug, (inDeg.get(p.toStop.slug) ?? 0) + 1);
+      outDeg.set(p.fromStop.slug, (outDeg.get(p.fromStop.slug) ?? 0) + 1);
+    }
+    const minIn = Math.min(...ordered.map((s) => inDeg.get(s.slug) ?? 0));
+    const origin =
+      ordered
+        .filter((s) => (inDeg.get(s.slug) ?? 0) === minIn)
+        .sort((a, b) => (outDeg.get(b.slug) ?? 0) - (outDeg.get(a.slug) ?? 0))[0] ??
+      ordered[0];
+
+    // Segment pairs are all-pairs, and each origin → X edge carries the CUMULATIVE
+    // travel time origin..X, so a stop's clock time is simply
+    // departure + duration(origin → X). Computing each stop independently — rather
+    // than walking a consecutive chain — means a single missing/absent leg no longer
+    // cascades and blanks every downstream time. The old chain walk left only the
+    // origin with a time on multi-pickup routes, because parallel pickup points
+    // share the minimum in-degree and have no segment connecting one to the next.
+    const originDuration = new Map<string, number>();
+    for (const p of pairs) {
+      if (
+        p.fromStop.slug === origin.slug &&
+        typeof p.estimatedDurationMinutes === 'number' &&
+        p.estimatedDurationMinutes > 0
+      ) {
+        originDuration.set(p.toStop.slug, p.estimatedDurationMinutes);
       }
+    }
+
+    for (const stop of ordered) {
+      if (stop.slug === origin.slug) {
+        this.stopTimeMap.set(stop.slug, departure.format('HH:mm'));
+        continue;
+      }
+      const mins = originDuration.get(stop.slug);
+      // Blank only when the origin genuinely has no segment to this stop (e.g. a
+      // parallel pickup point), never as a cascade from an unrelated gap.
+      this.stopTimeMap.set(
+        stop.slug,
+        mins != null ? departure.add(mins, 'minute').format('HH:mm') : ''
+      );
     }
   }
 
