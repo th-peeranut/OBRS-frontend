@@ -1953,3 +1953,16 @@ business rules, not a blanket permission wall) but not a full driver board-succe
 Would need either a schedule with both `driver_id` set AND `departure_date_time` = today in SIT
 seed data, or a live DB write to create one — didn't do the latter to avoid mutating shared SIT
 state beyond what the QA pass itself needed.
+
+## OBRS-185 scrutinize self-fix (2026-07-10)
+- Consolidation added `COMMON.CALENDAR_ICON_ALT` and used it for the 12 new inline
+  calendar-icon instances, but left 5 pre-existing `alt="Calendar Icon"` hardcoded
+  strings on the img tags it was ALREADY editing (home-booking x2, schedule-booking-filter
+  x2, walk-in-trip-browser x1). Scrutinize replaced them with
+  `[attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate"` for i18n consistency (CLAUDE.md:
+  no hardcoded strings). Pattern: when you introduce an i18n key for a repeated string,
+  retrofit every instance you touch in the same diff — don't half-migrate.
+- Left the credit-card expiry picker (`payment-creditcard`, view="month", mm/yy) OUT of the
+  date-field consolidation on purpose: it is a month-only control, not a day-grid date field,
+  so the 280px day-panel + pill styling would not fit. Its `.calendar-icon` /
+  `payment-card-calendar-panel` classes are component-scoped and unaffected by the deletions.

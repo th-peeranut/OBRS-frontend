@@ -14,7 +14,7 @@
       [iconDisplay]="'input'"
       (ngModelChange)="onDateChange($event)"
     >
-      <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" alt="Calendar Icon" /></ng-template>
+      <ng-template pTemplate="inputicon"><img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" /></ng-template>
     </p-calendar>
   </div>
 
