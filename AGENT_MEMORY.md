@@ -1,5 +1,37 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-10 — QA: OBRS-84 verified login-email change — PASSED (verify only, not merged)
+
+Worktree `wt-obrs-84-email-change` @ `9938fde`. Full report + evidence recipe lives in the backend
+worktree's `AGENT_MEMORY.md` (same date) since the live click-through needed both repos running
+together. Summary from the FE side:
+
+- `/account` page + `app-change-email-dialog` (`src/app/modules/account/`) render correctly in
+  Thai (seeded users' default locale), light AND dark, zero raw i18n-key leaks: empty form,
+  wrong-password inline error (session stays authenticated — navbar avatar still shown, no
+  logout), same-email inline error, "sent" confirmation state.
+- `/change-email/confirm` (`src/app/modules/change-email-confirm/`) all three states captured live
+  against a real local backend: `success` (green check, new email shown, redirects to
+  `/login?reason=email-changed`), `invalid` (neutral gray info icon — confirmed NOT red, correct
+  per the deliberate design choice in the component's own comment), `targetTaken` (red error icon,
+  distinct from `invalid`).
+- `/login?reason=email-changed&email=...` banner renders and prefills the email field correctly.
+- Selector note for future Playwright work on this dialog: it's NOT `getByRole('button', {name:
+  /change email/i})` when default locale is Thai — use `.account-card button.btn-primary` /
+  `#change-email-current-password` / `#change-email-new-email` /
+  `.change-email-modal button[type="submit"]` (real DOM ids from the template, locale-independent).
+- Auth bypass for capture: `localStorage` keys `auth_token`/`auth_username`/`auth_roles` (JSON
+  array) skip the login UI; `app_admin_theme` = `'light'|'dark'` (class `is-dark` on `body`) drives
+  theme. `app_language` did NOT switch the rendered language within this session's time-box despite
+  being the same key/pattern that worked in the OBRS-129 QA pass — flagged in the backend note as a
+  possible follow-up, not re-investigated here.
+- CORS gotcha: local backend `dev` profile is single-origin (`application-dev.yml` hardcodes
+  `app.frontend-url: http://localhost:4200`), unlike SIT which wildcards `localhost:*` — serve the
+  FE on exactly 4200 when pointing at a local backend, or override `APP_FRONTEND_URL` env on the
+  backend to match.
+
+Screenshots are in the QA agent's scratchpad, not committed to either repo.
+
 ## 2026-07-10 — QA re-verify: OBRS-129 PASSED — data path confirmed end-to-end at backend `70ff182`
 
 Backend fix (`70ff182`, Instant→OffsetDateTime projection conversion) rebuilt locally on the same
