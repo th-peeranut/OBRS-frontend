@@ -124,7 +124,7 @@
         "REFUND": "您将获得退款 {{amount}}",
         "NO_PAYMENT": "无需额外付款"
       },
-      "CONFIRM_BUTTON": "确认改签",
+      "CONFIRM_BUTTON": "确认",
       "BACK_BUTTON": "返回",
       "SUCCESS": "您的预订已改签成功。",
       "PAYMENT_REQUIRED_NOTE": "请支付 {{amount}} 以完成改签。",
@@ -144,7 +144,8 @@
         "UNAUTHORIZED": "您无权改签此预订。",
         "GENERIC": "无法改签此预订，请重试。"
       },
-      "CURRENT_TRIP": "当前行程"
+      "CURRENT_TRIP": "当前行程",
+      "NEW_TRIP": "新行程"
     },
     "CHANGE_SEAT": {
       "ACTION": "更改座位",

@@ -90,6 +90,17 @@
   }
 }
 
+// OBRS-189: the NEW trip — same layout as current-trip but brand-blue accent
+// (border + label) so it reads clearly as the selected new trip, not the old one.
+.reschedule-new-trip {
+  border-color: $brand-customer-strong;
+  background: $primary-lightblue;
+
+  .reschedule-current-trip__label {
+    color: $brand-customer-strong;
+  }
+}
+
 @keyframes reschedule-modal-fade {
   from {
     opacity: 0;

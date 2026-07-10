@@ -124,7 +124,7 @@
         "REFUND": "You'll be refunded {{amount}}",
         "NO_PAYMENT": "No additional charge"
       },
-      "CONFIRM_BUTTON": "Confirm reschedule",
+      "CONFIRM_BUTTON": "Confirm",
       "BACK_BUTTON": "Back",
       "SUCCESS": "Your booking has been rescheduled.",
       "PAYMENT_REQUIRED_NOTE": "Complete a payment of {{amount}} to finish rescheduling your booking.",
@@ -144,7 +144,8 @@
         "UNAUTHORIZED": "You don't have permission to reschedule this booking.",
         "GENERIC": "Unable to reschedule this booking. Please try again."
       },
-      "CURRENT_TRIP": "Current trip"
+      "CURRENT_TRIP": "Current trip",
+      "NEW_TRIP": "New trip"
     },
     "CHANGE_SEAT": {
       "ACTION": "Change seat",

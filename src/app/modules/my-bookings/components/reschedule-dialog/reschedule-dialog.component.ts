@@ -123,6 +123,25 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
     };
   }
 
+  /**
+   * The NEW trip once a candidate is picked (OBRS-189): same stops (reschedule
+   * keeps the route — only date/time change) with the selected option's
+   * departure. Null until an option is selected, so it only shows from the
+   * estimate step onward, paired with `originalTrip` as a "from → to" view.
+   */
+  get newTrip(): { fromLabel: string; toLabel: string; departure: string } | null {
+    const leg = this.booking?.bookingSchedules?.[0];
+    if (!leg || !this.selectedOption) {
+      return null;
+    }
+    const locale = this.normalizeLocale(this.translate.currentLang);
+    return {
+      fromLabel: getStopLabel(leg.fromStop, locale),
+      toLabel: getStopLabel(leg.toStop, locale),
+      departure: formatDisplayDateTime(this.selectedOption.departureDateTime, locale),
+    };
+  }
+
   private normalizeLocale(locale: string | null | undefined): SupportedLocale {
     return locale === 'en' || locale === 'zh' ? locale : 'th';
   }

@@ -12,10 +12,17 @@
     <div class="reschedule-modal__body">
       <h2 class="reschedule-modal__title">{{ "MY_BOOKINGS.RESCHEDULE.DIALOG_TITLE" | translate }}</h2>
 
-      <!-- OBRS-189: always show the current trip so the traveller sees what they
-           are moving from while choosing the new one. -->
+      <!-- OBRS-189: show the current trip (always) and, once a candidate is
+           picked, the new trip below it — same style, accent colour marks it
+           as the NEW one — so the traveller sees "from → to". -->
       <div class="reschedule-current-trip" *ngIf="originalTrip as trip">
         <span class="reschedule-current-trip__label">{{ "MY_BOOKINGS.RESCHEDULE.CURRENT_TRIP" | translate }}</span>
+        <span class="reschedule-current-trip__route">{{ trip.fromLabel }} → {{ trip.toLabel }}</span>
+        <span class="reschedule-current-trip__time">{{ trip.departure }}</span>
+      </div>
+
+      <div class="reschedule-current-trip reschedule-new-trip" *ngIf="newTrip as trip">
+        <span class="reschedule-current-trip__label">{{ "MY_BOOKINGS.RESCHEDULE.NEW_TRIP" | translate }}</span>
         <span class="reschedule-current-trip__route">{{ trip.fromLabel }} → {{ trip.toLabel }}</span>
         <span class="reschedule-current-trip__time">{{ trip.departure }}</span>
       </div>

@@ -83,6 +83,22 @@ describe('RescheduleDialogComponent', () => {
     expect(trip?.departure).toBeTruthy();
   });
 
+  it('exposes the NEW trip only once an option is picked — same stops, new departure (OBRS-189)', () => {
+    const { component } = create(
+      buildState({ bookings: [buildBooking()], rescheduleDialogBookingId: 5 })
+    );
+    component.ngOnInit();
+
+    expect(component.newTrip).toBeNull(); // nothing selected yet
+
+    component.selectedOption = sampleOption;
+    const nt = component.newTrip;
+    expect(nt).not.toBeNull();
+    expect(nt?.fromLabel).toBe('a'); // route unchanged
+    expect(nt?.toLabel).toBe('b');
+    expect(nt?.departure).toBeTruthy();
+  });
+
   it('opens optimistically — dispatches openRescheduleDialog synchronously on init, before any data has loaded', () => {
     const { component, store } = create(
       buildState({ bookings: [buildBooking()], rescheduleDialogBookingId: 5 })
