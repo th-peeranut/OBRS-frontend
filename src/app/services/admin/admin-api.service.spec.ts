@@ -85,6 +85,63 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-196: regression for the wrong-URL contract break a coordinator
+  // reconciliation found post-merge (base path is `/api/private/settlements`,
+  // NO `/admin/` segment — `EndpointConstant.PRIVATE_SETTLEMENTS`) — a
+  // store-stub spec never exercises the real HttpClient call, so these hit
+  // HttpTestingController directly, same precedent as the OBRS-85 block above.
+  describe('getSettlementsPending', () => {
+    it('issues a GET to /api/private/settlements/pending?from&to (no /admin/ segment)', () => {
+      service.getSettlementsPending('2026-07-01', '2026-07-07').subscribe();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/settlements/pending` &&
+          request.params.get('from') === '2026-07-01' &&
+          request.params.get('to') === '2026-07-07'
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: { range: { from: '', to: '', timezone: '' }, items: [] } });
+    });
+  });
+
+  describe('getSettlementSchedule', () => {
+    it('issues a GET to /api/private/settlements/schedules/{id} (no /admin/ segment)', () => {
+      service.getSettlementSchedule(42).subscribe();
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/settlements/schedules/42`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
+  describe('confirmSettlement', () => {
+    it('issues a POST to /api/private/settlements/schedules/{id}/confirm with the acknowledged amount', () => {
+      service.confirmSettlement(42, '1950.00').subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/settlements/schedules/42/confirm`
+      );
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ acknowledgedTotalAmount: '1950.00' });
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+
+    it('posts an empty body when no acknowledged amount is given', () => {
+      service.confirmSettlement(42).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/settlements/schedules/42/confirm`
+      );
+      expect(req.request.body).toEqual({});
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
   // OBRS-109 (#37): full promotion CRUD, distinct from the round-trip
   // singleton endpoints above.
   describe('getPromotions', () => {

@@ -19,10 +19,12 @@
 
     <ng-container *ngIf="summary">
       <div class="settlement-detail-body">
-        <!-- Meta (seeded optimistically from the row, never gated on the fetch) -->
+        <!-- Meta (seeded optimistically from the row, never gated on the fetch).
+             GET /settlements/pending only ever returns PENDING rounds, so the
+             fallback status (before `detail` lands) is always PENDING. -->
         <div class="settlement-detail-row">
           <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ROUTE' | translate }}</span>
-          <span class="admin-emphasis">{{ summary.routeLabel }}</span>
+          <span class="admin-emphasis">{{ summary.routeSlug }}</span>
         </div>
         <div class="settlement-detail-row">
           <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DEPARTURE' | translate }}</span>
@@ -32,9 +34,9 @@
           <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</span>
           <span
             class="admin-status"
-            [ngClass]="(detail?.status ?? summary.status) === 'SETTLED' ? 'is-success' : 'is-warning'"
+            [ngClass]="(detail?.status ?? 'PENDING') === 'SETTLED' ? 'is-success' : 'is-warning'"
           >
-            {{ 'ADMIN.SETTLEMENTS.STATUS.' + (detail?.status ?? summary.status) | translate }}
+            {{ 'ADMIN.SETTLEMENTS.STATUS.' + (detail?.status ?? 'PENDING') | translate }}
           </span>
         </div>
 
@@ -51,8 +53,9 @@
           <span class="admin-skeleton admin-skeleton--sm" *ngFor="let row of skeletonRows"></span>
         </div>
 
-        <ng-container *ngIf="detail">
-          <!-- Totals -->
+        <!-- ══════════════ PENDING: live (recomputed-on-read) breakdown ══════════════
+             Full shape — per-bucket ticketCount, on-site/agency split via `remote`. -->
+        <ng-container *ngIf="detail && detail.status === 'PENDING'">
           <div class="settlement-detail-totals mt-3">
             <div class="settlement-detail-row">
               <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
@@ -76,7 +79,6 @@
             </div>
           </div>
 
-          <!-- By channel -->
           <div class="mt-3">
             <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_CHANNEL' | translate }}</p>
             <div class="admin-table-wrap">
@@ -102,7 +104,6 @@
             </div>
           </div>
 
-          <!-- By method -->
           <div class="mt-3">
             <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_METHOD' | translate }}</p>
             <div class="admin-table-wrap">
@@ -131,39 +132,8 @@
             </p>
           </div>
 
-          <!-- Settled info + discrepancy (settled only) -->
-          <ng-container *ngIf="detail.status === 'SETTLED' && detail.settled">
-            <div class="settlement-detail-row mt-3">
-              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_BY' | translate }}</span>
-              <span>{{ detail.settled.settledByName }}</span>
-            </div>
-            <div class="settlement-detail-row">
-              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_AT' | translate }}</span>
-              <span>{{ displayDateTime(detail.settled.settledAt) }}</span>
-            </div>
-
-            <div
-              class="admin-card settlement-discrepancy-card mt-3"
-              *ngIf="detail.discrepancy"
-              [class.is-danger]="detail.discrepancy.hasDiscrepancy"
-            >
-              <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_TITLE' | translate }}</p>
-              <p *ngIf="!detail.discrepancy.hasDiscrepancy" class="admin-muted">
-                {{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_NONE' | translate }}
-              </p>
-              <ng-container *ngIf="detail.discrepancy.hasDiscrepancy">
-                <p class="admin-error">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_FOUND' | translate }}</p>
-                <div class="settlement-detail-row">
-                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DIFFERENCE_AMOUNT' | translate }}</span>
-                  <span>{{ formatMoney(detail.discrepancy.differenceAmount, detail.currency) }}</span>
-                </div>
-              </ng-container>
-            </div>
-          </ng-container>
-
-          <!-- Confirm receipt — the modal's single primary action (design-system §4),
-               hidden entirely once settled. -->
-          <div class="settlement-detail-actions mt-3" *ngIf="detail.status === 'PENDING'">
+          <!-- Confirm receipt — the modal's single primary action (design-system §4). -->
+          <div class="settlement-detail-actions mt-3">
             <button
               type="button"
               class="admin-btn admin-btn-primary"
@@ -172,6 +142,95 @@
             >
               {{ 'ADMIN.SETTLEMENTS.CONFIRM.CONFIRM_BTN' | translate }}
             </button>
+          </div>
+        </ng-container>
+
+        <!-- ══════════ SETTLED: frozen snapshot — amount only, no ticketCount/remote ══════════ -->
+        <ng-container *ngIf="detail && detail.status === 'SETTLED' && detail.settled as settled">
+          <div class="settlement-detail-totals mt-3">
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
+              <span class="admin-big-number">{{ formatMoney(settled.totalAmount, detail.currency) }}</span>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_CHANNEL' | translate }}</p>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.CHANNEL' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of settled.byChannel; trackBy: trackByChannel">
+                    <td>{{ channelLabel(row.channel) }}</td>
+                    <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                  </tr>
+                  <tr *ngIf="settled.byChannel.length === 0" class="admin-empty-row">
+                    <td colspan="2">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="mt-3">
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_METHOD' | translate }}</p>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.METHOD' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of settled.byMethod; trackBy: trackByMethod">
+                    <td>{{ methodLabel(row.method) }}</td>
+                    <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                  </tr>
+                  <tr *ngIf="settled.byMethod.length === 0" class="admin-empty-row">
+                    <td colspan="2">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="admin-muted settlement-method-note">
+              {{ 'ADMIN.SETTLEMENTS.DETAIL.METHOD_NOTE' | translate }}
+            </p>
+          </div>
+
+          <div class="settlement-detail-row mt-3">
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_BY' | translate }}</span>
+            <span>{{ settled.settledByName }}</span>
+          </div>
+          <div class="settlement-detail-row">
+            <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_AT' | translate }}</span>
+            <span>{{ displayDateTime(settled.settledAt) }}</span>
+          </div>
+
+          <!-- Compares the frozen settled.totalAmount against the CURRENT
+               live.totalAmount (a late refund/cancel can drift them apart
+               after settlement) — SettlementDiscrepancyRespDto. -->
+          <div
+            class="admin-card settlement-discrepancy-card mt-3"
+            *ngIf="detail.discrepancy as discrepancy"
+            [class.is-danger]="discrepancy.hasDiscrepancy"
+          >
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_TITLE' | translate }}</p>
+            <p *ngIf="!discrepancy.hasDiscrepancy" class="admin-muted">
+              {{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_NONE' | translate }}
+            </p>
+            <ng-container *ngIf="discrepancy.hasDiscrepancy">
+              <p class="admin-error">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_FOUND' | translate }}</p>
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DIFFERENCE_AMOUNT' | translate }}</span>
+                <span>{{ formatMoney(discrepancy.deltaAmount, detail.currency) }}</span>
+              </div>
+            </ng-container>
           </div>
         </ng-container>
       </div>

@@ -5,11 +5,11 @@ import { createTranslateStub } from '../../../../../testing/test-stubs';
 function makeItem(overrides: Partial<SettlementPendingItemDto> = {}): SettlementPendingItemDto {
   return {
     scheduleId: 1,
-    routeLabel: 'BKK-CNX',
+    originStopId: 5,
+    originStopSlug: 'nong_chak',
     departureDateTime: '2026-07-10T08:00:00+07:00',
-    status: 'PENDING',
-    totalAmount: '1000.00',
-    currency: 'THB',
+    routeSlug: 'bkk-cnx',
+    liveTotalAmount: '1000.00',
     ticketCount: 4,
     ...overrides,
   };
@@ -36,12 +36,6 @@ describe('SettlementsListComponent', () => {
     spy.calls.reset();
     component['onRowActivate'](7, { target: button } as unknown as MouseEvent);
     expect(spy).not.toHaveBeenCalled(); // interactive-target click is ignored
-  });
-
-  it('maps PENDING/SETTLED to the correct status pill class', () => {
-    const component = new SettlementsListComponent(createTranslateStub());
-    expect(component['statusClass']('PENDING')).toBe('is-warning');
-    expect(component['statusClass']('SETTLED')).toBe('is-success');
   });
 
   it('formats a decimal-string amount with the given currency', () => {

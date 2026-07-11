@@ -10,24 +10,25 @@ import { createTranslateStub } from '../../../../testing/test-stubs';
 function makeItem(overrides: Partial<SettlementPendingItemDto> = {}): SettlementPendingItemDto {
   return {
     scheduleId: 1,
-    routeLabel: 'BKK-CNX',
+    originStopId: 5,
+    originStopSlug: 'nong_chak',
     departureDateTime: '2026-07-10T08:00:00+07:00',
-    status: 'PENDING',
-    totalAmount: '1000.00',
-    currency: 'THB',
+    routeSlug: 'bkk-cnx',
+    liveTotalAmount: '1000.00',
     ticketCount: 4,
     ...overrides,
   };
 }
 
 function makePage(items: SettlementPendingItemDto[] = [makeItem()]): SettlementPendingPageDto {
-  return { items, totalElements: items.length };
+  return { range: { from: '2026-07-01', to: '2026-07-07', timezone: 'Asia/Bangkok' }, items };
 }
 
 function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): SettlementScheduleDetailDto {
   return {
     scheduleId: 1,
-    routeLabel: 'BKK-CNX',
+    originStopId: 5,
+    originStopSlug: 'nong_chak',
     departureDateTime: '2026-07-10T08:00:00+07:00',
     status: 'PENDING',
     currency: 'THB',
@@ -355,7 +356,7 @@ describe('SettlementsPageComponent', () => {
         byChannel: [],
       },
     });
-    const store = makeStoreStub(makePage([makeItem({ scheduleId: 1, totalAmount: '0.00' })]));
+    const store = makeStoreStub(makePage([makeItem({ scheduleId: 1, liveTotalAmount: '0.00' })]));
     const adminApi = {
       getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(zeroDetail))),
       confirmSettlement: jasmine.createSpy().and.returnValue(of(ok({ ...zeroDetail, status: 'SETTLED' }))),
@@ -372,7 +373,17 @@ describe('SettlementsPageComponent', () => {
 
   it('SETTLEMENT_ALREADY_SETTLED: refetches, swaps to the settled view, shows info (not error), and removes the row', async () => {
     const store = makeStoreStub(makePage());
-    const settledDetail = makeDetail({ status: 'SETTLED', settled: { settledByName: 'Owner', settledAt: '2026-07-10T09:00:00+07:00', acknowledgedTotalAmount: '1000.00' } });
+    const settledDetail = makeDetail({
+      status: 'SETTLED',
+      settled: {
+        totalAmount: '1000.00',
+        byMethod: [{ method: 'cash', amount: '1000.00' }],
+        byChannel: [{ channel: 'walk_in', amount: '1000.00' }],
+        settledBy: 9,
+        settledByName: 'Owner',
+        settledAt: '2026-07-10T09:00:00+07:00',
+      },
+    });
     const adminApi = {
       getSettlementSchedule: jasmine.createSpy().and.returnValues(of(ok(makeDetail())), of(ok(settledDetail))),
       confirmSettlement: jasmine

@@ -11,18 +11,18 @@ function ok<T>(data: T): ResponseAPI<T> {
 
 function page(overrides: Partial<SettlementPendingPageDto> = {}): SettlementPendingPageDto {
   return {
+    range: { from: '2026-07-01', to: '2026-07-07', timezone: 'Asia/Bangkok' },
     items: [
       {
         scheduleId: 1,
-        routeLabel: 'BKK-CNX',
+        originStopId: 5,
+        originStopSlug: 'nong_chak',
         departureDateTime: '2026-07-10T08:00:00+07:00',
-        status: 'PENDING',
-        totalAmount: '1000.00',
-        currency: 'THB',
+        routeSlug: 'bkk-cnx',
+        liveTotalAmount: '1000.00',
         ticketCount: 4,
       },
     ],
-    totalElements: 1,
     ...overrides,
   };
 }
@@ -83,7 +83,7 @@ describe('SettlementsPendingStore', () => {
   it('setRange() switches the range and refetches with the new dates', async () => {
     const getSettlementsPending = jasmine
       .createSpy('getSettlementsPending')
-      .and.returnValue(of(ok(page({ totalElements: 2 }))));
+      .and.returnValue(of(ok(page({ items: [] }))));
     const store = makeStore({ getSettlementsPending });
 
     store.setRange('2026-06-01', '2026-06-10');
@@ -97,7 +97,25 @@ describe('SettlementsPendingStore', () => {
     const store = makeStore({
       getSettlementsPending: jasmine
         .createSpy('getSettlementsPending')
-        .and.returnValue(of(ok(page({ totalElements: 3 })))),
+        .and.returnValue(
+          of(
+            ok(
+              page({
+                items: [
+                  {
+                    scheduleId: 3,
+                    originStopId: 5,
+                    originStopSlug: 'nong_chak',
+                    departureDateTime: '2026-05-01T08:00:00+07:00',
+                    routeSlug: 'bkk-cnx',
+                    liveTotalAmount: '300.00',
+                    ticketCount: 1,
+                  },
+                ],
+              })
+            )
+          )
+        ),
     });
     store.setRange('2026-05-01', '2026-05-05');
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -105,7 +123,7 @@ describe('SettlementsPendingStore', () => {
     let received: SettlementPendingPageDto | null | undefined;
     store.data$.subscribe((value) => (received = value));
 
-    expect(received?.totalElements).toBe(3);
+    expect(received?.items[0].scheduleId).toBe(3);
     expect(store.range).toEqual({ from: '2026-05-01', to: '2026-05-05' });
   });
 
@@ -128,14 +146,14 @@ describe('SettlementsPendingStore', () => {
   });
 
   it('exposes the errorCode from a failed fetch via lastErrorCode', async () => {
-    const httpError = { error: { errorCode: 'SETTLEMENT_RANGE_TOO_LARGE' } };
+    const httpError = { error: { errorCode: 'SETTLEMENT_RANGE_INVALID' } };
     const store = makeStore({
       getSettlementsPending: jasmine.createSpy().and.returnValue(throwError(() => httpError)),
     });
 
     await store.refresh();
 
-    expect(store.lastErrorCode).toBe('SETTLEMENT_RANGE_TOO_LARGE');
+    expect(store.lastErrorCode).toBe('SETTLEMENT_RANGE_INVALID');
   });
 
   it('clears lastErrorCode after a subsequent successful fetch', async () => {
@@ -176,10 +194,8 @@ describe('SettlementsPendingStore', () => {
     store.mutate((current) => ({
       ...current,
       items: current.items.filter((i) => i.scheduleId !== 1),
-      totalElements: current.totalElements - 1,
     }));
 
     expect(store.value?.items.length).toBe(0);
-    expect(store.value?.totalElements).toBe(0);
   });
 });

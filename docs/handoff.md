@@ -71,10 +71,35 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 ## Contract Requests (Frontend → Backend)
 
 ### [Frontend] 2026-07-11 — Per-round revenue settlement + owner cash-handover sign-off (OBRS-196): endpoints not yet in contract
+
+> **RESOLVED 2026-07-11** — backend landed (commit `037cdb1`). Two contract breaks were found and fixed against the real
+> `SettlementController`/`docs/api/settlements.md`:
+> 1. **URL**: base path is `/api/private/settlements` — **no `/admin/` segment** (`EndpointConstant.PRIVATE_SETTLEMENTS`).
+>    Everything below was 404ing against the real backend until `AdminApiService`'s 3 methods were corrected.
+> 2. **Settled breakdown is a thinner shape than live**: `settled.byMethod[]`/`settled.byChannel[]` are `{method,amount}` /
+>    `{channel,amount}` only (no `ticketCount`, no `remote` — the frozen snapshot only stores amounts), vs. the live
+>    breakdown's full `{method,amount,ticketCount}` / `{channel,amount,ticketCount,remote}`. Also reconciled: the pending
+>    item has no `status`/`routeLabel`/`totalAmount`/`currency` fields (it's `{scheduleId, originStopId, originStopSlug,
+>    departureDateTime, routeSlug, liveTotalAmount, ticketCount}` — every row is definitionally PENDING, so the list's
+>    status pill is now a static badge, not a per-item bind), the pending list wraps in `{range, items}` (no
+>    `totalElements`), `discrepancy` is `{hasDiscrepancy, settledTotal, liveTotal, deltaAmount}` (not
+>    `differenceAmount`), and `settled` carries `{totalAmount, byMethod, byChannel, settledBy, settledByName,
+>    settledAt}` (not `acknowledgedTotalAmount`). `SettlementDetailModalComponent` now renders two distinct breakdown
+>    table blocks gated on `detail.status` (PENDING → `detail.live.*`, full columns; SETTLED → `detail.settled.*`,
+>    amount-only columns) instead of always rendering the live breakdown. All shapes reconciled directly against
+>    `SettlementSummaryRespDto`/`SettlementLiveRespDto`/`SettlementSettledRespDto`/`SettlementPendingItemRespDto`/
+>    `SettlementPendingListRespDto`/`SettlementDiscrepancyRespDto` in the backend worktree. `shared/interfaces/settlement.interface.ts`,
+>    `AdminApiService`, `SettlementsPendingStore`, `SettlementsPageComponent`, `SettlementsListComponent`, and
+>    `SettlementDetailModalComponent` were all updated; i18n untouched (no key renames needed). Regression-locked with
+>    new `HttpTestingController` tests in `admin-api.service.spec.ts` asserting the exact corrected URLs (mirrors the
+>    OBRS-85 precedent above), plus spec coverage for the thin settled-breakdown shape.
+>
+> Original entry kept below for history.
+
 **Affected endpoints**:
-- `GET /api/private/admin/settlements/pending?from=&to=` (new)
-- `GET /api/private/admin/settlements/schedules/{scheduleId}` (new)
-- `POST /api/private/admin/settlements/schedules/{scheduleId}/confirm` (new)
+- `GET /api/private/settlements/pending?from=&to=` (new)
+- `GET /api/private/settlements/schedules/{scheduleId}` (new)
+- `POST /api/private/settlements/schedules/{scheduleId}/confirm` (new)
 
 **Request type**: New endpoints (all three).
 

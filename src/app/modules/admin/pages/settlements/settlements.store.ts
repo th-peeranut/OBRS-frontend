@@ -74,7 +74,7 @@ export class SettlementsPendingStore extends AdminCollectionStore<SettlementPend
   }
 
   private emptyPage(): SettlementPendingPageDto {
-    return { items: [], totalElements: 0 };
+    return { range: { from: this.fromDate, to: this.toDate, timezone: '' }, items: [] };
   }
 
   private static extractErrorCode(error: unknown): string | null {

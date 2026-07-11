@@ -880,24 +880,25 @@ export class AdminApiService {
   }
 
   // OBRS-196: per-round revenue settlement + owner cash-handover sign-off.
-  // Endpoints built against the locked OBRS-196 contract given directly by the
-  // task orchestrator (paired backend worktree had no settlement code at time
-  // of writing) — same parallel-lane pattern as OBRS-129/OBRS-96 before them.
-  // See docs/handoff.md Contract Requests for the assumed shape.
+  // Base path is `/api/private/settlements` — NO `/admin/` segment
+  // (`EndpointConstant.PRIVATE_SETTLEMENTS`, confirmed against the landed
+  // backend commit 037cdb1 / docs/api/settlements.md). `SettlementController`
+  // is `@PreAuthorize("hasRole('OWNER')")`; ADMIN inherits via the backend's
+  // ROLE_ADMIN > ROLE_OWNER hierarchy and additionally bypasses scoping.
   getSettlementsPending(
     from: string,
     to: string
   ): Observable<ResponseAPI<SettlementPendingPageDto>> {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<SettlementPendingPageDto>(
-      `${this.baseUrl}/private/admin/settlements/pending`,
+      `${this.baseUrl}/private/settlements/pending`,
       params
     );
   }
 
   getSettlementSchedule(id: number): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
     return this.getRequest<SettlementScheduleDetailDto>(
-      `${this.baseUrl}/private/admin/settlements/schedules/${id}`
+      `${this.baseUrl}/private/settlements/schedules/${id}`
     );
   }
 
@@ -907,7 +908,7 @@ export class AdminApiService {
   ): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
     const payload = acknowledgedTotalAmount !== undefined ? { acknowledgedTotalAmount } : {};
     return this.postRequest<SettlementScheduleDetailDto>(
-      `${this.baseUrl}/private/admin/settlements/schedules/${id}/confirm`,
+      `${this.baseUrl}/private/settlements/schedules/${id}/confirm`,
       payload
     );
   }

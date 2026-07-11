@@ -16,6 +16,11 @@ export type SettlementsContentState = 'loading' | 'invalid' | 'error' | 'empty' 
  * banner") — the invalid/error text itself is owned by the page (translated
  * there, since the range-guard/error messages are page-specific), passed in
  * via `[message]`.
+ *
+ * `GET /settlements/pending` (`SettlementPendingItemDto`) never returns a
+ * `status` field — the endpoint's contract is "departed, not-yet-settled
+ * rounds only", so every row is definitionally PENDING; the status pill is
+ * rendered as a static PENDING badge rather than bound to a per-item field.
  */
 @Component({
   selector: 'app-settlements-list',
@@ -55,12 +60,6 @@ export class SettlementsListComponent {
       return;
     }
     this.rowClick.emit(scheduleId);
-  }
-
-  protected statusClass(status: string): string {
-    if (status === 'PENDING') return 'is-warning';
-    if (status === 'SETTLED') return 'is-success';
-    return '';
   }
 
   protected trackByScheduleId(_index: number, item: SettlementPendingItemDto): number {

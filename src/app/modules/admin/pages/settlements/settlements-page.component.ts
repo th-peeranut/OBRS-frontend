@@ -297,7 +297,6 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     this.store.mutate((current) => ({
       ...current,
       items: current.items.filter((i) => i.scheduleId !== id),
-      totalElements: Math.max(0, current.totalElements - 1),
     }));
   }
 

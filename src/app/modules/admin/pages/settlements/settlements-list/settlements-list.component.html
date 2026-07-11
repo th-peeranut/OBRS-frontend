@@ -44,14 +44,17 @@
             [class.zebra]="i % 2 === 1"
             (click)="onRowActivate(item.scheduleId, $event)"
           >
-            <td class="admin-emphasis">{{ item.routeLabel }}</td>
+            <td class="admin-emphasis">{{ item.routeSlug }}</td>
             <td>{{ displayDateTime(item.departureDateTime) }}</td>
             <td>
-              <span class="admin-status" [ngClass]="statusClass(item.status)">
-                {{ 'ADMIN.SETTLEMENTS.STATUS.' + item.status | translate }}
+              <!-- GET /settlements/pending only ever returns departed,
+                   not-yet-settled rounds — every row is definitionally
+                   PENDING, so this is a static badge, not a per-item bind. -->
+              <span class="admin-status is-warning">
+                {{ 'ADMIN.SETTLEMENTS.STATUS.PENDING' | translate }}
               </span>
             </td>
-            <td>{{ formatMoney(item.totalAmount, item.currency) }}</td>
+            <td>{{ formatMoney(item.liveTotalAmount, 'THB') }}</td>
             <td>
               <button
                 type="button"

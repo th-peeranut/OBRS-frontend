@@ -1,8 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
 import {
-  SettlementChannelBreakdownDto,
-  SettlementMethodBreakdownDto,
   SettlementPendingItemDto,
   SettlementScheduleDetailDto,
 } from '../../../../../shared/interfaces/settlement.interface';
@@ -19,6 +17,12 @@ import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-ti
  * hand before the detail GET resolves (design-system.md §6), so this modal
  * never gates its render on `[detail]` being present — `[isFetching]` drives
  * a skeleton for the breakdown tables only.
+ *
+ * The PENDING (`detail.live`) and SETTLED (`detail.settled`) breakdowns are
+ * DIFFERENT shapes — the live one is recomputed-on-read (full ticketCount +
+ * remote flag), the settled one is a frozen snapshot (amount only, per
+ * `docs/api/settlements.md`) — so the template renders two distinct table
+ * blocks gated on `detail.status`, not one table reused for both.
  */
 @Component({
   selector: 'app-settlement-detail-modal',
@@ -79,11 +83,13 @@ export class SettlementDetailModalComponent {
     this.confirmRequested.emit();
   }
 
-  protected trackByMethod(_index: number, row: SettlementMethodBreakdownDto): string {
+  // Structural (not nominal) param types so the same trackBy fn works for
+  // both the live (full) and settled (thin, amount-only) breakdown rows.
+  protected trackByMethod(_index: number, row: { method: string }): string {
     return row.method;
   }
 
-  protected trackByChannel(_index: number, row: SettlementChannelBreakdownDto): string {
+  protected trackByChannel(_index: number, row: { channel: string }): string {
     return row.channel;
   }
 }
