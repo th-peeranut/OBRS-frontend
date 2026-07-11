@@ -1,5 +1,59 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-11 — Frontend fix: OBRS-238 customer online booking blocked, missing email field on booker-info-form
+
+**Root cause was confirmed before this session started (backend `BookingReqDtoValidator.java:35-39`,
+correct, untouched): ONLINE `bookingChannel` requires a non-blank `contact.email`, but
+`BookerInfoFormComponent` (customer booker form) had no email input at all, so every customer
+online booking sent `contact.email=null` and 400'd. This was blocking ALL customer online
+bookings** — a P0-shaped defect despite the small diff.
+
+**Fix, FE-only, 8 files, +101 lines:**
+- `booker-info-form.component.ts`: new `email: ['', [Validators.required, Validators.email]]`
+  control, same pattern as the existing `phoneNumber` control (required + format validator).
+  `buildBookerPayload()` now includes `email: raw.email` in the returned `PassengerInfo`.
+- `booker-info-form.component.html`: new email field inserted right after Phone Number (it was
+  alone in its `col-12 col-md-6` row, so email is its natural row-mate before the Gender/status
+  section) — same label/input/two-error-div markup shape as every sibling field, `type="email"`,
+  `autocomplete="email"`.
+- `passenger-info.interface.ts`: added optional `email?: string` to `PassengerInfo` (booker-only
+  in practice; per-passenger rows never set it).
+- `passenger-info.component.ts`: `buildContactPayload()` now sets `email: (booker?.email ??
+  '').trim() || null` on the outgoing `contact`. **Load-bearing wiring**: this is the one line
+  that gets the value from the form into `BookingPayload.contact.email` on `POST
+  /api/private/bookings`. `BookingContact.email?: string | null` already existed in
+  `booking.interface.ts` — unused until now (found by grepping for `email` before writing
+  anything new, per the DRY gate).
+- i18n: `PASSENGER_INFO.FORM.EMAIL` / `EMAIL_PLACEHOLDER` / `EMAIL_REQUIRED` / `EMAIL_INVALID`
+  added to en/th/zh (all three, same commit).
+- Spec: `validBooker` fixture gained `email`, plus 2 new tests (`returns null when email is
+  missing`, `returns null when email format is invalid`) and an assertion in the existing
+  "valid form" test that `result?.email` round-trips.
+
+**Deliberately did NOT reuse the staff walk-in-checkout email field verbatim** — that one
+(`walk-in-checkout.component.ts`, OBRS-197) is intentionally OPTIONAL
+(`[Validators.email]` only, no `required`) because the offline/walk-in channel's proof of
+purchase is the printed receipt, not an e-ticket email. The customer/online path is the
+opposite: `required` is the whole point of this fix. Same field shape, different validator set
+— correctly NOT shared as one component since the two channels have genuinely different
+requiredness, not just a cosmetic difference.
+
+**Did NOT add pre-fill from a logged-in customer's account email** — no trivial existing hook
+found (`grep` for `currentUser`/`getCurrentUser`/`selectUser` under `modules/passenger-info`
+returned nothing), and the task explicitly said keep it simple / don't over-engineer this.
+Every sibling booker field (firstName/lastName/phone) also starts blank for a logged-in
+customer today, so this isn't a regression — just flagging it as a real "nice-to-have" gap for
+whoever picks up a follow-up card.
+
+**Test results:** `ng test --watch=false --browsers=ChromeHeadless` → **1435/1435 SUCCESS**.
+`ng build --configuration production` → clean, no new budget warnings (initial chunk 1.51 MB;
+the only build-time warning was a pre-existing `.form-floating>~label` selector warning,
+unrelated to this change).
+
+**Worktree:** `OBRS-frontend-wt-obrs-238-customer-booking-email` (branch
+`sit/obrs-238-customer-booking-email`, off `origin/dev`; had no `node_modules` at session
+start — `npm install` (1005 packages) was run first). Commit `42fa0a9`.
+
 ## 2026-07-11 — QA RE-RUN: OBRS-100 manifest export + print — PASSED (all previously-blocked items now verified)
 
 SIT login recovered (coordinator confirmed `POST /api/auth/login` → 200). Re-ran only the items
