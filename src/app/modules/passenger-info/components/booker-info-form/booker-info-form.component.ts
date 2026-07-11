@@ -54,6 +54,10 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       lastName: ['', Validators.required],
       phoneNumber: ['', [Validators.required, Validators.pattern(/^0\d{9}$/)]],
       gender: ['', Validators.required],
+      // OBRS-238: ONLINE bookings require a contact email (e-ticket delivery +
+      // BookingReqDtoValidator 400s without one) — required + format-checked,
+      // unlike the staff walk-in contact form where it stays optional (OBRS-197).
+      email: ['', [Validators.required, Validators.email]],
     });
   }
 
@@ -107,6 +111,7 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       gender: raw.gender,
       isSelectSeat: false,
       passengerSeat: '',
+      email: raw.email,
     };
   }
 

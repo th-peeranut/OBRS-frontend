@@ -351,6 +351,10 @@ export class PassengerInfoComponent {
       middleName: (booker?.middleName ?? '').trim() || null,
       lastName: (booker?.lastName ?? '').trim(),
       phoneNumber,
+      // OBRS-238: ONLINE bookingChannel requires contact.email (backend
+      // BookingReqDtoValidator 400s without it) — sourced from the booker
+      // form's required+email-format-validated field.
+      email: (booker?.email ?? '').trim() || null,
       preferredLocale,
     };
   }
