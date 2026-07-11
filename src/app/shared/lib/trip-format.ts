@@ -3,10 +3,10 @@ import { RouteStop, TripEstimate } from '../interfaces/route-map.interface';
 
 /**
  * Pure presentation formatters for a trip/schedule row — departure time, journey
- * duration, vehicle-type label, and per-seat price. These were duplicated verbatim
- * across the schedule-booking, payment, review, passenger-info and e-ticket
- * components; this is their single home so a formatting fix lands in one place and
- * the logic is unit-testable without a component harness.
+ * duration, vehicle-type label, per-seat price, and seat-availability status. These
+ * were duplicated verbatim across the schedule-booking, payment, review,
+ * passenger-info and e-ticket components; this is their single home so a formatting
+ * fix lands in one place and the logic is unit-testable without a component harness.
  */
 
 /** Formats an ISO/date string to `HH:mm` (24h). Empty string for missing/invalid input. */
@@ -55,6 +55,26 @@ export function capitalizeVehicleType(type: string | null | undefined): string {
 export function parsePricePerSeat(value: string | number | null | undefined): number {
   const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/** Coarse remaining-seat bucket for a schedule row, used to decide whether to
+ *  show the exact remaining count (scarcity signal) or a neutral/sold-out
+ *  status instead of always exposing the raw number. */
+export type SeatAvailabilityStatus = 'sold-out' | 'low' | 'available';
+
+/**
+ * Classifies `availableSeats` against `threshold` into a display bucket.
+ * `0` (or missing) seats is always `'sold-out'`; `<= threshold` is `'low'`
+ * (inclusive); anything above is `'available'`.
+ */
+export function getSeatAvailabilityStatus(
+  availableSeats: number | null | undefined,
+  threshold: number
+): SeatAvailabilityStatus {
+  const seats = availableSeats ?? 0;
+  if (seats <= 0) return 'sold-out';
+  if (seats <= threshold) return 'low';
+  return 'available';
 }
 
 /**

@@ -440,3 +440,36 @@ from data already on the page.
   per consumer (`stationSlugById`/`stationSlugById`-style private helpers
   mirroring the existing `getStationLabelById` pattern) and matched directly
   against `RouteStop.slug`, no translation layer needed.
+
+## Seat-scarcity display (OBRS-229)
+
+The schedule-booking list no longer always shows the exact remaining-seat
+count — it only surfaces the number when seats are scarce, per a coarse
+three-bucket status:
+
+- **`getSeatAvailabilityStatus(availableSeats, threshold)`**
+  (`src/app/shared/lib/trip-format.ts`) is the single pure classifier:
+  `'sold-out'` at `<= 0` (or missing) seats, `'low'` at `<= threshold`
+  (inclusive), else `'available'`.
+- `ScheduleBookingListComponent.LOW_SEAT_THRESHOLD = 5` is the current
+  threshold; `seatStatus(availableSeats)` wraps the classifier with it. Both
+  legs (`departure`/`return`) call the same method — no duplicated logic.
+- Template convention (`schedule-booking-list.component.html`, `.availability`
+  block): an `[ngSwitch]` over `seatStatus(...)` renders exactly one of
+  `SCHEDULE_BOOKING.SEAT_FULL` (sold-out), `SCHEDULE_BOOKING.SEAT_REMAIN {n}
+  SCHEDULE_BOOKING.SEAT_UNIT` (low — the only case that shows the raw
+  number), or `SCHEDULE_BOOKING.SEAT_AVAILABLE` (available, no number). Reuse
+  this switch pattern for any other surface that needs a scarcity-aware seat
+  display rather than re-deriving the bucket inline.
+- Sold-out is a **real** disabled state on the `select-btn`
+  (`[disabled]="…availableSeats === 0"` alongside the existing
+  `select-btn-diabled` class for styling) — previously the class only checked
+  `list.length === 0` inside the row's own `*ngFor`, which could never be
+  true for a rendered row, so a sold-out row's button was clickable.
+- Styling: `.seat-status--low` (red, semibold) and `.seat-status--full`
+  (light-grey, medium) in the component SCSS; `.seat-status--available` needs
+  no rule (inherits `.availability`'s colour). Dark mode re-asserts both
+  colours in `src/styles/dark-theme.scss` §14, next to the existing
+  `.text-error`/`.form-required` re-assert block, since the blanket
+  `.schedule-item *` dark-mode rule would otherwise wash them out to
+  `$dk-text`.

@@ -4,6 +4,7 @@ import {
   durationMinutes,
   durationMinutesTotal,
   formatTimeHHMM,
+  getSeatAvailabilityStatus,
   parsePricePerSeat,
   tripEstimateFromStops,
 } from './trip-format';
@@ -81,6 +82,25 @@ describe('trip-format', () => {
     it('falls back to 0 for non-finite/missing input', () => {
       expect(parsePricePerSeat(null)).toBe(0);
       expect(parsePricePerSeat('abc')).toBe(0);
+    });
+  });
+
+  describe('getSeatAvailabilityStatus', () => {
+    it('is "low" when seats equal the threshold (inclusive)', () => {
+      expect(getSeatAvailabilityStatus(5, 5)).toBe('low');
+    });
+
+    it('is "available" when seats exceed the threshold', () => {
+      expect(getSeatAvailabilityStatus(6, 5)).toBe('available');
+    });
+
+    it('is "sold-out" when seats are 0', () => {
+      expect(getSeatAvailabilityStatus(0, 5)).toBe('sold-out');
+    });
+
+    it('is "sold-out" when seats are null/undefined', () => {
+      expect(getSeatAvailabilityStatus(null, 5)).toBe('sold-out');
+      expect(getSeatAvailabilityStatus(undefined, 5)).toBe('sold-out');
     });
   });
 

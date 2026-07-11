@@ -24,7 +24,9 @@ import {
   durationHours,
   durationMinutes,
   formatTimeHHMM,
+  getSeatAvailabilityStatus,
   parsePricePerSeat,
+  SeatAvailabilityStatus,
   tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
@@ -54,6 +56,11 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   selectedSchedule: Schedule[] = [];
 
   isSelectFirst: boolean = false;
+
+  /** Below this remaining-seat count, the exact number is surfaced as a
+   *  scarcity cue (OBRS-229); above it, only a neutral "available" status
+   *  shows — see `getSeatAvailabilityStatus`. */
+  readonly LOW_SEAT_THRESHOLD = 5;
 
   scheduleList$: Subscription;
 
@@ -182,6 +189,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  seatStatus(availableSeats: number | null | undefined): SeatAvailabilityStatus {
+    return getSeatAvailabilityStatus(availableSeats, this.LOW_SEAT_THRESHOLD);
   }
 
   private getRouteFromFilter(

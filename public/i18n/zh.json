@@ -1126,6 +1126,8 @@
     "BAHT_UNIT": "泰铢",
     "SEAT_REMAIN": "剩余",
     "SEAT_UNIT": "个座位",
+    "SEAT_AVAILABLE": "有空位",
+    "SEAT_FULL": "已满",
     "SEAT_PER_PASSENGER": "价格/人",
     "CHOOSE": "选择",
     "CHANGE": "修改数据",

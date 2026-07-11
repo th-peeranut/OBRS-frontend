@@ -2054,3 +2054,47 @@ FE redeploy needed for that half of the contract).
   is older tech debt, left out of this scope.)
 - Verified: `npx tsc --noEmit -p tsconfig.app.json` clean after the change; no spec referenced
   the private method (public behavior unchanged).
+
+## OBRS-229 seat-scarcity display (schedule-booking list)
+- Goal: stop always exposing the exact remaining-seat count on the search-results page. New pure
+  classifier `getSeatAvailabilityStatus(availableSeats, threshold)` in `shared/lib/trip-format.ts`
+  (same file as the other trip-row formatters) buckets into `'sold-out'` (`<= 0`/missing),
+  `'low'` (`<= threshold`, inclusive), `'available'`. `ScheduleBookingListComponent` wraps it with
+  `LOW_SEAT_THRESHOLD = 5` via `seatStatus(availableSeats)`; both legs (departure/return) call the
+  same method — no duplicated bucket logic.
+- Template: an `[ngSwitch]` over `seatStatus(...)` in the `.availability` block, identical shape on
+  both legs — `SEAT_FULL` (sold-out), `SEAT_REMAIN {n} SEAT_UNIT` (low — the only branch that shows
+  the raw number, reusing the pre-existing `SEAT_REMAIN`/`SEAT_UNIT` keys unchanged), `SEAT_AVAILABLE`
+  (available, no number).
+- **Fixed a real dead-code bug while wiring the disabled state**: the existing
+  `[class.select-btn-diabled]="departureList.length === 0"` (and the return-leg equivalent) sat
+  inside the `*ngFor` over that same list — a rendered row's list can never have `length === 0`, so
+  sold-out styling could never actually fire and the button stayed clickable. Rewired to the
+  per-row `departure.availableSeats === 0` / `return.availableSeats === 0` and added a native
+  `[disabled]` binding alongside it (kept the existing typo'd class name `select-btn-diabled`
+  verbatim — renaming it was out of scope, and the SCSS already targets it).
+- Styling: `.seat-status--low` (red/semibold) and `.seat-status--full` (light-grey/medium) added
+  next to `.availability` in the component SCSS, using existing tokens
+  (`$text-red`, `$text-lightgrey`, `$font-weight-semibold`, `$font-weight-medium`) — no new hex.
+  `.seat-status--available` needs no rule (inherits `.availability`'s color).
+- Dark mode: `dark-theme.scss` §14 has a blanket `.schedule-item, .schedule-item * { color:
+  $dk-text !important; }` that would wash out both new colors. Followed the existing re-assert
+  precedent immediately below it (the `.text-error`/`.form-required` block) and added
+  `.schedule-item .seat-status--low { color: $dk-danger !important; }` /
+  `.schedule-item .seat-status--full { color: $dk-text-muted !important; }` — same pattern, same
+  location, no new tokens.
+- Added `SCHEDULE_BOOKING.SEAT_AVAILABLE`/`SEAT_FULL` to all three locale files in the same commit,
+  right next to the existing `SEAT_REMAIN`/`SEAT_UNIT` keys (kept unchanged, still used by the
+  `low` branch).
+- **Test gotcha hit while writing the return-leg spec**: `ngOnInit` unconditionally resets
+  `this.isSelectFirst = false`, which runs on the *first* `fixture.detectChanges()`. Setting
+  `component.isSelectFirst = true` before that first `detectChanges()` gets silently overwritten —
+  the return leg's `*ngIf="isSelectFirst"` wrapper never renders and `.schedule-item` queries come
+  back with only the departure row. Fix: call `detectChanges()` once (runs `ngOnInit`), then set
+  `isSelectFirst`, then call `detectChanges()` again to re-render with the leg visible.
+- Frontend-only, no backend/NgRx change (`LOW_SEAT_THRESHOLD` is a component constant, not a
+  server-driven config — no contract request needed).
+- `ng test --watch=false --browsers ChromeHeadless`: 1306/1306 green (1005 packages installed fresh
+  in this worktree via `npm ci`, no shared `node_modules`). `ng build --configuration production`:
+  clean, 1.49 MB initial (under the 1.5 MB warning budget). `npx tsc --noEmit -p tsconfig.app.json`:
+  clean.

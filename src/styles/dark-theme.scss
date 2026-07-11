@@ -529,6 +529,11 @@ body.is-dark {
     color: $dk-danger !important;
   }
 
+  // Re-assert the seat-scarcity status colours (OBRS-229), which the blanket
+  // rule above would otherwise wash out to $dk-text.
+  .schedule-item .seat-status--low { color: $dk-danger !important; }
+  .schedule-item .seat-status--full { color: $dk-text-muted !important; }
+
   // Schedule-results outer panel (.booking-container, light #f6fcff). Scope via
   // :has(.schedule-item) so the home page's own .booking-container is untouched.
   .booking-container:has(.schedule-item) {

@@ -121,6 +121,18 @@
         justify-content: flex-end;
       }
 
+      .seat-status {
+        &--low {
+          color: $text-red;
+          font-weight: $font-weight-semibold;
+        }
+
+        &--full {
+          color: $text-lightgrey;
+          font-weight: $font-weight-medium;
+        }
+      }
+
       .select-btn {
         background: $primary-blue;
         color: white;
