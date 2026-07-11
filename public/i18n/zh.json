@@ -391,7 +391,8 @@
       "PHONE_NO_EXIST": "此电话号码已被使用。",
       "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
       "FORM_INVALID": "请填写标记的必填字段。",
-      "POSITIVE_INTEGER": "请输入大于0的整数。"
+      "WHOLE_NUMBER": "请输入整数（不含小数）。",
+      "POSITIVE_NUMBER": "请输入大于0的数字。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",

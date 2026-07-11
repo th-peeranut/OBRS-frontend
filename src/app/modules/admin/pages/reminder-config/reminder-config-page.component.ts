@@ -88,6 +88,18 @@ export class ReminderConfigPageComponent implements OnInit, OnDestroy {
     return !!field && field.invalid && (field.dirty || field.touched);
   }
 
+  // Distinct message per failure reason (bug fix): `notInteger` (e.g. 1.5) is
+  // NOT the same problem as `positiveNumber`/`required`/`min` (e.g. 0, -5,
+  // empty) — showing "must be > 0" for a decimal input like 1.5 is wrong
+  // since 1.5 IS > 0; the real problem is it isn't a whole number.
+  protected errorKey(fieldName: string): string {
+    const field = this.reminderConfigForm.get(fieldName);
+    if (field?.hasError('notInteger')) {
+      return 'ADMIN.VALIDATION.WHOLE_NUMBER';
+    }
+    return 'ADMIN.VALIDATION.POSITIVE_NUMBER';
+  }
+
   protected async save(): Promise<void> {
     if (this.reminderConfigForm.invalid) {
       this.reminderConfigForm.markAllAsTouched();

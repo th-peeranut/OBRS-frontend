@@ -80,15 +80,34 @@ describe('ReminderConfigPageComponent', () => {
   });
 
   describe('positiveIntegerValidator rejects invalid input (Save stays disabled)', () => {
-    [0, -5, 1.5].forEach((invalidValue) => {
-      it(`rejects ${invalidValue}`, () => {
+    it('rejects a decimal (1.5) with `notInteger` -> WHOLE_NUMBER message (NOT "must be > 0", since 1.5 IS > 0)', () => {
+      const { component, store } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next({ ...CONFIG });
+
+      component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.setValue(1.5);
+
+      const field = component.reminderConfigForm.get('reminderHoursBeforeDeparture');
+      expect(field?.invalid).toBeTrue();
+      expect(field?.hasError('notInteger')).toBeTrue();
+      expect(component.errorKey('reminderHoursBeforeDeparture')).toBe('ADMIN.VALIDATION.WHOLE_NUMBER');
+      expect(component.reminderConfigForm.invalid).toBeTrue();
+    });
+
+    [0, -5].forEach((invalidValue) => {
+      it(`rejects ${invalidValue} with \`positiveNumber\` -> POSITIVE_NUMBER message`, () => {
         const { component, store } = makeComponent({});
         component.ngOnInit();
         store.data$.next({ ...CONFIG });
 
         component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.setValue(invalidValue);
 
-        expect(component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.invalid).toBeTrue();
+        const field = component.reminderConfigForm.get('reminderHoursBeforeDeparture');
+        expect(field?.invalid).toBeTrue();
+        expect(field?.hasError('positiveNumber')).toBeTrue();
+        expect(component.errorKey('reminderHoursBeforeDeparture')).toBe(
+          'ADMIN.VALIDATION.POSITIVE_NUMBER'
+        );
         expect(component.reminderConfigForm.invalid).toBeTrue();
       });
     });

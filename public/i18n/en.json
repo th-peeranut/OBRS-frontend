@@ -391,7 +391,8 @@
       "PHONE_NO_EXIST": "This phone number is already in use.",
       "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
       "FORM_INVALID": "Please complete the highlighted required fields.",
-      "POSITIVE_INTEGER": "Please enter a whole number greater than 0."
+      "WHOLE_NUMBER": "Please enter a whole number (no decimals).",
+      "POSITIVE_NUMBER": "Please enter a number greater than 0."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
