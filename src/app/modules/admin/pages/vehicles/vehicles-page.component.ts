@@ -4,36 +4,29 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminLookupDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
   AdminVehicleDto,
   AdminVehicleTypeDto,
   CreateVehiclePayload,
-  getAdminLookupLabel,
-  getAdminTranslationLabel,
-  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../../auth/auth.service';
 import { VehiclesStore } from './vehicles.store';
-
-interface VehicleRow {
-  id: number;
-  vehicleTypeSlug: string;
-  statusCode: string;
-  vehicleNumber: string;
-  plate: string;
-  vehicleType: string;
-  route: string;
-  status: string;
-}
-
-interface Option {
-  code: string;
-  label: string;
-}
+import {
+  Option,
+  VehicleRow,
+  buildVehicleFormValues,
+  filterMaintenanceStatusLookups,
+  filterVehiclesByStatus,
+  isVehicleStatusFilterStale,
+  statusClass,
+  toVehicleDtoFallback,
+  toVehiclePayload,
+  toVehicleRow,
+  toVehicleStatusOptions,
+  toVehicleTypeOptions,
+} from './vehicles-page.mappers';
 
 @Component({
   selector: 'app-vehicles-page',
@@ -160,21 +153,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   protected statusClass(status: string): string {
-    const normalizedStatus = status.toUpperCase();
-
-    if (
-      normalizedStatus === 'ACTIVE' ||
-      normalizedStatus === 'ONLINE' ||
-      normalizedStatus === 'AVAILABLE'
-    ) {
-      return 'is-success';
-    }
-
-    if (normalizedStatus === 'PENDING') {
-      return 'is-warning';
-    }
-
-    return 'is-danger';
+    return statusClass(status);
   }
 
   protected onStatusFilterChange(value: string): void {
@@ -222,7 +201,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedVehicle = vehicle;
     this.isEditDetailLoading = true;
-    this.applyVehicleFormValues(this.toVehicleDtoFallback(vehicle), vehicle);
+    this.applyVehicleFormValues(toVehicleDtoFallback(vehicle), vehicle);
     this.isFormModalOpen = true;
 
     try {
@@ -251,12 +230,7 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     vehicle: VehicleRow,
     onlyPristine = false
   ): void {
-    const values = {
-      vehicleType: String(vehicleDetail.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim(),
-      numberPlate: String(vehicleDetail.numberPlate ?? vehicle.plate).trim(),
-      vehicleNumber: String(vehicleDetail.vehicleNumber ?? vehicle.vehicleNumber).trim(),
-      status: this.parseStatus(vehicleDetail.status ?? vehicle.statusCode).code,
-    };
+    const values = buildVehicleFormValues(vehicleDetail, vehicle, this.getCurrentLocale());
 
     if (!onlyPristine) {
       this.vehicleForm.reset(values);
@@ -269,16 +243,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
         control.setValue(value);
       }
     }
-  }
-
-  private toVehicleDtoFallback(vehicle: VehicleRow): AdminVehicleDto {
-    return {
-      id: vehicle.id,
-      numberPlate: vehicle.plate,
-      vehicleNumber: vehicle.vehicleNumber,
-      status: vehicle.statusCode,
-      vehicleType: { id: 0, slug: vehicle.vehicleTypeSlug },
-    };
   }
 
   protected closeFormModal(force = false): void {
@@ -379,66 +343,28 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   private applyLocalization(): void {
     const currentLocale = this.getCurrentLocale();
 
-    this.vehicleTypeOptions = this.rawVehicleTypes.map((type) => ({
-      code: type.slug,
-      label:
-        this.getTranslationLabel(type.translations, currentLocale) ??
-        this.getTranslationLabel(type.translations, 'en') ??
-        type.slug,
-    }));
-
-    this.statusOptions = this.rawLookups
-      .filter((lookup) => lookup.category === 'vehicle_status')
-      .map((lookup) => ({
-        code: lookup.slug,
-        label:
-          this.getTranslationLabel(lookup.translations, currentLocale) ??
-          this.getTranslationLabel(lookup.translations, 'en') ??
-          lookup.slug,
-      }));
+    this.vehicleTypeOptions = toVehicleTypeOptions(this.rawVehicleTypes, currentLocale);
+    this.statusOptions = toVehicleStatusOptions(this.rawLookups, currentLocale);
 
     // OBRS-209: raw Lookup rows (not pre-mapped to Option[]) — the
     // maintenance panel derives its own localized labels, mirroring how this
     // page derives statusOptions above.
-    this.maintenanceStatusOptions = this.rawLookups.filter(
-      (lookup) => lookup.category === 'maintenance_status'
-    );
+    this.maintenanceStatusOptions = filterMaintenanceStatusLookups(this.rawLookups);
 
-    this.vehicles = this.rawVehicles.map((vehicle) => this.toVehicleRow(vehicle));
+    this.vehicles = this.rawVehicles.map((vehicle) => toVehicleRow(vehicle, currentLocale));
     this.syncStatusFilterWithAvailableOptions();
     this.applyVehicleFilter();
   }
 
   private toVehiclePayload(): CreateVehiclePayload {
-    return {
-      vehicleType: String(this.vehicleForm.value['vehicleType'] ?? '').trim().toLowerCase(),
-      numberPlate: String(this.vehicleForm.value['numberPlate'] ?? '').trim(),
-      vehicleNumber: String(this.vehicleForm.value['vehicleNumber'] ?? '').trim(),
-      status: String(this.vehicleForm.value['status'] ?? '').trim().toLowerCase(),
-    };
+    return toVehiclePayload(this.vehicleForm.value);
   }
 
-  private toVehicleRow(vehicle: AdminVehicleDto): VehicleRow {
-    const status = this.parseStatus(vehicle.status);
-    const currentLocale = this.getCurrentLocale();
-
-    return {
-      id: vehicle.id,
-      vehicleTypeSlug: vehicle.vehicleType?.slug ?? '',
-      statusCode: status.code,
-      vehicleNumber: vehicle.vehicleNumber ?? '-',
-      plate: vehicle.numberPlate ?? '-',
-      vehicleType:
-        getAdminLookupLabel(vehicle.vehicleType, currentLocale) ??
-        this.getTranslationLabel(vehicle.vehicleType?.translations, currentLocale) ??
-        this.getTranslationLabel(vehicle.vehicleType?.translations, 'en') ??
-        vehicle.vehicleType?.slug ??
-        '-',
-      route: '-',
-      status: status.name,
-    };
-  }
-
+  // NOTE: `||` short-circuit is deliberate — translate.getDefaultLang() must
+  // only be called when currentLang is falsy (some TranslateService stubs
+  // don't implement it). Kept un-extracted for the same reason the other
+  // admin pages (promotions/role/user/schedules/routes) keep their
+  // getCurrentLocale private rather than moving it to the mappers file.
   private getCurrentLocale(): string {
     const rawLocale = String(
       this.translate.currentLang || this.translate.getDefaultLang() || 'th'
@@ -447,39 +373,12 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     return rawLocale.startsWith('en') ? 'en' : 'th';
   }
 
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
-  }
-
   private applyVehicleFilter(): void {
-    const statusFilter = this.selectedStatusFilter;
-
-    this.filteredVehicles = this.vehicles.filter((vehicle) => {
-      if (statusFilter.length === 0) {
-        return true;
-      }
-
-      return vehicle.statusCode.trim().toLowerCase() === statusFilter;
-    });
+    this.filteredVehicles = filterVehiclesByStatus(this.vehicles, this.selectedStatusFilter);
   }
 
   private syncStatusFilterWithAvailableOptions(): void {
-    if (
-      this.selectedStatusFilter &&
-      !this.statusOptions.some(
-        (option) => option.code.trim().toLowerCase() === this.selectedStatusFilter
-      )
-    ) {
+    if (isVehicleStatusFilterStale(this.selectedStatusFilter, this.statusOptions)) {
       this.selectedStatusFilter = '';
     }
   }
