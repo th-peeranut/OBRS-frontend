@@ -294,6 +294,18 @@ body.is-dark {
   // Home page search card background
   .booking-section {
     background-color: $dk-bg-card;
+
+    // OBRS-217: the visible booking card is a nested `.booking-card` (white in
+    // light mode); §6 previously themed only the outer `.booking-section`, so
+    // the inner card stayed white in dark. Lift it one step above the section
+    // ($dk-bg-soft > $dk-bg-card) to keep the light-mode white-card-on-grey
+    // elevation. Labels/inputs inside already get $dk-text via §1.
+    // `!important` for the same reason as `.login-card`/`.form-control`: the
+    // component-scoped `.booking-card` rule carries Angular's `[_ngcontent]`
+    // attribute selector, which otherwise out-specifies this global rule.
+    .booking-card {
+      background-color: $dk-bg-soft !important;
+    }
   }
 }
 
