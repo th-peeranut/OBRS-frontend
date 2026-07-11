@@ -1,9 +1,16 @@
-import { FormBuilder } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, throwError } from 'rxjs';
 import { RoleManagementPageComponent } from './role-management-page.component';
-import { AdminRoleDto } from '../../../../services/admin/admin-api.service';
-import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+import { RoleRow } from './role-management.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+
+// OBRS-263 Phase 2 split: RoleManagementPageComponent is now an orchestrator
+// only — the form modal (create/edit/detail-fetch/submit ordering) and the
+// delete modal's confirm/cancel rendering moved to RoleFormModalComponent /
+// RoleDeleteModalComponent / RoleListTableComponent, with their own specs.
+// This spec keeps only what the parent still owns: store wiring, the
+// localization pass (incl. the dateLang-vs-locale CRITICAL case), the modal
+// open/close orchestration state, and confirmDelete (API + optimistic
+// mutate + refresh).
 
 const ROLE_ROW = {
   id: 7,
@@ -19,24 +26,8 @@ const ROLE_ROW = {
   updatedAt: '-',
 };
 
-function detailResponse(): ResponseAPI<AdminRoleDto> {
-  return {
-    code: 200,
-    message: 'OK',
-    data: {
-      id: 7,
-      slug: 'owner',
-      status: 'active',
-      translations: [
-        { locale: 'en', label: 'Owner EN', description: 'Owner EN desc' },
-        { locale: 'th', label: 'เจ้าของ TH', description: 'TH desc' },
-      ],
-    },
-  };
-}
-
 interface RolesData {
-  roles: Array<{ id: number; slug: string; status: string; translations: unknown[] }>;
+  roles: Array<{ id: number; slug: string; status: string; translations: unknown[]; updatedAt?: string }>;
   lookups: unknown[];
 }
 
@@ -60,20 +51,9 @@ function makeStoreStub() {
   return store;
 }
 
-function makeComponent(getRoleById$?: Subject<ResponseAPI<AdminRoleDto>>) {
+function makeComponent(translateOverrides: Record<string, unknown> = {}) {
   const adminApi = {
-    getRoleById: jasmine
-      .createSpy('getRoleById')
-      .and.returnValue((getRoleById$ ?? new Subject()).asObservable()),
-    createRole: jasmine
-      .createSpy('createRole')
-      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
-    updateRoleById: jasmine
-      .createSpy('updateRoleById')
-      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
-    deleteRoleById: jasmine
-      .createSpy('deleteRoleById')
-      .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
+    deleteRoleById: jasmine.createSpy('deleteRoleById').and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
   };
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
@@ -81,15 +61,18 @@ function makeComponent(getRoleById$?: Subject<ResponseAPI<AdminRoleDto>>) {
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
   };
   const store = makeStoreStub();
-  const component = new RoleManagementPageComponent(
-    adminApi as any,
-    new FormBuilder(),
-    alert as any,
-    createTranslateStub() as any,
-    store as any
-  );
-  (component as any).statusOptions = [{ code: 'active', label: 'Active' }];
-  return { component, adminApi, alert, store };
+  const translate = { ...createTranslateStub(), ...translateOverrides };
+  const component = new RoleManagementPageComponent(adminApi as any, alert as any, translate as any, store as any);
+  // Subscribe the way ngOnInit does, without invoking ngOnInit's void
+  // store.refresh() (irrelevant to these unit tests).
+  store.data$.subscribe((data) => {
+    if (data) {
+      (component as any).rawRoles = (data as RolesData).roles;
+      (component as any).rawLookups = (data as RolesData).lookups;
+      (component as any).applyLocalization();
+    }
+  });
+  return { component, adminApi, alert, store, translate };
 }
 
 /** Resolve after all pending microtasks have flushed. */
@@ -97,39 +80,58 @@ function flush(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-describe('RoleManagementPageComponent edit modal', () => {
-  // Regression: the modal must open immediately on Edit, not after the detail
-  // fetch resolves — a slow SIT response otherwise left a blank ~4s wait.
-  it('opens the edit modal before the role detail fetch resolves', () => {
-    const getRoleById$ = new Subject<ResponseAPI<AdminRoleDto>>();
-    const { component } = makeComponent(getRoleById$);
+describe('RoleManagementPageComponent modal orchestration', () => {
+  it('openCreateModal sets mode=create, clears selectedRole, and opens the form modal', () => {
+    const { component } = makeComponent();
+    (component as any).selectedRole = { ...ROLE_ROW };
 
-    void (component as any).openEditModal({ ...ROLE_ROW });
+    (component as any).openCreateModal();
 
+    expect((component as any).mode).toBe('create');
+    expect((component as any).selectedRole).toBeNull();
     expect((component as any).isFormModalOpen).toBeTrue();
-    expect((component as any).isEditMode).toBeTrue();
-    expect((component as any).isEditDetailLoading).toBeTrue();
-    // The form is already usable with the row data we had in hand.
-    expect((component as any).roleForm.get('enLabel').value).toBe('Owner');
-    expect((component as any).roleForm.get('slug').value).toBe('owner');
   });
 
-  it('patches server detail into untouched fields without clobbering user input', async () => {
-    const getRoleById$ = new Subject<ResponseAPI<AdminRoleDto>>();
-    const { component } = makeComponent(getRoleById$);
+  it('openEditModal sets mode=edit, selectedRole, and opens the form modal', () => {
+    const { component } = makeComponent();
 
-    const promise = (component as any).openEditModal({ ...ROLE_ROW });
-    const form = (component as any).roleForm;
-    form.get('enLabel').setValue('User typed');
-    form.get('enLabel').markAsDirty();
+    (component as any).openEditModal({ ...ROLE_ROW });
 
-    getRoleById$.next(detailResponse());
-    getRoleById$.complete();
-    await promise;
+    expect((component as any).mode).toBe('edit');
+    expect((component as any).selectedRole).toEqual({ ...ROLE_ROW });
+    expect((component as any).isFormModalOpen).toBeTrue();
+  });
 
-    expect(form.get('enDescription').value).toBe('Owner EN desc');
-    expect(form.get('enLabel').value).toBe('User typed');
-    expect((component as any).isEditDetailLoading).toBeFalse();
+  it('onFormModalClosed closes the modal and clears selectedRole', () => {
+    const { component } = makeComponent();
+    (component as any).openEditModal({ ...ROLE_ROW });
+
+    (component as any).onFormModalClosed();
+
+    expect((component as any).isFormModalOpen).toBeFalse();
+    expect((component as any).selectedRole).toBeNull();
+  });
+
+  it('openDeleteModal sets selectedRole and opens the delete modal', () => {
+    const { component } = makeComponent();
+
+    (component as any).openDeleteModal({ ...ROLE_ROW });
+
+    expect((component as any).selectedRole).toEqual({ ...ROLE_ROW });
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+  });
+
+  it('closeDeleteModal is a no-op while isDeleting unless forced', () => {
+    const { component } = makeComponent();
+    (component as any).openDeleteModal({ ...ROLE_ROW });
+    (component as any).isDeleting = true;
+
+    (component as any).closeDeleteModal();
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+
+    (component as any).closeDeleteModal(true);
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+    expect((component as any).selectedRole).toBeNull();
   });
 });
 
@@ -140,7 +142,6 @@ describe('RoleManagementPageComponent confirmDelete — optimistic removal', () 
   it('removes the deleted role from filteredRoles synchronously, before refresh resolves', async () => {
     const { component, store, alert } = makeComponent();
 
-    // Seed the store with two roles; the component subscribes via ngOnInit.
     const seedData: RolesData = {
       roles: [
         { id: 7, slug: 'owner', status: 'active', translations: [] },
@@ -149,98 +150,85 @@ describe('RoleManagementPageComponent confirmDelete — optimistic removal', () 
       lookups: [],
     };
     store.data$.next(seedData);
-    // Trigger subscription (ngOnInit is not called in unit tests without TestBed,
-    // so subscribe manually as the component does in ngOnInit).
-    store.data$.subscribe((data) => {
-      if (data) {
-        (component as any).rawRoles = (data as RolesData).roles;
-        (component as any).rawLookups = (data as RolesData).lookups;
-        (component as any).applyLocalization();
-      }
-    });
 
     // Make refresh stay pending so we can assert before it resolves.
     let resolveRefresh!: () => void;
     store.refresh.and.returnValue(new Promise<void>((r) => { resolveRefresh = r; }));
-    // Make the success alert resolve immediately.
     alert.success.and.resolveTo(undefined);
 
-    // Select role id=7 for deletion.
     (component as any).selectedRole = { ...ROLE_ROW, id: 7 };
     (component as any).isDeleteModalOpen = true;
 
     const done = (component as any).confirmDelete();
-    // Flush microtasks so the delete API call + mutate run synchronously.
     await flush();
 
-    // The role must be gone from filteredRoles BEFORE refresh resolves.
     const filteredRoles: Array<{ id: number }> = (component as any).filteredRoles;
     expect(filteredRoles.every((r) => r.id !== 7)).toBeTrue();
-    // The other role must still be present.
     expect(filteredRoles.some((r) => r.id === 9)).toBeTrue();
 
-    // Resolve refresh to let the test complete cleanly.
     resolveRefresh();
     await done;
   });
+
+  it('does nothing when confirmDelete is called with no selectedRole', async () => {
+    const { component, adminApi } = makeComponent();
+    (component as any).selectedRole = null;
+
+    await (component as any).confirmDelete();
+
+    expect(adminApi.deleteRoleById).not.toHaveBeenCalled();
+  });
+
+  it('shows an error alert and closes the modal (forced) on delete failure', async () => {
+    const { component, adminApi, alert } = makeComponent();
+    adminApi.deleteRoleById.and.returnValue(throwError(() => new Error('boom')));
+
+    (component as any).selectedRole = { ...ROLE_ROW };
+    (component as any).isDeleteModalOpen = true;
+
+    await (component as any).confirmDelete();
+
+    expect(alert.error).toHaveBeenCalledWith('boom');
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+  });
 });
 
-describe('RoleManagementPageComponent create submit', () => {
-  it('warns and does not call the API when the form is invalid', async () => {
-    const { component, adminApi, alert } = makeComponent();
-    (component as any).openCreateModal();
-    // Leave the required labels blank -> form invalid.
+describe('RoleManagementPageComponent applyLocalization — dateLang vs locale', () => {
+  // CRITICAL: mirrors role-management.mappers.spec.ts's toRoleRow/
+  // toLatestTimestamp CRITICAL cases, but exercised through the real page
+  // wiring (applyLocalization) to prove the page itself never collapses the
+  // raw `translate.currentLang` (dateLang) into the th/en-normalized
+  // `locale`. `zh` is chosen deliberately: getCurrentLocale() normalizes any
+  // non-"en"-prefixed lang to 'th' (so labels resolve via the th
+  // translation), while formatDisplayDateTime's month-name lookup treats
+  // 'zh' as its own branch, distinct from 'th' — so if the page had
+  // accidentally passed the normalized `locale` ('th') instead of the raw
+  // `dateLang` ('zh'), the date would render with Thai month abbreviations
+  // instead of Chinese ones, and this test would catch it.
+  it('passes the RAW currentLang as dateLang (not the normalized locale) into toRoleRow/toLatestTimestamp', () => {
+    const { component, store } = makeComponent({ currentLang: 'zh' });
 
-    await (component as any).submitRole();
+    const seedData: RolesData = {
+      roles: [
+        {
+          id: 1,
+          slug: 'owner',
+          status: 'active',
+          translations: [{ locale: 'th', label: 'เจ้าของ' }],
+          updatedAt: '2026-07-08T03:00:00Z',
+        },
+      ],
+      lookups: [],
+    };
+    store.data$.next(seedData);
 
-    expect(alert.warning).toHaveBeenCalled();
-    expect(adminApi.createRole).not.toHaveBeenCalled();
-  });
-
-  it('accepts a hyphenated slug (matches the documented slug format)', async () => {
-    const { component, adminApi } = makeComponent();
-    (component as any).openCreateModal();
-    const form = (component as any).roleForm;
-    form.get('slug').setValue('bus-operator');
-    form.get('enLabel').setValue('Bus Operator');
-    form.get('thLabel').setValue('พนักงานรถ');
-    form.get('status').setValue('active');
-
-    expect(form.valid).toBeTrue();
-
-    await (component as any).submitRole();
-    expect(adminApi.createRole).toHaveBeenCalled();
-  });
-
-  // Regression: the table revalidate must start concurrently with the success
-  // dialog, not after the user dismisses it. On SIT each request is ~2s, so
-  // serialising refresh behind the (hand-dismissed) popup was a big part of why
-  // "add role" felt ~8s. With the success dialog held open, refresh must
-  // already have been kicked off.
-  it('starts the table refresh while the success dialog is still open', async () => {
-    const { component, store, alert } = makeComponent();
-    let resolveSuccess!: () => void;
-    alert.success.and.returnValue(
-      new Promise<void>((resolve) => {
-        resolveSuccess = resolve;
-      })
-    );
-
-    (component as any).openCreateModal();
-    const form = (component as any).roleForm;
-    form.get('slug').setValue('bus-operator');
-    form.get('enLabel').setValue('Bus Operator');
-    form.get('thLabel').setValue('พนักงานรถ');
-    form.get('status').setValue('active');
-
-    const done = (component as any).submitRole();
-    await flush();
-
-    // Success dialog is open (its promise is unresolved) yet refresh already ran.
-    expect(alert.success).toHaveBeenCalled();
-    expect(store.refresh).toHaveBeenCalledTimes(1);
-
-    resolveSuccess();
-    await done;
+    const roles: RoleRow[] = (component as any).roles;
+    // locale normalizes to 'th' (zh doesn't start with 'en') -> label uses
+    // the th translation, same as today.
+    expect(roles[0].label).toBe('เจ้าของ');
+    // ...but the date must reflect the RAW dateLang ('zh'), not 'th'.
+    expect(roles[0].updatedAt).toContain('7月');
+    expect(roles[0].updatedAt).not.toContain('ก.ค.');
+    expect((component as any).lastUpdatedAt).toContain('7月');
   });
 });

@@ -7,6 +7,9 @@ import { AdminLayoutComponent } from './admin-layout.component';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
 import { RoleManagementPageComponent } from './pages/role-management/role-management-page.component';
+import { RoleListTableComponent } from './pages/role-management/role-list-table/role-list-table.component';
+import { RoleFormModalComponent } from './pages/role-management/role-form-modal/role-form-modal.component';
+import { RoleDeleteModalComponent } from './pages/role-management/role-delete-modal/role-delete-modal.component';
 import { UserManagementPageComponent } from './pages/user-management/user-management-page.component';
 import { UserListTableComponent } from './pages/user-management/user-list-table/user-list-table.component';
 import { UserFormModalComponent } from './pages/user-management/user-form-modal/user-form-modal.component';
@@ -144,6 +147,9 @@ const routes: Routes = [
     DashboardPageComponent,
     LookupSettingsPageComponent,
     RoleManagementPageComponent,
+    RoleListTableComponent,
+    RoleFormModalComponent,
+    RoleDeleteModalComponent,
     UserManagementPageComponent,
     UserListTableComponent,
     UserFormModalComponent,

@@ -1,0 +1,126 @@
+<div class="admin-modal-backdrop role-form-backdrop" *ngIf="isOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="requestClose()">
+  <div class="admin-modal role-form-modal" role="dialog" aria-modal="true">
+    <div class="role-form-header">
+      <div>
+        <h4 class="admin-modal-title">
+          {{ mode === 'edit' ? ('ADMIN.ROLES.EDIT_TITLE' | translate) : ('ADMIN.ROLES.ADD_TITLE' | translate) }}
+        </h4>
+        <p class="admin-modal-subtitle">
+          {{ 'ADMIN.ROLES.MODAL_HINT' | translate }}
+          <span class="admin-muted" *ngIf="mode === 'edit' && isEditDetailLoading">
+            · {{ 'ADMIN.COMMON.LOADING' | translate }}
+          </span>
+        </p>
+      </div>
+      <button
+        type="button"
+        class="role-form-close"
+        [disabled]="isSubmitting"
+        (click)="requestClose()"
+        [attr.aria-label]="'ADMIN.COMMON.CANCEL' | translate"
+      >
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+
+    <form [formGroup]="roleForm" class="role-form-shell" (ngSubmit)="submitRole()">
+      <div class="role-form-body">
+        <div class="role-form-admin-panel">
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'ADMIN.ROLES.ROLE_SLUG' | translate }} <span class="admin-required">*</span>
+            </label>
+            <div class="role-form-field-wrap" [class.is-locked]="mode === 'edit'">
+              <input class="admin-field" formControlName="slug" />
+            </div>
+            <small class="role-form-message" [class.admin-error]="isFieldInvalid('slug')">
+              {{
+                isFieldInvalid('slug')
+                  ? ('ADMIN.VALIDATION.SLUG_FORMAT' | translate)
+                  : ('ADMIN.ROLES.SLUG_HELP' | translate)
+              }}
+            </small>
+          </div>
+
+          <div class="admin-form-field">
+            <label class="admin-form-label">
+              {{ 'ADMIN.ROLES.ACCOUNT_STATUS' | translate }} <span class="admin-required">*</span>
+            </label>
+            <app-admin-dropdown
+              formControlName="status"
+              [options]="statusOptions"
+              valueKey="code"
+              labelKey="label"
+            ></app-admin-dropdown>
+            <small class="role-form-message admin-error">
+              {{ isFieldInvalid('status') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+            </small>
+          </div>
+        </div>
+
+        <div class="role-form-language-grid">
+          <div class="role-form-language-column">
+            <div class="role-form-language-heading">
+              <span class="role-form-language-badge is-en">EN</span>
+              <h5>{{ 'ADMIN.ROLES.ENGLISH_CONTENT' | translate }}</h5>
+            </div>
+
+            <div class="admin-form-field">
+              <label class="admin-form-label">
+                {{ 'ADMIN.ROLES.EN_LABEL' | translate }} <span class="admin-required">*</span>
+              </label>
+              <input class="admin-field" formControlName="enLabel" />
+              <small class="role-form-message admin-error">
+                {{ isFieldInvalid('enLabel') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+              </small>
+            </div>
+
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.ROLES.EN_DESCRIPTION' | translate }}</label>
+              <textarea
+                class="admin-field"
+                formControlName="enDescription"
+                [placeholder]="'ADMIN.ROLES.EN_DESCRIPTION_PLACEHOLDER' | translate"
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="role-form-language-column">
+            <div class="role-form-language-heading">
+              <span class="role-form-language-badge is-th">TH</span>
+              <h5>{{ 'ADMIN.ROLES.THAI_CONTENT' | translate }}</h5>
+            </div>
+
+            <div class="admin-form-field">
+              <label class="admin-form-label">
+                {{ 'ADMIN.ROLES.TH_LABEL' | translate }} <span class="admin-required">*</span>
+              </label>
+              <input class="admin-field" formControlName="thLabel" />
+              <small class="role-form-message admin-error">
+                {{ isFieldInvalid('thLabel') ? ('ADMIN.VALIDATION.REQUIRED' | translate) : '' }}
+              </small>
+            </div>
+
+            <div class="admin-form-field">
+              <label class="admin-form-label">{{ 'ADMIN.ROLES.TH_DESCRIPTION' | translate }}</label>
+              <textarea
+                class="admin-field"
+                formControlName="thDescription"
+                [placeholder]="'ADMIN.ROLES.TH_DESCRIPTION_PLACEHOLDER' | translate"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-modal-actions role-form-actions">
+        <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
+          {{ 'ADMIN.COMMON.CANCEL' | translate }}
+        </button>
+        <button type="submit" class="admin-btn admin-btn-primary" [disabled]="isSubmitting">
+          {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
