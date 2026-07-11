@@ -1,6 +1,14 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { By } from '@angular/platform-browser';
 import { RoutesPageComponent } from './routes-page.component';
-import { RouteRow } from './routes.mappers';
+import { RouteRow, SegmentRow } from './routes.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { RoutesStore } from './routes.store';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 
 const ROUTE_ROW: RouteRow = {
@@ -155,5 +163,126 @@ describe('RoutesPageComponent delete modal', () => {
 
     expect((component as any).isDeleteModalOpen).toBeFalse();
     expect(alert.error).toHaveBeenCalledWith('delete failed');
+  });
+});
+
+// ── OBRS-213: child extraction — verify the page wires the right inputs to
+// app-route-list-table / app-route-detail-panel and delegates their outputs
+// to the existing handlers. Uses NO_ERRORS_SCHEMA (established pattern in
+// this codebase, e.g. walk-in-center-panel.component.spec.ts) so the child
+// selectors don't need to be declared; Angular still records `[prop]`
+// bindings on DebugElement.properties and dispatches `(event)` bindings via
+// triggerEventHandler even for unrecognized elements.
+describe('RoutesPageComponent template wiring to child components', () => {
+  let fixture: ComponentFixture<RoutesPageComponent>;
+  let component: RoutesPageComponent;
+
+  beforeEach(async () => {
+    const store = makeStoreStub();
+    const adminApi = { deleteRouteById: jasmine.createSpy('deleteRouteById') };
+    const alert = { success: jasmine.createSpy('success'), error: jasmine.createSpy('error') };
+
+    await TestBed.configureTestingModule({
+      declarations: [RoutesPageComponent],
+      imports: [CommonModule, TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        { provide: RoutesStore, useValue: store },
+        { provide: AdminApiService, useValue: adminApi },
+        { provide: AlertService, useValue: alert },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RoutesPageComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('app-route-list-table receives filteredRoutes/routes.length/selectedRouteSlug/isLoading/hasError', () => {
+    fixture.detectChanges(); // run ngOnInit first (its error$ subscription resets errorMessage)
+    (component as any).filteredRoutes = [ROUTE_ROW];
+    (component as any).routes = [ROUTE_ROW, { ...ROUTE_ROW, id: 2, slug: 'c-d' }];
+    (component as any).selectedRouteSlug = 'a-b';
+    (component as any).errorMessage = 'boom';
+    fixture.detectChanges();
+
+    const table = fixture.debugElement.query(By.css('app-route-list-table'));
+    expect(table.properties['routes']).toBe((component as any).filteredRoutes);
+    expect(table.properties['totalCount']).toBe(2);
+    expect(table.properties['selectedRouteSlug']).toBe('a-b');
+    expect(table.properties['hasError']).toBeTrue();
+  });
+
+  it('app-route-detail-panel receives hasRoute/stops/allSegments/isDetailLoading and is always present (no host *ngIf)', () => {
+    // PARITY-CRITICAL: the panel host must render even when selectedRoute is
+    // null, so its own view-state (currentPage/selectedVehicleTypeSlug/
+    // segmentSearchTerm) survives a transient deselect (e.g. delete-then-
+    // auto-reselect) instead of being destroyed and recreated.
+    fixture.detectChanges();
+    let panel = fixture.debugElement.query(By.css('app-route-detail-panel'));
+    expect(panel).withContext('detail panel host must always be mounted').toBeTruthy();
+    expect(panel.properties['hasRoute']).toBeFalse();
+
+    const segments: SegmentRow[] = [
+      {
+        id: 1,
+        origin: 'A',
+        destination: 'B',
+        fare: 10,
+        duration: '10 mins',
+        estimatedDurationMinutes: 10,
+        fromStopSlug: 'a',
+        toStopSlug: 'b',
+        vehicleTypeSlug: 'van',
+        vehicleTypeName: 'Van',
+      },
+    ];
+    (component as any).selectedRoute = ROUTE_ROW;
+    (component as any).stops = [];
+    (component as any).allSegments = segments;
+    (component as any).isDetailLoading = true;
+    fixture.detectChanges();
+
+    panel = fixture.debugElement.query(By.css('app-route-detail-panel'));
+    expect(panel.properties['hasRoute']).toBeTrue();
+    expect(panel.properties['allSegments']).toBe(segments);
+    expect(panel.properties['isDetailLoading']).toBeTrue();
+  });
+
+  it('delegates (view)/(edit)/(delete) from the list table to selectRoute/openEditModal/openDeleteModal', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'selectRoute');
+    spyOn(component as any, 'openEditModal');
+    spyOn(component as any, 'openDeleteModal');
+
+    const table = fixture.debugElement.query(By.css('app-route-list-table'));
+    table.triggerEventHandler('view', ROUTE_ROW);
+    table.triggerEventHandler('edit', ROUTE_ROW);
+    table.triggerEventHandler('delete', ROUTE_ROW);
+
+    expect((component as any).selectRoute).toHaveBeenCalledWith(ROUTE_ROW);
+    expect((component as any).openEditModal).toHaveBeenCalledWith(ROUTE_ROW);
+    expect((component as any).openDeleteModal).toHaveBeenCalledWith(ROUTE_ROW);
+  });
+
+  it('delegates (editSegment) from the detail panel to openSegmentEditModal', () => {
+    fixture.detectChanges();
+    const segment = {
+      id: 5,
+      origin: 'A',
+      destination: 'B',
+      fare: 10,
+      duration: '10 mins',
+      estimatedDurationMinutes: 10,
+      fromStopSlug: 'a',
+      toStopSlug: 'b',
+      vehicleTypeSlug: 'van',
+      vehicleTypeName: 'Van',
+    };
+    spyOn(component as any, 'openSegmentEditModal');
+
+    const panel = fixture.debugElement.query(By.css('app-route-detail-panel'));
+    panel.triggerEventHandler('editSegment', segment);
+
+    expect((component as any).openSegmentEditModal).toHaveBeenCalledWith(segment);
   });
 });

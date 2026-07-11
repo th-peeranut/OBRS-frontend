@@ -1,0 +1,9 @@
+:host {
+  display: block;
+}
+
+// design-system §13: selected-row highlight uses the shell accent (--accent-soft
+// cascades from .admin-shell), never raw Bootstrap #0d6efd.
+.admin-table tr.is-selected td {
+  background: var(--accent-soft);
+}

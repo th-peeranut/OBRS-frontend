@@ -16,15 +16,10 @@ import {
   RouteRow,
   SegmentRow,
   StopPoint,
-  VehicleTypeOption,
-  formatFare as formatFareValue,
-  normalizeVehicleTypeKey,
-  statusClass as statusClassValue,
   toRouteRow,
   toRouteStatusOptions,
   toSegments,
   toStopPoints,
-  toVehicleTypeOptions,
 } from './routes.mappers';
 
 @Component({
@@ -40,19 +35,12 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
   protected stops: StopPoint[] = [];
   protected allSegments: SegmentRow[] = [];
-  protected vehicleTypeOptions: VehicleTypeOption[] = [];
   protected statusOptions: Option[] = [];
-  protected selectedVehicleTypeSlug = '';
   protected selectedStatusFilter = '';
   protected searchKeyword = '';
-  protected segmentSearchTerm = '';
-
-  protected readonly pageSize = 5;
-  protected currentPage = 1;
 
   protected isRefreshing = false;
   protected refreshFailed = false;
-  protected readonly skeletonRows = Array.from({ length: 5 });
   protected isDetailLoading = false;
   protected errorMessage = '';
 
@@ -66,7 +54,8 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected readonly reloadStructureBound = () =>
     this.loadRouteStructureBySlug(this.selectedRouteSlug);
 
-  @ViewChild('routeDetailSection') private routeDetailSection?: ElementRef<HTMLElement>;
+  @ViewChild('routeDetailSection', { read: ElementRef })
+  private routeDetailSection?: ElementRef<HTMLElement>;
   @ViewChild(RouteFormModalComponent) private routeFormModal!: RouteFormModalComponent;
   @ViewChild(SegmentEditModalComponent) private segmentEditModal!: SegmentEditModalComponent;
   private readonly subscriptions = new Subscription();
@@ -150,7 +139,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
       this.selectedRouteSlug = '';
       this.stops = [];
       this.allSegments = [];
-      this.vehicleTypeOptions = [];
       return;
     }
 
@@ -173,80 +161,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     return this.stops.length;
   }
 
-  protected get segments(): SegmentRow[] {
-    const selectedVehicleTypeSlug = normalizeVehicleTypeKey(this.selectedVehicleTypeSlug);
-
-    if (!selectedVehicleTypeSlug) {
-      return this.allSegments;
-    }
-
-    return this.allSegments.filter(
-      (segment) => normalizeVehicleTypeKey(segment.vehicleTypeSlug) === selectedVehicleTypeSlug
-    );
-  }
-
-  protected get filteredSegments(): SegmentRow[] {
-    const keyword = this.segmentSearchTerm.trim().toLowerCase();
-    if (!keyword) {
-      return this.segments;
-    }
-
-    return this.segments.filter(
-      (segment) =>
-        segment.origin.toLowerCase().includes(keyword) ||
-        segment.destination.toLowerCase().includes(keyword)
-    );
-  }
-
-  protected get totalSegments(): number {
-    return this.filteredSegments.length;
-  }
-
-  protected get totalPages(): number {
-    return Math.max(1, Math.ceil(this.totalSegments / this.pageSize));
-  }
-
-  protected get pagedSegments(): SegmentRow[] {
-    const startIndex = (this.currentPage - 1) * this.pageSize;
-    return this.filteredSegments.slice(startIndex, startIndex + this.pageSize);
-  }
-
-  protected get canPreviousPage(): boolean {
-    return this.currentPage > 1;
-  }
-
-  protected get canNextPage(): boolean {
-    return this.currentPage < this.totalPages;
-  }
-
-  protected get showingFrom(): number {
-    if (this.totalSegments === 0) {
-      return 0;
-    }
-
-    return (this.currentPage - 1) * this.pageSize + 1;
-  }
-
-  protected get showingTo(): number {
-    return Math.min(this.currentPage * this.pageSize, this.totalSegments);
-  }
-
-  protected trackByRouteId(_index: number, item: RouteRow): number {
-    return item.id;
-  }
-
-  protected trackByStopSlug(_index: number, stop: StopPoint): string {
-    return stop.slug;
-  }
-
-  protected trackBySegmentId(_index: number, segment: SegmentRow): number {
-    return segment.id;
-  }
-
-  protected statusClass(status: string): string {
-    return statusClassValue(status);
-  }
-
   protected onSearchKeywordChange(value: string): void {
     this.searchKeyword = String(value ?? '');
     this.applyRouteFilters();
@@ -255,38 +169,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   protected onStatusFilterChange(value: string): void {
     this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
     this.applyRouteFilters();
-  }
-
-  protected onSegmentSearchChange(): void {
-    this.currentPage = 1;
-  }
-
-  protected onVehicleTypeChange(value: string): void {
-    const normalizedValue = normalizeVehicleTypeKey(value);
-    const matchedOption = this.vehicleTypeOptions.find(
-      (option) =>
-        normalizeVehicleTypeKey(option.slug) === normalizedValue ||
-        normalizeVehicleTypeKey(option.name) === normalizedValue
-    );
-
-    this.selectedVehicleTypeSlug = matchedOption?.slug ?? String(value ?? '').trim();
-    this.currentPage = 1;
-  }
-
-  protected goToPreviousPage(): void {
-    if (!this.canPreviousPage) {
-      return;
-    }
-
-    this.currentPage -= 1;
-  }
-
-  protected goToNextPage(): void {
-    if (!this.canNextPage) {
-      return;
-    }
-
-    this.currentPage += 1;
   }
 
   protected async selectRoute(route: RouteRow): Promise<void> {
@@ -392,10 +274,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     // structure it's bound to via `reloadStructureBound` before closing.
   }
 
-  protected formatFare(fare: number): string {
-    return formatFareValue(fare);
-  }
-
   // Re-derive the locale-dependent route list + status options from cached DTOs.
   private applyRouteListLocalization(): void {
     const currentLocale = this.getCurrentLocale();
@@ -431,7 +309,6 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
     this.isDetailLoading = true;
     this.stops = [];
     this.allSegments = [];
-    this.vehicleTypeOptions = [];
 
     try {
       const [routeStopsResult, segmentsResult] = await Promise.allSettled([
@@ -450,25 +327,7 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
 
       if (segmentsResult.status === 'fulfilled') {
         this.allSegments = toSegments(segmentsResult.value.data, currentLocale);
-        this.vehicleTypeOptions = toVehicleTypeOptions(this.allSegments);
-
-        if (
-          this.vehicleTypeOptions.length > 0 &&
-          !this.vehicleTypeOptions.some(
-            (option) =>
-              normalizeVehicleTypeKey(option.slug) ===
-              normalizeVehicleTypeKey(this.selectedVehicleTypeSlug)
-          )
-        ) {
-          this.selectedVehicleTypeSlug = this.vehicleTypeOptions[0].slug;
-        }
       }
-
-      if (this.vehicleTypeOptions.length === 0) {
-        this.selectedVehicleTypeSlug = '';
-      }
-
-      this.currentPage = 1;
     } finally {
       this.isDetailLoading = false;
     }
