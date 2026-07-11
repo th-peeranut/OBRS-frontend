@@ -12,7 +12,7 @@ import {
   BoardingScanRequest,
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
-import { DriverDto } from '../admin/admin-api.service';
+import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 
 export interface ScheduleSearchReqDto {
   bookingType: 'one_way' | 'return';
@@ -316,6 +316,16 @@ export class StaffApiService {
   getDrivers(): Observable<ResponseAPI<DriverDto[]>> {
     return this.http.get<ResponseAPI<DriverDto[]>>(
       `${environment.apiUrl}/api/private/users/drivers`,
+      { context: this.skipContext }
+    );
+  }
+
+  // Current user's own profile — GET /api/private/users/me. Used by the walk-in
+  // sell page (OBRS-193) to read the salesperson's assigned salesPointStop and
+  // default the pickup stop selection to it.
+  getMe(): Observable<ResponseAPI<AdminUserDto>> {
+    return this.http.get<ResponseAPI<AdminUserDto>>(
+      `${environment.apiUrl}/api/private/users/me`,
       { context: this.skipContext }
     );
   }

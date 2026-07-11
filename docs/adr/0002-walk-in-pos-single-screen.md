@@ -47,3 +47,15 @@ Two product decisions are baked into the UI and documented backend-side in
 The page depends on `GET /api/private/schedules/walk-in?date=YYYY-MM-DD` (date-browse, whole-trip badge counts,
 plate/driver, `availableSeatNumbers`). The booking and cash-payment endpoints (`POST /api/private/bookings`,
 `POST /api/private/payments/walk-in`) are reused unchanged. See `../OBRS-backend/docs/api/scheduling.md`.
+
+## Pickup default (OBRS-193)
+
+The pickup stop no longer always defaults to the route origin. `SellPageComponent.ngOnInit()` fetches
+`GET /api/private/users/me` **once** and caches the salesperson's `salesPointStop` (a stop slug, or `null`) for the
+component's lifetime — it is joined into the existing `forkJoin` in `loadSegments()` alongside `segments` and
+`routeStops` so the pickup resolves to its final value in a single paint (no origin-then-jump flicker). When a stop
+is assigned and it's actually on the current route, pickup defaults to it instead of the origin; otherwise (no
+assignment, off-route, or a failed `/me` call) it falls back to the origin exactly as before. A manual pickup pick by
+the staff member still always wins across a language-switch reload — the pre-existing `preserve` mechanism in
+`_applyDefaultStops()` is unchanged. There is no new UI: the auto-defaulted pickup is visually identical to a manual
+selection, and no toast/alert is shown on any branch.
