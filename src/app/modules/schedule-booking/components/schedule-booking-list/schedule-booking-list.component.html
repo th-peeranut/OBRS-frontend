@@ -63,7 +63,7 @@
 
             <div class="availability">
               <span *ngIf="isLowSeats(departure.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-              <span>|</span>
+              <span *ngIf="isLowSeats(departure.availableSeats)">|</span>
               <span>
                 {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
               </span>
@@ -151,7 +151,7 @@
 
               <div class="availability">
                 <span *ngIf="isLowSeats(return.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-                <span>|</span>
+                <span *ngIf="isLowSeats(return.availableSeats)">|</span>
                 <span>
                   {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
                 </span>
