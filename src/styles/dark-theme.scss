@@ -285,12 +285,6 @@ body.is-dark {
 // 6. Home page & booking widget
 // =============================================================================
 body.is-dark {
-  .booking-container {
-    .secondary-lightgrey-bg {
-      background-color: $dk-bg-soft;
-    }
-  }
-
   // Home page search card background
   .booking-section {
     background-color: $dk-bg-card;
