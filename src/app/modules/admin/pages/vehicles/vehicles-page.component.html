@@ -73,85 +73,16 @@
   ></app-admin-dropdown>
 </section>
 
-<section class="admin-card mt-3">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</h4>
-  </div>
-
-  <div class="admin-table-wrap">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }}</th>
-          <th>{{ 'ADMIN.VEHICLES.STATUS' | translate }}</th>
-          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
-
-        <ng-container *ngIf="!isLoading">
-          <tr *ngFor="let vehicle of filteredVehicles; let i = index" [class.zebra]="i % 2 === 1">
-            <td class="admin-emphasis">{{ vehicle.vehicleNumber }}</td>
-            <td><code>{{ vehicle.plate }}</code></td>
-            <td>{{ vehicle.vehicleType }}</td>
-            <td>
-              <span class="admin-status" [ngClass]="statusClass(vehicle.statusCode)">{{ vehicle.status }}</span>
-            </td>
-            <td class="text-right">
-              <div class="admin-inline-actions">
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  [attr.aria-label]="'ADMIN.VEHICLES.MAINTENANCE.MANAGE_ACTION' | translate"
-                  (click)="viewMaintenanceForVehicle(vehicle)"
-                >
-                  <span class="material-symbols-outlined">build</span>
-                </button>
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                  (click)="openEditModal(vehicle)"
-                >
-                  <span class="material-symbols-outlined">edit_square</span>
-                </button>
-                <button
-                  type="button"
-                  class="admin-icon-btn danger"
-                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
-                  (click)="openDeleteModal(vehicle)"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
-
-          <tr *ngIf="filteredVehicles.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-  <div class="admin-table-footer">
-    <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredVehicles.length === 0 ? 0 : 1 }} - {{ filteredVehicles.length }}
-      {{ 'ADMIN.COMMON.OF' | translate }} {{ vehicles.length }} {{ 'ADMIN.VEHICLES.UNITS' | translate }}
-    </span>
-  </div>
-</section>
+<app-vehicle-list-table
+  [rows]="filteredVehicles"
+  [isLoading]="isLoading"
+  [skeletonRows]="skeletonRows"
+  [hasError]="!!errorMessage"
+  [totalCount]="vehicles.length"
+  (edit)="openEditModal($event)"
+  (delete)="openDeleteModal($event)"
+  (manageMaintenance)="viewMaintenanceForVehicle($event)"
+></app-vehicle-list-table>
 </ng-container>
 
 <ng-container *ngIf="activeTab === 'maintenance' && focusedVehicle">
@@ -171,94 +102,20 @@
   ></app-vehicle-maintenance-panel>
 </ng-container>
 
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
-  <div class="admin-modal">
-    <h4 class="admin-modal-title">
-      {{
-        isEditMode
-          ? ('ADMIN.VEHICLES.EDIT_TITLE' | translate)
-          : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
-      }}
-    </h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
-      <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
-        · {{ 'ADMIN.COMMON.LOADING' | translate }}
-      </span>
-    </p>
+<app-vehicle-form-modal
+  [isOpen]="isFormModalOpen"
+  [mode]="mode"
+  [selectedVehicle]="selectedVehicle"
+  [vehicleTypeOptions]="vehicleTypeOptions"
+  [statusOptions]="statusOptions"
+  [reloadStructure]="reloadStructureBound"
+  (closed)="onFormModalClosed()"
+></app-vehicle-form-modal>
 
-    <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="vehicleType"
-          [options]="vehicleTypeOptions"
-          valueKey="code"
-          labelKey="label"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.STATUS' | translate }} <span class="admin-required">*</span>
-        </label>
-        <app-admin-dropdown
-          formControlName="status"
-          [options]="statusOptions"
-          valueKey="code"
-          labelKey="label"
-        ></app-admin-dropdown>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="numberPlate" />
-        <small class="admin-error" *ngIf="isFieldInvalid('numberPlate')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-
-      <div class="admin-form-field">
-        <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="vehicleNumber" />
-        <small class="admin-error" *ngIf="isFieldInvalid('vehicleNumber')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-        </small>
-      </div>
-    </form>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeFormModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitVehicle()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="selectedVehicle">{{ selectedVehicle.vehicleNumber }}</strong>
-    </p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
-        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
+<app-vehicle-delete-modal
+  [isOpen]="isDeleteModalOpen"
+  [vehicle]="selectedVehicle"
+  [isDeleting]="isDeleting"
+  (confirm)="confirmDelete()"
+  (cancel)="closeDeleteModal()"
+></app-vehicle-delete-modal>

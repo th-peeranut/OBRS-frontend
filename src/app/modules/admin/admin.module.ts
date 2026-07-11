@@ -13,6 +13,9 @@ import { UserFormModalComponent } from './pages/user-management/user-form-modal/
 import { UserDeleteModalComponent } from './pages/user-management/user-delete-modal/user-delete-modal.component';
 import { UserUnlockModalComponent } from './pages/user-management/user-unlock-modal/user-unlock-modal.component';
 import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component';
+import { VehicleListTableComponent } from './pages/vehicles/vehicle-list-table/vehicle-list-table.component';
+import { VehicleFormModalComponent } from './pages/vehicles/vehicle-form-modal/vehicle-form-modal.component';
+import { VehicleDeleteModalComponent } from './pages/vehicles/vehicle-delete-modal/vehicle-delete-modal.component';
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
@@ -147,6 +150,9 @@ const routes: Routes = [
     UserDeleteModalComponent,
     UserUnlockModalComponent,
     VehiclesPageComponent,
+    VehicleListTableComponent,
+    VehicleFormModalComponent,
+    VehicleDeleteModalComponent,
     RoutesPageComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,

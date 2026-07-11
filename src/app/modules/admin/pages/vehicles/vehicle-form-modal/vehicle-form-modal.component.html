@@ -1,0 +1,72 @@
+<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{
+        mode === 'edit'
+          ? ('ADMIN.VEHICLES.EDIT_TITLE' | translate)
+          : ('ADMIN.VEHICLES.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.VEHICLES.MODAL_HINT' | translate }}
+      <span class="admin-muted" *ngIf="mode === 'edit' && isEditDetailLoading">
+        · {{ 'ADMIN.COMMON.LOADING' | translate }}
+      </span>
+    </p>
+
+    <form [formGroup]="vehicleForm" class="admin-form-grid" (ngSubmit)="submitVehicle()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.VEHICLE_TYPE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="vehicleType"
+          [options]="vehicleTypeOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.STATUS' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="status"
+          [options]="statusOptions"
+          valueKey="code"
+          labelKey="label"
+        ></app-admin-dropdown>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="numberPlate" />
+        <small class="admin-error" *ngIf="isFieldInvalid('numberPlate')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="vehicleNumber" />
+        <small class="admin-error" *ngIf="isFieldInvalid('vehicleNumber')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="requestClose()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isSubmitting" (click)="submitVehicle()">
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
