@@ -548,3 +548,127 @@ body.is-dark {
     background: $dk-bg !important;
   }
 }
+
+// =============================================================================
+// 16. Home page route-map section (route-map-home + stop list + travel summary)
+// =============================================================================
+// The home page's lower "route & pick-up/drop-off" block (app-route-map-home)
+// kept its light surfaces — a $secondary-lightgrey section background and white
+// .panel-card / .route-travel-summary cards — so in dark mode it stayed a bright
+// block below the already-dark booking section (the whole reason the toggle
+// looked like it "did nothing" once scrolled down). Theme its surfaces to the
+// dark palette and lift the (dark $text-*) copy to light. Scoped under the
+// `app-route-map-home` component host (which wraps this whole block in the DOM)
+// so the global PrimeNG rules below (.p-selectbutton / .p-tabview-nav / .p-badge)
+// can't leak onto the same components elsewhere — the app-wide usability FAB's
+// p-selectButton, or the staff walk-in p-tabView inside .admin-shell — once dark
+// mode (which lives on <body>, app-wide) is on. The Google-map tiles themselves
+// are left as-is — inherently light, like the e-ticket card in section 15.
+body.is-dark app-route-map-home {
+  // Section background — continues the dark page from the booking section above
+  .route-map-section { background-color: $dk-bg; }
+
+  // Card surfaces: list panel, map panel, trip-summary card, inline error box
+  .panel-card,
+  .route-travel-summary,
+  .route-error {
+    background-color: $dk-bg-card !important;
+    border-color: $dk-border !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35) !important;
+  }
+
+  .panel-header { border-bottom-color: $dk-border !important; }
+
+  // Map placeholder (shown before the map loads / on a map error)
+  .route-map-placeholder {
+    background-color: $dk-bg-soft !important;
+    border-color: $dk-border !important;
+  }
+
+  // Stop detail cards (PrimeNG <p-card styleClass="route-stop-detail-card">) —
+  // the pickup/dropoff selection panels + their "no selection" placeholder.
+  // p-card paints a white surface by default, so it stayed a bright box in dark
+  // until repainted here; the copy inside (.detail-name/.detail-sub/.detail-meta/
+  // .detail-empty) is already lifted by the heading/meta groups below.
+  .route-stop-detail-card {
+    background: $dk-bg-card !important;
+    border-color: $dk-border !important;
+  }
+  .route-stop-detail-card .p-card-body,
+  .route-stop-detail-card .p-card-content {
+    background: transparent !important;
+    color: $dk-text !important;
+  }
+
+  // Headings / primary copy -> light
+  .panel-title,
+  .map-title,
+  .list-header,
+  .stop-name,
+  .summary-title,
+  .summary-value,
+  .detail-name { color: $dk-text !important; }
+
+  // Secondary / meta copy -> muted
+  .panel-meta,
+  .route-loading-text,
+  .route-empty,
+  .stop-address,
+  .stop-time,
+  .summary-label,
+  .summary-meta,
+  .placeholder-text,
+  .detail-sub,
+  .detail-meta,
+  .detail-empty { color: $dk-text-muted !important; }
+
+  // Per-stop distance chips stay accent-blue (readable on the dark card)
+  .stop-distance,
+  .stop-distance--nearest { color: $dk-accent !important; }
+
+  // Selected / hover stop rows: lift the faint light-mode rgba fills so the
+  // selection still reads over the #1a1d27 card.
+  .stop-row:hover { background-color: rgba(75, 194, 247, 0.12) !important; }
+  .stop-row--selected.stop-row--pickup {
+    background-color: rgba(75, 194, 247, 0.18) !important;
+    border-color: rgba(75, 194, 247, 0.55) !important;
+  }
+  .stop-row--selected.stop-row--dropoff {
+    background-color: rgba(120, 150, 220, 0.18) !important;
+    border-color: rgba(120, 150, 220, 0.55) !important;
+  }
+
+  // PrimeNG direction selector (p-selectButton) — the light pill track
+  .p-selectbutton { background: $dk-bg-soft !important; }
+  .p-selectbutton .p-button { color: $dk-text-muted !important; }
+  .p-selectbutton .p-button.p-highlight {
+    background: $dk-accent !important;
+    color: $dk-bg !important;
+  }
+
+  // PrimeNG tab nav (จุดรับ / จุดส่ง) inside the stop-list card
+  .p-tabview-nav { border-bottom-color: $dk-border !important; }
+  .p-tabview-nav li .p-tabview-nav-link {
+    color: $dk-text-muted !important;
+    background: transparent !important;
+  }
+  .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+    color: $dk-accent !important;
+    background: rgba(75, 194, 247, 0.10) !important;
+  }
+  .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    color: $dk-accent !important;
+    background: $dk-bg-soft !important;
+  }
+  .p-tabview-panels { background: transparent !important; }
+
+  // Count badges — keep the soft pill but lift the number to light
+  .p-badge.p-badge-info {
+    background: rgba(75, 194, 247, 0.22) !important;
+    color: $dk-text !important;
+  }
+  .p-badge.p-badge-danger {
+    background: rgba(120, 150, 220, 0.20) !important;
+    color: $dk-text !important;
+  }
+}
