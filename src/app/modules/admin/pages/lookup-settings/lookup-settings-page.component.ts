@@ -4,26 +4,24 @@ import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminLookupDto,
-  AdminTranslationReqDto,
-  AdminTranslationCollection,
   CreateLookupPayload,
-  getAdminTranslationDescription,
-  getAdminTranslationLabel,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
 import { LookupsStore } from './lookups.store';
-
-interface LookupEntry {
-  id: number;
-  category: string;
-  slug: string;
-  enLabel: string;
-  enDescription: string;
-  thLabel: string;
-  thDescription: string;
-}
+import {
+  CategorySummary,
+  LookupCategoryGroup,
+  LookupEntry,
+  groupEntriesByCategory,
+  toCategorySummary,
+  toCategorySummaryFromEntries,
+  toEntryFromPayload,
+  toLookupEntry,
+  toLookupPayload,
+  updateEntriesWithOptimistic,
+} from './lookup-settings-page.mappers';
 
 @Component({
   selector: 'app-lookup-settings-page',
@@ -31,7 +29,7 @@ interface LookupEntry {
   styleUrl: './lookup-settings-page.component.scss',
 })
 export class LookupSettingsPageComponent implements OnInit, OnDestroy {
-  protected categories: Array<{ name: string; count: number }> = [];
+  protected categories: CategorySummary[] = [];
   protected entries: LookupEntry[] = [];
 
   protected isRefreshing = false;
@@ -105,7 +103,7 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
     return this.entries.length;
   }
 
-  protected trackByCategoryName(_index: number, item: { name: string; count: number }): string {
+  protected trackByCategoryName(_index: number, item: CategorySummary): string {
     return item.name;
   }
 
@@ -245,17 +243,8 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   }
 
   /** Entries grouped by category so the archive table reads by section. */
-  protected get groupedEntries(): Array<{ category: string; items: LookupEntry[] }> {
-    const map = new Map<string, LookupEntry[]>();
-    for (const entry of this.entries) {
-      const items = map.get(entry.category) ?? [];
-      items.push(entry);
-      map.set(entry.category, items);
-    }
-
-    return Array.from(map.entries())
-      .map(([category, items]) => ({ category, items }))
-      .sort((a, b) => a.category.localeCompare(b.category));
+  protected get groupedEntries(): LookupCategoryGroup[] {
+    return groupEntriesByCategory(this.entries);
   }
 
   // Patch the local table to reflect a just-saved lookup, so the change shows
@@ -265,125 +254,27 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
     original: LookupEntry | null
   ): void {
     const entry = this.toEntryFromPayload(payload, original?.id ?? 0);
-
-    if (original) {
-      this.entries = this.entries.map((existing) =>
-        existing.category === original.category && existing.slug === original.slug
-          ? entry
-          : existing
-      );
-    } else {
-      this.entries = [entry, ...this.entries];
-    }
-
+    this.entries = updateEntriesWithOptimistic(this.entries, entry, original);
     this.categories = this.toCategorySummaryFromEntries(this.entries);
   }
 
   private toEntryFromPayload(payload: CreateLookupPayload, id: number): LookupEntry {
-    const byLocale = (locale: string) =>
-      payload.translations.find((translation) => translation.locale === locale);
-    const en = byLocale('en');
-    const th = byLocale('th');
-
-    return {
-      id,
-      category: payload.category,
-      slug: payload.slug,
-      enLabel: en?.label || '-',
-      enDescription: en?.description || '-',
-      thLabel: th?.label || '-',
-      thDescription: th?.description || '-',
-    };
+    return toEntryFromPayload(payload, id);
   }
 
-  private toCategorySummaryFromEntries(
-    entries: LookupEntry[]
-  ): Array<{ name: string; count: number }> {
-    const categoryMap = new Map<string, number>();
-    for (const entry of entries) {
-      categoryMap.set(entry.category, (categoryMap.get(entry.category) ?? 0) + 1);
-    }
-
-    return Array.from(categoryMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
+  private toCategorySummaryFromEntries(entries: LookupEntry[]): CategorySummary[] {
+    return toCategorySummaryFromEntries(entries);
   }
 
   private toLookupPayload(): CreateLookupPayload {
-    const category = String(this.lookupForm.value['category'] ?? '')
-      .trim()
-      .toLowerCase();
-    const slug = String(this.lookupForm.value['slug'] ?? '')
-      .trim()
-      .toLowerCase();
-    const enLabel = String(this.lookupForm.value['enLabel'] ?? '').trim();
-    const enDescription = String(this.lookupForm.value['enDescription'] ?? '').trim();
-    const thLabel = String(this.lookupForm.value['thLabel'] ?? '').trim();
-    const thDescription = String(this.lookupForm.value['thDescription'] ?? '').trim();
-
-    const translations: AdminTranslationReqDto[] = [
-      {
-        locale: 'en',
-        label: enLabel,
-        description: enDescription || undefined,
-      },
-    ];
-
-    if (thLabel) {
-      translations.push({
-        locale: 'th',
-        label: thLabel,
-        description: thDescription || undefined,
-      });
-    }
-
-    return {
-      category,
-      slug,
-      translations,
-    };
+    return toLookupPayload(this.lookupForm.value);
   }
 
   private toLookupEntry(lookup: AdminLookupDto): LookupEntry {
-    return {
-      id: lookup.id,
-      category: lookup.category,
-      slug: lookup.slug,
-      enLabel: this.getTranslationLabel(lookup.translations, 'en') ?? '-',
-      enDescription: this.getTranslationDescription(lookup.translations, 'en') ?? '-',
-      thLabel: this.getTranslationLabel(lookup.translations, 'th') ?? '-',
-      thDescription: this.getTranslationDescription(lookup.translations, 'th') ?? '-',
-    };
+    return toLookupEntry(lookup);
   }
 
-  private toCategorySummary(
-    lookups: AdminLookupDto[]
-  ): Array<{ name: string; count: number }> {
-    const categoryMap = new Map<string, number>();
-
-    for (const lookup of lookups) {
-      categoryMap.set(
-        lookup.category,
-        (categoryMap.get(lookup.category) ?? 0) + 1
-      );
-    }
-
-    return Array.from(categoryMap.entries())
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count);
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private getTranslationDescription(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationDescription(translations, locale);
+  private toCategorySummary(lookups: AdminLookupDto[]): CategorySummary[] {
+    return toCategorySummary(lookups);
   }
 }
