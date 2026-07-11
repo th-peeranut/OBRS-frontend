@@ -6,7 +6,9 @@ import { AdminCollectionStore } from '../../shared/admin-collection-store';
 import { SettlementPendingPageDto } from '../../../../shared/interfaces/settlement.interface';
 
 /**
- * Stale-while-revalidate cache for `/admin/settlements/pending` (OBRS-196).
+ * Stale-while-revalidate cache for `/api/private/settlements/pending`
+ * (OBRS-196) — note the base path is `/private`, NOT `/admin` (the endpoint
+ * is `hasRole('OWNER')`; ADMIN inherits it via the backend role hierarchy).
  *
  * Mirrors `ReportsStore` (OBRS-40) exactly: a single root-scoped cache keyed
  * by an admin-chosen `[from, to]` date range — `setRange()` updates the range
