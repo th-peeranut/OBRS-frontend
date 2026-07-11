@@ -216,3 +216,49 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Dark-mode overrides for the tab bar + focus banner (OBRS-230, follow-up to
+ * OBRS-209). These classes hardcoded raw #ffffff / brand tints that render as
+ * bright-white boxes on the dark admin shell. `:host-context(.is-dark)` is the
+ * same mechanism theme-toggle.component.scss uses to react to the `is-dark`
+ * class `ThemeService` puts on `document.body` from inside a component-scoped
+ * stylesheet. Only the clashing tokens are overridden — light mode is untouched,
+ * since these rules never match outside `.is-dark`. Mirrors the block OBRS-209
+ * added to vehicles-page.component.scss, plus `.schedule-tab-count` which only
+ * exists here. */
+:host-context(.is-dark) {
+  .schedule-tabs {
+    background: var(--admin-surface-soft);
+  }
+
+  .schedule-tab {
+    color: var(--admin-muted);
+  }
+
+  .schedule-tab.is-active {
+    background: var(--admin-surface-card);
+    color: var(--admin-text);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .schedule-tab-count {
+    background: var(--admin-surface-card);
+    color: var(--admin-text);
+  }
+
+  .schedule-focus-banner {
+    border-color: var(--admin-outline);
+    background: var(--admin-surface-soft);
+    color: var(--admin-text);
+  }
+
+  .schedule-focus-banner .material-symbols-outlined {
+    color: var(--accent-text);
+  }
+
+  .schedule-focus-clear {
+    background: var(--admin-surface-card);
+    color: var(--accent-text);
+    box-shadow: 0 0 0 1px var(--admin-outline);
+  }
+}
