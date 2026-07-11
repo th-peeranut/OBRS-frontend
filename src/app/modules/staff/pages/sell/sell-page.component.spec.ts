@@ -864,7 +864,8 @@ describe('SellPageComponent', () => {
         translate,
         new FormBuilder(),
         createAdminApiStub(),
-        createScheduleStoreStub()
+        createScheduleStoreStub(),
+        createRouterStub()
       );
       return { comp, api, translate };
     }
@@ -928,7 +929,7 @@ describe('SellPageComponent', () => {
       });
       const comp = new SellPageComponent(
         api, createAlertStub(), createTranslateStub(), new FormBuilder(),
-        createAdminApiStub(), createScheduleStoreStub()
+        createAdminApiStub(), createScheduleStoreStub(), createRouterStub()
       );
       comp.ngOnInit();
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
