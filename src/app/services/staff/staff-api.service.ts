@@ -13,6 +13,11 @@ import {
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
 import { DriverDto } from '../admin/admin-api.service';
+// OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
+// SHAPE for its supplementary print/export trip header, but must not take a
+// runtime dependency on AdminApiService (see docs/adr/0015). Same type-only
+// precedent as DriverDto above, just made explicit with `import type`.
+import type { AdminScheduleDto } from '../admin/admin-api.service';
 
 export interface ScheduleSearchReqDto {
   bookingType: 'one_way' | 'return';
@@ -210,6 +215,21 @@ export class StaffApiService {
   getBoardingList(scheduleId: number): Observable<ResponseAPI<BoardingListItemDto[]>> {
     return this.http.get<ResponseAPI<BoardingListItemDto[]>>(
       `${environment.apiUrl}/api/private/schedules/${scheduleId}/boarding-list`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** OBRS-100: thin passthrough for the boarding-list print/export trip
+   * header (route/departure/vehicle/driver) — `BoardingListComponent` calls
+   * this directly rather than `AdminApiService.getScheduleById()` so a
+   * `shared/` component doesn't take a runtime dependency on an
+   * admin-domain-named service (see docs/adr/0015). Errors are suppressed
+   * globally (skipContext) because the caller degrades silently on failure
+   * (e.g. a driver 403'd off a schedule they don't own) rather than
+   * surfacing a toast for a supplementary header fetch. */
+  getScheduleById(id: number): Observable<ResponseAPI<AdminScheduleDto>> {
+    return this.http.get<ResponseAPI<AdminScheduleDto>>(
+      `${environment.apiUrl}/api/private/schedules/${id}`,
       { context: this.skipContext }
     );
   }

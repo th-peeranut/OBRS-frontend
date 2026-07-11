@@ -1,7 +1,15 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { TranslateModule } from '@ngx-translate/core';
+import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
-import { BoardingListItemDto } from '../../../services/staff/staff-api.service';
+import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
+import { AlertService } from '../../services/alert.service';
+import { AuthService } from '../../../auth/auth.service';
+import { BoardingListStore } from './boarding-list.store';
 import { createTranslateStub } from '../../../testing/test-stubs';
 
 function createAlertServiceStub(confirmResult = true): any {
@@ -52,18 +60,27 @@ function buildItem(overrides: Partial<BoardingListItemDto> = {}): BoardingListIt
   };
 }
 
+// OBRS-100: minimal stub — printManifest()/loadTripHeader() tests construct
+// their own ViewContainerRef/TemplateRef doubles where they matter; every
+// other existing test never calls printManifest(), so an empty stub is fine.
+function createViewContainerRefStub(): any {
+  return {};
+}
+
 function createComponent(
   staffApiServiceStub: any,
   storeStub: any = createStoreStub([buildItem()]),
   alertServiceStub: any = createAlertServiceStub(),
-  authServiceStub: any = createAuthServiceStub()
+  authServiceStub: any = createAuthServiceStub(),
+  viewContainerRefStub: any = createViewContainerRefStub()
 ): BoardingListComponent {
   const component = new BoardingListComponent(
     staffApiServiceStub,
     alertServiceStub,
     createTranslateStub(),
     authServiceStub,
-    storeStub
+    storeStub,
+    viewContainerRefStub
   );
   component.scheduleId = 42;
   component.ngOnChanges({ scheduleId: {} as any });
@@ -318,5 +335,194 @@ describe('BoardingListComponent — unboard() action (OBRS-130)', () => {
 
     expect(component['items'][0].boardedAt).toBe('2026-07-10T08:00:00Z');
     expect(component['items'][0].boardedByName).toBe('jane.doe');
+  });
+});
+
+describe('BoardingListComponent — boardedCount getter (OBRS-100 print header)', () => {
+  it('counts only items with a non-null boardedAt, out of items already held (not part of tripHeader)', () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 1, boardedAt: '2026-07-10T08:00:00Z' }),
+      buildItem({ ticketId: 2, boardedAt: undefined }),
+      buildItem({ ticketId: 3, boardedAt: '2026-07-10T09:00:00Z' }),
+    ]);
+    const component = createComponent({ getScheduleById: jasmine.createSpy() }, store);
+
+    expect(component['boardedCount']).toBe(2);
+    expect(component['items'].length).toBe(3);
+  });
+});
+
+describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
+  it('loadTripHeader() maps route/vehicle/driver/departure from StaffApiService.getScheduleById(), not AdminApiService', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            id: 42,
+            departureDateTime: '2026-07-10T08:00:00Z',
+            route: { id: 1, slug: 'bkk-cnx', code: 'BKK-CNX' },
+            vehicle: { id: 2, numberPlate: '1กก-1234' },
+            driver: { id: 3, fullName: 'Somchai Driver' },
+          },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(staffApiServiceStub.getScheduleById).toHaveBeenCalledWith(42);
+    expect(component['tripHeader']).toEqual({
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+    });
+  });
+
+  it('falls back to "-" per field when the schedule detail omits route/vehicle/driver', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42 } })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(component['tripHeader']).toEqual({
+      routeLabel: '-',
+      departureDateTime: '-',
+      vehicleLabel: '-',
+      driverName: '-',
+    });
+  });
+
+  it('degrades to null (template falls back to "-") on failure — e.g. a driver 403’d off a foreign schedule — without blocking export/print', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 403, error: { errorCode: 'ACCESS_DENIED' } }))
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(component['tripHeader']).toBeNull();
+  });
+
+  it('stale-guards: a slower response for an earlier scheduleId must not clobber the header for the current one', async () => {
+    const staleSubject = new Subject<any>();
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.callFake((id: number) =>
+        id === 42
+          ? staleSubject.asObservable()
+          : of({ code: 200, message: 'OK', data: { id, route: { slug: 'r99' } } })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    const staleCall = component['loadTripHeader'](42);
+    await component['loadTripHeader'](99); // supersedes — headerRequestScheduleId is now 99
+    expect(component['tripHeader']?.routeLabel).toBe('r99');
+
+    // The slow response for the superseded scheduleId (42) arrives late.
+    staleSubject.next({ code: 200, message: 'OK', data: { id: 42, route: { slug: 'r42' } } });
+    staleSubject.complete();
+    await staleCall;
+
+    expect(component['tripHeader']?.routeLabel).toBe('r99');
+  });
+});
+
+// OBRS-100 / ADR 0015: unlike every other describe block above (which
+// instantiates BoardingListComponent directly), the CDK Portal round-trip
+// needs a REAL ViewContainerRef + a REAL #printTemplate resolved by Angular's
+// view-init — neither exists on a bare `new BoardingListComponent(...)`. So
+// this block alone renders the component via TestBed. NO_ERRORS_SCHEMA lets
+// the template's unknown child elements (`<app-export-button>`, PrimeNG's
+// `p-menu` are irrelevant here since ExportButtonComponent isn't declared)
+// pass through unrendered — this suite only exercises printManifest().
+describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, CDK Portal, ADR 0015)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let component: BoardingListComponent;
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: [] }),
+            getScheduleById: () => of({ code: 200, message: 'OK', data: null }),
+          },
+        },
+        { provide: AlertService, useValue: {} },
+        {
+          provide: AuthService,
+          useValue: { hasAnyRole: () => false, getUsername: () => 'operator1', authStatus$: of(true) },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    component = fixture.componentInstance;
+    component.scheduleId = 42;
+    fixture.detectChanges(); // resolves the static #printTemplate ViewChild and calls ngOnInit
+  });
+
+  afterEach(() => {
+    // Belt-and-braces: a failed assertion mid-test could leave a stray body
+    // node behind for the next test/suite even with fixture.destroy() below.
+    document.querySelectorAll('.boarding-manifest-print-portal').forEach((el) => el.remove());
+  });
+
+  it('teleports a document.body child carrying the marker class and defers window.print()', () => {
+    const printSpy = spyOn(window, 'print');
+
+    component['printManifest']();
+
+    const host = document.querySelector('.boarding-manifest-print-portal');
+    expect(host).withContext('portal host should be appended to document.body').toBeTruthy();
+    expect(host?.parentElement).toBe(document.body);
+    // window.print() is deferred via setTimeout(0) so the portal DOM commits first.
+    expect(printSpy).not.toHaveBeenCalled();
+  });
+
+  it('afterprint tears the portal down (idempotent — no leaked listener/body node)', (done) => {
+    spyOn(window, 'print');
+    component['printManifest']();
+    expect(document.querySelector('.boarding-manifest-print-portal')).toBeTruthy();
+
+    window.dispatchEvent(new Event('afterprint'));
+
+    setTimeout(() => {
+      expect(document.querySelector('.boarding-manifest-print-portal')).toBeFalsy();
+      done();
+    });
+  });
+
+  it('ngOnDestroy disposes a still-open portal (scrutinize case: navigating away mid print-dialog must not leak a body node)', () => {
+    spyOn(window, 'print');
+    component['printManifest']();
+    expect(document.querySelector('.boarding-manifest-print-portal')).toBeTruthy();
+
+    fixture.destroy();
+
+    expect(document.querySelector('.boarding-manifest-print-portal')).toBeFalsy();
+  });
+
+  it('printManifest() is safe to call again while already open — never leaks a second host', () => {
+    spyOn(window, 'print');
+    component['printManifest']();
+    component['printManifest']();
+
+    expect(document.querySelectorAll('.boarding-manifest-print-portal').length).toBe(1);
   });
 });

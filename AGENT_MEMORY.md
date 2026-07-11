@@ -1,5 +1,197 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-11 — IMPLEMENTED: OBRS-100 passenger manifest export + print
+
+Built exactly to the spec below (both entries) — no deviations from the reviewed
+design. Summary of what landed, for whoever reviews/QAs this next:
+
+**Export**: `<app-export-button datasetKey="boarding-manifest" requiredRole="driver"
+[params]="{ scheduleId: String(scheduleId) }">` added to
+`boarding-list.component.html`'s new toolbar row. `protected readonly String = String;`
+added to the component so the template can call `String(scheduleId)` (Angular templates
+don't resolve bare globals otherwise). Zero changes to `ExportButtonComponent` itself.
+
+**Print**: `printManifest()` on `BoardingListComponent` builds a `TemplatePortal(this
+.printTemplate, this.viewContainerRef)` and attaches it via a `DomPortalOutlet` to a
+`<div class="boarding-manifest-print-portal">` appended to `document.body`, then
+`setTimeout(() => window.print(), 0)`. Teardown (`disposePrintPortal()`) is idempotent
+and called from both the `afterprint` listener and `ngOnDestroy` — the scrutinize-flagged
+leak case (navigate away mid-print-dialog) is covered. Global CSS in `admin-theme.scss`
+(`.boarding-manifest-print-portal { display:none }` + the `@media print` reveal rule) —
+exactly the two rules the spec called for. Full rationale in
+`docs/adr/0015-boarding-manifest-print-isolation.md`. Also added a short "new pattern"
+entry to `docs/design-system.md` §10 per its own §12 rule (CDK Portal is genuinely new
+here — first usage in the app).
+
+**Header self-fetch**: `StaffApiService.getScheduleById(id)` added (type-only imports
+`AdminScheduleDto` from `admin-api.service.ts`, same precedent as the existing `DriverDto`
+import) — a deliberate **second call site** for `GET /api/private/schedules/{id}`
+alongside `AdminApiService.getScheduleById()`, to keep `shared/` decoupled from admin-
+domain-named services. `BoardingListComponent.loadTripHeader()` is stale-guarded
+(`headerRequestScheduleId`) and degrades `tripHeader` to `null` on any failure — the
+template falls back to `'-'` per field either way. Route label falls back to
+`route?.code ?? route?.slug` (not a locale-resolved translation) — deliberately did
+**not** import `getAdminLookupLabel()` from `admin-api.service.ts` even though it exists,
+because that would be a *runtime* (value) import into a `shared/` component, which is
+exactly the coupling this ADR's Decision 3 avoids. If a translated route name is wanted
+later here, it needs its own home (e.g. promoted into `shared/lib/`), not a reach into
+`admin-api.service.ts`.
+
+**Constructor change**: `BoardingListComponent` now takes a 6th constructor param,
+`ViewContainerRef` (needed for the `TemplatePortal`). Updated the existing
+`boarding-list.component.spec.ts`'s `createComponent()` helper (which instantiates the
+component directly with `new`, not via TestBed) to pass a stub 6th arg. Added one NEW
+`describe` block in that same spec file that — unlike every other block there — renders
+the component via `TestBed.createComponent()` with `NO_ERRORS_SCHEMA`, because
+`printManifest()`'s CDK Portal round-trip needs a **real** `ViewContainerRef` and a real
+`#printTemplate` resolved by Angular's view-init; neither exists on a bare `new
+BoardingListComponent(...)`. That suite exercises the actual DOM attach/detach against
+real Chrome (Karma), not a mock.
+
+Tests: `ng test` — 1149/1149 passing (up from 1142 pre-change; net +7 after accounting
+for the pre-existing suite plus new describe blocks for `boardedCount`, `loadTripHeader`
+success/degrade/stale-guard, the print-portal lifecycle, and `StaffApiService
+.getScheduleById()`). `ng build --configuration production` — clean, no budget warnings
+(initial chunk unchanged at 1.50 MB, right at but not over the 1.5 MB warning threshold —
+this addition contributed negligible bytes since it reuses `app-export-button`/`.admin-btn`
+verbatim).
+
+**Left for QA / integration**: the backend `/api/private/exports/boarding-manifest`
+endpoint was being built in parallel and wasn't live at implementation time — FE was
+built and unit-tested strictly against the contract in the card (datasetKey, params
+shape, `ResponseAPI` envelope assumptions already proven by the existing
+`ExportButtonComponent`/`ExportService`, unchanged here). No live-browser screenshot was
+taken for this pass (no full E2E login/backend round-trip attempted) — the two new
+buttons reuse only pre-existing, already-themed classes (`.admin-btn`,
+`.material-symbols-outlined`) with zero new custom CSS on the buttons themselves, so
+light/dark theme risk is low, but QA should still eyeball both mounts
+(`/staff/boarding/:scheduleId` and Sell Tab-3) in both themes before sign-off.
+
+## 2026-07-11 — UX spec REVISION: OBRS-100 print isolation + header sourcing (post-Scrutinize)
+
+Scrutinize traced the first-pass spec (below) against the real components and found the
+export-button reuse, `requiredRole="driver"` role gate, and i18n plan sound — kept unchanged.
+Two architectural pieces got revised; both are corrected in the spec text below this entry, not
+duplicated here — summary of *why* each changed, for whoever reads this before the older entry:
+
+1. **Print isolation is no longer a shell-scoped `visibility:hidden` + absolute-reposition
+   rule.** It broke for two reasons Scrutinize named: the reveal selector omitted the print
+   area's own descendants, and an absolutely-positioned reveal is fragile under the sell mount's
+   `p-tabView`/grid ancestors (any `position`/`overflow`/`transform` on an ancestor clips or
+   offsets it) — plus body-appended overlays (`p-menu[appendTo="body"]`, SweetAlert2's
+   `.swal2-container`) aren't inside `.admin-shell` at all and would bleed through un-hidden.
+   **New approach:** CDK Portal (`DomPortalOutlet` + `TemplatePortal`, `@angular/cdk` already a
+   dependency at ~18.2.14, confirmed zero existing Portal usage anywhere in `src/` — this is the
+   first) teleports a dedicated `ng-template` to a `<div>` appended directly to `document.body`,
+   so the print DOM's only ancestor is `<body>` regardless of which mount triggered it. `@media
+   print { body > *:not(.boarding-manifest-print-portal) { display:none !important } }` hides
+   every other body child (including any stray overlay) and shows only the portal. This is now
+   the ADR-0015 pattern.
+2. **`tripHeader` is no longer threaded through the hosts as an `@Input()`.** Two problems: it
+   breaks `BoardingListComponent`'s documented self-sufficiency contract (ADR 0014: hosts pass
+   only `[scheduleId]`), and the sell mount genuinely cannot build a *complete* header —
+   `WalkInTripDto` has `driverName`/`licensePlate`/`departureDateTime` but no route name (route is
+   a slug two levels up, on `SellPageComponent.routeGroups`/`selectedRouteSlug`) — so the two
+   mounts would produce two different completeness levels for the same shared component's header.
+   **Fix:** `BoardingListComponent` self-fetches its own header in `ngOnChanges` (alongside the
+   existing `store.setScheduleId()`/`refresh()`), via a **new `StaffApiService.getScheduleById()`**
+   method — deliberately NOT reusing `AdminApiService.getScheduleById()` (which
+   `walk-in-center-panel.component.ts:289` already calls, so the endpoint/precedent exists) to
+   avoid a `shared/` component taking a runtime dependency on an admin-domain-named service;
+   `BoardingListComponent`'s collaborator set stays exactly what ADR 0014 already documents
+   (`StaffApiService`/`AuthService`/`AlertService`/`TranslateService`). Both hosts revert to
+   **exactly today's contract**, `[scheduleId]` only — the previously-planned
+   `BoardingListPageComponent` extension (calling `getScheduleById` itself) is removed; that fetch
+   now lives inside `BoardingListComponent`, so both mounts get it automatically.
+
+Everything else (export param stringification `[params]="{ scheduleId: String(scheduleId) }"`,
+the graceful degrade-to-`-` on a header-fetch failure, the driver-auth-on-`getScheduleById` flag
+for backend to confirm, the i18n table) is unchanged from the first pass.
+
+## 2026-07-11 — UX spec: passenger manifest export (CSV/XLSX) + print (OBRS-100) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-100-manifest-export` (branch `ao/obrs-100-manifest-export`,
+off `origin/dev`, 2 commits behind — includes OBRS-130's shared `<app-boarding-list>`). No code
+written this pass — UX/UI spec handoff. Full spec is in the OBRS-100 ticket thread / the parent
+agent's transcript; load-bearing findings below.
+
+**Export needs ZERO new component — `app-export-button` + `ExportService` already exist and were
+built exactly for this (OBRS-101, ADR 0001) but have NO consumer yet** (`grep -rn
+"app-export-button" src/app --include=*.html` returned nothing). `datasetKey="boarding-manifest"`,
+`requiredRole="driver"` (lowest role in `AuthService.ROLE_GRANTS` that all of
+driver/salesperson/owner/admin's expanded grant-sets contain — verified by reading
+`hasAnyRole()`), `[params]="{ scheduleId: String(scheduleId) }"` computed as a getter INSIDE
+`BoardingListComponent` itself (it already has `@Input() scheduleId`) — so the export half needs
+**no new `@Input()` and no host-component changes at all**. `COMMON.EXPORT.*` i18n keys (button
+label, CSV/XLSX, error codes incl. a reserved-but-unwired `SUCCESS`) already exist in all 3
+locales — reuse verbatim, do not duplicate.
+
+**Print is a genuinely new pattern for this codebase — no `window.print()` call exists anywhere
+in `src/`.** The two existing `@media print` rules (`e-ticket.component.scss`,
+`e-ticket-card.component.scss`) only resize a logo — `/e-ticket` is a standalone top-level route
+with no shell chrome around it, so it never needed content isolation. `<app-boarding-list>`'s two
+mounts both sit inside `.admin-shell.theme-staff` (`staff-layout.component.html` — sidebar +
+topbar), and the Sell-tab mount additionally has a trip-browser sidebar + checkout column as
+siblings — `window.print()` would print all of that unless isolated. Spec'd the classic
+"hide the shell, reveal one marker" CSS trick, scoped to `.theme-staff` only so it can't affect a
+future admin-shell print feature or `/e-ticket`:
+```scss
+@media print {
+  .admin-shell.theme-staff * { visibility: hidden; }
+  .admin-shell.theme-staff .boarding-manifest-print-area,
+  .admin-shell.theme-staff .boarding-manifest-print-area * { visibility: visible; }
+  .admin-shell.theme-staff .boarding-manifest-print-area { position: absolute; inset: 0; width: 100%; }
+}
+```
+Home for this: `admin-theme.scss` (where `.admin-shell`/theme variants already live), not a
+component-scoped style — Angular view encapsulation can't reach the sibling shell chrome from
+inside `boarding-list.component.scss`. Recommended writing this up as a new ADR (`docs/adr/0015-
+boarding-manifest-print-isolation.md`) since it's the first "print only this one element of a
+chromed page" pattern in the app and the next print feature should reuse the marker-class idiom,
+not reinvent it.
+
+**Driver-page trip header is a real gap, not a given — flagged explicitly rather than assumed
+away.** `BoardingListPageComponent` (the driver-route thin wrapper, ADR 0014 Decision 4: "does
+nothing else" but read `scheduleId`) currently holds NO route/vehicle/driver/departure data — the
+print trip-header (Route/Departure/Vehicle/Driver/Seats sold/Boarded) needs it. Two existing driver-
+accessible endpoints were checked: `StaffApiService.getMySchedules()` (`GET
+/private/schedules?assignedToMe=true`, confirmed driver-scoped, used by `driver-schedules-page`)
+and `AdminApiService.getScheduleById(id)` (`GET /private/schedules/{id}`, currently only called
+from the admin module). Spec calls for extending the driver-page wrapper to call
+`getScheduleById(scheduleId)` (id-scoped, matches the "a driver only sees their own schedule"
+backend rule already stated for `getBoardingList`) rather than `getMySchedules()` + client-side
+find (which would wrongly return nothing for a salesperson/owner/admin who navigates to
+`/staff/boarding/:id` directly, since `assignedToMe` is driver-identity-scoped). **This is an
+assumption an implementer/backend must confirm**: that `GET /private/schedules/{id}` already
+403s a non-owning driver the same way `getBoardingList` does. If it doesn't, print/export must
+still not be blocked — spec says degrade gracefully (header fields show `-`, Seats sold/Boarded
+still compute correctly from `items` already in the store) rather than gate the buttons on this
+fetch succeeding.
+
+**Sell-page (Tab 3) DOES already have everything needed, confirmed by reading state, not
+assumed:** `SellPageComponent.routeGroups: WalkInRouteGroupDto[]` + `selectedRouteSlug` give
+`routeLabel` (route grouping isn't inside `WalkInTripDto` itself); `selectedTrip: WalkInTripDto`
+gives `licensePlate`/`driverName`/`departureDateTime`. Spec threads one new `tripHeader` object
+two hops deep (`SellPageComponent` → `WalkInCenterPanelComponent` (new optional `@Input()`) →
+`BoardingListComponent` (new optional `@Input()`, null-default per design-system §10)) — same
+existing prop-drilling shape this component already uses for `pickupOptions`/`dropoffOptions`
+etc., not a new pattern.
+
+**Seats-sold / Boarded counts do NOT belong on the header input** — both are directly derivable
+from `items` already inside `BoardingListComponent` (`items.length` = seats sold, since each row
+is a sold seat; `items.filter(isBoarded).length` = boarded count). Only
+`{routeLabel, departureDateTime, vehicleLabel, driverName}` needs to come from the host.
+
+**i18n:** only 7 new keys needed under `STAFF.BOARDING.*` (`PRINT_BTN` + a `PRINT_HEADER.*`
+sub-object: `TITLE`/`ROUTE`/`DEPARTURE`/`VEHICLE`/`DRIVER`/`SEATS_SOLD`) — reuse the existing
+`STAFF.BOARDING.BOARDED` key verbatim for the header's "Boarded: n/total" line (same word, same
+meaning as the existing status-pill label). All `COMMON.EXPORT.*` keys are reused unchanged. Full
+TH/EN/ZH table is in the spec.
+
+**Access-model gate confirmed clean**: this card touches no `ROLE_GRANTS`/`PORTAL_ONLY_ROLES`/
+`canAccessCustomerArea`/`getHomeRoute`/`auth.guard.ts` — no access-model ADR needed, per the task
+brief.
+
 ## 2026-07-10 — QA: OBRS-84 verified login-email change — PASSED (verify only, not merged)
 
 Worktree `wt-obrs-84-email-change` @ `9938fde`. Full report + evidence recipe lives in the backend

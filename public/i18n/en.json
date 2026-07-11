@@ -1395,6 +1395,15 @@
       "BOARD_FAILED": "Unable to board passenger.",
       "UNBOARD_SUCCESS": "Passenger un-boarded successfully.",
       "UNBOARD_FAILED": "Unable to un-board passenger.",
+      "PRINT_BTN": "Print",
+      "PRINT_HEADER": {
+        "TITLE": "Passenger Manifest",
+        "ROUTE": "Route",
+        "DEPARTURE": "Departure",
+        "VEHICLE": "Vehicle",
+        "DRIVER": "Driver",
+        "SEATS_SOLD": "Seats sold"
+      },
       "ACTION_ERROR": {
         "ALREADY_BOARDED": "This ticket has already been boarded.",
         "NOT_BOARDED": "This ticket has not been boarded yet.",

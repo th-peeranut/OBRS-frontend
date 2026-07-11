@@ -1585,3 +1585,28 @@ textarea.admin-field {
     grid-template-columns: 1fr;
   }
 }
+
+// OBRS-100: print isolation for the boarding-manifest print feature
+// (docs/adr/0015). `BoardingListComponent.printManifest()` teleports its
+// dedicated `#printTemplate` to a `document.body` child (a CDK
+// `DomPortalOutlet`) carrying this marker class — global, not
+// component-scoped, because it governs `document.body`'s direct children,
+// which sit outside any component's view. `display:none` keeps the portal
+// host invisible during normal browsing; `@media print` hides every OTHER
+// body child (including body-appended overlays like `p-menu[appendTo="body"]`
+// or SweetAlert2's `.swal2-container`) and reveals only the portal, so
+// `window.print()` renders the manifest regardless of which shell/tab
+// triggered it.
+.boarding-manifest-print-portal {
+  display: none;
+}
+
+@media print {
+  body > *:not(.boarding-manifest-print-portal) {
+    display: none !important;
+  }
+
+  .boarding-manifest-print-portal {
+    display: block !important;
+  }
+}

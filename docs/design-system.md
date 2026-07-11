@@ -246,6 +246,23 @@ links to `/home` and no separate `a[href="/home"]` Home button exists.
 
 ## 10. Shared component conventions
 
+- **Print-only content: CDK Portal teleport-to-body, not a `visibility:hidden`
+  reveal rule (OBRS-100).** When a screen needs to print one element in
+  isolation from surrounding shell chrome, teleport a dedicated
+  `<ng-template>` to a `document.body` child via `DomPortalOutlet` +
+  `TemplatePortal` (`@angular/cdk/portal`), then gate visibility with a
+  marker class: `.the-marker-class { display:none; } @media print { body >
+  *:not(.the-marker-class) { display:none !important } .the-marker-class {
+  display:block !important } }`. This is immune to ancestor
+  `position`/`overflow`/`transform` (which breaks the classic
+  `visibility:hidden` + absolutely-positioned-reveal trick) and to
+  body-appended overlays (`p-menu[appendTo="body"]`, SweetAlert2's
+  `.swal2-container`) that a shell-scoped selector can't reach. Teardown must
+  be idempotent and bound to both `afterprint` **and** `ngOnDestroy` (a
+  leaked body node otherwise survives navigating away mid-print-dialog). See
+  `docs/adr/0015-boarding-manifest-print-isolation.md` (first usage,
+  `BoardingListComponent.printManifest()`) — reuse this pattern for the next
+  print feature rather than reinventing the reveal-rule idiom.
 - **Don't fork or mutate a shared component's contract** to add a per-surface need —
   extend it with an optional, null-default `@Input()` so existing call sites stay
   byte-identical. (`CORE.md`: seat components, walk-in reuse.)

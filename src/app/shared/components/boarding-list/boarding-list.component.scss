@@ -1,3 +1,5 @@
+@import "../../../../styles/variables.scss";
+
 // OBRS-96: manual boarding-scan validation box. Uses the shared admin/staff
 // shell tokens (design-system §2/§3/§4/§11) — .admin-field pill input,
 // .admin-btn/.admin-btn-primary, .admin-status result banner — since this is
@@ -65,4 +67,24 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+// OBRS-100: print-only manifest content. This is stamped from a TemplateRef
+// that belongs to THIS component (via ViewContainerRef), so Angular's
+// emulated-encapsulation attribute travels with the DOM node even after the
+// CDK DomPortalOutlet moves it to a document.body child — these rules keep
+// applying post-teleport. No new colors: reuses Bootstrap's `.table`/
+// `.table-bordered` (same family as the on-screen table) rather than
+// introducing a raw hex border (design-system §2.2).
+.boarding-manifest-print {
+  background: $primary-white;
+  color: $text-black;
+}
+
+.boarding-manifest-print-meta {
+  row-gap: 8px;
+}
+
+.boarding-manifest-print-table {
+  width: 100%;
 }
