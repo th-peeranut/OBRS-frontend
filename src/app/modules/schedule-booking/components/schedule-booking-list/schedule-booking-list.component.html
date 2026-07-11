@@ -58,15 +58,11 @@
           <div class="text-container">
             <div class="price">
               {{ getPricePerSeat(departure.pricePerSeat) }}
-              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
+              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
             </div>
 
-            <div class="availability">
-              <span *ngIf="isLowSeats(departure.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-              <span *ngIf="isLowSeats(departure.availableSeats)">|</span>
-              <span>
-                {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
-              </span>
+            <div class="availability" *ngIf="isLowSeats(departure.availableSeats)">
+              <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
             </div>
           </div>
 
@@ -146,15 +142,11 @@
             <div class="text-container">
               <div class="price">
                 {{ getPricePerSeat(return.pricePerSeat) }}
-                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
+                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
               </div>
 
-              <div class="availability">
-                <span *ngIf="isLowSeats(return.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-                <span *ngIf="isLowSeats(return.availableSeats)">|</span>
-                <span>
-                  {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
-                </span>
+              <div class="availability" *ngIf="isLowSeats(return.availableSeats)">
+                <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
               </div>
             </div>
 

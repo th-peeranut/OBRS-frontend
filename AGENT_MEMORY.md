@@ -2135,3 +2135,29 @@ FE redeploy needed for that half of the contract).
   spec's prose, check what the backing query actually returns — an endpoint that pre-filters
   (`WHERE capacity - occupied >= :n`) can make an entire branch of a state machine unreachable.
   Would have caught this by reading `ScheduleRepository` before the first implementation pass.
+
+## OBRS-229 layout polish — price-unit moved off the availability line
+- Two more PO polish passes landed on top of the scarcity-only cut:
+  1. `SEAT_PER_PASSENGER` copy changed from "ราคา/คน" (price/person) to "/ที่นั่ง" (leading slash,
+     meant to read directly after the price) and the pipe separator was made conditional on
+     `isLowSeats(...)` (it had gone orphaned once the neutral-seats text was removed, so a `|`
+     with nothing after it could render on comfortable rows).
+  2. That conditional pipe still left a visible duplication on the *low* row — "เหลือ 3 ที่นั่ง | /ที่นั่ง"
+     put "ที่นั่ง" on the line twice. Fix: moved `SEAT_PER_PASSENGER` off the `.availability` line
+     entirely and onto the `.price` line as a `<span class="price-unit">` directly after
+     `BAHT_UNIT` (so it reads "200 บาท/ที่นั่ง", grouped with the price it actually describes), and
+     put `*ngIf="isLowSeats(...)"` on the `.availability` **div itself** rather than the inner span
+     — so the div (and the now-obsolete pipe) is entirely absent above the threshold, not just
+     empty. Comfortable rows: no `.availability` element in the DOM at all (no empty div, no gap).
+     Low rows: `.availability` contains only the red `SEAT_REMAIN {n} SEAT_UNIT` span, nothing else.
+  3. New `.price-unit` SCSS rule (small/muted — `$font-size-sm`/`$font-weight-regular`/
+     `$text-lightblack`) matches the look the old inline availability text had, so the price line
+     doesn't visually clash between the bold price number and the muted per-seat unit.
+  4. Spec fix: the "comfortable seats" tests previously queried `.availability` and asserted on its
+     (now nonexistent) text — `fixture.debugElement.query()` returns `null` for an absent element,
+     so calling `.nativeElement` on it throws. Rewrote both to assert `query('.availability')` is
+     falsy directly, and added a `.price .price-unit` assertion to the low-seat tests to lock in
+     the new price-line grouping.
+- No i18n changes needed for this final layout pass — `SEAT_PER_PASSENGER`'s "/ที่นั่ง"-shaped value
+  (already leading-slash in all three locales from the prior polish commit) works unchanged whether
+  it's read on the availability line or the price line.

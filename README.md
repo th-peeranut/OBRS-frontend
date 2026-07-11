@@ -461,17 +461,29 @@ the row's mere presence already implies availability.
 - `ScheduleBookingListComponent.LOW_SEAT_THRESHOLD = 5` is the current
   threshold; `isLowSeats(availableSeats)` wraps the predicate with it. Both
   legs (`departure`/`return`) call the same method — no duplicated logic.
-- Template convention (`schedule-booking-list.component.html`,
-  `.availability` block): a single `*ngIf="isLowSeats(...)"` span renders
-  `SCHEDULE_BOOKING.SEAT_REMAIN {n} SCHEDULE_BOOKING.SEAT_UNIT` with class
-  `seat-status seat-status--low`; when seats are comfortable, nothing
-  renders in its place. Reuse this pattern for any other surface that needs
-  a scarcity-only seat cue rather than re-deriving the threshold check
-  inline.
-- Styling: `.seat-status--low` (red, semibold) in the component SCSS. Dark
-  mode re-asserts the colour in `src/styles/dark-theme.scss` §14, next to
-  the existing `.text-error`/`.form-required` re-assert block, since the
-  blanket `.schedule-item *` dark-mode rule would otherwise wash it out to
+- Template convention (`schedule-booking-list.component.html`): the
+  `.availability` **div itself** carries `*ngIf="isLowSeats(...)"` — when
+  seats are comfortable the div is absent from the DOM entirely (no empty
+  wrapper, no layout gap), and when low it contains only a single
+  `seat-status seat-status--low` span rendering `SCHEDULE_BOOKING.SEAT_REMAIN
+  {n} SCHEDULE_BOOKING.SEAT_UNIT`. Reuse this pattern (`*ngIf` on the
+  container, not the inner text) for any other surface that needs a
+  scarcity-only cue rather than re-deriving the threshold check inline.
+- `SCHEDULE_BOOKING.SEAT_PER_PASSENGER` (a leading-slash string, e.g.
+  `/ที่นั่ง`) lives on the **`.price` line**, not the availability line — a
+  `<span class="price-unit">` directly after `BAHT_UNIT` so the price reads
+  as one grouped unit ("200 บาท/ที่นั่ง"). It used to sit in `.availability`
+  next to a `|` separator; once the neutral/sold-out branches were cut that
+  pipe went orphaned, and even conditioned on `isLowSeats(...)` it produced
+  a visible "ที่นั่ง" duplicated on the same line as the low-seat warning.
+  Grouping the per-seat unit with the price it actually describes removes
+  both problems at once.
+- Styling: `.seat-status--low` (red, semibold) on the availability span;
+  `.price-unit` (small, muted — matches the old availability-line look) on
+  the price-line unit. Dark mode re-asserts `.seat-status--low`'s colour in
+  `src/styles/dark-theme.scss` §14, next to the existing
+  `.text-error`/`.form-required` re-assert block, since the blanket
+  `.schedule-item *` dark-mode rule would otherwise wash it out to
   `$dk-text`.
 - The select button on both legs has no seat-based disable — every rendered
   row is already bookable per the search filter above, so it's always

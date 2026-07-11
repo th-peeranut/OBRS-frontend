@@ -322,7 +322,7 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     store = TestBed.inject(MockStore);
   });
 
-  it('departure leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class', () => {
+  it('departure leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class, and the price line carries SEAT_PER_PASSENGER', () => {
     render(5, 10);
     const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
     const text = (availability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
@@ -331,16 +331,20 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     expect(text).toContain('SCHEDULE_BOOKING.SEAT_UNIT');
     const lowEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--low'));
     expect(lowEl).toBeTruthy();
+
+    const priceUnit = fixture.debugElement.query(By.css('.schedule-item .price .price-unit'));
+    expect((priceUnit.nativeElement.textContent || '').trim()).toBe('SCHEDULE_BOOKING.SEAT_PER_PASSENGER');
   });
 
-  it('departure leg: comfortable seats (6) renders no seat-status text at all', () => {
+  it('departure leg: comfortable seats (6) renders no `.availability` block at all', () => {
     render(6, 10);
     const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
-    const text = (availability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
-    expect(text).not.toContain('6');
+    expect(availability).toBeFalsy();
     const lowEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--low'));
     expect(lowEl).toBeFalsy();
+
+    const priceUnit = fixture.debugElement.query(By.css('.schedule-item .price .price-unit'));
+    expect((priceUnit.nativeElement.textContent || '').trim()).toBe('SCHEDULE_BOOKING.SEAT_PER_PASSENGER');
   });
 
   it('return leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class', () => {
@@ -353,13 +357,10 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     expect(items[1].query(By.css('.seat-status--low'))).toBeTruthy();
   });
 
-  it('return leg: comfortable seats (6) renders no seat-status text at all', () => {
+  it('return leg: comfortable seats (6) renders no `.availability` block at all', () => {
     render(10, 6, true);
     const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
-    const returnAvailability = items[1].query(By.css('.availability'));
-    const text = (returnAvailability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
-    expect(text).not.toContain('6');
+    expect(items[1].query(By.css('.availability'))).toBeFalsy();
     expect(items[1].query(By.css('.seat-status--low'))).toBeFalsy();
   });
 });
