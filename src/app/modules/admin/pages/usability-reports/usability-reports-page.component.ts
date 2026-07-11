@@ -5,7 +5,6 @@ import { TranslateService } from '@ngx-translate/core';
 import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
@@ -13,11 +12,20 @@ import {
   UsabilityReportStatus,
   UsabilityReportSummary,
 } from '../../../../shared/interfaces/usability-report.interface';
-
-interface StatusOption {
-  value: string;
-  label: string;
-}
+import {
+  DETAIL_STATUS_VALUES,
+  STATUS_FILTER_VALUES,
+  StatusOption,
+  buildStatusOptionList,
+  categoryLabel as categoryLabelPure,
+  displayDateTime as displayDateTimePure,
+  formatBytes as formatBytesPure,
+  seedDecisionStatus,
+  statusClass as statusClassPure,
+  statusLabel as statusLabelPure,
+  toUsabilityReportDetailFallback,
+  updateRowStatus,
+} from './usability-reports-page.mappers';
 
 @Component({
   selector: 'app-usability-reports-page',
@@ -35,13 +43,6 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // Built from i18n in ngOnInit (and rebuilt on language change) so the admin
   // dropdowns match the translated status labels shown in the table.
   protected statusFilterOptions: StatusOption[] = [];
-  private readonly statusValues: UsabilityReportStatus[] = [
-    'new',
-    'in_review',
-    'accepted',
-    'resolved',
-    'rejected',
-  ];
 
   // Detail modal
   protected selectedReportId: string | null = null;
@@ -65,12 +66,6 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private readonly detailCache = new Map<string, UsabilityReportDetail>();
 
   private readonly destroy$ = new Subject<void>();
-
-  // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
-  // states, not outcomes an admin picks (design-system.md §3.1: no pre-seeded
-  // default; the admin must actively choose an outcome).
-  private static readonly DECISION_STATUSES: ReadonlySet<UsabilityReportStatus> =
-    new Set<UsabilityReportStatus>(['accepted', 'resolved', 'rejected']);
 
   constructor(
     private readonly store: UsabilityReportsStore,
@@ -167,28 +162,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     // Open optimistically: populate from the summary row already in hand
     // (design-system.md §6) instead of gating the modal on the awaited fetch.
     const summary = this.allReports.find((r) => r.id === id) ?? null;
-    this.detailReport = summary
-      ? {
-          id: summary.id,
-          category: summary.category,
-          status: summary.status,
-          userId: summary.userId,
-          reporterEmail: null,
-          description: summary.descriptionPreview,
-          descriptionPreview: summary.descriptionPreview,
-          routeUrl: '',
-          userAgent: '',
-          imageCount: summary.imageCount,
-          images: [],
-          createdAt: summary.createdAt,
-          triageNote: null,
-          triagedBy: null,
-          triagedByName: null,
-          triagedAt: null,
-          jiraIssueKey: null,
-          reporterNotifiedAt: null,
-        }
-      : null;
+    this.detailReport = summary ? toUsabilityReportDetailFallback(summary) : null;
     this.selectedDetailStatus = this.seedStatus(summary?.status ?? '');
     this.selectedTriageNote = '';
     this.isDetailFetching = true;
@@ -240,9 +214,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // — the dropdown starts empty (placeholder, Save disabled) until the admin
   // actively picks one (design-system.md §3.1).
   private seedStatus(status: UsabilityReportStatus | ''): UsabilityReportStatus | '' {
-    return UsabilityReportsPageComponent.DECISION_STATUSES.has(status as UsabilityReportStatus)
-      ? (status as UsabilityReportStatus)
-      : '';
+    return seedDecisionStatus(status);
   }
 
   // Best-effort, toast-free promote of a freshly-opened 'new' report to
@@ -285,7 +257,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private setRowStatus(id: string, status: UsabilityReportStatus): void {
     this.store.mutate((current) => ({
       ...current,
-      content: current.content.map((r) => (r.id === id ? { ...r, status } : r)),
+      content: updateRowStatus(current.content, id, status),
     }));
   }
 
@@ -358,9 +330,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     // Optimistic update
     this.store.mutate((current) => ({
       ...current,
-      content: current.content.map((r) =>
-        r.id === id ? { ...r, status } : r
-      ),
+      content: updateRowStatus(current.content, id, status),
     }));
 
     this.isSavingStatus = true;
@@ -391,22 +361,15 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   }
 
   protected categoryLabel(category: string): string {
-    const key = `USABILITY_REPORT.CATEGORY.${category.toUpperCase()}`;
-    return this.translate.instant(key);
+    return categoryLabelPure(category, (key) => this.translate.instant(key));
   }
 
   protected statusLabel(status: string): string {
-    const key = `ADMIN.USABILITY_REPORTS.STATUS.${status}`;
-    return this.translate.instant(key);
+    return statusLabelPure(status, (key) => this.translate.instant(key));
   }
 
   protected statusClass(status: string): string {
-    if (status === 'new') return 'is-warning';
-    if (status === 'in_review') return 'is-info';
-    if (status === 'accepted') return 'is-accepted';
-    if (status === 'resolved') return 'is-success';
-    if (status === 'rejected') return 'is-danger';
-    return '';
+    return statusClassPure(status);
   }
 
   protected trackById(_index: number, item: UsabilityReportSummary): string {
@@ -417,33 +380,21 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // current UI language (Thai default). Called from the template so it re-runs
   // on language change, matching categoryLabel/statusLabel above.
   protected displayDateTime(value: string | null | undefined): string {
-    return formatDisplayDateTime(value, this.translate.currentLang);
+    return displayDateTimePure(value, this.translate.currentLang);
   }
 
   protected formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return formatBytesPure(bytes);
   }
 
-  protected detailStatusOptions: StatusOption[] = [];
   // Decision-only subset for the detail modal's status dropdown — 'new' and
   // 'in_review' are triage states an admin cannot select as an outcome, only
   // land on automatically (list default / auto-promote-on-open above).
-  private readonly detailStatusValues: UsabilityReportStatus[] = [
-    'accepted',
-    'resolved',
-    'rejected',
-  ];
+  protected detailStatusOptions: StatusOption[] = [];
 
   private buildStatusOptions(): void {
-    this.statusFilterOptions = this.statusValues.map((value) => ({
-      value,
-      label: this.translate.instant(`ADMIN.USABILITY_REPORTS.STATUS.${value}`),
-    }));
-    this.detailStatusOptions = this.detailStatusValues.map((value) => ({
-      value,
-      label: this.translate.instant(`ADMIN.USABILITY_REPORTS.STATUS.${value}`),
-    }));
+    const translateFn = (key: string) => this.translate.instant(key);
+    this.statusFilterOptions = buildStatusOptionList(STATUS_FILTER_VALUES, translateFn);
+    this.detailStatusOptions = buildStatusOptionList(DETAIL_STATUS_VALUES, translateFn);
   }
 }
