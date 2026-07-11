@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { extractApiErrorMessage } from './api-error';
+import { extractApiErrorMessage, statusAlertMessageKey } from './api-error';
 
 describe('extractApiErrorMessage', () => {
   it('prefers the backend ApiErrorResponse message', () => {
@@ -37,5 +37,28 @@ describe('extractApiErrorMessage', () => {
   it('returns "" for unknown error shapes', () => {
     expect(extractApiErrorMessage('nope')).toBe('');
     expect(extractApiErrorMessage(null)).toBe('');
+  });
+});
+
+describe('statusAlertMessageKey', () => {
+  it('maps a 503 to the dedicated service-unavailable i18n key', () => {
+    const error = new HttpErrorResponse({
+      status: 503,
+      error: { message: 'An unexpected error occurred.', errorCode: 'UNEXPECTED_ERROR' },
+    });
+    expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.SERVICE_UNAVAILABLE');
+  });
+
+  it('returns null for other statuses so their message is unchanged', () => {
+    for (const status of [400, 401, 403, 404, 409, 429, 500, 502, 504]) {
+      const error = new HttpErrorResponse({ status, error: { message: 'x' } });
+      expect(statusAlertMessageKey(error)).toBeNull();
+    }
+  });
+
+  it('returns null for a non-HttpErrorResponse error', () => {
+    expect(statusAlertMessageKey(new Error('boom'))).toBeNull();
+    expect(statusAlertMessageKey(null)).toBeNull();
+    expect(statusAlertMessageKey('nope')).toBeNull();
   });
 });

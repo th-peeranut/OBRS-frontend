@@ -296,6 +296,9 @@
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
     "CLOSE": "Close",
+    "ERROR": {
+      "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
+    },
     "EXPORT": {
       "BUTTON_LABEL": "Export",
       "FORMAT_CSV": "CSV",
