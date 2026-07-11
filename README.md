@@ -443,33 +443,36 @@ from data already on the page.
 
 ## Seat-scarcity display (OBRS-229)
 
-The schedule-booking list no longer always shows the exact remaining-seat
-count — it only surfaces the number when seats are scarce, per a coarse
-three-bucket status:
+The schedule-booking list surfaces the exact remaining-seat count **only**
+when seats are scarce; otherwise no seat-count text renders at all. This is
+scarcity-only by design, not a full available/low/sold-out tri-state — the
+search endpoint (`ScheduleRepository.searchSchedulesWithAvailability`)
+already filters out any schedule without enough seats for the requested
+party (`AND (capacity - occupied) >= :numberOfPassengers`), so a sold-out
+row can never reach this component; every row shown here is bookable. A
+neutral "seats available" label was considered and dropped as redundant —
+the row's mere presence already implies availability.
 
-- **`getSeatAvailabilityStatus(availableSeats, threshold)`**
-  (`src/app/shared/lib/trip-format.ts`) is the single pure classifier:
-  `'sold-out'` at `<= 0` (or missing) seats, `'low'` at `<= threshold`
-  (inclusive), else `'available'`.
+- **`isLowSeatCount(availableSeats, threshold)`**
+  (`src/app/shared/lib/trip-format.ts`) is the single pure predicate:
+  `true` for `1..threshold` seats (inclusive), `false` otherwise — including
+  `0`/missing, which is deliberately not a "warning" case since it can't
+  occur here.
 - `ScheduleBookingListComponent.LOW_SEAT_THRESHOLD = 5` is the current
-  threshold; `seatStatus(availableSeats)` wraps the classifier with it. Both
+  threshold; `isLowSeats(availableSeats)` wraps the predicate with it. Both
   legs (`departure`/`return`) call the same method — no duplicated logic.
-- Template convention (`schedule-booking-list.component.html`, `.availability`
-  block): an `[ngSwitch]` over `seatStatus(...)` renders exactly one of
-  `SCHEDULE_BOOKING.SEAT_FULL` (sold-out), `SCHEDULE_BOOKING.SEAT_REMAIN {n}
-  SCHEDULE_BOOKING.SEAT_UNIT` (low — the only case that shows the raw
-  number), or `SCHEDULE_BOOKING.SEAT_AVAILABLE` (available, no number). Reuse
-  this switch pattern for any other surface that needs a scarcity-aware seat
-  display rather than re-deriving the bucket inline.
-- Sold-out is a **real** disabled state on the `select-btn`
-  (`[disabled]="…availableSeats === 0"` alongside the existing
-  `select-btn-diabled` class for styling) — previously the class only checked
-  `list.length === 0` inside the row's own `*ngFor`, which could never be
-  true for a rendered row, so a sold-out row's button was clickable.
-- Styling: `.seat-status--low` (red, semibold) and `.seat-status--full`
-  (light-grey, medium) in the component SCSS; `.seat-status--available` needs
-  no rule (inherits `.availability`'s colour). Dark mode re-asserts both
-  colours in `src/styles/dark-theme.scss` §14, next to the existing
-  `.text-error`/`.form-required` re-assert block, since the blanket
-  `.schedule-item *` dark-mode rule would otherwise wash them out to
+- Template convention (`schedule-booking-list.component.html`,
+  `.availability` block): a single `*ngIf="isLowSeats(...)"` span renders
+  `SCHEDULE_BOOKING.SEAT_REMAIN {n} SCHEDULE_BOOKING.SEAT_UNIT` with class
+  `seat-status seat-status--low`; when seats are comfortable, nothing
+  renders in its place. Reuse this pattern for any other surface that needs
+  a scarcity-only seat cue rather than re-deriving the threshold check
+  inline.
+- Styling: `.seat-status--low` (red, semibold) in the component SCSS. Dark
+  mode re-asserts the colour in `src/styles/dark-theme.scss` §14, next to
+  the existing `.text-error`/`.form-required` re-assert block, since the
+  blanket `.schedule-item *` dark-mode rule would otherwise wash it out to
   `$dk-text`.
+- The select button on both legs has no seat-based disable — every rendered
+  row is already bookable per the search filter above, so it's always
+  enabled.

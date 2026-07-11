@@ -62,11 +62,7 @@
             </div>
 
             <div class="availability">
-              <ng-container [ngSwitch]="seatStatus(departure.availableSeats)">
-                <span *ngSwitchCase="'sold-out'" class="seat-status seat-status--full">{{ "SCHEDULE_BOOKING.SEAT_FULL" | translate }}</span>
-                <span *ngSwitchCase="'low'" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-                <span *ngSwitchDefault class="seat-status seat-status--available">{{ "SCHEDULE_BOOKING.SEAT_AVAILABLE" | translate }}</span>
-              </ng-container>
+              <span *ngIf="isLowSeats(departure.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
               <span>|</span>
               <span>
                 {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
@@ -79,8 +75,6 @@
             class="select-btn"
             type="button"
             (click)="selectSchedule(departure, true)"
-            [disabled]="departure.availableSeats === 0"
-            [class.select-btn-diabled]="departure.availableSeats === 0"
           >
             {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
           </button>
@@ -156,11 +150,7 @@
               </div>
 
               <div class="availability">
-                <ng-container [ngSwitch]="seatStatus(return.availableSeats)">
-                  <span *ngSwitchCase="'sold-out'" class="seat-status seat-status--full">{{ "SCHEDULE_BOOKING.SEAT_FULL" | translate }}</span>
-                  <span *ngSwitchCase="'low'" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
-                  <span *ngSwitchDefault class="seat-status seat-status--available">{{ "SCHEDULE_BOOKING.SEAT_AVAILABLE" | translate }}</span>
-                </ng-container>
+                <span *ngIf="isLowSeats(return.availableSeats)" class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
                 <span>|</span>
                 <span>
                   {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
@@ -172,8 +162,6 @@
               class="select-btn"
               (click)="selectSchedule(return, false)"
               type="button"
-              [disabled]="return.availableSeats === 0"
-              [class.select-btn-diabled]="return.availableSeats === 0"
             >
               {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
             </button>

@@ -57,24 +57,20 @@ export function parsePricePerSeat(value: string | number | null | undefined): nu
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-/** Coarse remaining-seat bucket for a schedule row, used to decide whether to
- *  show the exact remaining count (scarcity signal) or a neutral/sold-out
- *  status instead of always exposing the raw number. */
-export type SeatAvailabilityStatus = 'sold-out' | 'low' | 'available';
-
 /**
- * Classifies `availableSeats` against `threshold` into a display bucket.
- * `0` (or missing) seats is always `'sold-out'`; `<= threshold` is `'low'`
- * (inclusive); anything above is `'available'`.
+ * Whether a schedule row's remaining-seat count should be surfaced as a
+ * scarcity warning: `1..threshold` seats (inclusive). `0`/missing seats is
+ * deliberately `false` (no warning) — the search endpoint
+ * (`ScheduleRepository.searchSchedulesWithAvailability`) already filters out
+ * any schedule without enough seats for the party, so a sold-out row never
+ * reaches this component; every row shown here is bookable. Above the
+ * threshold is also `false` — the exact count is only shown when scarce.
  */
-export function getSeatAvailabilityStatus(
+export function isLowSeatCount(
   availableSeats: number | null | undefined,
   threshold: number
-): SeatAvailabilityStatus {
-  const seats = availableSeats ?? 0;
-  if (seats <= 0) return 'sold-out';
-  if (seats <= threshold) return 'low';
-  return 'available';
+): boolean {
+  return availableSeats != null && availableSeats > 0 && availableSeats <= threshold;
 }
 
 /**

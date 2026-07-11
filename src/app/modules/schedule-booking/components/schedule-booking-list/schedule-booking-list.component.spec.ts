@@ -333,30 +333,14 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     expect(lowEl).toBeTruthy();
   });
 
-  it('departure leg: comfortable seats (6) renders SEAT_AVAILABLE only, with no seat number', () => {
+  it('departure leg: comfortable seats (6) renders no seat-status text at all', () => {
     render(6, 10);
     const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
     const text = (availability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).toContain('SCHEDULE_BOOKING.SEAT_AVAILABLE');
     expect(text).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
     expect(text).not.toContain('6');
-    const availableEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--available'));
-    expect(availableEl).toBeTruthy();
-  });
-
-  it('departure leg: 0 seats renders SEAT_FULL, disables the select button, and blocks selectSchedule', () => {
-    render(0, 10);
-    const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
-    const text = (availability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).toContain('SCHEDULE_BOOKING.SEAT_FULL');
-
-    const selectBtn = fixture.debugElement.query(By.css('.schedule-item .select-btn'))
-      .nativeElement as HTMLButtonElement;
-    expect(selectBtn.disabled).toBe(true);
-
-    const selectSpy = spyOn(component, 'selectSchedule');
-    selectBtn.click();
-    expect(selectSpy).not.toHaveBeenCalled();
+    const lowEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--low'));
+    expect(lowEl).toBeFalsy();
   });
 
   it('return leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class', () => {
@@ -369,28 +353,13 @@ describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', ()
     expect(items[1].query(By.css('.seat-status--low'))).toBeTruthy();
   });
 
-  it('return leg: comfortable seats (6) renders SEAT_AVAILABLE only, with no seat number', () => {
+  it('return leg: comfortable seats (6) renders no seat-status text at all', () => {
     render(10, 6, true);
     const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
     const returnAvailability = items[1].query(By.css('.availability'));
     const text = (returnAvailability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).toContain('SCHEDULE_BOOKING.SEAT_AVAILABLE');
     expect(text).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
     expect(text).not.toContain('6');
-  });
-
-  it('return leg: 0 seats renders SEAT_FULL, disables the select button, and blocks selectSchedule', () => {
-    render(10, 0, true);
-    const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
-    const returnAvailability = items[1].query(By.css('.availability'));
-    const text = (returnAvailability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
-    expect(text).toContain('SCHEDULE_BOOKING.SEAT_FULL');
-
-    const selectBtn = items[1].query(By.css('.select-btn')).nativeElement as HTMLButtonElement;
-    expect(selectBtn.disabled).toBe(true);
-
-    const selectSpy = spyOn(component, 'selectSchedule');
-    selectBtn.click();
-    expect(selectSpy).not.toHaveBeenCalled();
+    expect(items[1].query(By.css('.seat-status--low'))).toBeFalsy();
   });
 });

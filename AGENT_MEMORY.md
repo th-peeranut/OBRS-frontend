@@ -2098,3 +2098,40 @@ FE redeploy needed for that half of the contract).
   in this worktree via `npm ci`, no shared `node_modules`). `ng build --configuration production`:
   clean, 1.49 MB initial (under the 1.5 MB warning budget). `npx tsc --noEmit -p tsconfig.app.json`:
   clean.
+
+## OBRS-229 follow-up — PO reduced to scarcity-only after grounding in the real query
+- PO re-grounded in the actual search query — `ScheduleRepository.searchSchedulesWithAvailability`
+  (line 65: `AND (capacity - occupied) >= :numberOfPassengers`) filters OUT any schedule that
+  doesn't have enough seats for the party, so a sold-out (0-seat) row can **never** appear in
+  search results, and every row shown is already bookable. That made both the neutral "seats
+  available" label and the sold-out/disabled-button handling from the first pass dead code —
+  unreachable given how the backend actually queries.
+- Reduced the whole feature to a single boolean predicate, replacing the three-bucket classifier:
+  `getSeatAvailabilityStatus()`/`SeatAvailabilityStatus` → `isLowSeatCount(availableSeats,
+  threshold): boolean` — `true` for `1..threshold` (inclusive), `false` for everything else
+  including `0`/missing (deliberately not a "warning" — it just can't happen here).
+  `seatStatus()` → `isLowSeats()` on the component, same wrapper shape.
+- Template: the `[ngSwitch]` over three cases collapsed to a single `*ngIf="isLowSeats(...)"` span
+  — low seats show `SEAT_REMAIN {n} SEAT_UNIT` in `.seat-status--low`; anything else renders
+  nothing (no text, no wrapper element) instead of a neutral "available" label.
+- **Removed the sold-out button disable added in the first pass** (`[disabled]="…availableSeats
+  === 0"` / `[class.select-btn-diabled]="…availableSeats === 0"` on both legs) — dead per the same
+  grounding, since a 0-seat row never reaches this component. Restored both buttons to their
+  pre-OBRS-229 bindings with no seat-count condition at all (did NOT reinstate the original
+  `list.length === 0` dead code either — that was already established as unreachable in the first
+  pass and stays gone).
+- i18n: removed `SCHEDULE_BOOKING.SEAT_AVAILABLE`/`SEAT_FULL` from all three locale files (now
+  unused); kept `SEAT_REMAIN`/`SEAT_UNIT` (still used by the low-seat span). Note there is an
+  unrelated, pre-existing `SEAT_AVAILABLE` key elsewhere in each locale file (a different feature's
+  seat-map block) — left untouched, only the `SCHEDULE_BOOKING.*` ones were removed.
+- SCSS: removed `.seat-status--full` from the component SCSS and its dark-theme re-assert in
+  `dark-theme.scss` §14; kept `.seat-status--low` in both. Left the now-unreferenced
+  `.select-btn-diabled` SCSS rule alone (harmless, out of scope to hunt down).
+- Spec: replaced the six-test seat-scarcity block (sold-out/low/available × 2 legs) with a
+  four-test block (low/comfortable × 2 legs) — comfortable-seats assertions now check that
+  `.seat-status--low` is absent and no `SEAT_REMAIN` text renders, rather than asserting a
+  different (now-deleted) neutral label.
+- **Lesson for future OBRS-229-shaped work**: before designing a multi-state UI purely from a UX
+  spec's prose, check what the backing query actually returns — an endpoint that pre-filters
+  (`WHERE capacity - occupied >= :n`) can make an entire branch of a state machine unreachable.
+  Would have caught this by reading `ScheduleRepository` before the first implementation pass.

@@ -1127,8 +1127,6 @@
     "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
-    "SEAT_AVAILABLE": "Seats available",
-    "SEAT_FULL": "Full",
     "SEAT_PER_PASSENGER": "price/person",
     "CHOOSE": "select",
     "CHANGE": "change data",

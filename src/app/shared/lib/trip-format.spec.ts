@@ -4,7 +4,7 @@ import {
   durationMinutes,
   durationMinutesTotal,
   formatTimeHHMM,
-  getSeatAvailabilityStatus,
+  isLowSeatCount,
   parsePricePerSeat,
   tripEstimateFromStops,
 } from './trip-format';
@@ -85,22 +85,22 @@ describe('trip-format', () => {
     });
   });
 
-  describe('getSeatAvailabilityStatus', () => {
-    it('is "low" when seats equal the threshold (inclusive)', () => {
-      expect(getSeatAvailabilityStatus(5, 5)).toBe('low');
+  describe('isLowSeatCount', () => {
+    it('is true when seats equal the threshold (inclusive)', () => {
+      expect(isLowSeatCount(5, 5)).toBe(true);
     });
 
-    it('is "available" when seats exceed the threshold', () => {
-      expect(getSeatAvailabilityStatus(6, 5)).toBe('available');
+    it('is false when seats exceed the threshold', () => {
+      expect(isLowSeatCount(6, 5)).toBe(false);
     });
 
-    it('is "sold-out" when seats are 0', () => {
-      expect(getSeatAvailabilityStatus(0, 5)).toBe('sold-out');
+    it('is false when seats are 0 (sold-out rows never reach this component)', () => {
+      expect(isLowSeatCount(0, 5)).toBe(false);
     });
 
-    it('is "sold-out" when seats are null/undefined', () => {
-      expect(getSeatAvailabilityStatus(null, 5)).toBe('sold-out');
-      expect(getSeatAvailabilityStatus(undefined, 5)).toBe('sold-out');
+    it('is false when seats are null/undefined', () => {
+      expect(isLowSeatCount(null, 5)).toBe(false);
+      expect(isLowSeatCount(undefined, 5)).toBe(false);
     });
   });
 
