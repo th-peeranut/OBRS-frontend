@@ -24,7 +24,7 @@
 
     <div class="ticket-divider"></div>
 
-    <div class="ticket-grid">
+    <div class="ticket-grid ticket-summary-grid">
       <div class="ticket-item">
         <span class="label">{{ "E_TICKET.LABEL.BOOKING_REF" | translate }}</span>
         <span class="value">{{ bookingNumber }}</span>
@@ -33,51 +33,65 @@
         <span class="label">{{ "E_TICKET.LABEL.TICKET_NO" | translate }}</span>
         <span class="value">{{ ticketNumber }}</span>
       </div>
-      <div class="ticket-item">
-        <span class="label">{{ "E_TICKET.LABEL.TRAVEL_DATE" | translate }}</span>
-        <span class="value">{{ travelDate }}</span>
-      </div>
-      <div class="ticket-item">
-        <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
-        <span class="value">{{ travelTime }}</span>
-      </div>
     </div>
 
-    <div class="ticket-route">
-      <div class="ticket-item full">
-        <span class="label">{{ "E_TICKET.LABEL.ROUTE" | translate }}</span>
-        <span class="value">{{ route }}</span>
+    <ng-container
+      *ngFor="let leg of legs; let i = index; trackBy: trackByIndex"
+    >
+      <ng-container *ngIf="legs.length > 1">
+        <div class="ticket-divider"></div>
+        <div class="ticket-leg-heading">
+          {{ (i === 0 ? "E_TICKET.LABEL.LEG_OUTBOUND" : "E_TICKET.LABEL.LEG_RETURN") | translate }}
+        </div>
+      </ng-container>
+
+      <div class="ticket-leg">
+        <div class="ticket-grid">
+          <div class="ticket-item">
+            <span class="label">{{ "E_TICKET.LABEL.TRAVEL_DATE" | translate }}</span>
+            <span class="value">{{ leg.travelDate }}</span>
+          </div>
+          <div class="ticket-item">
+            <span class="label">{{ "E_TICKET.LABEL.TRAVEL_TIME" | translate }}</span>
+            <span class="value">{{ leg.travelTime }}</span>
+          </div>
+        </div>
+
+        <div class="ticket-route">
+          <div class="ticket-item full">
+            <span class="label">{{ "E_TICKET.LABEL.ROUTE" | translate }}</span>
+            <span class="value">{{ leg.route }}</span>
+          </div>
+          <div class="ticket-item full" *ngIf="leg.distanceKm != null">
+            <small class="trip-estimate">
+              ≈ {{ leg.distanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}
+            </small>
+          </div>
+          <div class="ticket-grid">
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>
+              <span class="value">{{ leg.origin }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.DESTINATION" | translate }}</span>
+              <span class="value">{{ leg.destination }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.VEHICLE_TYPE" | translate }}</span>
+              <span class="value">{{ leg.vehicleType }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.VEHICLE_PLATE" | translate }}</span>
+              <span class="value">{{ leg.vehiclePlate }}</span>
+            </div>
+            <div class="ticket-item">
+              <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
+              <span class="value">{{ leg.seats }}</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="ticket-item full" *ngIf="estimateDistanceKm != null">
-        <small class="trip-estimate">
-          ≈ {{ estimateDistanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}<ng-container
-            *ngIf="returnEstimateDistanceKm != null && returnEstimateDistanceKm !== estimateDistanceKm"
-          > / ≈ {{ returnEstimateDistanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}</ng-container>
-        </small>
-      </div>
-      <div class="ticket-grid">
-        <div class="ticket-item">
-          <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>
-          <span class="value">{{ origin }}</span>
-        </div>
-        <div class="ticket-item">
-          <span class="label">{{ "E_TICKET.LABEL.DESTINATION" | translate }}</span>
-          <span class="value">{{ destination }}</span>
-        </div>
-        <div class="ticket-item">
-          <span class="label">{{ "E_TICKET.LABEL.VEHICLE_TYPE" | translate }}</span>
-          <span class="value">{{ vehicleType }}</span>
-        </div>
-        <div class="ticket-item">
-          <span class="label">{{ "E_TICKET.LABEL.VEHICLE_PLATE" | translate }}</span>
-          <span class="value">{{ vehiclePlate }}</span>
-        </div>
-        <div class="ticket-item">
-          <span class="label">{{ "E_TICKET.LABEL.SEAT" | translate }}</span>
-          <span class="value">{{ seats }}</span>
-        </div>
-      </div>
-    </div>
+    </ng-container>
 
     <ng-container *ngIf="booker">
       <div class="ticket-divider dotted"></div>

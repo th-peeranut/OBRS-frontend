@@ -1447,7 +1447,9 @@
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
       "TOTAL_UNIT": "baht",
-      "ESTIMATE_KM_UNIT": "km"
+      "ESTIMATE_KM_UNIT": "km",
+      "LEG_OUTBOUND": "Outbound",
+      "LEG_RETURN": "Return"
     },
     "QR_HINT": "QR code is used for identity verification before boarding only.",
     "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",

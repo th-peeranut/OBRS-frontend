@@ -27,20 +27,11 @@
         *ngIf="!loading && !error && card"
         [bookingNumber]="card.bookingNumber"
         [ticketNumber]="card.ticketNumber"
-        [travelDate]="card.travelDate"
-        [travelTime]="card.travelTime"
-        [route]="card.route"
-        [origin]="card.origin"
-        [destination]="card.destination"
-        [vehicleType]="card.vehicleType"
-        [vehiclePlate]="card.vehiclePlate"
-        [seats]="card.seats"
+        [legs]="card.legs"
         [paymentDate]="card.paymentDate"
         [totalAmount]="card.totalAmount"
         [passengers]="card.passengers"
         [booker]="card.booker"
-        [estimateDistanceKm]="card.estimateDistanceKm"
-        [returnEstimateDistanceKm]="card.returnEstimateDistanceKm"
       ></app-e-ticket-card>
     </div>
   </div>

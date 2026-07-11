@@ -100,6 +100,25 @@
   gap: $space-xs 16px;
 }
 
+// Scoped to the shared booking-ref/ticket-no grid only — preserves today's row
+// cadence now that travel date/time moved into the per-leg block below it.
+.ticket-summary-grid {
+  margin-bottom: $space-xs;
+}
+
+.ticket-leg {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.ticket-leg-heading {
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-lightblack; // static token: the ticket card is intentionally exempt from dark theming (dark-theme.scss §15 paper look) — matches sibling captions, do NOT use a runtime --accent* var
+  margin-bottom: $space-2xs;
+}
+
 .ticket-item {
   display: flex;
   flex-direction: column;
