@@ -267,3 +267,100 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     expect(text).not.toContain('ESTIMATE_MIN_UNIT');
   });
 });
+
+describe('ScheduleBookingListComponent (seat-scarcity display — OBRS-229)', () => {
+  let fixture: ComponentFixture<ScheduleBookingListComponent>;
+  let component: ScheduleBookingListComponent;
+  let store: MockStore;
+
+  function makeSchedule(id: number, availableSeats: number): Schedule {
+    return {
+      id,
+      vehicleType: 'van',
+      departureDateTime: '2030-06-17T08:00:00+07:00',
+      arrivalDateTime: '2030-06-17T09:58:00+07:00',
+      pricePerSeat: '200',
+      availableSeats,
+      availableSeatNumbers: [],
+      routeSlug: 'chonburi-bangkok',
+    };
+  }
+
+  // `isSelectFirst` gates which button renders: the departure leg's
+  // `.select-btn` only shows while `false` (its first-choose state), and the
+  // return leg only renders at all while `true` (after the first choose) —
+  // so departure- and return-leg button assertions need different states.
+  function render(departureSeats: number, arrivalSeats: number | null, isSelectFirst = false): void {
+    const departureSchedule = makeSchedule(1, departureSeats);
+    const arrivalSchedules = arrivalSeats === null ? [] : [makeSchedule(2, arrivalSeats)];
+
+    store.overrideSelector(selectScheduleList, {
+      departureSchedules: [departureSchedule],
+      arrivalSchedules,
+    } as ScheduleList);
+    store.overrideSelector(selectScheduleFilter, null as any);
+    store.overrideSelector(selectProvinceWithStation, [] as any);
+
+    fixture = TestBed.createComponent(ScheduleBookingListComponent);
+    component = fixture.componentInstance;
+    // ngOnInit (run by the first detectChanges) resets isSelectFirst to
+    // false, so it must be set only after that initial change-detection pass.
+    fixture.detectChanges();
+    component.isSelectFirst = isSelectFirst;
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [ScheduleBookingListComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        provideMockStore(),
+        { provide: RouteMapService, useValue: createRouteMapServiceStub() },
+      ],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  it('departure leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class, and the price line carries SEAT_PER_PASSENGER', () => {
+    render(5, 10);
+    const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
+    const text = (availability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
+    expect(text).toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+    expect(text).toContain('5');
+    expect(text).toContain('SCHEDULE_BOOKING.SEAT_UNIT');
+    const lowEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--low'));
+    expect(lowEl).toBeTruthy();
+
+    const priceUnit = fixture.debugElement.query(By.css('.schedule-item .price .price-unit'));
+    expect((priceUnit.nativeElement.textContent || '').trim()).toBe('SCHEDULE_BOOKING.SEAT_PER_PASSENGER');
+  });
+
+  it('departure leg: comfortable seats (6) renders no `.availability` block at all', () => {
+    render(6, 10);
+    const availability = fixture.debugElement.query(By.css('.schedule-item .availability'));
+    expect(availability).toBeFalsy();
+    const lowEl = fixture.debugElement.query(By.css('.schedule-item .seat-status--low'));
+    expect(lowEl).toBeFalsy();
+
+    const priceUnit = fixture.debugElement.query(By.css('.schedule-item .price .price-unit'));
+    expect((priceUnit.nativeElement.textContent || '').trim()).toBe('SCHEDULE_BOOKING.SEAT_PER_PASSENGER');
+  });
+
+  it('return leg: low seats (5) renders SEAT_REMAIN + count + SEAT_UNIT with the low status class', () => {
+    render(10, 5, true);
+    const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    const returnAvailability = items[1].query(By.css('.availability'));
+    const text = (returnAvailability.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
+    expect(text).toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+    expect(text).toContain('5');
+    expect(items[1].query(By.css('.seat-status--low'))).toBeTruthy();
+  });
+
+  it('return leg: comfortable seats (6) renders no `.availability` block at all', () => {
+    render(10, 6, true);
+    const items = fixture.debugElement.queryAll(By.css('.schedule-item'));
+    expect(items[1].query(By.css('.availability'))).toBeFalsy();
+    expect(items[1].query(By.css('.seat-status--low'))).toBeFalsy();
+  });
+});

@@ -1231,7 +1231,7 @@
     "BAHT_UNIT": "baht",
     "SEAT_REMAIN": "remaining",
     "SEAT_UNIT": "seats",
-    "SEAT_PER_PASSENGER": "price/person",
+    "SEAT_PER_PASSENGER": "/seat",
     "CHOOSE": "select",
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",

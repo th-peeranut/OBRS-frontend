@@ -2515,6 +2515,7 @@ FE redeploy needed for that half of the contract).
   is older tech debt, left out of this scope.)
 - Verified: `npx tsc --noEmit -p tsconfig.app.json` clean after the change; no spec referenced
   the private method (public behavior unchanged).
+
 ---
 
 ## OBRS-100 scrutinize self-fix — global @media print rule blank-printed the whole app
@@ -2564,3 +2565,110 @@ explicitly invoked. An unconditional global print rule is a whole-app regression
   real path. Pattern: when a reconciliation changes a URL/contract, grep the
   matching store/service JSDoc for the OLD path — code was correct, only the
   doc lied.
+
+## OBRS-229 seat-scarcity display (schedule-booking list)
+- Goal: stop always exposing the exact remaining-seat count on the search-results page. New pure
+  classifier `getSeatAvailabilityStatus(availableSeats, threshold)` in `shared/lib/trip-format.ts`
+  (same file as the other trip-row formatters) buckets into `'sold-out'` (`<= 0`/missing),
+  `'low'` (`<= threshold`, inclusive), `'available'`. `ScheduleBookingListComponent` wraps it with
+  `LOW_SEAT_THRESHOLD = 5` via `seatStatus(availableSeats)`; both legs (departure/return) call the
+  same method — no duplicated bucket logic.
+- Template: an `[ngSwitch]` over `seatStatus(...)` in the `.availability` block, identical shape on
+  both legs — `SEAT_FULL` (sold-out), `SEAT_REMAIN {n} SEAT_UNIT` (low — the only branch that shows
+  the raw number, reusing the pre-existing `SEAT_REMAIN`/`SEAT_UNIT` keys unchanged), `SEAT_AVAILABLE`
+  (available, no number).
+- **Fixed a real dead-code bug while wiring the disabled state**: the existing
+  `[class.select-btn-diabled]="departureList.length === 0"` (and the return-leg equivalent) sat
+  inside the `*ngFor` over that same list — a rendered row's list can never have `length === 0`, so
+  sold-out styling could never actually fire and the button stayed clickable. Rewired to the
+  per-row `departure.availableSeats === 0` / `return.availableSeats === 0` and added a native
+  `[disabled]` binding alongside it (kept the existing typo'd class name `select-btn-diabled`
+  verbatim — renaming it was out of scope, and the SCSS already targets it).
+- Styling: `.seat-status--low` (red/semibold) and `.seat-status--full` (light-grey/medium) added
+  next to `.availability` in the component SCSS, using existing tokens
+  (`$text-red`, `$text-lightgrey`, `$font-weight-semibold`, `$font-weight-medium`) — no new hex.
+  `.seat-status--available` needs no rule (inherits `.availability`'s color).
+- Dark mode: `dark-theme.scss` §14 has a blanket `.schedule-item, .schedule-item * { color:
+  $dk-text !important; }` that would wash out both new colors. Followed the existing re-assert
+  precedent immediately below it (the `.text-error`/`.form-required` block) and added
+  `.schedule-item .seat-status--low { color: $dk-danger !important; }` /
+  `.schedule-item .seat-status--full { color: $dk-text-muted !important; }` — same pattern, same
+  location, no new tokens.
+- Added `SCHEDULE_BOOKING.SEAT_AVAILABLE`/`SEAT_FULL` to all three locale files in the same commit,
+  right next to the existing `SEAT_REMAIN`/`SEAT_UNIT` keys (kept unchanged, still used by the
+  `low` branch).
+- **Test gotcha hit while writing the return-leg spec**: `ngOnInit` unconditionally resets
+  `this.isSelectFirst = false`, which runs on the *first* `fixture.detectChanges()`. Setting
+  `component.isSelectFirst = true` before that first `detectChanges()` gets silently overwritten —
+  the return leg's `*ngIf="isSelectFirst"` wrapper never renders and `.schedule-item` queries come
+  back with only the departure row. Fix: call `detectChanges()` once (runs `ngOnInit`), then set
+  `isSelectFirst`, then call `detectChanges()` again to re-render with the leg visible.
+- Frontend-only, no backend/NgRx change (`LOW_SEAT_THRESHOLD` is a component constant, not a
+  server-driven config — no contract request needed).
+- `ng test --watch=false --browsers ChromeHeadless`: 1306/1306 green (1005 packages installed fresh
+  in this worktree via `npm ci`, no shared `node_modules`). `ng build --configuration production`:
+  clean, 1.49 MB initial (under the 1.5 MB warning budget). `npx tsc --noEmit -p tsconfig.app.json`:
+  clean.
+
+## OBRS-229 follow-up — PO reduced to scarcity-only after grounding in the real query
+- PO re-grounded in the actual search query — `ScheduleRepository.searchSchedulesWithAvailability`
+  (line 65: `AND (capacity - occupied) >= :numberOfPassengers`) filters OUT any schedule that
+  doesn't have enough seats for the party, so a sold-out (0-seat) row can **never** appear in
+  search results, and every row shown is already bookable. That made both the neutral "seats
+  available" label and the sold-out/disabled-button handling from the first pass dead code —
+  unreachable given how the backend actually queries.
+- Reduced the whole feature to a single boolean predicate, replacing the three-bucket classifier:
+  `getSeatAvailabilityStatus()`/`SeatAvailabilityStatus` → `isLowSeatCount(availableSeats,
+  threshold): boolean` — `true` for `1..threshold` (inclusive), `false` for everything else
+  including `0`/missing (deliberately not a "warning" — it just can't happen here).
+  `seatStatus()` → `isLowSeats()` on the component, same wrapper shape.
+- Template: the `[ngSwitch]` over three cases collapsed to a single `*ngIf="isLowSeats(...)"` span
+  — low seats show `SEAT_REMAIN {n} SEAT_UNIT` in `.seat-status--low`; anything else renders
+  nothing (no text, no wrapper element) instead of a neutral "available" label.
+- **Removed the sold-out button disable added in the first pass** (`[disabled]="…availableSeats
+  === 0"` / `[class.select-btn-diabled]="…availableSeats === 0"` on both legs) — dead per the same
+  grounding, since a 0-seat row never reaches this component. Restored both buttons to their
+  pre-OBRS-229 bindings with no seat-count condition at all (did NOT reinstate the original
+  `list.length === 0` dead code either — that was already established as unreachable in the first
+  pass and stays gone).
+- i18n: removed `SCHEDULE_BOOKING.SEAT_AVAILABLE`/`SEAT_FULL` from all three locale files (now
+  unused); kept `SEAT_REMAIN`/`SEAT_UNIT` (still used by the low-seat span). Note there is an
+  unrelated, pre-existing `SEAT_AVAILABLE` key elsewhere in each locale file (a different feature's
+  seat-map block) — left untouched, only the `SCHEDULE_BOOKING.*` ones were removed.
+- SCSS: removed `.seat-status--full` from the component SCSS and its dark-theme re-assert in
+  `dark-theme.scss` §14; kept `.seat-status--low` in both. Left the now-unreferenced
+  `.select-btn-diabled` SCSS rule alone (harmless, out of scope to hunt down).
+- Spec: replaced the six-test seat-scarcity block (sold-out/low/available × 2 legs) with a
+  four-test block (low/comfortable × 2 legs) — comfortable-seats assertions now check that
+  `.seat-status--low` is absent and no `SEAT_REMAIN` text renders, rather than asserting a
+  different (now-deleted) neutral label.
+- **Lesson for future OBRS-229-shaped work**: before designing a multi-state UI purely from a UX
+  spec's prose, check what the backing query actually returns — an endpoint that pre-filters
+  (`WHERE capacity - occupied >= :n`) can make an entire branch of a state machine unreachable.
+  Would have caught this by reading `ScheduleRepository` before the first implementation pass.
+
+## OBRS-229 layout polish — price-unit moved off the availability line
+- Two more PO polish passes landed on top of the scarcity-only cut:
+  1. `SEAT_PER_PASSENGER` copy changed from "ราคา/คน" (price/person) to "/ที่นั่ง" (leading slash,
+     meant to read directly after the price) and the pipe separator was made conditional on
+     `isLowSeats(...)` (it had gone orphaned once the neutral-seats text was removed, so a `|`
+     with nothing after it could render on comfortable rows).
+  2. That conditional pipe still left a visible duplication on the *low* row — "เหลือ 3 ที่นั่ง | /ที่นั่ง"
+     put "ที่นั่ง" on the line twice. Fix: moved `SEAT_PER_PASSENGER` off the `.availability` line
+     entirely and onto the `.price` line as a `<span class="price-unit">` directly after
+     `BAHT_UNIT` (so it reads "200 บาท/ที่นั่ง", grouped with the price it actually describes), and
+     put `*ngIf="isLowSeats(...)"` on the `.availability` **div itself** rather than the inner span
+     — so the div (and the now-obsolete pipe) is entirely absent above the threshold, not just
+     empty. Comfortable rows: no `.availability` element in the DOM at all (no empty div, no gap).
+     Low rows: `.availability` contains only the red `SEAT_REMAIN {n} SEAT_UNIT` span, nothing else.
+  3. New `.price-unit` SCSS rule (small/muted — `$font-size-sm`/`$font-weight-regular`/
+     `$text-lightblack`) matches the look the old inline availability text had, so the price line
+     doesn't visually clash between the bold price number and the muted per-seat unit.
+  4. Spec fix: the "comfortable seats" tests previously queried `.availability` and asserted on its
+     (now nonexistent) text — `fixture.debugElement.query()` returns `null` for an absent element,
+     so calling `.nativeElement` on it throws. Rewrote both to assert `query('.availability')` is
+     falsy directly, and added a `.price .price-unit` assertion to the low-seat tests to lock in
+     the new price-line grouping.
+- No i18n changes needed for this final layout pass — `SEAT_PER_PASSENGER`'s "/ที่นั่ง"-shaped value
+  (already leading-slash in all three locales from the prior polish commit) works unchanged whether
+  it's read on the availability line or the price line.

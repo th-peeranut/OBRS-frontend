@@ -108,6 +108,12 @@
         color: $text-softblack;
       }
 
+      .price-unit {
+        font-size: $font-size-sm;
+        font-weight: $font-weight-regular;
+        color: $text-lightblack;
+      }
+
       .availability {
         font-size: $font-size-sm;
         font-weight: $font-weight-regular;
@@ -119,6 +125,13 @@
         column-gap: $space-2xs;
         flex-wrap: wrap;
         justify-content: flex-end;
+      }
+
+      .seat-status {
+        &--low {
+          color: $text-red;
+          font-weight: $font-weight-semibold;
+        }
       }
 
       .select-btn {

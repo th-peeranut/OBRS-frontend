@@ -58,19 +58,11 @@
           <div class="text-container">
             <div class="price">
               {{ getPricePerSeat(departure.pricePerSeat) }}
-              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
+              {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
             </div>
 
-            <div class="availability">
-              <span>
-                {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
-                {{ departure.availableSeats }}
-                {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
-              </span>
-              <span>|</span>
-              <span>
-                {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
-              </span>
+            <div class="availability" *ngIf="isLowSeats(departure.availableSeats)">
+              <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ departure.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
             </div>
           </div>
 
@@ -79,7 +71,6 @@
             class="select-btn"
             type="button"
             (click)="selectSchedule(departure, true)"
-            [class.select-btn-diabled]="departureList.length === 0"
           >
             {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
           </button>
@@ -151,19 +142,11 @@
             <div class="text-container">
               <div class="price">
                 {{ getPricePerSeat(return.pricePerSeat) }}
-                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}
+                {{ "SCHEDULE_BOOKING.BAHT_UNIT" | translate }}<span class="price-unit">{{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}</span>
               </div>
 
-              <div class="availability">
-                <span>
-                  {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }}
-                  {{ return.availableSeats }}
-                  {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
-                </span>
-                <span>|</span>
-                <span>
-                  {{ "SCHEDULE_BOOKING.SEAT_PER_PASSENGER" | translate }}
-                </span>
+              <div class="availability" *ngIf="isLowSeats(return.availableSeats)">
+                <span class="seat-status seat-status--low">{{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ return.availableSeats }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}</span>
               </div>
             </div>
 
@@ -171,7 +154,6 @@
               class="select-btn"
               (click)="selectSchedule(return, false)"
               type="button"
-              [class.select-btn-diabled]="returnList.length === 0"
             >
               {{ "SCHEDULE_BOOKING.CHOOSE" | translate }}
             </button>

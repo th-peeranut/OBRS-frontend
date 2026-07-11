@@ -3,10 +3,10 @@ import { RouteStop, TripEstimate } from '../interfaces/route-map.interface';
 
 /**
  * Pure presentation formatters for a trip/schedule row — departure time, journey
- * duration, vehicle-type label, and per-seat price. These were duplicated verbatim
- * across the schedule-booking, payment, review, passenger-info and e-ticket
- * components; this is their single home so a formatting fix lands in one place and
- * the logic is unit-testable without a component harness.
+ * duration, vehicle-type label, per-seat price, and seat-availability status. These
+ * were duplicated verbatim across the schedule-booking, payment, review,
+ * passenger-info and e-ticket components; this is their single home so a formatting
+ * fix lands in one place and the logic is unit-testable without a component harness.
  */
 
 /** Formats an ISO/date string to `HH:mm` (24h). Empty string for missing/invalid input. */
@@ -55,6 +55,22 @@ export function capitalizeVehicleType(type: string | null | undefined): string {
 export function parsePricePerSeat(value: string | number | null | undefined): number {
   const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Whether a schedule row's remaining-seat count should be surfaced as a
+ * scarcity warning: `1..threshold` seats (inclusive). `0`/missing seats is
+ * deliberately `false` (no warning) — the search endpoint
+ * (`ScheduleRepository.searchSchedulesWithAvailability`) already filters out
+ * any schedule without enough seats for the party, so a sold-out row never
+ * reaches this component; every row shown here is bookable. Above the
+ * threshold is also `false` — the exact count is only shown when scarce.
+ */
+export function isLowSeatCount(
+  availableSeats: number | null | undefined,
+  threshold: number
+): boolean {
+  return availableSeats != null && availableSeats > 0 && availableSeats <= threshold;
 }
 
 /**

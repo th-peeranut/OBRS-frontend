@@ -4,6 +4,7 @@ import {
   durationMinutes,
   durationMinutesTotal,
   formatTimeHHMM,
+  isLowSeatCount,
   parsePricePerSeat,
   tripEstimateFromStops,
 } from './trip-format';
@@ -81,6 +82,25 @@ describe('trip-format', () => {
     it('falls back to 0 for non-finite/missing input', () => {
       expect(parsePricePerSeat(null)).toBe(0);
       expect(parsePricePerSeat('abc')).toBe(0);
+    });
+  });
+
+  describe('isLowSeatCount', () => {
+    it('is true when seats equal the threshold (inclusive)', () => {
+      expect(isLowSeatCount(5, 5)).toBe(true);
+    });
+
+    it('is false when seats exceed the threshold', () => {
+      expect(isLowSeatCount(6, 5)).toBe(false);
+    });
+
+    it('is false when seats are 0 (sold-out rows never reach this component)', () => {
+      expect(isLowSeatCount(0, 5)).toBe(false);
+    });
+
+    it('is false when seats are null/undefined', () => {
+      expect(isLowSeatCount(null, 5)).toBe(false);
+      expect(isLowSeatCount(undefined, 5)).toBe(false);
     });
   });
 

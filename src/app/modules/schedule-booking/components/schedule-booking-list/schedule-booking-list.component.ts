@@ -24,6 +24,7 @@ import {
   durationHours,
   durationMinutes,
   formatTimeHHMM,
+  isLowSeatCount,
   parsePricePerSeat,
   tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
@@ -54,6 +55,11 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   selectedSchedule: Schedule[] = [];
 
   isSelectFirst: boolean = false;
+
+  /** At or below this remaining-seat count, the exact number is surfaced as
+   *  a scarcity cue (OBRS-229); above it, no seat text shows at all — see
+   *  `isLowSeatCount`. */
+  readonly LOW_SEAT_THRESHOLD = 5;
 
   scheduleList$: Subscription;
 
@@ -182,6 +188,10 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   getPricePerSeat(value: string | number | null | undefined): number {
     return parsePricePerSeat(value);
+  }
+
+  isLowSeats(availableSeats: number | null | undefined): boolean {
+    return isLowSeatCount(availableSeats, this.LOW_SEAT_THRESHOLD);
   }
 
   private getRouteFromFilter(
