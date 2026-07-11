@@ -169,13 +169,21 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
     return translated === key ? slug : translated;
   }
 
-  protected trackByRow(_index: number, row: EodSalespersonRowDto): number {
-    return this.expandKey(row);
-  }
+  // Arrow-function class properties, NOT ordinary methods: NgForOf's DefaultIterableDiffer
+  // stores/invokes a `trackBy` function DETACHED from the component instance, so a bare
+  // `protected trackByRow(...)` method passed as `trackBy: trackByRow` runs with `this ===
+  // undefined` and throws the moment it touches `this.expandKey(...)` — which silently aborts
+  // that *ngFor's diff mid-render (table paints zero rows, looks "empty" not "errored"). An
+  // arrow function captures `this` lexically at construction, so it stays bound regardless of
+  // how the template/directive invokes it. See eod-sales-report-page.component.spec.ts's
+  // "(template rendering)" block, which reproduces this by actually rendering the template
+  // (unlike the rest of this file's specs, which call methods directly and never exercised the
+  // detached-callback path) — confirmed to fail against the bare-method version, pass here.
+  protected readonly trackByRow = (_index: number, row: EodSalespersonRowDto): number =>
+    this.expandKey(row);
 
-  protected trackByMethod(_index: number, entry: EodMethodEntry): string {
-    return entry.slug;
-  }
+  protected readonly trackByMethod = (_index: number, entry: EodMethodEntry): string =>
+    entry.slug;
 
   // Copied verbatim from ReportsPageComponent.formatMoney (OBRS-40) — same money-string ->
   // localized-currency formatting, deliberately not shared as a util because ReportsPage's

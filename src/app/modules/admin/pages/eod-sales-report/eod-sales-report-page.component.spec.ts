@@ -1,7 +1,14 @@
 import { BehaviorSubject } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
+import { CalendarModule } from 'primeng/calendar';
 import { EodSalesReportPageComponent } from './eod-sales-report-page.component';
+import { EodSalesReportStore } from './eod-sales-report.store';
 import { EodSalesReportDto } from '../../../../shared/interfaces/eod-sales-report.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { AdminSharedModule } from '../../admin-shared.module';
 
 function makeReport(overrides: Partial<EodSalesReportDto> = {}): EodSalesReportDto {
   return {
@@ -305,5 +312,72 @@ describe('EodSalesReportPageComponent', () => {
 
     store.data$.next(makeReport({ grandTotal: { ...makeReport().grandTotal, bookingCount: 999 } }));
     expect((component as any).grandTotal.bookingCount).not.toBe(999);
+  });
+});
+
+// Regression coverage for a real render-blocking bug: NgForOf's DefaultIterableDiffer stores
+// and invokes `trackBy` DETACHED from the component instance. Every spec above constructs the
+// component directly and calls its methods with `this` correctly bound, so none of them exercise
+// the actual template-driven trackBy invocation path — this is the one that must render the real
+// template via TestBed + fixture.detectChanges() to catch a `this === undefined` crash inside
+// trackByRow/trackByMethod. Before the fix (bare `protected trackByRow(...)` methods passed as
+// `trackBy: trackByRow`), this suite fails with a TypeError and 0 rendered rows even though the
+// store has real salesperson rows.
+describe('EodSalesReportPageComponent (template rendering)', () => {
+  let fixture: ComponentFixture<EodSalesReportPageComponent>;
+  let dataSubject: BehaviorSubject<EodSalesReportDto | null>;
+  let storeStub: {
+    data$: BehaviorSubject<EodSalesReportDto | null>;
+    refreshing$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<boolean>;
+    date: string;
+    hasValue: boolean;
+    refresh: jasmine.Spy;
+    setDate: jasmine.Spy;
+  };
+
+  beforeEach(async () => {
+    dataSubject = new BehaviorSubject<EodSalesReportDto | null>(null);
+    storeStub = {
+      data$: dataSubject,
+      refreshing$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<boolean>(false),
+      date: '2026-07-11',
+      hasValue: false,
+      refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+      setDate: jasmine.createSpy('setDate'),
+    };
+
+    await TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, AdminSharedModule],
+      declarations: [EodSalesReportPageComponent],
+      providers: [{ provide: EodSalesReportStore, useValue: storeStub }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(EodSalesReportPageComponent);
+  });
+
+  it('renders one table row per salesperson via the real template (trackBy stays bound to the component)', () => {
+    const report = makeReport(); // 2 salespersons: one numeric id, one null ("Unassigned")
+    storeStub.hasValue = true;
+    dataSubject.next(report);
+
+    expect(() => fixture.detectChanges()).not.toThrow();
+
+    const dataRows: NodeListOf<HTMLTableRowElement> = fixture.nativeElement.querySelectorAll(
+      'tbody tr:not(.eod-report-detail-row):not(.eod-report-grand-total-row)'
+    );
+    expect(dataRows.length).toBe(report.salespersons.length);
+  });
+
+  it('renders the grand-total row alongside the salesperson rows', () => {
+    const report = makeReport();
+    storeStub.hasValue = true;
+    dataSubject.next(report);
+
+    fixture.detectChanges();
+
+    const grandTotalRow = fixture.nativeElement.querySelector('tbody tr.eod-report-grand-total-row');
+    expect(grandTotalRow).not.toBeNull();
   });
 });
