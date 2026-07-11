@@ -19,6 +19,7 @@ describe('BookerInfoFormComponent', () => {
     gender: 'MALE',
     isSelectSeat: false,
     passengerSeat: '',
+    email: 'somchai@example.com',
   };
 
   beforeEach(async () => {
@@ -66,6 +67,7 @@ describe('BookerInfoFormComponent', () => {
         lastName: 'Jaidee',
         phoneNumber: '0812345678',
         gender: 'MALE',
+        email: 'somchai@example.com',
       });
 
       const result = component.validateAndGetBooker();
@@ -73,6 +75,7 @@ describe('BookerInfoFormComponent', () => {
       expect(result?.firstName).toBe('Somchai');
       expect(result?.phoneNumber).toBe('0812345678');
       expect(result?.title).toBe(1);
+      expect(result?.email).toBe('somchai@example.com');
     });
 
     it('normalises title when value is a Dropdown object', () => {
@@ -82,10 +85,37 @@ describe('BookerInfoFormComponent', () => {
         lastName: 'Kaew',
         phoneNumber: '0899999999',
         gender: 'FEMALE',
+        email: 'malee@example.com',
       });
 
       const result = component.validateAndGetBooker();
       expect(result?.title).toBe(2);
+    });
+
+    it('returns null when email is missing', () => {
+      component.bookerForm.patchValue({
+        title: 1,
+        firstName: 'Somchai',
+        lastName: 'Jaidee',
+        phoneNumber: '0812345678',
+        gender: 'MALE',
+        email: '',
+      });
+
+      expect(component.validateAndGetBooker()).toBeNull();
+    });
+
+    it('returns null when email format is invalid', () => {
+      component.bookerForm.patchValue({
+        title: 1,
+        firstName: 'Somchai',
+        lastName: 'Jaidee',
+        phoneNumber: '0812345678',
+        gender: 'MALE',
+        email: 'not-an-email',
+      });
+
+      expect(component.validateAndGetBooker()).toBeNull();
     });
   });
 

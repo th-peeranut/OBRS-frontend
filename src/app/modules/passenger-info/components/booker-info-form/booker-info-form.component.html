@@ -180,6 +180,50 @@
             </div>
           </div>
 
+          <!-- Email -->
+          <div class="col-12 col-md-6">
+            <label
+              for="booker-email"
+              [class.label-error]="
+                bookerForm.get('email')?.errors &&
+                (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.EMAIL" | translate }}
+              <span class="form-required">*</span>
+            </label>
+            <input
+              class="form-control mt-1"
+              type="email"
+              id="booker-email"
+              formControlName="email"
+              autocomplete="email"
+              [placeholder]="'PASSENGER_INFO.FORM.EMAIL_PLACEHOLDER' | translate"
+              [class.form-error]="
+                bookerForm.get('email')?.errors &&
+                (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
+              "
+            />
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('email')?.hasError('required') &&
+                (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.EMAIL_REQUIRED" | translate }}
+            </div>
+            <div
+              class="text-error"
+              *ngIf="
+                bookerForm.get('email')?.hasError('email') &&
+                (bookerForm.get('email')?.touched || bookerForm.get('email')?.dirty)
+              "
+            >
+              {{ "PASSENGER_INFO.FORM.EMAIL_INVALID" | translate }}
+            </div>
+          </div>
+
           <!-- Gender/status -->
           <div class="col-6">
             <label
