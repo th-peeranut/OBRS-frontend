@@ -1427,6 +1427,15 @@
       "BOARD_FAILED": "无法登记旅客登车。",
       "UNBOARD_SUCCESS": "已成功取消旅客登车。",
       "UNBOARD_FAILED": "无法取消旅客登车。",
+      "PRINT_BTN": "打印",
+      "PRINT_HEADER": {
+        "TITLE": "乘客名单（打印版）",
+        "ROUTE": "路线",
+        "DEPARTURE": "发车时间",
+        "VEHICLE": "车辆",
+        "DRIVER": "司机",
+        "SEATS_SOLD": "已售座位数"
+      },
       "ACTION_ERROR": {
         "ALREADY_BOARDED": "此票已登车。",
         "NOT_BOARDED": "此票尚未登车。",

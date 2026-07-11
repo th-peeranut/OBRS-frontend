@@ -1,4 +1,15 @@
-import { Component, Input, OnChanges, OnDestroy, OnInit, SimpleChanges } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  SimpleChanges,
+  TemplateRef,
+  ViewChild,
+  ViewContainerRef,
+} from '@angular/core';
+import { DomPortalOutlet, TemplatePortal } from '@angular/cdk/portal';
 import { Subscription, firstValueFrom } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../auth/auth.service';
@@ -10,9 +21,23 @@ import {
   mapBoardingScanErrorCode,
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
+import { formatDisplayDateTime } from '../../lib/display-date-time';
 import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
 import { BoardingListStore } from './boarding-list.store';
+
+/** OBRS-100: supplementary trip-header data for the print manifest (and,
+ * incidentally, informational display) — self-fetched by
+ * `BoardingListComponent` via `StaffApiService.getScheduleById()`, never
+ * threaded through either host (ADR 0014 keeps the `[scheduleId]`-only
+ * contract). Seats-sold / boarded counts are NOT part of this shape — they
+ * are derived from `items` already held by the component. */
+export interface BoardingManifestHeader {
+  routeLabel: string;
+  departureDateTime: string;
+  vehicleLabel: string;
+  driverName: string;
+}
 
 /** Inline result of the manual boarding-scan box — success carries the
  * boarded passenger/seat/time, failure carries the errorCode-derived i18n
@@ -44,10 +69,28 @@ export interface BoardingScanErrorResult {
 export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   @Input() scheduleId!: number;
 
+  @ViewChild('printTemplate', { static: true }) protected printTemplate!: TemplateRef<unknown>;
+
   protected items: BoardingListItemDto[] = [];
   protected isRefreshing = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
+
+  /** OBRS-100: supplementary print/export trip header — see `loadTripHeader()`.
+   * `null` while loading and on any fetch failure (silent degrade; template
+   * falls back to '-' per field). */
+  protected tripHeader: BoardingManifestHeader | null = null;
+  private headerRequestScheduleId: number | null = null;
+
+  /** OBRS-100: exposes the global `String` ctor to the template so
+   * `[params]="{ scheduleId: String(scheduleId) }"` can stringify the
+   * numeric input — `ExportButtonComponent.params` is typed
+   * `Record<string, string>` under strictTemplates. */
+  protected readonly String = String;
+
+  private printPortalHost: HTMLElement | null = null;
+  private printPortalOutlet: DomPortalOutlet | null = null;
+  private readonly handleAfterPrint = (): void => this.disposePrintPortal();
 
   /** Ticket ids with a board() call in flight (button spinner/disabled state). */
   protected boardingIds = new Set<number>();
@@ -73,7 +116,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
     private readonly authService: AuthService,
-    protected readonly store: BoardingListStore
+    protected readonly store: BoardingListStore,
+    private readonly viewContainerRef: ViewContainerRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
   }
@@ -82,6 +126,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     if (changes['scheduleId']) {
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
+      void this.loadTripHeader(this.scheduleId);
     }
   }
 
@@ -107,6 +152,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    // OBRS-100: guard against a leaked body node if the operator navigates
+    // away while the print dialog is still open (afterprint alone can't be
+    // relied on for that case) — see docs/adr/0015.
+    this.disposePrintPortal();
   }
 
   protected get isLoading(): boolean {
@@ -122,6 +171,13 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   protected isBoarding(item: BoardingListItemDto): boolean {
     return this.boardingIds.has(item.ticketId);
+  }
+
+  /** OBRS-100: "Boarded" count for the print header — derived from `items`
+   * (already held), not part of `tripHeader` (design-system §10: don't
+   * duplicate state the component already has). */
+  protected get boardedCount(): number {
+    return this.items.filter((item) => this.isBoarded(item)).length;
   }
 
   protected isUnboarding(item: BoardingListItemDto): boolean {
@@ -274,5 +330,91 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           : item
       )
     );
+  }
+
+  /**
+   * OBRS-100: self-fetches the supplementary print/export trip header via
+   * `StaffApiService.getScheduleById()` — NOT threaded through either host
+   * (ADR 0014: both mounts stay `[scheduleId]`-only). Stale-guarded with
+   * `headerRequestScheduleId` so a fast re-bind (the Sell Tab-3 host changes
+   * `[scheduleId]` when the salesperson picks a different trip) can't let a
+   * slower, earlier response clobber the header for the schedule now
+   * showing. Degrades to `null` (template falls back to '-' per field) on
+   * any failure — e.g. a driver 403'd off a schedule they don't own — since
+   * the header is supplementary and export/print must never be blocked by
+   * it (separate endpoint, separate failure domain).
+   */
+  private async loadTripHeader(scheduleId: number): Promise<void> {
+    this.headerRequestScheduleId = scheduleId;
+
+    try {
+      const response = await firstValueFrom(this.staffApiService.getScheduleById(scheduleId));
+      if (this.headerRequestScheduleId !== scheduleId) {
+        return; // a newer scheduleId arrived while this fetch was in flight
+      }
+
+      const schedule = response?.data;
+      this.tripHeader = {
+        routeLabel: schedule?.route?.code ?? schedule?.route?.slug ?? '-',
+        departureDateTime: schedule?.departureDateTime
+          ? formatDisplayDateTime(schedule.departureDateTime, this.translate.currentLang)
+          : '-',
+        vehicleLabel: schedule?.vehicle?.numberPlate ?? schedule?.vehicle?.vehicleNumber ?? '-',
+        driverName: schedule?.driver?.fullName ?? '-',
+      };
+    } catch {
+      if (this.headerRequestScheduleId === scheduleId) {
+        this.tripHeader = null;
+      }
+    }
+  }
+
+  /**
+   * OBRS-100: teleports the dedicated `#printTemplate` to a `document.body`
+   * child via a CDK `DomPortalOutlet`, so `window.print()` only ever sees
+   * this one element — immune to whatever `p-tabView`/grid ancestors sit
+   * above either mount, and to any *other* body-appended overlay
+   * (`p-menu[appendTo="body"]`, SweetAlert2's `.swal2-container`). The
+   * `.boarding-manifest-print-portal` class is the marker the global
+   * `@media print` rule in `admin-theme.scss` hides everything else for.
+   * See docs/adr/0015.
+   */
+  protected printManifest(): void {
+    this.disposePrintPortal(); // idempotent guard — clears any stray prior instance first
+
+    const host = document.createElement('div');
+    host.className = 'boarding-manifest-print-portal';
+    document.body.appendChild(host);
+    // OBRS-100: gate the global `@media print` isolation on this marker class so
+    // it only applies while a manifest portal is live — otherwise a native
+    // Ctrl+P on any other page would blank-print (the hide rule would match
+    // `app-root`). Removed in disposePrintPortal(). See admin-theme.scss / ADR 0015.
+    document.body.classList.add('boarding-manifest-printing');
+    this.printPortalHost = host;
+
+    this.printPortalOutlet = new DomPortalOutlet(host);
+    this.printPortalOutlet.attach(new TemplatePortal(this.printTemplate, this.viewContainerRef));
+
+    window.addEventListener('afterprint', this.handleAfterPrint);
+    setTimeout(() => window.print(), 0);
+  }
+
+  /**
+   * Idempotent teardown — safe to call from the `afterprint` handler, from
+   * the top of a subsequent `printManifest()` call, and from `ngOnDestroy`
+   * (the scrutinize-flagged case: the operator navigates away while the
+   * print dialog/preview is still open, so `afterprint` never fires and the
+   * portal host would otherwise leak as an orphaned `document.body` node).
+   */
+  private disposePrintPortal(): void {
+    if (!this.printPortalHost) {
+      return;
+    }
+    window.removeEventListener('afterprint', this.handleAfterPrint);
+    document.body.classList.remove('boarding-manifest-printing');
+    this.printPortalOutlet?.dispose();
+    this.printPortalHost.remove();
+    this.printPortalOutlet = null;
+    this.printPortalHost = null;
   }
 }

@@ -45,6 +45,19 @@ describe('StaffApiService', () => {
     req.flush({ code: 200, message: 'OK', data: [] });
   });
 
+  // OBRS-100: thin passthrough for the boarding-list print/export trip
+  // header — deliberately a second call site for the same endpoint as
+  // AdminApiService.getScheduleById() (docs/adr/0015), not a shared call.
+  it('getScheduleById() gets the schedule detail endpoint', () => {
+    service.getScheduleById(42).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/schedules/42`);
+    expect(req.request.method).toBe('GET');
+    req.flush({ code: 200, message: 'OK', data: { id: 42 } });
+  });
+
   it('board() posts to the correct endpoint and sets SKIP_AUTH_LOGOUT', () => {
     service.board(7).subscribe((res) => {
       expect(res).toBeTruthy();

@@ -1,3 +1,5 @@
+@import "../../../../styles/variables.scss";
+
 // OBRS-96: manual boarding-scan validation box. Uses the shared admin/staff
 // shell tokens (design-system §2/§3/§4/§11) — .admin-field pill input,
 // .admin-btn/.admin-btn-primary, .admin-status result banner — since this is
@@ -65,4 +67,86 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+// OBRS-100: dark-theme the manifest content, scoped to THIS component only
+// (blast radius = the boarding manifest). The surrounding card + table are
+// intentionally raw Bootstrap (see the top-of-file comment) and were never
+// dark-themed — the OBRS-128 dark `.card` fix only covers the /staff/sell
+// panels, not this component — so on the dark shell the whole content area
+// (`.card` #fff, `.table-light` thead, `td` cells) rendered as a white block,
+// and the status `.badge.bg-secondary` (#6c757d) as a light grey pill. Point
+// them all at the shell's dark surface/text/outline tokens. Light mode keeps
+// Bootstrap's defaults untouched. `!important` is needed where Bootstrap uses
+// `!important` utilities.
+:host-context(.admin-shell.is-dark) {
+  // scan-token card + manifest table card
+  .card {
+    background-color: var(--admin-surface-card);
+    color: var(--admin-text);
+  }
+
+  // Bootstrap table: base bg transparent (dark card shows through), dark borders
+  .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--admin-text);
+    --bs-table-border-color: var(--admin-outline);
+    color: var(--admin-text);
+    border-color: var(--admin-outline);
+  }
+
+  .table > :not(caption) > * > * {
+    background-color: transparent;
+    color: var(--admin-text);
+    border-bottom-color: var(--admin-outline);
+  }
+
+  // .table-light thead renders light-grey by default
+  .table thead.table-light th {
+    background-color: var(--admin-surface-soft);
+    color: var(--admin-muted);
+    border-bottom-color: var(--admin-outline);
+  }
+
+  // row hover on dark
+  .table-hover > tbody > tr:hover > * {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--admin-text);
+  }
+
+  // loading skeleton uses Bootstrap .bg-light
+  .bg-light {
+    background-color: var(--admin-surface-soft) !important;
+  }
+
+  // ticket-status badge (สถานะ column) — raw Bootstrap .badge, theme as dark chips
+  .badge.bg-secondary {
+    background-color: #333b42 !important;
+    color: #cdd8df !important;
+  }
+
+  .badge.bg-success {
+    background-color: #14532d !important;
+    color: #b7f3c0 !important;
+  }
+}
+
+// OBRS-100: print-only manifest content. This is stamped from a TemplateRef
+// that belongs to THIS component (via ViewContainerRef), so Angular's
+// emulated-encapsulation attribute travels with the DOM node even after the
+// CDK DomPortalOutlet moves it to a document.body child — these rules keep
+// applying post-teleport. No new colors: reuses Bootstrap's `.table`/
+// `.table-bordered` (same family as the on-screen table) rather than
+// introducing a raw hex border (design-system §2.2).
+.boarding-manifest-print {
+  background: $primary-white;
+  color: $text-black;
+}
+
+.boarding-manifest-print-meta {
+  row-gap: 8px;
+}
+
+.boarding-manifest-print-table {
+  width: 100%;
 }

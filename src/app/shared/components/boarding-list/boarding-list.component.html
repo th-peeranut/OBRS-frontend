@@ -1,4 +1,25 @@
 <div class="container-fluid py-4">
+  <!-- OBRS-100: export (reuses the canonical app-export-button, ADR 0001)
+       + print (CDK Portal teleport-to-body, docs/adr/0015). Neither is a
+       screen "primary" action (design-system §4) — both stay secondary
+       admin-btn. -->
+  <div class="boarding-list-toolbar d-flex justify-content-end gap-2 mb-3">
+    <button
+      type="button"
+      class="admin-btn"
+      [disabled]="isLoading"
+      (click)="printManifest()"
+    >
+      <span class="material-symbols-outlined" aria-hidden="true">print</span>
+      {{ 'STAFF.BOARDING.PRINT_BTN' | translate }}
+    </button>
+    <app-export-button
+      datasetKey="boarding-manifest"
+      requiredRole="driver"
+      [params]="{ scheduleId: String(scheduleId) }"
+    ></app-export-button>
+  </div>
+
   <div *ngIf="errorMessage" class="alert alert-danger mb-3">{{ errorMessage }}</div>
 
   <!-- OBRS-96: manual boarding-scan validation — text-entry token only
@@ -157,3 +178,75 @@
     </div>
   </div>
 </div>
+
+<!-- OBRS-100: print-only manifest — NEVER rendered inline. Teleported to a
+     document.body child on printManifest() via a CDK DomPortalOutlet (see
+     the .ts) so it prints in isolation regardless of the sell-tab/p-tabView
+     ancestors either host sits inside. Re-bound to the SAME items/isBoarded()
+     the on-screen table already uses (one data source, two renderings) — the
+     .boarding-manifest-print* classes are scoped in boarding-list.component.scss
+     and keep applying after the teleport (Angular's emulated-encapsulation
+     attribute travels with the DOM node, not its position in the tree). -->
+<ng-template #printTemplate>
+  <div class="boarding-manifest-print p-4">
+    <h2 class="mb-3">{{ 'STAFF.BOARDING.PRINT_HEADER.TITLE' | translate }}</h2>
+
+    <div class="row mb-4 boarding-manifest-print-meta">
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</div>
+        <div class="fw-semibold">{{ tripHeader?.routeLabel ?? '-' }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</div>
+        <div class="fw-semibold">{{ tripHeader?.departureDateTime ?? '-' }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</div>
+        <div class="fw-semibold">{{ tripHeader?.vehicleLabel ?? '-' }}</div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</div>
+        <div class="fw-semibold">{{ tripHeader?.driverName ?? '-' }}</div>
+      </div>
+      <div class="col-6 col-md-3 mt-2">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.SEATS_SOLD' | translate }}</div>
+        <div class="fw-semibold">{{ items.length }}</div>
+      </div>
+      <div class="col-6 col-md-3 mt-2">
+        <div class="text-muted small">{{ 'STAFF.BOARDING.BOARDED' | translate }}</div>
+        <div class="fw-semibold">{{ boardedCount }}/{{ items.length }}</div>
+      </div>
+    </div>
+
+    <table class="table table-bordered boarding-manifest-print-table">
+      <thead>
+        <tr>
+          <th>{{ 'STAFF.BOARDING.TICKET_NO' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.SEAT' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.PASSENGER' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of items">
+          <td>{{ item.ticketNumber }}</td>
+          <td>{{ item.seatNumber }}</td>
+          <td>{{ item.passengerName }}</td>
+          <td>{{ item.fromStop }}</td>
+          <td>{{ item.toStop }}</td>
+          <td>{{ item.status.label }}</td>
+          <td>
+            {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
+            <ng-container *ngIf="isBoarded(item)">
+              &mdash; {{ item.boardedAt | date: 'HH:mm' }}
+              <ng-container *ngIf="item.boardedByName">&middot; {{ item.boardedByName }}</ng-container>
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</ng-template>
