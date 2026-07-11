@@ -1234,6 +1234,7 @@
       "DETAIL_DROPOFF_TITLE": "รายละเอียดจุดส่ง ({{province}})",
       "DETAIL_TIME": "เวลาโดยประมาณ {{time}} น.",
       "BTN_OPEN_MAPS": "เปิดใน Google Maps",
+      "BTN_NAVIGATE": "นำทาง",
       "VALIDATION_SELECT_BOTH": "กรุณาเลือกทั้งจุดรับและจุดส่งก่อนยืนยัน",
       "VALIDATION_SELECT_PICKUP": "กรุณาเลือกจุดรับก่อนยืนยัน",
       "VALIDATION_SELECT_DROPOFF": "กรุณาเลือกจุดส่งก่อนยืนยัน",
@@ -1441,6 +1442,7 @@
   "E_TICKET": {
     "TITLE": "อีทิกเก็ต",
     "SUBTITLE": "ตั๋วเดินทางออนไลน์ NJ ผู้ใหญ่ปู",
+    "BTN_NAVIGATE": "นำทาง",
     "LABEL": {
       "BOOKING_REF": "รหัสจอง",
       "TICKET_NO": "เลขที่ตั๋ว",

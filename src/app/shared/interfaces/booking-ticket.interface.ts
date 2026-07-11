@@ -19,6 +19,12 @@ export interface BookingTicketStop {
   /** Minutes from the route origin's departure baseline to this stop.
    *  Carried through from `RouteStop.offsetMinutesFromOrigin`. */
   offsetMinutesFromOrigin?: number | null;
+  /** OBRS-269: coordinates carried through from `RouteStop.latitude`/`longitude`
+   *  so the e-ticket can offer a "Navigate to pickup" deep-link. Optional/nullable
+   *  so older fixtures/consumers and a stop missing this field stay valid — the
+   *  Navigate button hides itself when either is null (see `TicketLeg`). */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface BookingTicketVehicle {

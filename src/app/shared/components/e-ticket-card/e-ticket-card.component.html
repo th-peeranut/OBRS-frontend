@@ -67,6 +67,19 @@
               ≈ {{ leg.distanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}
             </small>
           </div>
+          <div
+            class="ticket-item full"
+            *ngIf="leg.pickupLatitude != null && leg.pickupLongitude != null"
+          >
+            <button
+              type="button"
+              class="ticket-nav-btn"
+              (click)="navigateToPickup(leg)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">directions</span>
+              {{ "E_TICKET.BTN_NAVIGATE" | translate }}
+            </button>
+          </div>
           <div class="ticket-grid">
             <div class="ticket-item">
               <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>

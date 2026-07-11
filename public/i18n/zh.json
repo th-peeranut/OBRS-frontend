@@ -1232,6 +1232,7 @@
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
+      "BTN_NAVIGATE": "导航",
       "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
       "VALIDATION_SELECT_PICKUP": "请先选择上车点再确认",
       "VALIDATION_SELECT_DROPOFF": "请先选择下车点再确认",
@@ -1439,6 +1440,7 @@
   "E_TICKET": {
     "TITLE": "电子票",
     "SUBTITLE": "NJ Phuyaipu 在线旅行票",
+    "BTN_NAVIGATE": "导航",
     "LABEL": {
       "BOOKING_REF": "预订参考号",
       "TICKET_NO": "票号",

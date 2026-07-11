@@ -47,6 +47,8 @@ export function mapBookingTicketsToCard(
       ) || '-',
     seats: buildSeatList(buildPassengers(journey)) || '-',
     distanceKm: tripEstimateFromStops(journey.fromStop, journey.toStop).distanceKm,
+    pickupLatitude: journey.fromStop?.latitude ?? null,
+    pickupLongitude: journey.fromStop?.longitude ?? null,
   });
 
   const legs: TicketLeg[] = [outbound, inbound]

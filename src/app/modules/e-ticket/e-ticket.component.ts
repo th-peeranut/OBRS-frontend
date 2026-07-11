@@ -15,6 +15,7 @@ import {
 } from 'rxjs';
 import dayjs from 'dayjs';
 import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
+import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
@@ -85,6 +86,12 @@ export class ETicketComponent implements OnInit, OnDestroy {
   paymentDate = '-';
   totalAmount = '0.00';
   isDownloadingTicket = false;
+  /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
+   *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
+   *  the API response lands (store-only pre-API render) — the Navigate button
+   *  hides until then. */
+  originLatitude: number | null = null;
+  originLongitude: number | null = null;
 
   passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
@@ -187,6 +194,18 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  /** OBRS-269: opens Google Maps Directions from the user's current location to
+   *  the outbound pickup stop — a deep-link only (no Directions API call). The
+   *  template hides the button entirely when either coord is null, so this is a
+   *  defensive no-op rather than the primary gate. */
+  navigateToPickup(): void {
+    if (this.originLatitude == null || this.originLongitude == null) {
+      return;
+    }
+    const url = buildMapsDirectionsUrl(this.originLatitude, this.originLongitude);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   async downloadTicketImage(): Promise<void> {
     const ticketElement = this.ticketPaper?.nativeElement;
     if (!ticketElement || this.isDownloadingTicket) {
@@ -205,7 +224,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
             .querySelector('.ticket-paper')
             ?.classList.add('is-exporting');
         },
-        ignoreElements: (element) => element.classList.contains('download-btn'),
+        ignoreElements: (element) =>
+          element.classList.contains('download-btn') ||
+          element.classList.contains('ticket-nav-btn'),
       });
 
       const imageUrl = canvas.toDataURL('image/png');
@@ -610,6 +631,8 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (fromName || toName) {
       this.route = this.buildRouteLabel(fromName, toName, !!inbound);
     }
+    this.originLatitude = outbound?.fromStop?.latitude ?? null;
+    this.originLongitude = outbound?.fromStop?.longitude ?? null;
 
     const travelDate = this.buildTravelDate(
       outbound?.departureDateTime,

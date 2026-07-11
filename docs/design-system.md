@@ -345,6 +345,15 @@ enforced rule with a test behind it.
   (not counts like Bookings/Tickets). Reuse this class for the next reconciliation-style
   table instead of inventing a second right-align convention.
 
+- **Bespoke static-token button on a dark-theme-exempt surface** (OBRS-269,
+  `.ticket-nav-btn` on the e-ticket card/page's "Navigate to pickup" button): the
+  e-ticket paper is intentionally exempt from dark theming (`dark-theme.scss` §15
+  paper look), so this button is styled with fixed `$primary-blue`/`$primary-white`
+  SCSS tokens — never the runtime `--accent*` vars — matching the sibling
+  `.ticket-leg-heading`/`.trip-estimate` static-token rules already on that surface.
+  Reuse this precedent for the next control added to the ticket paper instead of
+  reaching for a themed token that won't apply there.
+
 - **Expandable per-row detail** (OBRS-231, `EodSalesReportPageComponent`'s `byMethod`
   breakdown): no accordion-row precedent existed in any admin table. Built from two
   already-themed primitives, not a new control — `.admin-icon-btn` +

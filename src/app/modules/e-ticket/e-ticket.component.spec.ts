@@ -219,6 +219,50 @@ describe('ETicketComponent', () => {
 
       expect(component.bookingNumber).toBe('STORE-REF');
     });
+
+    it('OBRS-269: threads originLatitude/originLongitude from the outbound fromStop coords', () => {
+      const data = buildTicketsData();
+      data.journeys![0].fromStop!.latitude = 13.7563;
+      data.journeys![0].fromStop!.longitude = 100.5018;
+
+      apply(data);
+
+      expect(component.originLatitude).toBe(13.7563);
+      expect(component.originLongitude).toBe(100.5018);
+    });
+
+    it('OBRS-269: leaves originLatitude/originLongitude null when the outbound fromStop has no coords', () => {
+      apply(buildTicketsData());
+
+      expect(component.originLatitude).toBeNull();
+      expect(component.originLongitude).toBeNull();
+    });
+  });
+
+  describe('navigateToPickup (OBRS-269)', () => {
+    it('opens the Google Maps directions deep-link when coords are present', () => {
+      component.originLatitude = 13.7563;
+      component.originLongitude = 100.5018;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
+        '_blank',
+        'noopener,noreferrer'
+      );
+    });
+
+    it('does nothing when coords are missing', () => {
+      component.originLatitude = null;
+      component.originLongitude = null;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).not.toHaveBeenCalled();
+    });
   });
 
   describe('per-ticket boarding-token QR fetch (OBRS-96)', () => {

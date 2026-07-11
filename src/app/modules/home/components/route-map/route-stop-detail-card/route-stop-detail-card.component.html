@@ -62,6 +62,18 @@
           <i class="bi bi-map me-1"></i>
         </ng-template>
       </p-button>
+      <p-button
+        *ngIf="type === 'pickup'"
+        severity="secondary"
+        size="small"
+        [label]="'HOME.ROUTE_MAP.BTN_NAVIGATE' | translate"
+        [disabled]="!hasPickupCoords"
+        (onClick)="navigateToPickup()"
+      >
+        <ng-template pTemplate="icon">
+          <i class="bi bi-signpost-2 me-1"></i>
+        </ng-template>
+      </p-button>
     </div>
   </ng-container>
 </p-card>

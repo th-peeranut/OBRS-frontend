@@ -18,6 +18,12 @@ export interface TicketLeg {
   seats: string;
   /** Rounded pickup→dropoff estimate (km) for this leg, OBRS-138-style — `null` hides the chip. */
   distanceKm: number | null;
+  /** OBRS-269: this leg's pickup-stop coordinates, carried through from
+   *  `BookingTicketStop.latitude`/`longitude` (`journeyToLeg`). `null` when the
+   *  stop has no coordinates (e.g. an older ticket) — the card hides its
+   *  "Navigate to pickup" button rather than disabling it. */
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
 }
 
 /** Presentation-ready fields for the shared e-ticket card. */
