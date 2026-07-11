@@ -39,6 +39,7 @@ import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-ma
 import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
+import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -132,6 +133,18 @@ const routes: Routes = [
           requiredRoles: ['admin', 'owner'],
         },
       },
+      {
+        // OBRS-223: reminder-timing config, ADMIN-only (403 for non-admin
+        // per the backend contract shipped by OBRS-139).
+        path: 'reminder-config',
+        component: ReminderConfigPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REMINDER_CONFIG',
+          subtitleKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -179,6 +192,7 @@ const routes: Routes = [
     SettlementsPageComponent,
     SettlementsListComponent,
     SettlementDetailModalComponent,
+    ReminderConfigPageComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })

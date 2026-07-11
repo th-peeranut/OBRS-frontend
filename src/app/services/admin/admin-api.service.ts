@@ -581,6 +581,15 @@ export interface UpdateRoundTripPromotionPayload {
   minBookingAmount?: number;
 }
 
+// OBRS-223: reminder-timing config, a singleton row (like the round-trip
+// promotion above) — GET/PUT `/api/private/admin/configs/reminders`, shipped
+// backend-only by OBRS-139. Both fields are required positive integers on
+// the wire; the backend evicts its cache after PUT (no FE cache concern).
+export interface ReminderConfigDto {
+  reminderHoursBeforeDeparture: number;
+  boardingReminderMinutesBeforeDeparture: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -1036,6 +1045,21 @@ export class AdminApiService {
   ): Observable<ResponseAPI<unknown>> {
     return this.patchRequest<unknown>(
       `${this.baseUrl}/private/admin/promotions/round-trip`,
+      payload
+    );
+  }
+
+  // OBRS-223: reminder-timing config is a singleton row (like the round-trip
+  // promotion above), ADMIN-only (403 for non-admin per the backend contract).
+  getReminderConfig(): Observable<ResponseAPI<ReminderConfigDto>> {
+    return this.getRequest<ReminderConfigDto>(`${this.baseUrl}/private/admin/configs/reminders`);
+  }
+
+  updateReminderConfig(
+    payload: ReminderConfigDto
+  ): Observable<ResponseAPI<ReminderConfigDto>> {
+    return this.putRequest<ReminderConfigDto>(
+      `${this.baseUrl}/private/admin/configs/reminders`,
       payload
     );
   }

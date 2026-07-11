@@ -327,7 +327,8 @@
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
       "SETTLEMENTS": "Settlements",
-      "EOD_SALES_REPORT": "End-of-day Sales"
+      "EOD_SALES_REPORT": "End-of-day Sales",
+      "REMINDER_CONFIG": "Reminder Timing"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -389,7 +390,8 @@
       "EMAIL_EXIST": "This email is already in use.",
       "PHONE_NO_EXIST": "This phone number is already in use.",
       "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
-      "FORM_INVALID": "Please complete the highlighted required fields."
+      "FORM_INVALID": "Please complete the highlighted required fields.",
+      "POSITIVE_INTEGER": "Please enter a whole number greater than 0."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -904,6 +906,14 @@
         "RABBIT_LINEPAY": "Rabbit LINE Pay",
         "OTHER": "Other"
       }
+    },
+    "REMINDER_CONFIG": {
+      "SUBTITLE": "Set how far in advance departure and boarding reminders are sent.",
+      "HOURS_LABEL": "Departure Reminder (hours before)",
+      "HOURS_HELPER": "How many hours before departure the reminder notification is sent.",
+      "MINUTES_LABEL": "Boarding Reminder (minutes before)",
+      "MINUTES_HELPER": "How many minutes before departure the boarding reminder is sent.",
+      "LOAD_FAILED": "Unable to load the reminder-timing config."
     }
   },
   "AUTH": {

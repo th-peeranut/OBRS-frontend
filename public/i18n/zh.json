@@ -327,7 +327,8 @@
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
       "SETTLEMENTS": "分账结算",
-      "EOD_SALES_REPORT": "每日销售报告"
+      "EOD_SALES_REPORT": "每日销售报告",
+      "REMINDER_CONFIG": "提醒时间设置"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -389,7 +390,8 @@
       "EMAIL_EXIST": "此电子邮件已被使用。",
       "PHONE_NO_EXIST": "此电话号码已被使用。",
       "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
-      "FORM_INVALID": "请填写标记的必填字段。"
+      "FORM_INVALID": "请填写标记的必填字段。",
+      "POSITIVE_INTEGER": "请输入大于0的整数。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
@@ -904,6 +906,14 @@
         "RABBIT_LINEPAY": "Rabbit LINE Pay",
         "OTHER": "其他"
       }
+    },
+    "REMINDER_CONFIG": {
+      "SUBTITLE": "设置发车提醒和上车提醒的提前时间。",
+      "HOURS_LABEL": "发车提醒（提前小时数）",
+      "HOURS_HELPER": "发车前多少小时发送提醒通知。",
+      "MINUTES_LABEL": "上车提醒（提前分钟数）",
+      "MINUTES_HELPER": "发车前多少分钟发送上车提醒。",
+      "LOAD_FAILED": "无法加载提醒时间设置。"
     }
   },
   "AUTH": {

@@ -85,6 +85,51 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-223: reminder-timing config, a singleton row shipped backend-only by
+  // OBRS-139 (GET/PUT /api/private/admin/configs/reminders).
+  describe('getReminderConfig', () => {
+    it('issues a GET to /api/private/admin/configs/reminders', () => {
+      service.getReminderConfig().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/reminders`
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { reminderHoursBeforeDeparture: 24, boardingReminderMinutesBeforeDeparture: 45 },
+      });
+    });
+  });
+
+  describe('updateReminderConfig', () => {
+    it('issues a PUT to /api/private/admin/configs/reminders with the full payload shape', () => {
+      service
+        .updateReminderConfig({
+          reminderHoursBeforeDeparture: 12,
+          boardingReminderMinutesBeforeDeparture: 30,
+        })
+        .subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/reminders`
+      );
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({
+        reminderHoursBeforeDeparture: 12,
+        boardingReminderMinutesBeforeDeparture: 30,
+      });
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { reminderHoursBeforeDeparture: 12, boardingReminderMinutesBeforeDeparture: 30 },
+      });
+    });
+  });
+
   // OBRS-196: regression for the wrong-URL contract break a coordinator
   // reconciliation found post-merge (base path is `/api/private/settlements`,
   // NO `/admin/` segment — `EndpointConstant.PRIVATE_SETTLEMENTS`) — a

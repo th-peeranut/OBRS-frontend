@@ -63,6 +63,17 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale' });
     }
 
+    // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
+    // ['admin']`), so it's gated the same way Settlements is gated above,
+    // just on the admin role instead of owner.
+    if (this.authService.hasAnyRole(['admin'])) {
+      items.push({
+        path: 'reminder-config',
+        labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
+        icon: 'notifications_active',
+      });
+    }
+
     return items;
   }
 
