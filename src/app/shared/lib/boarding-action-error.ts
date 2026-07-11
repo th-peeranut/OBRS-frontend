@@ -17,6 +17,9 @@ export function mapBoardingActionErrorCode(errorCode: string | null | undefined)
     TICKET_NOT_CONFIRMED: 'STAFF.BOARDING.ACTION_ERROR.TICKET_NOT_CONFIRMED',
     BOARDING_WINDOW_NOT_OPEN: 'STAFF.BOARDING.ACTION_ERROR.BOARDING_WINDOW_NOT_OPEN',
     TICKET_ERROR_ID_NOT_FOUND: 'STAFF.BOARDING.ACTION_ERROR.TICKET_ERROR_ID_NOT_FOUND',
+    // OBRS-256: board/unboard attempted after the schedule was marked
+    // `arrived` (backend forward-transition guard).
+    BOARDING_ROUND_ARRIVED: 'STAFF.BOARDING.ACTION_ERROR.BOARDING_ROUND_ARRIVED',
   };
 
   return (errorCode && knownCodes[errorCode]) || 'STAFF.BOARDING.ACTION_ERROR.GENERIC';

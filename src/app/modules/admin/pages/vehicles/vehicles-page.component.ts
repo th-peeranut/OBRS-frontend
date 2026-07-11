@@ -1,12 +1,10 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subscription, firstValueFrom } from 'rxjs';
 import {
   AdminApiService,
   AdminLookupDto,
   AdminVehicleDto,
   AdminVehicleTypeDto,
-  CreateVehiclePayload,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
@@ -16,18 +14,28 @@ import { VehiclesStore } from './vehicles.store';
 import {
   Option,
   VehicleRow,
-  buildVehicleFormValues,
   filterMaintenanceStatusLookups,
   filterVehiclesByStatus,
   isVehicleStatusFilterStale,
   statusClass,
-  toVehicleDtoFallback,
-  toVehiclePayload,
   toVehicleRow,
   toVehicleStatusOptions,
   toVehicleTypeOptions,
 } from './vehicles-page.mappers';
 
+/**
+ * Vehicle management list + CRUD + maintenance focus (OBRS-91 / OBRS-209).
+ *
+ * OBRS-261 (Phase 2 split, mirroring promotions OBRS-251 and user-management
+ * OBRS-257): thinned down to an orchestrator. The list table, the
+ * create/edit form modal, and the delete-confirm modal are now child
+ * components (VehicleListTableComponent / VehicleFormModalComponent /
+ * VehicleDeleteModalComponent) — this page owns only the store
+ * subscriptions, localization, option lists, the status filter, the
+ * maintenance-tab focus state, and the modal open/close + delete
+ * orchestration state. `<app-vehicle-maintenance-panel>` is unrelated to
+ * this split and is untouched.
+ */
 @Component({
   selector: 'app-vehicles-page',
   templateUrl: './vehicles-page.component.html',
@@ -47,10 +55,8 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
   protected isFormModalOpen = false;
   protected isDeleteModalOpen = false;
-  protected isSubmitting = false;
   protected isDeleting = false;
-  protected isEditMode = false;
-  protected isEditDetailLoading = false;
+  protected mode: 'create' | 'edit' = 'create';
   protected selectedVehicle: VehicleRow | null = null;
 
   // OBRS-209: Maintenance tab — the tab bar mirrors SchedulesPageComponent's
@@ -65,7 +71,14 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   // passed down to the panel as an @Input().
   protected readonly canWriteMaintenance: boolean;
 
-  protected readonly vehicleForm: FormGroup;
+  // Bound reloader passed to the form modal so it can refresh the list after
+  // it closes and shows its own success alert (arrow closes over `this`,
+  // mirroring PromotionsPageComponent.reloadStructureBound /
+  // UserManagementPageComponent.reloadStructureBound). Called LAST in the
+  // child's submitVehicle, after close + alert — same order as the
+  // pre-split store.refresh() call.
+  protected readonly reloadStructureBound = () => this.store.refresh();
+
   private readonly subscriptions = new Subscription();
 
   private rawVehicles: AdminVehicleDto[] = [];
@@ -74,20 +87,12 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly adminApiService: AdminApiService,
-    private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
     private readonly store: VehiclesStore,
     private readonly authService: AuthService
   ) {
     this.canWriteMaintenance = this.authService.hasAnyRole(['owner']);
-
-    this.vehicleForm = this.formBuilder.group({
-      vehicleType: ['', [Validators.required]],
-      numberPlate: ['', [Validators.required, Validators.maxLength(50)]],
-      vehicleNumber: ['', [Validators.required, Validators.maxLength(50)]],
-      status: ['', [Validators.required]],
-    });
 
     // Language change only swaps displayed translations; data is already loaded,
     // so re-derive the view locally instead of re-fetching from the backend.
@@ -136,10 +141,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected trackById(_index: number, item: VehicleRow): number {
-    return item.id;
-  }
-
   protected get totalVehicles(): number {
     return this.vehicles.length;
   }
@@ -183,77 +184,20 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   }
 
   protected openCreateModal(): void {
-    this.isEditMode = false;
+    this.mode = 'create';
     this.selectedVehicle = null;
-    this.vehicleForm.reset({
-      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
-      numberPlate: '',
-      vehicleNumber: '',
-      status: this.statusOptions[0]?.code ?? '',
-    });
     this.isFormModalOpen = true;
   }
 
-  protected async openEditModal(vehicle: VehicleRow): Promise<void> {
-    // Open the modal immediately with the row data we already hold, so it
-    // appears without waiting on the (slow on SIT) detail fetch. The server
-    // detail is patched in once it arrives — see the fetch below.
-    this.isEditMode = true;
+  protected openEditModal(vehicle: VehicleRow): void {
+    this.mode = 'edit';
     this.selectedVehicle = vehicle;
-    this.isEditDetailLoading = true;
-    this.applyVehicleFormValues(toVehicleDtoFallback(vehicle), vehicle);
     this.isFormModalOpen = true;
-
-    try {
-      const response = await firstValueFrom(this.adminApiService.getVehicleById(vehicle.id));
-      const vehicleDetail = response?.data ?? null;
-      // Ignore a stale response if the user has closed the modal or moved on
-      // to editing a different vehicle in the meantime.
-      if (vehicleDetail && this.isFormModalOpen && this.selectedVehicle?.id === vehicle.id) {
-        this.applyVehicleFormValues(vehicleDetail, vehicle, true);
-      }
-    } catch {
-      // Keep the fallback values already shown in the open modal.
-    } finally {
-      // Only clear the loading hint if this fetch is still the current one.
-      if (this.isFormModalOpen && this.selectedVehicle?.id === vehicle.id) {
-        this.isEditDetailLoading = false;
-      }
-    }
   }
 
-  // Populate the vehicle form from a DTO. When `onlyPristine` is set (the late
-  // detail patch), only controls the user hasn't started editing are filled,
-  // so the arriving server data never clobbers in-progress input.
-  private applyVehicleFormValues(
-    vehicleDetail: AdminVehicleDto,
-    vehicle: VehicleRow,
-    onlyPristine = false
-  ): void {
-    const values = buildVehicleFormValues(vehicleDetail, vehicle, this.getCurrentLocale());
-
-    if (!onlyPristine) {
-      this.vehicleForm.reset(values);
-      return;
-    }
-
-    for (const [name, value] of Object.entries(values)) {
-      const control = this.vehicleForm.get(name);
-      if (control?.pristine) {
-        control.setValue(value);
-      }
-    }
-  }
-
-  protected closeFormModal(force = false): void {
-    if (this.isSubmitting && !force) {
-      return;
-    }
-
+  protected onFormModalClosed(): void {
     this.isFormModalOpen = false;
-    this.isEditDetailLoading = false;
     this.selectedVehicle = null;
-    this.vehicleForm.reset();
   }
 
   protected openDeleteModal(vehicle: VehicleRow): void {
@@ -268,45 +212,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
 
     this.isDeleteModalOpen = false;
     this.selectedVehicle = null;
-  }
-
-  protected isFieldInvalid(fieldName: string): boolean {
-    const field = this.vehicleForm.get(fieldName);
-    return !!field && field.invalid && (field.dirty || field.touched);
-  }
-
-  protected async submitVehicle(): Promise<void> {
-    if (this.vehicleForm.invalid) {
-      this.vehicleForm.markAllAsTouched();
-      return;
-    }
-
-    this.isSubmitting = true;
-    try {
-      const payload = this.toVehiclePayload();
-
-      if (this.isEditMode && this.selectedVehicle) {
-        await firstValueFrom(
-          this.adminApiService.updateVehicle(this.selectedVehicle.id, payload)
-        );
-        this.closeFormModal(true);
-        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
-      } else {
-        await firstValueFrom(this.adminApiService.createVehicle(payload));
-        this.closeFormModal(true);
-        await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.CREATED'));
-      }
-
-      await this.store.refresh();
-    } catch (error) {
-      this.closeFormModal(true);
-      const message =
-        extractApiErrorMessage(error) ||
-        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
-      await this.alertService.error(message);
-    } finally {
-      this.isSubmitting = false;
-    }
   }
 
   protected async confirmDelete(): Promise<void> {
@@ -354,10 +259,6 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.vehicles = this.rawVehicles.map((vehicle) => toVehicleRow(vehicle, currentLocale));
     this.syncStatusFilterWithAvailableOptions();
     this.applyVehicleFilter();
-  }
-
-  private toVehiclePayload(): CreateVehiclePayload {
-    return toVehiclePayload(this.vehicleForm.value);
   }
 
   // NOTE: `||` short-circuit is deliberate — translate.getDefaultLang() must

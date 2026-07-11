@@ -1,0 +1,81 @@
+@import "../../../../../styles/variables.scss";
+
+// Desktop grid: label | Email | SMS (design-system layout spec, OBRS-141).
+.npref-row {
+  display: grid;
+  grid-template-columns: 1fr 96px 96px;
+  align-items: center;
+  column-gap: $space-sm;
+  padding: $space-sm 0;
+  border-top: 1px solid $primary-lightgrey;
+
+  &:first-of-type {
+    border-top: none;
+  }
+}
+
+.npref-row__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.npref-row__type {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-black;
+}
+
+// Always-visible hint (not a hover tooltip) — design-system a11y guidance.
+.npref-row__hint {
+  font-size: $font-size-xs;
+  color: $text-lightblack;
+}
+
+.npref-row__cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+// Only shown in the stacked mobile layout (hidden on desktop, see below).
+.npref-row__cell-label {
+  display: none;
+}
+
+.npref-cell--na {
+  font-size: $font-size-xs;
+  color: $text-lightgrey;
+}
+
+.npref-row__warning {
+  grid-column: 1 / -1;
+  margin: $space-2xs 0 0;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  color: $text-red;
+}
+
+@media (max-width: 767px) {
+  // Stacked card per type (design-system layout spec) — same visual
+  // treatment as `.account-card`/`.npref-matrix`, one card per row.
+  .npref-row {
+    grid-template-columns: 1fr;
+    row-gap: $space-2xs;
+    padding: $space-sm;
+    background-color: $primary-white;
+    border: 1px solid $primary-lightgrey;
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(13, 21, 37, 0.04);
+  }
+
+  .npref-row__cell {
+    justify-content: space-between;
+  }
+
+  .npref-row__cell-label {
+    display: inline;
+    font-size: $font-size-sm;
+    color: $text-softblack;
+  }
+}

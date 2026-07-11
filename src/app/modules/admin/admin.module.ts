@@ -7,8 +7,18 @@ import { AdminLayoutComponent } from './admin-layout.component';
 import { DashboardPageComponent } from './pages/dashboard/dashboard-page.component';
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
 import { RoleManagementPageComponent } from './pages/role-management/role-management-page.component';
+import { RoleListTableComponent } from './pages/role-management/role-list-table/role-list-table.component';
+import { RoleFormModalComponent } from './pages/role-management/role-form-modal/role-form-modal.component';
+import { RoleDeleteModalComponent } from './pages/role-management/role-delete-modal/role-delete-modal.component';
 import { UserManagementPageComponent } from './pages/user-management/user-management-page.component';
+import { UserListTableComponent } from './pages/user-management/user-list-table/user-list-table.component';
+import { UserFormModalComponent } from './pages/user-management/user-form-modal/user-form-modal.component';
+import { UserDeleteModalComponent } from './pages/user-management/user-delete-modal/user-delete-modal.component';
+import { UserUnlockModalComponent } from './pages/user-management/user-unlock-modal/user-unlock-modal.component';
 import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component';
+import { VehicleListTableComponent } from './pages/vehicles/vehicle-list-table/vehicle-list-table.component';
+import { VehicleFormModalComponent } from './pages/vehicles/vehicle-form-modal/vehicle-form-modal.component';
+import { VehicleDeleteModalComponent } from './pages/vehicles/vehicle-delete-modal/vehicle-delete-modal.component';
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
@@ -137,8 +147,18 @@ const routes: Routes = [
     DashboardPageComponent,
     LookupSettingsPageComponent,
     RoleManagementPageComponent,
+    RoleListTableComponent,
+    RoleFormModalComponent,
+    RoleDeleteModalComponent,
     UserManagementPageComponent,
+    UserListTableComponent,
+    UserFormModalComponent,
+    UserDeleteModalComponent,
+    UserUnlockModalComponent,
     VehiclesPageComponent,
+    VehicleListTableComponent,
+    VehicleFormModalComponent,
+    VehicleDeleteModalComponent,
     RoutesPageComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,

@@ -114,3 +114,25 @@ Admin satisfies this via the existing `ROLE_GRANTS` hierarchy expansion in
 - **Have both hosts call `store.setScheduleId()`** (once in the host's
   `ngOnInit`, once implicitly via the shared component) — rejected per
   Decision 3: guaranteed double-fetch on every mount.
+
+## Addendum (OBRS-256): the print-only trip header is promoted to an
+on-screen strip, and drives a count-lock
+
+The `tripHeader` self-fetch (`loadTripHeader()`, OBRS-100) was print-only
+until now. OBRS-256 additionally renders it as an on-screen
+`.boarding-trip-header` strip carrying a departed/arrived status pill and the
+forward-only transition control (`PATCH /schedules/{id}/status`,
+`scheduled→departed→arrived`, OBRS-200 backend). No new fetch was added —
+`statusCode` is derived from the same response via the existing
+`parseAdminStatus()` helper (shared with the admin schedules table).
+
+Once a schedule reaches `arrived`, the manifest's boarding controls (scan
+input/button, per-row Board/Un-board) freeze client-side via a single
+`isScheduleArrived` getter (`tripHeader?.statusCode === 'arrived'`, strict
+equality only) — both as `[disabled]` bindings and as an early-return guard
+inside `board()`/`unboard()`/`validateScan()`, so a stale render can't fire a
+request the backend would reject with `BOARDING_ROUND_ARRIVED` (409) anyway.
+The whole header strip (and therefore the transition button) is gated on
+`*ngIf="tripHeader"`, matching the existing print template's silent-degrade
+contract — a failed self-fetch hides the strip rather than showing a
+mis-tinted default status.

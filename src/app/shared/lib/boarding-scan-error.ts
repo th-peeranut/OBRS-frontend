@@ -16,6 +16,10 @@ export function mapBoardingScanErrorCode(errorCode: string | null | undefined): 
     TICKET_NOT_CONFIRMED: 'STAFF.BOARDING.SCAN.ERROR.TICKET_NOT_CONFIRMED',
     ALREADY_BOARDED: 'STAFF.BOARDING.SCAN.ERROR.ALREADY_BOARDED',
     TICKET_ERROR_ID_NOT_FOUND: 'STAFF.BOARDING.SCAN.ERROR.TICKET_ERROR_ID_NOT_FOUND',
+    // OBRS-256: scan attempted after the schedule was marked `arrived` — the
+    // count-lock has already frozen boarding client-side, but the backend is
+    // the source of truth (a stale tab or a race with another operator).
+    BOARDING_ROUND_ARRIVED: 'STAFF.BOARDING.SCAN.ERROR.BOARDING_ROUND_ARRIVED',
   };
 
   return (errorCode && knownCodes[errorCode]) || 'STAFF.BOARDING.SCAN.ERROR.GENERIC';
@@ -32,6 +36,8 @@ const WARNING_ERROR_CODES: readonly string[] = [
   'WRONG_SCHEDULE_TICKET',
   'BOARDING_WINDOW_NOT_OPEN',
   'ALREADY_BOARDED',
+  // OBRS-256: an already-settled schedule state, not a hard-invalid token.
+  'BOARDING_ROUND_ARRIVED',
 ];
 
 export function boardingScanErrorSeverity(
@@ -48,6 +54,7 @@ const ICON_BY_ERROR_CODE: Record<string, string> = {
   TICKET_NOT_CONFIRMED: 'block',
   ALREADY_BOARDED: 'how_to_reg',
   TICKET_ERROR_ID_NOT_FOUND: 'search_off',
+  BOARDING_ROUND_ARRIVED: 'lock',
   GENERIC: 'error',
 };
 

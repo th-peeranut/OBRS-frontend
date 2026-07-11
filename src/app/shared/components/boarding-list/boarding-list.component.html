@@ -1,4 +1,46 @@
 <div class="container-fluid py-4">
+  <!-- OBRS-256: on-screen promotion of the (previously print-only) trip
+       header — route/departure/vehicle meta + the departed/arrived status
+       pill + the forward-transition control. Gated on the WHOLE tripHeader
+       so a null/failed self-fetch hides the whole strip (no mis-tinted
+       flash of a default state). -->
+  <div class="boarding-trip-header" *ngIf="tripHeader">
+    <div class="boarding-trip-header-meta">
+      <div class="boarding-trip-header-field">
+        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.ROUTE' | translate }}</span>
+        <span class="fw-semibold">{{ tripHeader.routeLabel }}</span>
+      </div>
+      <div class="boarding-trip-header-field">
+        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DEPARTURE' | translate }}</span>
+        <span class="fw-semibold">{{ tripHeader.departureDateTime }}</span>
+      </div>
+      <div class="boarding-trip-header-field">
+        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.VEHICLE' | translate }}</span>
+        <span class="fw-semibold">{{ tripHeader.vehicleLabel }}</span>
+      </div>
+      <div class="boarding-trip-header-field">
+        <span class="text-muted small">{{ 'STAFF.BOARDING.PRINT_HEADER.DRIVER' | translate }}</span>
+        <span class="fw-semibold">{{ tripHeader.driverName }}</span>
+      </div>
+    </div>
+    <div class="boarding-trip-header-status">
+      <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
+        <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
+        {{ scheduleStatusPillLabelKey | translate }}
+      </span>
+      <button
+        *ngIf="canControlScheduleStatus && scheduleStatusAction as action"
+        type="button"
+        class="admin-btn"
+        [disabled]="isUpdatingScheduleStatus"
+        (click)="onScheduleStatusAction()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
+        {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
+      </button>
+    </div>
+  </div>
+
   <!-- OBRS-100: export (reuses the canonical app-export-button, ADR 0001)
        + print (CDK Portal teleport-to-body, docs/adr/0015). Neither is a
        screen "primary" action (design-system §4) — both stay secondary
@@ -22,6 +64,13 @@
 
   <div *ngIf="errorMessage" class="alert alert-danger mb-3">{{ errorMessage }}</div>
 
+  <!-- OBRS-256: count-lock — once the schedule is arrived, boarding writes
+       are frozen (mirrors the backend's BOARDING_ROUND_ARRIVED guard). -->
+  <div class="boarding-lock-banner" *ngIf="isScheduleArrived" role="status">
+    <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+    {{ 'STAFF.SCHEDULE_STATUS.LOCK_BANNER' | translate }}
+  </div>
+
   <!-- OBRS-96: manual boarding-scan validation — text-entry token only
        (camera scanning is out of scope for this card; the hint below
        reserves the visual room for a future "Scan with camera" affordance).
@@ -42,14 +91,14 @@
             name="boardingScanInput"
             [(ngModel)]="scanToken"
             [placeholder]="'STAFF.BOARDING.SCAN.PLACEHOLDER' | translate"
-            [disabled]="isScanning"
+            [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
             (keydown.enter)="validateScan()"
             autocomplete="off"
           />
           <button
             type="button"
             class="admin-btn admin-btn-primary boarding-scan-btn"
-            [disabled]="!scanToken.trim() || isScanning"
+            [disabled]="!scanToken.trim() || isScanning || isUpdatingScheduleStatus || isScheduleArrived"
             (click)="validateScan()"
           >
             <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
@@ -157,7 +206,7 @@
                     *ngIf="!isBoarded(item)"
                     type="button"
                     class="admin-btn admin-btn-small"
-                    [disabled]="isBoarding(item)"
+                    [disabled]="isBoarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
                     (click)="board(item)">
                     {{ (isBoarding(item) ? 'STAFF.BOARDING.BOARDING_IN_PROGRESS' : 'STAFF.BOARDING.BOARD_BTN') | translate }}
                   </button>
@@ -165,7 +214,7 @@
                     *ngIf="isBoarded(item) && canUnboard"
                     type="button"
                     class="admin-btn admin-btn-small admin-btn-danger"
-                    [disabled]="isUnboarding(item)"
+                    [disabled]="isUnboarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
                     (click)="unboard(item)">
                     {{ (isUnboarding(item) ? 'STAFF.BOARDING.UNBOARD_IN_PROGRESS' : 'STAFF.BOARDING.UNBOARD_BTN') | translate }}
                   </button>

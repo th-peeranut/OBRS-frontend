@@ -42,6 +42,10 @@ export const BOARDING_SCAN_ERROR_CODES = [
   // Deliberately kept as `TICKET_ERROR_ID_NOT_FOUND` (not tidied to
   // `TICKET_NOT_FOUND`) — must match the backend's stable code exactly.
   'TICKET_ERROR_ID_NOT_FOUND',
+  // OBRS-256: a boarding-scan attempted on a schedule already marked
+  // `arrived` (backend forward-transition guard) — the boarding-list
+  // count-lock surfaces this as a warning (see boarding-scan-error.ts).
+  'BOARDING_ROUND_ARRIVED',
 ] as const;
 
 export type BoardingScanErrorCode = (typeof BOARDING_SCAN_ERROR_CODES)[number] | 'GENERIC';
@@ -60,6 +64,9 @@ export const BOARDING_ACTION_ERROR_CODES = [
   // Deliberately kept as `TICKET_ERROR_ID_NOT_FOUND` (not tidied to
   // `TICKET_NOT_FOUND`) — must match the backend's stable code exactly.
   'TICKET_ERROR_ID_NOT_FOUND',
+  // OBRS-256: a board/unboard attempted on a schedule already marked
+  // `arrived` (backend forward-transition guard).
+  'BOARDING_ROUND_ARRIVED',
 ] as const;
 
 export type BoardingActionErrorCode = (typeof BOARDING_ACTION_ERROR_CODES)[number] | 'GENERIC';
