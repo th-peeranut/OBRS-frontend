@@ -28,10 +28,17 @@
     </span>
   </div>
 
-  <div class="summary-row">
+  <div *ngIf="!isDurationSegment" class="summary-row">
     <i class="bi bi-clock summary-meta small me-1"></i>
     <span class="small">
       {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION' | translate: { min: displayDurationMin, max: displayDurationMax } }}
+    </span>
+  </div>
+
+  <div *ngIf="isDurationSegment" class="summary-row">
+    <i class="bi bi-clock summary-meta small me-1"></i>
+    <span class="small">
+      {{ 'HOME.ROUTE_MAP.SUMMARY_DURATION_SEGMENT' | translate: { duration: displayDurationMinutes } }}
     </span>
   </div>
 

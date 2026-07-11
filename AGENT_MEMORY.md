@@ -1981,3 +1981,76 @@ state beyond what the QA pass itself needed.
   date-field consolidation on purpose: it is a month-only control, not a day-grid date field,
   so the 280px day-panel + pill styling would not fit. Its `.calendar-icon` /
   `payment-card-calendar-panel` classes are component-scoped and unaffected by the deletions.
+
+## 2026-07-11 — OBRS-138 FE delta: authoritative pickup→dropoff distance/duration estimates
+
+Worktree `OBRS-frontend-wt-obrs-138-distance-estimation` @ branch `ao/obrs-138-distance-estimation`.
+Frontend-only half of a card built in parallel with the backend (the live `OBRS-backend` clone at
+the time of this work did **not** yet have `StopEntry.offsetMinutesFromOrigin` or
+`ScheduleSearchRespDto.routeSlug` — both are passthrough interface fields here, so the FE compiles
+and tests green today and picks the real values up automatically once the backend lands them; no
+FE redeploy needed for that half of the contract).
+
+- **Replaced the client-side proxy ratio** in `RouteTravelSummaryComponent`
+  (`src/app/modules/home/components/route-map/route-travel-summary/`) with the direct authoritative
+  delta: `distanceKm = |Δ distanceKmFromOrigin|`, a NEW single-value duration key
+  (`HOME.ROUTE_MAP.SUMMARY_DURATION_SEGMENT`) from `|Δ offsetMinutesFromOrigin|`, replacing the
+  old ratio-projected min/max range for a resolved segment. Distance and duration fall back
+  **independently** now (two separate source fields, not one shared ratio) — deleted `@Input()
+  routeSpanKm`, the `segmentRatio` getter, and `route-map-home.component.ts`'s `routeSpanKm` getter
+  entirely; also deleted a stale comment on `distanceKmFromOrigin` that called it an "offset-derived
+  proxy" — Scrutinize (SA-side, prior card) had already confirmed it's a real km value, and the new
+  |Δ| is strictly more accurate than the old ratio projection.
+- **New shared helper `tripEstimateFromStops(pickup, dropoff)`** in `src/app/shared/lib/trip-format.ts`
+  — the single place every consumer (schedule-booking-list row chips, review-schedule-booking-summary
+  per-leg chips) computes the estimate. Each figure (`distanceKm`/`durationMinutes`) resolves
+  independently; a missing source value on either stop yields `null` for that one figure, never a
+  fabricated `0`.
+- **New `RouteMapService.getPickupDropoffCached(slug)`** — session-scoped in-memory
+  `Map<slug, Observable>` + `shareReplay({ refCount: false })` + `catchError(() => of(null))`, so N
+  schedule rows on the same route fire one HTTP call and a failure just means the chip stays absent
+  (no `AlertService`). Documented in the README as a reusable request-dedup pattern, distinct from
+  the map panel's persisted two-tier Directions cache.
+- **The return-leg swap (load-bearing, easy to get backwards):** a return schedule's `routeSlug` is
+  the *reverse* physical route — its `pickup[]` holds the destination-city stops, `dropoff[]` holds
+  the origin-city stops. Both `schedule-booking-list.component.ts` (`resolveLegEstimates`) and
+  `review-schedule-booking-summary.component.ts` (`findTripEstimate`) resolve `fromSlug`/`toSlug`
+  once from the search filter's `startStationId`/`stopStationId`, then swap which slug is searched
+  in `pickup[]` vs `dropoff[]` **only** for the return leg (`pickupSlug = toSlug`, `dropoffSlug =
+  fromSlug`). Verified via a unit test with a synthetic reverse-route fixture in both components'
+  specs (`resolves the return leg estimate with the pickup/dropoff swap`) — searching unswapped
+  would silently empty every return-leg chip (`.find()` never matches) with no error surfaced
+  anywhere, so this is the single riskiest line in the diff.
+- **Slug-space check (explicit ask from the UX spec, done rather than assumed):** confirmed
+  `StationApi.slug` (`GET /api/stops`, fed into the schedule-filter's station store) and
+  `StopEntry.slug` (`GET /api/routes/{slug}/pickup-dropoff`) key off the same underlying
+  `stops.slug` column server-side per `../OBRS-backend/docs/api/catalog.md` ("every stop slug in
+  pickup/dropoff also appears in the province/stops feed") — so a direct slug match (no translation
+  layer) is correct. Matched on `StationApi.slug` via new private `stationSlugById()` helpers
+  (mirroring the existing `getStationLabelById()` pattern) in both consumer components.
+- **Deliberately did NOT touch** the pre-existing unswapped station-*label* lookup in
+  `review-schedule-booking-summary.component.html`'s return card (`findStationById(startStationId)`/
+  `findStationById(stopStationId)` around what were originally lines 260/305) — that's a separate,
+  already-flagged, out-of-scope bug; this card's own estimate chip resolver applies the correct
+  swap regardless of that unrelated label bug.
+- Added `HOME.ROUTE_MAP.SUMMARY_DURATION_SEGMENT`, `SCHEDULE_BOOKING.ESTIMATE_KM_UNIT`/
+  `ESTIMATE_MIN_UNIT`, `REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT`/`ESTIMATE_MIN_UNIT` to all
+  three locale files in the same commit; `≈`/`·` are literal punctuation (matches the existing
+  `|`-separator precedent in schedule-booking-list), not i18n keys.
+- `ng test --watch=false --browsers ChromeHeadless`: 1196/1196 green. `ng build --configuration
+  production`: clean (1.48 MB initial, under the 1.5 MB warning budget). `npx tsc --noEmit -p
+  tsconfig.app.json`: clean. No NgRx changes — plain service memoization per the spec.
+
+## Scrutinize self-fix (OBRS-138) — DRY consolidation of `stationSlugById`
+- The commit introduced a byte-identical private `stationSlugById(stationId, stationList)`
+  in BOTH `schedule-booking-list.component.ts` and `review-schedule-booking-summary.component.ts`
+  (a net-new fork in the same commit). There is an established shared-helper home in
+  `shared/interfaces/station.interface.ts` (`getStationFallbackLabel`, `getStationTranslationLabel`).
+- Fix: extracted the logic once as exported `getStationSlugById(stationId, stationList)` in
+  `station.interface.ts`; both components now import and call it, private copies deleted.
+- Pattern for next time: a helper that resolves a station field by id belongs beside the other
+  `getStation*` functions in `station.interface.ts` — grep there BEFORE adding a private copy.
+  (The pre-existing `getStationLabelById` duplication across e-ticket/payment-info/schedule-booking-list
+  is older tech debt, left out of this scope.)
+- Verified: `npx tsc --noEmit -p tsconfig.app.json` clean after the change; no spec referenced
+  the private method (public behavior unchanged).

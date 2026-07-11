@@ -84,6 +84,22 @@ export function getStationFallbackLabel(
   return getStationTranslationLabel(stationApi, locale) ?? stationApi?.slug ?? '';
 }
 
+/** Resolves a station's `slug` by id — matched against `RouteStop.slug`
+ *  (from `getPickupDropoffCached`); both key off the same `stops.slug`
+ *  column server-side. Returns '' when the id or a matching station is
+ *  missing. */
+export function getStationSlugById(
+  stationId: string | number | null | undefined,
+  stationList: StationApi[] | null | undefined
+): string {
+  if (stationId === null || stationId === undefined || stationId === '') {
+    return '';
+  }
+  const parsed = Number(stationId);
+  const match = (stationList ?? []).find((station) => station.id === parsed);
+  return match?.slug ?? '';
+}
+
 export function getStopTypeLabel(
   stopType: StationLookupValue | null | undefined,
   locale: string

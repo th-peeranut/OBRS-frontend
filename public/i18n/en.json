@@ -1080,6 +1080,7 @@
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} stops",
       "SUMMARY_DISTANCE": "Approx. {{distance}} km",
       "SUMMARY_DURATION": "Travel time approx. {{min}} - {{max}} min",
+      "SUMMARY_DURATION_SEGMENT": "Travel time approx. {{duration}} min",
       "SUMMARY_SEGMENT_NOTE": "For your selected pickup and drop-off",
       "DETAIL_PICKUP_TITLE": "Pickup detail ({{province}})",
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
@@ -1130,7 +1131,8 @@
     "CHOOSE": "select",
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
-    "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers."
+    "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
+    "ESTIMATE_KM_UNIT": "km"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -1145,6 +1147,7 @@
       "TIME_UNIT": "",
       "HOUR_UNIT": "Hours",
       "MINITE_UNIT": "Minutes",
+      "ESTIMATE_KM_UNIT": "km",
       "BTN_BACK": "Back",
       "BTN_NEXT": "Next"
     },

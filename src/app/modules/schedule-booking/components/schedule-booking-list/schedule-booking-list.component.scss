@@ -78,6 +78,13 @@
           overflow: hidden;
           text-overflow: ellipsis;
         }
+
+        .trip-estimate {
+          font-size: $font-size-sm;
+          color: $text-lightblack;
+          text-align: center;
+          white-space: nowrap;
+        }
       }
     }
 
@@ -202,6 +209,11 @@
     max-width: 100%;
     text-align: left;
     overflow: visible;
+  }
+
+  .booking-container .schedule-item .left .time-info .trip-estimate {
+    white-space: normal;
+    text-align: left;
   }
 
   .booking-container .schedule-item .left .icon img {

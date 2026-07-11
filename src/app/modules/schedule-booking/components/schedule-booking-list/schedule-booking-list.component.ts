@@ -4,7 +4,16 @@ import {
   ScheduleFilter,
   ScheduleList,
 } from '../../../../shared/interfaces/schedule.interface';
-import { combineLatest, map, Observable, startWith, Subscription, take } from 'rxjs';
+import {
+  combineLatest,
+  map,
+  Observable,
+  startWith,
+  Subject,
+  Subscription,
+  take,
+  takeUntil,
+} from 'rxjs';
 import { Store, select } from '@ngrx/store';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { selectScheduleList } from '../../../../shared/stores/schedule-list/schedule-list.selector';
@@ -16,14 +25,18 @@ import {
   durationMinutes,
   formatTimeHHMM,
   parsePricePerSeat,
+  tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import {
   getStationFallbackLabel,
+  getStationSlugById,
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
+import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
 
 @Component({
   selector: 'app-schedule-booking-list',
@@ -44,11 +57,22 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   scheduleList$: Subscription;
 
+  /** Authoritative pickup→dropoff distance/duration per schedule id, resolved
+   *  from `RouteMapService.getPickupDropoffCached` once the schedule's
+   *  `routeSlug`, and the filter's from/to stations, are known. Absent
+   *  (no key) until resolved — the chip simply doesn't render yet
+   *  (progressive enhancement, no loading spinner). */
+  departureEstimates: Record<number, TripEstimate> = {};
+  returnEstimates: Record<number, TripEstimate> = {};
+
+  private destroy$ = new Subject<void>();
+
   constructor(
     private store: Store,
     private router: Router,
     private appStore: Store<Appstate>,
-    private translateService: TranslateService
+    private translateService: TranslateService,
+    private routeMapService: RouteMapService
   ) {
     this.scheduleList = this.store.pipe(select(selectScheduleList));
     this.scheduleFilter = this.store.pipe(select(selectScheduleFilter));
@@ -80,12 +104,20 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.isSelectFirst = false;
     this.selectedSchedule = [];
+
+    combineLatest([this.scheduleList, this.scheduleFilter, this.rawProvinceStationList])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(([scheduleList, scheduleFilter, stations]) => {
+        this.resolveTripEstimates(scheduleList, scheduleFilter, stations);
+      });
   }
 
   ngOnDestroy(): void {
     if (this.scheduleList$) {
       this.scheduleList$.unsubscribe();
     }
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   selectSchedule(schedule: Schedule, isFirst: boolean = false): void {
@@ -187,6 +219,82 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     if (!match) return '';
 
     return getStationFallbackLabel(match, locale);
+  }
+
+  /** Resolves `departureEstimates`/`returnEstimates` for every schedule row
+   *  once the filter's from/to stations and each schedule's `routeSlug` are
+   *  known. One `getPickupDropoffCached` call per distinct route slug —
+   *  N schedule rows on the same route share a single HTTP request. */
+  private resolveTripEstimates(
+    scheduleList: ScheduleList | null | undefined,
+    scheduleFilter: ScheduleFilter | null | undefined,
+    stations: StationApi[] | null | undefined
+  ): void {
+    if (!scheduleFilter) {
+      return;
+    }
+
+    const fromSlug = getStationSlugById(scheduleFilter.startStationId, stations);
+    const toSlug = getStationSlugById(scheduleFilter.stopStationId, stations);
+    if (!fromSlug || !toSlug) {
+      return;
+    }
+
+    this.resolveLegEstimates(
+      scheduleList?.departureSchedules ?? [],
+      fromSlug,
+      toSlug,
+      false,
+      this.departureEstimates
+    );
+    // Return leg's routeSlug is the reverse route: its `pickup[]` holds the
+    // destination-city stops and its `dropoff[]` holds the origin-city
+    // stops, so the from/to lookup swaps versus the outbound leg.
+    this.resolveLegEstimates(
+      scheduleList?.arrivalSchedules ?? [],
+      fromSlug,
+      toSlug,
+      true,
+      this.returnEstimates
+    );
+  }
+
+  private resolveLegEstimates(
+    schedules: Schedule[],
+    fromSlug: string,
+    toSlug: string,
+    isReturnLeg: boolean,
+    target: Record<number, TripEstimate>
+  ): void {
+    const scheduleIdsBySlug = new Map<string, number[]>();
+    for (const schedule of schedules) {
+      if (!schedule.routeSlug) {
+        continue;
+      }
+      const ids = scheduleIdsBySlug.get(schedule.routeSlug) ?? [];
+      ids.push(schedule.id);
+      scheduleIdsBySlug.set(schedule.routeSlug, ids);
+    }
+
+    const pickupSlug = isReturnLeg ? toSlug : fromSlug;
+    const dropoffSlug = isReturnLeg ? fromSlug : toSlug;
+
+    scheduleIdsBySlug.forEach((scheduleIds, slug) => {
+      this.routeMapService
+        .getPickupDropoffCached(slug)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe((data) => {
+          if (!data) {
+            return;
+          }
+          const pickupStop = data.pickup.find((stop) => stop.slug === pickupSlug) ?? null;
+          const dropoffStop = data.dropoff.find((stop) => stop.slug === dropoffSlug) ?? null;
+          const estimate = tripEstimateFromStops(pickupStop, dropoffStop);
+          scheduleIds.forEach((id) => {
+            target[id] = estimate;
+          });
+        });
+    });
   }
 
   private normalizeLocale(locale: string | null | undefined): 'en' | 'th' {

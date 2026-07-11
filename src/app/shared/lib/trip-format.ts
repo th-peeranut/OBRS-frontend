@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { RouteStop, TripEstimate } from '../interfaces/route-map.interface';
 
 /**
  * Pure presentation formatters for a trip/schedule row — departure time, journey
@@ -54,4 +55,32 @@ export function capitalizeVehicleType(type: string | null | undefined): string {
 export function parsePricePerSeat(value: string | number | null | undefined): number {
   const parsed = typeof value === 'string' ? parseFloat(value) : value ?? 0;
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/**
+ * Authoritative pickup→dropoff distance/duration, derived from the two stops'
+ * offset-based fields on the seeded `route_stops` table (free — no Directions/
+ * Distance-Matrix call). Each figure is resolved independently: a missing
+ * value on either stop yields `null` for that figure rather than fabricating
+ * a `0`, so a caller never renders a misleading "≈ 0 km"/"0 min".
+ */
+export function tripEstimateFromStops(
+  pickup: RouteStop | null | undefined,
+  dropoff: RouteStop | null | undefined
+): TripEstimate {
+  const pickupDistance = pickup?.distanceKmFromOrigin;
+  const dropoffDistance = dropoff?.distanceKmFromOrigin;
+  const distanceKm =
+    pickupDistance != null && dropoffDistance != null
+      ? Math.round(Math.abs(dropoffDistance - pickupDistance))
+      : null;
+
+  const pickupOffset = pickup?.offsetMinutesFromOrigin;
+  const dropoffOffset = dropoff?.offsetMinutesFromOrigin;
+  const durationMinutes =
+    pickupOffset != null && dropoffOffset != null
+      ? Math.round(Math.abs(dropoffOffset - pickupOffset))
+      : null;
+
+  return { distanceKm, durationMinutes };
 }

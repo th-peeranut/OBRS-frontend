@@ -58,3 +58,13 @@ export function createLanguageServiceStub(): any {
 export function createElementRefStub(): any {
   return { nativeElement: document.createElement('div') };
 }
+
+/** RouteMapService: `getPickupDropoffCached` resolves to an inert `null` (no data yet). */
+export function createRouteMapServiceStub(): any {
+  return {
+    getPickupDropoff: () => of(null),
+    getActiveRoutes: () => of([]),
+    getFirstActiveRouteSlug: () => of(null),
+    getPickupDropoffCached: () => of(null),
+  };
+}

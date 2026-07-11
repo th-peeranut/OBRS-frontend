@@ -5,7 +5,28 @@ import {
   durationMinutesTotal,
   formatTimeHHMM,
   parsePricePerSeat,
+  tripEstimateFromStops,
 } from './trip-format';
+import { RouteStop } from '../interfaces/route-map.interface';
+
+function makeStop(
+  distanceKmFromOrigin: number | null,
+  offsetMinutesFromOrigin: number | null
+): RouteStop {
+  return {
+    order: 1,
+    slug: 'stop',
+    name: 'Stop',
+    address: 'Addr',
+    approxTime: '05:00',
+    distanceKmFromOrigin,
+    offsetMinutesFromOrigin,
+    latitude: null,
+    longitude: null,
+    primaryPhotoUrl: null,
+    googleMapsUrl: null,
+  };
+}
 
 describe('trip-format', () => {
   describe('formatTimeHHMM', () => {
@@ -60,6 +81,55 @@ describe('trip-format', () => {
     it('falls back to 0 for non-finite/missing input', () => {
       expect(parsePricePerSeat(null)).toBe(0);
       expect(parsePricePerSeat('abc')).toBe(0);
+    });
+  });
+
+  describe('tripEstimateFromStops', () => {
+    it('computes the absolute delta for both distance and duration', () => {
+      const pickup = makeStop(10, 15);
+      const dropoff = makeStop(55, 60);
+      expect(tripEstimateFromStops(pickup, dropoff)).toEqual({
+        distanceKm: 45,
+        durationMinutes: 45,
+      });
+    });
+
+    it('is order-independent (abs of the delta)', () => {
+      const pickup = makeStop(55, 60);
+      const dropoff = makeStop(10, 15);
+      expect(tripEstimateFromStops(pickup, dropoff)).toEqual({
+        distanceKm: 45,
+        durationMinutes: 45,
+      });
+    });
+
+    it('never fabricates 0 — a missing distance yields null distanceKm only', () => {
+      const pickup = makeStop(null, 15);
+      const dropoff = makeStop(55, 60);
+      expect(tripEstimateFromStops(pickup, dropoff)).toEqual({
+        distanceKm: null,
+        durationMinutes: 45,
+      });
+    });
+
+    it('never fabricates 0 — a missing offset yields null durationMinutes only', () => {
+      const pickup = makeStop(10, null);
+      const dropoff = makeStop(55, 60);
+      expect(tripEstimateFromStops(pickup, dropoff)).toEqual({
+        distanceKm: 45,
+        durationMinutes: null,
+      });
+    });
+
+    it('returns both null when pickup or dropoff is missing entirely', () => {
+      expect(tripEstimateFromStops(null, makeStop(55, 60))).toEqual({
+        distanceKm: null,
+        durationMinutes: null,
+      });
+      expect(tripEstimateFromStops(makeStop(10, 15), undefined)).toEqual({
+        distanceKm: null,
+        durationMinutes: null,
+      });
     });
   });
 });

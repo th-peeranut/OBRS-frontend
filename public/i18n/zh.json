@@ -1079,6 +1079,7 @@
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} 站",
       "SUMMARY_DISTANCE": "约 {{distance}} 公里",
       "SUMMARY_DURATION": "行程约 {{min}} - {{max}} 分钟",
+      "SUMMARY_DURATION_SEGMENT": "预计行程时间约 {{duration}} 分钟",
       "SUMMARY_SEGMENT_NOTE": "针对您所选的上车点和下车点",
       "DETAIL_PICKUP_TITLE": "上车点详情 ({{province}})",
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
@@ -1129,7 +1130,8 @@
     "CHOOSE": "选择",
     "CHANGE": "修改数据",
     "NO_RESULTS": "未找到符合条件的班次。请尝试更改日期、路线或减少乘客人数。",
-    "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。"
+    "NO_RETURN_RESULTS": "未找到符合条件的返程班次。请尝试更改返程日期或减少乘客人数。",
+    "ESTIMATE_KM_UNIT": "公里"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -1144,6 +1146,7 @@
       "TIME_UNIT": "",
       "HOUR_UNIT": "小时",
       "MINITE_UNIT": "分钟",
+      "ESTIMATE_KM_UNIT": "公里",
       "BTN_BACK": "返回",
       "BTN_NEXT": "下一步"
     },

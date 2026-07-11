@@ -40,6 +40,12 @@
             <div class="route">
               {{ departureRouteLabel$ | async }}
             </div>
+
+            <ng-container *ngIf="departureEstimates[departure.id] as est">
+              <small class="trip-estimate" *ngIf="est.distanceKm != null">
+                ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
+              </small>
+            </ng-container>
           </div>
 
           <div class="time">
@@ -127,6 +133,12 @@
               <div class="route">
                 {{ returnRouteLabel$ | async }}
               </div>
+
+              <ng-container *ngIf="returnEstimates[return.id] as est">
+                <small class="trip-estimate" *ngIf="est.distanceKm != null">
+                  ≈ {{ est.distanceKm }} {{ "SCHEDULE_BOOKING.ESTIMATE_KM_UNIT" | translate }}
+                </small>
+              </ng-container>
             </div>
 
             <div class="time">
