@@ -295,6 +295,7 @@
     "THEME_TOGGLE": "สลับโหมดมืด",
     "CLEAR": "ล้าง",
     "CALENDAR_ICON_ALT": "ไอคอนปฏิทิน",
+    "CLOSE": "ปิด",
     "EXPORT": {
       "BUTTON_LABEL": "ส่งออกข้อมูล",
       "FORMAT_CSV": "CSV",

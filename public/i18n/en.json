@@ -295,6 +295,7 @@
     "THEME_TOGGLE": "Toggle dark mode",
     "CLEAR": "Clear",
     "CALENDAR_ICON_ALT": "Calendar Icon",
+    "CLOSE": "Close",
     "EXPORT": {
       "BUTTON_LABEL": "Export",
       "FORMAT_CSV": "CSV",

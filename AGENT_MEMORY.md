@@ -194,6 +194,21 @@ tabs) is already gated behind `*ngIf="selectedTrip"` one level up, with the exis
 reachable in that state. The *zero-passengers-in-this-round* empty state inside the shared
 component reuses the existing `STAFF.BOARDING.EMPTY_TITLE`/`EMPTY_BODY` keys verbatim.
 
+## 2026-07-10 — Scrutinize self-fix: OBRS-195 post-sale dialog used a non-existent i18n key `COMMON.CLOSE`
+
+`sell-page.component.ts` `offerPrintTicket()` set `cancelButtonText: translate.instant('COMMON.CLOSE')`,
+but the `COMMON` namespace only had `THEME_TOGGLE`, `CLEAR`, `EXPORT` — there was no `COMMON.CLOSE`
+(only `ADMIN.COMMON.CLOSE`, `MY_BOOKINGS.TICKET_MODAL.CLOSE`, etc.). ngx-translate renders the raw
+key string when a key is missing, so the post-sale "Print ticket?" dialog's cancel button would have
+literally read "COMMON.CLOSE" in the shipped UI. The unit specs didn't catch it because the mocked
+`TranslateService.instant` echoes the key.
+
+Fix (additive, 3 lines): added `"CLOSE"` to the `COMMON` block in `public/i18n/{en,th,zh}.json`
+("Close" / "ปิด" / "关闭"). Re-ran `ng test` → 1057 SUCCESS.
+
+Pattern to internalize: when you reference an i18n key from TS, grep the locale JSON for that EXACT
+dotted path before shipping — a mocked translate pipe/service will happily pass specs on a missing key.
+
 ## 2026-07-10 — QA re-verify: OBRS-129 PASSED — data path confirmed end-to-end at backend `70ff182`
 
 Backend fix (`70ff182`, Instant→OffsetDateTime projection conversion) rebuilt locally on the same
