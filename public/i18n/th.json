@@ -296,6 +296,9 @@
     "CLEAR": "ล้าง",
     "CALENDAR_ICON_ALT": "ไอคอนปฏิทิน",
     "CLOSE": "ปิด",
+    "ERROR": {
+      "SERVICE_UNAVAILABLE": "ระบบมีปัญหาชั่วคราว กรุณาลองใหม่ภายหลัง"
+    },
     "EXPORT": {
       "BUTTON_LABEL": "ส่งออกข้อมูล",
       "FORMAT_CSV": "CSV",

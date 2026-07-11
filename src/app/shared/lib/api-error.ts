@@ -40,3 +40,21 @@ export function extractApiErrorMessage(error: unknown): string {
 
   return '';
 }
+
+/**
+ * Maps a transport-level HTTP status to a dedicated i18n message key for the
+ * global error alert, or null when the backend-provided message should be used.
+ *
+ * A 503 (Service Unavailable) means a dependency outage (DB unreachable / pool
+ * exhausted — see OBRS-210), for which the backend returns a generic
+ * `UNEXPECTED_ERROR` body that reads like a code fault. Surfacing a dedicated
+ * "temporarily unavailable, try again later" message is clearer and honest
+ * about it being transient. Every other status returns null so its handling
+ * (the backend message via extractApiErrorMessage) is unchanged.
+ */
+export function statusAlertMessageKey(error: unknown): string | null {
+  if (error instanceof HttpErrorResponse && error.status === 503) {
+    return 'COMMON.ERROR.SERVICE_UNAVAILABLE';
+  }
+  return null;
+}
