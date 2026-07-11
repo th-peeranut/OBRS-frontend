@@ -8,6 +8,10 @@ import { DashboardPageComponent } from './pages/dashboard/dashboard-page.compone
 import { LookupSettingsPageComponent } from './pages/lookup-settings/lookup-settings-page.component';
 import { RoleManagementPageComponent } from './pages/role-management/role-management-page.component';
 import { UserManagementPageComponent } from './pages/user-management/user-management-page.component';
+import { UserListTableComponent } from './pages/user-management/user-list-table/user-list-table.component';
+import { UserFormModalComponent } from './pages/user-management/user-form-modal/user-form-modal.component';
+import { UserDeleteModalComponent } from './pages/user-management/user-delete-modal/user-delete-modal.component';
+import { UserUnlockModalComponent } from './pages/user-management/user-unlock-modal/user-unlock-modal.component';
 import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component';
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
@@ -138,6 +142,10 @@ const routes: Routes = [
     LookupSettingsPageComponent,
     RoleManagementPageComponent,
     UserManagementPageComponent,
+    UserListTableComponent,
+    UserFormModalComponent,
+    UserDeleteModalComponent,
+    UserUnlockModalComponent,
     VehiclesPageComponent,
     RoutesPageComponent,
     RouteFormModalComponent,

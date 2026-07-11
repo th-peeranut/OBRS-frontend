@@ -47,343 +47,40 @@
   ></app-admin-dropdown>
 </section>
 
-<section class="admin-card mt-3">
-  <div class="admin-card-head">
-    <h4>{{ 'ADMIN.USERS.TABLE_TITLE' | translate }}</h4>
-  </div>
+<app-user-list-table
+  [rows]="filteredUsers"
+  [isLoading]="isLoading"
+  [skeletonRows]="skeletonRows"
+  [hasError]="!!errorMessage"
+  [canUnlock]="hasAdminRole()"
+  [totalCount]="users.length"
+  (edit)="openEditModal($event)"
+  (delete)="openDeleteModal($event)"
+  (unlock)="openUnlockModal($event)"
+></app-user-list-table>
 
-  <div class="admin-table-wrap">
-    <table class="admin-table">
-      <thead>
-        <tr>
-          <th>{{ 'ADMIN.USERS.FULL_NAME' | translate }}</th>
-          <th>{{ 'ADMIN.USERS.EMAIL_PHONE' | translate }}</th>
-          <th>{{ 'ADMIN.USERS.ROLES' | translate }}</th>
-          <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
-          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <ng-container *ngIf="isLoading">
-          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
-            <td>
-              <div class="admin-cell-stack">
-                <span class="admin-skeleton"></span>
-                <span class="admin-skeleton admin-skeleton--sm"></span>
-              </div>
-            </td>
-            <td>
-              <div class="admin-cell-stack">
-                <span class="admin-skeleton"></span>
-                <span class="admin-skeleton admin-skeleton--sm"></span>
-              </div>
-            </td>
-            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
-            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
-          </tr>
-        </ng-container>
+<app-user-form-modal
+  [isOpen]="isFormModalOpen"
+  [mode]="mode"
+  [selectedUser]="selectedUser"
+  [roleOptions]="roleOptions"
+  [statusOptions]="statusOptions"
+  [reloadStructure]="reloadStructureBound"
+  (closed)="onFormModalClosed()"
+></app-user-form-modal>
 
-        <ng-container *ngIf="!isLoading">
-          <tr *ngFor="let user of filteredUsers; let i = index" [class.zebra]="i % 2 === 1">
-            <td>
-              <div class="admin-cell-stack">
-                <span class="admin-emphasis">{{ user.fullName }}</span>
-                <span class="admin-muted">{{ 'ADMIN.USERS.LAST_UPDATED' | translate }}: {{ user.lastUpdated }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="admin-cell-stack">
-                <span>{{ user.email }}</span>
-                <span>{{ user.phone }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="admin-tags">
-                <span class="admin-chip" *ngFor="let role of user.roles">{{ role }}</span>
-              </div>
-            </td>
-            <td>
-              <div class="admin-cell-stack">
-                <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
-                <span class="admin-status is-warning admin-status--icon" *ngIf="user.locked">
-                  <span class="material-symbols-outlined">lock</span>
-                  {{ 'ADMIN.USERS.LOCKED_BADGE' | translate }}
-                </span>
-              </div>
-            </td>
-            <td class="text-right">
-              <div class="admin-inline-actions">
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  [attr.aria-label]="'ADMIN.USERS.UNLOCK_ACTION' | translate"
-                  (click)="openUnlockModal(user)"
-                  *ngIf="user.locked && hasAdminRole()"
-                >
-                  <span class="material-symbols-outlined">lock_open</span>
-                </button>
-                <button
-                  type="button"
-                  class="admin-icon-btn"
-                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
-                  (click)="openEditModal(user)"
-                >
-                  <span class="material-symbols-outlined">edit_square</span>
-                </button>
-                <button
-                  type="button"
-                  class="admin-icon-btn danger"
-                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
-                  (click)="openDeleteModal(user)"
-                >
-                  <span class="material-symbols-outlined">delete</span>
-                </button>
-              </div>
-            </td>
-          </tr>
+<app-user-delete-modal
+  [isOpen]="isDeleteModalOpen"
+  [user]="selectedUser"
+  [isDeleting]="isDeleting"
+  (confirm)="confirmDelete()"
+  (cancel)="closeDeleteModal()"
+></app-user-delete-modal>
 
-          <tr *ngIf="filteredUsers.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
-          </tr>
-        </ng-container>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="admin-table-footer">
-    <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredUsers.length === 0 ? 0 : 1 }} - {{ filteredUsers.length }}
-      {{ 'ADMIN.COMMON.OF' | translate }} {{ users.length }} {{ 'ADMIN.USERS.USER_COUNT' | translate }}
-    </span>
-  </div>
-</section>
-
-<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop [dismissOnBackdrop]="false" (dismiss)="closeFormModal()">
-  <div class="user-editor-modal">
-    <div class="user-editor-header">
-      <div>
-        <h4 class="user-editor-title">
-          {{ isEditMode ? ('ADMIN.USERS.EDIT_TITLE' | translate) : ('ADMIN.USERS.ADD_TITLE' | translate) }}
-        </h4>
-        <p class="user-editor-subtitle">
-          {{ 'ADMIN.USERS.MODAL_HINT' | translate }}
-          <span class="admin-muted" *ngIf="isEditMode && isEditDetailLoading">
-            · {{ 'ADMIN.COMMON.LOADING' | translate }}
-          </span>
-        </p>
-      </div>
-      <button type="button" class="user-editor-close" (click)="closeFormModal()">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-
-    <div class="user-editor-body">
-      <form [formGroup]="userForm" class="user-editor-form" (ngSubmit)="submitUser()">
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">person</span>
-            <h5>Personal Information</h5>
-          </div>
-
-          <div class="user-editor-grid">
-            <div class="user-field is-title">
-              <label>
-                {{ 'ADMIN.USERS.FORM_TITLE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="title" />
-              <small class="admin-error" *ngIf="isFieldInvalid('title')">
-                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field is-first-name">
-              <label>
-                {{ 'ADMIN.USERS.FIRST_NAME' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="firstName" />
-              <small class="admin-error" *ngIf="isFieldInvalid('firstName')">
-                {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field is-half">
-              <label>{{ 'ADMIN.USERS.MIDDLE_NAME' | translate }}</label>
-              <input class="admin-field user-input" formControlName="middleName" placeholder="-" />
-            </div>
-
-            <div class="user-field is-half">
-              <label>
-                {{ 'ADMIN.USERS.LAST_NAME' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="lastName" />
-              <small class="admin-error" *ngIf="isFieldInvalid('lastName')">
-                {{ 'ADMIN.VALIDATION.MIN_2' | translate }}
-              </small>
-            </div>
-          </div>
-        </section>
-
-        <section class="user-editor-section" *ngIf="!isEditMode">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">key</span>
-            <h5>Account Credentials</h5>
-          </div>
-
-          <div class="user-editor-grid is-two-column">
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.PASSWORD' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="password" type="password" />
-              <small class="admin-error" *ngIf="isFieldInvalid('password')">
-                {{ 'ADMIN.VALIDATION.PASSWORD' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.CONFIRM_PASSWORD' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="confirmPassword" type="password" />
-              <small class="admin-error" *ngIf="isFieldInvalid('confirmPassword')">
-                {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowConfirmPasswordMismatch()">
-                {{ 'ADMIN.VALIDATION.SAME_PASSWORD_VALIDATE' | translate }}
-              </small>
-            </div>
-          </div>
-        </section>
-
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">contact_mail</span>
-            <h5>Contact &amp; Settings</h5>
-          </div>
-
-          <div class="user-editor-grid is-two-column">
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.EMAIL' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="email" type="email" />
-              <small class="admin-error" *ngIf="isFieldInvalid('email')">
-                {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowCredentialValidationError('email')">
-                {{ 'ADMIN.VALIDATION.EMAIL_EXIST' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field">
-              <label>
-                {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <input class="admin-field user-input" formControlName="phoneNumber" type="tel" />
-              <small class="admin-error" *ngIf="isFieldInvalid('phoneNumber')">
-                {{ 'ADMIN.VALIDATION.PHONE' | translate }}
-              </small>
-              <small class="admin-error" *ngIf="shouldShowCredentialValidationError('phoneNumber')">
-                {{ 'ADMIN.VALIDATION.PHONE_NO_EXIST' | translate }}
-              </small>
-            </div>
-
-            <div class="user-field user-modal-select">
-              <label>
-                {{ 'ADMIN.USERS.LOCALE' | translate }} <span class="admin-required">*</span>
-              </label>
-              <app-admin-dropdown
-                formControlName="preferredLocale"
-                [options]="[{ value: 'th', label: 'th' }, { value: 'en', label: 'en' }]"
-              ></app-admin-dropdown>
-            </div>
-
-            <div class="user-field user-modal-select">
-              <label>
-                {{ 'ADMIN.USERS.STATUS' | translate }} <span class="admin-required">*</span>
-              </label>
-              <app-admin-dropdown
-                formControlName="status"
-                [options]="statusOptions"
-                valueKey="code"
-                labelKey="label"
-              ></app-admin-dropdown>
-            </div>
-          </div>
-        </section>
-
-        <section class="user-editor-section">
-          <div class="user-editor-section-title">
-            <span class="material-symbols-outlined">badge</span>
-            <h5>{{ 'ADMIN.USERS.ROLES' | translate }} <span class="admin-required">*</span></h5>
-          </div>
-
-          <div class="user-role-list">
-            <label
-              class="user-role-chip"
-              *ngFor="let role of roleOptions"
-              [class.is-selected]="isRoleChecked(role.slug)"
-            >
-              <input
-                type="checkbox"
-                [checked]="isRoleChecked(role.slug)"
-                (change)="toggleRoleSelection(role.slug, $any($event.target).checked)"
-              />
-              <span>{{ role.label }}</span>
-            </label>
-          </div>
-          <small class="admin-error" *ngIf="isFieldInvalid('roles')">
-            {{ 'ADMIN.VALIDATION.ROLE_REQUIRED' | translate }}
-          </small>
-        </section>
-      </form>
-    </div>
-
-    <div class="user-editor-footer">
-      <button type="button" class="user-editor-cancel" (click)="closeFormModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="user-editor-save" [disabled]="isSubmitting" (click)="submitUser()">
-        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="selectedUser">{{ selectedUser.fullName }}</strong>
-    </p>
-
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeDeleteModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirmDelete()">
-        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
-
-<div class="admin-modal-backdrop" *ngIf="isUnlockModalOpen" adminModalBackdrop (dismiss)="closeUnlockModal()">
-  <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.USERS.UNLOCK_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
-      {{ 'ADMIN.USERS.UNLOCK_CONFIRM_MESSAGE' | translate }}
-      <strong *ngIf="selectedUser">{{ selectedUser.fullName }}</strong>
-    </p>
-    <div class="admin-modal-actions">
-      <button type="button" class="admin-btn" (click)="closeUnlockModal()">
-        {{ 'ADMIN.COMMON.CANCEL' | translate }}
-      </button>
-      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isUnlocking" (click)="confirmUnlock()">
-        {{ isUnlocking ? ('ADMIN.USERS.UNLOCKING' | translate) : ('ADMIN.USERS.UNLOCK_BTN' | translate) }}
-      </button>
-    </div>
-  </div>
-</div>
+<app-user-unlock-modal
+  [isOpen]="isUnlockModalOpen"
+  [user]="selectedUser"
+  [isUnlocking]="isUnlocking"
+  (confirm)="confirmUnlock()"
+  (cancel)="closeUnlockModal()"
+></app-user-unlock-modal>
