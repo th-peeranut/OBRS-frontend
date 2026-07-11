@@ -10,10 +10,12 @@ import {
   ViewContainerRef,
 } from '@angular/core';
 import { DomPortalOutlet, TemplatePortal } from '@angular/cdk/portal';
-import { Subscription, firstValueFrom } from 'rxjs';
+import { Subject, Subscription, firstValueFrom } from 'rxjs';
+import { finalize, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
+import { parseAdminStatus } from '../../../services/admin/admin-api.service';
 import {
   boardingScanErrorIcon,
   boardingScanErrorSeverity,
@@ -21,6 +23,7 @@ import {
   mapBoardingScanErrorCode,
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
+import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
 import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
@@ -31,12 +34,29 @@ import { BoardingListStore } from './boarding-list.store';
  * `BoardingListComponent` via `StaffApiService.getScheduleById()`, never
  * threaded through either host (ADR 0014 keeps the `[scheduleId]`-only
  * contract). Seats-sold / boarded counts are NOT part of this shape — they
- * are derived from `items` already held by the component. */
+ * are derived from `items` already held by the component.
+ *
+ * OBRS-256: `statusCode` (`scheduled|departed|arrived|unknown`, from
+ * `parseAdminStatus(schedule?.status).code`) additionally drives the
+ * on-screen status pill + forward-transition control + the boarding
+ * count-lock once a schedule reaches `arrived`. */
 export interface BoardingManifestHeader {
   routeLabel: string;
   departureDateTime: string;
   vehicleLabel: string;
   driverName: string;
+  statusCode: string;
+}
+
+/** OBRS-256: the single forward transition available from the CURRENT
+ * schedule status, or `null` when there is none (`arrived`/`unknown`/no
+ * `tripHeader`). `code` is the value PATCHed to
+ * `StaffApiService.updateScheduleStatus()`. */
+export interface ScheduleStatusAction {
+  code: 'departed' | 'arrived';
+  labelKey: string;
+  icon: string;
+  requiresConfirm: boolean;
 }
 
 /** Inline result of the manual boarding-scan box — success carries the
@@ -102,6 +122,16 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `ExportButtonComponent.canExport`. */
   protected readonly canUnboard: boolean;
 
+  /** OBRS-256: the schedule departed/arrived control is salesperson/admin
+   * only — identical shape to `canUnboard` above (hidden, not disabled, for
+   * a driver). */
+  protected readonly canControlScheduleStatus: boolean;
+
+  /** OBRS-256: true while a departed/arrived PATCH is in flight — disables
+   * the transition button and (together with `isScheduleArrived`) the
+   * boarding controls. */
+  protected isUpdatingScheduleStatus = false;
+
   // Manual boarding-scan box (OBRS-96) — text-entry token only, camera
   // scanning is out of scope for this card.
   protected scanToken = '';
@@ -110,6 +140,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   protected scanError: BoardingScanErrorResult | null = null;
 
   private readonly subscriptions = new Subscription();
+  /** OBRS-256: scopes the `updateScheduleStatus()` HTTP subscription only —
+   * every other async flow in this component already uses `firstValueFrom`
+   * (a single-shot promise, no subscription to leak). */
+  private readonly destroy$ = new Subject<void>();
 
   constructor(
     private readonly staffApiService: StaffApiService,
@@ -120,6 +154,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly viewContainerRef: ViewContainerRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
+    this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -152,6 +187,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.unsubscribe();
+    this.destroy$.next();
+    this.destroy$.complete();
     // OBRS-100: guard against a leaked body node if the operator navigates
     // away while the print dialog is still open (afterprint alone can't be
     // relied on for that case) — see docs/adr/0015.
@@ -160,6 +197,76 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   protected get isLoading(): boolean {
     return this.isRefreshing && !this.store.hasValue;
+  }
+
+  /** OBRS-256: strict equality only — a `null`/`unknown` `tripHeader` must
+   * resolve `false` (never accidentally freeze or unlock the boarding UI via
+   * a negation or a fallback-to-true/false trick). */
+  protected get isScheduleArrived(): boolean {
+    return this.tripHeader?.statusCode === 'arrived';
+  }
+
+  protected get scheduleStatusPillClass(): string {
+    switch (this.tripHeader?.statusCode) {
+      case 'scheduled':
+        return 'is-neutral';
+      case 'departed':
+        return 'is-info';
+      case 'arrived':
+        return 'is-success';
+      default:
+        return 'is-neutral';
+    }
+  }
+
+  protected get scheduleStatusPillIcon(): string {
+    switch (this.tripHeader?.statusCode) {
+      case 'scheduled':
+        return 'schedule';
+      case 'departed':
+        return 'directions_bus';
+      case 'arrived':
+        return 'check_circle';
+      default:
+        return 'help';
+    }
+  }
+
+  protected get scheduleStatusPillLabelKey(): string {
+    switch (this.tripHeader?.statusCode) {
+      case 'scheduled':
+        return 'STAFF.SCHEDULE_STATUS.PILL.SCHEDULED';
+      case 'departed':
+        return 'STAFF.SCHEDULE_STATUS.PILL.DEPARTED';
+      case 'arrived':
+        return 'STAFF.SCHEDULE_STATUS.PILL.ARRIVED';
+      default:
+        return 'STAFF.SCHEDULE_STATUS.PILL.UNKNOWN';
+    }
+  }
+
+  /** OBRS-256: the single forward transition available from the CURRENT
+   * status, or `null` (arrived / unknown / no `tripHeader` — no button
+   * renders). */
+  protected get scheduleStatusAction(): ScheduleStatusAction | null {
+    switch (this.tripHeader?.statusCode) {
+      case 'scheduled':
+        return {
+          code: 'departed',
+          labelKey: 'STAFF.SCHEDULE_STATUS.ACTION.MARK_DEPARTED',
+          icon: 'departure_board',
+          requiresConfirm: false,
+        };
+      case 'departed':
+        return {
+          code: 'arrived',
+          labelKey: 'STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED',
+          icon: 'flag',
+          requiresConfirm: true,
+        };
+      default:
+        return null;
+    }
   }
 
   /** OBRS-130: boarded state is `boardedAt != null` — status-neutral, not
@@ -186,7 +293,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
 
   /** OBRS-130: manual Board action — replaces the retired check-in flow. */
   protected async board(item: BoardingListItemDto): Promise<void> {
-    if (this.isBoarded(item) || this.isBoarding(item)) {
+    // OBRS-256: count-lock — once the schedule is `arrived`, no boarding
+    // write is attempted client-side (mirrors the backend's own
+    // BOARDING_ROUND_ARRIVED guard).
+    if (this.isScheduleArrived || this.isBoarded(item) || this.isBoarding(item)) {
       return;
     }
 
@@ -230,7 +340,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * drivers, see `canUnboard`) and requires a confirm, since it reverses a
    * recorded fact. */
   protected async unboard(item: BoardingListItemDto): Promise<void> {
-    if (!this.canUnboard || !this.isBoarded(item) || this.isUnboarding(item)) {
+    // OBRS-256: count-lock — see the matching guard in `board()`.
+    if (this.isScheduleArrived || !this.canUnboard || !this.isBoarded(item) || this.isUnboarding(item)) {
       return;
     }
 
@@ -281,6 +392,11 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `boarding-scan-error.ts`.
    */
   protected async validateScan(): Promise<void> {
+    // OBRS-256: count-lock — see the matching guard in `board()`.
+    if (this.isScheduleArrived) {
+      return;
+    }
+
     const token = this.scanToken.trim();
     if (!token || this.isScanning) {
       return;
@@ -361,12 +477,73 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           : '-',
         vehicleLabel: schedule?.vehicle?.numberPlate ?? schedule?.vehicle?.vehicleNumber ?? '-',
         driverName: schedule?.driver?.fullName ?? '-',
+        // OBRS-256: reuses the same `parseAdminStatus` helper other admin
+        // status handling already uses — no second status parser.
+        statusCode: parseAdminStatus(schedule?.status).code,
       };
     } catch {
       if (this.headerRequestScheduleId === scheduleId) {
         this.tripHeader = null;
       }
     }
+  }
+
+  /**
+   * OBRS-256: fires the current schedule's forward transition
+   * (`scheduled→departed` or `departed→arrived`). `arrived` requires an
+   * `AlertService.confirm()` (irreversible from the UI — the backend is
+   * forward-only). On success, patches `tripHeader.statusCode` from the
+   * response so the pill/lock/button react immediately. On error, maps
+   * `error.error.errorCode` via `schedule-status-error.ts` and re-fetches
+   * `loadTripHeader()` to reconcile against actual server state (in case of
+   * a race/stale button).
+   */
+  protected async onScheduleStatusAction(): Promise<void> {
+    const action = this.scheduleStatusAction;
+    if (!action || this.isUpdatingScheduleStatus) {
+      return;
+    }
+
+    if (action.requiresConfirm) {
+      const confirmed = await this.alertService.confirm({
+        title: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.ARRIVED_CONFIRM_TITLE'),
+        text: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.ARRIVED_CONFIRM_TEXT'),
+        confirmButtonText: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.ARRIVED_CONFIRM_CONFIRM'),
+        cancelButtonText: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.ARRIVED_CONFIRM_CANCEL'),
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    this.isUpdatingScheduleStatus = true;
+    const scheduleId = this.scheduleId;
+    const successKey =
+      action.code === 'departed'
+        ? 'STAFF.SCHEDULE_STATUS.ACTION.MARK_DEPARTED_SUCCESS'
+        : 'STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED_SUCCESS';
+
+    this.staffApiService
+      .updateScheduleStatus(scheduleId, action.code)
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isUpdatingScheduleStatus = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          if (response?.data && this.tripHeader) {
+            this.tripHeader = { ...this.tripHeader, statusCode: response.data.status };
+          }
+          void this.alertService.success(this.translate.instant(successKey));
+        },
+        error: (error) => {
+          const errorCode = extractScheduleStatusErrorCode(error);
+          void this.alertService.error(this.translate.instant(mapScheduleStatusErrorCode(errorCode)));
+          void this.loadTripHeader(scheduleId);
+        },
+      });
   }
 
   /**

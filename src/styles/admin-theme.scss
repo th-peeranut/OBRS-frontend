@@ -121,6 +121,19 @@
   --admin-neutral-text: #cdd8df;
 }
 
+/* OBRS-256: `.is-info` (in_review / the schedule "departed" pill) had no
+   dark-mode override — its light blue-grey bg (#e2e5ea) + dark text (#3a4250)
+   read as a stark light blob on the dark shell, same failure class as the
+   --admin-neutral-* fix above. Verified contrast (WCAG relative-luminance
+   formula): bg #29323d / text #c7d3de ≈ 8.6:1, comfortably above the 4.5:1 AA
+   floor. This also happens to fix the pre-existing usability-reports
+   `in_review` status chip in dark mode, which shares this same token — an
+   accepted side-benefit, not additional scope. */
+.admin-shell.is-dark {
+  --admin-inreview-bg: #29323d;
+  --admin-inreview-text: #c7d3de;
+}
+
 /* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels
    (/staff/sell) use raw .form-control/.form-select, which default to a white bg +
    dark text and don't follow the theme — leaving white input boxes on the dark
