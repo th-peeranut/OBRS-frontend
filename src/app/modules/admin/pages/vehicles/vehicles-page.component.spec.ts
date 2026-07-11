@@ -1,9 +1,14 @@
-import { FormBuilder } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { By } from '@angular/platform-browser';
+import { BehaviorSubject, of } from 'rxjs';
 import { VehiclesPageComponent } from './vehicles-page.component';
-import { VehiclesData } from './vehicles.store';
-import { AdminVehicleDto } from '../../../../services/admin/admin-api.service';
-import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+import { VehiclesData, VehiclesStore } from './vehicles.store';
+import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
 const VEHICLE_ROW = {
@@ -35,6 +40,13 @@ function makeStoreStub(data: VehiclesData | null) {
     refreshing$,
     error$,
     refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    mutate: jasmine
+      .createSpy('mutate')
+      .and.callFake((transform: (current: VehiclesData) => VehiclesData) => {
+        if (data$.value !== null) {
+          data$.next(transform(data$.value));
+        }
+      }),
     get hasValue() {
       return data$.value !== null;
     },
@@ -45,11 +57,13 @@ function makeAuthServiceStub(canWrite = true) {
   return { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canWrite) };
 }
 
-function makeComponent(store: ReturnType<typeof makeStoreStub>) {
+function makeComponent(
+  store: ReturnType<typeof makeStoreStub>,
+  adminApi: Record<string, unknown> = {}
+) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
   return new VehiclesPageComponent(
-    {} as any,
-    new FormBuilder(),
+    adminApi as any,
     alert as any,
     createTranslateStub(),
     store as any,
@@ -147,7 +161,6 @@ describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {
     const authService = makeAuthServiceStub(true);
     const component = new VehiclesPageComponent(
       {} as any,
-      new FormBuilder(),
       alert as any,
       createTranslateStub(),
       makeStoreStub(null) as any,
@@ -159,69 +172,193 @@ describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {
   });
 });
 
-describe('VehiclesPageComponent edit modal', () => {
-  function makeEditComponent(getVehicleById$: Subject<ResponseAPI<AdminVehicleDto>>) {
-    const adminApi = {
-      getVehicleById: jasmine
-        .createSpy('getVehicleById')
-        .and.returnValue(getVehicleById$.asObservable()),
-    };
-    const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
-    return new VehiclesPageComponent(
-      adminApi as any,
-      new FormBuilder(),
-      alert as any,
-      createTranslateStub(),
-      makeStoreStub(null) as any,
-      makeAuthServiceStub() as any
-    );
-  }
+// OBRS-261: the form/table/confirm markup and their FormGroup/API calls
+// moved into child components (VehicleFormModalComponent /
+// VehicleListTableComponent / VehicleDeleteModalComponent) — the page now
+// only sets the modal-orchestration state those children are bound to.
+// Coverage for form validation/submit/edit-fetch lives in
+// vehicle-form-modal.component.spec.ts.
+describe('VehiclesPageComponent modal orchestration', () => {
+  it('openCreateModal() opens the form modal in create mode with no selection', () => {
+    const component = makeComponent(makeStoreStub(null));
 
-  // Regression: the modal must open immediately on Edit, not after the detail
-  // fetch resolves — otherwise a slow SIT response leaves a blank wait.
-  it('opens the edit modal before the vehicle detail fetch resolves', () => {
-    const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
-    const component = makeEditComponent(getVehicleById$);
+    component.ngOnInit();
+    (component as any).openCreateModal();
 
-    void (component as any).openEditModal({ ...VEHICLE_ROW });
-
-    // Subject has not emitted yet — the fetch is still in flight.
+    expect((component as any).mode).toBe('create');
+    expect((component as any).selectedVehicle).toBeNull();
     expect((component as any).isFormModalOpen).toBeTrue();
-    expect((component as any).isEditMode).toBeTrue();
-    expect((component as any).isEditDetailLoading).toBeTrue();
-    // Form already usable with the row data we had in hand.
-    expect((component as any).vehicleForm.get('numberPlate').value).toBe('ABC-123');
   });
 
-  it('patches server detail into untouched fields without clobbering user input', async () => {
-    const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
-    const component = makeEditComponent(getVehicleById$);
+  it('openEditModal() opens the form modal in edit mode with the given row, synchronously', () => {
+    const component = makeComponent(makeStoreStub(null));
+    const vehicle = { ...VEHICLE_ROW };
 
-    const promise = (component as any).openEditModal({ ...VEHICLE_ROW });
+    (component as any).openEditModal(vehicle);
 
-    // User edits the plate before the detail arrives.
-    const form = (component as any).vehicleForm;
-    form.get('numberPlate').setValue('USER-TYPED');
-    form.get('numberPlate').markAsDirty();
+    expect((component as any).mode).toBe('edit');
+    expect((component as any).selectedVehicle).toBe(vehicle);
+    expect((component as any).isFormModalOpen).toBeTrue();
+  });
 
-    getVehicleById$.next({
-      code: 200,
-      message: 'OK',
-      data: {
-        id: 1,
-        numberPlate: 'SERVER-PLATE',
-        vehicleNumber: 'V9',
-        status: 'active',
-        vehicleType: { id: 2, slug: 'bus' },
-      },
-    });
-    getVehicleById$.complete();
-    await promise;
+  it('onFormModalClosed() closes the form modal and clears the selection', () => {
+    const component = makeComponent(makeStoreStub(null));
+    (component as any).openEditModal({ ...VEHICLE_ROW });
 
-    // Untouched field is filled from the server detail...
-    expect(form.get('vehicleNumber').value).toBe('V9');
-    // ...but the field the user was editing is preserved.
-    expect(form.get('numberPlate').value).toBe('USER-TYPED');
-    expect((component as any).isEditDetailLoading).toBeFalse();
+    (component as any).onFormModalClosed();
+
+    expect((component as any).isFormModalOpen).toBeFalse();
+    expect((component as any).selectedVehicle).toBeNull();
+  });
+
+  it('reloadStructureBound() delegates to store.refresh()', () => {
+    const store = makeStoreStub(null);
+    const component = makeComponent(store);
+
+    (component as any).reloadStructureBound();
+
+    expect(store.refresh).toHaveBeenCalled();
+  });
+});
+
+describe('VehiclesPageComponent delete modal', () => {
+  it('openDeleteModal opens the confirm dialog for the given vehicle', () => {
+    const component = makeComponent(makeStoreStub(null));
+    const vehicle = { ...VEHICLE_ROW };
+
+    (component as any).openDeleteModal(vehicle);
+
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+    expect((component as any).selectedVehicle).toBe(vehicle);
+  });
+
+  it('closeDeleteModal does not close while deleting unless forced', () => {
+    const component = makeComponent(makeStoreStub(null));
+    (component as any).openDeleteModal({ ...VEHICLE_ROW });
+    (component as any).isDeleting = true;
+
+    (component as any).closeDeleteModal();
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+
+    (component as any).closeDeleteModal(true);
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+  });
+
+  it('confirmDelete() calls DELETE, optimistically removes the row, then refreshes', async () => {
+    const store = makeStoreStub(makeData());
+    const deleteSpy = jasmine
+      .createSpy('deleteVehicle')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+    const component = makeComponent(store, { deleteVehicle: deleteSpy });
+    component.ngOnInit();
+
+    (component as any).openDeleteModal({ ...VEHICLE_ROW, id: 1 });
+    await (component as any).confirmDelete();
+
+    expect(deleteSpy).toHaveBeenCalledWith(1);
+    const updated = store.data$.value as VehiclesData;
+    expect(updated.vehicles.length).toBe(0);
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+  });
+});
+
+// ── OBRS-261: child extraction — verify the page wires the right inputs to
+// app-vehicle-list-table / app-vehicle-form-modal / app-vehicle-delete-modal
+// and delegates their outputs to the existing handlers. Uses NO_ERRORS_SCHEMA
+// (established pattern in this codebase, e.g. promotions-page.component.spec.ts)
+// so the child selectors don't need to be declared.
+describe('VehiclesPageComponent template wiring to child components', () => {
+  let fixture: ComponentFixture<VehiclesPageComponent>;
+  let component: VehiclesPageComponent;
+
+  beforeEach(async () => {
+    const store = makeStoreStub(null);
+    const adminApi = { deleteVehicle: jasmine.createSpy('deleteVehicle') };
+    const alert = { success: jasmine.createSpy('success'), error: jasmine.createSpy('error') };
+    const authService = makeAuthServiceStub();
+
+    await TestBed.configureTestingModule({
+      declarations: [VehiclesPageComponent],
+      imports: [CommonModule, TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        { provide: VehiclesStore, useValue: store },
+        { provide: AdminApiService, useValue: adminApi },
+        { provide: AlertService, useValue: alert },
+        { provide: AuthService, useValue: authService },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(VehiclesPageComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('app-vehicle-list-table receives rows/isLoading/skeletonRows/hasError/totalCount', () => {
+    fixture.detectChanges(); // run ngOnInit first
+    (component as any).filteredVehicles = [{ id: 1, statusCode: 'active' }];
+    (component as any).vehicles = [
+      { id: 1, statusCode: 'active' },
+      { id: 2, statusCode: 'pending' },
+    ];
+    (component as any).errorMessage = 'boom';
+    fixture.detectChanges();
+
+    const table = fixture.debugElement.query(By.css('app-vehicle-list-table'));
+    expect(table.properties['rows']).toBe((component as any).filteredVehicles);
+    expect(table.properties['skeletonRows']).toBe((component as any).skeletonRows);
+    expect(table.properties['hasError']).toBeTrue();
+    expect(table.properties['totalCount']).toBe(2);
+  });
+
+  it('app-vehicle-form-modal receives isOpen/mode/selectedVehicle/option lists/reloadStructure', () => {
+    fixture.detectChanges();
+    (component as any).openEditModal({ id: 2, vehicleNumber: 'V2' });
+    fixture.detectChanges();
+
+    const modal = fixture.debugElement.query(By.css('app-vehicle-form-modal'));
+    expect(modal.properties['isOpen']).toBeTrue();
+    expect(modal.properties['mode']).toBe('edit');
+    expect(modal.properties['selectedVehicle']).toEqual({ id: 2, vehicleNumber: 'V2' });
+    expect(modal.properties['reloadStructure']).toBe((component as any).reloadStructureBound);
+  });
+
+  it('delegates (edit)/(delete)/(manageMaintenance) from the list table to the existing handlers', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'openEditModal');
+    spyOn(component as any, 'openDeleteModal');
+    spyOn(component as any, 'viewMaintenanceForVehicle');
+
+    const table = fixture.debugElement.query(By.css('app-vehicle-list-table'));
+    const row = { id: 2, vehicleNumber: 'V2' };
+    table.triggerEventHandler('edit', row);
+    table.triggerEventHandler('delete', row);
+    table.triggerEventHandler('manageMaintenance', row);
+
+    expect((component as any).openEditModal).toHaveBeenCalledWith(row);
+    expect((component as any).openDeleteModal).toHaveBeenCalledWith(row);
+    expect((component as any).viewMaintenanceForVehicle).toHaveBeenCalledWith(row);
+  });
+
+  it('delegates (closed) from the form modal to onFormModalClosed', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'onFormModalClosed');
+
+    const modal = fixture.debugElement.query(By.css('app-vehicle-form-modal'));
+    modal.triggerEventHandler('closed', undefined);
+
+    expect((component as any).onFormModalClosed).toHaveBeenCalled();
+  });
+
+  it('delegates (confirm)/(cancel) from the delete modal to confirmDelete/closeDeleteModal', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'confirmDelete');
+    spyOn(component as any, 'closeDeleteModal');
+
+    const modal = fixture.debugElement.query(By.css('app-vehicle-delete-modal'));
+    modal.triggerEventHandler('confirm', undefined);
+    modal.triggerEventHandler('cancel', undefined);
+
+    expect((component as any).confirmDelete).toHaveBeenCalled();
+    expect((component as any).closeDeleteModal).toHaveBeenCalled();
   });
 });
