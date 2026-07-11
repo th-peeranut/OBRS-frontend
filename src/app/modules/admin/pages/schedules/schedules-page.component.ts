@@ -7,50 +7,39 @@ import {
   AdminRouteDto,
   AdminScheduleDto,
   AdminScheduleSetDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
   AdminUserDto,
   AdminVehicleDto,
   AdminVehicleTypeDto,
   CreateSchedulePayload,
   CreateScheduleSetPayload,
-  getAdminLookupLabel,
-  getAdminTranslationLabel,
-  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
-import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
-import { formatDisplayDate, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { SchedulesStore } from './schedules.store';
-
-interface ScheduleRow {
-  kind: 'set' | 'schedule';
-  id: number;
-  scheduleSetId: number | null;
-  tripId: string;
-  dateRange: string;
-  startDate: string;
-  endDate: string;
-  departureTimes: string;
-  routeSlug: string;
-  route: string;
-  vehicleTypeSlug: string;
-  vehicleId: number | null;
-  driverId: number | null;
-  vehicle: string;
-  driver: string;
-  frequency: string;
-  status: string;
-  statusCode: string;
-  updatedAt: string;
-}
-
-interface Option {
-  code: string;
-  label: string;
-}
+import {
+  Option,
+  ScheduleRow,
+  parseStatus,
+  splitDateTime,
+  statusClass as statusClassValue,
+  toDateControlValue,
+  toDateInputValue,
+  toDepartureTimesText,
+  toDriverOptions,
+  toGeneratedScheduleRow,
+  toRouteOptions,
+  toScheduleDetailFallback,
+  toScheduleItemPayload as toScheduleItemPayloadValue,
+  toSchedulePayload as toSchedulePayloadValue,
+  toScheduleRow,
+  toScheduleSetFallback,
+  toScheduleStatusOptions,
+  toTimeControlValue,
+  toTimeInputValue,
+  toVehicleOptions,
+  toVehicleTypeOptions,
+} from './schedules.mappers';
 
 @Component({
   selector: 'app-schedules-page',
@@ -229,17 +218,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   }
 
   protected statusClass(status: string): string {
-    const normalizedStatus = status.trim().toUpperCase();
-
-    if (normalizedStatus === 'DEPARTED') {
-      return 'is-success';
-    }
-
-    if (normalizedStatus === 'SCHEDULED') {
-      return 'is-warning';
-    }
-
-    return 'is-danger';
+    return statusClassValue(status);
   }
 
   protected onSearchKeywordChange(value: string): void {
@@ -290,8 +269,8 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     now.setMinutes(now.getMinutes() - (now.getMinutes() % 5));
 
     this.scheduleItemForm.reset({
-      departureDate: this.toDateControlValue(this.toDateInputValue(now)),
-      departureTime: this.toTimeControlValue(this.toTimeInputValue(now)),
+      departureDate: toDateControlValue(toDateInputValue(now)),
+      departureTime: toTimeControlValue(toTimeInputValue(now)),
       route: this.routeOptions[0]?.code ?? '',
       vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
@@ -311,7 +290,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedSchedule = schedule;
     this.isEditDetailLoading = true;
-    this.applyScheduleSetFormValues(this.toScheduleSetFallback(schedule), schedule);
+    this.applyScheduleSetFormValues(toScheduleSetFallback(schedule), schedule);
     // Clear AFTER building the fallback: toScheduleSetFallback() runs
     // parseDepartureTimes(), which flips departureTimesInvalid=true on any
     // malformed stored time (e.g. a single-digit hour). Resetting here keeps a
@@ -346,7 +325,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isScheduleItemEditMode = true;
     this.selectedSchedule = schedule;
     this.isScheduleEditDetailLoading = true;
-    this.applyScheduleItemFormValues(this.toScheduleDetailFallback(schedule), schedule);
+    this.applyScheduleItemFormValues(toScheduleDetailFallback(schedule), schedule);
     this.isScheduleFormModalOpen = true;
 
     try {
@@ -372,11 +351,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     schedule: ScheduleRow,
     onlyPristine = false
   ): void {
-    const status = this.parseStatus(scheduleSet.status);
+    const status = parseStatus(scheduleSet.status, this.getCurrentLocale());
     const values = {
       startDate: scheduleSet.startDate ?? schedule.startDate,
       endDate: scheduleSet.endDate ?? schedule.endDate,
-      departureTimesText: this.toDepartureTimesText(scheduleSet.departureTimes),
+      departureTimesText: toDepartureTimesText(scheduleSet.departureTimes),
       frequency: scheduleSet.frequency ?? schedule.frequency,
       status: status.code,
       route: scheduleSet.route?.slug ?? schedule.routeSlug,
@@ -402,10 +381,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     schedule: ScheduleRow,
     onlyPristine = false
   ): void {
-    const departure = this.splitDateTime(scheduleDetail.departureDateTime);
+    const departure = splitDateTime(scheduleDetail.departureDateTime);
     const values = {
-      departureDate: this.toDateControlValue(departure.date || schedule.startDate),
-      departureTime: this.toTimeControlValue(departure.time || schedule.departureTimes),
+      departureDate: toDateControlValue(departure.date || schedule.startDate),
+      departureTime: toTimeControlValue(departure.time || schedule.departureTimes),
       route: scheduleDetail.route?.slug ?? schedule.routeSlug,
       vehicleType: scheduleDetail.vehicleType?.slug ?? schedule.vehicleTypeSlug,
       vehicleId: scheduleDetail.vehicle?.id ? String(scheduleDetail.vehicle.id) : '',
@@ -607,282 +586,40 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   private applyLocalization(): void {
     const currentLocale = this.getCurrentLocale();
 
-    this.routeOptions = this.toRouteOptions(this.rawRoutes, currentLocale);
-    this.vehicleOptions = this.toVehicleOptions(this.rawVehicles, currentLocale);
-    this.driverOptions = this.toDriverOptions(this.rawUsers);
-    this.vehicleTypeOptions = this.toVehicleTypeOptions(this.rawVehicleTypes, currentLocale);
-    this.statusOptions = this.toScheduleStatusOptions(this.rawLookups);
+    this.routeOptions = toRouteOptions(this.rawRoutes, currentLocale);
+    this.vehicleOptions = toVehicleOptions(this.rawVehicles, currentLocale);
+    this.driverOptions = toDriverOptions(this.rawUsers);
+    this.vehicleTypeOptions = toVehicleTypeOptions(this.rawVehicleTypes, currentLocale);
+    this.statusOptions = toScheduleStatusOptions(this.rawLookups, currentLocale);
     this.schedules = [
-      ...this.rawScheduleSets.map((scheduleSet) => this.toScheduleRow(scheduleSet)),
+      ...this.rawScheduleSets.map((scheduleSet) =>
+        toScheduleRow(scheduleSet, currentLocale, this.translate.currentLang)
+      ),
       ...this.rawGeneratedSchedules.map((schedule) =>
-        this.toGeneratedScheduleRow(schedule)
+        toGeneratedScheduleRow(schedule, currentLocale, this.translate.currentLang)
       ),
     ];
     this.syncFiltersWithAvailableOptions();
     this.applyFilters();
   }
 
+  // parseDepartureTimes() used to mutate departureTimesInvalid as a side
+  // effect when a time was malformed. The pure version now returns validity
+  // instead, so this wrapper sets the flag at the exact same call site the
+  // mutation used to happen at (see submitScheduleSet(), which still runs its
+  // own `payload.departureTimes.length === 0` check right after this call).
   private toSchedulePayload(): CreateScheduleSetPayload {
     const raw = this.scheduleForm.getRawValue();
+    const { payload, departureTimesValid } = toSchedulePayloadValue(raw);
+    if (!departureTimesValid) {
+      this.departureTimesInvalid = true;
+    }
 
-    return {
-      startDate: String(raw.startDate ?? '').trim(),
-      endDate: String(raw.endDate ?? '').trim(),
-      departureTimes: this.parseDepartureTimes(raw.departureTimesText),
-      frequency: String(raw.frequency ?? 'Daily').trim() || undefined,
-      status: String(raw.status ?? '').trim().toLowerCase(),
-      route: String(raw.route ?? '').trim(),
-      vehicleType: String(raw.vehicleType ?? '').trim(),
-    };
+    return payload;
   }
 
   private toScheduleItemPayload(): CreateSchedulePayload {
-    const raw = this.scheduleItemForm.getRawValue();
-    const vehicleId = this.toOptionalNumber(raw.vehicleId);
-    const driverId = this.toOptionalNumber(raw.driverId);
-    const departureDate = this.toDateInputValue(this.toDateValue(raw.departureDate));
-    const departureTime = this.toTimeInputValue(this.toDateValue(raw.departureTime));
-
-    return {
-      departureDateTime: combineBangkokDateTime(departureDate, departureTime),
-      route: String(raw.route ?? '').trim(),
-      vehicleType: String(raw.vehicleType ?? '').trim(),
-      ...(vehicleId !== undefined ? { vehicleId } : {}),
-      ...(driverId !== undefined ? { driverId } : {}),
-    };
-  }
-
-  private toScheduleRow(scheduleSet: AdminScheduleSetDto): ScheduleRow {
-    const currentLocale = this.getCurrentLocale();
-    const routeName =
-      getAdminLookupLabel(scheduleSet.route, currentLocale) ??
-      this.getTranslationLabel(scheduleSet.route?.translations, currentLocale) ??
-      scheduleSet.route?.slug ??
-      '-';
-    const vehicleTypeName =
-      getAdminLookupLabel(scheduleSet.vehicleType, currentLocale) ??
-      this.getTranslationLabel(scheduleSet.vehicleType?.translations, currentLocale) ??
-      scheduleSet.vehicleType?.slug ??
-      '-';
-    const status = this.parseStatus(scheduleSet.status);
-    const startDate = scheduleSet.startDate ?? '';
-    const endDate = scheduleSet.endDate ?? '';
-
-    return {
-      id: scheduleSet.id,
-      kind: 'set',
-      scheduleSetId: null,
-      tripId: `#SET-${scheduleSet.id}`,
-      dateRange: `${this.formatDateForDisplay(startDate)} to ${this.formatDateForDisplay(endDate)}`,
-      startDate,
-      endDate,
-      departureTimes: this.toDepartureTimesText(scheduleSet.departureTimes),
-      routeSlug: scheduleSet.route?.slug ?? '',
-      route: routeName,
-      vehicleTypeSlug: scheduleSet.vehicleType?.slug ?? '',
-      vehicleId: null,
-      driverId: null,
-      vehicle: vehicleTypeName,
-      driver: '-',
-      frequency: scheduleSet.frequency ?? '-',
-      status: status.name,
-      statusCode: status.code,
-      updatedAt: formatDisplayDateTime(scheduleSet.updatedAt ?? scheduleSet.createdAt, this.translate.currentLang),
-    };
-  }
-
-  private toGeneratedScheduleRow(schedule: AdminScheduleDto): ScheduleRow {
-    const currentLocale = this.getCurrentLocale();
-    const routeName =
-      getAdminLookupLabel(schedule.route, currentLocale) ??
-      this.getTranslationLabel(schedule.route?.translations, currentLocale) ??
-      schedule.route?.slug ??
-      '-';
-    const vehicleTypeName =
-      getAdminLookupLabel(schedule.vehicleType, currentLocale) ??
-      this.getTranslationLabel(schedule.vehicleType?.translations, currentLocale) ??
-      schedule.vehicleType?.slug ??
-      '-';
-    const vehicleName =
-      schedule.vehicle?.vehicleNumber ??
-      schedule.vehicle?.numberPlate ??
-      vehicleTypeName;
-    const status = this.parseStatus(schedule.status);
-    const departureDateTime = this.splitDateTime(schedule.departureDateTime);
-
-    return {
-      id: schedule.id,
-      kind: 'schedule',
-      scheduleSetId: schedule.scheduleSetId ?? null,
-      tripId: `#SCH-${schedule.id}`,
-      dateRange: this.formatDateForDisplay(departureDateTime.date),
-      startDate: departureDateTime.date,
-      endDate: departureDateTime.date,
-      departureTimes: departureDateTime.time,
-      routeSlug: schedule.route?.slug ?? '',
-      route: routeName,
-      vehicleTypeSlug: schedule.vehicleType?.slug ?? '',
-      vehicleId: schedule.vehicle?.id ?? null,
-      driverId: schedule.driver?.id ?? null,
-      vehicle: vehicleName,
-      driver: schedule.driver?.fullName ?? '-',
-      frequency: '-',
-      status: status.name,
-      statusCode: status.code,
-      updatedAt: formatDisplayDateTime(schedule.updatedAt ?? schedule.createdAt, this.translate.currentLang),
-    };
-  }
-
-  private toScheduleSetFallback(schedule: ScheduleRow): AdminScheduleSetDto {
-    return {
-      id: schedule.id,
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
-      departureTimes: this.parseDepartureTimes(schedule.departureTimes),
-      frequency: schedule.frequency,
-      status: schedule.statusCode,
-      route: {
-        id: 0,
-        slug: schedule.routeSlug,
-      },
-      vehicleType: {
-        id: 0,
-        slug: schedule.vehicleTypeSlug,
-      },
-    };
-  }
-
-  private toScheduleDetailFallback(schedule: ScheduleRow): AdminScheduleDto {
-    return {
-      id: schedule.id,
-      departureDateTime: `${schedule.startDate}T${schedule.departureTimes || '00:00'}:00`,
-      status: schedule.statusCode,
-      route: {
-        id: 0,
-        slug: schedule.routeSlug,
-      },
-      vehicleType: {
-        id: 0,
-        slug: schedule.vehicleTypeSlug,
-      },
-      vehicle: schedule.vehicleId
-        ? {
-            id: schedule.vehicleId,
-            vehicleNumber: schedule.vehicle,
-          }
-        : undefined,
-      driver: schedule.driverId
-        ? {
-            id: schedule.driverId,
-            fullName: schedule.driver,
-          }
-        : undefined,
-    };
-  }
-
-  private toRouteOptions(routes: AdminRouteDto[], currentLocale: string): Option[] {
-    return routes
-      .map((route) => ({
-        code: route.slug,
-        label:
-          getAdminLookupLabel(route, currentLocale) ??
-          this.getTranslationLabel(route.translations, currentLocale) ??
-          route.slug,
-      }))
-      .filter((option) => option.code.length > 0);
-  }
-
-  private toVehicleTypeOptions(
-    vehicleTypes: AdminVehicleTypeDto[],
-    currentLocale: string
-  ): Option[] {
-    return vehicleTypes
-      .map((vehicleType) => ({
-        code: vehicleType.slug,
-        label:
-          getAdminLookupLabel(vehicleType, currentLocale) ??
-          this.getTranslationLabel(vehicleType.translations, currentLocale) ??
-          vehicleType.slug,
-      }))
-      .filter((option) => option.code.length > 0);
-  }
-
-  private toVehicleOptions(
-    vehicles: AdminVehicleDto[],
-    currentLocale: string
-  ): Option[] {
-    return vehicles.map((vehicle) => {
-      const vehicleTypeName =
-        getAdminLookupLabel(vehicle.vehicleType, currentLocale) ??
-        this.getTranslationLabel(vehicle.vehicleType?.translations, currentLocale) ??
-        vehicle.vehicleType?.slug ??
-        '';
-      const identifier =
-        [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') ||
-        `#${vehicle.id}`;
-      const label = vehicleTypeName
-        ? `${identifier} - ${vehicleTypeName}`
-        : identifier;
-
-      return {
-        code: String(vehicle.id),
-        label,
-      };
-    });
-  }
-
-  private toDriverOptions(users: AdminUserDto[]): Option[] {
-    return users
-      .filter((user) => this.isDriverUser(user))
-      .map((user) => ({
-        code: String(user.id),
-        label: this.toUserDisplayName(user),
-      }));
-  }
-
-  private isDriverUser(user: AdminUserDto): boolean {
-    return (user.roles ?? []).some((role) => {
-      const roleSlug = typeof role === 'string' ? role : role.slug;
-      return String(roleSlug ?? '').trim().toLowerCase() === 'driver';
-    });
-  }
-
-  private toUserDisplayName(user: AdminUserDto): string {
-    const profileName = [
-      user.title,
-      user.firstName,
-      user.middleName,
-      user.lastName,
-    ]
-      .map((part) => String(part ?? '').trim())
-      .filter(Boolean)
-      .join(' ');
-
-    return (
-      user.fullName?.trim() ||
-      profileName ||
-      user.username?.trim() ||
-      user.email?.trim() ||
-      `#${user.id}`
-    );
-  }
-
-  private toScheduleStatusOptions(lookups: AdminLookupDto[]): Option[] {
-    const currentLocale = this.getCurrentLocale();
-
-    return lookups
-      .filter((lookup) => lookup.category === 'schedule_status')
-      .map((lookup) => {
-        const code = String(lookup.slug ?? '').trim().toLowerCase();
-        return {
-          code,
-          label:
-            this.getTranslationLabel(lookup.translations, currentLocale) ??
-            this.getTranslationLabel(lookup.translations, 'en') ??
-            code.replace(/_/g, ' ').toUpperCase(),
-        };
-      })
-      .filter((option) => option.code.length > 0);
+    return toScheduleItemPayloadValue(this.scheduleItemForm.getRawValue());
   }
 
   private getDefaultScheduleStatusCode(): string {
@@ -893,31 +630,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     );
   }
 
-  private parseDepartureTimes(value: unknown): string[] {
-    const rawValues = String(value ?? '')
-      .split(/[\n,]+/)
-      .map((time) => time.trim())
-      .filter((time) => time.length > 0);
-
-    const uniqueTimes = [...new Set(rawValues)];
-    const allValid = uniqueTimes.every((time) => /^([01]\d|2[0-3]):[0-5]\d$/.test(time));
-    if (!allValid) {
-      this.departureTimesInvalid = true;
-      return [];
-    }
-
-    return uniqueTimes.sort();
-  }
-
-  private toDepartureTimesText(times: string[] | null | undefined): string {
-    return (times ?? []).map((time) => String(time).slice(0, 5)).join(', ');
-  }
-
   private applyFilters(): void {
     const keyword = this.searchKeyword.trim().toLowerCase();
     const routeFilter = this.selectedRouteFilter;
     const statusFilter = this.selectedStatusFilter;
-    const dateFilter = this.toDateInputValue(this.selectedDateFilter);
+    const dateFilter = toDateInputValue(this.selectedDateFilter);
 
     this.filteredSchedules = this.schedules.filter((schedule) => {
       if (this.focusedSet && schedule.kind === 'schedule' && !this.matchesFocusedSet(schedule)) {
@@ -984,111 +701,6 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Date-only display (service window / departure date), standardized to the
-  // shared Style B format in the current language (OBRS-178).
-  private formatDateForDisplay(value: string | null | undefined): string {
-    return formatDisplayDate(value, this.translate.currentLang);
-  }
-
-  private splitDateTime(value: string | null | undefined): { date: string; time: string } {
-    const normalizedValue = String(value ?? '').trim();
-    if (!normalizedValue) {
-      return { date: '', time: '' };
-    }
-
-    const [date, rawTime = ''] = normalizedValue.includes('T')
-      ? normalizedValue.split('T')
-      : normalizedValue.split(/\s+/);
-
-    return {
-      date,
-      time: rawTime.slice(0, 5),
-    };
-  }
-
-  private toDateInputValue(value: Date | null): string {
-    if (!value || !Number.isFinite(value.getTime())) {
-      return '';
-    }
-
-    const year = value.getFullYear();
-    const month = String(value.getMonth() + 1).padStart(2, '0');
-    const day = String(value.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  }
-
-  private toDateControlValue(dateValue: string | null | undefined): Date | null {
-    const normalizedDate = String(dateValue ?? '').trim();
-    const [year, month, day] = normalizedDate.split('-').map((part) => Number(part));
-
-    if (!year || !month || !day) {
-      return null;
-    }
-
-    return new Date(year, month - 1, day);
-  }
-
-  private toTimeInputValue(value: Date | null): string {
-    if (!value || !Number.isFinite(value.getTime())) {
-      return '';
-    }
-
-    const hours = String(value.getHours()).padStart(2, '0');
-    const minutes = String(value.getMinutes()).padStart(2, '0');
-
-    return `${hours}:${minutes}`;
-  }
-
-  private toTimeControlValue(timeValue: string | null | undefined): Date | null {
-    const normalizedTime = String(timeValue ?? '').trim().slice(0, 5);
-    const [hours, minutes] = normalizedTime.split(':').map((part) => Number(part));
-
-    if (
-      !Number.isFinite(hours) ||
-      !Number.isFinite(minutes) ||
-      hours < 0 ||
-      hours > 23 ||
-      minutes < 0 ||
-      minutes > 59
-    ) {
-      return null;
-    }
-
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    return date;
-  }
-
-  private toDateValue(value: unknown): Date | null {
-    if (value instanceof Date && Number.isFinite(value.getTime())) {
-      return value;
-    }
-
-    const normalizedValue = String(value ?? '').trim();
-    if (!normalizedValue) {
-      return null;
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(normalizedValue)) {
-      return this.toDateControlValue(normalizedValue);
-    }
-
-    if (/^([01]\d|2[0-3]):[0-5]\d$/.test(normalizedValue)) {
-      return this.toTimeControlValue(normalizedValue);
-    }
-
-    const parsedDate = new Date(normalizedValue);
-    return Number.isFinite(parsedDate.getTime()) ? parsedDate : null;
-  }
-
-  private toOptionalNumber(value: unknown): number | undefined {
-    const numericValue = Number(value);
-    return Number.isFinite(numericValue) && numericValue > 0
-      ? numericValue
-      : undefined;
-  }
-
   private getTodayDateInputValue(): string {
     const today = new Date();
     const year = today.getFullYear();
@@ -1104,19 +716,5 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
   }
 }
