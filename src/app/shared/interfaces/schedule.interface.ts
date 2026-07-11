@@ -34,6 +34,12 @@ export interface Schedule {
   pricePerSeat: string | number;
   availableSeats: number;
   availableSeatNumbers: string[];
+  /** Slug of the route this schedule runs on. Verified passthrough — the
+   *  schedule-list NgRx store keeps `data` as-is with no manual field mapper,
+   *  so this appears automatically once the backend includes it. Used to
+   *  resolve the authoritative pickup→dropoff distance/duration estimate via
+   *  `RouteMapService.getPickupDropoffCached`. */
+  routeSlug?: string;
 }
 
 export interface ScheduleList {

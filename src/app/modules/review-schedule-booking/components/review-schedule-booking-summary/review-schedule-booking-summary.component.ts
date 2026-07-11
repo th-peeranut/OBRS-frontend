@@ -5,7 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { Appstate } from '../../../../shared/stores/appstate';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
-import { map, Observable, take } from 'rxjs';
+import { combineLatest, map, Observable, of, switchMap, take } from 'rxjs';
 import {
   Schedule,
   ScheduleFilter,
@@ -26,7 +26,10 @@ import {
   durationHours,
   durationMinutes,
   formatTimeHHMM,
+  tripEstimateFromStops,
 } from '../../../../shared/lib/trip-format';
+import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
+import { RouteMapService } from '../../../../services/route-map/route-map.service';
 
 @Component({
   selector: 'app-review-schedule-booking-summary',
@@ -42,7 +45,8 @@ export class ReviewScheduleBookingSummaryComponent {
     private store: Store,
     private router: Router,
     private appStore: Store<Appstate>,
-    private translateService: TranslateService
+    private translateService: TranslateService,
+    private routeMapService: RouteMapService
   ) {
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -167,6 +171,63 @@ export class ReviewScheduleBookingSummaryComponent {
     return this.translateService.currentLang === 'th'
       ? station.nameThai
       : station.nameEnglish;
+  }
+
+  /**
+   * Authoritative pickup→dropoff distance/duration for one leg's card, from
+   * `RouteMapService.getPickupDropoffCached`. `isReturnLeg` swaps which slug
+   * is searched in `pickup[]` vs `dropoff[]`: the return leg's `routeSlug` is
+   * the reverse physical route, so its `pickup[]` holds the destination-city
+   * stops and its `dropoff[]` holds the origin-city stops. This swap is
+   * independent of the pre-existing (out-of-scope) unswapped station-label
+   * lookup elsewhere in this template — the chip always uses the correct
+   * from/to regardless of that latent bug.
+   */
+  findTripEstimate(
+    schedule: Schedule | null | undefined,
+    isReturnLeg: boolean
+  ): Observable<TripEstimate | null> {
+    if (!schedule?.routeSlug) {
+      return of(null);
+    }
+    const routeSlug = schedule.routeSlug;
+
+    return combineLatest([this.scheduleFilter, this.rawProvinceStationList]).pipe(
+      take(1),
+      switchMap(([scheduleFilter, stations]) => {
+        const fromSlug = this.stationSlugById(scheduleFilter?.startStationId, stations);
+        const toSlug = this.stationSlugById(scheduleFilter?.stopStationId, stations);
+        if (!fromSlug || !toSlug) {
+          return of<TripEstimate | null>(null);
+        }
+
+        const pickupSlug = isReturnLeg ? toSlug : fromSlug;
+        const dropoffSlug = isReturnLeg ? fromSlug : toSlug;
+
+        return this.routeMapService.getPickupDropoffCached(routeSlug).pipe(
+          map((data) => {
+            if (!data) return null;
+            const pickupStop = data.pickup.find((s) => s.slug === pickupSlug) ?? null;
+            const dropoffStop = data.dropoff.find((s) => s.slug === dropoffSlug) ?? null;
+            return tripEstimateFromStops(pickupStop, dropoffStop);
+          })
+        );
+      })
+    );
+  }
+
+  /** Resolves a station's `slug` by id — same underlying `stops.slug` column
+   *  that `RouteStop.slug` (from `getPickupDropoffCached`) keys off. */
+  private stationSlugById(
+    stationId: string | number | null | undefined,
+    stationList: StationApi[] | null | undefined
+  ): string {
+    if (stationId === null || stationId === undefined || stationId === '') {
+      return '';
+    }
+    const parsed = Number(stationId);
+    const match = (stationList ?? []).find((station) => station.id === parsed);
+    return match?.slug ?? '';
   }
 
   private toStation(stationApi: StationApi): Station {

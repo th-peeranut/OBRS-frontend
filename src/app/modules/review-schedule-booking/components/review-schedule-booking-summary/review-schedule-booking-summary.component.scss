@@ -103,6 +103,11 @@
   color: $text-lightblack;
 }
 
+.body-estimate-text {
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
 .btn-change-info {
   display: flex;
   justify-content: center;
@@ -186,7 +191,8 @@
   }
 
   .subheader-text,
-  .body-subheader-text {
+  .body-subheader-text,
+  .body-estimate-text {
     font-size: 13px;
   }
 }

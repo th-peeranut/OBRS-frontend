@@ -9,10 +9,24 @@ export interface RouteStop {
    *  Optional so older fixtures/consumers remain valid; the component treats a
    *  missing value the same as null (falls back to whole-route figures). */
   distanceKmFromOrigin?: number | null;
+  /** Minutes from the route origin's departure baseline to this stop
+   *  (authoritative, offset-based — from the seeded `route_stops` table).
+   *  Used with `distanceKmFromOrigin` to derive the exact pickup→dropoff
+   *  segment distance/duration. Optional/nullable so older fixtures and a
+   *  stop missing this field degrade to whole-route figures. */
+  offsetMinutesFromOrigin?: number | null;
   latitude: number | null;
   longitude: number | null;
   primaryPhotoUrl: string | null;
   googleMapsUrl: string | null;
+}
+
+/** Authoritative pickup→dropoff span, derived from two `RouteStop` offsets
+ *  (never fabricated — a missing side on either stop yields `null` for that
+ *  figure rather than a misleading `0`). */
+export interface TripEstimate {
+  distanceKm: number | null;
+  durationMinutes: number | null;
 }
 
 export interface RouteMeta {

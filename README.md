@@ -354,3 +354,47 @@ change-stop has no options-list step to bounce back to; only
 `NOT_CONFIRMED`/`MAX_COUNT` are terminal (close + toast). See
 `docs/adr/0010-change-stop-dialog.md` for the full reasoning behind all
 three reuse decisions and the confirm-error persistence rule.
+
+## Authoritative trip distance/duration estimates (OBRS-138)
+
+Customer-facing trip-planning surfaces (the home route map's travel summary,
+the schedule-booking list, and the review-schedule-booking summary cards)
+show a **free, authoritative** pickup→dropoff distance/duration estimate
+derived from the seeded `route_stops` offsets, replacing an earlier
+client-side proxy ratio. No Google Distance-Matrix call is made anywhere —
+the map keeps its own road-snapped Directions + two-tier cache for drawing
+the route line; these estimates are a separate, purely arithmetic derivation
+from data already on the page.
+
+- **`tripEstimateFromStops(pickup, dropoff)`** (`src/app/shared/lib/trip-format.ts`)
+  is the single pure function every consumer calls: `distanceKm = |Δ
+  distanceKmFromOrigin|`, `durationMinutes = |Δ offsetMinutesFromOrigin|`,
+  each resolved **independently** — a missing value on either stop yields
+  `null` for that one figure rather than fabricating a misleading `0`. Never
+  gate distance on duration or vice versa.
+- **`RouteMapService.getPickupDropoffCached(slug)`** (`src/app/services/route-map/route-map.service.ts`)
+  is a reusable **request-dedup** pattern: a session-scoped in-memory
+  `Map<slug, Observable>` plus `shareReplay({ bufferSize: 1, refCount: false })`
+  and `catchError(() => of(null))`, so N schedule rows on the same route fire
+  exactly one HTTP call and a failure degrades to "chip absent" rather than
+  an `AlertService` error. This is intentionally lighter than the map panel's
+  two-tier (localStorage + TTL) Directions cache — reach for this pattern
+  whenever a list view needs to dedupe repeated lookups of the same
+  reference data by key within one page load, without needing persistence
+  across reloads.
+- **The return-leg swap**: a return schedule's `routeSlug` is the *reverse*
+  physical route, so its `pickup[]` holds the destination-city stops and its
+  `dropoff[]` holds the origin-city stops. Every consumer resolves
+  `fromSlug`/`toSlug` from the search filter's `startStationId`/
+  `stopStationId` once, then swaps which slug is searched in `pickup[]` vs
+  `dropoff[]` for the return leg only (`pickupSlug = toSlug`, `dropoffSlug =
+  fromSlug`). Getting this backwards silently empties every return-leg chip
+  (`.find()` never matches), so any new consumer of `getPickupDropoffCached`
+  for a return leg must apply the same swap.
+- **Slug space**: `StationApi.slug` (from `GET /api/stops`, the schedule
+  filter's station store) and `StopEntry.slug` (from `GET
+  /api/routes/{slug}/pickup-dropoff`) key off the same underlying
+  `stops.slug` column server-side — station ids are resolved to slugs once
+  per consumer (`stationSlugById`/`stationSlugById`-style private helpers
+  mirroring the existing `getStationLabelById` pattern) and matched directly
+  against `RouteStop.slug`, no translation layer needed.

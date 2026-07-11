@@ -1,10 +1,11 @@
 import { HttpClient, HttpContext } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { catchError, map, shareReplay } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   RouteListItem,
+  RoutePickupDropoffData,
   RoutePickupDropoffResponse,
   RouteStatusValue,
 } from '../../shared/interfaces/route-map.interface';
@@ -24,6 +25,19 @@ interface RouteListResponse {
   providedIn: 'root',
 })
 export class RouteMapService {
+  /**
+   * Session-scoped in-memory request-dedup cache for `getPickupDropoffCached`,
+   * keyed by route slug. Intentionally lighter than the map's two-tier
+   * Directions cache (localStorage + TTL) — this is purely a dedup so N rows
+   * referencing the same route on one page fire a single HTTP call; the
+   * server already `@Cacheable`s `getPickupDropoff` itself. Not persisted
+   * across page loads/reloads.
+   */
+  private pickupDropoffCache = new Map<
+    string,
+    Observable<RoutePickupDropoffData | null>
+  >();
+
   constructor(private http: HttpClient) {}
 
   getPickupDropoff(slug: string): Observable<RoutePickupDropoffResponse> {
@@ -31,6 +45,30 @@ export class RouteMapService {
       `${environment.apiUrl}/api/routes/${slug}/pickup-dropoff`,
       { context: this.selfHandledContext() }
     );
+  }
+
+  /**
+   * Same data as `getPickupDropoff`, memoized per slug for the life of the
+   * browser session (page load) and swallowing errors to `null` instead of
+   * propagating — callers (per-row trip-estimate chips) treat a failure the
+   * same as "not yet resolved": the chip simply stays absent, no AlertService
+   * involved. `shareReplay({ refCount: false })` keeps the single in-flight/
+   * completed request alive and replayed to every subscriber (each schedule
+   * row on the same route), regardless of how many unsubscribe.
+   */
+  getPickupDropoffCached(slug: string): Observable<RoutePickupDropoffData | null> {
+    const cached = this.pickupDropoffCache.get(slug);
+    if (cached) {
+      return cached;
+    }
+
+    const request$ = this.getPickupDropoff(slug).pipe(
+      map((response) => response?.data ?? null),
+      catchError(() => of<RoutePickupDropoffData | null>(null)),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+    this.pickupDropoffCache.set(slug, request$);
+    return request$;
   }
 
   getActiveRoutes(): Observable<RouteListItem[]> {

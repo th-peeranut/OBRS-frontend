@@ -1052,6 +1052,7 @@
       "SUMMARY_DROPOFF_VALUE": "{{province}} {{count}} จุด",
       "SUMMARY_DISTANCE": "ระยะทางประมาณ {{distance}} กม.",
       "SUMMARY_DURATION": "ใช้เวลาเดินทางประมาณ {{min}} - {{max}} นาที",
+      "SUMMARY_DURATION_SEGMENT": "ใช้เวลาเดินทางโดยประมาณ {{duration}} นาที",
       "SUMMARY_SEGMENT_NOTE": "สำหรับจุดรับและจุดส่งที่คุณเลือก",
       "DETAIL_PICKUP_TITLE": "รายละเอียดจุดรับ ({{province}})",
       "DETAIL_DROPOFF_TITLE": "รายละเอียดจุดส่ง ({{province}})",
@@ -1102,7 +1103,9 @@
     "CHOOSE": "เลือก",
     "CHANGE": "เปลี่ยนข้อมูล",
     "NO_RESULTS": "ไม่พบรอบการเดินทางตามที่ค้นหา กรุณาลองเปลี่ยนวันที่ เส้นทาง หรือลดจำนวนผู้โดยสาร",
-    "NO_RETURN_RESULTS": "ไม่พบรอบเดินทางขากลับตามที่ค้นหา กรุณาลองเปลี่ยนวันเดินทางกลับ หรือลดจำนวนผู้โดยสาร"
+    "NO_RETURN_RESULTS": "ไม่พบรอบเดินทางขากลับตามที่ค้นหา กรุณาลองเปลี่ยนวันเดินทางกลับ หรือลดจำนวนผู้โดยสาร",
+    "ESTIMATE_KM_UNIT": "กม.",
+    "ESTIMATE_MIN_UNIT": "นาที"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -1117,6 +1120,8 @@
       "TIME_UNIT": "น.",
       "HOUR_UNIT": "ชั่วโมง",
       "MINITE_UNIT": "นาที",
+      "ESTIMATE_KM_UNIT": "กม.",
+      "ESTIMATE_MIN_UNIT": "นาที",
       "BTN_BACK": "ย้อนกลับ",
       "BTN_NEXT": "ถัดไป"
     },

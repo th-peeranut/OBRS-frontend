@@ -14,67 +14,74 @@ export class RouteTravelSummaryComponent {
   @Input() pickupCount = 0;
   @Input() dropoffCount = 0;
 
-  /** When both are set with known distances, the summary shows the distance and
-   *  travel time for that selected segment instead of the whole route. */
+  /** When both are set with known distances/offsets, the summary shows the
+   *  distance and travel time for that selected segment instead of the whole
+   *  route. */
   @Input() selectedPickupStop: RouteStop | null = null;
   @Input() selectedDropoffStop: RouteStop | null = null;
 
-  /** The route's total distance span in the same units as each stop's
-   *  distanceKmFromOrigin (max − min across all stops). The per-stop values are
-   *  offset-derived proxies whose scale differs from routeMeta.totalDistanceKm,
-   *  so the selected segment is expressed as a fraction of this span and then
-   *  projected onto totalDistanceKm — keeping the summary self-consistent (a
-   *  full pickup→dropoff selection equals the whole-route figures). */
-  @Input() routeSpanKm: number | null = null;
-
-  /** True when the figures below reflect the selected pickup→dropoff segment
-   *  (not the whole route). Drives a small hint in the template. */
+  /** True when at least one figure below reflects the selected pickup→dropoff
+   *  segment (not the whole route). Drives a small hint in the template. */
   get isSegment(): boolean {
-    return this.segmentRatio !== null;
+    return this.segmentDistanceKm != null || this.isDurationSegment;
   }
 
-  /** Along-route distance (km) between the selected pickup and dropoff, or null
-   *  when a selection or its distance is missing. */
+  /** Authoritative along-route distance (km) between the selected pickup and
+   *  dropoff — the direct |Δ distanceKmFromOrigin|, not projected onto any
+   *  other total. Null when a selection or its distance is missing. */
   private get segmentDistanceKm(): number | null {
     const pickup = this.selectedPickupStop?.distanceKmFromOrigin;
     const dropoff = this.selectedDropoffStop?.distanceKmFromOrigin;
     if (pickup == null || dropoff == null) {
       return null;
     }
-    const km = Math.abs(dropoff - pickup);
-    return km > 0 ? km : null;
+    return Math.abs(dropoff - pickup);
   }
 
-  /** Fraction of the whole route covered by the selected segment, clamped to
-   *  (0, 1]. Scales both the distance and the duration band onto the route's
-   *  stated totals. Null (→ whole-route figures) when the span is unknown. */
-  private get segmentRatio(): number | null {
-    const segKm = this.segmentDistanceKm;
-    const span = this.routeSpanKm;
-    if (segKm == null || !span || span <= 0) {
+  /** Authoritative travel time (minutes) between the selected pickup and
+   *  dropoff — the direct |Δ offsetMinutesFromOrigin|. Null when a selection
+   *  or its offset is missing. */
+  private get segmentDurationMinutes(): number | null {
+    const pickup = this.selectedPickupStop?.offsetMinutesFromOrigin;
+    const dropoff = this.selectedDropoffStop?.offsetMinutesFromOrigin;
+    if (pickup == null || dropoff == null) {
       return null;
     }
-    return Math.min(segKm / span, 1);
+    return Math.abs(dropoff - pickup);
   }
 
-  /** Distance shown in the summary: the selected segment projected onto the
-   *  route's stated total when available, else the whole-route total. Rounded
-   *  to a whole km (min 1 for a real segment). */
+  /** True when the duration figure reflects the selected segment (renders
+   *  `SUMMARY_DURATION_SEGMENT` instead of the whole-route `SUMMARY_DURATION`
+   *  range). Independent of `segmentDistanceKm` — distance and duration each
+   *  fall back on their own missing source field. */
+  get isDurationSegment(): boolean {
+    return this.segmentDurationMinutes != null;
+  }
+
+  /** Distance shown in the summary: the authoritative selected-segment delta
+   *  when available, else the whole-route total. Rounded to a whole km
+   *  (min 1 for a real segment). */
   get displayDistanceKm(): number {
-    const ratio = this.segmentRatio;
-    const total = this.routeMeta?.totalDistanceKm ?? 0;
-    return ratio == null ? total : Math.max(1, Math.round(ratio * total));
+    const segment = this.segmentDistanceKm;
+    if (segment != null) {
+      return Math.max(1, Math.round(segment));
+    }
+    return this.routeMeta?.totalDistanceKm ?? 0;
+  }
+
+  /** Duration shown in the summary when a segment is resolved: the
+   *  authoritative selected-segment delta, rounded to a whole minute
+   *  (min 1). Only meaningful when `isDurationSegment` is true. */
+  get displayDurationMinutes(): number {
+    const segment = this.segmentDurationMinutes;
+    return segment != null ? Math.max(1, Math.round(segment)) : 0;
   }
 
   get displayDurationMin(): number {
-    const ratio = this.segmentRatio;
-    const routeMin = this.routeMeta?.durationMinMinutes ?? 0;
-    return ratio == null ? routeMin : Math.max(1, Math.round(routeMin * ratio));
+    return this.routeMeta?.durationMinMinutes ?? 0;
   }
 
   get displayDurationMax(): number {
-    const ratio = this.segmentRatio;
-    const routeMax = this.routeMeta?.durationMaxMinutes ?? 0;
-    return ratio == null ? routeMax : Math.max(1, Math.round(routeMax * ratio));
+    return this.routeMeta?.durationMaxMinutes ?? 0;
   }
 }

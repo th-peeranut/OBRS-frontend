@@ -14,7 +14,10 @@ const mockMeta: RouteMeta = {
   destinationProvinceLabel: 'Bangkok',
 };
 
-function makeStop(distanceKmFromOrigin: number | null): RouteStop {
+function makeStop(
+  distanceKmFromOrigin: number | null,
+  offsetMinutesFromOrigin: number | null = null
+): RouteStop {
   return {
     order: 1,
     slug: 'stop',
@@ -22,6 +25,7 @@ function makeStop(distanceKmFromOrigin: number | null): RouteStop {
     address: 'Addr',
     approxTime: '05:00',
     distanceKmFromOrigin,
+    offsetMinutesFromOrigin,
     latitude: null,
     longitude: null,
     primaryPhotoUrl: null,
@@ -53,37 +57,45 @@ describe('RouteTravelSummaryComponent', () => {
   it('shows whole-route figures when no stops are selected', () => {
     component.routeMeta = mockMeta;
     expect(component.isSegment).toBe(false);
+    expect(component.isDurationSegment).toBe(false);
     expect(component.displayDistanceKm).toBe(120);
     expect(component.displayDurationMin).toBe(90);
     expect(component.displayDurationMax).toBe(150);
   });
 
-  it('projects the segment onto the route total using the span (not raw stop km)', () => {
-    component.routeMeta = mockMeta; // total 120 km, 90-150 min
-    // Stop distances are on a different scale (span 160) than totalDistanceKm.
-    component.routeSpanKm = 160;
-    component.selectedPickupStop = makeStop(0);
-    component.selectedDropoffStop = makeStop(80); // 80/160 = ratio 0.5
+  it('computes the raw |Δdistance|, not scaled against the route total', () => {
+    component.routeMeta = mockMeta; // total 120 km — unrelated to the stop deltas below
+    component.selectedPickupStop = makeStop(10);
+    component.selectedDropoffStop = makeStop(55);
     expect(component.isSegment).toBe(true);
-    expect(component.displayDistanceKm).toBe(60); // round(0.5 * 120), NOT 80
-    expect(component.displayDurationMin).toBe(45); // round(90 * 0.5)
-    expect(component.displayDurationMax).toBe(75); // round(150 * 0.5)
+    expect(component.displayDistanceKm).toBe(45);
   });
 
-  it('a full pickup→dropoff selection equals the whole-route figures', () => {
+  it('computes the raw |Δoffset| and renders it via SUMMARY_DURATION_SEGMENT', () => {
     component.routeMeta = mockMeta;
-    component.routeSpanKm = 160;
-    component.selectedPickupStop = makeStop(0);
-    component.selectedDropoffStop = makeStop(160); // full span => ratio 1
-    expect(component.displayDistanceKm).toBe(120);
+    component.selectedPickupStop = makeStop(null, 15);
+    component.selectedDropoffStop = makeStop(null, 60);
+    expect(component.isDurationSegment).toBe(true);
+    expect(component.displayDurationMinutes).toBe(45);
+  });
+
+  it('falls back distance and duration independently on their own missing source field', () => {
+    // Distance resolvable (both distanceKmFromOrigin present), offset missing on one side.
+    component.routeMeta = mockMeta;
+    component.selectedPickupStop = makeStop(10, 15);
+    component.selectedDropoffStop = makeStop(55, null);
+
+    expect(component.displayDistanceKm).toBe(45);
+    expect(component.isDurationSegment).toBe(false);
     expect(component.displayDurationMin).toBe(90);
     expect(component.displayDurationMax).toBe(150);
+    // isSegment stays true because distance did resolve to a segment value.
+    expect(component.isSegment).toBe(true);
   });
 
   it('falls back to route figures when only one stop is selected', () => {
     component.routeMeta = mockMeta;
-    component.routeSpanKm = 160;
-    component.selectedPickupStop = makeStop(20);
+    component.selectedPickupStop = makeStop(20, 20);
     expect(component.isSegment).toBe(false);
     expect(component.displayDistanceKm).toBe(120);
     expect(component.displayDurationMin).toBe(90);
@@ -91,28 +103,9 @@ describe('RouteTravelSummaryComponent', () => {
 
   it('falls back when a selected stop has no distance', () => {
     component.routeMeta = mockMeta;
-    component.routeSpanKm = 160;
     component.selectedPickupStop = makeStop(null);
     component.selectedDropoffStop = makeStop(80);
     expect(component.isSegment).toBe(false);
-    expect(component.displayDistanceKm).toBe(120);
-  });
-
-  it('falls back to whole-route figures when the span is unknown', () => {
-    component.routeMeta = mockMeta;
-    component.routeSpanKm = null;
-    component.selectedPickupStop = makeStop(0);
-    component.selectedDropoffStop = makeStop(80);
-    expect(component.isSegment).toBe(false);
-    expect(component.displayDistanceKm).toBe(120);
-  });
-
-  it('caps the segment ratio at 1 so it never exceeds the whole-route band', () => {
-    component.routeMeta = mockMeta;
-    component.routeSpanKm = 160;
-    component.selectedPickupStop = makeStop(0);
-    component.selectedDropoffStop = makeStop(500); // beyond span, clamps to 1
-    expect(component.displayDurationMax).toBe(150);
     expect(component.displayDistanceKm).toBe(120);
   });
 });
