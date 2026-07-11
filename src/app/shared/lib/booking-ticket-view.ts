@@ -137,8 +137,17 @@ function buildSingleLegRoute(
   fromStop: BookingTicketJourney['fromStop'],
   toStop: BookingTicketJourney['toStop']
 ): string {
-  const from = fromStop?.label?.trim() ?? '';
-  const to = toStop?.label?.trim() ?? '';
+  const fromProvince = fromStop?.province?.label?.trim() ?? '';
+  const toProvince = toStop?.province?.label?.trim() ?? '';
+  // Show the province pair (e.g. "ชลบุรี - กรุงเทพมหานคร") only when BOTH stops have a
+  // province AND the two differ — the intercity case. For a same-province segment the
+  // province pair would collapse to a useless "ชลบุรี - ชลบุรี", and a partially-mapped
+  // segment would read at mixed granularity; in both cases fall back to the distinct stop
+  // labels so the line stays informative and consistent. The origin/destination detail
+  // rows always keep the specific stop labels regardless.
+  const useProvince = !!fromProvince && !!toProvince && fromProvince !== toProvince;
+  const from = useProvince ? fromProvince : (fromStop?.label?.trim() ?? '');
+  const to = useProvince ? toProvince : (toStop?.label?.trim() ?? '');
   if (from && to) {
     return `${from} - ${to}`;
   }
