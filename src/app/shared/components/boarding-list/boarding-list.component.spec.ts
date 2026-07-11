@@ -966,6 +966,33 @@ describe('BoardingListComponent — OBRS-266 camera QR scanner', () => {
     }
   }));
 
+  it('toggling text→camera→text while startup is still in flight stops the resolved stream — no orphan MediaStream', fakeAsync(() => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withVideoElement(component);
+    const stopSpy = jasmine.createSpy('stop');
+    let resolveControls: (c: any) => void = () => undefined;
+    const decodeSpy = jasmine.createSpy('decodeFromVideoDevice').and.callFake(
+      () => new Promise((resolve) => (resolveControls = resolve))
+    );
+    (component as any).codeReader = { decodeFromVideoDevice: decodeSpy };
+
+    component['setScanMode']('camera'); // enters 'requesting', awaits decode
+    tick();
+    expect(component['cameraStatus']).toBe('requesting');
+
+    // Operator taps "Text" BEFORE getUserMedia/decode resolves.
+    component['setScanMode']('text');
+    expect(component['scanMode']).toBe('text');
+
+    // Now the pending decode resolves with a live stream's controls.
+    resolveControls({ stop: stopSpy });
+    tick();
+
+    expect(stopSpy).toHaveBeenCalledTimes(1); // orphan stream stopped
+    expect((component as any).scannerControls).toBeNull();
+    expect(component['cameraStatus']).toBe('idle');
+  }));
+
   it('retryCamera() re-attempts startCameraScan()', fakeAsync(() => {
     const component = createComponent({ boardingScan: jasmine.createSpy() });
     withVideoElement(component);

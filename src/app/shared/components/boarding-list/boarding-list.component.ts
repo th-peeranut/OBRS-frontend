@@ -623,6 +623,18 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           });
         }
       );
+      // OBRS-266: a teardown (toggle-to-text, scheduleId re-bind,
+      // arrived-transition, destroy) can run WHILE this start is still
+      // awaiting getUserMedia/decode — the mode toggle isn't disabled during
+      // the 'requesting' phase, so an operator can tap "Text" mid-startup.
+      // stopCameraStream() nulls scannerControls + flips cameraStatus off
+      // 'requesting', but it can't stop a stream whose controls hadn't
+      // resolved yet. Detect that here and stop now, so we never store an
+      // orphaned live MediaStream (camera stays lit in text mode otherwise).
+      if (this.cameraStatus !== 'requesting') {
+        controls.stop();
+        return;
+      }
       this.scannerControls = controls;
       this.cameraStatus = 'active';
     } catch (error) {
