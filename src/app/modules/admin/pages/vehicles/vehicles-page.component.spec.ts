@@ -41,6 +41,10 @@ function makeStoreStub(data: VehiclesData | null) {
   };
 }
 
+function makeAuthServiceStub(canWrite = true) {
+  return { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canWrite) };
+}
+
 function makeComponent(store: ReturnType<typeof makeStoreStub>) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
   return new VehiclesPageComponent(
@@ -48,7 +52,8 @@ function makeComponent(store: ReturnType<typeof makeStoreStub>) {
     new FormBuilder(),
     alert as any,
     createTranslateStub(),
-    store as any
+    store as any,
+    makeAuthServiceStub() as any
   );
 }
 
@@ -101,6 +106,59 @@ describe('VehiclesPageComponent', () => {
   });
 });
 
+describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {
+  it('starts on the list tab with no focused vehicle', () => {
+    const component = makeComponent(makeStoreStub(null));
+
+    expect((component as any).activeTab).toBe('list');
+    expect((component as any).focusedVehicle).toBeNull();
+  });
+
+  it('setActiveTab("maintenance") is a no-op until a vehicle is focused (tab stays disabled)', () => {
+    const component = makeComponent(makeStoreStub(null));
+
+    (component as any).setActiveTab('maintenance');
+
+    expect((component as any).activeTab).toBe('list');
+  });
+
+  it('viewMaintenanceForVehicle() focuses the vehicle and switches to the maintenance tab', () => {
+    const component = makeComponent(makeStoreStub(null));
+    const vehicle = { ...VEHICLE_ROW };
+
+    (component as any).viewMaintenanceForVehicle(vehicle);
+
+    expect((component as any).focusedVehicle).toBe(vehicle);
+    expect((component as any).activeTab).toBe('maintenance');
+  });
+
+  it('clearFocusedVehicle() clears the focus and returns to the list tab', () => {
+    const component = makeComponent(makeStoreStub(null));
+    (component as any).viewMaintenanceForVehicle({ ...VEHICLE_ROW });
+
+    (component as any).clearFocusedVehicle();
+
+    expect((component as any).focusedVehicle).toBeNull();
+    expect((component as any).activeTab).toBe('list');
+  });
+
+  it('canWriteMaintenance reflects authService.hasAnyRole(["owner"]) (admin inherits via ROLE_GRANTS)', () => {
+    const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
+    const authService = makeAuthServiceStub(true);
+    const component = new VehiclesPageComponent(
+      {} as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      makeStoreStub(null) as any,
+      authService as any
+    );
+
+    expect(authService.hasAnyRole).toHaveBeenCalledWith(['owner']);
+    expect((component as any).canWriteMaintenance).toBeTrue();
+  });
+});
+
 describe('VehiclesPageComponent edit modal', () => {
   function makeEditComponent(getVehicleById$: Subject<ResponseAPI<AdminVehicleDto>>) {
     const adminApi = {
@@ -114,7 +172,8 @@ describe('VehiclesPageComponent edit modal', () => {
       new FormBuilder(),
       alert as any,
       createTranslateStub(),
-      makeStoreStub(null) as any
+      makeStoreStub(null) as any,
+      makeAuthServiceStub() as any
     );
   }
 

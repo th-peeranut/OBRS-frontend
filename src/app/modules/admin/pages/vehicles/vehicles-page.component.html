@@ -4,12 +4,40 @@
     <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
-  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+  <button *ngIf="activeTab === 'list'" type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
     <span class="material-symbols-outlined">add</span>
     <span>{{ 'ADMIN.VEHICLES.ADD' | translate }}</span>
   </button>
 </section>
 
+<nav class="schedule-tabs mt-3" role="tablist">
+  <button
+    type="button"
+    class="schedule-tab"
+    role="tab"
+    [class.is-active]="activeTab === 'list'"
+    [attr.aria-selected]="activeTab === 'list'"
+    (click)="setActiveTab('list')"
+  >
+    <span class="material-symbols-outlined">directions_bus</span>
+    <span>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</span>
+  </button>
+  <button
+    type="button"
+    class="schedule-tab"
+    role="tab"
+    [class.is-active]="activeTab === 'maintenance'"
+    [attr.aria-selected]="activeTab === 'maintenance'"
+    [disabled]="!focusedVehicle"
+    [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.MAINTENANCE.TAB_DISABLED_HINT' | translate) : null"
+    (click)="setActiveTab('maintenance')"
+  >
+    <span class="material-symbols-outlined">build</span>
+    <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.TAB' | translate }}</span>
+  </button>
+</nav>
+
+<ng-container *ngIf="activeTab === 'list'">
 <section class="admin-grid admin-grid--3 mt-3">
   <article class="admin-card admin-kpi">
     <span class="admin-kpi-icon"><span class="material-symbols-outlined">directions_bus</span></span>
@@ -85,6 +113,14 @@
                 <button
                   type="button"
                   class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.VEHICLES.MAINTENANCE.MANAGE_ACTION' | translate"
+                  (click)="viewMaintenanceForVehicle(vehicle)"
+                >
+                  <span class="material-symbols-outlined">build</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
                   [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                   (click)="openEditModal(vehicle)"
                 >
@@ -116,6 +152,24 @@
     </span>
   </div>
 </section>
+</ng-container>
+
+<ng-container *ngIf="activeTab === 'maintenance' && focusedVehicle">
+  <div class="schedule-focus-banner">
+    <span class="material-symbols-outlined">directions_bus</span>
+    <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
+    <button type="button" class="schedule-focus-clear" (click)="clearFocusedVehicle()">
+      {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
+    </button>
+  </div>
+
+  <app-vehicle-maintenance-panel
+    [vehicleId]="focusedVehicle.id"
+    [vehicleLabel]="focusedVehicle.vehicleNumber"
+    [canWrite]="canWriteMaintenance"
+    [statusOptions]="maintenanceStatusOptions"
+  ></app-vehicle-maintenance-panel>
+</ng-container>
 
 <div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
   <div class="admin-modal">

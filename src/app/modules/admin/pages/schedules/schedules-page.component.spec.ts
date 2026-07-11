@@ -1,5 +1,6 @@
 import { FormBuilder } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Subject, throwError } from 'rxjs';
 import { SchedulesPageComponent } from './schedules-page.component';
 import {
   AdminScheduleDto,
@@ -348,5 +349,101 @@ describe('SchedulesPageComponent create modals — vehicleType starts blank (des
     (component as any).openCreateScheduleModal();
     expect((component as any).scheduleItemForm.get('vehicleType')?.value).toBe('');
     expect((component as any).scheduleItemForm.get('route')?.value).toBe('bkk-cm');
+  });
+});
+
+// OBRS-209 AC10: a schedule create/update rejected with errorCode
+// VEHICLE_UNDER_MAINTENANCE surfaces as an inline field message under
+// vehicleId, never a second AlertService.error() toast.
+describe('SchedulesPageComponent submitSchedule — VEHICLE_UNDER_MAINTENANCE (OBRS-209 AC10)', () => {
+  function makeSubmitReady(adminApi: Record<string, unknown>) {
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const component = new SchedulesPageComponent(
+      adminApi as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      makeStoreStub() as any
+    );
+    (component as any).routeOptions = [{ code: 'bkk-cm', label: 'BKK-CM' }];
+    (component as any).vehicleTypeOptions = [{ code: 'van', label: 'Van' }];
+    component['openCreateScheduleModal']();
+    const form = (component as any).scheduleItemForm;
+    form.patchValue({
+      departureDate: new Date(2026, 6, 10),
+      departureTime: new Date(2026, 6, 10, 8, 0),
+      route: 'bkk-cm',
+      vehicleType: 'van',
+      vehicleId: '3',
+    });
+    return { component, alert };
+  }
+
+  it('sets the inline message and does NOT call AlertService.error (no double surface)', async () => {
+    const adminApi = {
+      createSchedule: jasmine.createSpy('createSchedule').and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { errorCode: 'VEHICLE_UNDER_MAINTENANCE', message: 'ignored localized message' },
+            })
+        )
+      ),
+    };
+    const { component, alert } = makeSubmitReady(adminApi);
+
+    await component['submitSchedule']();
+
+    expect((component as any).vehicleUnderMaintenanceMessage).toBe(
+      'ADMIN.SCHEDULES.VEHICLE_UNDER_MAINTENANCE'
+    );
+    expect(alert.error).not.toHaveBeenCalled();
+  });
+
+  it('any other errorCode keeps the existing generic AlertService.error() fallback', async () => {
+    const adminApi = {
+      createSchedule: jasmine.createSpy('createSchedule').and.returnValue(
+        throwError(
+          () => new HttpErrorResponse({ status: 400, error: { errorCode: 'SOME_OTHER_ERROR' } })
+        )
+      ),
+    };
+    const { component, alert } = makeSubmitReady(adminApi);
+
+    await component['submitSchedule']();
+
+    expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
+    expect(alert.error).toHaveBeenCalled();
+  });
+
+  it('clears the inline message when the vehicle selection changes', () => {
+    const { component } = makeSubmitReady({});
+    (component as any).vehicleUnderMaintenanceMessage = 'stale message';
+
+    (component as any).scheduleItemForm.get('vehicleId')?.setValue('9');
+
+    expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
+  });
+
+  it('clears the inline message when the departure date changes', () => {
+    const { component } = makeSubmitReady({});
+    (component as any).vehicleUnderMaintenanceMessage = 'stale message';
+
+    (component as any).scheduleItemForm.get('departureDate')?.setValue(new Date(2026, 6, 11));
+
+    expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
+  });
+
+  it('clears the inline message on modal close', () => {
+    const { component } = makeSubmitReady({});
+    (component as any).vehicleUnderMaintenanceMessage = 'stale message';
+
+    component['closeScheduleFormModal'](true);
+
+    expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
   });
 });

@@ -1,0 +1,34 @@
+:host {
+  display: block;
+}
+
+/* design-system §11 empty-state pattern: replaces the whole table section
+ * (not a zero-row table under a banner), themed via the admin shell's
+ * --admin-muted/--admin-text CSS vars only — no raw hex, themes for free in
+ * dark mode. */
+.vehicle-maintenance-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.vehicle-maintenance-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--admin-muted);
+}
+
+.vehicle-maintenance-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.vehicle-maintenance-empty-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}

@@ -397,6 +397,7 @@
       "LOAD_ROUTES_FAILED": "无法加载路线。",
       "LOAD_SCHEDULES_FAILED": "无法加载班次。",
       "LOAD_PROMOTIONS_FAILED": "无法加载促销活动。",
+      "LOAD_MAINTENANCE_FAILED": "无法加载维护记录。",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -552,7 +553,29 @@
       "FILTER_STATUS": "状态：全部",
       "ADD_TITLE": "创建车辆",
       "EDIT_TITLE": "编辑车辆",
-      "MODAL_HINT": "设置车辆信息和当前运营状态。"
+      "MODAL_HINT": "设置车辆信息和当前运营状态。",
+      "MAINTENANCE": {
+        "TAB": "维护保养",
+        "MANAGE_ACTION": "管理维护记录",
+        "TAB_DISABLED_HINT": "请先选择车辆",
+        "FOCUSED_BANNER": "正在显示 {{vehicle}} 的维护记录",
+        "FOCUSED_CLEAR": "返回车辆列表",
+        "TABLE_TITLE": "维护记录",
+        "ADD": "新增维护记录",
+        "ADD_TITLE": "创建维护记录",
+        "EDIT_TITLE": "编辑维护记录",
+        "MODAL_HINT": "请填写此维护记录的原因、日期与状态",
+        "REASON": "原因",
+        "START_DATE": "开始日期",
+        "END_DATE": "结束日期",
+        "NEXT_DUE_DATE": "下次到期日期",
+        "STATUS": "状态",
+        "NOTES": "备注",
+        "NOTES_PLACEHOLDER": "添加其他备注（可选）",
+        "DATE_RANGE_VALIDATION": "结束日期不能早于开始日期",
+        "EMPTY_TITLE": "暂无维护记录",
+        "EMPTY_BODY": "该车辆暂无维护记录，点击新增开始记录"
+      }
     },
     "ROUTES": {
       "TITLE": "路线管理",
@@ -644,7 +667,8 @@
       "TRIP_UNITS": "个班次",
       "VIEW_SCHEDULES": "查看生成的班次",
       "FOCUSED_BANNER": "显示由 {{set}} 生成的班次。",
-      "FOCUSED_CLEAR": "显示全部班次"
+      "FOCUSED_CLEAR": "显示全部班次",
+      "VEHICLE_UNDER_MAINTENANCE": "该车辆在所选日期存在未关闭的维护记录，请更换车辆或日期"
     },
     "BOOKINGS": {
       "TITLE": "预订管理",

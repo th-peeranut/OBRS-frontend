@@ -1,4 +1,78 @@
+@import "../../../../../styles/variables.scss";
 :host {
   display: block;
+}
+
+/* OBRS-209: Maintenance tab bar — copied from schedules-page.component.scss's
+ * .schedule-tabs/.schedule-tab pattern (design-system: reuse the tab-bar
+ * markup, not a new control). Page-scoped like the original (§13
+ * consolidation debt tracks extracting this to a shared partial). */
+.schedule-tabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(0, 102, 135, 0.06);
+}
+
+.schedule-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5a666c;
+  cursor: pointer;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+}
+
+.schedule-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.schedule-tab .material-symbols-outlined {
+  font-size: $font-size-md;
+}
+
+.schedule-tab.is-active {
+  background: #ffffff;
+  color: #0a3f58;
+  box-shadow: 0 4px 12px rgba(25, 28, 30, 0.1);
+}
+
+.schedule-focus-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 102, 135, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 102, 135, 0.06);
+  color: #0a3f58;
+  font-size: 13px;
+  font-weight: $font-weight-semibold;
+}
+
+.schedule-focus-banner .material-symbols-outlined {
+  font-size: $font-size-md;
+  color: #006687;
+}
+
+.schedule-focus-clear {
+  margin-left: auto;
+  border: 0;
+  border-radius: $radius-sm;
+  background: #ffffff;
+  color: #006687;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  box-shadow: 0 0 0 1px rgba(0, 102, 135, 0.25);
 }
 

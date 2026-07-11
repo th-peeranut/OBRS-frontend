@@ -397,6 +397,7 @@
       "LOAD_ROUTES_FAILED": "Unable to load routes.",
       "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
       "LOAD_PROMOTIONS_FAILED": "Unable to load promotions.",
+      "LOAD_MAINTENANCE_FAILED": "Unable to load maintenance records.",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -552,7 +553,29 @@
       "FILTER_STATUS": "Status: All",
       "ADD_TITLE": "Create Vehicle",
       "EDIT_TITLE": "Edit Vehicle",
-      "MODAL_HINT": "Set vehicle information and current operating status."
+      "MODAL_HINT": "Set vehicle information and current operating status.",
+      "MAINTENANCE": {
+        "TAB": "Maintenance",
+        "MANAGE_ACTION": "Manage maintenance",
+        "TAB_DISABLED_HINT": "Select a vehicle first",
+        "FOCUSED_BANNER": "Showing maintenance for {{vehicle}}",
+        "FOCUSED_CLEAR": "Back to vehicle list",
+        "TABLE_TITLE": "Maintenance Records",
+        "ADD": "Add Maintenance Record",
+        "ADD_TITLE": "Create Maintenance Record",
+        "EDIT_TITLE": "Edit Maintenance Record",
+        "MODAL_HINT": "Set the reason, dates, and status for this maintenance record.",
+        "REASON": "Reason",
+        "START_DATE": "Start Date",
+        "END_DATE": "End Date",
+        "NEXT_DUE_DATE": "Next Due Date",
+        "STATUS": "Status",
+        "NOTES": "Notes",
+        "NOTES_PLACEHOLDER": "Add any additional notes (optional)",
+        "DATE_RANGE_VALIDATION": "End date must be on or after the start date.",
+        "EMPTY_TITLE": "No maintenance records yet",
+        "EMPTY_BODY": "This vehicle has no maintenance history. Add one to get started."
+      }
     },
     "ROUTES": {
       "TITLE": "Route Management",
@@ -644,7 +667,8 @@
       "TRIP_UNITS": "schedules",
       "VIEW_SCHEDULES": "View generated schedules",
       "FOCUSED_BANNER": "Showing schedules generated from {{set}}.",
-      "FOCUSED_CLEAR": "Show all schedules"
+      "FOCUSED_CLEAR": "Show all schedules",
+      "VEHICLE_UNDER_MAINTENANCE": "This vehicle has an open maintenance record covering the selected date. Choose a different vehicle or date."
     },
     "BOOKINGS": {
       "TITLE": "Bookings Management",

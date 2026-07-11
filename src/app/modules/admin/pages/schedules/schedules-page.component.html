@@ -559,6 +559,9 @@
             labelKey="label"
             [placeholder]="'ADMIN.SCHEDULES.VEHICLE_OPTIONAL' | translate"
           ></app-admin-dropdown>
+          <small class="schedule-form-message admin-error" *ngIf="vehicleUnderMaintenanceMessage">
+            {{ vehicleUnderMaintenanceMessage }}
+          </small>
         </div>
 
         <div class="admin-form-field">

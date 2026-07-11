@@ -16,6 +16,7 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../../../auth/auth.service';
 import { VehiclesStore } from './vehicles.store';
 
 interface VehicleRow {
@@ -59,6 +60,18 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected isEditDetailLoading = false;
   protected selectedVehicle: VehicleRow | null = null;
 
+  // OBRS-209: Maintenance tab — the tab bar mirrors SchedulesPageComponent's
+  // pattern (set/schedule tabs). "Maintenance" starts disabled until a
+  // vehicle row's "Manage maintenance" action focuses one.
+  protected activeTab: 'list' | 'maintenance' = 'list';
+  protected focusedVehicle: VehicleRow | null = null;
+  protected maintenanceStatusOptions: AdminLookupDto[] = [];
+  // Write affordances on the maintenance panel (Add + modal Save) are
+  // owner/admin only; the per-row "Manage maintenance" action itself is
+  // available to every reader. Computed once — single source of truth
+  // passed down to the panel as an @Input().
+  protected readonly canWriteMaintenance: boolean;
+
   protected readonly vehicleForm: FormGroup;
   private readonly subscriptions = new Subscription();
 
@@ -71,8 +84,11 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly store: VehiclesStore
+    private readonly store: VehiclesStore,
+    private readonly authService: AuthService
   ) {
+    this.canWriteMaintenance = this.authService.hasAnyRole(['owner']);
+
     this.vehicleForm = this.formBuilder.group({
       vehicleType: ['', [Validators.required]],
       numberPlate: ['', [Validators.required, Validators.maxLength(50)]],
@@ -164,6 +180,27 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected onStatusFilterChange(value: string): void {
     this.selectedStatusFilter = String(value ?? '').trim().toLowerCase();
     this.applyVehicleFilter();
+  }
+
+  protected setActiveTab(tab: 'list' | 'maintenance'): void {
+    // The Maintenance tab is disabled (visible, not hidden) until a vehicle
+    // is focused via the per-row "Manage maintenance" action.
+    if (tab === 'maintenance' && !this.focusedVehicle) {
+      return;
+    }
+    this.activeTab = tab;
+  }
+
+  // Per-row "Manage maintenance" action — copies
+  // SchedulesPageComponent.viewSchedulesForSet()'s focus pattern.
+  protected viewMaintenanceForVehicle(vehicle: VehicleRow): void {
+    this.focusedVehicle = vehicle;
+    this.activeTab = 'maintenance';
+  }
+
+  protected clearFocusedVehicle(): void {
+    this.focusedVehicle = null;
+    this.activeTab = 'list';
   }
 
   protected openCreateModal(): void {
@@ -359,6 +396,13 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
           this.getTranslationLabel(lookup.translations, 'en') ??
           lookup.slug,
       }));
+
+    // OBRS-209: raw Lookup rows (not pre-mapped to Option[]) — the
+    // maintenance panel derives its own localized labels, mirroring how this
+    // page derives statusOptions above.
+    this.maintenanceStatusOptions = this.rawLookups.filter(
+      (lookup) => lookup.category === 'maintenance_status'
+    );
 
     this.vehicles = this.rawVehicles.map((vehicle) => this.toVehicleRow(vehicle));
     this.syncStatusFilterWithAvailableOptions();

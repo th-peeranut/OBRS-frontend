@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   AdminLookupDto,
   AdminRouteDto,
@@ -443,6 +444,20 @@ export function toSchedulePayload(
     },
     departureTimesValid: parsedDepartureTimes.valid,
   };
+}
+
+// OBRS-209 AC10: extracts `error.error.errorCode` from a failed schedule
+// create/update call, following the same pattern as
+// boarding-action-error.ts's extractBoardingActionErrorCode() — branch on
+// the stable code, never the localized `message` (design-system §9).
+export function extractScheduleErrorCode(error: unknown): string | null {
+  if (error instanceof HttpErrorResponse) {
+    const code = (error.error as { errorCode?: string } | null)?.errorCode;
+    if (code) {
+      return code;
+    }
+  }
+  return null;
 }
 
 export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): CreateSchedulePayload {

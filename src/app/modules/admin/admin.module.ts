@@ -17,6 +17,7 @@ import { UsabilityReportsPageComponent } from './pages/usability-reports/usabili
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -115,6 +116,7 @@ const routes: Routes = [
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
     ReportsPageComponent,
+    AppVehicleMaintenancePanelComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })

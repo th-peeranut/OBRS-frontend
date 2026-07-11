@@ -20,6 +20,7 @@ import { SchedulesStore } from './schedules.store';
 import {
   Option,
   ScheduleRow,
+  extractScheduleErrorCode,
   parseStatus,
   splitDateTime,
   statusClass as statusClassValue,
@@ -85,6 +86,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected departureTimesInvalid = false;
   protected errorMessage = '';
   protected selectedSchedule: ScheduleRow | null = null;
+  // OBRS-209 AC10: inline field message for VEHICLE_UNDER_MAINTENANCE,
+  // rendered under the vehicleId control instead of a second AlertService.error()
+  // toast (no double surface). Cleared on vehicle/date change and modal close.
+  protected vehicleUnderMaintenanceMessage = '';
 
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
@@ -123,6 +128,21 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       vehicleId: [''],
       driverId: [''],
     });
+
+    // OBRS-209 AC10: the VEHICLE_UNDER_MAINTENANCE inline message is only
+    // valid for the exact vehicle/date combination that produced it — clear
+    // it the moment either changes so it can't linger after the user adjusts
+    // their picks.
+    this.subscriptions.add(
+      this.scheduleItemForm.get('vehicleId')?.valueChanges.subscribe(() => {
+        this.vehicleUnderMaintenanceMessage = '';
+      })
+    );
+    this.subscriptions.add(
+      this.scheduleItemForm.get('departureDate')?.valueChanges.subscribe(() => {
+        this.vehicleUnderMaintenanceMessage = '';
+      })
+    );
 
     // Language change only swaps displayed translations; data is already loaded,
     // so re-derive the view locally instead of re-fetching from the backend.
@@ -263,6 +283,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   protected openCreateScheduleModal(): void {
     this.isScheduleItemEditMode = false;
     this.selectedSchedule = null;
+    this.vehicleUnderMaintenanceMessage = '';
 
     const now = new Date();
     now.setMinutes(now.getMinutes() + 30);
@@ -325,6 +346,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isScheduleItemEditMode = true;
     this.selectedSchedule = schedule;
     this.isScheduleEditDetailLoading = true;
+    this.vehicleUnderMaintenanceMessage = '';
     this.applyScheduleItemFormValues(toScheduleDetailFallback(schedule), schedule);
     this.isScheduleFormModalOpen = true;
 
@@ -424,6 +446,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isScheduleFormModalOpen = false;
     this.isScheduleEditDetailLoading = false;
     this.selectedSchedule = null;
+    this.vehicleUnderMaintenanceMessage = '';
     this.scheduleItemForm.reset();
   }
 
@@ -496,6 +519,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   }
 
   protected async submitSchedule(): Promise<void> {
+    this.vehicleUnderMaintenanceMessage = '';
     if (this.scheduleItemForm.invalid) {
       this.scheduleItemForm.markAllAsTouched();
       return;
@@ -518,10 +542,21 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       this.closeScheduleFormModal(true);
       await this.store.refresh();
     } catch (error) {
-      const message =
-        extractApiErrorMessage(error) ||
-        this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
-      await this.alertService.error(message);
+      // OBRS-209 AC10: a vehicle with an open maintenance record covering the
+      // picked date surfaces as an inline field message under vehicleId, not
+      // a second AlertService.error() toast. Matched on the stable errorCode,
+      // never the localized message. Every other error keeps the existing
+      // generic fallback.
+      if (extractScheduleErrorCode(error) === 'VEHICLE_UNDER_MAINTENANCE') {
+        this.vehicleUnderMaintenanceMessage = this.translate.instant(
+          'ADMIN.SCHEDULES.VEHICLE_UNDER_MAINTENANCE'
+        );
+      } else {
+        const message =
+          extractApiErrorMessage(error) ||
+          this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+        await this.alertService.error(message);
+      }
     } finally {
       this.isSubmitting = false;
     }

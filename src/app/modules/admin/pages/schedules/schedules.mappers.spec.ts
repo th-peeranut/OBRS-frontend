@@ -1,5 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ScheduleRow,
+  extractScheduleErrorCode,
   isDriverUser,
   parseDepartureTimes,
   parseStatus,
@@ -506,6 +508,23 @@ describe('schedules.mappers', () => {
       expect(payload.vehicleId).toBe(9);
       expect(payload.driverId).toBeUndefined();
       expect(payload.departureDateTime).toContain('2026-06-20');
+    });
+  });
+
+  // OBRS-209 AC10
+  describe('extractScheduleErrorCode', () => {
+    it('extracts error.error.errorCode from an HttpErrorResponse', () => {
+      const error = new HttpErrorResponse({ status: 400, error: { errorCode: 'VEHICLE_UNDER_MAINTENANCE' } });
+      expect(extractScheduleErrorCode(error)).toBe('VEHICLE_UNDER_MAINTENANCE');
+    });
+
+    it('returns null when the error body has no errorCode', () => {
+      const error = new HttpErrorResponse({ status: 500, error: { message: 'boom' } });
+      expect(extractScheduleErrorCode(error)).toBeNull();
+    });
+
+    it('returns null for a non-HttpErrorResponse error', () => {
+      expect(extractScheduleErrorCode(new Error('network down'))).toBeNull();
     });
   });
 });
