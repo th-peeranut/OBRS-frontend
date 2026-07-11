@@ -118,7 +118,7 @@ describe('SellReceiptPageComponent', () => {
       const component = createComponent(42);
       component.ngOnInit();
 
-      expect(bookingServiceStub.getBookingTickets).toHaveBeenCalledWith(42);
+      expect(bookingServiceStub.getBookingTickets).toHaveBeenCalledWith(42, true);
       expect(paymentServiceStub.getBookingPayments).toHaveBeenCalledWith(42, { skipGlobalLoadingAlert: true });
     });
 
@@ -204,8 +204,8 @@ describe('SellReceiptPageComponent', () => {
       const component = createComponent();
       component.ngOnInit();
 
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(1);
-      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(2);
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(1, true);
+      expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledWith(2, true);
     });
 
     it('renders a data-URL QR for a ticket whose boarding token resolves', async () => {

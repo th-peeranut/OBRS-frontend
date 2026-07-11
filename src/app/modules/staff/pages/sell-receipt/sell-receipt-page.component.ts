@@ -114,8 +114,11 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
     const bookingId = this.bookingId;
 
     forkJoin({
+      // Both calls opt out of the global "Loading..." dialog — this page shows
+      // its own inline spinner (isLoading), so letting the interceptor pop the
+      // shared modal on top produced a double loading indicator.
       tickets: this.bookingService
-        .getBookingTickets(bookingId)
+        .getBookingTickets(bookingId, true)
         .pipe(catchError(() => of(null))),
       payments: this.paymentService
         .getBookingPayments(bookingId, { skipGlobalLoadingAlert: true })
@@ -219,7 +222,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
 
     forkJoin(
       pendingTicketIds.map((ticketId) =>
-        this.ticketService.getBoardingToken(ticketId).pipe(
+        this.ticketService.getBoardingToken(ticketId, true).pipe(
           map((response) => ({
             ticketId,
             boardingToken: response?.data?.boardingToken?.trim() ?? '',
