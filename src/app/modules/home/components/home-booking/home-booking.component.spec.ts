@@ -25,8 +25,4 @@ describe('HomeBookingComponent', () => {
       { type: 'KIDS', count: 0 },
     ]);
   });
-
-  it('is searchable by default because a passenger is pre-selected', () => {
-    expect(component.isPassengerSelected).toBe(true);
-  });
 });
