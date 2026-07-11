@@ -53,6 +53,10 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
       { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
       { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
+      // OBRS-231: EOD sales report — admin+owner (route `requiredRoles:
+      // ['admin','owner']`), same audience as the base admin nav, so it lives
+      // in the always-shown list (not role-gated further like settlements).
+      { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {

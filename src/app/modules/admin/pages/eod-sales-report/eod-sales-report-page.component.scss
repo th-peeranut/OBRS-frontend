@@ -1,0 +1,61 @@
+@import "../../../../../styles/variables.scss";
+
+// State messages (fetch error / empty day) that stand in for the table — centered and
+// padded so the message reads as the body's content, not a stray line above zero rows.
+.eod-report-state-card,
+.eod-report-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+
+// New pattern (OBRS-231, design-system.md §12): right-aligned money columns. The Salesperson/
+// Bookings/Tickets columns stay left-aligned like every other admin table; only the money
+// columns get this so a cash-drawer reconciliation scans/sums visually top-to-bottom.
+.eod-report-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+// The expand-toggle + name/sales-point stack share one cell; inline-flex keeps the chevron
+// button and the two-line stack on one baseline without a second table column.
+.eod-report-salesperson-cell {
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+// New pattern (OBRS-231, design-system.md §12): expandable per-row detail. Built from two
+// already-themed primitives (`.admin-icon-btn` chevron toggle + this sibling detail row), not
+// a new control. `--admin-surface-soft` is the same "structural, not data" surface already
+// used for `.admin-table thead` — reused here, not a new color role.
+.eod-report-detail-row td {
+  background: var(--admin-surface-soft);
+  padding: 10px 14px;
+}
+
+.eod-report-method-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.eod-report-method-chip {
+  color: var(--admin-muted);
+  font-size: 0.85rem;
+}
+
+// Grand-total emphasis deliberately does NOT use `--accent*` (the admin shell's accent
+// resolves to orange in theme-admin and already marks `:hover`/selection — reusing it here
+// would misread the static summary row as interactive). Composed only from existing tokens:
+// the reused surface + a reused outline for the row, and typographic weight/size (not color)
+// to make the Cash total read as "the number".
+.eod-report-grand-total-row {
+  background: var(--admin-surface-soft);
+  border-top: 2px solid var(--admin-outline);
+}
+
+.eod-report-grand-cash {
+  font-weight: 800;
+  font-size: 1.15rem;
+  color: var(--admin-text);
+}

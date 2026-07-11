@@ -19,6 +19,7 @@ import {
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
+import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -961,6 +962,16 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<SettlementPendingPageDto>(
       `${this.baseUrl}/private/settlements/pending`,
+      params
+    );
+  }
+
+  // End-of-day Sales Report by Salesperson (OBRS-97/OBRS-231): single-day, staff-sold-only
+  // (walk_in/agent/kiosk) revenue by salesperson. See ../OBRS-backend/docs/api/reports.md.
+  getEodSalesReport(date: string): Observable<ResponseAPI<EodSalesReportDto>> {
+    const params = new HttpParams().set('date', date);
+    return this.getRequest<EodSalesReportDto>(
+      `${this.baseUrl}/private/admin/reports/eod-salesperson`,
       params
     );
   }

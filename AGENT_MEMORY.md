@@ -1,5 +1,67 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-11 — UX spec: End-of-day salesperson sales report (OBRS-231) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-231-eod-sales-report-fe` (branch `ao/obrs-231-eod-sales-report-fe`).
+Frontend-only report page, spec'd as a near 1:1 mirror of `ReportsPageComponent` (OBRS-40) — same
+`admin-page-filters` → state-card/empty-note → `admin-card` + `admin-table` skeleton, same
+`AdminCollectionStore<T>` SWR-cache pattern via a new `EodSalesReportStore`. No new component split:
+`ReportsPageComponent` itself is monolithic (no dumb children), so this page stays monolithic too —
+row-expand state (`Set<number>` of expanded `salespersonId`s) lives directly on the page component.
+
+**Two genuinely new patterns flagged for design-system.md §12 (neither existed anywhere in the
+codebase — checked via grep before spec'ing):**
+1. **Right-aligned money columns** (`.eod-report-money { text-align:right; font-variant-numeric:
+   tabular-nums; }`). Reports' own Revenue column is left-aligned like every other column — rejected
+   copying that verbatim because this table's whole purpose is cash-drawer reconciliation, where
+   columns of numbers need to scan/sum visually, which left-aligned text defeats. New scoped class,
+   no new color/token.
+2. **Expandable per-row detail (byMethod breakdown).** No accordion-row precedent exists in any admin
+   table (checked `route-detail-panel` — only has prev/next chevrons, not a row-expand). Built from
+   two already-themed primitives, not a new control: `.admin-icon-btn` + `material-symbols-outlined`
+   (`expand_more`/`expand_less`, same chevron-button shape as the pagination controls) toggles a
+   sibling `<tr>` with `[attr.colspan]="6"` containing a `flex-wrap` list of method chips on
+   `var(--admin-surface-soft)` (same "structural, not data" surface already used for `admin-table
+   thead`). Collapsed by default per-row; state does NOT persist across a date change (resets when
+   `salespersons` array changes identity).
+
+**Grand-total emphasis deliberately does NOT use `--accent*`.** The admin shell's `--accent*`
+resolves to **orange** (`theme-admin`) per the design-system §11 rubric warning — tinting the
+grand-total row with accent-soft would visually collide with the table's own `:hover` state (which
+already uses `--accent-soft`) and could misread as an interactive/selected row, not a static summary.
+Used typography emphasis instead, composed only from existing text tokens: grand-total row gets
+`var(--admin-surface-soft)` background (reuse) + `border-top: 2px solid var(--admin-outline)`
+(reuse, confirmed defined in both light `#bdc8cf` and dark `#3a444b`); the grand-total Cash cell
+specifically gets a new `.eod-report-grand-cash` class (font-weight 800, ~1.15rem, `color:
+var(--admin-text)`) — bigger than the per-row `.admin-emphasis` (700 weight, inherited size) so it
+reads as *the* number, with zero new hex/color roles.
+
+**Sales-point-stop null handling:** when `salesPointStopLabel` is null, the secondary
+`.admin-cell-stack` line is omitted entirely (`*ngIf`), not rendered as an empty/dash line — mirrors
+`.admin-cell-stack` precedent in `user-management-page.component.html:90-93` (name +
+`.admin-muted` secondary line), which always has a real value; hiding beats a dangling "-" under a
+name.
+
+**Method-label i18n reuses the existing dynamic-key idiom** from
+`usability-reports-page.component.ts:393-396` (`categoryLabel()`/`statusLabel()`: `` `NAMESPACE.${x.toUpperCase()}` `` via `translate.instant()`), extended with an instant-echo missing-key
+guard (`translated === key ? slug : translated`) for forward-compat with a payment method the backend
+ships before i18n catches up — same idea, not a new pattern, just adds the fallback the precedent
+didn't need.
+
+**Route roles: `requiredRoles: ['admin', 'owner']` is a direct, unremarkable use of
+`AuthGuard`'s existing `hasAnyRole(routeRoles)` array contract** (`auth.guard.ts:53-55`) — every
+existing admin route only lists `['admin']` today (reports/usability-reports), so this is the first
+route to add `'owner'` alongside `'admin'`, but the guard already supports N roles natively; no guard
+change needed.
+
+**Default date = today, client-local `yyyy-MM-dd`, same convention `ReportsStore` already uses for
+its default 7-day range** (`ReportsStore.toDateInputValue(new Date())`) — the store does NOT attempt
+its own Asia/Bangkok conversion client-side; the response's own `timezone` field confirms server-side
+bucketing, matching how Reports already defers all TZ math to the backend.
+
+Full spec (routes, DTOs, table/column contract, i18n table) is below this entry / in the parent
+agent's transcript.
+
 ## 2026-07-11 — QA RE-RUN: OBRS-100 manifest export + print — PASSED (all previously-blocked items now verified)
 
 SIT login recovered (coordinator confirmed `POST /api/auth/login` → 200). Re-ran only the items
