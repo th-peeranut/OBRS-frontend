@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import {
   catchError,
   debounceTime,
@@ -14,43 +14,28 @@ import {
   AdminApiService,
   AdminLookupDto,
   AdminRoleDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
   AdminUserDto,
-  CreateUserPayload,
-  UpdateUserPayload,
-  getAdminTranslationLabel,
-  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { UsersStore } from './users.store';
 import { AuthService } from '../../../../auth/auth.service';
-
-interface UserRow {
-  id: number;
-  fullName: string;
-  email: string;
-  phone: string;
-  roleSlugs: string[];
-  roles: string[];
-  status: string;
-  statusCode: string;
-  lastUpdated: string;
-  locked: boolean;
-}
-
-interface RoleOption {
-  slug: string;
-  label: string;
-}
-
-interface StatusOption {
-  code: string;
-  label: string;
-}
+import {
+  RoleOption,
+  StatusOption,
+  UserRow,
+  buildUserFormValues,
+  filterUsers,
+  roleRequiredValidator,
+  statusClass as statusClassValue,
+  toCreateUserPayload,
+  toRoleOptions,
+  toStatusOptions,
+  toUpdateUserPayload,
+  toUserDtoFallback,
+  toUserRow,
+} from './user-management.mappers';
 
 @Component({
   selector: 'app-user-management-page',
@@ -120,7 +105,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
         [Validators.required, Validators.pattern(/^[a-z]{2}(-[A-Z]{2})?$/)],
       ],
       status: ['', [Validators.required]],
-      roles: [[], [this.roleRequiredValidator]],
+      roles: [[], [roleRequiredValidator]],
       isPhoneNumberVerify: [true, [Validators.required]],
     });
 
@@ -179,17 +164,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected statusClass(status: string): string {
-    const normalizedStatus = status.toUpperCase();
-
-    if (normalizedStatus === 'ACTIVE') {
-      return 'is-success';
-    }
-
-    if (normalizedStatus.includes('PENDING')) {
-      return 'is-warning';
-    }
-
-    return 'is-danger';
+    return statusClassValue(status);
   }
 
   protected onRoleFilterChange(value: string): void {
@@ -237,7 +212,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.selectedUser = user;
     this.isEditDetailLoading = true;
     this.resetDuplicateFlags();
-    this.applyUserFormValues(this.toUserDtoFallback(user), user);
+    this.applyUserFormValues(toUserDtoFallback(user), user);
     this.setCredentialFieldsForEditMode();
     this.isFormModalOpen = true;
 
@@ -265,22 +240,7 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     user: UserRow,
     onlyPristine = false
   ): void {
-    const parsedName = this.parseNameFromFullName(userDetail.fullName ?? user.fullName);
-    const roles = this.extractRoleSlugs(userDetail.roles);
-    const status = this.parseStatus(userDetail.status ?? user.statusCode);
-
-    const values: Record<string, unknown> = {
-      title: String((userDetail.title ?? parsedName.title) || 'Mr').trim(),
-      firstName: String(userDetail.firstName ?? parsedName.firstName ?? '').trim(),
-      middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
-      lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
-      email: userDetail.email ?? user.email,
-      phoneNumber: String(userDetail.phoneNumber ?? user.phone).replace(/\D/g, ''),
-      preferredLocale: userDetail.preferredLocale ?? 'th',
-      status: status.code,
-      roles: roles.length > 0 ? roles : [...user.roleSlugs],
-      isPhoneNumberVerify: true,
-    };
+    const values = buildUserFormValues(userDetail, user, this.getCurrentLocale());
 
     if (!onlyPristine) {
       this.userForm.reset(values);
@@ -293,17 +253,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
         control.setValue(value);
       }
     }
-  }
-
-  private toUserDtoFallback(user: UserRow): AdminUserDto {
-    return {
-      id: user.id,
-      fullName: user.fullName,
-      email: user.email,
-      phoneNumber: user.phone,
-      status: user.statusCode,
-      roles: [...user.roleSlugs],
-    };
   }
 
   protected closeFormModal(force = false): void {
@@ -430,13 +379,13 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.isSubmitting = true;
     try {
       if (this.isEditMode && this.selectedUser) {
-        const payload = this.toUpdateUserPayload();
+        const payload = toUpdateUserPayload(this.userForm.getRawValue());
         await firstValueFrom(this.adminApiService.updateUser(this.selectedUser.id, payload));
         this.isSubmitting = false;
         this.closeFormModal(true);
         await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
       } else {
-        const payload = this.toCreateUserPayload();
+        const payload = toCreateUserPayload(this.userForm.getRawValue());
         await firstValueFrom(this.adminApiService.createUser(payload));
         this.isSubmitting = false;
         this.closeFormModal(true);
@@ -490,128 +439,13 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   private applyLocalization(): void {
     const currentLocale = this.getCurrentLocale();
 
-    this.roleOptions = this.rawRoles.map((role) => ({
-      slug: role.slug,
-      label:
-        role.name ??
-        this.getTranslationLabel(role.translations, currentLocale) ??
-        this.getTranslationLabel(role.translations, 'en') ??
-        role.slug,
-    }));
-
-    this.statusOptions = this.rawLookups
-      .filter((lookup) => lookup.category === 'user_status')
-      .map((lookup) => ({
-        code: lookup.slug,
-        label:
-          this.getTranslationLabel(lookup.translations, currentLocale) ??
-          this.getTranslationLabel(lookup.translations, 'en') ??
-          lookup.slug,
-      }));
-
-    this.users = this.rawUsers.map((user) => this.toUserRow(user));
+    this.roleOptions = toRoleOptions(this.rawRoles, currentLocale);
+    this.statusOptions = toStatusOptions(this.rawLookups, currentLocale);
+    this.users = this.rawUsers.map((user) =>
+      toUserRow(user, currentLocale, this.translate.currentLang)
+    );
     this.syncFiltersWithAvailableOptions();
     this.applyFilters();
-  }
-
-  private toCreateUserPayload(): CreateUserPayload {
-    const raw = this.userForm.getRawValue();
-
-    return {
-      title: String(raw.title ?? '').trim(),
-      firstName: String(raw.firstName ?? '').trim(),
-      middleName: String(raw.middleName ?? '').trim() || undefined,
-      lastName: String(raw.lastName ?? '').trim(),
-      email: String(raw.email ?? '').trim(),
-      phoneNumber: String(raw.phoneNumber ?? '').trim(),
-      password: String(raw.password ?? '').trim(),
-      preferredLocale: String(raw.preferredLocale ?? 'th').trim(),
-      status: String(raw.status ?? '').trim().toLowerCase(),
-      roles: [...(raw.roles ?? [])],
-      // Backend requires PDPA consent on user creation (UserReqDto extends SignUpReqDto).
-      // Admin-created accounts record consent on behalf of the operator.
-      pdpaConsent: true,
-    };
-  }
-
-  private toUpdateUserPayload(): UpdateUserPayload {
-    const raw = this.userForm.getRawValue();
-
-    return {
-      title: String(raw.title ?? '').trim(),
-      firstName: String(raw.firstName ?? '').trim(),
-      middleName: String(raw.middleName ?? '').trim() || undefined,
-      lastName: String(raw.lastName ?? '').trim(),
-      email: String(raw.email ?? '').trim(),
-      phoneNumber: String(raw.phoneNumber ?? '').trim(),
-      isPhoneNumberVerify: Boolean(raw.isPhoneNumberVerify),
-      preferredLocale: String(raw.preferredLocale ?? 'th').trim(),
-      status: String(raw.status ?? '').trim().toLowerCase(),
-      roles: [...(raw.roles ?? [])],
-    };
-  }
-
-  private toUserRow(user: AdminUserDto): UserRow {
-    const roleSlugs = this.extractRoleSlugs(user.roles);
-    const roleLabels = this.extractRoleLabels(user.roles);
-    const status = this.parseStatus(user.status);
-
-    return {
-      id: user.id,
-      fullName: user.fullName ?? '-',
-      email: user.email ?? '-',
-      phone: user.phoneNumber ?? '-',
-      roleSlugs,
-      roles: roleLabels.length > 0 ? roleLabels : ['-'],
-      status: status.name,
-      statusCode: status.code,
-      // The user record's last-modified time (updatedAt, falling back to createdAt).
-      // NOT a real login/activity time — labeled "อัปเดตล่าสุด" accordingly; a true
-      // last_login_at is tracked as a backlog item (OBRS-182).
-      lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, this.translate.currentLang),
-      locked: user.locked ?? false,
-    };
-  }
-
-  private extractRoleSlugs(roles: Array<string | AdminRoleDto> | null | undefined): string[] {
-    if (!roles || roles.length === 0) {
-      return [];
-    }
-
-    return roles
-      .map((role) => {
-        if (typeof role === 'string') {
-          return role;
-        }
-
-        return role.slug ?? '';
-      })
-      .map((slug) => slug.trim())
-      .filter((slug) => slug.length > 0);
-  }
-
-  private extractRoleLabels(roles: Array<string | AdminRoleDto> | null | undefined): string[] {
-    if (!roles || roles.length === 0) {
-      return [];
-    }
-
-    const currentLocale = this.getCurrentLocale();
-
-    return roles
-      .map((role) => {
-        if (typeof role === 'string') {
-          return role;
-        }
-
-        return (
-          role.name ??
-          this.getTranslationLabel(role.translations, currentLocale) ??
-          this.getTranslationLabel(role.translations, 'en') ??
-          role.slug
-        );
-      })
-      .map((label) => String(label ?? '').trim())
-      .filter((label) => label.length > 0);
   }
 
   private getCurrentLocale(): string {
@@ -620,60 +454,6 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
-  }
-
-  private parseNameFromFullName(fullName: string | null | undefined): {
-    title: string;
-    firstName: string;
-    middleName: string;
-    lastName: string;
-  } {
-    const parts = String(fullName ?? '')
-      .trim()
-      .split(/\s+/)
-      .filter((part) => part.length > 0);
-
-    if (parts.length === 0) {
-      return { title: '', firstName: '', middleName: '', lastName: '' };
-    }
-
-    const titleTokens = new Set(['mr', 'mr.', 'mrs', 'mrs.', 'ms', 'ms.', 'miss', 'dr', 'dr.']);
-    let title = '';
-    if (titleTokens.has(parts[0].toLowerCase())) {
-      title = parts.shift() ?? '';
-    }
-
-    const firstName = parts.shift() ?? '';
-    if (parts.length === 0) {
-      return { title, firstName, middleName: '', lastName: '' };
-    }
-
-    const lastName = parts.pop() ?? '';
-    const middleName = parts.join(' ');
-    return { title, firstName, middleName, lastName };
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private roleRequiredValidator(control: AbstractControl): { required: true } | null {
-    const value = control.value;
-    if (Array.isArray(value) && value.length > 0) {
-      return null;
-    }
-
-    return { required: true };
   }
 
   private setCredentialFieldsForCreateMode(): void {
@@ -768,41 +548,12 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
   }
 
   private applyFilters(): void {
-    const roleFilter = this.selectedRoleFilter;
-    const statusFilter = this.selectedStatusFilter;
-    const keyword = this.searchKeyword.trim().toLowerCase();
-
-    this.filteredUsers = this.users.filter((user) => {
-      const matchRole =
-        roleFilter.length === 0 ||
-        user.roleSlugs.some((role) => role.trim().toLowerCase() === roleFilter);
-      if (!matchRole) {
-        return false;
-      }
-
-      const matchStatus =
-        statusFilter.length === 0 ||
-        user.statusCode.trim().toLowerCase() === statusFilter;
-      if (!matchStatus) {
-        return false;
-      }
-
-      if (keyword.length === 0) {
-        return true;
-      }
-
-      const searchTarget = [
-        user.fullName,
-        user.email,
-        user.phone,
-        user.roles.join(' '),
-        user.status,
-      ]
-        .join(' ')
-        .toLowerCase();
-
-      return searchTarget.includes(keyword);
-    });
+    this.filteredUsers = filterUsers(
+      this.users,
+      this.selectedRoleFilter,
+      this.selectedStatusFilter,
+      this.searchKeyword
+    );
   }
 
   private resetDuplicateFlags(): void {
