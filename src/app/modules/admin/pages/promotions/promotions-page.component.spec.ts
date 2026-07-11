@@ -1,7 +1,13 @@
-import { FormBuilder } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { TranslateModule } from '@ngx-translate/core';
+import { By } from '@angular/platform-browser';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { PromotionsPageComponent } from './promotions-page.component';
-import { PromotionRespDto } from '../../../../services/admin/admin-api.service';
+import { AdminApiService, PromotionRespDto } from '../../../../services/admin/admin-api.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { PromotionsListStore } from './promotions-list.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
 const ROUND_TRIP: PromotionRespDto = {
@@ -60,7 +66,6 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
   };
   const component = new PromotionsPageComponent(
     adminApi as any,
-    new FormBuilder(),
     alert as any,
     createTranslateStub(),
     store as any
@@ -90,172 +95,205 @@ describe('PromotionsPageComponent', () => {
     expect(component.rows[1].code).toBe('SUMMER10');
   });
 
-  it('openCreateModal() resets every select to empty — no pre-seeded default (design-system §3.1)', () => {
-    const { component } = makeComponent({});
-    component.ngOnInit();
+  // OBRS-251: the form/table/confirm markup and their FormGroup/API calls
+  // moved into child components (PromotionFormModalComponent /
+  // PromotionListTableComponent / PromotionDeactivateModalComponent) — the
+  // page now only sets the modal-orchestration state those children are
+  // bound to. Coverage for form validation/submit/edit-fetch lives in
+  // promotion-form-modal.component.spec.ts.
+  describe('modal orchestration', () => {
+    it('openCreateModal() opens the form modal in create mode with no selection', () => {
+      const { component } = makeComponent({});
+      component.ngOnInit();
 
-    component.openCreateModal();
+      component.openCreateModal();
 
-    expect(component.promotionForm.get('discountType')?.value).toBe('');
-    expect(component.promotionForm.get('status')?.value).toBe('');
-    expect(component.promotionForm.get('autoApply')?.value).toBe('');
-    expect(component.isEditMode).toBeFalse();
-  });
-
-  it('openEditModal() opens optimistically from the row, then patches pristine controls from the detail fetch', async () => {
-    const getByIdSpy = jasmine.createSpy('getPromotionById').and.returnValue(
-      of({
-        code: 200,
-        message: 'OK',
-        data: { ...SUMMER_SALE, discountValue: 15 },
-      })
-    );
-    const { component, store } = makeComponent({ getPromotionById: getByIdSpy });
-    component.ngOnInit();
-    store.data$.next([SUMMER_SALE]);
-
-    const promise = component.openEditModal(component.rows[0]);
-    // Optimistic open: modal is already visible before the detail resolves.
-    expect(component.isFormModalOpen).toBeTrue();
-    expect(component.promotionForm.get('discountValue')?.value).toBe(10);
-
-    await promise;
-
-    expect(getByIdSpy).toHaveBeenCalledWith(2);
-    expect(component.promotionForm.get('discountValue')?.value).toBe(15);
-  });
-
-  it('openEditModal() does not clobber a field the admin already started editing before the detail arrives', async () => {
-    const getByIdSpy = jasmine.createSpy('getPromotionById').and.returnValue(
-      of({ code: 200, message: 'OK', data: { ...SUMMER_SALE, discountValue: 15 } })
-    );
-    const { component, store } = makeComponent({ getPromotionById: getByIdSpy });
-    component.ngOnInit();
-    store.data$.next([SUMMER_SALE]);
-
-    const promise = component.openEditModal(component.rows[0]);
-    component.promotionForm.get('discountValue')?.markAsDirty();
-    component.promotionForm.get('discountValue')?.setValue(999);
-
-    await promise;
-
-    expect(component.promotionForm.get('discountValue')?.value).toBe(999);
-  });
-
-  it('submitPromotion() creates via POST when not in edit mode, sending translations built from the form', async () => {
-    const createSpy = jasmine
-      .createSpy('createPromotion')
-      .and.returnValue(of({ code: 201, message: 'Created', data: null }));
-    const { component, store, alert } = makeComponent({ createPromotion: createSpy });
-    component.ngOnInit();
-
-    component.openCreateModal();
-    component.promotionForm.patchValue({
-      slug: 'winter-sale',
-      code: 'WINTER10',
-      discountType: 'percentage',
-      discountValue: 10,
-      startDateTime: new Date('2026-06-01'),
-      status: 'active',
-      autoApply: 'false',
-      enLabel: 'Winter Sale',
+      expect(component.mode).toBe('create');
+      expect(component.selectedPromotion).toBeNull();
+      expect(component.isFormModalOpen).toBeTrue();
     });
 
-    await component.submitPromotion();
+    it('openEditModal() opens the form modal in edit mode with the given row', () => {
+      const { component, store } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
 
-    expect(createSpy).toHaveBeenCalledTimes(1);
-    const payload = createSpy.calls.mostRecent().args[0];
-    expect(payload.slug).toBe('winter-sale');
-    expect(payload.autoApply).toBeFalse();
-    expect(payload.translations).toEqual([{ locale: 'en', label: 'Winter Sale', description: undefined }]);
-    // Backend @NotNull on minBookingAmount/usageLimit: blank -> 0 (their
-    // natural "no minimum"/"unlimited" value), never null.
-    expect(payload.minBookingAmount).toBe(0);
-    expect(payload.usageLimit).toBe(0);
-    expect(alert.success).toHaveBeenCalled();
-    expect(store.refresh).toHaveBeenCalled();
-  });
+      component.openEditModal(component.rows[0]);
 
-  it('submitPromotion() warns and does not call the API when startDateTime is blank (backend @NotNull)', async () => {
-    const createSpy = jasmine.createSpy('createPromotion');
-    const { component, alert } = makeComponent({ createPromotion: createSpy });
-    component.ngOnInit();
-
-    component.openCreateModal();
-    component.promotionForm.patchValue({
-      slug: 'winter-sale',
-      code: 'WINTER10',
-      discountType: 'percentage',
-      discountValue: 10,
-      status: 'active',
-      autoApply: 'false',
-      enLabel: 'Winter Sale',
-      // startDateTime deliberately left blank.
+      expect(component.mode).toBe('edit');
+      expect(component.selectedPromotion).toBe(component.rows[0]);
+      expect(component.isFormModalOpen).toBeTrue();
     });
 
-    await component.submitPromotion();
+    it('onFormModalClosed() closes the form modal and clears the selection', () => {
+      const { component, store } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
+      component.openEditModal(component.rows[0]);
 
-    expect(createSpy).not.toHaveBeenCalled();
-    expect(alert.warning).toHaveBeenCalled();
-    expect(component.promotionForm.get('startDateTime')?.touched).toBeTrue();
+      component.onFormModalClosed();
+
+      expect(component.isFormModalOpen).toBeFalse();
+      expect(component.selectedPromotion).toBeNull();
+    });
+
+    it('reloadStructureBound() delegates to store.refresh()', () => {
+      const { component, store } = makeComponent({});
+
+      component.reloadStructureBound();
+
+      expect(store.refresh).toHaveBeenCalled();
+    });
   });
 
-  it('submitPromotion() updates via PUT (full-replace) when in edit mode', async () => {
-    const updateSpy = jasmine
-      .createSpy('updatePromotion')
-      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
-    const getByIdSpy = jasmine.createSpy('getPromotionById').and.returnValue(of({ code: 200, message: 'OK', data: SUMMER_SALE }));
-    const { component, store } = makeComponent({ updatePromotion: updateSpy, getPromotionById: getByIdSpy });
-    component.ngOnInit();
-    store.data$.next([SUMMER_SALE]);
+  describe('deactivate modal', () => {
+    it('openDeactivateModal opens the confirm dialog for the given row', () => {
+      const { component, store } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
 
-    await component.openEditModal(component.rows[0]);
-    await component.submitPromotion();
+      component.openDeactivateModal(component.rows[0]);
 
-    expect(updateSpy).toHaveBeenCalledWith(2, jasmine.any(Object));
+      expect(component.isDeactivateModalOpen).toBeTrue();
+      expect(component.selectedPromotion).toBe(component.rows[0]);
+    });
+
+    it('closeDeactivateModal does not close while deactivating unless forced', () => {
+      const { component, store } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
+      component.openDeactivateModal(component.rows[0]);
+      component.isDeactivating = true;
+
+      component.closeDeactivateModal();
+      expect(component.isDeactivateModalOpen).toBeTrue();
+
+      component.closeDeactivateModal(true);
+      expect(component.isDeactivateModalOpen).toBeFalse();
+    });
+
+    it('confirmDeactivate() calls DELETE and flips the row to inactive locally without removing it', async () => {
+      const deleteSpy = jasmine
+        .createSpy('deletePromotion')
+        .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+      const { component, store, alert } = makeComponent({ deletePromotion: deleteSpy });
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
+
+      component.openDeactivateModal(component.rows[0]);
+      await component.confirmDeactivate();
+
+      expect(deleteSpy).toHaveBeenCalledWith(2);
+      const updatedList = store.data$.value as PromotionRespDto[];
+      expect(updatedList.length).toBe(1);
+      expect(updatedList[0].status).toBe('inactive');
+      expect(alert.success).toHaveBeenCalled();
+    });
+
+    it('confirmDeactivate() shows an error alert and does not mutate the list on failure', async () => {
+      const deleteSpy = jasmine.createSpy('deletePromotion').and.returnValue(throwError(() => new Error('boom')));
+      const { component, store, alert } = makeComponent({ deletePromotion: deleteSpy });
+      component.ngOnInit();
+      store.data$.next([SUMMER_SALE]);
+
+      component.openDeactivateModal(component.rows[0]);
+      await component.confirmDeactivate();
+
+      expect(alert.error).toHaveBeenCalled();
+      const updatedList = store.data$.value as PromotionRespDto[];
+      expect(updatedList[0].status).toBe('active');
+    });
+  });
+});
+
+// ── OBRS-251: child extraction — verify the page wires the right inputs to
+// app-promotion-list-table / app-promotion-form-modal /
+// app-promotion-deactivate-modal and delegates their outputs to the existing
+// handlers. Uses NO_ERRORS_SCHEMA (established pattern in this codebase,
+// e.g. routes-page.component.spec.ts) so the child selectors don't need to
+// be declared.
+describe('PromotionsPageComponent template wiring to child components', () => {
+  let fixture: ComponentFixture<PromotionsPageComponent>;
+  let component: PromotionsPageComponent;
+
+  beforeEach(async () => {
+    const store = makeStoreStub();
+    const adminApi = { deletePromotion: jasmine.createSpy('deletePromotion') };
+    const alert = { success: jasmine.createSpy('success'), error: jasmine.createSpy('error') };
+
+    await TestBed.configureTestingModule({
+      declarations: [PromotionsPageComponent],
+      imports: [CommonModule, TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        { provide: PromotionsListStore, useValue: store },
+        { provide: AdminApiService, useValue: adminApi },
+        { provide: AlertService, useValue: alert },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PromotionsPageComponent);
+    component = fixture.componentInstance;
   });
 
-  it('submitPromotion() warns and does not call the API when the form is invalid', async () => {
-    const createSpy = jasmine.createSpy('createPromotion');
-    const { component, alert } = makeComponent({ createPromotion: createSpy });
-    component.ngOnInit();
-    component.openCreateModal();
+  it('app-promotion-list-table receives rows/isLoading/skeletonRows/hasError', () => {
+    fixture.detectChanges(); // run ngOnInit first
+    (component as any).rows = [{ id: 1, isRoundTrip: false }];
+    (component as any).errorMessage = 'boom';
+    fixture.detectChanges();
 
-    await component.submitPromotion();
-
-    expect(createSpy).not.toHaveBeenCalled();
-    expect(alert.warning).toHaveBeenCalled();
+    const table = fixture.debugElement.query(By.css('app-promotion-list-table'));
+    expect(table.properties['rows']).toBe((component as any).rows);
+    expect(table.properties['skeletonRows']).toBe((component as any).skeletonRows);
+    expect(table.properties['hasError']).toBeTrue();
   });
 
-  it('confirmDeactivate() calls DELETE and flips the row to inactive locally without removing it', async () => {
-    const deleteSpy = jasmine
-      .createSpy('deletePromotion')
-      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
-    const { component, store, alert } = makeComponent({ deletePromotion: deleteSpy });
-    component.ngOnInit();
-    store.data$.next([SUMMER_SALE]);
+  it('app-promotion-form-modal receives isOpen/mode/selectedPromotion/option lists/reloadStructure', () => {
+    fixture.detectChanges();
+    (component as any).openEditModal({ id: 2, code: 'SUMMER10' });
+    fixture.detectChanges();
 
-    component.openDeactivateModal(component.rows[0]);
-    await component.confirmDeactivate();
-
-    expect(deleteSpy).toHaveBeenCalledWith(2);
-    const updatedList = store.data$.value as PromotionRespDto[];
-    expect(updatedList.length).toBe(1);
-    expect(updatedList[0].status).toBe('inactive');
-    expect(alert.success).toHaveBeenCalled();
+    const modal = fixture.debugElement.query(By.css('app-promotion-form-modal'));
+    expect(modal.properties['isOpen']).toBeTrue();
+    expect(modal.properties['mode']).toBe('edit');
+    expect(modal.properties['selectedPromotion']).toEqual({ id: 2, code: 'SUMMER10' });
+    expect(modal.properties['reloadStructure']).toBe((component as any).reloadStructureBound);
   });
 
-  it('confirmDeactivate() shows an error alert and does not mutate the list on failure', async () => {
-    const deleteSpy = jasmine.createSpy('deletePromotion').and.returnValue(throwError(() => new Error('boom')));
-    const { component, store, alert } = makeComponent({ deletePromotion: deleteSpy });
-    component.ngOnInit();
-    store.data$.next([SUMMER_SALE]);
+  it('delegates (edit)/(deactivate) from the list table to openEditModal/openDeactivateModal', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'openEditModal');
+    spyOn(component as any, 'openDeactivateModal');
 
-    component.openDeactivateModal(component.rows[0]);
-    await component.confirmDeactivate();
+    const table = fixture.debugElement.query(By.css('app-promotion-list-table'));
+    const row = { id: 2, code: 'SUMMER10' };
+    table.triggerEventHandler('edit', row);
+    table.triggerEventHandler('deactivate', row);
 
-    expect(alert.error).toHaveBeenCalled();
-    const updatedList = store.data$.value as PromotionRespDto[];
-    expect(updatedList[0].status).toBe('active');
+    expect((component as any).openEditModal).toHaveBeenCalledWith(row);
+    expect((component as any).openDeactivateModal).toHaveBeenCalledWith(row);
+  });
+
+  it('delegates (closed) from the form modal to onFormModalClosed', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'onFormModalClosed');
+
+    const modal = fixture.debugElement.query(By.css('app-promotion-form-modal'));
+    modal.triggerEventHandler('closed', undefined);
+
+    expect((component as any).onFormModalClosed).toHaveBeenCalled();
+  });
+
+  it('delegates (confirm)/(cancel) from the deactivate modal to confirmDeactivate/closeDeactivateModal', () => {
+    fixture.detectChanges();
+    spyOn(component as any, 'confirmDeactivate');
+    spyOn(component as any, 'closeDeactivateModal');
+
+    const modal = fixture.debugElement.query(By.css('app-promotion-deactivate-modal'));
+    modal.triggerEventHandler('confirm', undefined);
+    modal.triggerEventHandler('cancel', undefined);
+
+    expect((component as any).confirmDeactivate).toHaveBeenCalled();
+    expect((component as any).closeDeactivateModal).toHaveBeenCalled();
   });
 });
