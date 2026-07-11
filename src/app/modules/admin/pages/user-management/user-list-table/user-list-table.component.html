@@ -1,0 +1,111 @@
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.USERS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.USERS.FULL_NAME' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.EMAIL_PHONE' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.ROLES' | translate }}</th>
+          <th>{{ 'ADMIN.USERS.STATUS' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td>
+              <div class="admin-cell-stack">
+                <span class="admin-skeleton"></span>
+                <span class="admin-skeleton admin-skeleton--sm"></span>
+              </div>
+            </td>
+            <td>
+              <div class="admin-cell-stack">
+                <span class="admin-skeleton"></span>
+                <span class="admin-skeleton admin-skeleton--sm"></span>
+              </div>
+            </td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr *ngFor="let user of rows; let i = index" [class.zebra]="i % 2 === 1">
+            <td>
+              <div class="admin-cell-stack">
+                <span class="admin-emphasis">{{ user.fullName }}</span>
+                <span class="admin-muted">{{ 'ADMIN.USERS.LAST_UPDATED' | translate }}: {{ user.lastUpdated }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="admin-cell-stack">
+                <span>{{ user.email }}</span>
+                <span>{{ user.phone }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="admin-tags">
+                <span class="admin-chip" *ngFor="let role of user.roles">{{ role }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="admin-cell-stack">
+                <span class="admin-status" [ngClass]="statusClass(user.statusCode)">{{ user.status }}</span>
+                <span class="admin-status is-warning admin-status--icon" *ngIf="user.locked">
+                  <span class="material-symbols-outlined">lock</span>
+                  {{ 'ADMIN.USERS.LOCKED_BADGE' | translate }}
+                </span>
+              </div>
+            </td>
+            <td class="text-right">
+              <div class="admin-inline-actions">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.USERS.UNLOCK_ACTION' | translate"
+                  (click)="unlock.emit(user)"
+                  *ngIf="user.locked && canUnlock"
+                >
+                  <span class="material-symbols-outlined">lock_open</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="edit.emit(user)"
+                >
+                  <span class="material-symbols-outlined">edit_square</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn danger"
+                  [attr.aria-label]="'ADMIN.COMMON.DELETE' | translate"
+                  (click)="delete.emit(user)"
+                >
+                  <span class="material-symbols-outlined">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="rows.length === 0 && !hasError" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="admin-table-footer">
+    <span>
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ rows.length === 0 ? 0 : 1 }} - {{ rows.length }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ totalCount }} {{ 'ADMIN.USERS.USER_COUNT' | translate }}
+    </span>
+  </div>
+</section>
