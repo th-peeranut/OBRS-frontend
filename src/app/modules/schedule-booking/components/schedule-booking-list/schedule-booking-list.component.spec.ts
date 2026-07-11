@@ -254,12 +254,16 @@ describe('ScheduleBookingListComponent (trip estimate resolution)', () => {
     });
   });
 
-  it('renders the ≈ km · min chip text for the departure row (not silently empty)', () => {
+  it('renders a distance-only ≈ km chip for the departure row (not silently empty)', () => {
     const chip = fixture.debugElement.query(By.css('.trip-estimate'));
     expect(chip).toBeTruthy();
     const text = (chip.nativeElement.textContent || '').replace(/\s+/g, ' ').trim();
     expect(text).toContain('90');
-    expect(text).toContain('100');
     expect(text).toContain('≈');
+    // PO decision: duration is redundant with the already-shown scheduled
+    // clock-time duration on this surface — the chip must never render it.
+    expect(text).not.toContain('100');
+    expect(text).not.toContain('·');
+    expect(text).not.toContain('ESTIMATE_MIN_UNIT');
   });
 });

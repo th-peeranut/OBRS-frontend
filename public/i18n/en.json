@@ -1103,8 +1103,7 @@
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
-    "ESTIMATE_KM_UNIT": "km",
-    "ESTIMATE_MIN_UNIT": "min"
+    "ESTIMATE_KM_UNIT": "km"
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -1120,7 +1119,6 @@
       "HOUR_UNIT": "Hours",
       "MINITE_UNIT": "Minutes",
       "ESTIMATE_KM_UNIT": "km",
-      "ESTIMATE_MIN_UNIT": "min",
       "BTN_BACK": "Back",
       "BTN_NEXT": "Next"
     },

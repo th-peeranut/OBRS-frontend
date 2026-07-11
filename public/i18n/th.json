@@ -1104,8 +1104,7 @@
     "CHANGE": "เปลี่ยนข้อมูล",
     "NO_RESULTS": "ไม่พบรอบการเดินทางตามที่ค้นหา กรุณาลองเปลี่ยนวันที่ เส้นทาง หรือลดจำนวนผู้โดยสาร",
     "NO_RETURN_RESULTS": "ไม่พบรอบเดินทางขากลับตามที่ค้นหา กรุณาลองเปลี่ยนวันเดินทางกลับ หรือลดจำนวนผู้โดยสาร",
-    "ESTIMATE_KM_UNIT": "กม.",
-    "ESTIMATE_MIN_UNIT": "นาที"
+    "ESTIMATE_KM_UNIT": "กม."
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
@@ -1121,7 +1120,6 @@
       "HOUR_UNIT": "ชั่วโมง",
       "MINITE_UNIT": "นาที",
       "ESTIMATE_KM_UNIT": "กม.",
-      "ESTIMATE_MIN_UNIT": "นาที",
       "BTN_BACK": "ย้อนกลับ",
       "BTN_NEXT": "ถัดไป"
     },

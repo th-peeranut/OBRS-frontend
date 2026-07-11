@@ -128,20 +128,10 @@
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
         </div>
-        <!-- ~X km / ~Y min (authoritative pickup-dropoff estimate) -->
+        <!-- ~X km (authoritative pickup-dropoff distance estimate; duration is redundant with the clock-time duration above) -->
         <ng-container *ngIf="findTripEstimate(departureSchedule, false) | async as est">
-          <div
-            class="body-estimate-text"
-            *ngIf="est.distanceKm != null || est.durationMinutes != null"
-          >
-            <ng-container *ngIf="est.distanceKm != null"
-              >≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}</ng-container
-            >
-            <ng-container *ngIf="est.distanceKm != null && est.durationMinutes != null"> · </ng-container>
-            <ng-container *ngIf="est.durationMinutes != null"
-              ><ng-container *ngIf="est.distanceKm == null">≈ </ng-container
-              >{{ est.durationMinutes }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_MIN_UNIT" | translate }}</ng-container
-            >
+          <div class="body-estimate-text" *ngIf="est.distanceKm != null">
+            ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
           </div>
         </ng-container>
         <!-- xx:xx time -->
@@ -301,20 +291,10 @@
           }}
           {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.MINITE_UNIT" | translate }}
         </div>
-        <!-- ~X km / ~Y min (authoritative pickup-dropoff estimate, swapped for the return leg) -->
+        <!-- ~X km (authoritative pickup-dropoff distance estimate, swapped for the return leg; duration is redundant with the clock-time duration above) -->
         <ng-container *ngIf="findTripEstimate(returnSchedule, true) | async as est">
-          <div
-            class="body-estimate-text"
-            *ngIf="est.distanceKm != null || est.durationMinutes != null"
-          >
-            <ng-container *ngIf="est.distanceKm != null"
-              >≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}</ng-container
-            >
-            <ng-container *ngIf="est.distanceKm != null && est.durationMinutes != null"> · </ng-container>
-            <ng-container *ngIf="est.durationMinutes != null"
-              ><ng-container *ngIf="est.distanceKm == null">≈ </ng-container
-              >{{ est.durationMinutes }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_MIN_UNIT" | translate }}</ng-container
-            >
+          <div class="body-estimate-text" *ngIf="est.distanceKm != null">
+            ≈ {{ est.distanceKm }} {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ESTIMATE_KM_UNIT" | translate }}
           </div>
         </ng-container>
         <!-- xx:xx time -->
