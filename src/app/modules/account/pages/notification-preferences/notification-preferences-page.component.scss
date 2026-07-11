@@ -1,0 +1,104 @@
+@import "../../../../../styles/variables.scss";
+
+// Page shell mirrors account-page.component.scss (design-system §6/§12:
+// reuse the existing customer-shell page pattern rather than a new one).
+// This page renders its own title surface because the customer shell has no
+// route-driven topbar title (unlike the admin/staff shells, design-system §7).
+.npref-page {
+  min-height: 60vh;
+  padding: $space-xl clamp(16px, 6vw, 120px);
+  background-color: $secondary-grey;
+}
+
+.npref-page__inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.npref-page__header {
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: $font-weight-bold;
+    color: $text-black;
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    color: $text-lightblack;
+  }
+}
+
+.npref-page__loading {
+  display: flex;
+  justify-content: center;
+  padding: $space-2xl 0;
+}
+
+.npref-page__error {
+  background-color: $primary-white;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 14px;
+  padding: $space-lg;
+  text-align: center;
+
+  p {
+    margin: 0 0 $space-sm;
+    color: $text-softblack;
+  }
+}
+
+.npref-page__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: $space-md;
+}
+
+// Secondary (non-competing) action — only visible in the error state, so it
+// never doubles up with the Save primary (design-system §4: one primary).
+.npref-retry-btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border: 1px solid $primary-grey;
+  border-radius: $radius-sm;
+  background: $primary-white;
+  color: $text-softblack;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+// Single primary action on this page (design-system §4) — same brand token
+// as account-page's `.btn-primary`, applied to the PrimeNG button.
+:host ::ng-deep .npref-save-btn.p-button {
+  padding: 10px 22px;
+  border: none;
+  border-radius: $radius-sm;
+  background-color: $brand-customer-strong;
+  border-color: $brand-customer-strong;
+  color: $text-white;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+:host ::ng-deep .npref-save-btn.p-button:enabled:hover {
+  background-color: $text-blue;
+  border-color: $text-blue;
+}
+
+:host ::ng-deep .npref-save-btn.p-button:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 767px) {
+  .npref-page__actions {
+    display: block;
+  }
+
+  :host ::ng-deep .npref-save-btn.p-button {
+    width: 100%;
+  }
+}

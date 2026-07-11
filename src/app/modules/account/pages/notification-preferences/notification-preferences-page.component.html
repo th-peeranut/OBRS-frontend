@@ -1,0 +1,44 @@
+<app-navbar></app-navbar>
+
+<section class="npref-page">
+  <div class="npref-page__inner">
+    <header class="npref-page__header">
+      <h1>{{ 'NOTIFICATION_PREFS.TITLE' | translate }}</h1>
+      <p>{{ 'NOTIFICATION_PREFS.SUBTITLE' | translate }}</p>
+    </header>
+
+    <div class="npref-page__loading" *ngIf="isLoading">
+      <p-progressSpinner
+        styleClass="npref-spinner"
+        strokeWidth="4"
+        animationDuration=".8s"
+      ></p-progressSpinner>
+    </div>
+
+    <div class="npref-page__error" *ngIf="!isLoading && loadFailed">
+      <p>{{ 'NOTIFICATION_PREFS.ERROR.LOAD_FAILED' | translate }}</p>
+      <button type="button" class="npref-retry-btn" (click)="onRetry()">
+        {{ 'NOTIFICATION_PREFS.RETRY' | translate }}
+      </button>
+    </div>
+
+    <ng-container *ngIf="!isLoading && !loadFailed">
+      <app-notification-preference-matrix
+        [preferences]="rows"
+        [disabled]="isSaving"
+        [warningType]="criticalWarningType"
+        (rowChange)="onRowChange($event)"
+      ></app-notification-preference-matrix>
+
+      <div class="npref-page__actions">
+        <p-button
+          styleClass="npref-save-btn"
+          [label]="'NOTIFICATION_PREFS.SAVE_BUTTON' | translate"
+          [disabled]="!isDirty || isSaving"
+          [loading]="isSaving"
+          (onClick)="save()"
+        ></p-button>
+      </div>
+    </ng-container>
+  </div>
+</section>

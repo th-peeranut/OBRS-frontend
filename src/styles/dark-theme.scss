@@ -676,3 +676,95 @@ body.is-dark app-route-map-home {
     color: $dk-text !important;
   }
 }
+
+// =============================================================================
+// N. Notification preferences (OBRS-141, `/account/notification-preferences`)
+// =============================================================================
+// NOTE: `.account-card` on `/account` itself has a known pre-existing dark-mode
+// gap (tracked separately) — not touched here. This section only covers the
+// new `.npref-*` classes, built from the $dk-* vars already defined above.
+body.is-dark {
+  .npref-page {
+    background-color: $dk-bg;
+  }
+
+  .npref-page__header {
+    h1 { color: $dk-text; }
+    p { color: $dk-text-muted; }
+  }
+
+  .npref-page__error {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+
+    p { color: $dk-text-muted; }
+  }
+
+  .npref-retry-btn {
+    background: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text;
+    &:hover { background: rgba(75, 194, 247, 0.10); color: $dk-accent; }
+  }
+
+  .npref-save-btn.p-button {
+    background-color: $dk-accent !important;
+    border-color: $dk-accent !important;
+    color: $dk-bg !important;
+
+    &:enabled:hover {
+      background-color: $dk-accent-hover !important;
+      border-color: $dk-accent-hover !important;
+    }
+  }
+
+  .npref-matrix {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+  }
+
+  .npref-matrix__header-cell {
+    color: $dk-text-muted;
+  }
+
+  .npref-row {
+    border-top-color: $dk-border;
+
+    // Mobile: each row is its own card (see notification-preference-row
+    // component.scss's <768px block) — same dark surface as `.npref-matrix`.
+    @media (max-width: 767px) {
+      background-color: $dk-bg-card;
+      border-color: $dk-border;
+    }
+  }
+
+  .npref-row__type {
+    color: $dk-text;
+  }
+
+  .npref-row__hint,
+  .npref-cell--na,
+  .npref-row__cell-label {
+    color: $dk-text-muted;
+  }
+
+  .npref-row__warning {
+    color: $dk-danger;
+  }
+
+  // PrimeNG InputSwitch reads fine unchecked/checked on light surfaces, but
+  // the unchecked light-grey track (#d1d5db) is low-contrast on the dark
+  // card — lift it to the dark border/text-muted pair.
+  .npref-row .p-inputswitch:not(.p-inputswitch-checked) .p-inputswitch-slider {
+    background: $dk-border-muted;
+  }
+  .npref-row .p-inputswitch:not(.p-inputswitch-checked):not(.p-disabled):hover .p-inputswitch-slider {
+    background: $dk-border;
+  }
+  .npref-row .p-inputswitch.p-inputswitch-checked .p-inputswitch-slider {
+    background: $dk-accent;
+  }
+  .npref-row .p-inputswitch.p-inputswitch-checked:not(.p-disabled):hover .p-inputswitch-slider {
+    background: $dk-accent-hover;
+  }
+}

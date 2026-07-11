@@ -1030,7 +1030,39 @@
     "TITLE": "Account",
     "SUBTITLE": "Manage your login details.",
     "EMAIL_SECTION_TITLE": "Login email",
-    "CHANGE_EMAIL_BUTTON": "Change email"
+    "CHANGE_EMAIL_BUTTON": "Change email",
+    "NOTIFICATIONS_SECTION_TITLE": "Notification preferences",
+    "NOTIFICATIONS_SECTION_DESC": "Choose how we contact you for bookings, schedule changes, and reminders.",
+    "MANAGE_NOTIFICATIONS_BUTTON": "Manage notifications"
+  },
+  "NOTIFICATION_PREFS": {
+    "TITLE": "Notification preferences",
+    "SUBTITLE": "Choose which channels we use to reach you for each type of update.",
+    "CHANNEL_EMAIL": "Email",
+    "CHANNEL_SMS": "SMS",
+    "CHANNEL_NA": "Not available",
+    "CRITICAL_HINT": "At least one channel must stay on for this notification.",
+    "SAVE_BUTTON": "Save changes",
+    "SAVE_SUCCESS": "Notification preferences saved.",
+    "RETRY": "Try again",
+    "UNSAVED_CHANGES_TITLE": "Discard unsaved changes?",
+    "UNSAVED_CHANGES_TEXT": "You have unsaved notification preference changes. If you leave now, they will be lost.",
+    "UNSAVED_CHANGES_CONFIRM": "Discard changes",
+    "UNSAVED_CHANGES_CANCEL": "Keep editing",
+    "ERROR": {
+      "LOAD_FAILED": "Couldn't load your notification preferences. Please try again.",
+      "CRITICAL_LAST_CHANNEL": "At least one channel must stay on for this notification.",
+      "GENERIC": "Something went wrong. Please try again."
+    },
+    "TYPE": {
+      "PAYMENT_CONFIRMED": "Payment confirmed",
+      "BOOKING_CANCELLED": "Booking cancelled",
+      "SCHEDULE_CANCELLED": "Trip cancelled",
+      "BOOKING_RESCHEDULED": "Booking rescheduled",
+      "SCHEDULE_TIME_CHANGED": "Trip time changed",
+      "PRE_DEPARTURE_REMINDER": "Pre-departure reminder",
+      "BOARDING_REMINDER": "Boarding reminder"
+    }
   },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "Change your email",

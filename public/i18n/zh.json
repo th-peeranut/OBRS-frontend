@@ -1030,7 +1030,39 @@
     "TITLE": "我的账户",
     "SUBTITLE": "管理您的登录信息。",
     "EMAIL_SECTION_TITLE": "登录邮箱",
-    "CHANGE_EMAIL_BUTTON": "更改邮箱"
+    "CHANGE_EMAIL_BUTTON": "更改邮箱",
+    "NOTIFICATIONS_SECTION_TITLE": "通知偏好设置",
+    "NOTIFICATIONS_SECTION_DESC": "选择我们联系您的方式，用于预订、行程变更和提醒通知。",
+    "MANAGE_NOTIFICATIONS_BUTTON": "管理通知"
+  },
+  "NOTIFICATION_PREFS": {
+    "TITLE": "通知偏好设置",
+    "SUBTITLE": "为每种类型的更新选择我们联系您所使用的渠道。",
+    "CHANNEL_EMAIL": "电子邮件",
+    "CHANNEL_SMS": "短信",
+    "CHANNEL_NA": "不可用",
+    "CRITICAL_HINT": "此通知必须至少保留一个开启的渠道。",
+    "SAVE_BUTTON": "保存更改",
+    "SAVE_SUCCESS": "通知偏好设置已保存。",
+    "RETRY": "重试",
+    "UNSAVED_CHANGES_TITLE": "放弃未保存的更改？",
+    "UNSAVED_CHANGES_TEXT": "您有尚未保存的通知偏好更改。如果现在离开，这些更改将会丢失。",
+    "UNSAVED_CHANGES_CONFIRM": "放弃更改",
+    "UNSAVED_CHANGES_CANCEL": "继续编辑",
+    "ERROR": {
+      "LOAD_FAILED": "无法加载您的通知偏好设置，请重试。",
+      "CRITICAL_LAST_CHANNEL": "此通知必须至少保留一个开启的渠道。",
+      "GENERIC": "发生错误，请重试。"
+    },
+    "TYPE": {
+      "PAYMENT_CONFIRMED": "付款确认",
+      "BOOKING_CANCELLED": "预订已取消",
+      "SCHEDULE_CANCELLED": "行程已取消",
+      "BOOKING_RESCHEDULED": "预订已改期",
+      "SCHEDULE_TIME_CHANGED": "行程时间已变更",
+      "PRE_DEPARTURE_REMINDER": "出发前提醒",
+      "BOARDING_REMINDER": "登车提醒"
+    }
   },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "更改您的邮箱",
