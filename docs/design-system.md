@@ -334,6 +334,26 @@ enforced rule with a test behind it.
   Reuse this for the next list page that needs a richer empty state instead of
   inventing a third variant.
 
+- **Right-aligned money columns** (OBRS-231, `EodSalesReportPageComponent`): a scoped
+  `.eod-report-money { text-align: right; font-variant-numeric: tabular-nums; }` class for
+  a table whose whole purpose is cash-drawer reconciliation, where columns of numbers need
+  to scan/sum visually — left-aligned text (the existing convention, e.g. Reports' Revenue
+  column) defeats that. No new color/token; apply only to genuinely money-shaped columns
+  (not counts like Bookings/Tickets). Reuse this class for the next reconciliation-style
+  table instead of inventing a second right-align convention.
+
+- **Expandable per-row detail** (OBRS-231, `EodSalesReportPageComponent`'s `byMethod`
+  breakdown): no accordion-row precedent existed in any admin table. Built from two
+  already-themed primitives, not a new control — `.admin-icon-btn` +
+  `.material-symbols-outlined` (`expand_more`/`expand_less`, the same chevron-button shape
+  as pagination controls) toggles a sibling `<tr>` with `[attr.colspan]` spanning every
+  column, containing a `flex-wrap` list of chips on `var(--admin-surface-soft)` (the same
+  "structural, not data" surface already used for `admin-table thead`). Collapsed by
+  default per row; expand state is page-local (not store state) and is cleared whenever
+  the underlying row array's identity changes (a new fetch), so it never survives a filter
+  change. Reuse this pattern for the next table that needs row-level drill-down instead of
+  introducing a modal or a second navigation level.
+
 ---
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)

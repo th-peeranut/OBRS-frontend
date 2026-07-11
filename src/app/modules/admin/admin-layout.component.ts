@@ -44,6 +44,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
     { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
     { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
+    { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale' },
   ];
 
   // Count of usability reports with status 'new'. Plain field (not a getter)

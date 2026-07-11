@@ -325,7 +325,8 @@
       "BOOKINGS_MANAGEMENT": "Bookings",
       "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports",
-      "REPORTS": "Reports"
+      "REPORTS": "Reports",
+      "EOD_SALES_REPORT": "End-of-day Sales"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -799,6 +800,34 @@
       "ERROR": {
         "RANGE_INVALID": "The From date must be on or before the To date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "EOD_REPORT": {
+      "SUBTITLE": "End-of-day sales by salesperson, for staff-sold bookings on a single day.",
+      "FILTER_DATE": "Date",
+      "TABLE_TITLE": "Sales by Salesperson",
+      "COL": {
+        "SALESPERSON": "Salesperson",
+        "BOOKINGS": "Bookings",
+        "TICKETS": "Tickets",
+        "CASH": "Cash",
+        "NON_CASH": "Non-cash",
+        "NET": "Net"
+      },
+      "GRAND_TOTAL": "Grand Total",
+      "EXPAND_ARIA": "Show payment method breakdown",
+      "COLLAPSE_ARIA": "Hide payment method breakdown",
+      "EMPTY_DAY": "No staff-sold activity on the selected day.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "METHOD": {
+        "CASH": "Cash",
+        "CARD": "Card",
+        "QR_PROMPTPAY": "PromptPay QR",
+        "BANK_TRANSFER": "Bank Transfer",
+        "TRUEMONEY": "TrueMoney",
+        "SHOPEEPAY": "ShopeePay",
+        "RABBIT_LINEPAY": "Rabbit LINE Pay",
+        "OTHER": "Other"
       }
     }
   },

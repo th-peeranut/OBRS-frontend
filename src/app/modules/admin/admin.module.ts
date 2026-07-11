@@ -21,6 +21,7 @@ import { UsabilityReportsPageComponent } from './pages/usability-reports/usabili
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
@@ -95,6 +96,16 @@ const routes: Routes = [
           requiredRoles: ['admin'],
         },
       },
+      {
+        path: 'eod-sales-report',
+        component: EodSalesReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.EOD_SALES_REPORT',
+          subtitleKey: 'ADMIN.EOD_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -124,6 +135,7 @@ const routes: Routes = [
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
     ReportsPageComponent,
+    EodSalesReportPageComponent,
     AppVehicleMaintenancePanelComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],

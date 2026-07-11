@@ -325,7 +325,8 @@
       "BOOKINGS_MANAGEMENT": "预订",
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
-      "REPORTS": "报告"
+      "REPORTS": "报告",
+      "EOD_SALES_REPORT": "每日销售报告"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -799,6 +800,34 @@
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      }
+    },
+    "EOD_REPORT": {
+      "SUBTITLE": "按销售员统计的每日销售情况，仅限员工当天销售的订单。",
+      "FILTER_DATE": "日期",
+      "TABLE_TITLE": "按销售员统计的销售额",
+      "COL": {
+        "SALESPERSON": "销售员",
+        "BOOKINGS": "预订数",
+        "TICKETS": "票数",
+        "CASH": "现金",
+        "NON_CASH": "非现金",
+        "NET": "净额"
+      },
+      "GRAND_TOTAL": "总计",
+      "EXPAND_ARIA": "显示付款方式明细",
+      "COLLAPSE_ARIA": "隐藏付款方式明细",
+      "EMPTY_DAY": "所选日期没有员工销售活动。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "METHOD": {
+        "CASH": "现金",
+        "CARD": "银行卡",
+        "QR_PROMPTPAY": "PromptPay 二维码",
+        "BANK_TRANSFER": "银行转账",
+        "TRUEMONEY": "TrueMoney",
+        "SHOPEEPAY": "ShopeePay",
+        "RABBIT_LINEPAY": "Rabbit LINE Pay",
+        "OTHER": "其他"
       }
     }
   },
