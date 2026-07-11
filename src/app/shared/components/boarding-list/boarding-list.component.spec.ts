@@ -481,6 +481,7 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
     // Belt-and-braces: a failed assertion mid-test could leave a stray body
     // node behind for the next test/suite even with fixture.destroy() below.
     document.querySelectorAll('.boarding-manifest-print-portal').forEach((el) => el.remove());
+    document.body.classList.remove('boarding-manifest-printing');
   });
 
   it('teleports a document.body child carrying the marker class and defers window.print()', () => {
@@ -491,8 +492,23 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
     const host = document.querySelector('.boarding-manifest-print-portal');
     expect(host).withContext('portal host should be appended to document.body').toBeTruthy();
     expect(host?.parentElement).toBe(document.body);
+    // The body-class gate scopes the global @media print isolation to a live
+    // manifest print only — without it, a native Ctrl+P on any page blank-prints.
+    expect(document.body.classList.contains('boarding-manifest-printing'))
+      .withContext('printManifest() must arm the body-class print gate')
+      .toBe(true);
     // window.print() is deferred via setTimeout(0) so the portal DOM commits first.
     expect(printSpy).not.toHaveBeenCalled();
+  });
+
+  it('disarms the body-class print gate on teardown (native Ctrl+P elsewhere must not blank-print)', () => {
+    spyOn(window, 'print');
+    component['printManifest']();
+    expect(document.body.classList.contains('boarding-manifest-printing')).toBe(true);
+
+    window.dispatchEvent(new Event('afterprint'));
+
+    expect(document.body.classList.contains('boarding-manifest-printing')).toBe(false);
   });
 
   it('afterprint tears the portal down (idempotent — no leaked listener/body node)', (done) => {

@@ -385,6 +385,11 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     const host = document.createElement('div');
     host.className = 'boarding-manifest-print-portal';
     document.body.appendChild(host);
+    // OBRS-100: gate the global `@media print` isolation on this marker class so
+    // it only applies while a manifest portal is live — otherwise a native
+    // Ctrl+P on any other page would blank-print (the hide rule would match
+    // `app-root`). Removed in disposePrintPortal(). See admin-theme.scss / ADR 0015.
+    document.body.classList.add('boarding-manifest-printing');
     this.printPortalHost = host;
 
     this.printPortalOutlet = new DomPortalOutlet(host);
@@ -406,6 +411,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
     window.removeEventListener('afterprint', this.handleAfterPrint);
+    document.body.classList.remove('boarding-manifest-printing');
     this.printPortalOutlet?.dispose();
     this.printPortalHost.remove();
     this.printPortalOutlet = null;

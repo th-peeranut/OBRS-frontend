@@ -26,9 +26,12 @@
   /* OBRS-130: "not boarded" — a plain, un-tinted grey (no blue cast), so it
      reads distinctly against --admin-inreview-* (blue-grey) and every other
      status color, including the *resolved* theme-admin accent (orange), which
-     is always the active variant on the admin shell (design-system §11). Light
-     bg + dark text works in both themes, so — matching --admin-inreview-* and
-     --admin-accepted-* — there is no one-sided dark-mode override here either. */
+     is always the active variant on the admin shell (design-system §11).
+     OBRS-100: unlike the *colored* pastel status chips (success/accepted),
+     which read as "a green/blue chip" in both themes, this *un-tinted* light
+     grey reads as a stark white blob on the dark shell — so it DOES get a
+     dark-mode override below (a recessed dark chip + light text), fitting the
+     "pending/inactive" not-boarded state. */
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
 
@@ -105,6 +108,17 @@
 
 .admin-shell.theme-staff.is-dark {
   --accent-text: #5eead4;
+}
+
+/* OBRS-100: the neutral "not boarded" chip (.admin-status.is-neutral, boarding
+   manifest) kept its light-grey bg (#e4e4e7) in dark mode, reading as a stark
+   white blob on the dark shell — unlike the pastel colored status chips which
+   read as chips. Give it a recessed dark chip (grey surface a step lighter than
+   the row, light text ~8:1 contrast) so it fits the dark theme while staying the
+   distinct un-tinted "pending / not-boarded" state. Light mode is unchanged. */
+.admin-shell.is-dark {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
 }
 
 /* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels
@@ -1597,16 +1611,23 @@ textarea.admin-field {
 // or SweetAlert2's `.swal2-container`) and reveals only the portal, so
 // `window.print()` renders the manifest regardless of which shell/tab
 // triggered it.
+//
+// The `@media print` hide/reveal is gated on the `body.boarding-manifest-printing`
+// marker class, which `printManifest()` adds only while a portal is live and
+// `disposePrintPortal()` removes on teardown. Without this gate the hide rule
+// is GLOBAL and unconditional, so a NATIVE Ctrl+P on ANY page in the app (where
+// no portal exists) matches `body > *` = `app-root` and prints a blank page
+// app-wide. The body-class gate scopes the isolation to a manifest print only.
 .boarding-manifest-print-portal {
   display: none;
 }
 
 @media print {
-  body > *:not(.boarding-manifest-print-portal) {
+  body.boarding-manifest-printing > *:not(.boarding-manifest-print-portal) {
     display: none !important;
   }
 
-  .boarding-manifest-print-portal {
+  body.boarding-manifest-printing .boarding-manifest-print-portal {
     display: block !important;
   }
 }
