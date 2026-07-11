@@ -69,6 +69,27 @@
   gap: 6px;
 }
 
+// OBRS-100: the ticket-status badge in the manifest table (สถานะ column) uses
+// raw Bootstrap `.badge.bg-secondary`/`.bg-success` — the surrounding table is
+// intentionally Bootstrap-styled (see the top-of-file comment), so this pill
+// never got a dark-theme override. Bootstrap's `bg-secondary` (#6c757d medium
+// grey) reads as a light grey blob on the dark shell. Scope a dark-mode override
+// to THIS component only (blast radius = the manifest) so the status pill becomes
+// a dark chip that fits the dark theme, consistent with the adjacent themed
+// `.admin-status` boarded chip. `!important` is required to beat Bootstrap's own
+// `!important` utility classes. Light mode keeps Bootstrap's defaults untouched.
+:host-context(.admin-shell.is-dark) {
+  .badge.bg-secondary {
+    background-color: #333b42 !important;
+    color: #cdd8df !important;
+  }
+
+  .badge.bg-success {
+    background-color: #14532d !important;
+    color: #b7f3c0 !important;
+  }
+}
+
 // OBRS-100: print-only manifest content. This is stamped from a TemplateRef
 // that belongs to THIS component (via ViewContainerRef), so Angular's
 // emulated-encapsulation attribute travels with the DOM node even after the
