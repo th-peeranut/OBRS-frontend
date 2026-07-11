@@ -20,6 +20,10 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
+import {
+  SettlementPendingPageDto,
+  SettlementScheduleDetailDto,
+} from '../../shared/interfaces/settlement.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -942,6 +946,40 @@ export class AdminApiService {
 
   getDashboardToday(): Observable<ResponseAPI<DashboardTodayDto>> {
     return this.getRequest<DashboardTodayDto>(`${this.baseUrl}/private/admin/dashboard/today`);
+  }
+
+  // OBRS-196: per-round revenue settlement + owner cash-handover sign-off.
+  // Base path is `/api/private/settlements` — NO `/admin/` segment
+  // (`EndpointConstant.PRIVATE_SETTLEMENTS`, confirmed against the landed
+  // backend commit 037cdb1 / docs/api/settlements.md). `SettlementController`
+  // is `@PreAuthorize("hasRole('OWNER')")`; ADMIN inherits via the backend's
+  // ROLE_ADMIN > ROLE_OWNER hierarchy and additionally bypasses scoping.
+  getSettlementsPending(
+    from: string,
+    to: string
+  ): Observable<ResponseAPI<SettlementPendingPageDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<SettlementPendingPageDto>(
+      `${this.baseUrl}/private/settlements/pending`,
+      params
+    );
+  }
+
+  getSettlementSchedule(id: number): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
+    return this.getRequest<SettlementScheduleDetailDto>(
+      `${this.baseUrl}/private/settlements/schedules/${id}`
+    );
+  }
+
+  confirmSettlement(
+    id: number,
+    acknowledgedTotalAmount?: string
+  ): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
+    const payload = acknowledgedTotalAmount !== undefined ? { acknowledgedTotalAmount } : {};
+    return this.postRequest<SettlementScheduleDetailDto>(
+      `${this.baseUrl}/private/settlements/schedules/${id}/confirm`,
+      payload
+    );
   }
 
   // Backs the admin sidebar's "Usability Reports" nav badge — reuses the

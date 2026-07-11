@@ -325,7 +325,8 @@
       "BOOKINGS_MANAGEMENT": "Bookings",
       "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports",
-      "REPORTS": "Reports"
+      "REPORTS": "Reports",
+      "SETTLEMENTS": "Settlements"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -799,6 +800,80 @@
       "ERROR": {
         "RANGE_INVALID": "The From date must be on or before the To date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "SETTLEMENTS": {
+      "SUBTITLE": "Confirm cash and revenue handover for each departed round.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "TABLE_TITLE": "Rounds Pending Settlement",
+      "COL": {
+        "ROUTE": "Route",
+        "DEPARTURE": "Departure",
+        "STATUS": "Status",
+        "AMOUNT": "Total Amount",
+        "CHANNEL": "Channel",
+        "METHOD": "Payment Method",
+        "TICKETS": "Tickets"
+      },
+      "STATUS": {
+        "PENDING": "Pending",
+        "SETTLED": "Settled"
+      },
+      "EMPTY": "No rounds due for settlement in the selected range.",
+      "LOAD_FAILED": "Unable to load settlements. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer.",
+        "ALREADY_SETTLED": "This round has already been settled by another admin.",
+        "AMOUNT_MISMATCH": "The revenue total changed since this round was opened. Review the updated amount and try again.",
+        "SCOPE_FORBIDDEN": "You do not have permission to settle this round.",
+        "ROUND_NOT_DEPARTED": "This round has not departed yet and cannot be settled.",
+        "SCHEDULE_NOT_FOUND": "This round could not be found. It may have been removed.",
+        "CONFIRM_FAILED": "Unable to confirm settlement. Please try again."
+      },
+      "DETAIL": {
+        "TITLE": "Round Settlement",
+        "ROUTE": "Route",
+        "DEPARTURE": "Departure",
+        "ON_SITE_TOTAL": "On-site Total",
+        "AGENCY_TOTAL": "Agency Total",
+        "TOTAL_AMOUNT": "Total Amount",
+        "TICKET_COUNT": "Tickets",
+        "PASSENGER_COUNT": "Passengers",
+        "BY_CHANNEL": "By Channel",
+        "BY_METHOD": "By Payment Method",
+        "METHOD_NOTE": "Method totals are indicative; channel totals reconcile.",
+        "SETTLED_BY": "Settled By",
+        "SETTLED_AT": "Settled At",
+        "DISCREPANCY_TITLE": "Discrepancy",
+        "DISCREPANCY_NONE": "No discrepancy — the acknowledged amount matched the recorded total.",
+        "DISCREPANCY_FOUND": "A discrepancy was recorded for this settlement.",
+        "DIFFERENCE_AMOUNT": "Difference",
+        "LOAD_FAILED": "Unable to load round details.",
+        "RETRY": "Retry"
+      },
+      "CONFIRM": {
+        "TITLE": "Confirm Cash Handover",
+        "TEXT": "Confirm you have received {{amount}} in total for this round?",
+        "CONFIRM_BTN": "Confirm Receipt",
+        "SUCCESS": "Settlement confirmed."
+      },
+      "METHOD": {
+        "CASH": "Cash",
+        "CARD": "Card",
+        "BANK_TRANSFER": "Bank Transfer",
+        "QR_PROMPTPAY": "QR PromptPay",
+        "TRUEMONEY": "TrueMoney",
+        "SHOPEEPAY": "ShopeePay",
+        "RABBIT_LINEPAY": "Rabbit LINE Pay",
+        "OTHER": "Other"
+      },
+      "CHANNEL": {
+        "ONLINE": "Online",
+        "WALK_IN": "Walk-in",
+        "AGENT": "Agent",
+        "KIOSK": "Kiosk"
       }
     }
   },

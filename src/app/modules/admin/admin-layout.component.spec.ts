@@ -171,6 +171,37 @@ describe('AdminLayoutComponent', () => {
       .withContext('localStorage should be "0" when expanded')
       .toBe('0');
   });
+
+  // OBRS-196: Settlements nav entry is gated to owner/admin (hasAnyRole(['owner'])
+  // — ROLE_GRANTS['admin'] includes 'owner', so admin is admitted too). Asserted
+  // against the component's navItems field (rendered via *ngFor) rather than a
+  // resolved `href`, since RouterTestingModule doesn't resolve a relative
+  // routerLink to a predictable href outside a real route context.
+  it('hides the Settlements nav item when hasAnyRole(["owner"]) is false', () => {
+    const comp = fixture.componentInstance as unknown as { navItems: Array<{ path: string }> };
+    expect(comp.navItems.some((item) => item.path === 'settlements'))
+      .withContext('settlements nav item should be hidden for a non-owner/admin identity')
+      .toBeFalse();
+  });
+
+  it('shows the Settlements nav item for an owner/admin identity', () => {
+    const original = authStub.hasAnyRole;
+    authStub.hasAnyRole = (_roles: string[]) => true;
+    try {
+      const f = TestBed.createComponent(AdminLayoutComponent);
+      f.detectChanges();
+
+      const comp = f.componentInstance as unknown as { navItems: Array<{ path: string; labelKey: string }> };
+      expect(comp.navItems.some((item) => item.path === 'settlements'))
+        .withContext('settlements nav item should be present for owner/admin')
+        .toBeTrue();
+      expect(comp.navItems.find((item) => item.path === 'settlements')?.labelKey).toBe(
+        'ADMIN.PAGES.SETTLEMENTS'
+      );
+    } finally {
+      authStub.hasAnyRole = original;
+    }
+  });
 });
 
 // ── Usability Reports nav badge ───────────────────────────────────────────────

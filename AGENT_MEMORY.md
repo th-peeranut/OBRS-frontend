@@ -2402,3 +2402,12 @@ print and disarms on teardown, and afterEach class cleanup. 25/25 boarding-list 
 **Pattern for next time:** any GLOBAL `@media print` "hide everything except X" rule MUST be
 scoped to a runtime-toggled body/html class, so it is inert unless that specific print was
 explicitly invoked. An unconditional global print rule is a whole-app regression.
+## OBRS-196 scrutinize (settlements) — 2026-07-11
+- Self-fixed a STALE DOC COMMENT in `settlements.store.ts` class JSDoc: it still
+  said the cache backed `/admin/settlements/pending`, but the whole post-merge
+  reconciliation (commit 26f9b17) had moved the endpoint to
+  `/api/private/settlements/pending` (no `/admin/` segment — the controller is
+  `hasRole('OWNER')`, ADMIN inherits via role hierarchy). Comment now names the
+  real path. Pattern: when a reconciliation changes a URL/contract, grep the
+  matching store/service JSDoc for the OLD path — code was correct, only the
+  doc lied.

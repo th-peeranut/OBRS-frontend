@@ -1,0 +1,62 @@
+<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
+  <div>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="false"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <p-calendar
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="fromDate"
+    (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.SETTLEMENTS.FILTER_FROM' | translate"
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+
+  <p-calendar
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="toDate"
+    (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.SETTLEMENTS.FILTER_TO' | translate"
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+</section>
+
+<app-settlements-list
+  [items]="items"
+  [contentState]="contentState"
+  [message]="stateMessage"
+  (rowClick)="openDetail($event)"
+></app-settlements-list>
+
+<app-settlement-detail-modal
+  [isOpen]="openScheduleId !== null"
+  [summary]="modalSummary"
+  [detail]="modalDetail"
+  [isFetching]="isDetailFetching"
+  [isConfirming]="isConfirming"
+  [fetchError]="detailFetchError"
+  (closed)="closeDetail()"
+  (confirmRequested)="requestConfirm()"
+  (retryFetch)="retryFetch()"
+></app-settlement-detail-modal>
