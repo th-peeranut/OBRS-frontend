@@ -20,6 +20,9 @@ import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.d
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
+import { PromotionListTableComponent } from './pages/promotions/promotion-list-table/promotion-list-table.component';
+import { PromotionFormModalComponent } from './pages/promotions/promotion-form-modal/promotion-form-modal.component';
+import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
@@ -147,6 +150,9 @@ const routes: Routes = [
     UsabilityReportsPageComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
+    PromotionListTableComponent,
+    PromotionFormModalComponent,
+    PromotionDeactivateModalComponent,
     ReportsPageComponent,
     EodSalesReportPageComponent,
     AppVehicleMaintenancePanelComponent,
