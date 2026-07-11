@@ -1,11 +1,9 @@
-import { FormBuilder } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
 import { RoutesPageComponent } from './routes-page.component';
-import { AdminRouteDto } from '../../../../services/admin/admin-api.service';
-import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+import { RouteRow } from './routes.mappers';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 
-const ROUTE_ROW = {
+const ROUTE_ROW: RouteRow = {
   id: 1,
   slug: 'a-b',
   label: 'A to B',
@@ -14,22 +12,6 @@ const ROUTE_ROW = {
   statusCode: 'active',
   updatedAt: '-',
 };
-
-function detailResponse(): ResponseAPI<AdminRouteDto> {
-  return {
-    code: 200,
-    message: 'OK',
-    data: {
-      id: 1,
-      slug: 'a-b',
-      status: 'active',
-      translations: [
-        { locale: 'en', label: 'Server EN', description: 'Server EN desc' },
-        { locale: 'th', label: 'TH label', description: 'TH desc' },
-      ],
-    },
-  };
-}
 
 function makeStoreStub() {
   return {
@@ -43,77 +25,135 @@ function makeStoreStub() {
   };
 }
 
-function makeComponent(getRouteById$: Subject<ResponseAPI<AdminRouteDto>>) {
+function makeComponent() {
   const adminApi = {
-    getRouteById: jasmine.createSpy('getRouteById').and.returnValue(getRouteById$.asObservable()),
+    deleteRouteById: jasmine
+      .createSpy('deleteRouteById')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null })),
   };
   const alert = {
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
   };
+  const store = makeStoreStub();
   const component = new RoutesPageComponent(
     adminApi as any,
-    new FormBuilder(),
     alert as any,
     createTranslateStub(),
-    makeStoreStub() as any
+    store as any
   );
-  return { component, adminApi };
+  return { component, adminApi, alert, store };
 }
 
-describe('RoutesPageComponent edit modal', () => {
-  // Regression: the modal must open immediately on Edit, not after the detail
-  // fetch resolves — otherwise a slow SIT response leaves a blank ~4s wait.
-  it('opens the edit modal before the route detail fetch resolves', () => {
-    const getRouteById$ = new Subject<ResponseAPI<AdminRouteDto>>();
-    const { component } = makeComponent(getRouteById$);
+describe('RoutesPageComponent delegation to child modals', () => {
+  it('openCreateModal delegates to the route form modal', () => {
+    const { component } = makeComponent();
+    const routeFormModal = { openCreate: jasmine.createSpy('openCreate') };
+    (component as any).routeFormModal = routeFormModal;
 
-    void (component as any).openEditModal({ ...ROUTE_ROW });
-
-    // Subject has not emitted yet — the fetch is still in flight.
-    expect((component as any).isRouteFormModalOpen).toBeTrue();
-    expect((component as any).isEditMode).toBeTrue();
-    expect((component as any).isEditDetailLoading).toBeTrue();
-    // The form is already usable with the row data we had in hand.
-    expect((component as any).routeForm.get('enLabel').value).toBe('A to B');
-  });
-
-  // Regression: the create-route form must require the Thai route name.
-  it('requires the Thai route name (thLabel)', () => {
-    const { component } = makeComponent(new Subject<ResponseAPI<AdminRouteDto>>());
     (component as any).openCreateModal();
-    const form = (component as any).routeForm;
 
-    form.get('slug').setValue('a-b');
-    form.get('status').setValue('active');
-    form.get('enLabel').setValue('A to B');
-    form.get('thLabel').setValue('');
-    expect(form.get('thLabel').valid).toBeFalse();
-    expect(form.valid).toBeFalse();
-
-    form.get('thLabel').setValue('เอ ถึง บี');
-    expect(form.valid).toBeTrue();
+    expect(routeFormModal.openCreate).toHaveBeenCalled();
   });
 
-  it('patches server detail into untouched fields without clobbering user input', async () => {
-    const getRouteById$ = new Subject<ResponseAPI<AdminRouteDto>>();
-    const { component } = makeComponent(getRouteById$);
+  it('openEditModal delegates to the route form modal with the route row', () => {
+    const { component } = makeComponent();
+    const routeFormModal = { openEdit: jasmine.createSpy('openEdit').and.resolveTo(undefined) };
+    (component as any).routeFormModal = routeFormModal;
 
-    const promise = (component as any).openEditModal({ ...ROUTE_ROW });
+    (component as any).openEditModal({ ...ROUTE_ROW });
 
-    // User starts editing the English label before the detail arrives.
-    const form = (component as any).routeForm;
-    form.get('enLabel').setValue('User typed');
-    form.get('enLabel').markAsDirty();
+    expect(routeFormModal.openEdit).toHaveBeenCalledWith(ROUTE_ROW);
+  });
 
-    getRouteById$.next(detailResponse());
-    getRouteById$.complete();
-    await promise;
+  it('openSegmentEditModal delegates to the segment edit modal', () => {
+    const { component } = makeComponent();
+    const segment = {
+      id: 5,
+      origin: 'A',
+      destination: 'B',
+      fare: 10,
+      duration: '10 mins',
+      estimatedDurationMinutes: 10,
+      fromStopSlug: 'a',
+      toStopSlug: 'b',
+      vehicleTypeSlug: 'van',
+      vehicleTypeName: 'Van',
+    };
+    const segmentEditModal = { open: jasmine.createSpy('open') };
+    (component as any).segmentEditModal = segmentEditModal;
 
-    // Untouched Thai field is filled from the server detail...
-    expect(form.get('thLabel').value).toBe('TH label');
-    // ...but the field the user was editing is preserved.
-    expect(form.get('enLabel').value).toBe('User typed');
-    expect((component as any).isEditDetailLoading).toBeFalse();
+    (component as any).openSegmentEditModal(segment);
+
+    expect(segmentEditModal.open).toHaveBeenCalledWith(segment);
+  });
+
+  it('onRouteSaved sets the selected route slug then refreshes the store', async () => {
+    const { component, store } = makeComponent();
+
+    await (component as any).onRouteSaved({ slug: 'new-slug' });
+
+    expect((component as any).selectedRouteSlug).toBe('new-slug');
+    expect(store.refresh).toHaveBeenCalled();
+  });
+
+  it('reloadStructureBound calls loadRouteStructureBySlug with the selected route slug', () => {
+    const { component } = makeComponent();
+    (component as any).selectedRouteSlug = 'a-b';
+    const spy = spyOn<any>(component, 'loadRouteStructureBySlug').and.resolveTo(undefined);
+
+    (component as any).reloadStructureBound();
+
+    expect(spy).toHaveBeenCalledWith('a-b');
+  });
+});
+
+describe('RoutesPageComponent delete modal', () => {
+  it('openDeleteModal opens the confirm dialog for the given route', () => {
+    const { component } = makeComponent();
+
+    (component as any).openDeleteModal({ ...ROUTE_ROW });
+
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+    expect((component as any).routeForDelete).toEqual(ROUTE_ROW);
+  });
+
+  it('closeDeleteModal does not close while deleting unless forced', () => {
+    const { component } = makeComponent();
+    (component as any).openDeleteModal({ ...ROUTE_ROW });
+    (component as any).isDeleting = true;
+
+    (component as any).closeDeleteModal();
+    expect((component as any).isDeleteModalOpen).toBeTrue();
+
+    (component as any).closeDeleteModal(true);
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+  });
+
+  it('confirmDelete removes the route from the store and shows a success alert', async () => {
+    const { component, adminApi, alert, store } = makeComponent();
+    (component as any).openDeleteModal({ ...ROUTE_ROW });
+    (component as any).selectedRouteSlug = 'a-b';
+    const mutateSpy = jasmine.createSpy('mutate');
+    (store as any).mutate = mutateSpy;
+
+    await (component as any).confirmDelete();
+
+    expect(adminApi.deleteRouteById).toHaveBeenCalledWith(1);
+    expect(mutateSpy).toHaveBeenCalled();
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+    expect((component as any).selectedRouteSlug).toBe('');
+    expect(alert.success).toHaveBeenCalled();
+  });
+
+  it('confirmDelete shows an error alert and does not clear selection on failure', async () => {
+    const { component, adminApi, alert } = makeComponent();
+    (component as any).openDeleteModal({ ...ROUTE_ROW });
+    adminApi.deleteRouteById.and.returnValue(throwError(() => new Error('delete failed')));
+
+    await (component as any).confirmDelete();
+
+    expect((component as any).isDeleteModalOpen).toBeFalse();
+    expect(alert.error).toHaveBeenCalledWith('delete failed');
   });
 });

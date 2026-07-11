@@ -10,6 +10,8 @@ import { RoleManagementPageComponent } from './pages/role-management/role-manage
 import { UserManagementPageComponent } from './pages/user-management/user-management-page.component';
 import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component';
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
+import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
+import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
@@ -108,6 +110,8 @@ const routes: Routes = [
     UserManagementPageComponent,
     VehiclesPageComponent,
     RoutesPageComponent,
+    RouteFormModalComponent,
+    SegmentEditModalComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
     AdminModalBackdropDirective,
