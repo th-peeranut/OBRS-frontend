@@ -5,38 +5,27 @@ import {
   AdminApiService,
   AdminLookupDto,
   AdminRoleDto,
-  AdminStatusDto,
-  AdminTranslationCollection,
-  AdminTranslationReqDto,
   CreateRolePayload,
-  getAdminTranslationDescription,
-  getAdminTranslationLabel,
-  parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
-import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import { TranslateService } from '@ngx-translate/core';
 import { RolesStore } from './roles.store';
-
-interface RoleRow {
-  id: number;
-  slug: string;
-  label: string;
-  description: string;
-  enLabel: string;
-  enDescription: string;
-  thLabel: string;
-  thDescription: string;
-  status: string;
-  statusCode: string;
-  updatedAt: string;
-}
-
-interface StatusOption {
-  code: string;
-  label: string;
-}
+import {
+  RoleRow,
+  StatusOption,
+  buildRoleFormValues,
+  extractResponseData,
+  filterRolesByStatus,
+  isFilterStatusStale,
+  sortRolesByLatestUpdated,
+  statusClass,
+  toLatestTimestamp,
+  toRoleDetailFallback,
+  toRolePayload,
+  toRoleRow,
+  toStatusOptions,
+} from './role-management.mappers';
 
 @Component({
   selector: 'app-role-management-page',
@@ -147,17 +136,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   }
 
   protected statusClass(status: string): string {
-    const normalizedStatus = status.toUpperCase();
-
-    if (normalizedStatus === 'ACTIVE') {
-      return 'is-success';
-    }
-
-    if (normalizedStatus.includes('PENDING')) {
-      return 'is-warning';
-    }
-
-    return 'is-danger';
+    return statusClass(status);
   }
 
   protected openCreateModal(): void {
@@ -183,13 +162,13 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedRole = role;
     this.isEditDetailLoading = true;
-    this.applyRoleFormValues(this.toRoleDetailFallback(role), role);
+    this.applyRoleFormValues(toRoleDetailFallback(role), role);
     this.roleForm.get('slug')?.disable();
     this.isFormModalOpen = true;
 
     try {
       const response = await firstValueFrom(this.adminApiService.getRoleById(role.id));
-      const roleDetail = this.extractResponseData<AdminRoleDto>(response);
+      const roleDetail = extractResponseData<AdminRoleDto>(response);
       // Ignore a stale response if the user closed the modal or switched roles.
       if (roleDetail && this.isFormModalOpen && this.selectedRole?.id === role.id) {
         this.applyRoleFormValues(roleDetail, role, true);
@@ -211,27 +190,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     role: RoleRow,
     onlyPristine = false
   ): void {
-    const enLabel =
-      this.getTranslationLabel(roleDetail.translations, 'en') ??
-      roleDetail.name ??
-      role.enLabel;
-    const thLabel = this.getTranslationLabel(roleDetail.translations, 'th') ?? role.thLabel;
-    const enDescription =
-      this.getTranslationDescription(roleDetail.translations, 'en') ??
-      roleDetail.description ??
-      role.enDescription;
-    const thDescription =
-      this.getTranslationDescription(roleDetail.translations, 'th') ?? role.thDescription;
-    const status = this.parseStatus(roleDetail.status ?? role.statusCode);
-
-    const values = {
-      slug: String(roleDetail.slug ?? role.slug).trim(),
-      enLabel: String(enLabel ?? '').trim().replace(/^-$/, ''),
-      enDescription: String(enDescription ?? '').trim().replace(/^-$/, ''),
-      thLabel: String(thLabel ?? '').trim().replace(/^-$/, ''),
-      thDescription: String(thDescription ?? '').trim().replace(/^-$/, ''),
-      status: status.code,
-    };
+    const values = buildRoleFormValues(roleDetail, role, this.getCurrentLocale());
 
     if (!onlyPristine) {
       this.roleForm.reset(values);
@@ -287,7 +246,7 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     try {
-      const payload = this.toRolePayload();
+      const payload = toRolePayload(this.roleForm.getRawValue());
 
       // Start revalidating the table the moment the write succeeds, so it runs
       // concurrently with the success dialog (a SweetAlert the user dismisses by
@@ -352,179 +311,24 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
   // Re-derive every locale-dependent view field from the DTOs already in memory.
   // Runs on initial load and on each language change — no backend round-trip.
   private applyLocalization(): void {
-    this.statusOptions = this.toStatusOptions(this.rawLookups, this.rawRoles);
-    this.roles = this.sortRolesByLatestUpdated(this.rawRoles).map((role) => this.toRoleRow(role));
+    const currentLocale = this.getCurrentLocale();
+    const dateLang = this.translate.currentLang;
+
+    this.statusOptions = toStatusOptions(this.rawLookups, this.rawRoles, currentLocale);
+    this.roles = sortRolesByLatestUpdated(this.rawRoles).map((role) =>
+      toRoleRow(role, currentLocale, dateLang)
+    );
     this.syncStatusFilterWithAvailableOptions();
     this.applyRoleFilter();
-    this.lastUpdatedAt = this.toLatestTimestamp(this.rawRoles);
-  }
-
-  private toRolePayload(): CreateRolePayload {
-    const slug = String(this.roleForm.getRawValue()['slug'] ?? '')
-      .trim()
-      .toLowerCase();
-    const enLabel = String(this.roleForm.value['enLabel'] ?? '').trim();
-    const enDescription = String(this.roleForm.value['enDescription'] ?? '').trim();
-    const thLabel = String(this.roleForm.value['thLabel'] ?? '').trim();
-    const thDescription = String(this.roleForm.value['thDescription'] ?? '').trim();
-    const status = String(this.roleForm.value['status'] ?? '').trim().toLowerCase();
-
-    const translations: AdminTranslationReqDto[] = [
-      {
-        locale: 'en',
-        label: enLabel,
-        description: enDescription || undefined,
-      },
-    ];
-
-    translations.push({
-      locale: 'th',
-      label: thLabel,
-      description: thDescription || undefined,
-    });
-
-    return {
-      slug,
-      status,
-      translations,
-    };
-  }
-
-  private extractResponseData<T>(response: unknown): T | null {
-    if (response === null || response === undefined) {
-      return null;
-    }
-
-    if (typeof response === 'object' && 'data' in response) {
-      return ((response as { data?: T }).data ?? null);
-    }
-
-    return response as T;
-  }
-
-  private extractResponseArray<T>(response: unknown): T[] {
-    const data = this.extractResponseData<unknown>(response);
-    return Array.isArray(data) ? data as T[] : [];
-  }
-
-  private toStatusOptions(lookups: AdminLookupDto[], roles: AdminRoleDto[]): StatusOption[] {
-    const lookupOptions = lookups
-      .filter((lookup) => lookup.category === 'role_status')
-      .map((lookup) => ({
-        code: String(lookup.slug ?? '').trim().toLowerCase(),
-        label:
-          this.getTranslationLabel(lookup.translations, this.getCurrentLocale()) ??
-          this.getTranslationLabel(lookup.translations, 'en') ??
-          lookup.slug,
-      }))
-      .filter((option) => option.code.length > 0);
-
-    if (lookupOptions.length > 0) {
-      return lookupOptions;
-    }
-
-    const statusByCode = new Map<string, string>();
-    roles.forEach((role) => {
-      const status = this.parseStatus(role.status);
-      if (status.code && status.code !== 'unknown') {
-        statusByCode.set(status.code, status.name);
-      }
-    });
-
-    return [...statusByCode.entries()].map(([code, label]) => ({ code, label }));
-  }
-
-  private toRoleRow(role: AdminRoleDto): RoleRow {
-    const status = this.parseStatus(role.status);
-    const currentLocale = this.getCurrentLocale();
-    const enLabel = this.getTranslationLabel(role.translations, 'en') ?? role.name ?? role.slug;
-    const enDescription =
-      this.getTranslationDescription(role.translations, 'en') ??
-      role.description ??
-      '-';
-    const thLabel = this.getTranslationLabel(role.translations, 'th') ?? '-';
-    const thDescription = this.getTranslationDescription(role.translations, 'th') ?? '-';
-    const localizedLabel =
-      role.name ??
-      this.getTranslationLabel(role.translations, currentLocale) ??
-      enLabel;
-    const localizedDescription =
-      role.description ??
-      this.getTranslationDescription(role.translations, currentLocale) ??
-      enDescription;
-
-    return {
-      id: Number(role.id ?? 0),
-      slug: role.slug,
-      label: localizedLabel,
-      description: localizedDescription,
-      enLabel,
-      enDescription,
-      thLabel,
-      thDescription,
-      status: status.name,
-      statusCode: status.code,
-      updatedAt: formatDisplayDateTime(role.updatedAt ?? role.createdAt, this.translate.currentLang),
-    };
-  }
-
-  private parseStatus(value: string | AdminStatusDto | null | undefined): {
-    code: string;
-    name: string;
-  } {
-    return parseAdminStatus(value, this.getCurrentLocale());
-  }
-
-  private toLatestTimestamp(roles: AdminRoleDto[]): string {
-    const values = roles
-      .map((role) => role.updatedAt ?? role.createdAt)
-      .filter((item): item is string => !!item)
-      .map((item) => new Date(item).getTime())
-      .filter((item) => Number.isFinite(item));
-
-    if (values.length === 0) {
-      return '-';
-    }
-
-    return formatDisplayDateTime(new Date(Math.max(...values)).toISOString(), this.translate.currentLang);
-  }
-
-  private sortRolesByLatestUpdated(roles: AdminRoleDto[]): AdminRoleDto[] {
-    return [...roles].sort(
-      (first, second) =>
-        this.toTimestamp(second.updatedAt ?? second.createdAt) -
-        this.toTimestamp(first.updatedAt ?? first.createdAt)
-    );
-  }
-
-  private toTimestamp(value: string | null | undefined): number {
-    if (!value) {
-      return 0;
-    }
-
-    const timestamp = new Date(value).getTime();
-    return Number.isFinite(timestamp) ? timestamp : 0;
+    this.lastUpdatedAt = toLatestTimestamp(this.rawRoles, dateLang);
   }
 
   private applyRoleFilter(): void {
-    const statusFilter = this.selectedStatusFilter;
-
-    this.filteredRoles = this.roles.filter((role) => {
-      if (statusFilter.length === 0) {
-        return true;
-      }
-
-      return role.statusCode.trim().toLowerCase() === statusFilter;
-    });
+    this.filteredRoles = filterRolesByStatus(this.roles, this.selectedStatusFilter);
   }
 
   private syncStatusFilterWithAvailableOptions(): void {
-    if (
-      this.selectedStatusFilter &&
-      !this.statusOptions.some(
-        (option) => option.code.trim().toLowerCase() === this.selectedStatusFilter
-      )
-    ) {
+    if (isFilterStatusStale(this.selectedStatusFilter, this.statusOptions)) {
       this.selectedStatusFilter = '';
     }
   }
@@ -535,42 +339,6 @@ export class RoleManagementPageComponent implements OnInit, OnDestroy {
     ).toLowerCase();
 
     return rawLocale.startsWith('en') ? 'en' : 'th';
-  }
-
-  private toRoleDetailFallback(role: RoleRow): AdminRoleDto {
-    return {
-      id: role.id,
-      slug: role.slug,
-      name: role.label,
-      description: role.description === '-' ? '' : role.description,
-      status: role.statusCode,
-      translations: [
-        {
-          locale: 'en',
-          label: role.enLabel,
-          description: role.enDescription === '-' ? undefined : role.enDescription,
-        },
-        {
-          locale: 'th',
-          label: role.thLabel === '-' ? undefined : role.thLabel,
-          description: role.thDescription === '-' ? undefined : role.thDescription,
-        },
-      ],
-    };
-  }
-
-  private getTranslationLabel(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationLabel(translations, locale);
-  }
-
-  private getTranslationDescription(
-    translations: AdminTranslationCollection | null | undefined,
-    locale?: string
-  ): string | null {
-    return getAdminTranslationDescription(translations, locale);
   }
 
   private async updateRole(role: RoleRow, payload: CreateRolePayload): Promise<void> {
