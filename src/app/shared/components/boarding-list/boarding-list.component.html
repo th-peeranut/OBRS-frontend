@@ -71,18 +71,89 @@
     {{ 'STAFF.SCHEDULE_STATUS.LOCK_BANNER' | translate }}
   </div>
 
-  <!-- OBRS-96: manual boarding-scan validation — text-entry token only
-       (camera scanning is out of scope for this card; the hint below
-       reserves the visual room for a future "Scan with camera" affordance).
-       New control, so it follows the canonical admin/staff-shell tokens
-       (design-system §3/§4/§11): .admin-field pill input, .admin-btn-primary
-       the one primary action here, .admin-status for the result banner. -->
+  <!-- OBRS-96/OBRS-266: manual boarding-scan validation — text-entry token
+       (always usable, the fallback) plus a camera QR-scan mode. New control,
+       so it follows the canonical admin/staff-shell tokens (design-system
+       §3/§4/§11): .admin-field pill input, .admin-btn-primary the one
+       primary action here, .admin-status for the result banner. -->
   <div class="card shadow-sm border-0 mb-3">
     <div class="card-body">
       <div class="boarding-scan-box">
-        <label class="admin-form-label" for="boardingScanInput">
-          {{ 'STAFF.BOARDING.SCAN.LABEL' | translate }}
-        </label>
+        <div class="boarding-scan-header-row">
+          <label class="admin-form-label mb-0" for="boardingScanInput">
+            {{ 'STAFF.BOARDING.SCAN.LABEL' | translate }}
+          </label>
+
+          <!-- OBRS-266: segmented text/camera toggle — exactly one button is
+               ever the pressed/.is-active state. -->
+          <div
+            class="boarding-scan-mode-toggle"
+            role="group"
+            [attr.aria-label]="'STAFF.BOARDING.SCAN.MODE_TOGGLE_LABEL' | translate"
+          >
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              [class.is-active]="scanMode === 'text'"
+              [attr.aria-pressed]="scanMode === 'text'"
+              [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
+              (click)="setScanMode('text')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">keyboard</span>
+              {{ 'STAFF.BOARDING.SCAN.MODE_TEXT' | translate }}
+            </button>
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              [class.is-active]="scanMode === 'camera'"
+              [attr.aria-pressed]="scanMode === 'camera'"
+              [disabled]="isScanning || isUpdatingScheduleStatus || isScheduleArrived"
+              (click)="setScanMode('camera')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+              {{ 'STAFF.BOARDING.SCAN.MODE_CAMERA' | translate }}
+            </button>
+          </div>
+        </div>
+
+        <!-- OBRS-266: camera viewfinder — only rendered in camera mode. -->
+        <div class="boarding-scan-camera" *ngIf="scanMode === 'camera'">
+          <div
+            class="boarding-scan-camera-viewport"
+            *ngIf="cameraStatus === 'requesting' || cameraStatus === 'active'"
+          >
+            <video #scanVideo class="boarding-scan-video" autoplay muted playsinline></video>
+            <div class="boarding-scan-reticle" *ngIf="cameraStatus === 'active'" aria-hidden="true"></div>
+            <span class="boarding-scan-chip" *ngIf="cameraStatus === 'active'">
+              <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
+              {{ 'STAFF.BOARDING.SCAN.CAMERA.SCANNING' | translate }}
+            </span>
+            <div class="boarding-scan-camera-requesting" *ngIf="cameraStatus === 'requesting'">
+              {{ 'STAFF.BOARDING.SCAN.CAMERA.REQUESTING' | translate }}
+            </div>
+          </div>
+
+          <!-- Fallback empty-state (design-system §12 full-section empty-state pattern). -->
+          <div class="boarding-scan-camera-empty" *ngIf="isCameraFallbackStatus">
+            <span class="material-symbols-outlined" aria-hidden="true">{{ cameraFallbackIcon }}</span>
+            <p class="boarding-scan-camera-empty-title">{{ cameraFallbackMessageKey | translate }}</p>
+            <button
+              type="button"
+              class="admin-btn admin-btn-small"
+              *ngIf="cameraStatus === 'denied' || cameraStatus === 'error'"
+              (click)="retryCamera()"
+            >
+              {{ 'STAFF.BOARDING.SCAN.CAMERA.RETRY' | translate }}
+            </button>
+          </div>
+
+          <div class="boarding-scan-camera-hint text-muted small">
+            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+            {{ 'STAFF.BOARDING.SCAN.CAMERA.HINT' | translate }}
+          </div>
+        </div>
+
+        <!-- Text-entry box — the fallback, always present/usable in BOTH modes. -->
         <div class="boarding-scan-input-row">
           <input
             id="boardingScanInput"
@@ -104,10 +175,6 @@
             <span class="material-symbols-outlined" aria-hidden="true">qr_code_scanner</span>
             {{ (isScanning ? 'STAFF.BOARDING.SCAN.VALIDATING' : 'STAFF.BOARDING.SCAN.BUTTON') | translate }}
           </button>
-        </div>
-        <div class="boarding-scan-camera-hint text-muted small">
-          <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
-          {{ 'STAFF.BOARDING.SCAN.CAMERA_SOON' | translate }}
         </div>
 
         <div class="boarding-scan-result" *ngIf="scanResult" role="status">

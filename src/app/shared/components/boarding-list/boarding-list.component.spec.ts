@@ -67,12 +67,20 @@ function createViewContainerRefStub(): any {
   return {};
 }
 
+// OBRS-266: bare `new BoardingListComponent(...)` (unlike the TestBed suites)
+// never runs inside Angular's zone, so a pass-through `run()` is enough —
+// tests assert on component state directly, not on a real CD tick.
+function createNgZoneStub(): any {
+  return { run: (fn: () => unknown) => fn() };
+}
+
 function createComponent(
   staffApiServiceStub: any,
   storeStub: any = createStoreStub([buildItem()]),
   alertServiceStub: any = createAlertServiceStub(),
   authServiceStub: any = createAuthServiceStub(),
-  viewContainerRefStub: any = createViewContainerRefStub()
+  viewContainerRefStub: any = createViewContainerRefStub(),
+  ngZoneStub: any = createNgZoneStub()
 ): BoardingListComponent {
   const component = new BoardingListComponent(
     staffApiServiceStub,
@@ -80,7 +88,8 @@ function createComponent(
     createTranslateStub(),
     authServiceStub,
     storeStub,
-    viewContainerRefStub
+    viewContainerRefStub,
+    ngZoneStub
   );
   component.scheduleId = 42;
   component.ngOnChanges({ scheduleId: {} as any });
@@ -696,6 +705,401 @@ describe('BoardingListComponent — OBRS-256 count-lock freeze (isScheduleArrive
   });
 });
 
+// OBRS-266: camera QR scanner. `@zxing/browser`'s BrowserMultiFormatReader is
+// a plain (non-Angular) class field on the component (`private readonly
+// codeReader = new BrowserMultiFormatReader()`), so it's mocked the same way
+// the rest of this file mocks collaborators — `spyOn()` the actual instance
+// method rather than swapping a DI token. `videoElement` (the `#scanVideo`
+// ViewChild) is set directly on bare-instantiated components, same pattern
+// already used for `tripHeader` above (no TestBed render needed for these).
+describe('BoardingListComponent — OBRS-266 camera QR scanner', () => {
+  function withTripHeader(component: BoardingListComponent, statusCode: string): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode,
+    };
+  }
+
+  function withVideoElement(component: BoardingListComponent): void {
+    (component as any).videoElement = { nativeElement: document.createElement('video') };
+  }
+
+  // OBRS-266: `codeReader` is lazily created inside `startCameraScan()` via a
+  // dynamic `import('@zxing/browser')` (bundle-size fix — see the .ts
+  // comment), so it's `null` until the first real camera session. Presetting
+  // it here (rather than `spyOn()`-ing an eagerly-constructed instance) skips
+  // that dynamic import entirely in tests — same seam already used for
+  // `tripHeader`/`videoElement` above.
+  function stubDecode(
+    component: BoardingListComponent,
+    resolveWith: any = { stop: jasmine.createSpy('stop') }
+  ): { spy: jasmine.Spy; getCallback: () => (result: { getText(): string } | undefined) => void } {
+    let capturedCallback: (result: { getText(): string } | undefined) => void = () => undefined;
+    const spy = jasmine.createSpy('decodeFromVideoDevice').and.callFake(
+      (_deviceId: unknown, _video: unknown, cb: any) => {
+        capturedCallback = cb;
+        return Promise.resolve(resolveWith);
+      }
+    );
+    (component as any).codeReader = { decodeFromVideoDevice: spy };
+    return { spy, getCallback: () => capturedCallback };
+  }
+
+  it('setScanMode("camera") is a no-op when the schedule is arrived — the camera never starts (codeReader never even loads)', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withTripHeader(component, 'arrived');
+
+    component['setScanMode']('camera');
+
+    expect(component['scanMode']).toBe('text');
+    expect((component as any).codeReader).toBeNull();
+  });
+
+  it('setScanMode("camera") requests the camera against #scanVideo and resolves to active, storing the controls', fakeAsync(() => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withVideoElement(component);
+    const { spy } = stubDecode(component);
+
+    component['setScanMode']('camera');
+    tick();
+
+    expect(component['scanMode']).toBe('camera');
+    expect(component['cameraStatus']).toBe('active');
+    expect(spy).toHaveBeenCalledWith(undefined, (component as any).videoElement.nativeElement, jasmine.any(Function));
+  }));
+
+  it('the decode callback calls submitToken() -> boardingScan({ token, scheduleId }), same path as the manual button', fakeAsync(() => {
+    const store = createStoreStub([buildItem({ ticketId: 7 })]);
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 7, ticketNumber: 'T-ABC123', passengerName: 'Mr. Abc Def', seatNumber: '3', boardedAt: '2026-07-10T08:00:00Z' },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub, store);
+    withVideoElement(component);
+    const { getCallback } = stubDecode(component);
+
+    component['setScanMode']('camera');
+    tick();
+    getCallback()({ getText: () => 'signed.jwt.token' });
+    tick();
+
+    expect(staffApiServiceStub.boardingScan).toHaveBeenCalledWith({ token: 'signed.jwt.token', scheduleId: 42 });
+    expect(component['scanResult']).toBeTruthy();
+
+    // Camera mode schedules a 4s auto-dismiss on success (see the dedicated
+    // auto-dismiss tests below) — flush it so fakeAsync doesn't flag a
+    // leftover timer at the end of this test.
+    tick(4000);
+  }));
+
+  it('submitToken() re-checks isScheduleArrived — a decode landing after the schedule locks does not call boardingScan', fakeAsync(() => {
+    const staffApiServiceStub = { boardingScan: jasmine.createSpy('boardingScan') };
+    const component = createComponent(staffApiServiceStub);
+    withVideoElement(component);
+    const { getCallback } = stubDecode(component);
+
+    component['setScanMode']('camera');
+    tick();
+
+    // The schedule locks WHILE the camera session is live — after decode
+    // starts, before this particular frame's callback lands.
+    withTripHeader(component, 'arrived');
+
+    getCallback()({ getText: () => 'signed.jwt.token' });
+    tick();
+
+    expect(staffApiServiceStub.boardingScan).not.toHaveBeenCalled();
+  }));
+
+  it('debounces a re-decode of the same token within 3s — only one boardingScan call', fakeAsync(() => {
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 7, ticketNumber: 'T-ABC123', passengerName: 'x', seatNumber: '1', boardedAt: '2026-07-10T08:00:00Z' },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+    withVideoElement(component);
+    const { getCallback } = stubDecode(component);
+
+    component['setScanMode']('camera');
+    tick();
+
+    getCallback()({ getText: () => 'dup-token' });
+    tick();
+    getCallback()({ getText: () => 'dup-token' });
+    tick();
+
+    expect(staffApiServiceStub.boardingScan).toHaveBeenCalledTimes(1);
+    tick(4000); // flush the camera-mode auto-dismiss timer
+  }));
+
+  it('a DIFFERENT token decoded within the debounce window still calls boardingScan again', fakeAsync(() => {
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 7, ticketNumber: 'T-ABC123', passengerName: 'x', seatNumber: '1', boardedAt: '2026-07-10T08:00:00Z' },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+    withVideoElement(component);
+    const { getCallback } = stubDecode(component);
+
+    component['setScanMode']('camera');
+    tick();
+
+    getCallback()({ getText: () => 'token-a' });
+    tick();
+    getCallback()({ getText: () => 'token-b' });
+    tick();
+
+    expect(staffApiServiceStub.boardingScan).toHaveBeenCalledTimes(2);
+    tick(4000); // flush the camera-mode auto-dismiss timer (cleared+rescheduled by the 2nd call)
+  }));
+
+  it('camera-mode success banner auto-dismisses after 4s', fakeAsync(() => {
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 7, ticketNumber: 'T-ABC123', passengerName: 'x', seatNumber: '1', boardedAt: '2026-07-10T08:00:00Z' },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+    (component as any).scanMode = 'camera';
+
+    component['submitToken']('signed.jwt.token');
+    tick();
+    expect(component['scanResult']).toBeTruthy();
+
+    tick(4000);
+    expect(component['scanResult']).toBeNull();
+  }));
+
+  it('text-mode success banner does NOT auto-dismiss', fakeAsync(() => {
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 7, ticketNumber: 'T-ABC123', passengerName: 'x', seatNumber: '1', boardedAt: '2026-07-10T08:00:00Z' },
+        })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub); // scanMode defaults to 'text'
+
+    component['submitToken']('signed.jwt.token');
+    tick();
+    tick(10000);
+
+    expect(component['scanResult']).toBeTruthy();
+  }));
+
+  it('scanError is sticky — never auto-dismissed on a timer, in either mode', fakeAsync(() => {
+    const staffApiServiceStub = {
+      boardingScan: jasmine.createSpy('boardingScan').and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, error: { errorCode: 'WRONG_SCHEDULE_TICKET' } }))
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+    (component as any).scanMode = 'camera';
+
+    component['submitToken']('signed.jwt.token');
+    tick();
+    tick(10000);
+
+    expect(component['scanError']).toBeTruthy();
+  }));
+
+  it('cameraStatus maps getUserMedia rejection reasons: NotAllowedError -> denied, NotFoundError -> no-camera, other -> error', fakeAsync(() => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withVideoElement(component);
+    const decodeSpy = jasmine.createSpy('decodeFromVideoDevice');
+    (component as any).codeReader = { decodeFromVideoDevice: decodeSpy };
+
+    decodeSpy.and.returnValue(Promise.reject({ name: 'NotAllowedError' }));
+    component['setScanMode']('camera');
+    tick();
+    expect(component['cameraStatus']).toBe('denied');
+
+    component['setScanMode']('text');
+    decodeSpy.and.returnValue(Promise.reject({ name: 'NotFoundError' }));
+    component['setScanMode']('camera');
+    tick();
+    expect(component['cameraStatus']).toBe('no-camera');
+
+    component['setScanMode']('text');
+    decodeSpy.and.returnValue(Promise.reject(new Error('boom')));
+    component['setScanMode']('camera');
+    tick();
+    expect(component['cameraStatus']).toBe('error');
+  }));
+
+  it('cameraStatus is "unsupported" when the platform has no navigator.mediaDevices.getUserMedia', fakeAsync(() => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withVideoElement(component);
+    const originalMediaDevices = navigator.mediaDevices;
+    Object.defineProperty(navigator, 'mediaDevices', { value: undefined, configurable: true });
+
+    try {
+      component['setScanMode']('camera');
+      tick();
+      expect(component['cameraStatus']).toBe('unsupported');
+    } finally {
+      Object.defineProperty(navigator, 'mediaDevices', { value: originalMediaDevices, configurable: true });
+    }
+  }));
+
+  it('retryCamera() re-attempts startCameraScan()', fakeAsync(() => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withVideoElement(component);
+    const decodeSpy = jasmine.createSpy('decodeFromVideoDevice');
+    (component as any).codeReader = { decodeFromVideoDevice: decodeSpy };
+    decodeSpy.and.returnValue(Promise.reject({ name: 'NotAllowedError' }));
+
+    component['setScanMode']('camera');
+    tick();
+    expect(component['cameraStatus']).toBe('denied');
+
+    decodeSpy.and.returnValue(Promise.resolve({ stop: jasmine.createSpy('stop') }));
+    component['retryCamera']();
+    tick();
+
+    expect(component['cameraStatus']).toBe('active');
+  }));
+});
+
+describe('BoardingListComponent — OBRS-266 stopCameraStream() teardown contract', () => {
+  function primeActiveCameraSession(component: BoardingListComponent, stopSpy: jasmine.Spy): void {
+    (component as any).scannerControls = { stop: stopSpy };
+    (component as any).cameraStatus = 'active';
+    (component as any).scanMode = 'camera';
+  }
+
+  it('is idempotent — safe to call with no active stream, never throws (mirrors disposePrintPortal()\'s guard style)', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    expect(() => component['stopCameraStream']()).not.toThrow();
+    expect(component['cameraStatus']).toBe('idle');
+    // Calling it again with still nothing active must also be a no-op.
+    expect(() => component['stopCameraStream']()).not.toThrow();
+  });
+
+  it('ngOnChanges (scheduleId re-bind) stops a live stream and resets to text BEFORE the store re-init', () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    primeActiveCameraSession(component, stopSpy);
+
+    component.scheduleId = 99;
+    component.ngOnChanges({ scheduleId: {} as any });
+
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+    expect((component as any).scannerControls).toBeNull();
+    expect(component['cameraStatus']).toBe('idle');
+    expect(component['scanMode']).toBe('text');
+  });
+
+  it('toggling back to text stops the stream exactly once', () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    primeActiveCameraSession(component, stopSpy);
+
+    component['setScanMode']('text');
+
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+    expect(component['scanMode']).toBe('text');
+    expect(component['cameraStatus']).toBe('idle');
+  });
+
+  it('handleArrivedTransition() stops the stream — trigger site 1: onScheduleStatusAction() success (mark-arrived)', async () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const staffApiServiceStub = {
+      updateScheduleStatus: jasmine
+        .createSpy('updateScheduleStatus')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { scheduleId: 42, status: 'arrived' } })),
+    };
+    const alertServiceStub = createAlertServiceStub(true);
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'departed',
+    };
+    primeActiveCameraSession(component, stopSpy);
+
+    await component['onScheduleStatusAction']();
+
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+    expect(component['cameraStatus']).toBe('idle');
+  });
+
+  it('handleArrivedTransition() stops the stream — trigger site 2: loadTripHeader() success', async () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const staffApiServiceStub = {
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'ARRIVED' } })),
+    };
+    const component = createComponent(staffApiServiceStub);
+    primeActiveCameraSession(component, stopSpy);
+
+    await component['loadTripHeader'](42);
+
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+    expect(component['cameraStatus']).toBe('idle');
+  });
+
+  it('handleArrivedTransition() is NOT triggered for a non-arrived status (loadTripHeader stays departed)', async () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const staffApiServiceStub = {
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'DEPARTED' } })),
+    };
+    const component = createComponent(staffApiServiceStub);
+    primeActiveCameraSession(component, stopSpy);
+
+    await component['loadTripHeader'](42);
+
+    expect(stopSpy).not.toHaveBeenCalled();
+    expect(component['cameraStatus']).toBe('active');
+  });
+
+  it('ngOnDestroy unconditionally stops a live stream', () => {
+    const stopSpy = jasmine.createSpy('stop');
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    primeActiveCameraSession(component, stopSpy);
+
+    component.ngOnDestroy();
+
+    expect(stopSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('ngOnDestroy is safe when no camera session was ever started', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    expect(() => component.ngOnDestroy()).not.toThrow();
+  });
+});
+
 describe('BoardingListComponent — OBRS-256 template render: header strip, status pill, transition button, count-lock (TestBed)', () => {
   let fixture: ComponentFixture<BoardingListComponent>;
   let component: BoardingListComponent;
@@ -793,6 +1197,24 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
     expect(unboardBtn.disabled).toBeTrue();
 
     expect(fixture.nativeElement.querySelector('.boarding-lock-banner')).toBeTruthy();
+  }));
+
+  // OBRS-266: design-system §11 "exactly one primary/pressed control" contract
+  // for the new segmented text/camera toggle.
+  it('the scan-mode toggle renders exactly one aria-pressed="true"/.is-active button, defaulting to text', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    const buttons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.boarding-scan-mode-toggle .admin-btn')
+    );
+    expect(buttons.length).toBe(2);
+
+    const pressed = buttons.filter((btn) => btn.getAttribute('aria-pressed') === 'true');
+    expect(pressed.length).toBe(1);
+    expect(pressed[0].classList.contains('is-active')).toBeTrue();
+    expect(pressed[0].textContent).toContain('STAFF.BOARDING.SCAN.MODE_TEXT');
   }));
 });
 
