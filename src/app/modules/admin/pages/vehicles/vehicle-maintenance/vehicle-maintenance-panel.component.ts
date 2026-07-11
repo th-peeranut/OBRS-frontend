@@ -77,7 +77,9 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
       endDate: [null],
       nextDueDate: [null],
       // design-system §3.1: required, placeholder-start, no pre-seeded default.
-      maintenanceStatusId: ['', [Validators.required]],
+      // Holds the maintenance_status Lookup SLUG (e.g. "scheduled"), not a
+      // numeric id — matches the live backend contract.
+      maintenanceStatus: ['', [Validators.required]],
       notes: [''],
     });
 
@@ -149,7 +151,7 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
       startDate: null,
       endDate: null,
       nextDueDate: null,
-      maintenanceStatusId: '', // design-system §3.1: start on placeholder
+      maintenanceStatus: '', // design-system §3.1: start on placeholder
       notes: '',
     });
     this.isFormModalOpen = true;
@@ -171,7 +173,7 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
       startDate: toDateControlValue(record.startDate),
       endDate: record.endDate ? toDateControlValue(record.endDate) : null,
       nextDueDate: record.nextDueDate ? toDateControlValue(record.nextDueDate) : null,
-      maintenanceStatusId: record.statusId ? String(record.statusId) : '',
+      maintenanceStatus: record.statusCode,
       notes: record.notes,
     });
     this.isFormModalOpen = true;
@@ -240,7 +242,7 @@ export class AppVehicleMaintenancePanelComponent implements OnChanges, OnInit, O
     const locale = this.getCurrentLocale();
     this.statusDropdownOptions = toMaintenanceStatusOptions(this.statusOptions, locale);
     this.rows = this.rawRecords.map((record) =>
-      toMaintenanceRow(record, locale, this.translate.currentLang)
+      toMaintenanceRow(record, this.statusOptions, locale, this.translate.currentLang)
     );
   }
 

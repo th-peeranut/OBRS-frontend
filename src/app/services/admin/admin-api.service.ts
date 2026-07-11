@@ -114,7 +114,10 @@ export interface AdminVehicleDto {
   updatedAt?: string;
 }
 
-/** OBRS-209: a single vehicle-maintenance record (backend OBRS-102). */
+/** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
+ * `maintenanceStatus` is a flat `maintenance_status` Lookup **slug string**
+ * (e.g. "scheduled"), NOT a Lookup object — mirrors `AdminVehicleDto.status`'s
+ * plain-string shape, confirmed against the live `VehicleMaintenanceRespDto`. */
 export interface AdminVehicleMaintenanceDto {
   id: number;
   vehicleId: number;
@@ -122,7 +125,7 @@ export interface AdminVehicleMaintenanceDto {
   startDate: string;
   endDate?: string | null;
   nextDueDate?: string | null;
-  maintenanceStatus: AdminLookupDto;
+  maintenanceStatus: string;
   notes?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -461,14 +464,16 @@ export interface CreateVehiclePayload {
   status: string;
 }
 
-/** OBRS-209: create/update payload for a vehicle-maintenance record. `maintenanceStatusId`
- * is the `maintenance_status` Lookup's numeric id (not its slug — unlike CreateVehiclePayload.status). */
+/** OBRS-209: create/update payload for a vehicle-maintenance record.
+ * `maintenanceStatus` is the `maintenance_status` Lookup's **slug string**
+ * (e.g. "scheduled") — same shape as `CreateVehiclePayload.status`, matching
+ * the live backend `VehicleMaintenanceReqDto` (`@NotBlank String maintenanceStatus`). */
 export interface CreateVehicleMaintenancePayload {
   reason: string;
   startDate: string;
   endDate?: string | null;
   nextDueDate?: string | null;
-  maintenanceStatusId: number;
+  maintenanceStatus: string;
   notes?: string | null;
 }
 
@@ -732,8 +737,8 @@ export class AdminApiService {
   }
 
   // OBRS-209: vehicle maintenance records (backend OBRS-102). No hard delete —
-  // a record is closed via updateVehicleMaintenance() with maintenanceStatusId
-  // set to the "completed" Lookup id.
+  // a record is closed via updateVehicleMaintenance() with maintenanceStatus
+  // set to the "completed" Lookup slug.
   getVehicleMaintenance(vehicleId: number): Observable<ResponseAPI<AdminVehicleMaintenanceDto[]>> {
     return this.getRequest<AdminVehicleMaintenanceDto[]>(
       `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance`

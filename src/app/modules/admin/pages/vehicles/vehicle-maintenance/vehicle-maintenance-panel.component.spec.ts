@@ -41,7 +41,9 @@ function buildRecord(overrides: Partial<AdminVehicleMaintenanceDto> = {}): Admin
     startDate: '2026-07-01',
     endDate: null,
     nextDueDate: null,
-    maintenanceStatus: STATUS_OPTIONS[0],
+    // Flat slug string — matches the live backend VehicleMaintenanceRespDto,
+    // NOT a Lookup object.
+    maintenanceStatus: 'scheduled',
     notes: null,
     ...overrides,
   };
@@ -113,8 +115,8 @@ describe('AppVehicleMaintenancePanelComponent — loading/empty/error states', (
     expect((component as any).rows.length).toBe(1);
     expect((component as any).rows[0].status).toBe('Scheduled');
     expect((component as any).statusDropdownOptions).toEqual([
-      { code: '5', label: 'Scheduled' },
-      { code: '6', label: 'Completed' },
+      { code: 'scheduled', label: 'Scheduled' },
+      { code: 'completed', label: 'Completed' },
     ]);
   });
 });
@@ -139,12 +141,14 @@ describe('AppVehicleMaintenancePanelComponent — create/edit modal', () => {
 
     expect((component as any).isFormModalOpen).toBeTrue();
     expect((component as any).isEditMode).toBeFalse();
-    expect((component as any).maintenanceForm.get('maintenanceStatusId').value).toBe('');
+    expect((component as any).maintenanceForm.get('maintenanceStatus').value).toBe('');
   });
 
-  it('openEditModal() seeds the form synchronously from the row in hand (no second fetch)', () => {
+  it('openEditModal() seeds the form synchronously from the row in hand (no second fetch), pre-filling the status slug', () => {
     const adminApiServiceStub = { getVehicleMaintenanceById: jasmine.createSpy('getVehicleMaintenanceById') };
-    const store = createStoreStub([buildRecord({ reason: 'Oil change', endDate: '2026-07-05' })]);
+    const store = createStoreStub([
+      buildRecord({ reason: 'Oil change', endDate: '2026-07-05', maintenanceStatus: 'completed' }),
+    ]);
     const component = createComponent(adminApiServiceStub, store);
 
     component['openEditModal']((component as any).rows[0]);
@@ -152,7 +156,7 @@ describe('AppVehicleMaintenancePanelComponent — create/edit modal', () => {
     expect((component as any).isFormModalOpen).toBeTrue();
     expect((component as any).isEditMode).toBeTrue();
     expect((component as any).maintenanceForm.get('reason').value).toBe('Oil change');
-    expect((component as any).maintenanceForm.get('maintenanceStatusId').value).toBe('5');
+    expect((component as any).maintenanceForm.get('maintenanceStatus').value).toBe('completed');
     expect(adminApiServiceStub.getVehicleMaintenanceById).not.toHaveBeenCalled();
   });
 });
@@ -179,7 +183,7 @@ describe('AppVehicleMaintenancePanelComponent — submitMaintenance() (AC8 inval
       reason: 'Brake inspection',
       startDate: new Date(2026, 6, 10),
       endDate: new Date(2026, 6, 1),
-      maintenanceStatusId: '5',
+      maintenanceStatus: 'scheduled',
     });
 
     await component['submitMaintenance']();
@@ -201,14 +205,14 @@ describe('AppVehicleMaintenancePanelComponent — submitMaintenance() (AC8 inval
     (component as any).maintenanceForm.patchValue({
       reason: 'Brake inspection',
       startDate: new Date(2026, 6, 1),
-      maintenanceStatusId: '5',
+      maintenanceStatus: 'scheduled',
     });
 
     await component['submitMaintenance']();
 
     expect(adminApiServiceStub.createVehicleMaintenance).toHaveBeenCalledWith(
       42,
-      jasmine.objectContaining({ reason: 'Brake inspection', startDate: '2026-07-01', maintenanceStatusId: 5 })
+      jasmine.objectContaining({ reason: 'Brake inspection', startDate: '2026-07-01', maintenanceStatus: 'scheduled' })
     );
     expect(store.refresh).toHaveBeenCalled();
     expect(alertServiceStub.success).toHaveBeenCalledWith('ADMIN.MESSAGES.CREATED');
@@ -249,7 +253,7 @@ describe('AppVehicleMaintenancePanelComponent — submitMaintenance() (AC8 inval
     (component as any).maintenanceForm.patchValue({
       reason: 'Brake inspection',
       startDate: new Date(2026, 6, 1),
-      maintenanceStatusId: '5',
+      maintenanceStatus: 'scheduled',
     });
 
     await component['submitMaintenance']();

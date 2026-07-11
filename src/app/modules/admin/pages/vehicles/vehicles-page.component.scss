@@ -76,3 +76,44 @@
   box-shadow: 0 0 0 1px rgba(0, 102, 135, 0.25);
 }
 
+/* Dark mode (QA OBRS-209 P1): the tab-bar/focus-banner colors above are a
+ * fixed teal palette (copied as-is from schedules-page.component.scss, which
+ * has the same pre-existing gap — not fixed here, out of scope) that was
+ * never checked against the dark admin surface. The solid `#ffffff`
+ * active-tab/clear-button backgrounds rendered as bright white boxes on the
+ * dark shell. `:host-context(.is-dark)` is the same mechanism
+ * theme-toggle.component.scss already uses to react to the `is-dark` class
+ * `ThemeService` puts on `document.body` from inside a component-scoped
+ * stylesheet. Only the clashing tokens are overridden — light mode is
+ * untouched, since these rules never match outside `.is-dark`. */
+:host-context(.is-dark) {
+  .schedule-tabs {
+    background: var(--admin-surface-soft);
+  }
+
+  .schedule-tab {
+    color: var(--admin-muted);
+  }
+
+  .schedule-tab.is-active {
+    background: var(--admin-surface-card);
+    color: var(--admin-text);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .schedule-focus-banner {
+    border-color: var(--admin-outline);
+    background: var(--admin-surface-soft);
+    color: var(--admin-text);
+  }
+
+  .schedule-focus-banner .material-symbols-outlined {
+    color: var(--accent-text);
+  }
+
+  .schedule-focus-clear {
+    background: var(--admin-surface-card);
+    color: var(--accent-text);
+    box-shadow: 0 0 0 1px var(--admin-outline);
+  }
+}

@@ -26,7 +26,9 @@ export interface MaintenanceRow {
   startDateDisplay: string;
   endDateDisplay: string;
   nextDueDateDisplay: string;
-  statusId: number;
+  /** The `maintenance_status` Lookup slug (e.g. "scheduled") — the raw value
+   * the backend round-trips, unlike a numeric id. */
+  statusCode: string;
   status: string;
   notes: string;
 }
@@ -36,8 +38,9 @@ export interface MaintenanceStatusOption {
   label: string;
 }
 
-/** design-system §3.1: options carry the Lookup's numeric id as `code` (the
- * backend's `maintenanceStatusId` field), not its slug. */
+/** design-system §3.1: options carry the Lookup's **slug** as `code` (the
+ * backend's `maintenanceStatus` field is a slug string, not a numeric id —
+ * same shape as the existing `vehicle_status` dropdown in vehicles-page). */
 export function toMaintenanceStatusOptions(
   lookups: AdminLookupDto[],
   locale: string
@@ -45,7 +48,7 @@ export function toMaintenanceStatusOptions(
   return lookups
     .filter((lookup) => lookup.category === 'maintenance_status')
     .map((lookup) => ({
-      code: String(lookup.id),
+      code: lookup.slug,
       label:
         getAdminTranslationLabel(lookup.translations, locale) ??
         getAdminTranslationLabel(lookup.translations, 'en') ??
@@ -53,14 +56,26 @@ export function toMaintenanceStatusOptions(
     }));
 }
 
+/** `statusOptions` is the same pre-filtered `maintenance_status` Lookup list
+ * passed to `toMaintenanceStatusOptions` — the response DTO's
+ * `maintenanceStatus` is a flat slug string, so the localized label is
+ * resolved by matching that slug against the Lookup rows' `translations`,
+ * mirroring how `vehicles-page.component.ts` derives its `vehicle_status`
+ * dropdown labels. Falls back to the raw slug if no match is found (e.g. a
+ * stale/deleted lookup) rather than showing a blank dash. */
 export function toMaintenanceRow(
   dto: AdminVehicleMaintenanceDto,
+  statusOptions: AdminLookupDto[],
   locale: string,
   dateLang: string | null | undefined
 ): MaintenanceRow {
   const startDate = dto.startDate ?? '';
   const endDate = dto.endDate ?? '';
   const nextDueDate = dto.nextDueDate ?? '';
+  const statusCode = String(dto.maintenanceStatus ?? '').trim();
+  const statusLookup = statusOptions.find(
+    (lookup) => lookup.slug.trim().toLowerCase() === statusCode.toLowerCase()
+  );
 
   return {
     id: dto.id,
@@ -72,11 +87,11 @@ export function toMaintenanceRow(
     startDateDisplay: formatDisplayDate(startDate, dateLang),
     endDateDisplay: endDate ? formatDisplayDate(endDate, dateLang) : '',
     nextDueDateDisplay: nextDueDate ? formatDisplayDate(nextDueDate, dateLang) : '',
-    statusId: dto.maintenanceStatus?.id ?? 0,
+    statusCode,
     status:
-      getAdminTranslationLabel(dto.maintenanceStatus?.translations, locale) ??
-      getAdminTranslationLabel(dto.maintenanceStatus?.translations, 'en') ??
-      dto.maintenanceStatus?.slug ??
+      getAdminTranslationLabel(statusLookup?.translations, locale) ??
+      getAdminTranslationLabel(statusLookup?.translations, 'en') ??
+      statusCode ??
       '-',
     notes: dto.notes ?? '',
   };
@@ -122,14 +137,13 @@ export function toMaintenancePayload(
 ): CreateVehicleMaintenancePayload {
   const endDate = toDateInputValue(rawFormValue['endDate'] as Date | null);
   const nextDueDate = toDateInputValue(rawFormValue['nextDueDate'] as Date | null);
-  const maintenanceStatusId = Number(rawFormValue['maintenanceStatusId']);
 
   return {
     reason: String(rawFormValue['reason'] ?? '').trim(),
     startDate: toDateInputValue(rawFormValue['startDate'] as Date | null),
     endDate: endDate || null,
     nextDueDate: nextDueDate || null,
-    maintenanceStatusId: Number.isFinite(maintenanceStatusId) ? maintenanceStatusId : 0,
+    maintenanceStatus: String(rawFormValue['maintenanceStatus'] ?? '').trim(),
     notes: String(rawFormValue['notes'] ?? '').trim() || null,
   };
 }

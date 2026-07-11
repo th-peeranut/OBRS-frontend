@@ -166,13 +166,13 @@
           {{ 'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate }} <span class="admin-required">*</span>
         </label>
         <app-admin-dropdown
-          formControlName="maintenanceStatusId"
+          formControlName="maintenanceStatus"
           [options]="statusDropdownOptions"
           valueKey="code"
           labelKey="label"
           [placeholder]="'ADMIN.VEHICLES.MAINTENANCE.STATUS' | translate"
         ></app-admin-dropdown>
-        <small class="admin-error" *ngIf="isFieldInvalid('maintenanceStatusId')">
+        <small class="admin-error" *ngIf="isFieldInvalid('maintenanceStatus')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
       </div>

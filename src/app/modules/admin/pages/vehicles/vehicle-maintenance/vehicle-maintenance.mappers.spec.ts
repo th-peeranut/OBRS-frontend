@@ -8,30 +8,30 @@ import {
   toMaintenanceStatusOptions,
 } from './vehicle-maintenance.mappers';
 
+const STATUS_LOOKUPS: AdminLookupDto[] = [
+  { id: 1, category: 'vehicle_status', slug: 'active', translations: [] },
+  {
+    id: 5,
+    category: 'maintenance_status',
+    slug: 'scheduled',
+    translations: [{ locale: 'en', label: 'Scheduled' }],
+  },
+  {
+    id: 6,
+    category: 'maintenance_status',
+    slug: 'completed',
+    translations: [{ locale: 'en', label: 'Completed' }],
+  },
+];
+
 describe('vehicle-maintenance.mappers', () => {
   describe('toMaintenanceStatusOptions', () => {
-    it('filters lookups to the maintenance_status category and uses the id as code', () => {
-      const lookups: AdminLookupDto[] = [
-        { id: 1, category: 'vehicle_status', slug: 'active', translations: [] },
-        {
-          id: 5,
-          category: 'maintenance_status',
-          slug: 'scheduled',
-          translations: [{ locale: 'en', label: 'Scheduled' }],
-        },
-        {
-          id: 6,
-          category: 'maintenance_status',
-          slug: 'completed',
-          translations: [{ locale: 'en', label: 'Completed' }],
-        },
-      ];
-
-      const options = toMaintenanceStatusOptions(lookups, 'en');
+    it('filters lookups to the maintenance_status category and uses the SLUG as code (not the numeric id)', () => {
+      const options = toMaintenanceStatusOptions(STATUS_LOOKUPS, 'en');
 
       expect(options).toEqual([
-        { code: '5', label: 'Scheduled' },
-        { code: '6', label: 'Completed' },
+        { code: 'scheduled', label: 'Scheduled' },
+        { code: 'completed', label: 'Completed' },
       ]);
     });
 
@@ -41,13 +41,13 @@ describe('vehicle-maintenance.mappers', () => {
       ];
 
       expect(toMaintenanceStatusOptions(lookups, 'th')).toEqual([
-        { code: '7', label: 'in_progress' },
+        { code: 'in_progress', label: 'in_progress' },
       ]);
     });
   });
 
   describe('toMaintenanceRow', () => {
-    it('maps the DTO to a display row, localizing the status label', () => {
+    it('maps the DTO (maintenanceStatus as a flat slug string) to a display row, resolving the localized label by matching the slug against statusOptions', () => {
       const dto: AdminVehicleMaintenanceDto = {
         id: 10,
         vehicleId: 3,
@@ -55,22 +55,17 @@ describe('vehicle-maintenance.mappers', () => {
         startDate: '2026-07-01',
         endDate: '2026-07-03',
         nextDueDate: '2026-10-01',
-        maintenanceStatus: {
-          id: 5,
-          category: 'maintenance_status',
-          slug: 'scheduled',
-          translations: [{ locale: 'en', label: 'Scheduled' }],
-        },
+        maintenanceStatus: 'scheduled',
         notes: 'Check pads',
       };
 
-      const row = toMaintenanceRow(dto, 'en', 'en');
+      const row = toMaintenanceRow(dto, STATUS_LOOKUPS, 'en', 'en');
 
       expect(row.id).toBe(10);
       expect(row.vehicleId).toBe(3);
       expect(row.reason).toBe('Brake inspection');
       expect(row.startDate).toBe('2026-07-01');
-      expect(row.statusId).toBe(5);
+      expect(row.statusCode).toBe('scheduled');
       expect(row.status).toBe('Scheduled');
       expect(row.notes).toBe('Check pads');
       expect(row.endDateDisplay).not.toBe('');
@@ -84,18 +79,35 @@ describe('vehicle-maintenance.mappers', () => {
         startDate: '2026-07-01',
         endDate: null,
         nextDueDate: null,
-        maintenanceStatus: { id: 5, category: 'maintenance_status', slug: 'scheduled', translations: [] },
+        maintenanceStatus: 'scheduled',
         notes: null,
       };
 
-      const row = toMaintenanceRow(dto, 'en', 'en');
+      const row = toMaintenanceRow(dto, STATUS_LOOKUPS, 'en', 'en');
 
       expect(row.endDate).toBe('');
       expect(row.endDateDisplay).toBe('');
       expect(row.nextDueDateDisplay).toBe('');
       expect(row.notes).toBe('');
-      // No translation available — falls back to the raw slug.
-      expect(row.status).toBe('scheduled');
+      expect(row.status).toBe('Scheduled');
+    });
+
+    it('falls back to the raw slug when no matching Lookup row is found (stale/deleted lookup)', () => {
+      const dto: AdminVehicleMaintenanceDto = {
+        id: 12,
+        vehicleId: 3,
+        reason: 'Tire rotation',
+        startDate: '2026-07-01',
+        endDate: null,
+        nextDueDate: null,
+        maintenanceStatus: 'unknown_status',
+        notes: null,
+      };
+
+      const row = toMaintenanceRow(dto, STATUS_LOOKUPS, 'en', 'en');
+
+      expect(row.statusCode).toBe('unknown_status');
+      expect(row.status).toBe('unknown_status');
     });
   });
 
@@ -150,13 +162,13 @@ describe('vehicle-maintenance.mappers', () => {
   });
 
   describe('toMaintenancePayload', () => {
-    it('builds the create/update payload, trimming reason/notes and nulling absent dates', () => {
+    it('builds the create/update payload with maintenanceStatus as a SLUG STRING, trimming reason/notes and nulling absent dates', () => {
       const payload = toMaintenancePayload({
         reason: '  Brake inspection  ',
         startDate: new Date(2026, 6, 1),
         endDate: null,
         nextDueDate: null,
-        maintenanceStatusId: '5',
+        maintenanceStatus: 'scheduled',
         notes: '  ',
       });
 
@@ -165,7 +177,7 @@ describe('vehicle-maintenance.mappers', () => {
         startDate: '2026-07-01',
         endDate: null,
         nextDueDate: null,
-        maintenanceStatusId: 5,
+        maintenanceStatus: 'scheduled',
         notes: null,
       });
     });
@@ -176,14 +188,14 @@ describe('vehicle-maintenance.mappers', () => {
         startDate: new Date(2026, 6, 1),
         endDate: new Date(2026, 6, 3),
         nextDueDate: new Date(2026, 9, 1),
-        maintenanceStatusId: '6',
+        maintenanceStatus: 'completed',
         notes: 'All good',
       });
 
       expect(payload.endDate).toBe('2026-07-03');
       expect(payload.nextDueDate).toBe('2026-10-01');
       expect(payload.notes).toBe('All good');
-      expect(payload.maintenanceStatusId).toBe(6);
+      expect(payload.maintenanceStatus).toBe('completed');
     });
   });
 });
