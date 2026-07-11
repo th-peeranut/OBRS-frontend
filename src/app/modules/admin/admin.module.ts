@@ -12,6 +12,8 @@ import { VehiclesPageComponent } from './pages/vehicles/vehicles-page.component'
 import { RoutesPageComponent } from './pages/routes/routes-page.component';
 import { RouteFormModalComponent } from './pages/routes/route-form-modal/route-form-modal.component';
 import { SegmentEditModalComponent } from './pages/routes/segment-edit-modal/segment-edit-modal.component';
+import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/route-detail-panel.component';
+import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
@@ -113,6 +115,8 @@ const routes: Routes = [
     RoutesPageComponent,
     RouteFormModalComponent,
     SegmentEditModalComponent,
+    RouteDetailPanelComponent,
+    RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
     AdminModalBackdropDirective,
