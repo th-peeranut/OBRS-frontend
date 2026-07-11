@@ -31,6 +31,7 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import {
   getStationFallbackLabel,
+  getStationSlugById,
   StationApi,
 } from '../../../../shared/interfaces/station.interface';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
@@ -220,24 +221,6 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
     return getStationFallbackLabel(match, locale);
   }
 
-  /** Mirrors `getStationLabelById` but resolves the station's `slug` — the
-   *  key `RouteStop.slug` (from `getPickupDropoffCached`) is matched against.
-   *  Both `StationApi.slug` (this store, fed by `GET /api/stops`) and
-   *  `StopEntry.slug` (route pickup/dropoff) key off the same underlying
-   *  `stops.slug` column server-side, so this is a safe direct match. */
-  private stationSlugById(
-    stationId: string | number | null | undefined,
-    stationList: StationApi[] | null | undefined
-  ): string {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return '';
-    }
-
-    const parsed = Number(stationId);
-    const match = (stationList ?? []).find((station) => station.id === parsed);
-    return match?.slug ?? '';
-  }
-
   /** Resolves `departureEstimates`/`returnEstimates` for every schedule row
    *  once the filter's from/to stations and each schedule's `routeSlug` are
    *  known. One `getPickupDropoffCached` call per distinct route slug —
@@ -251,8 +234,8 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const fromSlug = this.stationSlugById(scheduleFilter.startStationId, stations);
-    const toSlug = this.stationSlugById(scheduleFilter.stopStationId, stations);
+    const fromSlug = getStationSlugById(scheduleFilter.startStationId, stations);
+    const toSlug = getStationSlugById(scheduleFilter.stopStationId, stations);
     if (!fromSlug || !toSlug) {
       return;
     }

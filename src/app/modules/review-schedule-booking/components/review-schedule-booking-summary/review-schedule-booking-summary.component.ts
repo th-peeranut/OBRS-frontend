@@ -12,6 +12,7 @@ import {
 } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import {
+  getStationSlugById,
   getStationTranslationLabel,
   getStopTypeLabel,
   Province,
@@ -195,8 +196,8 @@ export class ReviewScheduleBookingSummaryComponent {
     return combineLatest([this.scheduleFilter, this.rawProvinceStationList]).pipe(
       take(1),
       switchMap(([scheduleFilter, stations]) => {
-        const fromSlug = this.stationSlugById(scheduleFilter?.startStationId, stations);
-        const toSlug = this.stationSlugById(scheduleFilter?.stopStationId, stations);
+        const fromSlug = getStationSlugById(scheduleFilter?.startStationId, stations);
+        const toSlug = getStationSlugById(scheduleFilter?.stopStationId, stations);
         if (!fromSlug || !toSlug) {
           return of<TripEstimate | null>(null);
         }
@@ -214,20 +215,6 @@ export class ReviewScheduleBookingSummaryComponent {
         );
       })
     );
-  }
-
-  /** Resolves a station's `slug` by id — same underlying `stops.slug` column
-   *  that `RouteStop.slug` (from `getPickupDropoffCached`) keys off. */
-  private stationSlugById(
-    stationId: string | number | null | undefined,
-    stationList: StationApi[] | null | undefined
-  ): string {
-    if (stationId === null || stationId === undefined || stationId === '') {
-      return '';
-    }
-    const parsed = Number(stationId);
-    const match = (stationList ?? []).find((station) => station.id === parsed);
-    return match?.slug ?? '';
   }
 
   private toStation(stationApi: StationApi): Station {

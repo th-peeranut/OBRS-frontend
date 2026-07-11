@@ -2012,3 +2012,17 @@ FE redeploy needed for that half of the contract).
 - `ng test --watch=false --browsers ChromeHeadless`: 1196/1196 green. `ng build --configuration
   production`: clean (1.48 MB initial, under the 1.5 MB warning budget). `npx tsc --noEmit -p
   tsconfig.app.json`: clean. No NgRx changes — plain service memoization per the spec.
+
+## Scrutinize self-fix (OBRS-138) — DRY consolidation of `stationSlugById`
+- The commit introduced a byte-identical private `stationSlugById(stationId, stationList)`
+  in BOTH `schedule-booking-list.component.ts` and `review-schedule-booking-summary.component.ts`
+  (a net-new fork in the same commit). There is an established shared-helper home in
+  `shared/interfaces/station.interface.ts` (`getStationFallbackLabel`, `getStationTranslationLabel`).
+- Fix: extracted the logic once as exported `getStationSlugById(stationId, stationList)` in
+  `station.interface.ts`; both components now import and call it, private copies deleted.
+- Pattern for next time: a helper that resolves a station field by id belongs beside the other
+  `getStation*` functions in `station.interface.ts` — grep there BEFORE adding a private copy.
+  (The pre-existing `getStationLabelById` duplication across e-ticket/payment-info/schedule-booking-list
+  is older tech debt, left out of this scope.)
+- Verified: `npx tsc --noEmit -p tsconfig.app.json` clean after the change; no spec referenced
+  the private method (public behavior unchanged).
