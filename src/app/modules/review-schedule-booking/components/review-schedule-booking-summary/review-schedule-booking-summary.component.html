@@ -263,7 +263,7 @@
           >
             <ng-container
               *ngIf="
-                findStationById(scheduleFilter.startStationId)
+                findStationById(scheduleFilter.stopStationId)
                   | async as povinceStation
               "
             >
@@ -314,7 +314,7 @@
           >
             <ng-container
               *ngIf="
-                findStationById(scheduleFilter.stopStationId)
+                findStationById(scheduleFilter.startStationId)
                   | async as povinceStation
               "
             >
