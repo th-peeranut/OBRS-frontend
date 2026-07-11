@@ -138,6 +138,12 @@
   gap: $space-xs;
 }
 
+.trip-estimate {
+  display: block;
+  font-size: 11px;
+  color: $text-lightblack; // static token: the ticket card is intentionally exempt from dark theming (dark-theme.scss §15 paper look) — matches sibling captions, do NOT use a runtime --accent* var
+}
+
 .ticket-passengers {
   display: flex;
   flex-direction: column;

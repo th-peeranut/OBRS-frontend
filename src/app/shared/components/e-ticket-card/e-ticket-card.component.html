@@ -48,6 +48,13 @@
         <span class="label">{{ "E_TICKET.LABEL.ROUTE" | translate }}</span>
         <span class="value">{{ route }}</span>
       </div>
+      <div class="ticket-item full" *ngIf="estimateDistanceKm != null">
+        <small class="trip-estimate">
+          ≈ {{ estimateDistanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}<ng-container
+            *ngIf="returnEstimateDistanceKm != null && returnEstimateDistanceKm !== estimateDistanceKm"
+          > / ≈ {{ returnEstimateDistanceKm }} {{ "E_TICKET.LABEL.ESTIMATE_KM_UNIT" | translate }}</ng-container>
+        </small>
+      </div>
       <div class="ticket-grid">
         <div class="ticket-item">
           <span class="label">{{ "E_TICKET.LABEL.ORIGIN" | translate }}</span>

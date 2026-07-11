@@ -74,6 +74,17 @@ export function isLowSeatCount(
 }
 
 /**
+ * Structural subset of `RouteStop` carrying only the two offset-based fields
+ * `tripEstimateFromStops` reads. Lets other API shapes that carry the same
+ * two fields (e.g. `BookingTicketStop`) type-check without widening to the
+ * full `RouteStop` shape.
+ */
+export type TripStopOffsets = Pick<
+  RouteStop,
+  'distanceKmFromOrigin' | 'offsetMinutesFromOrigin'
+>;
+
+/**
  * Authoritative pickup→dropoff distance/duration, derived from the two stops'
  * offset-based fields on the seeded `route_stops` table (free — no Directions/
  * Distance-Matrix call). Each figure is resolved independently: a missing
@@ -81,8 +92,8 @@ export function isLowSeatCount(
  * a `0`, so a caller never renders a misleading "≈ 0 km"/"0 min".
  */
 export function tripEstimateFromStops(
-  pickup: RouteStop | null | undefined,
-  dropoff: RouteStop | null | undefined
+  pickup: TripStopOffsets | null | undefined,
+  dropoff: TripStopOffsets | null | undefined
 ): TripEstimate {
   const pickupDistance = pickup?.distanceKmFromOrigin;
   const dropoffDistance = dropoff?.distanceKmFromOrigin;

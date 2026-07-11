@@ -38,6 +38,8 @@ export class ETicketCardComponent implements OnChanges {
   @Input() totalAmount = '0.00';
   @Input() passengers: TicketPassenger[] = [];
   @Input() booker: TicketPassenger | null = null;
+  @Input() estimateDistanceKm: number | null = null;
+  @Input() returnEstimateDistanceKm: number | null = null;
 
   qrCodeDataUrl = '';
   isDownloadingTicket = false;

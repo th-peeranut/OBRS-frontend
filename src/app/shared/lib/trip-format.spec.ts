@@ -9,6 +9,7 @@ import {
   tripEstimateFromStops,
 } from './trip-format';
 import { RouteStop } from '../interfaces/route-map.interface';
+import { BookingTicketStop } from '../interfaces/booking-ticket.interface';
 
 function makeStop(
   distanceKmFromOrigin: number | null,
@@ -149,6 +150,26 @@ describe('trip-format', () => {
       expect(tripEstimateFromStops(makeStop(10, 15), undefined)).toEqual({
         distanceKm: null,
         durationMinutes: null,
+      });
+    });
+
+    it('accepts a BookingTicketStop-shaped object (widened TripStopOffsets signature)', () => {
+      const pickup: BookingTicketStop = {
+        code: 'a',
+        label: 'Station A',
+        distanceKmFromOrigin: 10,
+        offsetMinutesFromOrigin: 15,
+      };
+      const dropoff: BookingTicketStop = {
+        code: 'b',
+        label: 'Station B',
+        distanceKmFromOrigin: 55,
+        offsetMinutesFromOrigin: 60,
+      };
+
+      expect(tripEstimateFromStops(pickup, dropoff)).toEqual({
+        distanceKm: 45,
+        durationMinutes: 45,
       });
     });
   });

@@ -1,7 +1,11 @@
 import { of, throwError } from 'rxjs';
-import { TranslateService } from '@ngx-translate/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
+import { ETicketCardComponent } from '../../../../shared/components/e-ticket-card/e-ticket-card.component';
+import { ETicketCardModule } from '../../../../shared/components/e-ticket-card/e-ticket-card.module';
 import { MyBookingTicketModalComponent } from './my-booking-ticket-modal.component';
 
 function buildTicketsData(): BookingTicketsData {
@@ -13,8 +17,18 @@ function buildTicketsData(): BookingTicketsData {
     journeys: [
       {
         legType: { code: 'outbound', label: 'Outbound' },
-        fromStop: { code: 'a', label: 'Station A' },
-        toStop: { code: 'b', label: 'Station B' },
+        fromStop: {
+          code: 'a',
+          label: 'Station A',
+          distanceKmFromOrigin: 10,
+          offsetMinutesFromOrigin: 15,
+        },
+        toStop: {
+          code: 'b',
+          label: 'Station B',
+          distanceKmFromOrigin: 55,
+          offsetMinutesFromOrigin: 60,
+        },
         departureDateTime: '2026-12-20T08:00:00',
         arrivalDateTime: '2026-12-20T09:00:00',
         vehicle: {
@@ -101,5 +115,44 @@ describe('MyBookingTicketModalComponent', () => {
       currentTarget: backdrop,
     } as unknown as MouseEvent);
     expect(closedSpy).toHaveBeenCalled();
+  });
+});
+
+describe('MyBookingTicketModalComponent — distance chip passthrough (render)', () => {
+  let fixture: ComponentFixture<MyBookingTicketModalComponent>;
+  let component: MyBookingTicketModalComponent;
+
+  beforeEach(async () => {
+    const bookingServiceStub = {
+      getBookingTickets: () => of({ code: 200, message: 'OK', data: buildTicketsData() }),
+    } as unknown as BookingService;
+
+    await TestBed.configureTestingModule({
+      declarations: [MyBookingTicketModalComponent],
+      imports: [ETicketCardModule, TranslateModule.forRoot()],
+      providers: [{ provide: BookingService, useValue: bookingServiceStub }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MyBookingTicketModalComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('passes card.estimateDistanceKm / returnEstimateDistanceKm through to the e-ticket card', () => {
+    component.bookingId = 5;
+    component.ngOnChanges({
+      bookingId: {
+        currentValue: 5,
+        previousValue: null,
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    const cardDebugEl = fixture.debugElement.query(By.directive(ETicketCardComponent));
+    const cardInstance = cardDebugEl.componentInstance as ETicketCardComponent;
+
+    expect(cardInstance.estimateDistanceKm).toBe(45);
+    expect(cardInstance.returnEstimateDistanceKm).toBeNull();
   });
 });

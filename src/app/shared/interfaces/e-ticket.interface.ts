@@ -21,4 +21,8 @@ export interface ETicketCardData {
   booker: TicketPassenger | null;
   paymentDate: string;
   totalAmount: string;
+  /** Rounded pickup→dropoff estimate (km), OBRS-138-style — `null` hides the chip. */
+  estimateDistanceKm: number | null;
+  /** Same estimate for the return leg of a round-trip booking; `null` when there is no return leg. */
+  returnEstimateDistanceKm: number | null;
 }

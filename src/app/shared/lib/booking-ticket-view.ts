@@ -4,6 +4,7 @@ import {
   BookingTicketsData,
 } from '../interfaces/booking-ticket.interface';
 import { ETicketCardData, TicketPassenger } from '../interfaces/e-ticket.interface';
+import { tripEstimateFromStops } from './trip-format';
 
 export type ETicketLocale = 'en' | 'th' | 'zh';
 
@@ -54,6 +55,11 @@ export function mapBookingTicketsToCard(
     booker: buildBooker(data),
     paymentDate: '-',
     totalAmount: formatAmount(data.totalAmount),
+    estimateDistanceKm: tripEstimateFromStops(outbound?.fromStop, outbound?.toStop)
+      .distanceKm,
+    returnEstimateDistanceKm: inbound
+      ? tripEstimateFromStops(inbound.fromStop, inbound.toStop).distanceKm
+      : null,
   };
 }
 

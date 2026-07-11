@@ -1414,7 +1414,8 @@
       "PASSENGER_PHONE": "Phone number of the booker",
       "PAYMENT_DATE": "Payment date/time",
       "TOTAL": "Total",
-      "TOTAL_UNIT": "baht"
+      "TOTAL_UNIT": "baht",
+      "ESTIMATE_KM_UNIT": "km"
     },
     "QR_HINT": "QR code is used for identity verification before boarding only.",
     "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",
