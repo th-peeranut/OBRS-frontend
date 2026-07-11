@@ -57,6 +57,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // ['admin','owner']`), same audience as the base admin nav, so it lives
       // in the always-shown list (not role-gated further like settlements).
       { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale' },
+      // OBRS-98: refund/void summary report — same admin+owner audience (route
+      // `requiredRoles: ['admin','owner']`) as eod-sales-report above.
+      { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {

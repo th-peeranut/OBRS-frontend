@@ -20,6 +20,7 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
+import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -972,6 +973,16 @@ export class AdminApiService {
     const params = new HttpParams().set('date', date);
     return this.getRequest<EodSalesReportDto>(
       `${this.baseUrl}/private/admin/reports/eod-salesperson`,
+      params
+    );
+  }
+
+  // OBRS-98: refund / void summary report — mirrors getReportsSummary's [from, to]
+  // HttpParams shape.
+  getRefundVoidReport(from: string, to: string): Observable<ResponseAPI<RefundVoidReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RefundVoidReportDto>(
+      `${this.baseUrl}/private/admin/reports/refund-void`,
       params
     );
   }

@@ -651,6 +651,13 @@
   color: var(--admin-warning-text);
 }
 
+// OBRS-98: refund/void report's "Voided" KPI card — composes the existing §2.4
+// danger tokens (no new hex), same modifier shape as is-success/is-warning above.
+.admin-kpi-icon.is-danger {
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
 .admin-kpi .admin-big-number {
   font-size: 28px;
 }

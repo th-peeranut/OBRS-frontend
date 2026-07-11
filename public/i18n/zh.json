@@ -327,7 +327,8 @@
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
       "SETTLEMENTS": "分账结算",
-      "EOD_SALES_REPORT": "每日销售报告"
+      "EOD_SALES_REPORT": "每日销售报告",
+      "REFUND_VOID_REPORT": "退款/作废汇总"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -903,6 +904,40 @@
         "SHOPEEPAY": "ShopeePay",
         "RABBIT_LINEPAY": "Rabbit LINE Pay",
         "OTHER": "其他"
+      }
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "BASIS_NOTE": "退款和作废按处理日期统计，而非原订单日期或出发日期。",
+      "PARTITION_NOTE": "作废分为已取消（人工取消）和已过期（未支付超时）两类，两者之和等于作废总额。",
+      "CARD": {
+        "REFUNDED": "已退款（毛额）",
+        "REFUNDED_HINT": "扣除任何手续费之前退还给客户的总金额。",
+        "MANUAL_PENDING": "待人工退款",
+        "VOIDED": "已作废",
+        "CANCELLED": "已取消",
+        "EXPIRED": "已过期",
+        "COUNT_LABEL": "数量"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期",
+        "REFUNDED_COUNT": "退款（数量）",
+        "REFUNDED_AMOUNT": "退款（金额）",
+        "MANUAL_COUNT": "人工（数量）",
+        "MANUAL_AMOUNT": "人工（金额）",
+        "VOIDED_COUNT": "作废（数量）",
+        "VOIDED_AMOUNT": "作废（金额）"
+      },
+      "EXPAND_ARIA": "显示取消/过期明细",
+      "COLLAPSE_ARIA": "隐藏取消/过期明细",
+      "EMPTY": "所选日期范围内没有退款或作废的票务。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
       }
     }
   },

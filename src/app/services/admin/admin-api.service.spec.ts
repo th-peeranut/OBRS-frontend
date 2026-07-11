@@ -44,6 +44,25 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-98: regression for the endpoint path / from-to param contract, same
+  // rationale as getRoundTripPromotion below — a store-stub spec never
+  // exercises the real HttpClient call.
+  describe('getRefundVoidReport', () => {
+    it('issues a GET to /api/private/admin/reports/refund-void with from/to params', () => {
+      service.getRefundVoidReport('2026-07-01', '2026-07-07').subscribe();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/admin/reports/refund-void` &&
+          request.params.get('from') === '2026-07-01' &&
+          request.params.get('to') === '2026-07-07'
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: null });
+    });
+  });
+
   // OBRS-85: regression for the wrong-URL / wrong-field contract breaks
   // Scrutinize found — a store-stub spec never exercises the real HttpClient
   // call, so these hit HttpTestingController directly.
