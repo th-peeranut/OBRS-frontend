@@ -82,7 +82,8 @@ describe('MyBookingTicketModalComponent', () => {
     expect(component.loading).toBeFalse();
     expect(component.error).toBe('');
     expect(component.card?.bookingNumber).toBe('B-1');
-    expect(component.card?.route).toBe('Station A - Station B');
+    expect(component.card?.legs.length).toBe(1);
+    expect(component.card?.legs[0].route).toBe('Station A - Station B');
     expect(component.card?.passengers.length).toBe(1);
     expect(component.card?.booker?.phone).toBe('0812345678');
   });
@@ -118,7 +119,7 @@ describe('MyBookingTicketModalComponent', () => {
   });
 });
 
-describe('MyBookingTicketModalComponent — distance chip passthrough (render)', () => {
+describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
   let fixture: ComponentFixture<MyBookingTicketModalComponent>;
   let component: MyBookingTicketModalComponent;
 
@@ -137,7 +138,7 @@ describe('MyBookingTicketModalComponent — distance chip passthrough (render)',
     component = fixture.componentInstance;
   });
 
-  it('passes card.estimateDistanceKm / returnEstimateDistanceKm through to the e-ticket card', () => {
+  it('passes card.legs through to the e-ticket card', () => {
     component.bookingId = 5;
     component.ngOnChanges({
       bookingId: {
@@ -152,7 +153,7 @@ describe('MyBookingTicketModalComponent — distance chip passthrough (render)',
     const cardDebugEl = fixture.debugElement.query(By.directive(ETicketCardComponent));
     const cardInstance = cardDebugEl.componentInstance as ETicketCardComponent;
 
-    expect(cardInstance.estimateDistanceKm).toBe(45);
-    expect(cardInstance.returnEstimateDistanceKm).toBeNull();
+    expect(cardInstance.legs.length).toBe(1);
+    expect(cardInstance.legs[0].distanceKm).toBe(45);
   });
 });

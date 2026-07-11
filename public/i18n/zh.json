@@ -1414,7 +1414,9 @@
       "PAYMENT_DATE": "付款日期/时间",
       "TOTAL": "总计",
       "TOTAL_UNIT": "泰铢",
-      "ESTIMATE_KM_UNIT": "公里"
+      "ESTIMATE_KM_UNIT": "公里",
+      "LEG_OUTBOUND": "去程",
+      "LEG_RETURN": "返程"
     },
     "QR_HINT": "二维码仅用于登车前的身份验证。",
     "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",

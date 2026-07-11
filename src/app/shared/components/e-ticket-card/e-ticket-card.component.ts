@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import html2canvas from 'html2canvas';
 import QRCode from 'qrcode';
-import { TicketPassenger } from '../../interfaces/e-ticket.interface';
+import { TicketLeg, TicketPassenger } from '../../interfaces/e-ticket.interface';
 
 /**
  * Presentational e-ticket "paper". Renders the same markup/style as the booking
@@ -26,20 +26,11 @@ export class ETicketCardComponent implements OnChanges {
 
   @Input() bookingNumber = '-';
   @Input() ticketNumber = '-';
-  @Input() travelDate = '-';
-  @Input() travelTime = '-';
-  @Input() route = '-';
-  @Input() origin = '-';
-  @Input() destination = '-';
-  @Input() vehicleType = '-';
-  @Input() vehiclePlate = '-';
-  @Input() seats = '-';
+  @Input() legs: TicketLeg[] = [];
   @Input() paymentDate = '-';
   @Input() totalAmount = '0.00';
   @Input() passengers: TicketPassenger[] = [];
   @Input() booker: TicketPassenger | null = null;
-  @Input() estimateDistanceKm: number | null = null;
-  @Input() returnEstimateDistanceKm: number | null = null;
 
   qrCodeDataUrl = '';
   isDownloadingTicket = false;

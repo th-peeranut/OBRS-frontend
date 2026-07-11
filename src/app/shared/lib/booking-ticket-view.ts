@@ -3,7 +3,11 @@ import {
   BookingTicketJourney,
   BookingTicketsData,
 } from '../interfaces/booking-ticket.interface';
-import { ETicketCardData, TicketPassenger } from '../interfaces/e-ticket.interface';
+import {
+  ETicketCardData,
+  TicketLeg,
+  TicketPassenger,
+} from '../interfaces/e-ticket.interface';
 import { tripEstimateFromStops } from './trip-format';
 
 export type ETicketLocale = 'en' | 'th' | 'zh';
@@ -16,7 +20,7 @@ const MONTHS: Record<ETicketLocale, readonly string[]> = {
 
 /**
  * Maps a `BookingTicketsData` API response (GET /bookings/{id}/tickets) into the
- * flat fields the shared e-ticket card renders. Pure — drives the my-bookings
+ * per-leg fields the shared e-ticket card renders. Pure — drives the my-bookings
  * ticket modal without the booking-flow store the e-ticket page relies on.
  */
 export function mapBookingTicketsToCard(
@@ -28,39 +32,60 @@ export function mapBookingTicketsToCard(
   const inbound =
     findJourney(journeys, 'inbound') ?? (journeys.length > 1 ? journeys[1] : null);
 
-  const origin = outbound?.fromStop?.label?.trim() ?? '';
-  const destination = outbound?.toStop?.label?.trim() ?? '';
-  const passengers = buildPassengers(outbound);
+  const journeyToLeg = (journey: BookingTicketJourney): TicketLeg => ({
+    travelDate: formatDate(journey.departureDateTime, locale) || '-',
+    travelTime:
+      formatTimeRange(journey.departureDateTime, journey.arrivalDateTime) || '-',
+    route: buildSingleLegRoute(journey.fromStop, journey.toStop),
+    origin: journey.fromStop?.label?.trim() || '-',
+    destination: journey.toStop?.label?.trim() || '-',
+    vehicleType: formatVehicleType(journey.vehicle?.vehicleType?.label) || '-',
+    vehiclePlate:
+      buildVehiclePlate(
+        journey.vehicle?.vehicleNumber,
+        journey.vehicle?.numberPlate
+      ) || '-',
+    seats: buildSeatList(buildPassengers(journey)) || '-',
+    distanceKm: tripEstimateFromStops(journey.fromStop, journey.toStop).distanceKm,
+  });
+
+  const legs: TicketLeg[] = [outbound, inbound]
+    .filter((journey): journey is BookingTicketJourney => !!journey)
+    .map(journeyToLeg);
+  if (legs.length === 0) {
+    // Degrade to a single all-'-' placeholder leg rather than an empty array, so the
+    // card always has at least one leg to render (matches the pre-OBRS-254 flat-mapper
+    // behaviour of showing dashes instead of nothing).
+    legs.push(journeyToLeg({}));
+  }
+
+  // Travellers are assumed identical across legs (the FE model can't guarantee it —
+  // a round-trip pairs the same passengers on both legs); seats are shown per-leg
+  // (`TicketLeg.seats` above), but names are shown once, taken from whichever leg has
+  // the most tickets (falling back to outbound) so a leg with more passengers than the
+  // outbound leg doesn't drop names.
+  const passengers = buildPassengers(fullestJourney(journeys) ?? outbound);
 
   return {
     bookingNumber: data.bookingNumber?.trim() || '-',
     ticketNumber: collectTicketNumbers(journeys) || '-',
-    travelDate: buildTravelDate(
-      outbound?.departureDateTime,
-      inbound?.departureDateTime,
-      locale
-    ),
-    travelTime: buildTravelTime(outbound, inbound),
-    route: buildRouteLabel(origin, destination, !!inbound),
-    origin: origin || '-',
-    destination: destination || '-',
-    vehicleType: formatVehicleType(outbound?.vehicle?.vehicleType?.label) || '-',
-    vehiclePlate:
-      buildVehiclePlate(
-        outbound?.vehicle?.vehicleNumber,
-        outbound?.vehicle?.numberPlate
-      ) || '-',
-    seats: buildSeatList(passengers) || '-',
+    legs,
     passengers,
     booker: buildBooker(data),
     paymentDate: '-',
     totalAmount: formatAmount(data.totalAmount),
-    estimateDistanceKm: tripEstimateFromStops(outbound?.fromStop, outbound?.toStop)
-      .distanceKm,
-    returnEstimateDistanceKm: inbound
-      ? tripEstimateFromStops(inbound.fromStop, inbound.toStop).distanceKm
-      : null,
   };
+}
+
+function fullestJourney(
+  journeys: BookingTicketJourney[]
+): BookingTicketJourney | null {
+  if (journeys.length === 0) {
+    return null;
+  }
+  return journeys.reduce((fullest, journey) =>
+    (journey.tickets?.length ?? 0) > (fullest.tickets?.length ?? 0) ? journey : fullest
+  );
 }
 
 function findJourney(
@@ -108,46 +133,16 @@ function buildBooker(data: BookingTicketsData): TicketPassenger | null {
   return phone ? { name: '-', phone, seat: '-' } : null;
 }
 
-function buildTravelDate(
-  departureDateTime: string | undefined,
-  returnDateTime: string | undefined,
-  locale: ETicketLocale
+function buildSingleLegRoute(
+  fromStop: BookingTicketJourney['fromStop'],
+  toStop: BookingTicketJourney['toStop']
 ): string {
-  const departureDate = formatDate(departureDateTime, locale);
-  const returnDate = formatDate(returnDateTime, locale);
-  if (departureDate && returnDate && departureDate !== returnDate) {
-    return `${departureDate} / ${returnDate}`;
+  const from = fromStop?.label?.trim() ?? '';
+  const to = toStop?.label?.trim() ?? '';
+  if (from && to) {
+    return `${from} - ${to}`;
   }
-  return departureDate || returnDate || '-';
-}
-
-function buildTravelTime(
-  outbound: BookingTicketJourney | null,
-  inbound: BookingTicketJourney | null
-): string {
-  const departureTime = formatTimeRange(
-    outbound?.departureDateTime,
-    outbound?.arrivalDateTime
-  );
-  const returnTime = formatTimeRange(
-    inbound?.departureDateTime,
-    inbound?.arrivalDateTime
-  );
-  if (departureTime && returnTime) {
-    return `${departureTime} / ${returnTime}`;
-  }
-  return departureTime || returnTime || '-';
-}
-
-function buildRouteLabel(from: string, to: string, hasReturn: boolean): string {
-  const departureRoute = from && to ? `${from} - ${to}` : from || to;
-  if (!departureRoute) {
-    return '-';
-  }
-  if (!hasReturn || !from || !to) {
-    return departureRoute;
-  }
-  return `${departureRoute} / ${to} - ${from}`;
+  return from || to || '-';
 }
 
 function buildVehiclePlate(
