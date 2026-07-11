@@ -278,6 +278,23 @@ export class StaffApiService {
     );
   }
 
+  /** OBRS-256: forward-only schedule status transition
+   * (`scheduled` → `departed` → `arrived`), driven by the boarding-list
+   * header strip. Reuses `boardingScanContext` — a domain 409
+   * (`SCHEDULE_TRANSITION_ILLEGAL`) must never force-logout the operator nor
+   * duplicate a global alert (OBRS-187 trap), same reasoning as
+   * `board()`/`unboard()`. */
+  updateScheduleStatus(
+    id: number,
+    status: 'departed' | 'arrived'
+  ): Observable<ResponseAPI<{ scheduleId: number; status: string }>> {
+    return this.http.patch<ResponseAPI<{ scheduleId: number; status: string }>>(
+      `${environment.apiUrl}/api/private/schedules/${id}/status`,
+      { status },
+      { context: this.boardingScanContext }
+    );
+  }
+
   searchSchedules(req: ScheduleSearchReqDto): Observable<ResponseAPI<ScheduleSearchResultDto>> {
     return this.http.post<ResponseAPI<ScheduleSearchResultDto>>(
       `${environment.apiUrl}/api/public/schedules/search`,

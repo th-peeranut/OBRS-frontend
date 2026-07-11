@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
@@ -14,8 +14,8 @@ import { createTranslateStub } from '../../../testing/test-stubs';
 
 function createAlertServiceStub(confirmResult = true): any {
   return {
-    success: () => Promise.resolve(),
-    error: () => Promise.resolve(),
+    success: jasmine.createSpy('success').and.returnValue(Promise.resolve()),
+    error: jasmine.createSpy('error').and.returnValue(Promise.resolve()),
     confirm: jasmine.createSpy('confirm').and.returnValue(Promise.resolve(confirmResult)),
   };
 }
@@ -379,6 +379,7 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       departureDateTime: '10 Jul 2026 15:00',
       vehicleLabel: '1กก-1234',
       driverName: 'Somchai Driver',
+      statusCode: 'unknown',
     });
   });
 
@@ -397,7 +398,21 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       departureDateTime: '-',
       vehicleLabel: '-',
       driverName: '-',
+      statusCode: 'unknown',
     });
+  });
+
+  it('OBRS-256: statusCode is parsed via parseAdminStatus(schedule.status) — reused, not a second parser', async () => {
+    const staffApiServiceStub = {
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 42, status: 'DEPARTED' } })
+      ),
+    };
+    const component = createComponent(staffApiServiceStub);
+
+    await component['loadTripHeader'](42);
+
+    expect(component['tripHeader']?.statusCode).toBe('departed');
   });
 
   it('degrades to null (template falls back to "-") on failure — e.g. a driver 403’d off a foreign schedule — without blocking export/print', async () => {
@@ -435,6 +450,350 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
 
     expect(component['tripHeader']?.routeLabel).toBe('r99');
   });
+});
+
+describe('BoardingListComponent — OBRS-256 schedule status pill/action getters', () => {
+  function withTripHeader(component: BoardingListComponent, statusCode: string): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode,
+    };
+  }
+
+  it('pill class/icon/label per status (scheduled/departed/arrived/unknown)', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    withTripHeader(component, 'scheduled');
+    expect(component['scheduleStatusPillClass']).toBe('is-neutral');
+    expect(component['scheduleStatusPillIcon']).toBe('schedule');
+    expect(component['scheduleStatusPillLabelKey']).toBe('STAFF.SCHEDULE_STATUS.PILL.SCHEDULED');
+
+    withTripHeader(component, 'departed');
+    expect(component['scheduleStatusPillClass']).toBe('is-info');
+    expect(component['scheduleStatusPillIcon']).toBe('directions_bus');
+    expect(component['scheduleStatusPillLabelKey']).toBe('STAFF.SCHEDULE_STATUS.PILL.DEPARTED');
+
+    withTripHeader(component, 'arrived');
+    expect(component['scheduleStatusPillClass']).toBe('is-success');
+    expect(component['scheduleStatusPillIcon']).toBe('check_circle');
+    expect(component['scheduleStatusPillLabelKey']).toBe('STAFF.SCHEDULE_STATUS.PILL.ARRIVED');
+
+    withTripHeader(component, 'unknown');
+    expect(component['scheduleStatusPillClass']).toBe('is-neutral');
+    expect(component['scheduleStatusPillIcon']).toBe('help');
+    expect(component['scheduleStatusPillLabelKey']).toBe('STAFF.SCHEDULE_STATUS.PILL.UNKNOWN');
+  });
+
+  it('scheduleStatusAction: scheduled -> mark departed (no confirm), departed -> mark arrived (confirm required), arrived/unknown/null tripHeader -> null', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    withTripHeader(component, 'scheduled');
+    expect(component['scheduleStatusAction']).toEqual({
+      code: 'departed',
+      labelKey: 'STAFF.SCHEDULE_STATUS.ACTION.MARK_DEPARTED',
+      icon: 'departure_board',
+      requiresConfirm: false,
+    });
+
+    withTripHeader(component, 'departed');
+    expect(component['scheduleStatusAction']).toEqual({
+      code: 'arrived',
+      labelKey: 'STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED',
+      icon: 'flag',
+      requiresConfirm: true,
+    });
+
+    withTripHeader(component, 'arrived');
+    expect(component['scheduleStatusAction']).toBeNull();
+
+    withTripHeader(component, 'unknown');
+    expect(component['scheduleStatusAction']).toBeNull();
+
+    (component as any).tripHeader = null;
+    expect(component['scheduleStatusAction']).toBeNull();
+  });
+
+  it('canControlScheduleStatus is hidden for a driver — identical role gate to canUnboard', () => {
+    const driverComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ canUnboard: false })
+    );
+    expect(driverComponent['canControlScheduleStatus']).toBeFalse();
+
+    const salespersonComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ canUnboard: true })
+    );
+    expect(salespersonComponent['canControlScheduleStatus']).toBeTrue();
+  });
+});
+
+describe('BoardingListComponent — OBRS-256 onScheduleStatusAction()', () => {
+  function withTripHeader(component: BoardingListComponent, statusCode: string): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode,
+    };
+  }
+
+  it('mark-departed happy path: PATCH called with correct args, tripHeader.statusCode updates on success, no confirm needed', async () => {
+    const staffApiServiceStub = {
+      updateScheduleStatus: jasmine
+        .createSpy('updateScheduleStatus')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { scheduleId: 42, status: 'departed' } })),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withTripHeader(component, 'scheduled');
+
+    await component['onScheduleStatusAction']();
+
+    expect(alertServiceStub.confirm).not.toHaveBeenCalled();
+    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'departed');
+    expect(component['tripHeader']?.statusCode).toBe('departed');
+    expect(alertServiceStub.success).toHaveBeenCalled();
+    expect(component['isUpdatingScheduleStatus']).toBeFalse();
+  });
+
+  it('mark-arrived requires AlertService.confirm(); cancel bails without calling the API', async () => {
+    const staffApiServiceStub = { updateScheduleStatus: jasmine.createSpy('updateScheduleStatus') };
+    const alertServiceStub = createAlertServiceStub(false);
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withTripHeader(component, 'departed');
+
+    await component['onScheduleStatusAction']();
+
+    expect(alertServiceStub.confirm).toHaveBeenCalled();
+    expect(staffApiServiceStub.updateScheduleStatus).not.toHaveBeenCalled();
+  });
+
+  it('mark-arrived on confirm: calls the API and updates tripHeader.statusCode', async () => {
+    const staffApiServiceStub = {
+      updateScheduleStatus: jasmine
+        .createSpy('updateScheduleStatus')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { scheduleId: 42, status: 'arrived' } })),
+    };
+    const alertServiceStub = createAlertServiceStub(true);
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withTripHeader(component, 'departed');
+
+    await component['onScheduleStatusAction']();
+
+    expect(alertServiceStub.confirm).toHaveBeenCalled();
+    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'arrived');
+    expect(component['tripHeader']?.statusCode).toBe('arrived');
+  });
+
+  it('is a no-op when there is no action for the current status, or already in flight', async () => {
+    const staffApiServiceStub = { updateScheduleStatus: jasmine.createSpy('updateScheduleStatus') };
+    const component = createComponent(staffApiServiceStub);
+    withTripHeader(component, 'arrived'); // no forward action from 'arrived'
+
+    await component['onScheduleStatusAction']();
+
+    expect(staffApiServiceStub.updateScheduleStatus).not.toHaveBeenCalled();
+
+    withTripHeader(component, 'scheduled');
+    (component as any).isUpdatingScheduleStatus = true;
+
+    await component['onScheduleStatusAction']();
+
+    expect(staffApiServiceStub.updateScheduleStatus).not.toHaveBeenCalled();
+  });
+
+  it('error path: maps mapScheduleStatusErrorCode(extractScheduleStatusErrorCode()) and calls loadTripHeader() again to reconcile', async () => {
+    const staffApiServiceStub = {
+      updateScheduleStatus: jasmine
+        .createSpy('updateScheduleStatus')
+        .and.returnValue(
+          throwError(() => new HttpErrorResponse({ status: 409, error: { errorCode: 'SCHEDULE_TRANSITION_ILLEGAL' } }))
+        ),
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } })),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withTripHeader(component, 'scheduled');
+
+    await component['onScheduleStatusAction']();
+    // loadTripHeader() is fired with `void` (fire-and-forget) on the error path —
+    // flush its microtasks before asserting.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(alertServiceStub.error).toHaveBeenCalledWith('STAFF.SCHEDULE_STATUS.ERROR.SCHEDULE_TRANSITION_ILLEGAL');
+    expect(staffApiServiceStub.getScheduleById).toHaveBeenCalledWith(42);
+    expect(component['isUpdatingScheduleStatus']).toBeFalse();
+  });
+});
+
+describe('BoardingListComponent — OBRS-256 count-lock freeze (isScheduleArrived)', () => {
+  function withTripHeader(component: BoardingListComponent, statusCode: string): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode,
+    };
+  }
+
+  it('isScheduleArrived is true only for statusCode === "arrived" (strict equality, never a fallback)', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    withTripHeader(component, 'arrived');
+    expect(component['isScheduleArrived']).toBeTrue();
+
+    withTripHeader(component, 'departed');
+    expect(component['isScheduleArrived']).toBeFalse();
+
+    (component as any).tripHeader = null;
+    expect(component['isScheduleArrived']).toBeFalse();
+  });
+
+  it('board() early-returns with no HTTP call when the schedule is arrived', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, boardedAt: undefined })]);
+    const staffApiServiceStub = { board: jasmine.createSpy('board') };
+    const component = createComponent(staffApiServiceStub, store);
+    withTripHeader(component, 'arrived');
+
+    await component['board'](store.value[0]);
+
+    expect(staffApiServiceStub.board).not.toHaveBeenCalled();
+  });
+
+  it('unboard() early-returns with no HTTP call when the schedule is arrived', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, boardedAt: '2026-07-10T08:00:00Z' })]);
+    const staffApiServiceStub = { unboard: jasmine.createSpy('unboard') };
+    const component = createComponent(staffApiServiceStub, store);
+    withTripHeader(component, 'arrived');
+
+    await component['unboard'](store.value[0]);
+
+    expect(staffApiServiceStub.unboard).not.toHaveBeenCalled();
+  });
+
+  it('validateScan() early-returns with no HTTP call when the schedule is arrived', async () => {
+    const staffApiServiceStub = { boardingScan: jasmine.createSpy('boardingScan') };
+    const component = createComponent(staffApiServiceStub);
+    withTripHeader(component, 'arrived');
+    (component as any).scanToken = 'signed.jwt.token';
+
+    await component['validateScan']();
+
+    expect(staffApiServiceStub.boardingScan).not.toHaveBeenCalled();
+  });
+});
+
+describe('BoardingListComponent — OBRS-256 template render: header strip, status pill, transition button, count-lock (TestBed)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let component: BoardingListComponent;
+
+  function render(opts: { scheduleStatus: string; canControl: boolean }): void {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () =>
+              of({
+                code: 200,
+                message: 'OK',
+                data: [
+                  buildItem({ ticketId: 1, boardedAt: undefined }),
+                  buildItem({ ticketId: 2, boardedAt: '2026-07-10T08:00:00Z' }),
+                ],
+              }),
+            getScheduleById: () =>
+              of({ code: 200, message: 'OK', data: { id: 42, status: opts.scheduleStatus } }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: () => opts.canControl,
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    component = fixture.componentInstance;
+    component.scheduleId = 42;
+    // TestBed.createComponent() makes this the ROOT component — there is no
+    // host template binding `[scheduleId]`, so Angular never invokes
+    // ngOnChanges on its own (unlike a real host). Call it explicitly, same
+    // as the non-TestBed `createComponent()` helper above, so
+    // store.setScheduleId()/refresh()/loadTripHeader() actually fire.
+    component.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  it('hides the transition button entirely when canControlScheduleStatus is false (driver)', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: false });
+    tick();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.boarding-trip-header-status .admin-btn')).toBeFalsy();
+  }));
+
+  it('shows the transition button for salesperson on a scheduled trip', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    const btn = fixture.nativeElement.querySelector('.boarding-trip-header-status .admin-btn');
+    expect(btn).toBeTruthy();
+  }));
+
+  it('disables the scan input, scan button, board button, and unboard button once the schedule is arrived', fakeAsync(() => {
+    render({ scheduleStatus: 'arrived', canControl: true });
+    tick();
+    fixture.detectChanges();
+    // `NgModel`'s `[disabled]` input applies via `resolvedPromise.then()`
+    // internally (see @angular/forms `NgModel._updateDisabled()`) — an extra
+    // microtask beyond the change-detection pass that evaluates the
+    // `[disabled]` expression. Flush it before reading the DOM property.
+    tick();
+
+    const scanInput: HTMLInputElement = fixture.nativeElement.querySelector('#boardingScanInput');
+    const scanBtn: HTMLButtonElement = fixture.nativeElement.querySelector('.boarding-scan-btn');
+    const boardBtn: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.boarding-actions .admin-btn:not(.admin-btn-danger)'
+    );
+    const unboardBtn: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '.boarding-actions .admin-btn-danger'
+    );
+
+    expect(scanInput.disabled).toBeTrue();
+    expect(scanBtn.disabled).toBeTrue();
+    expect(boardBtn.disabled).toBeTrue();
+    expect(unboardBtn.disabled).toBeTrue();
+
+    expect(fixture.nativeElement.querySelector('.boarding-lock-banner')).toBeTruthy();
+  }));
 });
 
 // OBRS-100 / ADR 0015: unlike every other describe block above (which

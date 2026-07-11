@@ -1552,6 +1552,7 @@
         "TICKET_NOT_CONFIRMED": "This ticket can't be boarded (cancelled, refunded, no-show, or rescheduled away).",
         "BOARDING_WINDOW_NOT_OPEN": "Boarding hasn't opened for this trip yet.",
         "TICKET_ERROR_ID_NOT_FOUND": "No ticket was found.",
+        "BOARDING_ROUND_ARRIVED": "This trip has already arrived — boarding is locked.",
         "GENERIC": "Action failed. Please try again."
       },
       "SCAN": {
@@ -1573,8 +1574,35 @@
           "TICKET_NOT_CONFIRMED": "This ticket can't be used to board (cancelled, refunded, no-show, or rescheduled away).",
           "ALREADY_BOARDED": "This ticket has already been boarded.",
           "TICKET_ERROR_ID_NOT_FOUND": "No ticket was found for this token.",
+          "BOARDING_ROUND_ARRIVED": "This trip has already arrived — boarding is locked.",
           "GENERIC": "Validation failed. Please try again."
         }
+      }
+    },
+    "SCHEDULE_STATUS": {
+      "PILL": {
+        "SCHEDULED": "Scheduled",
+        "DEPARTED": "Departed",
+        "ARRIVED": "Arrived",
+        "UNKNOWN": "Status unavailable"
+      },
+      "ACTION": {
+        "MARK_DEPARTED": "Mark departed",
+        "MARK_DEPARTED_SUCCESS": "Schedule marked as departed.",
+        "MARK_ARRIVED": "Mark arrived",
+        "MARK_ARRIVED_SUCCESS": "Schedule marked as arrived.",
+        "UPDATING": "Updating…"
+      },
+      "CONFIRM": {
+        "ARRIVED_CONFIRM_TITLE": "Mark this trip as arrived?",
+        "ARRIVED_CONFIRM_TEXT": "This locks boarding for this schedule — no passenger can be boarded or un-boarded afterwards.",
+        "ARRIVED_CONFIRM_CONFIRM": "Mark arrived",
+        "ARRIVED_CONFIRM_CANCEL": "Cancel"
+      },
+      "LOCK_BANNER": "This trip has arrived. Boarding is locked and can no longer be changed.",
+      "ERROR": {
+        "SCHEDULE_TRANSITION_ILLEGAL": "This schedule can't move to that status right now.",
+        "GENERIC": "Unable to update the schedule status. Please try again."
       }
     },
     "DRIVER": {

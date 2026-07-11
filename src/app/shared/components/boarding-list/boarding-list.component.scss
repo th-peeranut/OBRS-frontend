@@ -1,5 +1,56 @@
 @import "../../../../styles/variables.scss";
 
+// OBRS-256: on-screen trip-header strip (route/departure/vehicle meta +
+// status pill + forward-transition button). Token/CSS-var colors only
+// (design-system §2.2) — no raw hex.
+.boarding-trip-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: var(--admin-surface-card);
+  border: 1px solid var(--admin-outline);
+}
+
+.boarding-trip-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.boarding-trip-header-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 110px;
+}
+
+.boarding-trip-header-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+// OBRS-256: count-lock banner shown once the schedule is `arrived` — reuses
+// the existing --admin-neutral-* pair (already dark-safe, see admin-theme.scss
+// OBRS-100 override), no new tokens needed.
+.boarding-lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
+  font-size: 14px;
+}
+
 // OBRS-96: manual boarding-scan validation box. Uses the shared admin/staff
 // shell tokens (design-system §2/§3/§4/§11) — .admin-field pill input,
 // .admin-btn/.admin-btn-primary, .admin-status result banner — since this is
