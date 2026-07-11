@@ -1,0 +1,73 @@
+<!-- Invalid range (client guard) or fetch error: the message REPLACES the
+     table — never shown next to a stale/zero table (design-system.md §6). -->
+<section class="admin-card mt-3 settlements-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
+  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ message }}</p>
+  <p class="admin-muted" *ngIf="contentState === 'error'">{{ message }}</p>
+</section>
+
+<section class="admin-card mt-3" *ngIf="contentState === 'loading' || contentState === 'empty' || contentState === 'data'">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.SETTLEMENTS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <!-- Valid but empty range: the note REPLACES the table. -->
+  <p class="admin-muted settlements-empty-note" *ngIf="contentState === 'empty'">
+    {{ 'ADMIN.SETTLEMENTS.EMPTY' | translate }}
+  </p>
+
+  <div class="admin-table-wrap" *ngIf="contentState !== 'empty'">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.SETTLEMENTS.COL.ROUTE' | translate }}</th>
+          <th>{{ 'ADMIN.SETTLEMENTS.COL.DEPARTURE' | translate }}</th>
+          <th>{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</th>
+          <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+          <th>{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="contentState === 'loading'">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="contentState === 'data'">
+          <tr
+            *ngFor="let item of items; let i = index; trackBy: trackByScheduleId"
+            class="settlements-row"
+            [class.zebra]="i % 2 === 1"
+            (click)="onRowActivate(item.scheduleId, $event)"
+          >
+            <td class="admin-emphasis">{{ item.routeLabel }}</td>
+            <td>{{ displayDateTime(item.departureDateTime) }}</td>
+            <td>
+              <span class="admin-status" [ngClass]="statusClass(item.status)">
+                {{ 'ADMIN.SETTLEMENTS.STATUS.' + item.status | translate }}
+              </span>
+            </td>
+            <td>{{ formatMoney(item.totalAmount, item.currency) }}</td>
+            <td>
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                (click)="rowClick.emit(item.scheduleId)"
+              >
+                {{ 'ADMIN.COMMON.VIEW' | translate }}
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="items.length === 0" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>

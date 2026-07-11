@@ -1,0 +1,180 @@
+<div
+  class="admin-modal-backdrop"
+  *ngIf="isOpen"
+  adminModalBackdrop
+  (dismiss)="onBackdropDismiss()"
+>
+  <div class="admin-modal settlement-detail-modal">
+    <div class="admin-modal-header">
+      <h4 class="admin-modal-title">{{ 'ADMIN.SETTLEMENTS.DETAIL.TITLE' | translate }}</h4>
+      <button
+        type="button"
+        class="settlement-detail-close"
+        [attr.aria-label]="'ADMIN.COMMON.CLOSE' | translate"
+        (click)="closed.emit()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="summary">
+      <div class="settlement-detail-body">
+        <!-- Meta (seeded optimistically from the row, never gated on the fetch) -->
+        <div class="settlement-detail-row">
+          <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ROUTE' | translate }}</span>
+          <span class="admin-emphasis">{{ summary.routeLabel }}</span>
+        </div>
+        <div class="settlement-detail-row">
+          <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DEPARTURE' | translate }}</span>
+          <span>{{ displayDateTime(summary.departureDateTime) }}</span>
+        </div>
+        <div class="settlement-detail-row">
+          <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.COL.STATUS' | translate }}</span>
+          <span
+            class="admin-status"
+            [ngClass]="(detail?.status ?? summary.status) === 'SETTLED' ? 'is-success' : 'is-warning'"
+          >
+            {{ 'ADMIN.SETTLEMENTS.STATUS.' + (detail?.status ?? summary.status) | translate }}
+          </span>
+        </div>
+
+        <!-- Detail GET network failure: inline error + Retry, never a blank modal. -->
+        <div class="admin-card settlement-detail-error mt-3" *ngIf="fetchError && !detail">
+          <p class="admin-error">{{ fetchError }}</p>
+          <button type="button" class="admin-btn" (click)="retryFetch.emit()">
+            {{ 'ADMIN.SETTLEMENTS.DETAIL.RETRY' | translate }}
+          </button>
+        </div>
+
+        <!-- Breakdown skeleton while the detail GET is still in flight. -->
+        <div class="mt-3" *ngIf="isFetching && !detail">
+          <span class="admin-skeleton admin-skeleton--sm" *ngFor="let row of skeletonRows"></span>
+        </div>
+
+        <ng-container *ngIf="detail">
+          <!-- Totals -->
+          <div class="settlement-detail-totals mt-3">
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
+              <span class="admin-big-number">{{ formatMoney(detail.live.totalAmount, detail.currency) }}</span>
+            </div>
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.ON_SITE_TOTAL' | translate }}</span>
+              <span>{{ formatMoney(detail.live.onSiteTotal, detail.currency) }}</span>
+            </div>
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.AGENCY_TOTAL' | translate }}</span>
+              <span>{{ formatMoney(detail.live.agencyTotal, detail.currency) }}</span>
+            </div>
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.TICKET_COUNT' | translate }}</span>
+              <span>{{ detail.live.ticketCount }}</span>
+            </div>
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.PASSENGER_COUNT' | translate }}</span>
+              <span>{{ detail.live.passengerCount }}</span>
+            </div>
+          </div>
+
+          <!-- By channel -->
+          <div class="mt-3">
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_CHANNEL' | translate }}</p>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.CHANNEL' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of detail.live.byChannel; trackBy: trackByChannel">
+                    <td>{{ channelLabel(row.channel) }}</td>
+                    <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                    <td>{{ row.ticketCount }}</td>
+                  </tr>
+                  <tr *ngIf="detail.live.byChannel.length === 0" class="admin-empty-row">
+                    <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- By method -->
+          <div class="mt-3">
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.BY_METHOD' | translate }}</p>
+            <div class="admin-table-wrap">
+              <table class="admin-table">
+                <thead>
+                  <tr>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.METHOD' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.AMOUNT' | translate }}</th>
+                    <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of detail.live.byMethod; trackBy: trackByMethod">
+                    <td>{{ methodLabel(row.method) }}</td>
+                    <td>{{ formatMoney(row.amount, detail.currency) }}</td>
+                    <td>{{ row.ticketCount }}</td>
+                  </tr>
+                  <tr *ngIf="detail.live.byMethod.length === 0" class="admin-empty-row">
+                    <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="admin-muted settlement-method-note">
+              {{ 'ADMIN.SETTLEMENTS.DETAIL.METHOD_NOTE' | translate }}
+            </p>
+          </div>
+
+          <!-- Settled info + discrepancy (settled only) -->
+          <ng-container *ngIf="detail.status === 'SETTLED' && detail.settled">
+            <div class="settlement-detail-row mt-3">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_BY' | translate }}</span>
+              <span>{{ detail.settled.settledByName }}</span>
+            </div>
+            <div class="settlement-detail-row">
+              <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.SETTLED_AT' | translate }}</span>
+              <span>{{ displayDateTime(detail.settled.settledAt) }}</span>
+            </div>
+
+            <div
+              class="admin-card settlement-discrepancy-card mt-3"
+              *ngIf="detail.discrepancy"
+              [class.is-danger]="detail.discrepancy.hasDiscrepancy"
+            >
+              <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_TITLE' | translate }}</p>
+              <p *ngIf="!detail.discrepancy.hasDiscrepancy" class="admin-muted">
+                {{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_NONE' | translate }}
+              </p>
+              <ng-container *ngIf="detail.discrepancy.hasDiscrepancy">
+                <p class="admin-error">{{ 'ADMIN.SETTLEMENTS.DETAIL.DISCREPANCY_FOUND' | translate }}</p>
+                <div class="settlement-detail-row">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.DETAIL.DIFFERENCE_AMOUNT' | translate }}</span>
+                  <span>{{ formatMoney(detail.discrepancy.differenceAmount, detail.currency) }}</span>
+                </div>
+              </ng-container>
+            </div>
+          </ng-container>
+
+          <!-- Confirm receipt — the modal's single primary action (design-system §4),
+               hidden entirely once settled. -->
+          <div class="settlement-detail-actions mt-3" *ngIf="detail.status === 'PENDING'">
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary"
+              [disabled]="!canConfirm"
+              (click)="onConfirmClick()"
+            >
+              {{ 'ADMIN.SETTLEMENTS.CONFIRM.CONFIRM_BTN' | translate }}
+            </button>
+          </div>
+        </ng-container>
+      </div>
+    </ng-container>
+  </div>
+</div>

@@ -1,0 +1,51 @@
+@import "../../../../../../styles/variables.scss";
+
+.settlement-detail-modal {
+  max-width: 640px;
+  width: 100%;
+}
+
+.settlement-detail-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.settlement-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 0;
+}
+
+.settlement-detail-label {
+  color: $text-lightgrey;
+  font-weight: 600;
+}
+
+.settlement-detail-totals {
+  border-top: 1px solid $primary-grey;
+  border-bottom: 1px solid $primary-grey;
+  padding: 0.5rem 0;
+}
+
+.settlement-method-note {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-discrepancy-card {
+  &.is-danger {
+    border-color: var(--admin-danger-border);
+  }
+}
+
+.settlement-detail-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settlement-detail-error {
+  text-align: center;
+}

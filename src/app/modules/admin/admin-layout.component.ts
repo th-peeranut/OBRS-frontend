@@ -29,22 +29,38 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   protected readonly defaultTitleKey = 'ADMIN.PAGES.DEFAULT';
   protected readonly defaultSubtitleKey = 'ADMIN.LAYOUT.SUBTITLE';
 
-  // Computed once at class-definition time. Must NOT be a getter — a getter
-  // returning a new array each cycle breaks *ngFor + routerLinkActive, causing
-  // change detection never to stabilise (hard-locks the browser).
-  protected readonly navItems: AdminNavItem[] = [
-    { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard' },
-    { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component' },
-    { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings' },
-    { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group' },
-    { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus' },
-    { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
-    { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
-    { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
-    { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
-    { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
-    { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
-  ];
+  // Computed once in ngOnInit (via buildNavItems(), below) and held in a
+  // stable field. Must NOT be a getter — a getter returning a new array each
+  // cycle breaks *ngFor + routerLinkActive, causing change detection never to
+  // stabilise (hard-locks the browser). Mirrors StaffLayoutComponent's
+  // navItems, which is built the same way to role-gate its own entries.
+  protected navItems: AdminNavItem[] = [];
+
+  // OBRS-196: Settlements is gated to owner/admin (route `requiredRoles:
+  // ['owner']`; ROLE_GRANTS['admin'] includes 'owner', so admin is admitted
+  // too). hasAnyRole(['owner']) alone is sufficient to cover both, mirroring
+  // the route guard's own check.
+  private buildNavItems(): AdminNavItem[] {
+    const items: AdminNavItem[] = [
+      { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard' },
+      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component' },
+      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings' },
+      { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group' },
+      { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus' },
+      { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
+      { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
+      { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
+      { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
+      { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
+      { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
+    ];
+
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale' });
+    }
+
+    return items;
+  }
 
   // Count of usability reports with status 'new'. Plain field (not a getter)
   // so it doesn't churn change detection like navItems above — assigned once
@@ -67,6 +83,10 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   override ngOnInit(): void {
+    // Build nav items before calling super so the route subscription (which
+    // fires synchronously via startWith) already has navItems in place —
+    // mirrors StaffLayoutComponent.ngOnInit's ordering.
+    this.navItems = this.buildNavItems();
     super.ngOnInit();
     this.watchNewReportCount();
   }

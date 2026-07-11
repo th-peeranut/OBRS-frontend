@@ -19,6 +19,9 @@ import { UsabilityReportsPageComponent } from './pages/usability-reports/usabili
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
+import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
+import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -92,6 +95,16 @@ const routes: Routes = [
           requiredRoles: ['admin'],
         },
       },
+      {
+        path: 'settlements',
+        component: SettlementsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.SETTLEMENTS',
+          subtitleKey: 'ADMIN.SETTLEMENTS.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -119,6 +132,9 @@ const routes: Routes = [
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
     ReportsPageComponent,
+    SettlementsPageComponent,
+    SettlementsListComponent,
+    SettlementDetailModalComponent,
   ],
   imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
 })

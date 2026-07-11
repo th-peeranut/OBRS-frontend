@@ -20,6 +20,10 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
+import {
+  SettlementPendingPageDto,
+  SettlementScheduleDetailDto,
+} from '../../shared/interfaces/settlement.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -873,6 +877,39 @@ export class AdminApiService {
 
   getDashboardToday(): Observable<ResponseAPI<DashboardTodayDto>> {
     return this.getRequest<DashboardTodayDto>(`${this.baseUrl}/private/admin/dashboard/today`);
+  }
+
+  // OBRS-196: per-round revenue settlement + owner cash-handover sign-off.
+  // Endpoints built against the locked OBRS-196 contract given directly by the
+  // task orchestrator (paired backend worktree had no settlement code at time
+  // of writing) — same parallel-lane pattern as OBRS-129/OBRS-96 before them.
+  // See docs/handoff.md Contract Requests for the assumed shape.
+  getSettlementsPending(
+    from: string,
+    to: string
+  ): Observable<ResponseAPI<SettlementPendingPageDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<SettlementPendingPageDto>(
+      `${this.baseUrl}/private/admin/settlements/pending`,
+      params
+    );
+  }
+
+  getSettlementSchedule(id: number): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
+    return this.getRequest<SettlementScheduleDetailDto>(
+      `${this.baseUrl}/private/admin/settlements/schedules/${id}`
+    );
+  }
+
+  confirmSettlement(
+    id: number,
+    acknowledgedTotalAmount?: string
+  ): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
+    const payload = acknowledgedTotalAmount !== undefined ? { acknowledgedTotalAmount } : {};
+    return this.postRequest<SettlementScheduleDetailDto>(
+      `${this.baseUrl}/private/admin/settlements/schedules/${id}/confirm`,
+      payload
+    );
   }
 
   // Backs the admin sidebar's "Usability Reports" nav badge — reuses the

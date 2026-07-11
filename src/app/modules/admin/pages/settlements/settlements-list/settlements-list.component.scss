@@ -1,0 +1,13 @@
+.settlements-row {
+  cursor: pointer;
+}
+
+// State messages (invalid range / fetch error / empty range) that stand in
+// for the table — centered and padded so the message reads as the body's
+// content, not a stray line above a table of zeros (mirrors reports-page).
+.settlements-state-card,
+.settlements-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}

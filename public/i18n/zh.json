@@ -325,7 +325,8 @@
       "BOOKINGS_MANAGEMENT": "预订",
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
-      "REPORTS": "报告"
+      "REPORTS": "报告",
+      "SETTLEMENTS": "分账结算"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -775,6 +776,80 @@
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。"
+      }
+    },
+    "SETTLEMENTS": {
+      "SUBTITLE": "确认每个已发车班次的现金与收入交接。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "TABLE_TITLE": "待结算班次",
+      "COL": {
+        "ROUTE": "路线",
+        "DEPARTURE": "发车时间",
+        "STATUS": "状态",
+        "AMOUNT": "总金额",
+        "CHANNEL": "渠道",
+        "METHOD": "支付方式",
+        "TICKETS": "票数"
+      },
+      "STATUS": {
+        "PENDING": "待结算",
+        "SETTLED": "已结算"
+      },
+      "EMPTY": "所选日期范围内没有待结算的班次。",
+      "LOAD_FAILED": "无法加载结算数据，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择不超过 366 天的范围。",
+        "ALREADY_SETTLED": "该班次已被其他管理员结算。",
+        "AMOUNT_MISMATCH": "自打开此班次以来收入总额已发生变化，请查看更新后的金额并重试。",
+        "SCOPE_FORBIDDEN": "您没有权限结算该班次。",
+        "ROUND_NOT_DEPARTED": "该班次尚未发车，无法结算。",
+        "SCHEDULE_NOT_FOUND": "未找到该班次，可能已被移除。",
+        "CONFIRM_FAILED": "无法确认结算，请重试。"
+      },
+      "DETAIL": {
+        "TITLE": "班次结算",
+        "ROUTE": "路线",
+        "DEPARTURE": "发车时间",
+        "ON_SITE_TOTAL": "现场收款总额",
+        "AGENCY_TOTAL": "代理渠道总额",
+        "TOTAL_AMOUNT": "总金额",
+        "TICKET_COUNT": "票数",
+        "PASSENGER_COUNT": "乘客数",
+        "BY_CHANNEL": "按渠道",
+        "BY_METHOD": "按支付方式",
+        "METHOD_NOTE": "支付方式金额仅供参考；渠道金额用于对账核对。",
+        "SETTLED_BY": "结算人",
+        "SETTLED_AT": "结算时间",
+        "DISCREPANCY_TITLE": "差异",
+        "DISCREPANCY_NONE": "无差异 — 确认金额与记录总额一致。",
+        "DISCREPANCY_FOUND": "该结算记录存在差异。",
+        "DIFFERENCE_AMOUNT": "差额",
+        "LOAD_FAILED": "无法加载班次详情。",
+        "RETRY": "重试"
+      },
+      "CONFIRM": {
+        "TITLE": "确认现金交接",
+        "TEXT": "确认您已收到该班次共计 {{amount}} 吗？",
+        "CONFIRM_BTN": "确认收款",
+        "SUCCESS": "结算已确认。"
+      },
+      "METHOD": {
+        "CASH": "现金",
+        "CARD": "银行卡",
+        "BANK_TRANSFER": "银行转账",
+        "QR_PROMPTPAY": "PromptPay 二维码",
+        "TRUEMONEY": "TrueMoney",
+        "SHOPEEPAY": "ShopeePay",
+        "RABBIT_LINEPAY": "Rabbit LINE Pay",
+        "OTHER": "其他"
+      },
+      "CHANNEL": {
+        "ONLINE": "线上",
+        "WALK_IN": "现场柜台",
+        "AGENT": "代理渠道",
+        "KIOSK": "自助终端"
       }
     }
   },
