@@ -1,4 +1,119 @@
+@import "../../../../../styles/variables.scss";
 :host {
   display: block;
 }
 
+/* OBRS-209: Maintenance tab bar — copied from schedules-page.component.scss's
+ * .schedule-tabs/.schedule-tab pattern (design-system: reuse the tab-bar
+ * markup, not a new control). Page-scoped like the original (§13
+ * consolidation debt tracks extracting this to a shared partial). */
+.schedule-tabs {
+  display: inline-flex;
+  gap: 6px;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(0, 102, 135, 0.06);
+}
+
+.schedule-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #5a666c;
+  cursor: pointer;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: $font-weight-bold;
+}
+
+.schedule-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.schedule-tab .material-symbols-outlined {
+  font-size: $font-size-md;
+}
+
+.schedule-tab.is-active {
+  background: #ffffff;
+  color: #0a3f58;
+  box-shadow: 0 4px 12px rgba(25, 28, 30, 0.1);
+}
+
+.schedule-focus-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 102, 135, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 102, 135, 0.06);
+  color: #0a3f58;
+  font-size: 13px;
+  font-weight: $font-weight-semibold;
+}
+
+.schedule-focus-banner .material-symbols-outlined {
+  font-size: $font-size-md;
+  color: #006687;
+}
+
+.schedule-focus-clear {
+  margin-left: auto;
+  border: 0;
+  border-radius: $radius-sm;
+  background: #ffffff;
+  color: #006687;
+  cursor: pointer;
+  padding: 6px 12px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-bold;
+  box-shadow: 0 0 0 1px rgba(0, 102, 135, 0.25);
+}
+
+/* Dark mode (QA OBRS-209 P1): the tab-bar/focus-banner colors above are a
+ * fixed teal palette (copied as-is from schedules-page.component.scss, which
+ * has the same pre-existing gap — not fixed here, out of scope) that was
+ * never checked against the dark admin surface. The solid `#ffffff`
+ * active-tab/clear-button backgrounds rendered as bright white boxes on the
+ * dark shell. `:host-context(.is-dark)` is the same mechanism
+ * theme-toggle.component.scss already uses to react to the `is-dark` class
+ * `ThemeService` puts on `document.body` from inside a component-scoped
+ * stylesheet. Only the clashing tokens are overridden — light mode is
+ * untouched, since these rules never match outside `.is-dark`. */
+:host-context(.is-dark) {
+  .schedule-tabs {
+    background: var(--admin-surface-soft);
+  }
+
+  .schedule-tab {
+    color: var(--admin-muted);
+  }
+
+  .schedule-tab.is-active {
+    background: var(--admin-surface-card);
+    color: var(--admin-text);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+
+  .schedule-focus-banner {
+    border-color: var(--admin-outline);
+    background: var(--admin-surface-soft);
+    color: var(--admin-text);
+  }
+
+  .schedule-focus-banner .material-symbols-outlined {
+    color: var(--accent-text);
+  }
+
+  .schedule-focus-clear {
+    background: var(--admin-surface-card);
+    color: var(--accent-text);
+    box-shadow: 0 0 0 1px var(--admin-outline);
+  }
+}

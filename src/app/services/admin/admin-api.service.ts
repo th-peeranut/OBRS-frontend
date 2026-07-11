@@ -118,6 +118,23 @@ export interface AdminVehicleDto {
   updatedAt?: string;
 }
 
+/** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
+ * `maintenanceStatus` is a flat `maintenance_status` Lookup **slug string**
+ * (e.g. "scheduled"), NOT a Lookup object — mirrors `AdminVehicleDto.status`'s
+ * plain-string shape, confirmed against the live `VehicleMaintenanceRespDto`. */
+export interface AdminVehicleMaintenanceDto {
+  id: number;
+  vehicleId: number;
+  reason: string;
+  startDate: string;
+  endDate?: string | null;
+  nextDueDate?: string | null;
+  maintenanceStatus: string;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AdminRouteDto {
   id: number;
   slug: string;
@@ -451,6 +468,19 @@ export interface CreateVehiclePayload {
   status: string;
 }
 
+/** OBRS-209: create/update payload for a vehicle-maintenance record.
+ * `maintenanceStatus` is the `maintenance_status` Lookup's **slug string**
+ * (e.g. "scheduled") — same shape as `CreateVehiclePayload.status`, matching
+ * the live backend `VehicleMaintenanceReqDto` (`@NotBlank String maintenanceStatus`). */
+export interface CreateVehicleMaintenancePayload {
+  reason: string;
+  startDate: string;
+  endDate?: string | null;
+  nextDueDate?: string | null;
+  maintenanceStatus: string;
+  notes?: string | null;
+}
+
 export interface CreateRoutePayload {
   slug: string;
   status: string;
@@ -708,6 +738,45 @@ export class AdminApiService {
 
   deleteVehicle(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/vehicles/${id}`);
+  }
+
+  // OBRS-209: vehicle maintenance records (backend OBRS-102). No hard delete —
+  // a record is closed via updateVehicleMaintenance() with maintenanceStatus
+  // set to the "completed" Lookup slug.
+  getVehicleMaintenance(vehicleId: number): Observable<ResponseAPI<AdminVehicleMaintenanceDto[]>> {
+    return this.getRequest<AdminVehicleMaintenanceDto[]>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance`
+    );
+  }
+
+  getVehicleMaintenanceById(
+    vehicleId: number,
+    id: number
+  ): Observable<ResponseAPI<AdminVehicleMaintenanceDto>> {
+    return this.getRequest<AdminVehicleMaintenanceDto>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance/${id}`
+    );
+  }
+
+  createVehicleMaintenance(
+    vehicleId: number,
+    payload: CreateVehicleMaintenancePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance`,
+      payload
+    );
+  }
+
+  updateVehicleMaintenance(
+    vehicleId: number,
+    id: number,
+    payload: CreateVehicleMaintenancePayload
+  ): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance/${id}`,
+      payload
+    );
   }
 
   getVehicleTypes(): Observable<ResponseAPI<AdminVehicleTypeDto[]>> {

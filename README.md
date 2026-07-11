@@ -158,6 +158,48 @@ exact pattern `ReportsStore` established: `fetch()` calls the single typed
 endpoint and `emptySnapshot()` covers the API-returns-no-data edge. See
 `docs/adr/0013-dashboard-rebase-on-admin-collection-store.md`.
 
+### Vehicle Maintenance (`/admin/vehicles` → Maintenance tab, OBRS-209)
+
+`VehiclesPageComponent` gained a second tab (`.schedule-tabs`/`.schedule-tab`,
+the same tab-bar markup `SchedulesPageComponent` uses for its Sets/Schedules
+tabs — no new route, no new guard). The tab starts **disabled** (visible, not
+hidden) until an admin clicks the per-row "Manage maintenance" `admin-icon-btn`
+on a vehicle, which focuses that vehicle and switches to it — copying
+`SchedulesPageComponent.viewSchedulesForSet()`'s focus-banner pattern
+("Showing maintenance for X · Back to vehicle list").
+
+The tab body is `AppVehicleMaintenancePanelComponent`
+(`src/app/modules/admin/pages/vehicles/vehicle-maintenance/`), a dumb,
+self-sufficient component mirroring `BoardingListComponent`
+(`src/app/shared/components/boarding-list/`): it owns its own
+`VehicleMaintenanceStore` instance via `providers: [VehicleMaintenanceStore]`
+on the component (component-scoped, **not** `providedIn: 'root'`) so a
+remount for a newly-focused vehicle never replays a previous vehicle's cached
+maintenance list. Only the panel's own `ngOnChanges` calls
+`store.setVehicleId()` + `refresh()` (single-owner re-bind contract); the host
+page must not call it. Create/update mutations `await store.refresh()`
+afterward rather than optimistic-splice, since the server assigns id/timestamps.
+
+The maintenance-status select is `app-admin-dropdown` (not `p-selectButton` —
+design-system §11), required, placeholder-start with no pre-seeded default on
+create, seeded from the record's current status on edit. There is no hard
+delete: a record is closed by editing it to the "completed" status.
+
+**Empty-state pattern** (new, design-system §12 candidate): a `200 + []`
+response renders a centered icon/title/body block
+(`.vehicle-maintenance-empty`, tokens `var(--admin-muted)`/`var(--admin-text)`
+only) that **replaces the whole table section**, not a zero-row table under a
+banner — reuse this instead of the older zero-row-table pattern when a list's
+empty state deserves more than one muted `<tr>`.
+
+Schedule create/update also surfaces a new backend error: a picked vehicle
+with an open maintenance record covering the departure date returns
+`errorCode: VEHICLE_UNDER_MAINTENANCE`. `SchedulesPageComponent.submitSchedule()`
+branches on this stable code (never the localized message) and renders it as
+an inline `<small class="schedule-form-message admin-error">` under the
+Vehicle field instead of a second `AlertService.error()` toast — cleared on
+vehicle/date change and on modal close.
+
 Like Reports, the `revenue` field on `tiles` is **optional** and the Revenue
 tile renders off its **presence** (`showRevenue`), never a client-side role
 check — forward-compat for a future viewer (e.g. salesperson) the server

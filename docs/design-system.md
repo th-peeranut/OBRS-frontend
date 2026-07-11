@@ -307,6 +307,16 @@ allowed, but:
 This is how a recurring papercut stops recurring: it graduates from a hotfix to an
 enforced rule with a test behind it.
 
+**New pattern log:**
+
+- **Full-section empty state** (OBRS-209, `AppVehicleMaintenancePanelComponent`):
+  when a `200 + []` response's empty state deserves more than one muted `<tr>`,
+  render a centered icon/title/body block that **replaces the whole table
+  section** (not a zero-row table under a banner), styled only with
+  `var(--admin-muted)` / `var(--admin-text)` (see `vehicle-maintenance-panel.component.scss`).
+  Reuse this for the next list page that needs a richer empty state instead of
+  inventing a third variant.
+
 ---
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
