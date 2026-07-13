@@ -1,12 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslateService } from '@ngx-translate/core';
-import { Subject, catchError, forkJoin, map, of, takeUntil } from 'rxjs';
-import QRCode from 'qrcode';
+import { Subject, catchError, forkJoin, of, takeUntil } from 'rxjs';
 import { AuthService } from '../../../../auth/auth.service';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
-import { TicketService } from '../../../../services/ticket/ticket.service';
+import { BoardingQrService } from '../../../../shared/services/boarding-qr.service';
 import {
   BookingTicketJourney,
   BookingTicketsData,
@@ -29,6 +28,9 @@ interface ReceiptTicketRow {
   selector: 'app-sell-receipt-page',
   templateUrl: './sell-receipt-page.component.html',
   styleUrl: './sell-receipt-page.component.scss',
+  // Component-scoped so its dedupe/cache state doesn't leak across page
+  // visits — see the class comment on BoardingQrService.
+  providers: [BoardingQrService],
 })
 export class SellReceiptPageComponent implements OnInit, OnDestroy {
   protected isLoading = true;
@@ -46,20 +48,13 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
 
   private bookingId: number | null = null;
   private readonly destroy$ = new Subject<void>();
-  /** Keyed by ticketId — survives `tickets` being rebuilt on a locale-driven
-   * refetch, same guard pattern as ETicketComponent (OBRS-96). */
-  private readonly qrStateByTicketId = new Map<
-    number,
-    { qrDataUrl: string; qrUnavailable: boolean }
-  >();
-  private readonly fetchedTicketIds = new Set<number>();
 
   constructor(
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly bookingService: BookingService,
     private readonly paymentService: PaymentService,
-    private readonly ticketService: TicketService,
+    private readonly boardingQrService: BoardingQrService,
     private readonly translate: TranslateService,
     private readonly authService: AuthService
   ) {
@@ -161,7 +156,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
     const tickets = journey?.tickets ?? [];
     this.tickets = tickets.map((ticket) => {
       const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
-      const qrState = ticketId !== null ? this.qrStateByTicketId.get(ticketId) : undefined;
+      const qrState = ticketId !== null ? this.boardingQrService.getState(ticketId) : undefined;
       return {
         ticketId,
         ticketNumber: ticket.ticketNumber?.trim() || '-',
@@ -203,66 +198,30 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OBRS-96 reuse: fetch each confirmed ticket's boarding-token and render it
-   * as its own QR — identical library (`qrcode`) and rendering options to
-   * `ETicketComponent.fetchBoardingTokensForPassengers` / rendering used on
-   * the customer e-ticket page, so there is exactly one QR pipeline in the
-   * codebase. `catchError` per ticket isolates a single 409/404 (e.g. a
-   * cancelled leg) from blanking the rest of the receipt.
+   * OBRS-96 / OBRS-221: fetch each confirmed ticket's boarding-token and
+   * render it as its own QR via the shared `BoardingQrService` — the same
+   * instance-scoped dedupe/isolation/rendering pipeline used by
+   * `ETicketComponent.fetchBoardingTokensForPassengers` on the customer
+   * e-ticket page, so there is exactly one QR pipeline in the codebase.
+   * `skipGlobalLoadingAlert: true` keeps this page's own inline spinner from
+   * doubling up with the global loading dialog (OBRS-195).
    */
   private fetchBoardingTokens(): void {
-    const pendingTicketIds = this.tickets
-      .map((t) => t.ticketId)
-      .filter((id): id is number => id !== null && !this.fetchedTicketIds.has(id));
+    const ticketIds = this.tickets.map((t) => t.ticketId);
 
-    if (pendingTicketIds.length === 0) {
-      return;
-    }
-    pendingTicketIds.forEach((id) => this.fetchedTicketIds.add(id));
-
-    forkJoin(
-      pendingTicketIds.map((ticketId) =>
-        this.ticketService.getBoardingToken(ticketId, true).pipe(
-          map((response) => ({
-            ticketId,
-            boardingToken: response?.data?.boardingToken?.trim() ?? '',
-          })),
-          catchError(() => of({ ticketId, boardingToken: '' }))
-        )
-      )
-    )
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((results) => {
-        void this.applyBoardingTokenResults(results);
-      });
+    this.boardingQrService.fetchBoardingTokens(
+      ticketIds,
+      () => this.applyBoardingQrStates(),
+      true
+    );
   }
 
-  private async applyBoardingTokenResults(
-    results: { ticketId: number; boardingToken: string }[]
-  ): Promise<void> {
-    for (const result of results) {
-      if (!result.boardingToken) {
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
-        continue;
-      }
-
-      try {
-        const qrDataUrl = await QRCode.toDataURL(result.boardingToken, {
-          width: 140,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-        });
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl, qrUnavailable: false });
-      } catch {
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
-      }
-    }
-
+  private applyBoardingQrStates(): void {
     this.tickets = this.tickets.map((ticket) => {
       if (ticket.ticketId === null) {
         return ticket;
       }
-      const qrState = this.qrStateByTicketId.get(ticket.ticketId);
+      const qrState = this.boardingQrService.getState(ticket.ticketId);
       return qrState ? { ...ticket, ...qrState } : ticket;
     });
   }

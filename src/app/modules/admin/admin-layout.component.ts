@@ -10,6 +10,10 @@ interface AdminNavItem {
   labelKey: string;
   icon: string;
   showBadge?: boolean;
+  // OBRS-290: i18n key of the menu's description (reuses each route's existing
+  // subtitleKey) so the sidebar search can match on what a menu *does*, not
+  // just its name — the user often recalls the function but not the label.
+  descriptionKey?: string;
 }
 
 // Cadence for the "Usability Reports" nav badge count. Separate from
@@ -36,34 +40,45 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // navItems, which is built the same way to role-gate its own entries.
   protected navItems: AdminNavItem[] = [];
 
+  // OBRS-290: sidebar menu search. `filteredNavItems` (what the template
+  // renders) is a stable field recomputed only on query/language change — NOT
+  // a getter, for the same *ngFor + change-detection reason as navItems above.
+  protected navSearchQuery = '';
+  protected filteredNavItems: AdminNavItem[] = [];
+
   // OBRS-196: Settlements is gated to owner/admin (route `requiredRoles:
   // ['owner']`; ROLE_GRANTS['admin'] includes 'owner', so admin is admitted
   // too). hasAnyRole(['owner']) alone is sufficient to cover both, mirroring
   // the route guard's own check.
   private buildNavItems(): AdminNavItem[] {
+    // OBRS-290: each item's descriptionKey reuses the matching route's
+    // subtitleKey (admin.module.ts) so search can match a menu by what it does.
     const items: AdminNavItem[] = [
-      { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard' },
-      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component' },
-      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings' },
-      { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group' },
-      { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus' },
-      { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route' },
-      { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month' },
-      { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number' },
-      { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell' },
-      { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true },
-      { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart' },
+      { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard', descriptionKey: 'ADMIN.DASHBOARD.SUBTITLE' },
+      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component', descriptionKey: 'ADMIN.LOOKUP.SUBTITLE' },
+      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings', descriptionKey: 'ADMIN.ROLES.SUBTITLE' },
+      { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group', descriptionKey: 'ADMIN.USERS.SUBTITLE' },
+      { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE' },
+      { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE' },
+      { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month', descriptionKey: 'ADMIN.SCHEDULES.SUBTITLE' },
+      { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number', descriptionKey: 'ADMIN.BOOKINGS.SUBTITLE' },
+      { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE' },
+      { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE' },
+      { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart', descriptionKey: 'ADMIN.REPORTS.SUBTITLE' },
       // OBRS-231: EOD sales report — admin+owner (route `requiredRoles:
       // ['admin','owner']`), same audience as the base admin nav, so it lives
       // in the always-shown list (not role-gated further like settlements).
-      { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale' },
+      { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale', descriptionKey: 'ADMIN.EOD_REPORT.SUBTITLE' },
       // OBRS-98: refund/void summary report — same admin+owner audience (route
       // `requiredRoles: ['admin','owner']`) as eod-sales-report above.
-      { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange' },
+      { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange', descriptionKey: 'ADMIN.REFUND_VOID_REPORT.SUBTITLE' },
+      // OBRS-99: cash/online reconciliation report — same admin+owner audience
+      // (route `requiredRoles: ['admin','owner']`) as refund-void-report above.
+      { path: 'cash-online-reconciliation-report', labelKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION', icon: 'account_balance_wallet', descriptionKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {
-      items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale' });
+      items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE' });
     }
 
     // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
@@ -74,6 +89,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
         path: 'reminder-config',
         labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
         icon: 'notifications_active',
+        descriptionKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
       });
     }
 
@@ -105,8 +121,40 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // fires synchronously via startWith) already has navItems in place —
     // mirrors StaffLayoutComponent.ngOnInit's ordering.
     this.navItems = this.buildNavItems();
+    this.filteredNavItems = this.navItems;
     super.ngOnInit();
     this.watchNewReportCount();
+
+    // OBRS-290: re-run the filter when the language changes, so a query typed
+    // in one language keeps matching against the freshly-translated labels /
+    // descriptions rather than going stale on the previous language's strings.
+    this.translate.onLangChange
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.applyNavSearch(this.navSearchQuery));
+  }
+
+  // OBRS-290: filter nav items by matching the (trimmed, lower-cased) query
+  // against each item's translated label AND translated description. An empty
+  // query restores the full list. Called from the search input's ngModelChange.
+  protected applyNavSearch(query: string): void {
+    this.navSearchQuery = query;
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      this.filteredNavItems = this.navItems;
+      return;
+    }
+    this.filteredNavItems = this.navItems.filter((item) => {
+      const label = this.translate.instant(item.labelKey).toLowerCase();
+      const description = item.descriptionKey
+        ? this.translate.instant(item.descriptionKey).toLowerCase()
+        : '';
+      return label.includes(q) || description.includes(q);
+    });
+  }
+
+  // OBRS-290: clear button / Escape resets the search to the full list.
+  protected clearNavSearch(): void {
+    this.applyNavSearch('');
   }
 
   // Fetches the new-usability-report count on entering the admin area, then

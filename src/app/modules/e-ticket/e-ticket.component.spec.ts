@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ETicketComponent } from './e-ticket.component';
 import { BookingService } from '../../services/booking/booking.service';
 import { TicketService } from '../../services/ticket/ticket.service';
+import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 
@@ -93,6 +94,7 @@ describe('ETicketComponent', () => {
   } as unknown as BookingService;
 
   let ticketServiceStub: jasmine.SpyObj<TicketService>;
+  let boardingQrService: BoardingQrService;
 
   const translateStub = {
     onLangChange: new Subject(),
@@ -106,11 +108,17 @@ describe('ETicketComponent', () => {
     ticketServiceStub.getBoardingToken.and.returnValue(
       of(null) as unknown as ReturnType<TicketService['getBoardingToken']>
     );
+    // Real BoardingQrService wired to the ticket-service stub (not a mock of
+    // the service itself) — a fresh instance per test, matching the
+    // component-scoped `providers: [BoardingQrService]` lifetime, so the
+    // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
+    // meaningful (OBRS-221 extraction).
+    boardingQrService = new BoardingQrService(ticketServiceStub);
 
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
-      ticketServiceStub,
+      boardingQrService,
       translateStub
     );
   });
