@@ -47,6 +47,15 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   @Output() validityChange = new EventEmitter<boolean>();
   @Output() useBookerAsPassenger = new EventEmitter<number>();
 
+  /**
+   * Index of the ACTIVE passenger for the shared outbound/return seat maps
+   * (OBRS-242 — one seat map per leg, not one per passenger). Clicking an
+   * available seat on the shared map assigns it to whichever passenger is
+   * active here.
+   */
+  activeOutboundIndex = 0;
+  activeReturnIndex = 0;
+
   titleOptions: Dropdown[] = [...TITLE_OPTIONS];
 
   scheduleFilter: Observable<ScheduleFilter>;
@@ -166,12 +175,79 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   insertPassenger(isAdult: boolean = false) {
     const passengerForm = this.createPassengerGroup(isAdult);
     this.passengerData.push(passengerForm);
+    this.clampActiveIndices();
     this.emitValidity();
   }
 
   deletePassenger(index: number) {
     this.passengerData.removeAt(index);
+    this.clampActiveIndices();
     this.emitValidity();
+  }
+
+  /** Which passenger is active on the shared outbound seat map. */
+  setActiveOutbound(index: number): void {
+    if (index >= 0 && index < this.passengerData.length) {
+      this.activeOutboundIndex = index;
+    }
+  }
+
+  /** Which passenger is active on the shared return seat map. */
+  setActiveReturn(index: number): void {
+    if (index >= 0 && index < this.passengerData.length) {
+      this.activeReturnIndex = index;
+    }
+  }
+
+  /**
+   * Owner map for the shared OUTBOUND seat map (OBRS-242): every seat
+   * already assigned to any passenger, keyed by seat label, with that
+   * passenger's ordinal badge + gender. Built fresh on every call (never
+   * mutates an `@Input`), so the shared `app-passenger-seat-van`/`-bus`
+   * always renders every passenger's seat at once, not just the active one.
+   */
+  getSeatOwners(): Record<string, { label: string; gender: string }> {
+    return this.buildSeatOwners('passengerSeat');
+  }
+
+  /** Same as `getSeatOwners`, for the independent RETURN leg pool. */
+  getSeatOwnersReturn(): Record<string, { label: string; gender: string }> {
+    return this.buildSeatOwners('passengerSeatReturn');
+  }
+
+  private buildSeatOwners(
+    controlName: 'passengerSeat' | 'passengerSeatReturn'
+  ): Record<string, { label: string; gender: string }> {
+    const owners: Record<string, { label: string; gender: string }> = {};
+
+    this.passengerData.controls.forEach((ctrl, idx) => {
+      const seat = ctrl.get(controlName)?.value;
+      if (!seat) {
+        return;
+      }
+
+      owners[seat] = {
+        label: String(idx + 1),
+        gender: ctrl.get('gender')?.value || '',
+      };
+    });
+
+    return owners;
+  }
+
+  /** Keeps activeOutboundIndex/activeReturnIndex in range after the passenger array changes. */
+  // Clamps the active-passenger indices to the current range. NOTE: this keeps
+  // the active INDEX valid, not the active passenger's IDENTITY — deleting a
+  // passenger BEFORE the active one would shift the selection to a different
+  // person. That's harmless today because passenger count here is fixed by the
+  // search filter and `deletePassenger` is not wired to any UI (grep confirms
+  // it's only exercised by its own spec; passengers are never removed/reordered
+  // mid-screen). If a remove-passenger control is ever added to this screen,
+  // remap the active index to follow the passenger there instead of clamping.
+  private clampActiveIndices(): void {
+    const maxIndex = Math.max(this.passengerData.length - 1, 0);
+    this.activeOutboundIndex = Math.min(this.activeOutboundIndex, maxIndex);
+    this.activeReturnIndex = Math.min(this.activeReturnIndex, maxIndex);
   }
 
   onUseBookerInfoChange(index: number, isChecked: boolean): void {
@@ -333,6 +409,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       });
       this.passengerData.push(group);
     });
+    this.clampActiveIndices();
     this.isPatchingFromStore = false;
     this.emitValidity();
   }

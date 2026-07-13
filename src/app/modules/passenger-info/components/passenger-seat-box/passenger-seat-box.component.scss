@@ -46,6 +46,31 @@
     font-size: calc(var(--seat-size, 80px) * 0.3);
     color: $text-lightblack;
   }
+
+  // Owner badge (shared seat map, OBRS-242): top-left corner so it never
+  // collides with the top-right Original marker above.
+  .seat-owner-badge {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    min-width: calc(var(--seat-size, 80px) * 0.22);
+    height: calc(var(--seat-size, 80px) * 0.22);
+    padding: 0 2px;
+    border-radius: $radius-pill;
+    background: $brand-customer-strong;
+    color: $primary-white;
+    font-size: calc(var(--seat-size, 80px) * 0.14);
+    font-weight: $font-weight-semibold;
+    line-height: calc(var(--seat-size, 80px) * 0.22);
+    text-align: center;
+  }
+}
+
+// Active-passenger emphasis ring (shared seat map, OBRS-242): the ACTIVE
+// passenger's own assigned seat gets a stronger outline than a seat merely
+// owned by someone else in the booking.
+.active-owner {
+  box-shadow: 0 0 0 3px $brand-customer-strong;
 }
 
 .disabled {

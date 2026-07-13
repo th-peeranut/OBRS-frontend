@@ -16,6 +16,20 @@ export class PassengerSeatBoxComponent implements OnChanges {
   @Input() label: string = '';
   @Input() isDisabled: boolean = false;
   @Input() gender: string = ''; // MALE, FEMALE, MONK, SELECTED, ORIGINAL
+  /**
+   * Owner badge for the collapsed shared seat map (OBRS-242): a short label
+   * (e.g. passenger ordinal "1", "2") naming which passenger a seat belongs
+   * to, shown as a corner badge alongside the gender icon. Null (the
+   * default) renders no badge — every existing single-passenger call site
+   * (change-seat dialog, walk-in, trip-details-edit) is unaffected.
+   */
+  @Input() ownerLabel: string | null = null;
+  /**
+   * Whether this seat belongs to the currently ACTIVE passenger in the
+   * shared seat map, for a visual emphasis ring distinct from other owned
+   * seats. False (the default) changes nothing for existing call sites.
+   */
+  @Input() isActiveOwner: boolean = false;
 
   @Output() passengerSeatOutput = new EventEmitter<string>();
 
