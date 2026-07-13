@@ -1,9 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
+import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 
 interface AdminNavItem {
   path: string;
@@ -27,7 +28,7 @@ const NEW_REPORT_COUNT_POLL_MS = 60_000;
   templateUrl: './admin-layout.component.html',
   styleUrl: './admin-layout.component.scss',
 })
-export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements OnInit {
+export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────
   protected readonly logoutSuccessKey = 'ADMIN.LAYOUT.LOGOUT_SUCCESS';
   protected readonly defaultTitleKey = 'ADMIN.PAGES.DEFAULT';
@@ -103,7 +104,8 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
 
   constructor(
     private readonly adminApiService: AdminApiService,
-    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService,
+    private readonly badgeSocketService: BadgeSocketService
   ) {
     super();
   }
@@ -125,12 +127,31 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     super.ngOnInit();
     this.watchNewReportCount();
 
+    // OBRS-147: real-time push for the same badge — additive to the poll /
+    // NavigationEnd / countAdjustments$ signals above, not a replacement.
+    // See watchNewReportCount()'s comment for why this stays a separate
+    // subscription rather than folding into the switchMap there.
+    this.badgeSocketService.connect();
+
     // OBRS-290: re-run the filter when the language changes, so a query typed
     // in one language keeps matching against the freshly-translated labels /
     // descriptions rather than going stale on the previous language's strings.
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => this.applyNavSearch(this.navSearchQuery));
+  }
+
+  override ngOnDestroy(): void {
+    this.badgeSocketService.disconnect();
+    super.ngOnDestroy();
+  }
+
+  // Mirrors SidebarLayoutBaseComponent.onLogout() (success toast + navigate
+  // to /login) but additionally tears down the WebSocket connection — a
+  // logged-out session must not keep pushing badge-count frames.
+  protected override onLogout(): void {
+    this.badgeSocketService.disconnect();
+    super.onLogout();
   }
 
   // OBRS-290: filter nav items by matching the (trimmed, lower-cased) query
@@ -189,6 +210,18 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       .pipe(takeUntil(this.destroy$))
       .subscribe((delta) => {
         this.newReportCount = Math.max(0, this.newReportCount + delta);
+      });
+
+    // OBRS-147: real-time push over the STOMP WebSocket. A SEPARATE
+    // subscription (not folded into the switchMap above) because the pushed
+    // payload already carries the authoritative count — no GET round-trip
+    // needed, unlike the poll/NavigationEnd/refreshRequested$ signal above.
+    // This is purely additive: if the socket never connects/reconnects, the
+    // 60s poll and the other signals above keep the badge correct on their own.
+    this.badgeSocketService.count$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((count) => {
+        this.newReportCount = count;
       });
   }
 }
