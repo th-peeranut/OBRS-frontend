@@ -21,6 +21,8 @@ const USER_ROW = {
   status: 'Active',
   statusCode: 'active',
   lastUpdated: '-',
+  lastLogin: '-',
+  hasLoggedIn: false,
   locked: false,
 };
 
@@ -93,6 +95,31 @@ describe('UserManagementPageComponent', () => {
 
     expect(component.users.length).toBe(1);
     expect(component.users[0].fullName).toBe('Mr John Doe');
+  });
+
+  // OBRS-182: real last-login flows through the page's mapping, not just the
+  // pure mapper unit (user-management.mappers.spec.ts covers the mapper
+  // logic itself).
+  it('maps a user with lastLoginAt into a row with hasLoggedIn true', () => {
+    const { component, store } = makeComponent();
+
+    component.ngOnInit();
+    store.data$.next({
+      users: [{ ...USER_DTO, lastLoginAt: '2026-07-10T02:00:00Z' }],
+      roles: [],
+      lookups: [],
+    });
+
+    expect(component.users[0].hasLoggedIn).toBeTrue();
+  });
+
+  it('maps a user with no lastLoginAt into a row with hasLoggedIn false (never falls back to updatedAt)', () => {
+    const { component, store } = makeComponent();
+
+    component.ngOnInit();
+    store.data$.next({ users: [USER_DTO], roles: [], lookups: [] });
+
+    expect(component.users[0].hasLoggedIn).toBeFalse();
   });
 
   // OBRS-257: the form/table/delete/unlock markup and their FormGroup/API

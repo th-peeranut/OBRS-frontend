@@ -88,6 +88,10 @@ export interface AdminUserDto {
   status?: string | AdminStatusDto;
   createdAt?: string;
   updatedAt?: string;
+  // OBRS-182: real last-login timestamp (set by the backend on successful
+  // authentication), distinct from updatedAt/createdAt which only reflect the
+  // record's last edit. Null/absent = the user has never signed in.
+  lastLoginAt?: string | null;
   roles: Array<string | AdminRoleDto>;
   locked?: boolean;
   accountLockedUntil?: string | null;

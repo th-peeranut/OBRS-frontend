@@ -16,6 +16,8 @@ function makeRow(overrides: Partial<UserRow> = {}): UserRow {
     status: 'Active',
     statusCode: 'active',
     lastUpdated: '-',
+    lastLogin: '-',
+    hasLoggedIn: false,
     locked: false,
     ...overrides,
   };
@@ -135,6 +137,28 @@ describe('UserListTableComponent (template)', () => {
     expect(unlockSpy).toHaveBeenCalledWith(row);
     expect(editSpy).toHaveBeenCalledWith(row);
     expect(deleteSpy).toHaveBeenCalledWith(row);
+  });
+
+  // OBRS-182: real last-login activity replaces the misleading
+  // updatedAt-based "lastActive" display.
+  it('renders the formatted last-login value when the user has logged in', () => {
+    component.isLoading = false;
+    component.rows = [makeRow({ id: 1, lastLogin: '8 Jul 2026 08:32', hasLoggedIn: true })];
+    fixture.detectChanges();
+
+    const cell = fixture.debugElement.query(By.css('.admin-cell-stack .admin-muted'));
+    expect(cell.nativeElement.textContent).toContain('8 Jul 2026 08:32');
+  });
+
+  it('renders the "never signed in" fallback when hasLoggedIn is false, never falling back to lastUpdated', () => {
+    component.isLoading = false;
+    component.rows = [
+      makeRow({ id: 1, lastLogin: '-', hasLoggedIn: false, lastUpdated: '1 Jan 2026 00:00' }),
+    ];
+    fixture.detectChanges();
+
+    const cell = fixture.debugElement.query(By.css('.admin-cell-stack .admin-muted'));
+    expect(cell.nativeElement.textContent).not.toContain('1 Jan 2026 00:00');
   });
 
   it('renders the totalCount and filtered rows.length in the footer', () => {

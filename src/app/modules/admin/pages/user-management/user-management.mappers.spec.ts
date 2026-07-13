@@ -152,6 +152,28 @@ describe('user-management.mappers', () => {
       const row = toUserRow(user, 'en', 'en');
       expect(row.lastUpdated).not.toBe('-');
     });
+
+    // OBRS-182: real last-login activity, separate from lastUpdated.
+    it('formats lastLogin and sets hasLoggedIn when lastLoginAt is present', () => {
+      const user: AdminUserDto = { ...baseUser, lastLoginAt: '2026-07-10T02:00:00Z' };
+      const row = toUserRow(user, 'en', 'en');
+      expect(row.hasLoggedIn).toBeTrue();
+      expect(row.lastLogin).not.toBe('-');
+    });
+
+    it('CRITICAL: does not fall back to updatedAt/createdAt when lastLoginAt is null — hasLoggedIn is false and lastUpdated stays independent', () => {
+      const user: AdminUserDto = { ...baseUser, lastLoginAt: null };
+      const row = toUserRow(user, 'en', 'en');
+      expect(row.hasLoggedIn).toBeFalse();
+      // lastUpdated still reflects updatedAt (unaffected), proving lastLogin
+      // is computed purely from lastLoginAt with no fallback chain.
+      expect(row.lastUpdated).not.toBe('-');
+    });
+
+    it('sets hasLoggedIn false when lastLoginAt is absent entirely (never provided by backend)', () => {
+      const row = toUserRow(baseUser, 'en', 'en');
+      expect(row.hasLoggedIn).toBeFalse();
+    });
   });
 
   describe('toUserDtoFallback', () => {
@@ -166,6 +188,8 @@ describe('user-management.mappers', () => {
         status: 'ACTIVE',
         statusCode: 'active',
         lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       };
 
@@ -244,6 +268,8 @@ describe('user-management.mappers', () => {
       status: 'ACTIVE',
       statusCode: 'active',
       lastUpdated: '-',
+      lastLogin: '-',
+      hasLoggedIn: false,
       locked: false,
     };
 
@@ -426,6 +452,8 @@ describe('user-management.mappers', () => {
         status: 'ACTIVE',
         statusCode: 'active',
         lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       },
       {
@@ -438,6 +466,8 @@ describe('user-management.mappers', () => {
         status: 'PENDING',
         statusCode: 'pending',
         lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       },
     ];

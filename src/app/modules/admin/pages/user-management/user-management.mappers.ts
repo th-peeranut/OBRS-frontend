@@ -28,6 +28,11 @@ export interface UserRow {
   status: string;
   statusCode: string;
   lastUpdated: string;
+  // OBRS-182: real last-login activity, replacing lastUpdated as the primary
+  // activity indicator shown in the list (lastUpdated is record-modified time,
+  // not login activity — kept on the row but no longer the headline field).
+  lastLogin: string;
+  hasLoggedIn: boolean;
   locked: boolean;
 }
 
@@ -133,6 +138,13 @@ export function toUserRow(
     // normalized locale here would silently change the date format under en-US
     // (see toRouteRow in routes.mappers.ts for the same trap).
     lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, dateLang),
+    // Real login activity (OBRS-182) — formatDisplayDateTime already returns
+    // '-' for a null/undefined lastLoginAt, but the row never displays that
+    // '-'; the template branches on hasLoggedIn and shows the
+    // NEVER_LOGGED_IN translation instead, so this never silently falls back
+    // to updatedAt/createdAt.
+    lastLogin: formatDisplayDateTime(user.lastLoginAt, dateLang),
+    hasLoggedIn: Boolean(user.lastLoginAt),
     locked: user.locked ?? false,
   };
 }
