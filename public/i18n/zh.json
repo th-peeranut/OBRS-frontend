@@ -332,6 +332,11 @@
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
     },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "搜索菜单...",
+      "SEARCH_CLEAR_ARIA": "清除菜单搜索",
+      "NO_RESULTS": "未找到菜单"
+    },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
       "SUBTITLE": "物流管理",

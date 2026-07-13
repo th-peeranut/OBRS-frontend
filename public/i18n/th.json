@@ -332,6 +332,11 @@
       "REFUND_VOID_REPORT": "สรุปการคืนเงิน / ยกเลิกตั๋ว",
       "CASH_ONLINE_RECONCILIATION": "กระทบยอดเงินสด / ออนไลน์"
     },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "ค้นหาเมนู...",
+      "SEARCH_CLEAR_ARIA": "ล้างการค้นหาเมนู",
+      "NO_RESULTS": "ไม่พบเมนู"
+    },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
       "SUBTITLE": "ผู้ดูแลระบบโลจิสติกส์",

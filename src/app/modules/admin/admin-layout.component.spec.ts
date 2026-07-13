@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
 
@@ -201,6 +201,92 @@ describe('AdminLayoutComponent', () => {
     } finally {
       authStub.hasAnyRole = original;
     }
+  });
+
+  // ── OBRS-290: sidebar menu search ───────────────────────────────────────────
+  type SearchComp = {
+    navItems: Array<{ path: string }>;
+    filteredNavItems: Array<{ path: string }>;
+    navSearchQuery: string;
+    applyNavSearch(q: string): void;
+    clearNavSearch(): void;
+  };
+
+  function seedNavTranslations(): void {
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      ADMIN: {
+        PAGES: {
+          DASHBOARD: 'Dashboard',
+          PROMOTIONS: 'Promotions',
+          LOOKUP_SETTINGS: 'Lookups',
+        },
+        // description (subtitle) source the search also matches on
+        LOOKUP: { SUBTITLE: 'Manage reference data such as provinces and statuses' },
+        DASHBOARD_SUB: {},
+      },
+    });
+    translate.use('en');
+  }
+
+  it('filters nav items by translated menu label', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    comp.applyNavSearch('promotion');
+    expect(comp.filteredNavItems.length).toBe(1);
+    expect(comp.filteredNavItems[0].path).toBe('promotions');
+  });
+
+  it('matches on the menu DESCRIPTION, not just the label (OBRS-290 core case)', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    // "provinces" appears only in the Lookups DESCRIPTION, never in any label
+    comp.applyNavSearch('provinces');
+    expect(comp.filteredNavItems.some((i) => i.path === 'lookups'))
+      .withContext('a menu should be findable by what its description says it does')
+      .toBeTrue();
+    expect(comp.filteredNavItems.every((i) => i.path === 'lookups')).toBeTrue();
+  });
+
+  it('restores the full list when the query is cleared', () => {
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    const full = comp.navItems.length;
+    comp.applyNavSearch('dashboard');
+    expect(comp.filteredNavItems.length).toBeLessThan(full);
+    comp.clearNavSearch();
+    expect(comp.filteredNavItems.length).toBe(full);
+    expect(comp.navSearchQuery).toBe('');
+  });
+
+  it('yields an empty filtered list (and no-results hint) when nothing matches', () => {
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    comp.applyNavSearch('zzz-no-such-menu-zzz');
+    fixture.detectChanges();
+    expect(comp.filteredNavItems.length).toBe(0);
+    expect(fixture.debugElement.query(By.css('.admin-nav-empty')))
+      .withContext('a no-results hint should render for a non-matching query')
+      .toBeTruthy();
+  });
+
+  it('renders only the matching nav links in the DOM after a search', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    comp.applyNavSearch('promotion');
+    fixture.detectChanges();
+    const links = fixture.debugElement.queryAll(By.css('.admin-nav-link:not(.admin-nav-btn)'));
+    expect(links.length).toBe(1);
+  });
+
+  it('clears the search (restores the full list) when a nav result is clicked', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    const full = comp.navItems.length;
+    comp.applyNavSearch('promotion');
+    fixture.detectChanges();
+    const link = fixture.debugElement.query(By.css('.admin-nav-link:not(.admin-nav-btn)'));
+    link.triggerEventHandler('click', null); // fires onNavLinkClick() + clearNavSearch()
+    expect(comp.navSearchQuery).toBe('');
+    expect(comp.filteredNavItems.length).toBe(full);
   });
 });
 
