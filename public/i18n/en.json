@@ -332,6 +332,11 @@
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
     },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "Search menu...",
+      "SEARCH_CLEAR_ARIA": "Clear menu search",
+      "NO_RESULTS": "No menu found"
+    },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
       "SUBTITLE": "Logistics Admin",
