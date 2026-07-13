@@ -15,6 +15,17 @@
   z-index: 1400;
 }
 
+// OBRS-265: the AuthGuard no-permission bounce alert (AlertService.permissionDenied)
+// obscures the just-bounced-to destination behind a blurred, slightly darker
+// backdrop so the page underneath reads as "calm" rather than a fully legible
+// page with a modal floating on top. Theme-agnostic (a dark translucent + blur
+// overlay reads correctly in both light and dark mode). Not a security control.
+.swal2-container.swal-guard-backdrop {
+  background: rgba(15, 18, 25, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
 * {
   font-family: "Sarabun", sans-serif;
 }
