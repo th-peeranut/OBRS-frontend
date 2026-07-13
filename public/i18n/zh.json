@@ -328,7 +328,8 @@
       "REPORTS": "报告",
       "SETTLEMENTS": "分账结算",
       "EOD_SALES_REPORT": "每日销售报告",
-      "REMINDER_CONFIG": "提醒时间设置"
+      "REMINDER_CONFIG": "提醒时间设置",
+      "REFUND_VOID_REPORT": "退款/作废汇总"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -915,6 +916,40 @@
       "MINUTES_LABEL": "上车提醒（提前分钟数）",
       "MINUTES_HELPER": "发车前多少分钟发送上车提醒。",
       "LOAD_FAILED": "无法加载提醒时间设置。"
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "BASIS_NOTE": "退款和作废按处理日期统计，而非原订单日期或出发日期。",
+      "PARTITION_NOTE": "作废分为已取消（人工取消）和已过期（未支付超时）两类，两者之和等于作废总额。",
+      "CARD": {
+        "REFUNDED": "已退款（毛额）",
+        "REFUNDED_HINT": "扣除任何手续费之前退还给客户的总金额。",
+        "MANUAL_PENDING": "待人工退款",
+        "VOIDED": "已作废",
+        "CANCELLED": "已取消",
+        "EXPIRED": "已过期",
+        "COUNT_LABEL": "数量"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期",
+        "REFUNDED_COUNT": "退款（数量）",
+        "REFUNDED_AMOUNT": "退款（金额）",
+        "MANUAL_COUNT": "人工（数量）",
+        "MANUAL_AMOUNT": "人工（金额）",
+        "VOIDED_COUNT": "作废（数量）",
+        "VOIDED_AMOUNT": "作废（金额）"
+      },
+      "EXPAND_ARIA": "显示取消/过期明细",
+      "COLLAPSE_ARIA": "隐藏取消/过期明细",
+      "EMPTY": "所选日期范围内没有退款或作废的票务。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
+      }
     }
   },
   "AUTH": {
@@ -1606,7 +1641,19 @@
         "PLACEHOLDER": "粘贴或扫描登车令牌",
         "BUTTON": "验证 / 登车",
         "VALIDATING": "验证中…",
-        "CAMERA_SOON": "摄像头扫描功能即将推出 — 目前请手动输入令牌。",
+        "MODE_TOGGLE_LABEL": "登车扫描模式",
+        "MODE_TEXT": "文本",
+        "MODE_CAMERA": "摄像头",
+        "CAMERA": {
+          "HINT": "将摄像头对准乘客电子票上的二维码。",
+          "SCANNING": "扫描中…",
+          "REQUESTING": "正在请求摄像头权限…",
+          "DENIED": "摄像头访问被拒绝。请在浏览器设置中允许摄像头权限，然后重试。",
+          "NO_CAMERA": "此设备未找到摄像头。",
+          "UNSUPPORTED": "此设备/浏览器不支持摄像头扫描。",
+          "ERROR": "无法启动摄像头，请重试。",
+          "RETRY": "重试"
+        },
         "SUCCESS_TITLE": "已登车",
         "RESULT_NAME": "乘客",
         "RESULT_SEAT": "座位",

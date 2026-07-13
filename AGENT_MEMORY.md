@@ -2672,3 +2672,28 @@ explicitly invoked. An unconditional global print rule is a whole-app regression
 - No i18n changes needed for this final layout pass — `SEAT_PER_PASSENGER`'s "/ที่นั่ง"-shaped value
   (already leading-slash in all three locales from the prior polish commit) works unchanged whether
   it's read on the availability line or the price line.
+
+## OBRS-266 scrutinize self-fix — camera startup teardown race (2026-07-11)
+
+`startCameraScan()` assigned `this.scannerControls`/`cameraStatus='active'` only AFTER
+awaiting `decodeFromVideoDevice()` (Promise). The mode-toggle buttons are disabled on
+`isScanning` but NOT during the camera `requesting` phase, so an operator can tap "Text"
+(or a scheduleId re-bind / arrived-transition can fire) mid-startup. `stopCameraStream()`
+then runs while `scannerControls` is still null (no-op), the pending promise later resolves,
+and a now-LIVE MediaStream gets stored into `scannerControls` with `cameraStatus='active'`
+while `scanMode==='text'` — an orphan stream (camera light stays on) nothing stops until the
+next teardown.
+
+Fix (pattern to remember): after any `await` that acquires a resource you also tear down
+elsewhere, re-check the teardown-owned flag BEFORE committing the resource:
+```ts
+const controls = await this.codeReader.decodeFromVideoDevice(...);
+if (this.cameraStatus !== 'requesting') { controls.stop(); return; } // torn down mid-await
+this.scannerControls = controls;
+this.cameraStatus = 'active';
+```
+`cameraStatus !== 'requesting'` catches all teardown paths at once (stopCameraStream sets it
+to 'idle'; re-bind/toggle also set scanMode='text'). Locked with a fakeAsync spec that resolves
+the decode promise AFTER a text-toggle and asserts `stop()` called once + `scannerControls` null.
+General lesson: an idempotent teardown helper only protects against a resource that ALREADY
+exists — it can't cancel one still in flight; guard the post-await assignment too.
