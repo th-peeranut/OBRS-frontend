@@ -7,6 +7,14 @@ export interface BookingPassenger {
   lastName: string;
   identityCardNumber?: string | null;
   phoneNumber?: string | null;
+  /**
+   * OBRS-296: per-passenger fare category — SEPARATE from `passengerType`
+   * (which carries gender: male/female/monk/nun). The server computes the
+   * 50% child discount off this field; the client never precomputes it
+   * (see `PassengerInfoComponent.calculateTotalAmount()`, which still sends
+   * the gross full-fare total).
+   */
+  fareCategory: 'adult' | 'child';
 }
 
 export interface BookingContact {

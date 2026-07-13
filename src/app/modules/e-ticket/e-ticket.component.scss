@@ -339,6 +339,16 @@
   color: $text-softblack;
 }
 
+// OBRS-296: child-fare boarding-check note. Static token only
+// ($text-lightblack) — this ticket paper is intentionally exempt from dark
+// theming (dark-theme.scss §15), matching the existing static-token
+// precedent on this surface (see .ticket-nav-btn above).
+.child-fare-note {
+  display: block;
+  font-size: 11px;
+  color: $text-lightblack;
+}
+
 .download-btn {
   display: flex;
   align-items: center;

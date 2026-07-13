@@ -120,6 +120,9 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
     name: ticket.passengerName?.trim() || '-',
     phone: '-',
     seat: ticket.seatNumber?.trim() || '-',
+    // OBRS-296: server-authoritative — carried straight through, never
+    // re-derived client-side.
+    fareCategory: ticket.fareCategory ?? null,
   }));
 }
 

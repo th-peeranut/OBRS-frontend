@@ -3,6 +3,10 @@ export interface TicketPassenger {
   name: string;
   phone: string;
   seat: string;
+  /** OBRS-296: `undefined`/`null` for the booker row (which has no fare
+   *  category of its own) and for a pre-API render where the ticket API
+   *  response hasn't landed yet. */
+  fareCategory?: 'adult' | 'child' | null;
 }
 
 /** Presentation-ready fields for a single leg (outbound or return) of the e-ticket card. */

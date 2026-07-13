@@ -77,4 +77,35 @@ describe('PassengerInfoFormComponent', () => {
       expect(component.getFormValue(1, 'passengerSeatReturn')).toBe('');
     });
   });
+
+  describe('fare-category radio (OBRS-296) — isAdult stays a real boolean', () => {
+    // Locks the exact bug the spec calls out: the gender radios use a
+    // string-attribute `value="MALE"` form, which is safe only because
+    // gender is a String control. Copying that form onto the BOOLEAN isAdult
+    // control (`value="false"`) would coerce every child to truthy. The
+    // template MUST use property binding `[value]="true"`/`[value]="false"` —
+    // this test simulates exactly that (a real boolean patchValue, not a
+    // DOM-attribute string) and asserts the control holds a boolean, never
+    // the string "false".
+    it('selecting Child sets isAdult to boolean false (not the string "false")', () => {
+      component.insertPassenger(true); // starts adult
+      const group = component.passengerData.at(0);
+
+      group.get('isAdult')?.setValue(false);
+
+      expect(group.get('isAdult')?.value).toBe(false);
+      expect(group.get('isAdult')?.value).not.toBe('false');
+      expect(typeof group.get('isAdult')?.value).toBe('boolean');
+    });
+
+    it('selecting Adult sets isAdult to boolean true (not the string "true")', () => {
+      component.insertPassenger(false); // starts child
+      const group = component.passengerData.at(0);
+
+      group.get('isAdult')?.setValue(true);
+
+      expect(group.get('isAdult')?.value).toBe(true);
+      expect(typeof group.get('isAdult')?.value).toBe('boolean');
+    });
+  });
 });
