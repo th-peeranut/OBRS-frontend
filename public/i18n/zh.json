@@ -335,7 +335,14 @@
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
       "SEARCH_CLEAR_ARIA": "清除菜单搜索",
-      "NO_RESULTS": "未找到菜单"
+      "NO_RESULTS": "未找到菜单",
+      "SECTION": {
+        "OVERVIEW": "概览",
+        "MASTER_DATA": "主数据",
+        "OPERATIONS": "运营",
+        "REPORTS": "报表与财务",
+        "SYSTEM": "系统"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",

@@ -335,7 +335,14 @@
     "NAV": {
       "SEARCH_PLACEHOLDER": "ค้นหาเมนู...",
       "SEARCH_CLEAR_ARIA": "ล้างการค้นหาเมนู",
-      "NO_RESULTS": "ไม่พบเมนู"
+      "NO_RESULTS": "ไม่พบเมนู",
+      "SECTION": {
+        "OVERVIEW": "ภาพรวม",
+        "MASTER_DATA": "ข้อมูลหลัก",
+        "OPERATIONS": "งานปฏิบัติการ",
+        "REPORTS": "รายงาน & การเงิน",
+        "SYSTEM": "ระบบ"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
