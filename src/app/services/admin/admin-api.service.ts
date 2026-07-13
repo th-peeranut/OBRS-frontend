@@ -20,6 +20,7 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
+import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -581,6 +582,15 @@ export interface UpdateRoundTripPromotionPayload {
   minBookingAmount?: number;
 }
 
+// OBRS-223: reminder-timing config, a singleton row (like the round-trip
+// promotion above) — GET/PUT `/api/private/admin/configs/reminders`, shipped
+// backend-only by OBRS-139. Both fields are required positive integers on
+// the wire; the backend evicts its cache after PUT (no FE cache concern).
+export interface ReminderConfigDto {
+  reminderHoursBeforeDeparture: number;
+  boardingReminderMinutesBeforeDeparture: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -976,6 +986,16 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-98: refund / void summary report — mirrors getReportsSummary's [from, to]
+  // HttpParams shape.
+  getRefundVoidReport(from: string, to: string): Observable<ResponseAPI<RefundVoidReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RefundVoidReportDto>(
+      `${this.baseUrl}/private/admin/reports/refund-void`,
+      params
+    );
+  }
+
   getSettlementSchedule(id: number): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
     return this.getRequest<SettlementScheduleDetailDto>(
       `${this.baseUrl}/private/settlements/schedules/${id}`
@@ -1036,6 +1056,21 @@ export class AdminApiService {
   ): Observable<ResponseAPI<unknown>> {
     return this.patchRequest<unknown>(
       `${this.baseUrl}/private/admin/promotions/round-trip`,
+      payload
+    );
+  }
+
+  // OBRS-223: reminder-timing config is a singleton row (like the round-trip
+  // promotion above), ADMIN-only (403 for non-admin per the backend contract).
+  getReminderConfig(): Observable<ResponseAPI<ReminderConfigDto>> {
+    return this.getRequest<ReminderConfigDto>(`${this.baseUrl}/private/admin/configs/reminders`);
+  }
+
+  updateReminderConfig(
+    payload: ReminderConfigDto
+  ): Observable<ResponseAPI<ReminderConfigDto>> {
+    return this.putRequest<ReminderConfigDto>(
+      `${this.baseUrl}/private/admin/configs/reminders`,
       payload
     );
   }

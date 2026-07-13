@@ -1,0 +1,64 @@
+@import "../../../../../styles/variables.scss";
+
+// State messages (invalid range / fetch error / empty report) that stand in for the
+// cards+table — centered and padded so the message reads as the body's content, not a
+// stray line above zero rows. Same treatment as reports-state-card / eod-report-state-card.
+.refund-void-state-card,
+.refund-void-empty-note {
+  text-align: center;
+  padding: 2rem 1rem;
+  margin: 0;
+}
+
+// Reused pattern (design-system.md §12, OBRS-231): right-aligned money/count columns for
+// a reconciliation-style table where columns of numbers need to scan/sum visually.
+.refund-void-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+// Card label row (muted field name + inline info-hint button) shares one line.
+.refund-void-card-label {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// Size-only override of the canonical `.admin-icon-btn` (36px) for a compact inline hint
+// trigger next to a KPI card's muted label — reuses the same tokens/hover states, no new
+// color. Not a new control, just a smaller instance of the existing one.
+.refund-void-info-btn {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+}
+
+.refund-void-sub-line {
+  font-size: 0.8rem;
+}
+
+// Reused pattern (design-system.md §12, OBRS-231 "Expandable per-row detail"): the
+// `.admin-icon-btn` chevron + sibling detail row, on the same "structural, not data"
+// surface already used for `.admin-table thead`.
+.refund-void-detail-row td {
+  background: var(--admin-surface-soft);
+  padding: 10px 14px;
+}
+
+.refund-void-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Same visual treatment as eod-sales-report-page.component.scss's `.eod-report-method-chip`
+// (component styles are view-encapsulated, so it can't be referenced directly across
+// components — this is the equivalent local class for this page).
+.refund-void-chip {
+  color: var(--admin-muted);
+  font-size: 0.85rem;
+}

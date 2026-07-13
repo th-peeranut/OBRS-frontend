@@ -327,7 +327,9 @@
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
       "SETTLEMENTS": "Settlements",
-      "EOD_SALES_REPORT": "End-of-day Sales"
+      "EOD_SALES_REPORT": "End-of-day Sales",
+      "REMINDER_CONFIG": "Reminder Timing",
+      "REFUND_VOID_REPORT": "Refund / Void Summary"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -389,7 +391,9 @@
       "EMAIL_EXIST": "This email is already in use.",
       "PHONE_NO_EXIST": "This phone number is already in use.",
       "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
-      "FORM_INVALID": "Please complete the highlighted required fields."
+      "FORM_INVALID": "Please complete the highlighted required fields.",
+      "WHOLE_NUMBER": "Please enter a whole number (no decimals).",
+      "POSITIVE_NUMBER": "Please enter a number greater than 0."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -903,6 +907,48 @@
         "SHOPEEPAY": "ShopeePay",
         "RABBIT_LINEPAY": "Rabbit LINE Pay",
         "OTHER": "Other"
+      }
+    },
+    "REMINDER_CONFIG": {
+      "SUBTITLE": "Set how far in advance departure and boarding reminders are sent.",
+      "HOURS_LABEL": "Departure Reminder (hours before)",
+      "HOURS_HELPER": "How many hours before departure the reminder notification is sent.",
+      "MINUTES_LABEL": "Boarding Reminder (minutes before)",
+      "MINUTES_HELPER": "How many minutes before departure the boarding reminder is sent.",
+      "LOAD_FAILED": "Unable to load the reminder-timing config."
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
+      "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
+      "CARD": {
+        "REFUNDED": "Refunded (gross)",
+        "REFUNDED_HINT": "Gross amount refunded to customers, before any processing fees are deducted.",
+        "MANUAL_PENDING": "Refund pending (manual)",
+        "VOIDED": "Voided",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired",
+        "COUNT_LABEL": "Count"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date",
+        "REFUNDED_COUNT": "Refunded (count)",
+        "REFUNDED_AMOUNT": "Refunded (amount)",
+        "MANUAL_COUNT": "Manual (count)",
+        "MANUAL_AMOUNT": "Manual (amount)",
+        "VOIDED_COUNT": "Voided (count)",
+        "VOIDED_AMOUNT": "Voided (amount)"
+      },
+      "EXPAND_ARIA": "Show cancelled/expired breakdown",
+      "COLLAPSE_ARIA": "Hide cancelled/expired breakdown",
+      "EMPTY": "No refunds or voided tickets in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
     }
   },
