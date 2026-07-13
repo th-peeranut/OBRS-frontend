@@ -282,4 +282,25 @@ describe('AdminApiService', () => {
       req.flush({ code: 200, message: 'OK', data: null });
     });
   });
+
+  // OBRS-283: soft-cancel endpoint used instead of deleteSchedule() when a
+  // schedule row's `deletable` field is `false`.
+  describe('cancelSchedule', () => {
+    it('issues a POST to /api/private/schedules/{id}/cancel with an empty body and resolves the response shape', () => {
+      let result: { scheduleId: number; status: string; affectedBookingCount: number } | undefined;
+      service.cancelSchedule(42).subscribe((resp) => (result = resp.data));
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/schedules/42/cancel`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({});
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { scheduleId: 42, status: 'cancelled', affectedBookingCount: 3 },
+      });
+
+      expect(result).toEqual({ scheduleId: 42, status: 'cancelled', affectedBookingCount: 3 });
+    });
+  });
 });

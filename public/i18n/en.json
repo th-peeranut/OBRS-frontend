@@ -376,7 +376,12 @@
       "DELETE": "Delete",
       "DELETING": "Deleting...",
       "DELETE_CONFIRM_TITLE": "Confirm Delete",
-      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?"
+      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "CANCELLING": "Cancelling..."
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -412,7 +417,13 @@
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
-      "UNLOCK_FAILED": "Unable to unlock the account."
+      "UNLOCK_FAILED": "Unable to unlock the account.",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_BODY": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_BODY": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "SCHEDULE_CANCELLED": "Trip cancelled successfully. {{count}} booking(s) affected.",
+      "CANCEL_FAILED": "Unable to cancel the trip."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",

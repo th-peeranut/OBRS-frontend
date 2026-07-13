@@ -38,6 +38,10 @@ export interface ScheduleRow {
   status: string;
   statusCode: string;
   updatedAt: string;
+  // OBRS-283: drives the delete-vs-cancel confirm-dialog branch — see
+  // shared/lib/schedule-delete-mode.ts.
+  deletable?: boolean;
+  confirmedBookingCount?: number;
 }
 
 export interface Option {
@@ -136,6 +140,8 @@ export function toRow(s: AdminScheduleDto, locale: string): ScheduleRow {
     status: status.name,
     statusCode: status.code,
     updatedAt: s.updatedAt ?? s.createdAt ?? '-',
+    deletable: s.deletable,
+    confirmedBookingCount: s.confirmedBookingCount,
   };
 }
 

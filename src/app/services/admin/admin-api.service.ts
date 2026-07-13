@@ -236,6 +236,23 @@ export interface AdminScheduleDto {
   driver?: AdminDriverInfoDto;
   /** Overridden seating capacity; null means use vehicleType.totalSeats as the effective value. */
   seatingCapacity?: number | null;
+  // OBRS-283: whether this trip can still be hard-DELETEd (no booking history
+  // referencing it). `false` means the delete button must instead soft-cancel
+  // via `POST /schedules/{id}/cancel` — see shared/lib/schedule-delete-mode.ts.
+  // Optional/undefined on a cached row predating this field, or on a Schedule
+  // Set row (a different endpoint/DTO — sets never carry this field).
+  deletable?: boolean;
+  /** OBRS-283: count of CONFIRMED bookings affected by cancelling this trip
+   * (drives the refund vs. no-refund confirm-dialog copy). */
+  confirmedBookingCount?: number;
+}
+
+// OBRS-283: response of POST /api/private/schedules/{id}/cancel (soft-cancel —
+// flips status to CANCELLED; affected CONFIRMED bookings are refunded async).
+export interface CancelScheduleRespDto {
+  scheduleId: number;
+  status: string;
+  affectedBookingCount: number;
 }
 
 export interface AdminPersonDto {
@@ -894,6 +911,15 @@ export class AdminApiService {
 
   deleteSchedule(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`);
+  }
+
+  // OBRS-283: soft-cancel — used instead of deleteSchedule() when the row's
+  // `deletable` field is `false` (see shared/lib/schedule-delete-mode.ts).
+  cancelSchedule(id: number): Observable<ResponseAPI<CancelScheduleRespDto>> {
+    return this.postRequest<CancelScheduleRespDto>(
+      `${this.baseUrl}/private/schedules/${id}/cancel`,
+      {}
+    );
   }
 
   generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {

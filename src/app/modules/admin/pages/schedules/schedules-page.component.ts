@@ -15,6 +15,10 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import {
+  ScheduleDeleteModalMode,
+  resolveScheduleDeleteModalMode,
+} from '../../../../shared/lib/schedule-delete-mode';
 import { TranslateService } from '@ngx-translate/core';
 import { SchedulesStore } from './schedules.store';
 import {
@@ -464,6 +468,32 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.selectedSchedule = null;
   }
 
+  // OBRS-283: Schedule SET rows (kind:'set') never carry deletable/
+  // confirmedBookingCount (a different endpoint/DTO) — the smart branch
+  // applies ONLY to Trip rows (kind:'schedule'); sets always hard-delete.
+  protected get deleteModalMode(): ScheduleDeleteModalMode {
+    if (!this.selectedSchedule || this.selectedSchedule.kind !== 'schedule') {
+      return 'delete';
+    }
+    return resolveScheduleDeleteModalMode(
+      this.selectedSchedule.deletable,
+      this.selectedSchedule.confirmedBookingCount
+    );
+  }
+
+  protected get deleteModalTitleKey(): string {
+    return this.deleteModalMode === 'delete'
+      ? 'ADMIN.COMMON.DELETE_CONFIRM_TITLE'
+      : 'ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE';
+  }
+
+  protected get deleteModalConfirmLabelKey(): string {
+    if (this.deleteModalMode === 'delete') {
+      return this.isDeleting ? 'ADMIN.COMMON.DELETING' : 'ADMIN.COMMON.DELETE';
+    }
+    return this.isDeleting ? 'ADMIN.COMMON.CANCELLING' : 'ADMIN.COMMON.CANCEL_TRIP_BTN';
+  }
+
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.scheduleForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
@@ -567,10 +597,29 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // Capture before closeDeleteModal clears selectedSchedule.
+    const { id, kind } = this.selectedSchedule;
+    const mode = this.deleteModalMode;
+
     this.isDeleting = true;
     try {
-      // Capture before closeDeleteModal clears selectedSchedule.
-      const { id, kind } = this.selectedSchedule;
+      if (mode !== 'delete') {
+        // OBRS-283: deletable===false — soft-cancel instead of hard-delete.
+        // The row itself isn't removed (its status flips to CANCELLED), so no
+        // optimistic mutate here; just refresh so the status badge updates.
+        const response = await firstValueFrom(this.adminApiService.cancelSchedule(id));
+        const affectedBookingCount = response?.data?.affectedBookingCount ?? 0;
+        this.closeDeleteModal(true);
+        const refresh = this.store.refresh();
+        await this.alertService.success(
+          this.translate.instant('ADMIN.MESSAGES.SCHEDULE_CANCELLED', {
+            count: affectedBookingCount,
+          })
+        );
+        await refresh;
+        return;
+      }
+
       if (kind === 'schedule') {
         await firstValueFrom(this.adminApiService.deleteSchedule(id));
       } else {
@@ -591,7 +640,9 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     } catch (error) {
       const message =
         extractApiErrorMessage(error) ||
-        this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+        this.translate.instant(
+          mode !== 'delete' ? 'ADMIN.MESSAGES.CANCEL_FAILED' : 'ADMIN.MESSAGES.DELETE_FAILED'
+        );
       await this.alertService.error(message);
     } finally {
       this.isDeleting = false;

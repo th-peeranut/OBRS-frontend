@@ -376,7 +376,12 @@
       "DELETE": "删除",
       "DELETING": "删除中...",
       "DELETE_CONFIRM_TITLE": "确认删除",
-      "DELETE_CONFIRM_MESSAGE": "此操作无法撤销，是否继续？"
+      "DELETE_CONFIRM_MESSAGE": "此操作无法撤销，是否继续？",
+      "CANCEL_TRIP_CONFIRM_TITLE": "确认取消行程",
+      "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} 个预订将自动退款并收到通知。",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "行程将被取消，不会产生退款。",
+      "CANCEL_TRIP_BTN": "取消行程",
+      "CANCELLING": "取消中..."
     },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项。",
@@ -412,7 +417,13 @@
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
-      "UNLOCK_FAILED": "无法解锁账户。"
+      "UNLOCK_FAILED": "无法解锁账户。",
+      "CANCEL_TRIP_CONFIRM_TITLE": "确认取消行程",
+      "CANCEL_TRIP_REFUND_BODY": "{{count}} 个预订将自动退款并收到通知。",
+      "CANCEL_TRIP_NO_REFUND_BODY": "行程将被取消，不会产生退款。",
+      "CANCEL_TRIP_BTN": "取消行程",
+      "SCHEDULE_CANCELLED": "行程已成功取消。受影响的预订：{{count}} 个。",
+      "CANCEL_FAILED": "无法取消行程。"
     },
     "LOOKUP": {
       "TITLE": "查找设置",

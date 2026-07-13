@@ -1011,6 +1011,65 @@ describe('SellPageComponent', () => {
     });
   });
 
+  // OBRS-283: smart delete/cancel branch driven by the trip's `deletable` +
+  // `confirmedBookingCount` fields (see shared/lib/schedule-delete-mode.ts).
+  describe('schedule management — OBRS-283 smart cancel branch', () => {
+    it('deletable===false + confirmedBookingCount>0 resolves the "cancel-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 4 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-refund');
+    });
+
+    it('deletable===false + confirmedBookingCount===0 resolves the "cancel-no-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 0 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-no-refund');
+    });
+
+    it('a trip missing `deletable` (undefined, the default from makeTrip()) falls through to "delete"', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('delete');
+    });
+
+    it('cancel-refund mode calls adminApiService.cancelSchedule() (not deleteSchedule()) and shows the success toast with the response affectedBookingCount', async () => {
+      const cancelSchedule = jasmine.createSpy('cancelSchedule').and.returnValue(
+        of({ data: { scheduleId: 10, status: 'cancelled', affectedBookingCount: 5 } })
+      );
+      const adminApi = { ...createAdminApiStub(), cancelSchedule };
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 5 });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(cancelSchedule).toHaveBeenCalledWith(10);
+      expect(adminApi.deleteSchedule).not.toHaveBeenCalled();
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.SCHEDULE_CANCELLED');
+    });
+
+    it('deletable===true still calls adminApiService.deleteSchedule() (unchanged)', async () => {
+      const adminApi = createAdminApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: true });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(adminApi.deleteSchedule).toHaveBeenCalledWith(10);
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.DELETED');
+    });
+  });
+
   // Regression: AC-1/AC-6 cold-open "Add schedule" has a blank route.
   // When the store hasn't loaded yet on first modal open, scheduleRouteOptions is
   // empty — so the form.reset() defaults route to ''. Fix: applyScheduleLocalization

@@ -376,7 +376,12 @@
       "DELETE": "ลบ",
       "DELETING": "กำลังลบ...",
       "DELETE_CONFIRM_TITLE": "ยืนยันการลบ",
-      "DELETE_CONFIRM_MESSAGE": "การกระทำนี้ไม่สามารถย้อนกลับได้ ต้องการดำเนินการต่อหรือไม่?"
+      "DELETE_CONFIRM_MESSAGE": "การกระทำนี้ไม่สามารถย้อนกลับได้ ต้องการดำเนินการต่อหรือไม่?",
+      "CANCEL_TRIP_CONFIRM_TITLE": "ยืนยันการยกเลิกทริป",
+      "CANCEL_TRIP_REFUND_MESSAGE": "การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติและได้รับการแจ้งเตือน",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "ทริปจะถูกยกเลิก ไม่มีการคืนเงิน",
+      "CANCEL_TRIP_BTN": "ยกเลิกทริป",
+      "CANCELLING": "กำลังยกเลิก..."
     },
     "VALIDATION": {
       "REQUIRED": "จำเป็นต้องกรอกข้อมูลนี้",
@@ -412,7 +417,13 @@
       "DELETE_CONFIRM_BODY": "การดำเนินการนี้ไม่สามารถยกเลิกได้ คุณต้องการดำเนินการต่อหรือไม่?",
       "DELETE_BTN": "ลบ",
       "UNLOCK_SUCCESS": "ปลดล็อกบัญชีสำเร็จ",
-      "UNLOCK_FAILED": "ไม่สามารถปลดล็อกบัญชีได้"
+      "UNLOCK_FAILED": "ไม่สามารถปลดล็อกบัญชีได้",
+      "CANCEL_TRIP_CONFIRM_TITLE": "ยืนยันการยกเลิกทริป",
+      "CANCEL_TRIP_REFUND_BODY": "การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติและได้รับการแจ้งเตือน",
+      "CANCEL_TRIP_NO_REFUND_BODY": "ทริปจะถูกยกเลิก ไม่มีการคืนเงิน",
+      "CANCEL_TRIP_BTN": "ยกเลิกทริป",
+      "SCHEDULE_CANCELLED": "ยกเลิกทริปสำเร็จ ({{count}} รายการจองที่ได้รับผลกระทบ)",
+      "CANCEL_FAILED": "ไม่สามารถยกเลิกทริปได้"
     },
     "LOOKUP": {
       "TITLE": "ตั้งค่า Lookup",
