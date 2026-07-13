@@ -80,6 +80,47 @@
   gap: 10px;
 }
 
+.boarding-scan-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+// OBRS-266: segmented text/camera toggle. Grouped visually (no gap between
+// the two buttons, shared border) so it reads as one control, not two
+// unrelated buttons — same intent as a PrimeNG p-selectButton without adding
+// a second control library for a two-option toggle.
+.boarding-scan-mode-toggle {
+  display: inline-flex;
+  border-radius: 999px;
+  overflow: hidden;
+  // var(--admin-outline), not the .admin-btn default hairline literal — this
+  // already resolves per-theme (see admin-theme.scss), no separate .is-dark
+  // override needed for this wrapper.
+  border: 1px solid var(--admin-outline);
+
+  .admin-btn {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .admin-btn + .admin-btn {
+    border-left: 1px solid var(--admin-outline);
+  }
+
+  // Active segment — reads as "selected", distinct from admin-btn-primary
+  // (design-system §4: one primary per screen; the primary here stays the
+  // scan Validate button, not the mode toggle).
+  .admin-btn.is-active {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 700;
+  }
+}
+
 .boarding-scan-input-row {
   display: flex;
   gap: 10px;
@@ -95,6 +136,104 @@
 .boarding-scan-btn {
   flex: 0 0 auto;
   white-space: nowrap;
+}
+
+// OBRS-266: camera QR-scan viewfinder.
+.boarding-scan-camera {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.boarding-scan-camera-viewport {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--admin-surface-soft);
+}
+
+.boarding-scan-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Reticle = scan-mask technique: a bordered window PLUS a huge box-shadow
+// that dims everything outside it, so the frame reads clearly against a
+// bright QR code (contrast comes from the dim boundary, not the border alone).
+.boarding-scan-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 62%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  border: 3px solid var(--accent-strong);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+
+.boarding-scan-chip {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: var(--accent-contrast);
+  font-size: 12px;
+  font-weight: 700;
+
+  .material-symbols-outlined {
+    font-size: 15px;
+  }
+}
+
+.boarding-scan-camera-requesting {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--accent-contrast);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+// OBRS-266: camera fallback (denied/no-camera/unsupported/error) — reuses the
+// design-system §12 full-section empty-state pattern (vehicle-maintenance-panel
+// precedent): centered icon/title/body, --admin-muted/--admin-text only.
+.boarding-scan-camera-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+
+  .material-symbols-outlined {
+    font-size: 36px;
+    color: var(--admin-muted);
+  }
+}
+
+.boarding-scan-camera-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
 }
 
 .boarding-scan-camera-hint {
@@ -149,6 +288,12 @@
 // Bootstrap's defaults untouched. `!important` is needed where Bootstrap uses
 // `!important` utilities.
 :host-context(.admin-shell.is-dark) {
+  // OBRS-266: the mode toggle / camera viewport / reticle / chip / fallback
+  // empty-state are all built from `--accent*` / `--admin-*` CSS vars (plus
+  // the reticle/chip's `rgba(0,0,0,…)` dim overlay, which is theme-agnostic
+  // by design — it always dims the live video feed, light or dark shell) —
+  // no separate override needed here; they theme for free (design-system §2.2).
+
   // scan-token card + manifest table card
   .card {
     background-color: var(--admin-surface-card);

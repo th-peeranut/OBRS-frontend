@@ -87,6 +87,11 @@ export interface WalkInTripDto {
   reservedUnpaidCount: number;
   soldPaidCount: number;
   availableSeatNumbers: string[];
+  // OBRS-283: mirrors AdminScheduleDto's same-named fields (admin-api.service.ts)
+  // — drives the delete-vs-cancel branch on the walk-in sell page's trip menu.
+  // Optional/undefined on a cached row predating this field.
+  deletable?: boolean;
+  confirmedBookingCount?: number;
 }
 
 export interface WalkInRouteGroupDto {

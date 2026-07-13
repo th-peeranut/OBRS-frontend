@@ -90,6 +90,19 @@
               <span class="value">{{ seats }}</span>
             </div>
           </div>
+          <div
+            class="ticket-item full"
+            *ngIf="originLatitude != null && originLongitude != null"
+          >
+            <button
+              type="button"
+              class="ticket-nav-btn"
+              (click)="navigateToPickup()"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">directions</span>
+              {{ "E_TICKET.BTN_NAVIGATE" | translate }}
+            </button>
+          </div>
         </div>
 
         <ng-container *ngIf="booker">

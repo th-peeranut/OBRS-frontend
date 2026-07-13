@@ -328,7 +328,21 @@
       "REPORTS": "Reports",
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
-      "REMINDER_CONFIG": "Reminder Timing"
+      "REMINDER_CONFIG": "Reminder Timing",
+      "REFUND_VOID_REPORT": "Refund / Void Summary",
+      "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
+    },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "Search menu...",
+      "SEARCH_CLEAR_ARIA": "Clear menu search",
+      "NO_RESULTS": "No menu found",
+      "SECTION": {
+        "OVERVIEW": "Overview",
+        "MASTER_DATA": "Master data",
+        "OPERATIONS": "Operations",
+        "REPORTS": "Reports & Finance",
+        "SYSTEM": "System"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -375,7 +389,12 @@
       "DELETE": "Delete",
       "DELETING": "Deleting...",
       "DELETE_CONFIRM_TITLE": "Confirm Delete",
-      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?"
+      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "CANCELLING": "Cancelling..."
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -411,7 +430,13 @@
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
-      "UNLOCK_FAILED": "Unable to unlock the account."
+      "UNLOCK_FAILED": "Unable to unlock the account.",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_BODY": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_BODY": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "SCHEDULE_CANCELLED": "Trip cancelled successfully. {{count}} booking(s) affected.",
+      "CANCEL_FAILED": "Unable to cancel the trip."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -915,6 +940,69 @@
       "MINUTES_LABEL": "Boarding Reminder (minutes before)",
       "MINUTES_HELPER": "How many minutes before departure the boarding reminder is sent.",
       "LOAD_FAILED": "Unable to load the reminder-timing config."
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
+      "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
+      "CARD": {
+        "REFUNDED": "Refunded (gross)",
+        "REFUNDED_HINT": "Gross amount refunded to customers, before any processing fees are deducted.",
+        "MANUAL_PENDING": "Refund pending (manual)",
+        "VOIDED": "Voided",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired",
+        "COUNT_LABEL": "Count"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date",
+        "REFUNDED_COUNT": "Refunded (count)",
+        "REFUNDED_AMOUNT": "Refunded (amount)",
+        "MANUAL_COUNT": "Manual (count)",
+        "MANUAL_AMOUNT": "Manual (amount)",
+        "VOIDED_COUNT": "Voided (count)",
+        "VOIDED_AMOUNT": "Voided (amount)"
+      },
+      "EXPAND_ARIA": "Show cancelled/expired breakdown",
+      "COLLAPSE_ARIA": "Hide cancelled/expired breakdown",
+      "EMPTY": "No refunds or voided tickets in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "CASH_ONLINE_RECONCILIATION": {
+      "SUBTITLE": "Cash, online, and other payment totals collected for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Cash, Online, and Other are bucketed by the date the booking was created, not the travel date.",
+      "PARTITION_NOTE": "Payments split into Cash (staff-collected), Online (card, PromptPay, and other digital gateways), and Other (bank transfer and miscellaneous) — every collected payment falls into exactly one bucket.",
+      "CARD": {
+        "CASH": "Cash",
+        "ONLINE": "Online",
+        "OTHER": "Other",
+        "COLLECTED": "Collected",
+        "REFUNDED": "Refunded",
+        "NET": "Net",
+        "COUNT_LABEL": "Count",
+        "TOTAL_COLLECTED": "Total Collected"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date"
+      },
+      "EXPAND_ARIA": "Show payment counts",
+      "COLLAPSE_ARIA": "Hide payment counts",
+      "EMPTY": "No payments collected in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
     }
   },
   "AUTH": {
@@ -1233,6 +1321,7 @@
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
       "DETAIL_TIME": "Approx. {{time}}",
       "BTN_OPEN_MAPS": "Open in Google Maps",
+      "BTN_NAVIGATE": "Navigate",
       "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
       "VALIDATION_SELECT_PICKUP": "Please select a pickup point before confirming",
       "VALIDATION_SELECT_DROPOFF": "Please select a drop-off point before confirming",
@@ -1440,6 +1529,7 @@
   "E_TICKET": {
     "TITLE": "E-Ticket",
     "SUBTITLE": "NJ Phuyaipu online travel ticket",
+    "BTN_NAVIGATE": "Navigate",
     "LABEL": {
       "BOOKING_REF": "Booking ref",
       "TICKET_NO": "Ticket no.",
@@ -1605,7 +1695,19 @@
         "PLACEHOLDER": "Paste or scan the boarding token",
         "BUTTON": "Validate / Board",
         "VALIDATING": "Validating…",
-        "CAMERA_SOON": "Camera scanning is coming soon — enter the token manually for now.",
+        "MODE_TOGGLE_LABEL": "Boarding scan mode",
+        "MODE_TEXT": "Text",
+        "MODE_CAMERA": "Camera",
+        "CAMERA": {
+          "HINT": "Point the camera at the passenger's e-ticket QR code.",
+          "SCANNING": "Scanning…",
+          "REQUESTING": "Requesting camera access…",
+          "DENIED": "Camera access was denied. Allow camera permission in your browser settings, then try again.",
+          "NO_CAMERA": "No camera was found on this device.",
+          "UNSUPPORTED": "Camera scanning isn't supported on this device/browser.",
+          "ERROR": "Couldn't start the camera. Please try again.",
+          "RETRY": "Try again"
+        },
         "SUCCESS_TITLE": "Boarded",
         "RESULT_NAME": "Passenger",
         "RESULT_SEAT": "Seat",

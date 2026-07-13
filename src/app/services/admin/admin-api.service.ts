@@ -20,6 +20,8 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
+import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
+import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -241,6 +243,23 @@ export interface AdminScheduleDto {
    * (see `BoardingListComponent.isScheduleDelayed`). `null`/absent = not delayed. */
   delayedDepartureDateTime?: string | null;
   delayReason?: string | null;
+  // OBRS-283: whether this trip can still be hard-DELETEd (no booking history
+  // referencing it). `false` means the delete button must instead soft-cancel
+  // via `POST /schedules/{id}/cancel` — see shared/lib/schedule-delete-mode.ts.
+  // Optional/undefined on a cached row predating this field, or on a Schedule
+  // Set row (a different endpoint/DTO — sets never carry this field).
+  deletable?: boolean;
+  /** OBRS-283: count of CONFIRMED bookings affected by cancelling this trip
+   * (drives the refund vs. no-refund confirm-dialog copy). */
+  confirmedBookingCount?: number;
+}
+
+// OBRS-283: response of POST /api/private/schedules/{id}/cancel (soft-cancel —
+// flips status to CANCELLED; affected CONFIRMED bookings are refunded async).
+export interface CancelScheduleRespDto {
+  scheduleId: number;
+  status: string;
+  affectedBookingCount: number;
 }
 
 export interface AdminPersonDto {
@@ -901,6 +920,15 @@ export class AdminApiService {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`);
   }
 
+  // OBRS-283: soft-cancel — used instead of deleteSchedule() when the row's
+  // `deletable` field is `false` (see shared/lib/schedule-delete-mode.ts).
+  cancelSchedule(id: number): Observable<ResponseAPI<CancelScheduleRespDto>> {
+    return this.postRequest<CancelScheduleRespDto>(
+      `${this.baseUrl}/private/schedules/${id}/cancel`,
+      {}
+    );
+  }
+
   generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(
       `${this.baseUrl}/private/schedule-set/${id}/generate-schedules`,
@@ -987,6 +1015,27 @@ export class AdminApiService {
     const params = new HttpParams().set('date', date);
     return this.getRequest<EodSalesReportDto>(
       `${this.baseUrl}/private/admin/reports/eod-salesperson`,
+      params
+    );
+  }
+
+  // OBRS-98: refund / void summary report — mirrors getReportsSummary's [from, to]
+  // HttpParams shape.
+  getRefundVoidReport(from: string, to: string): Observable<ResponseAPI<RefundVoidReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RefundVoidReportDto>(
+      `${this.baseUrl}/private/admin/reports/refund-void`,
+      params
+    );
+  }
+
+  getCashOnlineReconciliationReport(
+    from: string,
+    to: string
+  ): Observable<ResponseAPI<CashOnlineReconciliationReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<CashOnlineReconciliationReportDto>(
+      `${this.baseUrl}/private/admin/reports/cash-online-reconciliation`,
       params
     );
   }

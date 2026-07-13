@@ -10,6 +10,10 @@ import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-number';
 import {
+  ScheduleDeleteModalMode,
+  resolveScheduleDeleteModalMode,
+} from '../../../../shared/lib/schedule-delete-mode';
+import {
   PopularStopDto,
   RouteStopsDto,
   SegmentStopRefDto,
@@ -653,12 +657,24 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.deletingTrip = null;
   }
 
+  // OBRS-283: which confirm-dialog variant to show — see
+  // shared/lib/schedule-delete-mode.ts.
+  protected get scheduleDeleteModalMode(): ScheduleDeleteModalMode {
+    return resolveScheduleDeleteModalMode(
+      this.deletingTrip?.deletable,
+      this.deletingTrip?.confirmedBookingCount
+    );
+  }
+
   protected async confirmDeleteSchedule(): Promise<void> {
     if (!this.deletingTrip) { return; }
     const trip = this.deletingTrip;
     const scheduleId = trip.scheduleId;
+    const mode = this.scheduleDeleteModalMode;
 
-    // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned)
+    // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned).
+    // A cancelled trip is no longer sellable either, so this is safe for both
+    // the hard-delete and soft-cancel paths.
     this.routeGroups = this.routeGroups
       .map((group) => ({
         ...group,
@@ -667,7 +683,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       .filter((group) => group.trips.length > 0);
 
     // If the deleted trip was the selected trip, reset the selection
-    // so checkout can't POST against a deleted schedule.
+    // so checkout can't POST against a deleted/cancelled schedule.
     if (this.selectedTrip?.scheduleId === scheduleId) {
       this.selectedTrip = null;
       this.selectedRouteSlug = null;
@@ -683,11 +699,28 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.closeScheduleDelete(true);
 
     try {
+      if (mode !== 'delete') {
+        // OBRS-283: deletable===false — soft-cancel instead of hard-delete.
+        const response = await firstValueFrom(this.adminApiService.cancelSchedule(scheduleId));
+        const affectedBookingCount = response?.data?.affectedBookingCount ?? 0;
+        await this.alertService.success(
+          this.translate.instant('ADMIN.MESSAGES.SCHEDULE_CANCELLED', {
+            count: affectedBookingCount,
+          })
+        );
+        this.loadTrips(this.selectedDate); // reconcile
+        return;
+      }
+
       await firstValueFrom(this.adminApiService.deleteSchedule(scheduleId));
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.loadTrips(this.selectedDate); // reconcile
     } catch (error) {
-      const message = extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant(
+          mode !== 'delete' ? 'ADMIN.MESSAGES.CANCEL_FAILED' : 'ADMIN.MESSAGES.DELETE_FAILED'
+        );
       await this.alertService.error(message);
       this.loadTrips(this.selectedDate); // restore
     } finally {

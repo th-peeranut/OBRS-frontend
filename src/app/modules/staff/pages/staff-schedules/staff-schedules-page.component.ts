@@ -15,6 +15,10 @@ import {
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import {
+  ScheduleDeleteModalMode,
+  resolveScheduleDeleteModalMode,
+} from '../../../../shared/lib/schedule-delete-mode';
 import { StaffSchedulesStore } from './staff-schedules.store';
 import {
   Option,
@@ -190,6 +194,15 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
     this.selectedRow = null;
   }
 
+  // OBRS-283: which confirm-dialog variant to show — see
+  // shared/lib/schedule-delete-mode.ts.
+  protected get deleteModalMode(): ScheduleDeleteModalMode {
+    return resolveScheduleDeleteModalMode(
+      this.selectedRow?.deletable,
+      this.selectedRow?.confirmedBookingCount
+    );
+  }
+
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.scheduleItemForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
@@ -229,9 +242,26 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
 
   protected async confirmDelete(): Promise<void> {
     if (!this.selectedRow) return;
+    const id = this.selectedRow.id;
+    const mode = this.deleteModalMode;
     this.isDeleting = true;
     try {
-      const id = this.selectedRow.id;
+      if (mode !== 'delete') {
+        // OBRS-283: deletable===false — soft-cancel instead of hard-delete.
+        // The row stays (status flips to CANCELLED), so no optimistic mutate.
+        const response = await firstValueFrom(this.adminApiService.cancelSchedule(id));
+        const affectedBookingCount = response?.data?.affectedBookingCount ?? 0;
+        this.closeDeleteModal(true);
+        const refresh = this.store.refresh();
+        await this.alertService.success(
+          this.translate.instant('ADMIN.MESSAGES.SCHEDULE_CANCELLED', {
+            count: affectedBookingCount,
+          })
+        );
+        await refresh;
+        return;
+      }
+
       await firstValueFrom(this.adminApiService.deleteSchedule(id));
       this.store.mutate((d) => ({ ...d, schedules: d.schedules.filter((s) => s.id !== id) }));
       this.closeDeleteModal(true);
@@ -240,7 +270,11 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
       await refresh;
     } catch (error) {
       this.closeDeleteModal(true);
-      const message = extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant(
+          mode !== 'delete' ? 'ADMIN.MESSAGES.CANCEL_FAILED' : 'ADMIN.MESSAGES.DELETE_FAILED'
+        );
       await this.alertService.error(message);
     } finally {
       this.isDeleting = false;

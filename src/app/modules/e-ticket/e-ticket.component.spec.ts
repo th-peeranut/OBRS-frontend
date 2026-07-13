@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ETicketComponent } from './e-ticket.component';
 import { BookingService } from '../../services/booking/booking.service';
 import { TicketService } from '../../services/ticket/ticket.service';
+import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 
@@ -93,6 +94,7 @@ describe('ETicketComponent', () => {
   } as unknown as BookingService;
 
   let ticketServiceStub: jasmine.SpyObj<TicketService>;
+  let boardingQrService: BoardingQrService;
 
   const translateStub = {
     onLangChange: new Subject(),
@@ -106,11 +108,17 @@ describe('ETicketComponent', () => {
     ticketServiceStub.getBoardingToken.and.returnValue(
       of(null) as unknown as ReturnType<TicketService['getBoardingToken']>
     );
+    // Real BoardingQrService wired to the ticket-service stub (not a mock of
+    // the service itself) — a fresh instance per test, matching the
+    // component-scoped `providers: [BoardingQrService]` lifetime, so the
+    // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
+    // meaningful (OBRS-221 extraction).
+    boardingQrService = new BoardingQrService(ticketServiceStub);
 
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
-      ticketServiceStub,
+      boardingQrService,
       translateStub
     );
   });
@@ -218,6 +226,50 @@ describe('ETicketComponent', () => {
       (component as any).applyApiOverrides('en', storePassengers);
 
       expect(component.bookingNumber).toBe('STORE-REF');
+    });
+
+    it('OBRS-269: threads originLatitude/originLongitude from the outbound fromStop coords', () => {
+      const data = buildTicketsData();
+      data.journeys![0].fromStop!.latitude = 13.7563;
+      data.journeys![0].fromStop!.longitude = 100.5018;
+
+      apply(data);
+
+      expect(component.originLatitude).toBe(13.7563);
+      expect(component.originLongitude).toBe(100.5018);
+    });
+
+    it('OBRS-269: leaves originLatitude/originLongitude null when the outbound fromStop has no coords', () => {
+      apply(buildTicketsData());
+
+      expect(component.originLatitude).toBeNull();
+      expect(component.originLongitude).toBeNull();
+    });
+  });
+
+  describe('navigateToPickup (OBRS-269)', () => {
+    it('opens the Google Maps directions deep-link when coords are present', () => {
+      component.originLatitude = 13.7563;
+      component.originLongitude = 100.5018;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
+        '_blank',
+        'noopener,noreferrer'
+      );
+    });
+
+    it('does nothing when coords are missing', () => {
+      component.originLatitude = null;
+      component.originLongitude = null;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).not.toHaveBeenCalled();
     });
   });
 

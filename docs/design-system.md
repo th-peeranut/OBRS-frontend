@@ -346,6 +346,15 @@ enforced rule with a test behind it.
   (not counts like Bookings/Tickets). Reuse this class for the next reconciliation-style
   table instead of inventing a second right-align convention.
 
+- **Bespoke static-token button on a dark-theme-exempt surface** (OBRS-269,
+  `.ticket-nav-btn` on the e-ticket card/page's "Navigate to pickup" button): the
+  e-ticket paper is intentionally exempt from dark theming (`dark-theme.scss` §15
+  paper look), so this button is styled with fixed `$primary-blue`/`$primary-white`
+  SCSS tokens — never the runtime `--accent*` vars — matching the sibling
+  `.ticket-leg-heading`/`.trip-estimate` static-token rules already on that surface.
+  Reuse this precedent for the next control added to the ticket paper instead of
+  reaching for a themed token that won't apply there.
+
 - **Expandable per-row detail** (OBRS-231, `EodSalesReportPageComponent`'s `byMethod`
   breakdown): no accordion-row precedent existed in any admin table. Built from two
   already-themed primitives, not a new control — `.admin-icon-btn` +
@@ -356,7 +365,35 @@ enforced rule with a test behind it.
   default per row; expand state is page-local (not store state) and is cleared whenever
   the underlying row array's identity changes (a new fetch), so it never survives a filter
   change. Reuse this pattern for the next table that needs row-level drill-down instead of
-  introducing a modal or a second navigation level.
+  introducing a modal or a second navigation level. **Reused as-is** for
+  `RefundVoidReportPageComponent`'s cancelled/expired breakdown (OBRS-98), keyed by
+  `row.date` instead of a synthetic salesperson id.
+
+- **Compact inline info-hint button** (OBRS-98, `RefundVoidReportPageComponent`'s
+  Refunded card): a KPI card needed a short definitional tooltip ("gross, before fees")
+  next to its muted label. The canonical `.admin-icon-btn` is 36px, sized for a table's
+  chevron toggle — too large inline next to a small label. Rather than a new control,
+  `.refund-void-info-btn` is a **size-only** override (22px, smaller icon glyph) of
+  `.admin-icon-btn`, keeping its color/hover tokens untouched; exposed via `[title]` +
+  `[attr.aria-label]` (no new tooltip component). Reuse this modifier for the next
+  KPI-card hint instead of introducing a tooltip directive.
+
+- **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
+  card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
+  `--admin-danger-bg`/`--admin-danger-text` tokens (§2.4) — no new color, added to
+  `admin-theme.scss` alongside its siblings rather than a page-local rule, so the next
+  KPI card needing a danger tone doesn't re-derive it.
+
+- **Mandatory notes rendered independent of `contentState`** (OBRS-98,
+  `RefundVoidReportPageComponent`'s basis/partition notes): every prior report page
+  (`ReportsPageComponent`, `EodSalesReportPageComponent`) gates its captions inside the
+  loading/empty/data-only sections, so they disappear in the invalid-range/error states
+  along with the table. This page's basis note ("bucketed by processed date, not booking
+  date") and partition note ("Voided = Cancelled + Expired") are regulatory/definitional,
+  not data-dependent, so they render **unconditionally** — no `*ngIf` on `contentState`
+  at all. Reuse this only for a note that stays true regardless of whether the current
+  fetch succeeded; a note that describes the *data* (like the basis captions above)
+  should stay gated with its section.
 
 - **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,
   `BoardingListComponent`'s delay-ETA dialog): the first `*ngIf`-gated

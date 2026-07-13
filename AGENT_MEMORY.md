@@ -1,5 +1,252 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-13 — UX spec: wire cancel-trip smart button (OBRS-283) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-283-trip-cancel-refund-ui` (branch `ao/obrs-283-trip-cancel-refund-ui`).
+No code written this pass — UX/UI spec handoff. Not a new screen: one existing delete/cancel
+trigger on 3 pages becomes a data-driven branch, reusing each page's own pre-existing confirm-modal
+idiom verbatim. Full spec below; load-bearing findings first.
+
+**The 3 pages use TWO different confirm-modal idioms already — do not unify them, reuse each as-is:**
+1. `admin/pages/schedules/schedules-page.component.{ts,html}` — `isDeleteModalOpen` flag +
+   `adminModalBackdrop` directive + `.admin-modal.admin-modal-confirm`. This shell is **app-level
+   themed** in `admin-theme.scss` (`.is-dark .admin-modal` override at line 1159) — **zero new
+   component-scoped SCSS needed**, dark-safe already.
+2. `staff/pages/staff-schedules/staff-schedules-page.component.{ts,html}` AND
+   `staff/pages/sell/sell-page.component.{ts,html}` — both use a raw Bootstrap `.modal d-block`
+   with inline `style="background:rgba(0,0,0,0.5)"`, **not** the `.admin-modal` family. Grepped
+   `admin-theme.scss`/`dark-theme.scss` for `.modal-content`/`.modal-header`/`.modal-footer` —
+   **zero matches**. This raw-Bootstrap shell has **no dark-mode override anywhere in the
+   codebase today** — pre-existing debt shared by the sibling Edit-form modal and the current
+   hard-delete confirm modal already on both pages. OBRS-283 adds no new SCSS and does not worsen
+   this (same shell, new text inside it) — flagged as a follow-up Jira card candidate, out of
+   scope here.
+
+**Scoping gotcha caught before spec'ing:** on `admin/schedules-page`, the delete button exists on
+BOTH the Schedule-**Set** table (kind `'set'`, the recurring-generator template) and the
+Schedule-**Trip** table (kind `'schedule'`, the SA's `ScheduleRespDto`). The SA's `deletable`/
+`confirmedBookingCount` fields land only on `ScheduleRespDto` (trips), never on
+`AdminScheduleSetDto` (sets — a set has no bookings of its own). **The smart branch applies ONLY
+to Trip rows; Set rows keep their existing unconditional hard-delete, untouched.**
+`ScheduleRow.deletable`/`.confirmedBookingCount` are optional fields, populated only for
+`kind === 'schedule'` rows. Branch condition is **strict `=== false`** (not falsy) so a stale/
+pre-deploy cached row without the field falls through to today's safe hard-delete path, never a
+false-positive cancel-modal.
+
+**CRITICAL copy fix carried from the SA: "N การจอง" not "N ผู้โดยสาร".** `confirmedBookingCount`/
+`affectedBookingCount` count confirmed bookings (legs), not passengers — one booking can hold
+multiple seats. Every dialog/toast string below says "การจอง N รายการ" / "N booking(s)", never a
+passenger count.
+
+**Trigger element itself is unchanged on all 3 pages** — same delete icon-button (admin/staff-
+schedules-page) / same kebab "ลบตาราง" menu item (sell-page), same aria-label/translation key.
+Only the click handler becomes a branch (`openDeleteOrCancelModal()`) and the resulting dialog's
+title/body carries the real consequence — deliberately consistent across all 3 pages rather than
+relabeling the trigger differently per page.
+
+**New `AdminApiService.cancelSchedule(id)` method** (all 3 pages already inject
+`AdminApiService` for schedule CRUD) → `POST {baseUrl}/private/schedules/${id}/cancel` →
+`Observable<ResponseAPI<{ affectedBookingCount: number }>>`, mirroring the existing
+`deleteSchedule(id)` shape one line above it in `admin-api.service.ts`.
+
+**Error branching reuses the established `SCHEDULE_ERROR_*` prefix** (already used for
+`SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX`/`_CAPACITY_BELOW_OCCUPIED` in
+`walk-in-center-panel.component.ts` and `VEHICLE_UNDER_MAINTENANCE` via `extractScheduleErrorCode`
+in `schedules.mappers.ts`) — assumed names `SCHEDULE_ERROR_ALREADY_CANCELLED` (409),
+`SCHEDULE_ERROR_ALREADY_DEPARTED` (400), `SCHEDULE_ERROR_NOT_FOUND` (404), **not yet confirmed
+against a real backend `deriveErrorCode()` output** — same "built against the locked contract,
+flag in `docs/handoff.md` for backend confirmation" pattern used for every other assumed-errorCode
+entry in that file (OBRS-96, OBRS-110, OBRS-86). Implementer should add a `docs/handoff.md`
+Contract Request entry for these 3 codes if the paired backend worktree hasn't landed them yet.
+
+Full spec (component hierarchy, dialog copy, i18n table) is below this entry / in the parent
+agent's transcript.
+
+---
+
+## UX/UI Specification — OBRS-283 wire cancel-trip smart button
+
+### Scope
+Not a new screen. One existing trigger + one confirm-dialog shell per page, branched on two new
+read-only DTO fields (`deletable: boolean`, `confirmedBookingCount: number`) the backend adds to
+`ScheduleRespDto` (admin `AdminScheduleDto`, consumed by `admin/schedules-page` trip rows AND
+`staff/staff-schedules-page`) and `WalkInTripRespDto` (`WalkInTripDto`, consumed by `staff/sell-page`).
+
+### Component hierarchy (no new components)
+- `SchedulesPageComponent` (admin, smart) — adds `openDeleteOrCancelModal()`, `openCancelModal()`,
+  `closeCancelModal()`, `confirmCancel()`; new state `isCancelModalOpen`, `isCancelling`; reuses
+  `selectedSchedule`. Trip-row delete button's `(click)` changes from `openDeleteModal(schedule)` to
+  `openDeleteOrCancelModal(schedule)`. Set-row delete button is **unchanged** (`openDeleteModal`
+  directly, always hard-delete).
+- `StaffSchedulesPageComponent` (staff, smart) — same method split: `openDeleteOrCancelModal(row)`,
+  `openCancelModal()`, `closeCancelModal()`, `confirmCancel()`; new state `isCancelModalOpen`,
+  `isCancelling`; reuses `selectedRow`.
+- `SellPageComponent` (staff, smart) — `onDeleteScheduleClicked(event)` (currently opens the hard
+  delete modal unconditionally) becomes the branch; new `openCancelSchedule()`,
+  `closeScheduleCancel()`, `confirmCancelSchedule()`; new state `isScheduleCancelOpen`,
+  `isScheduleCancelling`; reuses `deletingTrip`. `WalkInTripBrowserComponent`'s kebab menu +
+  `deleteScheduleClicked` output are **unchanged** — same event, same emit site.
+
+### Branch logic (identical shape on all 3 pages)
+```
+openDeleteOrCancelModal(row):
+  if row.kind === 'schedule' (admin only; staff pages have no 'set' concept) AND row.deletable === false:
+    openCancelModal(row)   // NEW soft-cancel + refund flow
+  else:
+    openDeleteModal(row)   // EXISTING hard-delete flow, unchanged
+```
+
+### Data model additions
+| Type | New fields |
+|---|---|
+| `AdminScheduleDto` (`services/admin/admin-api.service.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` |
+| `ScheduleRow` (`admin/pages/schedules/schedules.mappers.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` — mapped only in `toGeneratedScheduleRow()` (trip rows), left `undefined` for `toScheduleRow()` (set rows) |
+| `ScheduleRow` (`staff/pages/staff-schedules/staff-schedules-page.mappers.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` — mapped in `toRow()` |
+| `WalkInTripDto` (`services/staff/staff-api.service.ts`) | `deletable: boolean; confirmedBookingCount: number;` (required — sell-page has no legacy pre-field cached shape to guard) |
+| `AdminApiService` | new `cancelSchedule(id: number): Observable<ResponseAPI<{ affectedBookingCount: number }>>` → `POST {baseUrl}/private/schedules/${id}/cancel` |
+
+### Confirm dialog spec (both variants, same shell per page)
+
+**Admin (`schedules-page`) — reuses `.admin-modal.admin-modal-confirm` verbatim:**
+```html
+<div class="admin-modal-backdrop" *ngIf="isCancelModalOpen" adminModalBackdrop (dismiss)="closeCancelModal()">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ (selectedSchedule?.confirmedBookingCount ?? 0) > 0
+          ? ('ADMIN.COMMON.CANCEL_TRIP_REFUND_MESSAGE' | translate:{ count: selectedSchedule?.confirmedBookingCount })
+          : ('ADMIN.COMMON.CANCEL_TRIP_NO_REFUND_MESSAGE' | translate) }}
+      <strong *ngIf="selectedSchedule">{{ selectedSchedule.tripId }}</strong>
+    </p>
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeCancelModal()">{{ 'ADMIN.COMMON.CANCEL' | translate }}</button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isCancelling" (click)="confirmCancel()">
+        {{ isCancelling ? ('ADMIN.COMMON.CANCELLING_TRIP' | translate) : ('ADMIN.COMMON.CANCEL_TRIP_BTN' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+```
+Button classing (`admin-btn-primary`, not `admin-btn-danger`) intentionally mirrors the **existing**
+hard-delete confirm button on this exact page verbatim — not "fixing" the §4 destructive-role
+mismatch as part of this card (pre-existing debt, same class already used one dialog above it).
+
+**Staff (`staff-schedules-page` + `sell-page`) — reuses the raw `.modal d-block` shell verbatim:**
+```html
+<div class="modal d-block" tabindex="-1" *ngIf="isCancelModalOpen" style="background:rgba(0,0,0,0.5)">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'ADMIN.MESSAGES.CANCEL_TRIP_CONFIRM_TITLE' | translate }}</h5>
+        <button class="btn-close" (click)="closeCancelModal()"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ (selectedRow?.confirmedBookingCount ?? 0) > 0
+              ? ('ADMIN.MESSAGES.CANCEL_TRIP_REFUND_BODY' | translate:{ count: selectedRow?.confirmedBookingCount })
+              : ('ADMIN.MESSAGES.CANCEL_TRIP_NO_REFUND_BODY' | translate) }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeCancelModal()" [disabled]="isCancelling">{{ 'STAFF.SELL.BACK_BTN' | translate }}</button>
+        <button class="btn btn-danger" (click)="confirmCancel()" [disabled]="isCancelling">
+          <span *ngIf="isCancelling" class="spinner-border spinner-border-sm me-1"></span>
+          {{ 'ADMIN.MESSAGES.CANCEL_TRIP_BTN' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+`sell-page`'s variant uses `deletingTrip`/`isScheduleCancelOpen`/`isScheduleCancelling` state names
+instead (same markup shape).
+
+Severity/icon: neither shell uses a PrimeNG/SweetAlert icon prop today (both are hand-rolled
+title+body dialogs) — no icon added, matching the existing hard-delete confirm precedent on both
+idioms exactly (no icon there either).
+
+### User flow
+1. Staff/admin clicks the existing delete/cancel trigger on a trip row.
+2. If `row.deletable === false` → the cancel-confirm dialog opens (refund or no-refund copy per
+   `confirmedBookingCount`). Else → the existing hard-delete confirm dialog opens, unchanged.
+3. User confirms → `POST /api/private/schedules/{id}/cancel`. Button shows its `CANCELLING_TRIP`/
+   spinner busy state (mirrors `isDeleting`/`isSubmitting` precedent).
+4. Success → modal closes, list refreshes (`store.refresh()` / `loadTrips()` per page — mirrors the
+   existing `confirmDelete()`/`generateSchedules()` refresh-then-toast pattern), success toast keyed
+   off the response's `affectedBookingCount` (`CANCEL_TRIP_SUCCESS_REFUND` if `> 0`, else
+   `_NO_REFUND` — avoids a "0 การจอง" toast when nothing was actually refunded).
+5. Error → modal closes (matches this page's existing error-handling shape, which already closes
+   before toasting), `AlertService.error()` with the `errorCode`-mapped message; `ALREADY_CANCELLED`/
+   `NOT_FOUND` additionally trigger a list refresh (the row's `deletable`/status is now stale on the
+   client, next paint should show the true state) — `ALREADY_DEPARTED` does not (no state has changed).
+
+### States
+- Loading/busy: the confirm button itself (`isCancelling`/`isScheduleCancelling`) — same
+  disabled+spinner/label-swap idiom as every sibling `isDeleting`/`isSubmitting` button on these
+  pages. No page-level skeleton needed (this is a modal action, not a page load).
+- Empty/no-op state: N/A — the dialog is only ever opened with a `selectedSchedule`/`selectedRow`/
+  `deletingTrip` already set (optimistic-open precedent, no fetch-gated content in this modal).
+- Error: `AlertService.error()` toast, never inline — matches every existing `confirmDelete()`/
+  `submitSchedule()` catch block on all 3 pages.
+
+### NgRx changes
+None — all 3 pages hold this state as plain component fields (`isCancelModalOpen`, etc.), exactly
+mirroring how `isDeleteModalOpen`/`isDeleteModalOpen`/`isScheduleDeleteOpen` already work on their
+respective pages today. No store/effect/selector involved for schedules on any of the 3 pages.
+
+### i18n keys to add
+Two families, reusing the **exact** existing per-page split (admin's confirm-dialog copy already
+lives in `ADMIN.COMMON.*`; both staff pages already share `ADMIN.MESSAGES.*` for the same concept
+— see `DELETE_CONFIRM_TITLE` existing today in both namespaces). Success/error toast keys are a
+**single shared set** under `ADMIN.MESSAGES.*`, reused verbatim by all 3 pages — mirrors how
+`ADMIN.MESSAGES.DELETED`/`DELETE_FAILED` are already shared cross-module today (staff-schedules-page
+and sell-page both call `ADMIN.MESSAGES.DELETED` directly, never a staff-local duplicate).
+
+| Key | TH | EN |
+|---|---|---|
+| `ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE` (admin dialog title) | ยืนยันการยกเลิกทริป | Confirm trip cancellation |
+| `ADMIN.COMMON.CANCEL_TRIP_REFUND_MESSAGE` (admin dialog body, refund variant, `{{count}}`) | การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติ และผู้โดยสารจะได้รับการแจ้งเตือน หลังจากนั้นทริปนี้จะถูกยกเลิก ต้องการดำเนินการต่อหรือไม่? | {{count}} confirmed booking(s) will be automatically refunded and passengers notified. The trip will then be cancelled. Continue? |
+| `ADMIN.COMMON.CANCEL_TRIP_NO_REFUND_MESSAGE` (admin dialog body, no-refund variant) | ทริปนี้ไม่มีการจองที่ยืนยันแล้ว ทริปจะถูกยกเลิก ไม่มีการคืนเงิน ต้องการดำเนินการต่อหรือไม่? | This trip has no confirmed bookings. The trip will be cancelled — no refund will be issued. Continue? |
+| `ADMIN.COMMON.CANCEL_TRIP_BTN` (admin confirm button) | ยกเลิกทริป | Cancel trip |
+| `ADMIN.COMMON.CANCELLING_TRIP` (admin confirm button busy label) | กำลังยกเลิกทริป... | Cancelling trip... |
+| `ADMIN.MESSAGES.CANCEL_TRIP_CONFIRM_TITLE` (staff dialog title, both pages) | ยืนยันการยกเลิกทริป | Confirm trip cancellation |
+| `ADMIN.MESSAGES.CANCEL_TRIP_REFUND_BODY` (staff dialog body, refund variant, `{{count}}`) | การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติ และผู้โดยสารจะได้รับการแจ้งเตือน หลังจากนั้นทริปนี้จะถูกยกเลิก | {{count}} confirmed booking(s) will be automatically refunded and passengers notified. The trip will then be cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_NO_REFUND_BODY` (staff dialog body, no-refund variant) | ทริปนี้ไม่มีการจองที่ยืนยันแล้ว ทริปจะถูกยกเลิก ไม่มีการคืนเงิน | This trip has no confirmed bookings. The trip will be cancelled — no refund will be issued. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_BTN` (staff confirm button) | ยกเลิกทริป | Cancel trip |
+| `ADMIN.MESSAGES.CANCEL_TRIP_SUCCESS_REFUND` (shared success toast, `affectedBookingCount > 0`, `{{count}}`) | ยกเลิกทริปสำเร็จ คืนเงินการจอง {{count}} รายการเรียบร้อยแล้ว | Trip cancelled successfully. {{count}} booking(s) refunded. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_SUCCESS_NO_REFUND` (shared success toast, `affectedBookingCount === 0`) | ยกเลิกทริปสำเร็จ | Trip cancelled successfully. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_ALREADY_CANCELLED` (shared error toast, `errorCode SCHEDULE_ERROR_ALREADY_CANCELLED`, 409) | ทริปนี้ถูกยกเลิกไปแล้ว | This trip has already been cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_DEPARTED` (shared error toast, `errorCode SCHEDULE_ERROR_ALREADY_DEPARTED`, 400) | ไม่สามารถยกเลิกทริปที่ออกเดินทางไปแล้วได้ | A trip that has already departed cannot be cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_NOT_FOUND` (shared error toast, `errorCode SCHEDULE_ERROR_NOT_FOUND`, 404) | ไม่พบทริปนี้ อาจถูกลบไปแล้ว | Trip not found — it may have already been deleted. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_FAILED` (shared generic fallback, any other error, mirrors `DELETE_FAILED`) | ไม่สามารถยกเลิกทริปได้ | Unable to cancel the trip. |
+
+**zh.json**: design-system §9 requires all 3 locale files land in the same commit — the implementer
+adds a `zh` column for all 15 keys above (not drafted here; th/en only per this task's ask).
+
+**Error-branching implementation note:** mirror `extractScheduleErrorCode()` (already in
+`schedules.mappers.ts`, used today for `VEHICLE_UNDER_MAINTENANCE`) — branch on
+`error.error.errorCode`, never the localized `message`, per §9.
+
+### Design-system conformance
+- **Reused patterns:** the exact pre-existing confirm-modal shell per page (`.admin-modal.admin-modal-confirm`
+  on admin; raw Bootstrap `.modal d-block` on both staff pages) — no new dialog component/family (§6).
+  Success/error surface through `AlertService.success()`/`.error()`, never `Swal.fire()` directly —
+  same as every existing `confirmDelete()` on all 3 pages. Trigger element (icon button / kebab menu
+  item) is byte-identical, only its handler branches — no new button, no new icon.
+- **New patterns:** none. This card adds zero new controls, zero new CSS, zero new component-scoped
+  SCSS — purely new i18n copy plus a data-driven branch in existing methods.
+- **Confirm:** no selects involved (no form on this dialog) · exactly one primary/danger action per
+  modal, unchanged from the existing hard-delete dialog's button classing on each page (§4) · zero raw
+  hex added · single title surface unaffected (this is a modal, not a page) · keys added to `en`/`th`
+  now, `zh` owed in the same implementation commit per §9.
+- **Dark-mode:** admin variant needs **no new SCSS** — `.admin-modal` is already globally dark-themed.
+  Staff variant (`staff-schedules-page`/`sell-page`) reuses a shell with **no existing dark-mode
+  coverage anywhere in the codebase** (pre-existing debt, confirmed via grep — not introduced or
+  worsened by this card, since no new SCSS is added and the sibling Edit/hard-delete modals on the
+  same pages already have this same gap). **Recommend opening a follow-up Jira card** to add
+  `:host-context(.is-dark)` (or a global `.modal-content` dark rule in `admin-theme.scss`) for the
+  staff module's raw-Bootstrap modals generally — out of scope for OBRS-283 itself.
+
+##UX_COMPLETE##
+
 ## 2026-07-11 — UX spec: End-of-day salesperson sales report (OBRS-231) — key findings for the implementer
 
 **Worktree:** `OBRS-frontend-wt-obrs-231-eod-sales-report-fe` (branch `ao/obrs-231-eod-sales-report-fe`).
@@ -2693,3 +2940,28 @@ Two under-30-line self-fixes applied after review; larger items left as notes be
    (`0016-eod-sales-report-money-columns-and-row-expand.md`); the real one is
    `0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Fixed the citation. Lesson:
    when the ADR number is assigned late, grep `docs/adr/` for the actual filename before citing it.
+
+## OBRS-266 scrutinize self-fix — camera startup teardown race (2026-07-11)
+
+`startCameraScan()` assigned `this.scannerControls`/`cameraStatus='active'` only AFTER
+awaiting `decodeFromVideoDevice()` (Promise). The mode-toggle buttons are disabled on
+`isScanning` but NOT during the camera `requesting` phase, so an operator can tap "Text"
+(or a scheduleId re-bind / arrived-transition can fire) mid-startup. `stopCameraStream()`
+then runs while `scannerControls` is still null (no-op), the pending promise later resolves,
+and a now-LIVE MediaStream gets stored into `scannerControls` with `cameraStatus='active'`
+while `scanMode==='text'` — an orphan stream (camera light stays on) nothing stops until the
+next teardown.
+
+Fix (pattern to remember): after any `await` that acquires a resource you also tear down
+elsewhere, re-check the teardown-owned flag BEFORE committing the resource:
+```ts
+const controls = await this.codeReader.decodeFromVideoDevice(...);
+if (this.cameraStatus !== 'requesting') { controls.stop(); return; } // torn down mid-await
+this.scannerControls = controls;
+this.cameraStatus = 'active';
+```
+`cameraStatus !== 'requesting'` catches all teardown paths at once (stopCameraStream sets it
+to 'idle'; re-bind/toggle also set scanMode='text'). Locked with a fakeAsync spec that resolves
+the decode promise AFTER a text-toggle and asserts `stop()` called once + `scannerControls` null.
+General lesson: an idempotent teardown helper only protects against a resource that ALREADY
+exists — it can't cancel one still in flight; guard the post-await assignment too.

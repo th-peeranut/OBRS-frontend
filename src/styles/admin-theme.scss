@@ -327,6 +327,91 @@
   flex: 0 0 auto;
 }
 
+/* ── OBRS-290: sidebar menu search — filters nav by name + description ──
+   All colors map to existing --admin-* / --accent-* tokens (theme-aware,
+   dark overrides inherited); no new hex. */
+.admin-nav-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.admin-nav-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 18px;
+  color: var(--admin-muted);
+  pointer-events: none;
+}
+
+.admin-nav-search-input {
+  width: 100%;
+  padding: 9px 32px 9px 34px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-outline);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-nav-search-input::placeholder {
+  color: var(--admin-muted);
+}
+
+.admin-nav-search-input:focus {
+  border-color: var(--accent-text);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.admin-nav-search-clear {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.admin-nav-search-clear .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.admin-nav-search-clear:hover {
+  color: var(--admin-text);
+}
+
+.admin-nav-empty {
+  color: var(--admin-muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+/* ── OBRS-289: nav section header ── muted, uppercase group label above each
+   cluster of nav links. Token-only color; no new hex. */
+.admin-nav-section-title {
+  margin: 12px 0 2px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+
+.admin-nav-section-title:first-child {
+  margin-top: 0;
+}
+
 .admin-sidebar-footer {
   margin-top: auto;
   padding-top: 14px;
@@ -660,6 +745,27 @@
 .admin-kpi-icon.is-warning {
   background: var(--admin-warning-bg);
   color: var(--admin-warning-text);
+}
+
+// OBRS-98: refund/void report's "Voided" KPI card — composes the existing §2.4
+// danger tokens (no new hex), same modifier shape as is-success/is-warning above.
+.admin-kpi-icon.is-danger {
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+// OBRS-99: cash/online reconciliation report's "Online" and "Other" KPI cards —
+// reuse the SAME --admin-inreview-*/--admin-neutral-* tokens already bound to
+// `.admin-status.is-info`/`.is-neutral` (no new hex), same modifier shape as
+// is-success/is-warning/is-danger above.
+.admin-kpi-icon.is-info {
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+.admin-kpi-icon.is-neutral {
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
 }
 
 .admin-kpi .admin-big-number {
@@ -1431,6 +1537,27 @@ textarea.admin-field {
   }
 
   /* ── NAV LINK: collapsed (icon rail) vs expanded states ── */
+
+  /* OBRS-290: the 76px icon rail has no room for the search field — hide it
+     when collapsed, reveal it only in the expanded 280px column. (The mobile
+     drawer is outside this min-width block, so it shows the search by default.) */
+  .admin-sidebar .admin-nav-search {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-search {
+    display: flex;
+  }
+
+  /* OBRS-289: same treatment for the section headers — the 76px icon rail has
+     no room for a group label, so hide it collapsed and reveal it expanded. */
+  .admin-sidebar .admin-nav-section-title {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-section-title {
+    display: block;
+  }
 
   /* Collapsed: icons centred, labels hidden */
   .admin-nav-link,

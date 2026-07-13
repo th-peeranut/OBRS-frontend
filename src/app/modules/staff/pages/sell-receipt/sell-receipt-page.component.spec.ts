@@ -1,5 +1,6 @@
 import { of, throwError, Subject } from 'rxjs';
 import { SellReceiptPageComponent } from './sell-receipt-page.component';
+import { BoardingQrService } from '../../../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
 import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/payment.interface';
 import { createRouterStub, createTranslateStub } from '../../../../testing/test-stubs';
@@ -79,13 +80,18 @@ describe('SellReceiptPageComponent', () => {
   let paymentServiceStub: any;
   let ticketServiceStub: any;
 
+  // Real BoardingQrService wired to the ticket-service stub (not a mock of the
+  // service itself) — a fresh instance per component, matching the
+  // component-scoped `providers: [BoardingQrService]` lifetime, so the
+  // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
+  // meaningful (OBRS-221 extraction).
   function createComponent(bookingId: number | string | null = 1): SellReceiptPageComponent {
     return new SellReceiptPageComponent(
       createActivatedRouteStub(bookingId),
       createRouterStub(),
       bookingServiceStub,
       paymentServiceStub,
-      ticketServiceStub,
+      new BoardingQrService(ticketServiceStub),
       createTranslateStub(),
       createAuthServiceStub()
     );
@@ -255,7 +261,7 @@ describe('SellReceiptPageComponent', () => {
         createRouterStub(),
         bookingServiceStub,
         paymentServiceStub,
-        ticketServiceStub,
+        new BoardingQrService(ticketServiceStub),
         translate,
         createAuthServiceStub()
       );
@@ -282,7 +288,7 @@ describe('SellReceiptPageComponent', () => {
         router,
         bookingServiceStub,
         paymentServiceStub,
-        ticketServiceStub,
+        new BoardingQrService(ticketServiceStub),
         createTranslateStub(),
         createAuthServiceStub()
       );
