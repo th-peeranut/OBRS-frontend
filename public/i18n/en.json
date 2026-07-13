@@ -335,7 +335,14 @@
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
       "SEARCH_CLEAR_ARIA": "Clear menu search",
-      "NO_RESULTS": "No menu found"
+      "NO_RESULTS": "No menu found",
+      "SECTION": {
+        "OVERVIEW": "Overview",
+        "MASTER_DATA": "Master data",
+        "OPERATIONS": "Operations",
+        "REPORTS": "Reports & Finance",
+        "SYSTEM": "System"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",

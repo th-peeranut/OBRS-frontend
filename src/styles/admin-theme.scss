@@ -385,6 +385,22 @@
   margin: 0;
 }
 
+/* ── OBRS-289: nav section header ── muted, uppercase group label above each
+   cluster of nav links. Token-only color; no new hex. */
+.admin-nav-section-title {
+  margin: 12px 0 2px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+
+.admin-nav-section-title:first-child {
+  margin-top: 0;
+}
+
 .admin-sidebar-footer {
   margin-top: auto;
   padding-top: 14px;
@@ -1513,6 +1529,16 @@ textarea.admin-field {
 
   .admin-shell.is-sidebar-pinned .admin-nav-search {
     display: flex;
+  }
+
+  /* OBRS-289: same treatment for the section headers — the 76px icon rail has
+     no room for a group label, so hide it collapsed and reveal it expanded. */
+  .admin-sidebar .admin-nav-section-title {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-section-title {
+    display: block;
   }
 
   /* Collapsed: icons centred, labels hidden */
