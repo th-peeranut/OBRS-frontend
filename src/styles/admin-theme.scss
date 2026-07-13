@@ -35,6 +35,17 @@
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
 
+  /* OBRS-272: "delayed" trip indicator (schedule-level, derived off
+     delayedDepartureDateTime — NOT a status code, status stays `scheduled`).
+     A distinct violet pastel so it never collides with is-info (blue-grey,
+     departed), is-success (blue, arrived), is-neutral (grey, scheduled/not
+     boarded), is-warning (orange — reserved, also the resolved theme-admin
+     --accent variant, design-system §11), or is-danger/is-accepted. Light bg +
+     dark text is a self-contained chip (like --admin-accepted-*): no
+     dark-mode override needed, same reasoning as the accepted-text note above. */
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
   --accent: #4dbeef;
@@ -1103,6 +1114,13 @@
 .admin-status.is-neutral {
   background: var(--admin-neutral-bg);
   color: var(--admin-neutral-text);
+}
+
+/* OBRS-272: "delayed" trip indicator pill — see the --admin-delayed-* token
+   comment above. */
+.admin-status.is-delayed {
+  background: var(--admin-delayed-bg);
+  color: var(--admin-delayed-text);
 }
 
 .admin-status--icon {
