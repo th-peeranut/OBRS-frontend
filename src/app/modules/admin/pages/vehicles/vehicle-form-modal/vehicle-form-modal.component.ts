@@ -147,20 +147,18 @@ export class VehicleFormModalComponent implements OnChanges {
     }
   }
 
-  // NOTE (discrepancy vs. the promotions/user form modals, and vs.
-  // design-system.md §3.1 "no pre-seeded default"): the pre-split
-  // VehiclesPageComponent.openCreateModal actually reset vehicleType/status
-  // to the FIRST option's code, not to ''. That is reproduced verbatim here
-  // — this refactor is behavior-preserving only, so the pre-existing
-  // design-system deviation is carried over rather than silently fixed. See
-  // the split report for the flagged follow-up.
+  // Create mode starts every select BLANK (empty = the field-name placeholder
+  // shows), per design-system.md §3.1 "no pre-seeded default" — matching the
+  // promotions/user form modals. OBRS-262 fixed the deviation OBRS-261 had
+  // carried over verbatim (first-option pre-seed) from the pre-split
+  // VehiclesPageComponent.openCreateModal.
   private initCreateForm(): void {
     this.isEditDetailLoading = false;
     this.vehicleForm.reset({
-      vehicleType: this.vehicleTypeOptions[0]?.code ?? '',
+      vehicleType: '',
       numberPlate: '',
       vehicleNumber: '',
-      status: this.statusOptions[0]?.code ?? '',
+      status: '',
     });
   }
 

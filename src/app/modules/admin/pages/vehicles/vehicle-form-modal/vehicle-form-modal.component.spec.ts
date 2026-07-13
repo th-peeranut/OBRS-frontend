@@ -104,19 +104,18 @@ function fillValidForm(component: VehicleFormModalComponent): void {
 
 describe('VehicleFormModalComponent', () => {
   describe('create mode', () => {
-    // NOTE: this is the flagged discrepancy vs. the promotions/user form
-    // modals and vs. design-system.md §3.1 — the pre-split
-    // VehiclesPageComponent.openCreateModal actually pre-seeded
-    // vehicleType/status with the FIRST option's code (not an empty
-    // placeholder). Reproduced verbatim; see the split report.
-    it('opens with vehicleType/status pre-seeded to the first option (pre-existing behavior, not design-system §3.1 compliant)', () => {
+    // Per design-system.md §3.1 ("no pre-seeded default"), create mode opens
+    // with every select BLANK (empty = placeholder), matching the
+    // promotions/user form modals. OBRS-262 fixed the deviation OBRS-261 had
+    // carried over verbatim (first-option pre-seed) from the pre-split modal.
+    it('opens with vehicleType/status blank (design-system §3.1, no pre-seeded default)', () => {
       const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
 
       openCreate(component);
 
       const form = (component as any).vehicleForm;
-      expect(form.get('vehicleType').value).toBe('van');
-      expect(form.get('status').value).toBe('active');
+      expect(form.get('vehicleType').value).toBe('');
+      expect(form.get('status').value).toBe('');
       expect(form.get('numberPlate').value).toBe('');
       expect(form.get('vehicleNumber').value).toBe('');
     });
