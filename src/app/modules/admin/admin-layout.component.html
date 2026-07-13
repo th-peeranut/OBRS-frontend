@@ -65,24 +65,29 @@
         </button>
       </div>
 
+      <!-- OBRS-289: nav grouped into labelled sections (presentational only —
+           grouping never changes which items show or their access). -->
       <nav class="admin-nav">
-        <a
-          *ngFor="let item of filteredNavItems"
-          [routerLink]="item.path"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="admin-nav-link"
-          (click)="onNavLinkClick(); clearNavSearch()"
-        >
-          <span class="material-symbols-outlined">{{ item.icon }}</span>
-          <span>{{ item.labelKey | translate }}</span>
-          <span
-            *ngIf="item.showBadge && newReportCount > 0"
-            class="admin-nav-badge"
-            [attr.aria-label]="'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA' | translate: { count: newReportCount }"
-          >{{ newReportCount > 99 ? '99+' : newReportCount }}</span>
-        </a>
-        <p *ngIf="navSearchQuery && filteredNavItems.length === 0" class="admin-nav-empty">
+        <ng-container *ngFor="let section of filteredNavSections">
+          <p class="admin-nav-section-title">{{ section.titleKey | translate }}</p>
+          <a
+            *ngFor="let item of section.items"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="admin-nav-link"
+            (click)="onNavLinkClick(); clearNavSearch()"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span>{{ item.labelKey | translate }}</span>
+            <span
+              *ngIf="item.showBadge && newReportCount > 0"
+              class="admin-nav-badge"
+              [attr.aria-label]="'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA' | translate: { count: newReportCount }"
+            >{{ newReportCount > 99 ? '99+' : newReportCount }}</span>
+          </a>
+        </ng-container>
+        <p *ngIf="navSearchQuery && filteredNavSections.length === 0" class="admin-nav-empty">
           {{ 'ADMIN.NAV.NO_RESULTS' | translate }}
         </p>
       </nav>
