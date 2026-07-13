@@ -731,7 +731,52 @@
       "PAYMENT_STATUS": "สถานะการชำระเงิน",
       "UNITS": "รายการ",
       "LOADING": "กำลังโหลดข้อมูลการจอง...",
-      "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลการจองจากระบบได้"
+      "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลการจองจากระบบได้",
+      "VIEW": "ดูรายละเอียด",
+      "DETAIL": {
+        "TITLE": "รายละเอียดการจอง",
+        "CLOSE": "ปิด",
+        "LOAD_FAILED": "ไม่สามารถโหลดรายละเอียดการจองได้ กรุณาลองใหม่อีกครั้ง",
+        "CREATED_AT": "สร้างเมื่อ",
+        "EXPIRES_AT": "หมดอายุเมื่อ",
+        "SECTION": {
+          "CONTACT": "ข้อมูลติดต่อลูกค้า",
+          "ACTOR": "ผู้ทำรายการจอง",
+          "PASSENGERS": "ผู้โดยสารและตั๋ว",
+          "PAYMENT": "การชำระเงิน",
+          "TIMELINE": "ความเคลื่อนไหว"
+        },
+        "CONTACT_NAME": "ชื่อ-นามสกุล",
+        "CONTACT_PHONE": "หมายเลขโทรศัพท์",
+        "ACTOR_NAME": "ชื่อ",
+        "ACTOR_TYPE": "ประเภทผู้ทำรายการ",
+        "ACTOR_CHANNEL": "ช่องทาง",
+        "ACTOR_OFFICE": "สำนักงาน",
+        "NO_JOURNEYS": "ไม่มีเที่ยวเดินทางในรายการจองนี้",
+        "JOURNEY_LABEL": "เที่ยวที่ {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "ผู้โดยสาร",
+          "PASSENGER_TYPE": "ประเภท",
+          "SEAT": "ที่นั่ง",
+          "TICKET_NUMBER": "หมายเลขตั๋ว",
+          "TICKET_STATUS": "สถานะตั๋ว",
+          "TXN_DATE": "วันที่/เวลา",
+          "TXN_METHOD": "วิธีการชำระเงิน",
+          "TXN_AMOUNT": "จำนวนเงิน",
+          "TXN_STATUS": "สถานะ"
+        },
+        "TOTAL_AMOUNT": "ยอดรวม",
+        "PAID_AMOUNT": "ชำระแล้ว",
+        "OUTSTANDING_AMOUNT": "ค้างชำระ",
+        "REFUNDED_AMOUNT": "คืนเงินแล้ว",
+        "NO_TRANSACTIONS": "ไม่มีรายการธุรกรรมการชำระเงิน",
+        "EVENT": {
+          "CREATED": "สร้างรายการจอง",
+          "PAYMENT": "ได้รับการชำระเงิน ({{method}})",
+          "EXPIRES": "รายการจองจะหมดอายุ",
+          "CURRENT_STATUS": "สถานะปัจจุบัน: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "แดชบอร์ด",

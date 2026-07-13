@@ -731,7 +731,52 @@
       "PAYMENT_STATUS": "支付状态",
       "UNITS": "条预订",
       "LOADING": "正在加载预订数据...",
-      "LOAD_FAILED": "无法从后端加载预订数据。"
+      "LOAD_FAILED": "无法从后端加载预订数据。",
+      "VIEW": "查看",
+      "DETAIL": {
+        "TITLE": "预订详情",
+        "CLOSE": "关闭",
+        "LOAD_FAILED": "无法加载预订详情，请重试。",
+        "CREATED_AT": "创建时间",
+        "EXPIRES_AT": "过期时间",
+        "SECTION": {
+          "CONTACT": "客户联系信息",
+          "ACTOR": "预订操作人",
+          "PASSENGERS": "乘客与车票",
+          "PAYMENT": "付款",
+          "TIMELINE": "活动记录"
+        },
+        "CONTACT_NAME": "姓名",
+        "CONTACT_PHONE": "电话号码",
+        "ACTOR_NAME": "姓名",
+        "ACTOR_TYPE": "操作人类型",
+        "ACTOR_CHANNEL": "渠道",
+        "ACTOR_OFFICE": "办公室",
+        "NO_JOURNEYS": "此预订没有行程。",
+        "JOURNEY_LABEL": "行程 {{index}}：{{route}}",
+        "COL": {
+          "PASSENGER_NAME": "乘客",
+          "PASSENGER_TYPE": "类型",
+          "SEAT": "座位",
+          "TICKET_NUMBER": "车票编号",
+          "TICKET_STATUS": "车票状态",
+          "TXN_DATE": "日期/时间",
+          "TXN_METHOD": "支付方式",
+          "TXN_AMOUNT": "金额",
+          "TXN_STATUS": "状态"
+        },
+        "TOTAL_AMOUNT": "总金额",
+        "PAID_AMOUNT": "已付",
+        "OUTSTANDING_AMOUNT": "未付",
+        "REFUNDED_AMOUNT": "已退款",
+        "NO_TRANSACTIONS": "暂无支付交易记录。",
+        "EVENT": {
+          "CREATED": "预订已创建",
+          "PAYMENT": "收到付款（{{method}}）",
+          "EXPIRES": "预订即将过期",
+          "CURRENT_STATUS": "当前状态：{{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "仪表板",

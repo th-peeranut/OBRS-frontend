@@ -2965,3 +2965,408 @@ to 'idle'; re-bind/toggle also set scanMode='text'). Locked with a fakeAsync spe
 the decode promise AFTER a text-toggle and asserts `stop()` called once + `scannerControls` null.
 General lesson: an idempotent teardown helper only protects against a resource that ALREADY
 exists — it can't cancel one still in flight; guard the post-await assignment too.
+
+---
+
+## 2026-07-13 — UX spec: read-only Admin Booking Detail dialog (OBRS-280) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-280-admin-booking-detail` (branch `ao/obrs-280-admin-booking-detail`).
+No code written this pass — UX/UI spec handoff. Frontend-only, read-only, no new route: a "view"
+action on `admin/pages/bookings` opens a detail dialog for one booking. NO cancel/reschedule
+actions (deferred cards) — Close is the only interactive control besides the top-right ×.
+
+**The closest existing precedent is `UsabilityReportsPageComponent`'s detail modal — copy its
+idiom almost verbatim, not the schedules-page confirm-modal idiom.** It's the only other read-
+mostly, click-a-row-to-drill-in admin detail dialog in the codebase, and it already encodes every
+rule design-system.md §6/§11 cares about:
+- Row click (`(click)="onRowActivate(id, $event)"` on `<tr>`) **and** a small explicit
+  `admin-btn admin-btn-small` "View" button in an Actions column both open the same dialog — the
+  row has no `role="button"`/keyboard handler (would orphan cells), so the button remains the
+  accessible/keyboard affordance. `onRowActivate` ignores clicks on `button, a, input, select,
+  textarea` (`target.closest(...)`) and ignores an active text selection
+  (`window.getSelection()?.toString()`), then calls the same `openDetail(id)` the button calls.
+  **Reuse this exact guard**, not a bare `(click)` on the row.
+- **Optimistic open + stale-response guard**, textbook: `openDetail(id)` sets
+  `selectedReportId = id` synchronously (this alone makes `*ngIf="selectedReportId !== null"`
+  show the backdrop+shell instantly), seeds `detailReport` from a **fallback built from the row
+  already in hand** (`toUsabilityReportDetailFallback(summary)`) so the header renders before any
+  network round-trip, sets `isDetailFetching = true`, then in the subscribe `next`, bails with
+  `if (this.selectedReportId !== id) return;` before touching any field — so a second row-click
+  while the first fetch is in flight can never let the stale response clobber the newer one.
+  **OBRS-280 needs this exact pattern**, just with two independent fetches instead of one (see
+  below), each with its own stale-id guard.
+- Modal shell: `.admin-modal-backdrop` + `adminModalBackdrop` directive (`(dismiss)="..."`) wrapping
+  `.admin-modal <page-prefix>-detail-modal`, containing a `.admin-modal-header` (`h4.admin-modal-title`
+  + a 36px round icon-button `×` using `.material-symbols-outlined` `close`), then the body gated
+  `*ngIf="detailReport"`. **No `.admin-modal-actions` / primary button at all** — this dialog has no
+  save/confirm action, unlike the schedules confirm-modal or the usability-report's own status-update
+  footer (OBRS-280 must **not** copy that footer — it's mutating, we're read-only).
+- `.admin-modal` **base is theme-var driven already** (`background: var(--admin-surface-card)`,
+  `.is-dark .admin-modal { border-color: var(--admin-outline); }` in `admin-theme.scss` lines
+  ~1244-1260) — reusing it costs **zero new dark-mode SCSS**. The only component-scoped SCSS this
+  card needs is a **width override** (usability-reports uses `.ur-detail-modal { max-width: 680px;
+  max-height: 90vh; overflow-y: auto; }`; `promotion-form-modal` separately proves the same
+  size-variant-by-scoped-class idiom with `.admin-modal-lg { width: min(880px, 100%); }`) — no
+  color, so it needs no dark override either. **OBRS-280 uses `max-width: 900px` (wider than 680px
+  — this dialog has two data tables, not just label/value rows).**
+
+**Two independent fetches, not one — size the loading state per-section, not modal-wide.**
+`GET /api/private/bookings/{id}` (`AdminApiService.getBookingById`, **new method, doesn't exist
+yet**) returns the booking header/status/contact/actor/journeys+tickets/pricing/payment-summary;
+`GET /api/private/bookings/{id}/payments` (`AdminApiService.getBookingPayments`, **already exists**,
+used today by `BookingsStore.loadPaymentStatusByBookingId`) returns the transaction list. Fire both
+`takeUntil(this.destroy$)` subscriptions from `openDetail()`, each with its own
+`isDetailFetching` / `isPaymentsFetching` flag and its own `if (this.selectedBookingId !== id)
+return;` guard — so the passengers/tickets section can render as soon as the first call resolves
+without waiting on the second, and vice versa. Show `admin-skeleton` blocks (the row-list idiom
+already used on this exact page for the table body) in each section while its flag is true, not a
+single modal-wide spinner.
+
+**`BookingRow` (in `bookings.store.ts`) doesn't carry the numeric booking `id` today** — it only
+exposes `bookingId: string` (the human-facing `bookingNumber`, e.g. `#BK-1042`). Add
+`id: number` to the `BookingRow` interface and populate it from `booking.id` in `toBookingRow()` —
+required so the "View" click can call `getBookingById(row.id)`. This is the one existing-file
+change on the list side; everything else is additive.
+
+**New DTOs needed in `admin-api.service.ts`** (none of these exist yet — `AdminBookingDto`, the
+list DTO, has no `bookingType`/`expiredAt`/ticket-level data):
+```ts
+export interface AdminBookingTicketDto {
+  passengerName?: string;
+  passengerType?: string;
+  seatNumber?: string;
+  status?: string | AdminStatusDto;   // include CANCELLED/REFUNDED tickets, don't filter them
+  ticketNumber?: string;
+}
+export interface AdminBookingDetailJourneyDto extends AdminBookingJourneyDto {
+  tickets?: AdminBookingTicketDto[];
+}
+export interface AdminBookingDetailDto {
+  id: number;
+  bookingNumber?: string;
+  bookingType?: string;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  expiredAt?: string;
+  actor?: { name?: string; type?: string; channel?: string; officeName?: string };
+  contact?: { fullName?: string; phoneNumber?: string };
+  journeys?: AdminBookingDetailJourneyDto[];
+  pricing?: AdminPriceSummaryDto;
+  payment?: AdminPaymentSummaryDto;
+}
+getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
+  return this.getRequest<AdminBookingDetailDto>(`${this.baseUrl}/private/bookings/${bookingId}`);
+}
+```
+Base path matches the sibling `getBookingPayments` (`${this.baseUrl}/private/bookings/${id}/payments`)
+— **not** the list endpoint's `/private/admin/bookings` path, which is a different resource.
+
+**Ticket/transaction status color mapping is a new small local method, following the codebase's
+established per-page duplication style** (`bookings-page.component.ts` already has its own private
+`statusClass()`/`paymentClass()` — there's no shared status-class util anywhere in admin, so don't
+invent one here): `ticketStatusClass(status)` → CONFIRMED/ACTIVE → `is-success`; PENDING →
+`is-warning`; CANCELLED → `is-danger`; REFUNDED → `is-neutral` (the plain-grey "inactive/unset"
+role, §2.4 — distinct from danger, since a refunded ticket isn't an error state, it's a resolved
+one). Booking-level `status` badge reuses the page's *existing* `statusClass()` method unchanged.
+
+**Timeline is composed client-side — no history/audit endpoint exists.** Build a flat, time-sorted
+array from fields already in hand: `{ time: createdAt, labelKey: EVENT.CREATED }`, one entry per
+payment transaction (`{ time: tx.paidAt, labelKey: EVENT.PAYMENT, params: { method: tx.paymentMethod } }`),
+`{ time: expiredAt, labelKey: EVENT.EXPIRES }` **only when present** (a confirmed/paid booking has
+no `expiredAt`), and a final `{ time: null, labelKey: EVENT.CURRENT_STATUS, params: { status:
+booking.status.label } }` pinned last regardless of sort (it's "now", not a past event). Render as
+a plain `<ul class="bk-timeline">` of `<li>` — a dot (`background: var(--accent)`) + label
+(`var(--admin-text)`) + muted timestamp (`var(--admin-muted)`), no new component. Copy this as
+"Activity" (`SECTION.TIMELINE`), not "Audit trail" or "History" — it's a derived convenience list,
+not a real audit log; don't over-promise completeness the backend doesn't back.
+
+Full spec (routes, component hierarchy, dialog layout, forms, i18n table) is below this entry.
+
+---
+
+## UX/UI Specification — OBRS-280 Admin Booking Detail dialog
+
+### New routes / pages
+None. No new route. All changes land on the existing
+`src/app/modules/admin/pages/bookings/bookings-page.component.{ts,html,scss}` (page-scoped SCSS
+file needs to be created — the page currently has no `.scss` beyond table/filter layout, check
+`bookings-page.component.scss` and add to it) plus `bookings.store.ts` (add `id` to `BookingRow`)
+and `admin-api.service.ts` (new `getBookingById` + DTOs above).
+
+### Component hierarchy
+No new Angular components — deliberately mirrors `UsabilityReportsPageComponent`, which keeps its
+entire read-only detail modal inline in the page template rather than extracting a child component.
+Same choice here: less indirection for a single-consumer, read-only view.
+
+- `BookingsPageComponent` (smart, existing) — new protected state:
+  - `selectedBookingId: number | null = null`
+  - `detailBooking: AdminBookingDetailDto | null = null` (seeded optimistically, see above)
+  - `paymentTransactions: AdminPaymentTransactionDto[] | null = null`
+  - `isDetailFetching = false`, `isPaymentsFetching = false`
+  - `detailLoadError = ''`, `paymentsLoadError = ''`
+  new protected methods: `onRowActivate(row, event)`, `openDetail(row: BookingRow)`,
+  `closeDetail()`, `onDetailBackdropDismiss()`, `ticketStatusClass(status)`, `timelineEvents(): {time, labelKey, params}[]` (getter, computed from `detailBooking` + `paymentTransactions`).
+
+### Bookings list table changes (prerequisite for opening the dialog)
+- Add an `Actions` column: `<th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>`
+  (key already exists — used by schedules/usability-reports, no new key) — bump the empty-row
+  `colspan` from `8` to `9` and add a skeleton `<td>` to the loading rows.
+- Row `<tr>` gets `(click)="onRowActivate(booking, $event)"` (guard pattern above); action cell has
+  one small button, `admin-btn admin-btn-small`, `(click)="openDetail(booking)"`, label
+  `'ADMIN.BOOKINGS.VIEW' | translate` (new key, mirrors `ADMIN.USABILITY_REPORTS.VIEW`).
+
+### Detail dialog layout (inline in `bookings-page.component.html`, appended after the `admin-card`
+section, structurally mirroring `usability-reports-page.component.html`'s `<!-- Detail Modal -->`
+block)
+
+```html
+<div class="admin-modal-backdrop" *ngIf="selectedBookingId !== null" adminModalBackdrop (dismiss)="onDetailBackdropDismiss()">
+  <div class="admin-modal bk-detail-modal">
+    <div class="admin-modal-header">
+      <h4 class="admin-modal-title">{{ 'ADMIN.BOOKINGS.DETAIL.TITLE' | translate }}</h4>
+      <button type="button" class="bk-detail-close" [attr.aria-label]="'ADMIN.BOOKINGS.DETAIL.CLOSE' | translate" (click)="closeDetail()">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="detailBooking">
+      <!-- 1. Header / status band -->
+      <div class="bk-detail-header">
+        <span class="admin-emphasis">{{ detailBooking.bookingNumber }}</span>
+        <span class="admin-status" [ngClass]="statusClass(bookingStatusCode(detailBooking.status))">
+          {{ bookingStatusLabel(detailBooking.status) }}
+        </span>
+        <span class="admin-muted">{{ detailBooking.bookingType }}</span>
+      </div>
+      <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CREATED_AT' | translate }}</span><span>{{ displayDateTime(detailBooking.createdAt) }}</span></div>
+      <div class="bk-detail-row" *ngIf="detailBooking.expiredAt"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.EXPIRES_AT' | translate }}</span><span>{{ displayDateTime(detailBooking.expiredAt) }}</span></div>
+
+      <!-- 2. Contact + actor, two-column -->
+      <div class="bk-detail-twocol">
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT' | translate }}</h5>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_NAME' | translate }}</span><span>{{ detailBooking.contact?.fullName || '-' }}</span></div>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span><span>{{ detailBooking.contact?.phoneNumber || '-' }}</span></div>
+        </section>
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.ACTOR' | translate }}</h5>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_NAME' | translate }}</span><span>{{ detailBooking.actor?.name || '-' }}</span></div>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_TYPE' | translate }}</span><span>{{ detailBooking.actor?.type || '-' }}</span></div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.channel"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_CHANNEL' | translate }}</span><span>{{ detailBooking.actor?.channel }}</span></div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.officeName"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_OFFICE' | translate }}</span><span>{{ detailBooking.actor?.officeName }}</span></div>
+        </section>
+      </div>
+
+      <!-- 3. Passengers & tickets, grouped by journey -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PASSENGERS' | translate }}
+          <span *ngIf="isDetailFetching" class="ur-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        </h5>
+        <p *ngIf="!isDetailFetching && !(detailBooking.journeys?.length)" class="admin-muted">{{ 'ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS' | translate }}</p>
+        <ng-container *ngFor="let journey of detailBooking.journeys; let ji = index">
+          <div class="bk-journey-heading">
+            {{ 'ADMIN.BOOKINGS.DETAIL.JOURNEY_LABEL' | translate: { index: ji + 1, route: journeyRouteLabel(journey) } }}
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_NAME' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_TYPE' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.SEAT' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_NUMBER' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_STATUS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ticket of journey.tickets">
+                <td>{{ ticket.passengerName }}</td>
+                <td>{{ ticket.passengerType }}</td>
+                <td class="admin-emphasis">{{ ticket.seatNumber }}</td>
+                <td><code>{{ ticket.ticketNumber }}</code></td>
+                <td><span class="admin-status" [ngClass]="ticketStatusClass(ticketStatusCode(ticket.status))">{{ ticketStatusLabel(ticket.status) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </ng-container>
+      </section>
+
+      <!-- 4. Payment summary + transactions -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PAYMENT' | translate }}</h5>
+        <div class="bk-payment-summary">
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT' | translate }}</span><span class="admin-emphasis">{{ formatMoney(detailBooking.payment?.totalAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.paidAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.outstandingAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.refundedAmount, detailBooking.payment?.currency) }}</span></div>
+          <span class="admin-status" [ngClass]="paymentClass(detailBooking.payment?.status)">{{ detailBooking.payment?.status }}</span>
+        </div>
+        <span *ngIf="isPaymentsFetching" class="ur-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        <table class="admin-table mt-2" *ngIf="!isPaymentsFetching">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_DATE' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_METHOD' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_AMOUNT' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of paymentTransactions">
+              <td>{{ displayDateTime(tx.paidAt) }}</td>
+              <td>{{ tx.paymentMethod }}</td>
+              <td class="admin-emphasis">{{ formatMoney(tx.amount, tx.currency) }}</td>
+              <td><span class="admin-status" [ngClass]="paymentClass(tx.status)">{{ tx.status }}</span></td>
+            </tr>
+            <tr *ngIf="!paymentTransactions?.length" class="admin-empty-row"><td colspan="4">{{ 'ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS' | translate }}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 5. Timeline -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE' | translate }}</h5>
+        <ul class="bk-timeline">
+          <li *ngFor="let event of timelineEvents">
+            <span class="bk-timeline-dot" aria-hidden="true"></span>
+            <span>{{ event.labelKey | translate: event.params }}</span>
+            <span class="admin-muted" *ngIf="event.time">{{ displayDateTime(event.time) }}</span>
+          </li>
+        </ul>
+      </section>
+    </ng-container>
+
+    <p *ngIf="!detailBooking && detailLoadError" class="admin-muted text-center mt-3">{{ detailLoadError }}</p>
+  </div>
+</div>
+```
+
+Notes on the markup above:
+- `bookingStatusCode`/`bookingStatusLabel`/`ticketStatusCode`/`ticketStatusLabel` are thin helpers
+  around the already-imported `parseAdminStatus` util (same one `bookings.store.ts` uses) — status
+  can come back as a bare string or `{slug, label}`, both need normalizing before badge/class lookup.
+- `formatMoney(amount, currency)` — reuse the `Intl.NumberFormat('en-US', { style: 'currency', ... })`
+  one-liner already written in `bookings.store.ts` `toBookingRow()`; hoist it to a shared
+  `shared/lib` helper if touching that file anyway, otherwise a local private method is fine (same
+  duplication tolerance as `statusClass`/`paymentClass` today).
+- `.bk-journey-heading` / `.bk-payment-summary` / `.bk-timeline` are **new page-scoped classes** —
+  style them ONLY with existing CSS custom properties (`var(--admin-surface-soft)` for the journey
+  heading background — the same "structural, not data" surface already used for `admin-table thead`
+  and the OBRS-231 expandable-row chip surface per design-system.md §12 — and `var(--admin-text)`/
+  `var(--admin-muted)`/`var(--accent)` for the timeline dot/text), so dark mode needs **zero**
+  additional overrides (the CSS vars already flip under `.is-dark`).
+
+### Forms
+None — this is a read-only view, no form controls, no validation.
+
+### User flows
+1. Admin opens `/admin/bookings` (existing) → sees the booking list (unchanged, now with an Actions
+   column) → clicks a row (or its "View" button) → dialog opens instantly showing bookingNumber +
+   status pill it already had from the row (no blank/spinner-only state) → within ~1-2s the
+   passengers/tickets, payment, and timeline sections populate as their two backing fetches resolve.
+2. Admin clicks a different row while the first dialog's fetch is still in flight → `selectedBookingId`
+   flips to the new id immediately, dialog re-seeds from the new row's fallback, the in-flight
+   response for the old id is dropped by the stale-id guard when it lands.
+3. Fetch fails (404/500) → `detailLoadError` is set (via the same inline-message convention the page
+   already uses for its list-load failure — `admin-muted` paragraph, no `Swal`/AlertService, since
+   this replaces content rather than reacting to a user action) → admin clicks Close (or backdrop, or ×)
+   → dialog closes, state resets, no residual error banner leaks into the next open.
+
+### States
+- Loading: per-section, not modal-wide — `isDetailFetching`/`isPaymentsFetching` gate their own
+  sections with the existing inline `'ADMIN.COMMON.UPDATING' | translate` hint (`.ur-inline-updating`
+  class already defined globally from the usability-reports work — reuse, don't redefine) next to
+  each section heading; the header/status band never blanks because it's seeded from the row.
+- Empty: no journeys → `ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS`; no transactions →
+  `ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS` (both inline `admin-muted` text, matching `ADMIN.COMMON.NO_DATA`'s
+  existing tone elsewhere on this page).
+- Error: `detailLoadError` inline `admin-muted text-center` paragraph inside the modal body (not
+  AlertService — this is a content-load failure being displayed, not a transient action result).
+
+### NgRx changes
+None. The admin module doesn't use `@ngrx/store` for this data — `bookings.store.ts` is a local
+`AdminCollectionStore` (RxJS `BehaviorSubject`-backed cache), and the detail dialog's state
+(`selectedBookingId`, `detailBooking`, `paymentTransactions`, the fetching/error flags) lives
+directly on `BookingsPageComponent`, exactly like `UsabilityReportsPageComponent`'s
+`selectedReportId`/`detailReport`. No new selectors/actions/effects.
+
+### i18n keys to add
+All three locale files (`public/i18n/en.json`, `th.json`, `zh.json`), inside the existing
+`"ADMIN"."BOOKINGS"` object (add `"VIEW"` as a sibling of `"LOAD_FAILED"`, then a new `"DETAIL"`
+object, mirroring `ADMIN.USABILITY_REPORTS.DETAIL`'s placement exactly):
+
+| Key | EN | TH | ZH |
+|---|---|---|---|
+| ADMIN.BOOKINGS.VIEW | View | ดูรายละเอียด | 查看 |
+| ADMIN.BOOKINGS.DETAIL.TITLE | Booking Detail | รายละเอียดการจอง | 预订详情 |
+| ADMIN.BOOKINGS.DETAIL.CLOSE | Close | ปิด | 关闭 |
+| ADMIN.BOOKINGS.DETAIL.LOAD_FAILED | Unable to load booking detail. Please try again. | ไม่สามารถโหลดรายละเอียดการจองได้ กรุณาลองใหม่อีกครั้ง | 无法加载预订详情，请重试。 |
+| ADMIN.BOOKINGS.DETAIL.CREATED_AT | Created At | สร้างเมื่อ | 创建时间 |
+| ADMIN.BOOKINGS.DETAIL.EXPIRES_AT | Expires At | หมดอายุเมื่อ | 过期时间 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT | Customer Contact | ข้อมูลติดต่อลูกค้า | 客户联系信息 |
+| ADMIN.BOOKINGS.DETAIL.CONTACT_NAME | Full Name | ชื่อ-นามสกุล | 姓名 |
+| ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE | Phone Number | หมายเลขโทรศัพท์ | 电话号码 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.ACTOR | Booked By | ผู้ทำรายการจอง | 预订操作人 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_NAME | Name | ชื่อ | 姓名 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_TYPE | Actor Type | ประเภทผู้ทำรายการ | 操作人类型 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_CHANNEL | Channel | ช่องทาง | 渠道 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_OFFICE | Office | สำนักงาน | 办公室 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.PASSENGERS | Passengers & Tickets | ผู้โดยสารและตั๋ว | 乘客与车票 |
+| ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS | No journeys on this booking. | ไม่มีเที่ยวเดินทางในรายการจองนี้ | 此预订没有行程。 |
+| ADMIN.BOOKINGS.DETAIL.JOURNEY_LABEL | Journey {{index}}: {{route}} | เที่ยวที่ {{index}}: {{route}} | 行程 {{index}}：{{route}} |
+| ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_NAME | Passenger | ผู้โดยสาร | 乘客 |
+| ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_TYPE | Type | ประเภท | 类型 |
+| ADMIN.BOOKINGS.DETAIL.COL.SEAT | Seat | ที่นั่ง | 座位 |
+| ADMIN.BOOKINGS.DETAIL.COL.TICKET_NUMBER | Ticket No. | หมายเลขตั๋ว | 车票编号 |
+| ADMIN.BOOKINGS.DETAIL.COL.TICKET_STATUS | Ticket Status | สถานะตั๋ว | 车票状态 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.PAYMENT | Payment | การชำระเงิน | 付款 |
+| ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT | Total | ยอดรวม | 总金额 |
+| ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT | Paid | ชำระแล้ว | 已付 |
+| ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT | Outstanding | ค้างชำระ | 未付 |
+| ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT | Refunded | คืนเงินแล้ว | 已退款 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_DATE | Date/Time | วันที่/เวลา | 日期/时间 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_METHOD | Method | วิธีการชำระเงิน | 支付方式 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_AMOUNT | Amount | จำนวนเงิน | 金额 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_STATUS | Status | สถานะ | 状态 |
+| ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS | No payment transactions recorded. | ไม่มีรายการธุรกรรมการชำระเงิน | 暂无支付交易记录。 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE | Activity | ความเคลื่อนไหว | 活动记录 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.CREATED | Booking created | สร้างรายการจอง | 预订已创建 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.PAYMENT | Payment received ({{method}}) | ได้รับการชำระเงิน ({{method}}) | 收到付款（{{method}}） |
+| ADMIN.BOOKINGS.DETAIL.EVENT.EXPIRES | Booking expires | รายการจองจะหมดอายุ | 预订即将过期 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.CURRENT_STATUS | Current status: {{status}} | สถานะปัจจุบัน: {{status}} | 当前状态：{{status}} |
+
+Reused (no new key): `ADMIN.COMMON.ACTIONS`, `ADMIN.COMMON.UPDATING`, `ADMIN.COMMON.NO_DATA`.
+
+### Design-system conformance
+- **Reused patterns:** `.admin-modal` + `.admin-modal-backdrop` + `adminModalBackdrop` directive
+  (app-themed, §6); `.admin-table`/`admin-status` pill classes + `.admin-skeleton` loading rows
+  (already on this page); `admin-emphasis`/`admin-muted` text tokens; the row-click +
+  guarded-`onRowActivate` + explicit small View-button dual affordance and the
+  optimistic-open/stale-id-guard fetch pattern, copied from `UsabilityReportsPageComponent`
+  (the closest existing read-only detail dialog); component-scoped modal-width override
+  (`.bk-detail-modal { max-width: 900px }`), same idiom as `.ur-detail-modal`/`.admin-modal-lg`
+  elsewhere; `var(--admin-surface-soft)` "structural, not data" background for the journey-group
+  heading, same role it already plays for `admin-table thead` and the OBRS-231 expandable-row
+  chip surface (§12).
+- **New patterns:** (1) a **client-composed timeline list** (`.bk-timeline`) — no
+  history/audit-log endpoint exists in this system yet, and no timeline/activity-feed UI exists
+  anywhere in the admin module to reuse; justified because the alternative (omitting it) drops a
+  requirement, and it introduces no new color (dot = `var(--accent)`, text = existing text/muted
+  tokens) so it needs no dark-mode work. (2) a **two-fetch, two-flag optimistic-open** (rather
+  than the single-fetch version `UsabilityReportsPageComponent` uses) — justified because this
+  dialog's data genuinely comes from two separate existing endpoints (`getBookingById`,
+  `getBookingPayments`) and gating passengers/tickets on the slower of the two would be a
+  regression vs. showing each section as soon as its own data arrives; both fetches use the
+  identical stale-id-guard idiom, so the risk profile is unchanged, just duplicated per-section.
+  No spec-test lock added for either (read-only view, no state that can be silently clobbered by
+  a stale write) — flag as a candidate for a lock spec only if a future card adds a mutating
+  action to this dialog.
+- **Confirm:** no selects in this dialog (read-only, no form) so §3.1 doesn't apply · exactly
+  **zero** primary buttons (deliberately — no save/confirm action exists; Close is a plain
+  `.bk-detail-close` icon button mirroring `.ur-detail-close`, not a `.admin-btn`/`.admin-btn-primary`
+  pair, matching the usability-report dialog's own icon-only close, since a text "Close" button in
+  `.admin-modal-actions` would imply there's a companion primary action there isn't) · no raw hex,
+  every new color reference is a `var(--admin-*)`/`var(--accent*)` token · single title surface
+  (route topbar renders "Bookings Management" already; this dialog's own `h4.admin-modal-title` is
+  the modal's own title surface, not a page title, so §7 doesn't apply — same precedent as every
+  other `.admin-modal-title` in the codebase) · no i18n string hardcoded, all new keys land in
+  en/th/zh in the same commit.
