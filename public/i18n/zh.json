@@ -329,7 +329,8 @@
       "SETTLEMENTS": "分账结算",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
-      "REFUND_VOID_REPORT": "退款/作废汇总"
+      "REFUND_VOID_REPORT": "退款/作废汇总",
+      "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -945,6 +946,35 @@
       "EXPAND_ARIA": "显示取消/过期明细",
       "COLLAPSE_ARIA": "隐藏取消/过期明细",
       "EMPTY": "所选日期范围内没有退款或作废的票务。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
+      }
+    },
+    "CASH_ONLINE_RECONCILIATION": {
+      "SUBTITLE": "所选日期范围内收取的现金、线上和其他支付总额。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "BASIS_NOTE": "现金、线上和其他按订单创建日期统计，而非出行日期。",
+      "PARTITION_NOTE": "支付分为现金（人工收款）、线上（银行卡、PromptPay 及其他数字渠道）和其他（银行转账及杂项）三类，每笔已收款项仅归入其中一类。",
+      "CARD": {
+        "CASH": "现金",
+        "ONLINE": "线上",
+        "OTHER": "其他",
+        "COLLECTED": "已收款",
+        "REFUNDED": "已退款",
+        "NET": "净额",
+        "COUNT_LABEL": "数量",
+        "TOTAL_COLLECTED": "收款总额"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期"
+      },
+      "EXPAND_ARIA": "显示支付笔数",
+      "COLLAPSE_ARIA": "隐藏支付笔数",
+      "EMPTY": "所选日期范围内没有收款记录。",
       "LOAD_FAILED": "无法加载报告，请重试。",
       "ERROR": {
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",

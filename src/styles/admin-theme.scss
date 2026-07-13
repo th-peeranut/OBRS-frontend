@@ -658,6 +658,20 @@
   color: var(--admin-danger-text);
 }
 
+// OBRS-99: cash/online reconciliation report's "Online" and "Other" KPI cards —
+// reuse the SAME --admin-inreview-*/--admin-neutral-* tokens already bound to
+// `.admin-status.is-info`/`.is-neutral` (no new hex), same modifier shape as
+// is-success/is-warning/is-danger above.
+.admin-kpi-icon.is-info {
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+.admin-kpi-icon.is-neutral {
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
+}
+
 .admin-kpi .admin-big-number {
   font-size: 28px;
 }

@@ -21,6 +21,7 @@ import {
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
+import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -992,6 +993,17 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<RefundVoidReportDto>(
       `${this.baseUrl}/private/admin/reports/refund-void`,
+      params
+    );
+  }
+
+  getCashOnlineReconciliationReport(
+    from: string,
+    to: string
+  ): Observable<ResponseAPI<CashOnlineReconciliationReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<CashOnlineReconciliationReportDto>(
+      `${this.baseUrl}/private/admin/reports/cash-online-reconciliation`,
       params
     );
   }
