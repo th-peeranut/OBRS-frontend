@@ -1,6 +1,13 @@
 import { FormBuilder } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
+import { Store } from '@ngrx/store';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { PassengerInfoFormComponent } from './passenger-info-form.component';
+import { SharedModule } from '../../../../shared/shared.module';
+import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { PassengerSeatModule } from '../../passenger-seat.module';
 import {
   createRouterStub,
   createStoreStub,
@@ -78,34 +85,102 @@ describe('PassengerInfoFormComponent', () => {
     });
   });
 
-  describe('fare-category radio (OBRS-296) — isAdult stays a real boolean', () => {
-    // Locks the exact bug the spec calls out: the gender radios use a
-    // string-attribute `value="MALE"` form, which is safe only because
-    // gender is a String control. Copying that form onto the BOOLEAN isAdult
-    // control (`value="false"`) would coerce every child to truthy. The
-    // template MUST use property binding `[value]="true"`/`[value]="false"` —
-    // this test simulates exactly that (a real boolean patchValue, not a
-    // DOM-attribute string) and asserts the control holds a boolean, never
-    // the string "false".
-    it('selecting Child sets isAdult to boolean false (not the string "false")', () => {
+  describe('fare-category radio (OBRS-296) — FormControl-level sanity check only', () => {
+    // NOTE: a bare FormControl.setValue() never coerces types, so this only
+    // confirms the control itself is untyped-boolean-friendly — it does NOT
+    // exercise the template's [value] binding or the RadioControlValueAccessor,
+    // which is the only place the string-coercion bug (value="false" -> string
+    // "false" -> truthy -> every child billed as adult) can actually occur.
+    // The real lock for that bug is the DOM/CVA-driven describe block below
+    // ("fare-category radio (OBRS-296) — real DOM/CVA path").
+    it('setValue(false)/setValue(true) round-trip as real booleans, never strings', () => {
       component.insertPassenger(true); // starts adult
       const group = component.passengerData.at(0);
 
       group.get('isAdult')?.setValue(false);
-
       expect(group.get('isAdult')?.value).toBe(false);
-      expect(group.get('isAdult')?.value).not.toBe('false');
       expect(typeof group.get('isAdult')?.value).toBe('boolean');
-    });
-
-    it('selecting Adult sets isAdult to boolean true (not the string "true")', () => {
-      component.insertPassenger(false); // starts child
-      const group = component.passengerData.at(0);
 
       group.get('isAdult')?.setValue(true);
-
       expect(group.get('isAdult')?.value).toBe(true);
       expect(typeof group.get('isAdult')?.value).toBe('boolean');
     });
+  });
+});
+
+// OBRS-296 (Scrutinize follow-up): the FormControl-level test above is
+// vacuous against the actual coercion bug — a bare FormControl never coerces
+// on setValue(), so it would still pass even if the template regressed to
+// the gender radios' string-attribute form (`value="false"`). This suite
+// renders the real template via TestBed and drives the native radio inputs
+// through a real click + change event, which is the ONLY path
+// RadioControlValueAccessor's string-vs-boolean coercion can occur on. A
+// revert to `value="false"`/`value="true"` (string attribute) makes the
+// child radio's `value` DOM property become the string "false", so
+// RadioControlValueAccessor would write the STRING back to the FormControl —
+// failing the `typeof ... === 'boolean'` assertions below.
+describe('PassengerInfoFormComponent — fare-category radio (OBRS-296) — real DOM/CVA path', () => {
+  let fixture: ComponentFixture<PassengerInfoFormComponent>;
+  let component: PassengerInfoFormComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PassengerInfoFormComponent],
+      imports: [SharedModule, DropdownObrsComponent, PassengerSeatModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: Store, useValue: createStoreStub() },
+        { provide: Router, useValue: createRouterStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PassengerInfoFormComponent);
+    component = fixture.componentInstance;
+    // The store/schedule-filter streams are stubbed to emit null (see
+    // createStoreStub()), so ngOnInit's auto-insert-from-schedule-filter path
+    // never fires — insert the one passenger group this suite needs directly,
+    // same as the bare-instantiation suite above.
+    component.insertPassenger(true); // starts Adult
+    fixture.detectChanges();
+  });
+
+  function radioEl(id: string): HTMLInputElement {
+    const el = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement | null;
+    if (!el) {
+      throw new Error(`Radio input #${id} not found in the rendered template`);
+    }
+    return el;
+  }
+
+  it('selecting the Child radio through the DOM writes a real boolean false — never the string "false"', () => {
+    const childRadio = radioEl('fareCategory_child-0');
+
+    childRadio.click();
+    fixture.detectChanges();
+
+    const value = component.passengerData.at(0).get('isAdult')?.value;
+    expect(typeof value).toBe('boolean');
+    expect(value).toBe(false);
+    expect(value as unknown).not.toBe('false');
+  });
+
+  it('selecting the Adult radio through the DOM writes a real boolean true — never the string "true"', () => {
+    // Start the group as Child so selecting Adult is an observable transition.
+    component.passengerData.at(0).get('isAdult')?.setValue(false);
+    fixture.detectChanges();
+
+    const adultRadio = radioEl('fareCategory_adult-0');
+    adultRadio.click();
+    fixture.detectChanges();
+
+    const value = component.passengerData.at(0).get('isAdult')?.value;
+    expect(typeof value).toBe('boolean');
+    expect(value).toBe(true);
+    expect(value as unknown).not.toBe('true');
+  });
+
+  it('the rendered radios reflect the boolean isAdult value — Adult checked by default, Child unchecked', () => {
+    // insertPassenger(true) in beforeEach starts the group as Adult.
+    expect(radioEl('fareCategory_adult-0').checked).toBeTrue();
+    expect(radioEl('fareCategory_child-0').checked).toBeFalse();
   });
 });
