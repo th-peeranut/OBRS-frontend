@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   ElementRef,
   Input,
@@ -197,7 +198,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly authService: AuthService,
     protected readonly store: BoardingListStore,
     private readonly viewContainerRef: ViewContainerRef,
-    private readonly ngZone: NgZone
+    private readonly ngZone: NgZone,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
     this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
@@ -585,10 +587,17 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       return;
     }
 
-    // The <video> only renders once cameraStatus is 'requesting'/'active'
-    // (see template) — Angular commits that DOM change before this async
-    // function's first awaited call resumes, so the ViewChild is present by
-    // the time decodeFromVideoDevice() needs it. Still guard defensively.
+    // The <video #scanVideo> only renders once cameraStatus is
+    // 'requesting'/'active' (see template). setScanMode()/retryCamera() call us
+    // synchronously from a click handler — BEFORE Angular's own change
+    // detection runs — so the *ngIf hasn't added the <video> yet and the
+    // ViewChild is still undefined at this point on the FIRST open (a bare
+    // `if (!this.videoElement)` here would wrongly fall straight to 'error' and
+    // the camera could never open). Flush CD now so the just-set 'requesting'
+    // state renders the <video> and the ViewChild query resolves before we hand
+    // its nativeElement to zxing. (OBRS-266 fix — the unit test masked this by
+    // pre-assigning `videoElement`; a real browser never reached 'active'.)
+    this.cdr.detectChanges();
     if (!this.videoElement) {
       this.cameraStatus = 'error';
       return;

@@ -80,7 +80,13 @@ function createComponent(
   alertServiceStub: any = createAlertServiceStub(),
   authServiceStub: any = createAuthServiceStub(),
   viewContainerRefStub: any = createViewContainerRefStub(),
-  ngZoneStub: any = createNgZoneStub()
+  ngZoneStub: any = createNgZoneStub(),
+  // OBRS-266: startCameraScan() flushes CD (cdr.detectChanges()) so the *ngIf
+  // renders <video #scanVideo> before the ViewChild read. On bare instances the
+  // DOM isn't live, so a no-op stub is correct — these specs pre-assign
+  // `videoElement` via withVideoElement(); the real-DOM path is covered by the
+  // TestBed regression spec below.
+  cdrStub: any = { detectChanges: () => undefined, markForCheck: () => undefined }
 ): BoardingListComponent {
   const component = new BoardingListComponent(
     staffApiServiceStub,
@@ -89,7 +95,8 @@ function createComponent(
     authServiceStub,
     storeStub,
     viewContainerRefStub,
-    ngZoneStub
+    ngZoneStub,
+    cdrStub
   );
   component.scheduleId = 42;
   component.ngOnChanges({ scheduleId: {} as any });
@@ -1242,6 +1249,54 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
     expect(pressed.length).toBe(1);
     expect(pressed[0].classList.contains('is-active')).toBeTrue();
     expect(pressed[0].textContent).toContain('STAFF.BOARDING.SCAN.MODE_TEXT');
+  }));
+
+  // OBRS-266 REGRESSION (real-DOM): the bare-instance camera specs above
+  // pre-assign `videoElement` (`withVideoElement()`), which masks a real
+  // ordering bug — setScanMode('camera') runs synchronously from the click
+  // handler BEFORE Angular renders <video #scanVideo>, so a synchronous
+  // `this.videoElement` read is undefined and the camera fell straight to
+  // 'error' on a real browser (never reached 'active'; the live QA fake-camera
+  // "couldn't reach active" was THIS, not a device quirk). This test renders
+  // the component through TestBed and does NOT touch `videoElement`, so the
+  // *ngIf → ViewChild → cdr.detectChanges() path is exercised for real:
+  // pre-fix it asserts 'error', post-fix 'active'.
+  it('setScanMode("camera") reaches "active" against the real *ngIf-rendered <video> (no pre-set ViewChild)', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    // The startCameraScan() guard only checks navigator.mediaDevices exists;
+    // decodeFromVideoDevice is stubbed so getUserMedia is never truly invoked.
+    const anyNav = navigator as any;
+    if (!anyNav.mediaDevices) anyNav.mediaDevices = {};
+    if (!anyNav.mediaDevices.getUserMedia) anyNav.mediaDevices.getUserMedia = () => Promise.resolve({});
+
+    // Skip the dynamic import('@zxing/browser') by pre-seeding codeReader, same
+    // seam as stubDecode() above — but crucially we leave `videoElement` unset
+    // so it must resolve from the real rendered DOM.
+    const stopSpy = jasmine.createSpy('stop');
+    const decodeSpy = jasmine
+      .createSpy('decodeFromVideoDevice')
+      .and.callFake((_d: unknown, _v: unknown, _cb: unknown) => Promise.resolve({ stop: stopSpy }));
+    (component as any).codeReader = { decodeFromVideoDevice: decodeSpy };
+
+    expect((component as any).videoElement).toBeUndefined(); // not rendered until camera mode
+
+    component['setScanMode']('camera');
+    tick();
+    fixture.detectChanges();
+
+    expect(component['cameraStatus']).toBe('active');
+    // the ViewChild resolved from the real DOM (this is what the fix restores)
+    expect((component as any).videoElement?.nativeElement).toBeTruthy();
+    expect(decodeSpy).toHaveBeenCalledWith(
+      undefined,
+      (component as any).videoElement.nativeElement,
+      jasmine.any(Function)
+    );
+    // live <video> present in the rendered template
+    expect(fixture.nativeElement.querySelector('video.boarding-scan-video')).toBeTruthy();
   }));
 });
 
