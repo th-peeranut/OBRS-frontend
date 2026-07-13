@@ -329,7 +329,8 @@
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
-      "REFUND_VOID_REPORT": "Refund / Void Summary"
+      "REFUND_VOID_REPORT": "Refund / Void Summary",
+      "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -945,6 +946,35 @@
       "EXPAND_ARIA": "Show cancelled/expired breakdown",
       "COLLAPSE_ARIA": "Hide cancelled/expired breakdown",
       "EMPTY": "No refunds or voided tickets in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "CASH_ONLINE_RECONCILIATION": {
+      "SUBTITLE": "Cash, online, and other payment totals collected for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Cash, Online, and Other are bucketed by the date the booking was created, not the travel date.",
+      "PARTITION_NOTE": "Payments split into Cash (staff-collected), Online (card, PromptPay, and other digital gateways), and Other (bank transfer and miscellaneous) — every collected payment falls into exactly one bucket.",
+      "CARD": {
+        "CASH": "Cash",
+        "ONLINE": "Online",
+        "OTHER": "Other",
+        "COLLECTED": "Collected",
+        "REFUNDED": "Refunded",
+        "NET": "Net",
+        "COUNT_LABEL": "Count",
+        "TOTAL_COLLECTED": "Total Collected"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date"
+      },
+      "EXPAND_ARIA": "Show payment counts",
+      "COLLAPSE_ARIA": "Hide payment counts",
+      "EMPTY": "No payments collected in the selected range.",
       "LOAD_FAILED": "Unable to load the report. Please try again.",
       "ERROR": {
         "RANGE_INVALID": "The From date must be on or before the To date.",

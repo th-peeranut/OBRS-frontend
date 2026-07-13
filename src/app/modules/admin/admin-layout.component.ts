@@ -60,6 +60,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // OBRS-98: refund/void summary report — same admin+owner audience (route
       // `requiredRoles: ['admin','owner']`) as eod-sales-report above.
       { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange' },
+      // OBRS-99: cash/online reconciliation report — same admin+owner audience
+      // (route `requiredRoles: ['admin','owner']`) as refund-void-report above.
+      { path: 'cash-online-reconciliation-report', labelKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION', icon: 'account_balance_wallet' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {
