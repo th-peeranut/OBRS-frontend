@@ -26,7 +26,7 @@ import {
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
 import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
-import { mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
+import { extractScheduleDelayErrorCode, mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
 import {
   combineBangkokDateTime,
@@ -394,8 +394,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * or bean-validation) renders as an INLINE field error, never a toast;
    * anything else (409 `SCHEDULE_DELAY_NOT_SCHEDULED` / generic) is an
    * `AlertService.error()` toast — branch on `error.error.errorCode`
-   * (`extractScheduleStatusErrorCode()`, reused — see schedule-delay-error.ts),
-   * never the localized message.
+   * (`extractScheduleDelayErrorCode()`, the reused extractor — see
+   * schedule-delay-error.ts), never the localized message.
    */
   protected submitDelaySchedule(): void {
     if (this.isSubmittingDelay) {
@@ -455,7 +455,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           void this.loadTripHeader(scheduleId);
         },
         error: (error) => {
-          const errorCode = extractScheduleStatusErrorCode(error);
+          const errorCode = extractScheduleDelayErrorCode(error);
           const status = error instanceof HttpErrorResponse ? error.status : undefined;
           if (status === 400) {
             // SCHEDULE_DELAY_ETA_INVALID or a bean-validation null-ETA 400 —

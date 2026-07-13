@@ -24,7 +24,7 @@ import {
  * `AdminModule` (a module cycle, since `AdminModule` already imports
  * `SharedModule`). Both `AdminModule` and `StaffModule` import `SharedModule`,
  * so admin's existing modals keep resolving the directive unchanged. See
- * docs/adr/0016-admin-modal-backdrop-relocation.md.
+ * docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md.
  */
 @Directive({
   selector: '[adminModalBackdrop]',
