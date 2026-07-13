@@ -10,7 +10,7 @@ import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
 import { AdminSharedModule } from '../../admin-shared.module';
-import { AdminModalBackdropDirective } from '../../components/admin-modal-backdrop.directive';
+import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,

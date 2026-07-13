@@ -170,6 +170,27 @@ export interface WalkInPaymentRespDto {
   netAmount?: number;
 }
 
+/** OBRS-272: `PATCH /api/private/schedules/{id}/delay` request body.
+ * `delayedDepartureDateTime` is required (an OffsetDateTime string, strictly
+ * after the schedule's current `departureDateTime` — validated client-side in
+ * `BoardingListComponent` and re-validated by the backend as
+ * `SCHEDULE_DELAY_ETA_INVALID`). `delayReason` is optional, max 500 chars. */
+export interface DelayScheduleReqDto {
+  delayedDepartureDateTime: string;
+  delayReason?: string;
+}
+
+/** OBRS-272: `PATCH /api/private/schedules/{id}/delay` response data.
+ * `status` is always `"scheduled"` — the delay never changes the schedule's
+ * status code. `affectedBookingCount` drives the success toast's `{{count}}`. */
+export interface DelayScheduleRespDto {
+  scheduleId: number;
+  status: string;
+  delayedDepartureDateTime: string;
+  delayReason?: string | null;
+  affectedBookingCount: number;
+}
+
 export interface BoardingListItemDto {
   ticketId: number;
   ticketNumber: string;
@@ -291,6 +312,23 @@ export class StaffApiService {
     return this.http.patch<ResponseAPI<{ scheduleId: number; status: string }>>(
       `${environment.apiUrl}/api/private/schedules/${id}/status`,
       { status },
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-272: mark/update a schedule's ETA delay — status STAYS `scheduled`
+   * (delay is a derived UI state, never a status code). Reuses
+   * `boardingScanContext` — a domain 409 (`SCHEDULE_DELAY_NOT_SCHEDULED`) or
+   * 400 (`SCHEDULE_DELAY_ETA_INVALID`/bean-validation) must never force-logout
+   * the operator nor duplicate a global alert (OBRS-187 trap), same reasoning
+   * as `updateScheduleStatus()`. */
+  delaySchedule(
+    id: number,
+    payload: DelayScheduleReqDto
+  ): Observable<ResponseAPI<DelayScheduleRespDto>> {
+    return this.http.patch<ResponseAPI<DelayScheduleRespDto>>(
+      `${environment.apiUrl}/api/private/schedules/${id}/delay`,
+      payload,
       { context: this.boardingScanContext }
     );
   }

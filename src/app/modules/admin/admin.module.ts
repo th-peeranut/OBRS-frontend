@@ -26,7 +26,6 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
-import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
@@ -179,7 +178,6 @@ const routes: Routes = [
     RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
-    AdminModalBackdropDirective,
     UsabilityReportsPageComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,

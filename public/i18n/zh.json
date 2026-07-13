@@ -1649,6 +1649,34 @@
         "GENERIC": "无法更新班次状态，请重试。"
       }
     },
+    "SCHEDULE_DELAY": {
+      "PILL_MARK": "标记为延误",
+      "PILL_UPDATE": "更新预计时间",
+      "INDICATOR_LABEL": "延误 — 新预计时间 {{eta}}",
+      "INDICATOR_REASON": "原因：{{reason}}",
+      "DIALOG_TITLE_MARK": "标记此班次延误",
+      "DIALOG_TITLE_UPDATE": "更新延误预计时间",
+      "FIELD": {
+        "DATE": "新出发日期",
+        "TIME": "新出发时间",
+        "REASON": "原因（选填）",
+        "REASON_PLACEHOLDER": "例如：高速公路交通拥堵"
+      },
+      "VALIDATION": {
+        "REQUIRED": "此字段为必填项。",
+        "MUST_BE_AFTER": "新的预计时间必须晚于原出发时间。",
+        "REASON_TOO_LONG": "原因不得超过 500 个字符。"
+      },
+      "CANCEL": "取消",
+      "SUBMIT": "保存",
+      "SUBMITTING": "保存中…",
+      "SUCCESS": "已通知 {{count}} 名乘客",
+      "ERROR": {
+        "SCHEDULE_DELAY_NOT_SCHEDULED": "此班次已无法标记为延误。",
+        "SCHEDULE_DELAY_ETA_INVALID": "新的预计时间必须晚于原出发时间。",
+        "GENERIC": "无法更新延误信息，请重试。"
+      }
+    },
     "DRIVER": {
       "TITLE": "我的分配班次",
       "SUBTITLE": "您被分配驾驶的班次",

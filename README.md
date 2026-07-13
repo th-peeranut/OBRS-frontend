@@ -210,6 +210,40 @@ with departure-date occupancy but zero booking-date bookings is **not**
 empty (same divergent-basis reasoning as Reports' `isEmptyRange`, carried
 over as `isEmptyDay`).
 
+### Boarding manifest — schedule delay control (OBRS-272)
+
+`BoardingListComponent` (`src/app/shared/components/boarding-list/`) gained a
+staff-only "Mark delayed"/"Update ETA" pill in the `.boarding-trip-header`
+strip, next to OBRS-256's departed/arrived control — same role gate
+(`canControlScheduleStatus`), visible only while the schedule is still
+`scheduled`. Opening it shows an inline `*ngIf`-gated `.admin-modal-backdrop`/
+`.admin-modal` dialog (component-local `FormGroup`, no separate component, no
+NgRx — mirrors every other admin modal and OBRS-256's
+`onScheduleStatusAction()`): a split `p-calendar` date + `p-calendar`
+`[timeOnly]` pair (combined client-side via `combineBangkokDateTime()`, the
+same `shared/lib/api-date-time.ts` helper `SchedulesPageComponent` uses) plus
+an optional reason `textarea`. The ETA is client-validated as strictly after
+the schedule's original `departureDateTime` before any API call; the backend
+re-validates the same rule as `SCHEDULE_DELAY_ETA_INVALID`, which renders as
+an inline field error, never a toast (only `SCHEDULE_DELAY_NOT_SCHEDULED`/
+generic errors go through `AlertService.error()`).
+
+"Delayed" is a **derived** UI state — `AdminScheduleDto`/
+`BoardingManifestHeader.delayedDepartureDateTime` is a sibling field to
+`status`, not a new status value (`PATCH .../delay`'s response `status` is
+always `"scheduled"`). The on-screen indicator uses a new
+`.admin-status.is-delayed` token (`--admin-delayed-bg`/`--admin-delayed-text`,
+violet) distinct from the existing scheduled(grey)/departed(blue-grey)/
+arrived(blue) pills — see `docs/design-system.md` §2.4.
+
+This is also the first `.admin-modal-backdrop` dialog owned by a component
+declared in `SharedModule` rather than a lazy feature module, which required
+relocating `AdminModalBackdropDirective` from `AdminModule` into
+`SharedModule` (declare + export) — see
+`docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md` for
+the full rationale (module-cycle avoidance, why `SharedModule` over
+`AdminSharedModule`).
+
 ## Customer Account Page & Email-Change Flow
 
 `/account` (OBRS-84) is the first customer "account settings" page — a

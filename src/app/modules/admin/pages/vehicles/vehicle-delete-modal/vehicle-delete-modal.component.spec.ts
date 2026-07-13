@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { VehicleDeleteModalComponent } from './vehicle-delete-modal.component';
-import { AdminModalBackdropDirective } from '../../../components/admin-modal-backdrop.directive';
+import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { VehicleRow } from '../vehicles-page.mappers';
 
 const VAN_ROW: VehicleRow = {

@@ -29,11 +29,29 @@
   min-width: 110px;
 }
 
+// OBRS-272: the status column now stacks the pill/action row above an
+// optional delay-reason line, so it's a column of its own rather than a
+// single flex row.
 .boarding-trip-header-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.boarding-trip-header-status-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+// OBRS-272: the delay reason line under the status row — muted, right-aligned
+// to match the column above, no new color token (reuses Bootstrap's
+// .text-muted like the rest of this component).
+.boarding-delay-reason {
+  text-align: right;
+  max-width: 320px;
 }
 
 // OBRS-256: count-lock banner shown once the schedule is `arrived` — reuses

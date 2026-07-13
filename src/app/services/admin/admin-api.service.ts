@@ -235,6 +235,12 @@ export interface AdminScheduleDto {
   driver?: AdminDriverInfoDto;
   /** Overridden seating capacity; null means use vehicleType.totalSeats as the effective value. */
   seatingCapacity?: number | null;
+  /** OBRS-272: set once staff marks the trip delayed via
+   * `PATCH /api/private/schedules/{id}/delay` — `status` STAYS `scheduled`;
+   * "delayed" is a derived UI state off these two fields, never a status code
+   * (see `BoardingListComponent.isScheduleDelayed`). `null`/absent = not delayed. */
+  delayedDepartureDateTime?: string | null;
+  delayReason?: string | null;
 }
 
 export interface AdminPersonDto {

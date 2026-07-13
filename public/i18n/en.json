@@ -1650,6 +1650,34 @@
         "GENERIC": "Unable to update the schedule status. Please try again."
       }
     },
+    "SCHEDULE_DELAY": {
+      "PILL_MARK": "Mark delayed",
+      "PILL_UPDATE": "Update ETA",
+      "INDICATOR_LABEL": "Delayed — new ETA {{eta}}",
+      "INDICATOR_REASON": "Reason: {{reason}}",
+      "DIALOG_TITLE_MARK": "Mark this trip delayed",
+      "DIALOG_TITLE_UPDATE": "Update the delay ETA",
+      "FIELD": {
+        "DATE": "New departure date",
+        "TIME": "New departure time",
+        "REASON": "Reason (optional)",
+        "REASON_PLACEHOLDER": "e.g. Traffic on the highway"
+      },
+      "VALIDATION": {
+        "REQUIRED": "This field is required.",
+        "MUST_BE_AFTER": "The new ETA must be after the original departure time.",
+        "REASON_TOO_LONG": "Reason must be 500 characters or fewer."
+      },
+      "CANCEL": "Cancel",
+      "SUBMIT": "Save",
+      "SUBMITTING": "Saving…",
+      "SUCCESS": "{{count}} passengers notified",
+      "ERROR": {
+        "SCHEDULE_DELAY_NOT_SCHEDULED": "This trip can no longer be marked delayed.",
+        "SCHEDULE_DELAY_ETA_INVALID": "The new ETA must be after the original departure time.",
+        "GENERIC": "Unable to update the delay. Please try again."
+      }
+    },
     "DRIVER": {
       "TITLE": "My Assigned Schedules",
       "SUBTITLE": "Schedules you are assigned to drive.",

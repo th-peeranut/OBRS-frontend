@@ -14,6 +14,17 @@ import {
  * `.admin-modal-backdrop` element: marks the inner `.admin-modal` as an
  * accessible dialog, locks body scroll while open, restores focus on close,
  * and emits `dismiss` on Escape or a click on the backdrop itself.
+ *
+ * OBRS-272: relocated from `modules/admin/components/` into `shared/directives/`
+ * and declared/exported by `SharedModule` rather than `AdminModule`. The
+ * directive is generic (backdrop/Escape/focus-trap/scroll-lock/aria, nothing
+ * admin-specific) — moving it here lets `BoardingListComponent` (declared in
+ * `SharedModule`, mounted by the staff shell) use `[adminModalBackdrop]` for
+ * its new delay-ETA dialog without `SharedModule` reaching into the lazy
+ * `AdminModule` (a module cycle, since `AdminModule` already imports
+ * `SharedModule`). Both `AdminModule` and `StaffModule` import `SharedModule`,
+ * so admin's existing modals keep resolving the directive unchanged. See
+ * docs/adr/0016-admin-modal-backdrop-relocation.md.
  */
 @Directive({
   selector: '[adminModalBackdrop]',

@@ -9,7 +9,9 @@ import {
   ViewChild,
   ViewContainerRef,
 } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DomPortalOutlet, TemplatePortal } from '@angular/cdk/portal';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subject, Subscription, firstValueFrom } from 'rxjs';
 import { finalize, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -24,7 +26,16 @@ import {
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
 import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
+import { mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
+import {
+  combineBangkokDateTime,
+  controlValueToDateString,
+  controlValueToTimeString,
+  dateStringToControlValue,
+  splitApiOffsetDateTime,
+  timeStringToControlValue,
+} from '../../lib/api-date-time';
 import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
 import { BoardingListStore } from './boarding-list.store';
@@ -39,13 +50,25 @@ import { BoardingListStore } from './boarding-list.store';
  * OBRS-256: `statusCode` (`scheduled|departed|arrived|unknown`, from
  * `parseAdminStatus(schedule?.status).code`) additionally drives the
  * on-screen status pill + forward-transition control + the boarding
- * count-lock once a schedule reaches `arrived`. */
+ * count-lock once a schedule reaches `arrived`.
+ *
+ * OBRS-272: `departureDateTimeRaw` carries the schedule's original (raw,
+ * offset-ISO) `departureDateTime` alongside the already-formatted display
+ * string, so the delay dialog can client-validate "ETA strictly after the
+ * original departure" without re-parsing a localized display string.
+ * `delayedDepartureDateTime`/`delayReason` mirror `AdminScheduleDto` — `null`
+ * (the default) means the schedule isn't delayed; "delayed" is a DERIVED UI
+ * state off these two fields, never a status code (`statusCode` stays
+ * `scheduled`). */
 export interface BoardingManifestHeader {
   routeLabel: string;
   departureDateTime: string;
+  departureDateTimeRaw: string | null;
   vehicleLabel: string;
   driverName: string;
   statusCode: string;
+  delayedDepartureDateTime: string | null;
+  delayReason: string | null;
 }
 
 /** OBRS-256: the single forward transition available from the CURRENT
@@ -139,10 +162,26 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   protected scanResult: BoardingScanResultDto | null = null;
   protected scanError: BoardingScanErrorResult | null = null;
 
+  // OBRS-272: "Mark delayed"/"Update ETA" dialog — inline, component-local
+  // state (mirrors OBRS-256's onScheduleStatusAction(), not a separate
+  // component/NgRx slice — see docs/adr/0017).
+  protected delayForm!: FormGroup;
+  protected isDelayFormOpen = false;
+  protected isSubmittingDelay = false;
+  /** True when the client-side "ETA strictly after the original departure"
+   * check fails — cleared on the next date/time edit or dialog (re)open. */
+  protected delayEtaAfterError = false;
+  /** True when the backend rejected the ETA (`SCHEDULE_DELAY_ETA_INVALID` or a
+   * bean-validation 400) — rendered as the SAME inline field message as
+   * `delayEtaAfterError` (never a duplicate `AlertService.error()` toast). */
+  protected delayEtaServerError = false;
+
   private readonly subscriptions = new Subscription();
   /** OBRS-256: scopes the `updateScheduleStatus()` HTTP subscription only —
    * every other async flow in this component already uses `firstValueFrom`
-   * (a single-shot promise, no subscription to leak). */
+   * (a single-shot promise, no subscription to leak).
+   * OBRS-272: also scopes `delaySchedule()`'s subscription and the delay
+   * form's `valueChanges` resets. */
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -151,7 +190,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly translate: TranslateService,
     private readonly authService: AuthService,
     protected readonly store: BoardingListStore,
-    private readonly viewContainerRef: ViewContainerRef
+    private readonly viewContainerRef: ViewContainerRef,
+    private readonly formBuilder: FormBuilder
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
     this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
@@ -183,6 +223,22 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         }
       })
     );
+
+    this.delayForm = this.formBuilder.group({
+      delayedDate: [null, [Validators.required]],
+      delayedTime: [null, [Validators.required]],
+      delayReason: ['', [Validators.maxLength(500)]],
+    });
+    // Clear a stale client/server ETA error the moment the operator edits
+    // either control again, so an old message doesn't linger over a fresh value.
+    this.delayForm
+      .get('delayedDate')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.resetDelayEtaErrors());
+    this.delayForm
+      .get('delayedTime')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.resetDelayEtaErrors());
   }
 
   ngOnDestroy(): void {
@@ -267,6 +323,149 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       default:
         return null;
     }
+  }
+
+  /** OBRS-272: "delayed" is DERIVED off `delayedDepartureDateTime`, never a
+   * status code — `parseAdminStatus`/`statusCode` never returns `delayed`.
+   * The pill/indicator below is a separate branch from `scheduleStatusPill*`. */
+  protected get isScheduleDelayed(): boolean {
+    return this.tripHeader?.delayedDepartureDateTime != null;
+  }
+
+  /** The "Mark delayed"/"Update ETA" pill only ever renders when the schedule
+   * is still `scheduled` (see the template's `*ngIf`) — this getter just picks
+   * the label between the two states. */
+  protected get delayPillLabelKey(): string {
+    return this.isScheduleDelayed ? 'STAFF.SCHEDULE_DELAY.PILL_UPDATE' : 'STAFF.SCHEDULE_DELAY.PILL_MARK';
+  }
+
+  /** Bangkok-pinned display string for the current delayed ETA — reuses
+   * `formatDisplayDateTime()` (design-system: don't hand-roll a UTC format). */
+  protected get formattedDelayedEta(): string {
+    return formatDisplayDateTime(this.tripHeader?.delayedDepartureDateTime, this.translate.currentLang);
+  }
+
+  protected isDelayFieldInvalid(name: string): boolean {
+    const control = this.delayForm.get(name);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  /**
+   * OBRS-272: opens the inline delay dialog, pre-filling date/time/reason from
+   * the CURRENT `tripHeader` when the trip is already marked delayed (re-mark
+   * flow) — split via `splitApiOffsetDateTime()`. Opens optimistically off the
+   * `tripHeader` already held (design-system §6), no fetch.
+   */
+  protected openDelayDialog(): void {
+    this.resetDelayEtaErrors();
+
+    const currentEta = this.tripHeader?.delayedDepartureDateTime ?? null;
+    const split = currentEta ? splitApiOffsetDateTime(currentEta) : { date: '', time: '' };
+
+    this.delayForm.reset({
+      delayedDate: dateStringToControlValue(split.date),
+      delayedTime: timeStringToControlValue(split.time),
+      delayReason: this.tripHeader?.delayReason ?? '',
+    });
+
+    this.isDelayFormOpen = true;
+  }
+
+  protected closeDelayDialog(): void {
+    if (this.isSubmittingDelay) {
+      return;
+    }
+    this.isDelayFormOpen = false;
+  }
+
+  private resetDelayEtaErrors(): void {
+    this.delayEtaAfterError = false;
+    this.delayEtaServerError = false;
+  }
+
+  /**
+   * OBRS-272: submits `PATCH /api/private/schedules/{id}/delay`. Client-side
+   * validates the combined ETA is strictly after `tripHeader.departureDateTimeRaw`
+   * (when known) WITHOUT calling the API on failure (design-system: fail fast,
+   * no wasted round-trip). On success: closes the dialog, patches `tripHeader`
+   * in place from the response (mirrors `onScheduleStatusAction()` — no full
+   * reload needed), fires a background `loadTripHeader()` reconcile, and shows
+   * the `{{count}}` success toast. On error: a 400 (`SCHEDULE_DELAY_ETA_INVALID`
+   * or bean-validation) renders as an INLINE field error, never a toast;
+   * anything else (409 `SCHEDULE_DELAY_NOT_SCHEDULED` / generic) is an
+   * `AlertService.error()` toast — branch on `error.error.errorCode`
+   * (`extractScheduleStatusErrorCode()`, reused — see schedule-delay-error.ts),
+   * never the localized message.
+   */
+  protected submitDelaySchedule(): void {
+    if (this.isSubmittingDelay) {
+      return;
+    }
+
+    this.delayForm.markAllAsTouched();
+    if (this.delayForm.invalid) {
+      return;
+    }
+
+    const dateValue = controlValueToDateString(this.delayForm.get('delayedDate')?.value ?? null);
+    const timeValue = controlValueToTimeString(this.delayForm.get('delayedTime')?.value ?? null);
+    if (!dateValue || !timeValue) {
+      return;
+    }
+
+    const eta = combineBangkokDateTime(dateValue, timeValue);
+    const originalDeparture = this.tripHeader?.departureDateTimeRaw;
+    if (originalDeparture && !(new Date(eta).getTime() > new Date(originalDeparture).getTime())) {
+      this.delayEtaAfterError = true;
+      return;
+    }
+    this.delayEtaAfterError = false;
+    this.delayEtaServerError = false;
+
+    const reason = String(this.delayForm.get('delayReason')?.value ?? '').trim();
+    const scheduleId = this.scheduleId;
+
+    this.isSubmittingDelay = true;
+    this.staffApiService
+      .delaySchedule(scheduleId, {
+        delayedDepartureDateTime: eta,
+        ...(reason ? { delayReason: reason } : {}),
+      })
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isSubmittingDelay = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.isDelayFormOpen = false;
+          if (response?.data && this.tripHeader) {
+            this.tripHeader = {
+              ...this.tripHeader,
+              delayedDepartureDateTime: response.data.delayedDepartureDateTime,
+              delayReason: response.data.delayReason ?? null,
+            };
+          }
+          void this.alertService.success(
+            this.translate.instant('STAFF.SCHEDULE_DELAY.SUCCESS', {
+              count: response?.data?.affectedBookingCount ?? 0,
+            })
+          );
+          void this.loadTripHeader(scheduleId);
+        },
+        error: (error) => {
+          const errorCode = extractScheduleStatusErrorCode(error);
+          const status = error instanceof HttpErrorResponse ? error.status : undefined;
+          if (status === 400) {
+            // SCHEDULE_DELAY_ETA_INVALID or a bean-validation null-ETA 400 —
+            // both render as the SAME inline field message, never a toast.
+            this.delayEtaServerError = true;
+          } else {
+            void this.alertService.error(this.translate.instant(mapScheduleDelayErrorCode(errorCode)));
+          }
+        },
+      });
   }
 
   /** OBRS-130: boarded state is `boardedAt != null` — status-neutral, not
@@ -475,11 +674,18 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         departureDateTime: schedule?.departureDateTime
           ? formatDisplayDateTime(schedule.departureDateTime, this.translate.currentLang)
           : '-',
+        // OBRS-272: raw (offset-ISO) departure — used to client-validate the
+        // delay dialog's ETA without re-parsing the localized display string.
+        departureDateTimeRaw: schedule?.departureDateTime ?? null,
         vehicleLabel: schedule?.vehicle?.numberPlate ?? schedule?.vehicle?.vehicleNumber ?? '-',
         driverName: schedule?.driver?.fullName ?? '-',
         // OBRS-256: reuses the same `parseAdminStatus` helper other admin
         // status handling already uses — no second status parser.
         statusCode: parseAdminStatus(schedule?.status).code,
+        // OBRS-272: derived-state fields — see BoardingManifestHeader's doc
+        // comment. `status` itself never becomes `delayed`.
+        delayedDepartureDateTime: schedule?.delayedDepartureDateTime ?? null,
+        delayReason: schedule?.delayReason ?? null,
       };
     } catch {
       if (this.headerRequestScheduleId === scheduleId) {
