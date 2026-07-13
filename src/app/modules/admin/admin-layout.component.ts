@@ -15,7 +15,29 @@ interface AdminNavItem {
   // subtitleKey) so the sidebar search can match on what a menu *does*, not
   // just its name — the user often recalls the function but not the label.
   descriptionKey?: string;
+  // OBRS-289: which nav section this item belongs to (see SECTION_ORDER).
+  section: NavSectionKey;
 }
+
+// OBRS-289: group the (long) admin nav into labelled sections so it scans
+// faster. Purely presentational — grouping never changes which items are
+// shown or their access (admin stays a full superset). Order here IS the
+// render order top-to-bottom.
+type NavSectionKey = 'overview' | 'master' | 'operations' | 'reports' | 'system';
+
+interface AdminNavSection {
+  key: NavSectionKey;
+  titleKey: string;
+  items: AdminNavItem[];
+}
+
+const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
+  { key: 'overview', titleKey: 'ADMIN.NAV.SECTION.OVERVIEW' },
+  { key: 'master', titleKey: 'ADMIN.NAV.SECTION.MASTER_DATA' },
+  { key: 'operations', titleKey: 'ADMIN.NAV.SECTION.OPERATIONS' },
+  { key: 'reports', titleKey: 'ADMIN.NAV.SECTION.REPORTS' },
+  { key: 'system', titleKey: 'ADMIN.NAV.SECTION.SYSTEM' },
+];
 
 // Cadence for the "Usability Reports" nav badge count. Separate from
 // ADMIN_POLL_INTERVAL_MS (admin-auto-refresh.ts) — that constant tunes the
@@ -46,6 +68,10 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // a getter, for the same *ngFor + change-detection reason as navItems above.
   protected navSearchQuery = '';
   protected filteredNavItems: AdminNavItem[] = [];
+  // OBRS-289: the rendered structure — filteredNavItems grouped into ordered
+  // sections (empty sections dropped). Stable field, recomputed alongside
+  // filteredNavItems; NOT a getter (same CD-safety rule as navItems above).
+  protected filteredNavSections: AdminNavSection[] = [];
 
   // OBRS-196: Settlements is gated to owner/admin (route `requiredRoles:
   // ['owner']`; ROLE_GRANTS['admin'] includes 'owner', so admin is admitted
@@ -55,31 +81,31 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // OBRS-290: each item's descriptionKey reuses the matching route's
     // subtitleKey (admin.module.ts) so search can match a menu by what it does.
     const items: AdminNavItem[] = [
-      { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard', descriptionKey: 'ADMIN.DASHBOARD.SUBTITLE' },
-      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component', descriptionKey: 'ADMIN.LOOKUP.SUBTITLE' },
-      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings', descriptionKey: 'ADMIN.ROLES.SUBTITLE' },
-      { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group', descriptionKey: 'ADMIN.USERS.SUBTITLE' },
-      { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE' },
-      { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE' },
-      { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month', descriptionKey: 'ADMIN.SCHEDULES.SUBTITLE' },
-      { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number', descriptionKey: 'ADMIN.BOOKINGS.SUBTITLE' },
-      { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE' },
-      { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE' },
-      { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart', descriptionKey: 'ADMIN.REPORTS.SUBTITLE' },
+      { path: 'dashboard', labelKey: 'ADMIN.PAGES.DASHBOARD', icon: 'dashboard', descriptionKey: 'ADMIN.DASHBOARD.SUBTITLE', section: 'overview' },
+      { path: 'lookups', labelKey: 'ADMIN.PAGES.LOOKUP_SETTINGS', icon: 'settings_input_component', descriptionKey: 'ADMIN.LOOKUP.SUBTITLE', section: 'master' },
+      { path: 'roles', labelKey: 'ADMIN.PAGES.ROLE_MANAGEMENT', icon: 'admin_panel_settings', descriptionKey: 'ADMIN.ROLES.SUBTITLE', section: 'master' },
+      { path: 'users', labelKey: 'ADMIN.PAGES.USER_MANAGEMENT', icon: 'group', descriptionKey: 'ADMIN.USERS.SUBTITLE', section: 'master' },
+      { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE', section: 'master' },
+      { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE', section: 'master' },
+      { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month', descriptionKey: 'ADMIN.SCHEDULES.SUBTITLE', section: 'master' },
+      { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number', descriptionKey: 'ADMIN.BOOKINGS.SUBTITLE', section: 'operations' },
+      { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE', section: 'operations' },
+      { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE', section: 'reports' },
+      { path: 'reports', labelKey: 'ADMIN.PAGES.REPORTS', icon: 'bar_chart', descriptionKey: 'ADMIN.REPORTS.SUBTITLE', section: 'reports' },
       // OBRS-231: EOD sales report — admin+owner (route `requiredRoles:
       // ['admin','owner']`), same audience as the base admin nav, so it lives
       // in the always-shown list (not role-gated further like settlements).
-      { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale', descriptionKey: 'ADMIN.EOD_REPORT.SUBTITLE' },
+      { path: 'eod-sales-report', labelKey: 'ADMIN.PAGES.EOD_SALES_REPORT', icon: 'point_of_sale', descriptionKey: 'ADMIN.EOD_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-98: refund/void summary report — same admin+owner audience (route
       // `requiredRoles: ['admin','owner']`) as eod-sales-report above.
-      { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange', descriptionKey: 'ADMIN.REFUND_VOID_REPORT.SUBTITLE' },
+      { path: 'refund-void-report', labelKey: 'ADMIN.PAGES.REFUND_VOID_REPORT', icon: 'currency_exchange', descriptionKey: 'ADMIN.REFUND_VOID_REPORT.SUBTITLE', section: 'reports' },
       // OBRS-99: cash/online reconciliation report — same admin+owner audience
       // (route `requiredRoles: ['admin','owner']`) as refund-void-report above.
-      { path: 'cash-online-reconciliation-report', labelKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION', icon: 'account_balance_wallet', descriptionKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE' },
+      { path: 'cash-online-reconciliation-report', labelKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION', icon: 'account_balance_wallet', descriptionKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE', section: 'reports' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {
-      items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE' });
+      items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });
     }
 
     // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
@@ -91,6 +117,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
         labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
         icon: 'notifications_active',
         descriptionKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
+        section: 'system',
       });
     }
 
@@ -124,6 +151,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // mirrors StaffLayoutComponent.ngOnInit's ordering.
     this.navItems = this.buildNavItems();
     this.filteredNavItems = this.navItems;
+    this.filteredNavSections = this.buildSections(this.navItems);
     super.ngOnInit();
     this.watchNewReportCount();
 
@@ -171,6 +199,18 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
         : '';
       return label.includes(q) || description.includes(q);
     });
+    this.filteredNavSections = this.buildSections(this.filteredNavItems);
+  }
+
+  // OBRS-289: group a flat item list into the ordered sections of SECTION_ORDER,
+  // dropping any section that has no items (so a role that lacks every item in a
+  // section — or a search that filters one out entirely — hides its header too).
+  private buildSections(items: AdminNavItem[]): AdminNavSection[] {
+    return SECTION_ORDER.map(({ key, titleKey }) => ({
+      key,
+      titleKey,
+      items: items.filter((item) => item.section === key),
+    })).filter((section) => section.items.length > 0);
   }
 
   // OBRS-290: clear button / Escape resets the search to the full list.

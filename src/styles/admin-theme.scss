@@ -35,6 +35,17 @@
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
 
+  /* OBRS-272: "delayed" trip indicator (schedule-level, derived off
+     delayedDepartureDateTime — NOT a status code, status stays `scheduled`).
+     A distinct violet pastel so it never collides with is-info (blue-grey,
+     departed), is-success (blue, arrived), is-neutral (grey, scheduled/not
+     boarded), is-warning (orange — reserved, also the resolved theme-admin
+     --accent variant, design-system §11), or is-danger/is-accepted. Light bg +
+     dark text is a self-contained chip (like --admin-accepted-*): no
+     dark-mode override needed, same reasoning as the accepted-text note above. */
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
   --accent: #4dbeef;
@@ -383,6 +394,22 @@
   font-size: 13px;
   padding: 8px 12px;
   margin: 0;
+}
+
+/* ── OBRS-289: nav section header ── muted, uppercase group label above each
+   cluster of nav links. Token-only color; no new hex. */
+.admin-nav-section-title {
+  margin: 12px 0 2px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+
+.admin-nav-section-title:first-child {
+  margin-top: 0;
 }
 
 .admin-sidebar-footer {
@@ -1089,6 +1116,13 @@
   color: var(--admin-neutral-text);
 }
 
+/* OBRS-272: "delayed" trip indicator pill — see the --admin-delayed-* token
+   comment above. */
+.admin-status.is-delayed {
+  background: var(--admin-delayed-bg);
+  color: var(--admin-delayed-text);
+}
+
 .admin-status--icon {
   gap: 4px;
 
@@ -1513,6 +1547,16 @@ textarea.admin-field {
 
   .admin-shell.is-sidebar-pinned .admin-nav-search {
     display: flex;
+  }
+
+  /* OBRS-289: same treatment for the section headers — the 76px icon rail has
+     no room for a group label, so hide it collapsed and reveal it expanded. */
+  .admin-sidebar .admin-nav-section-title {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-section-title {
+    display: block;
   }
 
   /* Collapsed: icons centred, labels hidden */

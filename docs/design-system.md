@@ -92,6 +92,7 @@ token it's copied from:
 | `.is-accepted` | `--admin-accepted-bg` / `--admin-accepted-text` | accepted (usability reports) | green. |
 | `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text, no dark-mode override. |
 | `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text, no dark-mode override. |
+| `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
 
 ### 2.3 Brand is per-shell (decision)
 
@@ -393,6 +394,19 @@ enforced rule with a test behind it.
   at all. Reuse this only for a note that stays true regardless of whether the current
   fetch succeeded; a note that describes the *data* (like the basis captions above)
   should stay gated with its section.
+
+- **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,
+  `BoardingListComponent`'s delay-ETA dialog): the first `*ngIf`-gated
+  `.admin-modal-backdrop`/`.admin-modal` dialog owned by a component declared in
+  `SharedModule` rather than a lazy feature module — same component-local-state
+  pattern as every other admin modal (no separate component, no NgRx), just hosted
+  somewhere new. This required moving `AdminModalBackdropDirective` from
+  `AdminModule` into `SharedModule` (declare + export) so a `shared/` component can
+  reach it without `SharedModule` reaching into a lazy feature module (a cycle,
+  since `AdminModule`/`StaffModule` both already import `SharedModule`). See
+  `docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Reuse
+  this precedent — directive lives in `SharedModule`, dialog markup stays inline —
+  for the next `shared/`-component modal instead of re-litigating the module home.
 
 ---
 

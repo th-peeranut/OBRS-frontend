@@ -24,20 +24,48 @@
       </div>
     </div>
     <div class="boarding-trip-header-status">
-      <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
-        <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
-        {{ scheduleStatusPillLabelKey | translate }}
-      </span>
-      <button
-        *ngIf="canControlScheduleStatus && scheduleStatusAction as action"
-        type="button"
-        class="admin-btn"
-        [disabled]="isUpdatingScheduleStatus"
-        (click)="onScheduleStatusAction()"
-      >
-        <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
-        {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
-      </button>
+      <div class="boarding-trip-header-status-row">
+        <span class="admin-status admin-status--icon" [ngClass]="scheduleStatusPillClass">
+          <span class="material-symbols-outlined" aria-hidden="true">{{ scheduleStatusPillIcon }}</span>
+          {{ scheduleStatusPillLabelKey | translate }}
+        </span>
+        <!-- OBRS-272: "delayed" is a DERIVED indicator (off delayedDepartureDateTime),
+             never routed through scheduleStatusPillClass/parseAdminStatus — the
+             schedule's own status stays `scheduled`. New --admin-delayed-* token
+             (design-system §2.4/§11): distinct violet, no collision with
+             is-info(departed)/is-success(arrived)/is-neutral(scheduled). -->
+        <span class="admin-status is-delayed admin-status--icon" *ngIf="isScheduleDelayed">
+          <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
+          {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_LABEL' | translate: { eta: formattedDelayedEta } }}
+        </span>
+        <button
+          *ngIf="canControlScheduleStatus && scheduleStatusAction as action"
+          type="button"
+          class="admin-btn"
+          [disabled]="isUpdatingScheduleStatus"
+          (click)="onScheduleStatusAction()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">{{ action.icon }}</span>
+          {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
+        </button>
+        <!-- OBRS-272: "Mark delayed"/"Update ETA" pill — next to OBRS-256's
+             departed/arrived control. Renders ONLY while still `scheduled` AND
+             for the same role gate as the transition button above (hidden once
+             departed/arrived/cancelled, making the 409 NOT_SCHEDULED path rare
+             by construction). -->
+        <button
+          *ngIf="canControlScheduleStatus && tripHeader.statusCode === 'scheduled'"
+          type="button"
+          class="admin-btn"
+          (click)="openDelayDialog()"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">update</span>
+          {{ delayPillLabelKey | translate }}
+        </button>
+      </div>
+      <div class="boarding-delay-reason text-muted small" *ngIf="isScheduleDelayed && tripHeader.delayReason">
+        {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_REASON' | translate: { reason: tripHeader.delayReason } }}
+      </div>
     </div>
   </div>
 
@@ -291,6 +319,110 @@
           </tbody>
         </table>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- OBRS-272: "Mark delayed"/"Update ETA" dialog — inline `*ngIf` block,
+     component-local state (mirrors every other admin-modal-backdrop in this
+     codebase, e.g. schedules-page.component.html — not a separate component).
+     `[adminModalBackdrop]` now resolves from SharedModule (relocated from
+     AdminModule, see docs/adr/0017) since this component lives in shared/. -->
+<div
+  class="admin-modal-backdrop"
+  *ngIf="isDelayFormOpen"
+  adminModalBackdrop
+  [dismissOnBackdrop]="false"
+  (dismiss)="closeDelayDialog()"
+>
+  <div class="admin-modal schedule-delay-modal">
+    <h4 class="admin-modal-title">
+      {{
+        (isScheduleDelayed ? 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_UPDATE' : 'STAFF.SCHEDULE_DELAY.DIALOG_TITLE_MARK')
+          | translate
+      }}
+    </h4>
+
+    <form [formGroup]="delayForm" class="admin-form-grid" (ngSubmit)="submitDelaySchedule()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-calendar
+          formControlName="delayedDate"
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.DATE' | translate"
+        >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-calendar>
+        <small class="admin-error">
+          {{ isDelayFieldInvalid('delayedDate') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REQUIRED' | translate) : '' }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-calendar
+          formControlName="delayedTime"
+          styleClass="app-date-field"
+          panelStyleClass="app-date-field-panel"
+          [timeOnly]="true"
+          [hourFormat]="'24'"
+          [showIcon]="true"
+          [iconDisplay]="'input'"
+          [showButtonBar]="true"
+          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.TIME' | translate"
+        >
+          <ng-template pTemplate="inputicon">
+            <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+          </ng-template>
+        </p-calendar>
+        <small class="admin-error">
+          {{
+            isDelayFieldInvalid('delayedTime')
+              ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REQUIRED' | translate)
+              : (delayEtaAfterError
+                  ? ('STAFF.SCHEDULE_DELAY.VALIDATION.MUST_BE_AFTER' | translate)
+                  : (delayEtaServerError ? ('STAFF.SCHEDULE_DELAY.ERROR.SCHEDULE_DELAY_ETA_INVALID' | translate) : ''))
+          }}
+        </small>
+      </div>
+
+      <div class="admin-form-field full">
+        <label class="admin-form-label">{{ 'STAFF.SCHEDULE_DELAY.FIELD.REASON' | translate }}</label>
+        <textarea
+          class="admin-field"
+          formControlName="delayReason"
+          [placeholder]="'STAFF.SCHEDULE_DELAY.FIELD.REASON_PLACEHOLDER' | translate"
+          maxlength="500"
+        ></textarea>
+        <small class="admin-error">
+          {{ isDelayFieldInvalid('delayReason') ? ('STAFF.SCHEDULE_DELAY.VALIDATION.REASON_TOO_LONG' | translate) : '' }}
+        </small>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" [disabled]="isSubmittingDelay" (click)="closeDelayDialog()">
+        {{ 'STAFF.SCHEDULE_DELAY.CANCEL' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSubmittingDelay || delayForm.invalid"
+        (click)="submitDelaySchedule()"
+      >
+        {{ (isSubmittingDelay ? 'STAFF.SCHEDULE_DELAY.SUBMITTING' : 'STAFF.SCHEDULE_DELAY.SUBMIT') | translate }}
+      </button>
     </div>
   </div>
 </div>

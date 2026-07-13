@@ -235,8 +235,9 @@ describe('AdminLayoutComponent', () => {
 
   // ── OBRS-290: sidebar menu search ───────────────────────────────────────────
   type SearchComp = {
-    navItems: Array<{ path: string }>;
+    navItems: Array<{ path: string; section: string }>;
     filteredNavItems: Array<{ path: string }>;
+    filteredNavSections: Array<{ key: string; titleKey: string; items: Array<{ path: string }> }>;
     navSearchQuery: string;
     applyNavSearch(q: string): void;
     clearNavSearch(): void;
@@ -317,6 +318,31 @@ describe('AdminLayoutComponent', () => {
     link.triggerEventHandler('click', null); // fires onNavLinkClick() + clearNavSearch()
     expect(comp.navSearchQuery).toBe('');
     expect(comp.filteredNavItems.length).toBe(full);
+  });
+
+  // ── OBRS-289: nav grouping into sections ────────────────────────────────────
+  it('groups nav items into ordered sections and renders a header per section', () => {
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    // sections appear in SECTION_ORDER and each carries only its own items
+    const keys = comp.filteredNavSections.map((s) => s.key);
+    expect(keys).toEqual(['overview', 'master', 'operations', 'reports']); // no 'system' for non-admin stub
+    expect(comp.filteredNavSections.every((s) => s.items.every((i) => i.path)))
+      .toBeTrue();
+    // every rendered item belongs to its section's key
+    const master = comp.filteredNavSections.find((s) => s.key === 'master');
+    expect(master?.items.some((i) => i.path === 'users')).toBeTrue();
+
+    fixture.detectChanges();
+    const headers = fixture.debugElement.queryAll(By.css('.admin-nav-section-title'));
+    expect(headers.length).toBe(comp.filteredNavSections.length);
+  });
+
+  it('drops a section whose items are all filtered out by the search', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    comp.applyNavSearch('promotion'); // only 'promotions' (operations section) matches
+    expect(comp.filteredNavSections.map((s) => s.key)).toEqual(['operations']);
+    expect(comp.filteredNavSections[0].items.length).toBe(1);
   });
 });
 
