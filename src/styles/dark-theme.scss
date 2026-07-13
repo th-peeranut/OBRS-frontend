@@ -672,12 +672,44 @@ body.is-dark app-route-map-home {
 }
 
 // =============================================================================
-// N. Notification preferences (OBRS-141, `/account/notification-preferences`)
+// N. /account page + notification preferences (OBRS-258, OBRS-141)
 // =============================================================================
-// NOTE: `.account-card` on `/account` itself has a known pre-existing dark-mode
-// gap (tracked separately) — not touched here. This section only covers the
-// new `.npref-*` classes, built from the $dk-* vars already defined above.
+// Covers the `/account` shell (`.account-page` / `.account-card`) — the
+// pre-existing dark-mode gap fixed in OBRS-258 — and the
+// `/account/notification-preferences` `.npref-*` classes (OBRS-141). All built
+// from the $dk-* vars defined above; no raw hex.
 body.is-dark {
+  // --- /account shell (OBRS-258) ---
+  .account-page {
+    background-color: $dk-bg;
+  }
+
+  // `.account-page` qualifier is required: the component's own
+  // `.account-page__header h1/p` rules are view-encapsulated ([_ngcontent]
+  // attrs → specificity 0,3,1), which outweighs a plain
+  // `body.is-dark .account-page__header h1` (0,2,2). Chaining `.account-page`
+  // lifts these to (0,3,2) so the dark colors actually win. (Single-class
+  // rules like `.account-card__title` below don't need this.)
+  .account-page .account-page__header {
+    h1 { color: $dk-text; }
+    p { color: $dk-text-muted; }
+  }
+
+  .account-card {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  }
+
+  .account-card__title {
+    color: $dk-text;
+  }
+
+  .account-card__email {
+    color: $dk-text-muted;
+  }
+
+  // --- /account/notification-preferences (OBRS-141) ---
   .npref-page {
     background-color: $dk-bg;
   }
