@@ -1545,6 +1545,7 @@
       "VEHICLE_TYPE": "Vehicle type",
       "VEHICLE_PLATE": "Vehicle no.",
       "SEAT": "Seat",
+      "SEAT_OPEN": "Open seating (unreserved seat)",
       "PASSENGERS": "Passengers",
       "BOOKER": "Booker",
       "PASSENGER_NAME": "Passenger name",

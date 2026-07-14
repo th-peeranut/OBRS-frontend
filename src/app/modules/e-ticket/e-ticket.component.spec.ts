@@ -194,8 +194,10 @@ describe('ETicketComponent', () => {
           ticketNumber: 'T-Q4QZXTZAFY',
           qrDataUrl: '',
           qrUnavailable: true,
+          seatOpen: false,
         },
       ]);
+      expect(component.seatsOpen).toBeFalse();
     });
 
     it('selects the outbound journey even when legType order changes', () => {
@@ -244,6 +246,25 @@ describe('ETicketComponent', () => {
 
       expect(component.originLatitude).toBeNull();
       expect(component.originLongitude).toBeNull();
+    });
+
+    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and seatsOpen overall, and seat falls back to "-"', () => {
+      const data = buildTicketsData();
+      data.journeys![0].tickets![0].seatNumber = undefined;
+
+      apply(data);
+
+      expect(component.seatsOpen).toBeTrue();
+      expect(component.passengers[0].seat).toBe('-');
+      expect(component.passengers[0].seatOpen).toBeTrue();
+    });
+
+    it('OBRS-325 (ASSIGNED regression): a ticket with a seatNumber keeps seatOpen false and the real seat unchanged', () => {
+      apply(buildTicketsData());
+
+      expect(component.seatsOpen).toBeFalse();
+      expect(component.passengers[0].seat).toBe('1');
+      expect(component.passengers[0].seatOpen).toBeFalse();
     });
   });
 

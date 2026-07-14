@@ -46,6 +46,7 @@ export function mapBookingTicketsToCard(
         journey.vehicle?.numberPlate
       ) || '-',
     seats: buildSeatList(buildPassengers(journey)) || '-',
+    isOpenSeating: isJourneyOpenSeating(journey),
     distanceKm: tripEstimateFromStops(journey.fromStop, journey.toStop).distanceKm,
     pickupLatitude: journey.fromStop?.latitude ?? null,
     pickupLongitude: journey.fromStop?.longitude ?? null,
@@ -121,6 +122,23 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
     phone: '-',
     seat: ticket.seatNumber?.trim() || '-',
   }));
+}
+
+/**
+ * OBRS-325: a leg is open-seating when it has at least one ticket and every
+ * ticket's `seatNumber` is null/blank (`schedules.seating_mode = OPEN`,
+ * OBRS-321 — the read DTO doesn't expose `seatingMode` itself yet on the FE
+ * models, so this derives the same signal from `seat_number == null`; see the
+ * handoff note requesting the field directly). A leg with zero tickets (the
+ * empty-journey placeholder) is not "open" — it's the pre-existing "no data"
+ * case and must keep showing the `'-'` placeholder unchanged.
+ */
+function isJourneyOpenSeating(journey: BookingTicketJourney): boolean {
+  const tickets = journey.tickets ?? [];
+  if (tickets.length === 0) {
+    return false;
+  }
+  return tickets.every((ticket) => !ticket.seatNumber?.trim());
 }
 
 function buildSeatList(passengers: TicketPassenger[]): string {

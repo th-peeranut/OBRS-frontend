@@ -1546,6 +1546,7 @@
       "VEHICLE_TYPE": "ประเภทรถ",
       "VEHICLE_PLATE": "หมายเลขรถ/ทะเบียน",
       "SEAT": "ที่นั่ง",
+      "SEAT_OPEN": "ขึ้นนั่งตามที่ว่าง",
       "PASSENGERS": "ผู้โดยสาร",
       "BOOKER": "คนที่จอง",
       "PASSENGER_NAME": "ชื่อ-นามสกุล",

@@ -1544,6 +1544,7 @@
       "VEHICLE_TYPE": "车辆类型",
       "VEHICLE_PLATE": "车牌号",
       "SEAT": "座位",
+      "SEAT_OPEN": "自由入座（不指定座位）",
       "PASSENGERS": "乘客",
       "BOOKER": "预订人",
       "PASSENGER_NAME": "乘客姓名",
