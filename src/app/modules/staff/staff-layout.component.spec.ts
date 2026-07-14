@@ -1,3 +1,4 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -12,6 +13,12 @@ import { AlertService } from '../../shared/services/alert.service';
 import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
+import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+
+// OBRS-317: stub the bell selector so this layout-chrome spec stays scoped
+// to the layout itself (same approach as admin-layout.component.spec.ts).
+@Component({ selector: 'app-notification-bell', template: '' })
+class NotificationBellStubComponent {}
 
 // localStorage shim — keeps spec storage isolated
 function clearSidebarStorage(): void {
@@ -38,7 +45,7 @@ describe('StaffLayoutComponent', () => {
   beforeEach(async () => {
     clearSidebarStorage();
     await TestBed.configureTestingModule({
-      declarations: [StaffLayoutComponent, LangSwitcherComponent],
+      declarations: [StaffLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -46,6 +53,10 @@ describe('StaffLayoutComponent', () => {
         { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         { provide: ThemeService, useValue: themeServiceStub },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
       ],
     }).compileComponents();
 

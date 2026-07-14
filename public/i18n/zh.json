@@ -1165,6 +1165,19 @@
       "BOARDING_REMINDER": "登车提醒"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "通知，{{count}} 条未读",
+    "PANEL_TITLE": "通知",
+    "MARK_ALL_READ": "全部标为已读",
+    "EMPTY_TITLE": "暂无通知",
+    "LOAD_ERROR": "无法加载通知",
+    "RETRY": "重试",
+    "SHOWING_LATEST": "显示最近 {{shown}} 条，共 {{total}} 条",
+    "MARK_READ_ERROR": "标记已读失败，请重试",
+    "MARK_ALL_ERROR": "全部标记已读失败，请重试",
+    "ROW_UNREAD_SUFFIX": "未读",
+    "ROW_READ_SUFFIX": "已读"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "更改您的邮箱",
     "CURRENT_PASSWORD_LABEL": "当前密码",

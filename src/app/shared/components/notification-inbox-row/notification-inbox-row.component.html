@@ -1,0 +1,15 @@
+<button
+  type="button"
+  class="notification-row"
+  [class.is-unread]="!item.read"
+  [attr.aria-label]="ariaLabel"
+  (click)="onClick()"
+>
+  <span class="notification-row-indicator" aria-hidden="true">
+    <span class="notification-row-dot" *ngIf="!item.read"></span>
+  </span>
+  <span class="notification-row-body">
+    <span class="notification-row-message">{{ item.message }}</span>
+    <span class="notification-row-timestamp">{{ formattedTimestamp }}</span>
+  </span>
+</button>

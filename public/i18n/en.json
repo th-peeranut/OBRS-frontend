@@ -1165,6 +1165,19 @@
       "BOARDING_REMINDER": "Boarding reminder"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "Notifications, {{count}} unread",
+    "PANEL_TITLE": "Notifications",
+    "MARK_ALL_READ": "Mark all read",
+    "EMPTY_TITLE": "No notifications yet",
+    "LOAD_ERROR": "Couldn't load notifications",
+    "RETRY": "Retry",
+    "SHOWING_LATEST": "Showing latest {{shown}} of {{total}}",
+    "MARK_READ_ERROR": "Couldn't mark as read — please try again",
+    "MARK_ALL_ERROR": "Couldn't mark all as read — please try again",
+    "ROW_UNREAD_SUFFIX": "unread",
+    "ROW_READ_SUFFIX": "read"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "Change your email",
     "CURRENT_PASSWORD_LABEL": "Current password",
