@@ -341,6 +341,63 @@ export interface AdminPaymentTransactionDto {
   remark?: string;
 }
 
+// OBRS-280: GET /api/private/bookings/{id} (admin booking detail dialog).
+// Shape verified against the live backend record types (not guessed):
+// `BookingDetailResponse.java` + its nested `business`/`business.localized`
+// records. Booking/ticket `status`, `bookingType`, `passengerType`, and the
+// journey `fromStop`/`toStop` all come back as `{code, label}`
+// (`LocalizedResponse` implementations) — structurally a subset of the
+// existing `AdminStatusDto`, so they're typed with it here rather than a new
+// interface (reuses `parseAdminStatus`/`getAdminLookupLabel` too).
+export interface AdminBookingTicketDto {
+  id?: number;
+  ticketNumber?: string;
+  passengerType?: AdminStatusDto;
+  passengerName?: string;
+  seatNumber?: string;
+  // Ticket status is included for EVERY ticket on the booking, including
+  // CANCELLED/REFUNDED legs — the detail dialog must not filter them out.
+  status?: string | AdminStatusDto;
+}
+
+export interface AdminBookingDetailJourneyDto {
+  legType?: AdminStatusDto;
+  fromStop?: AdminStatusDto;
+  toStop?: AdminStatusDto;
+  departureDateTime?: string;
+  arrivalDateTime?: string;
+  tickets?: AdminBookingTicketDto[];
+}
+
+export interface AdminBookingActorDetailDto {
+  id?: number;
+  name?: string;
+  type?: string;
+  channel?: string;
+  officeName?: string;
+}
+
+export interface AdminBookingContactDetailDto {
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export interface AdminBookingDetailDto {
+  id: number;
+  bookingNumber?: string;
+  bookingType?: AdminStatusDto;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  expiredAt?: string;
+  actor?: AdminBookingActorDetailDto;
+  contact?: AdminBookingContactDetailDto;
+  journeys?: AdminBookingDetailJourneyDto[];
+  // Reuses the existing list-endpoint DTOs — `PriceSummaryResponse`/
+  // `PaymentSummaryResponse` on the backend match these field-for-field.
+  pricing?: AdminPriceSummaryDto;
+  payment?: AdminPaymentSummaryDto;
+}
+
 export function getAdminTranslationLabel(
   translations: AdminTranslationCollection | null | undefined,
   locale?: string
@@ -954,6 +1011,14 @@ export class AdminApiService {
   ): Observable<ResponseAPI<AdminPaymentByBookingIdDto>> {
     return this.getRequest<AdminPaymentByBookingIdDto>(
       `${this.baseUrl}/private/bookings/${bookingId}/payments`
+    );
+  }
+
+  // OBRS-280: read-only admin booking detail dialog. Same base path as
+  // getBookingPayments above (NOT the list endpoint's `/private/admin/bookings`).
+  getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
+    return this.getRequest<AdminBookingDetailDto>(
+      `${this.baseUrl}/private/bookings/${bookingId}`
     );
   }
 

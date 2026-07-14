@@ -322,4 +322,63 @@ describe('AdminApiService', () => {
       expect(result).toEqual({ scheduleId: 42, status: 'cancelled', affectedBookingCount: 3 });
     });
   });
+
+  // OBRS-280: admin booking detail dialog. Same base path as
+  // getBookingPayments (`/private/bookings/{id}`), NOT the list endpoint's
+  // `/private/admin/bookings` — a store-stub spec never exercises the real
+  // HttpClient call, so this hits HttpTestingController directly, same
+  // precedent as the OBRS-85/OBRS-196 blocks above.
+  describe('getBookingById', () => {
+    it('issues a GET to /api/private/bookings/{id} and resolves the detail shape', () => {
+      let result: unknown;
+      service.getBookingById(42).subscribe((resp) => (result = resp.data));
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/42`);
+      expect(req.request.method).toBe('GET');
+
+      const detail = {
+        id: 42,
+        bookingNumber: '#BK-42',
+        bookingType: { code: 'online', label: 'Online' },
+        status: { code: 'confirmed', label: 'Confirmed' },
+        createdAt: '2026-07-01T10:00:00+07:00',
+        expiredAt: null,
+        actor: { id: 1, name: 'Jane Doe', type: 'CUSTOMER', channel: 'WEB', officeName: null },
+        contact: { fullName: 'Jane Doe', phoneNumber: '0812345678' },
+        journeys: [
+          {
+            legType: { code: 'outbound', label: 'Outbound' },
+            fromStop: { code: 'bkk', label: 'Bangkok' },
+            toStop: { code: 'cnx', label: 'Chiang Mai' },
+            departureDateTime: '2026-07-02T08:00:00+07:00',
+            arrivalDateTime: '2026-07-02T16:00:00+07:00',
+            vehicle: null,
+            tickets: [
+              {
+                id: 1,
+                ticketNumber: 'TK-001',
+                passengerType: { code: 'adult', label: 'Adult' },
+                passengerName: 'Jane Doe',
+                seatNumber: 'A1',
+                status: { code: 'confirmed', label: 'Confirmed' },
+              },
+            ],
+          },
+        ],
+        pricing: { basePrice: '500.00', discount: '0.00', fee: '0.00', netAmount: '500.00', currency: 'THB' },
+        payment: {
+          totalAmount: '500.00',
+          paidAmount: '500.00',
+          outstandingAmount: '0.00',
+          refundedAmount: '0.00',
+          currency: 'THB',
+          status: 'PAID',
+        },
+      };
+
+      req.flush({ code: 200, message: 'OK', data: detail });
+
+      expect(result).toEqual(detail);
+    });
+  });
 });

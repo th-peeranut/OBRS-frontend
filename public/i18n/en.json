@@ -731,7 +731,52 @@
       "PAYMENT_STATUS": "Payment Status",
       "UNITS": "bookings",
       "LOADING": "Loading booking data...",
-      "LOAD_FAILED": "Unable to load booking data from backend."
+      "LOAD_FAILED": "Unable to load booking data from backend.",
+      "VIEW": "View",
+      "DETAIL": {
+        "TITLE": "Booking Detail",
+        "CLOSE": "Close",
+        "LOAD_FAILED": "Unable to load booking detail. Please try again.",
+        "CREATED_AT": "Created At",
+        "EXPIRES_AT": "Expires At",
+        "SECTION": {
+          "CONTACT": "Customer Contact",
+          "ACTOR": "Booked By",
+          "PASSENGERS": "Passengers & Tickets",
+          "PAYMENT": "Payment",
+          "TIMELINE": "Activity"
+        },
+        "CONTACT_NAME": "Full Name",
+        "CONTACT_PHONE": "Phone Number",
+        "ACTOR_NAME": "Name",
+        "ACTOR_TYPE": "Actor Type",
+        "ACTOR_CHANNEL": "Channel",
+        "ACTOR_OFFICE": "Office",
+        "NO_JOURNEYS": "No journeys on this booking.",
+        "JOURNEY_LABEL": "Journey {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "Passenger",
+          "PASSENGER_TYPE": "Type",
+          "SEAT": "Seat",
+          "TICKET_NUMBER": "Ticket No.",
+          "TICKET_STATUS": "Ticket Status",
+          "TXN_DATE": "Date/Time",
+          "TXN_METHOD": "Method",
+          "TXN_AMOUNT": "Amount",
+          "TXN_STATUS": "Status"
+        },
+        "TOTAL_AMOUNT": "Total",
+        "PAID_AMOUNT": "Paid",
+        "OUTSTANDING_AMOUNT": "Outstanding",
+        "REFUNDED_AMOUNT": "Refunded",
+        "NO_TRANSACTIONS": "No payment transactions recorded.",
+        "EVENT": {
+          "CREATED": "Booking created",
+          "PAYMENT": "Payment received ({{method}})",
+          "EXPIRES": "Booking expires",
+          "CURRENT_STATUS": "Current status: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "Dashboard",
