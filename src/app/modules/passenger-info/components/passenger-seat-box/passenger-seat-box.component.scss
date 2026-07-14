@@ -64,6 +64,37 @@
     line-height: calc(var(--seat-size, 80px) * 0.22);
     text-align: center;
   }
+
+  // Seat-attribute badges (OBRS-362) — same filled-circle recipe as
+  // .seat-owner-badge above, positioned at the BOTTOM corners so they never
+  // collide with the owner badge (top-left) or the original marker
+  // (top-right). A seat can carry both at once (e.g. front-row A1/B1) —
+  // left/right split keeps them from overlapping each other too.
+  .seat-attribute-badge {
+    position: absolute;
+    bottom: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--seat-size, 80px) * 0.28);
+    height: calc(var(--seat-size, 80px) * 0.28);
+    border-radius: $radius-pill;
+    color: $primary-white;
+
+    .material-symbols-outlined {
+      font-size: calc(var(--seat-size, 80px) * 0.2);
+    }
+  }
+
+  .seat-attribute-badge-wheelchair {
+    left: 2px;
+    background: $brand-customer-strong;
+  }
+
+  .seat-attribute-badge-legroom {
+    right: 2px;
+    background: $text-lightblack;
+  }
 }
 
 // Active-passenger emphasis ring (shared seat map, OBRS-242): the ACTIVE

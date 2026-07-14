@@ -30,6 +30,21 @@ export class PassengerSeatBoxComponent implements OnChanges {
    * seats. False (the default) changes nothing for existing call sites.
    */
   @Input() isActiveOwner: boolean = false;
+  /**
+   * Seat-attribute badges (OBRS-362) — whether this specific seat is
+   * wheelchair-accessible / has extra legroom, per the schedule's seat map.
+   * Both false by default (every existing call site unaffected). Unlike the
+   * owner/gender/original markers above, these render UNCONDITIONALLY (not
+   * gated by `isDisabled`) — accessibility info is relevant even on an
+   * already-taken seat.
+   */
+  @Input() hasWheelchairBadge: boolean = false;
+  @Input() hasExtraLegroomBadge: boolean = false;
+  /** Pre-translated aria-labels for the two badges above, sourced from the
+   *  host (this component stays a dumb/presentational leaf with no
+   *  TranslateModule dependency). */
+  @Input() wheelchairBadgeAriaLabel: string = '';
+  @Input() extraLegroomBadgeAriaLabel: string = '';
 
   @Output() passengerSeatOutput = new EventEmitter<string>();
 

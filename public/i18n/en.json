@@ -1534,7 +1534,22 @@
       "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
       "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
       "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
-      "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left)."
+      "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left).",
+      "SEAT_PREFERENCE_LABEL": "Seat preference (optional)",
+      "SEAT_PREFERENCE_GROUP_ARIA": "Select seat preference",
+      "SEAT_PREFERENCE_WINDOW": "Window",
+      "SEAT_PREFERENCE_AISLE": "Aisle",
+      "SEAT_REQUIREMENT_LABEL": "Special requirement (optional)",
+      "SEAT_REQUIREMENT_GROUP_ARIA": "Select special seat requirement",
+      "SEAT_REQUIREMENT_WHEELCHAIR": "Wheelchair accessible",
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom"
+    },
+    "SEAT_MAP": {
+      "WHEELCHAIR_BADGE_ARIA": "Wheelchair accessible seat",
+      "EXTRA_LEGROOM_BADGE_ARIA": "Extra legroom seat",
+      "LEGEND_TITLE": "Seat legend",
+      "LEGEND_WHEELCHAIR": "Wheelchair accessible",
+      "LEGEND_EXTRA_LEGROOM": "Extra legroom"
     },
     "GENDER": {
       "MALE": "Male",
@@ -1542,7 +1557,10 @@
       "MONK": "Monk"
     },
     "SUMMARY": {
-      "OPEN_SEATING_BADGE": "No assigned seat (Open Seating)"
+      "OPEN_SEATING_BADGE": "No assigned seat (Open Seating)",
+      "PASSENGERS_TITLE": "Passengers",
+      "NO_SEAT": "No seat selected",
+      "SEAT_LABEL": "Seat {{seat}}"
     },
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",

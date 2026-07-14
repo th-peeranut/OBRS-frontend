@@ -56,4 +56,27 @@
     class="material-symbols-outlined passenger-original-icon"
     aria-hidden="true"
   >bookmark</span>
+
+  <!-- Wheelchair-accessible badge (OBRS-362) — bottom-left filled circle.
+       Renders UNCONDITIONALLY, not gated by isDisabled (unlike every marker
+       above): accessibility info is still relevant on an already-taken seat. -->
+  <span
+    *ngIf="hasWheelchairBadge"
+    class="seat-attribute-badge seat-attribute-badge-wheelchair"
+    role="img"
+    [attr.aria-label]="wheelchairBadgeAriaLabel"
+  >
+    <span class="material-symbols-outlined" aria-hidden="true">accessible</span>
+  </span>
+
+  <!-- Extra-legroom badge — bottom-right; a seat can carry BOTH badges at
+       once (e.g. front-row A1/B1), so the two never overlap. -->
+  <span
+    *ngIf="hasExtraLegroomBadge"
+    class="seat-attribute-badge seat-attribute-badge-legroom"
+    role="img"
+    [attr.aria-label]="extraLegroomBadgeAriaLabel"
+  >
+    <span class="material-symbols-outlined" aria-hidden="true">airline_seat_legroom_extra</span>
+  </span>
 </div>

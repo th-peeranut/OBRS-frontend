@@ -1,4 +1,7 @@
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { PassengerSeatBusComponent } from './passenger-seat-bus.component';
+import { PassengerSeatModule } from '../../passenger-seat.module';
 
 describe('PassengerSeatBusComponent', () => {
   let component: PassengerSeatBusComponent;
@@ -210,5 +213,87 @@ describe('PassengerSeatBusComponent', () => {
 
       expect(emitted).toEqual(['B7']);
     });
+  });
+
+  describe('seatAttributes (OBRS-362)', () => {
+    beforeEach(() => {
+      component.seatAttributes = {
+        '1': ['WHEELCHAIR'],
+        '2': ['EXTRA_LEGROOM'],
+        '3': ['WHEELCHAIR', 'EXTRA_LEGROOM'],
+      };
+    });
+
+    it('attributesFor normalizes the label ("B1" -> "1") to match the numeric key', () => {
+      expect(component.attributesFor('B1')).toEqual(['WHEELCHAIR']);
+      expect(component.attributesFor('B2')).toEqual(['EXTRA_LEGROOM']);
+    });
+
+    it('attributesFor returns an empty array for a seat with no attributes', () => {
+      expect(component.attributesFor('B4')).toEqual([]);
+    });
+
+    it('hasWheelchairBadge / hasExtraLegroomBadge read the per-seat attribute list', () => {
+      expect(component.hasWheelchairBadge('B1')).toBeTrue();
+      expect(component.hasExtraLegroomBadge('B1')).toBeFalse();
+      expect(component.hasWheelchairBadge('B2')).toBeFalse();
+      expect(component.hasExtraLegroomBadge('B2')).toBeTrue();
+    });
+
+    it('a seat can carry BOTH badges at once (e.g. front-row B1)', () => {
+      expect(component.hasWheelchairBadge('B3')).toBeTrue();
+      expect(component.hasExtraLegroomBadge('B3')).toBeTrue();
+    });
+
+    it('returns no badges when seatAttributes is null (default — every existing call site unaffected)', () => {
+      component.seatAttributes = null;
+      expect(component.attributesFor('B1')).toEqual([]);
+      expect(component.hasWheelchairBadge('B1')).toBeFalse();
+      expect(component.hasExtraLegroomBadge('B1')).toBeFalse();
+    });
+  });
+});
+
+// OBRS-362: real-DOM render check that a badge lands on the CORRECT seat
+// box (bus label form, 'B1'..'B21') — not merely that the logic method
+// returns the right booleans in isolation.
+describe('PassengerSeatBusComponent — badge placement (real DOM, OBRS-362)', () => {
+  let fixture: ComponentFixture<PassengerSeatBusComponent>;
+  let component: PassengerSeatBusComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PassengerSeatModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PassengerSeatBusComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('the wheelchair badge renders inside seat B1 only, not any other seat box', () => {
+    component.seatAttributes = { '1': ['WHEELCHAIR'] };
+    fixture.detectChanges();
+
+    const seatBoxes = fixture.debugElement.queryAll(By.css('app-passenger-seat-box'));
+    const b1 = seatBoxes.find((box) => box.componentInstance.label === 'B1');
+    const others = seatBoxes.filter((box) => box.componentInstance.label !== 'B1');
+
+    expect(b1?.query(By.css('.seat-attribute-badge-wheelchair'))).not.toBeNull();
+    for (const box of others) {
+      expect(box.query(By.css('.seat-attribute-badge-wheelchair')))
+        .withContext(`seat ${box.componentInstance.label}`)
+        .toBeNull();
+    }
+  });
+
+  it('a seat with both attributes renders both badges in the real DOM', () => {
+    component.seatAttributes = { '2': ['WHEELCHAIR', 'EXTRA_LEGROOM'] };
+    fixture.detectChanges();
+
+    const seatBoxes = fixture.debugElement.queryAll(By.css('app-passenger-seat-box'));
+    const b2 = seatBoxes.find((box) => box.componentInstance.label === 'B2');
+
+    expect(b2?.query(By.css('.seat-attribute-badge-wheelchair'))).not.toBeNull();
+    expect(b2?.query(By.css('.seat-attribute-badge-legroom'))).not.toBeNull();
   });
 });

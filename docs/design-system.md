@@ -270,7 +270,16 @@ links to `/home` and no separate `a[href="/home"]` Home button exists.
   print feature rather than reinventing the reveal-rule idiom.
 - **Don't fork or mutate a shared component's contract** to add a per-surface need —
   extend it with an optional, null-default `@Input()` so existing call sites stay
-  byte-identical. (`CORE.md`: seat components, walk-in reuse.)
+  byte-identical. (`CORE.md`: seat components, walk-in reuse.) **Seat-attribute
+  badges (OBRS-362)** follow this exact precedent: `seatAttributes: Record<string,
+  ('WHEELCHAIR'|'EXTRA_LEGROOM')[]> | null = null` on `passenger-seat-van`/`-bus`,
+  same shape as `seatOwners`/`seatGenders`.
+- **Seat-label normalization: one canonical util, `shared/lib/seat-label.ts`
+  (`normalizeSeatNumber`)** (OBRS-362). A UI seat label (`'A1'`, `'B12'`) is matched
+  against the backend's plain-numeric seat keys by stripping non-digit characters —
+  this used to be forked (a private copy in `passenger-seat-van.component.ts`, an
+  inline regex in `PassengerInfoComponent`). New seat-label matching reuses this
+  util; don't re-derive the regex.
 - **Don't mutate `@Input` arrays** — derive via a getter returning a new array;
   `.push()/.sort()/.splice()` on an `@Input` ref corrupts the parent. (`CORE.md`,
   Confirmed.)

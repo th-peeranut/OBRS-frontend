@@ -127,6 +127,47 @@ hr {
   font-weight: $font-weight-medium;
 }
 
+// Passengers block (OBRS-361) — `.seat-passenger-chip` visual reused from
+// passenger-info-form.component.scss (view-encapsulation means the class
+// name is copied, not shared, across component boundaries).
+.summary-passengers {
+  display: flex;
+  flex-direction: column;
+  row-gap: $space-xs;
+}
+
+.summary-passenger-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2xs;
+}
+
+.summary-passenger-name {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-lightblack;
+}
+
+.summary-passenger-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-3xs;
+}
+
+.seat-passenger-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: $space-3xs $space-sm;
+  border-radius: $radius-pill;
+  border: 1px solid $primary-lightgrey;
+  background: $primary-white;
+  color: $text-lightblack;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
 .subheader-text {
   font-size: $font-size-sm;
   color: $text-lightblack;

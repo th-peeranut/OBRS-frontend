@@ -286,6 +286,50 @@
       <hr />
     </ng-container>
 
+    <!-- Passengers block (OBRS-361) — live same-session reflection of
+         per-passenger seat preference / requirement, sourced from
+         selectPassengerInfo. No backend echo. -->
+    <ng-container *ngIf="passengerInfo$ | async as passengers">
+      <div class="summary-passengers" *ngIf="passengers.length">
+        <div class="subtitle">{{ "PASSENGER_INFO.SUMMARY.PASSENGERS_TITLE" | translate }}</div>
+        <div
+          class="summary-passenger-row"
+          *ngFor="let p of passengers; let i = index"
+        >
+          <span class="summary-passenger-name">
+            {{
+              (p.firstName || "").trim() ||
+                ("PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: i + 1 })
+            }}
+          </span>
+          <span class="summary-passenger-chips">
+            <span class="seat-passenger-chip" *ngIf="!p.passengerSeat && !p.passengerSeatReturn">
+              {{ "PASSENGER_INFO.SUMMARY.NO_SEAT" | translate }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.passengerSeat">
+              {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeat } }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.passengerSeatReturn">
+              {{ "PASSENGER_INFO.SUMMARY.SEAT_LABEL" | translate: { seat: p.passengerSeatReturn } }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.seatPreference === 'WINDOW'">
+              {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_WINDOW" | translate }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.seatPreference === 'AISLE'">
+              {{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_AISLE" | translate }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.seatRequirement === 'WHEELCHAIR'">
+              {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_WHEELCHAIR" | translate }}
+            </span>
+            <span class="seat-passenger-chip" *ngIf="p.seatRequirement === 'EXTRA_LEGROOM'">
+              {{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_EXTRA_LEGROOM" | translate }}
+            </span>
+          </span>
+        </div>
+      </div>
+      <hr class="dotted-line" *ngIf="passengers.length" />
+    </ng-container>
+
     <div class="card-body-summary">
       <!-- ADULT -->
       <div

@@ -70,6 +70,28 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-14 — Advanced-booking passenger preferences (OBRS-361/362): built against the contract described in the task brief, not yet confirmed in `docs/api/`
+
+**Affected endpoints**: `POST /api/private/bookings` (`BookingScheduleReqDto.passengers[]`) and `GET /api/schedules/{id}/seats` (`SeatMapRespDto`).
+
+**Request type**: field addition confirmation (additive, R1) — built per an explicit contract description from the UX/task brief; grepped `docs/api/booking.md` and `docs/api/scheduling.md` before starting and found **zero** mentions of `seatPreference`/`seatRequirement`/`isWheelchairAccessible`/`isExtraLegroom` — these are assumed to be landing in parallel, not yet documented.
+
+**What the frontend built against**:
+| Field | Location | Assumed shape |
+|---|---|---|
+| `seatPreference` | `POST /api/private/bookings` request, per passenger | `'window' \| 'aisle' \| null`, lowercase, optional, best-effort |
+| `seatRequirement` | same | `'wheelchair' \| 'extra_legroom' \| null`, lowercase, optional, best-effort |
+| `isWheelchairAccessible` | `GET /api/schedules/{id}/seats` response (`SeatMapRespDto`) | `boolean`, optional |
+| `isExtraLegroom` | same | `boolean`, optional |
+| `seatNumber` | same | confirmed already documented (plain numeric string, `'1'..'21'`) — no change, just confirming the FE's `normalizeSeatNumber()` util keys off it correctly |
+
+**What the frontend did to stay safe against an unconfirmed contract**: every field above is optional/nullable in the FE's own types (`PassengerInfo.seatPreference?`, `SeatMapRespDto.isWheelchairAccessible?`, etc.) — if the backend ships a different field name or doesn't ship at all yet, the booking payload still validates (fields just serialize as `null`/absent) and the seat-map fetch degrades to zero badges via `catchError(() => of({}))` (never blocks a booking, never alerts). `AC-361.5` (never attach a preference to an OPEN leg) is enforced entirely client-side regardless of what the backend does with the field.
+
+### Impact if not addressed
+If the backend lands under different field names, `seatPreference`/`seatRequirement` will silently no-op (backend ignores unknown fields per its usual permissive-decoder behavior elsewhere in this contract) and the wheelchair/extra-legroom badges will simply never render (both booleans read `undefined`, falsy) — no error, no crash, just missing functionality until the FE interfaces are corrected to match the real field names.
+
+---
+
 ### [Frontend] 2026-07-14 — `seatingMode` not exposed on any FE-reachable read DTO (OBRS-325, open-seating epic 318-e)
 
 **Affected endpoints**: `GET /api/private/bookings/{id}/tickets` (`BookingTicketsData.journeys[].tickets[]`, consumed by both e-ticket surfaces) and, if a search-list "Open seating" badge is ever wanted, the schedule search endpoint behind `Schedule` (`shared/interfaces/schedule.interface.ts`).

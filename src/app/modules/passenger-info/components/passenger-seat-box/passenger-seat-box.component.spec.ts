@@ -176,4 +176,58 @@ describe('PassengerSeatBoxComponent', () => {
       expect(box.nativeElement.classList).not.toContain('active-owner');
     });
   });
+
+  describe('seat-attribute badges (OBRS-362)', () => {
+    it('renders no badges by default (existing call sites unaffected)', () => {
+      component.label = 'B1';
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.seat-attribute-badge-wheelchair'))).toBeNull();
+      expect(fixture.debugElement.query(By.css('.seat-attribute-badge-legroom'))).toBeNull();
+    });
+
+    it('renders only the wheelchair badge when hasWheelchairBadge is true', () => {
+      component.label = 'B1';
+      component.hasWheelchairBadge = true;
+      component.wheelchairBadgeAriaLabel = 'Wheelchair accessible seat';
+      fixture.detectChanges();
+
+      const badge = fixture.debugElement.query(By.css('.seat-attribute-badge-wheelchair'));
+      expect(badge).not.toBeNull();
+      expect(badge.attributes['aria-label']).toBe('Wheelchair accessible seat');
+      expect(badge.attributes['role']).toBe('img');
+      expect(fixture.debugElement.query(By.css('.seat-attribute-badge-legroom'))).toBeNull();
+    });
+
+    it('a seat with BOTH badges renders both, simultaneously (front-row seat)', () => {
+      component.label = 'A1';
+      component.hasWheelchairBadge = true;
+      component.hasExtraLegroomBadge = true;
+      component.wheelchairBadgeAriaLabel = 'Wheelchair accessible seat';
+      component.extraLegroomBadgeAriaLabel = 'Extra legroom seat';
+      fixture.detectChanges();
+
+      const wheelchairBadge = fixture.debugElement.query(By.css('.seat-attribute-badge-wheelchair'));
+      const legroomBadge = fixture.debugElement.query(By.css('.seat-attribute-badge-legroom'));
+      expect(wheelchairBadge).not.toBeNull();
+      expect(legroomBadge).not.toBeNull();
+      expect(wheelchairBadge.attributes['aria-label']).toBe('Wheelchair accessible seat');
+      expect(legroomBadge.attributes['aria-label']).toBe('Extra legroom seat');
+    });
+
+    it('renders the badges UNCONDITIONALLY — even when the seat is disabled (unlike owner/gender markers)', () => {
+      component.label = 'B1';
+      component.isDisabled = true;
+      component.gender = 'MALE';
+      component.hasWheelchairBadge = true;
+      component.hasExtraLegroomBadge = true;
+      fixture.detectChanges();
+
+      // Disabled seats hide the gender icon (existing behavior)...
+      expect(fixture.debugElement.query(By.css('.passenger-male-icon'))).toBeNull();
+      // ...but the attribute badges still render.
+      expect(fixture.debugElement.query(By.css('.seat-attribute-badge-wheelchair'))).not.toBeNull();
+      expect(fixture.debugElement.query(By.css('.seat-attribute-badge-legroom'))).not.toBeNull();
+    });
+  });
 });

@@ -305,6 +305,68 @@
                 {{ "PASSENGER_INFO.FORM.GENDER_STATUS_REQUIRED" | translate }}
               </div>
             </div>
+
+            <!-- Seat preference / requirement (OBRS-361) — optional,
+                 best-effort, never pre-selected (design-system §3.1). Hidden
+                 leg-aware via showSeatPreferenceFields(): every leg OPEN, or
+                 every ASSIGNED leg relevant to this passenger already has a
+                 seat picked. -->
+            <ng-container *ngIf="passengerPrefsContext$ | async as prefsCtx">
+              <ng-container
+                *ngIf="
+                  showSeatPreferenceFields(
+                    i,
+                    prefsCtx.outboundOpen,
+                    prefsCtx.returnOpen,
+                    prefsCtx.isReturn
+                  )
+                "
+              >
+                <div class="col-12 col-md-6 mt-3">
+                  <label>{{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_LABEL" | translate }}</label>
+                  <div
+                    class="mt-1"
+                    role="group"
+                    [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA' | translate"
+                  >
+                    <p-selectButton
+                      [options]="seatPreferenceOptions"
+                      optionLabel="labelKey"
+                      optionValue="value"
+                      formControlName="seatPreference"
+                      [allowEmpty]="true"
+                    >
+                      <ng-template let-item pTemplate="item">
+                        <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                        <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
+                      </ng-template>
+                    </p-selectButton>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6 mt-3">
+                  <label>{{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_LABEL" | translate }}</label>
+                  <div
+                    class="mt-1"
+                    role="group"
+                    [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA' | translate"
+                  >
+                    <p-selectButton
+                      [options]="seatRequirementOptions"
+                      optionLabel="labelKey"
+                      optionValue="value"
+                      formControlName="seatRequirement"
+                      [allowEmpty]="true"
+                    >
+                      <ng-template let-item pTemplate="item">
+                        <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                        <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
+                      </ng-template>
+                    </p-selectButton>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
           </div>
         </div>
       </div>
@@ -434,6 +496,9 @@
                     [takenSeats]="getTakenSeats(activeOutboundIndex)"
                     [availableSeatNumbers]="availableSeatNumbers$ | async"
                     [seatOwners]="getSeatOwners()"
+                    [seatAttributes]="seatAttributesOutbound$ | async"
+                    [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                    [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                     (passengerSeatPositionOnChange)="
                       setPassengerSeat(activeOutboundIndex, $event)
                     "
@@ -445,12 +510,36 @@
                     [currentSeat]="getFormValue(activeOutboundIndex, 'passengerSeat')"
                     [takenSeats]="getTakenSeats(activeOutboundIndex)"
                     [seatOwners]="getSeatOwners()"
+                    [seatAttributes]="seatAttributesOutbound$ | async"
+                    [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                    [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                     (passengerSeatPositionOnChange)="
                       setPassengerSeat(activeOutboundIndex, $event)
                     "
                   ></app-passenger-seat-bus>
                 </ng-template>
               </div>
+            </div>
+
+            <!-- Seat-feature legend (OBRS-362) — shown only when this leg
+                 has at least one badge to explain. -->
+            <div
+              class="seat-map-legend mt-2"
+              *ngIf="hasSeatAttributes(seatAttributesOutbound$ | async)"
+            >
+              <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
+              <span class="seat-map-legend-item">
+                <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                  <span class="material-symbols-outlined">accessible</span>
+                </span>
+                {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
+              </span>
+              <span class="seat-map-legend-item">
+                <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                  <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                </span>
+                {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
+              </span>
             </div>
           </ng-container>
           <ng-template #outboundOpenSeatCard>
@@ -526,6 +615,9 @@
                       [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
                       [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
                       [seatOwners]="getSeatOwnersReturn()"
+                      [seatAttributes]="seatAttributesReturn$ | async"
+                      [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                      [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
                         setPassengerSeatReturn(activeReturnIndex, $event)
                       "
@@ -537,12 +629,35 @@
                       [currentSeat]="getFormValue(activeReturnIndex, 'passengerSeatReturn')"
                       [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
                       [seatOwners]="getSeatOwnersReturn()"
+                      [seatAttributes]="seatAttributesReturn$ | async"
+                      [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                      [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
                         setPassengerSeatReturn(activeReturnIndex, $event)
                       "
                     ></app-passenger-seat-bus>
                   </ng-template>
                 </div>
+              </div>
+
+              <!-- Seat-feature legend (OBRS-362) — return leg. -->
+              <div
+                class="seat-map-legend mt-2"
+                *ngIf="hasSeatAttributes(seatAttributesReturn$ | async)"
+              >
+                <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
+                <span class="seat-map-legend-item">
+                  <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                    <span class="material-symbols-outlined">accessible</span>
+                  </span>
+                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
+                </span>
+                <span class="seat-map-legend-item">
+                  <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                    <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                  </span>
+                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
+                </span>
               </div>
             </ng-container>
             <ng-template #returnOpenSeatCard>

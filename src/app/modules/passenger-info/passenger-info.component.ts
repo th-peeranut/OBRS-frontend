@@ -230,13 +230,23 @@ export class PassengerInfoComponent {
     const departureSchedule = schedules[0];
     const arrivalSchedule = isReturnTrip ? schedules[1] : null;
 
+    // AC-361.5 (scrutinize blocker): never attach a seat preference/
+    // requirement to a leg whose schedule sells with no fixed seat — gate on
+    // the LEG's seatingMode, not just whether a seatNumber happens to be
+    // present, so a mixed round trip (e.g. OPEN outbound / ASSIGNED return)
+    // sends prefs on the ASSIGNED leg only.
     const departurePassengers = this.buildPassengersPayload(
       passengerInfo,
-      'outbound'
+      'outbound',
+      departureSchedule?.seatingMode === 'OPEN'
     );
     const arrivalPassengers =
       isReturnTrip && arrivalSchedule
-        ? this.buildPassengersPayload(passengerInfo, 'inbound')
+        ? this.buildPassengersPayload(
+            passengerInfo,
+            'inbound',
+            arrivalSchedule?.seatingMode === 'OPEN'
+          )
         : [];
 
     const totalAmount =
@@ -291,7 +301,8 @@ export class PassengerInfoComponent {
 
   private buildPassengersPayload(
     passengers: PassengerInfo[],
-    leg: 'outbound' | 'inbound' = 'outbound'
+    leg: 'outbound' | 'inbound' = 'outbound',
+    isLegOpen = false
   ): BookingSchedulePayload['passengers'] {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
@@ -307,7 +318,32 @@ export class PassengerInfoComponent {
       // (property-bound radios, not the gender radios' string-attribute
       // form), so this is never accidentally 'adult' for a falsy string.
       fareCategory: passenger.isAdult ? 'adult' : 'child',
+      // OBRS-361 / AC-361.5: an OPEN leg never carries a preference, even if
+      // the passenger set one (e.g. while a mixed round trip's other leg was
+      // ASSIGNED) — best-effort fields, lowercase per the backend contract.
+      seatPreference: isLegOpen
+        ? null
+        : this.normalizeSeatPreference(passenger.seatPreference),
+      seatRequirement: isLegOpen
+        ? null
+        : this.normalizeSeatRequirement(passenger.seatRequirement),
     }));
+  }
+
+  private normalizeSeatPreference(
+    value: PassengerInfo['seatPreference']
+  ): 'window' | 'aisle' | null {
+    if (value === 'WINDOW') return 'window';
+    if (value === 'AISLE') return 'aisle';
+    return null;
+  }
+
+  private normalizeSeatRequirement(
+    value: PassengerInfo['seatRequirement']
+  ): 'wheelchair' | 'extra_legroom' | null {
+    if (value === 'WHEELCHAIR') return 'wheelchair';
+    if (value === 'EXTRA_LEGROOM') return 'extra_legroom';
+    return null;
   }
 
   private buildSchedulePayload(
