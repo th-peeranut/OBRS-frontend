@@ -1459,7 +1459,7 @@
       "SEAT_LEG_RETURN": "Return seat",
       "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
       "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
-      "OPEN_SEAT_SECTION_HINT": "Open seating — no seat selection needed, board in arrival order.",
+      "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
       "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
       "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left)."
     },
