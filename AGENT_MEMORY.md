@@ -3018,3 +3018,32 @@ to 10 most recent (read+unread), "showing latest N of M" footer when `totalEleme
 new `notification-bell.component.spec.ts`: an untranslated-key assertion and a copy-paste'd wrong
 call-count expectation — fixed before submitting, not a product bug). `ng build --configuration
 production` passes. ADR: `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`.
+
+### Scrutinize follow-up fix (same day, commit a8f327c)
+
+Scrutinize caught a real visual defect unit tests couldn't: `p-overlayPanel`'s
+`appendTo="body"` moves the panel outside `.admin-shell`, so every `--admin-*`/
+`--accent-*` custom property the panel/row SCSS reads (declared only on
+`.admin-shell`/`.admin-shell.theme-*`/`.admin-shell.is-dark` in
+`admin-theme.scss`) silently failed to resolve there (no fallback → invisible
+unread highlight/dot, black text in dark mode, missing footer border). Same
+class of bug as the already-solved `my-bookings-action-menu` precedent
+(`appendTo="body"` + a `styleClass` carrying context, themed in the matching
+global stylesheet) — should have been caught by re-grepping for `appendTo=
+"body"` precedent BEFORE writing the component, not after Scrutinize flagged
+it. Fix: bell takes `shellVariant: 'admin'|'staff'` input + reads
+`ThemeService.mode$` directly, composes `styleClass="notification-inbox-overlay
+theme-{variant}[ is-dark]"`, and `admin-theme.scss` re-declares the needed
+tokens scoped to that class. **Verification method worth reusing**: jsdom/Karma
+can't render real CSS cascade for a body-appended node, so I built a static
+HTML harness loading the actual compiled `dist/.../styles-*.css` (has the new
+`.notification-inbox-overlay*` rules) + the component SCSS inlined verbatim
+(these particular files are plain CSS, no SCSS-only syntax) and read
+`getComputedStyle()` via Playwright (already in `node_modules`, run with
+`NODE_PATH=<repo>/node_modules node <script>` since the script lives in the
+scratchpad dir outside the repo) — confirmed all 5 flagged properties resolve
+to real theme colors, not transparent/black/Bootstrap-default, across
+admin/staff × light/dark. Lesson: for any `appendTo="body"`/CDK-overlay/portal
+content that reads shell-scoped CSS custom properties, grep for the existing
+`my-bookings-action-menu` pattern FIRST and budget for a styleClass + global
+stylesheet rule from the start — don't discover the gap after Scrutinize.
