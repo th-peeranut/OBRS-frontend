@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
-import { StaffApiService } from './staff-api.service';
+import { StaffApiService, isOpenSeatingTrip } from './staff-api.service';
 import { environment } from '../../../environments/environment';
 import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
 
@@ -160,5 +160,25 @@ describe('StaffApiService', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.headers.get('Idempotency-Key')).toBe('test-key-123');
     req.flush({ code: 200, message: 'OK', data: { id: 1, bookingId: 1, status: 'paid', paymentMethod: 'cash', amount: 100 } });
+  });
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d)
+  describe('isOpenSeatingTrip', () => {
+    it('returns true when seatingMode is OPEN', () => {
+      expect(isOpenSeatingTrip({ seatingMode: 'OPEN' })).toBeTrue();
+    });
+
+    it('returns false when seatingMode is ASSIGNED', () => {
+      expect(isOpenSeatingTrip({ seatingMode: 'ASSIGNED' })).toBeFalse();
+    });
+
+    it('returns false when seatingMode is missing (safe default — backend does not yet expose it here)', () => {
+      expect(isOpenSeatingTrip({})).toBeFalse();
+    });
+
+    it('returns false for null/undefined trip', () => {
+      expect(isOpenSeatingTrip(null)).toBeFalse();
+      expect(isOpenSeatingTrip(undefined)).toBeFalse();
+    });
   });
 });

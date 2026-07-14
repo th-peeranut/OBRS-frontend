@@ -33,6 +33,13 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   @Input() isSelling = false;
   /** Per-seat fare from sell-page (after segment resolution). */
   @Input() pricePerSeat = 0;
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): 'ASSIGNED' is the safe
+  // default — every existing call site that doesn't pass this binding (and
+  // every pre-existing spec in this file) keeps requiring `selectedSeats`,
+  // byte-identical to before this card.
+  @Input() seatingMode: 'OPEN' | 'ASSIGNED' = 'ASSIGNED';
+  /** OPEN-mode headcount from sell-page (no seat picker to derive a count from). */
+  @Input() passengerCount = 0;
   // OBRS-85: parity/forward-compat input for a future walk-in round-trip
   // discount. Dormant today — sell-page.component.ts hardcodes
   // bookingType:'one_way' for every walk-in sale, so this can never be > 0
@@ -77,8 +84,13 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['selectedSeats'] || changes['selectedTrip']) {
-      // reset cash received when seats change
+    if (
+      changes['selectedSeats'] ||
+      changes['selectedTrip'] ||
+      changes['passengerCount'] ||
+      changes['seatingMode']
+    ) {
+      // reset cash received when seats/passenger count change
       this.cashReceived = 0;
     }
   }
@@ -92,9 +104,15 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     return localizedDropdownName(option, this.translate.currentLang);
   }
 
+  // OBRS-324: OPEN sells by headcount (no seat picker); ASSIGNED keeps counting
+  // selectedSeats exactly as before.
+  protected get ticketCount(): number {
+    return this.seatingMode === 'OPEN' ? this.passengerCount : this.selectedSeats.length;
+  }
+
   protected get totalAmount(): number {
     if (this.pricePerSeat === 0) return 0;
-    return this.pricePerSeat * this.selectedSeats.length;
+    return this.pricePerSeat * this.ticketCount;
   }
 
   // OBRS-85: netAmount === totalAmount while discountAmount is null/0 (today,
@@ -111,7 +129,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   protected get canSell(): boolean {
     return (
       this.contactForm.valid &&
-      this.selectedSeats.length >= 1 &&
+      this.ticketCount >= 1 &&
       this.pricePerSeat > 0 &&
       this.cashReceived >= this.netAmount
     );

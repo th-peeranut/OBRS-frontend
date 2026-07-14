@@ -92,12 +92,35 @@ export interface WalkInTripDto {
   // Optional/undefined on a cached row predating this field.
   deletable?: boolean;
   confirmedBookingCount?: number;
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): 'OPEN' | 'ASSIGNED' —
+  // `schedules.seating_mode` (OBRS-321). Verified passthrough — same pattern
+  // as `Schedule.seatingMode` in `shared/interfaces/schedule.interface.ts`
+  // (OBRS-323): no manual mapper needed once the backend response includes
+  // it. Optional because `GET /api/private/schedules/walk-in`
+  // (`WalkInTripRespDto`) does NOT yet expose this field — see the OBRS-324
+  // Contract Request in docs/handoff.md. Until the backend adds it, this is
+  // always `undefined` here and every walk-in trip is treated as ASSIGNED
+  // (the safe default — see `isOpenSeatingTrip` below).
+  seatingMode?: 'OPEN' | 'ASSIGNED';
 }
 
 export interface WalkInRouteGroupDto {
   routeSlug: string;
   routeLabel: string;
   trips: WalkInTripDto[];
+}
+
+/**
+ * OBRS-324: whether a walk-in trip sells on OPEN seating (headcount only, no
+ * seat map). Missing/unknown `seatingMode` (today, always — see the field's
+ * doc comment above) safely resolves to `false` (ASSIGNED), preserving the
+ * pre-existing seat-picker flow byte-for-byte until the backend ships the
+ * field on this endpoint.
+ */
+export function isOpenSeatingTrip(
+  trip: Pick<WalkInTripDto, 'seatingMode'> | null | undefined
+): boolean {
+  return trip?.seatingMode === 'OPEN';
 }
 
 export interface SegmentStopRefDto {

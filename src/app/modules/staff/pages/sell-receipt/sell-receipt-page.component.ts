@@ -20,6 +20,10 @@ interface ReceiptTicketRow {
   ticketNumber: string;
   passengerName: string;
   seat: string;
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): true when this ticket has no
+  // seat_number (an OPEN-seating walk-in sale) — mirrors the OBRS-325
+  // `leg.isOpenSeating` derivation on the e-ticket card, one ticket at a time.
+  seatOpen: boolean;
   qrDataUrl: string;
   qrUnavailable: boolean;
 }
@@ -162,6 +166,7 @@ export class SellReceiptPageComponent implements OnInit, OnDestroy {
         ticketNumber: ticket.ticketNumber?.trim() || '-',
         passengerName: ticket.passengerName?.trim() || '-',
         seat: ticket.seatNumber?.trim() || '-',
+        seatOpen: !ticket.seatNumber?.trim(),
         qrDataUrl: qrState?.qrDataUrl ?? '',
         qrUnavailable: qrState?.qrUnavailable ?? false,
       };
