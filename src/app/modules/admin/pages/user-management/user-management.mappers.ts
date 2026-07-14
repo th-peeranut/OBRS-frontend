@@ -27,10 +27,6 @@ export interface UserRow {
   roles: string[];
   status: string;
   statusCode: string;
-  lastUpdated: string;
-  // OBRS-182: real last-login activity, replacing lastUpdated as the primary
-  // activity indicator shown in the list (lastUpdated is record-modified time,
-  // not login activity — kept on the row but no longer the headline field).
   lastLogin: string;
   hasLoggedIn: boolean;
   locked: boolean;
@@ -172,15 +168,11 @@ export function toUserRow(
     roles: roleLabels.length > 0 ? roleLabels : ['-'],
     status: status.name,
     statusCode: status.code,
-    // The user record's last-modified time (updatedAt, falling back to createdAt).
-    // NOT a real login/activity time — labeled "อัปเดตล่าสุด" accordingly; a true
-    // last_login_at is tracked as a backlog item (OBRS-182).
-    //
     // dateLang is deliberately the RAW translate.currentLang, NOT the
     // th/en-normalized `locale` used above for role/status labels — passing the
     // normalized locale here would silently change the date format under en-US
     // (see toRouteRow in routes.mappers.ts for the same trap).
-    lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, dateLang),
+    //
     // Real login activity (OBRS-182) — formatDisplayDateTime already returns
     // '-' for a null/undefined lastLoginAt, but the row never displays that
     // '-'; the template branches on hasLoggedIn and shows the
