@@ -1932,7 +1932,7 @@
       "BADGE_SOLD": "已售",
       "TRIPS_EMPTY": "当日无班次",
       "CENTER_EMPTY": "请在左侧选择班次",
-      "OPEN_SEATING_HINT": "自由入座——无座位图，按乘客人数售票。",
+      "OPEN_SEATING_HINT": "不指定座位——按乘客人数售票。",
       "PASSENGER_COUNT_DECREASE": "减少乘客人数",
       "PASSENGER_COUNT_INCREASE": "增加乘客人数",
       "PASSENGER_COUNT_MAX": "最多可售 {{max}} 位乘客",

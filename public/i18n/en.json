@@ -1933,7 +1933,7 @@
       "BADGE_SOLD": "Sold",
       "TRIPS_EMPTY": "No trips scheduled for this date.",
       "CENTER_EMPTY": "Select a trip on the left to get started.",
-      "OPEN_SEATING_HINT": "Open seating — no seat map. Sell by number of passengers.",
+      "OPEN_SEATING_HINT": "Unassigned seating — sell by number of passengers.",
       "PASSENGER_COUNT_DECREASE": "Decrease passenger count",
       "PASSENGER_COUNT_INCREASE": "Increase passenger count",
       "PASSENGER_COUNT_MAX": "Max {{max}} passengers available",
