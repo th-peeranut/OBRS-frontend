@@ -490,8 +490,11 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     // Click Sell
     await page.locator('button.btn-success').click();
 
-    // Wait for navigation to e-ticket
-    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+    // OBRS-188/OBRS-310: the staff POS confirms the sale IN PLACE via a SweetAlert success
+    // dialog — it does NOT navigate to the customerArea /e-ticket route (AuthGuard would
+    // bounce staff). Wait for the confirmation dialog as the sale-complete signal.
+    await expect(page.locator('.swal2-container')).toBeVisible({ timeout: 20_000 });
+    expect(page.url()).not.toContain('/e-ticket');
 
     // Verify captured payload
     expect(capturedBookingPayload).not.toBeNull();
@@ -597,7 +600,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
 
   // ── AC-9  Successful sale → trips list refreshes ─────────────────────────
 
-  test('AC-9: successful Sell calls payWalkIn and navigates to /e-ticket', async ({ page }) => {
+  test('AC-9: successful Sell calls payWalkIn and reloads trips in place (badge refresh, no /e-ticket nav)', async ({ page }) => {
     let walkInCallCount = 0;
 
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) => {
@@ -626,11 +629,13 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
 
     await page.locator('button.btn-success').click();
 
-    // Navigates to e-ticket on success
-    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+    // OBRS-188/OBRS-310: confirms in place (SweetAlert success dialog), no /e-ticket nav.
+    await expect(page.locator('.swal2-container')).toBeVisible({ timeout: 20_000 });
+    expect(page.url()).not.toContain('/e-ticket');
 
-    // Walk-in schedules were reloaded after payment (badge refresh — AC-9)
-    expect(walkInCallCount).toBeGreaterThan(initialCallCount);
+    // Walk-in schedules were reloaded after payment (badge refresh — AC-9). The reload
+    // fires alongside the dialog, so poll rather than assert a single instantaneous value.
+    await expect.poll(() => walkInCallCount, { timeout: 5_000 }).toBeGreaterThan(initialCallCount);
   });
 
   // ── AC-10  Center panel: 3 tabs ───────────────────────────────────────────
@@ -770,7 +775,8 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     await page.locator('input[type="number"]').fill('400');
     await page.locator('button.btn-success').click();
 
-    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+    // OBRS-188/OBRS-310: sale confirms in place (SweetAlert), no /e-ticket nav.
+    await expect(page.locator('.swal2-container')).toBeVisible({ timeout: 20_000 });
 
     // Idempotency key must be a valid UUID v4
     expect(capturedIdempotencyKey).toBeTruthy();
@@ -781,7 +787,7 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
 
   // ── Full happy-path flow ───────────────────────────────────────────────────
 
-  test('Full happy path: select date → trip → seat → fill form → cash → Sell → /e-ticket', async ({ page }) => {
+  test('Full happy path: select date → trip → seat → fill form → cash → Sell → confirm-in-place → Print → /staff/sell/receipt', async ({ page }) => {
     let bookingPayload: Record<string, unknown> | null = null;
 
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
@@ -823,8 +829,11 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     // Sell
     await page.locator('button.btn-success').click();
 
-    // Navigates to /e-ticket
-    await page.waitForURL('**/e-ticket**', { timeout: 20_000 });
+    // OBRS-188/OBRS-310: the sale confirms IN PLACE via a SweetAlert success dialog with a
+    // "Print ticket" / "Close" choice — it does NOT navigate to the customerArea /e-ticket
+    // route. Wait for the dialog as the sale-complete signal.
+    await expect(page.locator('.swal2-container')).toBeVisible({ timeout: 20_000 });
+    expect(page.url()).not.toContain('/e-ticket');
 
     // Verify booking payload correctness (WI-A, WI-B, AC-6)
     expect(bookingPayload).not.toBeNull();
@@ -836,6 +845,12 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     expect(dep.passengers[0]['seatNumber']).toBeDefined();
     expect(dep.passengers[0]['passengerType']).toBe('male');
     expect(dep.passengers[0]).not.toHaveProperty('gender');
+
+    // OBRS-195/OBRS-310: confirming "Print ticket" (.swal2-confirm) routes to the
+    // staff-owned receipt page — never the customerArea /e-ticket route.
+    await page.locator('.swal2-confirm').click();
+    await page.waitForURL('**/staff/sell/receipt/**', { timeout: 20_000 });
+    expect(page.url()).not.toContain('/e-ticket');
   });
 
   // ── Layout regression (issue #41): POS fits viewport, no full-page scroll ───
