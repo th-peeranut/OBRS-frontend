@@ -34,7 +34,8 @@
               "dayjs",
               "qrcode",
               "html2canvas",
-              "sweetalert2"
+              "sweetalert2",
+              "@stomp/stompjs"
             ],
             "assets": [
               {

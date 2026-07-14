@@ -5,6 +5,7 @@ import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { MenuModule } from 'primeng/menu';
+import { CalendarModule } from 'primeng/calendar';
 
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -17,6 +18,11 @@ import { ExportButtonComponent } from './components/export-button/export-button.
 import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 import { BoardingListComponent } from './components/boarding-list/boarding-list.component';
 
+// Directives
+// OBRS-272: relocated here from `modules/admin/components/` — see the
+// directive's own doc comment for the module-cycle rationale.
+import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.directive';
+
 @NgModule({
   declarations: [
     FooterComponent,
@@ -28,6 +34,7 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+    AdminModalBackdropDirective,
   ],
   imports: [
     CommonModule,
@@ -37,6 +44,7 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ReactiveFormsModule,
     SelectButtonModule,
     MenuModule,
+    CalendarModule,
   ],
   exports: [
     // Modules
@@ -58,6 +66,9 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+
+    // Directives
+    AdminModalBackdropDirective,
   ],
 })
 export class SharedModule {}

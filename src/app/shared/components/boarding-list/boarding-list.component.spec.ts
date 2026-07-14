@@ -1,15 +1,17 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { TranslateModule } from '@ngx-translate/core';
+import { CalendarModule } from 'primeng/calendar';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { BoardingListComponent } from './boarding-list.component';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
 import { AlertService } from '../../services/alert.service';
 import { AuthService } from '../../../auth/auth.service';
 import { BoardingListStore } from './boarding-list.store';
+import { AdminModalBackdropDirective } from '../../directives/admin-modal-backdrop.directive';
 import { createTranslateStub } from '../../../testing/test-stubs';
 
 function createAlertServiceStub(confirmResult = true): any {
@@ -95,6 +97,7 @@ function createComponent(
     authServiceStub,
     storeStub,
     viewContainerRefStub,
+    new FormBuilder(),
     ngZoneStub,
     cdrStub
   );
@@ -393,9 +396,12 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
     expect(component['tripHeader']).toEqual({
       routeLabel: 'BKK-CNX',
       departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: '2026-07-10T08:00:00Z',
       vehicleLabel: '1กก-1234',
       driverName: 'Somchai Driver',
       statusCode: 'unknown',
+      delayedDepartureDateTime: null,
+      delayReason: null,
     });
   });
 
@@ -412,9 +418,12 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
     expect(component['tripHeader']).toEqual({
       routeLabel: '-',
       departureDateTime: '-',
+      departureDateTimeRaw: null,
       vehicleLabel: '-',
       driverName: '-',
       statusCode: 'unknown',
+      delayedDepartureDateTime: null,
+      delayReason: null,
     });
   });
 
@@ -709,6 +718,308 @@ describe('BoardingListComponent — OBRS-256 count-lock freeze (isScheduleArrive
     await component['validateScan']();
 
     expect(staffApiServiceStub.boardingScan).not.toHaveBeenCalled();
+  });
+});
+
+describe('BoardingListComponent — OBRS-272 delay getters (isScheduleDelayed / delayPillLabelKey / formattedDelayedEta)', () => {
+  function withTripHeader(
+    component: BoardingListComponent,
+    overrides: { delayedDepartureDateTime?: string | null; delayReason?: string | null } = {}
+  ): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: '2026-07-10T08:00:00+07:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'scheduled',
+      delayedDepartureDateTime: overrides.delayedDepartureDateTime ?? null,
+      delayReason: overrides.delayReason ?? null,
+    };
+  }
+
+  it('isScheduleDelayed is true iff delayedDepartureDateTime is non-null — never derived from statusCode', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    withTripHeader(component);
+    expect(component['isScheduleDelayed']).toBeFalse();
+
+    withTripHeader(component, { delayedDepartureDateTime: '2026-07-10T10:00:00+07:00' });
+    expect(component['isScheduleDelayed']).toBeTrue();
+
+    (component as any).tripHeader = null;
+    expect(component['isScheduleDelayed']).toBeFalse();
+  });
+
+  it('delayPillLabelKey switches between PILL_MARK and PILL_UPDATE', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    withTripHeader(component);
+    expect(component['delayPillLabelKey']).toBe('STAFF.SCHEDULE_DELAY.PILL_MARK');
+
+    withTripHeader(component, { delayedDepartureDateTime: '2026-07-10T10:00:00+07:00' });
+    expect(component['delayPillLabelKey']).toBe('STAFF.SCHEDULE_DELAY.PILL_UPDATE');
+  });
+
+  it('formattedDelayedEta reuses formatDisplayDateTime() (Bangkok-pinned), not a hand-rolled UTC format', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    withTripHeader(component, { delayedDepartureDateTime: '2026-07-10T10:00:00+07:00' });
+
+    expect(component['formattedDelayedEta']).toBe('10 Jul 2026 10:00');
+  });
+});
+
+describe('BoardingListComponent — OBRS-272 openDelayDialog() / closeDelayDialog()', () => {
+  it('opens with blank date/time/reason when not currently delayed', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: '2026-07-10T08:00:00+07:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'scheduled',
+      delayedDepartureDateTime: null,
+      delayReason: null,
+    };
+
+    component['openDelayDialog']();
+
+    expect(component['isDelayFormOpen']).toBeTrue();
+    expect(component['delayForm'].get('delayedDate')?.value).toBeNull();
+    expect(component['delayForm'].get('delayedTime')?.value).toBeNull();
+    expect(component['delayForm'].get('delayReason')?.value).toBe('');
+  });
+
+  it('re-mark: pre-fills date/time/reason by splitting the current delayedDepartureDateTime/delayReason', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: '2026-07-10T08:00:00+07:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'scheduled',
+      delayedDepartureDateTime: '2026-07-10T10:30:00+07:00',
+      delayReason: 'Traffic on the highway',
+    };
+
+    component['openDelayDialog']();
+
+    const dateControl: Date = component['delayForm'].get('delayedDate')?.value;
+    const timeControl: Date = component['delayForm'].get('delayedTime')?.value;
+    expect(dateControl.getFullYear()).toBe(2026);
+    expect(dateControl.getMonth()).toBe(6); // 0-based: July
+    expect(dateControl.getDate()).toBe(10);
+    expect(timeControl.getHours()).toBe(10);
+    expect(timeControl.getMinutes()).toBe(30);
+    expect(component['delayForm'].get('delayReason')?.value).toBe('Traffic on the highway');
+  });
+
+  it('resets stale client/server ETA errors on open', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    (component as any).tripHeader = { statusCode: 'scheduled', delayedDepartureDateTime: null, delayReason: null };
+    (component as any).delayEtaAfterError = true;
+    (component as any).delayEtaServerError = true;
+
+    component['openDelayDialog']();
+
+    expect(component['delayEtaAfterError']).toBeFalse();
+    expect(component['delayEtaServerError']).toBeFalse();
+  });
+
+  it('closeDelayDialog() is a no-op while submitting, otherwise closes', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+    component['isDelayFormOpen'] = true;
+    (component as any).isSubmittingDelay = true;
+
+    component['closeDelayDialog']();
+    expect(component['isDelayFormOpen']).toBeTrue();
+
+    (component as any).isSubmittingDelay = false;
+    component['closeDelayDialog']();
+    expect(component['isDelayFormOpen']).toBeFalse();
+  });
+});
+
+describe('BoardingListComponent — OBRS-272 submitDelaySchedule()', () => {
+  function withScheduledTripHeader(component: BoardingListComponent): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: '2026-07-10T08:00:00+07:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'scheduled',
+      delayedDepartureDateTime: null,
+      delayReason: null,
+    };
+  }
+
+  it('is a no-op (no HTTP call) when the form is invalid (missing date/time)', () => {
+    const staffApiServiceStub = { delaySchedule: jasmine.createSpy('delaySchedule') };
+    const component = createComponent(staffApiServiceStub);
+    withScheduledTripHeader(component);
+
+    component['submitDelaySchedule']();
+
+    expect(staffApiServiceStub.delaySchedule).not.toHaveBeenCalled();
+  });
+
+  it('client-validates the ETA is strictly after the original departure WITHOUT calling the API', () => {
+    const staffApiServiceStub = { delaySchedule: jasmine.createSpy('delaySchedule') };
+    const component = createComponent(staffApiServiceStub);
+    withScheduledTripHeader(component);
+    component['openDelayDialog']();
+    // Original departure is 2026-07-10T08:00:00+07:00 — pick an ETA BEFORE it.
+    component['delayForm'].setValue({
+      delayedDate: new Date(2026, 6, 10),
+      delayedTime: (() => {
+        const d = new Date();
+        d.setHours(7, 0, 0, 0);
+        return d;
+      })(),
+      delayReason: '',
+    });
+
+    component['submitDelaySchedule']();
+
+    expect(staffApiServiceStub.delaySchedule).not.toHaveBeenCalled();
+    expect(component['delayEtaAfterError']).toBeTrue();
+  });
+
+  it('happy path: PATCHes delaySchedule(), closes the dialog, patches tripHeader, and shows the {{count}} success toast', () => {
+    const staffApiServiceStub = {
+      delaySchedule: jasmine.createSpy('delaySchedule').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            scheduleId: 42,
+            status: 'scheduled',
+            delayedDepartureDateTime: '2026-07-10T10:30:00+07:00',
+            delayReason: 'Traffic',
+            affectedBookingCount: 3,
+          },
+        })
+      ),
+      // The success path also fires a background loadTripHeader() reconcile
+      // (fire-and-forget) — stub it so that call doesn't throw synchronously
+      // (calling an undefined stub method) and null out tripHeader before
+      // the assertions below run.
+      getScheduleById: jasmine.createSpy('getScheduleById').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            id: 42,
+            status: 'scheduled',
+            delayedDepartureDateTime: '2026-07-10T10:30:00+07:00',
+            delayReason: 'Traffic',
+          },
+        })
+      ),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withScheduledTripHeader(component);
+    component['openDelayDialog']();
+    component['delayForm'].setValue({
+      delayedDate: new Date(2026, 6, 10),
+      delayedTime: (() => {
+        const d = new Date();
+        d.setHours(10, 30, 0, 0);
+        return d;
+      })(),
+      delayReason: 'Traffic',
+    });
+
+    component['submitDelaySchedule']();
+
+    expect(staffApiServiceStub.delaySchedule).toHaveBeenCalledWith(42, {
+      delayedDepartureDateTime: '2026-07-10T10:30:00+07:00',
+      delayReason: 'Traffic',
+    });
+    expect(component['isDelayFormOpen']).toBeFalse();
+    expect(component['tripHeader']?.delayedDepartureDateTime).toBe('2026-07-10T10:30:00+07:00');
+    expect(component['tripHeader']?.delayReason).toBe('Traffic');
+    expect(alertServiceStub.success).toHaveBeenCalledWith('STAFF.SCHEDULE_DELAY.SUCCESS');
+  });
+
+  it('409 SCHEDULE_DELAY_NOT_SCHEDULED: shows an AlertService.error() toast, not an inline field error', () => {
+    const staffApiServiceStub = {
+      delaySchedule: jasmine.createSpy('delaySchedule').and.returnValue(
+        throwError(
+          () => new HttpErrorResponse({ status: 409, error: { errorCode: 'SCHEDULE_DELAY_NOT_SCHEDULED' } })
+        )
+      ),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withScheduledTripHeader(component);
+    component['openDelayDialog']();
+    component['delayForm'].setValue({
+      delayedDate: new Date(2026, 6, 10),
+      delayedTime: (() => {
+        const d = new Date();
+        d.setHours(10, 30, 0, 0);
+        return d;
+      })(),
+      delayReason: '',
+    });
+
+    component['submitDelaySchedule']();
+
+    expect(alertServiceStub.error).toHaveBeenCalledWith('STAFF.SCHEDULE_DELAY.ERROR.SCHEDULE_DELAY_NOT_SCHEDULED');
+    expect(component['delayEtaServerError']).toBeFalse();
+    expect(component['isDelayFormOpen']).toBeTrue();
+  });
+
+  it('400 (SCHEDULE_DELAY_ETA_INVALID or bean-validation) sets an inline field error, never a toast', () => {
+    const staffApiServiceStub = {
+      delaySchedule: jasmine.createSpy('delaySchedule').and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 400, error: { errorCode: 'SCHEDULE_DELAY_ETA_INVALID' } }))
+      ),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withScheduledTripHeader(component);
+    component['openDelayDialog']();
+    component['delayForm'].setValue({
+      delayedDate: new Date(2026, 6, 10),
+      delayedTime: (() => {
+        const d = new Date();
+        d.setHours(10, 30, 0, 0);
+        return d;
+      })(),
+      delayReason: '',
+    });
+
+    component['submitDelaySchedule']();
+
+    expect(alertServiceStub.error).not.toHaveBeenCalled();
+    expect(component['delayEtaServerError']).toBeTrue();
+  });
+
+  it('reasonlength > 500 keeps the form invalid — no HTTP call', () => {
+    const staffApiServiceStub = { delaySchedule: jasmine.createSpy('delaySchedule') };
+    const component = createComponent(staffApiServiceStub);
+    withScheduledTripHeader(component);
+    component['openDelayDialog']();
+    component['delayForm'].setValue({
+      delayedDate: new Date(2026, 6, 10),
+      delayedTime: (() => {
+        const d = new Date();
+        d.setHours(10, 30, 0, 0);
+        return d;
+      })(),
+      delayReason: 'x'.repeat(501),
+    });
+
+    component['submitDelaySchedule']();
+
+    expect(staffApiServiceStub.delaySchedule).not.toHaveBeenCalled();
+    expect(component['isDelayFieldInvalid']('delayReason')).toBeTrue();
   });
 });
 
@@ -1297,6 +1608,128 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
     );
     // live <video> present in the rendered template
     expect(fixture.nativeElement.querySelector('video.boarding-scan-video')).toBeTruthy();
+  }));
+});
+
+// OBRS-272 / design-system §12 locking spec: renders the REAL
+// AdminModalBackdropDirective (not NO_ERRORS_SCHEMA-suppressed) to prove it
+// resolves from its new home (SharedModule, relocated from AdminModule — see
+// docs/adr/0017) for a component declared in shared/. Also locks the new
+// `.is-delayed` status color role (never falling back to is-info/is-success/
+// is-neutral) per design-system §11's "status colors" rubric item.
+describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (TestBed, real AdminModalBackdropDirective)', () => {
+  let fixture: ComponentFixture<BoardingListComponent>;
+  let component: BoardingListComponent;
+
+  function render(opts: {
+    scheduleStatus: string;
+    canControl: boolean;
+    delayedDepartureDateTime?: string | null;
+    delayReason?: string | null;
+  }): void {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, ReactiveFormsModule, CalendarModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent, AdminModalBackdropDirective],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: [] }),
+            getScheduleById: () =>
+              of({
+                code: 200,
+                message: 'OK',
+                data: {
+                  id: 42,
+                  status: opts.scheduleStatus,
+                  departureDateTime: '2026-07-10T08:00:00+07:00',
+                  delayedDepartureDateTime: opts.delayedDepartureDateTime ?? null,
+                  delayReason: opts.delayReason ?? null,
+                },
+              }),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: { hasAnyRole: () => opts.canControl, getUsername: () => 'operator1', authStatus$: of(true) },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(BoardingListComponent);
+    component = fixture.componentInstance;
+    component.scheduleId = 42;
+    component.ngOnChanges({ scheduleId: {} as any });
+    fixture.detectChanges();
+  }
+
+  afterEach(() => {
+    fixture?.destroy();
+  });
+
+  it('shows the "Mark delayed" pill for salesperson on a scheduled trip, hidden once departed', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    const pillButtons: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.boarding-trip-header-status-row .admin-btn')
+    );
+    const markDelayedBtn = pillButtons.find((btn) => btn.textContent?.includes('STAFF.SCHEDULE_DELAY.PILL_MARK'));
+    expect(markDelayedBtn).toBeTruthy();
+
+    fixture.destroy();
+    render({ scheduleStatus: 'departed', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    const afterDeparted: HTMLButtonElement[] = Array.from(
+      fixture.nativeElement.querySelectorAll('.boarding-trip-header-status-row .admin-btn')
+    );
+    expect(afterDeparted.some((btn) => btn.textContent?.includes('STAFF.SCHEDULE_DELAY'))).toBeFalse();
+  }));
+
+  it('renders the delayed indicator with the is-delayed class + reason line — never is-info/is-success/is-neutral', fakeAsync(() => {
+    render({
+      scheduleStatus: 'scheduled',
+      canControl: true,
+      delayedDepartureDateTime: '2026-07-10T10:30:00+07:00',
+      delayReason: 'Traffic on the highway',
+    });
+    tick();
+    fixture.detectChanges();
+
+    const indicator: HTMLElement = fixture.nativeElement.querySelector('.admin-status.is-delayed');
+    expect(indicator).toBeTruthy();
+    expect(indicator.classList.contains('is-info')).toBeFalse();
+    expect(indicator.classList.contains('is-success')).toBeFalse();
+    expect(indicator.classList.contains('is-neutral')).toBeFalse();
+
+    // No translation loader is configured in this TestBed (TranslateModule.forRoot()
+    // with no loader), so `| translate` falls back to the raw key — assert the
+    // reason line renders (i18n key present), not the interpolated prose.
+    const reasonLine: HTMLElement = fixture.nativeElement.querySelector('.boarding-delay-reason');
+    expect(reasonLine.textContent).toContain('STAFF.SCHEDULE_DELAY.INDICATOR_REASON');
+  }));
+
+  it('opening the dialog renders .admin-modal with role="dialog" + aria-modal="true" (proves the relocated directive is wired)', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: true });
+    tick();
+    fixture.detectChanges();
+
+    component['openDelayDialog']();
+    fixture.detectChanges();
+
+    const backdrop: HTMLElement = fixture.nativeElement.querySelector('.admin-modal-backdrop');
+    const modal: HTMLElement = fixture.nativeElement.querySelector('.admin-modal');
+    expect(backdrop).toBeTruthy();
+    expect(modal).toBeTruthy();
+    expect(modal.getAttribute('role')).toBe('dialog');
+    expect(modal.getAttribute('aria-modal')).toBe('true');
   }));
 });
 

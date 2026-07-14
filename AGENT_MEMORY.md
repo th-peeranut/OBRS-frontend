@@ -2920,6 +2920,27 @@ explicitly invoked. An unconditional global print rule is a whole-app regression
   (already leading-slash in all three locales from the prior polish commit) works unchanged whether
   it's read on the availability line or the price line.
 
+## 2026-07-13 — Scrutinize self-fix: OBRS-272 trip delay staff control (commit efaf24c)
+
+**Worktree:** `OBRS-frontend-wt-obrs-272-trip-delay-notify` (branch `ao/obrs-272-trip-delay-notify`).
+Two under-30-line self-fixes applied after review; larger items left as notes below.
+
+1. **Dead reuse alias wired up, not deleted.** `schedule-delay-error.ts` exported
+   `extractScheduleDelayErrorCode = extractScheduleStatusErrorCode` (the intended per-flow
+   extract+map pair, matching `boarding-scan-error`/`boarding-action-error`/`schedule-status-error`),
+   but `BoardingListComponent.submitDelaySchedule()`'s error handler still called
+   `extractScheduleStatusErrorCode()` directly — leaving the alias dead. Fix: import and call
+   `extractScheduleDelayErrorCode()` in the delay flow (line ~458) so each flow imports its own
+   extract+map pair (convention), and the OBRS-256 status flow (line ~748) keeps
+   `extractScheduleStatusErrorCode`. Pattern lesson: when you create a feature-local reuse alias,
+   USE it at the call site — don't create it then bypass it, or it reads as dead code on review.
+
+2. **Wrong ADR reference.** `admin-modal-backdrop.directive.ts`'s doc comment cited
+   `docs/adr/0016-admin-modal-backdrop-relocation.md`, but 0016 is an unrelated ADR
+   (`0016-eod-sales-report-money-columns-and-row-expand.md`); the real one is
+   `0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Fixed the citation. Lesson:
+   when the ADR number is assigned late, grep `docs/adr/` for the actual filename before citing it.
+
 ## OBRS-266 scrutinize self-fix — camera startup teardown race (2026-07-11)
 
 `startCameraScan()` assigned `this.scannerControls`/`cameraStatus='active'` only AFTER

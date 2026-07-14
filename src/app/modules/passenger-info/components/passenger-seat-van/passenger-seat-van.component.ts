@@ -25,6 +25,17 @@ export class PassengerSeatVanComponent implements OnChanges {
    * flow is unaffected.
    */
   @Input() seatGenders: Record<string, string> | null = null;
+  /**
+   * Per-seat OWNER map for the collapsed shared seat map (OBRS-242): every
+   * seat already assigned to ANY passenger in this booking, keyed by seat
+   * label, with that passenger's badge label + gender. Null (the default)
+   * leaves every existing single-select/`seatGenders` call site untouched.
+   * When set, it takes priority over `seatGenders` for rendering — but the
+   * click-eligibility guard is unchanged: `currentSeat` still means "the
+   * ACTIVE passenger's own seat" and `takenSeats` still means "seats owned
+   * by every OTHER passenger", so the host needs no new guard logic.
+   */
+  @Input() seatOwners: Record<string, { label: string; gender: string }> | null = null;
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
   @Output() seatClicked = new EventEmitter<string>();
@@ -42,8 +53,10 @@ export class PassengerSeatVanComponent implements OnChanges {
   }
 
   setPassengerSeatPosition(passengerSeatPosition: string) {
-    // In multi-select mode allow click as long as a gender map exists.
-    const effectiveGender = this.seatGenders !== null ? 'multi' : this.gender;
+    // In multi-select/shared-map mode allow click as long as an owner or
+    // gender map exists.
+    const effectiveGender =
+      this.seatOwners !== null || this.seatGenders !== null ? 'multi' : this.gender;
     if (effectiveGender == '') {
       return;
     }
@@ -87,6 +100,9 @@ export class PassengerSeatVanComponent implements OnChanges {
    * Single-select mode: only the currently selected seat shows the gender.
    */
   seatGenderFor(label: string): string {
+    if (this.seatOwners !== null) {
+      return this.seatOwners[label]?.gender ?? '';
+    }
     if (this.seatGenders !== null) {
       return this.seatGenders[label] ?? '';
     }
@@ -95,14 +111,31 @@ export class PassengerSeatVanComponent implements OnChanges {
 
   /**
    * Whether a seat is "active" (selected/occupied by the current booking).
+   * Shared-map: any seat present in the seatOwners map.
    * Multi-select: any seat present in seatGenders map.
    * Single-select: only the one isSelected seat.
    */
   isSeatActive(label: string): boolean {
+    if (this.seatOwners !== null) {
+      return label in this.seatOwners;
+    }
     if (this.seatGenders !== null) {
       return label in this.seatGenders && (this.seatGenders[label] ?? '') !== '';
     }
     return this.isSelected === label;
+  }
+
+  /** Owner badge label for a seat in shared-map mode; null outside it. */
+  ownerLabelFor(label: string): string | null {
+    return this.seatOwners?.[label]?.label ?? null;
+  }
+
+  /**
+   * Whether this seat is the currently ACTIVE passenger's own assigned seat
+   * (shared-map mode only) — drives the emphasis ring.
+   */
+  isActiveOwnerFor(label: string): boolean {
+    return this.seatOwners !== null && !!this.currentSeat && label === this.currentSeat;
   }
 
   private isSeatAvailable(seat: string): boolean {

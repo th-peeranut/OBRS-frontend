@@ -1455,7 +1455,9 @@
       "SEAT_SECTION_TITLE": "座位选择",
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",
-      "SEAT_LEG_RETURN": "返程座位"
+      "SEAT_LEG_RETURN": "返程座位",
+      "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
+      "SEAT_CHIP_FALLBACK": "乘客 {{n}}"
     },
     "GENDER": {
       "MALE": "男",
@@ -1751,6 +1753,34 @@
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "此班次目前无法切换到该状态。",
         "GENERIC": "无法更新班次状态，请重试。"
+      }
+    },
+    "SCHEDULE_DELAY": {
+      "PILL_MARK": "标记为延误",
+      "PILL_UPDATE": "更新预计时间",
+      "INDICATOR_LABEL": "延误 — 新预计时间 {{eta}}",
+      "INDICATOR_REASON": "原因：{{reason}}",
+      "DIALOG_TITLE_MARK": "标记此班次延误",
+      "DIALOG_TITLE_UPDATE": "更新延误预计时间",
+      "FIELD": {
+        "DATE": "新出发日期",
+        "TIME": "新出发时间",
+        "REASON": "原因（选填）",
+        "REASON_PLACEHOLDER": "例如：高速公路交通拥堵"
+      },
+      "VALIDATION": {
+        "REQUIRED": "此字段为必填项。",
+        "MUST_BE_AFTER": "新的预计时间必须晚于原出发时间。",
+        "REASON_TOO_LONG": "原因不得超过 500 个字符。"
+      },
+      "CANCEL": "取消",
+      "SUBMIT": "保存",
+      "SUBMITTING": "保存中…",
+      "SUCCESS": "已通知 {{count}} 名乘客",
+      "ERROR": {
+        "SCHEDULE_DELAY_NOT_SCHEDULED": "此班次已无法标记为延误。",
+        "SCHEDULE_DELAY_ETA_INVALID": "新的预计时间必须晚于原出发时间。",
+        "GENERIC": "无法更新延误信息，请重试。"
       }
     },
     "DRIVER": {

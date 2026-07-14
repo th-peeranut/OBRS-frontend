@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { UserDeleteModalComponent } from './user-delete-modal.component';
-import { AdminModalBackdropDirective } from '../../../components/admin-modal-backdrop.directive';
+import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UserRow } from '../user-management.mappers';
 
 const JOHN_ROW: UserRow = {

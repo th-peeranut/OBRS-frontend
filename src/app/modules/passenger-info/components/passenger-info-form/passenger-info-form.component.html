@@ -278,81 +278,178 @@
                 {{ "PASSENGER_INFO.FORM.GENDER_STATUS_REQUIRED" | translate }}
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-            <!-- Seat selection, optional -->
+    <!-- Seat selection — ONE shared seat map per leg (OBRS-242), not one per
+         passenger. An active-passenger selector above each leg's map decides
+         who a seat click assigns to; the map itself shows every passenger's
+         seat at once. -->
+    <div class="card-container mt-3" *ngIf="passengerData.controls.length">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12">
+            <div class="subtitle">
+              {{ "PASSENGER_INFO.FORM.SEAT_SECTION_TITLE" | translate }}
+            </div>
+          </div>
+          <div class="col-12 text-muted">
+            {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
+          </div>
+
+          <!-- Outbound leg label (only labelled when there's a return leg too) -->
+          <div class="col-12 mt-2" *ngIf="isReturnTrip$ | async">
+            <div class="seat-leg-label">
+              {{ "PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND" | translate }}
+            </div>
+          </div>
+
+          <!-- Active-passenger selector (outbound) -->
+          <div class="col-12 mt-3">
+            <div class="seat-active-label">
+              {{ "PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL" | translate }}
+            </div>
+            <div
+              class="seat-passenger-chips mt-1"
+              role="tablist"
+              [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL' | translate"
+            >
+              <button
+                type="button"
+                *ngFor="let p of passengerData.controls; let pi = index; trackBy: trackByIndex"
+                class="seat-passenger-chip"
+                [class.active]="pi === activeOutboundIndex"
+                role="tab"
+                [attr.aria-selected]="pi === activeOutboundIndex"
+                (click)="setActiveOutbound(pi)"
+              >
+                <span class="seat-passenger-chip-badge">{{ pi + 1 }}</span>
+                <span class="seat-passenger-chip-name">
+                  <ng-container
+                    *ngIf="(getFormValue(pi, 'firstName') || '').trim() as fname; else outboundFallbackName"
+                    >{{ fname }}</ng-container
+                  >
+                  <ng-template #outboundFallbackName>{{
+                    "PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: pi + 1 }
+                  }}</ng-template>
+                </span>
+                <span
+                  class="seat-passenger-chip-seat"
+                  *ngIf="getFormValue(pi, 'passengerSeat')"
+                >
+                  · {{ getFormValue(pi, "passengerSeat") }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div class="seat-map-wrap mt-3">
+            <div class="seat-map-inner">
+              <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
+                <app-passenger-seat-van
+                  [gender]="getFormValue(activeOutboundIndex, 'gender')"
+                  [currentSeat]="getFormValue(activeOutboundIndex, 'passengerSeat')"
+                  [takenSeats]="getTakenSeats(activeOutboundIndex)"
+                  [availableSeatNumbers]="availableSeatNumbers$ | async"
+                  [seatOwners]="getSeatOwners()"
+                  (passengerSeatPositionOnChange)="
+                    setPassengerSeat(activeOutboundIndex, $event)
+                  "
+                ></app-passenger-seat-van>
+              </ng-container>
+              <ng-template #busSeatMap>
+                <app-passenger-seat-bus
+                  [gender]="getFormValue(activeOutboundIndex, 'gender')"
+                  [currentSeat]="getFormValue(activeOutboundIndex, 'passengerSeat')"
+                  [takenSeats]="getTakenSeats(activeOutboundIndex)"
+                  [seatOwners]="getSeatOwners()"
+                  (passengerSeatPositionOnChange)="
+                    setPassengerSeat(activeOutboundIndex, $event)
+                  "
+                ></app-passenger-seat-bus>
+              </ng-template>
+            </div>
+          </div>
+
+          <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
+          <ng-container *ngIf="isReturnTrip$ | async">
             <div class="col-12 mt-4">
-              <div class="subtitle">
-                {{ "PASSENGER_INFO.FORM.SEAT_SECTION_TITLE" | translate }}
+              <div class="seat-leg-label">
+                {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
               </div>
-            </div>
-            <div class="col-12 text-muted">
-              {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
             </div>
 
-            <!-- Outbound leg label (only labelled when there's a return leg too) -->
-            <div class="col-12 mt-2" *ngIf="isReturnTrip$ | async">
-              <div class="seat-leg-label">
-                {{ "PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND" | translate }}
+            <!-- Active-passenger selector (return) -->
+            <div class="col-12 mt-3">
+              <div class="seat-active-label">
+                {{ "PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL" | translate }}
+              </div>
+              <div
+                class="seat-passenger-chips mt-1"
+                role="tablist"
+                [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL' | translate"
+              >
+                <button
+                  type="button"
+                  *ngFor="let p of passengerData.controls; let pi = index; trackBy: trackByIndex"
+                  class="seat-passenger-chip"
+                  [class.active]="pi === activeReturnIndex"
+                  role="tab"
+                  [attr.aria-selected]="pi === activeReturnIndex"
+                  (click)="setActiveReturn(pi)"
+                >
+                  <span class="seat-passenger-chip-badge">{{ pi + 1 }}</span>
+                  <span class="seat-passenger-chip-name">
+                    <ng-container
+                      *ngIf="(getFormValue(pi, 'firstName') || '').trim() as fname; else returnFallbackName"
+                      >{{ fname }}</ng-container
+                    >
+                    <ng-template #returnFallbackName>{{
+                      "PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: pi + 1 }
+                    }}</ng-template>
+                  </span>
+                  <span
+                    class="seat-passenger-chip-seat"
+                    *ngIf="getFormValue(pi, 'passengerSeatReturn')"
+                  >
+                    · {{ getFormValue(pi, "passengerSeatReturn") }}
+                  </span>
+                </button>
               </div>
             </div>
+
             <div class="seat-map-wrap mt-3">
               <div class="seat-map-inner">
-                <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
+                <ng-container
+                  *ngIf="isVanVehicleReturn$ | async; else busSeatMapReturn"
+                >
                   <app-passenger-seat-van
-                    [gender]="group.get('gender')?.value"
-                    [currentSeat]="getFormValue(i, 'passengerSeat')"
-                    [takenSeats]="getTakenSeats(i)"
-                    [availableSeatNumbers]="availableSeatNumbers$ | async"
-                    (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                    [gender]="getFormValue(activeReturnIndex, 'gender')"
+                    [currentSeat]="getFormValue(activeReturnIndex, 'passengerSeatReturn')"
+                    [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
+                    [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
+                    [seatOwners]="getSeatOwnersReturn()"
+                    (passengerSeatPositionOnChange)="
+                      setPassengerSeatReturn(activeReturnIndex, $event)
+                    "
                   ></app-passenger-seat-van>
                 </ng-container>
-                <ng-template #busSeatMap>
+                <ng-template #busSeatMapReturn>
                   <app-passenger-seat-bus
-                    [gender]="group.get('gender')?.value"
-                    [currentSeat]="getFormValue(i, 'passengerSeat')"
-                    [takenSeats]="getTakenSeats(i)"
-                    (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                    [gender]="getFormValue(activeReturnIndex, 'gender')"
+                    [currentSeat]="getFormValue(activeReturnIndex, 'passengerSeatReturn')"
+                    [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
+                    [seatOwners]="getSeatOwnersReturn()"
+                    (passengerSeatPositionOnChange)="
+                      setPassengerSeatReturn(activeReturnIndex, $event)
+                    "
                   ></app-passenger-seat-bus>
                 </ng-template>
               </div>
             </div>
-
-            <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
-            <ng-container *ngIf="isReturnTrip$ | async">
-              <div class="col-12 mt-3">
-                <div class="seat-leg-label">
-                  {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
-                </div>
-              </div>
-              <div class="seat-map-wrap mt-2">
-                <div class="seat-map-inner">
-                  <ng-container
-                    *ngIf="isVanVehicleReturn$ | async; else busSeatMapReturn"
-                  >
-                    <app-passenger-seat-van
-                      [gender]="group.get('gender')?.value"
-                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
-                      [takenSeats]="getTakenSeatsReturn(i)"
-                      [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
-                      (passengerSeatPositionOnChange)="
-                        setPassengerSeatReturn(i, $event)
-                      "
-                    ></app-passenger-seat-van>
-                  </ng-container>
-                  <ng-template #busSeatMapReturn>
-                    <app-passenger-seat-bus
-                      [gender]="group.get('gender')?.value"
-                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
-                      [takenSeats]="getTakenSeatsReturn(i)"
-                      (passengerSeatPositionOnChange)="
-                        setPassengerSeatReturn(i, $event)
-                      "
-                    ></app-passenger-seat-bus>
-                  </ng-template>
-                </div>
-              </div>
-            </ng-container>
-          </div>
+          </ng-container>
         </div>
       </div>
     </div>

@@ -2,9 +2,19 @@
 <div
   class="seat-box"
   [class.disabled]="isDisabled"
+  [class.active-owner]="isActiveOwner"
   (click)="setPassengerSeatOuput(label)"
 >
   {{ label }}
+
+  <!-- Owner badge (shared seat map, OBRS-242): which passenger this seat
+       belongs to. A corner badge (like Original below) so it never hides
+       the seat label or the centered gender icon. -->
+  <span
+    *ngIf="!isDisabled && ownerLabel"
+    class="seat-owner-badge"
+    aria-hidden="true"
+  >{{ ownerLabel }}</span>
 
   <!-- Male -->
   <img

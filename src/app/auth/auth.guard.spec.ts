@@ -44,7 +44,7 @@ describe('AuthGuard (area-based access)', () => {
     router.parseUrl.and.callFake(
       (url: string) => ({ url } as unknown as UrlTree)
     );
-    alert = jasmine.createSpyObj<AlertService>('AlertService', ['error']);
+    alert = jasmine.createSpyObj<AlertService>('AlertService', ['error', 'permissionDenied']);
 
     TestBed.configureTestingModule({
       providers: [
@@ -133,7 +133,7 @@ describe('AuthGuard (area-based access)', () => {
         stateFor('/admin')
       );
       expect(targetOf(result)).toBe('/staff');
-      expect(alert.error).toHaveBeenCalled();
+      expect(alert.permissionDenied).toHaveBeenCalled();
     });
   });
 });

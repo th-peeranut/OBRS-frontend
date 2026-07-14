@@ -3,7 +3,7 @@ import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 
 // localStorage shim — keeps spec storage isolated
 function clearSidebarStorage(): void {
@@ -19,6 +19,22 @@ import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
+import { BadgeSocketService } from '../../services/admin/badge-socket.service';
+
+// OBRS-147: fake WebSocket badge push — a plain Subject the test drives
+// directly, so specs don't need a real STOMP connection (mirrored per test
+// group, same pattern as `createWithCountSource` for AdminApiService below).
+function createBadgeSocketServiceStub(): {
+  count$: Subject<number>;
+  connect: jasmine.Spy;
+  disconnect: jasmine.Spy;
+} {
+  return {
+    count$: new Subject<number>(),
+    connect: jasmine.createSpy('connect'),
+    disconnect: jasmine.createSpy('disconnect'),
+  };
+}
 
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
@@ -37,8 +53,11 @@ describe('AdminLayoutComponent', () => {
     mode$: themeMode$.asObservable(),
   };
 
+  let badgeSocketServiceStub: ReturnType<typeof createBadgeSocketServiceStub>;
+
   beforeEach(async () => {
     clearSidebarStorage();
+    badgeSocketServiceStub = createBadgeSocketServiceStub();
     await TestBed.configureTestingModule({
       declarations: [AdminLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
@@ -52,6 +71,7 @@ describe('AdminLayoutComponent', () => {
           provide: AdminApiService,
           useValue: { getNewUsabilityReportCount: () => of(0) },
         },
+        { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
       ],
     }).compileComponents();
 
@@ -60,6 +80,16 @@ describe('AdminLayoutComponent', () => {
   });
 
   afterEach(() => { clearSidebarStorage(); });
+
+  // ── OBRS-147: WebSocket badge lifecycle ─────────────────────────────────────
+  it('connects the badge socket on init', () => {
+    expect(badgeSocketServiceStub.connect).toHaveBeenCalled();
+  });
+
+  it('disconnects the badge socket on destroy', () => {
+    fixture.destroy();
+    expect(badgeSocketServiceStub.disconnect).toHaveBeenCalled();
+  });
 
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
@@ -323,6 +353,7 @@ describe('AdminLayoutComponent', () => {
 // describe's non-fakeAsync beforeEach above.
 describe('AdminLayoutComponent — usability report badge', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
+  let badgeSocketServiceStub: ReturnType<typeof createBadgeSocketServiceStub>;
 
   const authStub = {
     getUsername: () => 'admin@obrs.test',
@@ -340,6 +371,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
 
   beforeEach(async () => {
     clearSidebarStorage();
+    badgeSocketServiceStub = createBadgeSocketServiceStub();
     await TestBed.configureTestingModule({
       declarations: [AdminLayoutComponent, LangSwitcherComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
@@ -354,6 +386,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
         // resulting timer(0, ...) subscription is registered inside that
         // test's own fakeAsync zone and can be flushed deterministically.
         { provide: AdminApiService, useValue: { getNewUsabilityReportCount: () => of(0) } },
+        { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
       ],
     }).compileComponents();
   });
@@ -445,5 +478,56 @@ describe('AdminLayoutComponent — usability report badge', () => {
     expect(badge.nativeElement.textContent.trim())
       .withContext('failed poll must not reset the badge to 0')
       .toBe('3');
+  }));
+
+  // ── OBRS-147: real-time WebSocket push (additive 4th signal) ────────────────
+
+  it('updates newReportCount when badgeSocketService.count$ emits (real-time push)', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(0));
+    tick();
+    fixture.detectChanges();
+
+    badgeSocketServiceStub.count$.next(7);
+    fixture.detectChanges();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge)
+      .withContext('a pushed WS frame should update the badge without waiting for a poll tick')
+      .toBeTruthy();
+    expect(badge.nativeElement.textContent.trim()).toBe('7');
+
+    discardPeriodicTasks();
+  }));
+
+  it('the 60s poll / NavigationEnd / refreshRequested$ fallback still updates the badge when the socket stays silent', fakeAsync(() => {
+    // No badgeSocketServiceStub.count$.next(...) call anywhere in this test —
+    // the socket is silent for its entire duration; the poll must still work
+    // on its own, proving the WS push is additive, not a replacement.
+    fixture = createWithCountSource(() => of(4));
+    tick();
+    fixture.detectChanges();
+
+    let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('initial poll tick should populate the badge with the socket silent')
+      .toBe('4');
+
+    discardPeriodicTasks();
+  }));
+
+  it('countAdjustments$ optimistic adjustBy still applies with the socket wired in', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(3));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+    const badgeRefreshService = TestBed.inject(UsabilityReportBadgeRefreshService);
+
+    badgeRefreshService.adjustBy(-1);
+    fixture.detectChanges();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('optimistic adjustBy must still apply now that the WS signal is also wired in')
+      .toBe('2');
   }));
 });
