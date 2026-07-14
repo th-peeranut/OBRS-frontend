@@ -3047,3 +3047,39 @@ admin/staff × light/dark. Lesson: for any `appendTo="body"`/CDK-overlay/portal
 content that reads shell-scoped CSS custom properties, grep for the existing
 `my-bookings-action-menu` pattern FIRST and budget for a styleClass + global
 stylesheet rule from the start — don't discover the gap after Scrutinize.
+
+### QA follow-up 2 (same day, commit 9951b61) — panel root chrome + i18n NG0200 diagnosis
+
+**Fix 1 (in scope):** the earlier `.notification-inbox-overlay` block only re-declared
+custom PROPERTIES, never an actual `background`/`color`/`border` on the PrimeNG panel
+ROOT — so the card chrome stayed the theme's hardcoded `.p-overlaypanel { background:
+#ffffff }` (lara-light-blue) white in dark mode, behind now-correctly-dark-themed text.
+Added `.p-overlaypanel.notification-inbox-overlay` (background/color/border from the
+same tokens) + arrow pseudo-element overrides. Verified with the same static-harness-
++-Playwright `getComputedStyle()` recipe as the first Scrutinize fix, this time
+reproducing the REAL rendered root classes (`p-overlaypanel p-component` + styleClass,
+copied from `OverlayPanel`'s own template) so the specificity fight (`0-2-0` vs `0-1-0`)
+is tested faithfully, not just the token declarations.
+
+**Diagnose 2 (NG0200 circular DI / raw i18n keys) — CONCLUSION: pre-existing/env, NOT
+OBRS-317-caused.** Empirically reproduced with Playwright against `npm run
+start:local`-equivalent (`ng serve`): the exact `NG0200: Circular dependency in DI
+detected for _TranslateService` (thrown from `error.interceptor.ts:22`'s `inject(
+TranslateService)`) fires on a **cold `/login` page load**, before any auth, before any
+navigation into `/admin` or `/staff`, i.e. before a single line of OBRS-317 code (bell,
+NotificationInboxService, NotificationApiService) has executed. Visually confirmed
+`/login` itself renders raw keys (`LOGIN.WELCOME`, `LOGIN.USERNAME`, ...,
+`USABILITY_REPORT.FAB.LABEL`) in that same session. Root cause (not fixed, out of
+scope — `error.interceptor.ts` is on the CLAUDE.md "DO NOT MODIFY without explicit
+request" list): the interceptor's `inject(TranslateService)` is unconditional (runs for
+literally every HttpClient request, not gated behind `isApiRequest`), so it also fires
+for the i18n loader's OWN `/i18n/{lang}.json` HttpClient GET. If that fetch is issued
+synchronously from within `TranslateService`'s own construction (e.g. an eager
+`.use(lang)` call before the constructor returns), the interceptor's `inject()` for the
+SAME token mid-construction is a genuine reentrant cycle → NG0200, independent of route,
+independent of our polling. `AuthService.isAuthenticated()`/`getRoles()` read plain
+localStorage (`auth_token`/`auth_roles`, no JWT verification client-side) — useful
+precedent for future FE-only repro without a live backend: `localStorage.setItem(
+'auth_token', 'x'); localStorage.setItem('auth_roles', '["admin"]')` then
+`goto('/admin/dashboard')` renders the shell as if logged in. Reported back to
+coordinator to open a separate card; left `error.interceptor.ts` untouched.
