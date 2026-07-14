@@ -42,6 +42,45 @@ export interface StopOption extends SegmentStopRefDto {
   time: string;
 }
 
+/**
+ * OBRS-358: the walk-in booking-create request body, built ONCE per sale
+ * attempt in `onSell()` and reused byte-identical across the first attempt
+ * and the single allowed reactive-ack retry in `submitWalkInBooking()` —
+ * only `jumpSeatAcknowledged` (spread on at send time) and the
+ * Idempotency-Key (regenerated per attempt) differ between the two.
+ */
+interface WalkInBookingPayloadDraft {
+  bookingType: 'one_way';
+  totalAmount: number;
+  bookingChannel: 'walk_in';
+  jumpSeatAcknowledged?: boolean;
+  departureSchedule: {
+    scheduleId: number;
+    fromStop: string;
+    toStop: string;
+    departureDateTime: string;
+    arrivalDateTime: string;
+    passengers: {
+      passengerType: string;
+      seatNumber: string;
+      title: string;
+      firstName: string;
+      lastName: string;
+      phoneNumber: string;
+      identityCardNumber?: string;
+    }[];
+  };
+  contact: {
+    title: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    preferredLocale: string;
+    identityCardNumber?: string;
+    email?: string;
+  };
+}
+
 @Component({
   selector: 'app-sell-page',
   templateUrl: './sell-page.component.html',
@@ -343,26 +382,20 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected async onSell(payload: WalkInCheckoutPayload): Promise<void> {
     if (!this.selectedTrip) return;
 
-    // OBRS-358: this sale spills into the jump seat (walk-in-only, sold
-    // last) — gate on an explicit staff acknowledgment BEFORE building the
-    // payload. Reuses AlertService.confirm() (the exact primitive already
-    // used by offerPrintTicket() in this same file), not a bespoke modal.
-    // Declining leaves selection/checkout untouched and makes no API call.
+    // OBRS-358 (PROACTIVE path): this sale spills into the jump seat
+    // (walk-in-only, sold last) per the client-side overflowUnits hint —
+    // gate on an explicit staff acknowledgment BEFORE building the payload.
+    // Reuses AlertService.confirm() (the exact primitive already used by
+    // offerPrintTicket() in this same file), not a bespoke modal. Declining
+    // leaves selection/checkout untouched and makes no API call. Kept as-is
+    // alongside the REACTIVE backstop below — a harmless pre-warning when
+    // the hint happens to be right; see submitWalkInBooking()'s doc comment
+    // for why the hint alone isn't reliable enough on OPEN trips.
     let jumpSeatAcknowledged = false;
     if (this.requiresJumpSeatAck) {
-      const acknowledged = await this.alertService.confirm({
-        title: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE'),
-        text: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT'),
-        confirmButtonText: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_OK'),
-        cancelButtonText: this.translate.instant('COMMON.CLOSE'),
-        icon: 'warning',
-      });
+      const acknowledged = await this.confirmJumpSeatSale();
       if (!acknowledged) return;
       jumpSeatAcknowledged = true;
-    }
-
-    if (!this.idempotencyKey) {
-      this.idempotencyKey = generateIdempotencyKey();
     }
 
     const trip = this.selectedTrip;
@@ -417,29 +450,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     const fare = this.segmentFare ?? 0;
     const totalAmount = fare * this.ticketCount;
 
-    const bookingPayload: {
-      bookingType: 'one_way';
-      totalAmount: number;
-      bookingChannel: 'walk_in';
-      jumpSeatAcknowledged?: boolean;
-      departureSchedule: {
-        scheduleId: number;
-        fromStop: string;
-        toStop: string;
-        departureDateTime: string;
-        arrivalDateTime: string;
-        passengers: typeof passengers;
-      };
-      contact: {
-        title: string;
-        firstName: string;
-        lastName: string;
-        phoneNumber: string;
-        preferredLocale: string;
-        identityCardNumber?: string;
-        email?: string;
-      };
-    } = {
+    const basePayload: WalkInBookingPayloadDraft = {
       bookingType: 'one_way',
       totalAmount,
       bookingChannel: 'walk_in',
@@ -461,74 +472,189 @@ export class SellPageComponent implements OnInit, OnDestroy {
     };
 
     if (payload.contact.identityCardNumber) {
-      bookingPayload.contact.identityCardNumber = payload.contact.identityCardNumber;
+      basePayload.contact.identityCardNumber = payload.contact.identityCardNumber;
     }
     if (payload.contact.email) {
-      bookingPayload.contact.email = payload.contact.email;
-    }
-    // OBRS-358: only sent when this sale was gated on the jump-seat
-    // acknowledgment above — omitted (not `false`) otherwise, same
-    // conditional-field shape as identityCardNumber/email above.
-    if (jumpSeatAcknowledged) {
-      bookingPayload.jumpSeatAcknowledged = true;
+      basePayload.contact.email = payload.contact.email;
     }
 
+    // allowAckRetry=true: this is the first attempt for this sale, so a
+    // reactive ACK_REQUIRED 400 (see submitWalkInBooking()) is allowed to
+    // retry once.
+    await this.submitWalkInBooking(basePayload, jumpSeatAcknowledged, true);
+  }
+
+  /**
+   * OBRS-358: shared confirm dialog for BOTH the proactive (overflowUnits
+   * hint) and reactive (server 400) jump-seat acknowledgment paths — one
+   * copy, one code path, reused rather than forked per-trigger. Reuses
+   * AlertService.confirm() (the exact primitive already used by
+   * offerPrintTicket() in this same file), never a bespoke modal.
+   */
+  private confirmJumpSeatSale(): Promise<boolean> {
+    return this.alertService.confirm({
+      title: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE'),
+      text: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_OK'),
+      cancelButtonText: this.translate.instant('COMMON.CLOSE'),
+      icon: 'warning',
+    });
+  }
+
+  /**
+   * Sends the walk-in booking-create request, pays it on success, and offers
+   * the print-ticket prompt — the single implementation shared by the first
+   * attempt and the one allowed retry below (no duplicated success/payment
+   * handling).
+   *
+   * OBRS-358 REACTIVE backstop: the proactive `overflowUnits` hint (built
+   * from the walk-in trip DTO's sold/reserved counts) under-reports on OPEN
+   * trips — `findWalkInSchedulesByDate`'s `soldPaidCount` is always 0 there
+   * (a pre-existing `string_agg(DISTINCT seat_number)` bug collapsing blank
+   * OPEN seat numbers; not ours to fix here). So the hint can fail to fire
+   * while the server still correctly rejects the sale with
+   * `BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED`. Treating that 400 as
+   * authoritative — showing the SAME confirmJumpSeatSale() dialog reactively
+   * and, on Confirm, resubmitting with `jumpSeatAcknowledged: true` — closes
+   * the dead-end where staff could not otherwise complete a legitimate sale
+   * of the 21st (jump) seat.
+   *
+   * `allowAckRetry` guards against a retry loop: the retry call passes
+   * `false`, so a repeated ACK_REQUIRED (should not happen once ack=true is
+   * sent, but defensively) falls through to the plain error toast instead of
+   * retrying again.
+   */
+  private submitWalkInBooking(
+    basePayload: WalkInBookingPayloadDraft,
+    jumpSeatAcknowledged: boolean,
+    allowAckRetry: boolean
+  ): Promise<void> {
+    // Fills in a key only when one isn't already held for this sale attempt
+    // — handleCreateBookingError() explicitly regenerates it before calling
+    // this method again for the reactive-ack retry (a FRESH key, since the
+    // failed attempt created nothing server-side), so this fallback only
+    // ever fires for a genuinely first call.
+    if (!this.idempotencyKey) {
+      this.idempotencyKey = generateIdempotencyKey();
+    }
     const key = this.idempotencyKey;
 
-    this.staffApiService
-      .createWalkInBooking(bookingPayload as Parameters<typeof this.staffApiService.createWalkInBooking>[0])
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (bookingResp) => {
-          const bId = bookingResp?.data?.bookingId ?? null;
-          const bNum = bookingResp?.data?.bookingNumber ?? null;
-          this.bookingId = bId;
-          this.bookingNumber = bNum;
+    // OBRS-358: only sent when this attempt was gated on (or reactively
+    // confirmed for) the jump-seat acknowledgment — omitted (not `false`)
+    // otherwise, same conditional-field shape as identityCardNumber/email.
+    const payloadToSend: WalkInBookingPayloadDraft = jumpSeatAcknowledged
+      ? { ...basePayload, jumpSeatAcknowledged: true }
+      : basePayload;
 
-          if (!bId || !key) {
-            this.isSelling = false;
-            return;
-          }
+    return new Promise<void>((resolve) => {
+      this.staffApiService
+        .createWalkInBooking(payloadToSend as Parameters<typeof this.staffApiService.createWalkInBooking>[0])
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: (bookingResp) => {
+            const bId = bookingResp?.data?.bookingId ?? null;
+            const bNum = bookingResp?.data?.bookingNumber ?? null;
+            this.bookingId = bId;
+            this.bookingNumber = bNum;
 
-          this.staffApiService
-            .payWalkIn(bId, key)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: () => {
-                this.isSelling = false;
-                this.idempotencyKey = null;
-                this.selectedSeats = [];
-                this.passengerCount = 1;
-                this.seatPassengerTypes = {};
-                // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
-                // route, so AuthGuard bounces staff to their home and leaves the
-                // just-sold seat showing as available on the now-stale seat map
-                // (OBRS-188). Confirm in place and reload so the seat map + the
-                // trip row's sold-count badge reflect the sale.
-                this.selectedTrip = null;
-                this.activeTabIndex = 0;
-                this.loadTrips(this.selectedDate);
-                void this.offerPrintTicket(bId, bNum);
-              },
-              error: (err: unknown) => {
-                this.isSelling = false;
-                const message =
-                  this.mapJumpSeatErrorMessage(err) ||
-                  extractApiErrorMessage(err) ||
-                  this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
-                void this.alertService.error(message);
-              },
-            });
-        },
-        error: (err: unknown) => {
-          this.isSelling = false;
-          const message =
-            this.mapJumpSeatErrorMessage(err) ||
-            extractApiErrorMessage(err) ||
-            this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
-          void this.alertService.error(message);
-        },
-      });
+            if (!bId || !key) {
+              this.isSelling = false;
+              resolve();
+              return;
+            }
+
+            this.staffApiService
+              .payWalkIn(bId, key)
+              .pipe(takeUntil(this.destroy$))
+              .subscribe({
+                next: () => {
+                  this.isSelling = false;
+                  this.idempotencyKey = null;
+                  this.selectedSeats = [];
+                  this.passengerCount = 1;
+                  this.seatPassengerTypes = {};
+                  // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
+                  // route, so AuthGuard bounces staff to their home and leaves the
+                  // just-sold seat showing as available on the now-stale seat map
+                  // (OBRS-188). Confirm in place and reload so the seat map + the
+                  // trip row's sold-count badge reflect the sale.
+                  this.selectedTrip = null;
+                  this.activeTabIndex = 0;
+                  this.loadTrips(this.selectedDate);
+                  void this.offerPrintTicket(bId, bNum);
+                  resolve();
+                },
+                error: (err: unknown) => {
+                  this.isSelling = false;
+                  const message =
+                    this.mapJumpSeatErrorMessage(err) ||
+                    extractApiErrorMessage(err) ||
+                    this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+                  void this.alertService.error(message);
+                  resolve();
+                },
+              });
+          },
+          error: (err: unknown) => {
+            void this.handleCreateBookingError(err, basePayload, jumpSeatAcknowledged, allowAckRetry).then(resolve);
+          },
+        });
+    });
+  }
+
+  /**
+   * Branches a failed booking-create call: the OBRS-358 reactive ack-retry
+   * (see submitWalkInBooking()'s doc comment) when eligible, otherwise the
+   * plain mapped-error toast unchanged from before this follow-up.
+   */
+  private async handleCreateBookingError(
+    err: unknown,
+    basePayload: WalkInBookingPayloadDraft,
+    jumpSeatAcknowledged: boolean,
+    allowAckRetry: boolean
+  ): Promise<void> {
+    const errorCode = this.extractErrorCode(err);
+
+    if (
+      allowAckRetry &&
+      !jumpSeatAcknowledged &&
+      errorCode === 'BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'
+    ) {
+      this.isSelling = false;
+      const acknowledged = await this.confirmJumpSeatSale();
+      if (!acknowledged) {
+        // Quiet abort — no toast, no raw code (design-system §9); staff
+        // simply declined the jump-seat sale. Selection/checkout stay as-is
+        // so staff can adjust and try again.
+        return;
+      }
+      // The failed attempt created nothing server-side (it 400'd before
+      // persistence) — this retry is a NEW sale attempt, not a resend of
+      // the failed one: always regenerate, never reuse the key already
+      // held from the failed attempt above (submitWalkInBooking() only
+      // fills in a key when one isn't already set, so an explicit
+      // regenerate here is required — it would otherwise be reused as-is).
+      this.idempotencyKey = generateIdempotencyKey();
+      this.isSelling = true;
+      // allowAckRetry=false: at most one reactive retry per sale attempt.
+      await this.submitWalkInBooking(basePayload, true, false);
+      return;
+    }
+
+    this.isSelling = false;
+    const message =
+      this.mapJumpSeatErrorMessage(err) ||
+      extractApiErrorMessage(err) ||
+      this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
+    void this.alertService.error(message);
+  }
+
+  /** Extracts `error.error.errorCode` off a failed HTTP call (same shape
+   * WalkInCenterPanelComponent.onSave() reads for
+   * SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX) — shared by
+   * mapJumpSeatErrorMessage() and handleCreateBookingError()'s retry check. */
+  private extractErrorCode(err: unknown): string {
+    return (err as { error?: { errorCode?: string } } | null)?.error?.errorCode ?? '';
   }
 
   // OBRS-358: jump-seat sale errorCode -> i18n key, same switch-on-errorCode
@@ -546,8 +672,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
   // the copy is never duplicated. Returns '' (falsy) for any other/absent
   // code so the caller falls through to `extractApiErrorMessage`.
   private mapJumpSeatErrorMessage(err: unknown): string {
-    const errorCode = (err as { error?: { errorCode?: string } } | null)?.error?.errorCode ?? '';
-    switch (errorCode) {
+    switch (this.extractErrorCode(err)) {
       case 'BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED':
         return this.translate.instant('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
       case 'BOOKING_ERROR_JUMPSEAT_DISABLED':

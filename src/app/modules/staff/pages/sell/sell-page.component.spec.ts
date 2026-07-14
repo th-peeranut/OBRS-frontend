@@ -1426,8 +1426,11 @@ describe('SellPageComponent', () => {
       return { error: { errorCode } };
     }
 
+    // BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED is deliberately excluded
+    // from this generic "always a plain toast" table — the reactive-retry
+    // follow-up below routes it through confirmJumpSeatSale() instead. See
+    // the dedicated 'onSell — reactive jump-seat ack retry' describe block.
     ([
-      ['BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED', 'STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED'],
       ['BOOKING_ERROR_JUMPSEAT_DISABLED', 'STAFF.SELL.ERR_JUMPSEAT_DISABLED'],
       ['BOOKING_ERROR_JUMPSEAT_NORMAL_SEATS_AVAILABLE', 'STAFF.SELL.ERR_JUMPSEAT_NORMAL_AVAILABLE'],
       ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
@@ -1465,6 +1468,166 @@ describe('SellPageComponent', () => {
       await (comp as any).onSell(validPayload);
 
       expect(alert.error).toHaveBeenCalledWith('ADMIN.MESSAGES.SAVE_FAILED');
+    });
+  });
+
+  // OBRS-358 follow-up: the proactive overflowUnits hint under-reports on
+  // OPEN trips (findWalkInSchedulesByDate's soldPaidCount is always 0 there
+  // — a pre-existing backend bug, not FE's to fix), so the server's 400
+  // BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED must be treated as the
+  // authoritative, reactive trigger for the SAME ack dialog — otherwise
+  // staff hit a dead-end selling the 21st (jump) seat.
+  describe('onSell — reactive jump-seat ack retry (OBRS-358 follow-up)', () => {
+    function errorWithCode(errorCode: string): unknown {
+      return { error: { errorCode } };
+    }
+
+    it('on a 400 ACK_REQUIRED (no proactive hint), shows the SAME confirm dialog and, on Confirm, retries with jumpSeatAcknowledged:true using a FRESH idempotency key — then completes the sale', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValues(
+            throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED')),
+            of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
+          ),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip(); // no normalCapacity -> proactive hint does NOT fire
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      // Proactive gate never fired; the ONE confirm() call is the reactive one.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(alert.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          title: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE',
+          text: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT',
+          confirmButtonText: 'STAFF.SELL.JUMP_SEAT_CONFIRM_OK',
+          icon: 'warning',
+        })
+      );
+
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(2);
+      const firstArg = api.createWalkInBooking.calls.argsFor(0)[0];
+      const retryArg = api.createWalkInBooking.calls.argsFor(1)[0];
+      expect('jumpSeatAcknowledged' in firstArg).toBeFalse();
+      expect(retryArg.jumpSeatAcknowledged).toBeTrue();
+
+      // The retry succeeds and pays with a key — that key must NOT be the
+      // one the failed first attempt would have used (fresh per retry).
+      expect(api.payWalkIn).toHaveBeenCalledTimes(1);
+      const payKey = api.payWalkIn.calls.mostRecent().args[1];
+      expect(typeof payKey).toBe('string');
+      expect(payKey.length).toBeGreaterThan(0);
+
+      // Sale completed end-to-end (no dead-end, no leftover error toast).
+      expect(alert.error).not.toHaveBeenCalled();
+      expect((comp as any).selectedTrip).toBeNull();
+    });
+
+    it('uses a DIFFERENT idempotency key on the retry than the one held after the failed first attempt (never reuses the failed key)', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValues(
+            throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED')),
+            of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
+          ),
+      });
+      const alert = createAlertStub();
+      // Snapshot the key the FAILED first attempt was holding at the moment
+      // the reactive dialog is shown (submitWalkInBooking() sets it
+      // unconditionally before the HTTP call, so it's already populated here).
+      let keyHeldAfterFailedFirstAttempt: string | null = null;
+      alert.confirm.and.callFake(() => {
+        keyHeldAfterFailedFirstAttempt = (comp as any).idempotencyKey;
+        return Promise.resolve(true);
+      });
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      expect(keyHeldAfterFailedFirstAttempt).toEqual(jasmine.any(String));
+      const retryKeyUsedForPayment = api.payWalkIn.calls.mostRecent().args[1];
+      expect(retryKeyUsedForPayment).toEqual(jasmine.any(String));
+      expect(retryKeyUsedForPayment).not.toBe(keyHeldAfterFailedFirstAttempt);
+    });
+
+    it('does NOT retry when staff declines the reactive ack dialog — quiet abort, no toast, no second API call', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub(); // confirm() defaults to resolving false
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(1);
+      expect(alert.error).not.toHaveBeenCalled();
+      expect((comp as any).isSelling).toBeFalse();
+    });
+
+    it('guards against a retry loop: if the retry itself returns ACK_REQUIRED again, falls through to the plain error toast instead of retrying a second time', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      // Exactly one confirm prompt and one retry attempt (2 total create
+      // calls) — the second failure does NOT prompt again.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(2);
+      expect(alert.error).toHaveBeenCalledWith('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
+    });
+
+    it('does NOT reactively retry when the proactive hint already sent jumpSeatAcknowledged:true (defensive — should not occur once ack=true is sent)', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true)); // proactive gate confirms
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 20,
+        reservedUnpaidCount: 0,
+        normalCapacity: 20,
+      }); // proactive hint DOES fire (overflowUnits = 1)
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      // Only the ONE proactive confirm — no second (reactive) prompt, since
+      // this attempt already carried jumpSeatAcknowledged:true.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(1);
+      expect(alert.error).toHaveBeenCalledWith('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
     });
   });
 });
