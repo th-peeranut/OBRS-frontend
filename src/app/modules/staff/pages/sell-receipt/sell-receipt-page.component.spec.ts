@@ -144,8 +144,24 @@ describe('SellReceiptPageComponent', () => {
 
       expect((component as any).tickets.length).toBe(2);
       expect((component as any).tickets[0]).toEqual(
-        jasmine.objectContaining({ ticketNumber: 'T-OK', passengerName: 'Mr. Ok Passenger', seat: '1' })
+        jasmine.objectContaining({ ticketNumber: 'T-OK', passengerName: 'Mr. Ok Passenger', seat: '1', seatOpen: false })
       );
+    });
+
+    // OBRS-324 (Epic OBRS-318 open seating, 318-d): an OPEN walk-in ticket has
+    // seatNumber == null — the receipt should flag it instead of rendering '-'.
+    it('flags seatOpen=true for a ticket with no seatNumber (OPEN-seating walk-in sale)', () => {
+      const data = buildTicketsData();
+      data.journeys![0].tickets![0].seatNumber = undefined;
+      bookingServiceStub.getBookingTickets.and.returnValue(
+        of({ code: 200, message: 'OK', data })
+      );
+
+      const component = createComponent();
+      component.ngOnInit();
+
+      expect((component as any).tickets[0].seatOpen).toBeTrue();
+      expect((component as any).tickets[1].seatOpen).toBeFalse();
     });
 
     it('maps the cash payment method, paid amount, and paidAt from the payments response', () => {

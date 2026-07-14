@@ -137,35 +137,60 @@
         </div>
       </div>
 
-      <!-- Selected seat chips -->
-      <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
-        <span *ngFor="let seat of selectedSeats"
-              class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
-          {{ seat }}
-        </span>
+      <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
+      <div *ngIf="isOpenSeating" class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">
+        <div class="text-muted small">{{ 'STAFF.SELL.OPEN_SEATING_HINT' | translate }}</div>
+        <div class="d-flex align-items-center gap-3">
+          <button type="button"
+                  class="btn btn-outline-secondary rounded-circle"
+                  [disabled]="passengerCount <= 1"
+                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_DECREASE' | translate"
+                  (click)="decrementPassengerCount()">
+            <i class="bi bi-dash" aria-hidden="true"></i>
+          </button>
+          <span class="fs-3 fw-semibold text-center" style="min-width:2.5rem" aria-live="polite">{{ passengerCount }}</span>
+          <button type="button"
+                  class="btn btn-outline-secondary rounded-circle"
+                  [disabled]="passengerCount >= maxPassengerCount"
+                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_INCREASE' | translate"
+                  (click)="incrementPassengerCount()">
+            <i class="bi bi-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
       </div>
 
-      <!-- Van seat map -->
-      <ng-container *ngIf="isVan">
-        <app-passenger-seat-van
-          [gender]="seatGender"
-          [takenSeats]="takenSeats"
-          [currentSeat]="currentSeat"
-          [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
-          [seatGenders]="seatGendersUpper"
-          (seatClicked)="seatToggled.emit($event)">
-        </app-passenger-seat-van>
-      </ng-container>
+      <ng-container *ngIf="!isOpenSeating">
+        <!-- Selected seat chips -->
+        <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
+          <span *ngFor="let seat of selectedSeats"
+                class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
+            {{ seat }}
+          </span>
+        </div>
 
-      <!-- Bus seat map -->
-      <ng-container *ngIf="!isVan">
-        <app-passenger-seat-bus
-          [gender]="seatGender"
-          [takenSeats]="takenSeats"
-          [currentSeat]="currentSeat"
-          [seatGenders]="seatGendersUpper"
-          (seatClicked)="seatToggled.emit($event)">
-        </app-passenger-seat-bus>
+        <!-- Van seat map -->
+        <ng-container *ngIf="isVan">
+          <app-passenger-seat-van
+            [gender]="seatGender"
+            [takenSeats]="takenSeats"
+            [currentSeat]="currentSeat"
+            [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
+            [seatGenders]="seatGendersUpper"
+            (seatClicked)="seatToggled.emit($event)">
+          </app-passenger-seat-van>
+        </ng-container>
+
+        <!-- Bus seat map -->
+        <ng-container *ngIf="!isVan">
+          <app-passenger-seat-bus
+            [gender]="seatGender"
+            [takenSeats]="takenSeats"
+            [currentSeat]="currentSeat"
+            [seatGenders]="seatGendersUpper"
+            (seatClicked)="seatToggled.emit($event)">
+          </app-passenger-seat-bus>
+        </ng-container>
       </ng-container>
     </p-tabPanel>
 

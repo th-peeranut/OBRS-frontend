@@ -144,6 +144,53 @@ describe('WalkInCheckoutComponent', () => {
     });
   });
 
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN sells by passenger
+  // count only — canSell must gate on passengerCount, NOT selectedSeats.
+  describe('canSell gating — OPEN seating (OBRS-324)', () => {
+    it('returns true on passengerCount >= 1 with NO selectedSeats', () => {
+      const comp = makeComponent();
+      comp.seatingMode = 'OPEN';
+      comp.selectedSeats = [];
+      comp.passengerCount = 1;
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      fillValidContact(comp);
+      expect((comp as any).canSell).toBeTrue();
+    });
+
+    it('returns false when passengerCount is 0, even with pricePerSeat/cash set', () => {
+      const comp = makeComponent();
+      comp.seatingMode = 'OPEN';
+      comp.selectedSeats = [];
+      comp.passengerCount = 0;
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      fillValidContact(comp);
+      expect((comp as any).canSell).toBeFalse();
+    });
+
+    it('totalAmount multiplies pricePerSeat by passengerCount, ignoring selectedSeats', () => {
+      const comp = makeComponent();
+      comp.seatingMode = 'OPEN';
+      comp.selectedSeats = ['B1']; // should be ignored in OPEN mode
+      comp.passengerCount = 3;
+      comp.pricePerSeat = 300;
+      expect((comp as any).totalAmount).toBe(900);
+    });
+
+    it('ASSIGNED mode (default) is unaffected by passengerCount', () => {
+      const comp = makeComponent();
+      // seatingMode left at its default ('ASSIGNED')
+      comp.selectedSeats = [];
+      comp.passengerCount = 5;
+      comp.pricePerSeat = 300;
+      comp['cashReceived'] = 300;
+      fillValidContact(comp);
+      // No seats selected in ASSIGNED mode → still gated false, regardless of passengerCount.
+      expect((comp as any).canSell).toBeFalse();
+    });
+  });
+
   describe('total & change due', () => {
     it('multiplies pricePerSeat by the seat count', () => {
       const comp = makeComponent();

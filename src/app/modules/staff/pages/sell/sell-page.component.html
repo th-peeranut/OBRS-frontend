@@ -40,6 +40,7 @@
             [selectedSeats]="selectedSeats"
             [passengerGender]="selectedPassengerType"
             [seatPassengerTypes]="seatPassengerTypes"
+            [passengerCount]="passengerCount"
             [pickupOptions]="pickupOptions"
             [dropoffOptions]="dropoffOptions"
             [pickupSlug]="pickupSlug"
@@ -49,6 +50,7 @@
             [popularDropoffStops]="popularDropoffStops"
             (seatToggled)="onSeatToggled($event)"
             (passengerTypeChange)="onPassengerTypeChanged($event)"
+            (passengerCountChange)="onPassengerCountChanged($event)"
             (pickupChange)="onPickupChanged($event)"
             (dropoffChange)="onDropoffChanged($event)"
             (tripDetailsUpdated)="onTripDetailsUpdated($event)"
@@ -66,6 +68,8 @@
           <app-walk-in-checkout
             [selectedTrip]="selectedTrip"
             [selectedSeats]="selectedSeats"
+            [seatingMode]="isOpenSeating ? 'OPEN' : 'ASSIGNED'"
+            [passengerCount]="passengerCount"
             [isSelling]="isSelling"
             [pricePerSeat]="pricePerSeat"
             (sell)="onSell($event)">
