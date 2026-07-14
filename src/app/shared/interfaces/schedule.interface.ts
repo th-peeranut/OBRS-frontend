@@ -40,6 +40,13 @@ export interface Schedule {
    *  resolve the authoritative pickup→dropoff distance/duration estimate via
    *  `RouteMapService.getPickupDropoffCached`. */
   routeSlug?: string;
+  /** 'OPEN' | 'ASSIGNED' — whether this schedule sells seats without a fixed
+   *  seat number (OBRS-318/321). Same verified passthrough as `routeSlug`:
+   *  `ScheduleSearchRespDto` already carries it (OBRS-321), the schedule-list
+   *  store keeps `data` as-is, and the schedule-booking store keeps whichever
+   *  full `Schedule` row the user selected — no manual mapper needed on
+   *  either hop, so it's present by the time the booking page reads it. */
+  seatingMode?: string;
 }
 
 export interface ScheduleList {

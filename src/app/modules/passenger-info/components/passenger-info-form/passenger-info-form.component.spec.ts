@@ -1,4 +1,9 @@
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
 
 import { PassengerInfoFormComponent } from './passenger-info-form.component';
 import {
@@ -6,6 +11,12 @@ import {
   createStoreStub,
   createTranslateStub,
 } from '../../../../testing/test-stubs';
+import { PassengerSeatModule } from '../../passenger-seat.module';
+import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { Schedule } from '../../../../shared/interfaces/schedule.interface';
+import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
+import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
+import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
 
 describe('PassengerInfoFormComponent', () => {
   let component: PassengerInfoFormComponent;
@@ -146,5 +157,99 @@ describe('PassengerInfoFormComponent', () => {
       expect(component.getSeatOwners()).toEqual({ '1': { label: '1', gender: '' } });
       expect(component.getSeatOwnersReturn()).toEqual({ '9': { label: '1', gender: '' } });
     });
+  });
+});
+
+describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => {
+  let fixture: ComponentFixture<PassengerInfoFormComponent>;
+  let component: PassengerInfoFormComponent;
+  let store: MockStore;
+
+  const openSchedule: Schedule = {
+    id: 1,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-17T08:00:00+07:00',
+    arrivalDateTime: '2030-06-17T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 2,
+    availableSeatNumbers: ['1A', '2A'],
+    seatingMode: 'OPEN',
+  };
+
+  const assignedSchedule: Schedule = {
+    id: 2,
+    vehicleType: 'van',
+    departureDateTime: '2030-06-18T08:00:00+07:00',
+    arrivalDateTime: '2030-06-18T09:58:00+07:00',
+    pricePerSeat: '200',
+    availableSeats: 10,
+    availableSeatNumbers: ['1A', '2A', '3A'],
+    seatingMode: 'ASSIGNED',
+  };
+
+  function render(schedule: Schedule[]): void {
+    store.overrideSelector(selectScheduleBooking, { schedule });
+    store.overrideSelector(selectScheduleFilter, {
+      passengerInfo: [
+        { type: 'ADULT', count: 1 },
+        { type: 'KIDS', count: 0 },
+      ],
+    } as any);
+    store.overrideSelector(selectPassengerInfo, null as any);
+    fixture = TestBed.createComponent(PassengerInfoFormComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [PassengerInfoFormComponent],
+      imports: [
+        ReactiveFormsModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        PassengerSeatModule,
+        DropdownObrsComponent,
+      ],
+      providers: [provideMockStore()],
+    }).compileComponents();
+    store = TestBed.inject(MockStore);
+  });
+
+  it('one-way OPEN schedule: no seat map renders, and + beyond availableSeats does not grow passengerData', () => {
+    render([openSchedule]);
+
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-bus')).length).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+
+    // Seeded with 1 adult from the schedule filter; openSchedule.availableSeats = 2.
+    expect(component.passengerData.length).toBe(1);
+
+    const addBtn = fixture.debugElement.query(By.css('.passenger-add'));
+    addBtn.nativeElement.click();
+    fixture.detectChanges();
+    expect(component.passengerData.length).toBe(2);
+
+    // At the availableSeats cap (2) now — a further click must not grow it.
+    addBtn.nativeElement.click();
+    fixture.detectChanges();
+    expect(component.passengerData.length).toBe(2);
+  });
+
+  it('mixed-mode round trip: OPEN outbound renders a count card, ASSIGNED return still renders its seat map', () => {
+    render([openSchedule, assignedSchedule]);
+
+    // Outbound (OPEN): no seat map, count card present.
+    // Return (ASSIGNED, van): exactly one seat map, for the return leg only.
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+  });
+
+  it('ASSIGNED-only schedule (regression): seat map renders as before, no OPEN-seating card', () => {
+    render([assignedSchedule]);
+
+    expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(0);
   });
 });

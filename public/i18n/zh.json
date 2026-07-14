@@ -1457,16 +1457,23 @@
       "SEAT_LEG_OUTBOUND": "去程座位",
       "SEAT_LEG_RETURN": "返程座位",
       "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
-      "SEAT_CHIP_FALLBACK": "乘客 {{n}}"
+      "SEAT_CHIP_FALLBACK": "乘客 {{n}}",
+      "OPEN_SEAT_SECTION_HINT": "开放座位 — 无需选择座位，按到达顺序上车。",
+      "OPEN_SEAT_COUNT_LABEL": "乘客人数",
+      "OPEN_SEAT_MAX_HINT": "乘客人数已达剩余座位上限（剩余 {{max}} 个）。"
     },
     "GENDER": {
       "MALE": "男",
       "FEMALE": "女",
       "MONK": "僧侣"
     },
+    "SUMMARY": {
+      "OPEN_SEATING_BADGE": "不指定座位（开放座位）"
+    },
     "ALERT": {
       "CREATE_SUCCESS": "预订保存成功",
-      "CREATE_FAILED": "无法创建预订，请重试。"
+      "CREATE_FAILED": "无法创建预订，请重试。",
+      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。"
     }
   },
   "PAYMENT": {

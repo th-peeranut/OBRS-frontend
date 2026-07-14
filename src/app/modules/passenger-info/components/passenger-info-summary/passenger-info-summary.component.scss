@@ -114,6 +114,19 @@ hr {
   color: $text-lightblack;
 }
 
+// OPEN-seating leg badge (OBRS-323) — same pill/token pattern as
+// passenger-info-form's `.passenget-badge` (adult/child chip).
+.open-seating-badge {
+  display: inline-block;
+  width: fit-content;
+  background: $secondary-light-blue;
+  color: $text-primary;
+  border-radius: $radius-pill;
+  padding: $space-3xs $space-xs;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+}
+
 .subheader-text {
   font-size: $font-size-sm;
   color: $text-lightblack;

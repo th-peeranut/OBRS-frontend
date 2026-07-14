@@ -188,6 +188,17 @@ export class PassengerInfoComponent {
       return;
     }
 
+    // OBRS-323: capacity-full rejection on this (promo-suppressed) call —
+    // the no-promo path already gets this from the BE's localized message via
+    // the global error interceptor, so this branch only fires when the global
+    // alert was suppressed for the applied-promo call.
+    if (errorCode.startsWith('BOOKING_ERROR_SEATS')) {
+      this.alertService.error(
+        this.translateService.instant('PASSENGER_INFO.ALERT.CAPACITY_FULL')
+      );
+      return;
+    }
+
     this.alertService.error(
       this.translateService.instant('PASSENGER_INFO.ALERT.CREATE_FAILED')
     );

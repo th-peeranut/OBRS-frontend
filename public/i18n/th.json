@@ -1459,16 +1459,23 @@
       "SEAT_LEG_OUTBOUND": "ที่นั่งขาไป",
       "SEAT_LEG_RETURN": "ที่นั่งขากลับ",
       "SEAT_ACTIVE_PASSENGER_LABEL": "เลือกผู้โดยสารที่ต้องการกำหนดที่นั่ง",
-      "SEAT_CHIP_FALLBACK": "ผู้โดยสาร {{n}}"
+      "SEAT_CHIP_FALLBACK": "ผู้โดยสาร {{n}}",
+      "OPEN_SEAT_SECTION_HINT": "ที่นั่งแบบไม่ระบุที่นั่ง — ไม่ต้องเลือกที่นั่ง ขึ้นรถตามลำดับ",
+      "OPEN_SEAT_COUNT_LABEL": "จำนวนผู้โดยสาร",
+      "OPEN_SEAT_MAX_HINT": "จำนวนผู้โดยสารสูงสุดคือที่นั่งที่เหลืออยู่ ({{max}} ที่นั่ง)"
     },
     "GENDER": {
       "MALE": "ชาย",
       "FEMALE": "หญิง",
       "MONK": "พระ"
     },
+    "SUMMARY": {
+      "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)"
+    },
     "ALERT": {
       "CREATE_SUCCESS": "บันทึกข้อมูลการจองรอบสำเร็จ",
-      "CREATE_FAILED": "ไม่สามารถสร้างการจองได้ กรุณาลองใหม่อีกครั้ง"
+      "CREATE_FAILED": "ไม่สามารถสร้างการจองได้ กรุณาลองใหม่อีกครั้ง",
+      "CAPACITY_FULL": "ที่นั่งเต็มแล้วในช่วงเวลานี้ กรุณาลดจำนวนผู้โดยสารหรือเลือกรอบเวลาอื่น"
     }
   },
   "PAYMENT": {
