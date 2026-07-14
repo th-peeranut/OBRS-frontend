@@ -556,6 +556,13 @@
         "customer": "Customer"
       },
       "STATUS": "Status",
+      "STATUS_NAMES": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending_verification": "Pending verification",
+        "suspended": "Suspended",
+        "deleted": "Deleted"
+      },
       "USER_COUNT": "users",
       "ADD_TITLE": "Create User",
       "EDIT_TITLE": "Edit User",

@@ -15,6 +15,7 @@ import {
   toRoleOptions,
   toStatusOptions,
   translateRoleSlug,
+  translateStatusCode,
   toUpdateUserPayload,
   toUserDtoFallback,
   toUserRow,
@@ -31,6 +32,17 @@ const ROLE_NAME_STUB: Record<string, string> = {
   'ADMIN.USERS.ROLE_NAMES.customer': 'Customer',
 };
 const stubTranslateFn = (key: string): string => ROLE_NAME_STUB[key] ?? key;
+
+// Same missing-key contract, mirrors ADMIN.USERS.STATUS_NAMES in
+// public/i18n/en.json for the 5 known `user_status` codes (OBRS-353).
+const STATUS_NAME_STUB: Record<string, string> = {
+  'ADMIN.USERS.STATUS_NAMES.active': 'Active',
+  'ADMIN.USERS.STATUS_NAMES.inactive': 'Inactive',
+  'ADMIN.USERS.STATUS_NAMES.pending_verification': 'Pending verification',
+  'ADMIN.USERS.STATUS_NAMES.suspended': 'Suspended',
+  'ADMIN.USERS.STATUS_NAMES.deleted': 'Deleted',
+};
+const stubStatusTranslateFn = (key: string): string => STATUS_NAME_STUB[key] ?? key;
 import { AdminLookupDto, AdminRoleDto, AdminUserDto } from '../../../../services/admin/admin-api.service';
 
 describe('user-management.mappers', () => {
@@ -107,6 +119,29 @@ describe('user-management.mappers', () => {
     it('falls back to a prettified slug — never a raw i18n key — for an unknown slug', () => {
       expect(translateRoleSlug('some_role', stubTranslateFn)).toBe('Some Role');
       expect(translateRoleSlug('some_role', stubTranslateFn)).not.toContain('ADMIN.USERS.ROLE_NAMES');
+    });
+  });
+
+  // OBRS-353: Status chip localizes the same way roles do (OBRS-330) —
+  // Option A FE i18n takeover, since the backend's lookup_translations has
+  // no zh rows for user_status.
+  describe('translateStatusCode', () => {
+    it('translates a known status code via the provided translateFn', () => {
+      expect(translateStatusCode('active', stubStatusTranslateFn)).toBe('Active');
+      expect(translateStatusCode('pending_verification', stubStatusTranslateFn)).toBe(
+        'Pending verification'
+      );
+    });
+
+    it('is case-insensitive on the code when building the i18n key', () => {
+      expect(translateStatusCode('ACTIVE', stubStatusTranslateFn)).toBe('Active');
+    });
+
+    it('falls back to a prettified code — never a raw i18n key — for an unknown status code', () => {
+      expect(translateStatusCode('some_status', stubStatusTranslateFn)).toBe('Some Status');
+      expect(translateStatusCode('some_status', stubStatusTranslateFn)).not.toContain(
+        'ADMIN.USERS.STATUS_NAMES'
+      );
     });
   });
 
@@ -235,6 +270,27 @@ describe('user-management.mappers', () => {
       const summaryUser: AdminUserDto = { ...baseUser, roles: ['owner'] };
       const row = toUserRow(summaryUser, 'en', 'en');
       expect(row.roles).toEqual(['owner']);
+    });
+
+    // OBRS-353: Status chip localization, mirroring the role tests above.
+    it('localizes the status via translateFn using the STATUS_NAMES key, leaving statusCode untouched', () => {
+      const row = toUserRow(baseUser, 'en', 'en', stubStatusTranslateFn);
+      expect(row.statusCode).toBe('active');
+      expect(row.status).toBe('Active');
+    });
+
+    it('without translateFn, status falls back to the BE label (old behavior preserved)', () => {
+      const row = toUserRow(baseUser, 'en', 'en');
+      expect(row.statusCode).toBe('active');
+      expect(row.status).toBe('ACTIVE');
+    });
+
+    it('falls back to a prettified label — never a raw i18n key — for an unknown status code', () => {
+      const summaryUser: AdminUserDto = { ...baseUser, status: 'some_status' };
+      const row = toUserRow(summaryUser, 'en', 'en', stubStatusTranslateFn);
+      expect(row.statusCode).toBe('some_status');
+      expect(row.status).toBe('Some Status');
+      expect(row.status).not.toContain('ADMIN.USERS.STATUS_NAMES');
     });
   });
 

@@ -556,6 +556,13 @@
         "customer": "ลูกค้า"
       },
       "STATUS": "สถานะ",
+      "STATUS_NAMES": {
+        "active": "ใช้งาน",
+        "inactive": "ไม่ใช้งาน",
+        "pending_verification": "รอการยืนยัน",
+        "suspended": "ถูกระงับ",
+        "deleted": "ถูกลบ"
+      },
       "USER_COUNT": "ผู้ใช้",
       "ADD_TITLE": "สร้างผู้ใช้",
       "EDIT_TITLE": "แก้ไขผู้ใช้",
