@@ -22,6 +22,10 @@ import {
   toVehicleDtoFallback,
   toVehiclePayload,
 } from '../vehicles-page.mappers';
+import {
+  optionalPositiveIntegerValidator,
+  optionalYearRangeValidator,
+} from './vehicle-form-modal.validators';
 
 // Smart create/edit form modal, extracted from VehiclesPageComponent
 // (OBRS-261, mirroring OBRS-251's PromotionFormModalComponent / OBRS-257's
@@ -62,6 +66,15 @@ export class VehicleFormModalComponent implements OnChanges {
 
   protected isSubmitting = false;
   protected isEditDetailLoading = false;
+  // R1 fetch-fail guard (OBRS-316 Gap 1): the modal opens synchronously from a row
+  // fallback that has none of the 7 new attribute fields; real values only arrive
+  // from the late getVehicleById pristine-patch in initEditForm. Because PUT is a
+  // full-replace, submitting before/without that patch would silently NULL all 7
+  // on the server. Save stays disabled (and submitVehicle() short-circuits) while
+  // this is true, so the only recovery is close + reopen (== retry the fetch).
+  protected isEditDetailError = false;
+
+  protected readonly maxYear = new Date().getFullYear() + 1;
 
   protected readonly vehicleForm: FormGroup;
 
@@ -76,6 +89,17 @@ export class VehicleFormModalComponent implements OnChanges {
       numberPlate: ['', [Validators.required, Validators.maxLength(50)]],
       vehicleNumber: ['', [Validators.required, Validators.maxLength(50)]],
       status: ['', [Validators.required]],
+      // OBRS-316 Gap 1: all 7 optional (no Validators.required, no asterisk) —
+      // design-system §3.1 only requires the no-pre-seeded-default rule for
+      // selects, but the same "optional means actually optional" principle
+      // applies here: PUT sends null for a blank field, never rejects it.
+      brand: ['', [Validators.maxLength(100)]],
+      model: ['', [Validators.maxLength(100)]],
+      manufactureYear: [null, [optionalYearRangeValidator(1980, this.maxYear)]],
+      colour: ['', [Validators.maxLength(50)]],
+      engineCc: [null, [optionalPositiveIntegerValidator]],
+      chassisNumber: ['', [Validators.maxLength(100)]],
+      note: [''],
     });
   }
 
@@ -97,6 +121,7 @@ export class VehicleFormModalComponent implements OnChanges {
       }
     } else {
       this.isEditDetailLoading = false;
+      this.isEditDetailError = false;
       this.vehicleForm.reset();
     }
   }
@@ -104,6 +129,27 @@ export class VehicleFormModalComponent implements OnChanges {
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.vehicleForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
+  }
+
+  // Mirrors ReminderConfigPageComponent.errorKey — a distinct key per failure
+  // reason so the template shows an accurate message. yearRange only applies to
+  // manufactureYear; notInteger/positiveNumber are shared with engineCc.
+  protected errorKey(fieldName: string): string {
+    const field = this.vehicleForm.get(fieldName);
+    if (field?.hasError('yearRange')) {
+      return 'ADMIN.VALIDATION.YEAR_RANGE';
+    }
+    if (field?.hasError('notInteger')) {
+      return 'ADMIN.VALIDATION.WHOLE_NUMBER';
+    }
+    return 'ADMIN.VALIDATION.POSITIVE_NUMBER';
+  }
+
+  // R1 guard: Enter-in-text-field submits the <form> even when the Save button
+  // is [disabled], so submitVehicle() itself must also refuse to run while the
+  // full vehicle detail hasn't loaded (or failed to load) in edit mode.
+  protected get isSaveBlocked(): boolean {
+    return this.mode === 'edit' && (this.isEditDetailLoading || this.isEditDetailError);
   }
 
   protected requestClose(): void {
@@ -114,6 +160,10 @@ export class VehicleFormModalComponent implements OnChanges {
   }
 
   protected async submitVehicle(): Promise<void> {
+    if (this.isSaveBlocked) {
+      return;
+    }
+
     if (this.vehicleForm.invalid) {
       this.vehicleForm.markAllAsTouched();
       return;
@@ -154,19 +204,34 @@ export class VehicleFormModalComponent implements OnChanges {
   // VehiclesPageComponent.openCreateModal.
   private initCreateForm(): void {
     this.isEditDetailLoading = false;
+    this.isEditDetailError = false;
     this.vehicleForm.reset({
       vehicleType: '',
       numberPlate: '',
       vehicleNumber: '',
       status: '',
+      brand: '',
+      model: '',
+      manufactureYear: null,
+      colour: '',
+      engineCc: null,
+      chassisNumber: '',
+      note: '',
     });
   }
 
   // Open immediately with the row data already in hand, then patch in the
   // server detail once it arrives (pristine controls only) — same pattern
   // as the pre-split VehiclesPageComponent.openEditModal.
+  //
+  // R1 guard (OBRS-316 Gap 1): the row fallback has none of the 7 new
+  // attribute fields, and PUT is a full-replace, so a save before this detail
+  // fetch resolves would NULL them all. A failed fetch is no longer silent —
+  // it sets isEditDetailError so Save stays disabled/guarded until the admin
+  // closes and reopens (== retries).
   private async initEditForm(vehicle: VehicleRow): Promise<void> {
     this.isEditDetailLoading = true;
+    this.isEditDetailError = false;
     this.applyVehicleFormValues(toVehicleDtoFallback(vehicle), vehicle);
 
     try {
@@ -178,7 +243,9 @@ export class VehicleFormModalComponent implements OnChanges {
         this.applyVehicleFormValues(vehicleDetail, vehicle, true);
       }
     } catch {
-      // Keep the fallback values already shown in the open modal.
+      if (this.isOpen && this.selectedVehicle?.id === vehicle.id) {
+        this.isEditDetailError = true;
+      }
     } finally {
       if (this.isOpen && this.selectedVehicle?.id === vehicle.id) {
         this.isEditDetailLoading = false;

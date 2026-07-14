@@ -1277,6 +1277,12 @@
   border-color: var(--admin-outline);
 }
 
+/* OBRS-316 Gap 1: wider variant for the vehicle form modal now that it carries 7
+   additional attribute fields across two sections — same shell, wider cap. */
+.admin-modal-lg {
+  width: min(880px, 100%);
+}
+
 .admin-modal-title {
   margin: 0;
   font-size: 22px;
@@ -1327,6 +1333,17 @@
 
 .admin-required {
   color: var(--admin-danger-text);
+}
+
+/* OBRS-316 Gap 1: section divider heading inside a multi-section admin form
+   (e.g. vehicle-form-modal's "Make & Model" / "Technical & Notes" groups). Sits
+   directly after a `<hr>` — the hairline itself uses the shared global `hr` rule
+   (design-system.md §5), this only styles the label text beneath it. */
+.admin-form-subheading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
 }
 
 /* design-system §5 — single input shape: pill (999px), matching app-admin-dropdown

@@ -127,6 +127,14 @@ export interface AdminVehicleDto {
   vehicleType?: AdminVehicleTypeDto;
   createdAt?: string;
   updatedAt?: string;
+  /** OBRS-316 Gap 1: vehicle detail attributes, all optional/nullable on the backend. */
+  brand?: string | null;
+  model?: string | null;
+  manufactureYear?: number | null;
+  colour?: string | null;
+  engineCc?: number | null;
+  chassisNumber?: string | null;
+  note?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -552,11 +560,21 @@ export interface UpdateUserPayload {
   roles: string[];
 }
 
+// OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
+// MUST send all 7 attribute fields on every submit (create AND edit) — they are
+// non-optional KEYS here (always serialized), even though each value is nullable.
 export interface CreateVehiclePayload {
   vehicleType: string;
   numberPlate: string;
   vehicleNumber: string;
   status: string;
+  brand: string | null;
+  model: string | null;
+  manufactureYear: number | null;
+  colour: string | null;
+  engineCc: number | null;
+  chassisNumber: string | null;
+  note: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.

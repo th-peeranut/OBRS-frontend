@@ -411,7 +411,8 @@
       "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
       "FORM_INVALID": "Please complete the highlighted required fields.",
       "WHOLE_NUMBER": "Please enter a whole number (no decimals).",
-      "POSITIVE_NUMBER": "Please enter a number greater than 0."
+      "POSITIVE_NUMBER": "Please enter a number greater than 0.",
+      "YEAR_RANGE": "Enter a year between {{min}} and {{max}}."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -597,6 +598,19 @@
       "ADD_TITLE": "Create Vehicle",
       "EDIT_TITLE": "Edit Vehicle",
       "MODAL_HINT": "Set vehicle information and current operating status.",
+      "EDIT_DETAIL_LOAD_FAILED": "Failed to load the full vehicle details. Close and reopen this form to try again — saving is disabled until it loads.",
+      "DETAILS": {
+        "SECTION_MAKE_MODEL": "Make & Model",
+        "SECTION_TECHNICAL": "Technical & Notes",
+        "BRAND": "Brand",
+        "MODEL": "Model",
+        "MANUFACTURE_YEAR": "Manufacture Year",
+        "COLOUR": "Colour",
+        "ENGINE_CC": "Engine (cc)",
+        "CHASSIS_NUMBER": "Chassis Number",
+        "NOTE": "Note",
+        "NOTE_PLACEHOLDER": "Add any additional notes about this vehicle (optional)"
+      },
       "MAINTENANCE": {
         "TAB": "Maintenance",
         "MANAGE_ACTION": "Manage maintenance",
