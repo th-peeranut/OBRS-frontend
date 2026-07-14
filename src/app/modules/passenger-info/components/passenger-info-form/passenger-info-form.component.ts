@@ -30,7 +30,8 @@ import { map, takeUntil } from 'rxjs/operators';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { ScheduleBooking } from '../../../../shared/interfaces/schedule-booking.interface';
 import { shareReplay } from 'rxjs/operators';
-import { MAX_PASSENGERS_PER_BOOKING } from '../../../../shared/constants/passenger-limits';
+import { MAX_PASSENGERS_PER_BOOKING, LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
+import { isLowSeatCount } from '../../../../shared/lib/trip-format';
 
 @Component({
   selector: 'app-passenger-info-form',
@@ -69,6 +70,16 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   openSeatAvailableShared$: Observable<number>;
 
   readonly maxPassengersPerBooking = MAX_PASSENGERS_PER_BOOKING;
+
+  /**
+   * "เหลือ X ที่นั่ง" on the OPEN count card is a near-full scarcity signal only —
+   * shown iff `available <= LOW_SEAT_THRESHOLD` (0 < available), matching the
+   * search results list convention (`ScheduleBookingListComponent`). Above the
+   * threshold the remaining count is hidden; the +/- cap still applies silently.
+   */
+  isLowSeat(available: number | null | undefined): boolean {
+    return isLowSeatCount(available, LOW_SEAT_THRESHOLD);
+  }
 
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;

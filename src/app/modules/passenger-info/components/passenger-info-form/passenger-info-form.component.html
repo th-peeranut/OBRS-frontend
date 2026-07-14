@@ -299,7 +299,7 @@
             <div class="open-seat-card-label">
               {{ "PASSENGER_INFO.FORM.OPEN_SEAT_COUNT_LABEL" | translate }}
             </div>
-            <div class="option-hint-text mt-1">
+            <div class="option-hint-text mt-1" *ngIf="isLowSeat(available)">
               {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ available }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
             </div>
           </div>

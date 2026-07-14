@@ -237,6 +237,19 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(component.passengerData.length).toBe(2);
   });
 
+  it('OPEN near-full (availableSeats <= LOW_SEAT_THRESHOLD): the "เหลือ X ที่นั่ง" remaining-seat line IS shown', () => {
+    render([openSchedule]); // availableSeats = 2 (<= 5)
+    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
+    expect(card.textContent).toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+  });
+
+  it('OPEN plenty (availableSeats > LOW_SEAT_THRESHOLD): the remaining-seat line is HIDDEN (no inventory reveal), count card still renders', () => {
+    render([{ ...openSchedule, availableSeats: 13 }]); // 13 > 5
+    expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(1);
+    const card = fixture.debugElement.query(By.css('.open-seat-card')).nativeElement;
+    expect(card.textContent).not.toContain('SCHEDULE_BOOKING.SEAT_REMAIN');
+  });
+
   it('mixed-mode round trip: OPEN outbound renders a count card, ASSIGNED return still renders its seat map', () => {
     render([openSchedule, assignedSchedule]);
 
