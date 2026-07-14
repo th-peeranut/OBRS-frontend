@@ -918,10 +918,11 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
       route.fulfill({ json: EMPTY_RESP })
     );
     await gotoSellPage(page);
-    // Home-parity in-input calendar icon is rendered inside the field.
-    await expect(page.locator('.trip-browser-calendar .calendar-icon')).toBeVisible();
+    // OBRS-185 canonical shared date field: in-input calendar icon (.app-date-field-icon)
+    // rendered inside the p-calendar (styleClass="app-date-field"), iconDisplay='input'.
+    await expect(page.locator('app-walk-in-trip-browser .app-date-field-icon')).toBeVisible();
     // The date input fills its container (not crushed into a sliver).
-    const input = page.locator('.trip-browser-calendar input.p-inputtext');
+    const input = page.locator('app-walk-in-trip-browser .app-date-field input.p-inputtext');
     await expect(input).toBeVisible();
     const box = await input.boundingBox();
     expect(box!.width, 'calendar input should fill its container, not be crushed').toBeGreaterThan(120);
@@ -1225,24 +1226,26 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
     const centerPanel = page.locator('app-walk-in-center-panel');
     const stopsRow = centerPanel.locator('.row.g-2.mb-3');
     const pickupCol = stopsRow.locator('.col-6').nth(0);
-    const popularPickupSection = pickupCol.locator('.list-group:not(.stop-list)');
+    // OBRS-190: the Popular group is now rendered INSIDE the .stop-list as a
+    // .stop-list-header + .popular-stop-item buttons (no separate list-group).
+    const popularPickupHeader = pickupCol.locator('.stop-list-header');
+    const popularPickupBtns = pickupCol.locator('.stop-list .popular-stop-item');
 
     // Popular section is visible and header shows the English label.
-    await expect(popularPickupSection).toBeVisible({ timeout: 5_000 });
-    await expect(popularPickupSection.locator('span.text-muted')).toContainText('Popular');
+    await expect(popularPickupHeader).toBeVisible({ timeout: 5_000 });
+    await expect(popularPickupHeader.locator('span.text-muted')).toContainText('Popular');
 
     // 3 stop buttons present in rank order: a(5) > b(4) > c(2).
-    const btns = popularPickupSection.locator('button');
-    await expect(btns).toHaveCount(3);
-    await expect(btns.nth(0)).toContainText('Stop A');
-    await expect(btns.nth(1)).toContainText('Stop B');
-    await expect(btns.nth(2)).toContainText('Stop C');
+    await expect(popularPickupBtns).toHaveCount(3);
+    await expect(popularPickupBtns.nth(0)).toContainText('Stop A');
+    await expect(popularPickupBtns.nth(1)).toContainText('Stop B');
+    await expect(popularPickupBtns.nth(2)).toContainText('Stop C');
 
     // Dropoff column also has a Popular section with the correct header.
     const dropoffCol = stopsRow.locator('.col-6').nth(1);
-    const popularDropoffSection = dropoffCol.locator('.list-group:not(.stop-list)');
-    await expect(popularDropoffSection).toBeVisible({ timeout: 5_000 });
-    await expect(popularDropoffSection.locator('span.text-muted')).toContainText('Popular');
+    const popularDropoffHeader = dropoffCol.locator('.stop-list-header');
+    await expect(popularDropoffHeader).toBeVisible({ timeout: 5_000 });
+    await expect(popularDropoffHeader.locator('span.text-muted')).toContainText('Popular');
   });
 
   // ── PS-a Thai ────────────────────────────────────────────────────────────────
@@ -1257,9 +1260,9 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
 
     const centerPanel = page.locator('app-walk-in-center-panel');
     const pickupCol = centerPanel.locator('.row.g-2.mb-3 .col-6').nth(0);
-    const popularPickupSection = pickupCol.locator('.list-group:not(.stop-list)');
+    const popularPickupHeader = pickupCol.locator('.stop-list-header');
 
-    await expect(popularPickupSection.locator('span.text-muted')).toContainText('นิยม', { timeout: 5_000 });
+    await expect(popularPickupHeader.locator('span.text-muted')).toContainText('นิยม', { timeout: 5_000 });
   });
 
   // ── PS-b Pickup selection ─────────────────────────────────────────────────────
@@ -1271,10 +1274,10 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
 
     const centerPanel = page.locator('app-walk-in-center-panel');
     const stopsRow = centerPanel.locator('.row.g-2.mb-3');
-    const popularPickupSection = stopsRow.locator('.col-6').nth(0).locator('.list-group:not(.stop-list)');
+    const popularPickupBtns = stopsRow.locator('.col-6').nth(0).locator('.stop-list .popular-stop-item');
 
     // Stop B is rank-2 in the popular pickup section.
-    const stopBBtn = popularPickupSection.locator('button').nth(1);
+    const stopBBtn = popularPickupBtns.nth(1);
     await expect(stopBBtn).toContainText('Stop B');
     await stopBBtn.click();
 
@@ -1295,10 +1298,10 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
     await selectFirstTripAndWaitForStops(page);
 
     const centerPanel = page.locator('app-walk-in-center-panel');
-    const popularDropoffSection = centerPanel.locator('.row.g-2.mb-3 .col-6').nth(1).locator('.list-group:not(.stop-list)');
+    const popularDropoffBtns = centerPanel.locator('.row.g-2.mb-3 .col-6').nth(1).locator('.stop-list .popular-stop-item');
 
     // Popular dropoffs (visible): d(10) first, c(5) second. Click Stop C (rank-2).
-    const stopCBtn = popularDropoffSection.locator('button').nth(1);
+    const stopCBtn = popularDropoffBtns.nth(1);
     await expect(stopCBtn).toContainText('Stop C');
     await stopCBtn.click();
 
@@ -1315,23 +1318,24 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
 
     const centerPanel = page.locator('app-walk-in-center-panel');
     const pickupCol = centerPanel.locator('.row.g-2.mb-3 .col-6').nth(0);
-    const popularPickupSection = pickupCol.locator('.list-group:not(.stop-list)');
+    const popularPickupBtns = pickupCol.locator('.stop-list .popular-stop-item');
+    const popularPickupHeader = pickupCol.locator('.stop-list-header');
     const pickupFilter = centerPanel.locator('.input-group').nth(0).locator('input');
 
     // Initially 3 popular stops are visible.
-    await expect(popularPickupSection.locator('button')).toHaveCount(3);
+    await expect(popularPickupBtns).toHaveCount(3);
 
     // Partial match: "Stop A" → only 1 popular stop passes the filter.
     await pickupFilter.fill('Stop A');
-    await expect(popularPickupSection.locator('button')).toHaveCount(1, { timeout: 3_000 });
-    await expect(popularPickupSection.locator('button').nth(0)).toContainText('Stop A');
+    await expect(popularPickupBtns).toHaveCount(1, { timeout: 3_000 });
+    await expect(popularPickupBtns.nth(0)).toContainText('Stop A');
 
     // Zero match: entire popular block (including POPULAR_LABEL header) disappears.
     await pickupFilter.fill('zzznomatch999');
-    await expect(popularPickupSection).not.toBeVisible({ timeout: 3_000 });
-    // The span.text-muted carrying the POPULAR_LABEL is inside the ng-container
-    // and must also vanish — not merely be hidden via display:none.
-    await expect(pickupCol.locator('span.text-muted')).not.toBeVisible();
+    await expect(popularPickupBtns).toHaveCount(0, { timeout: 3_000 });
+    // The .stop-list-header carrying the POPULAR_LABEL is inside the ng-container
+    // and must also vanish (removed from DOM, not merely display:none).
+    await expect(popularPickupHeader).toHaveCount(0);
   });
 
   // ── PS-d Empty arrays ─────────────────────────────────────────────────────────
@@ -1349,7 +1353,8 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
     const pickupCol = stopsRow.locator('.col-6').nth(0);
 
     // No popular section element in the DOM (ng-container removes it when count=0).
-    await expect(pickupCol.locator('.list-group:not(.stop-list)')).toHaveCount(0, { timeout: 5_000 });
+    await expect(pickupCol.locator('.stop-list-header')).toHaveCount(0, { timeout: 5_000 });
+    await expect(pickupCol.locator('.stop-list .popular-stop-item')).toHaveCount(0);
 
     // Regular stop list is still present and functional.
     const fromList = pickupCol.locator('.stop-list');
@@ -1358,7 +1363,8 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
 
     // Dropoff column also has no popular section.
     const dropoffCol = stopsRow.locator('.col-6').nth(1);
-    await expect(dropoffCol.locator('.list-group:not(.stop-list)')).toHaveCount(0);
+    await expect(dropoffCol.locator('.stop-list-header')).toHaveCount(0);
+    await expect(dropoffCol.locator('.stop-list .popular-stop-item')).toHaveCount(0);
   });
 
   // ── PS-e Route-pair intersection for popular dropoffs ─────────────────────────
@@ -1374,14 +1380,13 @@ test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
 
     const centerPanel = page.locator('app-walk-in-center-panel');
     const dropoffCol = centerPanel.locator('.row.g-2.mb-3 .col-6').nth(1);
-    const popularDropoffSection = dropoffCol.locator('.list-group:not(.stop-list)');
+    const popularDropoffBtns = dropoffCol.locator('.stop-list .popular-stop-item');
 
     // Only D and C appear; Stop A is filtered out.
-    const popularDropoffBtns = popularDropoffSection.locator('button');
     await expect(popularDropoffBtns).toHaveCount(2, { timeout: 5_000 });
     await expect(popularDropoffBtns.nth(0)).toContainText('Stop D');
     await expect(popularDropoffBtns.nth(1)).toContainText('Stop C');
-    await expect(popularDropoffSection).not.toContainText('Stop A');
+    await expect(popularDropoffBtns.filter({ hasText: 'Stop A' })).toHaveCount(0);
   });
 });
 
@@ -1391,8 +1396,12 @@ function isVisibleHighlight(bg: string): boolean {
 }
 
 test.describe('Multi-stop pickup/drop-off — selected stop is visibly highlighted', () => {
+  // Real admin storageState (like the PS-* and POS suites) — a fake token now triggers a
+  // real 401 on a non-mocked authed call, which logs the session out and redirects to
+  // /login before the stop list can render. Real auth lets the highlight assertion run.
+  test.use({ storageState: ADMIN_AUTH });
+
   test('default + clicked From stop have a visible (non-transparent) highlight', async ({ page }) => {
-    await injectFakeAuth(page, ['admin']);
     await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) => route.fulfill({ json: WALK_IN_SCHEDULES_RESP }));
 
