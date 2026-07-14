@@ -18,6 +18,7 @@ import { BookingService } from '../../services/booking/booking.service';
 import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
 import {
+  BookingTicketItem,
   BookingTicketJourney,
   BookingTicketsData,
 } from '../../shared/interfaces/booking-ticket.interface';
@@ -763,7 +764,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
     storePassengers: PassengerInfo[] | null
   ): TicketPassenger[] {
     const tickets = journey?.tickets ?? [];
-    return tickets.map((ticket) => {
+    return tickets.map((ticket, index) => {
       const rawSeatNumber = ticket.seatNumber?.trim();
       const seatOpen = !rawSeatNumber;
       const seat = rawSeatNumber || '-';
@@ -772,7 +773,13 @@ export class ETicketComponent implements OnInit, OnDestroy {
 
       return {
         name: ticket.passengerName?.trim() || '-',
-        phone: this.findPhoneForSeat(seat, storePassengers),
+        phone: this.findPhoneForPassenger(
+          ticket,
+          index,
+          tickets.length,
+          seat,
+          storePassengers
+        ),
         seat,
         ticketId,
         ticketNumber: ticket.ticketNumber?.trim() || '-',
@@ -786,19 +793,72 @@ export class ETicketComponent implements OnInit, OnDestroy {
     });
   }
 
-  private findPhoneForSeat(
+  /**
+   * OBRS-350: under OPEN seating (Epic OBRS-318/321) `ticket.seatNumber` is
+   * null for every ticket, so `seat` collapses to `'-'` for every passenger
+   * and the original seat-keyed match could never tell passengers apart —
+   * every row resolved to the same (non-)match and showed '-'. Re-keys off a
+   * stable identity instead, without touching the ASSIGNED path at all.
+   */
+  private findPhoneForPassenger(
+    ticket: BookingTicketItem,
+    index: number,
+    ticketCount: number,
     seat: string,
     storePassengers: PassengerInfo[] | null
   ): string {
-    if (!seat || seat === '-') {
+    const passengers = storePassengers ?? [];
+    if (passengers.length === 0) {
       return '-';
     }
 
-    const match = (storePassengers ?? []).find(
-      (passenger) => passenger.passengerSeat?.trim() === seat
-    );
+    if (seat && seat !== '-') {
+      // ASSIGNED seating: real seat number present — unchanged, byte-for-byte,
+      // from the pre-OBRS-350 behavior. Never falls through to the OPEN
+      // strategies below, so existing ASSIGNED bookings can't regress.
+      const bySeat = passengers.find(
+        (passenger) => passenger.passengerSeat?.trim() === seat
+      );
+      return bySeat?.phoneNumber?.trim() || '-';
+    }
 
-    return match?.phoneNumber?.trim() || '-';
+    // OBRS-350 OPEN fallback 1: match by passenger name. `ticket.passengerName`
+    // often carries a title the store doesn't ("Mr. Abc Def" vs.
+    // firstName/lastName "Abc"/"Def"), so compare by containment rather than
+    // strict equality. Only trust it when exactly one store passenger
+    // matches — a duplicate name is ambiguous, not a match, and must not risk
+    // handing back a stranger's phone number.
+    const ticketName = ticket.passengerName?.trim().toLowerCase();
+    if (ticketName) {
+      const nameMatches = passengers.filter((passenger) => {
+        const storeName = this.buildStorePassengerName(passenger).toLowerCase();
+        return !!storeName && ticketName.includes(storeName);
+      });
+      if (nameMatches.length === 1) {
+        return nameMatches[0].phoneNumber?.trim() || '-';
+      }
+    }
+
+    // OBRS-350 OPEN fallback 2: positional index. Only safe when
+    // `storePassengers` and this journey's `tickets` are known to correspond
+    // 1:1 (same length) — e.g. a one-way OPEN booking, or a duplicate-name
+    // case where fallback 1 above was ambiguous. A round-trip where the store
+    // holds every passenger for the whole booking while `tickets` is a single
+    // leg can have a different length; guessing positionally there risks
+    // showing the wrong person's phone, so bail to '-' instead (same as
+    // today) rather than guess.
+    if (passengers.length === ticketCount) {
+      return passengers[index]?.phoneNumber?.trim() || '-';
+    }
+
+    return '-';
+  }
+
+  private buildStorePassengerName(passenger: PassengerInfo): string {
+    return [passenger.firstName, passenger.middleName, passenger.lastName]
+      .map((part) => part?.trim())
+      .filter((part): part is string => !!part)
+      .join(' ');
   }
 
   private buildVehiclePlate(vehicleNumber: string, numberPlate: string): string {
