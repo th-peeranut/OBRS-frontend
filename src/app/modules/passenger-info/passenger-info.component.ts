@@ -30,6 +30,7 @@ import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import { toApiOffsetDateTime } from '../../shared/lib/api-date-time';
+import { normalizeSeatNumber as stripSeatDigits } from '../../shared/lib/seat-label';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
 import { StationApi } from '../../shared/interfaces/station.interface';
 import { Observable } from 'rxjs';
@@ -432,11 +433,10 @@ export class PassengerInfoComponent {
   }
 
   private normalizeSeatNumber(seatNumber?: string | null): string | null {
-    if (!seatNumber) {
-      return null;
-    }
-
-    const digits = seatNumber.match(/\d+/g)?.join('') ?? '';
+    // Booking-payload seat number: reuse the shared digit-strip (OBRS-362), then
+    // apply the payload-specific null semantics ('' / no-digit means "no manual
+    // seat", which the backend expects as null, not an empty string).
+    const digits = stripSeatDigits(seatNumber);
     return digits.length > 0 ? digits : null;
   }
 

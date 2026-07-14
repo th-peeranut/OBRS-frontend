@@ -735,20 +735,47 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * OBRS-361 defect fix (QA-reported, live-reproduced): this used to
+   * unconditionally `removeAt(0)` EVERY existing group and `push()` brand
+   * new `FormGroup`/`FormControl` instances for every store round trip —
+   * including the new debounced live-sync round trip added for OBRS-361,
+   * which now fires after ~every field edit (not just the rare initial-load
+   * / OPEN-seating +/- cases this method originally handled). Angular's
+   * `formControlName`/`formGroupName` directives bind to a control instance
+   * once, at directive init, and do **not** re-bind just because the
+   * `*ngFor` (with `trackBy: trackByIndex`) reuses the same DOM node for a
+   * replaced control at the same index — so after a wholesale rebuild, a
+   * `p-selectButton` the user is mid-interaction with stays wired to the
+   * OLD, now-detached control. Its own visual `p-highlight` state still
+   * looks right (driven by the CVA's locally-cached value), but the click's
+   * `writeValue`/model update lands on a control `getRawValue()` never
+   * reads again — so a 2nd field set shortly after a round trip silently
+   * vanishes from the submit payload even though both buttons still look
+   * selected. Fix: when the passenger COUNT is unchanged (the common case
+   * for a live field edit — count only changes via `insertPassenger`/
+   * `deletePassenger`, e.g. OPEN-seating +/-), patch the EXISTING groups in
+   * place instead of destroying/recreating them, so a control the user is
+   * actively bound to is never swapped out from under them. Only the
+   * genuine count DELTA is added/removed.
+   */
   private setPassengerData(passengers: PassengerInfo[]): void {
     this.isPatchingFromStore = true;
-    while (this.passengerData.length) {
-      this.passengerData.removeAt(0);
+
+    while (this.passengerData.length > passengers.length) {
+      this.passengerData.removeAt(this.passengerData.length - 1);
+    }
+    while (this.passengerData.length < passengers.length) {
+      this.passengerData.push(this.createPassengerGroup());
     }
 
-    passengers.forEach((passenger) => {
-      const group = this.createPassengerGroup(passenger.isAdult);
-      group.patchValue({
+    passengers.forEach((passenger, index) => {
+      this.passengerData.at(index).patchValue({
         ...passenger,
         title: passenger.title,
       });
-      this.passengerData.push(group);
     });
+
     this.clampActiveIndices();
     this.isPatchingFromStore = false;
     this.emitValidity();

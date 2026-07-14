@@ -23,7 +23,9 @@ import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { invokeSetPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.action';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { PassengerInfoComponent } from '../../passenger-info.component';
 
 describe('PassengerInfoFormComponent', () => {
   let component: PassengerInfoFormComponent;
@@ -490,6 +492,94 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     fixture.detectChanges();
     expect(component.getFormValue(0, 'seatRequirement')).toBeNull();
   });
+
+  // QA-reported live defect (reproduced 3x, one-way ASSIGNED booking): a
+  // passenger who set BOTH seatPreference AND seatRequirement had the
+  // FIRST-clicked field silently drop to null in the actual submit payload,
+  // even though both p-selectButtons still showed selected in the DOM. A
+  // hand-built-object unit test on buildPassengersPayload() cannot see this
+  // — the loss happens UPSTREAM, in the live form -> store -> form round
+  // trip. This test drives the REAL form via two real DOM clicks with a
+  // real debounced store round trip running in between (the exact QA repro
+  // timing), using the real invokeSetPassengerInfo -> selectPassengerInfo
+  // wiring (MockStore doesn't run reducers, so the fake dispatch below
+  // manually completes the round trip exactly as
+  // PassengerInfoEffect.setPassengerInfo$ does — a synchronous pass-through,
+  // see passenger-info.effect.ts).
+  it('OBRS-361 defect repro: setting BOTH fields survives the debounced store round-trip into the submit payload, all the way through the lowercase payload boundary', fakeAsync(() => {
+    render([assignedSchedule]); // ASSIGNED one-way, 1 auto-seeded passenger
+
+    // Fill the other required fields so validateAndGetPassengerInfo() below
+    // can actually return a payload — irrelevant to the seatPreference/
+    // seatRequirement defect itself, just satisfying this form's normal
+    // required-field validators (title/firstName/lastName/gender), same as
+    // a real traveler would before submitting.
+    component.passengerData.at(0).patchValue({
+      title: 1,
+      firstName: 'Jane',
+      lastName: 'Doe',
+      gender: 'FEMALE',
+    });
+    fixture.detectChanges();
+
+    const originalDispatch = store.dispatch.bind(store);
+    spyOn(store, 'dispatch').and.callFake((action: any) => {
+      originalDispatch(action);
+      if (action.type === invokeSetPassengerInfo.type) {
+        store.overrideSelector(selectPassengerInfo, action.passengerInfo);
+        store.refreshState();
+      }
+    });
+
+    const prefGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
+    );
+    const reqGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
+    );
+    const windowBtn = prefGroup.queryAll(By.css('.p-button'))[0];
+    const wheelchairBtn = reqGroup.queryAll(By.css('.p-button'))[0];
+
+    // Click 1: Window. Let the debounced live-sync round trip run to
+    // completion BEFORE the 2nd click — the exact timing QA reproduced
+    // (a store round trip landing mid-interaction, between the two clicks).
+    windowBtn.nativeElement.click();
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    // Click 2: Wheelchair, on whatever control is now live post-round-trip.
+    wheelchairBtn.nativeElement.click();
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    // Exactly 1 passenger card -> exactly 2 selectButton groups (preference
+    // + requirement), never a duplicate-render artifact.
+    expect(fixture.debugElement.queryAll(By.css('.p-selectbutton')).length)
+      .withContext('one passenger card = exactly 2 selectButton groups (preference + requirement)')
+      .toBe(2);
+
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
+    expect(component.getFormValue(0, 'seatRequirement')).toBe('WHEELCHAIR');
+
+    const submitted = component.validateAndGetPassengerInfo();
+    expect(submitted?.[0].seatPreference).toBe('WINDOW');
+    expect(submitted?.[0].seatRequirement).toBe('WHEELCHAIR');
+
+    // End-to-end through the REAL payload mapper (the lowercase boundary) —
+    // proves the fix all the way to what actually reaches POST /bookings.
+    const bookingComponent = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      {} as any,
+      createTranslateStub(),
+      {} as any
+    );
+    const payload = (bookingComponent as any).buildPassengersPayload(submitted, 'outbound', false);
+    expect(payload[0].seatPreference).toBe('window');
+    expect(payload[0].seatRequirement).toBe('wheelchair');
+  }));
 });
 
 // OBRS-296 (Scrutinize follow-up): the FormControl-level test above is

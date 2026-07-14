@@ -1,5 +1,71 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-14 — FIXED: OBRS-361 live defect — second selectButton field silently dropped on submit
+
+QA reproduced (3x, one-way ASSIGNED booking) that setting BOTH `seatPreference`
+("Window") AND `seatRequirement` ("Wheelchair accessible") on the same passenger
+card kept only the FIRST-clicked field in the actual `POST /api/private/bookings`
+body — the second silently came back `null`, even though both buttons still showed
+`p-highlight`-selected in the DOM at submit time. Single-field cases (either alone)
+were fine; the OBRS-362 badges were unaffected.
+
+**Root cause (confirmed via debug-mantra trace + an A/B test revert, not guessed):**
+`setPassengerData()` — called every time the `passengerInfo` store slice emits,
+which since OBRS-361 now includes the NEW debounced live-sync round trip
+(`passengerData.valueChanges` → 300ms debounce → dispatch → store →
+`selectPassengerInfo` → `setPassengerData()`), not just the old rare initial-load /
+OPEN-seating +/- cases — unconditionally did `while (passengerData.length)
+{ removeAt(0) }` then rebuilt every group with `createPassengerGroup()` + `push()`,
+i.e. destroyed and recreated every `FormControl` on EVERY round trip. Angular's
+`formControlName`/`formGroupName` directives bind to a control instance once, at
+directive init, and do **not** rebind just because `*ngFor` (with
+`trackBy: trackByIndex`) reuses the same DOM node for a replaced control at the
+same index. So: click Window (t=0) → 300ms later the debounced round trip
+REBUILDS the FormArray (new control instances, values reaffirmed from what was
+known at t=0 — just Window) → click Wheelchair sometime after that → the
+`p-selectButton`'s CVA is STILL wired to the OLD (now-detached, pre-rebuild)
+`seatRequirement` control, so the click updates a control nothing reads anymore.
+The button's own local highlight state still looks right (driven by the CVA's
+cached value), but `getRawValue()` on the CURRENT live FormArray — which
+`buildPassengerInfoPayload()`/the submit path actually reads — never sees it.
+
+**Fix** (`passenger-info-form.component.ts`, `setPassengerData()`): patch existing
+groups IN PLACE (`this.passengerData.at(index).patchValue(...)`) when the
+passenger COUNT is unchanged — the common case for a live field edit — instead of
+destroying/recreating every control. Only the genuine count DELTA is
+added/removed (`push`/`removeAt` trimmed to the difference). This means a control
+the user is actively bound to is never swapped out from under them mid-interaction,
+regardless of click timing relative to the debounce window.
+
+**Test that catches it** (`passenger-info-form.component.spec.ts`, inside the
+"OPEN-seating rendering, OBRS-323" describe): *"OBRS-361 defect repro: setting BOTH
+fields survives the debounced store round-trip into the submit payload, all the way
+through the lowercase payload boundary"* — drives the REAL form via two real DOM
+clicks (Window, then Wheelchair) with `fakeAsync`/`tick(300)` letting a REAL
+debounced store round trip run in between (the exact QA timing), using MockStore
+with a `spyOn(store, 'dispatch').and.callFake(...)` that manually completes the
+round trip exactly as `PassengerInfoEffect.setPassengerInfo$` does (a synchronous
+pass-through — MockStore doesn't run real reducers/effects). Verified via an
+explicit A/B revert: reverted `setPassengerData()` to the pre-fix
+destroy-and-rebuild version, reran — the test FAILED with
+`seatRequirement: null` (the exact reported symptom, second-clicked field lost);
+restored the fix, reran — passes. Also asserts the payload survives the lowercase
+boundary via the real `PassengerInfoComponent.buildPassengersPayload()`.
+
+**Unrelated drift noticed mid-session**: `passenger-info.component.ts`'s own
+pre-existing private `normalizeSeatNumber()` (booking-payload seat-number
+stripping) got consolidated onto the shared `shared/lib/seat-label.ts` util
+(`normalizeSeatNumber as stripSeatDigits`) — flagged in the original OBRS-361/362
+report as a follow-up not done at the time; it landed here (via linter/tooling,
+not a deliberate edit this session) and is functionally equivalent + covered by
+the existing passing `passenger-info.component.spec.ts` suite (9/9), so kept as-is
+rather than reverted.
+
+**Full suite**: `ng test --watch=false --browsers=ChromeHeadless` → 2249/2249
+SUCCESS (2248 prior + the 1 new defect-repro test).
+
+---
+
 ## 2026-07-14 — IMPLEMENTED: OBRS-361 + OBRS-362 advanced-booking passenger preferences
 
 **Worktree:** `OBRS-frontend-wt-obrs-361-362-booking-prefs` (branch `ao/obrs-361-362-booking-prefs`).
@@ -3602,3 +3668,17 @@ Reused (no new key): `ADMIN.COMMON.ACTIONS`, `ADMIN.COMMON.UPDATING`, `ADMIN.COM
   the modal's own title surface, not a page title, so §7 doesn't apply — same precedent as every
   other `.admin-modal-title` in the codebase) · no i18n string hardcoded, all new keys land in
   en/th/zh in the same commit.
+
+## OBRS-361/362 scrutinize self-fix (2026-07-14) — finish the seat-label consolidation
+- `src/app/shared/lib/seat-label.ts`'s docstring claimed it consolidated BOTH the van's private
+  `normalizeSeatNumber` AND `PassengerInfoComponent`'s inline `.match(/\d+/g)` regex. The van was
+  repointed correctly, but `PassengerInfoComponent.normalizeSeatNumber` (`passenger-info.component.ts`)
+  still re-implemented the digit regex → the docstring's claim was false and one duplicate regex
+  remained.
+- Fix (behavior-identical, verified by input enumeration + `tsc` + the 9 passenger-info specs):
+  imported the shared util as `stripSeatDigits` and had the private method delegate to it, KEEPING
+  the payload-specific null-return wrapper (`'' / no-digit` → `null`, which the shared util does not
+  do because the booking payload needs `seatNumber: null`, not `''`, for "no manual seat").
+- Lesson: when a shared util's docstring says "every X should call this", grep that it actually
+  replaced EVERY call site — a half-finished consolidation leaves the util's own contract untrue.
+  The method itself was correct to keep (distinct null semantics); only its inner regex was the dup.
