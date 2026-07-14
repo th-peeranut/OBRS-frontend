@@ -15,7 +15,13 @@
     >{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
   </button>
 
-  <p-overlayPanel #overlayPanel appendTo="body" [style]="{ width: '360px' }" (onShow)="onPanelShow()">
+  <p-overlayPanel
+    #overlayPanel
+    appendTo="body"
+    [styleClass]="overlayStyleClass"
+    [style]="{ width: '360px' }"
+    (onShow)="onPanelShow()"
+  >
     <app-notification-inbox-panel
       [items]="(items$ | async) ?? []"
       [total]="(totalElements$ | async) ?? 0"

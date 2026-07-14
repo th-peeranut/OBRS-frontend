@@ -121,6 +121,41 @@
   --accent-text: #5eead4;
 }
 
+/* OBRS-317: notification-bell overlay panel — `p-overlayPanel`'s
+   `appendTo="body"` detaches the panel (and its `styleClass`) from
+   `.admin-shell`'s DOM subtree, so none of the `--admin-*`/`--accent-*`
+   custom properties above are in scope there (CSS custom properties inherit
+   down the actual DOM tree, not through Angular's view-encapsulation
+   attributes — same relocation issue already solved for
+   `.my-bookings-action-menu`, see `dark-theme.scss`). `NotificationBellComponent`
+   applies `styleClass="notification-inbox-overlay theme-{admin|staff}[ is-dark]"`
+   to the panel root (mirroring the shell's own `.admin-shell.theme-*`/`.is-dark`
+   class combination), so re-declare just the handful of tokens the panel/row
+   SCSS reference, scoped to that class instead of `.admin-shell`. */
+.notification-inbox-overlay {
+  --admin-surface-card: #ffffff;
+  --admin-outline: #bdc8cf;
+  --admin-muted: #55636c;
+  --admin-text: #191c1e;
+}
+
+.notification-inbox-overlay.theme-admin {
+  --accent-strong: #c2410c;
+  --accent-soft: rgba(234, 88, 12, 0.14);
+}
+
+.notification-inbox-overlay.theme-staff {
+  --accent-strong: #0d9488;
+  --accent-soft: rgba(13, 148, 136, 0.14);
+}
+
+.notification-inbox-overlay.is-dark {
+  --admin-surface-card: #1d2226;
+  --admin-outline: #3a444b;
+  --admin-muted: #9fb0bb;
+  --admin-text: #e7edf1;
+}
+
 /* OBRS-100: the neutral "not boarded" chip (.admin-status.is-neutral, boarding
    manifest) kept its light-grey bg (#e4e4e7) in dark mode, reading as a stark
    white blob on the dark shell — unlike the pastel colored status chips which

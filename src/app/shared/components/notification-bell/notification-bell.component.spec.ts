@@ -7,15 +7,18 @@ import { BehaviorSubject } from 'rxjs';
 import { NotificationBellComponent } from './notification-bell.component';
 import { NotificationInboxService } from '../../services/notification-inbox.service';
 import { NotificationItem } from '../../interfaces/notification.interface';
+import { ThemeMode, ThemeService } from '../../services/theme.service';
 
 describe('NotificationBellComponent', () => {
   let fixture: ComponentFixture<NotificationBellComponent>;
   let component: NotificationBellComponent;
   let unreadCount$: BehaviorSubject<number>;
+  let themeMode$: BehaviorSubject<ThemeMode>;
   let inboxServiceSpy: jasmine.SpyObj<NotificationInboxService>;
 
   beforeEach(async () => {
     unreadCount$ = new BehaviorSubject<number>(0);
+    themeMode$ = new BehaviorSubject<ThemeMode>('light');
     inboxServiceSpy = jasmine.createSpyObj('NotificationInboxService', [
       'startPolling',
       'refreshOnOpen',
@@ -33,7 +36,10 @@ describe('NotificationBellComponent', () => {
     await TestBed.configureTestingModule({
       declarations: [NotificationBellComponent],
       imports: [TranslateModule.forRoot(), OverlayPanelModule],
-      providers: [{ provide: NotificationInboxService, useValue: inboxServiceSpy }],
+      providers: [
+        { provide: NotificationInboxService, useValue: inboxServiceSpy },
+        { provide: ThemeService, useValue: { mode$: themeMode$.asObservable() } },
+      ],
       // The inbox panel's own template/child tree isn't relevant to these
       // bell-scoped assertions (badge/aria-label/lifecycle) — schema-suppress
       // its unknown element rather than pulling in its full dependency chain.
@@ -101,5 +107,39 @@ describe('NotificationBellComponent', () => {
 
     component['onRetry']();
     expect(inboxServiceSpy.refreshOnOpen).toHaveBeenCalledTimes(1);
+  });
+
+  // ── Scrutinize fix: appendTo="body" detaches the panel from .admin-shell,
+  // so it must carry its own theme-variant + dark-mode classes for the
+  // --admin-*/--accent-* tokens (admin-theme.scss's .notification-inbox-overlay
+  // rules) to resolve at its actual (body-level) DOM location. ──
+  describe('overlayStyleClass (body-appended panel theming)', () => {
+    it('defaults to the admin accent variant in light mode', () => {
+      expect(component.shellVariant).toBe('admin');
+      expect(component['overlayStyleClass']).toBe('notification-inbox-overlay theme-admin');
+    });
+
+    it('carries theme-staff when shellVariant is staff', () => {
+      component.shellVariant = 'staff';
+      expect(component['overlayStyleClass']).toBe('notification-inbox-overlay theme-staff');
+    });
+
+    it('appends is-dark when ThemeService reports dark mode', () => {
+      themeMode$.next('dark');
+      expect(component['overlayStyleClass']).toBe('notification-inbox-overlay theme-admin is-dark');
+    });
+
+    it('drops is-dark again when ThemeService reports light mode', () => {
+      themeMode$.next('dark');
+      themeMode$.next('light');
+      expect(component['overlayStyleClass']).toBe('notification-inbox-overlay theme-admin');
+    });
+
+    it('binds styleClass onto the child p-overlayPanel instance', () => {
+      themeMode$.next('dark');
+      component.shellVariant = 'staff';
+      fixture.detectChanges();
+      expect(component.overlayPanel?.styleClass).toBe('notification-inbox-overlay theme-staff is-dark');
+    });
   });
 });
