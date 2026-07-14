@@ -549,6 +549,13 @@
       "USERNAME": "用户名",
       "EMAIL_PHONE": "电子邮件和电话",
       "ROLES": "角色",
+      "ROLE_NAMES": {
+        "admin": "管理员",
+        "owner": "老板",
+        "salesperson": "销售员",
+        "driver": "司机",
+        "customer": "客户"
+      },
       "STATUS": "状态",
       "USER_COUNT": "名用户",
       "ADD_TITLE": "创建用户",
