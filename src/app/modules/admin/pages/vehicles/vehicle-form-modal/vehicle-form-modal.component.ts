@@ -239,8 +239,15 @@ export class VehicleFormModalComponent implements OnChanges {
       const vehicleDetail = response?.data ?? null;
       // Ignore a stale response if the modal has since closed or moved on to
       // editing a different vehicle.
-      if (vehicleDetail && this.isOpen && this.selectedVehicle?.id === vehicle.id) {
-        this.applyVehicleFormValues(vehicleDetail, vehicle, true);
+      if (this.isOpen && this.selectedVehicle?.id === vehicle.id) {
+        if (vehicleDetail) {
+          this.applyVehicleFormValues(vehicleDetail, vehicle, true);
+        } else {
+          // R1 guard: a 2xx with a null/empty data envelope means the 7
+          // attributes never loaded — treat it like a failed fetch so a
+          // full-replace PUT can't null them all (same block-until-reopen).
+          this.isEditDetailError = true;
+        }
       }
     } catch {
       if (this.isOpen && this.selectedVehicle?.id === vehicle.id) {

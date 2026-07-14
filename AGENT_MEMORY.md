@@ -3370,3 +3370,14 @@ Reused (no new key): `ADMIN.COMMON.ACTIONS`, `ADMIN.COMMON.UPDATING`, `ADMIN.COM
   the modal's own title surface, not a page title, so §7 doesn't apply — same precedent as every
   other `.admin-modal-title` in the codebase) · no i18n string hardcoded, all new keys land in
   en/th/zh in the same commit.
+
+## OBRS-316 Gap 1 scrutinize — full-replace guard hole on 2xx-empty-data (SELF_FIXED)
+`vehicle-form-modal.component.ts` `initEditForm`: the R1 fetch-fail guard only set
+`isEditDetailError` in the `catch` (thrown / non-2xx). A 2xx response with a null/empty
+`data` envelope made `vehicleDetail = null`, skipped the patch, and cleared the loading
+flag WITHOUT setting the error flag → Save re-enabled with the 7 attribute controls still
+at blank fallback → a full-replace PUT would null all 7 saved attributes. Pattern for
+full-replace edit forms opened from a partial row fallback: the "detail didn't arrive"
+guard must cover BOTH throw AND loaded-but-empty (`response.data == null`), not just throw.
+Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check and setting
+`isEditDetailError = true` on the empty branch.
