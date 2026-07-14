@@ -87,7 +87,9 @@
               <span class="label">
                 {{ "E_TICKET.LABEL.SEAT" | translate }}
               </span>
-              <span class="value">{{ seats }}</span>
+              <span class="value">{{
+                seatsOpen ? ("E_TICKET.LABEL.SEAT_OPEN" | translate) : seats
+              }}</span>
             </div>
           </div>
           <div
@@ -196,7 +198,12 @@
                   </span>
                   <span class="value">{{ passenger.name }}</span>
                 </div>
-                <div class="passenger-field">
+                <!-- OBRS-325: on an OPEN schedule every passenger shares the
+                     same "ขึ้นนั่งตามที่ว่าง" note, so the journey-level seat
+                     summary above already states it once — repeating it per
+                     passenger adds no per-person info. Hide this row when
+                     seatOpen; ASSIGNED keeps showing each passenger's seat. -->
+                <div class="passenger-field" *ngIf="!passenger.seatOpen">
                   <span class="label">
                     {{ "E_TICKET.LABEL.SEAT" | translate }}
                   </span>

@@ -14,6 +14,7 @@ function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
     vehicleType: 'Van',
     vehiclePlate: '12/1234',
     seats: '1',
+    isOpenSeating: false,
     distanceKm: 45,
     pickupLatitude: null,
     pickupLongitude: null,
@@ -185,5 +186,22 @@ describe('ETicketCardComponent — leg rendering', () => {
     fixture.detectChanges();
 
     expect(fixture.debugElement.queryAll(By.css('.ticket-nav-btn')).length).toBe(1);
+  });
+
+  it('OBRS-325: shows the open-seating label instead of the seat list when isOpenSeating is true', () => {
+    component.legs = [buildLeg({ isOpenSeating: true, seats: '-' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.SEAT_OPEN');
+  });
+
+  it('OBRS-325 (ASSIGNED regression): shows the real seat number unchanged when isOpenSeating is false', () => {
+    component.legs = [buildLeg({ isOpenSeating: false, seats: 'A5' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('A5');
+    expect(text).not.toContain('E_TICKET.LABEL.SEAT_OPEN');
   });
 });

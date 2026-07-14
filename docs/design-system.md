@@ -155,6 +155,7 @@ do not add a fourth.
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. |
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
+| **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
 
 ### 3.1 Dropdown contract (this is what the Vehicle Type bug violated)
 
@@ -400,6 +401,21 @@ enforced rule with a test behind it.
   `[attr.aria-label]` (no new tooltip component). Reuse this modifier for the next
   KPI-card hint instead of introducing a tooltip directive.
 
+- **Notification bell + `p-overlayPanel` inbox, root-service state** (OBRS-317,
+  `AppNotificationBellComponent`): the owner/staff topbar's notification bell opens a
+  `p-overlayPanel` (§3's new "Rich-content popup" row) hosting a stateful list —
+  `AppNotificationInboxPanelComponent` → `AppNotificationInboxRowComponent` — rather
+  than `p-menu[popup]`'s flat `MenuItem[]`. Its unread-count/list state lives in a
+  root `NotificationInboxService` (plain `BehaviorSubject`s, no NgRx — NgRx here is
+  scoped to the customer booking modules), mirroring `BadgeSocketService`'s
+  idempotent-`connect()`/`count$` shape and `AdminCollectionStore`'s
+  clear-on-logout-via-`authStatus$` pattern. The corner badge is a **position-only**
+  modifier (`.notification-bell-badge`) of the existing `.admin-nav-badge` recipe —
+  reused verbatim, not re-derived. See
+  `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. Reuse
+  `p-overlayPanel` for the next back-office popup that needs to host a stateful list,
+  and the root-service shape for the next cross-cutting back-office signal.
+
 - **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
   card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
   `--admin-danger-bg`/`--admin-danger-text` tokens (§2.4) — no new color, added to
@@ -416,6 +432,25 @@ enforced rule with a test behind it.
   at all. Reuse this only for a note that stays true regardless of whether the current
   fetch succeeded; a note that describes the *data* (like the basis captions above)
   should stay gated with its section.
+
+- **OPEN-seating passenger-count card in place of a leg's seat map** (OBRS-323,
+  `PassengerInfoFormComponent`): a schedule with `seatingMode: 'OPEN'` has no fixed
+  seat to pick, so that leg's seat map/active-passenger-chip-row/leg-label are hidden
+  and replaced with an inline count card — current count, "เหลือ X ที่นั่ง" (reusing
+  the existing `SCHEDULE_BOOKING.SEAT_REMAIN`/`SEAT_UNIT` keys, not a duplicate), and
+  +/- icon-buttons. The +/- markup and disabled-state visuals are reused from
+  `DropdownObrsPassengerComponent`'s `.count-section` (same class names, scoped by
+  Angular's default view encapsulation — no bleed), but bound to the
+  `passengerData` FormArray directly via `addOpenSeatPassenger()`/
+  `removeOpenSeatPassenger()`, not a `DropdownPassenger[]` — the two controls keep
+  separate contracts. Each leg branches independently (`isOpenSeatingOutbound$`/
+  `isOpenSeatingReturn$`), so a round trip can mix an OPEN outbound with an ASSIGNED
+  return; the shared "Seat selection" card title/hint is dropped only when every leg
+  on the booking is OPEN. See `docs/adr/0019-open-seating-passenger-count-card-per-leg-branch.md`.
+  Reuse this pattern (the `openSeatCountCard` template + add/remove methods) for the
+  next passenger-count stepper outside the home-page search filter, instead of
+  reaching for `DropdownObrsPassengerComponent` (adult/kid-split,
+  `ControlValueAccessor`-shaped — a different contract) or inventing a third one.
 
 - **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,
   `BoardingListComponent`'s delay-ETA dialog): the first `*ngIf`-gated

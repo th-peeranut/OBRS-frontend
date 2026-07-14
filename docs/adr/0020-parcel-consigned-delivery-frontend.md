@@ -1,4 +1,4 @@
-# ADR 0018 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2), frontend decisions
+# ADR 0020 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2), frontend decisions
 
 **Date:** 2026-07-14
 **Status:** Accepted

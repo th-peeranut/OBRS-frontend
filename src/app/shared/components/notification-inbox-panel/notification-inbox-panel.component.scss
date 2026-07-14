@@ -1,0 +1,64 @@
+.notification-inbox-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--admin-text);
+  width: 100%;
+}
+
+.notification-inbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notification-inbox-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.notification-inbox-body {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.notification-inbox-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notification-inbox-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  color: var(--admin-muted);
+  text-align: center;
+}
+
+.notification-inbox-state p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.notification-inbox-state .material-symbols-outlined {
+  font-size: 28px;
+}
+
+.notification-inbox-footer {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--admin-outline);
+  color: var(--admin-muted);
+  font-size: 11px;
+  text-align: center;
+}

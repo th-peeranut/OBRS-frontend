@@ -137,6 +137,33 @@ describe('ParcelConsignPageComponent', () => {
     expect(cargoStore.refresh).toHaveBeenCalled();
   });
 
+  // OBRS-305 (QA-flagged blocker, 2026-07-14): pins the exact regression QA
+  // reported — `GET /private/route-stops/{slug}` returning stops with NO
+  // `id` (the pre-fix backend `LookupResponse` shape) must degrade to empty
+  // dropdown options (never a crash, never a stop pushed with an unusable
+  // id), and the fixed/with-`id` shape (the test right above this one) must
+  // populate them. Together these two tests lock both sides of the fix.
+  it('renders EMPTY pickup options when the backend route-stops response has no stop.id (pre-fix shape)', () => {
+    staffApi.getRouteStops.and.returnValue(
+      of({
+        code: 200,
+        message: 'OK',
+        data: {
+          stops: [
+            { stopOrder: 1, offsetMinutesFromOrigin: 0, stop: { code: 'bkk' } },
+            { stopOrder: 2, offsetMinutesFromOrigin: 600, stop: { code: 'cnx' } },
+          ],
+        },
+      })
+    );
+
+    component.ngOnInit();
+    component['onScheduleChange']('42');
+
+    expect(component['pickupOptions']).toEqual([]);
+    expect(component['dropoffOptions']).toEqual([]);
+  });
+
   it('filters dropoff options to stops AFTER the chosen pickup (client pre-check)', () => {
     component.ngOnInit();
     component['onScheduleChange']('42');

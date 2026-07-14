@@ -543,13 +543,26 @@
       "FILTER_ROLE": "Role: All Roles",
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
-      "LAST_UPDATED": "Last updated",
       "LAST_LOGIN": "Last signed in",
       "NEVER_LOGGED_IN": "Never signed in",
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "ROLE_NAMES": {
+        "admin": "Admin",
+        "owner": "Owner",
+        "salesperson": "Salesperson",
+        "driver": "Driver",
+        "customer": "Customer"
+      },
       "STATUS": "Status",
+      "STATUS_NAMES": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending_verification": "Pending verification",
+        "suspended": "Suspended",
+        "deleted": "Deleted"
+      },
       "USER_COUNT": "users",
       "ADD_TITLE": "Create User",
       "EDIT_TITLE": "Edit User",
@@ -724,7 +737,52 @@
       "PAYMENT_STATUS": "Payment Status",
       "UNITS": "bookings",
       "LOADING": "Loading booking data...",
-      "LOAD_FAILED": "Unable to load booking data from backend."
+      "LOAD_FAILED": "Unable to load booking data from backend.",
+      "VIEW": "View",
+      "DETAIL": {
+        "TITLE": "Booking Detail",
+        "CLOSE": "Close",
+        "LOAD_FAILED": "Unable to load booking detail. Please try again.",
+        "CREATED_AT": "Created At",
+        "EXPIRES_AT": "Expires At",
+        "SECTION": {
+          "CONTACT": "Customer Contact",
+          "ACTOR": "Booked By",
+          "PASSENGERS": "Passengers & Tickets",
+          "PAYMENT": "Payment",
+          "TIMELINE": "Activity"
+        },
+        "CONTACT_NAME": "Full Name",
+        "CONTACT_PHONE": "Phone Number",
+        "ACTOR_NAME": "Name",
+        "ACTOR_TYPE": "Actor Type",
+        "ACTOR_CHANNEL": "Channel",
+        "ACTOR_OFFICE": "Office",
+        "NO_JOURNEYS": "No journeys on this booking.",
+        "JOURNEY_LABEL": "Journey {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "Passenger",
+          "PASSENGER_TYPE": "Type",
+          "SEAT": "Seat",
+          "TICKET_NUMBER": "Ticket No.",
+          "TICKET_STATUS": "Ticket Status",
+          "TXN_DATE": "Date/Time",
+          "TXN_METHOD": "Method",
+          "TXN_AMOUNT": "Amount",
+          "TXN_STATUS": "Status"
+        },
+        "TOTAL_AMOUNT": "Total",
+        "PAID_AMOUNT": "Paid",
+        "OUTSTANDING_AMOUNT": "Outstanding",
+        "REFUNDED_AMOUNT": "Refunded",
+        "NO_TRANSACTIONS": "No payment transactions recorded.",
+        "EVENT": {
+          "CREATED": "Booking created",
+          "PAYMENT": "Payment received ({{method}})",
+          "EXPIRES": "Booking expires",
+          "CURRENT_STATUS": "Current status: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "Dashboard",
@@ -1165,6 +1223,19 @@
       "BOARDING_REMINDER": "Boarding reminder"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "Notifications, {{count}} unread",
+    "PANEL_TITLE": "Notifications",
+    "MARK_ALL_READ": "Mark all read",
+    "EMPTY_TITLE": "No notifications yet",
+    "LOAD_ERROR": "Couldn't load notifications",
+    "RETRY": "Retry",
+    "SHOWING_LATEST": "Showing latest {{shown}} of {{total}}",
+    "MARK_READ_ERROR": "Couldn't mark as read — please try again",
+    "MARK_ALL_ERROR": "Couldn't mark all as read — please try again",
+    "ROW_UNREAD_SUFFIX": "unread",
+    "ROW_READ_SUFFIX": "read"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "Change your email",
     "CURRENT_PASSWORD_LABEL": "Current password",
@@ -1460,16 +1531,23 @@
       "FARE_CATEGORY": "Fare category",
       "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall.",
       "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
-      "SEAT_CHIP_FALLBACK": "Passenger {{n}}"
+      "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
+      "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
+      "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
+      "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left)."
     },
     "GENDER": {
       "MALE": "Male",
       "FEMALE": "Female",
       "MONK": "Monk"
     },
+    "SUMMARY": {
+      "OPEN_SEATING_BADGE": "No assigned seat (Open Seating)"
+    },
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",
-      "CREATE_FAILED": "Unable to create the booking. Please try again."
+      "CREATE_FAILED": "Unable to create the booking. Please try again.",
+      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule."
     }
   },
   "PAYMENT": {
@@ -1547,6 +1625,7 @@
       "VEHICLE_TYPE": "Vehicle type",
       "VEHICLE_PLATE": "Vehicle no.",
       "SEAT": "Seat",
+      "SEAT_OPEN": "Open seating (unreserved seat)",
       "PASSENGERS": "Passengers",
       "BOOKER": "Booker",
       "PASSENGER_NAME": "Passenger name",

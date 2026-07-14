@@ -312,6 +312,25 @@ prerequisites (`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`)
 so the action is never presented as available when the server would reject
 it — the server remains the final authority.
 
+## E-Ticket — open-seating display (OBRS-325)
+
+Both e-ticket surfaces — the shared `app-e-ticket-card` (used by the My
+Bookings ticket modal) and the booking-flow's own `ETicketComponent` page —
+swap the seat-cell's *text only* (same label/box, no new styling) when a
+ticket's `seatNumber` is null: instead of a blank/`'-'` seat value they show
+`E_TICKET.LABEL.SEAT_OPEN` ("ขึ้นนั่งตามที่ว่าง" / "Open seating" / 自由入座).
+This is the display side of the open-seating epic (OBRS-318/321) — a
+`schedules.seating_mode = OPEN` schedule leaves `tickets.seat_number` null by
+design, not as missing data.
+
+The FE has no `seatingMode` field on any read DTO yet (see `docs/handoff.md`
+Contract Requests, 2026-07-14), so OPEN is inferred client-side from
+`seatNumber == null`, computed once per leg/ticket (`TicketLeg.isOpenSeating`
+in `shared/lib/booking-ticket-view.ts`; `TicketPassenger.seatOpen` in
+`modules/e-ticket/e-ticket.component.ts`) rather than re-checked ad hoc in the
+template — reuse those flags for the next surface that renders a ticket's
+seat instead of re-deriving the null check inline.
+
 Clicking an enabled action dispatches `openRescheduleDialog({ bookingId })`,
 which the module-local `myBookings` NgRx state reflects **synchronously** —
 `RescheduleDialogComponent` opens optimistically (its date-picker step is
@@ -527,7 +546,7 @@ the row's mere presence already implies availability.
 
 Four surfaces, built against
 `../OBRS-backend/docs/api/parcels-consigned-delivery.md` (see
-`docs/adr/0018-parcel-consigned-delivery-frontend.md` for the frontend-specific
+`docs/adr/0020-parcel-consigned-delivery-frontend.md` for the frontend-specific
 decisions and `docs/handoff.md` for one assumed endpoint + one shape
 ambiguity flagged back to the backend).
 
@@ -575,7 +594,7 @@ flight, but its displayed `deliveryStatus` only changes once the actual 200
 body's `deliveryStatus` is known — never guessed client-side. A wrong-state 409
 shows an `AlertService.toast()` and re-syncs the row via `store.refresh()`
 rather than trusting the stale local guess. The collect dialog ships a
-code-only input for MVP (see ADR 0018 Decision 2 for why the existing
+code-only input for MVP (see ADR 0020 Decision 2 for why the existing
 `BoardingListComponent` camera QR scanner isn't reused here).
 
 **4. Public tracking** (`/track-parcel`, `/track-parcel/:trackingNumber` — own
@@ -590,7 +609,7 @@ neutral "not found" state (the API doc: "no distinction between not-found and
 any other state"). The status chip reuses the exact same `.admin-status.is-*`
 markup as the staff delivery-list even though this customer-shell page has no
 `.admin-shell` ancestor — see `docs/design-system.md` §12's new-pattern-log
-entry and ADR 0018 Decision 1 for the cross-shell token-reuse rationale.
+entry and ADR 0020 Decision 1 for the cross-shell token-reuse rationale.
 
 **Status-color mapping**: all 7 renderable `parcel_delivery_status` slugs map
 onto the existing `.admin-status.is-*` tokens (no new hex) — see

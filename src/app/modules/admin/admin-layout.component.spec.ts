@@ -1,9 +1,18 @@
+import { Component } from '@angular/core';
 import { ComponentFixture, TestBed, fakeAsync, tick, discardPeriodicTasks } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { RouterTestingModule } from '@angular/router/testing';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { PrimeNGConfig } from 'primeng/api';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
+import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+
+// OBRS-317: the real bell pulls in NotificationInboxService (+ its own HTTP
+// dependency chain) — stub the selector so these layout-chrome specs stay
+// scoped to the layout itself, same approach as every other cross-cutting
+// child mounted here.
+@Component({ selector: 'app-notification-bell', template: '' })
+class NotificationBellStubComponent {}
 
 // localStorage shim — keeps spec storage isolated
 function clearSidebarStorage(): void {
@@ -59,7 +68,7 @@ describe('AdminLayoutComponent', () => {
     clearSidebarStorage();
     badgeSocketServiceStub = createBadgeSocketServiceStub();
     await TestBed.configureTestingModule({
-      declarations: [AdminLayoutComponent, LangSwitcherComponent],
+      declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -72,6 +81,10 @@ describe('AdminLayoutComponent', () => {
           useValue: { getNewUsabilityReportCount: () => of(0) },
         },
         { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
       ],
     }).compileComponents();
 
@@ -373,7 +386,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
     clearSidebarStorage();
     badgeSocketServiceStub = createBadgeSocketServiceStub();
     await TestBed.configureTestingModule({
-      declarations: [AdminLayoutComponent, LangSwitcherComponent],
+      declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
       providers: [
         { provide: AuthService, useValue: authStub },
@@ -387,6 +400,10 @@ describe('AdminLayoutComponent — usability report badge', () => {
         // test's own fakeAsync zone and can be flushed deterministically.
         { provide: AdminApiService, useValue: { getNewUsabilityReportCount: () => of(0) } },
         { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
       ],
     }).compileComponents();
   });

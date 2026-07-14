@@ -26,12 +26,20 @@
             {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.ROUND_TRIP_BEGIN" | translate }}
           </div>
 
-          
+          <!-- OPEN-seating badge (OBRS-323) — this leg sells with no fixed seat -->
+          <div
+            class="open-seating-badge"
+            *ngIf="getScheduleBooking(scheduleBooking?.schedule)[0].seatingMode === 'OPEN'"
+          >
+            {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
+          </div>
+
+
           <div class="subheader-text">
             <div>
               {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
             </div>
-            
+
             <div>
               {{
                 formatDateFromDateTime(
@@ -161,12 +169,19 @@
               }}
             </div>
 
-            
+            <!-- OPEN-seating badge (OBRS-323) — this leg sells with no fixed seat -->
+            <div
+              class="open-seating-badge"
+              *ngIf="getScheduleBooking(scheduleBooking?.schedule)[1].seatingMode === 'OPEN'"
+            >
+              {{ "PASSENGER_INFO.SUMMARY.OPEN_SEATING_BADGE" | translate }}
+            </div>
+
             <div class="subheader-text">
               <div>
                 {{ "REVIEW_SCHEDULE_BOOKING.SUMMARY.DATE_UNIT" | translate }}
               </div>
-              
+
               <div>
                 {{
                   formatDateFromDateTime(

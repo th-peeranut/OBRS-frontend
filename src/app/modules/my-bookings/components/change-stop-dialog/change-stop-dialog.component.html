@@ -61,7 +61,7 @@
         *ngIf="step === 'estimate'"
         [estimate]="changeStopEstimate$ | async"
         [loading]="estimateLoading"
-        [error]="confirmError"
+        [error]="estimateError ?? confirmError"
         [submitting]="submitting"
         [hideFee]="true"
         i18nPrefix="MY_BOOKINGS.CHANGE_STOP"

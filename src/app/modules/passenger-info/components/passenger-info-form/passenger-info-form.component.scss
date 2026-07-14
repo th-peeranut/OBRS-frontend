@@ -154,6 +154,71 @@
   font-weight: $font-weight-regular;
 }
 
+// OPEN-seating (OBRS-323) passenger-count card, shown in place of a leg's
+// seat map. Reuses the `.count-section`/`.passenger-icon` +/- markup and
+// disabled-state pattern from DropdownObrsPassengerComponent (same class
+// names — scoped per-component by Angular's default view encapsulation, so
+// no bleed) for visual consistency, on the same tokens as the rest of this card.
+.open-seat-card {
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-sm;
+  padding: $space-sm;
+}
+
+.open-seat-card-hint {
+  font-size: $font-size-sm;
+}
+
+.open-seat-card-label {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-black;
+}
+
+.open-seat-card-count {
+  min-width: 24px;
+  text-align: center;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.dropdown-passenger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $space-sm;
+
+  .text-section {
+    .option-hint-text {
+      font-size: $font-size-xs;
+      color: $text-lightgrey;
+    }
+  }
+
+  .count-section {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+}
+
+.passenger-icon {
+  cursor: pointer;
+}
+
+.passenger-icon.passenger-add.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.passenger-max-hint {
+  padding-top: $space-3xs;
+  font-size: $font-size-xs;
+  color: $text-lightgrey;
+}
+
 @media (max-width: 992px) {
   .card-container {
     padding: $space-md;

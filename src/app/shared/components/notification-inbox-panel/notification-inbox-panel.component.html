@@ -1,0 +1,42 @@
+<div class="notification-inbox-panel">
+  <div class="notification-inbox-header">
+    <h3 class="notification-inbox-title">{{ 'NOTIFICATIONS.PANEL_TITLE' | translate }}</h3>
+    <button
+      type="button"
+      class="admin-btn admin-btn-small notification-inbox-mark-all"
+      [disabled]="unreadCount === 0"
+      (click)="markAllRead.emit()"
+    >
+      {{ 'NOTIFICATIONS.MARK_ALL_READ' | translate }}
+    </button>
+  </div>
+
+  <div class="notification-inbox-body">
+    <div class="notification-inbox-state" *ngIf="showInitialLoading">
+      <span class="material-symbols-outlined admin-loading-spinner" aria-hidden="true">sync</span>
+    </div>
+
+    <div class="notification-inbox-state" *ngIf="showError">
+      <span class="material-symbols-outlined" aria-hidden="true">error_outline</span>
+      <p>{{ 'NOTIFICATIONS.LOAD_ERROR' | translate }}</p>
+      <button type="button" class="admin-btn admin-btn-small" (click)="retry.emit()">
+        {{ 'NOTIFICATIONS.RETRY' | translate }}
+      </button>
+    </div>
+
+    <div class="notification-inbox-state" *ngIf="showEmpty">
+      <span class="material-symbols-outlined" aria-hidden="true">notifications_none</span>
+      <p>{{ 'NOTIFICATIONS.EMPTY_TITLE' | translate }}</p>
+    </div>
+
+    <ul class="notification-inbox-list" *ngIf="items.length > 0">
+      <li *ngFor="let item of items">
+        <app-notification-inbox-row [item]="item" (open)="onRowOpen($event)"></app-notification-inbox-row>
+      </li>
+    </ul>
+  </div>
+
+  <p class="notification-inbox-footer" *ngIf="showFooter">
+    {{ 'NOTIFICATIONS.SHOWING_LATEST' | translate: { shown: items.length, total: total } }}
+  </p>
+</div>

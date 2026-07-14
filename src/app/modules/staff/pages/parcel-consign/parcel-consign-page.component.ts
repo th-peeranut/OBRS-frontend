@@ -178,6 +178,24 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * OBRS-305 (QA-flagged blocker, 2026-07-14): a stop with no numeric `id`
+   * (`s.stop?.id`) is skipped rather than pushed with a placeholder — a
+   * `pickupStopId`/`dropoffStopId` the backend can't resolve is worse than a
+   * missing dropdown option. This is exactly what caused the reported bug:
+   * at QA time, `GET /private/route-stops/{slug}` didn't return `id` at all
+   * (`LookupResponse` had no `id` field yet), so EVERY stop was skipped and
+   * both dropdowns rendered empty. Verified end-to-end against the backend
+   * fix (`OBRS-backend-wt-obrs-305-parcel-consigned-delivery`'s
+   * `LookupResponse`/`StopDtoService.toLookupResponse` diff): the field
+   * lands at exactly `stops[].stop.id`, matching what's read here — no
+   * mapping change needed once that backend change ships. `id` stays
+   * optional (`RouteStopTimeDto.stop.id?: number`, staff-api.service.ts) so
+   * a stop from a not-yet-upgraded backend degrades to "skipped" again
+   * rather than a runtime error, but every stop should carry it once the
+   * fix is deployed — see `parcel-consign-page.component.spec.ts` for both
+   * the "id present -> populated" and "id absent -> skipped" cases.
+   */
   private buildOrderedStops(
     segments: RouteSegmentsDto | undefined,
     stops: RouteStopsDto | undefined

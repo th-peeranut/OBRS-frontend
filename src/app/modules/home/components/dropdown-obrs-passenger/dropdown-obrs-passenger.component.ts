@@ -15,6 +15,7 @@ import {
 import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { DropdownPassenger } from '../../../../shared/interfaces/dropdown.interface';
+import { MAX_PASSENGERS_PER_BOOKING } from '../../../../shared/constants/passenger-limits';
 
 @Component({
   selector: 'app-dropdown-obrs-passenger',
@@ -34,11 +35,11 @@ export class DropdownObrsPassengerComponent
   implements ControlValueAccessor, OnChanges, OnDestroy
 {
   /**
-   * Maximum passengers a single booking can request. Mirrors the backend
-   * ScheduleSearchReqDto.MAX_PASSENGERS_PER_BOOKING (largest vehicle = minibus,
-   * 21 seats), so a higher count can never match a schedule.
+   * Maximum passengers a single booking can request (OBRS-323: promoted to the
+   * shared `MAX_PASSENGERS_PER_BOOKING` constant, also used by the OPEN-seating
+   * passenger-count stepper on the passenger-info page).
    */
-  readonly maxPassengers = 21;
+  readonly maxPassengers = MAX_PASSENGERS_PER_BOOKING;
 
   @Input() data?: DropdownPassenger;
   @Output() currentValue = new EventEmitter<DropdownPassenger[]>();

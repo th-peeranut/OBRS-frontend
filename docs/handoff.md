@@ -83,7 +83,7 @@ documents. That doc lists per-parcel action endpoints
 (`/load`, `/arrived`, `/collect`, `/waybill`) but no "list consigned parcels
 for a schedule" GET, which the delivery-handoff list
 (`/staff/parcels/deliveries/:scheduleId`) needs to enumerate rows. See
-`docs/adr/0018-parcel-consigned-delivery-frontend.md` Decision 3 — this is the
+`docs/adr/0020-parcel-consigned-delivery-frontend.md` Decision 3 — this is the
 same parallel-lane build pattern already used for OBRS-96/OBRS-129/OBRS-130
 above (see those entries), not an assumption that an undocumented endpoint
 already exists.
@@ -115,6 +115,20 @@ a human name) rather than breaking, but should still be confirmed. Do not
 merge/deploy until the backend confirms both — track against the paired
 backend worktree `OBRS-backend-wt-obrs-305-parcel-consigned-delivery` before
 promoting either side.
+
+---
+
+### [Frontend] 2026-07-14 — `seatingMode` not exposed on any FE-reachable read DTO (OBRS-325, open-seating epic 318-e)
+
+**Affected endpoints**: `GET /api/private/bookings/{id}/tickets` (`BookingTicketsData.journeys[].tickets[]`, consumed by both e-ticket surfaces) and, if a search-list "Open seating" badge is ever wanted, the schedule search endpoint behind `Schedule` (`shared/interfaces/schedule.interface.ts`).
+
+**Request type**: field addition (additive, R1) — not blocking, worked around for now.
+
+**What I found**: 318-a (OBRS-321, merged to `origin/dev`) added `schedules.seating_mode` (`OPEN`/`ASSIGNED`) and made `tickets.seat_number` nullable on the backend. I grepped the whole FE tree for `seatingMode`/`seating_mode`/`SeatingMode` before starting this card — **zero matches**. Neither `BookingTicketItem` (`shared/interfaces/booking-ticket.interface.ts`) nor `Schedule` (`shared/interfaces/schedule.interface.ts`) carries the field; `BookingTicketItem.seatNumber` is already `string | undefined`, so the nullability change passed through silently with no FE-visible signal beyond "the value can be missing."
+
+**What I did instead**: derived OPEN purely from `ticket.seatNumber` being null/blank (`isJourneyOpenSeating()` in `shared/lib/booking-ticket-view.ts`, mirrored in `modules/e-ticket/e-ticket.component.ts`'s `buildPassengersFromApi`). This works because every ticket on a leg shares one schedule, so either all its `seatNumber`s are null (OPEN) or none are (ASSIGNED) — there's no per-ticket ambiguity today. It's a client-side inference, not a real read of `seating_mode`, so it would misfire if a future case ever left a single ASSIGNED-schedule ticket with a null seat for an unrelated reason (data issue, cancelled leg, etc.) — that ticket would read as "open seating" instead of "no seat assigned."
+
+**What the frontend needs (not urgent, no current UI depends on it)**: if/when a customer-facing surface wants to render seating mode as its own concept rather than inferring it from nullability (e.g. a search-result "Open seating" badge, since `Schedule` today only exposes `availableSeats`/`availableSeatNumbers`, never a seat number, so there's nothing to derive from at that layer) — add `seatingMode: 'OPEN' | 'ASSIGNED'` directly to `BookingTicketItem`/`BookingTicketJourney` and to `Schedule`. Until then the null-seat inference above is sufficient and I did not add speculative UI to the search-result list (`schedule-booking-list.component.html`) since it has no reliable signal to key off.
 
 ---
 

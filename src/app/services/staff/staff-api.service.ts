@@ -142,12 +142,23 @@ export interface RouteStopTimeDto {
   offsetMinutesFromOrigin: number;
   distanceKmFromOrigin?: number;
   /** LookupResponse — `code` is the stop slug used to join with segment stops.
-   * OBRS-305: `id` added (optional, additive) — the parcel consign form needs
-   * the numeric stop id for `pickupStopId`/`dropoffStopId` on the consigned
-   * intake request. The underlying `/private/route-stops/{slug}` response
-   * already carries it (same backend endpoint `AdminApiService.getRouteStops`
-   * calls, whose `AdminStopDto.id` types the identical field) — this FE-side
-   * type just hadn't needed it until now. */
+   * OBRS-305 (QA-flagged blocker, 2026-07-14): `id` added (optional,
+   * additive) — the parcel consign form needs the numeric stop id for
+   * `pickupStopId`/`dropoffStopId` on the consigned intake request.
+   * CORRECTION: an earlier version of this comment claimed the underlying
+   * `/private/route-stops/{slug}` response "already carries it" — verified
+   * false at the time (backend `LookupResponse` had no `id` field, so every
+   * stop was silently dropped by `buildOrderedStops()` and the consign
+   * form's pickup/dropoff dropdowns rendered permanently empty). The backend
+   * is adding `id` to `LookupResponse` (`StopDtoService.toLookupResponse` ->
+   * `entity.getId()`) specifically for this need — verified directly against
+   * `OBRS-backend-wt-obrs-305-parcel-consigned-delivery`'s
+   * `LookupResponse`/`StopOrderRespDto`/`StopDtoService` source: the field
+   * lands at exactly this path (`stops[].stop.id`), matching what
+   * `buildOrderedStops()` already reads. No frontend mapping change needed
+   * once that backend change ships — `id?: number` stays optional so a stop
+   * missing it (a stale/un-upgraded backend) degrades to being skipped
+   * (documented behavior below), never a broken/undefined dropdown entry. */
   stop: { code: string; id?: number };
 }
 
