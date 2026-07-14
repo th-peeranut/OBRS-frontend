@@ -10,15 +10,42 @@
         <!-- BODY -->
         <div class="card-body">
           <div class="row form-row">
-            <!-- Adult/child -->
+            <!-- Adult/child fare category (OBRS-296: editable — was a
+                 display-only badge). CRITICAL: [value] is PROPERTY-bound to
+                 the real booleans true/false, not the gender radios' string
+                 `value="MALE"` attribute form — a string "false" on this
+                 boolean isAdult control would coerce truthy and bill every
+                 child as an adult. -->
             <div class="col-12">
-              <div class="passenget-badge">
-                {{
-                  group.get("isAdult")?.value
-                    ? ("PASSENGER_INFO.BADGE.ADULT" | translate)
-                    : ("PASSENGER_INFO.BADGE.CHILD" | translate)
-                }}
-                <!-- {{ i + 1 }} -->
+              <label class="fare-category-label">
+                {{ "PASSENGER_INFO.FORM.FARE_CATEGORY" | translate }}
+              </label>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="fareCategory_adult-{{ i }}"
+                  formControlName="isAdult"
+                  [value]="true"
+                />
+                <label class="form-check-label" for="fareCategory_adult-{{ i }}">
+                  {{ "PASSENGER_INFO.BADGE.ADULT" | translate }}
+                </label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="fareCategory_child-{{ i }}"
+                  formControlName="isAdult"
+                  [value]="false"
+                />
+                <label class="form-check-label" for="fareCategory_child-{{ i }}">
+                  {{ "PASSENGER_INFO.BADGE.CHILD" | translate }}
+                </label>
+              </div>
+              <div class="fare-category-hint text-muted small">
+                {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
               </div>
             </div>
 

@@ -549,6 +549,13 @@
       "USERNAME": "用户名",
       "EMAIL_PHONE": "电子邮件和电话",
       "ROLES": "角色",
+      "ROLE_NAMES": {
+        "admin": "管理员",
+        "owner": "老板",
+        "salesperson": "销售员",
+        "driver": "司机",
+        "customer": "客户"
+      },
       "STATUS": "状态",
       "USER_COUNT": "名用户",
       "ADD_TITLE": "创建用户",
@@ -1256,7 +1263,7 @@
       "PASSENGER_1": "成人",
       "PASSENGER_1_HINT": "12岁及以上",
       "PASSENGER_2": "儿童",
-      "PASSENGER_2_HINT": "2-11岁",
+      "PASSENGER_2_HINT": "身高≤130cm（2-11岁）",
       "START_STATION": "出发地",
       "END_STATION": "目的地",
       "DEPARTURE_DATE": "出发日期",
@@ -1456,6 +1463,8 @@
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",
       "SEAT_LEG_RETURN": "返程座位",
+      "FARE_CATEGORY": "票价类别",
+      "FARE_CATEGORY_CHILD_HINT": "儿童票适用于身高≤130cm的乘客。",
       "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
       "SEAT_CHIP_FALLBACK": "乘客 {{n}}"
     },
@@ -1554,14 +1563,16 @@
       "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
-      "LEG_RETURN": "返程"
+      "LEG_RETURN": "返程",
+      "FARE_CATEGORY": "票价类别"
     },
     "QR_HINT": "二维码仅用于登车前的身份验证。",
     "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",
     "DOWNLOAD": "下载电子票",
     "NOTE_LABEL": "注意：",
     "QR_ARIA_LABEL": "二维码",
-    "LOGO_ALT": "NJ Phuyaipu 标志"
+    "LOGO_ALT": "NJ Phuyaipu 标志",
+    "CHILD_FARE_NOTE": "登车检查：乘客身高须≤130cm。"
   },
   "POLICY": {
     "REFUND": {
@@ -1728,6 +1739,27 @@
           "BOARDING_ROUND_ARRIVED": "本班次已到达，登车功能已锁定。",
           "GENERIC": "验证失败，请重试。"
         }
+      },
+      "FARE_CATEGORY": "票价类别",
+      "CHILD_FARE_FLAG_BTN": "标记不符",
+      "CHILD_FARE_UNFLAG_BTN": "取消标记",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "标记中…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "取消标记中…",
+      "CHILD_FARE_FLAGGED": "已标记",
+      "CHILD_FARE_FLAGGED_AT": "标记时间",
+      "CHILD_FARE_FLAGGED_BY": "标记人",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "确定取消此标记吗？",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "此操作将清除该票的儿童票不符标记。",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "取消标记",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "取消",
+      "CHILD_FARE_FLAG_SUCCESS": "该票已标记票价类别不符。",
+      "CHILD_FARE_FLAG_FAILED": "无法标记该票。",
+      "CHILD_FARE_UNFLAG_SUCCESS": "标记已取消。",
+      "CHILD_FARE_UNFLAG_FAILED": "无法取消标记。",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "该票已被标记。",
+        "NOT_FLAGGED": "该票尚未被标记。",
+        "GENERIC": "操作失败，请重试。"
       }
     },
     "SCHEDULE_STATUS": {

@@ -291,6 +291,11 @@ export class PassengerInfoComponent {
       firstName: passenger.firstName,
       middleName: passenger.middleName || null,
       lastName: passenger.lastName,
+      // OBRS-296: separate from passengerType (gender) — the server computes
+      // the child discount off this field. isAdult is a real boolean control
+      // (property-bound radios, not the gender radios' string-attribute
+      // form), so this is never accidentally 'adult' for a falsy string.
+      fareCategory: passenger.isAdult ? 'adult' : 'child',
     }));
   }
 

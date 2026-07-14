@@ -43,6 +43,8 @@ function buildTicketsData(): BookingTicketsData {
             passengerName: 'Mr. Abc Def',
             seatNumber: '1',
             status: { code: 'confirmed', label: 'Confirmed' },
+            // OBRS-296: server-authoritative fare category.
+            fareCategory: 'child',
           },
         ],
       },
@@ -195,6 +197,9 @@ describe('ETicketComponent', () => {
           qrDataUrl: '',
           qrUnavailable: true,
           seatOpen: false,
+          // OBRS-296: server-authoritative — carried from the ticket
+          // response's fareCategory, never re-derived client-side.
+          fareCategory: 'child',
         },
       ]);
       expect(component.seatsOpen).toBeFalse();

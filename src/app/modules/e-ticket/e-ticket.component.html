@@ -209,7 +209,27 @@
                   </span>
                   <span class="value">{{ passenger.seat }}</span>
                 </div>
+                <div class="passenger-field" *ngIf="passenger.fareCategory">
+                  <span class="label">
+                    {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
+                  </span>
+                  <span class="value">
+                    {{
+                      (passenger.fareCategory === "adult"
+                        ? "PASSENGER_INFO.BADGE.ADULT"
+                        : "PASSENGER_INFO.BADGE.CHILD"
+                      ) | translate
+                    }}
+                  </span>
+                </div>
               </div>
+              <!-- OBRS-296: boarding-check note for a child-fare passenger —
+                   static token ($text-lightblack via .child-fare-note),
+                   matching the .ticket-nav-btn/.trip-estimate precedent on
+                   this dark-theme-exempt ticket paper. -->
+              <small class="child-fare-note" *ngIf="passenger.fareCategory === 'child'">
+                {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
+              </small>
             </div>
           </div>
 

@@ -49,7 +49,7 @@
         *ngIf="step === 'estimate'"
         [estimate]="rescheduleEstimate$ | async"
         [loading]="estimateLoading"
-        [error]="confirmError"
+        [error]="estimateError ?? confirmError"
         [submitting]="submitting"
         (confirm)="onConfirm()"
         (back)="onEstimateBack()"

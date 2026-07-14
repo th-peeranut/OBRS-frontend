@@ -40,6 +40,11 @@ export interface BookingTicketItem {
   passengerName?: string;
   seatNumber?: string;
   status?: CodeLabel;
+  /** OBRS-296: per-passenger fare category the booking was created with —
+   *  server-authoritative (drives the 50% child-discount and the boarding
+   *  manifest's mismatch-flag surface). `undefined` on an older
+   *  ticket/fixture predating this field. */
+  fareCategory?: 'adult' | 'child';
 }
 
 export interface BookingTicketJourney {

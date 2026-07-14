@@ -63,6 +63,11 @@ interface TicketPassenger {
    * pre-existing "no data" placeholder). Always `false` before the ticket API
    * response lands (store-only rows never have a real ticket seat yet). */
   seatOpen: boolean;
+  /** OBRS-296: server-authoritative fare category — `null` on the
+   *  pre-API/store-only render (derived from `PassengerInfo.isAdult` there;
+   *  see `buildPassengerRows()`) until `buildPassengersFromApi()` overrides
+   *  it from the ticket response. */
+  fareCategory: 'adult' | 'child' | null;
 }
 type Locale = 'en' | 'th' | 'zh';
 
@@ -439,6 +444,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
         // seat_number to inspect — mirrors seat above (real value fills in
         // once buildPassengersFromApi runs).
         seatOpen: false,
+        // OBRS-296: pre-API render — derived from the form's isAdult, same
+        // adult/child mapping as buildPassengersPayload(). Overridden by the
+        // server-authoritative value once buildPassengersFromApi() runs.
+        fareCategory: passenger.isAdult ? 'adult' : 'child',
       };
     });
   }
@@ -693,6 +702,8 @@ export class ETicketComponent implements OnInit, OnDestroy {
       qrDataUrl: '',
       qrUnavailable: false,
       seatOpen: false,
+      // OBRS-296: the booker row has no fare category of its own.
+      fareCategory: null,
     };
   }
 
@@ -768,6 +779,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
         qrDataUrl: qrState?.qrDataUrl ?? '',
         qrUnavailable: qrState?.qrUnavailable ?? false,
         seatOpen,
+        // OBRS-296: server-authoritative — replaces the pre-API isAdult-derived
+        // guess from buildPassengerRows() once the ticket API response lands.
+        fareCategory: ticket.fareCategory ?? null,
       };
     });
   }

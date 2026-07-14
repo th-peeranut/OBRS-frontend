@@ -221,6 +221,23 @@ export interface BoardingListItemDto {
    * — never seed it onto a pre-existing boarded row, that was the
    * misattribution bug). */
   boardedByName?: string;
+  /** OBRS-296: the fare category the booking was created with —
+   * server-authoritative, drives the boarding manifest's "Flag mismatch"
+   * surface (only rendered for `'child'` rows). `undefined` on an older
+   * ticket/fixture predating this field. */
+  fareCategory?: 'adult' | 'child';
+  /** OBRS-296: populated once a salesperson/driver has flagged this ticket's
+   * fare category as a mismatch (undefined until then — additive, optional
+   * field, same shape as `boardedAt`). */
+  childFareFlaggedAt?: string;
+  /** OBRS-296: the staff user id who flagged the mismatch — undefined until
+   * flagged. */
+  childFareFlaggedBy?: number;
+  /** OBRS-296: display name for `childFareFlaggedBy`, resolved server-side so
+   * it survives a refresh — same "only seed your own name on the row you
+   * just acted on" rule as `boardedByName` (see
+   * `boarding-list.component.ts`). */
+  childFareFlaggedByName?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -299,6 +316,29 @@ export class StaffApiService {
   unboard(ticketId: number): Observable<ResponseAPI<null>> {
     return this.http.post<ResponseAPI<null>>(
       `${environment.apiUrl}/api/private/tickets/${ticketId}/unboard`,
+      {},
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-296: flag a ticket's fare category as a mismatch (low-stakes, no
+   * confirm — mirrors `board()`). Reuses `boardingScanContext` — a domain 409
+   * (`ALREADY_FLAGGED`) must never force-logout the operator nor duplicate a
+   * global alert (OBRS-187 trap), same reasoning as `board()`/`unboard()`. */
+  flagChildFare(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/flag-child-fare`,
+      {},
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-296: reverse a child-fare mismatch flag (salesperson/admin only —
+   * enforced by the backend `@PreAuthorize` and mirrored client-side by
+   * hiding the control, same shape as `unboard()`). */
+  unflagChildFare(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/unflag-child-fare`,
       {},
       { context: this.boardingScanContext }
     );

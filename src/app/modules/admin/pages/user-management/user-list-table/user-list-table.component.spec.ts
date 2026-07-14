@@ -161,6 +161,20 @@ describe('UserListTableComponent (template)', () => {
     expect(cell.nativeElement.textContent).not.toContain('1 Jan 2026 00:00');
   });
 
+  // OBRS-330: the template renders row.roles verbatim (`{{ role }}`) — it
+  // trusts the mapper (toUserRow/extractRoleLabels) to have already
+  // localized each entry, so a Thai/Chinese label renders through
+  // unmodified rather than the raw English slug.
+  it('renders each already-localized role label as its own chip', () => {
+    component.isLoading = false;
+    component.rows = [makeRow({ id: 1, roleSlugs: ['owner'], roles: ['เจ้าของกิจการ'] })];
+    fixture.detectChanges();
+
+    const chips = fixture.debugElement.queryAll(By.css('.admin-chip'));
+    expect(chips.length).toBe(1);
+    expect(chips[0].nativeElement.textContent.trim()).toBe('เจ้าของกิจการ');
+  });
+
   it('renders the totalCount and filtered rows.length in the footer', () => {
     component.isLoading = false;
     component.rows = [makeRow({ id: 1 })];
