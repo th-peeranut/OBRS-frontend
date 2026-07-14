@@ -239,6 +239,19 @@
   }
 }
 
+// OBRS-296: child-fare boarding-check note — spans the full `.passenger-row`
+// grid (which is otherwise `auto 1fr`, two columns) so it reads as a caption
+// under the whole row rather than being squeezed into the narrow index
+// column. Static token only ($text-lightblack) — matches the
+// .ticket-leg-heading/.trip-estimate precedent; this ticket paper is
+// intentionally exempt from dark theming (dark-theme.scss §15).
+.child-fare-note {
+  display: block;
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: $text-lightblack;
+}
+
 .ticket-footer {
   display: flex;
   align-items: flex-start;

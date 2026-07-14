@@ -265,7 +265,9 @@ export class UserManagementPageComponent implements OnInit, OnDestroy {
     this.roleOptions = toRoleOptions(this.rawRoles, currentLocale);
     this.statusOptions = toStatusOptions(this.rawLookups, currentLocale);
     this.users = this.rawUsers.map((user) =>
-      toUserRow(user, currentLocale, this.translate.currentLang)
+      toUserRow(user, currentLocale, this.translate.currentLang, (key) =>
+        this.translate.instant(key)
+      )
     );
     this.syncFiltersWithAvailableOptions();
     this.applyFilters();

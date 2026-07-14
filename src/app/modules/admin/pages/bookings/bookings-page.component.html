@@ -53,6 +53,7 @@
           <th>{{ 'ADMIN.BOOKINGS.TOTAL_FARE' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.BOOKING_STATUS' | translate }}</th>
           <th>{{ 'ADMIN.BOOKINGS.PAYMENT_STATUS' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
         </tr>
       </thead>
       <tbody>
@@ -66,11 +67,17 @@
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
             <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
           </tr>
         </ng-container>
 
         <ng-container *ngIf="!isLoading">
-          <tr *ngFor="let booking of pagedBookings; let i = index" [class.zebra]="i % 2 === 1">
+          <tr
+            *ngFor="let booking of pagedBookings; let i = index"
+            class="bk-booking-row"
+            [class.zebra]="i % 2 === 1"
+            (click)="onRowActivate(booking, $event)"
+          >
             <td class="admin-emphasis">{{ booking.bookingId }}</td>
             <td>{{ booking.customer }}</td>
             <td>{{ booking.route }}</td>
@@ -87,10 +94,19 @@
                 {{ booking.paymentStatus }}
               </span>
             </td>
+            <td class="text-right">
+              <button
+                type="button"
+                class="admin-btn admin-btn-small"
+                (click)="openDetail(booking)"
+              >
+                {{ 'ADMIN.BOOKINGS.VIEW' | translate }}
+              </button>
+            </td>
           </tr>
 
           <tr *ngIf="filteredBookings.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="8">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            <td colspan="9">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
           </tr>
         </ng-container>
       </tbody>
@@ -124,3 +140,188 @@
     </div>
   </div>
 </section>
+
+<!-- Detail Modal (OBRS-280, read-only) -->
+<div
+  class="admin-modal-backdrop"
+  *ngIf="selectedBookingId !== null"
+  adminModalBackdrop
+  (dismiss)="onDetailBackdropDismiss()"
+>
+  <div class="admin-modal bk-detail-modal">
+    <div class="admin-modal-header">
+      <h4 class="admin-modal-title">{{ 'ADMIN.BOOKINGS.DETAIL.TITLE' | translate }}</h4>
+      <button
+        type="button"
+        class="bk-detail-close"
+        [attr.aria-label]="'ADMIN.BOOKINGS.DETAIL.CLOSE' | translate"
+        (click)="closeDetail()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="detailBooking">
+      <!-- 1. Header / status band -->
+      <div class="bk-detail-header">
+        <span class="admin-emphasis">{{ detailBooking.bookingNumber }}</span>
+        <span class="admin-status" [ngClass]="statusClass(bookingStatusCode(detailBooking.status))">
+          {{ bookingStatusLabel(detailBooking.status) }}
+        </span>
+        <span class="admin-muted" *ngIf="detailBooking.bookingType">
+          {{ detailBooking.bookingType.label || detailBooking.bookingType.code }}
+        </span>
+      </div>
+      <div class="bk-detail-row">
+        <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CREATED_AT' | translate }}</span>
+        <span>{{ displayDateTime(detailBooking.createdAt) }}</span>
+      </div>
+      <div class="bk-detail-row" *ngIf="detailBooking.expiredAt">
+        <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.EXPIRES_AT' | translate }}</span>
+        <span>{{ displayDateTime(detailBooking.expiredAt) }}</span>
+      </div>
+
+      <!-- 2. Contact + actor, two-column -->
+      <div class="bk-detail-twocol">
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT' | translate }}</h5>
+          <div class="bk-detail-row">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_NAME' | translate }}</span>
+            <span>{{ detailBooking.contact?.fullName || '-' }}</span>
+          </div>
+          <div class="bk-detail-row">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span>
+            <span>{{ detailBooking.contact?.phoneNumber || '-' }}</span>
+          </div>
+        </section>
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.ACTOR' | translate }}</h5>
+          <div class="bk-detail-row">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_NAME' | translate }}</span>
+            <span>{{ detailBooking.actor?.name || '-' }}</span>
+          </div>
+          <div class="bk-detail-row">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_TYPE' | translate }}</span>
+            <span>{{ detailBooking.actor?.type || '-' }}</span>
+          </div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.channel">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_CHANNEL' | translate }}</span>
+            <span>{{ detailBooking.actor?.channel }}</span>
+          </div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.officeName">
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_OFFICE' | translate }}</span>
+            <span>{{ detailBooking.actor?.officeName }}</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- 3. Passengers & tickets, grouped by journey -->
+      <section class="mt-3">
+        <h5>
+          {{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PASSENGERS' | translate }}
+          <span *ngIf="isDetailFetching" class="bk-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        </h5>
+        <p *ngIf="!isDetailFetching && detailLoadError" class="admin-muted">{{ detailLoadError }}</p>
+        <p *ngIf="!isDetailFetching && !detailLoadError && !(detailBooking.journeys?.length)" class="admin-muted">
+          {{ 'ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS' | translate }}
+        </p>
+        <ng-container *ngIf="!detailLoadError">
+          <ng-container *ngFor="let journey of detailBooking.journeys; let ji = index">
+            <div class="bk-journey-heading">
+              {{ 'ADMIN.BOOKINGS.DETAIL.JOURNEY_LABEL' | translate: { index: ji + 1, route: journeyRouteLabel(journey) } }}
+            </div>
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_NAME' | translate }}</th>
+                  <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_TYPE' | translate }}</th>
+                  <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.SEAT' | translate }}</th>
+                  <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_NUMBER' | translate }}</th>
+                  <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_STATUS' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let ticket of journey.tickets">
+                  <td>{{ ticket.passengerName }}</td>
+                  <td>{{ ticket.passengerType?.label || ticket.passengerType?.code }}</td>
+                  <td class="admin-emphasis">{{ ticket.seatNumber }}</td>
+                  <td><code>{{ ticket.ticketNumber }}</code></td>
+                  <td>
+                    <span class="admin-status" [ngClass]="ticketStatusClass(ticketStatusCode(ticket.status))">
+                      {{ ticketStatusLabel(ticket.status) }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </ng-container>
+        </ng-container>
+      </section>
+
+      <!-- 4. Payment summary + transactions -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PAYMENT' | translate }}</h5>
+        <div class="bk-payment-summary">
+          <div>
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT' | translate }}</span>
+            <span class="admin-emphasis">{{ formatMoney(detailBooking.payment?.totalAmount, detailBooking.payment?.currency) }}</span>
+          </div>
+          <div>
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT' | translate }}</span>
+            <span>{{ formatMoney(detailBooking.payment?.paidAmount, detailBooking.payment?.currency) }}</span>
+          </div>
+          <div>
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT' | translate }}</span>
+            <span>{{ formatMoney(detailBooking.payment?.outstandingAmount, detailBooking.payment?.currency) }}</span>
+          </div>
+          <div>
+            <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT' | translate }}</span>
+            <span>{{ formatMoney(detailBooking.payment?.refundedAmount, detailBooking.payment?.currency) }}</span>
+          </div>
+          <span class="admin-status" *ngIf="detailBooking.payment?.status" [ngClass]="paymentClass(detailBooking.payment?.status ?? '')">
+            {{ detailBooking.payment?.status }}
+          </span>
+        </div>
+        <span *ngIf="isPaymentsFetching" class="bk-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        <p *ngIf="!isPaymentsFetching && paymentsLoadError" class="admin-muted">{{ paymentsLoadError }}</p>
+        <table class="admin-table mt-2" *ngIf="!isPaymentsFetching && !paymentsLoadError">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_DATE' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_METHOD' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_AMOUNT' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of paymentTransactions">
+              <td>{{ displayDateTime(tx.paidAt) }}</td>
+              <td>{{ tx.paymentMethod }}</td>
+              <td class="admin-emphasis">{{ formatMoney(tx.amount, tx.currency) }}</td>
+              <td>
+                <span class="admin-status" *ngIf="tx.status" [ngClass]="paymentClass(tx.status)">{{ tx.status }}</span>
+              </td>
+            </tr>
+            <tr *ngIf="!paymentTransactions?.length" class="admin-empty-row">
+              <td colspan="4">{{ 'ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS' | translate }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 5. Timeline -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE' | translate }}</h5>
+        <ul class="bk-timeline">
+          <li *ngFor="let event of timelineEvents">
+            <span class="bk-timeline-dot" aria-hidden="true"></span>
+            <span>{{ event.labelKey | translate: event.params }}</span>
+            <span class="admin-muted" *ngIf="event.time">{{ displayDateTime(event.time) }}</span>
+          </li>
+        </ul>
+      </section>
+    </ng-container>
+
+    <p *ngIf="!detailBooking && detailLoadError" class="admin-muted text-center mt-3">{{ detailLoadError }}</p>
+  </div>
+</div>

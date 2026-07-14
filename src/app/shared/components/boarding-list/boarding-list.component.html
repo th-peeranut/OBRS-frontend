@@ -249,6 +249,7 @@
               <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
               <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
               <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+              <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
               <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
               <th></th>
             </tr>
@@ -256,12 +257,12 @@
           <tbody>
             <ng-container *ngIf="isLoading">
               <tr *ngFor="let row of skeletonRows">
-                <td colspan="8"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
+                <td colspan="9"><div class="skeleton-row bg-light rounded" style="height:20px"></div></td>
               </tr>
             </ng-container>
             <ng-container *ngIf="!isLoading && items.length === 0 && !errorMessage">
               <tr>
-                <td colspan="8" class="text-center py-5">
+                <td colspan="9" class="text-center py-5">
                   <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:48px">people</span>
                   <div class="fw-semibold">{{ 'STAFF.BOARDING.EMPTY_TITLE' | translate }}</div>
                   <div class="text-muted small">{{ 'STAFF.BOARDING.EMPTY_BODY' | translate }}</div>
@@ -279,6 +280,26 @@
                   <span class="badge" [class.bg-success]="item.status.code === 'checked_in'" [class.bg-secondary]="item.status.code !== 'checked_in'">
                     {{ item.status.label }}
                   </span>
+                </td>
+                <td>
+                  <ng-container *ngIf="item.fareCategory">
+                    {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
+                  </ng-container>
+                  <ng-container *ngIf="isChildFare(item)">
+                    <span
+                      *ngIf="isFlagged(item)"
+                      class="admin-status is-warning admin-status--icon d-block mt-1"
+                    >
+                      <span class="material-symbols-outlined" aria-hidden="true">flag</span>
+                      {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
+                    </span>
+                    <div class="text-muted small boarding-audit-line" *ngIf="isFlagged(item)">
+                      {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_AT' | translate }}: {{ item.childFareFlaggedAt | date: 'HH:mm' }}
+                      <ng-container *ngIf="item.childFareFlaggedByName">
+                        &middot; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED_BY' | translate }}: {{ item.childFareFlaggedByName }}
+                      </ng-container>
+                    </div>
+                  </ng-container>
                 </td>
                 <td>
                   <span
@@ -312,6 +333,27 @@
                     [disabled]="isUnboarding(item) || isUpdatingScheduleStatus || isScheduleArrived"
                     (click)="unboard(item)">
                     {{ (isUnboarding(item) ? 'STAFF.BOARDING.UNBOARD_IN_PROGRESS' : 'STAFF.BOARDING.UNBOARD_BTN') | translate }}
+                  </button>
+                  <!-- OBRS-296: fare-category mismatch flag — a child-fare-only
+                       row action, independent of the boarding controls above
+                       (flag never blocks boarding). Flag has no confirm (like
+                       Board); unflag requires one (like Un-board) and is
+                       salesperson-only. -->
+                  <button
+                    *ngIf="isChildFare(item) && !isFlagged(item)"
+                    type="button"
+                    class="admin-btn admin-btn-small"
+                    [disabled]="isFlagging(item)"
+                    (click)="flagChildFare(item)">
+                    {{ (isFlagging(item) ? 'STAFF.BOARDING.CHILD_FARE_FLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_FLAG_BTN') | translate }}
+                  </button>
+                  <button
+                    *ngIf="isChildFare(item) && isFlagged(item) && canUnflagChildFare"
+                    type="button"
+                    class="admin-btn admin-btn-small admin-btn-danger"
+                    [disabled]="isUnflagging(item)"
+                    (click)="unflagChildFare(item)">
+                    {{ (isUnflagging(item) ? 'STAFF.BOARDING.CHILD_FARE_UNFLAGGING_IN_PROGRESS' : 'STAFF.BOARDING.CHILD_FARE_UNFLAG_BTN') | translate }}
                   </button>
                 </td>
               </tr>
@@ -475,6 +517,7 @@
           <th>{{ 'STAFF.BOARDING.FROM' | translate }}</th>
           <th>{{ 'STAFF.BOARDING.TO' | translate }}</th>
           <th>{{ 'STAFF.BOARDING.STATUS' | translate }}</th>
+          <th>{{ 'STAFF.BOARDING.FARE_CATEGORY' | translate }}</th>
           <th>{{ 'STAFF.BOARDING.BOARDED' | translate }}</th>
         </tr>
       </thead>
@@ -486,6 +529,16 @@
           <td>{{ item.fromStop }}</td>
           <td>{{ item.toStop }}</td>
           <td>{{ item.status.label }}</td>
+          <td>
+            <ng-container *ngIf="item.fareCategory">
+              {{ (item.fareCategory === 'adult' ? 'PASSENGER_INFO.BADGE.ADULT' : 'PASSENGER_INFO.BADGE.CHILD') | translate }}
+            </ng-container>
+            <ng-container *ngIf="isChildFare(item) && isFlagged(item)">
+              &mdash; {{ 'STAFF.BOARDING.CHILD_FARE_FLAGGED' | translate }}
+              {{ item.childFareFlaggedAt | date: 'HH:mm' }}
+              <ng-container *ngIf="item.childFareFlaggedByName">&middot; {{ item.childFareFlaggedByName }}</ng-container>
+            </ng-container>
+          </td>
           <td>
             {{ (isBoarded(item) ? 'STAFF.BOARDING.BOARDED' : 'STAFF.BOARDING.NOT_BOARDED') | translate }}
             <ng-container *ngIf="isBoarded(item)">

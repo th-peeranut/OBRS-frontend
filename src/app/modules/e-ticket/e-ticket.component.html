@@ -87,7 +87,9 @@
               <span class="label">
                 {{ "E_TICKET.LABEL.SEAT" | translate }}
               </span>
-              <span class="value">{{ seats }}</span>
+              <span class="value">{{
+                seatsOpen ? ("E_TICKET.LABEL.SEAT_OPEN" | translate) : seats
+              }}</span>
             </div>
           </div>
           <div
@@ -196,13 +198,38 @@
                   </span>
                   <span class="value">{{ passenger.name }}</span>
                 </div>
-                <div class="passenger-field">
+                <!-- OBRS-325: on an OPEN schedule every passenger shares the
+                     same "ขึ้นนั่งตามที่ว่าง" note, so the journey-level seat
+                     summary above already states it once — repeating it per
+                     passenger adds no per-person info. Hide this row when
+                     seatOpen; ASSIGNED keeps showing each passenger's seat. -->
+                <div class="passenger-field" *ngIf="!passenger.seatOpen">
                   <span class="label">
                     {{ "E_TICKET.LABEL.SEAT" | translate }}
                   </span>
                   <span class="value">{{ passenger.seat }}</span>
                 </div>
+                <div class="passenger-field" *ngIf="passenger.fareCategory">
+                  <span class="label">
+                    {{ "E_TICKET.LABEL.FARE_CATEGORY" | translate }}
+                  </span>
+                  <span class="value">
+                    {{
+                      (passenger.fareCategory === "adult"
+                        ? "PASSENGER_INFO.BADGE.ADULT"
+                        : "PASSENGER_INFO.BADGE.CHILD"
+                      ) | translate
+                    }}
+                  </span>
+                </div>
               </div>
+              <!-- OBRS-296: boarding-check note for a child-fare passenger —
+                   static token ($text-lightblack via .child-fare-note),
+                   matching the .ticket-nav-btn/.trip-estimate precedent on
+                   this dark-theme-exempt ticket paper. -->
+              <small class="child-fare-note" *ngIf="passenger.fareCategory === 'child'">
+                {{ "E_TICKET.CHILD_FARE_NOTE" | translate }}
+              </small>
             </div>
           </div>
 

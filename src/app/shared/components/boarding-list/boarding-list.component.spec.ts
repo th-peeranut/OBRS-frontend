@@ -357,6 +357,150 @@ describe('BoardingListComponent — unboard() action (OBRS-130)', () => {
   });
 });
 
+describe('BoardingListComponent — isChildFare() / isFlagged() (OBRS-296)', () => {
+  it('isChildFare is true iff fareCategory === "child"', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    expect(component['isChildFare'](buildItem({ fareCategory: 'child' }))).toBeTrue();
+    expect(component['isChildFare'](buildItem({ fareCategory: 'adult' }))).toBeFalse();
+    expect(component['isChildFare'](buildItem({ fareCategory: undefined }))).toBeFalse();
+  });
+
+  it('isFlagged is true iff childFareFlaggedAt is non-null', () => {
+    const component = createComponent({ boardingScan: jasmine.createSpy() });
+
+    expect(component['isFlagged'](buildItem({ childFareFlaggedAt: '2026-07-10T08:00:00Z' }))).toBeTrue();
+    expect(component['isFlagged'](buildItem({ childFareFlaggedAt: undefined }))).toBeFalse();
+  });
+});
+
+describe('BoardingListComponent — flagChildFare() action (OBRS-296)', () => {
+  it('optimistically stamps childFareFlaggedAt + the current operator name, then calls staffApiService.flagChildFare()', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, fareCategory: 'child' })]);
+    const staffApiServiceStub = {
+      flagChildFare: jasmine.createSpy('flagChildFare').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = createComponent(staffApiServiceStub, store, createAlertServiceStub(), createAuthServiceStub({ username: 'jane.doe' }));
+
+    const flagPromise = component['flagChildFare'](store.value[0]);
+    // Optimistic update happens synchronously before the await resolves.
+    expect(component['items'][0].childFareFlaggedByName).toBe('jane.doe');
+    expect(component['items'][0].childFareFlaggedAt).toBeTruthy();
+
+    await flagPromise;
+
+    expect(staffApiServiceStub.flagChildFare).toHaveBeenCalledWith(7);
+  });
+
+  it('reverts childFareFlaggedAt/childFareFlaggedByName on failure', async () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: undefined, childFareFlaggedByName: undefined }),
+    ]);
+    const staffApiServiceStub = {
+      flagChildFare: jasmine.createSpy('flagChildFare').and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, error: { errorCode: 'ALREADY_FLAGGED' } }))
+      ),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, store, alertServiceStub);
+
+    await component['flagChildFare'](store.value[0]);
+
+    expect(component['items'][0].childFareFlaggedAt).toBeUndefined();
+    expect(component['items'][0].childFareFlaggedByName).toBeUndefined();
+    expect(alertServiceStub.error).toHaveBeenCalledWith('STAFF.BOARDING.CHILD_FARE_ERROR.ALREADY_FLAGGED');
+  });
+
+  it('is a no-op when already flagged or already in flight', async () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: '2026-07-10T08:00:00Z' }),
+    ]);
+    const staffApiServiceStub = { flagChildFare: jasmine.createSpy('flagChildFare') };
+    const component = createComponent(staffApiServiceStub, store);
+
+    await component['flagChildFare'](store.value[0]);
+
+    expect(staffApiServiceStub.flagChildFare).not.toHaveBeenCalled();
+  });
+
+  it('never touches boardedAt — flag is independent of the boarding controls', async () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 7, fareCategory: 'child', boardedAt: '2026-07-10T08:00:00Z', boardedByName: 'jane.doe' }),
+    ]);
+    const staffApiServiceStub = {
+      flagChildFare: jasmine.createSpy('flagChildFare').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = createComponent(staffApiServiceStub, store);
+
+    await component['flagChildFare'](store.value[0]);
+
+    expect(component['items'][0].boardedAt).toBe('2026-07-10T08:00:00Z');
+    expect(component['items'][0].boardedByName).toBe('jane.doe');
+  });
+});
+
+describe('BoardingListComponent — unflagChildFare() action (OBRS-296)', () => {
+  it('is hidden for a driver (canUnflagChildFare=false) — template gates on it, but the method also refuses to act', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: '2026-07-10T08:00:00Z' })]);
+    const staffApiServiceStub = { unflagChildFare: jasmine.createSpy('unflagChildFare') };
+    const component = createComponent(staffApiServiceStub, store, createAlertServiceStub(), createAuthServiceStub({ canUnboard: false }));
+
+    expect(component['canUnflagChildFare']).toBeFalse();
+
+    await component['unflagChildFare'](store.value[0]);
+
+    expect(staffApiServiceStub.unflagChildFare).not.toHaveBeenCalled();
+  });
+
+  it('requires AlertService.confirm() before firing, and is a no-op on cancel', async () => {
+    const store = createStoreStub([buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: '2026-07-10T08:00:00Z' })]);
+    const staffApiServiceStub = { unflagChildFare: jasmine.createSpy('unflagChildFare') };
+    const alertServiceStub = createAlertServiceStub(false);
+    const component = createComponent(staffApiServiceStub, store, alertServiceStub);
+
+    await component['unflagChildFare'](store.value[0]);
+
+    expect(alertServiceStub.confirm).toHaveBeenCalled();
+    expect(staffApiServiceStub.unflagChildFare).not.toHaveBeenCalled();
+    expect(component['items'][0].childFareFlaggedAt).toBe('2026-07-10T08:00:00Z');
+  });
+
+  it('on confirm: optimistically clears childFareFlaggedAt/childFareFlaggedByName, then calls staffApiService.unflagChildFare()', async () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: '2026-07-10T08:00:00Z', childFareFlaggedByName: 'jane.doe' }),
+    ]);
+    const staffApiServiceStub = {
+      unflagChildFare: jasmine.createSpy('unflagChildFare').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+    };
+    const component = createComponent(staffApiServiceStub, store);
+
+    const unflagPromise = component['unflagChildFare'](store.value[0]);
+    await Promise.resolve(); // let the confirm() microtask settle before asserting the optimistic clear
+    await unflagPromise;
+
+    expect(staffApiServiceStub.unflagChildFare).toHaveBeenCalledWith(7);
+    expect(component['items'][0].childFareFlaggedAt).toBeUndefined();
+    expect(component['items'][0].childFareFlaggedByName).toBeUndefined();
+  });
+
+  it('reverts childFareFlaggedAt/childFareFlaggedByName on failure', async () => {
+    const store = createStoreStub([
+      buildItem({ ticketId: 7, fareCategory: 'child', childFareFlaggedAt: '2026-07-10T08:00:00Z', childFareFlaggedByName: 'jane.doe' }),
+    ]);
+    const staffApiServiceStub = {
+      unflagChildFare: jasmine.createSpy('unflagChildFare').and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 409, error: { errorCode: 'NOT_FLAGGED' } }))
+      ),
+    };
+    const component = createComponent(staffApiServiceStub, store);
+
+    await component['unflagChildFare'](store.value[0]);
+
+    expect(component['items'][0].childFareFlaggedAt).toBe('2026-07-10T08:00:00Z');
+    expect(component['items'][0].childFareFlaggedByName).toBe('jane.doe');
+  });
+});
+
 describe('BoardingListComponent — boardedCount getter (OBRS-100 print header)', () => {
   it('counts only items with a non-null boardedAt, out of items already held (not part of tripHeader)', () => {
     const store = createStoreStub([

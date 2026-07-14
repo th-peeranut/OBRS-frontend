@@ -543,12 +543,18 @@
       "FILTER_ROLE": "Role: All Roles",
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
-      "LAST_UPDATED": "Last updated",
       "LAST_LOGIN": "Last signed in",
       "NEVER_LOGGED_IN": "Never signed in",
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "ROLE_NAMES": {
+        "admin": "Admin",
+        "owner": "Owner",
+        "salesperson": "Salesperson",
+        "driver": "Driver",
+        "customer": "Customer"
+      },
       "STATUS": "Status",
       "USER_COUNT": "users",
       "ADD_TITLE": "Create User",
@@ -724,7 +730,52 @@
       "PAYMENT_STATUS": "Payment Status",
       "UNITS": "bookings",
       "LOADING": "Loading booking data...",
-      "LOAD_FAILED": "Unable to load booking data from backend."
+      "LOAD_FAILED": "Unable to load booking data from backend.",
+      "VIEW": "View",
+      "DETAIL": {
+        "TITLE": "Booking Detail",
+        "CLOSE": "Close",
+        "LOAD_FAILED": "Unable to load booking detail. Please try again.",
+        "CREATED_AT": "Created At",
+        "EXPIRES_AT": "Expires At",
+        "SECTION": {
+          "CONTACT": "Customer Contact",
+          "ACTOR": "Booked By",
+          "PASSENGERS": "Passengers & Tickets",
+          "PAYMENT": "Payment",
+          "TIMELINE": "Activity"
+        },
+        "CONTACT_NAME": "Full Name",
+        "CONTACT_PHONE": "Phone Number",
+        "ACTOR_NAME": "Name",
+        "ACTOR_TYPE": "Actor Type",
+        "ACTOR_CHANNEL": "Channel",
+        "ACTOR_OFFICE": "Office",
+        "NO_JOURNEYS": "No journeys on this booking.",
+        "JOURNEY_LABEL": "Journey {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "Passenger",
+          "PASSENGER_TYPE": "Type",
+          "SEAT": "Seat",
+          "TICKET_NUMBER": "Ticket No.",
+          "TICKET_STATUS": "Ticket Status",
+          "TXN_DATE": "Date/Time",
+          "TXN_METHOD": "Method",
+          "TXN_AMOUNT": "Amount",
+          "TXN_STATUS": "Status"
+        },
+        "TOTAL_AMOUNT": "Total",
+        "PAID_AMOUNT": "Paid",
+        "OUTSTANDING_AMOUNT": "Outstanding",
+        "REFUNDED_AMOUNT": "Refunded",
+        "NO_TRANSACTIONS": "No payment transactions recorded.",
+        "EVENT": {
+          "CREATED": "Booking created",
+          "PAYMENT": "Payment received ({{method}})",
+          "EXPIRES": "Booking expires",
+          "CURRENT_STATUS": "Current status: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "Dashboard",
@@ -1269,7 +1320,7 @@
       "PASSENGER_1": "Adult",
       "PASSENGER_1_HINT": "12 years old and above",
       "PASSENGER_2": "Child",
-      "PASSENGER_2_HINT": "2-11 years old",
+      "PASSENGER_2_HINT": "≤130cm tall (2-11 years old)",
       "START_STATION": "Source",
       "END_STATION": "Destination",
       "DEPARTURE_DATE": "Departure date",
@@ -1470,6 +1521,8 @@
       "SEAT_SECTION_HINT": "Choose your seat — if you skip it, one is assigned automatically.",
       "SEAT_LEG_OUTBOUND": "Departure seat",
       "SEAT_LEG_RETURN": "Return seat",
+      "FARE_CATEGORY": "Fare category",
+      "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall.",
       "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
       "SEAT_CHIP_FALLBACK": "Passenger {{n}}"
     },
@@ -1558,6 +1611,7 @@
       "VEHICLE_TYPE": "Vehicle type",
       "VEHICLE_PLATE": "Vehicle no.",
       "SEAT": "Seat",
+      "SEAT_OPEN": "Open seating (unreserved seat)",
       "PASSENGERS": "Passengers",
       "BOOKER": "Booker",
       "PASSENGER_NAME": "Passenger name",
@@ -1567,14 +1621,16 @@
       "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
-      "LEG_RETURN": "Return"
+      "LEG_RETURN": "Return",
+      "FARE_CATEGORY": "Fare category"
     },
     "QR_HINT": "QR code is used for identity verification before boarding only.",
     "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",
     "DOWNLOAD": "Download e-ticket",
     "NOTE_LABEL": "Note:",
     "QR_ARIA_LABEL": "QR code",
-    "LOGO_ALT": "NJ Phuyaipu logo"
+    "LOGO_ALT": "NJ Phuyaipu logo",
+    "CHILD_FARE_NOTE": "Boarding check: passenger must be ≤130cm tall."
   },
   "POLICY": {
     "REFUND": {
@@ -1741,6 +1797,27 @@
           "BOARDING_ROUND_ARRIVED": "This trip has already arrived — boarding is locked.",
           "GENERIC": "Validation failed. Please try again."
         }
+      },
+      "FARE_CATEGORY": "Fare category",
+      "CHILD_FARE_FLAG_BTN": "Flag mismatch",
+      "CHILD_FARE_UNFLAG_BTN": "Unflag",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "Flagging…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "Unflagging…",
+      "CHILD_FARE_FLAGGED": "Flagged",
+      "CHILD_FARE_FLAGGED_AT": "Flagged at",
+      "CHILD_FARE_FLAGGED_BY": "Flagged by",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "Remove this flag?",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "This clears the child-fare mismatch flag for this ticket.",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "Unflag",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "Cancel",
+      "CHILD_FARE_FLAG_SUCCESS": "Ticket flagged for a fare-category mismatch.",
+      "CHILD_FARE_FLAG_FAILED": "Unable to flag this ticket.",
+      "CHILD_FARE_UNFLAG_SUCCESS": "Flag removed.",
+      "CHILD_FARE_UNFLAG_FAILED": "Unable to unflag this ticket.",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "This ticket has already been flagged.",
+        "NOT_FLAGGED": "This ticket has not been flagged.",
+        "GENERIC": "Action failed. Please try again."
       }
     },
     "SCHEDULE_STATUS": {

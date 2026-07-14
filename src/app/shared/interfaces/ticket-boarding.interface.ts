@@ -70,3 +70,13 @@ export const BOARDING_ACTION_ERROR_CODES = [
 ] as const;
 
 export type BoardingActionErrorCode = (typeof BOARDING_ACTION_ERROR_CODES)[number] | 'GENERIC';
+
+/** Stable UPPER_SNAKE error codes surfaced by the OBRS-296 child-fare
+ * mismatch flag/unflag actions (`POST /tickets/{id}/flag-child-fare`,
+ * `POST /tickets/{id}/unflag-child-fare`) — its own set, distinct from
+ * `BOARDING_ACTION_ERROR_CODES` (this pair has no boarding-window/ticket-
+ * confirmed guard of its own). Branch on these, never on `error.message`
+ * (design-system §9). */
+export const CHILD_FARE_FLAG_ERROR_CODES = ['ALREADY_FLAGGED', 'NOT_FLAGGED'] as const;
+
+export type ChildFareFlagErrorCode = (typeof CHILD_FARE_FLAG_ERROR_CODES)[number] | 'GENERIC';
