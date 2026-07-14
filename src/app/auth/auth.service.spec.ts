@@ -62,7 +62,7 @@ describe('AuthService', () => {
 
     const resultPromise = service.register(register);
     const request = httpTesting.expectOne(
-      'http://localhost:8000/api/auth/signup'
+      `${environment.apiUrl}/api/auth/signup`
     );
 
     expect(request.request.body).toEqual({

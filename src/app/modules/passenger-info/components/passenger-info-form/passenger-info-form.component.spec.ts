@@ -580,6 +580,82 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(payload[0].seatPreference).toBe('window');
     expect(payload[0].seatRequirement).toBe('wheelchair');
   }));
+
+  // OBRS-367 (follow-up from OBRS-361/362): count-delta prefs survival. The
+  // OBRS-361 defect fix made `setPassengerData()` patch in place ONLY when the
+  // passenger COUNT is unchanged; a count change still takes the remove/add
+  // branch, which had no dedicated lock on the two new fields. The only screen
+  // where the +/- count card AND the preference/requirement fields are both
+  // live is a MIXED round trip (OPEN outbound => count card; ASSIGNED return,
+  // no return seat => preference fields shown — see showSeatPreferenceFields).
+  // This drives that real path: set both prefs on passenger 1, add passenger 2
+  // via the OPEN leg's "+" (the real insertPassenger() + syncPassengerInfoToStore()
+  // => store round trip => setPassengerData([p1, p2]) delta branch), and assert
+  // passenger 1's prefs SURVIVE and passenger 2's are independent.
+  it('OBRS-367: a passenger\'s seatPreference/seatRequirement survive adding a passenger, and the new passenger is independent', fakeAsync(() => {
+    render([openSchedule, assignedSchedule]); // mixed: OPEN outbound + ASSIGNED return
+
+    // MockStore runs no reducers, so mirror PassengerInfoEffect.setPassengerInfo$
+    // (a synchronous pass-through) — feed each dispatched payload straight back
+    // into selectPassengerInfo, exactly as the OBRS-361 defect-repro test above.
+    const originalDispatch = store.dispatch.bind(store);
+    spyOn(store, 'dispatch').and.callFake((action: any) => {
+      originalDispatch(action);
+      if (action.type === invokeSetPassengerInfo.type) {
+        store.overrideSelector(selectPassengerInfo, action.passengerInfo);
+        store.refreshState();
+      }
+    });
+
+    // Seeded with 1 adult from the schedule filter.
+    expect(component.passengerData.length).toBe(1);
+
+    // Set BOTH preference fields on passenger 1 via real DOM clicks, then let the
+    // debounced live-sync round trip land (persisting them to the store).
+    const p1Pref = fixture.debugElement.queryAll(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
+    )[0];
+    const p1Req = fixture.debugElement.queryAll(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
+    )[0];
+    p1Pref.queryAll(By.css('.p-button'))[0].nativeElement.click(); // WINDOW
+    p1Req.queryAll(By.css('.p-button'))[0].nativeElement.click(); // WHEELCHAIR
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
+    expect(component.getFormValue(0, 'seatRequirement')).toBe('WHEELCHAIR');
+
+    // Add passenger 2 via the OPEN leg's "+": insertPassenger() +
+    // syncPassengerInfoToStore() => a store round trip => setPassengerData([p1, p2])
+    // taking the count-CHANGED (remove/add-delta) branch.
+    const addBtn = fixture.debugElement.query(By.css('.passenger-add'));
+    addBtn.nativeElement.click();
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    expect(component.passengerData.length).toBe(2);
+    // Passenger 1's prefs SURVIVE the count change.
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
+    expect(component.getFormValue(0, 'seatRequirement')).toBe('WHEELCHAIR');
+    // Passenger 2 starts with NO inherited prefs.
+    expect(component.getFormValue(1, 'seatPreference')).toBeNull();
+    expect(component.getFormValue(1, 'seatRequirement')).toBeNull();
+
+    // Passenger 2's prefs are independent — setting p2 never disturbs p1.
+    const p2Pref = fixture.debugElement.queryAll(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
+    )[1];
+    p2Pref.queryAll(By.css('.p-button'))[1].nativeElement.click(); // AISLE
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    expect(component.getFormValue(1, 'seatPreference')).toBe('AISLE');
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW'); // p1 untouched
+  }));
 });
 
 // OBRS-296 (Scrutinize follow-up): the FormControl-level test above is

@@ -4,7 +4,13 @@
 // end up importing themselves.
 export const environmentBase = {
   production: false,
-  apiUrl: 'http://localhost:8000',
+  // Local backend default (OBRS-367): the un-overridden base URL is only ever
+  // used by `environment.ts` (the `npm run start:local` / `ng test` config);
+  // `environment.sit.ts` overrides it. The local Spring Boot backend serves on
+  // :8080 (`./mvnw spring-boot:run -Dspring-boot.run.profiles=dev,local`), so
+  // this must match it — a stale :8000 here made `npm run start:local` 500 on
+  // login until every dev hand-patched it.
+  apiUrl: 'http://localhost:8080',
   promptpay: {
     baseUrl: '',
     id: '0123456789',
