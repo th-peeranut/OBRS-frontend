@@ -2965,3 +2965,56 @@ to 'idle'; re-bind/toggle also set scanMode='text'). Locked with a fakeAsync spe
 the decode promise AFTER a text-toggle and asserts `stop()` called once + `scannerControls` null.
 General lesson: an idempotent teardown helper only protects against a resource that ALREADY
 exists — it can't cancel one still in flight; guard the post-await assignment too.
+
+## 2026-07-14 — OBRS-317 owner/staff in-app notification inbox (Phase 1, poll) — commit 95b3679
+
+**Worktree:** `OBRS-frontend-wt-obrs-317-notification-inbox` (branch `ao/obrs-317-notification-inbox`,
+off `origin/dev` at 41513cf). Worktree was recreated mid-flight by a parallel session's sweep;
+started fresh, no prior 317 work lost (there was none).
+
+**What shipped:** bell + unread badge in both `admin-layout`/`staff-layout` topbars, opening a
+`p-overlayPanel` inbox (click-to-read + mark-all-read), backed by role-agnostic
+`/api/private/notifications`. Poll-only unread-count (60s, matches the existing
+`NEW_REPORT_COUNT_POLL_MS` sidebar-badge cadence) + list refetch on init/panel-open. List capped
+to 10 most recent (read+unread), "showing latest N of M" footer when `totalElements > 10`.
+
+**Reuse ledger (DRY gate):**
+- `PageResponse<T>` (`payment.interface.ts`) reused as-is for the paged list — no new Page type.
+- `.admin-nav-badge` token recipe reused **verbatim**; only a position-only modifier class
+  (`.notification-bell-badge`, absolute-positioned corner) added on top — did not fork the badge.
+- `formatDisplayDateTime()` reused for the row timestamp — no new date formatter.
+- `NotificationInboxService`'s idempotent-start guard mirrors `BadgeSocketService.connect()`;
+  clear-on-logout mirrors `AdminCollectionStore`'s `authStatus$` subscription. New code, but shaped
+  identically to the two closest precedents rather than inventing a third shape.
+- New: `NotificationApiService` (deliberately NOT folded into `AdminApiService` — that service is
+  admin-scoped; this endpoint must also serve staff/salesperson/driver). New: `p-overlayPanel` is
+  the first use of that PrimeNG component in the codebase (`p-menu[popup]`'s `MenuItem[]` shape
+  can't carry a row's message/timestamp/read-state/click-handler) — see ADR 0018.
+
+**Gotchas hit:**
+1. TS2729 ("used before initialization") when a component's field initializers read
+   `this.constructorParamService.xyz$` — constructor-param-property assignment happens in the
+   constructor body, which runs AFTER top-of-class field initializers in the emitted JS. Fixed by
+   declaring the fields as `Observable<T>` (no initializer) and assigning them inside the
+   constructor body instead of at declaration.
+2. Both `admin-layout.component.spec.ts` and `staff-layout.component.spec.ts` needed a same-file
+   `@Component({selector: 'app-notification-bell', template: ''})` stub declared + a
+   `NotificationInboxService` mock provider added to their existing `TestBed.configureTestingModule`
+   blocks — mounting the real bell markup in the layout template makes those specs fail to compile
+   otherwise (unknown element / missing DI token). Same pattern as the existing `LangSwitcherComponent`
+   real-component approach, but the bell pulls in a full HTTP-backed service chain so a stub was the
+   better fit here (mirrors how `BadgeSocketService` gets a hand-rolled stub in the same spec file).
+3. `*ngIf="unreadCount$ | async as unreadCount"` for the badge naturally matches
+   "`show only when > 0`" for free — 0 is falsy in JS, so no explicit `> 0` comparison needed in the
+   template; kept the field truthy-check idiom rather than writing `(unreadCount$ | async) ?? 0 > 0`.
+4. `npm ci` was required in this fresh worktree (no `node_modules/`) before `ng test`/`ng build`
+   would run at all — budget ~6 min. `ng build --configuration production` passed with only the
+   pre-existing initial-bundle-budget WARNING (not new to this change; 1.67MB vs 1.57MB budget,
+   a warning not an error, build exits 0) — did not investigate whether this session's ~15KB of
+   added JS pushed it over an existing-close threshold; flag for `obrs-tech-lead` if bundle size
+   becomes a recurring blocker.
+
+**Result:** `ng test` 2142/2142 passing (added 2 spec failures during first pass — both in my own
+new `notification-bell.component.spec.ts`: an untranslated-key assertion and a copy-paste'd wrong
+call-count expectation — fixed before submitting, not a product bug). `ng build --configuration
+production` passes. ADR: `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`.
