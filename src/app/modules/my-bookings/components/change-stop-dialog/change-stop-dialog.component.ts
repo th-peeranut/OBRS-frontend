@@ -30,6 +30,7 @@ import {
   selectChangeStopConfirmError,
   selectChangeStopDropoffStops,
   selectChangeStopEstimate,
+  selectChangeStopEstimateError,
   selectChangeStopEstimateLoading,
   selectChangeStopPendingPayment,
   selectChangeStopPickupStops,
@@ -81,6 +82,15 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
 
   readonly changeStopEstimate$: Observable<ChangeStopEstimate | null>;
   estimateLoading = false;
+  /**
+   * Error from loading the estimate itself (a failed `loadChangeStopEstimate`),
+   * distinct from `confirmError` (a failed confirm/execute). Without surfacing
+   * this the estimate step dead-ends silently — spinner clears, `estimate`
+   * stays null, no message, Confirm disabled — the same latent bug OBRS-345
+   * fixed for the reschedule dialog (this dialog reuses the same
+   * `reschedule-estimate-summary`). OBRS-351.
+   */
+  estimateError: string | null = null;
   /** Inline confirm-time banner on the estimate step; survives a background
    * re-fetch (see the reducer's `loadChangeStopEstimate` case). */
   confirmError: string | null = null;
@@ -158,6 +168,10 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
     this.store
       .pipe(select(selectChangeStopEstimateLoading), takeUntil(this.destroy$))
       .subscribe((loading) => (this.estimateLoading = loading));
+
+    this.store
+      .pipe(select(selectChangeStopEstimateError), takeUntil(this.destroy$))
+      .subscribe((error) => (this.estimateError = error));
 
     this.changeStopEstimate$.pipe(takeUntil(this.destroy$)).subscribe((estimate) => {
       this.currentEstimate = estimate;
