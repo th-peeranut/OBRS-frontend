@@ -86,9 +86,51 @@ export function extractRoleSlugs(
     .filter((slug) => slug.length > 0);
 }
 
+// OBRS-330: the user-summary endpoint sends `roles` as bare slug strings
+// (Role::getSlug) with no translations attached — unlike status, which the
+// backend sends as a rich object with translations. To still localize the
+// role chips, the FE owns a fixed slug -> i18n-key mapping for the 5
+// system roles (see public/i18n/*.json ADMIN.USERS.ROLE_NAMES) and this
+// takes a translateFn callback (typically `key => translate.instant(key)`)
+// so the mapper itself stays a pure, Angular-free function per the file
+// header note. Any slug outside the known set (a future custom role) falls
+// back to a prettified version of the slug, never a raw i18n key.
+export const ROLE_NAME_TRANSLATION_PREFIX = 'ADMIN.USERS.ROLE_NAMES.';
+
+export function prettifyRoleSlug(slug: string): string {
+  return slug
+    .split(/[\s_-]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function translateRoleSlug(
+  slug: string,
+  translateFn: (key: string) => string
+): string {
+  const trimmedSlug = slug.trim();
+  if (trimmedSlug.length === 0) {
+    return trimmedSlug;
+  }
+
+  const key = `${ROLE_NAME_TRANSLATION_PREFIX}${trimmedSlug.toLowerCase()}`;
+  const translated = translateFn(key);
+
+  // ngx-translate's instant() returns the key itself when no translation is
+  // found — that's how we detect an unknown/custom slug and fall back to a
+  // readable label instead of leaking a raw i18n key into the UI.
+  if (!translated || translated === key) {
+    return prettifyRoleSlug(trimmedSlug);
+  }
+
+  return translated;
+}
+
 export function extractRoleLabels(
   roles: Array<string | AdminRoleDto> | null | undefined,
-  locale: string
+  locale: string,
+  translateFn?: (key: string) => string
 ): string[] {
   if (!roles || roles.length === 0) {
     return [];
@@ -97,7 +139,7 @@ export function extractRoleLabels(
   return roles
     .map((role) => {
       if (typeof role === 'string') {
-        return role;
+        return translateFn ? translateRoleSlug(role, translateFn) : role;
       }
 
       return (
@@ -114,10 +156,11 @@ export function extractRoleLabels(
 export function toUserRow(
   user: AdminUserDto,
   locale: string,
-  dateLang: string | null | undefined
+  dateLang: string | null | undefined,
+  translateFn?: (key: string) => string
 ): UserRow {
   const roleSlugs = extractRoleSlugs(user.roles);
-  const roleLabels = extractRoleLabels(user.roles, locale);
+  const roleLabels = extractRoleLabels(user.roles, locale, translateFn);
   const status = parseStatus(user.status, locale);
 
   return {
@@ -309,7 +352,17 @@ export function filterUsers(
       return true;
     }
 
-    const searchTarget = [user.fullName, user.email, user.phone, user.roles.join(' '), user.status]
+    // Roles are now localized display labels (OBRS-330), so include the raw
+    // slugs too — otherwise searching by the English slug (e.g. "owner")
+    // stops matching once the chip renders as "เจ้าของกิจการ" under Thai/中文.
+    const searchTarget = [
+      user.fullName,
+      user.email,
+      user.phone,
+      user.roles.join(' '),
+      user.roleSlugs.join(' '),
+      user.status,
+    ]
       .join(' ')
       .toLowerCase();
 

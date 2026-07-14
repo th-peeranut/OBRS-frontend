@@ -549,6 +549,13 @@
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "ROLE_NAMES": {
+        "admin": "Admin",
+        "owner": "Owner",
+        "salesperson": "Salesperson",
+        "driver": "Driver",
+        "customer": "Customer"
+      },
       "STATUS": "Status",
       "USER_COUNT": "users",
       "ADD_TITLE": "Create User",

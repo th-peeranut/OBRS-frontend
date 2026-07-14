@@ -549,6 +549,13 @@
       "USERNAME": "ชื่อผู้ใช้",
       "EMAIL_PHONE": "อีเมลและเบอร์โทร",
       "ROLES": "บทบาท",
+      "ROLE_NAMES": {
+        "admin": "ผู้ดูแลระบบ",
+        "owner": "เจ้าของกิจการ",
+        "salesperson": "พนักงานขาย",
+        "driver": "คนขับ",
+        "customer": "ลูกค้า"
+      },
       "STATUS": "สถานะ",
       "USER_COUNT": "ผู้ใช้",
       "ADD_TITLE": "สร้างผู้ใช้",
