@@ -40,7 +40,10 @@
             <td>
               <div class="admin-cell-stack">
                 <span class="admin-emphasis">{{ user.fullName }}</span>
-                <span class="admin-muted">{{ 'ADMIN.USERS.LAST_UPDATED' | translate }}: {{ user.lastUpdated }}</span>
+                <span class="admin-muted">
+                  {{ 'ADMIN.USERS.LAST_LOGIN' | translate }}:
+                  {{ user.hasLoggedIn ? user.lastLogin : ('ADMIN.USERS.NEVER_LOGGED_IN' | translate) }}
+                </span>
               </div>
             </td>
             <td>

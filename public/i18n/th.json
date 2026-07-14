@@ -544,6 +544,8 @@
       "FILTER_STATUS": "สถานะ: ทั้งหมด",
       "FULL_NAME": "ชื่อ-นามสกุล",
       "LAST_UPDATED": "อัปเดตล่าสุด",
+      "LAST_LOGIN": "เข้าใช้งานล่าสุด",
+      "NEVER_LOGGED_IN": "ยังไม่เคยเข้าสู่ระบบ",
       "USERNAME": "ชื่อผู้ใช้",
       "EMAIL_PHONE": "อีเมลและเบอร์โทร",
       "ROLES": "บทบาท",
@@ -1457,7 +1459,9 @@
       "SEAT_LEG_OUTBOUND": "ที่นั่งขาไป",
       "SEAT_LEG_RETURN": "ที่นั่งขากลับ",
       "FARE_CATEGORY": "ประเภทค่าโดยสาร",
-      "FARE_CATEGORY_CHILD_HINT": "ราคาเด็กสำหรับผู้โดยสารส่วนสูงไม่เกิน 130 ซม."
+      "FARE_CATEGORY_CHILD_HINT": "ราคาเด็กสำหรับผู้โดยสารส่วนสูงไม่เกิน 130 ซม.",
+      "SEAT_ACTIVE_PASSENGER_LABEL": "เลือกผู้โดยสารที่ต้องการกำหนดที่นั่ง",
+      "SEAT_CHIP_FALLBACK": "ผู้โดยสาร {{n}}"
     },
     "GENDER": {
       "MALE": "ชาย",

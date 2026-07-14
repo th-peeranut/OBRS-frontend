@@ -129,4 +129,51 @@ describe('PassengerSeatBoxComponent', () => {
 
     expect(spy).not.toHaveBeenCalled();
   });
+
+  describe('ownerLabel / isActiveOwner (shared seat map, OBRS-242)', () => {
+    it('renders no owner badge by default (existing call sites unaffected)', () => {
+      component.label = 'B1';
+      component.gender = 'MALE';
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.seat-owner-badge'))).toBeNull();
+    });
+
+    it('renders the owner badge text when ownerLabel is set', () => {
+      component.label = 'B1';
+      component.gender = 'MALE';
+      component.ownerLabel = '2';
+      fixture.detectChanges();
+
+      const badge = fixture.debugElement.query(By.css('.seat-owner-badge'));
+      expect(badge).not.toBeNull();
+      expect(badge.nativeElement.textContent.trim()).toBe('2');
+    });
+
+    it('does not render the owner badge when the seat is disabled', () => {
+      component.label = 'B1';
+      component.ownerLabel = '2';
+      component.isDisabled = true;
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('.seat-owner-badge'))).toBeNull();
+    });
+
+    it('applies the active-owner emphasis class only when isActiveOwner is true', () => {
+      component.label = 'B1';
+      component.isActiveOwner = true;
+      fixture.detectChanges();
+
+      const box = fixture.debugElement.query(By.css('.seat-box'));
+      expect(box.nativeElement.classList).toContain('active-owner');
+    });
+
+    it('does not apply the active-owner class by default', () => {
+      component.label = 'B1';
+      fixture.detectChanges();
+
+      const box = fixture.debugElement.query(By.css('.seat-box'));
+      expect(box.nativeElement.classList).not.toContain('active-owner');
+    });
+  });
 });

@@ -16,6 +16,8 @@ const LOCKED_ROW: UserRow = {
   status: 'Active',
   statusCode: 'active',
   lastUpdated: '-',
+  lastLogin: '-',
+  hasLoggedIn: false,
   locked: true,
 };
 

@@ -79,10 +79,79 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  // Safety net (OBRS-242, design-system §8 responsiveness): the seat map
+  // itself never grows past its own fixed grid, but on very narrow
+  // viewports this keeps it scrolling in its own container instead of the
+  // page body ever having to scroll horizontally.
+  overflow-x: auto;
 }
 
 .seat-map-inner {
   width: 50%;
+}
+
+// Active-passenger chip selector (OBRS-242): one row per leg, above its
+// shared seat map. Chips wrap on narrow viewports (design-system §8).
+.seat-active-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-lightblack;
+}
+
+.seat-passenger-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+}
+
+.seat-passenger-chip {
+  display: flex;
+  align-items: center;
+  gap: $space-3xs;
+  padding: $space-3xs $space-sm;
+  border-radius: $radius-pill;
+  border: 1px solid $primary-lightgrey;
+  background: $primary-white;
+  color: $text-lightblack;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &.active {
+    border-color: $brand-customer-strong;
+    color: $brand-customer-strong;
+    background: $secondary-light-blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $brand-customer-strong;
+    outline-offset: 2px;
+  }
+}
+
+.seat-passenger-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: $radius-circle;
+  background: $primary-lightgrey;
+  color: $text-lightblack;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.seat-passenger-chip.active .seat-passenger-chip-badge {
+  background: $brand-customer-strong;
+  color: $primary-white;
+}
+
+.seat-passenger-chip-seat {
+  color: inherit;
+  font-weight: $font-weight-regular;
 }
 
 @media (max-width: 992px) {

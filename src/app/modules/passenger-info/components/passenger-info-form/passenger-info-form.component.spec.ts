@@ -106,6 +106,76 @@ describe('PassengerInfoFormComponent', () => {
       expect(typeof group.get('isAdult')?.value).toBe('boolean');
     });
   });
+
+  describe('shared seat map — active passenger + owner map (OBRS-242)', () => {
+    it('defaults both leg active indices to the first passenger', () => {
+      component.insertPassenger(true);
+      expect(component.activeOutboundIndex).toBe(0);
+      expect(component.activeReturnIndex).toBe(0);
+    });
+
+    it('setActiveOutbound/setActiveReturn switch the active passenger independently per leg', () => {
+      component.insertPassenger(true);
+      component.insertPassenger(true);
+
+      component.setActiveOutbound(1);
+      component.setActiveReturn(0);
+
+      expect(component.activeOutboundIndex).toBe(1);
+      expect(component.activeReturnIndex).toBe(0);
+    });
+
+    it('setActiveOutbound/setActiveReturn ignore an out-of-range index', () => {
+      component.insertPassenger(true);
+
+      component.setActiveOutbound(5);
+      component.setActiveReturn(-1);
+
+      expect(component.activeOutboundIndex).toBe(0);
+      expect(component.activeReturnIndex).toBe(0);
+    });
+
+    it('deletePassenger clamps an active index that falls out of range', () => {
+      component.insertPassenger(true);
+      component.insertPassenger(true);
+      component.setActiveOutbound(1);
+
+      component.deletePassenger(1);
+
+      expect(component.activeOutboundIndex).toBe(0);
+    });
+
+    it('getSeatOwners returns every passenger with an assigned outbound seat, keyed by seat label', () => {
+      component.insertPassenger(true);
+      component.insertPassenger(true);
+      component.passengerData.at(0).patchValue({ gender: 'MALE' });
+      component.passengerData.at(1).patchValue({ gender: 'FEMALE' });
+      component.setPassengerSeat(0, '1');
+      component.setPassengerSeat(1, '2');
+
+      expect(component.getSeatOwners()).toEqual({
+        '1': { label: '1', gender: 'MALE' },
+        '2': { label: '2', gender: 'FEMALE' },
+      });
+    });
+
+    it('getSeatOwners omits passengers with no assigned seat', () => {
+      component.insertPassenger(true);
+      component.insertPassenger(true);
+      component.setPassengerSeat(0, '1');
+
+      expect(component.getSeatOwners()).toEqual({ '1': { label: '1', gender: '' } });
+    });
+
+    it('getSeatOwnersReturn is independent of the outbound owner map', () => {
+      component.insertPassenger(true);
+      component.setPassengerSeat(0, '1');
+      component.setPassengerSeatReturn(0, '9');
+
+      expect(component.getSeatOwners()).toEqual({ '1': { label: '1', gender: '' } });
+      expect(component.getSeatOwnersReturn()).toEqual({ '9': { label: '1', gender: '' } });
+    });
+  });
 });
 
 // OBRS-296 (Scrutinize follow-up): the FormControl-level test above is

@@ -544,6 +544,8 @@
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
       "LAST_UPDATED": "Last updated",
+      "LAST_LOGIN": "Last signed in",
+      "NEVER_LOGGED_IN": "Never signed in",
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
@@ -1456,7 +1458,9 @@
       "SEAT_LEG_OUTBOUND": "Departure seat",
       "SEAT_LEG_RETURN": "Return seat",
       "FARE_CATEGORY": "Fare category",
-      "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall."
+      "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall.",
+      "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
+      "SEAT_CHIP_FALLBACK": "Passenger {{n}}"
     },
     "GENDER": {
       "MALE": "Male",
