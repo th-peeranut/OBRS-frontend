@@ -15,6 +15,16 @@ export interface BookingPassenger {
    * the gross full-fare total).
    */
   fareCategory: 'adult' | 'child';
+  /**
+   * OBRS-361: optional, best-effort per-passenger preferences. Sent
+   * lowercase per the backend contract even though the FE enum values are
+   * uppercase (mapped at the payload boundary in
+   * `PassengerInfoComponent.buildPassengersPayload`). AC-361.5: MUST be
+   * `null` on a leg whose schedule is OPEN seating — never attach a
+   * preference to a leg with no fixed seat.
+   */
+  seatPreference?: 'window' | 'aisle' | null;
+  seatRequirement?: 'wheelchair' | 'extra_legroom' | null;
 }
 
 export interface BookingContact {

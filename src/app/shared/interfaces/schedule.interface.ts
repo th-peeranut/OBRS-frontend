@@ -53,3 +53,19 @@ export interface ScheduleList {
   departureSchedules: Schedule[] | null;
   arrivalSchedules: Schedule[] | null;
 }
+
+/**
+ * GET /api/schedules/{id}/seats — physical seat map for a Schedule's vehicle
+ * type (`seatNumber`/`rowIndex`/`columnIndex` are documented today,
+ * `docs/api/scheduling.md`). `isWheelchairAccessible`/`isExtraLegroom` are
+ * additive booleans from a parallel backend task (OBRS-362) — optional so
+ * this stays undefined-safe until that ships; see `docs/handoff.md` Contract
+ * Requests. Public endpoint, no auth.
+ */
+export interface SeatMapRespDto {
+  seatNumber: string;
+  rowIndex?: number;
+  columnIndex?: number;
+  isWheelchairAccessible?: boolean;
+  isExtraLegroom?: boolean;
+}

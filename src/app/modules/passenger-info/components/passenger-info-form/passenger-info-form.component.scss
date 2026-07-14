@@ -154,6 +154,66 @@
   font-weight: $font-weight-regular;
 }
 
+// Seat preference / requirement p-selectButton item content (OBRS-361) —
+// icon + label, same token set as the rest of this form. PrimeNG owns the
+// button chrome (selected/unselected state); this only styles the inner
+// content row.
+.seat-pref-option-icon {
+  font-size: $font-size-base;
+  vertical-align: middle;
+  margin-right: $space-3xs;
+}
+
+.seat-pref-option-label {
+  vertical-align: middle;
+}
+
+// Seat-feature legend (OBRS-362) — explains the badges shown on the seat
+// map above it. Reuses the same filled-circle badge recipe as
+// passenger-seat-box's own badges (kept in sync manually since Angular view
+// encapsulation scopes styles per component).
+.seat-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-sm;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+.seat-map-legend-title {
+  font-weight: $font-weight-medium;
+  color: $text-lightgrey;
+}
+
+.seat-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+}
+
+.seat-attribute-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-pill;
+  color: $primary-white;
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+}
+
+.seat-attribute-badge-wheelchair {
+  background: $brand-customer-strong;
+}
+
+.seat-attribute-badge-legroom {
+  background: $text-lightblack;
+}
+
 // OPEN-seating (OBRS-323) passenger-count card, shown in place of a leg's
 // seat map. Reuses the `.count-section`/`.passenger-icon` +/- markup and
 // disabled-state pattern from DropdownObrsPassengerComponent (same class

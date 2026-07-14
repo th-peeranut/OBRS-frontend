@@ -1549,7 +1549,22 @@
       "SEAT_CHIP_FALLBACK": "ผู้โดยสาร {{n}}",
       "OPEN_SEAT_SECTION_HINT": "ที่นั่งแบบไม่ระบุที่นั่ง — ขึ้นรถตามลำดับ",
       "OPEN_SEAT_COUNT_LABEL": "จำนวนผู้โดยสาร",
-      "OPEN_SEAT_MAX_HINT": "จำนวนผู้โดยสารสูงสุดคือที่นั่งที่เหลืออยู่ ({{max}} ที่นั่ง)"
+      "OPEN_SEAT_MAX_HINT": "จำนวนผู้โดยสารสูงสุดคือที่นั่งที่เหลืออยู่ ({{max}} ที่นั่ง)",
+      "SEAT_PREFERENCE_LABEL": "ตำแหน่งที่นั่งที่ต้องการ (ไม่บังคับ)",
+      "SEAT_PREFERENCE_GROUP_ARIA": "เลือกตำแหน่งที่นั่งที่ต้องการ",
+      "SEAT_PREFERENCE_WINDOW": "ริมหน้าต่าง",
+      "SEAT_PREFERENCE_AISLE": "ริมทางเดิน",
+      "SEAT_REQUIREMENT_LABEL": "ความต้องการพิเศษ (ไม่บังคับ)",
+      "SEAT_REQUIREMENT_GROUP_ARIA": "เลือกความต้องการที่นั่งพิเศษ",
+      "SEAT_REQUIREMENT_WHEELCHAIR": "รองรับรถเข็น",
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม"
+    },
+    "SEAT_MAP": {
+      "WHEELCHAIR_BADGE_ARIA": "ที่นั่งรองรับรถเข็น",
+      "EXTRA_LEGROOM_BADGE_ARIA": "ที่นั่งมีพื้นที่วางขาเพิ่ม",
+      "LEGEND_TITLE": "สัญลักษณ์ที่นั่ง",
+      "LEGEND_WHEELCHAIR": "รองรับรถเข็น",
+      "LEGEND_EXTRA_LEGROOM": "พื้นที่วางขาเพิ่ม"
     },
     "GENDER": {
       "MALE": "ชาย",
@@ -1557,7 +1572,10 @@
       "MONK": "พระ"
     },
     "SUMMARY": {
-      "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)"
+      "OPEN_SEATING_BADGE": "ไม่ระบุที่นั่ง (Open Seating)",
+      "PASSENGERS_TITLE": "ผู้โดยสาร",
+      "NO_SEAT": "ยังไม่เลือกที่นั่ง",
+      "SEAT_LABEL": "ที่นั่ง {{seat}}"
     },
     "ALERT": {
       "CREATE_SUCCESS": "บันทึกข้อมูลการจองรอบสำเร็จ",

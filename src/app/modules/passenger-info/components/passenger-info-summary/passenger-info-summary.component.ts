@@ -24,6 +24,8 @@ import {
 } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { Station } from '../../../../shared/interfaces/station.interface';
+import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
 import dayjs from 'dayjs';
 import {
   capitalizeVehicleType,
@@ -51,6 +53,13 @@ export class PassengerInfoSummaryComponent {
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
   rawProvinceStationList: Observable<StationApi[]>;
+  /**
+   * OBRS-361: same-session "Passengers" summary block — live per the
+   * loop-safe `passengerData.valueChanges` sync in `PassengerInfoFormComponent`
+   * (scrutinize blocker #1), so seat preference/requirement reflect the
+   * traveler's current in-progress entry. No backend echo.
+   */
+  passengerInfo$: Observable<PassengerInfo[] | null>;
   // Local view state only, so the Subtotal/Discount/Total breakdown can
   // replace the plain Total row while a code is applied.
   protected appliedPromo: PromoCodeAppliedEvent | null = null;
@@ -66,6 +75,7 @@ export class PassengerInfoSummaryComponent {
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
     );
+    this.passengerInfo$ = this.store.pipe(select(selectPassengerInfo));
   }
 
   getScheduleBooking(schedule?: Schedule[] | null): Schedule[] {

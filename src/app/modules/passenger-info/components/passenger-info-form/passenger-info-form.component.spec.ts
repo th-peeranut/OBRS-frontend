@@ -1,11 +1,13 @@
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { RouterTestingModule } from '@angular/router/testing';
 import { Store } from '@ngrx/store';
 import { MockStore, provideMockStore } from '@ngrx/store/testing';
 import { TranslateModule } from '@ngx-translate/core';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { of } from 'rxjs';
 
 import { PassengerInfoFormComponent } from './passenger-info-form.component';
 import { SharedModule } from '../../../../shared/shared.module';
@@ -13,6 +15,7 @@ import { DropdownObrsComponent } from '../../../../shared/components/dropdown-ob
 import { PassengerSeatModule } from '../../passenger-seat.module';
 import {
   createRouterStub,
+  createScheduleServiceStub,
   createStoreStub,
   createTranslateStub,
 } from '../../../../testing/test-stubs';
@@ -20,6 +23,9 @@ import { Schedule } from '../../../../shared/interfaces/schedule.interface';
 import { selectScheduleBooking } from '../../../../shared/stores/schedule-booking/schedule-booking.selector';
 import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/schedule-filter.selector';
 import { selectPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.selector';
+import { invokeSetPassengerInfo } from '../../../../shared/stores/passenger-info/passenger-info.action';
+import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import { PassengerInfoComponent } from '../../passenger-info.component';
 
 describe('PassengerInfoFormComponent', () => {
   let component: PassengerInfoFormComponent;
@@ -29,7 +35,8 @@ describe('PassengerInfoFormComponent', () => {
       createStoreStub(),
       createRouterStub(),
       new FormBuilder(),
-      createTranslateStub()
+      createTranslateStub(),
+      createScheduleServiceStub()
     );
   });
 
@@ -183,6 +190,153 @@ describe('PassengerInfoFormComponent', () => {
       expect(component.getSeatOwnersReturn()).toEqual({ '9': { label: '1', gender: '' } });
     });
   });
+
+  // OBRS-361: showSeatPreferenceFields() full enumeration table from the UX
+  // spec. Hide iff (a) every leg is OPEN, or (b) every ASSIGNED leg relevant
+  // to this passenger already has a seat. A one-way booking never looks at
+  // passengerSeatReturn; a mixed round trip never requires the OPEN leg's
+  // (always-empty) seat.
+  describe('showSeatPreferenceFields (OBRS-361) — leg-aware visibility enumeration', () => {
+    beforeEach(() => {
+      component.insertPassenger(true);
+    });
+
+    it('one-way, ASSIGNED, no seat picked -> SHOWN', () => {
+      expect(component.showSeatPreferenceFields(0, false, false, false)).toBeTrue();
+    });
+
+    it('one-way, ASSIGNED, seat picked -> HIDDEN', () => {
+      component.setPassengerSeat(0, '3');
+      expect(component.showSeatPreferenceFields(0, false, false, false)).toBeFalse();
+    });
+
+    it('one-way, OPEN -> HIDDEN regardless of seat state (allLegsOpenSeating parity)', () => {
+      expect(component.showSeatPreferenceFields(0, true, false, false)).toBeFalse();
+    });
+
+    it('one-way ignores passengerSeatReturn: return seat set but outbound not -> still SHOWN', () => {
+      component.setPassengerSeatReturn(0, '9');
+      expect(component.showSeatPreferenceFields(0, false, false, false)).toBeTrue();
+    });
+
+    it('round trip, both legs ASSIGNED, neither seat picked -> SHOWN', () => {
+      expect(component.showSeatPreferenceFields(0, false, false, true)).toBeTrue();
+    });
+
+    it('round trip, both legs ASSIGNED, only outbound seat picked -> SHOWN', () => {
+      component.setPassengerSeat(0, '3');
+      expect(component.showSeatPreferenceFields(0, false, false, true)).toBeTrue();
+    });
+
+    it('round trip, both legs ASSIGNED, only return seat picked -> SHOWN', () => {
+      component.setPassengerSeatReturn(0, '3');
+      expect(component.showSeatPreferenceFields(0, false, false, true)).toBeTrue();
+    });
+
+    it('round trip, both legs ASSIGNED, both seats picked -> HIDDEN', () => {
+      component.setPassengerSeat(0, '3');
+      component.setPassengerSeatReturn(0, '7');
+      expect(component.showSeatPreferenceFields(0, false, false, true)).toBeFalse();
+    });
+
+    it('round trip, both legs OPEN -> HIDDEN', () => {
+      expect(component.showSeatPreferenceFields(0, true, true, true)).toBeFalse();
+    });
+
+    it('mixed: outbound OPEN / return ASSIGNED, no return seat -> SHOWN (OPEN leg never required)', () => {
+      expect(component.showSeatPreferenceFields(0, true, false, true)).toBeTrue();
+    });
+
+    it('mixed: outbound OPEN / return ASSIGNED, return seat picked -> HIDDEN', () => {
+      component.setPassengerSeatReturn(0, '7');
+      expect(component.showSeatPreferenceFields(0, true, false, true)).toBeFalse();
+    });
+
+    it('mixed: outbound ASSIGNED / return OPEN, no outbound seat -> SHOWN', () => {
+      expect(component.showSeatPreferenceFields(0, false, true, true)).toBeTrue();
+    });
+
+    it('mixed: outbound ASSIGNED / return OPEN, outbound seat picked -> HIDDEN', () => {
+      component.setPassengerSeat(0, '3');
+      expect(component.showSeatPreferenceFields(0, false, true, true)).toBeFalse();
+    });
+  });
+});
+
+// OBRS-361 scrutinize blocker #1 — the live-sync subscription
+// (`passengerData.valueChanges`, debounced 300ms) must settle to exactly one
+// dispatch per burst of user edits, and a store-driven rebuild
+// (`setPassengerData`, e.g. from the initial `invokeGetPassengerInfoSuccess`
+// emission) must never itself trigger a dispatch — that's the feedback loop
+// (sync -> dispatch -> store -> setPassengerData -> valueChanges -> sync ->
+// ...) the `isPatchingFromStore` pre-debounce filter exists to break.
+describe('PassengerInfoFormComponent — loop-safe live sync (OBRS-361 scrutinize blocker #1)', () => {
+  let component: PassengerInfoFormComponent;
+  let dispatchSpy: jasmine.Spy;
+
+  beforeEach(() => {
+    dispatchSpy = jasmine.createSpy('dispatch');
+    const storeStub: any = {
+      pipe: () => of(null),
+      select: () => of(null),
+      dispatch: dispatchSpy,
+    };
+    component = new PassengerInfoFormComponent(
+      storeStub,
+      createRouterStub(),
+      new FormBuilder(),
+      createTranslateStub(),
+      createScheduleServiceStub()
+    );
+    component.ngOnInit();
+    dispatchSpy.calls.reset(); // ignore ngOnInit's own invokeGetPassengerInfo() dispatch
+  });
+
+  it('typing settles to exactly ONE dispatch after the debounce window, not a dispatch storm', fakeAsync(() => {
+    component.insertPassenger(true);
+    tick(400); // flush any debounce triggered by inserting the row itself
+    dispatchSpy.calls.reset();
+
+    const firstName = component.passengerData.at(0).get('firstName')!;
+    firstName.setValue('J');
+    tick(50);
+    firstName.setValue('Jo');
+    tick(50);
+    firstName.setValue('Joh');
+    tick(50);
+    firstName.setValue('John');
+
+    tick(299); // still inside the 300ms debounce window since the last keystroke
+    expect(dispatchSpy).not.toHaveBeenCalled();
+
+    tick(1); // crosses the debounce boundary
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+
+    tick(1000); // no further/extra dispatches after settling
+    expect(dispatchSpy).toHaveBeenCalledTimes(1);
+  }));
+
+  it('a store-driven rebuild (setPassengerData) never triggers a dispatch — the pre-debounce guard blocks the loop', fakeAsync(() => {
+    (component as any).setPassengerData([
+      {
+        isAdult: true,
+        title: 1,
+        firstName: 'Ann',
+        middleName: '',
+        lastName: 'Lee',
+        phoneNumber: '',
+        gender: 'FEMALE',
+        isSelectSeat: true,
+        passengerSeat: '',
+        passengerSeatReturn: '',
+        seatPreference: null,
+        seatRequirement: null,
+      },
+    ]);
+
+    tick(1000); // well past the debounce window
+    expect(dispatchSpy).not.toHaveBeenCalled();
+  }));
 });
 
 describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => {
@@ -235,8 +389,12 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
         TranslateModule.forRoot(),
         PassengerSeatModule,
         DropdownObrsComponent,
+        SelectButtonModule,
       ],
-      providers: [provideMockStore()],
+      providers: [
+        provideMockStore(),
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
+      ],
     }).compileComponents();
     store = TestBed.inject(MockStore);
   });
@@ -290,6 +448,138 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
     expect(fixture.debugElement.queryAll(By.css('app-passenger-seat-van')).length).toBe(1);
     expect(fixture.debugElement.queryAll(By.css('.open-seat-card')).length).toBe(0);
   });
+
+  // OBRS-361: both p-selectButton groups render with no pre-selection, and
+  // (allowEmpty=true) re-clicking the already-selected option clears it back
+  // to null — design-system §3.1's no-pre-seeded-default rule, applied to a
+  // selectButton group instead of a dropdown.
+  it('OBRS-361: seat preference/requirement selectButtons render unselected, and re-click clears to null', () => {
+    render([assignedSchedule]); // ASSIGNED one-way, no seat yet -> fields shown
+
+    expect(component.getFormValue(0, 'seatPreference')).toBeNull();
+    expect(component.getFormValue(0, 'seatRequirement')).toBeNull();
+
+    const prefGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
+    );
+    expect(prefGroup).not.toBeNull();
+    const prefButtons = prefGroup.queryAll(By.css('.p-button'));
+    expect(prefButtons.length).toBe(2);
+    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-highlight'))).toBeFalse();
+
+    prefButtons[0].nativeElement.click(); // select WINDOW
+    fixture.detectChanges();
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
+    expect(prefButtons[0].nativeElement.classList.contains('p-highlight')).toBeTrue();
+
+    prefButtons[0].nativeElement.click(); // re-click the SAME option clears it
+    fixture.detectChanges();
+    expect(component.getFormValue(0, 'seatPreference')).toBeNull();
+    expect(prefButtons.some((b) => b.nativeElement.classList.contains('p-highlight'))).toBeFalse();
+
+    const reqGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
+    );
+    expect(reqGroup).not.toBeNull();
+    const reqButtons = reqGroup.queryAll(By.css('.p-button'));
+    expect(reqButtons.length).toBe(2);
+
+    reqButtons[1].nativeElement.click(); // select EXTRA_LEGROOM
+    fixture.detectChanges();
+    expect(component.getFormValue(0, 'seatRequirement')).toBe('EXTRA_LEGROOM');
+
+    reqButtons[1].nativeElement.click(); // re-click clears
+    fixture.detectChanges();
+    expect(component.getFormValue(0, 'seatRequirement')).toBeNull();
+  });
+
+  // QA-reported live defect (reproduced 3x, one-way ASSIGNED booking): a
+  // passenger who set BOTH seatPreference AND seatRequirement had the
+  // FIRST-clicked field silently drop to null in the actual submit payload,
+  // even though both p-selectButtons still showed selected in the DOM. A
+  // hand-built-object unit test on buildPassengersPayload() cannot see this
+  // — the loss happens UPSTREAM, in the live form -> store -> form round
+  // trip. This test drives the REAL form via two real DOM clicks with a
+  // real debounced store round trip running in between (the exact QA repro
+  // timing), using the real invokeSetPassengerInfo -> selectPassengerInfo
+  // wiring (MockStore doesn't run reducers, so the fake dispatch below
+  // manually completes the round trip exactly as
+  // PassengerInfoEffect.setPassengerInfo$ does — a synchronous pass-through,
+  // see passenger-info.effect.ts).
+  it('OBRS-361 defect repro: setting BOTH fields survives the debounced store round-trip into the submit payload, all the way through the lowercase payload boundary', fakeAsync(() => {
+    render([assignedSchedule]); // ASSIGNED one-way, 1 auto-seeded passenger
+
+    // Fill the other required fields so validateAndGetPassengerInfo() below
+    // can actually return a payload — irrelevant to the seatPreference/
+    // seatRequirement defect itself, just satisfying this form's normal
+    // required-field validators (title/firstName/lastName/gender), same as
+    // a real traveler would before submitting.
+    component.passengerData.at(0).patchValue({
+      title: 1,
+      firstName: 'Jane',
+      lastName: 'Doe',
+      gender: 'FEMALE',
+    });
+    fixture.detectChanges();
+
+    const originalDispatch = store.dispatch.bind(store);
+    spyOn(store, 'dispatch').and.callFake((action: any) => {
+      originalDispatch(action);
+      if (action.type === invokeSetPassengerInfo.type) {
+        store.overrideSelector(selectPassengerInfo, action.passengerInfo);
+        store.refreshState();
+      }
+    });
+
+    const prefGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA"]')
+    );
+    const reqGroup = fixture.debugElement.query(
+      By.css('[aria-label="PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA"]')
+    );
+    const windowBtn = prefGroup.queryAll(By.css('.p-button'))[0];
+    const wheelchairBtn = reqGroup.queryAll(By.css('.p-button'))[0];
+
+    // Click 1: Window. Let the debounced live-sync round trip run to
+    // completion BEFORE the 2nd click — the exact timing QA reproduced
+    // (a store round trip landing mid-interaction, between the two clicks).
+    windowBtn.nativeElement.click();
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    // Click 2: Wheelchair, on whatever control is now live post-round-trip.
+    wheelchairBtn.nativeElement.click();
+    fixture.detectChanges();
+    tick(300);
+    fixture.detectChanges();
+
+    // Exactly 1 passenger card -> exactly 2 selectButton groups (preference
+    // + requirement), never a duplicate-render artifact.
+    expect(fixture.debugElement.queryAll(By.css('.p-selectbutton')).length)
+      .withContext('one passenger card = exactly 2 selectButton groups (preference + requirement)')
+      .toBe(2);
+
+    expect(component.getFormValue(0, 'seatPreference')).toBe('WINDOW');
+    expect(component.getFormValue(0, 'seatRequirement')).toBe('WHEELCHAIR');
+
+    const submitted = component.validateAndGetPassengerInfo();
+    expect(submitted?.[0].seatPreference).toBe('WINDOW');
+    expect(submitted?.[0].seatRequirement).toBe('WHEELCHAIR');
+
+    // End-to-end through the REAL payload mapper (the lowercase boundary) —
+    // proves the fix all the way to what actually reaches POST /bookings.
+    const bookingComponent = new PassengerInfoComponent(
+      createStoreStub(),
+      createRouterStub(),
+      {} as any,
+      createTranslateStub(),
+      {} as any
+    );
+    const payload = (bookingComponent as any).buildPassengersPayload(submitted, 'outbound', false);
+    expect(payload[0].seatPreference).toBe('window');
+    expect(payload[0].seatRequirement).toBe('wheelchair');
+  }));
 });
 
 // OBRS-296 (Scrutinize follow-up): the FormControl-level test above is
@@ -314,6 +604,7 @@ describe('PassengerInfoFormComponent — fare-category radio (OBRS-296) — real
       providers: [
         { provide: Store, useValue: createStoreStub() },
         { provide: Router, useValue: createRouterStub() },
+        { provide: ScheduleService, useValue: createScheduleServiceStub() },
       ],
     }).compileComponents();
 

@@ -1,5 +1,186 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-14 — FIXED: OBRS-361 live defect — second selectButton field silently dropped on submit
+
+QA reproduced (3x, one-way ASSIGNED booking) that setting BOTH `seatPreference`
+("Window") AND `seatRequirement` ("Wheelchair accessible") on the same passenger
+card kept only the FIRST-clicked field in the actual `POST /api/private/bookings`
+body — the second silently came back `null`, even though both buttons still showed
+`p-highlight`-selected in the DOM at submit time. Single-field cases (either alone)
+were fine; the OBRS-362 badges were unaffected.
+
+**Root cause (confirmed via debug-mantra trace + an A/B test revert, not guessed):**
+`setPassengerData()` — called every time the `passengerInfo` store slice emits,
+which since OBRS-361 now includes the NEW debounced live-sync round trip
+(`passengerData.valueChanges` → 300ms debounce → dispatch → store →
+`selectPassengerInfo` → `setPassengerData()`), not just the old rare initial-load /
+OPEN-seating +/- cases — unconditionally did `while (passengerData.length)
+{ removeAt(0) }` then rebuilt every group with `createPassengerGroup()` + `push()`,
+i.e. destroyed and recreated every `FormControl` on EVERY round trip. Angular's
+`formControlName`/`formGroupName` directives bind to a control instance once, at
+directive init, and do **not** rebind just because `*ngFor` (with
+`trackBy: trackByIndex`) reuses the same DOM node for a replaced control at the
+same index. So: click Window (t=0) → 300ms later the debounced round trip
+REBUILDS the FormArray (new control instances, values reaffirmed from what was
+known at t=0 — just Window) → click Wheelchair sometime after that → the
+`p-selectButton`'s CVA is STILL wired to the OLD (now-detached, pre-rebuild)
+`seatRequirement` control, so the click updates a control nothing reads anymore.
+The button's own local highlight state still looks right (driven by the CVA's
+cached value), but `getRawValue()` on the CURRENT live FormArray — which
+`buildPassengerInfoPayload()`/the submit path actually reads — never sees it.
+
+**Fix** (`passenger-info-form.component.ts`, `setPassengerData()`): patch existing
+groups IN PLACE (`this.passengerData.at(index).patchValue(...)`) when the
+passenger COUNT is unchanged — the common case for a live field edit — instead of
+destroying/recreating every control. Only the genuine count DELTA is
+added/removed (`push`/`removeAt` trimmed to the difference). This means a control
+the user is actively bound to is never swapped out from under them mid-interaction,
+regardless of click timing relative to the debounce window.
+
+**Test that catches it** (`passenger-info-form.component.spec.ts`, inside the
+"OPEN-seating rendering, OBRS-323" describe): *"OBRS-361 defect repro: setting BOTH
+fields survives the debounced store round-trip into the submit payload, all the way
+through the lowercase payload boundary"* — drives the REAL form via two real DOM
+clicks (Window, then Wheelchair) with `fakeAsync`/`tick(300)` letting a REAL
+debounced store round trip run in between (the exact QA timing), using MockStore
+with a `spyOn(store, 'dispatch').and.callFake(...)` that manually completes the
+round trip exactly as `PassengerInfoEffect.setPassengerInfo$` does (a synchronous
+pass-through — MockStore doesn't run real reducers/effects). Verified via an
+explicit A/B revert: reverted `setPassengerData()` to the pre-fix
+destroy-and-rebuild version, reran — the test FAILED with
+`seatRequirement: null` (the exact reported symptom, second-clicked field lost);
+restored the fix, reran — passes. Also asserts the payload survives the lowercase
+boundary via the real `PassengerInfoComponent.buildPassengersPayload()`.
+
+**Unrelated drift noticed mid-session**: `passenger-info.component.ts`'s own
+pre-existing private `normalizeSeatNumber()` (booking-payload seat-number
+stripping) got consolidated onto the shared `shared/lib/seat-label.ts` util
+(`normalizeSeatNumber as stripSeatDigits`) — flagged in the original OBRS-361/362
+report as a follow-up not done at the time; it landed here (via linter/tooling,
+not a deliberate edit this session) and is functionally equivalent + covered by
+the existing passing `passenger-info.component.spec.ts` suite (9/9), so kept as-is
+rather than reverted.
+
+**Full suite**: `ng test --watch=false --browsers=ChromeHeadless` → 2249/2249
+SUCCESS (2248 prior + the 1 new defect-repro test).
+
+---
+
+## 2026-07-14 — IMPLEMENTED: OBRS-361 + OBRS-362 advanced-booking passenger preferences
+
+**Worktree:** `OBRS-frontend-wt-obrs-361-362-booking-prefs` (branch `ao/obrs-361-362-booking-prefs`).
+Note for whoever reads this next: this entry's own UX spec was NOT actually present
+in this file when the frontend session started (grepped for `OBRS-361`/`OBRS-362`/
+`wheelchair`/`seatPreference` — zero matches; the file's most recent entry was
+2026-07-13 OBRS-283, several cards behind). The full spec was carried in the task
+brief instead (component-by-component, i18n table, the 2 scrutinize blockers) — the
+implementer built directly from that, cross-checked against the real component code.
+Flagging the gap so a future session knows this file's "UX designer left the spec
+here" convention had a miss on this card.
+
+**Built exactly per the task brief. Summary of what landed:**
+
+- **Inputs (OBRS-361):** `passenger-info-form.component.ts` — added
+  `seatPreference: [null]` / `seatRequirement: [null]` to `createPassengerGroup()`
+  (never pre-seeded, design-system §3.1). Two `p-selectButton` groups (window/aisle,
+  wheelchair/extra_legroom), `[allowEmpty]="true"`, custom `pTemplate="item"` for
+  icon+i18n-key rendering, each wrapped `role="group"` + `[attr.aria-label]` —
+  verbatim recipe from `route-map-home.component.html`. `SelectButtonModule`/
+  `ReactiveFormsModule` already flow in via `SharedModule` → `PassengerInfoModule`,
+  no module change needed.
+- **Visibility:** `showSeatPreferenceFields(index, outboundOpen, returnOpen, isReturn)`
+  — hides when every leg is OPEN (same semantics as `allLegsOpenSeating$`, computed
+  from a new `passengerPrefsContext$` combineLatest of the 3 EXISTING per-leg
+  observables, never re-derives `seatingMode`), else hides once every ASSIGNED leg
+  relevant to the passenger has a seat. One-way ignores `passengerSeatReturn`; mixed
+  round-trip ignores the OPEN leg's always-empty seat. Full enumeration table locked
+  in `passenger-info-form.component.spec.ts`.
+- **Scrutinize blocker #1 (loop-safe live sync):** new `passengerData.valueChanges`
+  subscription in `ngOnInit`, `filter(() => !this.isPatchingFromStore)` placed
+  **BEFORE** `debounceTime(300)` — load-bearing ordering. The store→
+  `setPassengerData()` rebuild sets/clears the flag synchronously well under 300ms,
+  so a guard checked only AFTER the debounce window would already see it cleared and
+  dispatch again (the exact feedback loop the blocker warned about). Filtering
+  pre-debounce discards every rebuild-driven emission at the moment it fires.
+  Verified with a `fakeAsync`/`tick` spec: a burst of keystrokes settles to exactly
+  ONE dispatch after 300ms of quiet, and a `setPassengerData()` rebuild alone never
+  dispatches.
+- **Scrutinize blocker #2 (AC-361.5):** `PassengerInfoComponent.buildPassengersPayload()`
+  gained a 3rd `isLegOpen` param (default `false`, so the 2 pre-existing bare-2-arg
+  call sites in `passenger-info.component.spec.ts` are untouched). The two real call
+  sites in `buildBookingPayload()` pass `departureSchedule?.seatingMode === 'OPEN'` /
+  `arrivalSchedule?.seatingMode === 'OPEN'` — gated on the LEG's seatingMode, not
+  seat-number presence, so a mixed round trip sends prefs on the ASSIGNED leg only.
+  Values are lowercased at this exact boundary (`'WINDOW'` → `'window'`, etc.) — the
+  FE enum stays uppercase everywhere else.
+- **Badges (OBRS-362):** new `src/app/shared/lib/seat-label.ts` (`normalizeSeatNumber`)
+  — deleted the private duplicate in `passenger-seat-van.component.ts` (repointed
+  `isSeatAvailable`), `passenger-seat-bus` (had none) now imports the same util, and
+  the fetch/merge layer in `passenger-info-form.component.ts` uses it too. Both
+  `passenger-seat-van`/`-bus` gained `@Input() seatAttributes: Record<string,
+  ('WHEELCHAIR'|'EXTRA_LEGROOM')[]> | null = null` (same null-default precedent as
+  `seatOwners`/`seatGenders`, OBRS-242) + `attributesFor()`/`hasWheelchairBadge()`/
+  `hasExtraLegroomBadge()`, passed down to `passenger-seat-box` as
+  `hasWheelchairBadge`/`hasExtraLegroomBadge` booleans. **Aria-labels are passed as
+  pre-translated `@Input() wheelchairBadgeAriaLabel`/`extraLegroomBadgeAriaLabel`
+  strings from the form template** (computed once via `| translate`), NOT via a
+  `| translate` pipe inside van/bus/box themselves — keeps those 3 components
+  TranslateModule-free (no module change, no spec breakage on their existing
+  TestBeds, which don't import `TranslateModule`).
+- **Badge markup** in `passenger-seat-box`: bottom-left filled circle = wheelchair
+  (`accessible` icon), bottom-right = extra-legroom (`airline_seat_legroom_extra`),
+  render **UNCONDITIONALLY** (no `!isDisabled` gate, unlike every other marker in
+  that template), `role="img"` + the forwarded aria-label. SCSS reuses the
+  `.seat-owner-badge` filled-circle recipe (`$brand-customer-strong`/
+  `$text-lightblack`, `$radius-pill`) — **gotcha hit while writing the SCSS**: my
+  first attempt accidentally closed `.seat-box {` one rule early, landing the new
+  badge rules (and a stray extra `}`) outside the parent selector — caught by
+  re-reading the file after the edit, fixed by re-nesting before running any build.
+  Worth a general reminder: always re-read a `.scss` file after a multi-rule Edit
+  that touches brace boundaries.
+- **Legend + fetch:** legend block (`.seat-map-legend`) below each leg's seat map in
+  `passenger-info-form.component.html`, gated on a new `hasSeatAttributes()` helper
+  (`Object.keys(attrs).length > 0` — an empty-but-non-null `{}` from a resolved
+  fetch must NOT show the legend, so this can't be a bare `*ngIf="attrs$ | async"`).
+  New `ScheduleService.getSeatMap(id)` → `GET /api/schedules/{id}/seats` (public, no
+  auth, already documented minus the 2 new booleans — see `docs/handoff.md` Contract
+  Requests entry added this session). `seatAttributesOutbound$`/`seatAttributesReturn$`
+  built via `switchMap` off `combineLatest(scheduleBooking$, isOpenSeating$)`,
+  short-circuit to `of({})` for an OPEN leg or a missing schedule id (never fires the
+  HTTP call), `catchError(() => of({}))`, `shareReplay(1)` — non-blocking, no
+  `AlertService`, matches the task's explicit "best-effort" framing.
+- **Summary:** `PassengerInfoSummaryComponent` gained `passengerInfo$` (bare
+  `select(selectPassengerInfo)`, now genuinely live thanks to blocker #1's fix) and a
+  new "Passengers" block in the template (name · seat chip(s) · pref chip ·
+  requirement chip · a `NO_SEAT` fallback chip when neither leg has one) — reuses
+  the `.seat-passenger-chip` pill class NAME from `passenger-info-form.component.scss`,
+  redeclared (not shared — Angular view encapsulation scopes styles per component;
+  this mirrors the existing `.open-seating-badge`/`.passenget-badge` precedent
+  already noted in that file's own comments).
+- **i18n:** all 16 keys (8 `FORM.*`, 5 `SEAT_MAP.*`, 3 `SUMMARY.*`) added to en/th/zh
+  in one commit via a small Node script (`JSON.parse`→merge→`JSON.stringify(...,null,2)`
+  round-trip) — verified the diff touched ONLY the `PASSENGER_INFO` block in each
+  file (no incidental reformatting elsewhere) before committing.
+- **Contract not yet confirmed:** `seatPreference`/`seatRequirement` (booking
+  payload) and `isWheelchairAccessible`/`isExtraLegroom` (`SeatMapRespDto`) are not
+  in `docs/api/booking.md`/`scheduling.md` as of this session (grepped, zero
+  matches) — built exactly per the task brief's described contract, flagged as a
+  Contract Request in `docs/handoff.md` for backend confirmation. Every one of these
+  fields is optional/nullable client-side, so a name mismatch degrades silently
+  (missing badges / a no-op preference field) rather than breaking booking.
+
+**Tests:** see the frontend implementation report for this session for the exact
+`ng test`/`ng build` results. New/changed spec files: `passenger-info-form.component
+.spec.ts` (selectButton no-pre-selection + re-click-clears, the full
+`showSeatPreferenceFields` enumeration, the `fakeAsync` loop-safe-sync pair),
+`passenger-info.component.spec.ts` (AC-361.5 incl. the mixed-round-trip case),
+`passenger-seat-box.component.spec.ts` / `passenger-seat-van.component.spec.ts` /
+`passenger-seat-bus.component.spec.ts` (badge rendering, both-badges-at-once,
+unconditional-even-when-disabled, real-DOM badge-lands-on-the-correct-seat for both
+label forms).
+
+---
+
 ## 2026-07-13 — UX spec: wire cancel-trip smart button (OBRS-283) — key findings for the implementer
 
 **Worktree:** `OBRS-frontend-wt-obrs-283-trip-cancel-refund-ui` (branch `ao/obrs-283-trip-cancel-refund-ui`).
@@ -3498,3 +3679,16 @@ full-replace edit forms opened from a partial row fallback: the "detail didn't a
 guard must cover BOTH throw AND loaded-but-empty (`response.data == null`), not just throw.
 Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check and setting
 `isEditDetailError = true` on the empty branch.
+## OBRS-361/362 scrutinize self-fix (2026-07-14) — finish the seat-label consolidation
+- `src/app/shared/lib/seat-label.ts`'s docstring claimed it consolidated BOTH the van's private
+  `normalizeSeatNumber` AND `PassengerInfoComponent`'s inline `.match(/\d+/g)` regex. The van was
+  repointed correctly, but `PassengerInfoComponent.normalizeSeatNumber` (`passenger-info.component.ts`)
+  still re-implemented the digit regex → the docstring's claim was false and one duplicate regex
+  remained.
+- Fix (behavior-identical, verified by input enumeration + `tsc` + the 9 passenger-info specs):
+  imported the shared util as `stripSeatDigits` and had the private method delegate to it, KEEPING
+  the payload-specific null-return wrapper (`'' / no-digit` → `null`, which the shared util does not
+  do because the booking payload needs `seatNumber: null`, not `''`, for "no manual seat").
+- Lesson: when a shared util's docstring says "every X should call this", grep that it actually
+  replaced EVERY call site — a half-finished consolidation leaves the util's own contract untrue.
+  The method itself was correct to keep (distinct null semantics); only its inner regex was the dup.

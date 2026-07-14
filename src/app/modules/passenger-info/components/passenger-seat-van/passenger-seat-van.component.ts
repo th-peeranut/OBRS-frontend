@@ -6,6 +6,7 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
+import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 
 @Component({
   selector: 'app-passenger-seat-van',
@@ -36,6 +37,17 @@ export class PassengerSeatVanComponent implements OnChanges {
    * by every OTHER passenger", so the host needs no new guard logic.
    */
   @Input() seatOwners: Record<string, { label: string; gender: string }> | null = null;
+  /**
+   * Per-seat attribute map (OBRS-362) — which seats are wheelchair-accessible
+   * / have extra legroom, keyed by the backend's plain-numeric seat label
+   * (`normalizeSeatNumber('A1') === '1'`). Null (the default) renders no
+   * badges — every existing call site is unaffected (same null-default
+   * `@Input()` precedent as `seatOwners`/`seatGenders`, OBRS-242).
+   */
+  @Input() seatAttributes: Record<string, ('WHEELCHAIR' | 'EXTRA_LEGROOM')[]> | null = null;
+  /** Pre-translated aria-labels forwarded to every seat box's badge. */
+  @Input() wheelchairBadgeAriaLabel: string = '';
+  @Input() extraLegroomBadgeAriaLabel: string = '';
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
   @Output() seatClicked = new EventEmitter<string>();
@@ -138,21 +150,33 @@ export class PassengerSeatVanComponent implements OnChanges {
     return this.seatOwners !== null && !!this.currentSeat && label === this.currentSeat;
   }
 
+  /** Attribute list for a seat label (OBRS-362); empty when unset/unknown. */
+  attributesFor(label: string): ('WHEELCHAIR' | 'EXTRA_LEGROOM')[] {
+    if (!this.seatAttributes) {
+      return [];
+    }
+    return this.seatAttributes[normalizeSeatNumber(label)] ?? [];
+  }
+
+  hasWheelchairBadge(label: string): boolean {
+    return this.attributesFor(label).includes('WHEELCHAIR');
+  }
+
+  hasExtraLegroomBadge(label: string): boolean {
+    return this.attributesFor(label).includes('EXTRA_LEGROOM');
+  }
+
   private isSeatAvailable(seat: string): boolean {
     const available = this.availableSeatNumbers ?? [];
     if (available.length === 0) {
       return true;
     }
 
-    const normalized = this.normalizeSeatNumber(seat);
+    const normalized = normalizeSeatNumber(seat);
     if (!normalized) {
       return true;
     }
 
     return available.includes(normalized);
-  }
-
-  private normalizeSeatNumber(seat: string): string {
-    return (seat || '').replace(/\D/g, '');
   }
 }
