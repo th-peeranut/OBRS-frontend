@@ -52,3 +52,27 @@ deferred notification domain), not before.
 - If another admin screen later needs an immediate same-page badge refresh, it
   can call `.trigger()` on the same shared service rather than growing a new
   ad-hoc channel.
+
+## Addendum (OBRS-370, 2026-07-15) — owner is a SCREEN-ONLY tier
+
+`UsabilityReportsPageComponent` now also role-gates its triage controls: role
+OWNER can view the list/detail and move a report forward through the
+non-terminal statuses (`in_review`, `accepted`), but the backend 403s a
+non-admin on the terminal decisions (`resolved`/`rejected` — terminal, email
+the reporter) and on the Jira key. The FE mirrors that so owner never sees a
+control that would 403:
+
+- `isAdmin` is sourced from `authService.getRoles().includes('admin')` — the
+  **raw** held role, not `hasAnyRole(['admin'])`. Under this FE's area-based
+  access model (`AuthService.ROLE_GRANTS`), owner is an all-access superset
+  that satisfies `hasAnyRole(['admin'])` too, so that check cannot distinguish
+  a real admin from an owner here. This mirrors the same raw-role precedent in
+  `boarding-entry-page.component.ts` / `parcel-delivery-schedule-page.component.ts`.
+- The decision-only dropdown (`detailStatusOptions`) builds from
+  `DETAIL_STATUS_VALUES` (`accepted`/`resolved`/`rejected`) for admin, or the
+  new `OWNER_DETAIL_STATUS_VALUES` (`in_review`/`accepted`) for a non-admin.
+- The Jira key display row is now additionally gated on `isAdmin`.
+- `seedStatus()` no longer pre-seeds a value that isn't in the current
+  role's `detailStatusOptions` — an owner opening a report an admin already
+  resolved/rejected must not land with that terminal value silently selected
+  (Save enabled) behind a dropdown that no longer lists it.
