@@ -1315,4 +1315,156 @@ describe('SellPageComponent', () => {
       expect(() => comp.ngOnDestroy()).not.toThrow();
     });
   });
+
+  // OBRS-358: jump-seat overflow hint + staff-acknowledgment gate.
+  describe('overflowUnits / requiresJumpSeatAck getters', () => {
+    it('is 0 / false when the trip has no normalCapacity (backend predating this card)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ soldPaidCount: 20, reservedUnpaidCount: 0 });
+      (comp as any).selectedSeats = ['B1'];
+
+      expect((comp as any).overflowUnits).toBe(0);
+      expect((comp as any).requiresJumpSeatAck).toBeFalse();
+    });
+
+    it('is 0 / false when existing + ticketCount stays within normalCapacity', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 10,
+        reservedUnpaidCount: 5,
+        normalCapacity: 20,
+      });
+      (comp as any).selectedSeats = ['B1'];
+
+      expect((comp as any).overflowUnits).toBe(0);
+      expect((comp as any).requiresJumpSeatAck).toBeFalse();
+    });
+
+    it('computes overflowUnits as max(0, existing + ticketCount - normalCapacity) and flips requiresJumpSeatAck true', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 15,
+        reservedUnpaidCount: 4,
+        normalCapacity: 20,
+      });
+      (comp as any).selectedSeats = ['B1', 'B2'];
+
+      // existing (19) + ticketCount (2) - normalCapacity (20) = 1
+      expect((comp as any).overflowUnits).toBe(1);
+      expect((comp as any).requiresJumpSeatAck).toBeTrue();
+    });
+  });
+
+  describe('onSell — jump-seat acknowledgment gate (OBRS-358)', () => {
+    function makeOverflowTrip(): WalkInTripDto {
+      // existing (soldPaidCount + reservedUnpaidCount = 20) + ticketCount (1) -
+      // normalCapacity (20) = 1 unit of overflow.
+      return makeTrip({ soldPaidCount: 20, reservedUnpaidCount: 0, normalCapacity: 20 });
+    }
+
+    it('does NOT call the jump-seat confirm prompt when the sale does not overflow', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      // Isolate the jump-seat ack gate from the unrelated post-sale
+      // "Print ticket" offer (offerPrintTicket() also calls
+      // alertService.confirm() — see OBRS-195), so this assertion only
+      // reflects OBRS-358's gate, not that later prompt.
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).not.toHaveBeenCalled();
+      expect(api.createWalkInBooking).toHaveBeenCalled();
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect('jumpSeatAcknowledged' in callArg).toBeFalse();
+    });
+
+    it('gates onSell on AlertService.confirm() when the sale overflows into the jump seat, and makes NO API call when declined', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub(); // confirm() defaults to resolving false
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeOverflowTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          title: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE',
+          text: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT',
+          confirmButtonText: 'STAFF.SELL.JUMP_SEAT_CONFIRM_OK',
+          icon: 'warning',
+        })
+      );
+      expect(api.createWalkInBooking).not.toHaveBeenCalled();
+    });
+
+    it('sends jumpSeatAcknowledged: true on the booking payload when staff confirms the overflow prompt', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeOverflowTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(api.createWalkInBooking).toHaveBeenCalled();
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.jumpSeatAcknowledged).toBeTrue();
+    });
+  });
+
+  describe('onSell — jump-seat errorCode mapping (OBRS-358)', () => {
+    function errorWithCode(errorCode: string): unknown {
+      return { error: { errorCode } };
+    }
+
+    ([
+      ['BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED', 'STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED'],
+      ['BOOKING_ERROR_JUMPSEAT_DISABLED', 'STAFF.SELL.ERR_JUMPSEAT_DISABLED'],
+      ['BOOKING_ERROR_JUMPSEAT_NORMAL_SEATS_AVAILABLE', 'STAFF.SELL.ERR_JUMPSEAT_NORMAL_AVAILABLE'],
+      ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
+    ] as const).forEach(([errorCode, i18nKey]) => {
+      it(`maps ${errorCode} -> ${i18nKey} (never the raw code) on booking-create failure`, async () => {
+        const alert = createAlertStub();
+        const api = createStaffApiStub({
+          createWalkInBooking: jasmine
+            .createSpy()
+            .and.returnValue(throwError(() => errorWithCode(errorCode))),
+        });
+        const comp = makeComponent(api, alert);
+        (comp as any).selectedTrip = makeTrip();
+        (comp as any).selectedSeats = ['B1'];
+        setSegmentFare(comp, 300);
+
+        await (comp as any).onSell(validPayload);
+
+        expect(alert.error).toHaveBeenCalledWith(i18nKey);
+      });
+    });
+
+    it('falls back to extractApiErrorMessage/SAVE_FAILED for an unrecognized errorCode', async () => {
+      const alert = createAlertStub();
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy()
+          .and.returnValue(throwError(() => errorWithCode('SOME_OTHER_ERROR'))),
+      });
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.error).toHaveBeenCalledWith('ADMIN.MESSAGES.SAVE_FAILED');
+    });
+  });
 });

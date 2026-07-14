@@ -235,6 +235,25 @@ export class SellPageComponent implements OnInit, OnDestroy {
     return this.isOpenSeating ? this.passengerCount : this.selectedSeats.length;
   }
 
+  // OBRS-358: how many of THIS sale's tickets spill past the trip's
+  // `normalCapacity` into the jump seat (walk-in-only, sold last). Purely a
+  // staff-facing HINT — non-authoritative, the server re-validates under a
+  // row lock at sale time regardless of what this computes. `normalCapacity`
+  // absent (backend predating this card, or no jump seat on this
+  // trip/vehicle) resolves to 0 overflow / no acknowledgment, same
+  // graceful-fallback contract as `isOpenSeatingTrip`.
+  protected get overflowUnits(): number {
+    const trip = this.selectedTrip;
+    if (!trip || trip.normalCapacity == null) return 0;
+    const existing = trip.soldPaidCount + trip.reservedUnpaidCount;
+    return Math.max(0, existing + this.ticketCount - trip.normalCapacity);
+  }
+
+  /** Whether this sale needs the jump-seat staff acknowledgment gate at onSell(). */
+  protected get requiresJumpSeatAck(): boolean {
+    return this.overflowUnits > 0;
+  }
+
   protected onPassengerCountChanged(count: number): void {
     const max = Math.max(1, this.selectedTrip?.availableCount ?? count);
     this.passengerCount = Math.min(Math.max(1, count), max);
@@ -321,8 +340,26 @@ export class SellPageComponent implements OnInit, OnDestroy {
     return this.segmentFare ?? 0;
   }
 
-  protected onSell(payload: WalkInCheckoutPayload): void {
+  protected async onSell(payload: WalkInCheckoutPayload): Promise<void> {
     if (!this.selectedTrip) return;
+
+    // OBRS-358: this sale spills into the jump seat (walk-in-only, sold
+    // last) — gate on an explicit staff acknowledgment BEFORE building the
+    // payload. Reuses AlertService.confirm() (the exact primitive already
+    // used by offerPrintTicket() in this same file), not a bespoke modal.
+    // Declining leaves selection/checkout untouched and makes no API call.
+    let jumpSeatAcknowledged = false;
+    if (this.requiresJumpSeatAck) {
+      const acknowledged = await this.alertService.confirm({
+        title: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE'),
+        text: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT'),
+        confirmButtonText: this.translate.instant('STAFF.SELL.JUMP_SEAT_CONFIRM_OK'),
+        cancelButtonText: this.translate.instant('COMMON.CLOSE'),
+        icon: 'warning',
+      });
+      if (!acknowledged) return;
+      jumpSeatAcknowledged = true;
+    }
 
     if (!this.idempotencyKey) {
       this.idempotencyKey = generateIdempotencyKey();
@@ -384,6 +421,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
       bookingType: 'one_way';
       totalAmount: number;
       bookingChannel: 'walk_in';
+      jumpSeatAcknowledged?: boolean;
       departureSchedule: {
         scheduleId: number;
         fromStop: string;
@@ -428,6 +466,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
     if (payload.contact.email) {
       bookingPayload.contact.email = payload.contact.email;
     }
+    // OBRS-358: only sent when this sale was gated on the jump-seat
+    // acknowledgment above — omitted (not `false`) otherwise, same
+    // conditional-field shape as identityCardNumber/email above.
+    if (jumpSeatAcknowledged) {
+      bookingPayload.jumpSeatAcknowledged = true;
+    }
 
     const key = this.idempotencyKey;
 
@@ -469,6 +513,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
               error: (err: unknown) => {
                 this.isSelling = false;
                 const message =
+                  this.mapJumpSeatErrorMessage(err) ||
                   extractApiErrorMessage(err) ||
                   this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
                 void this.alertService.error(message);
@@ -478,11 +523,42 @@ export class SellPageComponent implements OnInit, OnDestroy {
         error: (err: unknown) => {
           this.isSelling = false;
           const message =
+            this.mapJumpSeatErrorMessage(err) ||
             extractApiErrorMessage(err) ||
             this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');
           void this.alertService.error(message);
         },
       });
+  }
+
+  // OBRS-358: jump-seat sale errorCode -> i18n key, same switch-on-errorCode
+  // pattern as WalkInCenterPanelComponent.onSave()'s
+  // SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX branch — never surface the raw
+  // code (design-system §9). The backend's DomainException derives the
+  // UPPER_SNAKE errorCode from its internal message key, e.g.
+  // `booking.error.jumpseat.acknowledgment-required` ->
+  // `BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED` (same derivation
+  // documented in `shared/interfaces/reschedule.interface.ts`).
+  // `SEAT_ERROR_WALK_IN_ONLY` is the ONE shared code also reachable from the
+  // customer change-seat/reschedule/change-stop flows (see
+  // `shared/lib/change-seat-error.ts` / `change-stop-error.ts` /
+  // `reschedule-error.ts`) — mapped here to the same `COMMON.ERROR.*` key so
+  // the copy is never duplicated. Returns '' (falsy) for any other/absent
+  // code so the caller falls through to `extractApiErrorMessage`.
+  private mapJumpSeatErrorMessage(err: unknown): string {
+    const errorCode = (err as { error?: { errorCode?: string } } | null)?.error?.errorCode ?? '';
+    switch (errorCode) {
+      case 'BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED':
+        return this.translate.instant('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
+      case 'BOOKING_ERROR_JUMPSEAT_DISABLED':
+        return this.translate.instant('STAFF.SELL.ERR_JUMPSEAT_DISABLED');
+      case 'BOOKING_ERROR_JUMPSEAT_NORMAL_SEATS_AVAILABLE':
+        return this.translate.instant('STAFF.SELL.ERR_JUMPSEAT_NORMAL_AVAILABLE');
+      case 'SEAT_ERROR_WALK_IN_ONLY':
+        return this.translate.instant('COMMON.ERROR.SEAT_WALK_IN_ONLY');
+      default:
+        return '';
+    }
   }
 
   /**

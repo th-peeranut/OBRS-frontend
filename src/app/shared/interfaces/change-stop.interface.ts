@@ -50,6 +50,10 @@ export const CHANGE_STOP_ERROR_CODES = [
   'CHANGE_STOP_ERROR_UNAUTHORIZED',
   'CHANGE_STOP_ERROR_BOOKING_NOT_FOUND',
   'CHANGE_STOP_ERROR_MULTI_LEG_NOT_SUPPORTED',
+  // OBRS-358: the ONE shared jump-seat channel-guard code, also reachable
+  // from create-booking/reschedule/change-seat — see
+  // change-seat.interface.ts's identical entry for the full rationale.
+  'SEAT_ERROR_WALK_IN_ONLY',
 ] as const;
 
 export type ChangeStopErrorCode = (typeof CHANGE_STOP_ERROR_CODES)[number] | 'GENERIC';

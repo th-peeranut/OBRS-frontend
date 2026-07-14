@@ -122,6 +122,19 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-358: jump-seat (walk-in-only seat channel) toggle is ADMIN-only
+    // (route `requiredRoles: ['admin']`), gated the same way as
+    // reminder-config directly above.
+    if (this.authService.hasAnyRole(['admin'])) {
+      items.push({
+        path: 'jump-seat-config',
+        labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
+        icon: 'event_seat',
+        descriptionKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
+        section: 'system',
+      });
+    }
+
     return items;
   }
 

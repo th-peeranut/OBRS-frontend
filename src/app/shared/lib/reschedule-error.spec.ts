@@ -24,6 +24,8 @@ describe('mapRescheduleErrorCode', () => {
       ['RESCHEDULE_ERROR_NET_AMOUNT_CHANGED', 'MY_BOOKINGS.RESCHEDULE.ERROR.NET_AMOUNT_CHANGED'],
       ['RESCHEDULE_ERROR_UNAUTHORIZED', 'MY_BOOKINGS.RESCHEDULE.ERROR.UNAUTHORIZED'],
       ['RESCHEDULE_PRICE_CHANGED', 'MY_BOOKINGS.RESCHEDULE.PRICE_CHANGED'],
+      // OBRS-358: shared jump-seat channel-guard code -> the shared COMMON.ERROR.* key.
+      ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
     ];
 
     for (const [code, key] of cases) {

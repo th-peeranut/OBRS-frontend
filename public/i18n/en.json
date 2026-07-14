@@ -297,7 +297,8 @@
     "CALENDAR_ICON_ALT": "Calendar Icon",
     "CLOSE": "Close",
     "ERROR": {
-      "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
+      "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
+      "SEAT_WALK_IN_ONLY": "This seat is reserved for walk-in sale by staff and can't be selected online."
     },
     "EXPORT": {
       "BUTTON_LABEL": "Export",
@@ -329,6 +330,7 @@
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
+      "JUMP_SEAT_CONFIG": "Jump Seat",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
     },
@@ -1014,6 +1016,12 @@
       "MINUTES_LABEL": "Boarding Reminder (minutes before)",
       "MINUTES_HELPER": "How many minutes before departure the boarding reminder is sent.",
       "LOAD_FAILED": "Unable to load the reminder-timing config."
+    },
+    "JUMP_SEAT_CONFIG": {
+      "SUBTITLE": "Turn walk-in sale of the jump seat (unassigned reserve seat) on or off.",
+      "ENABLED_LABEL": "Enable jump-seat walk-in sale",
+      "HELPER": "When off, staff cannot sell the jump seat even when the normal seats are full — has no effect on the online channel.",
+      "LOAD_FAILED": "Unable to load the jump-seat config."
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
@@ -1998,6 +2006,13 @@
       "PASSENGER_COUNT_DECREASE": "Decrease passenger count",
       "PASSENGER_COUNT_INCREASE": "Increase passenger count",
       "PASSENGER_COUNT_MAX": "Max {{max}} passengers available",
+      "JUMP_SEAT_OVERFLOW_HINT": "This sale includes the jump seat (no backrest) — the reserve seat sold last.",
+      "JUMP_SEAT_CONFIRM_TITLE": "Confirm jump-seat sale",
+      "JUMP_SEAT_CONFIRM_TEXT": "This seat is a backrest-free jump seat, sold at staff discretion once the normal seats are full. Continue with this sale?",
+      "JUMP_SEAT_CONFIRM_OK": "Confirm sale",
+      "ERR_JUMPSEAT_ACK_REQUIRED": "This sale includes the jump seat — please confirm to continue.",
+      "ERR_JUMPSEAT_DISABLED": "The jump seat is currently disabled for this trip.",
+      "ERR_JUMPSEAT_NORMAL_AVAILABLE": "Normal seats are still available — the jump seat can't be sold yet.",
       "TAB_TICKET_SALES": "Ticket Sales",
       "TAB_TRIP_DETAILS": "Trip Details",
       "TAB_BOARDING": "Boarding",

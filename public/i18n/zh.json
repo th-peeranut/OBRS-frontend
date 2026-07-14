@@ -297,7 +297,8 @@
     "CALENDAR_ICON_ALT": "日历图标",
     "CLOSE": "关闭",
     "ERROR": {
-      "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。"
+      "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
+      "SEAT_WALK_IN_ONLY": "该座位仅限工作人员现场售票选用，无法在线选择。"
     },
     "EXPORT": {
       "BUTTON_LABEL": "导出",
@@ -329,6 +330,7 @@
       "SETTLEMENTS": "分账结算",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
+      "JUMP_SEAT_CONFIG": "加座设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
     },
@@ -1014,6 +1016,12 @@
       "MINUTES_LABEL": "上车提醒（提前分钟数）",
       "MINUTES_HELPER": "发车前多少分钟发送上车提醒。",
       "LOAD_FAILED": "无法加载提醒时间设置。"
+    },
+    "JUMP_SEAT_CONFIG": {
+      "SUBTITLE": "开启或关闭加座（不指定的备用座位）的现场销售。",
+      "ENABLED_LABEL": "启用加座现场销售",
+      "HELPER": "关闭后，即使普通座位已满，工作人员也无法出售加座——对在线渠道无影响。",
+      "LOAD_FAILED": "无法加载加座设置。"
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
@@ -1997,6 +2005,13 @@
       "PASSENGER_COUNT_DECREASE": "减少乘客人数",
       "PASSENGER_COUNT_INCREASE": "增加乘客人数",
       "PASSENGER_COUNT_MAX": "最多可售 {{max}} 位乘客",
+      "JUMP_SEAT_OVERFLOW_HINT": "本次销售包含加座（无靠背）——该备用座位最后售出。",
+      "JUMP_SEAT_CONFIRM_TITLE": "确认加座销售",
+      "JUMP_SEAT_CONFIRM_TEXT": "该座位为无靠背加座，仅在普通座位售罄后由工作人员酌情出售。是否继续本次销售？",
+      "JUMP_SEAT_CONFIRM_OK": "确认销售",
+      "ERR_JUMPSEAT_ACK_REQUIRED": "本次销售包含加座——请确认以继续。",
+      "ERR_JUMPSEAT_DISABLED": "该班次目前已停用加座。",
+      "ERR_JUMPSEAT_NORMAL_AVAILABLE": "普通座位仍有余位——暂不能出售加座。",
       "TAB_TICKET_SALES": "售票",
       "TAB_TRIP_DETAILS": "班次详情",
       "TAB_BOARDING": "登车",
