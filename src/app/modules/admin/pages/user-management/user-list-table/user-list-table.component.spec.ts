@@ -15,7 +15,6 @@ function makeRow(overrides: Partial<UserRow> = {}): UserRow {
     roles: ['Admin'],
     status: 'Active',
     statusCode: 'active',
-    lastUpdated: '-',
     lastLogin: '-',
     hasLoggedIn: false,
     locked: false,
@@ -150,15 +149,13 @@ describe('UserListTableComponent (template)', () => {
     expect(cell.nativeElement.textContent).toContain('8 Jul 2026 08:32');
   });
 
-  it('renders the "never signed in" fallback when hasLoggedIn is false, never falling back to lastUpdated', () => {
+  it('renders the "never signed in" fallback when hasLoggedIn is false', () => {
     component.isLoading = false;
-    component.rows = [
-      makeRow({ id: 1, lastLogin: '-', hasLoggedIn: false, lastUpdated: '1 Jan 2026 00:00' }),
-    ];
+    component.rows = [makeRow({ id: 1, lastLogin: '-', hasLoggedIn: false })];
     fixture.detectChanges();
 
     const cell = fixture.debugElement.query(By.css('.admin-cell-stack .admin-muted'));
-    expect(cell.nativeElement.textContent).not.toContain('1 Jan 2026 00:00');
+    expect(cell.nativeElement.textContent).toContain('ADMIN.USERS.NEVER_LOGGED_IN');
   });
 
   // OBRS-330: the template renders row.roles verbatim (`{{ role }}`) — it

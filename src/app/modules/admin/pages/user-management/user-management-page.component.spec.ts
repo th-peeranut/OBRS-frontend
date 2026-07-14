@@ -20,7 +20,6 @@ const USER_ROW = {
   roles: ['Admin'],
   status: 'Active',
   statusCode: 'active',
-  lastUpdated: '-',
   lastLogin: '-',
   hasLoggedIn: false,
   locked: false,

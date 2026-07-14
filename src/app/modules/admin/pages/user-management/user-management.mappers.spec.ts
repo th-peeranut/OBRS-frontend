@@ -180,10 +180,11 @@ describe('user-management.mappers', () => {
       // as locale (so role/status resolve to English) while passing 'th' as
       // dateLang must produce the TH-formatted date, proving the two are wired
       // to separate parameters and never collapsed into one.
-      const rowThDate = toUserRow(baseUser, 'en', 'th');
-      const rowEnDate = toUserRow(baseUser, 'en', 'en');
+      const userWithLogin: AdminUserDto = { ...baseUser, lastLoginAt: '2026-07-10T02:00:00Z' };
+      const rowThDate = toUserRow(userWithLogin, 'en', 'th');
+      const rowEnDate = toUserRow(userWithLogin, 'en', 'en');
 
-      expect(rowThDate.lastUpdated).not.toBe(rowEnDate.lastUpdated);
+      expect(rowThDate.lastLogin).not.toBe(rowEnDate.lastLogin);
     });
 
     it('defaults missing fields to "-" and empty roles to ["-"]', () => {
@@ -196,17 +197,7 @@ describe('user-management.mappers', () => {
       expect(row.locked).toBeFalse();
     });
 
-    it('falls back updatedAt to createdAt when updatedAt is missing', () => {
-      const user: AdminUserDto = {
-        ...baseUser,
-        updatedAt: undefined,
-        createdAt: '2026-01-01T00:00:00Z',
-      };
-      const row = toUserRow(user, 'en', 'en');
-      expect(row.lastUpdated).not.toBe('-');
-    });
-
-    // OBRS-182: real last-login activity, separate from lastUpdated.
+    // OBRS-182: real last-login activity.
     it('formats lastLogin and sets hasLoggedIn when lastLoginAt is present', () => {
       const user: AdminUserDto = { ...baseUser, lastLoginAt: '2026-07-10T02:00:00Z' };
       const row = toUserRow(user, 'en', 'en');
@@ -214,13 +205,14 @@ describe('user-management.mappers', () => {
       expect(row.lastLogin).not.toBe('-');
     });
 
-    it('CRITICAL: does not fall back to updatedAt/createdAt when lastLoginAt is null — hasLoggedIn is false and lastUpdated stays independent', () => {
+    it('CRITICAL: does not fall back to updatedAt/createdAt when lastLoginAt is null — hasLoggedIn is false and lastLogin is the never-logged-in sentinel', () => {
+      // baseUser has a real updatedAt; lastLoginAt is explicitly null. If a
+      // fallback to updatedAt/createdAt were ever reintroduced into lastLogin,
+      // this would fail because lastLogin would stop being '-'.
       const user: AdminUserDto = { ...baseUser, lastLoginAt: null };
       const row = toUserRow(user, 'en', 'en');
       expect(row.hasLoggedIn).toBeFalse();
-      // lastUpdated still reflects updatedAt (unaffected), proving lastLogin
-      // is computed purely from lastLoginAt with no fallback chain.
-      expect(row.lastUpdated).not.toBe('-');
+      expect(row.lastLogin).toBe('-');
     });
 
     it('sets hasLoggedIn false when lastLoginAt is absent entirely (never provided by backend)', () => {
@@ -257,7 +249,6 @@ describe('user-management.mappers', () => {
         roles: ['Administrator', 'Staff'],
         status: 'ACTIVE',
         statusCode: 'active',
-        lastUpdated: '-',
         lastLogin: '-',
         hasLoggedIn: false,
         locked: false,
@@ -337,7 +328,6 @@ describe('user-management.mappers', () => {
       roles: ['Administrator'],
       status: 'ACTIVE',
       statusCode: 'active',
-      lastUpdated: '-',
       lastLogin: '-',
       hasLoggedIn: false,
       locked: false,
@@ -521,7 +511,6 @@ describe('user-management.mappers', () => {
         roles: ['Administrator'],
         status: 'ACTIVE',
         statusCode: 'active',
-        lastUpdated: '-',
         lastLogin: '-',
         hasLoggedIn: false,
         locked: false,
@@ -535,7 +524,6 @@ describe('user-management.mappers', () => {
         roles: ['Staff'],
         status: 'PENDING',
         statusCode: 'pending',
-        lastUpdated: '-',
         lastLogin: '-',
         hasLoggedIn: false,
         locked: false,
