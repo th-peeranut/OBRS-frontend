@@ -36,6 +36,7 @@ import {
   mapBoardingScanErrorCode,
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
+import { extractChildFareFlagErrorCode, mapChildFareFlagErrorCode } from '../../lib/child-fare-flag-error';
 import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
 import { extractScheduleDelayErrorCode, mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
@@ -174,6 +175,15 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `ExportButtonComponent.canExport`. */
   protected readonly canUnboard: boolean;
 
+  /** OBRS-296: ticket ids with a flagChildFare() call in flight. */
+  protected flaggingIds = new Set<number>();
+  /** OBRS-296: ticket ids with an unflagChildFare() call in flight. */
+  protected unflaggingIds = new Set<number>();
+
+  /** OBRS-296: unflag is salesperson/admin only — hidden, not disabled, for a
+   * driver. Same shape as `canUnboard` above. */
+  protected readonly canUnflagChildFare: boolean;
+
   /** OBRS-256: the schedule departed/arrived control is salesperson/admin
    * only — identical shape to `canUnboard` above (hidden, not disabled, for
    * a driver). */
@@ -243,6 +253,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
     this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
+    this.canUnflagChildFare = this.authService.hasAnyRole(['salesperson']);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -640,6 +651,117 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       await this.alertService.error(this.translate.instant(mapBoardingActionErrorCode(errorCode)));
     } finally {
       this.unboardingIds.delete(item.ticketId);
+    }
+  }
+
+  /** OBRS-296: only child-fare rows get the flag/unflag surface. */
+  protected isChildFare(item: BoardingListItemDto): boolean {
+    return item.fareCategory === 'child';
+  }
+
+  /** OBRS-296: flagged state is `childFareFlaggedAt != null` — the same
+   * status-neutral shape as `isBoarded()`. */
+  protected isFlagged(item: BoardingListItemDto): boolean {
+    return item.childFareFlaggedAt != null;
+  }
+
+  protected isFlagging(item: BoardingListItemDto): boolean {
+    return this.flaggingIds.has(item.ticketId);
+  }
+
+  protected isUnflagging(item: BoardingListItemDto): boolean {
+    return this.unflaggingIds.has(item.ticketId);
+  }
+
+  /** OBRS-296: flag a fare-category mismatch. Low-stakes — no confirm,
+   * mirrors `board()`. Never blocks the boarding controls (a separate
+   * optimistic mutate scoped to the flag fields only). */
+  protected async flagChildFare(item: BoardingListItemDto): Promise<void> {
+    if (this.isFlagged(item) || this.isFlagging(item)) {
+      return;
+    }
+
+    this.flaggingIds.add(item.ticketId);
+    const originalFlaggedAt = item.childFareFlaggedAt;
+    const originalFlaggedBy = item.childFareFlaggedByName;
+    // Same "you are the operator acting right now" reasoning as board()'s
+    // optimistic name seed — correct for the row you just acted on, never for
+    // a pre-existing flagged row.
+    const flaggerName = this.authService.getUsername() ?? undefined;
+
+    this.store.mutate((items) =>
+      items.map((i) =>
+        i.ticketId === item.ticketId
+          ? { ...i, childFareFlaggedAt: new Date().toISOString(), childFareFlaggedByName: flaggerName }
+          : i
+      )
+    );
+
+    try {
+      await firstValueFrom(this.staffApiService.flagChildFare(item.ticketId));
+      await this.alertService.success(this.translate.instant('STAFF.BOARDING.CHILD_FARE_FLAG_SUCCESS'));
+      void this.store.refresh();
+    } catch (error) {
+      this.store.mutate((items) =>
+        items.map((i) =>
+          i.ticketId === item.ticketId
+            ? { ...i, childFareFlaggedAt: originalFlaggedAt, childFareFlaggedByName: originalFlaggedBy }
+            : i
+        )
+      );
+      const errorCode = extractChildFareFlagErrorCode(error);
+      await this.alertService.error(this.translate.instant(mapChildFareFlagErrorCode(errorCode)));
+    } finally {
+      this.flaggingIds.delete(item.ticketId);
+    }
+  }
+
+  /** OBRS-296: reverse a fare-category mismatch flag. Salesperson/admin only
+   * (hidden for drivers, see `canUnflagChildFare`) and requires a confirm —
+   * same shape as `unboard()`. */
+  protected async unflagChildFare(item: BoardingListItemDto): Promise<void> {
+    if (!this.canUnflagChildFare || !this.isFlagged(item) || this.isUnflagging(item)) {
+      return;
+    }
+
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_TITLE'),
+      text: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_CONFIRM'),
+      cancelButtonText: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.unflaggingIds.add(item.ticketId);
+    const originalFlaggedAt = item.childFareFlaggedAt;
+    const originalFlaggedBy = item.childFareFlaggedByName;
+
+    this.store.mutate((items) =>
+      items.map((i) =>
+        i.ticketId === item.ticketId
+          ? { ...i, childFareFlaggedAt: undefined, childFareFlaggedByName: undefined }
+          : i
+      )
+    );
+
+    try {
+      await firstValueFrom(this.staffApiService.unflagChildFare(item.ticketId));
+      await this.alertService.success(this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_SUCCESS'));
+      void this.store.refresh();
+    } catch (error) {
+      this.store.mutate((items) =>
+        items.map((i) =>
+          i.ticketId === item.ticketId
+            ? { ...i, childFareFlaggedAt: originalFlaggedAt, childFareFlaggedByName: originalFlaggedBy }
+            : i
+        )
+      );
+      const errorCode = extractChildFareFlagErrorCode(error);
+      await this.alertService.error(this.translate.instant(mapChildFareFlagErrorCode(errorCode)));
+    } finally {
+      this.unflaggingIds.delete(item.ticketId);
     }
   }
 

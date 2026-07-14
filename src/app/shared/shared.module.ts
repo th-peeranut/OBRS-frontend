@@ -6,6 +6,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { MenuModule } from 'primeng/menu';
 import { CalendarModule } from 'primeng/calendar';
+import { OverlayPanelModule } from 'primeng/overlaypanel';
 
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -17,6 +18,10 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
 import { ExportButtonComponent } from './components/export-button/export-button.component';
 import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 import { BoardingListComponent } from './components/boarding-list/boarding-list.component';
+// OBRS-317: owner/staff in-app notification bell + inbox panel family.
+import { NotificationBellComponent } from './components/notification-bell/notification-bell.component';
+import { NotificationInboxPanelComponent } from './components/notification-inbox-panel/notification-inbox-panel.component';
+import { NotificationInboxRowComponent } from './components/notification-inbox-row/notification-inbox-row.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -34,6 +39,9 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+    NotificationBellComponent,
+    NotificationInboxPanelComponent,
+    NotificationInboxRowComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -45,6 +53,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     SelectButtonModule,
     MenuModule,
     CalendarModule,
+    OverlayPanelModule,
   ],
   exports: [
     // Modules
@@ -66,6 +75,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+    NotificationBellComponent,
 
     // Directives
     AdminModalBackdropDirective,

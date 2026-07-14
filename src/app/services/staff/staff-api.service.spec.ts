@@ -80,6 +80,28 @@ describe('StaffApiService', () => {
     req.flush({ code: 200, message: 'OK', data: null });
   });
 
+  it('flagChildFare() posts to the correct endpoint and sets SKIP_AUTH_LOGOUT', () => {
+    service.flagChildFare(7).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/7/flag-child-fare`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: null });
+  });
+
+  it('unflagChildFare() posts to the correct endpoint and sets SKIP_AUTH_LOGOUT', () => {
+    service.unflagChildFare(7).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/tickets/7/unflag-child-fare`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+    req.flush({ code: 200, message: 'OK', data: null });
+  });
+
   it('searchSchedules() posts to the search endpoint', () => {
     const searchReq = {
       bookingType: 'one_way' as const,

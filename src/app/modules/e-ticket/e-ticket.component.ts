@@ -57,6 +57,17 @@ interface TicketPassenger {
    * (e.g. 409 TICKET_NOT_CONFIRMED on a cancelled/refunded leg) — renders a
    * placeholder instead of blanking the whole page (OBRS-96). */
   qrUnavailable: boolean;
+  /** OBRS-325: true when this ticket's `seatNumber` is null (an open-seating
+   * schedule, `schedules.seating_mode = OPEN`, OBRS-321) — the template shows
+   * the open-seating label instead of `seat` (which stays `'-'`, same as the
+   * pre-existing "no data" placeholder). Always `false` before the ticket API
+   * response lands (store-only rows never have a real ticket seat yet). */
+  seatOpen: boolean;
+  /** OBRS-296: server-authoritative fare category — `null` on the
+   *  pre-API/store-only render (derived from `PassengerInfo.isAdult` there;
+   *  see `buildPassengerRows()`) until `buildPassengersFromApi()` overrides
+   *  it from the ticket response. */
+  fareCategory: 'adult' | 'child' | null;
 }
 type Locale = 'en' | 'th' | 'zh';
 
@@ -81,6 +92,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
   vehicleType = '-';
   vehiclePlate = '-';
   seats = '-';
+  /** OBRS-325: true when every ticket in the outbound journey has a null
+   *  `seatNumber` — mirrors `TicketLeg.isOpenSeating` on the shared card. */
+  seatsOpen = false;
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
@@ -426,6 +440,14 @@ export class ETicketComponent implements OnInit, OnDestroy {
         ticketNumber: '-',
         qrDataUrl: '',
         qrUnavailable: false,
+        // No ticket exists yet at this stage, so there is no real
+        // seat_number to inspect — mirrors seat above (real value fills in
+        // once buildPassengersFromApi runs).
+        seatOpen: false,
+        // OBRS-296: pre-API render — derived from the form's isAdult, same
+        // adult/child mapping as buildPassengersPayload(). Overridden by the
+        // server-authoritative value once buildPassengersFromApi() runs.
+        fareCategory: passenger.isAdult ? 'adult' : 'child',
       };
     });
   }
@@ -652,6 +674,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (apiPassengers.length > 0) {
       this.passengers = apiPassengers;
       this.seats = this.buildSeatList(apiPassengers);
+      // OBRS-325: every ticket on the outbound leg shares one schedule, so
+      // either all of them are open-seating or none are.
+      this.seatsOpen = apiPassengers.every((passenger) => passenger.seatOpen);
       this.fetchBoardingTokensForPassengers();
     }
 
@@ -676,6 +701,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
       ticketNumber: '-',
       qrDataUrl: '',
       qrUnavailable: false,
+      seatOpen: false,
+      // OBRS-296: the booker row has no fare category of its own.
+      fareCategory: null,
     };
   }
 
@@ -736,7 +764,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
   ): TicketPassenger[] {
     const tickets = journey?.tickets ?? [];
     return tickets.map((ticket) => {
-      const seat = ticket.seatNumber?.trim() || '-';
+      const rawSeatNumber = ticket.seatNumber?.trim();
+      const seatOpen = !rawSeatNumber;
+      const seat = rawSeatNumber || '-';
       const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
       const qrState = ticketId !== null ? this.boardingQrService.getState(ticketId) : undefined;
 
@@ -748,6 +778,10 @@ export class ETicketComponent implements OnInit, OnDestroy {
         ticketNumber: ticket.ticketNumber?.trim() || '-',
         qrDataUrl: qrState?.qrDataUrl ?? '',
         qrUnavailable: qrState?.qrUnavailable ?? false,
+        seatOpen,
+        // OBRS-296: server-authoritative — replaces the pre-API isAdult-derived
+        // guess from buildPassengerRows() once the ticket API response lands.
+        fareCategory: ticket.fareCategory ?? null,
       };
     });
   }

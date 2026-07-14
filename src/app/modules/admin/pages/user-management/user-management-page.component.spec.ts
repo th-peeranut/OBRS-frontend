@@ -20,7 +20,6 @@ const USER_ROW = {
   roles: ['Admin'],
   status: 'Active',
   statusCode: 'active',
-  lastUpdated: '-',
   lastLogin: '-',
   hasLoggedIn: false,
   locked: false,
@@ -95,6 +94,23 @@ describe('UserManagementPageComponent', () => {
 
     expect(component.users.length).toBe(1);
     expect(component.users[0].fullName).toBe('Mr John Doe');
+  });
+
+  // OBRS-330: applyLocalization wires a translateFn (translate.instant) into
+  // toUserRow so the Roles column localizes like the Status column already
+  // does. createTranslateStub()'s instant() is an identity function (no
+  // ADMIN.USERS.ROLE_NAMES.* keys resolve), which is exactly the "unknown
+  // translation" case toUserRow/extractRoleLabels must fall back on — so the
+  // bare "admin" slug from USER_DTO.roles should render as the prettified
+  // "Admin" fallback, never the raw slug and never a raw i18n key.
+  it('localizes the role slug via translate.instant, falling back to a prettified label', () => {
+    const { component, store } = makeComponent();
+
+    component.ngOnInit();
+    store.data$.next({ users: [USER_DTO], roles: [], lookups: [] });
+
+    expect(component.users[0].roleSlugs).toEqual(['admin']);
+    expect(component.users[0].roles).toEqual(['Admin']);
   });
 
   // OBRS-182: real last-login flows through the page's mapping, not just the

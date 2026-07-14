@@ -543,13 +543,26 @@
       "FILTER_ROLE": "角色：所有角色",
       "FILTER_STATUS": "状态：全部",
       "FULL_NAME": "全名",
-      "LAST_UPDATED": "更新时间",
       "LAST_LOGIN": "最近登录",
       "NEVER_LOGGED_IN": "从未登录",
       "USERNAME": "用户名",
       "EMAIL_PHONE": "电子邮件和电话",
       "ROLES": "角色",
+      "ROLE_NAMES": {
+        "admin": "管理员",
+        "owner": "老板",
+        "salesperson": "销售员",
+        "driver": "司机",
+        "customer": "客户"
+      },
       "STATUS": "状态",
+      "STATUS_NAMES": {
+        "active": "使用中",
+        "inactive": "未使用",
+        "pending_verification": "待验证",
+        "suspended": "已暂停",
+        "deleted": "已删除"
+      },
       "USER_COUNT": "名用户",
       "ADD_TITLE": "创建用户",
       "EDIT_TITLE": "编辑用户",
@@ -724,7 +737,52 @@
       "PAYMENT_STATUS": "支付状态",
       "UNITS": "条预订",
       "LOADING": "正在加载预订数据...",
-      "LOAD_FAILED": "无法从后端加载预订数据。"
+      "LOAD_FAILED": "无法从后端加载预订数据。",
+      "VIEW": "查看",
+      "DETAIL": {
+        "TITLE": "预订详情",
+        "CLOSE": "关闭",
+        "LOAD_FAILED": "无法加载预订详情，请重试。",
+        "CREATED_AT": "创建时间",
+        "EXPIRES_AT": "过期时间",
+        "SECTION": {
+          "CONTACT": "客户联系信息",
+          "ACTOR": "预订操作人",
+          "PASSENGERS": "乘客与车票",
+          "PAYMENT": "付款",
+          "TIMELINE": "活动记录"
+        },
+        "CONTACT_NAME": "姓名",
+        "CONTACT_PHONE": "电话号码",
+        "ACTOR_NAME": "姓名",
+        "ACTOR_TYPE": "操作人类型",
+        "ACTOR_CHANNEL": "渠道",
+        "ACTOR_OFFICE": "办公室",
+        "NO_JOURNEYS": "此预订没有行程。",
+        "JOURNEY_LABEL": "行程 {{index}}：{{route}}",
+        "COL": {
+          "PASSENGER_NAME": "乘客",
+          "PASSENGER_TYPE": "类型",
+          "SEAT": "座位",
+          "TICKET_NUMBER": "车票编号",
+          "TICKET_STATUS": "车票状态",
+          "TXN_DATE": "日期/时间",
+          "TXN_METHOD": "支付方式",
+          "TXN_AMOUNT": "金额",
+          "TXN_STATUS": "状态"
+        },
+        "TOTAL_AMOUNT": "总金额",
+        "PAID_AMOUNT": "已付",
+        "OUTSTANDING_AMOUNT": "未付",
+        "REFUNDED_AMOUNT": "已退款",
+        "NO_TRANSACTIONS": "暂无支付交易记录。",
+        "EVENT": {
+          "CREATED": "预订已创建",
+          "PAYMENT": "收到付款（{{method}}）",
+          "EXPIRES": "预订即将过期",
+          "CURRENT_STATUS": "当前状态：{{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "仪表板",
@@ -1165,6 +1223,19 @@
       "BOARDING_REMINDER": "登车提醒"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "通知，{{count}} 条未读",
+    "PANEL_TITLE": "通知",
+    "MARK_ALL_READ": "全部标为已读",
+    "EMPTY_TITLE": "暂无通知",
+    "LOAD_ERROR": "无法加载通知",
+    "RETRY": "重试",
+    "SHOWING_LATEST": "显示最近 {{shown}} 条，共 {{total}} 条",
+    "MARK_READ_ERROR": "标记已读失败，请重试",
+    "MARK_ALL_ERROR": "全部标记已读失败，请重试",
+    "ROW_UNREAD_SUFFIX": "未读",
+    "ROW_READ_SUFFIX": "已读"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "更改您的邮箱",
     "CURRENT_PASSWORD_LABEL": "当前密码",
@@ -1256,7 +1327,7 @@
       "PASSENGER_1": "成人",
       "PASSENGER_1_HINT": "12岁及以上",
       "PASSENGER_2": "儿童",
-      "PASSENGER_2_HINT": "2-11岁",
+      "PASSENGER_2_HINT": "身高≤130cm（2-11岁）",
       "START_STATION": "出发地",
       "END_STATION": "目的地",
       "DEPARTURE_DATE": "出发日期",
@@ -1456,6 +1527,8 @@
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",
       "SEAT_LEG_RETURN": "返程座位",
+      "FARE_CATEGORY": "票价类别",
+      "FARE_CATEGORY_CHILD_HINT": "儿童票适用于身高≤130cm的乘客。",
       "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
       "SEAT_CHIP_FALLBACK": "乘客 {{n}}",
       "OPEN_SEAT_SECTION_HINT": "开放座位 — 按到达顺序上车。",
@@ -1551,6 +1624,7 @@
       "VEHICLE_TYPE": "车辆类型",
       "VEHICLE_PLATE": "车牌号",
       "SEAT": "座位",
+      "SEAT_OPEN": "自由入座（不指定座位）",
       "PASSENGERS": "乘客",
       "BOOKER": "预订人",
       "PASSENGER_NAME": "乘客姓名",
@@ -1560,14 +1634,16 @@
       "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
-      "LEG_RETURN": "返程"
+      "LEG_RETURN": "返程",
+      "FARE_CATEGORY": "票价类别"
     },
     "QR_HINT": "二维码仅用于登车前的身份验证。",
     "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",
     "DOWNLOAD": "下载电子票",
     "NOTE_LABEL": "注意：",
     "QR_ARIA_LABEL": "二维码",
-    "LOGO_ALT": "NJ Phuyaipu 标志"
+    "LOGO_ALT": "NJ Phuyaipu 标志",
+    "CHILD_FARE_NOTE": "登车检查：乘客身高须≤130cm。"
   },
   "POLICY": {
     "REFUND": {
@@ -1734,6 +1810,27 @@
           "BOARDING_ROUND_ARRIVED": "本班次已到达，登车功能已锁定。",
           "GENERIC": "验证失败，请重试。"
         }
+      },
+      "FARE_CATEGORY": "票价类别",
+      "CHILD_FARE_FLAG_BTN": "标记不符",
+      "CHILD_FARE_UNFLAG_BTN": "取消标记",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "标记中…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "取消标记中…",
+      "CHILD_FARE_FLAGGED": "已标记",
+      "CHILD_FARE_FLAGGED_AT": "标记时间",
+      "CHILD_FARE_FLAGGED_BY": "标记人",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "确定取消此标记吗？",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "此操作将清除该票的儿童票不符标记。",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "取消标记",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "取消",
+      "CHILD_FARE_FLAG_SUCCESS": "该票已标记票价类别不符。",
+      "CHILD_FARE_FLAG_FAILED": "无法标记该票。",
+      "CHILD_FARE_UNFLAG_SUCCESS": "标记已取消。",
+      "CHILD_FARE_UNFLAG_FAILED": "无法取消标记。",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "该票已被标记。",
+        "NOT_FLAGGED": "该票尚未被标记。",
+        "GENERIC": "操作失败，请重试。"
       }
     },
     "SCHEDULE_STATUS": {

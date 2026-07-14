@@ -5,6 +5,7 @@ import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-
 import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
+import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 
 interface AdminNavItem {
   path: string;
@@ -132,7 +133,8 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly badgeRefreshService: UsabilityReportBadgeRefreshService,
-    private readonly badgeSocketService: BadgeSocketService
+    private readonly badgeSocketService: BadgeSocketService,
+    private readonly notificationInboxService: NotificationInboxService
   ) {
     super();
   }
@@ -171,6 +173,11 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
 
   override ngOnDestroy(): void {
     this.badgeSocketService.disconnect();
+    // OBRS-317: stop the notification-bell unread-count poll — the service
+    // also self-tears-down on authStatus$ going false, but this mirrors the
+    // explicit BadgeSocketService.disconnect() teardown above for the same
+    // "leaving the shell" lifecycle moment.
+    this.notificationInboxService.stopPolling();
     super.ngOnDestroy();
   }
 
@@ -179,6 +186,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // logged-out session must not keep pushing badge-count frames.
   protected override onLogout(): void {
     this.badgeSocketService.disconnect();
+    this.notificationInboxService.stopPolling();
     super.onLogout();
   }
 

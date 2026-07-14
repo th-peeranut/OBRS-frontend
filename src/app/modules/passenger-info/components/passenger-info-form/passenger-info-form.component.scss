@@ -39,6 +39,20 @@
   text-align: center;
 }
 
+// OBRS-296: fare-category radio group (adult/child) — reuses the existing
+// gender-radio .form-check-inline styling below; only the label + child hint
+// need their own rule.
+.fare-category-label {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-lightblack;
+}
+
+.fare-category-hint {
+  display: block;
+  color: $text-lightgrey;
+}
+
 .form-row {
   display: flex;
   row-gap: $space-2xs;

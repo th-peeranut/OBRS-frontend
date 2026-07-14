@@ -543,13 +543,26 @@
       "FILTER_ROLE": "บทบาท: ทั้งหมด",
       "FILTER_STATUS": "สถานะ: ทั้งหมด",
       "FULL_NAME": "ชื่อ-นามสกุล",
-      "LAST_UPDATED": "อัปเดตล่าสุด",
       "LAST_LOGIN": "เข้าใช้งานล่าสุด",
       "NEVER_LOGGED_IN": "ยังไม่เคยเข้าสู่ระบบ",
       "USERNAME": "ชื่อผู้ใช้",
       "EMAIL_PHONE": "อีเมลและเบอร์โทร",
       "ROLES": "บทบาท",
+      "ROLE_NAMES": {
+        "admin": "ผู้ดูแลระบบ",
+        "owner": "เจ้าของกิจการ",
+        "salesperson": "พนักงานขาย",
+        "driver": "คนขับ",
+        "customer": "ลูกค้า"
+      },
       "STATUS": "สถานะ",
+      "STATUS_NAMES": {
+        "active": "ใช้งาน",
+        "inactive": "ไม่ใช้งาน",
+        "pending_verification": "รอการยืนยัน",
+        "suspended": "ถูกระงับ",
+        "deleted": "ถูกลบ"
+      },
       "USER_COUNT": "ผู้ใช้",
       "ADD_TITLE": "สร้างผู้ใช้",
       "EDIT_TITLE": "แก้ไขผู้ใช้",
@@ -724,7 +737,52 @@
       "PAYMENT_STATUS": "สถานะการชำระเงิน",
       "UNITS": "รายการ",
       "LOADING": "กำลังโหลดข้อมูลการจอง...",
-      "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลการจองจากระบบได้"
+      "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลการจองจากระบบได้",
+      "VIEW": "ดูรายละเอียด",
+      "DETAIL": {
+        "TITLE": "รายละเอียดการจอง",
+        "CLOSE": "ปิด",
+        "LOAD_FAILED": "ไม่สามารถโหลดรายละเอียดการจองได้ กรุณาลองใหม่อีกครั้ง",
+        "CREATED_AT": "สร้างเมื่อ",
+        "EXPIRES_AT": "หมดอายุเมื่อ",
+        "SECTION": {
+          "CONTACT": "ข้อมูลติดต่อลูกค้า",
+          "ACTOR": "ผู้ทำรายการจอง",
+          "PASSENGERS": "ผู้โดยสารและตั๋ว",
+          "PAYMENT": "การชำระเงิน",
+          "TIMELINE": "ความเคลื่อนไหว"
+        },
+        "CONTACT_NAME": "ชื่อ-นามสกุล",
+        "CONTACT_PHONE": "หมายเลขโทรศัพท์",
+        "ACTOR_NAME": "ชื่อ",
+        "ACTOR_TYPE": "ประเภทผู้ทำรายการ",
+        "ACTOR_CHANNEL": "ช่องทาง",
+        "ACTOR_OFFICE": "สำนักงาน",
+        "NO_JOURNEYS": "ไม่มีเที่ยวเดินทางในรายการจองนี้",
+        "JOURNEY_LABEL": "เที่ยวที่ {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "ผู้โดยสาร",
+          "PASSENGER_TYPE": "ประเภท",
+          "SEAT": "ที่นั่ง",
+          "TICKET_NUMBER": "หมายเลขตั๋ว",
+          "TICKET_STATUS": "สถานะตั๋ว",
+          "TXN_DATE": "วันที่/เวลา",
+          "TXN_METHOD": "วิธีการชำระเงิน",
+          "TXN_AMOUNT": "จำนวนเงิน",
+          "TXN_STATUS": "สถานะ"
+        },
+        "TOTAL_AMOUNT": "ยอดรวม",
+        "PAID_AMOUNT": "ชำระแล้ว",
+        "OUTSTANDING_AMOUNT": "ค้างชำระ",
+        "REFUNDED_AMOUNT": "คืนเงินแล้ว",
+        "NO_TRANSACTIONS": "ไม่มีรายการธุรกรรมการชำระเงิน",
+        "EVENT": {
+          "CREATED": "สร้างรายการจอง",
+          "PAYMENT": "ได้รับการชำระเงิน ({{method}})",
+          "EXPIRES": "รายการจองจะหมดอายุ",
+          "CURRENT_STATUS": "สถานะปัจจุบัน: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "แดชบอร์ด",
@@ -1166,6 +1224,19 @@
       "BOARDING_REMINDER": "แจ้งเตือนขึ้นรถ"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "การแจ้งเตือน มี {{count}} รายการที่ยังไม่ได้อ่าน",
+    "PANEL_TITLE": "การแจ้งเตือน",
+    "MARK_ALL_READ": "ทำเครื่องหมายว่าอ่านแล้วทั้งหมด",
+    "EMPTY_TITLE": "ยังไม่มีการแจ้งเตือน",
+    "LOAD_ERROR": "ไม่สามารถโหลดการแจ้งเตือนได้",
+    "RETRY": "ลองอีกครั้ง",
+    "SHOWING_LATEST": "แสดง {{shown}} รายการล่าสุด จากทั้งหมด {{total}}",
+    "MARK_READ_ERROR": "ไม่สามารถทำเครื่องหมายว่าอ่านแล้วได้ กรุณาลองอีกครั้ง",
+    "MARK_ALL_ERROR": "ไม่สามารถทำเครื่องหมายว่าอ่านแล้วทั้งหมดได้ กรุณาลองอีกครั้ง",
+    "ROW_UNREAD_SUFFIX": "ยังไม่ได้อ่าน",
+    "ROW_READ_SUFFIX": "อ่านแล้ว"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "เปลี่ยนอีเมลของคุณ",
     "CURRENT_PASSWORD_LABEL": "รหัสผ่านปัจจุบัน",
@@ -1257,7 +1328,7 @@
       "PASSENGER_1": "ผู้ใหญ่",
       "PASSENGER_1_HINT": "อายุ 12 ปีขึ้นไป",
       "PASSENGER_2": "เด็ก",
-      "PASSENGER_2_HINT": "อายุ 2-11 ปี",
+      "PASSENGER_2_HINT": "ส่วนสูงไม่เกิน 130 ซม. (อายุ 2-11 ปี)",
       "START_STATION": "ต้นทาง",
       "END_STATION": "ปลายทาง",
       "DEPARTURE_DATE": "วันออกเดินทาง",
@@ -1458,6 +1529,8 @@
       "SEAT_SECTION_HINT": "เลือกที่นั่งของคุณ — หากไม่เลือก ระบบจะกำหนดที่นั่งให้โดยอัตโนมัติ",
       "SEAT_LEG_OUTBOUND": "ที่นั่งขาไป",
       "SEAT_LEG_RETURN": "ที่นั่งขากลับ",
+      "FARE_CATEGORY": "ประเภทค่าโดยสาร",
+      "FARE_CATEGORY_CHILD_HINT": "ราคาเด็กสำหรับผู้โดยสารส่วนสูงไม่เกิน 130 ซม.",
       "SEAT_ACTIVE_PASSENGER_LABEL": "เลือกผู้โดยสารที่ต้องการกำหนดที่นั่ง",
       "SEAT_CHIP_FALLBACK": "ผู้โดยสาร {{n}}",
       "OPEN_SEAT_SECTION_HINT": "ที่นั่งแบบไม่ระบุที่นั่ง — ขึ้นรถตามลำดับ",
@@ -1553,6 +1626,7 @@
       "VEHICLE_TYPE": "ประเภทรถ",
       "VEHICLE_PLATE": "หมายเลขรถ/ทะเบียน",
       "SEAT": "ที่นั่ง",
+      "SEAT_OPEN": "ขึ้นนั่งตามที่ว่าง",
       "PASSENGERS": "ผู้โดยสาร",
       "BOOKER": "คนที่จอง",
       "PASSENGER_NAME": "ชื่อ-นามสกุล",
@@ -1562,14 +1636,16 @@
       "TOTAL_UNIT": "บาท",
       "ESTIMATE_KM_UNIT": "กม.",
       "LEG_OUTBOUND": "ขาไป",
-      "LEG_RETURN": "ขากลับ"
+      "LEG_RETURN": "ขากลับ",
+      "FARE_CATEGORY": "ประเภทค่าโดยสาร"
     },
     "QR_HINT": "QR-code ใช้สำหรับสแกนยืนยันตัวตนก่อนขึ้นรถเท่านั้น",
     "QR_UNAVAILABLE": "ตั๋วใบนี้ใช้ขึ้นรถไม่ได้ (ถูกยกเลิก คืนเงิน หรือไม่สามารถใช้งานได้แล้ว)",
     "DOWNLOAD": "ดาวน์โหลด",
     "NOTE_LABEL": "หมายเหตุ:",
     "QR_ARIA_LABEL": "คิวอาร์โค้ด",
-    "LOGO_ALT": "โลโก้ NJ Phuyaipu"
+    "LOGO_ALT": "โลโก้ NJ Phuyaipu",
+    "CHILD_FARE_NOTE": "ตรวจสอบตอนขึ้นรถ: ผู้โดยสารต้องมีส่วนสูงไม่เกิน 130 ซม."
   },
   "POLICY": {
     "REFUND": {
@@ -1736,6 +1812,27 @@
           "BOARDING_ROUND_ARRIVED": "รอบนี้ถึงปลายทางแล้ว การขึ้นรถถูกล็อกไว้",
           "GENERIC": "ตรวจสอบไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
         }
+      },
+      "FARE_CATEGORY": "ประเภทค่าโดยสาร",
+      "CHILD_FARE_FLAG_BTN": "แจ้งไม่ตรงประเภท",
+      "CHILD_FARE_UNFLAG_BTN": "ยกเลิกการแจ้ง",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "กำลังแจ้ง…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "กำลังยกเลิกการแจ้ง…",
+      "CHILD_FARE_FLAGGED": "ถูกแจ้ง",
+      "CHILD_FARE_FLAGGED_AT": "แจ้งเมื่อ",
+      "CHILD_FARE_FLAGGED_BY": "แจ้งโดย",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "ยกเลิกการแจ้งนี้หรือไม่?",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "การดำเนินการนี้จะล้างการแจ้งไม่ตรงประเภทค่าโดยสารเด็กสำหรับตั๋วใบนี้",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "ยกเลิกการแจ้ง",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "ยกเลิก",
+      "CHILD_FARE_FLAG_SUCCESS": "แจ้งตั๋วนี้ว่าประเภทค่าโดยสารไม่ตรงเรียบร้อยแล้ว",
+      "CHILD_FARE_FLAG_FAILED": "ไม่สามารถแจ้งตั๋วนี้ได้",
+      "CHILD_FARE_UNFLAG_SUCCESS": "ยกเลิกการแจ้งเรียบร้อยแล้ว",
+      "CHILD_FARE_UNFLAG_FAILED": "ไม่สามารถยกเลิกการแจ้งได้",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "ตั๋วใบนี้ถูกแจ้งไปแล้ว",
+        "NOT_FLAGGED": "ตั๋วใบนี้ยังไม่ถูกแจ้ง",
+        "GENERIC": "ดำเนินการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง"
       }
     },
     "SCHEDULE_STATUS": {

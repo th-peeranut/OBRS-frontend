@@ -133,6 +133,7 @@ do not add a fourth.
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. |
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
+| **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
 
 ### 3.1 Dropdown contract (this is what the Vehicle Type bug violated)
 
@@ -377,6 +378,21 @@ enforced rule with a test behind it.
   `.admin-icon-btn`, keeping its color/hover tokens untouched; exposed via `[title]` +
   `[attr.aria-label]` (no new tooltip component). Reuse this modifier for the next
   KPI-card hint instead of introducing a tooltip directive.
+
+- **Notification bell + `p-overlayPanel` inbox, root-service state** (OBRS-317,
+  `AppNotificationBellComponent`): the owner/staff topbar's notification bell opens a
+  `p-overlayPanel` (§3's new "Rich-content popup" row) hosting a stateful list —
+  `AppNotificationInboxPanelComponent` → `AppNotificationInboxRowComponent` — rather
+  than `p-menu[popup]`'s flat `MenuItem[]`. Its unread-count/list state lives in a
+  root `NotificationInboxService` (plain `BehaviorSubject`s, no NgRx — NgRx here is
+  scoped to the customer booking modules), mirroring `BadgeSocketService`'s
+  idempotent-`connect()`/`count$` shape and `AdminCollectionStore`'s
+  clear-on-logout-via-`authStatus$` pattern. The corner badge is a **position-only**
+  modifier (`.notification-bell-badge`) of the existing `.admin-nav-badge` recipe —
+  reused verbatim, not re-derived. See
+  `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. Reuse
+  `p-overlayPanel` for the next back-office popup that needs to host a stateful list,
+  and the root-service shape for the next cross-cutting back-office signal.
 
 - **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
   card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
