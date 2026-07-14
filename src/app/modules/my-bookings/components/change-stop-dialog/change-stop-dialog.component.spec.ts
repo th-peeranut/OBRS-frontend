@@ -296,4 +296,37 @@ describe('ChangeStopDialogComponent', () => {
 
     expect(component.confirmError).toBe('MY_BOOKINGS.CHANGE_STOP.ERROR.NO_SEATS');
   });
+
+  // OBRS-351 (sibling of OBRS-345): on any loadChangeStopEstimateFailure the
+  // component must consume selectChangeStopEstimateError so the estimate step
+  // shows a message instead of a blank pane with a stuck-disabled Confirm.
+  // Before OBRS-351 the component never subscribed that selector (the store set
+  // changeStopEstimateError but nothing read it) and the estimate step bound
+  // [error]="confirmError" (the confirm step's error), so a change-stop
+  // estimate-load failure surfaced nothing — the same silent dead-end OBRS-345
+  // fixed for reschedule, one dialog over.
+  it('surfaces the estimate-load error at the estimate step and clears the spinner (never stuck) — OBRS-351', () => {
+    const { component, store } = create(buildState({ bookings: [buildBooking()] }));
+    component.ngOnInit();
+    component.step = 'estimate';
+
+    // Mirror the reducer's loadChangeStopEstimateFailure shape: loading cleared,
+    // estimate still null, a localized error message set.
+    store.next({
+      myBookings: buildState({
+        bookings: [buildBooking()],
+        changeStopDialogBookingId: 5,
+        changeStopEstimate: null,
+        changeStopEstimateLoading: false,
+        changeStopEstimateError: 'MY_BOOKINGS.CHANGE_STOP.ERROR.GENERIC',
+      }),
+    });
+
+    expect(component.estimateError)
+      .withContext('the estimate-load error must reach the component, not be dropped')
+      .toBe('MY_BOOKINGS.CHANGE_STOP.ERROR.GENERIC');
+    expect(component.estimateLoading)
+      .withContext('the spinner must resolve on failure, never stay stuck')
+      .toBeFalse();
+  });
 });
