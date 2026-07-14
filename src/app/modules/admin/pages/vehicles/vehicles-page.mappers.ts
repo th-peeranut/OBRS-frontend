@@ -101,6 +101,16 @@ export function buildVehicleFormValues(
     numberPlate: String(vehicleDetail.numberPlate ?? vehicle.plate).trim(),
     vehicleNumber: String(vehicleDetail.vehicleNumber ?? vehicle.vehicleNumber).trim(),
     status: parseAdminStatus(vehicleDetail.status ?? vehicle.statusCode, locale).code,
+    // OBRS-316 Gap 1: the row fallback (toVehicleDtoFallback) has none of these 7
+    // fields, so on the immediate open they read as blank until the real GET
+    // detail patches them in (see initEditForm's R1 fetch-fail guard).
+    brand: vehicleDetail.brand ?? '',
+    model: vehicleDetail.model ?? '',
+    manufactureYear: vehicleDetail.manufactureYear ?? null,
+    colour: vehicleDetail.colour ?? '',
+    engineCc: vehicleDetail.engineCc ?? null,
+    chassisNumber: vehicleDetail.chassisNumber ?? '',
+    note: vehicleDetail.note ?? '',
   };
 }
 
@@ -110,7 +120,33 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
     numberPlate: String(rawFormValue['numberPlate'] ?? '').trim(),
     vehicleNumber: String(rawFormValue['vehicleNumber'] ?? '').trim(),
     status: String(rawFormValue['status'] ?? '').trim().toLowerCase(),
+    // OBRS-316 Gap 1: PUT is full-replace, so all 7 are always sent (create AND
+    // edit) — blank strings/empty numbers normalize to `null`, never dropped.
+    // Deliberately NOT .toLowerCase()'d (unlike vehicleType/status slugs above) —
+    // brand/model/colour/chassisNumber/note are free-text display values, not
+    // lookup codes.
+    brand: nullableTrimmedString(rawFormValue['brand']),
+    model: nullableTrimmedString(rawFormValue['model']),
+    manufactureYear: nullableNumber(rawFormValue['manufactureYear']),
+    colour: nullableTrimmedString(rawFormValue['colour']),
+    engineCc: nullableNumber(rawFormValue['engineCc']),
+    chassisNumber: nullableTrimmedString(rawFormValue['chassisNumber']),
+    note: nullableTrimmedString(rawFormValue['note']),
   };
+}
+
+function nullableTrimmedString(rawValue: unknown): string | null {
+  const trimmed = String(rawValue ?? '').trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function nullableNumber(rawValue: unknown): number | null {
+  if (rawValue === null || rawValue === undefined || rawValue === '') {
+    return null;
+  }
+
+  const numericValue = Number(rawValue);
+  return Number.isNaN(numericValue) ? null : numericValue;
 }
 
 export function toVehicleTypeOptions(
