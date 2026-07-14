@@ -1,0 +1,21 @@
+.parcel-waybill-paper {
+  background: var(--admin-surface-card, #fff);
+  color: var(--admin-text, #191c1e);
+  padding: 24px;
+}
+
+.parcel-waybill-tracking {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.parcel-waybill-qr {
+  margin-top: 24px;
+  text-align: center;
+
+  img {
+    width: 140px;
+    height: 140px;
+  }
+}

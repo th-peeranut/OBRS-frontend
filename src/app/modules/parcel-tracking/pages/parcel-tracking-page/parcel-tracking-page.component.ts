@@ -1,0 +1,96 @@
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
+import { TranslateService } from '@ngx-translate/core';
+import { ParcelTrackingService } from '../../../../services/parcel-tracking/parcel-tracking.service';
+import { ParcelTrackRespDto } from '../../../../shared/interfaces/parcel.interface';
+import { parcelDeliveryStatusChip, ParcelStatusChip } from '../../../../shared/lib/parcel-delivery-status';
+import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+
+type TrackingContentState = 'idle' | 'loading' | 'found' | 'not-found';
+
+/**
+ * Public parcel tracking (`/track-parcel`, `/track-parcel/:trackingNumber`) —
+ * `customerArea: true`, no `requireAuth` (refund-policy precedent, no
+ * access-model change). A deep link with a tracking number auto-runs the
+ * lookup on load.
+ */
+@Component({
+  selector: 'app-parcel-tracking-page',
+  templateUrl: './parcel-tracking-page.component.html',
+  styleUrl: './parcel-tracking-page.component.scss',
+})
+export class ParcelTrackingPageComponent implements OnInit, OnDestroy {
+  protected readonly form: FormGroup;
+  protected contentState: TrackingContentState = 'idle';
+  protected result: ParcelTrackRespDto | null = null;
+  protected readonly parcelStopLabel = parcelStopLabel;
+
+  private readonly destroy$ = new Subject<void>();
+
+  constructor(
+    private readonly fb: FormBuilder,
+    private readonly route: ActivatedRoute,
+    private readonly trackingService: ParcelTrackingService,
+    private readonly translate: TranslateService
+  ) {
+    this.form = this.fb.group({
+      trackingNumber: ['', [Validators.required]],
+    });
+  }
+
+  ngOnInit(): void {
+    const deepLinkTrackingNumber = this.route.snapshot.paramMap.get('trackingNumber');
+    if (deepLinkTrackingNumber) {
+      this.form.patchValue({ trackingNumber: deepLinkTrackingNumber });
+      this.track();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  protected onSubmit(): void {
+    this.form.markAllAsTouched();
+    if (this.form.invalid) return;
+    this.track();
+  }
+
+  private track(): void {
+    const trackingNumber = String(this.form.value.trackingNumber ?? '').trim();
+    if (!trackingNumber) return;
+
+    this.contentState = 'loading';
+    this.result = null;
+
+    this.trackingService
+      .track(trackingNumber)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.result = resp?.data ?? null;
+          this.contentState = this.result ? 'found' : 'not-found';
+        },
+        error: () => {
+          // 404 (unknown tracking number) and any other failure both render
+          // as a neutral not-found state — the API doc: "no distinction
+          // between not-found and any other state".
+          this.result = null;
+          this.contentState = 'not-found';
+        },
+      });
+  }
+
+  protected chipFor(status: string): ParcelStatusChip {
+    return parcelDeliveryStatusChip(status);
+  }
+
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.translate.currentLang);
+  }
+}

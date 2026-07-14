@@ -522,3 +522,86 @@ the row's mere presence already implies availability.
 - The select button on both legs has no seat-based disable — every rendered
   row is already bookable per the search filter above, so it's always
   enabled.
+
+## Parcel Consigned Delivery — Staff Intake, Waybill, Handoff, Public Tracking (OBRS-305 Card 2)
+
+Four surfaces, built against
+`../OBRS-backend/docs/api/parcels-consigned-delivery.md` (see
+`docs/adr/0018-parcel-consigned-delivery-frontend.md` for the frontend-specific
+decisions and `docs/handoff.md` for one assumed endpoint + one shape
+ambiguity flagged back to the backend).
+
+**1. Staff consigned intake** (`/staff/parcels/consign`, `requiredRoles: ['salesperson']`).
+`ParcelConsignPageComponent` (smart) owns every HTTP call; `ParcelConsignFormComponent`
+(dumb reactive form) assembles sender/recipient/schedule/pickup/dropoff/weight/
+description/optional-dimensions/prohibited-acknowledgement and emits a debounced
+(400ms) `quoteParamsChange` the page uses to refetch the live quote (thin service
+call) and the cargo-remaining indicator (`ParcelCargoAvailabilityStore`,
+component-scoped `AdminCollectionStore` — providers: [], same reasoning as
+`BoardingListStore`) independently. Schedule/pickup/dropoff are all
+`app-admin-dropdown` (placeholder, no pre-seed, design-system §3.1); dropoff
+options are pre-filtered client-side to stops strictly after the chosen
+pickup's `stop_order` (the "client pre-check"). On success,
+`ParcelIntakeResultPanelComponent` replaces the form and shows the tracking
+number/collection code/a link to the waybill. Every documented 409/400
+`errorCode` maps to its own inline `STAFF.PARCEL_CONSIGN.ERROR.*` message
+(never the raw response message); the form is never reset on error.
+
+**2. Printable waybill** (`/staff/parcels/:id/waybill`, `requiredRoles: ['salesperson']`).
+`ParcelWaybillPageComponent` renders `WaybillRespDto` via the dumb
+`ParcelWaybillPaperComponent`, reused byte-identical for both the on-screen card
+and the CDK-portal print-only template — same
+`docs/adr/0015-boarding-manifest-print-isolation.md` idiom as
+`BoardingListComponent.printManifest()` (own marker-class pair,
+`.parcel-waybill-print-portal`/`body.parcel-waybill-printing`, in
+`admin-theme.scss`). The QR (encoding `collectionToken`) is rendered directly via
+the existing `qrcode` package (same call shape as `payment-qrcode.component.ts`) —
+no new dependency. `collectionToken`/its QR appear on this page ONLY, never on
+the public tracking response.
+
+**3. Delivery handoff** (`/staff/parcels/deliveries` → `/staff/parcels/deliveries/:scheduleId`,
+`requiredRoles: ['driver','salesperson']` — the role hierarchy note in the API
+doc means a salesperson session also satisfies the backend's `hasRole('DRIVER')`
+action guard). The entry page (`ParcelDeliveryEntryPageComponent`) mirrors
+`BoardingEntryPageComponent` exactly (same driver/staff schedule-store split),
+just navigating to the parcels-deliveries route. The list page
+(`ParcelDeliveryListPageComponent`, component-scoped `ParcelDeliveryListStore`)
+renders one row per consigned parcel with a state-driven action button
+(`accepted`→Load, `in_transit`→Mark arrived, `arrived_notified`→Collect via
+`ParcelCollectDialogComponent`, an inline `.admin-modal-backdrop` dialog using
+the existing `AdminModalBackdropDirective`, OBRS-272). Every action is
+**optimistic-disable-only**: the row's button disables while the request is in
+flight, but its displayed `deliveryStatus` only changes once the actual 200
+body's `deliveryStatus` is known — never guessed client-side. A wrong-state 409
+shows an `AlertService.toast()` and re-syncs the row via `store.refresh()`
+rather than trusting the stale local guess. The collect dialog ships a
+code-only input for MVP (see ADR 0018 Decision 2 for why the existing
+`BoardingListComponent` camera QR scanner isn't reused here).
+
+**4. Public tracking** (`/track-parcel`, `/track-parcel/:trackingNumber` — own
+lazy `ParcelTrackingModule`, `customerArea: true`, no `requireAuth`, same
+precedent as `/refund-policy`). `ParcelTrackingService.track()` sets
+`SKIP_AUTH_LOGOUT` (in addition to the usual `SKIP_GLOBAL_ERROR_ALERT`/
+`SKIP_GLOBAL_LOADING_ALERT`) — a logged-in staff member browsing this public,
+`permitAll` page with an expired token must never be force-logged-out by a bare
+401 on a page that never required auth. A deep-linked tracking number
+auto-runs the lookup on load; a 404 and any other failure both render the same
+neutral "not found" state (the API doc: "no distinction between not-found and
+any other state"). The status chip reuses the exact same `.admin-status.is-*`
+markup as the staff delivery-list even though this customer-shell page has no
+`.admin-shell` ancestor — see `docs/design-system.md` §12's new-pattern-log
+entry and ADR 0018 Decision 1 for the cross-shell token-reuse rationale.
+
+**Status-color mapping**: all 7 renderable `parcel_delivery_status` slugs map
+onto the existing `.admin-status.is-*` tokens (no new hex) — see
+`docs/design-system.md` §2.4.1 for the full slug→token table and
+`shared/lib/parcel-delivery-status.ts`/its spec for the implementation + lock.
+
+**DRY notes**: no new global NgRx slice was added (per the locked spec — thin
+service calls for quote/tracking, component-scoped `AdminCollectionStore`
+subclasses for cargo-availability/delivery-list). `StaffApiService` gained 8
+new methods rather than a new staff-domain service (existing domain service,
+same file). `RouteStopTimeDto.stop` gained an optional `id` field (additive) so
+the consign form can resolve numeric `pickupStopId`/`dropoffStopId` from the
+already-called `/private/route-stops/{slug}` endpoint, instead of adding a
+second stop-lookup call.

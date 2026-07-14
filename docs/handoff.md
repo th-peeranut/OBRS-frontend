@@ -70,6 +70,54 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-14 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2): one assumed endpoint + one shape ambiguity
+
+**Affected endpoint**: `GET /api/private/schedules/{scheduleId}/parcels/consigned` (new, ASSUMED)
+**Also affected**: `pickupStop`/`dropoffStop` shape on `ParcelTrackRespDto` (`GET /api/parcels/track/{tn}`) and `WaybillRespDto` (`GET /api/private/parcels/{id}/waybill`)
+
+**Request type**: New endpoint + shape clarification.
+
+**Status at time of writing**: built against
+`../OBRS-backend/docs/api/parcels-consigned-delivery.md` for every endpoint it
+documents. That doc lists per-parcel action endpoints
+(`/load`, `/arrived`, `/collect`, `/waybill`) but no "list consigned parcels
+for a schedule" GET, which the delivery-handoff list
+(`/staff/parcels/deliveries/:scheduleId`) needs to enumerate rows. See
+`docs/adr/0018-parcel-consigned-delivery-frontend.md` Decision 3 — this is the
+same parallel-lane build pattern already used for OBRS-96/OBRS-129/OBRS-130
+above (see those entries), not an assumption that an undocumented endpoint
+already exists.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/schedules/{scheduleId}/parcels/consigned` → `ParcelDeliveryListItemDto[]` = `{ parcelId, trackingNumber, senderName, senderPhone, recipientName, recipientPhone, pickupStop, dropoffStop, weightKg, deliveryStatus }[]`. Same role gate as `/load`/`/arrived`/`/collect` (`hasRole('DRIVER')`, which the role hierarchy note in the API doc says also admits SALESPERSON/OWNER/ADMIN) | New endpoint | Backs `ParcelDeliveryListPageComponent`'s per-schedule manifest — the row source for the load/arrived/collect action buttons |
+| Confirm the exact shape of `pickupStop`/`dropoffStop` on `ParcelTrackRespDto` and `WaybillRespDto` | Existing documented endpoints (`GET /api/parcels/track/{tn}`, `GET /api/private/parcels/{id}/waybill`) | The doc names these fields without specifying their shape beyond the field name. FE modeled `ParcelStopRefDto { code?, slug?, name?, label? }` (a superset of the shapes already used elsewhere in this codebase for a "stop reference" — `SegmentStopRefDto{slug,name}` from the segments endpoint, `RouteStopTimeDto.stop{code}` from route-stops) and resolves a display label via `parcelStopLabel()` (`shared/lib/parcel-stop-label.ts`), which tries `name` → `label` → `code` → `slug` → falls back to `'-'`. This degrades gracefully regardless of which shape the real response uses, but the exact shape should be confirmed and, ideally, made consistent with one of the codebase's existing stop-ref shapes rather than a third variant. |
+
+### What the frontend implemented (additive-safe)
+- `StaffApiService.getConsignedParcelsForSchedule()` (new method) and
+  `ParcelDeliveryListStore` (component-scoped `AdminCollectionStore`
+  subclass) are additive — no existing endpoint or field touched.
+- `parcelStopLabel()` is deliberately resilient to shape variance (see above)
+  so the delivery-list/waybill/tracking pages don't break on whichever real
+  shape the backend returns; only the *label chosen* would differ from the
+  intended one if the real shape doesn't match the assumed field-name
+  priority.
+
+### Impact if not addressed
+The delivery-handoff list (`/staff/parcels/deliveries/:scheduleId`) is
+implemented and additive-safe (new route, new nav entry point, no existing
+endpoint/field touched), but functionally inert until the backend ships this
+endpoint — the list will show its error state and no parcel can be
+loaded/marked-arrived/collected from this page. The stop-ref shape gap
+degrades gracefully (worst case: a stop renders its `code`/`slug` instead of
+a human name) rather than breaking, but should still be confirmed. Do not
+merge/deploy until the backend confirms both — track against the paired
+backend worktree `OBRS-backend-wt-obrs-305-parcel-consigned-delivery` before
+promoting either side.
+
+---
+
 ### [Frontend] 2026-07-11 — Per-round revenue settlement + owner cash-handover sign-off (OBRS-196): endpoints not yet in contract
 
 > **RESOLVED 2026-07-11** — backend landed (commit `037cdb1`). Two contract breaks were found and fixed against the real

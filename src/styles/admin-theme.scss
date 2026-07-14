@@ -1789,3 +1789,21 @@ textarea.admin-field {
     display: block !important;
   }
 }
+
+// OBRS-305: the parcel waybill's print-only portal (ParcelWaybillPageComponent.
+// printWaybill()) — same idiom as .boarding-manifest-print-portal immediately
+// above (docs/adr/0015-boarding-manifest-print-isolation.md), reused for the
+// next print feature rather than reinventing the reveal-rule pattern.
+.parcel-waybill-print-portal {
+  display: none;
+}
+
+@media print {
+  body.parcel-waybill-printing > *:not(.parcel-waybill-print-portal) {
+    display: none !important;
+  }
+
+  body.parcel-waybill-printing .parcel-waybill-print-portal {
+    display: block !important;
+  }
+}

@@ -12,6 +12,19 @@ import {
   BoardingScanRequest,
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
+import {
+  CargoAvailabilityRespDto,
+  ParcelCollectReqDto,
+  ParcelCollectRespDto,
+  ParcelConsignedReqDto,
+  ParcelConsignedRespDto,
+  ParcelDeliveryListItemDto,
+  ParcelLoadRespDto,
+  ParcelArrivedRespDto,
+  ParcelQuoteReqParams,
+  ParcelQuoteRespDto,
+  WaybillRespDto,
+} from '../../shared/interfaces/parcel.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
@@ -128,8 +141,14 @@ export interface RouteStopTimeDto {
   stopOrder: number;
   offsetMinutesFromOrigin: number;
   distanceKmFromOrigin?: number;
-  /** LookupResponse — `code` is the stop slug used to join with segment stops. */
-  stop: { code: string };
+  /** LookupResponse — `code` is the stop slug used to join with segment stops.
+   * OBRS-305: `id` added (optional, additive) — the parcel consign form needs
+   * the numeric stop id for `pickupStopId`/`dropoffStopId` on the consigned
+   * intake request. The underlying `/private/route-stops/{slug}` response
+   * already carries it (same backend endpoint `AdminApiService.getRouteStops`
+   * calls, whose `AdminStopDto.id` types the identical field) — this FE-side
+   * type just hadn't needed it until now. */
+  stop: { code: string; id?: number };
 }
 
 export interface RouteStopsDto {
@@ -447,6 +466,112 @@ export class StaffApiService {
     return this.http.get<ResponseAPI<AdminUserDto>>(
       `${environment.apiUrl}/api/private/users/me`,
       { context: this.skipContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-305 Card 2 — parcel consigned intake + delivery handoff (staff-facing).
+  // See ../OBRS-backend/docs/api/parcels-consigned-delivery.md.
+  // ---------------------------------------------------------------------------
+
+  /** POST /api/private/parcels/walk-in, consigned branch. Reuses the Card-1
+   * walk-in endpoint (SALESPERSON-authorized) — `parcelType: 'consigned'`
+   * routes to the new consigned branch server-side. */
+  createConsignedParcel(
+    payload: ParcelConsignedReqDto
+  ): Observable<ResponseAPI<ParcelConsignedRespDto>> {
+    return this.http.post<ResponseAPI<ParcelConsignedRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/walk-in`,
+      payload,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/parcels/quote — live consigned quote, refetched
+   * debounced by the consign form as schedule/pickup/dropoff/weight change. */
+  getParcelQuote(params: ParcelQuoteReqParams): Observable<ResponseAPI<ParcelQuoteRespDto>> {
+    const query = new URLSearchParams({
+      parcelType: params.parcelType,
+      scheduleId: String(params.scheduleId),
+      pickupStopId: String(params.pickupStopId),
+      dropoffStopId: String(params.dropoffStopId),
+      weightKg: String(params.weightKg),
+    }).toString();
+    return this.http.get<ResponseAPI<ParcelQuoteRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/quote?${query}`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/schedules/{id}/cargo-availability — the cargo-remaining
+   * indicator on the consign form. */
+  getCargoAvailability(scheduleId: number): Observable<ResponseAPI<CargoAvailabilityRespDto>> {
+    return this.http.get<ResponseAPI<CargoAvailabilityRespDto>>(
+      `${environment.apiUrl}/api/private/schedules/${scheduleId}/cargo-availability`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/parcels/{id}/waybill — Option B (ADR-0067 on the
+   * backend): no server-side PDF, FE renders + browser print-to-PDF. */
+  getWaybill(parcelId: number): Observable<ResponseAPI<WaybillRespDto>> {
+    return this.http.get<ResponseAPI<WaybillRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/waybill`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** ASSUMED endpoint, not yet in the backend contract doc — see
+   * `docs/handoff.md` Contract Requests (OBRS-305). Backs the delivery-handoff
+   * list for one schedule (`/staff/parcels/deliveries/:scheduleId`). */
+  getConsignedParcelsForSchedule(
+    scheduleId: number
+  ): Observable<ResponseAPI<ParcelDeliveryListItemDto[]>> {
+    return this.http.get<ResponseAPI<ParcelDeliveryListItemDto[]>>(
+      `${environment.apiUrl}/api/private/schedules/${scheduleId}/parcels/consigned`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** Domain state-transition action endpoints (load/arrived/collect) reuse
+   * `boardingScanContext`'s reasoning: a domain 409 (wrong-state,
+   * code/token mismatch, already-collected) on a retryable staff action must
+   * never force-logout the operator nor duplicate a global alert (OBRS-187
+   * trap) — same defensive treatment as `board()`/`unboard()`/
+   * `updateScheduleStatus()`/`delaySchedule()` above. */
+  private readonly parcelActionContext = new HttpContext()
+    .set(SKIP_GLOBAL_ERROR_ALERT, true)
+    .set(SKIP_GLOBAL_LOADING_ALERT, true)
+    .set(SKIP_AUTH_LOGOUT, true);
+
+  /** POST /api/private/parcels/{id}/load — accepted → in_transit. DRIVER-only. */
+  loadParcel(parcelId: number): Observable<ResponseAPI<ParcelLoadRespDto>> {
+    return this.http.post<ResponseAPI<ParcelLoadRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/load`,
+      {},
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcels/{id}/arrived — in_transit → arrived_notified. DRIVER-only. */
+  markParcelArrived(parcelId: number): Observable<ResponseAPI<ParcelArrivedRespDto>> {
+    return this.http.post<ResponseAPI<ParcelArrivedRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/arrived`,
+      {},
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcels/{id}/collect — arrived_notified → collected
+   * (CAS). Body carries exactly one of collectionCode/collectionToken. */
+  collectParcel(
+    parcelId: number,
+    payload: ParcelCollectReqDto
+  ): Observable<ResponseAPI<ParcelCollectRespDto>> {
+    return this.http.post<ResponseAPI<ParcelCollectRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
+      payload,
+      { context: this.parcelActionContext }
     );
   }
 }

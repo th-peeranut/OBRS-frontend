@@ -1,0 +1,153 @@
+<form [formGroup]="form" class="parcel-consign-form" (ngSubmit)="onSubmit()">
+  <div class="row g-3">
+    <div class="col-12">
+      <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.SENDER' | translate }}</h5>
+    </div>
+    <div class="col-md-6">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_NAME' | translate }}</label>
+      <input type="text" class="admin-field" formControlName="senderName" [class.is-invalid]="isFieldInvalid('senderName')" />
+      <small class="admin-error" *ngIf="fieldError('senderName') as err">{{ err | translate }}</small>
+    </div>
+    <div class="col-md-6">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_PHONE' | translate }}</label>
+      <input type="text" class="admin-field" formControlName="senderPhone" [class.is-invalid]="isFieldInvalid('senderPhone')" />
+      <small class="admin-error" *ngIf="fieldError('senderPhone') as err">{{ err | translate }}</small>
+    </div>
+
+    <div class="col-12">
+      <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.RECIPIENT' | translate }}</h5>
+    </div>
+    <div class="col-md-6">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_NAME' | translate }}</label>
+      <input type="text" class="admin-field" formControlName="recipientName" [class.is-invalid]="isFieldInvalid('recipientName')" />
+      <small class="admin-error" *ngIf="fieldError('recipientName') as err">{{ err | translate }}</small>
+    </div>
+    <div class="col-md-6">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_PHONE' | translate }}</label>
+      <input type="text" class="admin-field" formControlName="recipientPhone" [class.is-invalid]="isFieldInvalid('recipientPhone')" />
+      <small class="admin-error" *ngIf="fieldError('recipientPhone') as err">{{ err | translate }}</small>
+    </div>
+
+    <div class="col-12">
+      <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.TRIP' | translate }}</h5>
+    </div>
+    <div class="col-md-4">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate }}</label>
+      <app-admin-dropdown
+        formControlName="scheduleId"
+        [options]="scheduleOptions"
+        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.SCHEDULE' | translate"
+        valueKey="value"
+        labelKey="label"
+      ></app-admin-dropdown>
+    </div>
+    <div class="col-md-4">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate }}</label>
+      <app-admin-dropdown
+        formControlName="pickupStopId"
+        [options]="pickupOptions"
+        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.PICKUP_STOP' | translate"
+        [disabled]="isLoadingStops || pickupOptions.length === 0"
+        valueKey="value"
+        labelKey="label"
+      ></app-admin-dropdown>
+    </div>
+    <div class="col-md-4">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate }}</label>
+      <app-admin-dropdown
+        formControlName="dropoffStopId"
+        [options]="dropoffOptions"
+        [placeholder]="'STAFF.PARCEL_CONSIGN.FIELD.DROPOFF_STOP' | translate"
+        [disabled]="isLoadingStops || dropoffOptions.length === 0"
+        valueKey="value"
+        labelKey="label"
+      ></app-admin-dropdown>
+    </div>
+
+    <div class="col-md-4">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WEIGHT' | translate }}</label>
+      <input type="number" step="0.1" class="admin-field" formControlName="weightKg" [class.is-invalid]="isFieldInvalid('weightKg')" />
+      <small class="admin-error" *ngIf="fieldError('weightKg') as err">{{ err | translate }}</small>
+    </div>
+
+    <div class="col-md-8">
+      <div class="parcel-consign-indicator" *ngIf="isLoadingCargo">
+        {{ 'STAFF.PARCEL_CONSIGN.CARGO.LOADING' | translate }}
+      </div>
+      <div class="parcel-consign-indicator is-error" *ngIf="!isLoadingCargo && cargoErrorKey as err">
+        {{ err | translate }}
+      </div>
+      <div class="parcel-consign-indicator" *ngIf="!isLoadingCargo && !cargoErrorKey && cargoAvailability as cargo">
+        {{ 'STAFF.PARCEL_CONSIGN.CARGO.REMAINING' | translate: { remaining: cargo.remainingKg, capacity: cargo.cargoCapacityKg } }}
+      </div>
+    </div>
+
+    <div class="col-12">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DESCRIPTION' | translate }}</label>
+      <textarea class="admin-field" rows="3" formControlName="description" [class.is-invalid]="isFieldInvalid('description')"></textarea>
+      <small class="admin-error" *ngIf="fieldError('description') as err">{{ err | translate }}</small>
+    </div>
+
+    <div class="col-12" [formGroup]="dimensionsGroup">
+      <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.SECTION.DIMENSIONS' | translate }}</h5>
+      <div class="row g-3">
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.LENGTH_CM' | translate }}</label>
+          <input type="number" class="admin-field" formControlName="lengthCm" />
+        </div>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.WIDTH_CM' | translate }}</label>
+          <input type="number" class="admin-field" formControlName="widthCm" />
+        </div>
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.HEIGHT_CM' | translate }}</label>
+          <input type="number" class="admin-field" formControlName="heightCm" />
+        </div>
+        <div class="col-12" *ngIf="isDimensionsIncomplete">
+          <small class="admin-error">{{ 'STAFF.PARCEL_CONSIGN.VALIDATION.DIMENSIONS_ALL_OR_NONE' | translate }}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12">
+      <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.PAYMENT_METHOD' | translate }}</label>
+      <div class="parcel-consign-payment-readonly">{{ 'STAFF.PARCEL_CONSIGN.PAYMENT_CASH' | translate }}</div>
+    </div>
+
+    <div class="col-12">
+      <div class="parcel-consign-indicator" *ngIf="isLoadingQuote">
+        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.LOADING' | translate }}
+      </div>
+      <div class="parcel-consign-indicator is-error" *ngIf="!isLoadingQuote && quoteErrorKey as err">
+        {{ err | translate }}
+      </div>
+      <div class="parcel-consign-quote" *ngIf="!isLoadingQuote && !quoteErrorKey && quote as q">
+        {{ 'STAFF.PARCEL_CONSIGN.QUOTE.AMOUNT' | translate: { amount: q.amount } }}
+      </div>
+    </div>
+
+    <div class="col-12">
+      <div class="form-check">
+        <input
+          type="checkbox"
+          class="form-check-input"
+          id="prohibitedAcknowledged"
+          formControlName="prohibitedAcknowledged"
+        />
+        <label class="form-check-label" for="prohibitedAcknowledged">
+          {{ 'STAFF.PARCEL_CONSIGN.FIELD.PROHIBITED_ACK' | translate }}
+        </label>
+      </div>
+    </div>
+
+    <div class="col-12" *ngIf="serverErrorKey as err">
+      <div class="admin-error">{{ err | translate }}</div>
+    </div>
+
+    <div class="col-12">
+      <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canSubmit">
+        {{ (isSubmitting ? 'STAFF.PARCEL_CONSIGN.SUBMITTING' : 'STAFF.PARCEL_CONSIGN.SUBMIT') | translate }}
+      </button>
+    </div>
+  </div>
+</form>

@@ -1611,7 +1611,10 @@
       "SELL_RECEIPT": "Print Ticket",
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
-      "BOARDING": "Boarding List"
+      "BOARDING": "Boarding List",
+      "PARCEL_CONSIGN": "Consign Parcel",
+      "PARCEL_WAYBILL": "Waybill",
+      "PARCEL_DELIVERY": "Parcel Deliveries"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -1976,6 +1979,136 @@
       "SUBTITLE": "Choose a schedule to view its boarding list.",
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "You have no schedules assigned. Please check back later."
+    },
+    "PARCEL_CONSIGN": {
+      "SUBTITLE": "Record a new consigned parcel for delivery.",
+      "SECTION": {
+        "SENDER": "Sender",
+        "RECIPIENT": "Recipient",
+        "TRIP": "Trip",
+        "DIMENSIONS": "Dimensions (optional)"
+      },
+      "FIELD": {
+        "SENDER_NAME": "Sender name",
+        "SENDER_PHONE": "Sender phone",
+        "RECIPIENT_NAME": "Recipient name",
+        "RECIPIENT_PHONE": "Recipient phone",
+        "DATE": "Date",
+        "SCHEDULE": "Schedule",
+        "PICKUP_STOP": "Pickup stop",
+        "DROPOFF_STOP": "Drop-off stop",
+        "WEIGHT": "Weight (kg)",
+        "DESCRIPTION": "Description",
+        "LENGTH_CM": "Length (cm)",
+        "WIDTH_CM": "Width (cm)",
+        "HEIGHT_CM": "Height (cm)",
+        "PAYMENT_METHOD": "Payment method",
+        "PROHIBITED_ACK": "I confirm this parcel does not contain any prohibited item."
+      },
+      "PAYMENT_CASH": "Cash",
+      "CARGO": {
+        "LOADING": "Checking cargo capacity…",
+        "REMAINING": "{{remaining}} kg remaining of {{capacity}} kg cargo capacity"
+      },
+      "QUOTE": {
+        "LOADING": "Calculating price…",
+        "AMOUNT": "Price: {{amount}}"
+      },
+      "SUBMIT": "Consign parcel",
+      "SUBMITTING": "Submitting…",
+      "VALIDATION": {
+        "WEIGHT_POSITIVE": "Weight must be greater than 0.",
+        "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank."
+      },
+      "ERROR": {
+        "PROHIBITED_CATEGORY": "This parcel matches a prohibited category and cannot be accepted.",
+        "CARGO_CAPACITY_EXCEEDED": "This schedule's cargo capacity has been exceeded.",
+        "CARGO_CAPACITY_NOT_CONFIGURED": "Cargo capacity is not configured for this schedule.",
+        "STOP_PAIR_NOT_PRICEABLE": "No fare is configured for this pickup/drop-off pair.",
+        "GENERIC": "Unable to consign this parcel. Please try again.",
+        "QUOTE_FAILED": "Unable to calculate the price.",
+        "CARGO_FAILED": "Unable to check cargo capacity."
+      },
+      "RESULT": {
+        "TITLE": "Parcel consigned",
+        "TRACKING_NUMBER": "Tracking number",
+        "COLLECTION_CODE": "Collection code",
+        "AMOUNT": "Amount",
+        "VIEW_WAYBILL": "View waybill"
+      }
+    },
+    "PARCEL_WAYBILL": {
+      "SUBTITLE": "Printable waybill for this parcel.",
+      "TITLE": "Waybill",
+      "SENDER": "Sender",
+      "RECIPIENT": "Recipient",
+      "PICKUP_STOP": "Pickup stop",
+      "DROPOFF_STOP": "Drop-off stop",
+      "WEIGHT": "Weight",
+      "AMOUNT": "Amount",
+      "DEPARTURE": "Departure",
+      "QR_ALT": "Collection QR code",
+      "QR_HINT": "Present this QR code, or the collection code, on delivery.",
+      "PRINT": "Print",
+      "LOAD_FAILED": "Unable to load this waybill."
+    },
+    "PARCEL_DELIVERY": {
+      "ENTRY_TITLE": "Select a Schedule",
+      "ENTRY_SUBTITLE": "Choose a schedule to view its parcel deliveries.",
+      "LIST_SUBTITLE": "Manage parcel handoff for this schedule.",
+      "EMPTY_TITLE": "No schedules available",
+      "EMPTY_BODY": "You have no schedules assigned. Please check back later.",
+      "VIEW_BTN": "Deliveries",
+      "LIST_EMPTY_TITLE": "No consigned parcels for this schedule",
+      "LOAD_FAILED": "Unable to load parcel deliveries.",
+      "COL": {
+        "TRACKING_NUMBER": "Tracking number",
+        "SENDER": "Sender",
+        "RECIPIENT": "Recipient",
+        "PICKUP_STOP": "Pickup stop",
+        "DROPOFF_STOP": "Drop-off stop",
+        "WEIGHT": "Weight",
+        "STATUS": "Status"
+      },
+      "ACTION": {
+        "LOAD": "Load",
+        "MARK_ARRIVED": "Mark arrived",
+        "COLLECT": "Collect"
+      },
+      "COLLECT_DIALOG": {
+        "TITLE": "Collect parcel",
+        "CODE_LABEL": "Collection code",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Confirm collection",
+        "SUBMITTING": "Confirming…"
+      },
+      "ERROR": {
+        "CODE_MISMATCH": "This collection code does not match.",
+        "ALREADY_COLLECTED": "This parcel has already been collected.",
+        "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed."
+      },
+      "STATUS": {
+        "ACCEPTED": "Accepted",
+        "IN_TRANSIT": "In transit",
+        "ARRIVED_NOTIFIED": "Arrived",
+        "COLLECTED": "Collected",
+        "LEFT_AT_STOP": "Left at stop",
+        "UNCLAIMED_RETURNED": "Unclaimed / returned",
+        "REJECTED": "Rejected",
+        "UNKNOWN": "Unknown"
+      }
     }
+  },
+  "PARCEL_TRACKING": {
+    "TITLE": "Track your parcel",
+    "INPUT_PLACEHOLDER": "Enter tracking number",
+    "SUBMIT": "Track",
+    "NOT_FOUND": "We couldn't find a parcel with that tracking number.",
+    "PICKUP_STOP": "Pickup stop",
+    "DROPOFF_STOP": "Drop-off stop",
+    "ARRIVED_NOTIFIED_AT": "Arrived at destination",
+    "COLLECTED_AT": "Collected",
+    "RECIPIENT": "Recipient"
   }
 }

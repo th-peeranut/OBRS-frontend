@@ -94,6 +94,28 @@ token it's copied from:
 | `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text, no dark-mode override. |
 | `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
 
+#### 2.4.1 `parcel_delivery_status` → token mapping (OBRS-305)
+
+The 7 renderable `parcel_delivery_status` slugs (`ParcelDeliveryListItemDto`/
+`ParcelTrackRespDto.deliveryStatus`, staff delivery-list + public tracking
+timeline) map 1:1 onto the 7 tokens above — **no new hex, no forked chip
+look**. Resolved by `parcelDeliveryStatusChip()`
+(`shared/lib/parcel-delivery-status.ts`), locked by
+`parcel-delivery-status.spec.ts` (every slug maps to a distinct token):
+
+| `parcel_delivery_status` slug | Token | Rationale |
+|---|---|---|
+| `accepted` | `.is-accepted` | first positive state after intake — green, matches its existing "accepted" meaning. |
+| `in_transit` | `.is-warning` | active/in-progress, reads as "needs attention" while en route. |
+| `arrived_notified` | `.is-info` | waiting-for-pickup, matches `.is-info`'s existing "in-review"/waiting semantics. |
+| `collected` | `.is-success` | terminal positive outcome — `.is-success` resolves to **blue** (its own note above: "historical name, resolves to blue not green"), i.e. "resolved", not literally "succeeded in green". |
+| `left_at_stop` | `.is-delayed` | an off-happy-path exception state — reuses the existing distinct violet rather than inventing an 8th token. |
+| `unclaimed_returned` | `.is-neutral` | a dormant/inactive terminal outcome, matching `.is-neutral`'s existing "inactive/unset" meaning. |
+| `rejected` | `.is-danger` | terminal negative outcome. |
+
+(`created` — the 8th seeded lookup slug — is never surfaced as a chip:
+consigned intake sets the row directly to `accepted`.)
+
 ### 2.3 Brand is per-shell (decision)
 
 The app has **three shell identities** and intentionally keeps them distinct —
@@ -407,6 +429,34 @@ enforced rule with a test behind it.
   `docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Reuse
   this precedent — directive lives in `SharedModule`, dialog markup stays inline —
   for the next `shared/`-component modal instead of re-litigating the module home.
+
+- **Cross-shell reuse of `.admin-status.is-*` tokens on a customer-shell page**
+  (OBRS-305, `ParcelTrackingPageComponent`'s status chip): the public parcel
+  tracking page has no `.admin-shell` ancestor, so the `--admin-*-bg`/`-text`
+  custom properties `.admin-status.is-*` reads (only ever defined inside
+  `.admin-shell`, admin-theme.scss) would otherwise resolve to nothing. Rather
+  than fork a second status-chip look for this one customer page, the
+  component's own `:host` re-declares the SAME custom-property **values**
+  already bound to those roles in `admin-theme.scss` (no new hex — see §2.4.1)
+  scoped to this component instead of `.admin-shell`, and mirrors the existing
+  `.admin-shell.is-dark` overrides under `:host-context(body.is-dark)` (this
+  app's public dark-mode class, dark-theme.scss) instead of
+  `.admin-shell.is-dark`. The `.admin-status.is-*` markup/classes themselves
+  are reused byte-identical to the staff delivery-list. Reuse this re-scoping
+  idiom for the next customer-shell surface that needs a staff/admin status
+  chip rather than duplicating the token values into a new class name.
+
+- **CDK Portal print isolation reused for a second surface** (OBRS-305,
+  `ParcelWaybillPageComponent.printWaybill()`): the exact
+  `docs/adr/0015-boarding-manifest-print-isolation.md` recipe
+  (`DomPortalOutlet`/`TemplatePortal` teleport to `document.body`, a
+  `body.<feature>-printing` marker class gating a global `@media print` hide
+  rule, idempotent teardown bound to both `afterprint` and `ngOnDestroy`) —
+  copied with a new marker-class pair (`.parcel-waybill-print-portal` /
+  `body.parcel-waybill-printing`) rather than reusing the boarding-manifest's
+  marker classes (a shared marker would let a boarding-manifest print and a
+  waybill print interfere if ever triggered concurrently). Reuse this idiom
+  (new marker-class pair per print surface) for the next print feature.
 
 ---
 

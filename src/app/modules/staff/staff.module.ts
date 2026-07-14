@@ -29,6 +29,16 @@ import { WalkInCenterPanelComponent } from './components/walk-in-center-panel/wa
 import { WalkInCheckoutComponent } from './components/walk-in-checkout/walk-in-checkout.component';
 import { TripDetailsEditFormComponent } from './components/trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
 
+// OBRS-305 Card 2 — parcel consigned intake + delivery handoff (staff-facing).
+import { ParcelConsignPageComponent } from './pages/parcel-consign/parcel-consign-page.component';
+import { ParcelConsignFormComponent } from './components/parcel-consign-form/parcel-consign-form.component';
+import { ParcelIntakeResultPanelComponent } from './components/parcel-intake-result-panel/parcel-intake-result-panel.component';
+import { ParcelWaybillPageComponent } from './pages/parcel-waybill/parcel-waybill-page.component';
+import { ParcelWaybillPaperComponent } from './components/parcel-waybill-paper/parcel-waybill-paper.component';
+import { ParcelDeliveryEntryPageComponent } from './pages/parcel-delivery-schedule/parcel-delivery-schedule-page.component';
+import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
+import { ParcelCollectDialogComponent } from './components/parcel-collect-dialog/parcel-collect-dialog.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -85,6 +95,31 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.BOARDING', subtitleKey: 'STAFF.BOARDING.SUBTITLE' },
       },
+      // OBRS-305 Card 2 — parcel consigned intake + delivery handoff.
+      {
+        path: 'parcels/consign',
+        component: ParcelConsignPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.PARCEL_CONSIGN', subtitleKey: 'STAFF.PARCEL_CONSIGN.SUBTITLE' },
+      },
+      {
+        path: 'parcels/:id/waybill',
+        component: ParcelWaybillPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.PARCEL_WAYBILL', subtitleKey: 'STAFF.PARCEL_WAYBILL.SUBTITLE' },
+      },
+      {
+        path: 'parcels/deliveries',
+        component: ParcelDeliveryEntryPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.ENTRY_SUBTITLE' },
+      },
+      {
+        path: 'parcels/deliveries/:scheduleId',
+        component: ParcelDeliveryListPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.LIST_SUBTITLE' },
+      },
     ],
   },
 ];
@@ -102,6 +137,14 @@ export const staffRoutes: Routes = [
     WalkInCenterPanelComponent,
     WalkInCheckoutComponent,
     TripDetailsEditFormComponent,
+    ParcelConsignPageComponent,
+    ParcelConsignFormComponent,
+    ParcelIntakeResultPanelComponent,
+    ParcelWaybillPageComponent,
+    ParcelWaybillPaperComponent,
+    ParcelDeliveryEntryPageComponent,
+    ParcelDeliveryListPageComponent,
+    ParcelCollectDialogComponent,
   ],
   imports: [
     SharedModule,

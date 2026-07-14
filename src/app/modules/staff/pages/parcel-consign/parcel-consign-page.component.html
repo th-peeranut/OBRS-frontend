@@ -1,0 +1,45 @@
+<div class="container-fluid py-4">
+  <div class="card shadow-sm border-0 p-4">
+    <ng-container *ngIf="!result">
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DATE' | translate }}</label>
+          <p-calendar
+            [(ngModel)]="selectedDate"
+            (onSelect)="onDateChange($event)"
+            [showIcon]="true"
+            [iconDisplay]="'input'"
+            dateFormat="yy-mm-dd"
+            styleClass="app-date-field"
+            panelStyleClass="app-date-field-panel"
+          >
+            <ng-template pTemplate="inputicon">
+              <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+            </ng-template>
+          </p-calendar>
+        </div>
+      </div>
+
+      <app-parcel-consign-form
+        [scheduleOptions]="scheduleOptions"
+        [pickupOptions]="pickupOptions"
+        [dropoffOptions]="dropoffOptions"
+        [isLoadingStops]="isLoadingStops"
+        [quote]="quote"
+        [isLoadingQuote]="isLoadingQuote"
+        [quoteErrorKey]="quoteErrorKey"
+        [cargoAvailability]="cargoValue"
+        [isLoadingCargo]="isLoadingCargo"
+        [cargoErrorKey]="cargoErrorKey"
+        [serverErrorKey]="serverErrorKey"
+        [isSubmitting]="isSubmitting"
+        (scheduleChange)="onScheduleChange($event)"
+        (pickupChange)="onPickupChange($event)"
+        (quoteParamsChange)="onQuoteParamsChange($event)"
+        (submitForm)="onSubmit($event)"
+      ></app-parcel-consign-form>
+    </ng-container>
+
+    <app-parcel-intake-result-panel *ngIf="result" [result]="result"></app-parcel-intake-result-panel>
+  </div>
+</div>
