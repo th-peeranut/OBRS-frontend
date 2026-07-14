@@ -556,6 +556,13 @@
         "customer": "客户"
       },
       "STATUS": "状态",
+      "STATUS_NAMES": {
+        "active": "使用中",
+        "inactive": "未使用",
+        "pending_verification": "待验证",
+        "suspended": "已暂停",
+        "deleted": "已删除"
+      },
       "USER_COUNT": "名用户",
       "ADD_TITLE": "创建用户",
       "EDIT_TITLE": "编辑用户",

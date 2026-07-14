@@ -123,6 +123,39 @@ export function translateRoleSlug(
   return translated;
 }
 
+// OBRS-353: mirrors OBRS-330's role-slug takeover, applied to status. The
+// user-summary endpoint's `status` DOES come back as a rich AdminStatusDto
+// with a pre-localized `name`/`label` (unlike the bare role slugs above) —
+// but the backend's `lookup_translations` table only has en/th rows, no zh,
+// so under a Chinese UI that pre-localized label silently stays Thai. This
+// is a deliberate FE i18n takeover (Option A): the FE owns a fixed
+// code -> i18n-key mapping for the 5 known `user_status` codes (see
+// public/i18n/*.json ADMIN.USERS.STATUS_NAMES) instead of changing the
+// backend contract. Any code outside the known set falls back to the same
+// prettified-slug helper roles use, never a raw i18n key.
+export const STATUS_NAME_TRANSLATION_PREFIX = 'ADMIN.USERS.STATUS_NAMES.';
+
+export function translateStatusCode(
+  code: string,
+  translateFn: (key: string) => string
+): string {
+  const trimmedCode = code.trim();
+  if (trimmedCode.length === 0) {
+    return trimmedCode;
+  }
+
+  const key = `${STATUS_NAME_TRANSLATION_PREFIX}${trimmedCode.toLowerCase()}`;
+  const translated = translateFn(key);
+
+  // Same missing-key detection as translateRoleSlug: ngx-translate's
+  // instant() returns the key itself when there's no translation for it.
+  if (!translated || translated === key) {
+    return prettifyRoleSlug(trimmedCode);
+  }
+
+  return translated;
+}
+
 export function extractRoleLabels(
   roles: Array<string | AdminRoleDto> | null | undefined,
   locale: string,
@@ -166,7 +199,10 @@ export function toUserRow(
     phone: user.phoneNumber ?? '-',
     roleSlugs,
     roles: roleLabels.length > 0 ? roleLabels : ['-'],
-    status: status.name,
+    // OBRS-353: FE i18n takeover for the Status chip (see translateStatusCode
+    // above) — without translateFn this preserves the old BE-label behavior
+    // exactly, same fallback contract as extractRoleLabels/roles above.
+    status: translateFn ? translateStatusCode(status.code, translateFn) : status.name,
     statusCode: status.code,
     // dateLang is deliberately the RAW translate.currentLang, NOT the
     // th/en-normalized `locale` used above for role/status labels — passing the
