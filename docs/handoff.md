@@ -118,6 +118,20 @@ promoting either side.
 
 ---
 
+### [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+
+**Affected endpoint**: `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`, consumed by the staff walk-in/POS sell page).
+
+**Request type**: field addition (additive, R1) — not blocking, worked around for now.
+
+**What I found**: 318-a (OBRS-321) added `schedules.seating_mode` and exposed it as `seatingMode` on `ScheduleRespDto` and `ScheduleSearchRespDto` (see `docs/api/scheduling.md`, and the FE precedent `Schedule.seatingMode` in `shared/interfaces/schedule.interface.ts` added by OBRS-323). `WalkInTripRespDto` (`dto/response/business/WalkInTripRespDto.java`) was **not** touched by 318-a/318-b — `ScheduleService.getWalkInTrips()` builds it via a 13-arg `@AllArgsConstructor` call (`ScheduleService.java`, the `WalkInTripRespDto trip = new WalkInTripRespDto(...)` call) that never reads `schedule.getSeatingMode()`, unlike the sibling `searchSchedules()` method a few dozen lines below it, which does pass `schedule.getSeatingMode()` into `ScheduleSearchRespDto`. Confirmed by reading the backend source directly, not just the docs.
+
+**What I did instead**: added `seatingMode?: 'OPEN' | 'ASSIGNED'` to the FE's `WalkInTripDto` (`services/staff/staff-api.service.ts`) as a verified-passthrough optional field (same pattern as `Schedule.seatingMode` — `getWalkInSchedules()` is a raw `http.get<ResponseAPI<WalkInRouteGroupDto[]>>` passthrough, no manual per-field mapper, so the field will populate automatically the moment the backend adds it, no further FE change needed then). Added `isOpenSeatingTrip(trip)` next to it, which resolves missing/undefined to `false` (ASSIGNED) — the walk-in OPEN-sell UI (passenger-count-only checkout, no seat map) is fully built and tested against this helper, but **will not activate for any real trip until this field is added**, since every walk-in trip reads as ASSIGNED today regardless of its actual `seating_mode`.
+
+**What the frontend needs**: add `schedule.getSeatingMode()` as a 14th constructor argument to the `WalkInTripRespDto` build in `ScheduleService.getWalkInTrips()` (mirroring the `searchSchedules()` call), plus the matching field + Lombok `@Data` getter on `WalkInTripRespDto` itself. Until this ships, walk-in OPEN-seating schedules are still sold through the ASSIGNED (seat-map) flow in the POS, same as before this card.
+
+---
+
 ### [Frontend] 2026-07-14 — `seatingMode` not exposed on any FE-reachable read DTO (OBRS-325, open-seating epic 318-e)
 
 **Affected endpoints**: `GET /api/private/bookings/{id}/tickets` (`BookingTicketsData.journeys[].tickets[]`, consumed by both e-ticket surfaces) and, if a search-list "Open seating" badge is ever wanted, the schedule search endpoint behind `Schedule` (`shared/interfaces/schedule.interface.ts`).

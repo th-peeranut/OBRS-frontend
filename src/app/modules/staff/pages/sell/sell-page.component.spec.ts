@@ -207,6 +207,13 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedSeats).toEqual([]);
     });
 
+    it('resets passengerCount to 1 on date change (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
     it('resets seatPassengerTypes on date change', () => {
       const comp = makeComponent();
       (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
@@ -273,6 +280,13 @@ describe('SellPageComponent', () => {
       (comp as any).seatPassengerTypes = { B1: 'male' };
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+
+    it('resets passengerCount to 1 when a new trip is selected (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).passengerCount).toBe(1);
     });
 
     it('resets activeTabIndex to 0 when a new trip is selected (the center panel\'s p-tabView remounts on tab 0)', () => {
@@ -653,6 +667,111 @@ describe('SellPageComponent', () => {
       (comp as any).onSell(validPayload);
 
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+  });
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d)
+  describe('isOpenSeating getter', () => {
+    it('is false when no trip is selected', () => {
+      const comp = makeComponent();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is false when the trip has no seatingMode (safe default)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is true when the trip seatingMode is OPEN', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      expect((comp as any).isOpenSeating).toBeTrue();
+    });
+  });
+
+  describe('onPassengerCountChanged', () => {
+    it('clamps to the trip availableCount', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(9);
+      expect((comp as any).passengerCount).toBe(4);
+    });
+
+    it('floors at 1', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(0);
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
+    it('accepts a value within range unchanged', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 10 });
+      (comp as any).onPassengerCountChanged(3);
+      expect((comp as any).passengerCount).toBe(3);
+    });
+  });
+
+  describe('onSell — OPEN seating (OBRS-324)', () => {
+    it('builds passengerCount passengers with a blank seatNumber, ignoring selectedSeats', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1']; // must be ignored for OPEN
+      (comp as any).passengerCount = 3;
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { seatNumber: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers.length).toBe(3);
+      for (const p of passengers) {
+        expect(p.seatNumber).toBe('');
+      }
+    });
+
+    it('totalAmount is fare * passengerCount (not selectedSeats.length)', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1', 'B2']; // 2 seats, must be ignored
+      (comp as any).passengerCount = 5;
+      setSegmentFare(comp, 100);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(500);
+    });
+
+    it('ASSIGNED trip (default) is unaffected — still one passenger per selected seat', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip(); // no seatingMode → ASSIGNED
+      (comp as any).selectedSeats = ['B1', 'B2'];
+      (comp as any).passengerCount = 7; // must be ignored for ASSIGNED
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.departureSchedule.passengers.length).toBe(2);
+      expect(callArg.totalAmount).toBe(600);
+    });
+
+    it('resets passengerCount to 1 after a successful sale', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).passengerCount = 4;
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+
+      expect((comp as any).passengerCount).toBe(1);
     });
   });
 

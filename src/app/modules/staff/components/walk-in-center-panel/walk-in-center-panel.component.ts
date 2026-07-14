@@ -15,7 +15,7 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 
-import { WalkInTripDto } from '../../../../services/staff/staff-api.service';
+import { WalkInTripDto, isOpenSeatingTrip } from '../../../../services/staff/staff-api.service';
 import { StopOption } from '../../pages/sell/sell-page.component';
 import {
   AdminVehicleDto,
@@ -53,6 +53,12 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   /** Per-seat passenger type map (seat label → passenger_type slug) for multi-select rendering. */
   @Input() seatPassengerTypes: Record<string, string> = {};
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN-mode headcount, owned by
+  // sell-page (mirrors `selectedSeats` for ASSIGNED). Only meaningful when
+  // `isOpenSeating` is true.
+  @Input() passengerCount = 1;
+  @Output() passengerCountChange = new EventEmitter<number>();
 
   // --- Stop selection inputs (lifted from checkout) ---
   @Input() pickupOptions: StopOption[] = [];
@@ -255,6 +261,31 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   protected get isVan(): boolean {
     return this.selectedTrip?.vehicleType === 'van';
+  }
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN schedules sell by
+  // passenger count only — no seat map/picker. Missing/unknown seatingMode
+  // (the field isn't on this endpoint's response yet — see the OBRS-324
+  // Contract Request in docs/handoff.md) safely resolves to false/ASSIGNED.
+  protected get isOpenSeating(): boolean {
+    return isOpenSeatingTrip(this.selectedTrip);
+  }
+
+  /** Whole-trip availability (walk-in is whole-trip, never per-segment) caps the OPEN headcount. */
+  protected get maxPassengerCount(): number {
+    return Math.max(1, this.selectedTrip?.availableCount ?? 1);
+  }
+
+  protected incrementPassengerCount(): void {
+    if (this.passengerCount < this.maxPassengerCount) {
+      this.passengerCountChange.emit(this.passengerCount + 1);
+    }
+  }
+
+  protected decrementPassengerCount(): void {
+    if (this.passengerCount > 1) {
+      this.passengerCountChange.emit(this.passengerCount - 1);
+    }
   }
 
   protected get currentSeat(): string {

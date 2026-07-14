@@ -411,7 +411,8 @@
       "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
       "FORM_INVALID": "请填写标记的必填字段。",
       "WHOLE_NUMBER": "请输入整数（不含小数）。",
-      "POSITIVE_NUMBER": "请输入大于0的数字。"
+      "POSITIVE_NUMBER": "请输入大于0的数字。",
+      "YEAR_RANGE": "请输入 {{min}} 至 {{max}} 之间的年份。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
@@ -604,6 +605,19 @@
       "ADD_TITLE": "创建车辆",
       "EDIT_TITLE": "编辑车辆",
       "MODAL_HINT": "设置车辆信息和当前运营状态。",
+      "EDIT_DETAIL_LOAD_FAILED": "加载完整车辆信息失败。请关闭并重新打开此窗口以重试——在加载成功前无法保存。",
+      "DETAILS": {
+        "SECTION_MAKE_MODEL": "品牌与型号",
+        "SECTION_TECHNICAL": "技术信息与备注",
+        "BRAND": "品牌",
+        "MODEL": "型号",
+        "MANUFACTURE_YEAR": "出厂年份",
+        "COLOUR": "颜色",
+        "ENGINE_CC": "排量（cc）",
+        "CHASSIS_NUMBER": "底盘号",
+        "NOTE": "备注",
+        "NOTE_PLACEHOLDER": "添加关于此车辆的其他备注（可选）"
+      },
       "MAINTENANCE": {
         "TAB": "维护保养",
         "MANAGE_ACTION": "管理维护记录",
@@ -1961,6 +1975,10 @@
       "BADGE_SOLD": "已售",
       "TRIPS_EMPTY": "当日无班次",
       "CENTER_EMPTY": "请在左侧选择班次",
+      "OPEN_SEATING_HINT": "不指定座位——按乘客人数售票。",
+      "PASSENGER_COUNT_DECREASE": "减少乘客人数",
+      "PASSENGER_COUNT_INCREASE": "增加乘客人数",
+      "PASSENGER_COUNT_MAX": "最多可售 {{max}} 位乘客",
       "TAB_TICKET_SALES": "售票",
       "TAB_TRIP_DETAILS": "班次详情",
       "TAB_BOARDING": "登车",
