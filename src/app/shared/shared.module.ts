@@ -5,6 +5,8 @@ import { RouterModule } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { SelectButtonModule } from 'primeng/selectbutton';
 import { MenuModule } from 'primeng/menu';
+import { CalendarModule } from 'primeng/calendar';
+import { OverlayPanelModule } from 'primeng/overlaypanel';
 
 // Components
 import { NavbarComponent } from './components/navbar/navbar.component';
@@ -16,6 +18,15 @@ import { ReportUsabilityFabComponent } from './components/report-usability-fab/r
 import { ExportButtonComponent } from './components/export-button/export-button.component';
 import { PromoCodeFieldComponent } from './components/promo-code-field/promo-code-field.component';
 import { BoardingListComponent } from './components/boarding-list/boarding-list.component';
+// OBRS-317: owner/staff in-app notification bell + inbox panel family.
+import { NotificationBellComponent } from './components/notification-bell/notification-bell.component';
+import { NotificationInboxPanelComponent } from './components/notification-inbox-panel/notification-inbox-panel.component';
+import { NotificationInboxRowComponent } from './components/notification-inbox-row/notification-inbox-row.component';
+
+// Directives
+// OBRS-272: relocated here from `modules/admin/components/` — see the
+// directive's own doc comment for the module-cycle rationale.
+import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.directive';
 
 @NgModule({
   declarations: [
@@ -28,6 +39,10 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+    NotificationBellComponent,
+    NotificationInboxPanelComponent,
+    NotificationInboxRowComponent,
+    AdminModalBackdropDirective,
   ],
   imports: [
     CommonModule,
@@ -37,6 +52,8 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ReactiveFormsModule,
     SelectButtonModule,
     MenuModule,
+    CalendarModule,
+    OverlayPanelModule,
   ],
   exports: [
     // Modules
@@ -58,6 +75,10 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
     ExportButtonComponent,
     PromoCodeFieldComponent,
     BoardingListComponent,
+    NotificationBellComponent,
+
+    // Directives
+    AdminModalBackdropDirective,
   ],
 })
 export class SharedModule {}

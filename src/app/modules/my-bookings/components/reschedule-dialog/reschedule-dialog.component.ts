@@ -41,6 +41,7 @@ import {
   selectRescheduleConfirmError,
   selectRescheduleConfirmErrorCode,
   selectRescheduleEstimate,
+  selectRescheduleEstimateError,
   selectRescheduleEstimateLoading,
   selectRescheduleOptions,
   selectRescheduleOptionsError,
@@ -84,6 +85,15 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
 
   readonly rescheduleEstimate$: Observable<RescheduleEstimate | null>;
   estimateLoading = false;
+  /**
+   * Error from loading the estimate itself (a failed `loadRescheduleEstimate`),
+   * distinct from `confirmError` (a failed confirm/execute). Without surfacing
+   * this the estimate step dead-ends silently — spinner clears, `estimate`
+   * stays null, no message, Confirm disabled — reproducing OBRS-186 via any
+   * estimate-load failure the backend own-schedule filter doesn't cover
+   * (trip fills between options→estimate, validation, transient 5xx). OBRS-345.
+   */
+  estimateError: string | null = null;
   confirmError: string | null = null;
   submitting = false;
   /** Formatted net amount, shown in the payment step's note. */
@@ -188,6 +198,10 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
     this.store
       .pipe(select(selectRescheduleEstimateLoading), takeUntil(this.destroy$))
       .subscribe((loading) => (this.estimateLoading = loading));
+
+    this.store
+      .pipe(select(selectRescheduleEstimateError), takeUntil(this.destroy$))
+      .subscribe((error) => (this.estimateError = error));
 
     this.store
       .pipe(select(selectRescheduleSubmitting), takeUntil(this.destroy$))

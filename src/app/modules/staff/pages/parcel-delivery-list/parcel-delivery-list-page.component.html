@@ -1,0 +1,82 @@
+<div class="container-fluid py-4">
+  <ng-container *ngIf="isEmpty">
+    <div class="text-center py-5">
+      <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:64px">inventory_2</span>
+      <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_DELIVERY.LIST_EMPTY_TITLE' | translate }}</div>
+    </div>
+  </ng-container>
+
+  <div class="text-center py-5" *ngIf="hasError">
+    <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_DELIVERY.LOAD_FAILED' | translate }}</div>
+  </div>
+
+  <div class="card shadow-sm border-0" *ngIf="!isEmpty && !hasError">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.TRACKING_NUMBER' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.SENDER' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.RECIPIENT' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.PICKUP_STOP' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.DROPOFF_STOP' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.WEIGHT' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_DELIVERY.COL.STATUS' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows">
+              <td class="fw-semibold">{{ row.trackingNumber }}</td>
+              <td>{{ row.senderName }}</td>
+              <td>{{ row.recipientName }}</td>
+              <td>{{ parcelStopLabel(row.pickupStop) }}</td>
+              <td>{{ parcelStopLabel(row.dropoffStop) }}</td>
+              <td>{{ row.weightKg }} kg</td>
+              <td>
+                <span class="admin-status" [ngClass]="chipFor(row).token">
+                  {{ chipFor(row).i18nKey | translate }}
+                </span>
+              </td>
+              <td>
+                <button
+                  *ngIf="row.deliveryStatus === 'accepted'"
+                  class="admin-btn admin-btn-small"
+                  [disabled]="isRowBusy(row.parcelId)"
+                  (click)="onLoad(row)"
+                >
+                  {{ 'STAFF.PARCEL_DELIVERY.ACTION.LOAD' | translate }}
+                </button>
+                <button
+                  *ngIf="row.deliveryStatus === 'in_transit'"
+                  class="admin-btn admin-btn-small"
+                  [disabled]="isRowBusy(row.parcelId)"
+                  (click)="onArrived(row)"
+                >
+                  {{ 'STAFF.PARCEL_DELIVERY.ACTION.MARK_ARRIVED' | translate }}
+                </button>
+                <button
+                  *ngIf="row.deliveryStatus === 'arrived_notified'"
+                  class="admin-btn admin-btn-small"
+                  [disabled]="isRowBusy(row.parcelId)"
+                  (click)="openCollectDialog(row)"
+                >
+                  {{ 'STAFF.PARCEL_DELIVERY.ACTION.COLLECT' | translate }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-parcel-collect-dialog
+  [isOpen]="collectDialogParcelId !== null"
+  [isSubmitting]="isCollecting"
+  [serverErrorKey]="collectErrorKey"
+  (dismiss)="closeCollectDialog()"
+  (confirm)="confirmCollect($event)"
+></app-parcel-collect-dialog>

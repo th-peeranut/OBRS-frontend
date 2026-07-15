@@ -218,4 +218,95 @@ describe('mapBookingTicketsToCard — legs', () => {
     expect(card.passengers.length).toBe(1);
     expect(card.passengers[0].name).toBe('Mr A');
   });
+
+  it('OBRS-269: maps each leg\'s pickupLatitude/pickupLongitude from its own fromStop coords', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A', latitude: 13.7563, longitude: 100.5018 },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+        {
+          legType: { code: 'inbound', label: 'Inbound' },
+          fromStop: { code: 'b', label: 'Station B', latitude: 18.7883, longitude: 98.9853 },
+          toStop: { code: 'a', label: 'Station A' },
+          departureDateTime: '2026-12-25T08:00:00',
+          arrivalDateTime: '2026-12-25T09:00:00',
+          tickets: [
+            { id: 2, ticketNumber: 'T-2', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].pickupLatitude).toBe(13.7563);
+    expect(card.legs[0].pickupLongitude).toBe(100.5018);
+    expect(card.legs[1].pickupLatitude).toBe(18.7883);
+    expect(card.legs[1].pickupLongitude).toBe(98.9853);
+  });
+
+  it('OBRS-269: a fromStop with no coordinates maps to null pickupLatitude/pickupLongitude', () => {
+    const card = mapBookingTicketsToCard(buildData(), 'en');
+
+    expect(card.legs[0].pickupLatitude).toBeNull();
+    expect(card.legs[0].pickupLongitude).toBeNull();
+  });
+});
+
+describe('mapBookingTicketsToCard — isOpenSeating (OBRS-325)', () => {
+  it('ASSIGNED regression: a leg whose tickets all carry a seatNumber is not open-seating', () => {
+    const card = mapBookingTicketsToCard(buildData(), 'en');
+
+    expect(card.legs[0].isOpenSeating).toBeFalse();
+    expect(card.legs[0].seats).toBe('1');
+  });
+
+  it('OPEN: a leg whose tickets all have a null seatNumber is open-seating and seats stays "-"', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: undefined, passengerName: 'Mr A' },
+            { id: 2, ticketNumber: 'T-2', seatNumber: undefined, passengerName: 'Mrs B' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].isOpenSeating).toBeTrue();
+    expect(card.legs[0].seats).toBe('-');
+  });
+
+  it('a leg with no tickets at all (the empty-journey placeholder) is not open-seating', () => {
+    const card = mapBookingTicketsToCard(buildData({ journeys: [] }), 'en');
+
+    expect(card.legs[0].isOpenSeating).toBeFalse();
+  });
+
+  it('round-trip: each leg\'s isOpenSeating is derived independently', () => {
+    const data = buildRoundTripData();
+    data.journeys![1].tickets = [
+      { id: 2, ticketNumber: 'T-2', seatNumber: undefined, passengerName: 'Mr A' },
+    ];
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].isOpenSeating).toBeFalse();
+    expect(card.legs[1].isOpenSeating).toBeTrue();
+  });
 });

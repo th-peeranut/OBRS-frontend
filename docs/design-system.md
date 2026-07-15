@@ -92,6 +92,29 @@ token it's copied from:
 | `.is-accepted` | `--admin-accepted-bg` / `--admin-accepted-text` | accepted (usability reports) | green. |
 | `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text, no dark-mode override. |
 | `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text, no dark-mode override. |
+| `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
+
+#### 2.4.1 `parcel_delivery_status` → token mapping (OBRS-305)
+
+The 7 renderable `parcel_delivery_status` slugs (`ParcelDeliveryListItemDto`/
+`ParcelTrackRespDto.deliveryStatus`, staff delivery-list + public tracking
+timeline) map 1:1 onto the 7 tokens above — **no new hex, no forked chip
+look**. Resolved by `parcelDeliveryStatusChip()`
+(`shared/lib/parcel-delivery-status.ts`), locked by
+`parcel-delivery-status.spec.ts` (every slug maps to a distinct token):
+
+| `parcel_delivery_status` slug | Token | Rationale |
+|---|---|---|
+| `accepted` | `.is-accepted` | first positive state after intake — green, matches its existing "accepted" meaning. |
+| `in_transit` | `.is-warning` | active/in-progress, reads as "needs attention" while en route. |
+| `arrived_notified` | `.is-info` | waiting-for-pickup, matches `.is-info`'s existing "in-review"/waiting semantics. |
+| `collected` | `.is-success` | terminal positive outcome — `.is-success` resolves to **blue** (its own note above: "historical name, resolves to blue not green"), i.e. "resolved", not literally "succeeded in green". |
+| `left_at_stop` | `.is-delayed` | an off-happy-path exception state — reuses the existing distinct violet rather than inventing an 8th token. |
+| `unclaimed_returned` | `.is-neutral` | a dormant/inactive terminal outcome, matching `.is-neutral`'s existing "inactive/unset" meaning. |
+| `rejected` | `.is-danger` | terminal negative outcome. |
+
+(`created` — the 8th seeded lookup slug — is never surfaced as a chip:
+consigned intake sets the row directly to `accepted`.)
 
 ### 2.3 Brand is per-shell (decision)
 
@@ -132,6 +155,7 @@ do not add a fourth.
 | Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. |
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
+| **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
 
 ### 3.1 Dropdown contract (this is what the Vehicle Type bug violated)
 
@@ -268,7 +292,16 @@ links to `/home` and no separate `a[href="/home"]` Home button exists.
   print feature rather than reinventing the reveal-rule idiom.
 - **Don't fork or mutate a shared component's contract** to add a per-surface need —
   extend it with an optional, null-default `@Input()` so existing call sites stay
-  byte-identical. (`CORE.md`: seat components, walk-in reuse.)
+  byte-identical. (`CORE.md`: seat components, walk-in reuse.) **Seat-attribute
+  badges (OBRS-362)** follow this exact precedent: `seatAttributes: Record<string,
+  ('WHEELCHAIR'|'EXTRA_LEGROOM')[]> | null = null` on `passenger-seat-van`/`-bus`,
+  same shape as `seatOwners`/`seatGenders`.
+- **Seat-label normalization: one canonical util, `shared/lib/seat-label.ts`
+  (`normalizeSeatNumber`)** (OBRS-362). A UI seat label (`'A1'`, `'B12'`) is matched
+  against the backend's plain-numeric seat keys by stripping non-digit characters —
+  this used to be forked (a private copy in `passenger-seat-van.component.ts`, an
+  inline regex in `PassengerInfoComponent`). New seat-label matching reuses this
+  util; don't re-derive the regex.
 - **Don't mutate `@Input` arrays** — derive via a getter returning a new array;
   `.push()/.sort()/.splice()` on an `@Input` ref corrupts the parent. (`CORE.md`,
   Confirmed.)
@@ -345,6 +378,15 @@ enforced rule with a test behind it.
   (not counts like Bookings/Tickets). Reuse this class for the next reconciliation-style
   table instead of inventing a second right-align convention.
 
+- **Bespoke static-token button on a dark-theme-exempt surface** (OBRS-269,
+  `.ticket-nav-btn` on the e-ticket card/page's "Navigate to pickup" button): the
+  e-ticket paper is intentionally exempt from dark theming (`dark-theme.scss` §15
+  paper look), so this button is styled with fixed `$primary-blue`/`$primary-white`
+  SCSS tokens — never the runtime `--accent*` vars — matching the sibling
+  `.ticket-leg-heading`/`.trip-estimate` static-token rules already on that surface.
+  Reuse this precedent for the next control added to the ticket paper instead of
+  reaching for a themed token that won't apply there.
+
 - **Expandable per-row detail** (OBRS-231, `EodSalesReportPageComponent`'s `byMethod`
   breakdown): no accordion-row precedent existed in any admin table. Built from two
   already-themed primitives, not a new control — `.admin-icon-btn` +
@@ -355,7 +397,110 @@ enforced rule with a test behind it.
   default per row; expand state is page-local (not store state) and is cleared whenever
   the underlying row array's identity changes (a new fetch), so it never survives a filter
   change. Reuse this pattern for the next table that needs row-level drill-down instead of
-  introducing a modal or a second navigation level.
+  introducing a modal or a second navigation level. **Reused as-is** for
+  `RefundVoidReportPageComponent`'s cancelled/expired breakdown (OBRS-98), keyed by
+  `row.date` instead of a synthetic salesperson id.
+
+- **Compact inline info-hint button** (OBRS-98, `RefundVoidReportPageComponent`'s
+  Refunded card): a KPI card needed a short definitional tooltip ("gross, before fees")
+  next to its muted label. The canonical `.admin-icon-btn` is 36px, sized for a table's
+  chevron toggle — too large inline next to a small label. Rather than a new control,
+  `.refund-void-info-btn` is a **size-only** override (22px, smaller icon glyph) of
+  `.admin-icon-btn`, keeping its color/hover tokens untouched; exposed via `[title]` +
+  `[attr.aria-label]` (no new tooltip component). Reuse this modifier for the next
+  KPI-card hint instead of introducing a tooltip directive.
+
+- **Notification bell + `p-overlayPanel` inbox, root-service state** (OBRS-317,
+  `AppNotificationBellComponent`): the owner/staff topbar's notification bell opens a
+  `p-overlayPanel` (§3's new "Rich-content popup" row) hosting a stateful list —
+  `AppNotificationInboxPanelComponent` → `AppNotificationInboxRowComponent` — rather
+  than `p-menu[popup]`'s flat `MenuItem[]`. Its unread-count/list state lives in a
+  root `NotificationInboxService` (plain `BehaviorSubject`s, no NgRx — NgRx here is
+  scoped to the customer booking modules), mirroring `BadgeSocketService`'s
+  idempotent-`connect()`/`count$` shape and `AdminCollectionStore`'s
+  clear-on-logout-via-`authStatus$` pattern. The corner badge is a **position-only**
+  modifier (`.notification-bell-badge`) of the existing `.admin-nav-badge` recipe —
+  reused verbatim, not re-derived. See
+  `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. Reuse
+  `p-overlayPanel` for the next back-office popup that needs to host a stateful list,
+  and the root-service shape for the next cross-cutting back-office signal.
+
+- **`.admin-kpi-icon.is-danger`** (OBRS-98, `RefundVoidReportPageComponent`'s Voided
+  card): completes the `is-success`/`is-warning` KPI-icon modifier set with the existing
+  `--admin-danger-bg`/`--admin-danger-text` tokens (§2.4) — no new color, added to
+  `admin-theme.scss` alongside its siblings rather than a page-local rule, so the next
+  KPI card needing a danger tone doesn't re-derive it.
+
+- **Mandatory notes rendered independent of `contentState`** (OBRS-98,
+  `RefundVoidReportPageComponent`'s basis/partition notes): every prior report page
+  (`ReportsPageComponent`, `EodSalesReportPageComponent`) gates its captions inside the
+  loading/empty/data-only sections, so they disappear in the invalid-range/error states
+  along with the table. This page's basis note ("bucketed by processed date, not booking
+  date") and partition note ("Voided = Cancelled + Expired") are regulatory/definitional,
+  not data-dependent, so they render **unconditionally** — no `*ngIf` on `contentState`
+  at all. Reuse this only for a note that stays true regardless of whether the current
+  fetch succeeded; a note that describes the *data* (like the basis captions above)
+  should stay gated with its section.
+
+- **OPEN-seating passenger-count card in place of a leg's seat map** (OBRS-323,
+  `PassengerInfoFormComponent`): a schedule with `seatingMode: 'OPEN'` has no fixed
+  seat to pick, so that leg's seat map/active-passenger-chip-row/leg-label are hidden
+  and replaced with an inline count card — current count, "เหลือ X ที่นั่ง" (reusing
+  the existing `SCHEDULE_BOOKING.SEAT_REMAIN`/`SEAT_UNIT` keys, not a duplicate), and
+  +/- icon-buttons. The +/- markup and disabled-state visuals are reused from
+  `DropdownObrsPassengerComponent`'s `.count-section` (same class names, scoped by
+  Angular's default view encapsulation — no bleed), but bound to the
+  `passengerData` FormArray directly via `addOpenSeatPassenger()`/
+  `removeOpenSeatPassenger()`, not a `DropdownPassenger[]` — the two controls keep
+  separate contracts. Each leg branches independently (`isOpenSeatingOutbound$`/
+  `isOpenSeatingReturn$`), so a round trip can mix an OPEN outbound with an ASSIGNED
+  return; the shared "Seat selection" card title/hint is dropped only when every leg
+  on the booking is OPEN. See `docs/adr/0019-open-seating-passenger-count-card-per-leg-branch.md`.
+  Reuse this pattern (the `openSeatCountCard` template + add/remove methods) for the
+  next passenger-count stepper outside the home-page search filter, instead of
+  reaching for `DropdownObrsPassengerComponent` (adult/kid-split,
+  `ControlValueAccessor`-shaped — a different contract) or inventing a third one.
+
+- **Inline `admin-modal-backdrop` dialog inside a `shared/` component** (OBRS-272,
+  `BoardingListComponent`'s delay-ETA dialog): the first `*ngIf`-gated
+  `.admin-modal-backdrop`/`.admin-modal` dialog owned by a component declared in
+  `SharedModule` rather than a lazy feature module — same component-local-state
+  pattern as every other admin modal (no separate component, no NgRx), just hosted
+  somewhere new. This required moving `AdminModalBackdropDirective` from
+  `AdminModule` into `SharedModule` (declare + export) so a `shared/` component can
+  reach it without `SharedModule` reaching into a lazy feature module (a cycle,
+  since `AdminModule`/`StaffModule` both already import `SharedModule`). See
+  `docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Reuse
+  this precedent — directive lives in `SharedModule`, dialog markup stays inline —
+  for the next `shared/`-component modal instead of re-litigating the module home.
+
+- **Cross-shell reuse of `.admin-status.is-*` tokens on a customer-shell page**
+  (OBRS-305, `ParcelTrackingPageComponent`'s status chip): the public parcel
+  tracking page has no `.admin-shell` ancestor, so the `--admin-*-bg`/`-text`
+  custom properties `.admin-status.is-*` reads (only ever defined inside
+  `.admin-shell`, admin-theme.scss) would otherwise resolve to nothing. Rather
+  than fork a second status-chip look for this one customer page, the
+  component's own `:host` re-declares the SAME custom-property **values**
+  already bound to those roles in `admin-theme.scss` (no new hex — see §2.4.1)
+  scoped to this component instead of `.admin-shell`, and mirrors the existing
+  `.admin-shell.is-dark` overrides under `:host-context(body.is-dark)` (this
+  app's public dark-mode class, dark-theme.scss) instead of
+  `.admin-shell.is-dark`. The `.admin-status.is-*` markup/classes themselves
+  are reused byte-identical to the staff delivery-list. Reuse this re-scoping
+  idiom for the next customer-shell surface that needs a staff/admin status
+  chip rather than duplicating the token values into a new class name.
+
+- **CDK Portal print isolation reused for a second surface** (OBRS-305,
+  `ParcelWaybillPageComponent.printWaybill()`): the exact
+  `docs/adr/0015-boarding-manifest-print-isolation.md` recipe
+  (`DomPortalOutlet`/`TemplatePortal` teleport to `document.body`, a
+  `body.<feature>-printing` marker class gating a global `@media print` hide
+  rule, idempotent teardown bound to both `afterprint` and `ngOnDestroy`) —
+  copied with a new marker-class pair (`.parcel-waybill-print-portal` /
+  `body.parcel-waybill-printing`) rather than reusing the boarding-manifest's
+  marker classes (a shared marker would let a boarding-manifest print and a
+  waybill print interfere if ever triggered concurrently). Reuse this idiom
+  (new marker-class pair per print surface) for the next print feature.
 
 ---
 

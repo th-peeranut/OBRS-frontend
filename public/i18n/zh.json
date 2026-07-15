@@ -328,7 +328,21 @@
       "REPORTS": "报告",
       "SETTLEMENTS": "分账结算",
       "EOD_SALES_REPORT": "每日销售报告",
-      "REMINDER_CONFIG": "提醒时间设置"
+      "REMINDER_CONFIG": "提醒时间设置",
+      "REFUND_VOID_REPORT": "退款/作废汇总",
+      "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
+    },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "搜索菜单...",
+      "SEARCH_CLEAR_ARIA": "清除菜单搜索",
+      "NO_RESULTS": "未找到菜单",
+      "SECTION": {
+        "OVERVIEW": "概览",
+        "MASTER_DATA": "主数据",
+        "OPERATIONS": "运营",
+        "REPORTS": "报表与财务",
+        "SYSTEM": "系统"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS 管理员",
@@ -375,7 +389,12 @@
       "DELETE": "删除",
       "DELETING": "删除中...",
       "DELETE_CONFIRM_TITLE": "确认删除",
-      "DELETE_CONFIRM_MESSAGE": "此操作无法撤销，是否继续？"
+      "DELETE_CONFIRM_MESSAGE": "此操作无法撤销，是否继续？",
+      "CANCEL_TRIP_CONFIRM_TITLE": "确认取消行程",
+      "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} 个预订将自动退款并收到通知。",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "行程将被取消，不会产生退款。",
+      "CANCEL_TRIP_BTN": "取消行程",
+      "CANCELLING": "取消中..."
     },
     "VALIDATION": {
       "REQUIRED": "此字段为必填项。",
@@ -392,7 +411,8 @@
       "SAME_PASSWORD_VALIDATE": "请输入相同的密码。",
       "FORM_INVALID": "请填写标记的必填字段。",
       "WHOLE_NUMBER": "请输入整数（不含小数）。",
-      "POSITIVE_NUMBER": "请输入大于0的数字。"
+      "POSITIVE_NUMBER": "请输入大于0的数字。",
+      "YEAR_RANGE": "请输入 {{min}} 至 {{max}} 之间的年份。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
@@ -411,7 +431,13 @@
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
-      "UNLOCK_FAILED": "无法解锁账户。"
+      "UNLOCK_FAILED": "无法解锁账户。",
+      "CANCEL_TRIP_CONFIRM_TITLE": "确认取消行程",
+      "CANCEL_TRIP_REFUND_BODY": "{{count}} 个预订将自动退款并收到通知。",
+      "CANCEL_TRIP_NO_REFUND_BODY": "行程将被取消，不会产生退款。",
+      "CANCEL_TRIP_BTN": "取消行程",
+      "SCHEDULE_CANCELLED": "行程已成功取消。受影响的预订：{{count}} 个。",
+      "CANCEL_FAILED": "无法取消行程。"
     },
     "LOOKUP": {
       "TITLE": "查找设置",
@@ -518,11 +544,26 @@
       "FILTER_ROLE": "角色：所有角色",
       "FILTER_STATUS": "状态：全部",
       "FULL_NAME": "全名",
-      "LAST_UPDATED": "更新时间",
+      "LAST_LOGIN": "最近登录",
+      "NEVER_LOGGED_IN": "从未登录",
       "USERNAME": "用户名",
       "EMAIL_PHONE": "电子邮件和电话",
       "ROLES": "角色",
+      "ROLE_NAMES": {
+        "admin": "管理员",
+        "owner": "老板",
+        "salesperson": "销售员",
+        "driver": "司机",
+        "customer": "客户"
+      },
       "STATUS": "状态",
+      "STATUS_NAMES": {
+        "active": "使用中",
+        "inactive": "未使用",
+        "pending_verification": "待验证",
+        "suspended": "已暂停",
+        "deleted": "已删除"
+      },
       "USER_COUNT": "名用户",
       "ADD_TITLE": "创建用户",
       "EDIT_TITLE": "编辑用户",
@@ -564,6 +605,19 @@
       "ADD_TITLE": "创建车辆",
       "EDIT_TITLE": "编辑车辆",
       "MODAL_HINT": "设置车辆信息和当前运营状态。",
+      "EDIT_DETAIL_LOAD_FAILED": "加载完整车辆信息失败。请关闭并重新打开此窗口以重试——在加载成功前无法保存。",
+      "DETAILS": {
+        "SECTION_MAKE_MODEL": "品牌与型号",
+        "SECTION_TECHNICAL": "技术信息与备注",
+        "BRAND": "品牌",
+        "MODEL": "型号",
+        "MANUFACTURE_YEAR": "出厂年份",
+        "COLOUR": "颜色",
+        "ENGINE_CC": "排量（cc）",
+        "CHASSIS_NUMBER": "底盘号",
+        "NOTE": "备注",
+        "NOTE_PLACEHOLDER": "添加关于此车辆的其他备注（可选）"
+      },
       "MAINTENANCE": {
         "TAB": "维护保养",
         "MANAGE_ACTION": "管理维护记录",
@@ -697,7 +751,52 @@
       "PAYMENT_STATUS": "支付状态",
       "UNITS": "条预订",
       "LOADING": "正在加载预订数据...",
-      "LOAD_FAILED": "无法从后端加载预订数据。"
+      "LOAD_FAILED": "无法从后端加载预订数据。",
+      "VIEW": "查看",
+      "DETAIL": {
+        "TITLE": "预订详情",
+        "CLOSE": "关闭",
+        "LOAD_FAILED": "无法加载预订详情，请重试。",
+        "CREATED_AT": "创建时间",
+        "EXPIRES_AT": "过期时间",
+        "SECTION": {
+          "CONTACT": "客户联系信息",
+          "ACTOR": "预订操作人",
+          "PASSENGERS": "乘客与车票",
+          "PAYMENT": "付款",
+          "TIMELINE": "活动记录"
+        },
+        "CONTACT_NAME": "姓名",
+        "CONTACT_PHONE": "电话号码",
+        "ACTOR_NAME": "姓名",
+        "ACTOR_TYPE": "操作人类型",
+        "ACTOR_CHANNEL": "渠道",
+        "ACTOR_OFFICE": "办公室",
+        "NO_JOURNEYS": "此预订没有行程。",
+        "JOURNEY_LABEL": "行程 {{index}}：{{route}}",
+        "COL": {
+          "PASSENGER_NAME": "乘客",
+          "PASSENGER_TYPE": "类型",
+          "SEAT": "座位",
+          "TICKET_NUMBER": "车票编号",
+          "TICKET_STATUS": "车票状态",
+          "TXN_DATE": "日期/时间",
+          "TXN_METHOD": "支付方式",
+          "TXN_AMOUNT": "金额",
+          "TXN_STATUS": "状态"
+        },
+        "TOTAL_AMOUNT": "总金额",
+        "PAID_AMOUNT": "已付",
+        "OUTSTANDING_AMOUNT": "未付",
+        "REFUNDED_AMOUNT": "已退款",
+        "NO_TRANSACTIONS": "暂无支付交易记录。",
+        "EVENT": {
+          "CREATED": "预订已创建",
+          "PAYMENT": "收到付款（{{method}}）",
+          "EXPIRES": "预订即将过期",
+          "CURRENT_STATUS": "当前状态：{{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "仪表板",
@@ -915,6 +1014,69 @@
       "MINUTES_LABEL": "上车提醒（提前分钟数）",
       "MINUTES_HELPER": "发车前多少分钟发送上车提醒。",
       "LOAD_FAILED": "无法加载提醒时间设置。"
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "BASIS_NOTE": "退款和作废按处理日期统计，而非原订单日期或出发日期。",
+      "PARTITION_NOTE": "作废分为已取消（人工取消）和已过期（未支付超时）两类，两者之和等于作废总额。",
+      "CARD": {
+        "REFUNDED": "已退款（毛额）",
+        "REFUNDED_HINT": "扣除任何手续费之前退还给客户的总金额。",
+        "MANUAL_PENDING": "待人工退款",
+        "VOIDED": "已作废",
+        "CANCELLED": "已取消",
+        "EXPIRED": "已过期",
+        "COUNT_LABEL": "数量"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期",
+        "REFUNDED_COUNT": "退款（数量）",
+        "REFUNDED_AMOUNT": "退款（金额）",
+        "MANUAL_COUNT": "人工（数量）",
+        "MANUAL_AMOUNT": "人工（金额）",
+        "VOIDED_COUNT": "作废（数量）",
+        "VOIDED_AMOUNT": "作废（金额）"
+      },
+      "EXPAND_ARIA": "显示取消/过期明细",
+      "COLLAPSE_ARIA": "隐藏取消/过期明细",
+      "EMPTY": "所选日期范围内没有退款或作废的票务。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
+      }
+    },
+    "CASH_ONLINE_RECONCILIATION": {
+      "SUBTITLE": "所选日期范围内收取的现金、线上和其他支付总额。",
+      "FILTER_FROM": "起始日期",
+      "FILTER_TO": "结束日期",
+      "BASIS_NOTE": "现金、线上和其他按订单创建日期统计，而非出行日期。",
+      "PARTITION_NOTE": "支付分为现金（人工收款）、线上（银行卡、PromptPay 及其他数字渠道）和其他（银行转账及杂项）三类，每笔已收款项仅归入其中一类。",
+      "CARD": {
+        "CASH": "现金",
+        "ONLINE": "线上",
+        "OTHER": "其他",
+        "COLLECTED": "已收款",
+        "REFUNDED": "已退款",
+        "NET": "净额",
+        "COUNT_LABEL": "数量",
+        "TOTAL_COLLECTED": "收款总额"
+      },
+      "TABLE_TITLE": "每日明细",
+      "COL": {
+        "DATE": "日期"
+      },
+      "EXPAND_ARIA": "显示支付笔数",
+      "COLLAPSE_ARIA": "隐藏支付笔数",
+      "EMPTY": "所选日期范围内没有收款记录。",
+      "LOAD_FAILED": "无法加载报告，请重试。",
+      "ERROR": {
+        "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
+        "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
+      }
     }
   },
   "AUTH": {
@@ -1075,6 +1237,19 @@
       "BOARDING_REMINDER": "登车提醒"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "通知，{{count}} 条未读",
+    "PANEL_TITLE": "通知",
+    "MARK_ALL_READ": "全部标为已读",
+    "EMPTY_TITLE": "暂无通知",
+    "LOAD_ERROR": "无法加载通知",
+    "RETRY": "重试",
+    "SHOWING_LATEST": "显示最近 {{shown}} 条，共 {{total}} 条",
+    "MARK_READ_ERROR": "标记已读失败，请重试",
+    "MARK_ALL_ERROR": "全部标记已读失败，请重试",
+    "ROW_UNREAD_SUFFIX": "未读",
+    "ROW_READ_SUFFIX": "已读"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "更改您的邮箱",
     "CURRENT_PASSWORD_LABEL": "当前密码",
@@ -1166,7 +1341,7 @@
       "PASSENGER_1": "成人",
       "PASSENGER_1_HINT": "12岁及以上",
       "PASSENGER_2": "儿童",
-      "PASSENGER_2_HINT": "2-11岁",
+      "PASSENGER_2_HINT": "身高≤130cm（2-11岁）",
       "START_STATION": "出发地",
       "END_STATION": "目的地",
       "DEPARTURE_DATE": "出发日期",
@@ -1232,6 +1407,7 @@
       "DETAIL_DROPOFF_TITLE": "下车点详情 ({{province}})",
       "DETAIL_TIME": "预计时间 {{time}}",
       "BTN_OPEN_MAPS": "在 Google 地图中打开",
+      "BTN_NAVIGATE": "导航",
       "VALIDATION_SELECT_BOTH": "请先选择上车点和下车点再确认",
       "VALIDATION_SELECT_PICKUP": "请先选择上车点再确认",
       "VALIDATION_SELECT_DROPOFF": "请先选择下车点再确认",
@@ -1364,16 +1540,45 @@
       "SEAT_SECTION_TITLE": "座位选择",
       "SEAT_SECTION_HINT": "请选择您的座位 — 若跳过，系统将自动为您分配座位。",
       "SEAT_LEG_OUTBOUND": "去程座位",
-      "SEAT_LEG_RETURN": "返程座位"
+      "SEAT_LEG_RETURN": "返程座位",
+      "FARE_CATEGORY": "票价类别",
+      "FARE_CATEGORY_CHILD_HINT": "儿童票适用于身高≤130cm的乘客。",
+      "SEAT_ACTIVE_PASSENGER_LABEL": "选择要分配座位的乘客",
+      "SEAT_CHIP_FALLBACK": "乘客 {{n}}",
+      "OPEN_SEAT_SECTION_HINT": "开放座位 — 按到达顺序上车。",
+      "OPEN_SEAT_COUNT_LABEL": "乘客人数",
+      "OPEN_SEAT_MAX_HINT": "乘客人数已达剩余座位上限（剩余 {{max}} 个）。",
+      "SEAT_PREFERENCE_LABEL": "座位偏好（可选）",
+      "SEAT_PREFERENCE_GROUP_ARIA": "选择座位偏好",
+      "SEAT_PREFERENCE_WINDOW": "靠窗",
+      "SEAT_PREFERENCE_AISLE": "靠走道",
+      "SEAT_REQUIREMENT_LABEL": "特殊需求（可选）",
+      "SEAT_REQUIREMENT_GROUP_ARIA": "选择特殊座位需求",
+      "SEAT_REQUIREMENT_WHEELCHAIR": "轮椅通道",
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "加大腿部空间"
+    },
+    "SEAT_MAP": {
+      "WHEELCHAIR_BADGE_ARIA": "轮椅无障碍座位",
+      "EXTRA_LEGROOM_BADGE_ARIA": "加大腿部空间座位",
+      "LEGEND_TITLE": "座位图例",
+      "LEGEND_WHEELCHAIR": "轮椅无障碍",
+      "LEGEND_EXTRA_LEGROOM": "加大腿部空间"
     },
     "GENDER": {
       "MALE": "男",
       "FEMALE": "女",
       "MONK": "僧侣"
     },
+    "SUMMARY": {
+      "OPEN_SEATING_BADGE": "不指定座位（开放座位）",
+      "PASSENGERS_TITLE": "乘客",
+      "NO_SEAT": "尚未选择座位",
+      "SEAT_LABEL": "座位 {{seat}}"
+    },
     "ALERT": {
       "CREATE_SUCCESS": "预订保存成功",
-      "CREATE_FAILED": "无法创建预订，请重试。"
+      "CREATE_FAILED": "无法创建预订，请重试。",
+      "CAPACITY_FULL": "此班次座位已满，请减少乘客人数或选择其他班次。"
     }
   },
   "PAYMENT": {
@@ -1439,6 +1644,7 @@
   "E_TICKET": {
     "TITLE": "电子票",
     "SUBTITLE": "NJ Phuyaipu 在线旅行票",
+    "BTN_NAVIGATE": "导航",
     "LABEL": {
       "BOOKING_REF": "预订参考号",
       "TICKET_NO": "票号",
@@ -1450,6 +1656,7 @@
       "VEHICLE_TYPE": "车辆类型",
       "VEHICLE_PLATE": "车牌号",
       "SEAT": "座位",
+      "SEAT_OPEN": "自由入座（不指定座位）",
       "PASSENGERS": "乘客",
       "BOOKER": "预订人",
       "PASSENGER_NAME": "乘客姓名",
@@ -1459,14 +1666,16 @@
       "TOTAL_UNIT": "泰铢",
       "ESTIMATE_KM_UNIT": "公里",
       "LEG_OUTBOUND": "去程",
-      "LEG_RETURN": "返程"
+      "LEG_RETURN": "返程",
+      "FARE_CATEGORY": "票价类别"
     },
     "QR_HINT": "二维码仅用于登车前的身份验证。",
     "QR_UNAVAILABLE": "此票无法用于登车（已取消、已退款或已失效）。",
     "DOWNLOAD": "下载电子票",
     "NOTE_LABEL": "注意：",
     "QR_ARIA_LABEL": "二维码",
-    "LOGO_ALT": "NJ Phuyaipu 标志"
+    "LOGO_ALT": "NJ Phuyaipu 标志",
+    "CHILD_FARE_NOTE": "登车检查：乘客身高须≤130cm。"
   },
   "POLICY": {
     "REFUND": {
@@ -1512,7 +1721,10 @@
       "SELL_RECEIPT": "打印车票",
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
-      "BOARDING": "登车名单"
+      "BOARDING": "登车名单",
+      "PARCEL_CONSIGN": "寄送包裹",
+      "PARCEL_WAYBILL": "运单",
+      "PARCEL_DELIVERY": "包裹配送"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -1604,7 +1816,19 @@
         "PLACEHOLDER": "粘贴或扫描登车令牌",
         "BUTTON": "验证 / 登车",
         "VALIDATING": "验证中…",
-        "CAMERA_SOON": "摄像头扫描功能即将推出 — 目前请手动输入令牌。",
+        "MODE_TOGGLE_LABEL": "登车扫描模式",
+        "MODE_TEXT": "文本",
+        "MODE_CAMERA": "摄像头",
+        "CAMERA": {
+          "HINT": "将摄像头对准乘客电子票上的二维码。",
+          "SCANNING": "扫描中…",
+          "REQUESTING": "正在请求摄像头权限…",
+          "DENIED": "摄像头访问被拒绝。请在浏览器设置中允许摄像头权限，然后重试。",
+          "NO_CAMERA": "此设备未找到摄像头。",
+          "UNSUPPORTED": "此设备/浏览器不支持摄像头扫描。",
+          "ERROR": "无法启动摄像头，请重试。",
+          "RETRY": "重试"
+        },
         "SUCCESS_TITLE": "已登车",
         "RESULT_NAME": "乘客",
         "RESULT_SEAT": "座位",
@@ -1621,6 +1845,27 @@
           "BOARDING_ROUND_ARRIVED": "本班次已到达，登车功能已锁定。",
           "GENERIC": "验证失败，请重试。"
         }
+      },
+      "FARE_CATEGORY": "票价类别",
+      "CHILD_FARE_FLAG_BTN": "标记不符",
+      "CHILD_FARE_UNFLAG_BTN": "取消标记",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "标记中…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "取消标记中…",
+      "CHILD_FARE_FLAGGED": "已标记",
+      "CHILD_FARE_FLAGGED_AT": "标记时间",
+      "CHILD_FARE_FLAGGED_BY": "标记人",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "确定取消此标记吗？",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "此操作将清除该票的儿童票不符标记。",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "取消标记",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "取消",
+      "CHILD_FARE_FLAG_SUCCESS": "该票已标记票价类别不符。",
+      "CHILD_FARE_FLAG_FAILED": "无法标记该票。",
+      "CHILD_FARE_UNFLAG_SUCCESS": "标记已取消。",
+      "CHILD_FARE_UNFLAG_FAILED": "无法取消标记。",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "该票已被标记。",
+        "NOT_FLAGGED": "该票尚未被标记。",
+        "GENERIC": "操作失败，请重试。"
       }
     },
     "SCHEDULE_STATUS": {
@@ -1647,6 +1892,34 @@
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "此班次目前无法切换到该状态。",
         "GENERIC": "无法更新班次状态，请重试。"
+      }
+    },
+    "SCHEDULE_DELAY": {
+      "PILL_MARK": "标记为延误",
+      "PILL_UPDATE": "更新预计时间",
+      "INDICATOR_LABEL": "延误 — 新预计时间 {{eta}}",
+      "INDICATOR_REASON": "原因：{{reason}}",
+      "DIALOG_TITLE_MARK": "标记此班次延误",
+      "DIALOG_TITLE_UPDATE": "更新延误预计时间",
+      "FIELD": {
+        "DATE": "新出发日期",
+        "TIME": "新出发时间",
+        "REASON": "原因（选填）",
+        "REASON_PLACEHOLDER": "例如：高速公路交通拥堵"
+      },
+      "VALIDATION": {
+        "REQUIRED": "此字段为必填项。",
+        "MUST_BE_AFTER": "新的预计时间必须晚于原出发时间。",
+        "REASON_TOO_LONG": "原因不得超过 500 个字符。"
+      },
+      "CANCEL": "取消",
+      "SUBMIT": "保存",
+      "SUBMITTING": "保存中…",
+      "SUCCESS": "已通知 {{count}} 名乘客",
+      "ERROR": {
+        "SCHEDULE_DELAY_NOT_SCHEDULED": "此班次已无法标记为延误。",
+        "SCHEDULE_DELAY_ETA_INVALID": "新的预计时间必须晚于原出发时间。",
+        "GENERIC": "无法更新延误信息，请重试。"
       }
     },
     "DRIVER": {
@@ -1720,6 +1993,10 @@
       "BADGE_SOLD": "已售",
       "TRIPS_EMPTY": "当日无班次",
       "CENTER_EMPTY": "请在左侧选择班次",
+      "OPEN_SEATING_HINT": "不指定座位——按乘客人数售票。",
+      "PASSENGER_COUNT_DECREASE": "减少乘客人数",
+      "PASSENGER_COUNT_INCREASE": "增加乘客人数",
+      "PASSENGER_COUNT_MAX": "最多可售 {{max}} 位乘客",
       "TAB_TICKET_SALES": "售票",
       "TAB_TRIP_DETAILS": "班次详情",
       "TAB_BOARDING": "登车",
@@ -1816,6 +2093,136 @@
       "SUBTITLE": "选择班次以查看登车名单。",
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
+    },
+    "PARCEL_CONSIGN": {
+      "SUBTITLE": "登记一个新的寄送包裹以便配送。",
+      "SECTION": {
+        "SENDER": "寄件人",
+        "RECIPIENT": "收件人",
+        "TRIP": "行程",
+        "DIMENSIONS": "尺寸（选填）"
+      },
+      "FIELD": {
+        "SENDER_NAME": "寄件人姓名",
+        "SENDER_PHONE": "寄件人电话",
+        "RECIPIENT_NAME": "收件人姓名",
+        "RECIPIENT_PHONE": "收件人电话",
+        "DATE": "日期",
+        "SCHEDULE": "班次",
+        "PICKUP_STOP": "取件站点",
+        "DROPOFF_STOP": "送达站点",
+        "WEIGHT": "重量（公斤）",
+        "DESCRIPTION": "包裹描述",
+        "LENGTH_CM": "长度（厘米）",
+        "WIDTH_CM": "宽度（厘米）",
+        "HEIGHT_CM": "高度（厘米）",
+        "PAYMENT_METHOD": "付款方式",
+        "PROHIBITED_ACK": "我确认此包裹不含任何违禁物品。"
+      },
+      "PAYMENT_CASH": "现金",
+      "CARGO": {
+        "LOADING": "正在检查货运容量…",
+        "REMAINING": "剩余 {{remaining}} 公斤，总容量 {{capacity}} 公斤"
+      },
+      "QUOTE": {
+        "LOADING": "正在计算价格…",
+        "AMOUNT": "价格：{{amount}}"
+      },
+      "SUBMIT": "寄送包裹",
+      "SUBMITTING": "提交中…",
+      "VALIDATION": {
+        "WEIGHT_POSITIVE": "重量必须大于 0。",
+        "WEIGHT_MAX": "重量不能超过 100 公斤。",
+        "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。"
+      },
+      "ERROR": {
+        "PROHIBITED_CATEGORY": "此包裹属于违禁类别，无法受理。",
+        "CARGO_CAPACITY_EXCEEDED": "此班次的货运容量已超出。",
+        "CARGO_CAPACITY_NOT_CONFIGURED": "此班次尚未配置货运容量。",
+        "STOP_PAIR_NOT_PRICEABLE": "此取件/送达组合尚未配置运费。",
+        "GENERIC": "无法寄送此包裹，请重试。",
+        "QUOTE_FAILED": "无法计算价格。",
+        "CARGO_FAILED": "无法检查货运容量。"
+      },
+      "RESULT": {
+        "TITLE": "包裹寄送成功",
+        "TRACKING_NUMBER": "追踪单号",
+        "COLLECTION_CODE": "取件码",
+        "AMOUNT": "金额",
+        "VIEW_WAYBILL": "查看运单"
+      }
+    },
+    "PARCEL_WAYBILL": {
+      "SUBTITLE": "此包裹的可打印运单。",
+      "TITLE": "运单",
+      "SENDER": "寄件人",
+      "RECIPIENT": "收件人",
+      "PICKUP_STOP": "取件站点",
+      "DROPOFF_STOP": "送达站点",
+      "WEIGHT": "重量",
+      "AMOUNT": "金额",
+      "DEPARTURE": "出发时间",
+      "QR_ALT": "取件二维码",
+      "QR_HINT": "取件时请出示此二维码或取件码。",
+      "PRINT": "打印",
+      "LOAD_FAILED": "无法加载此运单。"
+    },
+    "PARCEL_DELIVERY": {
+      "ENTRY_TITLE": "选择班次",
+      "ENTRY_SUBTITLE": "选择班次以查看包裹配送。",
+      "LIST_SUBTITLE": "管理此班次的包裹交接。",
+      "EMPTY_TITLE": "暂无可用班次",
+      "EMPTY_BODY": "您没有分配的班次，请稍后再查。",
+      "VIEW_BTN": "包裹配送",
+      "LIST_EMPTY_TITLE": "此班次暂无寄送包裹",
+      "LOAD_FAILED": "无法加载包裹配送信息。",
+      "COL": {
+        "TRACKING_NUMBER": "追踪单号",
+        "SENDER": "寄件人",
+        "RECIPIENT": "收件人",
+        "PICKUP_STOP": "取件站点",
+        "DROPOFF_STOP": "送达站点",
+        "WEIGHT": "重量",
+        "STATUS": "状态"
+      },
+      "ACTION": {
+        "LOAD": "装车",
+        "MARK_ARRIVED": "标记已到达",
+        "COLLECT": "取件"
+      },
+      "COLLECT_DIALOG": {
+        "TITLE": "取件",
+        "CODE_LABEL": "取件码",
+        "CANCEL": "取消",
+        "CONFIRM": "确认取件",
+        "SUBMITTING": "确认中…"
+      },
+      "ERROR": {
+        "CODE_MISMATCH": "取件码不匹配。",
+        "ALREADY_COLLECTED": "此包裹已被取走。",
+        "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。"
+      },
+      "STATUS": {
+        "ACCEPTED": "已受理",
+        "IN_TRANSIT": "运输中",
+        "ARRIVED_NOTIFIED": "已到达",
+        "COLLECTED": "已取件",
+        "LEFT_AT_STOP": "已留存于站点",
+        "UNCLAIMED_RETURNED": "无人认领 / 已退回",
+        "REJECTED": "已拒收",
+        "UNKNOWN": "未知状态"
+      }
     }
+  },
+  "PARCEL_TRACKING": {
+    "TITLE": "追踪您的包裹",
+    "INPUT_PLACEHOLDER": "请输入追踪单号",
+    "SUBMIT": "追踪",
+    "NOT_FOUND": "找不到该追踪单号对应的包裹。",
+    "PICKUP_STOP": "取件站点",
+    "DROPOFF_STOP": "送达站点",
+    "ARRIVED_NOTIFIED_AT": "已到达目的地",
+    "COLLECTED_AT": "取件时间",
+    "RECIPIENT": "收件人"
   }
 }

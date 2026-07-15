@@ -19,6 +19,12 @@ export interface BookingTicketStop {
   /** Minutes from the route origin's departure baseline to this stop.
    *  Carried through from `RouteStop.offsetMinutesFromOrigin`. */
   offsetMinutesFromOrigin?: number | null;
+  /** OBRS-269: coordinates carried through from `RouteStop.latitude`/`longitude`
+   *  so the e-ticket can offer a "Navigate to pickup" deep-link. Optional/nullable
+   *  so older fixtures/consumers and a stop missing this field stay valid — the
+   *  Navigate button hides itself when either is null (see `TicketLeg`). */
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface BookingTicketVehicle {
@@ -34,6 +40,11 @@ export interface BookingTicketItem {
   passengerName?: string;
   seatNumber?: string;
   status?: CodeLabel;
+  /** OBRS-296: per-passenger fare category the booking was created with —
+   *  server-authoritative (drives the 50% child-discount and the boarding
+   *  manifest's mismatch-flag surface). `undefined` on an older
+   *  ticket/fixture predating this field. */
+  fareCategory?: 'adult' | 'child';
 }
 
 export interface BookingTicketJourney {

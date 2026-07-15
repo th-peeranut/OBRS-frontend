@@ -1,0 +1,24 @@
+.parcel-consign-indicator {
+  font-size: 13px;
+  color: var(--admin-muted);
+  padding: 6px 0;
+
+  &.is-error {
+    color: var(--admin-danger-text);
+  }
+}
+
+.parcel-consign-quote {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.parcel-consign-payment-readonly {
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--admin-outline);
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+  width: fit-content;
+}

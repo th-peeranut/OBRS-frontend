@@ -5,6 +5,7 @@ import { TranslateService } from '@ngx-translate/core';
 import { ETicketComponent } from './e-ticket.component';
 import { BookingService } from '../../services/booking/booking.service';
 import { TicketService } from '../../services/ticket/ticket.service';
+import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import { PassengerInfo } from '../../shared/interfaces/passenger-info.interface';
 
@@ -42,6 +43,8 @@ function buildTicketsData(): BookingTicketsData {
             passengerName: 'Mr. Abc Def',
             seatNumber: '1',
             status: { code: 'confirmed', label: 'Confirmed' },
+            // OBRS-296: server-authoritative fare category.
+            fareCategory: 'child',
           },
         ],
       },
@@ -93,6 +96,7 @@ describe('ETicketComponent', () => {
   } as unknown as BookingService;
 
   let ticketServiceStub: jasmine.SpyObj<TicketService>;
+  let boardingQrService: BoardingQrService;
 
   const translateStub = {
     onLangChange: new Subject(),
@@ -106,11 +110,17 @@ describe('ETicketComponent', () => {
     ticketServiceStub.getBoardingToken.and.returnValue(
       of(null) as unknown as ReturnType<TicketService['getBoardingToken']>
     );
+    // Real BoardingQrService wired to the ticket-service stub (not a mock of
+    // the service itself) — a fresh instance per test, matching the
+    // component-scoped `providers: [BoardingQrService]` lifetime, so the
+    // existing assertions on `ticketServiceStub.getBoardingToken` calls stay
+    // meaningful (OBRS-221 extraction).
+    boardingQrService = new BoardingQrService(ticketServiceStub);
 
     component = new ETicketComponent(
       storeStub,
       bookingServiceStub,
-      ticketServiceStub,
+      boardingQrService,
       translateStub
     );
   });
@@ -186,8 +196,13 @@ describe('ETicketComponent', () => {
           ticketNumber: 'T-Q4QZXTZAFY',
           qrDataUrl: '',
           qrUnavailable: true,
+          seatOpen: false,
+          // OBRS-296: server-authoritative — carried from the ticket
+          // response's fareCategory, never re-derived client-side.
+          fareCategory: 'child',
         },
       ]);
+      expect(component.seatsOpen).toBeFalse();
     });
 
     it('selects the outbound journey even when legType order changes', () => {
@@ -218,6 +233,211 @@ describe('ETicketComponent', () => {
       (component as any).applyApiOverrides('en', storePassengers);
 
       expect(component.bookingNumber).toBe('STORE-REF');
+    });
+
+    it('OBRS-269: threads originLatitude/originLongitude from the outbound fromStop coords', () => {
+      const data = buildTicketsData();
+      data.journeys![0].fromStop!.latitude = 13.7563;
+      data.journeys![0].fromStop!.longitude = 100.5018;
+
+      apply(data);
+
+      expect(component.originLatitude).toBe(13.7563);
+      expect(component.originLongitude).toBe(100.5018);
+    });
+
+    it('OBRS-269: leaves originLatitude/originLongitude null when the outbound fromStop has no coords', () => {
+      apply(buildTicketsData());
+
+      expect(component.originLatitude).toBeNull();
+      expect(component.originLongitude).toBeNull();
+    });
+
+    it('OBRS-325: an OPEN ticket (null seatNumber) flags seatOpen on the passenger and seatsOpen overall, and seat falls back to "-"', () => {
+      const data = buildTicketsData();
+      data.journeys![0].tickets![0].seatNumber = undefined;
+
+      apply(data);
+
+      expect(component.seatsOpen).toBeTrue();
+      expect(component.passengers[0].seat).toBe('-');
+      expect(component.passengers[0].seatOpen).toBeTrue();
+    });
+
+    it('OBRS-325 (ASSIGNED regression): a ticket with a seatNumber keeps seatOpen false and the real seat unchanged', () => {
+      apply(buildTicketsData());
+
+      expect(component.seatsOpen).toBeFalse();
+      expect(component.passengers[0].seat).toBe('1');
+      expect(component.passengers[0].seatOpen).toBeFalse();
+    });
+  });
+
+  describe('OBRS-350: e-ticket passenger phone resolution under OPEN seating', () => {
+    function openTicketsData(
+      tickets: { id: number; ticketNumber: string; passengerName: string }[]
+    ): BookingTicketsData {
+      const data = buildTicketsData();
+      data.journeys = [
+        {
+          ...data.journeys![0],
+          tickets: tickets.map((t) => ({
+            ...t,
+            seatNumber: undefined,
+            status: { code: 'confirmed', label: 'Confirmed' },
+          })),
+        },
+      ];
+      return data;
+    }
+
+    function apply(
+      data: BookingTicketsData,
+      storePassengers: PassengerInfo[]
+    ): void {
+      (component as any).ticketApiData = data;
+      (component as any).applyApiOverrides('en', storePassengers);
+    }
+
+    function passenger(
+      firstName: string,
+      lastName: string,
+      phoneNumber: string
+    ): PassengerInfo {
+      return {
+        isAdult: true,
+        title: 1,
+        firstName,
+        middleName: '',
+        lastName,
+        phoneNumber,
+        gender: 'male',
+        isSelectSeat: false,
+        passengerSeat: '',
+      };
+    }
+
+    it('resolves each passenger phone by name when seatNumber is null, regardless of store-list order', () => {
+      const data = openTicketsData([
+        { id: 1, ticketNumber: 'T-1', passengerName: 'Mr. Alice Wong' },
+        { id: 2, ticketNumber: 'T-2', passengerName: 'Ms. Bob Lee' },
+      ]);
+      // Store order intentionally reversed vs. ticket order, so a positional
+      // (index) match would give the WRONG phone — only a real name match
+      // gets this right.
+      const storePassengers = [
+        passenger('Bob', 'Lee', '0822222222'),
+        passenger('Alice', 'Wong', '0811111111'),
+      ];
+
+      apply(data, storePassengers);
+
+      expect(component.passengers[0].name).toBe('Mr. Alice Wong');
+      expect(component.passengers[0].phone).toBe('0811111111');
+      expect(component.passengers[1].name).toBe('Ms. Bob Lee');
+      expect(component.passengers[1].phone).toBe('0822222222');
+    });
+
+    it('ASSIGNED regression: seat-based match is untouched when real seat numbers are present, even with the same store-list reordering trick', () => {
+      const data = buildTicketsData();
+      data.journeys = [
+        {
+          ...data.journeys![0],
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', passengerName: 'Mr. Alice Wong', seatNumber: '2' },
+            { id: 2, ticketNumber: 'T-2', passengerName: 'Ms. Bob Lee', seatNumber: '5' },
+          ],
+        },
+      ];
+      const storePassengers = [
+        { ...passenger('Bob', 'Lee', '0822222222'), passengerSeat: '5' },
+        { ...passenger('Alice', 'Wong', '0811111111'), passengerSeat: '2' },
+      ];
+
+      apply(data, storePassengers);
+
+      expect(component.passengers[0].seat).toBe('2');
+      expect(component.passengers[0].phone).toBe('0811111111');
+      expect(component.passengers[1].seat).toBe('5');
+      expect(component.passengers[1].phone).toBe('0822222222');
+    });
+
+    it('OPEN + duplicate passenger names: falls back to positional index within an aligned (same-length) list, never leaking the wrong phone', () => {
+      const data = openTicketsData([
+        { id: 1, ticketNumber: 'T-1', passengerName: 'Mr. Sam Lee' },
+        { id: 2, ticketNumber: 'T-2', passengerName: 'Mr. Sam Lee' },
+      ]);
+      const storePassengers = [
+        passenger('Sam', 'Lee', '0810000001'),
+        passenger('Sam', 'Lee', '0810000002'),
+      ];
+
+      apply(data, storePassengers);
+
+      expect(component.passengers[0].phone).toBe('0810000001');
+      expect(component.passengers[1].phone).toBe('0810000002');
+    });
+
+    it('OPEN + round-trip/length-mismatch (store holds more/fewer passengers than this leg has tickets): ambiguous name + mismatched length never guesses positionally — falls back to "-"', () => {
+      const data = openTicketsData([
+        { id: 1, ticketNumber: 'T-1', passengerName: 'Mr. Sam Lee' },
+        { id: 2, ticketNumber: 'T-2', passengerName: 'Mr. Sam Lee' },
+      ]);
+      // storePassengers holds 3 entries (e.g. a round-trip where the store
+      // carries every passenger for the whole booking) while this leg has
+      // only 2 tickets — lengths don't correspond, and the name is
+      // ambiguous, so neither fallback may guess.
+      const storePassengers = [
+        passenger('Sam', 'Lee', '0810000001'),
+        passenger('Sam', 'Lee', '0810000002'),
+        passenger('Alex', 'Chan', '0810000003'),
+      ];
+
+      apply(data, storePassengers);
+
+      expect(component.passengers[0].phone).toBe('-');
+      expect(component.passengers[1].phone).toBe('-');
+    });
+
+    it('OPEN + unique name match still resolves correctly even when list lengths differ', () => {
+      const data = openTicketsData([
+        { id: 1, ticketNumber: 'T-1', passengerName: 'Mr. Alice Wong' },
+      ]);
+      const storePassengers = [
+        passenger('Alice', 'Wong', '0811111111'),
+        passenger('Bob', 'Lee', '0822222222'),
+        passenger('Carol', 'Ng', '0833333333'),
+      ];
+
+      apply(data, storePassengers);
+
+      expect(component.passengers[0].phone).toBe('0811111111');
+    });
+  });
+
+  describe('navigateToPickup (OBRS-269)', () => {
+    it('opens the Google Maps directions deep-link when coords are present', () => {
+      component.originLatitude = 13.7563;
+      component.originLongitude = 100.5018;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).toHaveBeenCalledWith(
+        'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
+        '_blank',
+        'noopener,noreferrer'
+      );
+    });
+
+    it('does nothing when coords are missing', () => {
+      component.originLatitude = null;
+      component.originLongitude = null;
+      const openSpy = spyOn(window, 'open');
+
+      component.navigateToPickup();
+
+      expect(openSpy).not.toHaveBeenCalled();
     });
   });
 

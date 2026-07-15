@@ -1,5 +1,442 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-15 — SELF-FIXED: OBRS-370 duplicated HTML comment (copy-paste artifact)
+
+In `usability-reports-page.component.html` the OBRS-370 Jira-key-visibility
+comment block was pasted twice, back-to-back, above the
+`*ngIf="detailReport.jiraIssueKey && isAdmin"` row. Harmless at runtime but a
+copy-paste smell. Removed the duplicate (kept one). Lesson: when adding an
+explanatory comment above a gated element, paste once — re-check the diff for
+an accidental double-insert before submitting.
+
+## 2026-07-14 — FIXED: OBRS-361 live defect — second selectButton field silently dropped on submit
+
+QA reproduced (3x, one-way ASSIGNED booking) that setting BOTH `seatPreference`
+("Window") AND `seatRequirement` ("Wheelchair accessible") on the same passenger
+card kept only the FIRST-clicked field in the actual `POST /api/private/bookings`
+body — the second silently came back `null`, even though both buttons still showed
+`p-highlight`-selected in the DOM at submit time. Single-field cases (either alone)
+were fine; the OBRS-362 badges were unaffected.
+
+**Root cause (confirmed via debug-mantra trace + an A/B test revert, not guessed):**
+`setPassengerData()` — called every time the `passengerInfo` store slice emits,
+which since OBRS-361 now includes the NEW debounced live-sync round trip
+(`passengerData.valueChanges` → 300ms debounce → dispatch → store →
+`selectPassengerInfo` → `setPassengerData()`), not just the old rare initial-load /
+OPEN-seating +/- cases — unconditionally did `while (passengerData.length)
+{ removeAt(0) }` then rebuilt every group with `createPassengerGroup()` + `push()`,
+i.e. destroyed and recreated every `FormControl` on EVERY round trip. Angular's
+`formControlName`/`formGroupName` directives bind to a control instance once, at
+directive init, and do **not** rebind just because `*ngFor` (with
+`trackBy: trackByIndex`) reuses the same DOM node for a replaced control at the
+same index. So: click Window (t=0) → 300ms later the debounced round trip
+REBUILDS the FormArray (new control instances, values reaffirmed from what was
+known at t=0 — just Window) → click Wheelchair sometime after that → the
+`p-selectButton`'s CVA is STILL wired to the OLD (now-detached, pre-rebuild)
+`seatRequirement` control, so the click updates a control nothing reads anymore.
+The button's own local highlight state still looks right (driven by the CVA's
+cached value), but `getRawValue()` on the CURRENT live FormArray — which
+`buildPassengerInfoPayload()`/the submit path actually reads — never sees it.
+
+**Fix** (`passenger-info-form.component.ts`, `setPassengerData()`): patch existing
+groups IN PLACE (`this.passengerData.at(index).patchValue(...)`) when the
+passenger COUNT is unchanged — the common case for a live field edit — instead of
+destroying/recreating every control. Only the genuine count DELTA is
+added/removed (`push`/`removeAt` trimmed to the difference). This means a control
+the user is actively bound to is never swapped out from under them mid-interaction,
+regardless of click timing relative to the debounce window.
+
+**Test that catches it** (`passenger-info-form.component.spec.ts`, inside the
+"OPEN-seating rendering, OBRS-323" describe): *"OBRS-361 defect repro: setting BOTH
+fields survives the debounced store round-trip into the submit payload, all the way
+through the lowercase payload boundary"* — drives the REAL form via two real DOM
+clicks (Window, then Wheelchair) with `fakeAsync`/`tick(300)` letting a REAL
+debounced store round trip run in between (the exact QA timing), using MockStore
+with a `spyOn(store, 'dispatch').and.callFake(...)` that manually completes the
+round trip exactly as `PassengerInfoEffect.setPassengerInfo$` does (a synchronous
+pass-through — MockStore doesn't run real reducers/effects). Verified via an
+explicit A/B revert: reverted `setPassengerData()` to the pre-fix
+destroy-and-rebuild version, reran — the test FAILED with
+`seatRequirement: null` (the exact reported symptom, second-clicked field lost);
+restored the fix, reran — passes. Also asserts the payload survives the lowercase
+boundary via the real `PassengerInfoComponent.buildPassengersPayload()`.
+
+**Unrelated drift noticed mid-session**: `passenger-info.component.ts`'s own
+pre-existing private `normalizeSeatNumber()` (booking-payload seat-number
+stripping) got consolidated onto the shared `shared/lib/seat-label.ts` util
+(`normalizeSeatNumber as stripSeatDigits`) — flagged in the original OBRS-361/362
+report as a follow-up not done at the time; it landed here (via linter/tooling,
+not a deliberate edit this session) and is functionally equivalent + covered by
+the existing passing `passenger-info.component.spec.ts` suite (9/9), so kept as-is
+rather than reverted.
+
+**Full suite**: `ng test --watch=false --browsers=ChromeHeadless` → 2249/2249
+SUCCESS (2248 prior + the 1 new defect-repro test).
+
+---
+
+## 2026-07-14 — IMPLEMENTED: OBRS-361 + OBRS-362 advanced-booking passenger preferences
+
+**Worktree:** `OBRS-frontend-wt-obrs-361-362-booking-prefs` (branch `ao/obrs-361-362-booking-prefs`).
+Note for whoever reads this next: this entry's own UX spec was NOT actually present
+in this file when the frontend session started (grepped for `OBRS-361`/`OBRS-362`/
+`wheelchair`/`seatPreference` — zero matches; the file's most recent entry was
+2026-07-13 OBRS-283, several cards behind). The full spec was carried in the task
+brief instead (component-by-component, i18n table, the 2 scrutinize blockers) — the
+implementer built directly from that, cross-checked against the real component code.
+Flagging the gap so a future session knows this file's "UX designer left the spec
+here" convention had a miss on this card.
+
+**Built exactly per the task brief. Summary of what landed:**
+
+- **Inputs (OBRS-361):** `passenger-info-form.component.ts` — added
+  `seatPreference: [null]` / `seatRequirement: [null]` to `createPassengerGroup()`
+  (never pre-seeded, design-system §3.1). Two `p-selectButton` groups (window/aisle,
+  wheelchair/extra_legroom), `[allowEmpty]="true"`, custom `pTemplate="item"` for
+  icon+i18n-key rendering, each wrapped `role="group"` + `[attr.aria-label]` —
+  verbatim recipe from `route-map-home.component.html`. `SelectButtonModule`/
+  `ReactiveFormsModule` already flow in via `SharedModule` → `PassengerInfoModule`,
+  no module change needed.
+- **Visibility:** `showSeatPreferenceFields(index, outboundOpen, returnOpen, isReturn)`
+  — hides when every leg is OPEN (same semantics as `allLegsOpenSeating$`, computed
+  from a new `passengerPrefsContext$` combineLatest of the 3 EXISTING per-leg
+  observables, never re-derives `seatingMode`), else hides once every ASSIGNED leg
+  relevant to the passenger has a seat. One-way ignores `passengerSeatReturn`; mixed
+  round-trip ignores the OPEN leg's always-empty seat. Full enumeration table locked
+  in `passenger-info-form.component.spec.ts`.
+- **Scrutinize blocker #1 (loop-safe live sync):** new `passengerData.valueChanges`
+  subscription in `ngOnInit`, `filter(() => !this.isPatchingFromStore)` placed
+  **BEFORE** `debounceTime(300)` — load-bearing ordering. The store→
+  `setPassengerData()` rebuild sets/clears the flag synchronously well under 300ms,
+  so a guard checked only AFTER the debounce window would already see it cleared and
+  dispatch again (the exact feedback loop the blocker warned about). Filtering
+  pre-debounce discards every rebuild-driven emission at the moment it fires.
+  Verified with a `fakeAsync`/`tick` spec: a burst of keystrokes settles to exactly
+  ONE dispatch after 300ms of quiet, and a `setPassengerData()` rebuild alone never
+  dispatches.
+- **Scrutinize blocker #2 (AC-361.5):** `PassengerInfoComponent.buildPassengersPayload()`
+  gained a 3rd `isLegOpen` param (default `false`, so the 2 pre-existing bare-2-arg
+  call sites in `passenger-info.component.spec.ts` are untouched). The two real call
+  sites in `buildBookingPayload()` pass `departureSchedule?.seatingMode === 'OPEN'` /
+  `arrivalSchedule?.seatingMode === 'OPEN'` — gated on the LEG's seatingMode, not
+  seat-number presence, so a mixed round trip sends prefs on the ASSIGNED leg only.
+  Values are lowercased at this exact boundary (`'WINDOW'` → `'window'`, etc.) — the
+  FE enum stays uppercase everywhere else.
+- **Badges (OBRS-362):** new `src/app/shared/lib/seat-label.ts` (`normalizeSeatNumber`)
+  — deleted the private duplicate in `passenger-seat-van.component.ts` (repointed
+  `isSeatAvailable`), `passenger-seat-bus` (had none) now imports the same util, and
+  the fetch/merge layer in `passenger-info-form.component.ts` uses it too. Both
+  `passenger-seat-van`/`-bus` gained `@Input() seatAttributes: Record<string,
+  ('WHEELCHAIR'|'EXTRA_LEGROOM')[]> | null = null` (same null-default precedent as
+  `seatOwners`/`seatGenders`, OBRS-242) + `attributesFor()`/`hasWheelchairBadge()`/
+  `hasExtraLegroomBadge()`, passed down to `passenger-seat-box` as
+  `hasWheelchairBadge`/`hasExtraLegroomBadge` booleans. **Aria-labels are passed as
+  pre-translated `@Input() wheelchairBadgeAriaLabel`/`extraLegroomBadgeAriaLabel`
+  strings from the form template** (computed once via `| translate`), NOT via a
+  `| translate` pipe inside van/bus/box themselves — keeps those 3 components
+  TranslateModule-free (no module change, no spec breakage on their existing
+  TestBeds, which don't import `TranslateModule`).
+- **Badge markup** in `passenger-seat-box`: bottom-left filled circle = wheelchair
+  (`accessible` icon), bottom-right = extra-legroom (`airline_seat_legroom_extra`),
+  render **UNCONDITIONALLY** (no `!isDisabled` gate, unlike every other marker in
+  that template), `role="img"` + the forwarded aria-label. SCSS reuses the
+  `.seat-owner-badge` filled-circle recipe (`$brand-customer-strong`/
+  `$text-lightblack`, `$radius-pill`) — **gotcha hit while writing the SCSS**: my
+  first attempt accidentally closed `.seat-box {` one rule early, landing the new
+  badge rules (and a stray extra `}`) outside the parent selector — caught by
+  re-reading the file after the edit, fixed by re-nesting before running any build.
+  Worth a general reminder: always re-read a `.scss` file after a multi-rule Edit
+  that touches brace boundaries.
+- **Legend + fetch:** legend block (`.seat-map-legend`) below each leg's seat map in
+  `passenger-info-form.component.html`, gated on a new `hasSeatAttributes()` helper
+  (`Object.keys(attrs).length > 0` — an empty-but-non-null `{}` from a resolved
+  fetch must NOT show the legend, so this can't be a bare `*ngIf="attrs$ | async"`).
+  New `ScheduleService.getSeatMap(id)` → `GET /api/schedules/{id}/seats` (public, no
+  auth, already documented minus the 2 new booleans — see `docs/handoff.md` Contract
+  Requests entry added this session). `seatAttributesOutbound$`/`seatAttributesReturn$`
+  built via `switchMap` off `combineLatest(scheduleBooking$, isOpenSeating$)`,
+  short-circuit to `of({})` for an OPEN leg or a missing schedule id (never fires the
+  HTTP call), `catchError(() => of({}))`, `shareReplay(1)` — non-blocking, no
+  `AlertService`, matches the task's explicit "best-effort" framing.
+- **Summary:** `PassengerInfoSummaryComponent` gained `passengerInfo$` (bare
+  `select(selectPassengerInfo)`, now genuinely live thanks to blocker #1's fix) and a
+  new "Passengers" block in the template (name · seat chip(s) · pref chip ·
+  requirement chip · a `NO_SEAT` fallback chip when neither leg has one) — reuses
+  the `.seat-passenger-chip` pill class NAME from `passenger-info-form.component.scss`,
+  redeclared (not shared — Angular view encapsulation scopes styles per component;
+  this mirrors the existing `.open-seating-badge`/`.passenget-badge` precedent
+  already noted in that file's own comments).
+- **i18n:** all 16 keys (8 `FORM.*`, 5 `SEAT_MAP.*`, 3 `SUMMARY.*`) added to en/th/zh
+  in one commit via a small Node script (`JSON.parse`→merge→`JSON.stringify(...,null,2)`
+  round-trip) — verified the diff touched ONLY the `PASSENGER_INFO` block in each
+  file (no incidental reformatting elsewhere) before committing.
+- **Contract not yet confirmed:** `seatPreference`/`seatRequirement` (booking
+  payload) and `isWheelchairAccessible`/`isExtraLegroom` (`SeatMapRespDto`) are not
+  in `docs/api/booking.md`/`scheduling.md` as of this session (grepped, zero
+  matches) — built exactly per the task brief's described contract, flagged as a
+  Contract Request in `docs/handoff.md` for backend confirmation. Every one of these
+  fields is optional/nullable client-side, so a name mismatch degrades silently
+  (missing badges / a no-op preference field) rather than breaking booking.
+
+**Tests:** see the frontend implementation report for this session for the exact
+`ng test`/`ng build` results. New/changed spec files: `passenger-info-form.component
+.spec.ts` (selectButton no-pre-selection + re-click-clears, the full
+`showSeatPreferenceFields` enumeration, the `fakeAsync` loop-safe-sync pair),
+`passenger-info.component.spec.ts` (AC-361.5 incl. the mixed-round-trip case),
+`passenger-seat-box.component.spec.ts` / `passenger-seat-van.component.spec.ts` /
+`passenger-seat-bus.component.spec.ts` (badge rendering, both-badges-at-once,
+unconditional-even-when-disabled, real-DOM badge-lands-on-the-correct-seat for both
+label forms).
+
+---
+
+## 2026-07-13 — UX spec: wire cancel-trip smart button (OBRS-283) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-283-trip-cancel-refund-ui` (branch `ao/obrs-283-trip-cancel-refund-ui`).
+No code written this pass — UX/UI spec handoff. Not a new screen: one existing delete/cancel
+trigger on 3 pages becomes a data-driven branch, reusing each page's own pre-existing confirm-modal
+idiom verbatim. Full spec below; load-bearing findings first.
+
+**The 3 pages use TWO different confirm-modal idioms already — do not unify them, reuse each as-is:**
+1. `admin/pages/schedules/schedules-page.component.{ts,html}` — `isDeleteModalOpen` flag +
+   `adminModalBackdrop` directive + `.admin-modal.admin-modal-confirm`. This shell is **app-level
+   themed** in `admin-theme.scss` (`.is-dark .admin-modal` override at line 1159) — **zero new
+   component-scoped SCSS needed**, dark-safe already.
+2. `staff/pages/staff-schedules/staff-schedules-page.component.{ts,html}` AND
+   `staff/pages/sell/sell-page.component.{ts,html}` — both use a raw Bootstrap `.modal d-block`
+   with inline `style="background:rgba(0,0,0,0.5)"`, **not** the `.admin-modal` family. Grepped
+   `admin-theme.scss`/`dark-theme.scss` for `.modal-content`/`.modal-header`/`.modal-footer` —
+   **zero matches**. This raw-Bootstrap shell has **no dark-mode override anywhere in the
+   codebase today** — pre-existing debt shared by the sibling Edit-form modal and the current
+   hard-delete confirm modal already on both pages. OBRS-283 adds no new SCSS and does not worsen
+   this (same shell, new text inside it) — flagged as a follow-up Jira card candidate, out of
+   scope here.
+
+**Scoping gotcha caught before spec'ing:** on `admin/schedules-page`, the delete button exists on
+BOTH the Schedule-**Set** table (kind `'set'`, the recurring-generator template) and the
+Schedule-**Trip** table (kind `'schedule'`, the SA's `ScheduleRespDto`). The SA's `deletable`/
+`confirmedBookingCount` fields land only on `ScheduleRespDto` (trips), never on
+`AdminScheduleSetDto` (sets — a set has no bookings of its own). **The smart branch applies ONLY
+to Trip rows; Set rows keep their existing unconditional hard-delete, untouched.**
+`ScheduleRow.deletable`/`.confirmedBookingCount` are optional fields, populated only for
+`kind === 'schedule'` rows. Branch condition is **strict `=== false`** (not falsy) so a stale/
+pre-deploy cached row without the field falls through to today's safe hard-delete path, never a
+false-positive cancel-modal.
+
+**CRITICAL copy fix carried from the SA: "N การจอง" not "N ผู้โดยสาร".** `confirmedBookingCount`/
+`affectedBookingCount` count confirmed bookings (legs), not passengers — one booking can hold
+multiple seats. Every dialog/toast string below says "การจอง N รายการ" / "N booking(s)", never a
+passenger count.
+
+**Trigger element itself is unchanged on all 3 pages** — same delete icon-button (admin/staff-
+schedules-page) / same kebab "ลบตาราง" menu item (sell-page), same aria-label/translation key.
+Only the click handler becomes a branch (`openDeleteOrCancelModal()`) and the resulting dialog's
+title/body carries the real consequence — deliberately consistent across all 3 pages rather than
+relabeling the trigger differently per page.
+
+**New `AdminApiService.cancelSchedule(id)` method** (all 3 pages already inject
+`AdminApiService` for schedule CRUD) → `POST {baseUrl}/private/schedules/${id}/cancel` →
+`Observable<ResponseAPI<{ affectedBookingCount: number }>>`, mirroring the existing
+`deleteSchedule(id)` shape one line above it in `admin-api.service.ts`.
+
+**Error branching reuses the established `SCHEDULE_ERROR_*` prefix** (already used for
+`SCHEDULE_ERROR_CAPACITY_EXCEEDS_TYPE_MAX`/`_CAPACITY_BELOW_OCCUPIED` in
+`walk-in-center-panel.component.ts` and `VEHICLE_UNDER_MAINTENANCE` via `extractScheduleErrorCode`
+in `schedules.mappers.ts`) — assumed names `SCHEDULE_ERROR_ALREADY_CANCELLED` (409),
+`SCHEDULE_ERROR_ALREADY_DEPARTED` (400), `SCHEDULE_ERROR_NOT_FOUND` (404), **not yet confirmed
+against a real backend `deriveErrorCode()` output** — same "built against the locked contract,
+flag in `docs/handoff.md` for backend confirmation" pattern used for every other assumed-errorCode
+entry in that file (OBRS-96, OBRS-110, OBRS-86). Implementer should add a `docs/handoff.md`
+Contract Request entry for these 3 codes if the paired backend worktree hasn't landed them yet.
+
+Full spec (component hierarchy, dialog copy, i18n table) is below this entry / in the parent
+agent's transcript.
+
+---
+
+## UX/UI Specification — OBRS-283 wire cancel-trip smart button
+
+### Scope
+Not a new screen. One existing trigger + one confirm-dialog shell per page, branched on two new
+read-only DTO fields (`deletable: boolean`, `confirmedBookingCount: number`) the backend adds to
+`ScheduleRespDto` (admin `AdminScheduleDto`, consumed by `admin/schedules-page` trip rows AND
+`staff/staff-schedules-page`) and `WalkInTripRespDto` (`WalkInTripDto`, consumed by `staff/sell-page`).
+
+### Component hierarchy (no new components)
+- `SchedulesPageComponent` (admin, smart) — adds `openDeleteOrCancelModal()`, `openCancelModal()`,
+  `closeCancelModal()`, `confirmCancel()`; new state `isCancelModalOpen`, `isCancelling`; reuses
+  `selectedSchedule`. Trip-row delete button's `(click)` changes from `openDeleteModal(schedule)` to
+  `openDeleteOrCancelModal(schedule)`. Set-row delete button is **unchanged** (`openDeleteModal`
+  directly, always hard-delete).
+- `StaffSchedulesPageComponent` (staff, smart) — same method split: `openDeleteOrCancelModal(row)`,
+  `openCancelModal()`, `closeCancelModal()`, `confirmCancel()`; new state `isCancelModalOpen`,
+  `isCancelling`; reuses `selectedRow`.
+- `SellPageComponent` (staff, smart) — `onDeleteScheduleClicked(event)` (currently opens the hard
+  delete modal unconditionally) becomes the branch; new `openCancelSchedule()`,
+  `closeScheduleCancel()`, `confirmCancelSchedule()`; new state `isScheduleCancelOpen`,
+  `isScheduleCancelling`; reuses `deletingTrip`. `WalkInTripBrowserComponent`'s kebab menu +
+  `deleteScheduleClicked` output are **unchanged** — same event, same emit site.
+
+### Branch logic (identical shape on all 3 pages)
+```
+openDeleteOrCancelModal(row):
+  if row.kind === 'schedule' (admin only; staff pages have no 'set' concept) AND row.deletable === false:
+    openCancelModal(row)   // NEW soft-cancel + refund flow
+  else:
+    openDeleteModal(row)   // EXISTING hard-delete flow, unchanged
+```
+
+### Data model additions
+| Type | New fields |
+|---|---|
+| `AdminScheduleDto` (`services/admin/admin-api.service.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` |
+| `ScheduleRow` (`admin/pages/schedules/schedules.mappers.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` — mapped only in `toGeneratedScheduleRow()` (trip rows), left `undefined` for `toScheduleRow()` (set rows) |
+| `ScheduleRow` (`staff/pages/staff-schedules/staff-schedules-page.mappers.ts`) | `deletable?: boolean; confirmedBookingCount?: number;` — mapped in `toRow()` |
+| `WalkInTripDto` (`services/staff/staff-api.service.ts`) | `deletable: boolean; confirmedBookingCount: number;` (required — sell-page has no legacy pre-field cached shape to guard) |
+| `AdminApiService` | new `cancelSchedule(id: number): Observable<ResponseAPI<{ affectedBookingCount: number }>>` → `POST {baseUrl}/private/schedules/${id}/cancel` |
+
+### Confirm dialog spec (both variants, same shell per page)
+
+**Admin (`schedules-page`) — reuses `.admin-modal.admin-modal-confirm` verbatim:**
+```html
+<div class="admin-modal-backdrop" *ngIf="isCancelModalOpen" adminModalBackdrop (dismiss)="closeCancelModal()">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ (selectedSchedule?.confirmedBookingCount ?? 0) > 0
+          ? ('ADMIN.COMMON.CANCEL_TRIP_REFUND_MESSAGE' | translate:{ count: selectedSchedule?.confirmedBookingCount })
+          : ('ADMIN.COMMON.CANCEL_TRIP_NO_REFUND_MESSAGE' | translate) }}
+      <strong *ngIf="selectedSchedule">{{ selectedSchedule.tripId }}</strong>
+    </p>
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeCancelModal()">{{ 'ADMIN.COMMON.CANCEL' | translate }}</button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isCancelling" (click)="confirmCancel()">
+        {{ isCancelling ? ('ADMIN.COMMON.CANCELLING_TRIP' | translate) : ('ADMIN.COMMON.CANCEL_TRIP_BTN' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>
+```
+Button classing (`admin-btn-primary`, not `admin-btn-danger`) intentionally mirrors the **existing**
+hard-delete confirm button on this exact page verbatim — not "fixing" the §4 destructive-role
+mismatch as part of this card (pre-existing debt, same class already used one dialog above it).
+
+**Staff (`staff-schedules-page` + `sell-page`) — reuses the raw `.modal d-block` shell verbatim:**
+```html
+<div class="modal d-block" tabindex="-1" *ngIf="isCancelModalOpen" style="background:rgba(0,0,0,0.5)">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">{{ 'ADMIN.MESSAGES.CANCEL_TRIP_CONFIRM_TITLE' | translate }}</h5>
+        <button class="btn-close" (click)="closeCancelModal()"></button>
+      </div>
+      <div class="modal-body">
+        <p>{{ (selectedRow?.confirmedBookingCount ?? 0) > 0
+              ? ('ADMIN.MESSAGES.CANCEL_TRIP_REFUND_BODY' | translate:{ count: selectedRow?.confirmedBookingCount })
+              : ('ADMIN.MESSAGES.CANCEL_TRIP_NO_REFUND_BODY' | translate) }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" (click)="closeCancelModal()" [disabled]="isCancelling">{{ 'STAFF.SELL.BACK_BTN' | translate }}</button>
+        <button class="btn btn-danger" (click)="confirmCancel()" [disabled]="isCancelling">
+          <span *ngIf="isCancelling" class="spinner-border spinner-border-sm me-1"></span>
+          {{ 'ADMIN.MESSAGES.CANCEL_TRIP_BTN' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+```
+`sell-page`'s variant uses `deletingTrip`/`isScheduleCancelOpen`/`isScheduleCancelling` state names
+instead (same markup shape).
+
+Severity/icon: neither shell uses a PrimeNG/SweetAlert icon prop today (both are hand-rolled
+title+body dialogs) — no icon added, matching the existing hard-delete confirm precedent on both
+idioms exactly (no icon there either).
+
+### User flow
+1. Staff/admin clicks the existing delete/cancel trigger on a trip row.
+2. If `row.deletable === false` → the cancel-confirm dialog opens (refund or no-refund copy per
+   `confirmedBookingCount`). Else → the existing hard-delete confirm dialog opens, unchanged.
+3. User confirms → `POST /api/private/schedules/{id}/cancel`. Button shows its `CANCELLING_TRIP`/
+   spinner busy state (mirrors `isDeleting`/`isSubmitting` precedent).
+4. Success → modal closes, list refreshes (`store.refresh()` / `loadTrips()` per page — mirrors the
+   existing `confirmDelete()`/`generateSchedules()` refresh-then-toast pattern), success toast keyed
+   off the response's `affectedBookingCount` (`CANCEL_TRIP_SUCCESS_REFUND` if `> 0`, else
+   `_NO_REFUND` — avoids a "0 การจอง" toast when nothing was actually refunded).
+5. Error → modal closes (matches this page's existing error-handling shape, which already closes
+   before toasting), `AlertService.error()` with the `errorCode`-mapped message; `ALREADY_CANCELLED`/
+   `NOT_FOUND` additionally trigger a list refresh (the row's `deletable`/status is now stale on the
+   client, next paint should show the true state) — `ALREADY_DEPARTED` does not (no state has changed).
+
+### States
+- Loading/busy: the confirm button itself (`isCancelling`/`isScheduleCancelling`) — same
+  disabled+spinner/label-swap idiom as every sibling `isDeleting`/`isSubmitting` button on these
+  pages. No page-level skeleton needed (this is a modal action, not a page load).
+- Empty/no-op state: N/A — the dialog is only ever opened with a `selectedSchedule`/`selectedRow`/
+  `deletingTrip` already set (optimistic-open precedent, no fetch-gated content in this modal).
+- Error: `AlertService.error()` toast, never inline — matches every existing `confirmDelete()`/
+  `submitSchedule()` catch block on all 3 pages.
+
+### NgRx changes
+None — all 3 pages hold this state as plain component fields (`isCancelModalOpen`, etc.), exactly
+mirroring how `isDeleteModalOpen`/`isDeleteModalOpen`/`isScheduleDeleteOpen` already work on their
+respective pages today. No store/effect/selector involved for schedules on any of the 3 pages.
+
+### i18n keys to add
+Two families, reusing the **exact** existing per-page split (admin's confirm-dialog copy already
+lives in `ADMIN.COMMON.*`; both staff pages already share `ADMIN.MESSAGES.*` for the same concept
+— see `DELETE_CONFIRM_TITLE` existing today in both namespaces). Success/error toast keys are a
+**single shared set** under `ADMIN.MESSAGES.*`, reused verbatim by all 3 pages — mirrors how
+`ADMIN.MESSAGES.DELETED`/`DELETE_FAILED` are already shared cross-module today (staff-schedules-page
+and sell-page both call `ADMIN.MESSAGES.DELETED` directly, never a staff-local duplicate).
+
+| Key | TH | EN |
+|---|---|---|
+| `ADMIN.COMMON.CANCEL_TRIP_CONFIRM_TITLE` (admin dialog title) | ยืนยันการยกเลิกทริป | Confirm trip cancellation |
+| `ADMIN.COMMON.CANCEL_TRIP_REFUND_MESSAGE` (admin dialog body, refund variant, `{{count}}`) | การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติ และผู้โดยสารจะได้รับการแจ้งเตือน หลังจากนั้นทริปนี้จะถูกยกเลิก ต้องการดำเนินการต่อหรือไม่? | {{count}} confirmed booking(s) will be automatically refunded and passengers notified. The trip will then be cancelled. Continue? |
+| `ADMIN.COMMON.CANCEL_TRIP_NO_REFUND_MESSAGE` (admin dialog body, no-refund variant) | ทริปนี้ไม่มีการจองที่ยืนยันแล้ว ทริปจะถูกยกเลิก ไม่มีการคืนเงิน ต้องการดำเนินการต่อหรือไม่? | This trip has no confirmed bookings. The trip will be cancelled — no refund will be issued. Continue? |
+| `ADMIN.COMMON.CANCEL_TRIP_BTN` (admin confirm button) | ยกเลิกทริป | Cancel trip |
+| `ADMIN.COMMON.CANCELLING_TRIP` (admin confirm button busy label) | กำลังยกเลิกทริป... | Cancelling trip... |
+| `ADMIN.MESSAGES.CANCEL_TRIP_CONFIRM_TITLE` (staff dialog title, both pages) | ยืนยันการยกเลิกทริป | Confirm trip cancellation |
+| `ADMIN.MESSAGES.CANCEL_TRIP_REFUND_BODY` (staff dialog body, refund variant, `{{count}}`) | การจอง {{count}} รายการจะได้รับเงินคืนอัตโนมัติ และผู้โดยสารจะได้รับการแจ้งเตือน หลังจากนั้นทริปนี้จะถูกยกเลิก | {{count}} confirmed booking(s) will be automatically refunded and passengers notified. The trip will then be cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_NO_REFUND_BODY` (staff dialog body, no-refund variant) | ทริปนี้ไม่มีการจองที่ยืนยันแล้ว ทริปจะถูกยกเลิก ไม่มีการคืนเงิน | This trip has no confirmed bookings. The trip will be cancelled — no refund will be issued. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_BTN` (staff confirm button) | ยกเลิกทริป | Cancel trip |
+| `ADMIN.MESSAGES.CANCEL_TRIP_SUCCESS_REFUND` (shared success toast, `affectedBookingCount > 0`, `{{count}}`) | ยกเลิกทริปสำเร็จ คืนเงินการจอง {{count}} รายการเรียบร้อยแล้ว | Trip cancelled successfully. {{count}} booking(s) refunded. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_SUCCESS_NO_REFUND` (shared success toast, `affectedBookingCount === 0`) | ยกเลิกทริปสำเร็จ | Trip cancelled successfully. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_ALREADY_CANCELLED` (shared error toast, `errorCode SCHEDULE_ERROR_ALREADY_CANCELLED`, 409) | ทริปนี้ถูกยกเลิกไปแล้ว | This trip has already been cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_DEPARTED` (shared error toast, `errorCode SCHEDULE_ERROR_ALREADY_DEPARTED`, 400) | ไม่สามารถยกเลิกทริปที่ออกเดินทางไปแล้วได้ | A trip that has already departed cannot be cancelled. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_ERROR_NOT_FOUND` (shared error toast, `errorCode SCHEDULE_ERROR_NOT_FOUND`, 404) | ไม่พบทริปนี้ อาจถูกลบไปแล้ว | Trip not found — it may have already been deleted. |
+| `ADMIN.MESSAGES.CANCEL_TRIP_FAILED` (shared generic fallback, any other error, mirrors `DELETE_FAILED`) | ไม่สามารถยกเลิกทริปได้ | Unable to cancel the trip. |
+
+**zh.json**: design-system §9 requires all 3 locale files land in the same commit — the implementer
+adds a `zh` column for all 15 keys above (not drafted here; th/en only per this task's ask).
+
+**Error-branching implementation note:** mirror `extractScheduleErrorCode()` (already in
+`schedules.mappers.ts`, used today for `VEHICLE_UNDER_MAINTENANCE`) — branch on
+`error.error.errorCode`, never the localized `message`, per §9.
+
+### Design-system conformance
+- **Reused patterns:** the exact pre-existing confirm-modal shell per page (`.admin-modal.admin-modal-confirm`
+  on admin; raw Bootstrap `.modal d-block` on both staff pages) — no new dialog component/family (§6).
+  Success/error surface through `AlertService.success()`/`.error()`, never `Swal.fire()` directly —
+  same as every existing `confirmDelete()` on all 3 pages. Trigger element (icon button / kebab menu
+  item) is byte-identical, only its handler branches — no new button, no new icon.
+- **New patterns:** none. This card adds zero new controls, zero new CSS, zero new component-scoped
+  SCSS — purely new i18n copy plus a data-driven branch in existing methods.
+- **Confirm:** no selects involved (no form on this dialog) · exactly one primary/danger action per
+  modal, unchanged from the existing hard-delete dialog's button classing on each page (§4) · zero raw
+  hex added · single title surface unaffected (this is a modal, not a page) · keys added to `en`/`th`
+  now, `zh` owed in the same implementation commit per §9.
+- **Dark-mode:** admin variant needs **no new SCSS** — `.admin-modal` is already globally dark-themed.
+  Staff variant (`staff-schedules-page`/`sell-page`) reuses a shell with **no existing dark-mode
+  coverage anywhere in the codebase** (pre-existing debt, confirmed via grep — not introduced or
+  worsened by this card, since no new SCSS is added and the sibling Edit/hard-delete modals on the
+  same pages already have this same gap). **Recommend opening a follow-up Jira card** to add
+  `:host-context(.is-dark)` (or a global `.modal-content` dark rule in `admin-theme.scss`) for the
+  staff module's raw-Bootstrap modals generally — out of scope for OBRS-283 itself.
+
+##UX_COMPLETE##
+
 ## 2026-07-11 — UX spec: End-of-day salesperson sales report (OBRS-231) — key findings for the implementer
 
 **Worktree:** `OBRS-frontend-wt-obrs-231-eod-sales-report-fe` (branch `ao/obrs-231-eod-sales-report-fe`).
@@ -2672,3 +3109,595 @@ explicitly invoked. An unconditional global print rule is a whole-app regression
 - No i18n changes needed for this final layout pass — `SEAT_PER_PASSENGER`'s "/ที่นั่ง"-shaped value
   (already leading-slash in all three locales from the prior polish commit) works unchanged whether
   it's read on the availability line or the price line.
+
+## 2026-07-13 — Scrutinize self-fix: OBRS-272 trip delay staff control (commit efaf24c)
+
+**Worktree:** `OBRS-frontend-wt-obrs-272-trip-delay-notify` (branch `ao/obrs-272-trip-delay-notify`).
+Two under-30-line self-fixes applied after review; larger items left as notes below.
+
+1. **Dead reuse alias wired up, not deleted.** `schedule-delay-error.ts` exported
+   `extractScheduleDelayErrorCode = extractScheduleStatusErrorCode` (the intended per-flow
+   extract+map pair, matching `boarding-scan-error`/`boarding-action-error`/`schedule-status-error`),
+   but `BoardingListComponent.submitDelaySchedule()`'s error handler still called
+   `extractScheduleStatusErrorCode()` directly — leaving the alias dead. Fix: import and call
+   `extractScheduleDelayErrorCode()` in the delay flow (line ~458) so each flow imports its own
+   extract+map pair (convention), and the OBRS-256 status flow (line ~748) keeps
+   `extractScheduleStatusErrorCode`. Pattern lesson: when you create a feature-local reuse alias,
+   USE it at the call site — don't create it then bypass it, or it reads as dead code on review.
+
+2. **Wrong ADR reference.** `admin-modal-backdrop.directive.ts`'s doc comment cited
+   `docs/adr/0016-admin-modal-backdrop-relocation.md`, but 0016 is an unrelated ADR
+   (`0016-eod-sales-report-money-columns-and-row-expand.md`); the real one is
+   `0017-schedule-delay-control-and-modal-backdrop-relocation.md`. Fixed the citation. Lesson:
+   when the ADR number is assigned late, grep `docs/adr/` for the actual filename before citing it.
+
+## OBRS-266 scrutinize self-fix — camera startup teardown race (2026-07-11)
+
+`startCameraScan()` assigned `this.scannerControls`/`cameraStatus='active'` only AFTER
+awaiting `decodeFromVideoDevice()` (Promise). The mode-toggle buttons are disabled on
+`isScanning` but NOT during the camera `requesting` phase, so an operator can tap "Text"
+(or a scheduleId re-bind / arrived-transition can fire) mid-startup. `stopCameraStream()`
+then runs while `scannerControls` is still null (no-op), the pending promise later resolves,
+and a now-LIVE MediaStream gets stored into `scannerControls` with `cameraStatus='active'`
+while `scanMode==='text'` — an orphan stream (camera light stays on) nothing stops until the
+next teardown.
+
+Fix (pattern to remember): after any `await` that acquires a resource you also tear down
+elsewhere, re-check the teardown-owned flag BEFORE committing the resource:
+```ts
+const controls = await this.codeReader.decodeFromVideoDevice(...);
+if (this.cameraStatus !== 'requesting') { controls.stop(); return; } // torn down mid-await
+this.scannerControls = controls;
+this.cameraStatus = 'active';
+```
+`cameraStatus !== 'requesting'` catches all teardown paths at once (stopCameraStream sets it
+to 'idle'; re-bind/toggle also set scanMode='text'). Locked with a fakeAsync spec that resolves
+the decode promise AFTER a text-toggle and asserts `stop()` called once + `scannerControls` null.
+General lesson: an idempotent teardown helper only protects against a resource that ALREADY
+exists — it can't cancel one still in flight; guard the post-await assignment too.
+
+## 2026-07-14 — OBRS-317 owner/staff in-app notification inbox (Phase 1, poll) — commit 95b3679
+
+**Worktree:** `OBRS-frontend-wt-obrs-317-notification-inbox` (branch `ao/obrs-317-notification-inbox`,
+off `origin/dev` at 41513cf). Worktree was recreated mid-flight by a parallel session's sweep;
+started fresh, no prior 317 work lost (there was none).
+
+**What shipped:** bell + unread badge in both `admin-layout`/`staff-layout` topbars, opening a
+`p-overlayPanel` inbox (click-to-read + mark-all-read), backed by role-agnostic
+`/api/private/notifications`. Poll-only unread-count (60s, matches the existing
+`NEW_REPORT_COUNT_POLL_MS` sidebar-badge cadence) + list refetch on init/panel-open. List capped
+to 10 most recent (read+unread), "showing latest N of M" footer when `totalElements > 10`.
+
+**Reuse ledger (DRY gate):**
+- `PageResponse<T>` (`payment.interface.ts`) reused as-is for the paged list — no new Page type.
+- `.admin-nav-badge` token recipe reused **verbatim**; only a position-only modifier class
+  (`.notification-bell-badge`, absolute-positioned corner) added on top — did not fork the badge.
+- `formatDisplayDateTime()` reused for the row timestamp — no new date formatter.
+- `NotificationInboxService`'s idempotent-start guard mirrors `BadgeSocketService.connect()`;
+  clear-on-logout mirrors `AdminCollectionStore`'s `authStatus$` subscription. New code, but shaped
+  identically to the two closest precedents rather than inventing a third shape.
+- New: `NotificationApiService` (deliberately NOT folded into `AdminApiService` — that service is
+  admin-scoped; this endpoint must also serve staff/salesperson/driver). New: `p-overlayPanel` is
+  the first use of that PrimeNG component in the codebase (`p-menu[popup]`'s `MenuItem[]` shape
+  can't carry a row's message/timestamp/read-state/click-handler) — see ADR 0018.
+
+**Gotchas hit:**
+1. TS2729 ("used before initialization") when a component's field initializers read
+   `this.constructorParamService.xyz$` — constructor-param-property assignment happens in the
+   constructor body, which runs AFTER top-of-class field initializers in the emitted JS. Fixed by
+   declaring the fields as `Observable<T>` (no initializer) and assigning them inside the
+   constructor body instead of at declaration.
+2. Both `admin-layout.component.spec.ts` and `staff-layout.component.spec.ts` needed a same-file
+   `@Component({selector: 'app-notification-bell', template: ''})` stub declared + a
+   `NotificationInboxService` mock provider added to their existing `TestBed.configureTestingModule`
+   blocks — mounting the real bell markup in the layout template makes those specs fail to compile
+   otherwise (unknown element / missing DI token). Same pattern as the existing `LangSwitcherComponent`
+   real-component approach, but the bell pulls in a full HTTP-backed service chain so a stub was the
+   better fit here (mirrors how `BadgeSocketService` gets a hand-rolled stub in the same spec file).
+3. `*ngIf="unreadCount$ | async as unreadCount"` for the badge naturally matches
+   "`show only when > 0`" for free — 0 is falsy in JS, so no explicit `> 0` comparison needed in the
+   template; kept the field truthy-check idiom rather than writing `(unreadCount$ | async) ?? 0 > 0`.
+4. `npm ci` was required in this fresh worktree (no `node_modules/`) before `ng test`/`ng build`
+   would run at all — budget ~6 min. `ng build --configuration production` passed with only the
+   pre-existing initial-bundle-budget WARNING (not new to this change; 1.67MB vs 1.57MB budget,
+   a warning not an error, build exits 0) — did not investigate whether this session's ~15KB of
+   added JS pushed it over an existing-close threshold; flag for `obrs-tech-lead` if bundle size
+   becomes a recurring blocker.
+
+**Result:** `ng test` 2142/2142 passing (added 2 spec failures during first pass — both in my own
+new `notification-bell.component.spec.ts`: an untranslated-key assertion and a copy-paste'd wrong
+call-count expectation — fixed before submitting, not a product bug). `ng build --configuration
+production` passes. ADR: `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`.
+
+### Scrutinize follow-up fix (same day, commit a8f327c)
+
+Scrutinize caught a real visual defect unit tests couldn't: `p-overlayPanel`'s
+`appendTo="body"` moves the panel outside `.admin-shell`, so every `--admin-*`/
+`--accent-*` custom property the panel/row SCSS reads (declared only on
+`.admin-shell`/`.admin-shell.theme-*`/`.admin-shell.is-dark` in
+`admin-theme.scss`) silently failed to resolve there (no fallback → invisible
+unread highlight/dot, black text in dark mode, missing footer border). Same
+class of bug as the already-solved `my-bookings-action-menu` precedent
+(`appendTo="body"` + a `styleClass` carrying context, themed in the matching
+global stylesheet) — should have been caught by re-grepping for `appendTo=
+"body"` precedent BEFORE writing the component, not after Scrutinize flagged
+it. Fix: bell takes `shellVariant: 'admin'|'staff'` input + reads
+`ThemeService.mode$` directly, composes `styleClass="notification-inbox-overlay
+theme-{variant}[ is-dark]"`, and `admin-theme.scss` re-declares the needed
+tokens scoped to that class. **Verification method worth reusing**: jsdom/Karma
+can't render real CSS cascade for a body-appended node, so I built a static
+HTML harness loading the actual compiled `dist/.../styles-*.css` (has the new
+`.notification-inbox-overlay*` rules) + the component SCSS inlined verbatim
+(these particular files are plain CSS, no SCSS-only syntax) and read
+`getComputedStyle()` via Playwright (already in `node_modules`, run with
+`NODE_PATH=<repo>/node_modules node <script>` since the script lives in the
+scratchpad dir outside the repo) — confirmed all 5 flagged properties resolve
+to real theme colors, not transparent/black/Bootstrap-default, across
+admin/staff × light/dark. Lesson: for any `appendTo="body"`/CDK-overlay/portal
+content that reads shell-scoped CSS custom properties, grep for the existing
+`my-bookings-action-menu` pattern FIRST and budget for a styleClass + global
+stylesheet rule from the start — don't discover the gap after Scrutinize.
+
+### QA follow-up 2 (same day, commit 9951b61) — panel root chrome + i18n NG0200 diagnosis
+
+**Fix 1 (in scope):** the earlier `.notification-inbox-overlay` block only re-declared
+custom PROPERTIES, never an actual `background`/`color`/`border` on the PrimeNG panel
+ROOT — so the card chrome stayed the theme's hardcoded `.p-overlaypanel { background:
+#ffffff }` (lara-light-blue) white in dark mode, behind now-correctly-dark-themed text.
+Added `.p-overlaypanel.notification-inbox-overlay` (background/color/border from the
+same tokens) + arrow pseudo-element overrides. Verified with the same static-harness-
++-Playwright `getComputedStyle()` recipe as the first Scrutinize fix, this time
+reproducing the REAL rendered root classes (`p-overlaypanel p-component` + styleClass,
+copied from `OverlayPanel`'s own template) so the specificity fight (`0-2-0` vs `0-1-0`)
+is tested faithfully, not just the token declarations.
+
+**Diagnose 2 (NG0200 circular DI / raw i18n keys) — CONCLUSION: pre-existing/env, NOT
+OBRS-317-caused.** Empirically reproduced with Playwright against `npm run
+start:local`-equivalent (`ng serve`): the exact `NG0200: Circular dependency in DI
+detected for _TranslateService` (thrown from `error.interceptor.ts:22`'s `inject(
+TranslateService)`) fires on a **cold `/login` page load**, before any auth, before any
+navigation into `/admin` or `/staff`, i.e. before a single line of OBRS-317 code (bell,
+NotificationInboxService, NotificationApiService) has executed. Visually confirmed
+`/login` itself renders raw keys (`LOGIN.WELCOME`, `LOGIN.USERNAME`, ...,
+`USABILITY_REPORT.FAB.LABEL`) in that same session. Root cause (not fixed, out of
+scope — `error.interceptor.ts` is on the CLAUDE.md "DO NOT MODIFY without explicit
+request" list): the interceptor's `inject(TranslateService)` is unconditional (runs for
+literally every HttpClient request, not gated behind `isApiRequest`), so it also fires
+for the i18n loader's OWN `/i18n/{lang}.json` HttpClient GET. If that fetch is issued
+synchronously from within `TranslateService`'s own construction (e.g. an eager
+`.use(lang)` call before the constructor returns), the interceptor's `inject()` for the
+SAME token mid-construction is a genuine reentrant cycle → NG0200, independent of route,
+independent of our polling. `AuthService.isAuthenticated()`/`getRoles()` read plain
+localStorage (`auth_token`/`auth_roles`, no JWT verification client-side) — useful
+precedent for future FE-only repro without a live backend: `localStorage.setItem(
+'auth_token', 'x'); localStorage.setItem('auth_roles', '["admin"]')` then
+`goto('/admin/dashboard')` renders the shell as if logged in. Reported back to
+coordinator to open a separate card; left `error.interceptor.ts` untouched.
+---
+
+## 2026-07-13 — UX spec: read-only Admin Booking Detail dialog (OBRS-280) — key findings for the implementer
+
+**Worktree:** `OBRS-frontend-wt-obrs-280-admin-booking-detail` (branch `ao/obrs-280-admin-booking-detail`).
+No code written this pass — UX/UI spec handoff. Frontend-only, read-only, no new route: a "view"
+action on `admin/pages/bookings` opens a detail dialog for one booking. NO cancel/reschedule
+actions (deferred cards) — Close is the only interactive control besides the top-right ×.
+
+**The closest existing precedent is `UsabilityReportsPageComponent`'s detail modal — copy its
+idiom almost verbatim, not the schedules-page confirm-modal idiom.** It's the only other read-
+mostly, click-a-row-to-drill-in admin detail dialog in the codebase, and it already encodes every
+rule design-system.md §6/§11 cares about:
+- Row click (`(click)="onRowActivate(id, $event)"` on `<tr>`) **and** a small explicit
+  `admin-btn admin-btn-small` "View" button in an Actions column both open the same dialog — the
+  row has no `role="button"`/keyboard handler (would orphan cells), so the button remains the
+  accessible/keyboard affordance. `onRowActivate` ignores clicks on `button, a, input, select,
+  textarea` (`target.closest(...)`) and ignores an active text selection
+  (`window.getSelection()?.toString()`), then calls the same `openDetail(id)` the button calls.
+  **Reuse this exact guard**, not a bare `(click)` on the row.
+- **Optimistic open + stale-response guard**, textbook: `openDetail(id)` sets
+  `selectedReportId = id` synchronously (this alone makes `*ngIf="selectedReportId !== null"`
+  show the backdrop+shell instantly), seeds `detailReport` from a **fallback built from the row
+  already in hand** (`toUsabilityReportDetailFallback(summary)`) so the header renders before any
+  network round-trip, sets `isDetailFetching = true`, then in the subscribe `next`, bails with
+  `if (this.selectedReportId !== id) return;` before touching any field — so a second row-click
+  while the first fetch is in flight can never let the stale response clobber the newer one.
+  **OBRS-280 needs this exact pattern**, just with two independent fetches instead of one (see
+  below), each with its own stale-id guard.
+- Modal shell: `.admin-modal-backdrop` + `adminModalBackdrop` directive (`(dismiss)="..."`) wrapping
+  `.admin-modal <page-prefix>-detail-modal`, containing a `.admin-modal-header` (`h4.admin-modal-title`
+  + a 36px round icon-button `×` using `.material-symbols-outlined` `close`), then the body gated
+  `*ngIf="detailReport"`. **No `.admin-modal-actions` / primary button at all** — this dialog has no
+  save/confirm action, unlike the schedules confirm-modal or the usability-report's own status-update
+  footer (OBRS-280 must **not** copy that footer — it's mutating, we're read-only).
+- `.admin-modal` **base is theme-var driven already** (`background: var(--admin-surface-card)`,
+  `.is-dark .admin-modal { border-color: var(--admin-outline); }` in `admin-theme.scss` lines
+  ~1244-1260) — reusing it costs **zero new dark-mode SCSS**. The only component-scoped SCSS this
+  card needs is a **width override** (usability-reports uses `.ur-detail-modal { max-width: 680px;
+  max-height: 90vh; overflow-y: auto; }`; `promotion-form-modal` separately proves the same
+  size-variant-by-scoped-class idiom with `.admin-modal-lg { width: min(880px, 100%); }`) — no
+  color, so it needs no dark override either. **OBRS-280 uses `max-width: 900px` (wider than 680px
+  — this dialog has two data tables, not just label/value rows).**
+
+**Two independent fetches, not one — size the loading state per-section, not modal-wide.**
+`GET /api/private/bookings/{id}` (`AdminApiService.getBookingById`, **new method, doesn't exist
+yet**) returns the booking header/status/contact/actor/journeys+tickets/pricing/payment-summary;
+`GET /api/private/bookings/{id}/payments` (`AdminApiService.getBookingPayments`, **already exists**,
+used today by `BookingsStore.loadPaymentStatusByBookingId`) returns the transaction list. Fire both
+`takeUntil(this.destroy$)` subscriptions from `openDetail()`, each with its own
+`isDetailFetching` / `isPaymentsFetching` flag and its own `if (this.selectedBookingId !== id)
+return;` guard — so the passengers/tickets section can render as soon as the first call resolves
+without waiting on the second, and vice versa. Show `admin-skeleton` blocks (the row-list idiom
+already used on this exact page for the table body) in each section while its flag is true, not a
+single modal-wide spinner.
+
+**`BookingRow` (in `bookings.store.ts`) doesn't carry the numeric booking `id` today** — it only
+exposes `bookingId: string` (the human-facing `bookingNumber`, e.g. `#BK-1042`). Add
+`id: number` to the `BookingRow` interface and populate it from `booking.id` in `toBookingRow()` —
+required so the "View" click can call `getBookingById(row.id)`. This is the one existing-file
+change on the list side; everything else is additive.
+
+**New DTOs needed in `admin-api.service.ts`** (none of these exist yet — `AdminBookingDto`, the
+list DTO, has no `bookingType`/`expiredAt`/ticket-level data):
+```ts
+export interface AdminBookingTicketDto {
+  passengerName?: string;
+  passengerType?: string;
+  seatNumber?: string;
+  status?: string | AdminStatusDto;   // include CANCELLED/REFUNDED tickets, don't filter them
+  ticketNumber?: string;
+}
+export interface AdminBookingDetailJourneyDto extends AdminBookingJourneyDto {
+  tickets?: AdminBookingTicketDto[];
+}
+export interface AdminBookingDetailDto {
+  id: number;
+  bookingNumber?: string;
+  bookingType?: string;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  expiredAt?: string;
+  actor?: { name?: string; type?: string; channel?: string; officeName?: string };
+  contact?: { fullName?: string; phoneNumber?: string };
+  journeys?: AdminBookingDetailJourneyDto[];
+  pricing?: AdminPriceSummaryDto;
+  payment?: AdminPaymentSummaryDto;
+}
+getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
+  return this.getRequest<AdminBookingDetailDto>(`${this.baseUrl}/private/bookings/${bookingId}`);
+}
+```
+Base path matches the sibling `getBookingPayments` (`${this.baseUrl}/private/bookings/${id}/payments`)
+— **not** the list endpoint's `/private/admin/bookings` path, which is a different resource.
+
+**Ticket/transaction status color mapping is a new small local method, following the codebase's
+established per-page duplication style** (`bookings-page.component.ts` already has its own private
+`statusClass()`/`paymentClass()` — there's no shared status-class util anywhere in admin, so don't
+invent one here): `ticketStatusClass(status)` → CONFIRMED/ACTIVE → `is-success`; PENDING →
+`is-warning`; CANCELLED → `is-danger`; REFUNDED → `is-neutral` (the plain-grey "inactive/unset"
+role, §2.4 — distinct from danger, since a refunded ticket isn't an error state, it's a resolved
+one). Booking-level `status` badge reuses the page's *existing* `statusClass()` method unchanged.
+
+**Timeline is composed client-side — no history/audit endpoint exists.** Build a flat, time-sorted
+array from fields already in hand: `{ time: createdAt, labelKey: EVENT.CREATED }`, one entry per
+payment transaction (`{ time: tx.paidAt, labelKey: EVENT.PAYMENT, params: { method: tx.paymentMethod } }`),
+`{ time: expiredAt, labelKey: EVENT.EXPIRES }` **only when present** (a confirmed/paid booking has
+no `expiredAt`), and a final `{ time: null, labelKey: EVENT.CURRENT_STATUS, params: { status:
+booking.status.label } }` pinned last regardless of sort (it's "now", not a past event). Render as
+a plain `<ul class="bk-timeline">` of `<li>` — a dot (`background: var(--accent)`) + label
+(`var(--admin-text)`) + muted timestamp (`var(--admin-muted)`), no new component. Copy this as
+"Activity" (`SECTION.TIMELINE`), not "Audit trail" or "History" — it's a derived convenience list,
+not a real audit log; don't over-promise completeness the backend doesn't back.
+
+Full spec (routes, component hierarchy, dialog layout, forms, i18n table) is below this entry.
+
+---
+
+## UX/UI Specification — OBRS-280 Admin Booking Detail dialog
+
+### New routes / pages
+None. No new route. All changes land on the existing
+`src/app/modules/admin/pages/bookings/bookings-page.component.{ts,html,scss}` (page-scoped SCSS
+file needs to be created — the page currently has no `.scss` beyond table/filter layout, check
+`bookings-page.component.scss` and add to it) plus `bookings.store.ts` (add `id` to `BookingRow`)
+and `admin-api.service.ts` (new `getBookingById` + DTOs above).
+
+### Component hierarchy
+No new Angular components — deliberately mirrors `UsabilityReportsPageComponent`, which keeps its
+entire read-only detail modal inline in the page template rather than extracting a child component.
+Same choice here: less indirection for a single-consumer, read-only view.
+
+- `BookingsPageComponent` (smart, existing) — new protected state:
+  - `selectedBookingId: number | null = null`
+  - `detailBooking: AdminBookingDetailDto | null = null` (seeded optimistically, see above)
+  - `paymentTransactions: AdminPaymentTransactionDto[] | null = null`
+  - `isDetailFetching = false`, `isPaymentsFetching = false`
+  - `detailLoadError = ''`, `paymentsLoadError = ''`
+  new protected methods: `onRowActivate(row, event)`, `openDetail(row: BookingRow)`,
+  `closeDetail()`, `onDetailBackdropDismiss()`, `ticketStatusClass(status)`, `timelineEvents(): {time, labelKey, params}[]` (getter, computed from `detailBooking` + `paymentTransactions`).
+
+### Bookings list table changes (prerequisite for opening the dialog)
+- Add an `Actions` column: `<th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>`
+  (key already exists — used by schedules/usability-reports, no new key) — bump the empty-row
+  `colspan` from `8` to `9` and add a skeleton `<td>` to the loading rows.
+- Row `<tr>` gets `(click)="onRowActivate(booking, $event)"` (guard pattern above); action cell has
+  one small button, `admin-btn admin-btn-small`, `(click)="openDetail(booking)"`, label
+  `'ADMIN.BOOKINGS.VIEW' | translate` (new key, mirrors `ADMIN.USABILITY_REPORTS.VIEW`).
+
+### Detail dialog layout (inline in `bookings-page.component.html`, appended after the `admin-card`
+section, structurally mirroring `usability-reports-page.component.html`'s `<!-- Detail Modal -->`
+block)
+
+```html
+<div class="admin-modal-backdrop" *ngIf="selectedBookingId !== null" adminModalBackdrop (dismiss)="onDetailBackdropDismiss()">
+  <div class="admin-modal bk-detail-modal">
+    <div class="admin-modal-header">
+      <h4 class="admin-modal-title">{{ 'ADMIN.BOOKINGS.DETAIL.TITLE' | translate }}</h4>
+      <button type="button" class="bk-detail-close" [attr.aria-label]="'ADMIN.BOOKINGS.DETAIL.CLOSE' | translate" (click)="closeDetail()">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="detailBooking">
+      <!-- 1. Header / status band -->
+      <div class="bk-detail-header">
+        <span class="admin-emphasis">{{ detailBooking.bookingNumber }}</span>
+        <span class="admin-status" [ngClass]="statusClass(bookingStatusCode(detailBooking.status))">
+          {{ bookingStatusLabel(detailBooking.status) }}
+        </span>
+        <span class="admin-muted">{{ detailBooking.bookingType }}</span>
+      </div>
+      <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CREATED_AT' | translate }}</span><span>{{ displayDateTime(detailBooking.createdAt) }}</span></div>
+      <div class="bk-detail-row" *ngIf="detailBooking.expiredAt"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.EXPIRES_AT' | translate }}</span><span>{{ displayDateTime(detailBooking.expiredAt) }}</span></div>
+
+      <!-- 2. Contact + actor, two-column -->
+      <div class="bk-detail-twocol">
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT' | translate }}</h5>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_NAME' | translate }}</span><span>{{ detailBooking.contact?.fullName || '-' }}</span></div>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span><span>{{ detailBooking.contact?.phoneNumber || '-' }}</span></div>
+        </section>
+        <section>
+          <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.ACTOR' | translate }}</h5>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_NAME' | translate }}</span><span>{{ detailBooking.actor?.name || '-' }}</span></div>
+          <div class="bk-detail-row"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_TYPE' | translate }}</span><span>{{ detailBooking.actor?.type || '-' }}</span></div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.channel"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_CHANNEL' | translate }}</span><span>{{ detailBooking.actor?.channel }}</span></div>
+          <div class="bk-detail-row" *ngIf="detailBooking.actor?.officeName"><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.ACTOR_OFFICE' | translate }}</span><span>{{ detailBooking.actor?.officeName }}</span></div>
+        </section>
+      </div>
+
+      <!-- 3. Passengers & tickets, grouped by journey -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PASSENGERS' | translate }}
+          <span *ngIf="isDetailFetching" class="ur-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        </h5>
+        <p *ngIf="!isDetailFetching && !(detailBooking.journeys?.length)" class="admin-muted">{{ 'ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS' | translate }}</p>
+        <ng-container *ngFor="let journey of detailBooking.journeys; let ji = index">
+          <div class="bk-journey-heading">
+            {{ 'ADMIN.BOOKINGS.DETAIL.JOURNEY_LABEL' | translate: { index: ji + 1, route: journeyRouteLabel(journey) } }}
+          </div>
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_NAME' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_TYPE' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.SEAT' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_NUMBER' | translate }}</th>
+                <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TICKET_STATUS' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let ticket of journey.tickets">
+                <td>{{ ticket.passengerName }}</td>
+                <td>{{ ticket.passengerType }}</td>
+                <td class="admin-emphasis">{{ ticket.seatNumber }}</td>
+                <td><code>{{ ticket.ticketNumber }}</code></td>
+                <td><span class="admin-status" [ngClass]="ticketStatusClass(ticketStatusCode(ticket.status))">{{ ticketStatusLabel(ticket.status) }}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </ng-container>
+      </section>
+
+      <!-- 4. Payment summary + transactions -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.PAYMENT' | translate }}</h5>
+        <div class="bk-payment-summary">
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT' | translate }}</span><span class="admin-emphasis">{{ formatMoney(detailBooking.payment?.totalAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.paidAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.outstandingAmount, detailBooking.payment?.currency) }}</span></div>
+          <div><span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT' | translate }}</span><span>{{ formatMoney(detailBooking.payment?.refundedAmount, detailBooking.payment?.currency) }}</span></div>
+          <span class="admin-status" [ngClass]="paymentClass(detailBooking.payment?.status)">{{ detailBooking.payment?.status }}</span>
+        </div>
+        <span *ngIf="isPaymentsFetching" class="ur-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
+        <table class="admin-table mt-2" *ngIf="!isPaymentsFetching">
+          <thead>
+            <tr>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_DATE' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_METHOD' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_AMOUNT' | translate }}</th>
+              <th>{{ 'ADMIN.BOOKINGS.DETAIL.COL.TXN_STATUS' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let tx of paymentTransactions">
+              <td>{{ displayDateTime(tx.paidAt) }}</td>
+              <td>{{ tx.paymentMethod }}</td>
+              <td class="admin-emphasis">{{ formatMoney(tx.amount, tx.currency) }}</td>
+              <td><span class="admin-status" [ngClass]="paymentClass(tx.status)">{{ tx.status }}</span></td>
+            </tr>
+            <tr *ngIf="!paymentTransactions?.length" class="admin-empty-row"><td colspan="4">{{ 'ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS' | translate }}</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- 5. Timeline -->
+      <section class="mt-3">
+        <h5>{{ 'ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE' | translate }}</h5>
+        <ul class="bk-timeline">
+          <li *ngFor="let event of timelineEvents">
+            <span class="bk-timeline-dot" aria-hidden="true"></span>
+            <span>{{ event.labelKey | translate: event.params }}</span>
+            <span class="admin-muted" *ngIf="event.time">{{ displayDateTime(event.time) }}</span>
+          </li>
+        </ul>
+      </section>
+    </ng-container>
+
+    <p *ngIf="!detailBooking && detailLoadError" class="admin-muted text-center mt-3">{{ detailLoadError }}</p>
+  </div>
+</div>
+```
+
+Notes on the markup above:
+- `bookingStatusCode`/`bookingStatusLabel`/`ticketStatusCode`/`ticketStatusLabel` are thin helpers
+  around the already-imported `parseAdminStatus` util (same one `bookings.store.ts` uses) — status
+  can come back as a bare string or `{slug, label}`, both need normalizing before badge/class lookup.
+- `formatMoney(amount, currency)` — reuse the `Intl.NumberFormat('en-US', { style: 'currency', ... })`
+  one-liner already written in `bookings.store.ts` `toBookingRow()`; hoist it to a shared
+  `shared/lib` helper if touching that file anyway, otherwise a local private method is fine (same
+  duplication tolerance as `statusClass`/`paymentClass` today).
+- `.bk-journey-heading` / `.bk-payment-summary` / `.bk-timeline` are **new page-scoped classes** —
+  style them ONLY with existing CSS custom properties (`var(--admin-surface-soft)` for the journey
+  heading background — the same "structural, not data" surface already used for `admin-table thead`
+  and the OBRS-231 expandable-row chip surface per design-system.md §12 — and `var(--admin-text)`/
+  `var(--admin-muted)`/`var(--accent)` for the timeline dot/text), so dark mode needs **zero**
+  additional overrides (the CSS vars already flip under `.is-dark`).
+
+### Forms
+None — this is a read-only view, no form controls, no validation.
+
+### User flows
+1. Admin opens `/admin/bookings` (existing) → sees the booking list (unchanged, now with an Actions
+   column) → clicks a row (or its "View" button) → dialog opens instantly showing bookingNumber +
+   status pill it already had from the row (no blank/spinner-only state) → within ~1-2s the
+   passengers/tickets, payment, and timeline sections populate as their two backing fetches resolve.
+2. Admin clicks a different row while the first dialog's fetch is still in flight → `selectedBookingId`
+   flips to the new id immediately, dialog re-seeds from the new row's fallback, the in-flight
+   response for the old id is dropped by the stale-id guard when it lands.
+3. Fetch fails (404/500) → `detailLoadError` is set (via the same inline-message convention the page
+   already uses for its list-load failure — `admin-muted` paragraph, no `Swal`/AlertService, since
+   this replaces content rather than reacting to a user action) → admin clicks Close (or backdrop, or ×)
+   → dialog closes, state resets, no residual error banner leaks into the next open.
+
+### States
+- Loading: per-section, not modal-wide — `isDetailFetching`/`isPaymentsFetching` gate their own
+  sections with the existing inline `'ADMIN.COMMON.UPDATING' | translate` hint (`.ur-inline-updating`
+  class already defined globally from the usability-reports work — reuse, don't redefine) next to
+  each section heading; the header/status band never blanks because it's seeded from the row.
+- Empty: no journeys → `ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS`; no transactions →
+  `ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS` (both inline `admin-muted` text, matching `ADMIN.COMMON.NO_DATA`'s
+  existing tone elsewhere on this page).
+- Error: `detailLoadError` inline `admin-muted text-center` paragraph inside the modal body (not
+  AlertService — this is a content-load failure being displayed, not a transient action result).
+
+### NgRx changes
+None. The admin module doesn't use `@ngrx/store` for this data — `bookings.store.ts` is a local
+`AdminCollectionStore` (RxJS `BehaviorSubject`-backed cache), and the detail dialog's state
+(`selectedBookingId`, `detailBooking`, `paymentTransactions`, the fetching/error flags) lives
+directly on `BookingsPageComponent`, exactly like `UsabilityReportsPageComponent`'s
+`selectedReportId`/`detailReport`. No new selectors/actions/effects.
+
+### i18n keys to add
+All three locale files (`public/i18n/en.json`, `th.json`, `zh.json`), inside the existing
+`"ADMIN"."BOOKINGS"` object (add `"VIEW"` as a sibling of `"LOAD_FAILED"`, then a new `"DETAIL"`
+object, mirroring `ADMIN.USABILITY_REPORTS.DETAIL`'s placement exactly):
+
+| Key | EN | TH | ZH |
+|---|---|---|---|
+| ADMIN.BOOKINGS.VIEW | View | ดูรายละเอียด | 查看 |
+| ADMIN.BOOKINGS.DETAIL.TITLE | Booking Detail | รายละเอียดการจอง | 预订详情 |
+| ADMIN.BOOKINGS.DETAIL.CLOSE | Close | ปิด | 关闭 |
+| ADMIN.BOOKINGS.DETAIL.LOAD_FAILED | Unable to load booking detail. Please try again. | ไม่สามารถโหลดรายละเอียดการจองได้ กรุณาลองใหม่อีกครั้ง | 无法加载预订详情，请重试。 |
+| ADMIN.BOOKINGS.DETAIL.CREATED_AT | Created At | สร้างเมื่อ | 创建时间 |
+| ADMIN.BOOKINGS.DETAIL.EXPIRES_AT | Expires At | หมดอายุเมื่อ | 过期时间 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.CONTACT | Customer Contact | ข้อมูลติดต่อลูกค้า | 客户联系信息 |
+| ADMIN.BOOKINGS.DETAIL.CONTACT_NAME | Full Name | ชื่อ-นามสกุล | 姓名 |
+| ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE | Phone Number | หมายเลขโทรศัพท์ | 电话号码 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.ACTOR | Booked By | ผู้ทำรายการจอง | 预订操作人 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_NAME | Name | ชื่อ | 姓名 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_TYPE | Actor Type | ประเภทผู้ทำรายการ | 操作人类型 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_CHANNEL | Channel | ช่องทาง | 渠道 |
+| ADMIN.BOOKINGS.DETAIL.ACTOR_OFFICE | Office | สำนักงาน | 办公室 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.PASSENGERS | Passengers & Tickets | ผู้โดยสารและตั๋ว | 乘客与车票 |
+| ADMIN.BOOKINGS.DETAIL.NO_JOURNEYS | No journeys on this booking. | ไม่มีเที่ยวเดินทางในรายการจองนี้ | 此预订没有行程。 |
+| ADMIN.BOOKINGS.DETAIL.JOURNEY_LABEL | Journey {{index}}: {{route}} | เที่ยวที่ {{index}}: {{route}} | 行程 {{index}}：{{route}} |
+| ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_NAME | Passenger | ผู้โดยสาร | 乘客 |
+| ADMIN.BOOKINGS.DETAIL.COL.PASSENGER_TYPE | Type | ประเภท | 类型 |
+| ADMIN.BOOKINGS.DETAIL.COL.SEAT | Seat | ที่นั่ง | 座位 |
+| ADMIN.BOOKINGS.DETAIL.COL.TICKET_NUMBER | Ticket No. | หมายเลขตั๋ว | 车票编号 |
+| ADMIN.BOOKINGS.DETAIL.COL.TICKET_STATUS | Ticket Status | สถานะตั๋ว | 车票状态 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.PAYMENT | Payment | การชำระเงิน | 付款 |
+| ADMIN.BOOKINGS.DETAIL.TOTAL_AMOUNT | Total | ยอดรวม | 总金额 |
+| ADMIN.BOOKINGS.DETAIL.PAID_AMOUNT | Paid | ชำระแล้ว | 已付 |
+| ADMIN.BOOKINGS.DETAIL.OUTSTANDING_AMOUNT | Outstanding | ค้างชำระ | 未付 |
+| ADMIN.BOOKINGS.DETAIL.REFUNDED_AMOUNT | Refunded | คืนเงินแล้ว | 已退款 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_DATE | Date/Time | วันที่/เวลา | 日期/时间 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_METHOD | Method | วิธีการชำระเงิน | 支付方式 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_AMOUNT | Amount | จำนวนเงิน | 金额 |
+| ADMIN.BOOKINGS.DETAIL.COL.TXN_STATUS | Status | สถานะ | 状态 |
+| ADMIN.BOOKINGS.DETAIL.NO_TRANSACTIONS | No payment transactions recorded. | ไม่มีรายการธุรกรรมการชำระเงิน | 暂无支付交易记录。 |
+| ADMIN.BOOKINGS.DETAIL.SECTION.TIMELINE | Activity | ความเคลื่อนไหว | 活动记录 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.CREATED | Booking created | สร้างรายการจอง | 预订已创建 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.PAYMENT | Payment received ({{method}}) | ได้รับการชำระเงิน ({{method}}) | 收到付款（{{method}}） |
+| ADMIN.BOOKINGS.DETAIL.EVENT.EXPIRES | Booking expires | รายการจองจะหมดอายุ | 预订即将过期 |
+| ADMIN.BOOKINGS.DETAIL.EVENT.CURRENT_STATUS | Current status: {{status}} | สถานะปัจจุบัน: {{status}} | 当前状态：{{status}} |
+
+Reused (no new key): `ADMIN.COMMON.ACTIONS`, `ADMIN.COMMON.UPDATING`, `ADMIN.COMMON.NO_DATA`.
+
+### Design-system conformance
+- **Reused patterns:** `.admin-modal` + `.admin-modal-backdrop` + `adminModalBackdrop` directive
+  (app-themed, §6); `.admin-table`/`admin-status` pill classes + `.admin-skeleton` loading rows
+  (already on this page); `admin-emphasis`/`admin-muted` text tokens; the row-click +
+  guarded-`onRowActivate` + explicit small View-button dual affordance and the
+  optimistic-open/stale-id-guard fetch pattern, copied from `UsabilityReportsPageComponent`
+  (the closest existing read-only detail dialog); component-scoped modal-width override
+  (`.bk-detail-modal { max-width: 900px }`), same idiom as `.ur-detail-modal`/`.admin-modal-lg`
+  elsewhere; `var(--admin-surface-soft)` "structural, not data" background for the journey-group
+  heading, same role it already plays for `admin-table thead` and the OBRS-231 expandable-row
+  chip surface (§12).
+- **New patterns:** (1) a **client-composed timeline list** (`.bk-timeline`) — no
+  history/audit-log endpoint exists in this system yet, and no timeline/activity-feed UI exists
+  anywhere in the admin module to reuse; justified because the alternative (omitting it) drops a
+  requirement, and it introduces no new color (dot = `var(--accent)`, text = existing text/muted
+  tokens) so it needs no dark-mode work. (2) a **two-fetch, two-flag optimistic-open** (rather
+  than the single-fetch version `UsabilityReportsPageComponent` uses) — justified because this
+  dialog's data genuinely comes from two separate existing endpoints (`getBookingById`,
+  `getBookingPayments`) and gating passengers/tickets on the slower of the two would be a
+  regression vs. showing each section as soon as its own data arrives; both fetches use the
+  identical stale-id-guard idiom, so the risk profile is unchanged, just duplicated per-section.
+  No spec-test lock added for either (read-only view, no state that can be silently clobbered by
+  a stale write) — flag as a candidate for a lock spec only if a future card adds a mutating
+  action to this dialog.
+- **Confirm:** no selects in this dialog (read-only, no form) so §3.1 doesn't apply · exactly
+  **zero** primary buttons (deliberately — no save/confirm action exists; Close is a plain
+  `.bk-detail-close` icon button mirroring `.ur-detail-close`, not a `.admin-btn`/`.admin-btn-primary`
+  pair, matching the usability-report dialog's own icon-only close, since a text "Close" button in
+  `.admin-modal-actions` would imply there's a companion primary action there isn't) · no raw hex,
+  every new color reference is a `var(--admin-*)`/`var(--accent*)` token · single title surface
+  (route topbar renders "Bookings Management" already; this dialog's own `h4.admin-modal-title` is
+  the modal's own title surface, not a page title, so §7 doesn't apply — same precedent as every
+  other `.admin-modal-title` in the codebase) · no i18n string hardcoded, all new keys land in
+  en/th/zh in the same commit.
+
+## OBRS-316 Gap 1 scrutinize — full-replace guard hole on 2xx-empty-data (SELF_FIXED)
+`vehicle-form-modal.component.ts` `initEditForm`: the R1 fetch-fail guard only set
+`isEditDetailError` in the `catch` (thrown / non-2xx). A 2xx response with a null/empty
+`data` envelope made `vehicleDetail = null`, skipped the patch, and cleared the loading
+flag WITHOUT setting the error flag → Save re-enabled with the 7 attribute controls still
+at blank fallback → a full-replace PUT would null all 7 saved attributes. Pattern for
+full-replace edit forms opened from a partial row fallback: the "detail didn't arrive"
+guard must cover BOTH throw AND loaded-but-empty (`response.data == null`), not just throw.
+Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check and setting
+`isEditDetailError = true` on the empty branch.
+## OBRS-361/362 scrutinize self-fix (2026-07-14) — finish the seat-label consolidation
+- `src/app/shared/lib/seat-label.ts`'s docstring claimed it consolidated BOTH the van's private
+  `normalizeSeatNumber` AND `PassengerInfoComponent`'s inline `.match(/\d+/g)` regex. The van was
+  repointed correctly, but `PassengerInfoComponent.normalizeSeatNumber` (`passenger-info.component.ts`)
+  still re-implemented the digit regex → the docstring's claim was false and one duplicate regex
+  remained.
+- Fix (behavior-identical, verified by input enumeration + `tsc` + the 9 passenger-info specs):
+  imported the shared util as `stripSeatDigits` and had the private method delegate to it, KEEPING
+  the payload-specific null-return wrapper (`'' / no-digit` → `null`, which the shared util does not
+  do because the booking payload needs `seatNumber: null`, not `''`, for "no manual seat").
+- Lesson: when a shared util's docstring says "every X should call this", grep that it actually
+  replaced EVERY call site — a half-finished consolidation leaves the util's own contract untrue.
+  The method itself was correct to keep (distinct null semantics); only its inner regex was the dup.

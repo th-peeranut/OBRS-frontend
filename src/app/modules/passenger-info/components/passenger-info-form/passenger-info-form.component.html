@@ -10,15 +10,42 @@
         <!-- BODY -->
         <div class="card-body">
           <div class="row form-row">
-            <!-- Adult/child -->
+            <!-- Adult/child fare category (OBRS-296: editable — was a
+                 display-only badge). CRITICAL: [value] is PROPERTY-bound to
+                 the real booleans true/false, not the gender radios' string
+                 `value="MALE"` attribute form — a string "false" on this
+                 boolean isAdult control would coerce truthy and bill every
+                 child as an adult. -->
             <div class="col-12">
-              <div class="passenget-badge">
-                {{
-                  group.get("isAdult")?.value
-                    ? ("PASSENGER_INFO.BADGE.ADULT" | translate)
-                    : ("PASSENGER_INFO.BADGE.CHILD" | translate)
-                }}
-                <!-- {{ i + 1 }} -->
+              <label class="fare-category-label">
+                {{ "PASSENGER_INFO.FORM.FARE_CATEGORY" | translate }}
+              </label>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="fareCategory_adult-{{ i }}"
+                  formControlName="isAdult"
+                  [value]="true"
+                />
+                <label class="form-check-label" for="fareCategory_adult-{{ i }}">
+                  {{ "PASSENGER_INFO.BADGE.ADULT" | translate }}
+                </label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  type="radio"
+                  id="fareCategory_child-{{ i }}"
+                  formControlName="isAdult"
+                  [value]="false"
+                />
+                <label class="form-check-label" for="fareCategory_child-{{ i }}">
+                  {{ "PASSENGER_INFO.BADGE.CHILD" | translate }}
+                </label>
+              </div>
+              <div class="fare-category-hint text-muted small">
+                {{ "PASSENGER_INFO.FORM.FARE_CATEGORY_CHILD_HINT" | translate }}
               </div>
             </div>
 
@@ -279,79 +306,398 @@
               </div>
             </div>
 
-            <!-- Seat selection, optional -->
-            <div class="col-12 mt-4">
-              <div class="subtitle">
-                {{ "PASSENGER_INFO.FORM.SEAT_SECTION_TITLE" | translate }}
-              </div>
+            <!-- Seat preference / requirement (OBRS-361) — optional,
+                 best-effort, never pre-selected (design-system §3.1). Hidden
+                 leg-aware via showSeatPreferenceFields(): every leg OPEN, or
+                 every ASSIGNED leg relevant to this passenger already has a
+                 seat picked. -->
+            <ng-container *ngIf="passengerPrefsContext$ | async as prefsCtx">
+              <ng-container
+                *ngIf="
+                  showSeatPreferenceFields(
+                    i,
+                    prefsCtx.outboundOpen,
+                    prefsCtx.returnOpen,
+                    prefsCtx.isReturn
+                  )
+                "
+              >
+                <div class="col-12 col-md-6 mt-3">
+                  <label>{{ "PASSENGER_INFO.FORM.SEAT_PREFERENCE_LABEL" | translate }}</label>
+                  <div
+                    class="mt-1"
+                    role="group"
+                    [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_PREFERENCE_GROUP_ARIA' | translate"
+                  >
+                    <p-selectButton
+                      [options]="seatPreferenceOptions"
+                      optionLabel="labelKey"
+                      optionValue="value"
+                      formControlName="seatPreference"
+                      [allowEmpty]="true"
+                    >
+                      <ng-template let-item pTemplate="item">
+                        <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                        <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
+                      </ng-template>
+                    </p-selectButton>
+                  </div>
+                </div>
+
+                <div class="col-12 col-md-6 mt-3">
+                  <label>{{ "PASSENGER_INFO.FORM.SEAT_REQUIREMENT_LABEL" | translate }}</label>
+                  <div
+                    class="mt-1"
+                    role="group"
+                    [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_REQUIREMENT_GROUP_ARIA' | translate"
+                  >
+                    <p-selectButton
+                      [options]="seatRequirementOptions"
+                      optionLabel="labelKey"
+                      optionValue="value"
+                      formControlName="seatRequirement"
+                      [allowEmpty]="true"
+                    >
+                      <ng-template let-item pTemplate="item">
+                        <span class="material-symbols-outlined seat-pref-option-icon" aria-hidden="true">{{ item.icon }}</span>
+                        <span class="seat-pref-option-label">{{ item.labelKey | translate }}</span>
+                      </ng-template>
+                    </p-selectButton>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OPEN-seating (OBRS-323/318-c) passenger-count card, reused wherever a
+         leg's seat map is hidden because that leg sells with no fixed seat
+         (also as the single shared card when every leg is OPEN). Bound to the
+         `passengerData` FormArray directly (not a DropdownPassenger[]) — reuses
+         only the `.count-section` +/- markup/disabled-state pattern from
+         DropdownObrsPassengerComponent for visual consistency. -->
+    <ng-template #openSeatCountCard let-available="available" let-maxCount="maxCount">
+      <div class="open-seat-card">
+        <div class="text-muted open-seat-card-hint">
+          {{ "PASSENGER_INFO.FORM.OPEN_SEAT_SECTION_HINT" | translate }}
+        </div>
+        <div class="dropdown-passenger mt-2">
+          <div class="text-section">
+            <div class="open-seat-card-label">
+              {{ "PASSENGER_INFO.FORM.OPEN_SEAT_COUNT_LABEL" | translate }}
             </div>
-            <div class="col-12 text-muted">
-              {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
+            <div class="option-hint-text mt-1" *ngIf="isLowSeat(available)">
+              {{ "SCHEDULE_BOOKING.SEAT_REMAIN" | translate }} {{ available }} {{ "SCHEDULE_BOOKING.SEAT_UNIT" | translate }}
+            </div>
+          </div>
+          <div class="count-section gap-2">
+            <img
+              class="passenger-icon passenger-minus"
+              [src]="passengerData.length <= 1 ? 'icons/passenger-minus-disable.svg' : 'icons/passenger-minus.svg'"
+              alt="Passenger Minus Icon"
+              (click)="removeOpenSeatPassenger()"
+            />
+            <span class="open-seat-card-count">{{ passengerData.length }}</span>
+            <img
+              class="passenger-icon passenger-add"
+              [class.disabled]="passengerData.length >= maxCount"
+              src="icons/passenger-add.svg"
+              alt="Passenger Add Icon"
+              (click)="addOpenSeatPassenger(maxCount)"
+            />
+          </div>
+        </div>
+        <div class="passenger-max-hint" *ngIf="passengerData.length >= maxCount">
+          {{ "PASSENGER_INFO.FORM.OPEN_SEAT_MAX_HINT" | translate: { max: maxCount } }}
+        </div>
+      </div>
+    </ng-template>
+
+    <!-- Seat selection — ONE shared seat map per leg (OBRS-242), not one per
+         passenger. An active-passenger selector above each leg's map decides
+         who a seat click assigns to; the map itself shows every passenger's
+         seat at once. Per-leg branch (OBRS-323): a leg whose `seatingMode` is
+         OPEN hides its map/chip-row/leg-label and shows the count card above
+         instead — the two legs are independent, so a round trip can mix them. -->
+    <div
+      class="card-container mt-3"
+      *ngIf="passengerData.controls.length && !(allLegsOpenSeating$ | async)"
+    >
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12">
+            <div class="subtitle">
+              {{ "PASSENGER_INFO.FORM.SEAT_SECTION_TITLE" | translate }}
+            </div>
+          </div>
+          <div class="col-12 text-muted">
+            {{ "PASSENGER_INFO.FORM.SEAT_SECTION_HINT" | translate }}
+          </div>
+
+          <!-- Outbound leg label (only labelled when there's a return leg too,
+               and only when outbound still has a map to label) -->
+          <div
+            class="col-12 mt-2"
+            *ngIf="(isReturnTrip$ | async) && !(isOpenSeatingOutbound$ | async)"
+          >
+            <div class="seat-leg-label">
+              {{ "PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND" | translate }}
+            </div>
+          </div>
+
+          <ng-container *ngIf="!(isOpenSeatingOutbound$ | async); else outboundOpenSeatCard">
+            <!-- Active-passenger selector (outbound) -->
+            <div class="col-12 mt-3">
+              <div class="seat-active-label">
+                {{ "PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL" | translate }}
+              </div>
+              <div
+                class="seat-passenger-chips mt-1"
+                role="tablist"
+                [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL' | translate"
+              >
+                <button
+                  type="button"
+                  *ngFor="let p of passengerData.controls; let pi = index; trackBy: trackByIndex"
+                  class="seat-passenger-chip"
+                  [class.active]="pi === activeOutboundIndex"
+                  role="tab"
+                  [attr.aria-selected]="pi === activeOutboundIndex"
+                  (click)="setActiveOutbound(pi)"
+                >
+                  <span class="seat-passenger-chip-badge">{{ pi + 1 }}</span>
+                  <span class="seat-passenger-chip-name">
+                    <ng-container
+                      *ngIf="(getFormValue(pi, 'firstName') || '').trim() as fname; else outboundFallbackName"
+                      >{{ fname }}</ng-container
+                    >
+                    <ng-template #outboundFallbackName>{{
+                      "PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: pi + 1 }
+                    }}</ng-template>
+                  </span>
+                  <span
+                    class="seat-passenger-chip-seat"
+                    *ngIf="getFormValue(pi, 'passengerSeat')"
+                  >
+                    · {{ getFormValue(pi, "passengerSeat") }}
+                  </span>
+                </button>
+              </div>
             </div>
 
-            <!-- Outbound leg label (only labelled when there's a return leg too) -->
-            <div class="col-12 mt-2" *ngIf="isReturnTrip$ | async">
-              <div class="seat-leg-label">
-                {{ "PASSENGER_INFO.FORM.SEAT_LEG_OUTBOUND" | translate }}
-              </div>
-            </div>
             <div class="seat-map-wrap mt-3">
               <div class="seat-map-inner">
                 <ng-container *ngIf="isVanVehicle$ | async; else busSeatMap">
                   <app-passenger-seat-van
-                    [gender]="group.get('gender')?.value"
-                    [currentSeat]="getFormValue(i, 'passengerSeat')"
-                    [takenSeats]="getTakenSeats(i)"
+                    [gender]="getFormValue(activeOutboundIndex, 'gender')"
+                    [currentSeat]="getFormValue(activeOutboundIndex, 'passengerSeat')"
+                    [takenSeats]="getTakenSeats(activeOutboundIndex)"
                     [availableSeatNumbers]="availableSeatNumbers$ | async"
-                    (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                    [seatOwners]="getSeatOwners()"
+                    [seatAttributes]="seatAttributesOutbound$ | async"
+                    [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                    [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
+                    (passengerSeatPositionOnChange)="
+                      setPassengerSeat(activeOutboundIndex, $event)
+                    "
                   ></app-passenger-seat-van>
                 </ng-container>
                 <ng-template #busSeatMap>
                   <app-passenger-seat-bus
-                    [gender]="group.get('gender')?.value"
-                    [currentSeat]="getFormValue(i, 'passengerSeat')"
-                    [takenSeats]="getTakenSeats(i)"
-                    (passengerSeatPositionOnChange)="setPassengerSeat(i, $event)"
+                    [gender]="getFormValue(activeOutboundIndex, 'gender')"
+                    [currentSeat]="getFormValue(activeOutboundIndex, 'passengerSeat')"
+                    [takenSeats]="getTakenSeats(activeOutboundIndex)"
+                    [seatOwners]="getSeatOwners()"
+                    [seatAttributes]="seatAttributesOutbound$ | async"
+                    [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                    [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
+                    (passengerSeatPositionOnChange)="
+                      setPassengerSeat(activeOutboundIndex, $event)
+                    "
                   ></app-passenger-seat-bus>
                 </ng-template>
               </div>
             </div>
 
-            <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
-            <ng-container *ngIf="isReturnTrip$ | async">
+            <!-- Seat-feature legend (OBRS-362) — shown only when this leg
+                 has at least one badge to explain. -->
+            <div
+              class="seat-map-legend mt-2"
+              *ngIf="hasSeatAttributes(seatAttributesOutbound$ | async)"
+            >
+              <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
+              <span class="seat-map-legend-item">
+                <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                  <span class="material-symbols-outlined">accessible</span>
+                </span>
+                {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
+              </span>
+              <span class="seat-map-legend-item">
+                <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                  <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                </span>
+                {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
+              </span>
+            </div>
+          </ng-container>
+          <ng-template #outboundOpenSeatCard>
+            <div class="col-12 mt-3">
+              <ng-container
+                *ngTemplateOutlet="
+                  openSeatCountCard;
+                  context: {
+                    available: openSeatAvailableOutbound$ | async,
+                    maxCount: openSeatMaxCount$ | async
+                  }
+                "
+              ></ng-container>
+            </div>
+          </ng-template>
+
+          <!-- Return leg — round trips only; arrival vehicle/availability is independent -->
+          <ng-container *ngIf="isReturnTrip$ | async">
+            <div class="col-12 mt-4" *ngIf="!(isOpenSeatingReturn$ | async)">
+              <div class="seat-leg-label">
+                {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
+              </div>
+            </div>
+
+            <ng-container *ngIf="!(isOpenSeatingReturn$ | async); else returnOpenSeatCard">
+              <!-- Active-passenger selector (return) -->
               <div class="col-12 mt-3">
-                <div class="seat-leg-label">
-                  {{ "PASSENGER_INFO.FORM.SEAT_LEG_RETURN" | translate }}
+                <div class="seat-active-label">
+                  {{ "PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL" | translate }}
+                </div>
+                <div
+                  class="seat-passenger-chips mt-1"
+                  role="tablist"
+                  [attr.aria-label]="'PASSENGER_INFO.FORM.SEAT_ACTIVE_PASSENGER_LABEL' | translate"
+                >
+                  <button
+                    type="button"
+                    *ngFor="let p of passengerData.controls; let pi = index; trackBy: trackByIndex"
+                    class="seat-passenger-chip"
+                    [class.active]="pi === activeReturnIndex"
+                    role="tab"
+                    [attr.aria-selected]="pi === activeReturnIndex"
+                    (click)="setActiveReturn(pi)"
+                  >
+                    <span class="seat-passenger-chip-badge">{{ pi + 1 }}</span>
+                    <span class="seat-passenger-chip-name">
+                      <ng-container
+                        *ngIf="(getFormValue(pi, 'firstName') || '').trim() as fname; else returnFallbackName"
+                        >{{ fname }}</ng-container
+                      >
+                      <ng-template #returnFallbackName>{{
+                        "PASSENGER_INFO.FORM.SEAT_CHIP_FALLBACK" | translate: { n: pi + 1 }
+                      }}</ng-template>
+                    </span>
+                    <span
+                      class="seat-passenger-chip-seat"
+                      *ngIf="getFormValue(pi, 'passengerSeatReturn')"
+                    >
+                      · {{ getFormValue(pi, "passengerSeatReturn") }}
+                    </span>
+                  </button>
                 </div>
               </div>
-              <div class="seat-map-wrap mt-2">
+
+              <div class="seat-map-wrap mt-3">
                 <div class="seat-map-inner">
                   <ng-container
                     *ngIf="isVanVehicleReturn$ | async; else busSeatMapReturn"
                   >
                     <app-passenger-seat-van
-                      [gender]="group.get('gender')?.value"
-                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
-                      [takenSeats]="getTakenSeatsReturn(i)"
+                      [gender]="getFormValue(activeReturnIndex, 'gender')"
+                      [currentSeat]="getFormValue(activeReturnIndex, 'passengerSeatReturn')"
+                      [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
                       [availableSeatNumbers]="availableSeatNumbersReturn$ | async"
+                      [seatOwners]="getSeatOwnersReturn()"
+                      [seatAttributes]="seatAttributesReturn$ | async"
+                      [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                      [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
-                        setPassengerSeatReturn(i, $event)
+                        setPassengerSeatReturn(activeReturnIndex, $event)
                       "
                     ></app-passenger-seat-van>
                   </ng-container>
                   <ng-template #busSeatMapReturn>
                     <app-passenger-seat-bus
-                      [gender]="group.get('gender')?.value"
-                      [currentSeat]="getFormValue(i, 'passengerSeatReturn')"
-                      [takenSeats]="getTakenSeatsReturn(i)"
+                      [gender]="getFormValue(activeReturnIndex, 'gender')"
+                      [currentSeat]="getFormValue(activeReturnIndex, 'passengerSeatReturn')"
+                      [takenSeats]="getTakenSeatsReturn(activeReturnIndex)"
+                      [seatOwners]="getSeatOwnersReturn()"
+                      [seatAttributes]="seatAttributesReturn$ | async"
+                      [wheelchairBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.WHEELCHAIR_BADGE_ARIA' | translate"
+                      [extraLegroomBadgeAriaLabel]="'PASSENGER_INFO.SEAT_MAP.EXTRA_LEGROOM_BADGE_ARIA' | translate"
                       (passengerSeatPositionOnChange)="
-                        setPassengerSeatReturn(i, $event)
+                        setPassengerSeatReturn(activeReturnIndex, $event)
                       "
                     ></app-passenger-seat-bus>
                   </ng-template>
                 </div>
               </div>
+
+              <!-- Seat-feature legend (OBRS-362) — return leg. -->
+              <div
+                class="seat-map-legend mt-2"
+                *ngIf="hasSeatAttributes(seatAttributesReturn$ | async)"
+              >
+                <span class="seat-map-legend-title">{{ "PASSENGER_INFO.SEAT_MAP.LEGEND_TITLE" | translate }}</span>
+                <span class="seat-map-legend-item">
+                  <span class="seat-attribute-badge seat-attribute-badge-wheelchair" aria-hidden="true">
+                    <span class="material-symbols-outlined">accessible</span>
+                  </span>
+                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_WHEELCHAIR" | translate }}
+                </span>
+                <span class="seat-map-legend-item">
+                  <span class="seat-attribute-badge seat-attribute-badge-legroom" aria-hidden="true">
+                    <span class="material-symbols-outlined">airline_seat_legroom_extra</span>
+                  </span>
+                  {{ "PASSENGER_INFO.SEAT_MAP.LEGEND_EXTRA_LEGROOM" | translate }}
+                </span>
+              </div>
             </ng-container>
+            <ng-template #returnOpenSeatCard>
+              <div class="col-12 mt-4">
+                <ng-container
+                  *ngTemplateOutlet="
+                    openSeatCountCard;
+                    context: {
+                      available: openSeatAvailableReturn$ | async,
+                      maxCount: openSeatMaxCount$ | async
+                    }
+                  "
+                ></ng-container>
+              </div>
+            </ng-template>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+
+    <!-- Every leg on this booking is OPEN (both legs on a round trip, or the
+         single leg on a one-way) — no seat map anywhere, so the "Seat
+         selection" title/hint is dropped entirely; just the shared
+         passenger-count card, in the same canonical card shell. -->
+    <div
+      class="card-container mt-3"
+      *ngIf="passengerData.controls.length && (allLegsOpenSeating$ | async)"
+    >
+      <div class="card-body">
+        <div class="row">
+          <div class="col-12">
+            <ng-container
+              *ngTemplateOutlet="
+                openSeatCountCard;
+                context: {
+                  available: openSeatAvailableShared$ | async,
+                  maxCount: openSeatMaxCount$ | async
+                }
+              "
+            ></ng-container>
           </div>
         </div>
       </div>

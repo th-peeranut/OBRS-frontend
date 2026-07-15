@@ -226,7 +226,9 @@
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.TRIAGED_AT' | translate }}</span>
           <span>{{ displayDateTime(detailReport.triagedAt) }}</span>
         </div>
-        <div class="ur-detail-row" *ngIf="detailReport.jiraIssueKey">
+        <!-- OBRS-370: the Jira key is ADMIN-only visible — owner is a
+             screen-only tier and the backend never lets a non-admin set it. -->
+        <div class="ur-detail-row" *ngIf="detailReport.jiraIssueKey && isAdmin">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.JIRA_LINK_LABEL' | translate }}</span>
           <a
             class="btn btn-link p-0"

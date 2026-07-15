@@ -12,6 +12,19 @@ import {
   BoardingScanRequest,
   BoardingScanResultDto,
 } from '../../shared/interfaces/ticket-boarding.interface';
+import {
+  CargoAvailabilityRespDto,
+  ParcelCollectReqDto,
+  ParcelCollectRespDto,
+  ParcelConsignedReqDto,
+  ParcelConsignedRespDto,
+  ParcelDeliveryListItemDto,
+  ParcelLoadRespDto,
+  ParcelArrivedRespDto,
+  ParcelQuoteReqParams,
+  ParcelQuoteRespDto,
+  WaybillRespDto,
+} from '../../shared/interfaces/parcel.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
 // OBRS-100: type-only — BoardingListComponent (shared/) reuses the response
 // SHAPE for its supplementary print/export trip header, but must not take a
@@ -87,12 +100,40 @@ export interface WalkInTripDto {
   reservedUnpaidCount: number;
   soldPaidCount: number;
   availableSeatNumbers: string[];
+  // OBRS-283: mirrors AdminScheduleDto's same-named fields (admin-api.service.ts)
+  // — drives the delete-vs-cancel branch on the walk-in sell page's trip menu.
+  // Optional/undefined on a cached row predating this field.
+  deletable?: boolean;
+  confirmedBookingCount?: number;
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): 'OPEN' | 'ASSIGNED' —
+  // `schedules.seating_mode` (OBRS-321). Verified passthrough — same pattern
+  // as `Schedule.seatingMode` in `shared/interfaces/schedule.interface.ts`
+  // (OBRS-323): no manual mapper needed once the backend response includes
+  // it. Optional because `GET /api/private/schedules/walk-in`
+  // (`WalkInTripRespDto`) does NOT yet expose this field — see the OBRS-324
+  // Contract Request in docs/handoff.md. Until the backend adds it, this is
+  // always `undefined` here and every walk-in trip is treated as ASSIGNED
+  // (the safe default — see `isOpenSeatingTrip` below).
+  seatingMode?: 'OPEN' | 'ASSIGNED';
 }
 
 export interface WalkInRouteGroupDto {
   routeSlug: string;
   routeLabel: string;
   trips: WalkInTripDto[];
+}
+
+/**
+ * OBRS-324: whether a walk-in trip sells on OPEN seating (headcount only, no
+ * seat map). Missing/unknown `seatingMode` (today, always — see the field's
+ * doc comment above) safely resolves to `false` (ASSIGNED), preserving the
+ * pre-existing seat-picker flow byte-for-byte until the backend ships the
+ * field on this endpoint.
+ */
+export function isOpenSeatingTrip(
+  trip: Pick<WalkInTripDto, 'seatingMode'> | null | undefined
+): boolean {
+  return trip?.seatingMode === 'OPEN';
 }
 
 export interface SegmentStopRefDto {
@@ -123,8 +164,25 @@ export interface RouteStopTimeDto {
   stopOrder: number;
   offsetMinutesFromOrigin: number;
   distanceKmFromOrigin?: number;
-  /** LookupResponse — `code` is the stop slug used to join with segment stops. */
-  stop: { code: string };
+  /** LookupResponse — `code` is the stop slug used to join with segment stops.
+   * OBRS-305 (QA-flagged blocker, 2026-07-14): `id` added (optional,
+   * additive) — the parcel consign form needs the numeric stop id for
+   * `pickupStopId`/`dropoffStopId` on the consigned intake request.
+   * CORRECTION: an earlier version of this comment claimed the underlying
+   * `/private/route-stops/{slug}` response "already carries it" — verified
+   * false at the time (backend `LookupResponse` had no `id` field, so every
+   * stop was silently dropped by `buildOrderedStops()` and the consign
+   * form's pickup/dropoff dropdowns rendered permanently empty). The backend
+   * is adding `id` to `LookupResponse` (`StopDtoService.toLookupResponse` ->
+   * `entity.getId()`) specifically for this need — verified directly against
+   * `OBRS-backend-wt-obrs-305-parcel-consigned-delivery`'s
+   * `LookupResponse`/`StopOrderRespDto`/`StopDtoService` source: the field
+   * lands at exactly this path (`stops[].stop.id`), matching what
+   * `buildOrderedStops()` already reads. No frontend mapping change needed
+   * once that backend change ships — `id?: number` stays optional so a stop
+   * missing it (a stale/un-upgraded backend) degrades to being skipped
+   * (documented behavior below), never a broken/undefined dropdown entry. */
+  stop: { code: string; id?: number };
 }
 
 export interface RouteStopsDto {
@@ -170,6 +228,27 @@ export interface WalkInPaymentRespDto {
   netAmount?: number;
 }
 
+/** OBRS-272: `PATCH /api/private/schedules/{id}/delay` request body.
+ * `delayedDepartureDateTime` is required (an OffsetDateTime string, strictly
+ * after the schedule's current `departureDateTime` — validated client-side in
+ * `BoardingListComponent` and re-validated by the backend as
+ * `SCHEDULE_DELAY_ETA_INVALID`). `delayReason` is optional, max 500 chars. */
+export interface DelayScheduleReqDto {
+  delayedDepartureDateTime: string;
+  delayReason?: string;
+}
+
+/** OBRS-272: `PATCH /api/private/schedules/{id}/delay` response data.
+ * `status` is always `"scheduled"` — the delay never changes the schedule's
+ * status code. `affectedBookingCount` drives the success toast's `{{count}}`. */
+export interface DelayScheduleRespDto {
+  scheduleId: number;
+  status: string;
+  delayedDepartureDateTime: string;
+  delayReason?: string | null;
+  affectedBookingCount: number;
+}
+
 export interface BoardingListItemDto {
   ticketId: number;
   ticketNumber: string;
@@ -195,6 +274,23 @@ export interface BoardingListItemDto {
    * — never seed it onto a pre-existing boarded row, that was the
    * misattribution bug). */
   boardedByName?: string;
+  /** OBRS-296: the fare category the booking was created with —
+   * server-authoritative, drives the boarding manifest's "Flag mismatch"
+   * surface (only rendered for `'child'` rows). `undefined` on an older
+   * ticket/fixture predating this field. */
+  fareCategory?: 'adult' | 'child';
+  /** OBRS-296: populated once a salesperson/driver has flagged this ticket's
+   * fare category as a mismatch (undefined until then — additive, optional
+   * field, same shape as `boardedAt`). */
+  childFareFlaggedAt?: string;
+  /** OBRS-296: the staff user id who flagged the mismatch — undefined until
+   * flagged. */
+  childFareFlaggedBy?: number;
+  /** OBRS-296: display name for `childFareFlaggedBy`, resolved server-side so
+   * it survives a refresh — same "only seed your own name on the row you
+   * just acted on" rule as `boardedByName` (see
+   * `boarding-list.component.ts`). */
+  childFareFlaggedByName?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -278,6 +374,29 @@ export class StaffApiService {
     );
   }
 
+  /** OBRS-296: flag a ticket's fare category as a mismatch (low-stakes, no
+   * confirm — mirrors `board()`). Reuses `boardingScanContext` — a domain 409
+   * (`ALREADY_FLAGGED`) must never force-logout the operator nor duplicate a
+   * global alert (OBRS-187 trap), same reasoning as `board()`/`unboard()`. */
+  flagChildFare(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/flag-child-fare`,
+      {},
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-296: reverse a child-fare mismatch flag (salesperson/admin only —
+   * enforced by the backend `@PreAuthorize` and mirrored client-side by
+   * hiding the control, same shape as `unboard()`). */
+  unflagChildFare(ticketId: number): Observable<ResponseAPI<null>> {
+    return this.http.post<ResponseAPI<null>>(
+      `${environment.apiUrl}/api/private/tickets/${ticketId}/unflag-child-fare`,
+      {},
+      { context: this.boardingScanContext }
+    );
+  }
+
   /** OBRS-256: forward-only schedule status transition
    * (`scheduled` → `departed` → `arrived`), driven by the boarding-list
    * header strip. Reuses `boardingScanContext` — a domain 409
@@ -291,6 +410,23 @@ export class StaffApiService {
     return this.http.patch<ResponseAPI<{ scheduleId: number; status: string }>>(
       `${environment.apiUrl}/api/private/schedules/${id}/status`,
       { status },
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** OBRS-272: mark/update a schedule's ETA delay — status STAYS `scheduled`
+   * (delay is a derived UI state, never a status code). Reuses
+   * `boardingScanContext` — a domain 409 (`SCHEDULE_DELAY_NOT_SCHEDULED`) or
+   * 400 (`SCHEDULE_DELAY_ETA_INVALID`/bean-validation) must never force-logout
+   * the operator nor duplicate a global alert (OBRS-187 trap), same reasoning
+   * as `updateScheduleStatus()`. */
+  delaySchedule(
+    id: number,
+    payload: DelayScheduleReqDto
+  ): Observable<ResponseAPI<DelayScheduleRespDto>> {
+    return this.http.patch<ResponseAPI<DelayScheduleRespDto>>(
+      `${environment.apiUrl}/api/private/schedules/${id}/delay`,
+      payload,
       { context: this.boardingScanContext }
     );
   }
@@ -364,6 +500,112 @@ export class StaffApiService {
     return this.http.get<ResponseAPI<AdminUserDto>>(
       `${environment.apiUrl}/api/private/users/me`,
       { context: this.skipContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-305 Card 2 — parcel consigned intake + delivery handoff (staff-facing).
+  // See ../OBRS-backend/docs/api/parcels-consigned-delivery.md.
+  // ---------------------------------------------------------------------------
+
+  /** POST /api/private/parcels/walk-in, consigned branch. Reuses the Card-1
+   * walk-in endpoint (SALESPERSON-authorized) — `parcelType: 'consigned'`
+   * routes to the new consigned branch server-side. */
+  createConsignedParcel(
+    payload: ParcelConsignedReqDto
+  ): Observable<ResponseAPI<ParcelConsignedRespDto>> {
+    return this.http.post<ResponseAPI<ParcelConsignedRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/walk-in`,
+      payload,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/parcels/quote — live consigned quote, refetched
+   * debounced by the consign form as schedule/pickup/dropoff/weight change. */
+  getParcelQuote(params: ParcelQuoteReqParams): Observable<ResponseAPI<ParcelQuoteRespDto>> {
+    const query = new URLSearchParams({
+      parcelType: params.parcelType,
+      scheduleId: String(params.scheduleId),
+      pickupStopId: String(params.pickupStopId),
+      dropoffStopId: String(params.dropoffStopId),
+      weightKg: String(params.weightKg),
+    }).toString();
+    return this.http.get<ResponseAPI<ParcelQuoteRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/quote?${query}`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/schedules/{id}/cargo-availability — the cargo-remaining
+   * indicator on the consign form. */
+  getCargoAvailability(scheduleId: number): Observable<ResponseAPI<CargoAvailabilityRespDto>> {
+    return this.http.get<ResponseAPI<CargoAvailabilityRespDto>>(
+      `${environment.apiUrl}/api/private/schedules/${scheduleId}/cargo-availability`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/parcels/{id}/waybill — Option B (ADR-0067 on the
+   * backend): no server-side PDF, FE renders + browser print-to-PDF. */
+  getWaybill(parcelId: number): Observable<ResponseAPI<WaybillRespDto>> {
+    return this.http.get<ResponseAPI<WaybillRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/waybill`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** ASSUMED endpoint, not yet in the backend contract doc — see
+   * `docs/handoff.md` Contract Requests (OBRS-305). Backs the delivery-handoff
+   * list for one schedule (`/staff/parcels/deliveries/:scheduleId`). */
+  getConsignedParcelsForSchedule(
+    scheduleId: number
+  ): Observable<ResponseAPI<ParcelDeliveryListItemDto[]>> {
+    return this.http.get<ResponseAPI<ParcelDeliveryListItemDto[]>>(
+      `${environment.apiUrl}/api/private/schedules/${scheduleId}/parcels/consigned`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** Domain state-transition action endpoints (load/arrived/collect) reuse
+   * `boardingScanContext`'s reasoning: a domain 409 (wrong-state,
+   * code/token mismatch, already-collected) on a retryable staff action must
+   * never force-logout the operator nor duplicate a global alert (OBRS-187
+   * trap) — same defensive treatment as `board()`/`unboard()`/
+   * `updateScheduleStatus()`/`delaySchedule()` above. */
+  private readonly parcelActionContext = new HttpContext()
+    .set(SKIP_GLOBAL_ERROR_ALERT, true)
+    .set(SKIP_GLOBAL_LOADING_ALERT, true)
+    .set(SKIP_AUTH_LOGOUT, true);
+
+  /** POST /api/private/parcels/{id}/load — accepted → in_transit. DRIVER-only. */
+  loadParcel(parcelId: number): Observable<ResponseAPI<ParcelLoadRespDto>> {
+    return this.http.post<ResponseAPI<ParcelLoadRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/load`,
+      {},
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcels/{id}/arrived — in_transit → arrived_notified. DRIVER-only. */
+  markParcelArrived(parcelId: number): Observable<ResponseAPI<ParcelArrivedRespDto>> {
+    return this.http.post<ResponseAPI<ParcelArrivedRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/arrived`,
+      {},
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcels/{id}/collect — arrived_notified → collected
+   * (CAS). Body carries exactly one of collectionCode/collectionToken. */
+  collectParcel(
+    parcelId: number,
+    payload: ParcelCollectReqDto
+  ): Observable<ResponseAPI<ParcelCollectRespDto>> {
+    return this.http.post<ResponseAPI<ParcelCollectRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
+      payload,
+      { context: this.parcelActionContext }
     );
   }
 }

@@ -1,0 +1,72 @@
+@import "../../../../../styles/variables.scss";
+
+// OBRS-305 design-system §12 new-pattern note: this is a CUSTOMER-shell page
+// (no `.admin-shell` ancestor), but the status chip reuses the SAME
+// `.admin-status.is-*` component/classes as the staff delivery-list — no
+// forked chip look, no new hex. `.admin-status.is-*` (admin-theme.scss) reads
+// `var(--admin-success-bg)` etc., and those custom properties are only
+// DEFINED inside `.admin-shell`. Re-declare the exact same hex VALUES here,
+// scoped to this component's host instead of `.admin-shell` — reusing the
+// token values (not inventing new ones), just re-scoping them for a surface
+// outside the admin/staff shell. Dark variant mirrors admin-theme.scss's own
+// `.admin-shell.is-dark` overrides, gated on this app's public dark-mode
+// class (`body.is-dark`, dark-theme.scss) instead of `.admin-shell.is-dark`.
+:host {
+  --admin-success-bg: #d4e3ff;
+  --admin-success-text: #154c85;
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
+  --admin-danger-bg: #ffdad6;
+  --admin-danger-text: #93000a;
+  --admin-accepted-bg: #b7f3c0;
+  --admin-accepted-text: #0a3d1d;
+  --admin-inreview-bg: #e2e5ea;
+  --admin-inreview-text: #3a4250;
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+}
+
+:host-context(body.is-dark) {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
+  --admin-inreview-bg: #29323d;
+  --admin-inreview-text: #c7d3de;
+}
+
+.parcel-tracking-page {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+
+.parcel-tracking-card {
+  background: $primary-white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.parcel-tracking-form {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.parcel-tracking-not-found {
+  color: $text-lightgrey;
+  text-align: center;
+  padding: 24px 0;
+}
+
+.parcel-tracking-timeline-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid $primary-grey;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}

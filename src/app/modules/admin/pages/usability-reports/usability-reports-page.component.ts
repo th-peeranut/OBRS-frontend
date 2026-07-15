@@ -6,6 +6,7 @@ import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
   UsabilityReportDetail,
@@ -14,6 +15,7 @@ import {
 } from '../../../../shared/interfaces/usability-report.interface';
 import {
   DETAIL_STATUS_VALUES,
+  OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
@@ -44,6 +46,16 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // dropdowns match the translated status labels shown in the table.
   protected statusFilterOptions: StatusOption[] = [];
 
+  // OBRS-370: owner is a SCREEN-ONLY tier on this page — it may view and move
+  // a report FORWARD through non-terminal statuses, but the backend 403s a
+  // non-admin on the terminal decisions (resolved/rejected — terminal, email
+  // the reporter) and on the Jira key. Sourced from the *actual* held role
+  // (not hasAnyRole, which an owner satisfies for 'admin' too under the FE's
+  // area-based access widening — see boarding-entry-page.component.ts for the
+  // same raw-role precedent) so the gate here matches the backend's real
+  // authority check and the owner never sees a control that would 403.
+  protected isAdmin = false;
+
   // Detail modal
   protected selectedReportId: string | null = null;
   protected detailReport: UsabilityReportDetail | null = null;
@@ -72,10 +84,12 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService,
+    private readonly authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.isAdmin = this.authService.getRoles().includes('admin');
     this.buildStatusOptions();
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
@@ -213,8 +227,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // decision-only dropdown. 'new'/'in_review' are triage states, not outcomes
   // — the dropdown starts empty (placeholder, Save disabled) until the admin
   // actively picks one (design-system.md §3.1).
+  //
+  // OBRS-370: additionally never pre-seed a value the current role can't see
+  // in its own detailStatusOptions — e.g. an owner opening a report an admin
+  // already resolved/rejected must not land with that terminal value silently
+  // selected (Save enabled) behind a dropdown that no longer lists it.
   private seedStatus(status: UsabilityReportStatus | ''): UsabilityReportStatus | '' {
-    return seedDecisionStatus(status);
+    const seeded = seedDecisionStatus(status);
+    if (seeded && !this.detailStatusOptions.some((option) => option.value === seeded)) {
+      return '';
+    }
+    return seeded;
   }
 
   // Best-effort, toast-free promote of a freshly-opened 'new' report to
@@ -395,6 +418,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private buildStatusOptions(): void {
     const translateFn = (key: string) => this.translate.instant(key);
     this.statusFilterOptions = buildStatusOptionList(STATUS_FILTER_VALUES, translateFn);
-    this.detailStatusOptions = buildStatusOptionList(DETAIL_STATUS_VALUES, translateFn);
+    // OBRS-370: a non-admin (owner) is a screen-only tier — it may only move a
+    // report forward through the non-terminal statuses, never finalize it.
+    this.detailStatusOptions = buildStatusOptionList(
+      this.isAdmin ? DETAIL_STATUS_VALUES : OWNER_DETAIL_STATUS_VALUES,
+      translateFn
+    );
   }
 }

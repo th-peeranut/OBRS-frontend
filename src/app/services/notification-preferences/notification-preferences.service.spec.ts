@@ -7,6 +7,7 @@ import {
 
 import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationPreferenceRow } from '../../shared/interfaces/notification-preference.interface';
+import { environment } from '../../../environments/environment';
 
 describe('NotificationPreferencesService', () => {
   let service: NotificationPreferencesService;
@@ -20,7 +21,7 @@ describe('NotificationPreferencesService', () => {
     emailEnabled: true,
     smsEnabled: false,
   };
-  const endpointUrl = 'http://localhost:8000/api/private/users/me/notification-preferences';
+  const endpointUrl = `${environment.apiUrl}/api/private/users/me/notification-preferences`;
 
   beforeEach(() => {
     TestBed.configureTestingModule({

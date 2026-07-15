@@ -207,6 +207,13 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedSeats).toEqual([]);
     });
 
+    it('resets passengerCount to 1 on date change (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
     it('resets seatPassengerTypes on date change', () => {
       const comp = makeComponent();
       (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
@@ -273,6 +280,13 @@ describe('SellPageComponent', () => {
       (comp as any).seatPassengerTypes = { B1: 'male' };
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+
+    it('resets passengerCount to 1 when a new trip is selected (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).passengerCount).toBe(1);
     });
 
     it('resets activeTabIndex to 0 when a new trip is selected (the center panel\'s p-tabView remounts on tab 0)', () => {
@@ -656,6 +670,111 @@ describe('SellPageComponent', () => {
     });
   });
 
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d)
+  describe('isOpenSeating getter', () => {
+    it('is false when no trip is selected', () => {
+      const comp = makeComponent();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is false when the trip has no seatingMode (safe default)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is true when the trip seatingMode is OPEN', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      expect((comp as any).isOpenSeating).toBeTrue();
+    });
+  });
+
+  describe('onPassengerCountChanged', () => {
+    it('clamps to the trip availableCount', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(9);
+      expect((comp as any).passengerCount).toBe(4);
+    });
+
+    it('floors at 1', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(0);
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
+    it('accepts a value within range unchanged', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 10 });
+      (comp as any).onPassengerCountChanged(3);
+      expect((comp as any).passengerCount).toBe(3);
+    });
+  });
+
+  describe('onSell — OPEN seating (OBRS-324)', () => {
+    it('builds passengerCount passengers with a blank seatNumber, ignoring selectedSeats', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1']; // must be ignored for OPEN
+      (comp as any).passengerCount = 3;
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { seatNumber: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers.length).toBe(3);
+      for (const p of passengers) {
+        expect(p.seatNumber).toBe('');
+      }
+    });
+
+    it('totalAmount is fare * passengerCount (not selectedSeats.length)', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1', 'B2']; // 2 seats, must be ignored
+      (comp as any).passengerCount = 5;
+      setSegmentFare(comp, 100);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(500);
+    });
+
+    it('ASSIGNED trip (default) is unaffected — still one passenger per selected seat', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip(); // no seatingMode → ASSIGNED
+      (comp as any).selectedSeats = ['B1', 'B2'];
+      (comp as any).passengerCount = 7; // must be ignored for ASSIGNED
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.departureSchedule.passengers.length).toBe(2);
+      expect(callArg.totalAmount).toBe(600);
+    });
+
+    it('resets passengerCount to 1 after a successful sale', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).passengerCount = 4;
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+
+      expect((comp as any).passengerCount).toBe(1);
+    });
+  });
+
   describe('re-localization on language change', () => {
     // Stop/route names come from the server resolved by Accept-Language, so they
     // are stale after a language switch unless re-fetched. These guard that the
@@ -1008,6 +1127,65 @@ describe('SellPageComponent', () => {
 
       expect((comp as any).selectedTrip).toEqual(selectedTrip);
       expect((comp as any).selectedSeats).toEqual(['B1']);
+    });
+  });
+
+  // OBRS-283: smart delete/cancel branch driven by the trip's `deletable` +
+  // `confirmedBookingCount` fields (see shared/lib/schedule-delete-mode.ts).
+  describe('schedule management — OBRS-283 smart cancel branch', () => {
+    it('deletable===false + confirmedBookingCount>0 resolves the "cancel-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 4 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-refund');
+    });
+
+    it('deletable===false + confirmedBookingCount===0 resolves the "cancel-no-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 0 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-no-refund');
+    });
+
+    it('a trip missing `deletable` (undefined, the default from makeTrip()) falls through to "delete"', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('delete');
+    });
+
+    it('cancel-refund mode calls adminApiService.cancelSchedule() (not deleteSchedule()) and shows the success toast with the response affectedBookingCount', async () => {
+      const cancelSchedule = jasmine.createSpy('cancelSchedule').and.returnValue(
+        of({ data: { scheduleId: 10, status: 'cancelled', affectedBookingCount: 5 } })
+      );
+      const adminApi = { ...createAdminApiStub(), cancelSchedule };
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 5 });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(cancelSchedule).toHaveBeenCalledWith(10);
+      expect(adminApi.deleteSchedule).not.toHaveBeenCalled();
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.SCHEDULE_CANCELLED');
+    });
+
+    it('deletable===true still calls adminApiService.deleteSchedule() (unchanged)', async () => {
+      const adminApi = createAdminApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: true });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(adminApi.deleteSchedule).toHaveBeenCalledWith(10);
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.DELETED');
     });
   });
 

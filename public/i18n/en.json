@@ -328,7 +328,21 @@
       "REPORTS": "Reports",
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
-      "REMINDER_CONFIG": "Reminder Timing"
+      "REMINDER_CONFIG": "Reminder Timing",
+      "REFUND_VOID_REPORT": "Refund / Void Summary",
+      "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
+    },
+    "NAV": {
+      "SEARCH_PLACEHOLDER": "Search menu...",
+      "SEARCH_CLEAR_ARIA": "Clear menu search",
+      "NO_RESULTS": "No menu found",
+      "SECTION": {
+        "OVERVIEW": "Overview",
+        "MASTER_DATA": "Master data",
+        "OPERATIONS": "Operations",
+        "REPORTS": "Reports & Finance",
+        "SYSTEM": "System"
+      }
     },
     "LAYOUT": {
       "BRAND": "OBRS ADMIN",
@@ -375,7 +389,12 @@
       "DELETE": "Delete",
       "DELETING": "Deleting...",
       "DELETE_CONFIRM_TITLE": "Confirm Delete",
-      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?"
+      "DELETE_CONFIRM_MESSAGE": "This action cannot be undone. Do you want to continue?",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_MESSAGE": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_MESSAGE": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "CANCELLING": "Cancelling..."
     },
     "VALIDATION": {
       "REQUIRED": "This field is required.",
@@ -392,7 +411,8 @@
       "SAME_PASSWORD_VALIDATE": "Please enter the same password.",
       "FORM_INVALID": "Please complete the highlighted required fields.",
       "WHOLE_NUMBER": "Please enter a whole number (no decimals).",
-      "POSITIVE_NUMBER": "Please enter a number greater than 0."
+      "POSITIVE_NUMBER": "Please enter a number greater than 0.",
+      "YEAR_RANGE": "Enter a year between {{min}} and {{max}}."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -411,7 +431,13 @@
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
-      "UNLOCK_FAILED": "Unable to unlock the account."
+      "UNLOCK_FAILED": "Unable to unlock the account.",
+      "CANCEL_TRIP_CONFIRM_TITLE": "Confirm Cancel Trip",
+      "CANCEL_TRIP_REFUND_BODY": "{{count}} booking(s) will be automatically refunded and notified.",
+      "CANCEL_TRIP_NO_REFUND_BODY": "The trip will be cancelled. No refund will be issued.",
+      "CANCEL_TRIP_BTN": "Cancel Trip",
+      "SCHEDULE_CANCELLED": "Trip cancelled successfully. {{count}} booking(s) affected.",
+      "CANCEL_FAILED": "Unable to cancel the trip."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -518,11 +544,26 @@
       "FILTER_ROLE": "Role: All Roles",
       "FILTER_STATUS": "Status: All",
       "FULL_NAME": "Full Name",
-      "LAST_UPDATED": "Last updated",
+      "LAST_LOGIN": "Last signed in",
+      "NEVER_LOGGED_IN": "Never signed in",
       "USERNAME": "Username",
       "EMAIL_PHONE": "Email & Phone",
       "ROLES": "Roles",
+      "ROLE_NAMES": {
+        "admin": "Admin",
+        "owner": "Owner",
+        "salesperson": "Salesperson",
+        "driver": "Driver",
+        "customer": "Customer"
+      },
       "STATUS": "Status",
+      "STATUS_NAMES": {
+        "active": "Active",
+        "inactive": "Inactive",
+        "pending_verification": "Pending verification",
+        "suspended": "Suspended",
+        "deleted": "Deleted"
+      },
       "USER_COUNT": "users",
       "ADD_TITLE": "Create User",
       "EDIT_TITLE": "Edit User",
@@ -564,6 +605,19 @@
       "ADD_TITLE": "Create Vehicle",
       "EDIT_TITLE": "Edit Vehicle",
       "MODAL_HINT": "Set vehicle information and current operating status.",
+      "EDIT_DETAIL_LOAD_FAILED": "Failed to load the full vehicle details. Close and reopen this form to try again — saving is disabled until it loads.",
+      "DETAILS": {
+        "SECTION_MAKE_MODEL": "Make & Model",
+        "SECTION_TECHNICAL": "Technical & Notes",
+        "BRAND": "Brand",
+        "MODEL": "Model",
+        "MANUFACTURE_YEAR": "Manufacture Year",
+        "COLOUR": "Colour",
+        "ENGINE_CC": "Engine (cc)",
+        "CHASSIS_NUMBER": "Chassis Number",
+        "NOTE": "Note",
+        "NOTE_PLACEHOLDER": "Add any additional notes about this vehicle (optional)"
+      },
       "MAINTENANCE": {
         "TAB": "Maintenance",
         "MANAGE_ACTION": "Manage maintenance",
@@ -697,7 +751,52 @@
       "PAYMENT_STATUS": "Payment Status",
       "UNITS": "bookings",
       "LOADING": "Loading booking data...",
-      "LOAD_FAILED": "Unable to load booking data from backend."
+      "LOAD_FAILED": "Unable to load booking data from backend.",
+      "VIEW": "View",
+      "DETAIL": {
+        "TITLE": "Booking Detail",
+        "CLOSE": "Close",
+        "LOAD_FAILED": "Unable to load booking detail. Please try again.",
+        "CREATED_AT": "Created At",
+        "EXPIRES_AT": "Expires At",
+        "SECTION": {
+          "CONTACT": "Customer Contact",
+          "ACTOR": "Booked By",
+          "PASSENGERS": "Passengers & Tickets",
+          "PAYMENT": "Payment",
+          "TIMELINE": "Activity"
+        },
+        "CONTACT_NAME": "Full Name",
+        "CONTACT_PHONE": "Phone Number",
+        "ACTOR_NAME": "Name",
+        "ACTOR_TYPE": "Actor Type",
+        "ACTOR_CHANNEL": "Channel",
+        "ACTOR_OFFICE": "Office",
+        "NO_JOURNEYS": "No journeys on this booking.",
+        "JOURNEY_LABEL": "Journey {{index}}: {{route}}",
+        "COL": {
+          "PASSENGER_NAME": "Passenger",
+          "PASSENGER_TYPE": "Type",
+          "SEAT": "Seat",
+          "TICKET_NUMBER": "Ticket No.",
+          "TICKET_STATUS": "Ticket Status",
+          "TXN_DATE": "Date/Time",
+          "TXN_METHOD": "Method",
+          "TXN_AMOUNT": "Amount",
+          "TXN_STATUS": "Status"
+        },
+        "TOTAL_AMOUNT": "Total",
+        "PAID_AMOUNT": "Paid",
+        "OUTSTANDING_AMOUNT": "Outstanding",
+        "REFUNDED_AMOUNT": "Refunded",
+        "NO_TRANSACTIONS": "No payment transactions recorded.",
+        "EVENT": {
+          "CREATED": "Booking created",
+          "PAYMENT": "Payment received ({{method}})",
+          "EXPIRES": "Booking expires",
+          "CURRENT_STATUS": "Current status: {{status}}"
+        }
+      }
     },
     "DASHBOARD": {
       "TITLE": "Dashboard",
@@ -915,6 +1014,69 @@
       "MINUTES_LABEL": "Boarding Reminder (minutes before)",
       "MINUTES_HELPER": "How many minutes before departure the boarding reminder is sent.",
       "LOAD_FAILED": "Unable to load the reminder-timing config."
+    },
+    "REFUND_VOID_REPORT": {
+      "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Refunded and Voided are bucketed by the date the refund or void was processed, not the original booking or departure date.",
+      "PARTITION_NOTE": "Voided splits into Cancelled (staff-cancelled) and Expired (unpaid holds that timed out) — the two always sum to the Voided total.",
+      "CARD": {
+        "REFUNDED": "Refunded (gross)",
+        "REFUNDED_HINT": "Gross amount refunded to customers, before any processing fees are deducted.",
+        "MANUAL_PENDING": "Refund pending (manual)",
+        "VOIDED": "Voided",
+        "CANCELLED": "Cancelled",
+        "EXPIRED": "Expired",
+        "COUNT_LABEL": "Count"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date",
+        "REFUNDED_COUNT": "Refunded (count)",
+        "REFUNDED_AMOUNT": "Refunded (amount)",
+        "MANUAL_COUNT": "Manual (count)",
+        "MANUAL_AMOUNT": "Manual (amount)",
+        "VOIDED_COUNT": "Voided (count)",
+        "VOIDED_AMOUNT": "Voided (amount)"
+      },
+      "EXPAND_ARIA": "Show cancelled/expired breakdown",
+      "COLLAPSE_ARIA": "Hide cancelled/expired breakdown",
+      "EMPTY": "No refunds or voided tickets in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
+    },
+    "CASH_ONLINE_RECONCILIATION": {
+      "SUBTITLE": "Cash, online, and other payment totals collected for a date range.",
+      "FILTER_FROM": "From",
+      "FILTER_TO": "To",
+      "BASIS_NOTE": "Cash, Online, and Other are bucketed by the date the booking was created, not the travel date.",
+      "PARTITION_NOTE": "Payments split into Cash (staff-collected), Online (card, PromptPay, and other digital gateways), and Other (bank transfer and miscellaneous) — every collected payment falls into exactly one bucket.",
+      "CARD": {
+        "CASH": "Cash",
+        "ONLINE": "Online",
+        "OTHER": "Other",
+        "COLLECTED": "Collected",
+        "REFUNDED": "Refunded",
+        "NET": "Net",
+        "COUNT_LABEL": "Count",
+        "TOTAL_COLLECTED": "Total Collected"
+      },
+      "TABLE_TITLE": "Daily Breakdown",
+      "COL": {
+        "DATE": "Date"
+      },
+      "EXPAND_ARIA": "Show payment counts",
+      "COLLAPSE_ARIA": "Hide payment counts",
+      "EMPTY": "No payments collected in the selected range.",
+      "LOAD_FAILED": "Unable to load the report. Please try again.",
+      "ERROR": {
+        "RANGE_INVALID": "The From date must be on or before the To date.",
+        "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
+      }
     }
   },
   "AUTH": {
@@ -1075,6 +1237,19 @@
       "BOARDING_REMINDER": "Boarding reminder"
     }
   },
+  "NOTIFICATIONS": {
+    "BELL_ARIA": "Notifications, {{count}} unread",
+    "PANEL_TITLE": "Notifications",
+    "MARK_ALL_READ": "Mark all read",
+    "EMPTY_TITLE": "No notifications yet",
+    "LOAD_ERROR": "Couldn't load notifications",
+    "RETRY": "Retry",
+    "SHOWING_LATEST": "Showing latest {{shown}} of {{total}}",
+    "MARK_READ_ERROR": "Couldn't mark as read — please try again",
+    "MARK_ALL_ERROR": "Couldn't mark all as read — please try again",
+    "ROW_UNREAD_SUFFIX": "unread",
+    "ROW_READ_SUFFIX": "read"
+  },
   "EMAIL_CHANGE": {
     "DIALOG_TITLE": "Change your email",
     "CURRENT_PASSWORD_LABEL": "Current password",
@@ -1166,7 +1341,7 @@
       "PASSENGER_1": "Adult",
       "PASSENGER_1_HINT": "12 years old and above",
       "PASSENGER_2": "Child",
-      "PASSENGER_2_HINT": "2-11 years old",
+      "PASSENGER_2_HINT": "≤130cm tall (2-11 years old)",
       "START_STATION": "Source",
       "END_STATION": "Destination",
       "DEPARTURE_DATE": "Departure date",
@@ -1233,6 +1408,7 @@
       "DETAIL_DROPOFF_TITLE": "Drop-off detail ({{province}})",
       "DETAIL_TIME": "Approx. {{time}}",
       "BTN_OPEN_MAPS": "Open in Google Maps",
+      "BTN_NAVIGATE": "Navigate",
       "VALIDATION_SELECT_BOTH": "Please select both a pickup and a drop-off point before confirming",
       "VALIDATION_SELECT_PICKUP": "Please select a pickup point before confirming",
       "VALIDATION_SELECT_DROPOFF": "Please select a drop-off point before confirming",
@@ -1365,16 +1541,45 @@
       "SEAT_SECTION_TITLE": "Seat selection",
       "SEAT_SECTION_HINT": "Choose your seat — if you skip it, one is assigned automatically.",
       "SEAT_LEG_OUTBOUND": "Departure seat",
-      "SEAT_LEG_RETURN": "Return seat"
+      "SEAT_LEG_RETURN": "Return seat",
+      "FARE_CATEGORY": "Fare category",
+      "FARE_CATEGORY_CHILD_HINT": "Child fare applies to passengers ≤130cm tall.",
+      "SEAT_ACTIVE_PASSENGER_LABEL": "Select the passenger to assign a seat",
+      "SEAT_CHIP_FALLBACK": "Passenger {{n}}",
+      "OPEN_SEAT_SECTION_HINT": "Open seating — board in arrival order.",
+      "OPEN_SEAT_COUNT_LABEL": "Number of passengers",
+      "OPEN_SEAT_MAX_HINT": "Passenger count is capped at the remaining seats ({{max}} left).",
+      "SEAT_PREFERENCE_LABEL": "Seat preference (optional)",
+      "SEAT_PREFERENCE_GROUP_ARIA": "Select seat preference",
+      "SEAT_PREFERENCE_WINDOW": "Window",
+      "SEAT_PREFERENCE_AISLE": "Aisle",
+      "SEAT_REQUIREMENT_LABEL": "Special requirement (optional)",
+      "SEAT_REQUIREMENT_GROUP_ARIA": "Select special seat requirement",
+      "SEAT_REQUIREMENT_WHEELCHAIR": "Wheelchair accessible",
+      "SEAT_REQUIREMENT_EXTRA_LEGROOM": "Extra legroom"
+    },
+    "SEAT_MAP": {
+      "WHEELCHAIR_BADGE_ARIA": "Wheelchair accessible seat",
+      "EXTRA_LEGROOM_BADGE_ARIA": "Extra legroom seat",
+      "LEGEND_TITLE": "Seat legend",
+      "LEGEND_WHEELCHAIR": "Wheelchair accessible",
+      "LEGEND_EXTRA_LEGROOM": "Extra legroom"
     },
     "GENDER": {
       "MALE": "Male",
       "FEMALE": "Female",
       "MONK": "Monk"
     },
+    "SUMMARY": {
+      "OPEN_SEATING_BADGE": "No assigned seat (Open Seating)",
+      "PASSENGERS_TITLE": "Passengers",
+      "NO_SEAT": "No seat selected",
+      "SEAT_LABEL": "Seat {{seat}}"
+    },
     "ALERT": {
       "CREATE_SUCCESS": "Booking saved successfully",
-      "CREATE_FAILED": "Unable to create the booking. Please try again."
+      "CREATE_FAILED": "Unable to create the booking. Please try again.",
+      "CAPACITY_FULL": "This trip is fully booked. Please reduce the passenger count or choose another schedule."
     }
   },
   "PAYMENT": {
@@ -1440,6 +1645,7 @@
   "E_TICKET": {
     "TITLE": "E-Ticket",
     "SUBTITLE": "NJ Phuyaipu online travel ticket",
+    "BTN_NAVIGATE": "Navigate",
     "LABEL": {
       "BOOKING_REF": "Booking ref",
       "TICKET_NO": "Ticket no.",
@@ -1451,6 +1657,7 @@
       "VEHICLE_TYPE": "Vehicle type",
       "VEHICLE_PLATE": "Vehicle no.",
       "SEAT": "Seat",
+      "SEAT_OPEN": "Open seating (unreserved seat)",
       "PASSENGERS": "Passengers",
       "BOOKER": "Booker",
       "PASSENGER_NAME": "Passenger name",
@@ -1460,14 +1667,16 @@
       "TOTAL_UNIT": "baht",
       "ESTIMATE_KM_UNIT": "km",
       "LEG_OUTBOUND": "Outbound",
-      "LEG_RETURN": "Return"
+      "LEG_RETURN": "Return",
+      "FARE_CATEGORY": "Fare category"
     },
     "QR_HINT": "QR code is used for identity verification before boarding only.",
     "QR_UNAVAILABLE": "This ticket cannot be used to board (cancelled, refunded, or no longer valid).",
     "DOWNLOAD": "Download e-ticket",
     "NOTE_LABEL": "Note:",
     "QR_ARIA_LABEL": "QR code",
-    "LOGO_ALT": "NJ Phuyaipu logo"
+    "LOGO_ALT": "NJ Phuyaipu logo",
+    "CHILD_FARE_NOTE": "Boarding check: passenger must be ≤130cm tall."
   },
   "POLICY": {
     "REFUND": {
@@ -1513,7 +1722,10 @@
       "SELL_RECEIPT": "Print Ticket",
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
-      "BOARDING": "Boarding List"
+      "BOARDING": "Boarding List",
+      "PARCEL_CONSIGN": "Consign Parcel",
+      "PARCEL_WAYBILL": "Waybill",
+      "PARCEL_DELIVERY": "Parcel Deliveries"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -1605,7 +1817,19 @@
         "PLACEHOLDER": "Paste or scan the boarding token",
         "BUTTON": "Validate / Board",
         "VALIDATING": "Validating…",
-        "CAMERA_SOON": "Camera scanning is coming soon — enter the token manually for now.",
+        "MODE_TOGGLE_LABEL": "Boarding scan mode",
+        "MODE_TEXT": "Text",
+        "MODE_CAMERA": "Camera",
+        "CAMERA": {
+          "HINT": "Point the camera at the passenger's e-ticket QR code.",
+          "SCANNING": "Scanning…",
+          "REQUESTING": "Requesting camera access…",
+          "DENIED": "Camera access was denied. Allow camera permission in your browser settings, then try again.",
+          "NO_CAMERA": "No camera was found on this device.",
+          "UNSUPPORTED": "Camera scanning isn't supported on this device/browser.",
+          "ERROR": "Couldn't start the camera. Please try again.",
+          "RETRY": "Try again"
+        },
         "SUCCESS_TITLE": "Boarded",
         "RESULT_NAME": "Passenger",
         "RESULT_SEAT": "Seat",
@@ -1622,6 +1846,27 @@
           "BOARDING_ROUND_ARRIVED": "This trip has already arrived — boarding is locked.",
           "GENERIC": "Validation failed. Please try again."
         }
+      },
+      "FARE_CATEGORY": "Fare category",
+      "CHILD_FARE_FLAG_BTN": "Flag mismatch",
+      "CHILD_FARE_UNFLAG_BTN": "Unflag",
+      "CHILD_FARE_FLAGGING_IN_PROGRESS": "Flagging…",
+      "CHILD_FARE_UNFLAGGING_IN_PROGRESS": "Unflagging…",
+      "CHILD_FARE_FLAGGED": "Flagged",
+      "CHILD_FARE_FLAGGED_AT": "Flagged at",
+      "CHILD_FARE_FLAGGED_BY": "Flagged by",
+      "CHILD_FARE_UNFLAG_CONFIRM_TITLE": "Remove this flag?",
+      "CHILD_FARE_UNFLAG_CONFIRM_TEXT": "This clears the child-fare mismatch flag for this ticket.",
+      "CHILD_FARE_UNFLAG_CONFIRM_CONFIRM": "Unflag",
+      "CHILD_FARE_UNFLAG_CONFIRM_CANCEL": "Cancel",
+      "CHILD_FARE_FLAG_SUCCESS": "Ticket flagged for a fare-category mismatch.",
+      "CHILD_FARE_FLAG_FAILED": "Unable to flag this ticket.",
+      "CHILD_FARE_UNFLAG_SUCCESS": "Flag removed.",
+      "CHILD_FARE_UNFLAG_FAILED": "Unable to unflag this ticket.",
+      "CHILD_FARE_ERROR": {
+        "ALREADY_FLAGGED": "This ticket has already been flagged.",
+        "NOT_FLAGGED": "This ticket has not been flagged.",
+        "GENERIC": "Action failed. Please try again."
       }
     },
     "SCHEDULE_STATUS": {
@@ -1648,6 +1893,34 @@
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "This schedule can't move to that status right now.",
         "GENERIC": "Unable to update the schedule status. Please try again."
+      }
+    },
+    "SCHEDULE_DELAY": {
+      "PILL_MARK": "Mark delayed",
+      "PILL_UPDATE": "Update ETA",
+      "INDICATOR_LABEL": "Delayed — new ETA {{eta}}",
+      "INDICATOR_REASON": "Reason: {{reason}}",
+      "DIALOG_TITLE_MARK": "Mark this trip delayed",
+      "DIALOG_TITLE_UPDATE": "Update the delay ETA",
+      "FIELD": {
+        "DATE": "New departure date",
+        "TIME": "New departure time",
+        "REASON": "Reason (optional)",
+        "REASON_PLACEHOLDER": "e.g. Traffic on the highway"
+      },
+      "VALIDATION": {
+        "REQUIRED": "This field is required.",
+        "MUST_BE_AFTER": "The new ETA must be after the original departure time.",
+        "REASON_TOO_LONG": "Reason must be 500 characters or fewer."
+      },
+      "CANCEL": "Cancel",
+      "SUBMIT": "Save",
+      "SUBMITTING": "Saving…",
+      "SUCCESS": "{{count}} passengers notified",
+      "ERROR": {
+        "SCHEDULE_DELAY_NOT_SCHEDULED": "This trip can no longer be marked delayed.",
+        "SCHEDULE_DELAY_ETA_INVALID": "The new ETA must be after the original departure time.",
+        "GENERIC": "Unable to update the delay. Please try again."
       }
     },
     "DRIVER": {
@@ -1721,6 +1994,10 @@
       "BADGE_SOLD": "Sold",
       "TRIPS_EMPTY": "No trips scheduled for this date.",
       "CENTER_EMPTY": "Select a trip on the left to get started.",
+      "OPEN_SEATING_HINT": "Unassigned seating — sell by number of passengers.",
+      "PASSENGER_COUNT_DECREASE": "Decrease passenger count",
+      "PASSENGER_COUNT_INCREASE": "Increase passenger count",
+      "PASSENGER_COUNT_MAX": "Max {{max}} passengers available",
       "TAB_TICKET_SALES": "Ticket Sales",
       "TAB_TRIP_DETAILS": "Trip Details",
       "TAB_BOARDING": "Boarding",
@@ -1817,6 +2094,136 @@
       "SUBTITLE": "Choose a schedule to view its boarding list.",
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "You have no schedules assigned. Please check back later."
+    },
+    "PARCEL_CONSIGN": {
+      "SUBTITLE": "Record a new consigned parcel for delivery.",
+      "SECTION": {
+        "SENDER": "Sender",
+        "RECIPIENT": "Recipient",
+        "TRIP": "Trip",
+        "DIMENSIONS": "Dimensions (optional)"
+      },
+      "FIELD": {
+        "SENDER_NAME": "Sender name",
+        "SENDER_PHONE": "Sender phone",
+        "RECIPIENT_NAME": "Recipient name",
+        "RECIPIENT_PHONE": "Recipient phone",
+        "DATE": "Date",
+        "SCHEDULE": "Schedule",
+        "PICKUP_STOP": "Pickup stop",
+        "DROPOFF_STOP": "Drop-off stop",
+        "WEIGHT": "Weight (kg)",
+        "DESCRIPTION": "Description",
+        "LENGTH_CM": "Length (cm)",
+        "WIDTH_CM": "Width (cm)",
+        "HEIGHT_CM": "Height (cm)",
+        "PAYMENT_METHOD": "Payment method",
+        "PROHIBITED_ACK": "I confirm this parcel does not contain any prohibited item."
+      },
+      "PAYMENT_CASH": "Cash",
+      "CARGO": {
+        "LOADING": "Checking cargo capacity…",
+        "REMAINING": "{{remaining}} kg remaining of {{capacity}} kg cargo capacity"
+      },
+      "QUOTE": {
+        "LOADING": "Calculating price…",
+        "AMOUNT": "Price: {{amount}}"
+      },
+      "SUBMIT": "Consign parcel",
+      "SUBMITTING": "Submitting…",
+      "VALIDATION": {
+        "WEIGHT_POSITIVE": "Weight must be greater than 0.",
+        "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank."
+      },
+      "ERROR": {
+        "PROHIBITED_CATEGORY": "This parcel matches a prohibited category and cannot be accepted.",
+        "CARGO_CAPACITY_EXCEEDED": "This schedule's cargo capacity has been exceeded.",
+        "CARGO_CAPACITY_NOT_CONFIGURED": "Cargo capacity is not configured for this schedule.",
+        "STOP_PAIR_NOT_PRICEABLE": "No fare is configured for this pickup/drop-off pair.",
+        "GENERIC": "Unable to consign this parcel. Please try again.",
+        "QUOTE_FAILED": "Unable to calculate the price.",
+        "CARGO_FAILED": "Unable to check cargo capacity."
+      },
+      "RESULT": {
+        "TITLE": "Parcel consigned",
+        "TRACKING_NUMBER": "Tracking number",
+        "COLLECTION_CODE": "Collection code",
+        "AMOUNT": "Amount",
+        "VIEW_WAYBILL": "View waybill"
+      }
+    },
+    "PARCEL_WAYBILL": {
+      "SUBTITLE": "Printable waybill for this parcel.",
+      "TITLE": "Waybill",
+      "SENDER": "Sender",
+      "RECIPIENT": "Recipient",
+      "PICKUP_STOP": "Pickup stop",
+      "DROPOFF_STOP": "Drop-off stop",
+      "WEIGHT": "Weight",
+      "AMOUNT": "Amount",
+      "DEPARTURE": "Departure",
+      "QR_ALT": "Collection QR code",
+      "QR_HINT": "Present this QR code, or the collection code, on delivery.",
+      "PRINT": "Print",
+      "LOAD_FAILED": "Unable to load this waybill."
+    },
+    "PARCEL_DELIVERY": {
+      "ENTRY_TITLE": "Select a Schedule",
+      "ENTRY_SUBTITLE": "Choose a schedule to view its parcel deliveries.",
+      "LIST_SUBTITLE": "Manage parcel handoff for this schedule.",
+      "EMPTY_TITLE": "No schedules available",
+      "EMPTY_BODY": "You have no schedules assigned. Please check back later.",
+      "VIEW_BTN": "Deliveries",
+      "LIST_EMPTY_TITLE": "No consigned parcels for this schedule",
+      "LOAD_FAILED": "Unable to load parcel deliveries.",
+      "COL": {
+        "TRACKING_NUMBER": "Tracking number",
+        "SENDER": "Sender",
+        "RECIPIENT": "Recipient",
+        "PICKUP_STOP": "Pickup stop",
+        "DROPOFF_STOP": "Drop-off stop",
+        "WEIGHT": "Weight",
+        "STATUS": "Status"
+      },
+      "ACTION": {
+        "LOAD": "Load",
+        "MARK_ARRIVED": "Mark arrived",
+        "COLLECT": "Collect"
+      },
+      "COLLECT_DIALOG": {
+        "TITLE": "Collect parcel",
+        "CODE_LABEL": "Collection code",
+        "CANCEL": "Cancel",
+        "CONFIRM": "Confirm collection",
+        "SUBMITTING": "Confirming…"
+      },
+      "ERROR": {
+        "CODE_MISMATCH": "This collection code does not match.",
+        "ALREADY_COLLECTED": "This parcel has already been collected.",
+        "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed."
+      },
+      "STATUS": {
+        "ACCEPTED": "Accepted",
+        "IN_TRANSIT": "In transit",
+        "ARRIVED_NOTIFIED": "Arrived",
+        "COLLECTED": "Collected",
+        "LEFT_AT_STOP": "Left at stop",
+        "UNCLAIMED_RETURNED": "Unclaimed / returned",
+        "REJECTED": "Rejected",
+        "UNKNOWN": "Unknown"
+      }
     }
+  },
+  "PARCEL_TRACKING": {
+    "TITLE": "Track your parcel",
+    "INPUT_PLACEHOLDER": "Enter tracking number",
+    "SUBMIT": "Track",
+    "NOT_FOUND": "We couldn't find a parcel with that tracking number.",
+    "PICKUP_STOP": "Pickup stop",
+    "DROPOFF_STOP": "Drop-off stop",
+    "ARRIVED_NOTIFIED_AT": "Arrived at destination",
+    "COLLECTED_AT": "Collected",
+    "RECIPIENT": "Recipient"
   }
 }

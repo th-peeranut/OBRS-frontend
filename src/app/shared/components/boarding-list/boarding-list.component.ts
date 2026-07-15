@@ -1,6 +1,9 @@
 import {
+  ChangeDetectorRef,
   Component,
+  ElementRef,
   Input,
+  NgZone,
   OnChanges,
   OnDestroy,
   OnInit,
@@ -9,7 +12,17 @@ import {
   ViewChild,
   ViewContainerRef,
 } from '@angular/core';
+import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { DomPortalOutlet, TemplatePortal } from '@angular/cdk/portal';
+import { HttpErrorResponse } from '@angular/common/http';
+// OBRS-266: type-only import — `@zxing/browser` (which pulls in the
+// multi-format `@zxing/library` decoder) is loaded via a dynamic `import()`
+// in `startCameraScan()` instead, so it code-splits into its own on-demand
+// chunk rather than landing in the eager initial bundle (a static value
+// import here measured +500kB raw / +94kB gzip on the initial chunk, well
+// past the design-system/CLAUDE.md 1.5MB warning budget — most staff never
+// open camera mode, so it shouldn't cost every visitor that weight upfront).
+import type { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { Subject, Subscription, firstValueFrom } from 'rxjs';
 import { finalize, takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -23,8 +36,18 @@ import {
   mapBoardingScanErrorCode,
 } from '../../lib/boarding-scan-error';
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
+import { extractChildFareFlagErrorCode, mapChildFareFlagErrorCode } from '../../lib/child-fare-flag-error';
 import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
+import { extractScheduleDelayErrorCode, mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
+import {
+  combineBangkokDateTime,
+  controlValueToDateString,
+  controlValueToTimeString,
+  dateStringToControlValue,
+  splitApiOffsetDateTime,
+  timeStringToControlValue,
+} from '../../lib/api-date-time';
 import { BoardingScanResultDto } from '../../interfaces/ticket-boarding.interface';
 import { BoardingListItemDto, StaffApiService } from '../../../services/staff/staff-api.service';
 import { BoardingListStore } from './boarding-list.store';
@@ -39,13 +62,25 @@ import { BoardingListStore } from './boarding-list.store';
  * OBRS-256: `statusCode` (`scheduled|departed|arrived|unknown`, from
  * `parseAdminStatus(schedule?.status).code`) additionally drives the
  * on-screen status pill + forward-transition control + the boarding
- * count-lock once a schedule reaches `arrived`. */
+ * count-lock once a schedule reaches `arrived`.
+ *
+ * OBRS-272: `departureDateTimeRaw` carries the schedule's original (raw,
+ * offset-ISO) `departureDateTime` alongside the already-formatted display
+ * string, so the delay dialog can client-validate "ETA strictly after the
+ * original departure" without re-parsing a localized display string.
+ * `delayedDepartureDateTime`/`delayReason` mirror `AdminScheduleDto` — `null`
+ * (the default) means the schedule isn't delayed; "delayed" is a DERIVED UI
+ * state off these two fields, never a status code (`statusCode` stays
+ * `scheduled`). */
 export interface BoardingManifestHeader {
   routeLabel: string;
   departureDateTime: string;
+  departureDateTimeRaw: string | null;
   vehicleLabel: string;
   driverName: string;
   statusCode: string;
+  delayedDepartureDateTime: string | null;
+  delayReason: string | null;
 }
 
 /** OBRS-256: the single forward transition available from the CURRENT
@@ -69,6 +104,21 @@ export interface BoardingScanErrorResult {
   icon: string;
 }
 
+/** OBRS-266: camera QR-scan lifecycle for the boarding-scan box.
+ * `idle` — camera mode not active / just torn down.
+ * `requesting` — `getUserMedia` prompt in flight.
+ * `active` — stream bound to `#scanVideo`, decoding continuously.
+ * `denied` / `no-camera` / `unsupported` / `error` — terminal fallback states,
+ * each rendering the shared full-section empty-state (design-system §12). */
+export type BoardingCameraStatus =
+  | 'idle'
+  | 'requesting'
+  | 'active'
+  | 'denied'
+  | 'no-camera'
+  | 'unsupported'
+  | 'error';
+
 /**
  * OBRS-130: the driver-manifest / walk-in-boarding-tab shared presentational
  * component. Self-sufficient — owns its own `BoardingListStore` instance
@@ -90,6 +140,9 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   @Input() scheduleId!: number;
 
   @ViewChild('printTemplate', { static: true }) protected printTemplate!: TemplateRef<unknown>;
+  /** OBRS-266: only present in the DOM while `scanMode === 'camera'` (see
+   * template) — `undefined` in text mode / before the camera view renders. */
+  @ViewChild('scanVideo') protected videoElement?: ElementRef<HTMLVideoElement>;
 
   protected items: BoardingListItemDto[] = [];
   protected isRefreshing = false;
@@ -122,6 +175,15 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `ExportButtonComponent.canExport`. */
   protected readonly canUnboard: boolean;
 
+  /** OBRS-296: ticket ids with a flagChildFare() call in flight. */
+  protected flaggingIds = new Set<number>();
+  /** OBRS-296: ticket ids with an unflagChildFare() call in flight. */
+  protected unflaggingIds = new Set<number>();
+
+  /** OBRS-296: unflag is salesperson/admin only — hidden, not disabled, for a
+   * driver. Same shape as `canUnboard` above. */
+  protected readonly canUnflagChildFare: boolean;
+
   /** OBRS-256: the schedule departed/arrived control is salesperson/admin
    * only — identical shape to `canUnboard` above (hidden, not disabled, for
    * a driver). */
@@ -132,17 +194,50 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * boarding controls. */
   protected isUpdatingScheduleStatus = false;
 
-  // Manual boarding-scan box (OBRS-96) — text-entry token only, camera
-  // scanning is out of scope for this card.
+  // Manual boarding-scan box (OBRS-96) — text-entry token, always present as
+  // the fallback input regardless of scanMode (OBRS-266).
   protected scanToken = '';
   protected isScanning = false;
   protected scanResult: BoardingScanResultDto | null = null;
   protected scanError: BoardingScanErrorResult | null = null;
 
+  // OBRS-272: "Mark delayed"/"Update ETA" dialog — inline, component-local
+  // state (mirrors OBRS-256's onScheduleStatusAction(), not a separate
+  // component/NgRx slice — see docs/adr/0017).
+  protected delayForm!: FormGroup;
+  protected isDelayFormOpen = false;
+  protected isSubmittingDelay = false;
+  /** True when the client-side "ETA strictly after the original departure"
+   * check fails — cleared on the next date/time edit or dialog (re)open. */
+  protected delayEtaAfterError = false;
+  /** True when the backend rejected the ETA (`SCHEDULE_DELAY_ETA_INVALID` or a
+   * bean-validation 400) — rendered as the SAME inline field message as
+   * `delayEtaAfterError` (never a duplicate `AlertService.error()` toast). */
+  protected delayEtaServerError = false;
+
+  /** OBRS-266: camera QR scanner — segmented alternative to the text box. */
+  protected scanMode: 'text' | 'camera' = 'text';
+  protected cameraStatus: BoardingCameraStatus = 'idle';
+  private scannerControls: IScannerControls | null = null;
+  /** One reader instance reused across camera sessions in this component's
+   * lifetime — `decodeFromVideoDevice()` can be called again after `stop()`.
+   * Lazily created on the first `startCameraScan()` call (see the dynamic
+   * `import()` there) — `null` until the operator actually opens camera mode. */
+  private codeReader: BrowserMultiFormatReader | null = null;
+  /** Debounce: ignore a re-decode of the same token within `SCAN_DEBOUNCE_MS`
+   * (a QR code sitting in frame decodes on every tick otherwise). */
+  private lastScannedToken: string | null = null;
+  private lastScannedAt = 0;
+  private static readonly SCAN_DEBOUNCE_MS = 3000;
+  private static readonly SUCCESS_AUTO_DISMISS_MS = 4000;
+  private autoDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
   private readonly subscriptions = new Subscription();
   /** OBRS-256: scopes the `updateScheduleStatus()` HTTP subscription only —
    * every other async flow in this component already uses `firstValueFrom`
-   * (a single-shot promise, no subscription to leak). */
+   * (a single-shot promise, no subscription to leak).
+   * OBRS-272: also scopes `delaySchedule()`'s subscription and the delay
+   * form's `valueChanges` resets. */
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -151,14 +246,23 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly translate: TranslateService,
     private readonly authService: AuthService,
     protected readonly store: BoardingListStore,
-    private readonly viewContainerRef: ViewContainerRef
+    private readonly viewContainerRef: ViewContainerRef,
+    private readonly formBuilder: FormBuilder,
+    private readonly ngZone: NgZone,
+    private readonly cdr: ChangeDetectorRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
     this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
+    this.canUnflagChildFare = this.authService.hasAnyRole(['salesperson']);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['scheduleId']) {
+      // OBRS-266: a re-bind to a different schedule must not leave a live
+      // camera stream open against the previous trip's boarding-scan box —
+      // tear it down BEFORE the store re-init runs.
+      this.stopCameraStream();
+      this.scanMode = 'text';
       this.store.setScheduleId(this.scheduleId);
       void this.store.refresh();
       void this.loadTripHeader(this.scheduleId);
@@ -183,6 +287,22 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         }
       })
     );
+
+    this.delayForm = this.formBuilder.group({
+      delayedDate: [null, [Validators.required]],
+      delayedTime: [null, [Validators.required]],
+      delayReason: ['', [Validators.maxLength(500)]],
+    });
+    // Clear a stale client/server ETA error the moment the operator edits
+    // either control again, so an old message doesn't linger over a fresh value.
+    this.delayForm
+      .get('delayedDate')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.resetDelayEtaErrors());
+    this.delayForm
+      .get('delayedTime')
+      ?.valueChanges.pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.resetDelayEtaErrors());
   }
 
   ngOnDestroy(): void {
@@ -193,6 +313,13 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     // away while the print dialog is still open (afterprint alone can't be
     // relied on for that case) — see docs/adr/0015.
     this.disposePrintPortal();
+    // OBRS-266: unconditional — a live camera stream must never survive the
+    // component being torn down (e.g. navigating off the boarding tab).
+    this.stopCameraStream();
+    if (this.autoDismissTimer) {
+      clearTimeout(this.autoDismissTimer);
+      this.autoDismissTimer = null;
+    }
   }
 
   protected get isLoading(): boolean {
@@ -267,6 +394,149 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       default:
         return null;
     }
+  }
+
+  /** OBRS-272: "delayed" is DERIVED off `delayedDepartureDateTime`, never a
+   * status code — `parseAdminStatus`/`statusCode` never returns `delayed`.
+   * The pill/indicator below is a separate branch from `scheduleStatusPill*`. */
+  protected get isScheduleDelayed(): boolean {
+    return this.tripHeader?.delayedDepartureDateTime != null;
+  }
+
+  /** The "Mark delayed"/"Update ETA" pill only ever renders when the schedule
+   * is still `scheduled` (see the template's `*ngIf`) — this getter just picks
+   * the label between the two states. */
+  protected get delayPillLabelKey(): string {
+    return this.isScheduleDelayed ? 'STAFF.SCHEDULE_DELAY.PILL_UPDATE' : 'STAFF.SCHEDULE_DELAY.PILL_MARK';
+  }
+
+  /** Bangkok-pinned display string for the current delayed ETA — reuses
+   * `formatDisplayDateTime()` (design-system: don't hand-roll a UTC format). */
+  protected get formattedDelayedEta(): string {
+    return formatDisplayDateTime(this.tripHeader?.delayedDepartureDateTime, this.translate.currentLang);
+  }
+
+  protected isDelayFieldInvalid(name: string): boolean {
+    const control = this.delayForm.get(name);
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  /**
+   * OBRS-272: opens the inline delay dialog, pre-filling date/time/reason from
+   * the CURRENT `tripHeader` when the trip is already marked delayed (re-mark
+   * flow) — split via `splitApiOffsetDateTime()`. Opens optimistically off the
+   * `tripHeader` already held (design-system §6), no fetch.
+   */
+  protected openDelayDialog(): void {
+    this.resetDelayEtaErrors();
+
+    const currentEta = this.tripHeader?.delayedDepartureDateTime ?? null;
+    const split = currentEta ? splitApiOffsetDateTime(currentEta) : { date: '', time: '' };
+
+    this.delayForm.reset({
+      delayedDate: dateStringToControlValue(split.date),
+      delayedTime: timeStringToControlValue(split.time),
+      delayReason: this.tripHeader?.delayReason ?? '',
+    });
+
+    this.isDelayFormOpen = true;
+  }
+
+  protected closeDelayDialog(): void {
+    if (this.isSubmittingDelay) {
+      return;
+    }
+    this.isDelayFormOpen = false;
+  }
+
+  private resetDelayEtaErrors(): void {
+    this.delayEtaAfterError = false;
+    this.delayEtaServerError = false;
+  }
+
+  /**
+   * OBRS-272: submits `PATCH /api/private/schedules/{id}/delay`. Client-side
+   * validates the combined ETA is strictly after `tripHeader.departureDateTimeRaw`
+   * (when known) WITHOUT calling the API on failure (design-system: fail fast,
+   * no wasted round-trip). On success: closes the dialog, patches `tripHeader`
+   * in place from the response (mirrors `onScheduleStatusAction()` — no full
+   * reload needed), fires a background `loadTripHeader()` reconcile, and shows
+   * the `{{count}}` success toast. On error: a 400 (`SCHEDULE_DELAY_ETA_INVALID`
+   * or bean-validation) renders as an INLINE field error, never a toast;
+   * anything else (409 `SCHEDULE_DELAY_NOT_SCHEDULED` / generic) is an
+   * `AlertService.error()` toast — branch on `error.error.errorCode`
+   * (`extractScheduleDelayErrorCode()`, the reused extractor — see
+   * schedule-delay-error.ts), never the localized message.
+   */
+  protected submitDelaySchedule(): void {
+    if (this.isSubmittingDelay) {
+      return;
+    }
+
+    this.delayForm.markAllAsTouched();
+    if (this.delayForm.invalid) {
+      return;
+    }
+
+    const dateValue = controlValueToDateString(this.delayForm.get('delayedDate')?.value ?? null);
+    const timeValue = controlValueToTimeString(this.delayForm.get('delayedTime')?.value ?? null);
+    if (!dateValue || !timeValue) {
+      return;
+    }
+
+    const eta = combineBangkokDateTime(dateValue, timeValue);
+    const originalDeparture = this.tripHeader?.departureDateTimeRaw;
+    if (originalDeparture && !(new Date(eta).getTime() > new Date(originalDeparture).getTime())) {
+      this.delayEtaAfterError = true;
+      return;
+    }
+    this.delayEtaAfterError = false;
+    this.delayEtaServerError = false;
+
+    const reason = String(this.delayForm.get('delayReason')?.value ?? '').trim();
+    const scheduleId = this.scheduleId;
+
+    this.isSubmittingDelay = true;
+    this.staffApiService
+      .delaySchedule(scheduleId, {
+        delayedDepartureDateTime: eta,
+        ...(reason ? { delayReason: reason } : {}),
+      })
+      .pipe(
+        takeUntil(this.destroy$),
+        finalize(() => {
+          this.isSubmittingDelay = false;
+        })
+      )
+      .subscribe({
+        next: (response) => {
+          this.isDelayFormOpen = false;
+          if (response?.data && this.tripHeader) {
+            this.tripHeader = {
+              ...this.tripHeader,
+              delayedDepartureDateTime: response.data.delayedDepartureDateTime,
+              delayReason: response.data.delayReason ?? null,
+            };
+          }
+          void this.alertService.success(
+            this.translate.instant('STAFF.SCHEDULE_DELAY.SUCCESS', {
+              count: response?.data?.affectedBookingCount ?? 0,
+            })
+          );
+          void this.loadTripHeader(scheduleId);
+        },
+        error: (error) => {
+          const errorCode = extractScheduleDelayErrorCode(error);
+          const status = error instanceof HttpErrorResponse ? error.status : undefined;
+          if (status === 400) {
+            // SCHEDULE_DELAY_ETA_INVALID or a bean-validation null-ETA 400 —
+            // both render as the SAME inline field message, never a toast.
+            this.delayEtaServerError = true;
+          } else {
+            void this.alertService.error(this.translate.instant(mapScheduleDelayErrorCode(errorCode)));
+          }
+        },
+      });
   }
 
   /** OBRS-130: boarded state is `boardedAt != null` — status-neutral, not
@@ -384,12 +654,124 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     }
   }
 
+  /** OBRS-296: only child-fare rows get the flag/unflag surface. */
+  protected isChildFare(item: BoardingListItemDto): boolean {
+    return item.fareCategory === 'child';
+  }
+
+  /** OBRS-296: flagged state is `childFareFlaggedAt != null` — the same
+   * status-neutral shape as `isBoarded()`. */
+  protected isFlagged(item: BoardingListItemDto): boolean {
+    return item.childFareFlaggedAt != null;
+  }
+
+  protected isFlagging(item: BoardingListItemDto): boolean {
+    return this.flaggingIds.has(item.ticketId);
+  }
+
+  protected isUnflagging(item: BoardingListItemDto): boolean {
+    return this.unflaggingIds.has(item.ticketId);
+  }
+
+  /** OBRS-296: flag a fare-category mismatch. Low-stakes — no confirm,
+   * mirrors `board()`. Never blocks the boarding controls (a separate
+   * optimistic mutate scoped to the flag fields only). */
+  protected async flagChildFare(item: BoardingListItemDto): Promise<void> {
+    if (this.isFlagged(item) || this.isFlagging(item)) {
+      return;
+    }
+
+    this.flaggingIds.add(item.ticketId);
+    const originalFlaggedAt = item.childFareFlaggedAt;
+    const originalFlaggedBy = item.childFareFlaggedByName;
+    // Same "you are the operator acting right now" reasoning as board()'s
+    // optimistic name seed — correct for the row you just acted on, never for
+    // a pre-existing flagged row.
+    const flaggerName = this.authService.getUsername() ?? undefined;
+
+    this.store.mutate((items) =>
+      items.map((i) =>
+        i.ticketId === item.ticketId
+          ? { ...i, childFareFlaggedAt: new Date().toISOString(), childFareFlaggedByName: flaggerName }
+          : i
+      )
+    );
+
+    try {
+      await firstValueFrom(this.staffApiService.flagChildFare(item.ticketId));
+      await this.alertService.success(this.translate.instant('STAFF.BOARDING.CHILD_FARE_FLAG_SUCCESS'));
+      void this.store.refresh();
+    } catch (error) {
+      this.store.mutate((items) =>
+        items.map((i) =>
+          i.ticketId === item.ticketId
+            ? { ...i, childFareFlaggedAt: originalFlaggedAt, childFareFlaggedByName: originalFlaggedBy }
+            : i
+        )
+      );
+      const errorCode = extractChildFareFlagErrorCode(error);
+      await this.alertService.error(this.translate.instant(mapChildFareFlagErrorCode(errorCode)));
+    } finally {
+      this.flaggingIds.delete(item.ticketId);
+    }
+  }
+
+  /** OBRS-296: reverse a fare-category mismatch flag. Salesperson/admin only
+   * (hidden for drivers, see `canUnflagChildFare`) and requires a confirm —
+   * same shape as `unboard()`. */
+  protected async unflagChildFare(item: BoardingListItemDto): Promise<void> {
+    if (!this.canUnflagChildFare || !this.isFlagged(item) || this.isUnflagging(item)) {
+      return;
+    }
+
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_TITLE'),
+      text: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_CONFIRM'),
+      cancelButtonText: this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_CONFIRM_CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.unflaggingIds.add(item.ticketId);
+    const originalFlaggedAt = item.childFareFlaggedAt;
+    const originalFlaggedBy = item.childFareFlaggedByName;
+
+    this.store.mutate((items) =>
+      items.map((i) =>
+        i.ticketId === item.ticketId
+          ? { ...i, childFareFlaggedAt: undefined, childFareFlaggedByName: undefined }
+          : i
+      )
+    );
+
+    try {
+      await firstValueFrom(this.staffApiService.unflagChildFare(item.ticketId));
+      await this.alertService.success(this.translate.instant('STAFF.BOARDING.CHILD_FARE_UNFLAG_SUCCESS'));
+      void this.store.refresh();
+    } catch (error) {
+      this.store.mutate((items) =>
+        items.map((i) =>
+          i.ticketId === item.ticketId
+            ? { ...i, childFareFlaggedAt: originalFlaggedAt, childFareFlaggedByName: originalFlaggedBy }
+            : i
+        )
+      );
+      const errorCode = extractChildFareFlagErrorCode(error);
+      await this.alertService.error(this.translate.instant(mapChildFareFlagErrorCode(errorCode)));
+    } finally {
+      this.unflaggingIds.delete(item.ticketId);
+    }
+  }
+
   /**
    * OBRS-96: validate a manually-entered/pasted boarding token against this
    * schedule and mark the ticket boarded. `scheduleId` always comes from the
-   * `[scheduleId]` input, never user input. Errors branch on
-   * `error.error.errorCode` (never the localized message) via
-   * `boarding-scan-error.ts`.
+   * `[scheduleId]` input, never user input. The caller-side empty-check stays
+   * here; `submitToken()` (OBRS-266) owns everything else so the camera
+   * decode callback can share the exact same path. Text-entry behavior is
+   * unchanged.
    */
   protected async validateScan(): Promise<void> {
     // OBRS-256: count-lock — see the matching guard in `board()`.
@@ -398,13 +780,30 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     }
 
     const token = this.scanToken.trim();
-    if (!token || this.isScanning) {
+    if (!token) {
+      return;
+    }
+
+    await this.submitToken(token);
+  }
+
+  /**
+   * OBRS-266: shared submit path for BOTH the manual scan button
+   * (`validateScan()`) and the camera decode callback. Re-checks
+   * `isScheduleArrived` at the top — a camera decode is async, so the
+   * schedule can lock (mark-arrived) between the frame decoding and this
+   * call landing. Errors branch on `error.error.errorCode` via
+   * `boarding-scan-error.ts`, same as before.
+   */
+  private async submitToken(token: string): Promise<void> {
+    if (this.isScheduleArrived || this.isScanning) {
       return;
     }
 
     this.isScanning = true;
     this.scanResult = null;
     this.scanError = null;
+    this.clearAutoDismissTimer();
 
     try {
       const response = await firstValueFrom(
@@ -414,8 +813,20 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         this.scanResult = response.data;
         this.scanToken = '';
         this.reflectBoardedInList(response.data);
+        // OBRS-266: camera mode auto-dismisses the success banner so the next
+        // scan isn't blocked by a stale confirmation; text mode stays manual
+        // (the operator typed it, they dismiss it).
+        if (this.scanMode === 'camera') {
+          this.autoDismissTimer = setTimeout(() => {
+            this.autoDismissTimer = null;
+            this.dismissScanResult();
+          }, BoardingListComponent.SUCCESS_AUTO_DISMISS_MS);
+        }
       }
     } catch (error) {
+      // scanError is sticky in BOTH modes — never auto-dismissed on a timer,
+      // a WRONG_SCHEDULE/NOT_CONFIRMED rejection must stay visible until the
+      // operator acknowledges it (design-system: never hide a rejection).
       const errorCode = extractBoardingScanErrorCode(error);
       this.scanError = {
         messageKey: mapBoardingScanErrorCode(errorCode),
@@ -428,8 +839,207 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   protected dismissScanResult(): void {
+    this.clearAutoDismissTimer();
     this.scanResult = null;
     this.scanError = null;
+  }
+
+  private clearAutoDismissTimer(): void {
+    if (this.autoDismissTimer) {
+      clearTimeout(this.autoDismissTimer);
+      this.autoDismissTimer = null;
+    }
+  }
+
+  /**
+   * OBRS-266: segmented text/camera toggle. Switching to camera is guarded —
+   * a no-op once the schedule is `arrived` (mirrors every other write-path
+   * count-lock guard in this component); the template also disables both
+   * toggle buttons in that state, this is defense-in-depth for a
+   * programmatic call. Switching to text always tears the camera down first
+   * via the single `stopCameraStream()` teardown helper.
+   */
+  protected setScanMode(mode: 'text' | 'camera'): void {
+    if (mode === this.scanMode) {
+      return;
+    }
+
+    if (mode === 'text') {
+      this.stopCameraStream();
+      this.scanMode = 'text';
+      return;
+    }
+
+    if (this.isScheduleArrived) {
+      return;
+    }
+
+    this.scanMode = 'camera';
+    void this.startCameraScan();
+  }
+
+  /** Retry affordance on the `denied`/`error` fallback empty-states. */
+  protected retryCamera(): void {
+    if (this.isScheduleArrived) {
+      return;
+    }
+    void this.startCameraScan();
+  }
+
+  /**
+   * OBRS-266: requests the camera and starts continuous decode against
+   * `#scanVideo`. `decodeFromVideoDevice(undefined, ...)` (no explicit
+   * deviceId) asks `@zxing/browser` to pick a device itself, preferring the
+   * environment-facing (rear) camera when the platform reports one — no
+   * manual `enumerateDevices()`/`facingMode` plumbing needed here.
+   *
+   * `@zxing/browser` itself is loaded via a dynamic `import()` here (not a
+   * top-level value import — see the import statement at the top of this
+   * file) so the ~500kB decoder only downloads the first time an operator
+   * actually opens camera mode, instead of on every staff page load.
+   */
+  private async startCameraScan(): Promise<void> {
+    this.cameraStatus = 'requesting';
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      // Covers both "no MediaDevices API" and a non-secure context (browsers
+      // withhold `navigator.mediaDevices` off HTTPS/localhost).
+      this.cameraStatus = 'unsupported';
+      return;
+    }
+
+    // The <video #scanVideo> only renders once cameraStatus is
+    // 'requesting'/'active' (see template). setScanMode()/retryCamera() call us
+    // synchronously from a click handler — BEFORE Angular's own change
+    // detection runs — so the *ngIf hasn't added the <video> yet and the
+    // ViewChild is still undefined at this point on the FIRST open (a bare
+    // `if (!this.videoElement)` here would wrongly fall straight to 'error' and
+    // the camera could never open). Flush CD now so the just-set 'requesting'
+    // state renders the <video> and the ViewChild query resolves before we hand
+    // its nativeElement to zxing. (OBRS-266 fix — the unit test masked this by
+    // pre-assigning `videoElement`; a real browser never reached 'active'.)
+    this.cdr.detectChanges();
+    if (!this.videoElement) {
+      this.cameraStatus = 'error';
+      return;
+    }
+
+    try {
+      if (!this.codeReader) {
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        this.codeReader = new BrowserMultiFormatReader();
+      }
+
+      const controls = await this.codeReader.decodeFromVideoDevice(
+        undefined,
+        this.videoElement.nativeElement,
+        (result) => {
+          if (!result) {
+            return;
+          }
+          const token = result.getText();
+          const now = Date.now();
+          if (token === this.lastScannedToken && now - this.lastScannedAt < BoardingListComponent.SCAN_DEBOUNCE_MS) {
+            return;
+          }
+          this.lastScannedToken = token;
+          this.lastScannedAt = now;
+          // OBRS-266: the decode callback fires OUTSIDE Angular's zone (the
+          // library drives it via its own scan loop, not an Angular-patched
+          // API) — re-enter the zone so submitToken()'s state changes (row
+          // update / result banner) actually trigger change detection.
+          this.ngZone.run(() => {
+            void this.submitToken(token);
+          });
+        }
+      );
+      // OBRS-266: a teardown (toggle-to-text, scheduleId re-bind,
+      // arrived-transition, destroy) can run WHILE this start is still
+      // awaiting getUserMedia/decode — the mode toggle isn't disabled during
+      // the 'requesting' phase, so an operator can tap "Text" mid-startup.
+      // stopCameraStream() nulls scannerControls + flips cameraStatus off
+      // 'requesting', but it can't stop a stream whose controls hadn't
+      // resolved yet. Detect that here and stop now, so we never store an
+      // orphaned live MediaStream (camera stays lit in text mode otherwise).
+      if (this.cameraStatus !== 'requesting') {
+        controls.stop();
+        return;
+      }
+      this.scannerControls = controls;
+      this.cameraStatus = 'active';
+    } catch (error) {
+      this.cameraStatus = this.mapCameraError(error);
+    }
+  }
+
+  private mapCameraError(error: unknown): BoardingCameraStatus {
+    const name = (error as { name?: string } | null)?.name;
+    if (name === 'NotAllowedError') {
+      return 'denied';
+    }
+    if (name === 'NotFoundError') {
+      return 'no-camera';
+    }
+    return 'error';
+  }
+
+  /**
+   * OBRS-266: single idempotent teardown for every camera-stop path
+   * (ngOnChanges re-bind, toggle-to-text, handleArrivedTransition,
+   * ngOnDestroy). Mirrors `disposePrintPortal()`'s guard style — safe to call
+   * with no active stream, never throws.
+   */
+  private stopCameraStream(): void {
+    this.scannerControls?.stop();
+    this.scannerControls = null;
+    this.cameraStatus = 'idle';
+  }
+
+  /**
+   * OBRS-266: `isScheduleArrived` is a pure getter — it can't stop the camera
+   * itself when the schedule flips to `arrived`, so both places that can
+   * cause that flip (`onScheduleStatusAction()` success and
+   * `loadTripHeader()` success) call this explicitly. Camera mode is left
+   * selected (`scanMode` untouched) — the lock banner + disabled toggle
+   * already communicate the freeze; only the live stream needs to stop.
+   */
+  private handleArrivedTransition(): void {
+    this.stopCameraStream();
+  }
+
+  protected get isCameraFallbackStatus(): boolean {
+    return (
+      this.cameraStatus === 'denied' ||
+      this.cameraStatus === 'no-camera' ||
+      this.cameraStatus === 'unsupported' ||
+      this.cameraStatus === 'error'
+    );
+  }
+
+  protected get cameraFallbackIcon(): string {
+    switch (this.cameraStatus) {
+      case 'denied':
+        return 'videocam_off';
+      case 'no-camera':
+        return 'no_photography';
+      case 'unsupported':
+        return 'block';
+      default:
+        return 'error';
+    }
+  }
+
+  protected get cameraFallbackMessageKey(): string {
+    switch (this.cameraStatus) {
+      case 'denied':
+        return 'STAFF.BOARDING.SCAN.CAMERA.DENIED';
+      case 'no-camera':
+        return 'STAFF.BOARDING.SCAN.CAMERA.NO_CAMERA';
+      case 'unsupported':
+        return 'STAFF.BOARDING.SCAN.CAMERA.UNSUPPORTED';
+      default:
+        return 'STAFF.BOARDING.SCAN.CAMERA.ERROR';
+    }
   }
 
   /** OBRS-130: status-neutral — stamps `boardedAt` from the scan response
@@ -475,12 +1085,26 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         departureDateTime: schedule?.departureDateTime
           ? formatDisplayDateTime(schedule.departureDateTime, this.translate.currentLang)
           : '-',
+        // OBRS-272: raw (offset-ISO) departure — used to client-validate the
+        // delay dialog's ETA without re-parsing the localized display string.
+        departureDateTimeRaw: schedule?.departureDateTime ?? null,
         vehicleLabel: schedule?.vehicle?.numberPlate ?? schedule?.vehicle?.vehicleNumber ?? '-',
         driverName: schedule?.driver?.fullName ?? '-',
         // OBRS-256: reuses the same `parseAdminStatus` helper other admin
         // status handling already uses — no second status parser.
         statusCode: parseAdminStatus(schedule?.status).code,
+        // OBRS-272: derived-state fields — see BoardingManifestHeader's doc
+        // comment. `status` itself never becomes `delayed`.
+        delayedDepartureDateTime: schedule?.delayedDepartureDateTime ?? null,
+        delayReason: schedule?.delayReason ?? null,
       };
+      // OBRS-266: isScheduleArrived is a pure getter (no side effects), so the
+      // camera-stop on an arrived transition has to be triggered explicitly
+      // from every place tripHeader.statusCode can become 'arrived' — this is
+      // one of the two (the other is onScheduleStatusAction() below).
+      if (this.tripHeader.statusCode === 'arrived') {
+        this.handleArrivedTransition();
+      }
     } catch {
       if (this.headerRequestScheduleId === scheduleId) {
         this.tripHeader = null;
@@ -535,6 +1159,11 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         next: (response) => {
           if (response?.data && this.tripHeader) {
             this.tripHeader = { ...this.tripHeader, statusCode: response.data.status };
+          }
+          // OBRS-266: the second of the two arrived-transition trigger sites
+          // (see loadTripHeader() above).
+          if (response?.data?.status === 'arrived') {
+            this.handleArrivedTransition();
           }
           void this.alertService.success(this.translate.instant(successKey));
         },

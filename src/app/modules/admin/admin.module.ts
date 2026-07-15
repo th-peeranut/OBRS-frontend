@@ -26,7 +26,6 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
-import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
@@ -35,6 +34,8 @@ import { PromotionFormModalComponent } from './pages/promotions/promotion-form-m
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
+import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
+import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
@@ -145,6 +146,26 @@ const routes: Routes = [
           requiredRoles: ['admin'],
         },
       },
+      {
+        path: 'refund-void-report',
+        component: RefundVoidReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REFUND_VOID_REPORT',
+          subtitleKey: 'ADMIN.REFUND_VOID_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        path: 'cash-online-reconciliation-report',
+        component: CashOnlineReconciliationReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION',
+          subtitleKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -179,7 +200,6 @@ const routes: Routes = [
     RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
-    AdminModalBackdropDirective,
     UsabilityReportsPageComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
@@ -188,6 +208,8 @@ const routes: Routes = [
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
     EodSalesReportPageComponent,
+    RefundVoidReportPageComponent,
+    CashOnlineReconciliationReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     SettlementsPageComponent,
     SettlementsListComponent,

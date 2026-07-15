@@ -9,8 +9,9 @@ import { UsabilityReportsStore } from './usability-reports.store';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
-import { AdminModalBackdropDirective } from '../../components/admin-modal-backdrop.directive';
+import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,
@@ -29,6 +30,7 @@ describe('UsabilityReportsPageComponent', () => {
   };
   let adminApiServiceSpy: jasmine.SpyObj<AdminApiService>;
   let alertServiceSpy: jasmine.SpyObj<AlertService>;
+  let authServiceSpy: jasmine.SpyObj<AuthService>;
 
   beforeEach(async () => {
     const dataSubject = new BehaviorSubject<UsabilityReportPage | null>(null);
@@ -61,6 +63,14 @@ describe('UsabilityReportsPageComponent', () => {
 
     alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error']);
 
+    // OBRS-370: default to an ADMIN identity so every pre-existing spec below
+    // (written before the role gate existed) keeps exercising the full,
+    // un-restricted triage view. The owner (screen-only) behavior is covered
+    // by its own describe block further down, which overrides getRoles().
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['getRoles', 'hasAnyRole']);
+    authServiceSpy.getRoles.and.returnValue(['admin']);
+    authServiceSpy.hasAnyRole.and.returnValue(true);
+
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
       declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective],
@@ -68,6 +78,7 @@ describe('UsabilityReportsPageComponent', () => {
         { provide: UsabilityReportsStore, useValue: storeSpy },
         { provide: AdminApiService, useValue: adminApiServiceSpy },
         { provide: AlertService, useValue: alertServiceSpy },
+        { provide: AuthService, useValue: authServiceSpy },
       ],
     }).compileComponents();
 
@@ -803,5 +814,81 @@ describe('UsabilityReportsPageComponent', () => {
     expect(component['selectedReportId'])
       .withContext('a successful save must close the detail modal')
       .toBeNull();
+  });
+
+  // ── OBRS-370 regression specs: owner is a SCREEN-ONLY tier ────────────────
+  // The backend 403s a non-admin on the terminal decisions (resolved/rejected
+  // — terminal, email the reporter) and on the Jira key, so the FE must never
+  // surface a control that would trigger that 403.
+
+  describe('role-gated triage controls (OBRS-370)', () => {
+    it('an ADMIN sees the full decision dropdown (including resolved/rejected) and the Jira key field', () => {
+      authServiceSpy.getRoles.and.returnValue(['admin']);
+      primeReportList();
+
+      expect(component['isAdmin']).withContext('admin must be detected as isAdmin').toBeTrue();
+
+      const detailValues = component['detailStatusOptions'].map((o) => o.value);
+      expect(detailValues)
+        .withContext('admin must still see the full decision-only set, including terminal outcomes')
+        .toEqual(['accepted', 'resolved', 'rejected']);
+
+      const detailWithJira: UsabilityReportDetail = { ...mockFullDetail, jiraIssueKey: 'OBRS-123' };
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: detailWithJira,
+      }));
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      const jiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
+      expect(jiraLink).withContext('admin must still see the Jira key field').not.toBeNull();
+    });
+
+    it('a NON-admin (owner) sees only the non-terminal options (in_review/accepted) and never the Jira key field', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      primeReportList();
+
+      expect(component['isAdmin']).withContext('a pure owner must not be detected as isAdmin').toBeFalse();
+
+      const detailValues = component['detailStatusOptions'].map((o) => o.value);
+      expect(detailValues)
+        .withContext('owner is screen-only: forward-moving statuses only, never a terminal outcome')
+        .toEqual(['in_review', 'accepted']);
+      expect(detailValues)
+        .withContext('owner must never be offered resolved/rejected — the backend 403s those')
+        .not.toContain('resolved');
+      expect(detailValues).not.toContain('rejected');
+
+      // Even when the report already carries a Jira key (an admin set it
+      // earlier), the owner must never see that field.
+      const detailWithJira: UsabilityReportDetail = { ...mockFullDetail, jiraIssueKey: 'OBRS-123' };
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: detailWithJira,
+      }));
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      const jiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
+      expect(jiraLink).withContext('owner must never see the Jira key field').toBeNull();
+    });
+
+    it('does not pre-seed an owner-hidden terminal status when opening an already-resolved report', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      storeSpy.data$.next(pageWithStatus('resolved'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      expect(component['selectedDetailStatus'])
+        .withContext('owner must not land with a hidden terminal value silently selected (Save disabled)')
+        .toBe('');
+    });
   });
 });

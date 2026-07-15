@@ -38,6 +38,7 @@ import {
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import { RouteMapService } from '../../../../services/route-map/route-map.service';
 import { TripEstimate } from '../../../../shared/interfaces/route-map.interface';
+import { LOW_SEAT_THRESHOLD } from '../../../../shared/constants/passenger-limits';
 
 @Component({
   selector: 'app-schedule-booking-list',
@@ -58,8 +59,9 @@ export class ScheduleBookingListComponent implements OnInit, OnDestroy {
 
   /** At or below this remaining-seat count, the exact number is surfaced as
    *  a scarcity cue (OBRS-229); above it, no seat text shows at all — see
-   *  `isLowSeatCount`. */
-  readonly LOW_SEAT_THRESHOLD = 5;
+   *  `isLowSeatCount`. Shared single source (OBRS-323) with the OPEN-seating
+   *  count card so both surfaces use the same threshold. */
+  readonly LOW_SEAT_THRESHOLD = LOW_SEAT_THRESHOLD;
 
   scheduleList$: Subscription;
 

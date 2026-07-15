@@ -263,4 +263,49 @@ describe('RescheduleDialogComponent', () => {
       );
     });
   });
+
+  describe('estimate-load failure (regression — OBRS-345, residual of OBRS-186)', () => {
+    // Locks the silent dead-end: on any loadRescheduleEstimateFailure the
+    // component must consume selectRescheduleEstimateError so the estimate step
+    // shows a message instead of an empty pane with a stuck-disabled Confirm.
+    // Before OBRS-345 the component never subscribed that selector (the store
+    // set rescheduleEstimateError but nothing read it), and the estimate step
+    // bound [error]="confirmError" (the confirm step's error), so an estimate
+    // load failure surfaced nothing — reproducing OBRS-186 from a trigger the
+    // backend own-schedule filter (bd1c8533) doesn't cover.
+    it('surfaces the estimate-load error at the estimate step and clears the spinner (never stuck)', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          rescheduleOptions: [sampleOption],
+          rescheduleOptionsLoading: false,
+        })
+      );
+      component.ngOnInit();
+      component.step = 'estimate';
+      component.selectedOption = sampleOption;
+
+      // Mirror the reducer's loadRescheduleEstimateFailure shape: loading
+      // cleared, estimate still null, a localized error message set.
+      store.next({
+        myBookings: buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          rescheduleOptions: [sampleOption],
+          rescheduleOptionsLoading: false,
+          rescheduleEstimate: null,
+          rescheduleEstimateLoading: false,
+          rescheduleEstimateError: 'MY_BOOKINGS.RESCHEDULE.ERROR.GENERIC',
+        }),
+      });
+
+      expect(component.estimateError)
+        .withContext('the estimate-load error must reach the component, not be dropped')
+        .toBe('MY_BOOKINGS.RESCHEDULE.ERROR.GENERIC');
+      expect(component.estimateLoading)
+        .withContext('the spinner must resolve on failure, never stay stuck')
+        .toBeFalse();
+    });
+  });
 });

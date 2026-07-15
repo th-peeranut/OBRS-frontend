@@ -10,12 +10,17 @@ import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-number';
 import {
+  ScheduleDeleteModalMode,
+  resolveScheduleDeleteModalMode,
+} from '../../../../shared/lib/schedule-delete-mode';
+import {
   PopularStopDto,
   RouteStopsDto,
   SegmentStopRefDto,
   StaffApiService,
   WalkInRouteGroupDto,
   WalkInTripDto,
+  isOpenSeatingTrip,
 } from '../../../../services/staff/staff-api.service';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 import {
@@ -59,6 +64,10 @@ export class SellPageComponent implements OnInit, OnDestroy {
   protected activeTabIndex = 0;
   protected selectedRouteSlug: string | null = null;
   protected selectedSeats: string[] = [];
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN-mode headcount —
+  // mirrors selectedSeats for a schedule with no seat map. Only meaningful
+  // when isOpenSeating is true.
+  protected passengerCount = 1;
   /** passenger_type lookup slug chosen by staff via the center-panel tiles. */
   protected selectedPassengerType = 'male';
   /** Per-seat passenger type map — seat label → passenger_type slug. */
@@ -195,6 +204,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedTrip = null;
     this.selectedRouteSlug = null;
     this.selectedSeats = [];
+    this.passengerCount = 1;
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
@@ -206,10 +216,28 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.selectedTrip = selection.trip;
     this.selectedRouteSlug = selection.routeSlug;
     this.selectedSeats = [];
+    this.passengerCount = 1;
     this.seatPassengerTypes = {};
     this.idempotencyKey = null;
     this.activeTabIndex = 0;
     this.loadSegments(selection.routeSlug, selection.trip);
+  }
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): missing/unknown seatingMode
+  // (the field isn't on this endpoint's response yet — see the OBRS-324
+  // Contract Request in docs/handoff.md) safely resolves to false/ASSIGNED.
+  protected get isOpenSeating(): boolean {
+    return isOpenSeatingTrip(this.selectedTrip);
+  }
+
+  /** Ticket count driving totals/canSell: OPEN uses passengerCount, ASSIGNED uses selectedSeats. */
+  protected get ticketCount(): number {
+    return this.isOpenSeating ? this.passengerCount : this.selectedSeats.length;
+  }
+
+  protected onPassengerCountChanged(count: number): void {
+    const max = Math.max(1, this.selectedTrip?.availableCount ?? count);
+    this.passengerCount = Math.min(Math.max(1, count), max);
   }
 
   protected onPassengerTypeChanged(passengerType: string): void {
@@ -303,7 +331,16 @@ export class SellPageComponent implements OnInit, OnDestroy {
     const trip = this.selectedTrip;
     this.isSelling = true;
 
-    const passengers = this.selectedSeats.map((seat) => {
+    // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN sells by headcount only
+    // — the backend forces seatNumber=null for OPEN schedules regardless of what
+    // is sent (BookingService.verifyOpenCapacity, OBRS-322), so an empty string
+    // is sent as a harmless placeholder. ASSIGNED builds one passenger per
+    // selected seat, byte-identical to before this card.
+    const seatNumbers = this.isOpenSeating
+      ? Array.from({ length: this.passengerCount }, () => '')
+      : this.selectedSeats;
+
+    const passengers = seatNumbers.map((seat) => {
       const p: {
         passengerType: string;
         seatNumber: string;
@@ -314,7 +351,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
         identityCardNumber?: string;
       } = {
         // Use the per-seat type captured at click time; fall back to the current
-        // global type if somehow the seat isn't in the map.
+        // global type if somehow the seat isn't in the map (and, for OPEN, always
+        // — there is no seat to key a per-seat type off).
         passengerType: this.seatPassengerTypes[seat] ?? this.selectedPassengerType,
         // The seat maps render/select letter-prefixed labels (van "A1".."A13", bus
         // "B1".."B21" — see `selectedSeats` / `busSeatLabels` in
@@ -324,7 +362,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
         // raw label was sent as-is). Normalize here, at the payload boundary, the
         // same way the customer booking flow already does
         // (`PassengerInfoComponent.normalizeSeatNumber`) — display state
-        // (`selectedSeats`, seat-map highlighting) keeps the label form.
+        // (`selectedSeats`, seat-map highlighting) keeps the label form. A blank
+        // OPEN placeholder normalizes to '' unchanged.
         seatNumber: normalizeSeatNumber(seat),
         title: payload.contact.title,
         firstName: payload.contact.firstName,
@@ -339,7 +378,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
 
     // Segment fare is owned by sell-page; use it directly.
     const fare = this.segmentFare ?? 0;
-    const totalAmount = fare * this.selectedSeats.length;
+    const totalAmount = fare * this.ticketCount;
 
     const bookingPayload: {
       bookingType: 'one_way';
@@ -415,6 +454,7 @@ export class SellPageComponent implements OnInit, OnDestroy {
                 this.isSelling = false;
                 this.idempotencyKey = null;
                 this.selectedSeats = [];
+                this.passengerCount = 1;
                 this.seatPassengerTypes = {};
                 // Staff POS: do NOT navigate to /e-ticket — it's a customerArea
                 // route, so AuthGuard bounces staff to their home and leaves the
@@ -653,12 +693,24 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.deletingTrip = null;
   }
 
+  // OBRS-283: which confirm-dialog variant to show — see
+  // shared/lib/schedule-delete-mode.ts.
+  protected get scheduleDeleteModalMode(): ScheduleDeleteModalMode {
+    return resolveScheduleDeleteModalMode(
+      this.deletingTrip?.deletable,
+      this.deletingTrip?.confirmedBookingCount
+    );
+  }
+
   protected async confirmDeleteSchedule(): Promise<void> {
     if (!this.deletingTrip) { return; }
     const trip = this.deletingTrip;
     const scheduleId = trip.scheduleId;
+    const mode = this.scheduleDeleteModalMode;
 
-    // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned)
+    // OPTIMISTIC: remove from routeGroups immediately (new arrays — parent-owned).
+    // A cancelled trip is no longer sellable either, so this is safe for both
+    // the hard-delete and soft-cancel paths.
     this.routeGroups = this.routeGroups
       .map((group) => ({
         ...group,
@@ -667,11 +719,12 @@ export class SellPageComponent implements OnInit, OnDestroy {
       .filter((group) => group.trips.length > 0);
 
     // If the deleted trip was the selected trip, reset the selection
-    // so checkout can't POST against a deleted schedule.
+    // so checkout can't POST against a deleted/cancelled schedule.
     if (this.selectedTrip?.scheduleId === scheduleId) {
       this.selectedTrip = null;
       this.selectedRouteSlug = null;
       this.selectedSeats = [];
+      this.passengerCount = 1;
       this.seatPassengerTypes = {};
       this.idempotencyKey = null;
       this.activeTabIndex = 0;
@@ -683,11 +736,28 @@ export class SellPageComponent implements OnInit, OnDestroy {
     this.closeScheduleDelete(true);
 
     try {
+      if (mode !== 'delete') {
+        // OBRS-283: deletable===false — soft-cancel instead of hard-delete.
+        const response = await firstValueFrom(this.adminApiService.cancelSchedule(scheduleId));
+        const affectedBookingCount = response?.data?.affectedBookingCount ?? 0;
+        await this.alertService.success(
+          this.translate.instant('ADMIN.MESSAGES.SCHEDULE_CANCELLED', {
+            count: affectedBookingCount,
+          })
+        );
+        this.loadTrips(this.selectedDate); // reconcile
+        return;
+      }
+
       await firstValueFrom(this.adminApiService.deleteSchedule(scheduleId));
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.DELETED'));
       this.loadTrips(this.selectedDate); // reconcile
     } catch (error) {
-      const message = extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.DELETE_FAILED');
+      const message =
+        extractApiErrorMessage(error) ||
+        this.translate.instant(
+          mode !== 'delete' ? 'ADMIN.MESSAGES.CANCEL_FAILED' : 'ADMIN.MESSAGES.DELETE_FAILED'
+        );
       await this.alertService.error(message);
       this.loadTrips(this.selectedDate); // restore
     } finally {

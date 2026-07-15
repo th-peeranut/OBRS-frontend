@@ -43,6 +43,12 @@ export interface ScheduleRow {
   status: string;
   statusCode: string;
   updatedAt: string;
+  // OBRS-283: only ever populated for kind==='schedule' (trip) rows — a
+  // Schedule SET (kind==='set') has no such field on its DTO and always
+  // stays undefined here, so its delete button keeps the unconditional
+  // hard-delete path (see shared/lib/schedule-delete-mode.ts).
+  deletable?: boolean;
+  confirmedBookingCount?: number;
 }
 
 export interface Option {
@@ -274,6 +280,8 @@ export function toGeneratedScheduleRow(
     status: status.name,
     statusCode: status.code,
     updatedAt: formatDisplayDateTime(schedule.updatedAt ?? schedule.createdAt, dateLang),
+    deletable: schedule.deletable,
+    confirmedBookingCount: schedule.confirmedBookingCount,
   };
 }
 

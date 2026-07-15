@@ -32,4 +32,46 @@ describe('RouteStopDetailCardComponent', () => {
     component.openMaps();
     expect(openSpy).not.toHaveBeenCalled();
   });
+
+  it('hasPickupCoords is true when both latitude and longitude are present', () => {
+    component.stop = makeStop();
+    expect(component.hasPickupCoords).toBeTrue();
+  });
+
+  it('hasPickupCoords is false when latitude is null', () => {
+    component.stop = { ...makeStop(), latitude: null };
+    expect(component.hasPickupCoords).toBeFalse();
+  });
+
+  it('hasPickupCoords is false when longitude is null', () => {
+    component.stop = { ...makeStop(), longitude: null };
+    expect(component.hasPickupCoords).toBeFalse();
+  });
+
+  it('hasPickupCoords is false when there is no stop', () => {
+    component.stop = null;
+    expect(component.hasPickupCoords).toBeFalse();
+  });
+
+  it('navigateToPickup opens the Google Maps directions deep-link for the stop coords', () => {
+    component.stop = makeStop();
+    const openSpy = spyOn(window, 'open');
+
+    component.navigateToPickup();
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
+      '_blank',
+      'noopener,noreferrer'
+    );
+  });
+
+  it('navigateToPickup does nothing when coords are missing', () => {
+    component.stop = { ...makeStop(), latitude: null };
+    const openSpy = spyOn(window, 'open');
+
+    component.navigateToPickup();
+
+    expect(openSpy).not.toHaveBeenCalled();
+  });
 });

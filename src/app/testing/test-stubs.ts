@@ -68,3 +68,12 @@ export function createRouteMapServiceStub(): any {
     getPickupDropoffCached: () => of(null),
   };
 }
+
+/** ScheduleService: `getSeatMap` resolves to an empty seat list (no fetch
+ *  side-effects for a bare-instantiation "should create" smoke test). */
+export function createScheduleServiceStub(): any {
+  return {
+    getByFilter: () => of({ data: null }),
+    getSeatMap: () => of({ data: [] }),
+  };
+}

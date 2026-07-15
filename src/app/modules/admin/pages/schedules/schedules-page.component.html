@@ -602,10 +602,17 @@
 
 <div class="admin-modal-backdrop" *ngIf="isDeleteModalOpen" adminModalBackdrop (dismiss)="closeDeleteModal()">
   <div class="admin-modal admin-modal-confirm">
-    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
-    <p class="admin-modal-subtitle">
+    <h4 class="admin-modal-title">{{ deleteModalTitleKey | translate }}</h4>
+    <p class="admin-modal-subtitle" *ngIf="deleteModalMode === 'delete'">
       {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
       <strong *ngIf="selectedSchedule">{{ selectedSchedule.tripId }}</strong>
+    </p>
+    <!-- OBRS-283: deletable===false — soft-cancel copy instead of the hard-delete warning above. -->
+    <p class="admin-modal-subtitle" *ngIf="deleteModalMode === 'cancel-refund'">
+      {{ 'ADMIN.COMMON.CANCEL_TRIP_REFUND_MESSAGE' | translate: { count: selectedSchedule?.confirmedBookingCount ?? 0 } }}
+    </p>
+    <p class="admin-modal-subtitle" *ngIf="deleteModalMode === 'cancel-no-refund'">
+      {{ 'ADMIN.COMMON.CANCEL_TRIP_NO_REFUND_MESSAGE' | translate }}
     </p>
 
     <div class="admin-modal-actions">
@@ -618,7 +625,7 @@
         [disabled]="isDeleting"
         (click)="confirmDelete()"
       >
-        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+        {{ deleteModalConfirmLabelKey | translate }}
       </button>
     </div>
   </div>

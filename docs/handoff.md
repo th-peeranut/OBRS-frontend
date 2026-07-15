@@ -70,6 +70,101 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-14 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2): one assumed endpoint + one shape ambiguity
+
+**Affected endpoint**: `GET /api/private/schedules/{scheduleId}/parcels/consigned` (new, ASSUMED)
+**Also affected**: `pickupStop`/`dropoffStop` shape on `ParcelTrackRespDto` (`GET /api/parcels/track/{tn}`) and `WaybillRespDto` (`GET /api/private/parcels/{id}/waybill`)
+
+**Request type**: New endpoint + shape clarification.
+
+**Status at time of writing**: built against
+`../OBRS-backend/docs/api/parcels-consigned-delivery.md` for every endpoint it
+documents. That doc lists per-parcel action endpoints
+(`/load`, `/arrived`, `/collect`, `/waybill`) but no "list consigned parcels
+for a schedule" GET, which the delivery-handoff list
+(`/staff/parcels/deliveries/:scheduleId`) needs to enumerate rows. See
+`docs/adr/0020-parcel-consigned-delivery-frontend.md` Decision 3 — this is the
+same parallel-lane build pattern already used for OBRS-96/OBRS-129/OBRS-130
+above (see those entries), not an assumption that an undocumented endpoint
+already exists.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `GET /api/private/schedules/{scheduleId}/parcels/consigned` → `ParcelDeliveryListItemDto[]` = `{ parcelId, trackingNumber, senderName, senderPhone, recipientName, recipientPhone, pickupStop, dropoffStop, weightKg, deliveryStatus }[]`. Same role gate as `/load`/`/arrived`/`/collect` (`hasRole('DRIVER')`, which the role hierarchy note in the API doc says also admits SALESPERSON/OWNER/ADMIN) | New endpoint | Backs `ParcelDeliveryListPageComponent`'s per-schedule manifest — the row source for the load/arrived/collect action buttons |
+| Confirm the exact shape of `pickupStop`/`dropoffStop` on `ParcelTrackRespDto` and `WaybillRespDto` | Existing documented endpoints (`GET /api/parcels/track/{tn}`, `GET /api/private/parcels/{id}/waybill`) | The doc names these fields without specifying their shape beyond the field name. FE modeled `ParcelStopRefDto { code?, slug?, name?, label? }` (a superset of the shapes already used elsewhere in this codebase for a "stop reference" — `SegmentStopRefDto{slug,name}` from the segments endpoint, `RouteStopTimeDto.stop{code}` from route-stops) and resolves a display label via `parcelStopLabel()` (`shared/lib/parcel-stop-label.ts`), which tries `name` → `label` → `code` → `slug` → falls back to `'-'`. This degrades gracefully regardless of which shape the real response uses, but the exact shape should be confirmed and, ideally, made consistent with one of the codebase's existing stop-ref shapes rather than a third variant. |
+
+### What the frontend implemented (additive-safe)
+- `StaffApiService.getConsignedParcelsForSchedule()` (new method) and
+  `ParcelDeliveryListStore` (component-scoped `AdminCollectionStore`
+  subclass) are additive — no existing endpoint or field touched.
+- `parcelStopLabel()` is deliberately resilient to shape variance (see above)
+  so the delivery-list/waybill/tracking pages don't break on whichever real
+  shape the backend returns; only the *label chosen* would differ from the
+  intended one if the real shape doesn't match the assumed field-name
+  priority.
+
+### Impact if not addressed
+The delivery-handoff list (`/staff/parcels/deliveries/:scheduleId`) is
+implemented and additive-safe (new route, new nav entry point, no existing
+endpoint/field touched), but functionally inert until the backend ships this
+endpoint — the list will show its error state and no parcel can be
+loaded/marked-arrived/collected from this page. The stop-ref shape gap
+degrades gracefully (worst case: a stop renders its `code`/`slug` instead of
+a human name) rather than breaking, but should still be confirmed. Do not
+merge/deploy until the backend confirms both — track against the paired
+backend worktree `OBRS-backend-wt-obrs-305-parcel-consigned-delivery` before
+promoting either side.
+
+---
+
+### [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+
+**Affected endpoint**: `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`, consumed by the staff walk-in/POS sell page).
+
+**Request type**: field addition (additive, R1) — not blocking, worked around for now.
+
+**What I found**: 318-a (OBRS-321) added `schedules.seating_mode` and exposed it as `seatingMode` on `ScheduleRespDto` and `ScheduleSearchRespDto` (see `docs/api/scheduling.md`, and the FE precedent `Schedule.seatingMode` in `shared/interfaces/schedule.interface.ts` added by OBRS-323). `WalkInTripRespDto` (`dto/response/business/WalkInTripRespDto.java`) was **not** touched by 318-a/318-b — `ScheduleService.getWalkInTrips()` builds it via a 13-arg `@AllArgsConstructor` call (`ScheduleService.java`, the `WalkInTripRespDto trip = new WalkInTripRespDto(...)` call) that never reads `schedule.getSeatingMode()`, unlike the sibling `searchSchedules()` method a few dozen lines below it, which does pass `schedule.getSeatingMode()` into `ScheduleSearchRespDto`. Confirmed by reading the backend source directly, not just the docs.
+
+**What I did instead**: added `seatingMode?: 'OPEN' | 'ASSIGNED'` to the FE's `WalkInTripDto` (`services/staff/staff-api.service.ts`) as a verified-passthrough optional field (same pattern as `Schedule.seatingMode` — `getWalkInSchedules()` is a raw `http.get<ResponseAPI<WalkInRouteGroupDto[]>>` passthrough, no manual per-field mapper, so the field will populate automatically the moment the backend adds it, no further FE change needed then). Added `isOpenSeatingTrip(trip)` next to it, which resolves missing/undefined to `false` (ASSIGNED) — the walk-in OPEN-sell UI (passenger-count-only checkout, no seat map) is fully built and tested against this helper, but **will not activate for any real trip until this field is added**, since every walk-in trip reads as ASSIGNED today regardless of its actual `seating_mode`.
+
+**What the frontend needs**: add `schedule.getSeatingMode()` as a 14th constructor argument to the `WalkInTripRespDto` build in `ScheduleService.getWalkInTrips()` (mirroring the `searchSchedules()` call), plus the matching field + Lombok `@Data` getter on `WalkInTripRespDto` itself. Until this ships, walk-in OPEN-seating schedules are still sold through the ASSIGNED (seat-map) flow in the POS, same as before this card.
+### [Frontend] 2026-07-14 — Advanced-booking passenger preferences (OBRS-361/362): built against the contract described in the task brief, not yet confirmed in `docs/api/`
+
+**Affected endpoints**: `POST /api/private/bookings` (`BookingScheduleReqDto.passengers[]`) and `GET /api/schedules/{id}/seats` (`SeatMapRespDto`).
+
+**Request type**: field addition confirmation (additive, R1) — built per an explicit contract description from the UX/task brief; grepped `docs/api/booking.md` and `docs/api/scheduling.md` before starting and found **zero** mentions of `seatPreference`/`seatRequirement`/`isWheelchairAccessible`/`isExtraLegroom` — these are assumed to be landing in parallel, not yet documented.
+
+**What the frontend built against**:
+| Field | Location | Assumed shape |
+|---|---|---|
+| `seatPreference` | `POST /api/private/bookings` request, per passenger | `'window' \| 'aisle' \| null`, lowercase, optional, best-effort |
+| `seatRequirement` | same | `'wheelchair' \| 'extra_legroom' \| null`, lowercase, optional, best-effort |
+| `isWheelchairAccessible` | `GET /api/schedules/{id}/seats` response (`SeatMapRespDto`) | `boolean`, optional |
+| `isExtraLegroom` | same | `boolean`, optional |
+| `seatNumber` | same | confirmed already documented (plain numeric string, `'1'..'21'`) — no change, just confirming the FE's `normalizeSeatNumber()` util keys off it correctly |
+
+**What the frontend did to stay safe against an unconfirmed contract**: every field above is optional/nullable in the FE's own types (`PassengerInfo.seatPreference?`, `SeatMapRespDto.isWheelchairAccessible?`, etc.) — if the backend ships a different field name or doesn't ship at all yet, the booking payload still validates (fields just serialize as `null`/absent) and the seat-map fetch degrades to zero badges via `catchError(() => of({}))` (never blocks a booking, never alerts). `AC-361.5` (never attach a preference to an OPEN leg) is enforced entirely client-side regardless of what the backend does with the field.
+
+### Impact if not addressed
+If the backend lands under different field names, `seatPreference`/`seatRequirement` will silently no-op (backend ignores unknown fields per its usual permissive-decoder behavior elsewhere in this contract) and the wheelchair/extra-legroom badges will simply never render (both booleans read `undefined`, falsy) — no error, no crash, just missing functionality until the FE interfaces are corrected to match the real field names.
+
+---
+
+### [Frontend] 2026-07-14 — `seatingMode` not exposed on any FE-reachable read DTO (OBRS-325, open-seating epic 318-e)
+
+**Affected endpoints**: `GET /api/private/bookings/{id}/tickets` (`BookingTicketsData.journeys[].tickets[]`, consumed by both e-ticket surfaces) and, if a search-list "Open seating" badge is ever wanted, the schedule search endpoint behind `Schedule` (`shared/interfaces/schedule.interface.ts`).
+
+**Request type**: field addition (additive, R1) — not blocking, worked around for now.
+
+**What I found**: 318-a (OBRS-321, merged to `origin/dev`) added `schedules.seating_mode` (`OPEN`/`ASSIGNED`) and made `tickets.seat_number` nullable on the backend. I grepped the whole FE tree for `seatingMode`/`seating_mode`/`SeatingMode` before starting this card — **zero matches**. Neither `BookingTicketItem` (`shared/interfaces/booking-ticket.interface.ts`) nor `Schedule` (`shared/interfaces/schedule.interface.ts`) carries the field; `BookingTicketItem.seatNumber` is already `string | undefined`, so the nullability change passed through silently with no FE-visible signal beyond "the value can be missing."
+
+**What I did instead**: derived OPEN purely from `ticket.seatNumber` being null/blank (`isJourneyOpenSeating()` in `shared/lib/booking-ticket-view.ts`, mirrored in `modules/e-ticket/e-ticket.component.ts`'s `buildPassengersFromApi`). This works because every ticket on a leg shares one schedule, so either all its `seatNumber`s are null (OPEN) or none are (ASSIGNED) — there's no per-ticket ambiguity today. It's a client-side inference, not a real read of `seating_mode`, so it would misfire if a future case ever left a single ASSIGNED-schedule ticket with a null seat for an unrelated reason (data issue, cancelled leg, etc.) — that ticket would read as "open seating" instead of "no seat assigned."
+
+**What the frontend needs (not urgent, no current UI depends on it)**: if/when a customer-facing surface wants to render seating mode as its own concept rather than inferring it from nullability (e.g. a search-result "Open seating" badge, since `Schedule` today only exposes `availableSeats`/`availableSeatNumbers`, never a seat number, so there's nothing to derive from at that layer) — add `seatingMode: 'OPEN' | 'ASSIGNED'` directly to `BookingTicketItem`/`BookingTicketJourney` and to `Schedule`. Until then the null-seat inference above is sufficient and I did not add speculative UI to the search-result list (`schedule-booking-list.component.html`) since it has no reliable signal to key off.
+
+---
+
 ### [Frontend] 2026-07-11 — Per-round revenue settlement + owner cash-handover sign-off (OBRS-196): endpoints not yet in contract
 
 > **RESOLVED 2026-07-11** — backend landed (commit `037cdb1`). Two contract breaks were found and fixed against the real

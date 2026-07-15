@@ -15,6 +15,10 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
 
 export interface BookingRow {
+  /** Numeric booking id (OBRS-280) — used to fetch the read-only detail dialog
+   * (`AdminApiService.getBookingById`/`getBookingPayments`). Distinct from
+   * `bookingId` below, which is the human-facing booking NUMBER. */
+  id: number;
   bookingId: string;
   customer: string;
   route: string;
@@ -153,6 +157,7 @@ export class BookingsStore extends AdminCollectionStore<BookingsData> {
       null;
 
     return {
+      id: booking.id,
       bookingId: booking.bookingNumber ?? `#BK-${booking.id}`,
       customer: booking.contact?.fullName ?? booking.actor?.name ?? '-',
       route,
