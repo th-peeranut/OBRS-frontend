@@ -1,5 +1,14 @@
 # Agent Memory — Scrutinize notes for developers
 
+## 2026-07-15 — SELF-FIXED: OBRS-370 duplicated HTML comment (copy-paste artifact)
+
+In `usability-reports-page.component.html` the OBRS-370 Jira-key-visibility
+comment block was pasted twice, back-to-back, above the
+`*ngIf="detailReport.jiraIssueKey && isAdmin"` row. Harmless at runtime but a
+copy-paste smell. Removed the duplicate (kept one). Lesson: when adding an
+explanatory comment above a gated element, paste once — re-check the diff for
+an accidental double-insert before submitting.
+
 ## 2026-07-14 — FIXED: OBRS-361 live defect — second selectButton field silently dropped on submit
 
 QA reproduced (3x, one-way ASSIGNED booking) that setting BOTH `seatPreference`

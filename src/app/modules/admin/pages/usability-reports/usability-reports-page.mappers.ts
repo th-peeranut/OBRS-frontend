@@ -36,6 +36,15 @@ export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'rejected',
 ];
 
+// OBRS-370: owner is a SCREEN-ONLY tier on this page — the backend 403s a
+// non-admin on the terminal decisions (resolved/rejected, which are terminal
+// and email the reporter) and on the Jira key, so the owner's decision
+// dropdown only offers the non-terminal, forward-moving transitions.
+export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
+  'in_review',
+  'accepted',
+];
+
 // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
 // states, not outcomes an admin picks (design-system.md §3.1: no pre-seeded
 // default; the admin must actively choose an outcome).
