@@ -1,0 +1,66 @@
+name: CI
+
+# Why this exists (OBRS-393): until this file, OBRS-frontend ran ZERO tests in
+# CI — .github/workflows/ held only adr-access-model-gate.yml, while
+# OBRS-backend has run unit + integration on every push since day one. A
+# frontend dev tests its own feature branch, merges to dev, and nothing ever
+# tested merged dev, so a semantic merge conflict surfaced only when the next
+# session tripped over it — a full re-work cycle for a break that a 3-minute
+# job catches at push time.
+#
+# --reporters=dots is MANDATORY, not cosmetic. Karma's default `progress`
+# reporter repaints its status bar after every one of ~2.4k tests; a terminal
+# collapses those repaints, a CI log (and an AI agent's pipe) keeps every one.
+# Measured on a fully passing run: default = 276,346 chars, dots = 7,284 chars
+# — 97% of the log was ANSI cursor-up redraw, same 50s runtime, zero
+# information lost (the default was double-printing each error, not reporting
+# more). Do not remove the flag.
+
+on:
+  push:
+    branches: [dev, sit]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ubuntu-latest ships Google Chrome pre-installed, so karma-chrome-launcher
+      # resolves ChromeHeadless without an extra install step.
+      - name: Run unit tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless --reporters=dots
+
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Catches what `ng test` cannot: AOT template errors, and the production
+      # bundle budgets in angular.json (initial > 2mb is an error, not a warning).
+      - name: Build production bundle
+        run: npm run build -- --configuration production
