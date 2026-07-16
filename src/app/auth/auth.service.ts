@@ -42,7 +42,20 @@ export class AuthService {
   // only, a deliberate UX confinement introduced with no backing card. That
   // confinement is now reversed — admin is a cross-portal superset, matching
   // the fact that the backend already authorizes admin on every endpoint
-  // (staff, customer, even owner-only). See docs/adr/0011-admin-cross-area-access.md.
+  // (staff, customer, even owner-only). See docs/adr/0012-admin-cross-area-access.md.
+  //
+  // CONSEQUENCE (OBRS-446) — owner and admin grant EACH OTHER above, so any
+  // route declaring requiredRoles: ['admin'], ['owner'] or ['admin', 'owner']
+  // resolves to the identical predicate "admin or owner". Those literals are
+  // inert: they record intent, they do not gate. The admin module leans on
+  // this (settlements declares ['owner'] and admin reaches it anyway). What
+  // actually keeps everyone else out of /admin is the parent route's guard in
+  // app-routing.module.ts, not the per-page literal. Deliberate, not a bug —
+  // the literals are expected to start biting only when owner-scoping lands
+  // (OBRS-148/150). Pinned by auth.service.spec.ts 'admin-module
+  // requiredRoles variants'. NOTE: the backend is NOT symmetric — it has real
+  // admin-only endpoints that 403 an owner (OBRS-370), so do not carry this
+  // equivalence across to API expectations.
   private static readonly ROLE_GRANTS: Record<string, readonly string[]> = {
     owner: ['owner', 'admin', 'salesperson', 'driver', 'customer'],
     admin: ['admin', 'owner', 'salesperson', 'driver', 'customer'],

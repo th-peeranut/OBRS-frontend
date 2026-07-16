@@ -142,6 +142,75 @@ describe('AuthService', () => {
     });
   });
 
+  // OBRS-446: executable documentation for a trap that has already misled a
+  // reader. Because ROLE_GRANTS has owner and admin granting each OTHER, the
+  // three requiredRoles variants the admin module declares are the SAME
+  // predicate — "admin or owner" — and neither literal excludes anybody.
+  // These specs pin that so the equivalence cannot be quietly assumed to hold
+  // (or quietly broken): when owner-scoping lands (OBRS-148/150) and the
+  // literals start to bite, this block goes RED and forces the routes to be
+  // re-read rather than trusted. A prose comment alone would rot the way
+  // StompAuthChannelInterceptor's did (OBRS-400).
+  describe('admin-module requiredRoles variants (OBRS-446)', () => {
+    const setRoles = (roles: string[]) =>
+      localStorage.setItem('auth_roles', JSON.stringify(roles));
+
+    // The literals actually declared in admin.module.ts today.
+    const ADMIN_ONLY = ['admin']; // e.g. reports, reminder-config
+    const OWNER_ONLY = ['owner']; // settlements — reads as "admin excluded"
+    const BOTH = ['admin', 'owner']; // e.g. eod-sales-report
+
+    it('resolves all three variants identically for an admin', () => {
+      setRoles(['admin']);
+      expect(service.hasAnyRole(ADMIN_ONLY)).toBe(true);
+      // The sharp edge: settlements declares ['owner'], plainly reading as
+      // "owner only" — admin gets in regardless.
+      expect(service.hasAnyRole(OWNER_ONLY)).toBe(true);
+      expect(service.hasAnyRole(BOTH)).toBe(true);
+    });
+
+    it('resolves all three variants identically for an owner', () => {
+      setRoles(['owner']);
+      expect(service.hasAnyRole(ADMIN_ONLY)).toBe(true);
+      expect(service.hasAnyRole(OWNER_ONLY)).toBe(true);
+      expect(service.hasAnyRole(BOTH)).toBe(true);
+    });
+
+    // Control: the variants collapse only for admin/owner. Everyone else is
+    // still shut out — the parent /admin gate is what actually holds the line.
+    it('still denies every other role on all three variants', () => {
+      for (const role of ['salesperson', 'driver', 'customer']) {
+        setRoles([role]);
+        expect(service.hasAnyRole(ADMIN_ONLY)).toBe(false);
+        expect(service.hasAnyRole(OWNER_ONLY)).toBe(false);
+        expect(service.hasAnyRole(BOTH)).toBe(false);
+      }
+    });
+
+    // Proves the specs above are non-vacuous: they pass because of the
+    // admin→owner grant, not because hasAnyRole waves admin through on some
+    // other path. Simulates the OBRS-148/150 end-state (admin no longer
+    // granting owner) test-side only — production ROLE_GRANTS is untouched
+    // and restored below. If this ever fails, the equivalence documented on
+    // ROLE_GRANTS and on the settlements route no longer holds: re-read them.
+    it('would separate the variants if admin stopped granting owner', () => {
+      const grants = (AuthService as any).ROLE_GRANTS;
+      const original = grants.admin;
+      grants.admin = ['admin', 'salesperson', 'driver', 'customer'];
+      try {
+        setRoles(['admin']);
+        expect(service.hasAnyRole(ADMIN_ONLY)).toBe(true);
+        expect(service.hasAnyRole(OWNER_ONLY)).toBe(false); // settlements would exclude admin
+        expect(service.hasAnyRole(BOTH)).toBe(true);
+      } finally {
+        grants.admin = original;
+      }
+
+      // Restored — the collapse is back, so nothing leaks into later specs.
+      expect(service.hasAnyRole(OWNER_ONLY)).toBe(true);
+    });
+  });
+
   describe('getHomeRoute', () => {
     const setRoles = (roles: string[]) =>
       localStorage.setItem('auth_roles', JSON.stringify(roles));
