@@ -6,7 +6,9 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 // now that a second admin list (usability-reports) needs the same
 // server-side paginator, this is the shared dumb component both call sites
 // render. Deliberately no .scss: every class it renders resolves against the
-// global admin-theme.scss, verbatim.
+// global admin-theme.scss, verbatim — which is also why AdminSharedModule
+// (admin/staff shells only), not SharedModule, declares it: those classes only
+// style inside `.admin-shell`. See AdminSharedModule's docblock.
 @Component({
   selector: 'app-admin-paginator',
   templateUrl: './admin-paginator.component.html',

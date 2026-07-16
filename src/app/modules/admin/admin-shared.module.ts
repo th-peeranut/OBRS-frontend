@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminDropdownComponent } from './components/admin-dropdown/admin-dropdown.component';
 import { AdminRefreshHintComponent } from './components/admin-refresh-hint/admin-refresh-hint.component';
+import { AdminPaginatorComponent } from './components/admin-paginator/admin-paginator.component';
 import { TranslateModule } from '@ngx-translate/core';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
@@ -9,10 +10,24 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
  * Thin shared module that declares and exports the admin UI primitives that
  * are used both in AdminModule and StaffModule. AdminModule imports this
  * module (and removes its direct declarations of these two components).
+ *
+ * OBRS-403 (Scrutinize): `AdminPaginatorComponent` belongs HERE, not in
+ * `SharedModule`. It is not a generic primitive — it renders `.admin-btn` /
+ * `.admin-muted` / `.admin-inline-actions`, which only resolve inside
+ * `.admin-shell` (`dark-theme.scss` deliberately excludes that subtree), so
+ * outside an admin/staff shell it renders unstyled. `SharedModule` is imported
+ * by ~25 modules including every public customer-facing one; exporting an
+ * admin-only primitive into all of them widens its scope for no consumer.
+ * The `AdminModalBackdropDirective` precedent does NOT apply in reverse: that
+ * moved to `SharedModule` because it is genuinely generic AND a
+ * SharedModule-declared component (`BoardingListComponent`) needed it, which
+ * would otherwise have forced a SharedModule -> AdminModule cycle. Neither
+ * holds here — the paginator's only consumers are admin/staff pages, and both
+ * of those shells already import this module.
  */
 @NgModule({
-  declarations: [AdminDropdownComponent, AdminRefreshHintComponent],
+  declarations: [AdminDropdownComponent, AdminRefreshHintComponent, AdminPaginatorComponent],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, TranslateModule],
-  exports: [AdminDropdownComponent, AdminRefreshHintComponent],
+  exports: [AdminDropdownComponent, AdminRefreshHintComponent, AdminPaginatorComponent],
 })
 export class AdminSharedModule {}

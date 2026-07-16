@@ -166,11 +166,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected onStatusFilterChange(value: string): void {
     const status = (value || (this.isAdmin ? 'accepted' : 'new')) as UsabilityReportStatus;
     this.selectedStatusFilter = status;
-    // Synchronous defense-in-depth: the store's setStatus() already resets
-    // its own page to 0 and clears the cache, but seeding this locally too
-    // means the paginator never flashes the previous tab's page number
-    // during the async refetch.
-    this.currentPage = 1;
+    // OBRS-403 (Scrutinize): deliberately does NOT seed `currentPage = 1` here.
+    // The store owns the page (setStatus resets it to 0); `currentPage` is a
+    // pure mirror of `data.number + 1`. Writing it locally is unobservable on
+    // the real tab-switch path anyway — setStatus() clears the cache
+    // synchronously, so isLoading flips true and the whole footer (and with it
+    // the paginator) leaves the DOM until fresh data lands. Worse, in the one
+    // case it IS observable it renders a lie: re-picking the ALREADY-selected
+    // option still emits valueChange (admin-dropdown.selectOption emits
+    // unconditionally), setStatus's `if (this.status !== status)` guard then
+    // skips clear(), isLoading stays false, and the paginator would show
+    // "1 / N" while the store is still fetching page N.
     void this.store.setStatus(status);
   }
 

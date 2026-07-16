@@ -12,7 +12,6 @@ import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
-import { AdminPaginatorComponent } from '../../../../shared/components/admin-paginator/admin-paginator.component';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,
@@ -107,7 +106,10 @@ describe('UsabilityReportsPageComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
-      declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective, AdminPaginatorComponent],
+      // AdminPaginatorComponent needs no declaration here — AdminSharedModule
+      // (already imported above) declares and exports it, exactly as it does
+      // app-admin-dropdown / app-admin-refresh-hint.
+      declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },
         { provide: AdminApiService, useValue: adminApiServiceSpy },
@@ -1159,7 +1161,13 @@ describe('UsabilityReportsPageComponent', () => {
       expect(storeSpy.setPage).toHaveBeenCalledWith(1);
     });
 
-    it('resets currentPage to 1 synchronously when the status filter changes (defense-in-depth)', () => {
+    // OBRS-403 (Scrutinize): the STORE is the single owner of the page — a tab
+    // switch delegates the reset to setStatus() (pinned in
+    // usability-reports.store.spec.ts) and never writes currentPage locally.
+    // A local write is unobservable here (setStatus clears the cache, so the
+    // footer unmounts) and is actively wrong when the dropdown re-emits the
+    // already-selected status, where setStatus's guard skips the clear.
+    it('delegates the page reset on a tab switch to the store, without locally seeding currentPage', () => {
       storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 2, totalPages: 3 }));
       storeSpy.hasValue = true;
       fixture.detectChanges();
@@ -1167,7 +1175,26 @@ describe('UsabilityReportsPageComponent', () => {
 
       component['onStatusFilterChange']('resolved');
 
-      expect(component['currentPage']).toBe(1);
+      expect(storeSpy.setStatus).toHaveBeenCalledWith('resolved');
+      expect(component['currentPage'])
+        .withContext('currentPage must stay a pure mirror of the store emission')
+        .toBe(3);
+    });
+
+    it('does not render a page number the store has not confirmed when the same status is re-picked', () => {
+      // admin-dropdown.selectOption() emits valueChange unconditionally, so
+      // re-picking the selected option re-enters onStatusFilterChange with an
+      // unchanged status. The store's setStatus guard then skips clear(), so
+      // the footer stays mounted — currentPage must not have been reset to 1.
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 2, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      component['onStatusFilterChange'](component['selectedStatusFilter'] as string);
+
+      expect(component['currentPage'])
+        .withContext('a no-op re-pick must not flash "1 / 3" while page 3 is still displayed')
+        .toBe(3);
     });
 
     it('hides the paginator when totalPages <= 1, and renders it when > 1', () => {
