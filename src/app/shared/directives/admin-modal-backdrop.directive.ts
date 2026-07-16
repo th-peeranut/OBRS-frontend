@@ -33,6 +33,17 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
   @Input() dismissOnBackdrop = true;
   @Output() dismiss = new EventEmitter<void>();
 
+  // OBRS-376: the body scroll-lock is REF-COUNTED across every mounted
+  // instance. Previously ngOnDestroy cleared `body.overflow` unconditionally,
+  // which was correct only while at most ONE backdrop was mounted at a time.
+  // The duplicate picker is the first modal-over-modal case that mounts two
+  // instances concurrently (picker above the usability-report detail modal),
+  // so closing the inner picker un-locked page scroll while the detail modal
+  // underneath was still open. Counting mounts holds the lock until the LAST
+  // backdrop unmounts; with a single modal the count is 1 -> 0 and behaviour
+  // is byte-identical to before.
+  private static openCount = 0;
+
   private previouslyFocused: HTMLElement | null = null;
   private dialog: HTMLElement | null = null;
 
@@ -40,6 +51,7 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.previouslyFocused = document.activeElement as HTMLElement | null;
+    AdminModalBackdropDirective.openCount++;
     document.body.style.overflow = 'hidden';
 
     const dialog = this.elementRef.nativeElement.querySelector<HTMLElement>(
@@ -70,7 +82,15 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.body.style.overflow = '';
+    AdminModalBackdropDirective.openCount = Math.max(
+      0,
+      AdminModalBackdropDirective.openCount - 1
+    );
+    // Only release the lock once no backdrop is left mounted — otherwise an
+    // inner modal closing would un-lock scroll for the outer one still open.
+    if (AdminModalBackdropDirective.openCount === 0) {
+      document.body.style.overflow = '';
+    }
     this.previouslyFocused?.focus?.();
   }
 

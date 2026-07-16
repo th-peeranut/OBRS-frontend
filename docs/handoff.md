@@ -118,7 +118,11 @@ promoting either side.
 
 ---
 
-### [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+### ✅ RESOLVED — [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+
+> **RESOLVED 2026-07-16 (OBRS-452).** **OBRS-360** shipped exactly what this asked for: `WalkInTripRespDto.seatingMode` exists, `findWalkInSchedulesByDate` selects `s.seating_mode AS seatingMode`, and `ScheduleWalkInBrowseIT` (extended by OBRS-386) pins per-schedule passthrough to the DTO. So the "will not activate for any real trip" and "every walk-in trip reads as ASSIGNED today" claims below are **historical, not current** — OBRS-324's OPEN sell flow is live. Nothing further is needed from the backend; the entry is kept for history.
+>
+> Nothing grepped this entry when OBRS-360 falsified it, so the same stale claim sat in 5 places across `staff-api.service.ts`, its spec, `sell-page.component.ts` and `walk-in-center-panel.component.ts` for two days — OBRS-452 corrected all of them together.
 
 **Affected endpoint**: `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`, consumed by the staff walk-in/POS sell page).
 

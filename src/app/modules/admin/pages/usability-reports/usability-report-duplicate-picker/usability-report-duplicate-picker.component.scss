@@ -1,0 +1,54 @@
+@import "../../../../../../styles/variables.scss";
+
+// Sits above the default .admin-modal-backdrop (z-index 1200, admin-theme.scss)
+// so it reads as the topmost layer whether opened from a table row or from
+// inside the detail modal — same layering idea as the usability-reports
+// lightbox (.ur-lightbox-backdrop, z-index 1300), one step below it since the
+// two never open concurrently in this flow.
+.ur-duplicate-picker-backdrop {
+  z-index: 1250;
+}
+
+.ur-duplicate-picker-modal {
+  max-width: 560px;
+  max-height: 80vh;
+}
+
+.ur-duplicate-picker-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 10px;
+}
+
+.ur-duplicate-picker-row {
+  cursor: pointer;
+}
+
+// Mirrors .admin-empty-row's centered/muted look (admin-theme.scss), applied
+// here to a standalone <p> rather than a <td> — the picker shows no table at
+// all when there are zero selectable candidates.
+.admin-empty-row-text {
+  padding: 32px 14px;
+  text-align: center;
+  margin: 0;
+}
+
+// Radio-style single-select highlight — reuses the accent-soft token pairing
+// already used for hover/selection elsewhere in the admin shell (e.g. routes
+// selected-row, design-system.md §13) rather than inventing a new color.
+.ur-duplicate-picker-row.is-selected {
+  background: var(--accent-soft);
+}
+
+.ur-duplicate-picker-row.is-selected td {
+  color: var(--accent-text);
+  font-weight: $font-weight-semibold;
+}
+
+.ur-description-cell {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
