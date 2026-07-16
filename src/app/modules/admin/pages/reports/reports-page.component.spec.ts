@@ -328,8 +328,12 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
     fixture.detectChanges();
 
     expect(authServiceSpy.hasAnyRole).toHaveBeenCalledWith(['owner']);
-    const button = fixture.debugElement.query(By.directive(ExportButtonComponent));
-    expect(button).withContext('export button should render for an authorized role').not.toBeNull();
+    // Assert the TRIGGER, not By.directive(ExportButtonComponent): the host tag renders
+    // unconditionally (canExport's *ngIf is inside the child template), so a By.directive
+    // assertion here passes even for an unauthorized role — vacuous. Mirrors the negative
+    // spec below so the pair actually brackets the role gate.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger should render for an authorized role').not.toBeNull();
   });
 
   it('is absent for an unauthorized role', () => {
