@@ -225,12 +225,3 @@
   color: var(--admin-muted);
   font-size: 0.9rem;
 }
-
-// Size-only inline info glyph next to the "partial list" footer hint —
-// mirrors the .refund-void-info-btn precedent (design-system.md §12): a
-// small, presentational icon, no new color token (inherits admin-muted).
-.ur-partial-hint-icon {
-  font-size: 16px;
-  vertical-align: text-bottom;
-  margin-right: 2px;
-}

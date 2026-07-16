@@ -104,18 +104,21 @@
     </table>
   </div>
 
-  <!-- OBRS-378: no paginator exists yet (deferred to OBRS-403) — when the
-       fetched rows are fewer than the tab's total, disclose that more exist
-       rather than silently implying the table is complete. -->
-  <div class="admin-table-footer">
-    <span *ngIf="allReports.length >= totalElements">
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ allReports.length }}
+  <!-- OBRS-403: real server-side paginator. *ngIf="!isLoading" is deliberate
+       — the footer must not show a stale count/page under the skeleton rows
+       (a page change re-triggers isLoading via the store's clear()). -->
+  <div class="admin-table-footer" *ngIf="!isLoading">
+    <span *ngIf="totalElements > 0" aria-live="polite">
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ rangeStart }} - {{ rangeEnd }}
+      {{ 'ADMIN.COMMON.OF' | translate }} {{ totalElements }}
       {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
     </span>
-    <span *ngIf="allReports.length < totalElements" class="admin-muted">
-      <span class="material-symbols-outlined ur-partial-hint-icon" aria-hidden="true">info</span>
-      {{ 'ADMIN.USABILITY_REPORTS.PARTIAL_LIST_HINT' | translate: { shown: allReports.length, total: totalElements } }}
-    </span>
+    <app-admin-paginator
+      [currentPage]="currentPage"
+      [totalPages]="totalPages"
+      [disabled]="isRefreshing"
+      (pageChange)="onPageChange($event)"
+    ></app-admin-paginator>
   </div>
 </section>
 

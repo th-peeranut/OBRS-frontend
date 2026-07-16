@@ -1,3 +1,5 @@
+import { PageResponse } from './payment.interface';
+
 export type UsabilityReportCategory = 'bug' | 'ux_ui_improvement' | 'suggestion';
 export type UsabilityReportStatus =
   | 'new'
@@ -17,10 +19,13 @@ export interface UsabilityReportSummary {
   createdAt: string;
 }
 
-export interface UsabilityReportPage {
-  content: UsabilityReportSummary[];
-  totalElements: number;
-}
+// OBRS-403: the Spring `Page<T>` envelope this list endpoint actually returns
+// (totalPages/size/number/numberOfElements, needed by the new server-side
+// paginator) is already declared as `PageResponse<T>`
+// (shared/interfaces/payment.interface.ts) and reused as-is by the
+// notification/refund lists — alias rather than re-declare the same shape a
+// second time.
+export type UsabilityReportPage = PageResponse<UsabilityReportSummary>;
 
 export interface UsabilityReportImage {
   id: string;

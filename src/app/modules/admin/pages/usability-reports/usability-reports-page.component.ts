@@ -39,9 +39,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // OBRS-378: the list is now server-filtered by status (?status=), so
   // allReports IS the active tab's rows — no more client-side filteredReports.
   protected allReports: UsabilityReportSummary[] = [];
-  // Total row count for the active tab, from the pagination envelope — used
-  // for the count-vs-rows disclosure (no paginator exists yet; OBRS-403).
+  // Total row count for the active tab, from the pagination envelope — drives
+  // the Showing X-Y of N footer text.
   protected totalElements = 0;
+  // OBRS-403: server-side pagination — trust the backend's `number`/
+  // `totalPages` directly, never re-derive with Math.ceil(). pageSize mirrors
+  // UsabilityReportsStore.PAGE_SIZE (kept as a separate constant here — the
+  // rangeStart/rangeEnd getters are pure display math over currentPage, no
+  // dependency on the store's internals).
+  protected currentPage = 1;
+  protected totalPages = 1;
+  protected readonly pageSize = 20;
   protected isRefreshing = false;
   protected refreshFailed = false;
   protected errorMessage = '';
@@ -113,6 +121,9 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
         if (data) {
           this.allReports = data.content;
           this.totalElements = data.totalElements;
+          // Spring's `number` is 0-based; the paginator/footer render 1-based.
+          this.currentPage = data.number + 1;
+          this.totalPages = data.totalPages;
         }
       });
 
@@ -155,7 +166,30 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected onStatusFilterChange(value: string): void {
     const status = (value || (this.isAdmin ? 'accepted' : 'new')) as UsabilityReportStatus;
     this.selectedStatusFilter = status;
+    // Synchronous defense-in-depth: the store's setStatus() already resets
+    // its own page to 0 and clears the cache, but seeding this locally too
+    // means the paginator never flashes the previous tab's page number
+    // during the async refetch.
+    this.currentPage = 1;
     void this.store.setStatus(status);
+  }
+
+  // OBRS-403: server-side page change — 1-based in the template/paginator,
+  // 0-based on the wire (Spring Pageable).
+  protected onPageChange(page: number): void {
+    void this.store.setPage(page - 1);
+  }
+
+  // Mirrors bookings-page.component.ts's getters of the same name, but
+  // computed from the server's page number/total rather than a locally-sliced
+  // array — the backend already tells us exactly how many rows are on this
+  // page (data.number/totalElements), there is nothing to re-derive.
+  protected get rangeStart(): number {
+    return this.totalElements === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  protected get rangeEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalElements);
   }
 
   // Whole-row click is a MOUSE convenience for opening the detail modal. The
@@ -315,6 +349,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           }
         : { ...current, content: updateRowStatus(current.content, id, status) }
     );
+
+    // OBRS-403: a status change that empties a non-first page (the page's
+    // only row just left the active tab) would otherwise strand the admin on
+    // a blank page until they manually navigate back — step back one page
+    // instead.
+    if (leavesTab && this.currentPage > 1 && this.store.value?.content.length === 0) {
+      this.onPageChange(this.currentPage - 1);
+    }
   }
 
   protected closeDetail(): void {

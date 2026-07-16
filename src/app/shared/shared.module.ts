@@ -22,6 +22,9 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
 import { NotificationBellComponent } from './components/notification-bell/notification-bell.component';
 import { NotificationInboxPanelComponent } from './components/notification-inbox-panel/notification-inbox-panel.component';
 import { NotificationInboxRowComponent } from './components/notification-inbox-row/notification-inbox-row.component';
+// OBRS-403: shared server-side paginator, promoted from bookings-page's
+// inline Previous/Next markup now that a second admin list needs it.
+import { AdminPaginatorComponent } from './components/admin-paginator/admin-paginator.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -42,6 +45,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     NotificationBellComponent,
     NotificationInboxPanelComponent,
     NotificationInboxRowComponent,
+    AdminPaginatorComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -76,6 +80,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,
+    AdminPaginatorComponent,
 
     // Directives
     AdminModalBackdropDirective,

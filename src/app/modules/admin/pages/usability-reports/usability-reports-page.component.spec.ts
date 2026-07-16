@@ -12,12 +12,32 @@ import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
+import { AdminPaginatorComponent } from '../../../../shared/components/admin-paginator/admin-paginator.component';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,
   UsabilityReportStatus,
+  UsabilityReportSummary,
 } from '../../../../shared/interfaces/usability-report.interface';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
+
+// OBRS-403: UsabilityReportPage is now the full Spring Page<T> envelope
+// (PageResponse<T>) — this fills in the pagination fields most existing specs
+// don't care about, so each fixture only states what it's actually testing.
+function buildPage(
+  content: UsabilityReportSummary[],
+  totalElements: number,
+  overrides: Partial<Pick<UsabilityReportPage, 'totalPages' | 'size' | 'number' | 'numberOfElements'>> = {}
+): UsabilityReportPage {
+  return {
+    content,
+    totalElements,
+    totalPages: overrides.totalPages ?? 1,
+    size: overrides.size ?? 20,
+    number: overrides.number ?? 0,
+    numberOfElements: overrides.numberOfElements ?? content.length,
+  };
+}
 
 describe('UsabilityReportsPageComponent', () => {
   let fixture: ComponentFixture<UsabilityReportsPageComponent>;
@@ -27,6 +47,11 @@ describe('UsabilityReportsPageComponent', () => {
     refreshing$: BehaviorSubject<boolean>;
     error$: BehaviorSubject<boolean>;
     hasValue: boolean;
+    // OBRS-403: mirrors the real AdminCollectionStore.value getter — settable
+    // here so a test's mutate.and.callFake can reflect a mutation the way the
+    // real store would (applyRowStatus's auto-step-back rule reads this
+    // straight after calling store.mutate()).
+    value: UsabilityReportPage | null;
   };
   let adminApiServiceSpy: jasmine.SpyObj<AdminApiService>;
   let alertServiceSpy: jasmine.SpyObj<AlertService>;
@@ -37,18 +62,26 @@ describe('UsabilityReportsPageComponent', () => {
     const refreshingSubject = new BehaviorSubject<boolean>(false);
     const errorSubject = new BehaviorSubject<boolean>(false);
 
-    storeSpy = jasmine.createSpyObj('UsabilityReportsStore', ['refresh', 'mutate', 'setStatus']) as jasmine.SpyObj<UsabilityReportsStore> & {
+    storeSpy = jasmine.createSpyObj('UsabilityReportsStore', [
+      'refresh',
+      'mutate',
+      'setStatus',
+      'setPage',
+    ]) as jasmine.SpyObj<UsabilityReportsStore> & {
       data$: BehaviorSubject<UsabilityReportPage | null>;
       refreshing$: BehaviorSubject<boolean>;
       error$: BehaviorSubject<boolean>;
       hasValue: boolean;
+      value: UsabilityReportPage | null;
     };
     storeSpy.data$ = dataSubject;
     storeSpy.refreshing$ = refreshingSubject;
     storeSpy.error$ = errorSubject;
     storeSpy.hasValue = false;
+    storeSpy.value = null;
     storeSpy.refresh.and.returnValue(Promise.resolve());
     storeSpy.setStatus.and.returnValue(Promise.resolve());
+    storeSpy.setPage.and.returnValue(Promise.resolve());
 
     adminApiServiceSpy = jasmine.createSpyObj('AdminApiService', [
       'getUsabilityReportById',
@@ -74,7 +107,7 @@ describe('UsabilityReportsPageComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
-      declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective],
+      declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective, AdminPaginatorComponent],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },
         { provide: AdminApiService, useValue: adminApiServiceSpy },
@@ -134,8 +167,8 @@ describe('UsabilityReportsPageComponent', () => {
 
   // (e) Status update calls store.mutate with a FUNCTION (not a partial object)
   it('should call store.mutate with a transform FUNCTION when saving status', () => {
-    const mockPage: UsabilityReportPage = {
-      content: [
+    const mockPage: UsabilityReportPage = buildPage(
+      [
         {
           id: 'abc-123',
           category: 'bug',
@@ -146,8 +179,8 @@ describe('UsabilityReportsPageComponent', () => {
           createdAt: '2026-01-01T00:00:00Z',
         },
       ],
-      totalElements: 1,
-    };
+      1
+    );
 
     // Set store data so hasValue is truthy-equivalent
     storeSpy.data$.next(mockPage);
@@ -216,8 +249,8 @@ describe('UsabilityReportsPageComponent', () => {
 
   // ── OBRS-77 regression specs ──────────────────────────────────────────────
 
-  const mockSummaryPage: UsabilityReportPage = {
-    content: [
+  const mockSummaryPage: UsabilityReportPage = buildPage(
+    [
       {
         id: 'rep-1',
         category: 'bug',
@@ -228,8 +261,8 @@ describe('UsabilityReportsPageComponent', () => {
         createdAt: '2026-01-01T00:00:00Z',
       },
     ],
-    totalElements: 1,
-  };
+    1
+  );
 
   const mockFullDetail: UsabilityReportDetail = {
     id: 'rep-1',
@@ -489,10 +522,10 @@ describe('UsabilityReportsPageComponent', () => {
   });
 
   it('renders the accepted status as .admin-status.is-accepted in the table', () => {
-    const acceptedPage: UsabilityReportPage = {
-      content: [{ ...mockSummaryPage.content[0], status: 'accepted' }],
-      totalElements: 1,
-    };
+    const acceptedPage: UsabilityReportPage = buildPage(
+      [{ ...mockSummaryPage.content[0], status: 'accepted' }],
+      1
+    );
     storeSpy.data$.next(acceptedPage);
     storeSpy.hasValue = true;
     fixture.detectChanges();
@@ -672,11 +705,11 @@ describe('UsabilityReportsPageComponent', () => {
 
   // ── OBRS-174 regression specs: decision-only dropdown + silent auto-promote ──
 
-  function pageWithStatus(status: UsabilityReportStatus): UsabilityReportPage {
-    return {
-      content: [{ ...mockSummaryPage.content[0], status }],
-      totalElements: 1,
-    };
+  function pageWithStatus(
+    status: UsabilityReportStatus,
+    overrides: Partial<Pick<UsabilityReportPage, 'totalPages' | 'number' | 'totalElements' | 'numberOfElements'>> = {}
+  ): UsabilityReportPage {
+    return buildPage([{ ...mockSummaryPage.content[0], status }], overrides.totalElements ?? 1, overrides);
   }
 
   it('builds the admin detail dropdown from accepted/dismissed/resolved/rejected, while the table filter keeps all 6 statuses', () => {
@@ -935,14 +968,17 @@ describe('UsabilityReportsPageComponent', () => {
   // relabels a row leaves a stale, out-of-tab row visible until the next full
   // refresh. Both applyRowStatus() callers must remove it instead.
   describe('tab-leaving row removal (OBRS-378)', () => {
-    function primeOnNewTab(): UsabilityReportPage {
-      const page: UsabilityReportPage = {
-        content: [
+    function primeOnNewTab(
+      overrides: Partial<Pick<UsabilityReportPage, 'totalPages' | 'number'>> = {}
+    ): UsabilityReportPage {
+      const page: UsabilityReportPage = buildPage(
+        [
           { ...mockSummaryPage.content[0], status: 'new' },
           { id: 'rep-2', category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z' },
         ],
-        totalElements: 2,
-      };
+        2,
+        overrides
+      );
       authServiceSpy.getRoles.and.returnValue(['owner']);
       storeSpy.data$.next(page);
       storeSpy.hasValue = true;
@@ -1102,6 +1138,148 @@ describe('UsabilityReportsPageComponent', () => {
 
       expect(component['selectedStatusFilter']).toBe('new');
       expect(storeSpy.setStatus).toHaveBeenCalledWith('new');
+    });
+  });
+
+  // ── OBRS-403: real server-side paginator ──────────────────────────────────
+  describe('server-side pagination (OBRS-403)', () => {
+    it('derives currentPage/totalPages from the store emission (0-based number -> 1-based currentPage), never re-deriving with Math.ceil()', () => {
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 2, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      expect(component['currentPage']).toBe(3);
+      expect(component['totalPages']).toBe(3);
+    });
+
+    it('onPageChange forwards the 0-based page to store.setPage', () => {
+      primeReportList();
+      component['onPageChange'](2);
+
+      expect(storeSpy.setPage).toHaveBeenCalledWith(1);
+    });
+
+    it('resets currentPage to 1 synchronously when the status filter changes (defense-in-depth)', () => {
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 2, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      expect(component['currentPage']).toBe(3);
+
+      component['onStatusFilterChange']('resolved');
+
+      expect(component['currentPage']).toBe(1);
+    });
+
+    it('hides the paginator when totalPages <= 1, and renders it when > 1', () => {
+      primeReportList(); // buildPage defaults totalPages to 1
+      expect(fixture.nativeElement.querySelector('.admin-paginator'))
+        .withContext('single page: paginator must not render')
+        .toBeNull();
+
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 0, totalPages: 3 }));
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.admin-paginator'))
+        .withContext('multiple pages: paginator must render')
+        .not.toBeNull();
+    });
+
+    it('hides the whole footer (Showing text + paginator) while isLoading — a page change clears the cache and re-triggers it', () => {
+      fixture.detectChanges(); // ngOnInit subscribes to refreshing$/hasValue
+      storeSpy.hasValue = false;
+      storeSpy.refreshing$.next(true);
+      fixture.detectChanges();
+
+      expect(component['isLoading']).toBeTrue();
+      expect(fixture.nativeElement.querySelector('.admin-table-footer'))
+        .withContext('the footer must not render under the skeleton-loading state')
+        .toBeNull();
+    });
+
+    it('renders the Showing X - Y of N range computed from currentPage/totalElements', () => {
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 1, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      // Page 2 (1-based) of a 20-per-page listing: rows 21-40 of 45.
+      expect(component['rangeStart']).toBe(21);
+      expect(component['rangeEnd']).toBe(40);
+      const footerText = fixture.nativeElement.querySelector('.admin-table-footer')?.textContent ?? '';
+      expect(footerText).toContain('21');
+      expect(footerText).toContain('40');
+      expect(footerText).toContain('45');
+    });
+
+    it('steps back one page when a status change (leaving the active tab) empties a non-first page', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      // Page 2 (1-based; number=1), a single 'new' row — promoting it out of
+      // the 'new' tab will empty this page.
+      const page = buildPage([{ ...mockSummaryPage.content[0], status: 'new' }], 21, {
+        number: 1,
+        totalPages: 2,
+      });
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges(); // ngOnInit seeds selectedStatusFilter = 'new'; currentPage = 2
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      storeSpy.mutate.and.callFake((transformFn: (current: UsabilityReportPage) => UsabilityReportPage) => {
+        // Mirror the real AdminCollectionStore.mutate()'s effect on `.value`.
+        storeSpy.value = transformFn(page);
+      });
+
+      component['openDetail']('rep-1'); // auto-promotes 'new' -> 'in_review', leaving this tab
+
+      expect(storeSpy.setPage)
+        .withContext('emptying page 2 (1-based) must step back to page 1 (0-based page 0)')
+        .toHaveBeenCalledWith(0);
+    });
+
+    it('does NOT step back when the mutation leaves rows on the current page', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      const page = buildPage(
+        [
+          { ...mockSummaryPage.content[0], status: 'new' },
+          { id: 'rep-2', category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z' },
+        ],
+        22,
+        { number: 1, totalPages: 2 }
+      );
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      storeSpy.mutate.and.callFake((transformFn: (current: UsabilityReportPage) => UsabilityReportPage) => {
+        storeSpy.value = transformFn(page);
+      });
+
+      component['openDetail']('rep-1'); // leaves the sibling row ('rep-2') on this page
+
+      expect(storeSpy.setPage)
+        .withContext('a non-empty remaining page must not trigger a step-back')
+        .not.toHaveBeenCalled();
+    });
+
+    it('does NOT step back when the emptied page is already page 1', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      const page = buildPage([{ ...mockSummaryPage.content[0], status: 'new' }], 1, {
+        number: 0,
+        totalPages: 1,
+      });
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges(); // currentPage = 1
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      storeSpy.mutate.and.callFake((transformFn: (current: UsabilityReportPage) => UsabilityReportPage) => {
+        storeSpy.value = transformFn(page);
+      });
+
+      component['openDetail']('rep-1');
+
+      expect(storeSpy.setPage)
+        .withContext('page 1 emptying is the natural empty-tab state, not a step-back case')
+        .not.toHaveBeenCalled();
     });
   });
 });

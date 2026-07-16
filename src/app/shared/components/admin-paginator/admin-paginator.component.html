@@ -1,0 +1,24 @@
+<nav
+  class="admin-inline-actions admin-paginator"
+  role="navigation"
+  [attr.aria-label]="'ADMIN.COMMON.PAGINATION_NAV_ARIA' | translate"
+  *ngIf="totalPages > 1"
+>
+  <button
+    type="button"
+    class="admin-btn admin-btn-small"
+    [disabled]="currentPage === 1 || disabled"
+    (click)="pageChange.emit(currentPage - 1)"
+  >
+    {{ 'ADMIN.COMMON.PREVIOUS' | translate }}
+  </button>
+  <span class="admin-muted" aria-live="polite">{{ currentPage }} / {{ totalPages }}</span>
+  <button
+    type="button"
+    class="admin-btn admin-btn-small"
+    [disabled]="currentPage === totalPages || disabled"
+    (click)="pageChange.emit(currentPage + 1)"
+  >
+    {{ 'ADMIN.COMMON.NEXT' | translate }}
+  </button>
+</nav>

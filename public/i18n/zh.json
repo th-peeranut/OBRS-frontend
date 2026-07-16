@@ -382,6 +382,7 @@
       "EXPORT": "导出",
       "PREVIOUS": "上一页",
       "NEXT": "下一页",
+      "PAGINATION_NAV_ARIA": "分页",
       "ENTRIES": "条",
       "SHOWING": "显示",
       "OF": "/",
@@ -881,8 +882,7 @@
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈",
-      "ACCEPTED_BADGE_ARIA": "{{count}} 条待处理的可用性反馈",
-      "PARTIAL_LIST_HINT": "此状态下显示 {{shown}} / {{total}} 份报告 — 还有更多记录未显示。"
+      "ACCEPTED_BADGE_ARIA": "{{count}} 条待处理的可用性反馈"
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",

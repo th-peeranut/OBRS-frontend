@@ -1074,11 +1074,16 @@ export class AdminApiService {
   // sort param (e.g. ['createdAt,asc','id,asc'] — see sortForStatus()).
   // HttpParams.append is used per sort entry (NOT .set), which would
   // collapse the two into one param and drop the id tiebreak.
+  // OBRS-403: page/size added, mirroring getPendingManualRefunds() above —
+  // always sent so the request is deterministic rather than relying on the
+  // backend's @PageableDefault.
   getUsabilityReports(
     status?: UsabilityReportStatus,
-    sort?: string[]
+    sort?: string[],
+    page = 0,
+    size = 20
   ): Observable<ResponseAPI<UsabilityReportPage>> {
-    let params = new HttpParams();
+    let params = new HttpParams().set('page', page).set('size', size);
     if (status) {
       params = params.set('status', status);
     }
