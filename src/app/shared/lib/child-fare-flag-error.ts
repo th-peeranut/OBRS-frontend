@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { ChildFareFlagErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -21,11 +21,5 @@ export function mapChildFareFlagErrorCode(errorCode: string | null | undefined):
 
 /** Extracts `error.error.errorCode` from a failed flag/unflag HTTP call. */
 export function extractChildFareFlagErrorCode(error: unknown): ChildFareFlagErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as ChildFareFlagErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as ChildFareFlagErrorCode;
 }
