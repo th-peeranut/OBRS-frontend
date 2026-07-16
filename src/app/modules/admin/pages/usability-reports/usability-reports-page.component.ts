@@ -370,24 +370,29 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
         : { ...current, content: updateRowStatus(current.content, id, status) }
     );
 
-    // OBRS-403: a status change that empties a non-first page (the page's
-    // only row just left the active tab) would otherwise strand the admin on
-    // a blank page until they manually navigate back — step back one page
-    // instead.
-    if (leavesTab && this.currentPage > 1 && this.store.value?.content.length === 0) {
-      this.onPageChange(this.currentPage - 1);
+    // Only a row that LEFT the active tab can empty this page; a relabel-in-
+    // place keeps the row count identical, so there is nothing to step back
+    // from. The emptied-page rule itself lives in stepBackIfPageEmptied().
+    if (leavesTab) {
+      this.stepBackIfPageEmptied();
     }
   }
 
-  // OBRS-403 (merge with OBRS-376): mark/un-mark-as-duplicate below is a
-  // SECOND status-mutation path — unlike applyRowStatus() above, it doesn't
-  // optimistically mutate the cache, it round-trips through a full
-  // store.refresh() (duplicateCount is server-derived, so a local patch can't
-  // compute it). 'duplicate' is itself a selectable tab (STATUS_FILTER_VALUES),
-  // so marking/unmarking the last row on a non-first page is exactly the same
-  // "emptied the active tab's last page" case applyRowStatus guards — this
-  // must be checked here too, post-refresh, or the admin is stranded on a
-  // blank page (see applyRowStatus's doc comment for the original rule).
+  // The single owner of the "this mutation emptied a non-first page" rule —
+  // without it the admin is stranded on a blank page until they manually
+  // navigate back. Both of this page's status-mutation paths funnel here:
+  //
+  //  - applyRowStatus() (auto-promote, decision save/dismiss) calls it
+  //    synchronously after its optimistic cache mutate, gated on leavesTab;
+  //  - mark/un-mark-as-duplicate (OBRS-376) calls it from .then() after a full
+  //    store.refresh() — that path can't optimistically mutate, because
+  //    duplicateCount is server-derived, and 'duplicate' is itself a
+  //    selectable tab (STATUS_FILTER_VALUES), so marking/unmarking the last
+  //    row of a non-first page hits this same case.
+  //
+  // Both read post-mutation state: `currentPage` mirrors data.number + 1 via
+  // the data$ subscription, which the store emits synchronously before
+  // refresh() resolves.
   private stepBackIfPageEmptied(): void {
     if (this.currentPage > 1 && this.store.value?.content.length === 0) {
       this.onPageChange(this.currentPage - 1);

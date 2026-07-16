@@ -3701,3 +3701,24 @@ Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check a
 - Lesson: when a shared util's docstring says "every X should call this", grep that it actually
   replaced EVERY call site — a half-finished consolidation leaves the util's own contract untrue.
   The method itself was correct to keep (distinct null semantics); only its inner regex was the dup.
+## OBRS-403/376 merge scrutinize self-fix (2026-07-16) — one step-back rule, not two copies
+- The merge correctly SPOTTED that mark/unmark-as-duplicate never inherited OBRS-403's
+  auto-step-back guard (that path round-trips `store.refresh()` instead of `applyRowStatus()`'s
+  optimistic mutate, because `duplicateCount` is server-derived), and added
+  `stepBackIfPageEmptied()` for it. The diagnosis and the wiring were both right.
+- But it left the ORIGINAL rule inlined in `applyRowStatus()` as a byte-near-identical copy —
+  `if (this.currentPage > 1 && this.store.value?.content.length === 0) onPageChange(currentPage - 1)`
+  differing only by a leading `leavesTab &&`. That re-creates, one level up, the exact
+  "two call sites, one guarded" trap the merge had just finished fixing: the next paging rule
+  change now has to be made in two places, and whichever is forgotten fails silently (a blank
+  page is not an exception, and both copies' tests still pass independently).
+- Fix (behavior-identical, 2551/2551 green, both tsc clean): `applyRowStatus()` now calls
+  `if (leavesTab) { this.stepBackIfPageEmptied(); }`. `leavesTab` stays at the CALL SITE rather
+  than moving into the shared method — it is that path's own precondition (a relabel-in-place
+  can't empty a page), and the refresh-driven callers must NOT have it (post-refresh emptiness
+  is authoritative regardless of why). `stepBackIfPageEmptied()` is now the single owner of the
+  rule and its doc comment enumerates both callers.
+- Lesson (DEV-GOTCHAS "enumerate the WHOLE family, don't spot-fix the named line"): when you
+  find a guard missing at a second call site, the fix is to make the guard a single named unit
+  BOTH sites call — not to hand-copy it to the site you just found. Copying it forward means the
+  family now has two members to keep in sync instead of one, which is how the gap opened.
