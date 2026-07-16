@@ -20,24 +20,30 @@ export interface StatusOption {
   label: string;
 }
 
-// The table filter offers all statuses (including 'duplicate', OBRS-376, so
-// the table can be filtered down to just the merged-away reports);
-// 'new'/'in_review' are triage states, not outcomes, so they are excluded
-// from the decision-only detail dropdown below (design-system.md §3.1: no
-// pre-seeded default). 'duplicate' is ALSO excluded from the detail dropdown
-// (see DETAIL_STATUS_VALUES below) — it is never a dropdown-selectable
-// decision, only reachable via the mark/un-mark actions.
+// The table filter offers all 7 statuses (OBRS-378's 6 plus 'duplicate' from
+// OBRS-376, so the table can also be filtered down to just the merged-away
+// reports), non-terminal states grouped before terminal ones per the UX
+// spec; 'new'/'in_review' are triage states, not outcomes, so they are
+// excluded from the decision-only detail dropdowns below (design-system.md
+// §3.1: no pre-seeded default). 'duplicate' is ALSO excluded from the detail
+// dropdown (see DETAIL_STATUS_VALUES below) — it is never a
+// dropdown-selectable decision, only reachable via the mark/un-mark actions.
 export const STATUS_FILTER_VALUES: readonly UsabilityReportStatus[] = [
   'new',
   'in_review',
   'accepted',
+  'dismissed',
   'resolved',
   'rejected',
   'duplicate',
 ];
 
+// OBRS-378: 'dismissed' is a non-terminal screen-out decision (no email, can
+// be pulled back into review) that both admin and owner may set — see
+// OWNER_DETAIL_STATUS_VALUES below.
 export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'accepted',
+  'dismissed',
   'resolved',
   'rejected',
 ];
@@ -46,9 +52,12 @@ export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
 // non-admin on the terminal decisions (resolved/rejected, which are terminal
 // and email the reporter) and on the Jira key, so the owner's decision
 // dropdown only offers the non-terminal, forward-moving transitions.
+// OBRS-378 (PO lock): owner CAN set 'dismissed' — it is non-terminal and
+// non-email, so it stays within the owner's screening authority.
 export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'in_review',
   'accepted',
+  'dismissed',
 ];
 
 // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
@@ -98,12 +107,17 @@ export function statusClass(status: string): string {
   if (status === 'new') return 'is-warning';
   if (status === 'in_review') return 'is-info';
   if (status === 'accepted') return 'is-accepted';
+  // OBRS-378: dismissed is a muted, distinct-from-danger screen-out state —
+  // reuses the existing plain-grey .is-neutral token (design-system.md §2.4),
+  // verified WCAG-safe in both themes (admin-theme.scss), not a new hex.
+  if (status === 'dismissed') return 'is-neutral';
   if (status === 'resolved') return 'is-success';
   if (status === 'rejected') return 'is-danger';
-  // OBRS-376: plain-grey "inactive/unset" token (design-system.md §2.4) — a
-  // duplicate report is neither a positive nor negative outcome, it's off the
-  // active queue entirely, same semantic as boarding-list's "Not boarded".
-  if (status === 'duplicate') return 'is-neutral';
+  // OBRS-376/378 (PO decision, 2026-07-16): 'duplicate' originally reused the
+  // plain-grey is-neutral token, but that collided with 'dismissed' above —
+  // both rendered as identical grey chips. Moved to its own --admin-duplicate-*
+  // violet token (admin-theme.scss); 'dismissed' keeps is-neutral unchanged.
+  if (status === 'duplicate') return 'is-duplicate';
   return '';
 }
 
@@ -194,4 +208,29 @@ export function extractUsabilityReportErrorCode(error: unknown): string | null {
     }
   }
   return null;
+}
+
+// OBRS-378: pure list-mutate helper for a row that moved OUT of the currently
+// active tab (server-side ?status= filtering means a patched-but-out-of-tab
+// row must be dropped, not just re-labelled). Used by applyRowStatus()
+// alongside updateRowStatus() above.
+export function removeRow(
+  content: UsabilityReportSummary[],
+  id: string
+): UsabilityReportSummary[] {
+  return content.filter((r) => r.id !== id);
+}
+
+// OBRS-378: the two "actively worked" tabs (accepted awaiting resolution,
+// in_review awaiting a decision) sort oldest-first (FIFO — work the queue in
+// order); every other tab (new, dismissed, resolved, rejected) sorts
+// newest-first, matching this page's pre-existing default ordering.
+export const FIFO_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>([
+  'accepted',
+  'in_review',
+]);
+
+export function sortForStatus(status: UsabilityReportStatus | ''): string[] {
+  const dir = status !== '' && FIFO_STATUSES.has(status) ? 'asc' : 'desc';
+  return [`createdAt,${dir}`, `id,${dir}`];
 }

@@ -38,12 +38,21 @@
                 <span class="admin-status" [ngClass]="chipFor(row).token">
                   {{ chipFor(row).i18nKey | translate }}
                 </span>
+                <span
+                  *ngIf="paymentFlagFor(row) as paymentFlag"
+                  class="admin-status ms-1"
+                  [ngClass]="paymentFlag.token"
+                  data-testid="payment-flag"
+                >
+                  {{ paymentFlag.i18nKey | translate }}
+                </span>
               </td>
               <td>
                 <button
                   *ngIf="row.deliveryStatus === 'accepted'"
                   class="admin-btn admin-btn-small"
-                  [disabled]="isRowBusy(row.parcelId)"
+                  [disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                  [title]="isRowBlocked(row) ? ('STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
                   (click)="onLoad(row)"
                 >
                   {{ 'STAFF.PARCEL_DELIVERY.ACTION.LOAD' | translate }}
@@ -51,7 +60,8 @@
                 <button
                   *ngIf="row.deliveryStatus === 'in_transit'"
                   class="admin-btn admin-btn-small"
-                  [disabled]="isRowBusy(row.parcelId)"
+                  [disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                  [title]="isRowBlocked(row) ? ('STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
                   (click)="onArrived(row)"
                 >
                   {{ 'STAFF.PARCEL_DELIVERY.ACTION.MARK_ARRIVED' | translate }}
@@ -59,7 +69,8 @@
                 <button
                   *ngIf="row.deliveryStatus === 'arrived_notified'"
                   class="admin-btn admin-btn-small"
-                  [disabled]="isRowBusy(row.parcelId)"
+                  [disabled]="isRowBusy(row.parcelId) || isRowBlocked(row)"
+                  [title]="isRowBlocked(row) ? ('STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
                   (click)="openCollectDialog(row)"
                 >
                   {{ 'STAFF.PARCEL_DELIVERY.ACTION.COLLECT' | translate }}

@@ -46,6 +46,25 @@
   --admin-delayed-bg: #ede9fe;
   --admin-delayed-text: #4c1d95;
 
+  /* OBRS-376/378 chip-colour collision (PO decision): duplicate and dismissed
+     usability-report statuses both landed on is-neutral, reading as identical
+     grey chips. dismissed KEEPS is-neutral; duplicate gets its OWN token
+     rather than reusing --admin-delayed-* (visually close, violet) — that
+     token is semantically "trip delayed" (OBRS-272, schedule-level) and
+     cross-using it would mislead the next reader, same reasoning as every
+     other distinct state getting its own --admin-*-* pair
+     (--admin-accepted-*, --admin-neutral-*, --admin-delayed-*). Distinct from
+     every colour already on this page: new #ffdcbe peach, in_review #e2e5ea
+     grey-blue, accepted #b7f3c0 green, resolved #d4e3ff blue, rejected
+     #ffdad6 red, dismissed #e4e4e7 grey. Light bg + dark text is a
+     self-contained chip on its own (like --admin-accepted-* and
+     --admin-delayed-* above) but gets a dark-mode override anyway (below) —
+     --admin-delayed-* skipped that override and renders as a near-white
+     lavender blob on the dark shell, the exact OBRS-100 bug
+     --admin-neutral-* was introduced to fix; don't reproduce it here. */
+  --admin-duplicate-bg: #ede9fe;
+  --admin-duplicate-text: #4c1d95;
+
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
   --accent: #4dbeef;
@@ -192,6 +211,22 @@
 .admin-shell.is-dark {
   --admin-neutral-bg: #333b42;
   --admin-neutral-text: #cdd8df;
+}
+
+/* OBRS-376/378 (PO decision, chip-colour collision follow-up): the new
+   --admin-duplicate-* pair above is a self-contained-looking light-violet
+   chip in light mode, same shape as --admin-delayed-* — but --admin-delayed-*
+   was never given a dark-mode override and, as a result, renders as a
+   near-white lavender blob on the dark shell (same failure class as the
+   --admin-neutral-* fix above, i.e. the OBRS-100 bug). Give duplicate a
+   recessed dark violet chip instead: bg a step lighter than the row, text
+   light enough to read. Verified contrast (WCAG relative-luminance formula):
+   bg #3b2f5c / text #ddd6fe ≈ 8.7:1, comfortably above the 4.5:1 AA floor
+   (light mode bg #ede9fe / text #4c1d95 ≈ 9.2:1, also verified). Light mode
+   is unchanged. */
+.admin-shell.is-dark {
+  --admin-duplicate-bg: #3b2f5c;
+  --admin-duplicate-text: #ddd6fe;
 }
 
 /* OBRS-256: `.is-info` (in_review / the schedule "departed" pill) had no
@@ -730,9 +765,25 @@
   border-color: var(--admin-outline);
 }
 
-.admin-btn:hover {
+.admin-btn:not(:disabled):hover {
   border-color: rgba(0, 102, 135, 0.24);
   background: var(--accent-soft);
+}
+
+/* OBRS-406: shared disabled affordance for every .admin-btn (and its
+   -primary/-danger variants). The primitive had none, so a [disabled] button
+   was visually identical to a live one (opacity 1, cursor pointer) — invisible
+   to the user on every page that disables an action (in-flight isRowBusy,
+   unpaid parcel rows on the delivery list, a validating modal submit). Lifted
+   here from the OBRS-396 page-scoped workaround; additive to an
+   already-reachable state, so nothing that was enabled changes. The three
+   variant :hover rules are gated on :not(:disabled) (rather than re-setting
+   colours on :disabled:hover) so a disabled button simply holds its own base
+   look dimmed — no colour "jump" on hover, and the primary gradient isn't
+   flattened to a surface card the moment the cursor lands on it. */
+.admin-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .admin-btn-primary {
@@ -742,7 +793,7 @@
   box-shadow: 0 8px 18px rgba(0, 102, 135, 0.24);
 }
 
-.admin-btn-primary:hover {
+.admin-btn-primary:not(:disabled):hover {
   background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
   opacity: 0.9;
 }
@@ -763,7 +814,7 @@
   border-color: var(--admin-danger-border);
 }
 
-.admin-btn-danger:hover {
+.admin-btn-danger:not(:disabled):hover {
   background: var(--admin-danger-bg);
   border-color: var(--admin-danger-border);
 }
@@ -1185,6 +1236,16 @@
   color: var(--admin-delayed-text);
 }
 
+/* OBRS-376/378 (PO decision): "duplicate" usability-report status — see the
+   --admin-duplicate-* token comment above for why this is its own token
+   rather than reusing --admin-delayed-* (visually close, but semantically
+   the unrelated "trip delayed" pill) or --admin-neutral-* (already
+   "dismissed"'s token, and reusing it here read as identical grey chips). */
+.admin-status.is-duplicate {
+  background: var(--admin-duplicate-bg);
+  color: var(--admin-duplicate-text);
+}
+
 .admin-status--icon {
   gap: 4px;
 
@@ -1596,7 +1657,11 @@ textarea.admin-field {
     position: relative;
     height: 100%;
     width: 76px;
-    overflow: hidden;
+    /* overflow-x clips the 280px-wide labels while the rail animates to 76px.
+       overflow-y must stay auto: the nav is taller than a 1080p/125%-scaled
+       viewport, and the `overflow` shorthand used to reset it to hidden (OBRS-402). */
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--admin-surface-soft);
     border-right: 1px solid var(--admin-outline);
     padding: 28px 12px;

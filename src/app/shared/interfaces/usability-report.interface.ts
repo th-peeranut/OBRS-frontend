@@ -1,4 +1,6 @@
 export type UsabilityReportCategory = 'bug' | 'ux_ui_improvement' | 'suggestion';
+// OBRS-378: 'dismissed' is the owner/admin low-priority-triage outcome (see
+// that card's mappers/component for its dedicated flow).
 // OBRS-376: 'duplicate' is never a dropdown-selectable decision — a report only
 // reaches it via the mark-as-duplicate action, and only leaves it via the
 // un-mark action (PUT status 'in_review'). See usability-reports-page.mappers.ts
@@ -7,6 +9,7 @@ export type UsabilityReportStatus =
   | 'new'
   | 'in_review'
   | 'accepted'
+  | 'dismissed'
   | 'resolved'
   | 'rejected'
   | 'duplicate';
