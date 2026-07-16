@@ -1,5 +1,11 @@
 export type UsabilityReportCategory = 'bug' | 'ux_ui_improvement' | 'suggestion';
-export type UsabilityReportStatus = 'new' | 'in_review' | 'accepted' | 'resolved' | 'rejected';
+export type UsabilityReportStatus =
+  | 'new'
+  | 'in_review'
+  | 'accepted'
+  | 'dismissed'
+  | 'resolved'
+  | 'rejected';
 
 export interface UsabilityReportSummary {
   id: string;

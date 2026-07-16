@@ -6,6 +6,7 @@ import { AdminApiService } from '../../services/admin/admin-api.service';
 import { UsabilityReportBadgeRefreshService } from '../../shared/services/usability-report-badge-refresh.service';
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
 
 interface AdminNavItem {
   path: string;
@@ -138,10 +139,26 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     return items;
   }
 
-  // Count of usability reports with status 'new'. Plain field (not a getter)
-  // so it doesn't churn change detection like navItems above — assigned once
-  // per fetch/poll tick.
-  protected newReportCount = 0;
+  // OBRS-378: the sidebar badge is now role-split — owner defaults to
+  // watching 'new' (awaiting screening), admin watches 'accepted'
+  // (owner-vetted). Sourced from the RAW held role
+  // (authService.getRoles().includes('admin')), NEVER hasAnyRole(['admin']) —
+  // under this FE's area-based access model an owner satisfies
+  // hasAnyRole(['admin']) too (ROLE_GRANTS superset), which would make the
+  // badge (and everything gated on it) behave as admin for an owner. Mirrors
+  // the same raw-role precedent as UsabilityReportsPageComponent.isAdmin
+  // (usability-reports-page.component.ts:92) and ADR-0011's addendum.
+  protected readonly badgeStatus: UsabilityReportStatus = this.authService
+    .getRoles()
+    .includes('admin')
+    ? 'accepted'
+    : 'new';
+
+  // Count of usability reports with status `badgeStatus`. Plain field (not a
+  // getter) so it doesn't churn change detection like navItems above —
+  // assigned once per fetch/poll tick. RENAMED from newReportCount (OBRS-378)
+  // now that the badge no longer always tracks 'new'.
+  protected badgeCount = 0;
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -239,13 +256,15 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     this.applyNavSearch('');
   }
 
-  // Fetches the new-usability-report count on entering the admin area, then
-  // re-fetches every 60s, on every in-admin NavigationEnd, and whenever
-  // UsabilityReportBadgeRefreshService.trigger() fires (the detail page's
-  // silent auto-promote-on-open and decision-save both call it, so the badge
-  // updates immediately instead of waiting for the next poll/navigation).
-  // A failed tick is swallowed via catchError so the outer subscription (and
-  // therefore the 60s interval) survives; the last known count is kept on error.
+  // Fetches the usability-report badge count (status = badgeStatus) on
+  // entering the admin area, then re-fetches every 60s, on every in-admin
+  // NavigationEnd, and whenever UsabilityReportBadgeRefreshService.trigger()
+  // fires (the detail page's silent auto-promote-on-open and decision-save
+  // both call it, so the badge updates immediately instead of waiting for the
+  // next poll/navigation). A failed tick is swallowed via catchError so the
+  // outer subscription (and therefore the 60s interval) survives; the last
+  // known count is kept on error. ADR-0011's single-fetch-path decision
+  // holds: all three writers below still feed this one merge/switchMap.
   private watchNewReportCount(): void {
     merge(
       timer(0, NEW_REPORT_COUNT_POLL_MS),
@@ -254,35 +273,47 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     )
       .pipe(
         switchMap(() =>
-          this.adminApiService.getNewUsabilityReportCount().pipe(catchError(() => EMPTY))
+          this.adminApiService
+            .getUsabilityReportCountByStatus(this.badgeStatus)
+            .pipe(catchError(() => EMPTY))
         ),
         takeUntil(this.destroy$)
       )
       .subscribe((count) => {
-        this.newReportCount = count;
+        this.badgeCount = count;
       });
 
-    // Optimistic same-tick badge adjustment (OBRS-174): the detail page's
-    // silent auto-promote knows it just moved one report out of 'new', so it
-    // nudges the count by -1 here instantly rather than waiting on the
-    // authoritative GET above (a second live round-trip after the promote PUT).
-    // Clamped at 0; the poll/navigation refetch reconciles any drift.
+    // Optimistic same-tick badge adjustment (OBRS-174; status-gated OBRS-378):
+    // the detail page's silent auto-promote knows it just moved one report out
+    // of a status, so it nudges the count by a delta here instantly rather
+    // than waiting on the authoritative GET above (a second live round-trip
+    // after the promote PUT). A delta for a status this layout ISN'T
+    // displaying is ignored — e.g. an admin's badge (badgeStatus='accepted')
+    // must not react to a 'new'-tab adjustBy('new', -1) fired by another
+    // admin's page interaction. Clamped at 0; the poll/navigation refetch
+    // reconciles any drift.
     this.badgeRefreshService.countAdjustments$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((delta) => {
-        this.newReportCount = Math.max(0, this.newReportCount + delta);
+      .subscribe(({ status, delta }) => {
+        if (status !== this.badgeStatus) {
+          return;
+        }
+        this.badgeCount = Math.max(0, this.badgeCount + delta);
       });
 
     // OBRS-147: real-time push over the STOMP WebSocket. A SEPARATE
     // subscription (not folded into the switchMap above) because the pushed
-    // payload already carries the authoritative count — no GET round-trip
+    // payload already carries the authoritative counts — no GET round-trip
     // needed, unlike the poll/NavigationEnd/refreshRequested$ signal above.
     // This is purely additive: if the socket never connects/reconnects, the
-    // 60s poll and the other signals above keep the badge correct on their own.
-    this.badgeSocketService.count$
+    // 60s poll and the other signals above keep the badge correct on their
+    // own. OBRS-378: the message carries BOTH counts; select the one this
+    // layout's badgeStatus is watching.
+    this.badgeSocketService.counts$
       .pipe(takeUntil(this.destroy$))
-      .subscribe((count) => {
-        this.newReportCount = count;
+      .subscribe((message) => {
+        this.badgeCount =
+          this.badgeStatus === 'accepted' ? message.acceptedReportCount : message.newReportCount;
       });
   }
 }

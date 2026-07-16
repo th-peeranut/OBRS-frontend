@@ -22,6 +22,7 @@ import {
   categoryLabel as categoryLabelPure,
   displayDateTime as displayDateTimePure,
   formatBytes as formatBytesPure,
+  removeRow,
   seedDecisionStatus,
   statusClass as statusClassPure,
   statusLabel as statusLabelPure,
@@ -35,13 +36,24 @@ import {
   styleUrl: './usability-reports-page.component.scss',
 })
 export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
+  // OBRS-378: the list is now server-filtered by status (?status=), so
+  // allReports IS the active tab's rows — no more client-side filteredReports.
   protected allReports: UsabilityReportSummary[] = [];
+  // Total row count for the active tab, from the pagination envelope — used
+  // for the count-vs-rows disclosure (no paginator exists yet; OBRS-403).
+  protected totalElements = 0;
   protected isRefreshing = false;
   protected refreshFailed = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
 
-  protected selectedStatusFilter = '';
+  // OBRS-378: seeded to a concrete role default in ngOnInit and kept concrete
+  // thereafter — the filter dropdown drops its [placeholder] binding
+  // (design-system.md §3.1 leak: a placeholder header would emit '' and
+  // re-enter the retired "show all" mode), so its visible label always comes
+  // from the seeded value via the dropdown's own selectedLabel. Typed to
+  // include '' only to match UsabilityReportsStore.setStatus()'s signature.
+  protected selectedStatusFilter: UsabilityReportStatus | '' = 'new';
   // Built from i18n in ngOnInit (and rebuilt on language change) so the admin
   // dropdowns match the translated status labels shown in the table.
   protected statusFilterOptions: StatusOption[] = [];
@@ -100,6 +112,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       .subscribe((data) => {
         if (data) {
           this.allReports = data.content;
+          this.totalElements = data.totalElements;
         }
       });
 
@@ -117,7 +130,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
             : '';
       });
 
-    void this.store.refresh();
+    // OBRS-378: the list is server-filtered by status — owner defaults to
+    // 'new' (awaiting screening), admin defaults to 'accepted' (owner-vetted).
+    // setStatus() already calls refresh() internally, so this replaces (not
+    // supplements) the old unconditional store.refresh() — calling both would
+    // double-fetch on first load.
+    this.selectedStatusFilter = this.isAdmin ? 'accepted' : 'new';
+    void this.store.setStatus(this.selectedStatusFilter);
   }
 
   ngOnDestroy(): void {
@@ -129,15 +148,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected get filteredReports(): UsabilityReportSummary[] {
-    if (!this.selectedStatusFilter) {
-      return this.allReports;
-    }
-    return this.allReports.filter((r) => r.status === this.selectedStatusFilter);
-  }
-
+  // OBRS-378: maps a '' selection (defensive — the dropdown's [placeholder]
+  // binding is dropped so this shouldn't fire in practice, design-system.md
+  // §3.1) back to the role default rather than ever sending an undefined
+  // status to the server.
   protected onStatusFilterChange(value: string): void {
-    this.selectedStatusFilter = value ?? '';
+    const status = (value || (this.isAdmin ? 'accepted' : 'new')) as UsabilityReportStatus;
+    this.selectedStatusFilter = status;
+    void this.store.setStatus(status);
   }
 
   // Whole-row click is a MOUSE convenience for opening the detail modal. The
@@ -250,10 +268,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private autoPromoteToInReview(id: string): void {
     // Apply the promote OPTIMISTICALLY — before the PUT resolves — so the UI
     // reacts instantly instead of waiting on the live round-trip (~2s): flip
-    // the table row to in_review and drop the sidebar "new" badge by one. Both
-    // are reverted if the server rejects the promote.
-    this.setRowStatus(id, 'in_review');
-    this.badgeRefreshService.adjustBy(-1);
+    // the table row to in_review (or remove it, if that leaves the active
+    // tab — e.g. promoting out of the 'new' tab) and drop the sidebar "new"
+    // badge by one. Both are reverted if the server rejects the promote.
+    this.applyRowStatus(id, 'in_review');
+    this.badgeRefreshService.adjustBy('new', -1);
 
     this.adminApiService
       .updateUsabilityReportStatus(id, 'in_review', null)
@@ -270,18 +289,32 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           // Revert the optimistic changes (toast-free, per method doc). The
           // common failure is the stale cross-session 400 (the report was
           // already advanced elsewhere); the periodic count poll / NavigationEnd
-          // refetch reconciles the exact number regardless.
-          this.setRowStatus(id, 'new');
-          this.badgeRefreshService.adjustBy(1);
+          // refetch reconciles the exact number regardless. A promoted row may
+          // have been REMOVED (not just relabeled) by applyRowStatus above, so
+          // it can't be surgically restored — reconcile via a full refresh.
+          void this.store.refresh();
+          this.badgeRefreshService.adjustBy('new', 1);
         },
       });
   }
 
-  private setRowStatus(id: string, status: UsabilityReportStatus): void {
-    this.store.mutate((current) => ({
-      ...current,
-      content: updateRowStatus(current.content, id, status),
-    }));
+  // OBRS-378: shared optimistic-mutate helper for every status change on this
+  // page (auto-promote, decision save/dismiss). The list is server-filtered
+  // by ?status=, so a row whose NEW status no longer matches the active tab
+  // must be REMOVED from the client-side cache, not just relabeled in place —
+  // otherwise a patched-but-out-of-tab row keeps rendering until the next
+  // full refresh.
+  private applyRowStatus(id: string, status: UsabilityReportStatus): void {
+    const leavesTab = this.selectedStatusFilter !== '' && status !== this.selectedStatusFilter;
+    this.store.mutate((current) =>
+      leavesTab
+        ? {
+            ...current,
+            content: removeRow(current.content, id),
+            totalElements: Math.max(0, current.totalElements - 1),
+          }
+        : { ...current, content: updateRowStatus(current.content, id, status) }
+    );
   }
 
   protected closeDetail(): void {
@@ -350,11 +383,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     const id = this.selectedReportId;
     const status = this.selectedDetailStatus as UsabilityReportStatus;
 
-    // Optimistic update
-    this.store.mutate((current) => ({
-      ...current,
-      content: updateRowStatus(current.content, id, status),
-    }));
+    // Optimistic update — this is also THE dismiss path: an owner or admin
+    // picking 'dismissed' in the modal saves through here, so it must go
+    // through the same tab-leaving-removal logic as the auto-promote above
+    // (design-system.md §6 / OBRS-378).
+    this.applyRowStatus(id, status);
 
     this.isSavingStatus = true;
     this.adminApiService
@@ -379,8 +412,23 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           this.alertService.error(
             this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED')
           );
+          // The optimistic applyRowStatus() above may have REMOVED the row
+          // (a leaves-tab status) — on a failed save that removal must not
+          // stick, so reconcile via a full refresh (parallel to the
+          // auto-promote-revert above; exactly-once, one line).
+          void this.store.refresh();
         },
       });
+  }
+
+  // OBRS-378: the admin-only "Pull Back to Review" action on an already-
+  // dismissed report's detail modal — sets the decision status to in_review
+  // and reuses saveStatus() end-to-end (optimistic mutate, cache
+  // invalidation, toasts, badge trigger, close-on-success) rather than a
+  // parallel HTTP call path.
+  protected pullBackToReview(): void {
+    this.selectedDetailStatus = 'in_review';
+    this.saveStatus();
   }
 
   protected categoryLabel(category: string): string {

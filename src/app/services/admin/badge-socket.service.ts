@@ -14,19 +14,24 @@ import { AuthService } from '../../auth/auth.service';
 //   - STOMP endpoint: native WebSocket (no SockJS) at `/ws` on the backend
 //     HOST ROOT (NOT under `/api`).
 //   - Subscribe destination: `/topic/admin/usability-report-count`.
-//   - Payload: `{ "newReportCount": <number> }`.
+//   - Payload (OBRS-378): `{ "newReportCount": <number>, "acceptedReportCount":
+//     <number> }` — backward-compatible on the wire (the pre-OBRS-378 FE only
+//     read newReportCount, and the backend still always sends it). The whole
+//     message is emitted on counts$ so AdminLayoutComponent can select the
+//     field for its own badgeStatus, keeping that role decision in one file.
 const ADMIN_REPORT_COUNT_DESTINATION = '/topic/admin/usability-report-count';
 const STOMP_RECONNECT_DELAY_MS = 5000;
 const STOMP_HEARTBEAT_MS = 10000;
 
-interface UsabilityReportCountMessage {
+export interface UsabilityReportCountMessage {
   newReportCount: number;
+  acceptedReportCount: number;
 }
 
 @Injectable({ providedIn: 'root' })
 export class BadgeSocketService {
-  private readonly countSubject = new Subject<number>();
-  readonly count$: Observable<number> = this.countSubject.asObservable();
+  private readonly countsSubject = new Subject<UsabilityReportCountMessage>();
+  readonly counts$: Observable<UsabilityReportCountMessage> = this.countsSubject.asObservable();
 
   private client: Client | null = null;
 
@@ -48,7 +53,7 @@ export class BadgeSocketService {
       onConnect: () => {
         this.client?.subscribe(ADMIN_REPORT_COUNT_DESTINATION, (frame: IMessage) => {
           const payload = JSON.parse(frame.body) as UsabilityReportCountMessage;
-          this.countSubject.next(payload.newReportCount);
+          this.countsSubject.next(payload);
         });
       },
     });
