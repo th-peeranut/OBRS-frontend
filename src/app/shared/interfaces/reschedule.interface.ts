@@ -60,6 +60,10 @@ export const RESCHEDULE_ERROR_CODES = [
   'RESCHEDULE_ERROR_NO_SEATS',
   'RESCHEDULE_ERROR_NET_AMOUNT_CHANGED',
   'RESCHEDULE_ERROR_UNAUTHORIZED',
+  // OBRS-358: the ONE shared jump-seat channel-guard code, also reachable
+  // from create-booking/change-seat/change-stop — see
+  // change-seat.interface.ts's identical entry for the full rationale.
+  'SEAT_ERROR_WALK_IN_ONLY',
 ] as const;
 
 /** Client-only code (never sent by the backend) for the confirm-time

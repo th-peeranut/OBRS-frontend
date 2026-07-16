@@ -60,6 +60,14 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   @Input() passengerCount = 1;
   @Output() passengerCountChange = new EventEmitter<number>();
 
+  // OBRS-358: how many of the current sale's tickets spill into the jump
+  // seat (walk-in-only, sold last) — owned/computed by sell-page
+  // (`overflowUnits`), passed through for the inline warning hint below the
+  // stepper. Null-default `0` means "no overflow" — every existing call site
+  // that doesn't pass this binding renders no hint, byte-identical to before
+  // this card.
+  @Input() jumpSeatOverflowUnits = 0;
+
   // --- Stop selection inputs (lifted from checkout) ---
   @Input() pickupOptions: StopOption[] = [];
   @Input() dropoffOptions: StopOption[] = [];

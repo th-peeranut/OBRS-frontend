@@ -8,12 +8,18 @@ import { StaffApiService } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { ParcelDeliveryListItemDto } from '../../../../shared/interfaces/parcel.interface';
 import { parcelDeliveryStatusChip, ParcelStatusChip } from '../../../../shared/lib/parcel-delivery-status';
+import {
+  isParcelBookingBlocking,
+  parcelPaymentFlag,
+  ParcelPaymentFlag,
+} from '../../../../shared/lib/parcel-booking-status';
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { ParcelDeliveryListStore } from './parcel-delivery-list.store';
 
 const ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_COLLECT_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
   PARCEL_ALREADY_COLLECTED: 'STAFF.PARCEL_DELIVERY.ERROR.ALREADY_COLLECTED',
+  PARCEL_BOOKING_NOT_CONFIRMED: 'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
 };
 
 /**
@@ -86,6 +92,21 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
     return this.statusChip(row.deliveryStatus);
   }
 
+  /** OBRS-396: the unpaid/expired badge, or `null` for a paid row (the
+   * everyday case renders no badge at all). */
+  protected paymentFlagFor(row: ParcelDeliveryListItemDto): ParcelPaymentFlag | null {
+    return parcelPaymentFlag(row.bookingStatus);
+  }
+
+  /**
+   * OBRS-396: nobody paid for this parcel, so `ParcelDeliveryService` 409s
+   * every transition on it (OBRS-359). The row stays listed — staff are
+   * holding the physical box and need to see it — but its actions are off.
+   */
+  protected isRowBlocked(row: ParcelDeliveryListItemDto): boolean {
+    return isParcelBookingBlocking(row.bookingStatus);
+  }
+
   protected isRowBusy(parcelId: number): boolean {
     return this.loadingParcelIds.has(parcelId);
   }
@@ -99,6 +120,9 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
   }
 
   protected openCollectDialog(row: ParcelDeliveryListItemDto): void {
+    // Guard, not just a disabled button: handing the goods over is the one
+    // action that can't be undone, so the invariant lives in the component.
+    if (this.isRowBlocked(row)) return;
     this.collectErrorKey = null;
     this.collectDialogParcelId = row.parcelId;
   }

@@ -23,6 +23,8 @@ describe('mapChangeStopErrorCode', () => {
         'CHANGE_STOP_ERROR_MULTI_LEG_NOT_SUPPORTED',
         'MY_BOOKINGS.CHANGE_STOP.ERROR.MULTI_LEG_NOT_SUPPORTED',
       ],
+      // OBRS-358: shared jump-seat channel-guard code -> the shared COMMON.ERROR.* key.
+      ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
     ];
 
     for (const [code, key] of cases) {

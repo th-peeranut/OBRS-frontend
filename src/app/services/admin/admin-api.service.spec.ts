@@ -232,6 +232,35 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-358: jump-seat (walk-in-only seat channel) toggle, a singleton row
+  // mirroring reminder-config above (GET/PUT /api/private/admin/configs/jump-seat).
+  describe('getJumpSeatConfig', () => {
+    it('issues a GET to /api/private/admin/configs/jump-seat', () => {
+      service.getJumpSeatConfig().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/jump-seat`
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({ code: 200, message: 'OK', data: { enabled: true } });
+    });
+  });
+
+  describe('updateJumpSeatConfig', () => {
+    it('issues a PUT to /api/private/admin/configs/jump-seat with the full payload shape', () => {
+      service.updateJumpSeatConfig({ enabled: false }).subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/jump-seat`
+      );
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ enabled: false });
+
+      req.flush({ code: 200, message: 'OK', data: { enabled: false } });
+    });
+  });
+
   // OBRS-196: regression for the wrong-URL contract break a coordinator
   // reconciliation found post-merge (base path is `/api/private/settlements`,
   // NO `/admin/` segment — `EndpointConstant.PRIVATE_SETTLEMENTS`) — a

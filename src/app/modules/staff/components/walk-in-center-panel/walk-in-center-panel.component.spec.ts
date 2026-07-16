@@ -244,6 +244,27 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // OBRS-358: jump-seat overflow hint, rendered inside the OPEN-mode stepper block.
+  describe('jump-seat overflow hint (OBRS-358)', () => {
+    it('does not render when jumpSeatOverflowUnits is 0 (default, byte-identical to before this card)', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      fixture.detectChanges();
+
+      const hint = fixture.nativeElement.querySelector('.text-warning');
+      expect(hint).toBeFalsy();
+    });
+
+    it('renders the hint when jumpSeatOverflowUnits > 0 on an OPEN trip', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      component.jumpSeatOverflowUnits = 1;
+      fixture.detectChanges();
+
+      const hint = fixture.nativeElement.querySelector('.text-warning');
+      expect(hint).toBeTruthy();
+      expect(hint.textContent).toContain('STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT');
+    });
+  });
+
   describe('stop selection outputs', () => {
     it('emits pickupChange', () => {
       const emitted: string[] = [];

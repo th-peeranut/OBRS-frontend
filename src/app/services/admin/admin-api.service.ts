@@ -694,6 +694,15 @@ export interface ReminderConfigDto {
   boardingReminderMinutesBeforeDeparture: number;
 }
 
+// OBRS-358: jump-seat (walk-in-only seat channel) toggle, a singleton row —
+// same shape/lifecycle as ReminderConfigDto above — GET/PUT
+// `/api/private/admin/configs/jump-seat`, ADMIN-only. Disabling blocks staff
+// from selling the jump seat entirely (even when normal seats are full); has
+// no effect on the online channel, which never offers it.
+export interface JumpSeatConfigDto {
+  enabled: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -1220,6 +1229,21 @@ export class AdminApiService {
   ): Observable<ResponseAPI<ReminderConfigDto>> {
     return this.putRequest<ReminderConfigDto>(
       `${this.baseUrl}/private/admin/configs/reminders`,
+      payload
+    );
+  }
+
+  // OBRS-358: jump-seat toggle is a singleton row (mirrors reminder-config
+  // above), ADMIN-only (403 for non-admin per the backend contract).
+  getJumpSeatConfig(): Observable<ResponseAPI<JumpSeatConfigDto>> {
+    return this.getRequest<JumpSeatConfigDto>(`${this.baseUrl}/private/admin/configs/jump-seat`);
+  }
+
+  updateJumpSeatConfig(
+    payload: JumpSeatConfigDto
+  ): Observable<ResponseAPI<JumpSeatConfigDto>> {
+    return this.putRequest<JumpSeatConfigDto>(
+      `${this.baseUrl}/private/admin/configs/jump-seat`,
       payload
     );
   }

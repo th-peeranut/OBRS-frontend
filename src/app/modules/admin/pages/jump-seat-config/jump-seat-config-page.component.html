@@ -1,0 +1,49 @@
+<section class="admin-page-intro" *ngIf="errorMessage || (isRefreshing && !isLoading)">
+  <div>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <p class="admin-muted" *ngIf="isRefreshing && !isLoading">{{ 'ADMIN.COMMON.UPDATING' | translate }}</p>
+  </div>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PAGES.JUMP_SEAT_CONFIG' | translate }}</h4>
+  </div>
+
+  <ng-container *ngIf="isLoading">
+    <div class="admin-skeleton admin-skeleton--sm mb-2" *ngFor="let row of [1]"></div>
+  </ng-container>
+
+  <form
+    *ngIf="!isLoading && config"
+    [formGroup]="jumpSeatConfigForm"
+    class="admin-form-grid mt-3"
+    (ngSubmit)="save()"
+  >
+    <div class="admin-form-field full d-flex align-items-center gap-3">
+      <p-inputSwitch
+        formControlName="enabled"
+        inputId="jumpSeatEnabled"
+        [attr.aria-label]="'ADMIN.JUMP_SEAT_CONFIG.ENABLED_LABEL' | translate"
+      ></p-inputSwitch>
+      <label class="admin-form-label mb-0" for="jumpSeatEnabled">
+        {{ 'ADMIN.JUMP_SEAT_CONFIG.ENABLED_LABEL' | translate }}
+      </label>
+    </div>
+    <small class="admin-muted">{{ 'ADMIN.JUMP_SEAT_CONFIG.HELPER' | translate }}</small>
+
+    <div class="admin-form-field full">
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSaving || jumpSeatConfigForm.pristine"
+      >
+        {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </form>
+
+  <p class="admin-muted" *ngIf="!isLoading && !config && !errorMessage">
+    {{ 'ADMIN.COMMON.NO_DATA' | translate }}
+  </p>
+</section>
