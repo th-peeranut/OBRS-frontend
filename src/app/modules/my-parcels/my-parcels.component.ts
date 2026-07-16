@@ -29,19 +29,19 @@ interface MyParcelsVm {
   page: number;
 }
 
-interface StatusFilterOption {
-  value: string;
-  labelKey: string;
-}
-
 /**
  * Smart page: `/my-parcels` — the customer's own paginated parcel list, the
  * ONLY durable recovery path for a tracking number lost after the one-time
  * success screen (SPEC/UX-OBRS-415 §12, added 2026-07-16; no SMS/email
  * notification exists yet, OBRS-346). Mirrors `my-bookings`' own isolated
- * NgRx feature-slice shape/`.filter-pills`/skeleton-card conventions
- * (UX §12.7/§13) — the established pattern for a customer filtered
- * read-list page in this codebase.
+ * NgRx feature-slice shape/skeleton-card conventions (UX §12.7/§13) — the
+ * established pattern for a customer read-list page in this codebase.
+ *
+ * NO status filter (Scrutinize finding, 2026-07-16): `ParcelController
+ * #getMyParcels(Pageable)` takes only page/size/sort, and the UX spec's own
+ * filter-pill table never defined any status beyond "All" — a one-button
+ * filter nav sending a param the backend silently drops is worse than no
+ * filter, so both were removed rather than shipped as dead UI.
  *
  * OUT OF SCOPE (explicitly cut from this card): the "Continue to payment"
  * action for a still-`pending` row. Everything else in UX §12 stands —
@@ -54,10 +54,6 @@ interface StatusFilterOption {
   styleUrl: './my-parcels.component.scss',
 })
 export class MyParcelsComponent implements OnInit {
-  protected readonly statusFilters: StatusFilterOption[] = [
-    { value: '', labelKey: 'PARCEL_BOOKING.MY_PARCELS.FILTERS.ALL' },
-  ];
-  protected selectedStatus = '';
   protected readonly skeletonRows = Array.from({ length: 3 });
 
   protected vm$!: Observable<MyParcelsVm>;
@@ -93,25 +89,15 @@ export class MyParcelsComponent implements OnInit {
       }))
     );
 
-    this.store.dispatch(invokeLoadMyParcelsApi({ status: null, page: 0, append: false }));
-  }
-
-  protected onStatusChange(status: string): void {
-    if (status === this.selectedStatus) return;
-    this.selectedStatus = status;
-    this.store.dispatch(invokeLoadMyParcelsApi({ status: status || null, page: 0, append: false }));
+    this.store.dispatch(invokeLoadMyParcelsApi({ page: 0, append: false }));
   }
 
   protected onLoadMore(nextPage: number): void {
-    this.store.dispatch(
-      invokeLoadMyParcelsApi({ status: this.selectedStatus || null, page: nextPage, append: true })
-    );
+    this.store.dispatch(invokeLoadMyParcelsApi({ page: nextPage, append: true }));
   }
 
   protected onRetry(): void {
-    this.store.dispatch(
-      invokeLoadMyParcelsApi({ status: this.selectedStatus || null, page: 0, append: false })
-    );
+    this.store.dispatch(invokeLoadMyParcelsApi({ page: 0, append: false }));
   }
 
   protected trackByParcelId(_index: number, row: ParcelMeDto): number {

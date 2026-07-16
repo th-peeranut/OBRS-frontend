@@ -11,7 +11,3 @@ export const selectMyParcelsLoaded = createSelector(selectMyParcels, (state) => 
 export const selectMyParcelsError = createSelector(selectMyParcels, (state) => state.error);
 export const selectMyParcelsHasMore = createSelector(selectMyParcels, (state) => state.hasMore);
 export const selectMyParcelsPage = createSelector(selectMyParcels, (state) => state.page);
-export const selectMyParcelsStatusFilter = createSelector(
-  selectMyParcels,
-  (state) => state.statusFilter
-);

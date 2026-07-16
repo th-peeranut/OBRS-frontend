@@ -8,14 +8,12 @@ import {
 
 export const myParcelsReducer = createReducer(
   initialMyParcelsState,
-  on(invokeLoadMyParcelsApi, (state, { status, append }) => ({
+  on(invokeLoadMyParcelsApi, (state, { append }) => ({
     ...state,
     loading: true,
     error: null,
-    statusFilter: status,
-    // A filter change (append: false) clears the list immediately so a
-    // stale page from the PREVIOUS filter never flashes before the new
-    // page arrives.
+    // A fresh (non-append) load clears the list immediately so a stale page
+    // never flashes before the new one arrives.
     items: append ? state.items : [],
   })),
   on(invokeLoadMyParcelsApiSuccess, (state, { items, page, hasMore, append }) => ({

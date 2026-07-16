@@ -247,24 +247,38 @@ export interface ParcelOnlineQuoteParams {
  * notification exists yet, OBRS-346). Scoped server-side to the
  * authenticated customer's `actor_id` — never accepts a `userId` param
  * (would be IDOR).
+ *
+ * Field-for-field match to the backend's `ParcelMineRespDto` record
+ * (verified against the backend worktree 2026-07-16, post their own
+ * scrutinize fix) — do not add a field this record doesn't have
+ * (`arrivedNotifiedAt`/`collectedAt` do NOT exist on this response; they
+ * were a copy-paste from `ParcelTrackRespDto` and have been removed here) or
+ * omit one it does (`bookingNumber`/`collectionCode` were missing and are
+ * now added). `collectionCode` is always `null` on this path today (minted
+ * only at `accepted`, Card 3b/OBRS-416) but the field exists on the wire.
  */
 export interface ParcelMeDto {
   parcelId: number;
-  bookingId: number;
   trackingNumber: string;
+  bookingId: number;
+  bookingNumber: string;
+  amount: number;
   deliveryStatus: string;
   /** The booking's `EBookingStatus` slug (`pending`/`confirmed`/...) —
-   * distinct from `deliveryStatus`, same split as `ParcelDeliveryListItemDto`. */
+   * distinct from `deliveryStatus`, same split as `ParcelDeliveryListItemDto`.
+   * Load-bearing, not decorative: `deliveryStatus` is `created` for BOTH a
+   * paid and an unpaid online parcel (a pending parcel holds cargo quota
+   * exactly like a seat, SPEC-OBRS-415 §0.1), so this is the ONLY field
+   * that tells "unpaid, finish paying" apart from "paid, bring it to the
+   * origin stop". */
   bookingStatus: string;
+  collectionCode: string | null;
+  recipientName: string;
   pickupStop: ParcelStopRefDto | string;
   dropoffStop: ParcelStopRefDto | string;
   departureDateTime: string;
   weightKg: number;
-  recipientName: string;
-  amount: number;
   /** Only meaningful while `bookingStatus === 'pending'` — the reservation
    * hold's expiry, after which `BookingExpirationScheduler` sweeps it. */
   expiresAt?: string | null;
-  arrivedNotifiedAt?: string | null;
-  collectedAt?: string | null;
 }

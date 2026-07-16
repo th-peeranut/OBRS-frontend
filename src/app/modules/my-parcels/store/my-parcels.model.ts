@@ -7,7 +7,6 @@ export interface MyParcelsState {
   loading: boolean;
   loaded: boolean;
   error: string | null;
-  statusFilter: string | null;
 }
 
 export const initialMyParcelsState: MyParcelsState = {
@@ -17,5 +16,4 @@ export const initialMyParcelsState: MyParcelsState = {
   loading: false,
   loaded: false,
   error: null,
-  statusFilter: null,
 };

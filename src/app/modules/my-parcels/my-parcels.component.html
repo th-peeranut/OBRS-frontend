@@ -7,18 +7,6 @@
       <p>{{ "PARCEL_BOOKING.MY_PARCELS.SUBTITLE" | translate }}</p>
     </header>
 
-    <nav class="filter-pills" aria-label="status filter">
-      <button
-        *ngFor="let filter of statusFilters"
-        type="button"
-        class="filter-pill"
-        [class.is-active]="selectedStatus === filter.value"
-        (click)="onStatusChange(filter.value)"
-      >
-        {{ filter.labelKey | translate }}
-      </button>
-    </nav>
-
     <ng-container *ngIf="vm.loading && !vm.loaded">
       <div class="booking-card booking-card--skeleton" *ngFor="let row of skeletonRows">
         <span class="skeleton skeleton--line"></span>
@@ -77,7 +65,7 @@
           </div>
           <div>
             <dt>{{ "PARCEL_BOOKING.MY_PARCELS.WEIGHT" | translate }}</dt>
-            <dd>{{ row.weightKg }} kg</dd>
+            <dd>{{ "PARCEL_BOOKING.MY_PARCELS.WEIGHT_VALUE" | translate: { weight: row.weightKg } }}</dd>
           </div>
           <div>
             <dt>

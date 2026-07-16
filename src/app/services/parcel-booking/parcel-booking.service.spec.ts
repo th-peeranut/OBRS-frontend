@@ -82,8 +82,11 @@ describe('ParcelBookingService', () => {
     });
   });
 
-  it('getMyParcels omits the status param when null and sets page/size', () => {
-    service.getMyParcels(null, 0, 20).subscribe();
+  // ParcelController#getMyParcels(Pageable) takes ONLY page/size/sort — a
+  // `status` param would be silently dropped by Spring's binder, never
+  // filtered on, so this call sends page/size only (Scrutinize finding).
+  it('getMyParcels sends only page/size — never a status param', () => {
+    service.getMyParcels(0, 20).subscribe();
     const req = httpMock.expectOne(
       (r) => r.url === `${environment.apiUrl}/api/private/parcels/me`
     );
@@ -94,19 +97,6 @@ describe('ParcelBookingService', () => {
       code: 200,
       message: 'OK',
       data: { content: [], totalElements: 0, totalPages: 0, size: 20, number: 0, numberOfElements: 0 },
-    });
-  });
-
-  it('getMyParcels includes the status param when provided', () => {
-    service.getMyParcels('pending', 1, 20).subscribe();
-    const req = httpMock.expectOne(
-      (r) => r.url === `${environment.apiUrl}/api/private/parcels/me`
-    );
-    expect(req.request.params.get('status')).toBe('pending');
-    req.flush({
-      code: 200,
-      message: 'OK',
-      data: { content: [], totalElements: 0, totalPages: 0, size: 20, number: 1, numberOfElements: 0 },
     });
   });
 });

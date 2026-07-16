@@ -2308,6 +2308,7 @@
       "RECIPIENT_PHONE_INVALID": "收件人电话无效，请输入10-15位数字",
       "STOP_ORDER_INVALID": "卸货点必须在同一路线上位于取件点之后，请重新选择",
       "SENDER_PHONE_INVALID": "寄件人电话无效，请输入10-15位数字",
+      "SENDER_NAME_UNRESOLVED": "您的账户没有姓名记录，请先完善个人资料后再预订包裹",
       "PROHIBITED_CATEGORY": "您填写的描述涉及违禁类别，请重新查看上方清单，如有疑问请联系工作人员",
       "STOP_PAIR_NOT_PRICEABLE": "无法为所选取件/卸货点计价，请重新选择或联系工作人员",
       "CARGO_NOT_CONFIGURED": "该班次尚未开放寄件，请选择其他班次或联系工作人员",
@@ -2338,11 +2339,9 @@
       "BOOK_NOW": "预订寄件",
       "LOAD_MORE": "加载更多",
       "RETRY": "重试",
-      "FILTERS": {
-        "ALL": "全部"
-      },
       "RECIPIENT": "收件人",
       "WEIGHT": "重量",
+      "WEIGHT_VALUE": "{{weight}} 公斤",
       "AMOUNT_PAID": "已付金额",
       "AMOUNT_DUE": "应付金额"
     }

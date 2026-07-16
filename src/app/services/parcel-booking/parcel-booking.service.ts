@@ -75,16 +75,16 @@ export class ParcelBookingService {
   /** GET /api/private/parcels/me — the customer's own paginated parcel list
    * (SPEC-OBRS-415 comment, added 2026-07-16). Scoped server-side to the
    * authenticated customer's `actor_id`; there is deliberately no `userId`
-   * param here (would be IDOR). */
-  getMyParcels(
-    status: string | null,
-    page: number,
-    size: number
-  ): Observable<ResponseAPI<PageResponse<ParcelMeDto>>> {
-    let params = new HttpParams().set('page', String(page)).set('size', String(size));
-    if (status) {
-      params = params.set('status', status);
-    }
+   * param here (would be IDOR).
+   *
+   * No `status` param — `ParcelController#getMyParcels(Pageable pageable)`
+   * on the backend takes ONLY `Pageable` (page/size/sort); a `status` param
+   * would be silently dropped by Spring's binder, not filtered on. There is
+   * also no status to filter BY today — the UX spec's filter-pill row never
+   * defined any status beyond "All" — so this deliberately sends only
+   * page/size rather than a parameter that goes nowhere. */
+  getMyParcels(page: number, size: number): Observable<ResponseAPI<PageResponse<ParcelMeDto>>> {
+    const params = new HttpParams().set('page', String(page)).set('size', String(size));
 
     return this.http.get<ResponseAPI<PageResponse<ParcelMeDto>>>(
       `${environment.apiUrl}/api/private/parcels/me`,

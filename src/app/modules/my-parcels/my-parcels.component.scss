@@ -56,30 +56,6 @@
   }
 }
 
-.filter-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-2xs;
-  margin-bottom: 20px;
-}
-
-.filter-pill {
-  padding: 7px 16px;
-  border: 1px solid $primary-lightgrey;
-  border-radius: $radius-pill;
-  background-color: $primary-white;
-  color: $text-softblack;
-  font-size: $font-size-sm;
-  cursor: pointer;
-
-  &.is-active {
-    background-color: $secondary-blue;
-    border-color: $secondary-blue;
-    color: $text-white;
-    font-weight: $font-weight-semibold;
-  }
-}
-
 .parcel-card {
   background-color: $primary-white;
   border: 1px solid $primary-lightgrey;

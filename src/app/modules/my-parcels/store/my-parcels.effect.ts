@@ -22,8 +22,8 @@ export class MyParcelsEffect {
   loadMyParcels$ = createEffect(() =>
     this.actions$.pipe(
       ofType(invokeLoadMyParcelsApi),
-      switchMap(({ status, page, append }) =>
-        this.service.getMyParcels(status, page, PAGE_SIZE).pipe(
+      switchMap(({ page, append }) =>
+        this.service.getMyParcels(page, PAGE_SIZE).pipe(
           map((response) => {
             const data = response.data;
             const items = data?.content ?? [];

@@ -47,7 +47,7 @@ describe('MyParcelsEffect', () => {
       })
     );
 
-    actions$ = of(invokeLoadMyParcelsApi({ status: null, page: 0, append: false }));
+    actions$ = of(invokeLoadMyParcelsApi({ page: 0, append: false }));
 
     effect.loadMyParcels$.subscribe((action) => {
       expect(action).toEqual(
@@ -58,6 +58,9 @@ describe('MyParcelsEffect', () => {
           append: false,
         })
       );
+      // ParcelController#getMyParcels(Pageable) takes only page/size — no
+      // status argument ever reaches the service call.
+      expect(service.getMyParcels).toHaveBeenCalledWith(0, 20);
       done();
     });
   });
@@ -71,7 +74,7 @@ describe('MyParcelsEffect', () => {
       })
     );
 
-    actions$ = of(invokeLoadMyParcelsApi({ status: null, page: 0, append: false }));
+    actions$ = of(invokeLoadMyParcelsApi({ page: 0, append: false }));
 
     effect.loadMyParcels$.subscribe((action) => {
       expect((action as ReturnType<typeof invokeLoadMyParcelsApiSuccess>).hasMore).toBeFalse();
@@ -81,7 +84,7 @@ describe('MyParcelsEffect', () => {
 
   it('maps a failure into invokeLoadMyParcelsApiFailure', (done) => {
     service.getMyParcels.and.returnValue(throwError(() => new Error('network down')));
-    actions$ = of(invokeLoadMyParcelsApi({ status: null, page: 0, append: false }));
+    actions$ = of(invokeLoadMyParcelsApi({ page: 0, append: false }));
 
     effect.loadMyParcels$.subscribe((action) => {
       expect(action.type).toBe(invokeLoadMyParcelsApiFailure({ error: '' }).type);

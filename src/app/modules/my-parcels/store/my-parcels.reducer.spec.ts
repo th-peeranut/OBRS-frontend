@@ -9,16 +9,18 @@ import { ParcelMeDto } from '../../../shared/interfaces/parcel.interface';
 
 const item = (id: number): ParcelMeDto => ({
   parcelId: id,
-  bookingId: id,
   trackingNumber: `PCL${id}`,
+  bookingId: id,
+  bookingNumber: `BK${id}`,
+  amount: 100,
   deliveryStatus: 'created',
   bookingStatus: 'confirmed',
+  collectionCode: null,
+  recipientName: 'Somchai',
   pickupStop: 'a',
   dropoffStop: 'b',
   departureDateTime: '2026-08-01T08:00:00+07:00',
   weightKg: 5,
-  recipientName: 'Somchai',
-  amount: 100,
 });
 
 describe('myParcelsReducer', () => {
@@ -26,23 +28,16 @@ describe('myParcelsReducer', () => {
     expect(myParcelsReducer(undefined, { type: '@@init' } as any)).toEqual(initialMyParcelsState);
   });
 
-  it('sets loading + statusFilter and clears items on a NON-append load', () => {
+  it('sets loading and clears items on a NON-append load', () => {
     const seeded = { ...initialMyParcelsState, items: [item(1)] };
-    const state = myParcelsReducer(
-      seeded,
-      invokeLoadMyParcelsApi({ status: 'pending', page: 0, append: false })
-    );
+    const state = myParcelsReducer(seeded, invokeLoadMyParcelsApi({ page: 0, append: false }));
     expect(state.loading).toBeTrue();
-    expect(state.statusFilter).toBe('pending');
     expect(state.items).toEqual([]);
   });
 
   it('keeps existing items on an APPEND (load more) load', () => {
     const seeded = { ...initialMyParcelsState, items: [item(1)] };
-    const state = myParcelsReducer(
-      seeded,
-      invokeLoadMyParcelsApi({ status: null, page: 1, append: true })
-    );
+    const state = myParcelsReducer(seeded, invokeLoadMyParcelsApi({ page: 1, append: true }));
     expect(state.items).toEqual([item(1)]);
   });
 

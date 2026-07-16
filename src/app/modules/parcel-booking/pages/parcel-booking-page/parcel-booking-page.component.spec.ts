@@ -182,6 +182,33 @@ describe('ParcelBookingPageComponent', () => {
     expect(bookingService.setActiveBookingId).not.toHaveBeenCalled();
   });
 
+  // Scrutinize finding: PARCEL_SENDER_NAME_UNRESOLVED (the backend's
+  // resolveSenderName 409, a deliberate spec-sanctioned new code) was
+  // absent from the FE error map — it must not fall through to GENERIC.
+  it('maps PARCEL_SENDER_NAME_UNRESOLVED to its own "complete your profile" key', () => {
+    (component as any).tripValue = {
+      fromStationId: 1,
+      toStationId: 2,
+      date: new Date('2026-08-01'),
+      scheduleId: 42,
+    };
+    (component as any).phase = 'details';
+    parcelBookingService.createOnlineParcelBooking.and.returnValue(
+      throwError(() => ({ error: { errorCode: 'PARCEL_SENDER_NAME_UNRESOLVED' } }))
+    );
+
+    (component as any).onDetailsSubmit({
+      senderPhone: '0812345678',
+      recipient: { name: 'Somchai', phone: '0898765432' },
+      weightKg: 5,
+      description: 'a box',
+      prohibitedAcknowledged: true,
+    });
+
+    expect((component as any).serverErrorKey).toBe('PARCEL_BOOKING.ERROR.SENDER_NAME_UNRESOLVED');
+    expect((component as any).serverErrorKey).not.toBe('PARCEL_BOOKING.ERROR.GENERIC');
+  });
+
   it('onPaymentCompleted clears the active booking id as a safety net', () => {
     (component as any).onPaymentCompleted();
     expect(bookingService.clearActiveBookingId).toHaveBeenCalled();

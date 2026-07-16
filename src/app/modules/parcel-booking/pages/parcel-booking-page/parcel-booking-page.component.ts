@@ -34,6 +34,12 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
   PARCEL_STOP_PAIR_NOT_PRICEABLE: 'PARCEL_BOOKING.ERROR.STOP_PAIR_NOT_PRICEABLE',
   PARCEL_CARGO_CAPACITY_NOT_CONFIGURED: 'PARCEL_BOOKING.ERROR.CARGO_NOT_CONFIGURED',
   PARCEL_CARGO_CAPACITY_EXCEEDED: 'PARCEL_BOOKING.ERROR.CARGO_CAPACITY_EXCEEDED',
+  // Defensive 409 (ParcelIntakeService#resolveSenderName): the account's
+  // profile has no firstName/lastName to derive contact_name_snapshot from.
+  // Not in the UX §7 error table (added by the backend after its own
+  // scrutinize pass) — mapped here rather than falling through to GENERIC,
+  // since the guard's whole point is a clean, actionable message.
+  PARCEL_SENDER_NAME_UNRESOLVED: 'PARCEL_BOOKING.ERROR.SENDER_NAME_UNRESOLVED',
   'schedule.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
   'stop.error.id-not-found': 'PARCEL_BOOKING.ERROR.NOT_FOUND',
 };

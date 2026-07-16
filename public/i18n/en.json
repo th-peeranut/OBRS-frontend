@@ -2309,6 +2309,7 @@
       "RECIPIENT_PHONE_INVALID": "Recipient phone is invalid. Enter 10-15 digits.",
       "STOP_ORDER_INVALID": "Dropoff must be after pickup on the same route. Please choose again.",
       "SENDER_PHONE_INVALID": "Sender phone is invalid. Enter 10-15 digits.",
+      "SENDER_NAME_UNRESOLVED": "Your account has no name on file. Please complete your profile before booking a parcel.",
       "PROHIBITED_CATEGORY": "Your description matches a prohibited category. Review the list above or contact staff if unsure.",
       "STOP_PAIR_NOT_PRICEABLE": "This pickup/dropoff pair can't be priced. Choose again or contact staff.",
       "CARGO_NOT_CONFIGURED": "This schedule isn't open for parcel booking yet. Choose another or contact staff.",
@@ -2339,11 +2340,9 @@
       "BOOK_NOW": "Book a parcel",
       "LOAD_MORE": "Load more",
       "RETRY": "Retry",
-      "FILTERS": {
-        "ALL": "All"
-      },
       "RECIPIENT": "Recipient",
       "WEIGHT": "Weight",
+      "WEIGHT_VALUE": "{{weight}} kg",
       "AMOUNT_PAID": "Amount paid",
       "AMOUNT_DUE": "Amount due"
     }
