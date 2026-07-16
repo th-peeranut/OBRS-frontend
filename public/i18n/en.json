@@ -1906,6 +1906,7 @@
       "LOCK_BANNER": "This trip has arrived. Boarding is locked and can no longer be changed.",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "This schedule can't move to that status right now.",
+        "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "You can only update a trip you are assigned to drive.",
         "GENERIC": "Unable to update the schedule status. Please try again."
       }
     },
