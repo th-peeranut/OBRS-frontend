@@ -886,7 +886,6 @@
         "UNMARK_SUCCESS": "已取消重复标记。",
         "UNMARK_FAILED": "取消重复标记失败，请重试。",
         "PICKER_TITLE": "选择原始报告",
-        "PICKER_LABEL": "重复于",
         "PICKER_SEARCH_PLACEHOLDER": "按编号或描述搜索...",
         "PICKER_EMPTY": "没有可选作原始报告的报告。",
         "PICKER_CONFIRM": "确认",

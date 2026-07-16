@@ -886,7 +886,6 @@
         "UNMARK_SUCCESS": "Duplicate mark removed.",
         "UNMARK_FAILED": "Failed to unmark duplicate. Please try again.",
         "PICKER_TITLE": "Select the canonical report",
-        "PICKER_LABEL": "Duplicate of",
         "PICKER_SEARCH_PLACEHOLDER": "Search by ID or description...",
         "PICKER_EMPTY": "No reports available to pick as canonical.",
         "PICKER_CONFIRM": "Confirm",
