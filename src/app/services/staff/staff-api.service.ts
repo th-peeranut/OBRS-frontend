@@ -115,6 +115,16 @@ export interface WalkInTripDto {
   // always `undefined` here and every walk-in trip is treated as ASSIGNED
   // (the safe default — see `isOpenSeatingTrip` below).
   seatingMode?: 'OPEN' | 'ASSIGNED';
+  // OBRS-358: `base - walk_in_only seat count` — the online-visible seat
+  // count for this trip (e.g. minibus base=21, normalCapacity=20; seat 1 is
+  // the jump seat, walk-in-only, sold last). OPTIONAL: absent on a backend
+  // predating this card (or a cached row) means "no jump seat on this
+  // trip/vehicle" — every overflow/ack computation derived from it MUST
+  // gracefully no-op (0 overflow units, no acknowledgment prompt) rather than
+  // throw or misbehave. A staff-facing, NON-authoritative hint only — the
+  // server re-validates capacity under a row lock at sale time regardless of
+  // what the client computed here.
+  normalCapacity?: number;
 }
 
 export interface WalkInRouteGroupDto {
@@ -193,6 +203,14 @@ export interface WalkInBookingReqDto {
   bookingType: 'one_way' | 'return';
   totalAmount: number;
   bookingChannel: 'walk_in';
+  // OBRS-358: sent ONLY when the sale overflows the trip's `normalCapacity`
+  // (i.e. this sale reaches into the jump seat) and the staff user has
+  // confirmed the AlertService acknowledgment prompt — omitted entirely
+  // otherwise, same conditional-field convention as `identityCardNumber`/
+  // `email` on `WalkInContactReqDto` below. The server re-validates under a
+  // row lock regardless; this flag is the audit-trail record of staff
+  // consent, not the authorization boundary.
+  jumpSeatAcknowledged?: boolean;
   departureSchedule: WalkInBookingScheduleReqDto;
   arrivalSchedule?: WalkInBookingScheduleReqDto;
   contact: WalkInContactReqDto;

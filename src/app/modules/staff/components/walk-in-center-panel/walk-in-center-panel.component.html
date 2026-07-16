@@ -158,6 +158,12 @@
           </button>
         </div>
         <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
+        <!-- OBRS-358: this sale reaches into the jump seat (walk-in-only,
+             no backrest, sold last) — a staff-facing hint only; the
+             acknowledgment prompt itself fires from sell-page's onSell(). -->
+        <div class="text-warning small text-center" *ngIf="jumpSeatOverflowUnits > 0" role="status">
+          <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ 'STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT' | translate }}
+        </div>
       </div>
 
       <ng-container *ngIf="!isOpenSeating">
@@ -170,6 +176,14 @@
         </div>
 
         <!-- Van seat map -->
+        <!-- OBRS-358 follow-up: ASSIGNED-mode jump-seat (walk-in-only, seat 1)
+             tile styling is DEFERRED this card — no seeded ASSIGNED minibus to
+             exercise it against, and this van template only renders 13 seat
+             boxes (A1-A13) vs. the real 21-seat minibus fleet (separate gap).
+             When both land, add a null-default `restrictedSeats: string[] |
+             null = null` @Input here (same optional-@Input contract as
+             `seatOwners`/`seatGenders`, design-system.md §10) rather than a
+             second seat-map variant. -->
         <ng-container *ngIf="isVan">
           <app-passenger-seat-van
             [gender]="seatGender"

@@ -21,6 +21,8 @@ describe('mapChangeSeatErrorCode', () => {
       ],
       ['CHANGE_SEAT_ERROR_UNAUTHORIZED', 'MY_BOOKINGS.CHANGE_SEAT.ERROR.UNAUTHORIZED'],
       ['CHANGE_SEAT_ERROR_BOOKING_NOT_FOUND', 'MY_BOOKINGS.CHANGE_SEAT.ERROR.BOOKING_NOT_FOUND'],
+      // OBRS-358: shared jump-seat channel-guard code -> the shared COMMON.ERROR.* key.
+      ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
     ];
 
     for (const [code, key] of cases) {

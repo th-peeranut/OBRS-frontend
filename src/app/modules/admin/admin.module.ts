@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -41,6 +42,7 @@ import { SettlementsPageComponent } from './pages/settlements/settlements-page.c
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
+import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -147,6 +149,18 @@ const routes: Routes = [
         },
       },
       {
+        // OBRS-358: jump-seat (walk-in-only seat channel) toggle, ADMIN-only
+        // (403 for non-admin) — mirrors reminder-config above.
+        path: 'jump-seat-config',
+        component: JumpSeatConfigPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
+          subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
         path: 'refund-void-report',
         component: RefundVoidReportPageComponent,
         canActivate: [AuthGuard],
@@ -215,7 +229,14 @@ const routes: Routes = [
     SettlementsListComponent,
     SettlementDetailModalComponent,
     ReminderConfigPageComponent,
+    JumpSeatConfigPageComponent,
   ],
-  imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
+  imports: [
+    SharedModule,
+    RouterModule.forChild(routes),
+    CalendarModule,
+    InputSwitchModule,
+    AdminSharedModule,
+  ],
 })
 export class AdminModule {}
