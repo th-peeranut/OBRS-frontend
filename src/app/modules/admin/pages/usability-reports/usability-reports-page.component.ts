@@ -19,8 +19,10 @@ import {
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
+  canMarkAsDuplicate as canMarkAsDuplicatePure,
   categoryLabel as categoryLabelPure,
   displayDateTime as displayDateTimePure,
+  extractUsabilityReportErrorCode,
   formatBytes as formatBytesPure,
   removeRow,
   seedDecisionStatus,
@@ -92,6 +94,18 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // Lightbox overlay — a layer above the detail modal, tracked independently
   // so dismissing it never closes the detail modal underneath.
   protected lightboxImageUrl: string | null = null;
+
+  // OBRS-376: mark-as-duplicate candidate picker — another layer above the
+  // detail modal (same modal-over-modal shape as the lightbox), but can also
+  // be opened standalone from a table row with no detail modal open at all.
+  protected isPickerOpen = false;
+  protected pickerCandidates: UsabilityReportSummary[] = [];
+  protected isMarkingDuplicate = false;
+  private pickerSourceId: string | null = null;
+  // Whether the picker was opened from the detail modal's secondary button
+  // (vs. the row's action) — only then does a successful mark also close the
+  // detail modal underneath.
+  private pickerOpenedFromDetail = false;
 
   // In-memory cache of full report detail, keyed by report id, so reopening
   // the same report doesn't re-issue the GET. Invalidated on status save.
@@ -365,6 +379,21 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     }
   }
 
+  // OBRS-403 (merge with OBRS-376): mark/un-mark-as-duplicate below is a
+  // SECOND status-mutation path — unlike applyRowStatus() above, it doesn't
+  // optimistically mutate the cache, it round-trips through a full
+  // store.refresh() (duplicateCount is server-derived, so a local patch can't
+  // compute it). 'duplicate' is itself a selectable tab (STATUS_FILTER_VALUES),
+  // so marking/unmarking the last row on a non-first page is exactly the same
+  // "emptied the active tab's last page" case applyRowStatus guards — this
+  // must be checked here too, post-refresh, or the admin is stranded on a
+  // blank page (see applyRowStatus's doc comment for the original rule).
+  private stepBackIfPageEmptied(): void {
+    if (this.currentPage > 1 && this.store.value?.content.length === 0) {
+      this.onPageChange(this.currentPage - 1);
+    }
+  }
+
   protected closeDetail(): void {
     this.selectedReportId = null;
     this.detailReport = null;
@@ -377,9 +406,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   }
 
   // The detail modal's backdrop directive routes both ESC and backdrop-click
-  // here. When the lightbox is open it sits above the detail modal, so it
-  // must be dismissed first without closing the detail modal underneath.
+  // here. The duplicate picker and the lightbox each sit above the detail
+  // modal (in that priority — the picker can itself be opened while the
+  // detail modal is showing), so the topmost open layer must be dismissed
+  // first without closing the detail modal underneath. The picker owns its
+  // OWN `adminModalBackdrop` directive instance (see
+  // UsabilityReportDuplicatePickerComponent doc comment), so this only needs
+  // to no-op — not actively close it — when the picker is open.
   protected onDetailBackdropDismiss(): void {
+    if (this.isPickerOpen) {
+      return;
+    }
     if (this.lightboxImageUrl) {
       this.closeLightbox();
       return;
@@ -477,6 +514,168 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected pullBackToReview(): void {
     this.selectedDetailStatus = 'in_review';
     this.saveStatus();
+  }
+
+  // ── OBRS-376: mark / un-mark as duplicate ─────────────────────────────────
+
+  // Admin-only gate, mirrors detailStatusOptions' isAdmin gate above — owner
+  // is screen-only and must never see the mark/un-mark controls or the picker.
+  protected canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
+    return this.isAdmin && canMarkAsDuplicatePure(status);
+  }
+
+  protected canUnmarkDuplicate(status: UsabilityReportStatus): boolean {
+    return this.isAdmin && status === 'duplicate';
+  }
+
+  // Opens the picker with candidates pre-filtered to exclude the report
+  // itself and any report already status==='duplicate' — mirroring the
+  // backend's own REPORT_CANONICAL_SELF_REFERENCE / REPORT_CANONICAL_ALREADY_DUPLICATE
+  // guards so the admin can't even select an invalid target.
+  protected openDuplicatePicker(id: string): void {
+    this.pickerSourceId = id;
+    this.pickerOpenedFromDetail = this.selectedReportId === id;
+    this.pickerCandidates = this.allReports.filter(
+      (r) => r.id !== id && r.status !== 'duplicate'
+    );
+    this.isPickerOpen = true;
+  }
+
+  protected onPickerCancel(): void {
+    this.isPickerOpen = false;
+    this.pickerSourceId = null;
+    this.pickerCandidates = [];
+    this.pickerOpenedFromDetail = false;
+  }
+
+  protected onPickerConfirm(candidateId: string): void {
+    if (!this.pickerSourceId || this.isMarkingDuplicate) {
+      return;
+    }
+    // QA fix (OBRS-376 type-safety sweep): `candidateId` is typed string per
+    // the picker's `confirm: EventEmitter<string>` contract (locked UX
+    // spec), but its actual runtime value is whatever
+    // `UsabilityReportSummary.id` really is — a JSON number per the live API
+    // (confirmed by QA), despite that field's string type (a separate,
+    // wider follow-up card — not fixed here). `Number()` coerces either
+    // representation correctly; the NaN guard makes this an explicit, safe
+    // conversion for the PATCH body's `canonicalId: number` rather than
+    // something that only "happens to work" because both
+    // `Number(42)`/`Number('42')` resolve to `42`.
+    const canonicalId = Number(candidateId);
+    if (Number.isNaN(canonicalId)) {
+      return;
+    }
+    const id = this.pickerSourceId;
+    const openedFromDetail = this.pickerOpenedFromDetail;
+
+    this.isMarkingDuplicate = true;
+    this.adminApiService
+      .markUsabilityReportAsDuplicate(id, canonicalId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isMarkingDuplicate = false;
+          this.isPickerOpen = false;
+          this.pickerSourceId = null;
+          this.pickerCandidates = [];
+          this.pickerOpenedFromDetail = false;
+          // Invalidate the cached detail — status/duplicate fields changed.
+          this.detailCache.delete(id);
+          this.alertService.success(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_SUCCESS')
+          );
+          // duplicateCount on the canonical report is server-derived —
+          // refetch rather than hand-compute it. Step back a page afterwards
+          // if this marked the last row off the active tab's last page.
+          void this.store.refresh().then(() => this.stepBackIfPageEmptied());
+          if (openedFromDetail) {
+            this.closeDetail();
+          }
+        },
+        error: (error: unknown) => {
+          this.isMarkingDuplicate = false;
+          this.alertService.error(
+            this.translate.instant(this.duplicateMarkErrorKey(error))
+          );
+          // Picker stays open so the admin can pick a different candidate.
+        },
+      });
+  }
+
+  private duplicateMarkErrorKey(error: unknown): string {
+    const code = extractUsabilityReportErrorCode(error);
+    switch (code) {
+      case 'REPORT_CANONICAL_NOT_FOUND':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_CANONICAL_NOT_FOUND';
+      case 'REPORT_CANONICAL_SELF_REFERENCE':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_SELF_REFERENCE';
+      case 'REPORT_CANONICAL_ALREADY_DUPLICATE':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_ALREADY_DUPLICATE';
+      default:
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_FAILED';
+    }
+  }
+
+  // Un-mark reuses the EXISTING status-update endpoint (status -> 'in_review')
+  // rather than a dedicated un-mark endpoint — the backend clears the
+  // duplicate link server-side on that transition.
+  protected async unmarkDuplicate(id: string): Promise<void> {
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TITLE'),
+      text: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.adminApiService
+      .updateUsabilityReportStatus(id, 'in_review', null)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.detailCache.delete(id);
+          this.alertService.success(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_SUCCESS')
+          );
+          // Same step-back as onPickerConfirm above — un-marking also leaves
+          // the 'duplicate' tab if that's the active filter.
+          void this.store.refresh().then(() => this.stepBackIfPageEmptied());
+          if (this.selectedReportId === id) {
+            this.closeDetail();
+          }
+        },
+        error: () => {
+          this.alertService.error(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_FAILED')
+          );
+        },
+      });
+  }
+
+  // Display-only helper for the "ซ้ำกับ #X" link — duplicateOfId is a
+  // number (backend PK), openDetail()'s id param is this page's string id
+  // shape; reuses the existing openDetail() rather than a second fetch path.
+  // No role gate here — an owner may click through to the canonical report,
+  // same read-only visibility as the status chip/count badge (§ OWNER
+  // visibility in the UX spec).
+  //
+  // QA fix (OBRS-376 type-safety sweep): openDetail()'s optimistic-open
+  // lookup (`allReports.find(r => r.id === id)`, design-system.md §6) is a
+  // strict `===` against whatever runtime value is passed in. Every OTHER
+  // call site passes `report.id` UNCONVERTED — its real runtime value is a
+  // JSON number (confirmed live by QA), despite `UsabilityReportSummary.id`
+  // being TYPED string (separate, wider follow-up card — not fixed here;
+  // see the picker's filteredCandidates fix, same root cause). Converting
+  // via `String(canonicalId)` would silently break that `===` match
+  // (`42 === "42"` is false), dropping the optimistic pre-fill for exactly
+  // this one entry point — so this deliberately forwards the real number
+  // through, matching every other caller's runtime shape, rather than
+  // "honestly" stringifying it.
+  protected openCanonicalReport(canonicalId: number): void {
+    this.openDetail(canonicalId as unknown as string);
   }
 
   protected categoryLabel(category: string): string {

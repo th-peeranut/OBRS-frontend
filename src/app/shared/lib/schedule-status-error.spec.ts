@@ -8,6 +8,14 @@ describe('mapScheduleStatusErrorCode()', () => {
     );
   });
 
+  // OBRS-434: a driver who opens someone else's :scheduleId must be told WHY the
+  // click failed — a GENERIC "please try again" would invite them to retry forever.
+  it('maps SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER to its own i18n key, not GENERIC', () => {
+    expect(mapScheduleStatusErrorCode('SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER')).toBe(
+      'STAFF.SCHEDULE_STATUS.ERROR.SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER'
+    );
+  });
+
   it('falls back to the GENERIC key for an unknown/unmapped code (covers backend 400/404)', () => {
     expect(mapScheduleStatusErrorCode('SOME_UNMAPPED_CODE')).toBe('STAFF.SCHEDULE_STATUS.ERROR.GENERIC');
     expect(mapScheduleStatusErrorCode(null)).toBe('STAFF.SCHEDULE_STATUS.ERROR.GENERIC');
