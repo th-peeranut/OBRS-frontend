@@ -55,9 +55,18 @@ export class UsabilityReportDuplicatePickerComponent implements OnChanges {
     if (!term) {
       return this.candidates;
     }
+    // QA (OBRS-376): `UsabilityReportSummary.id` is TYPED string but the API
+    // actually returns it as a JSON number (confirmed live) — calling
+    // `.toLowerCase()` on it directly threw a TypeError on every keystroke,
+    // going stale/empty and leaving Confirm stuck disabled. `String(c.id)`
+    // coerces either the (mistyped) real number or a genuine string id
+    // safely. Deliberately NOT fixing the interface itself here — that's a
+    // separate, wider follow-up card (ripples into openDetail/the service
+    // signature/etc.); this is a local, defensive coercion at the point of
+    // use.
     return this.candidates.filter(
       (c) =>
-        c.id.toLowerCase().includes(term) ||
+        String(c.id).toLowerCase().includes(term) ||
         c.descriptionPreview.toLowerCase().includes(term)
     );
   }

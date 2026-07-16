@@ -441,8 +441,21 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     if (!this.pickerSourceId || this.isMarkingDuplicate) {
       return;
     }
-    const id = this.pickerSourceId;
+    // QA fix (OBRS-376 type-safety sweep): `candidateId` is typed string per
+    // the picker's `confirm: EventEmitter<string>` contract (locked UX
+    // spec), but its actual runtime value is whatever
+    // `UsabilityReportSummary.id` really is — a JSON number per the live API
+    // (confirmed by QA), despite that field's string type (a separate,
+    // wider follow-up card — not fixed here). `Number()` coerces either
+    // representation correctly; the NaN guard makes this an explicit, safe
+    // conversion for the PATCH body's `canonicalId: number` rather than
+    // something that only "happens to work" because both
+    // `Number(42)`/`Number('42')` resolve to `42`.
     const canonicalId = Number(candidateId);
+    if (Number.isNaN(canonicalId)) {
+      return;
+    }
+    const id = this.pickerSourceId;
     const openedFromDetail = this.pickerOpenedFromDetail;
 
     this.isMarkingDuplicate = true;
@@ -534,8 +547,21 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // No role gate here — an owner may click through to the canonical report,
   // same read-only visibility as the status chip/count badge (§ OWNER
   // visibility in the UX spec).
+  //
+  // QA fix (OBRS-376 type-safety sweep): openDetail()'s optimistic-open
+  // lookup (`allReports.find(r => r.id === id)`, design-system.md §6) is a
+  // strict `===` against whatever runtime value is passed in. Every OTHER
+  // call site passes `report.id` UNCONVERTED — its real runtime value is a
+  // JSON number (confirmed live by QA), despite `UsabilityReportSummary.id`
+  // being TYPED string (separate, wider follow-up card — not fixed here;
+  // see the picker's filteredCandidates fix, same root cause). Converting
+  // via `String(canonicalId)` would silently break that `===` match
+  // (`42 === "42"` is false), dropping the optimistic pre-fill for exactly
+  // this one entry point — so this deliberately forwards the real number
+  // through, matching every other caller's runtime shape, rather than
+  // "honestly" stringifying it.
   protected openCanonicalReport(canonicalId: number): void {
-    this.openDetail(String(canonicalId));
+    this.openDetail(canonicalId as unknown as string);
   }
 
   protected categoryLabel(category: string): string {

@@ -8,9 +8,17 @@ import { UsabilityReportDuplicatePickerComponent } from './usability-report-dupl
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UsabilityReportSummary } from '../../../../../shared/interfaces/usability-report.interface';
 
+// OBRS-376 QA finding: `UsabilityReportSummary.id` is TYPED string
+// (usability-report.interface.ts) but the live API actually returns `id` as
+// a JSON NUMBER (`GET /api/private/admin/usability-reports` -> `"id":1`).
+// Every fixture below casts a real number through `as unknown as string` to
+// mirror that runtime reality — a fixture using genuine strings (as this
+// file originally did) does NOT reproduce the "calling a string method on
+// id crashes" class of bug, which is exactly how the original picker spec
+// missed the search-crash defect.
 const CANDIDATES: UsabilityReportSummary[] = [
   {
-    id: 'rep-2',
+    id: 2 as unknown as string,
     category: 'bug',
     status: 'in_review',
     userId: 1,
@@ -21,7 +29,7 @@ const CANDIDATES: UsabilityReportSummary[] = [
     duplicateCount: 0,
   },
   {
-    id: 'rep-5',
+    id: 5 as unknown as string,
     category: 'suggestion',
     status: 'new',
     userId: 2,
@@ -65,16 +73,38 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     expect(empty).not.toBeNull();
   });
 
-  it('filters candidates by id substring', () => {
+  // ── OBRS-376 QA regression: id is a runtime number, not a string ─────────
+
+  it('REGRESSION: typing into the search box does not throw, even though candidate.id is a runtime number', () => {
     component.candidates = CANDIDATES;
     fixture.detectChanges();
 
-    component['onSearchTermChange']('rep-5');
+    // Before the fix, `c.id.toLowerCase()` inside filteredCandidates threw a
+    // TypeError the instant a non-empty search term ran the .filter() over
+    // any candidate whose id is a real number — reproducing the reported
+    // "open picker -> type ANY character -> crash" defect exactly as
+    // described (a numeric id, not a string one, is what the API sends).
+    expect(() => {
+      component['onSearchTermChange']('2');
+      fixture.detectChanges();
+    }).not.toThrow();
+
+    const rows = fixture.debugElement.queryAll(By.css('.ur-duplicate-picker-row'));
+    expect(rows.length).withContext('typing "2" must filter down to the id=2 candidate').toBe(1);
+    expect(rows[0].nativeElement.textContent).toContain('2');
+  });
+
+  it('filters candidates by id substring (id is a runtime number)', () => {
+    component.candidates = CANDIDATES;
+    fixture.detectChanges();
+
+    component['onSearchTermChange']('5');
     fixture.detectChanges();
 
     const rows = fixture.debugElement.queryAll(By.css('.ur-duplicate-picker-row'));
     expect(rows.length).toBe(1);
-    expect(rows[0].nativeElement.textContent).toContain('rep-5');
+    expect(rows[0].nativeElement.textContent).toContain('5');
+    expect(rows[0].nativeElement.textContent).toContain('dark-mode toggle');
   });
 
   it('filters candidates by descriptionPreview substring, case-insensitively', () => {
@@ -86,7 +116,21 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
 
     const rows = fixture.debugElement.queryAll(By.css('.ur-duplicate-picker-row'));
     expect(rows.length).toBe(1);
-    expect(rows[0].nativeElement.textContent).toContain('rep-5');
+    expect(rows[0].nativeElement.textContent).toContain('dark-mode toggle');
+  });
+
+  it('returns no rows (and does not throw) when the search term matches neither id nor description', () => {
+    component.candidates = CANDIDATES;
+    fixture.detectChanges();
+
+    expect(() => {
+      component['onSearchTermChange']('nonexistent-xyz');
+      fixture.detectChanges();
+    }).not.toThrow();
+
+    const rows = fixture.debugElement.queryAll(By.css('.ur-duplicate-picker-row'));
+    expect(rows.length).toBe(0);
+    expect(fixture.debugElement.query(By.css('.admin-empty-row-text'))).not.toBeNull();
   });
 
   it('Confirm is disabled with no row selected, and enabled after a row is clicked (single-select)', () => {
@@ -113,7 +157,7 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     expect(rows[1].nativeElement.classList).toContain('is-selected');
   });
 
-  it('emits confirm with the selected candidate id', () => {
+  it('emits confirm with the selected candidate id (the real runtime number, unconverted)', () => {
     component.candidates = CANDIDATES;
     fixture.detectChanges();
     const confirmSpy = jasmine.createSpy('confirm');
@@ -128,7 +172,12 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     ).nativeElement;
     confirmBtn.click();
 
-    expect(confirmSpy).toHaveBeenCalledOnceWith('rep-5');
+    // The picker never converts candidate.id — it forwards whatever value
+    // row-click handed it (selectCandidate(candidate.id)), which is the real
+    // runtime number 5. Downstream, UsabilityReportsPageComponent.onPickerConfirm()
+    // is responsible for turning this into a safe `Number(...)` for the
+    // PATCH body's `canonicalId`.
+    expect(confirmSpy).toHaveBeenCalledOnceWith(5 as unknown as string);
   });
 
   it('emits cancel on the Cancel button and on backdrop dismiss', () => {
@@ -148,7 +197,7 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
   it('disables both buttons while isSaving, and Confirm stays disabled even with a selection', () => {
     component.candidates = CANDIDATES;
     fixture.detectChanges();
-    component['selectCandidate']('rep-2');
+    component['selectCandidate'](2 as unknown as string);
     component.isSaving = true;
     fixture.detectChanges();
 
@@ -170,9 +219,9 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     component.ngOnChanges({ candidates: new SimpleChange(undefined, CANDIDATES, true) });
     fixture.detectChanges();
 
-    component['onSearchTermChange']('rep-5');
-    component['selectCandidate']('rep-5');
-    expect(component['selectedId']).toBe('rep-5');
+    component['onSearchTermChange']('5');
+    component['selectCandidate'](5 as unknown as string);
+    expect(component['selectedId']).toBe(5 as unknown as string);
 
     const nextCandidates = [...CANDIDATES]; // a new array reference — simulates a fresh picker open
     component.candidates = nextCandidates;

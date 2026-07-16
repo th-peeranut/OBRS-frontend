@@ -976,7 +976,13 @@ describe('UsabilityReportsPageComponent', () => {
       link.click();
       fixture.detectChanges();
 
-      expect(openSpy).withContext('the link opens the canonical report by id').toHaveBeenCalledOnceWith('99');
+      // QA fix (OBRS-376 type-safety sweep): openCanonicalReport() forwards
+      // the real number through (not String()-coerced) so it matches the
+      // runtime shape of every other report.id passed into openDetail() —
+      // see the doc comment on openCanonicalReport() for why.
+      expect(openSpy)
+        .withContext('the link opens the canonical report by the real numeric id, not a stringified one')
+        .toHaveBeenCalledOnceWith(99 as unknown as string);
     });
 
     it('does not render the duplicate-of link when duplicateOfId is null', () => {
