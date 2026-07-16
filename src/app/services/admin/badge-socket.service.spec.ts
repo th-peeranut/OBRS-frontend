@@ -62,7 +62,7 @@ describe('BadgeSocketService', () => {
     expect(capturedConfig.brokerURL).not.toContain('/api/ws');
   });
 
-  it('subscribes to /topic/admin/usability-report-count on connect and emits the parsed newReportCount on count$', () => {
+  it('subscribes to /topic/admin/usability-report-count on connect and emits the parsed message (both counts) on counts$', () => {
     service.connect();
 
     // Simulate the STOMP client firing onConnect.
@@ -77,12 +77,12 @@ describe('BadgeSocketService', () => {
       body: string;
     }) => void;
 
-    let emitted: number | undefined;
-    service.count$.subscribe((count) => (emitted = count));
+    let emitted: { newReportCount: number; acceptedReportCount: number } | undefined;
+    service.counts$.subscribe((counts) => (emitted = counts));
 
-    frameHandler({ body: JSON.stringify({ newReportCount: 3 }) });
+    frameHandler({ body: JSON.stringify({ newReportCount: 3, acceptedReportCount: 9 }) });
 
-    expect(emitted).toBe(3);
+    expect(emitted).toEqual({ newReportCount: 3, acceptedReportCount: 9 });
   });
 
   it('disconnect() deactivates the client', () => {

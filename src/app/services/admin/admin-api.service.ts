@@ -1061,9 +1061,24 @@ export class AdminApiService {
     );
   }
 
-  getUsabilityReports(): Observable<ResponseAPI<UsabilityReportPage>> {
+  // OBRS-378: status is the tab filter (?status=), sort is a multi-valued
+  // sort param (e.g. ['createdAt,asc','id,asc'] — see sortForStatus()).
+  // HttpParams.append is used per sort entry (NOT .set), which would
+  // collapse the two into one param and drop the id tiebreak.
+  getUsabilityReports(
+    status?: UsabilityReportStatus,
+    sort?: string[]
+  ): Observable<ResponseAPI<UsabilityReportPage>> {
+    let params = new HttpParams();
+    if (status) {
+      params = params.set('status', status);
+    }
+    for (const s of sort ?? []) {
+      params = params.append('sort', s);
+    }
     return this.getRequest<UsabilityReportPage>(
-      `${this.baseUrl}/private/admin/usability-reports`
+      `${this.baseUrl}/private/admin/usability-reports`,
+      params
     );
   }
 
@@ -1144,12 +1159,15 @@ export class AdminApiService {
     );
   }
 
-  // Backs the admin sidebar's "Usability Reports" nav badge — reuses the
+  // Backs the admin sidebar's usability-report nav badge — reuses the
   // existing list endpoint with size=1 so only the pagination envelope
   // (data.totalElements) is needed, not the report rows themselves.
-  getNewUsabilityReportCount(): Observable<number> {
+  // OBRS-378: parameterized by status — owner's badge counts 'new' (awaiting
+  // screening), admin's counts 'accepted' (owner-vetted) — see
+  // AdminLayoutComponent.badgeStatus.
+  getUsabilityReportCountByStatus(status: UsabilityReportStatus): Observable<number> {
     const params = new HttpParams()
-      .set('status', 'new')
+      .set('status', status)
       .set('size', '1')
       .set('page', '0');
 

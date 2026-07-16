@@ -861,7 +861,10 @@
         "TRIAGED_BY": "Triaged By",
         "TRIAGED_AT": "Triaged At",
         "JIRA_LINK_LABEL": "Jira Issue",
-        "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab"
+        "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab",
+        "PULL_BACK_TO_REVIEW": "Pull Back to Review",
+        "DISMISSED_ADMIN_HINT": "Owner marked this report as not important. You can bring it back into review if needed.",
+        "DISMISSED_OWNER_NOTE": "This report has been dismissed. An admin can bring it back for review."
       },
       "STATUS": {
         "LABEL": "Status",
@@ -869,12 +872,15 @@
         "new": "New",
         "in_review": "In Review",
         "accepted": "Accepted",
+        "dismissed": "Dismissed",
         "resolved": "Resolved",
         "rejected": "Rejected"
       },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
-      "NEW_BADGE_ARIA": "{{count}} new usability reports"
+      "NEW_BADGE_ARIA": "{{count}} new usability reports",
+      "ACCEPTED_BADGE_ARIA": "{{count}} usability reports awaiting action",
+      "PARTIAL_LIST_HINT": "Showing {{shown}} of {{total}} reports for this status — more exist but aren't shown yet."
     },
     "REPORTS": {
       "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",

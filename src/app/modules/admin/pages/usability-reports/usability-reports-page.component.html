@@ -15,12 +15,17 @@
   </div>
 
   <div class="admin-page-filters">
+    <!-- OBRS-378: no [placeholder] here (design-system.md §3.1 leak) — a
+         placeholder header would render a selectable empty row emitting '',
+         re-entering the retired "show all" mode and sending an undefined
+         status to the server. The dropdown always holds a concrete
+         role-default status, so its label comes from the selected option
+         (the dropdown's own selectedLabel), not a placeholder. -->
     <app-admin-dropdown
       [value]="selectedStatusFilter"
       [options]="statusFilterOptions"
       valueKey="value"
       labelKey="label"
-      [placeholder]="'ADMIN.USABILITY_REPORTS.FILTER_STATUS' | translate"
       (valueChange)="onStatusFilterChange($event)"
     ></app-admin-dropdown>
   </div>
@@ -55,7 +60,7 @@
 
         <ng-container *ngIf="!isLoading">
           <tr
-            *ngFor="let report of filteredReports; let i = index; trackBy: trackById"
+            *ngFor="let report of allReports; let i = index; trackBy: trackById"
             class="ur-report-row"
             [class.zebra]="i % 2 === 1"
             (click)="onRowActivate(report.id, $event)"
@@ -91,7 +96,7 @@
             </td>
           </tr>
 
-          <tr *ngIf="filteredReports.length === 0 && !errorMessage" class="admin-empty-row">
+          <tr *ngIf="allReports.length === 0 && !errorMessage" class="admin-empty-row">
             <td colspan="8">{{ 'ADMIN.USABILITY_REPORTS.EMPTY' | translate }}</td>
           </tr>
         </ng-container>
@@ -99,10 +104,17 @@
     </table>
   </div>
 
+  <!-- OBRS-378: no paginator exists yet (deferred to OBRS-403) — when the
+       fetched rows are fewer than the tab's total, disclose that more exist
+       rather than silently implying the table is complete. -->
   <div class="admin-table-footer">
-    <span>
-      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ filteredReports.length }}
+    <span *ngIf="allReports.length >= totalElements">
+      {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ allReports.length }}
       {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
+    </span>
+    <span *ngIf="allReports.length < totalElements" class="admin-muted">
+      <span class="material-symbols-outlined ur-partial-hint-icon" aria-hidden="true">info</span>
+      {{ 'ADMIN.USABILITY_REPORTS.PARTIAL_LIST_HINT' | translate: { shown: allReports.length, total: totalElements } }}
     </span>
   </div>
 </section>
@@ -257,8 +269,10 @@
           ></textarea>
         </div>
 
-        <!-- Status update -->
-        <div class="ur-status-update mt-3">
+        <!-- Status update: normal (existing dropdown + Save). OBRS-378: hidden
+             once the report is already dismissed — that state renders its own
+             branch below instead (exactly one primary button per state). -->
+        <div class="ur-status-update mt-3" *ngIf="detailReport.status !== 'dismissed'">
           <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>
           <div class="ur-status-controls">
             <app-admin-dropdown
@@ -278,6 +292,31 @@
               {{ 'ADMIN.USABILITY_REPORTS.STATUS.SAVE' | translate }}
             </button>
           </div>
+        </div>
+
+        <!-- Status update: dismissed. OBRS-378 (per UX spec) — admin sees a
+             hint + the single "Pull Back to Review" primary action; owner
+             sees only a muted note, no controls. No generic dropdown+Save
+             renders in this branch. -->
+        <div class="ur-status-update mt-3" *ngIf="detailReport.status === 'dismissed'">
+          <ng-container *ngIf="isAdmin; else ownerDismissedNote">
+            <p class="ur-dismissed-note">
+              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_ADMIN_HINT' | translate }}
+            </p>
+            <button
+              type="button"
+              class="admin-btn admin-btn-primary"
+              [disabled]="isSavingStatus"
+              (click)="pullBackToReview()"
+            >
+              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.PULL_BACK_TO_REVIEW' | translate }}
+            </button>
+          </ng-container>
+          <ng-template #ownerDismissedNote>
+            <p class="ur-dismissed-note">
+              {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_OWNER_NOTE' | translate }}
+            </p>
+          </ng-template>
         </div>
       </div>
     </ng-container>

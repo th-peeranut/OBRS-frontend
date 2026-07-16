@@ -861,7 +861,10 @@
         "TRIAGED_BY": "处理人",
         "TRIAGED_AT": "处理时间",
         "JIRA_LINK_LABEL": "Jira 问题",
-        "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}"
+        "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}",
+        "PULL_BACK_TO_REVIEW": "撤回至审查中",
+        "DISMISSED_ADMIN_HINT": "店主已将此报告标记为不重要。如有需要，您可以将其撤回重新审查。",
+        "DISMISSED_OWNER_NOTE": "此报告已搁置，管理员可以将其撤回重新审查。"
       },
       "STATUS": {
         "LABEL": "状态",
@@ -869,12 +872,15 @@
         "new": "新建",
         "in_review": "审查中",
         "accepted": "已接受",
+        "dismissed": "已搁置",
         "resolved": "已解决",
         "rejected": "已拒绝"
       },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
-      "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
+      "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈",
+      "ACCEPTED_BADGE_ARIA": "{{count}} 条待处理的可用性反馈",
+      "PARTIAL_LIST_HINT": "此状态下显示 {{shown}} / {{total}} 份报告 — 还有更多记录未显示。"
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",

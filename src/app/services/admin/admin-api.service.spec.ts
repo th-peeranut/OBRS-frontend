@@ -20,10 +20,10 @@ describe('AdminApiService', () => {
     httpMock.verify();
   });
 
-  describe('getNewUsabilityReportCount', () => {
+  describe('getUsabilityReportCountByStatus', () => {
     it('issues a GET with status=new&size=1&page=0 and resolves to data.totalElements', () => {
       let result: number | undefined;
-      service.getNewUsabilityReportCount().subscribe((count) => (result = count));
+      service.getUsabilityReportCountByStatus('new').subscribe((count) => (result = count));
 
       const req = httpMock.expectOne(
         (request) =>
@@ -41,6 +41,70 @@ describe('AdminApiService', () => {
       });
 
       expect(result).toBe(7);
+    });
+
+    // OBRS-378: admin's badge counts 'accepted' (owner-vetted) instead of 'new'.
+    it('issues a GET with status=accepted&size=1&page=0 and resolves to data.totalElements', () => {
+      let result: number | undefined;
+      service.getUsabilityReportCountByStatus('accepted').subscribe((count) => (result = count));
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/admin/usability-reports` &&
+          request.params.get('status') === 'accepted' &&
+          request.params.get('size') === '1' &&
+          request.params.get('page') === '0'
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { content: [], totalElements: 3 },
+      });
+
+      expect(result).toBe(3);
+    });
+  });
+
+  // OBRS-378: the list GET now optionally carries ?status= and a
+  // multi-valued ?sort= (must be TWO separate params, not one collapsed
+  // value — HttpParams.append vs .set).
+  describe('getUsabilityReports', () => {
+    it('issues a plain GET with no params when status/sort are omitted', () => {
+      service.getUsabilityReports().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/usability-reports`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.keys().length).toBe(0);
+
+      req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
+    });
+
+    it('sends the status param when provided', () => {
+      service.getUsabilityReports('accepted').subscribe();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/admin/usability-reports` &&
+          request.params.get('status') === 'accepted'
+      );
+      req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
+    });
+
+    it('sends TWO distinct sort params via append (not collapsed into one by .set)', () => {
+      service.getUsabilityReports('accepted', ['createdAt,asc', 'id,asc']).subscribe();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/admin/usability-reports` &&
+          request.params.get('status') === 'accepted'
+      );
+      expect(req.request.params.getAll('sort')).toEqual(['createdAt,asc', 'id,asc']);
+
+      req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
     });
   });
 
