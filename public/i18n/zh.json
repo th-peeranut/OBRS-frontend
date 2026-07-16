@@ -872,11 +872,34 @@
         "in_review": "审查中",
         "accepted": "已接受",
         "resolved": "已解决",
-        "rejected": "已拒绝"
+        "rejected": "已拒绝",
+        "duplicate": "重复"
       },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
-      "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈"
+      "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈",
+      "DUPLICATE": {
+        "MARK_ACTION": "标记为重复",
+        "UNMARK_ACTION": "取消重复标记",
+        "UNMARK_CONFIRM_TITLE": "取消此重复标记？",
+        "UNMARK_CONFIRM_TEXT": "该报告将返回审核队列（审核中）。",
+        "UNMARK_SUCCESS": "已取消重复标记。",
+        "UNMARK_FAILED": "取消重复标记失败，请重试。",
+        "PICKER_TITLE": "选择原始报告",
+        "PICKER_LABEL": "重复于",
+        "PICKER_SEARCH_PLACEHOLDER": "按编号或描述搜索...",
+        "PICKER_EMPTY": "没有可选作原始报告的报告。",
+        "PICKER_CONFIRM": "确认",
+        "PICKER_CANCEL": "取消",
+        "MARK_SUCCESS": "已标记为重复。",
+        "MARK_FAILED": "标记为重复失败，请重试。",
+        "ERROR_CANONICAL_NOT_FOUND": "未找到所选原始报告，可能已发生变化。",
+        "ERROR_SELF_REFERENCE": "报告不能标记为自身的重复。",
+        "ERROR_ALREADY_DUPLICATE": "所选报告本身就是重复项，不能作为原始报告。",
+        "LINK_TEXT": "重复于 #{{id}}",
+        "LINK_ARIA": "打开原始报告 #{{id}}",
+        "COUNT_BADGE": "{{count}} 个重复报告"
+      }
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",

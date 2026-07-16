@@ -66,6 +66,18 @@
               <span class="admin-status" [ngClass]="statusClass(report.status)">
                 {{ statusLabel(report.status) }}
               </span>
+              <!-- OBRS-376: read-only for owner too, same visibility as the status chip. -->
+              <a
+                *ngIf="report.duplicateOfId !== null"
+                class="btn btn-link p-0 ur-duplicate-link"
+                [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: report.duplicateOfId }"
+                (click)="openCanonicalReport(report.duplicateOfId)"
+              >
+                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: report.duplicateOfId } }}
+              </a>
+              <span *ngIf="report.duplicateCount > 0" class="ur-duplicate-count-pill">
+                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: report.duplicateCount } }}
+              </span>
             </td>
             <td>
               <ng-container *ngIf="report.userId !== null; else anonCell">
@@ -80,13 +92,29 @@
             <td class="ur-description-cell">{{ report.descriptionPreview }}</td>
             <td>{{ report.imageCount }}</td>
             <td>{{ displayDateTime(report.createdAt) }}</td>
-            <td>
+            <td class="ur-actions-cell">
               <button
                 type="button"
                 class="admin-btn admin-btn-small"
                 (click)="openDetail(report.id)"
               >
                 {{ 'ADMIN.USABILITY_REPORTS.VIEW' | translate }}
+              </button>
+              <button
+                *ngIf="canMarkAsDuplicate(report.status)"
+                type="button"
+                class="admin-btn admin-btn-small"
+                (click)="openDuplicatePicker(report.id)"
+              >
+                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
+              </button>
+              <button
+                *ngIf="canUnmarkDuplicate(report.status)"
+                type="button"
+                class="admin-btn admin-btn-small admin-btn-danger"
+                (click)="unmarkDuplicate(report.id)"
+              >
+                {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
               </button>
             </td>
           </tr>
@@ -133,6 +161,45 @@
         <div class="ur-detail-row">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.CATEGORY' | translate }}</span>
           <span>{{ categoryLabel(detailReport.category) }}</span>
+        </div>
+        <!-- OBRS-376: current status + duplicate meta, read-only for owner too
+             (same visibility as the table row's status chip). -->
+        <div class="ur-detail-row">
+          <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.COL.STATUS' | translate }}</span>
+          <span>
+            <span class="admin-status" [ngClass]="statusClass(detailReport.status)">
+              {{ statusLabel(detailReport.status) }}
+            </span>
+            <a
+              *ngIf="detailReport.duplicateOfId !== null"
+              class="btn btn-link p-0 ur-duplicate-link"
+              [attr.aria-label]="'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_ARIA' | translate:{ id: detailReport.duplicateOfId }"
+              (click)="openCanonicalReport(detailReport.duplicateOfId)"
+            >
+              {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.LINK_TEXT' | translate:{ id: detailReport.duplicateOfId } }}
+            </a>
+            <span *ngIf="detailReport.duplicateCount > 0" class="ur-duplicate-count-pill">
+              {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.COUNT_BADGE' | translate:{ count: detailReport.duplicateCount } }}
+            </span>
+          </span>
+        </div>
+        <div class="ur-duplicate-actions mt-2" *ngIf="canMarkAsDuplicate(detailReport.status) || canUnmarkDuplicate(detailReport.status)">
+          <button
+            *ngIf="canMarkAsDuplicate(detailReport.status)"
+            type="button"
+            class="admin-btn"
+            (click)="openDuplicatePicker(detailReport.id)"
+          >
+            {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_ACTION' | translate }}
+          </button>
+          <button
+            *ngIf="canUnmarkDuplicate(detailReport.status)"
+            type="button"
+            class="admin-btn admin-btn-danger"
+            (click)="unmarkDuplicate(detailReport.id)"
+          >
+            {{ 'ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION' | translate }}
+          </button>
         </div>
         <div class="ur-detail-row">
           <span class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.ROUTE' | translate }}</span>
@@ -300,3 +367,18 @@
     <img [src]="lightboxImageUrl" alt="" class="ur-lightbox-image" />
   </div>
 </div>
+
+<!-- OBRS-376: duplicate-of candidate picker — a modal-over-modal layer like
+     the lightbox above, but rendered OUTSIDE the detail modal's backdrop
+     (top-level, sibling) since it can also be opened standalone from a table
+     row with no detail modal open. See onDetailBackdropDismiss() /
+     UsabilityReportDuplicatePickerComponent's doc comment for how ESC/backdrop
+     routing to the topmost layer still works despite the two not being
+     nested. -->
+<app-usability-report-duplicate-picker
+  *ngIf="isPickerOpen"
+  [candidates]="pickerCandidates"
+  [isSaving]="isMarkingDuplicate"
+  (confirm)="onPickerConfirm($event)"
+  (cancel)="onPickerCancel()"
+></app-usability-report-duplicate-picker>

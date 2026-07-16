@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { environment } from '../../../../../environments/environment';
 import { UsabilityReportsPageComponent } from './usability-reports-page.component';
@@ -12,6 +13,7 @@ import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
+import { UsabilityReportDuplicatePickerComponent } from './usability-report-duplicate-picker/usability-report-duplicate-picker.component';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,
@@ -52,6 +54,7 @@ describe('UsabilityReportsPageComponent', () => {
     adminApiServiceSpy = jasmine.createSpyObj('AdminApiService', [
       'getUsabilityReportById',
       'updateUsabilityReportStatus',
+      'markUsabilityReportAsDuplicate',
     ]);
     // Default success response so the silent auto-promote-on-open path (fired
     // whenever a 'new'-status report is opened, most fixtures below use one)
@@ -61,7 +64,8 @@ describe('UsabilityReportsPageComponent', () => {
       of({ code: 200, message: 'OK', data: null })
     );
 
-    alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error']);
+    alertServiceSpy = jasmine.createSpyObj('AlertService', ['success', 'error', 'confirm']);
+    alertServiceSpy.confirm.and.resolveTo(true);
 
     // OBRS-370: default to an ADMIN identity so every pre-existing spec below
     // (written before the role gate existed) keeps exercising the full,
@@ -73,7 +77,11 @@ describe('UsabilityReportsPageComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot(), AdminSharedModule],
-      declarations: [UsabilityReportsPageComponent, AdminModalBackdropDirective],
+      declarations: [
+        UsabilityReportsPageComponent,
+        AdminModalBackdropDirective,
+        UsabilityReportDuplicatePickerComponent,
+      ],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },
         { provide: AdminApiService, useValue: adminApiServiceSpy },
@@ -116,6 +124,8 @@ describe('UsabilityReportsPageComponent', () => {
           descriptionPreview: 'Test',
           imageCount: 0,
           createdAt: '2026-01-01T00:00:00Z',
+          duplicateOfId: null,
+          duplicateCount: 0,
         },
       ],
       totalElements: 1,
@@ -149,6 +159,8 @@ describe('UsabilityReportsPageComponent', () => {
       triagedAt: null,
       jiraIssueKey: null,
       reporterNotifiedAt: null,
+      duplicateOfId: null,
+      duplicateCount: 0,
     };
 
     const detailResponse: ResponseAPI<UsabilityReportDetail> = {
@@ -194,6 +206,8 @@ describe('UsabilityReportsPageComponent', () => {
         descriptionPreview: 'Summary preview text',
         imageCount: 1,
         createdAt: '2026-01-01T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
       },
     ],
     totalElements: 1,
@@ -226,6 +240,8 @@ describe('UsabilityReportsPageComponent', () => {
     triagedAt: null,
     jiraIssueKey: null,
     reporterNotifiedAt: null,
+    duplicateOfId: null,
+    duplicateCount: 0,
   };
 
   function primeReportList(): void {
@@ -647,7 +663,7 @@ describe('UsabilityReportsPageComponent', () => {
     };
   }
 
-  it('builds the detail dropdown from only accepted/resolved/rejected, while the table filter keeps all 5 statuses', () => {
+  it('builds the detail dropdown from only accepted/resolved/rejected, while the table filter keeps all statuses (including duplicate, OBRS-376)', () => {
     primeReportList();
 
     const detailValues = component['detailStatusOptions'].map((o) => o.value);
@@ -657,8 +673,8 @@ describe('UsabilityReportsPageComponent', () => {
 
     const filterValues = component['statusFilterOptions'].map((o) => o.value);
     expect(filterValues)
-      .withContext('the table filter above the table must still offer all 5 statuses')
-      .toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected']);
+      .withContext('the table filter above the table must still offer every status, including duplicate')
+      .toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected', 'duplicate']);
   });
 
   it('fires the silent auto-promote (new -> in_review) exactly once when opening a "new" report', () => {
@@ -889,6 +905,221 @@ describe('UsabilityReportsPageComponent', () => {
       expect(component['selectedDetailStatus'])
         .withContext('owner must not land with a hidden terminal value silently selected (Save disabled)')
         .toBe('');
+    });
+  });
+
+  // ── OBRS-376 regression specs: mark / un-mark as duplicate ────────────────
+
+  describe('mark / un-mark as duplicate (OBRS-376)', () => {
+    beforeEach(() => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation('en', {
+        ADMIN: {
+          USABILITY_REPORTS: {
+            DUPLICATE: {
+              COUNT_BADGE: '{{count}} duplicate reports',
+              LINK_TEXT: 'Duplicate of #{{id}}',
+              LINK_ARIA: 'Open canonical report #{{id}}',
+              MARK_ACTION: 'Mark as duplicate',
+              UNMARK_ACTION: 'Unmark duplicate',
+            },
+          },
+        },
+      }, true);
+      translate.use('en');
+    });
+
+    function pageWithReports(reports: UsabilityReportPage['content']): UsabilityReportPage {
+      return { content: reports, totalElements: reports.length };
+    }
+
+    it('renders the duplicate-count badge with the derived count in the row', () => {
+      storeSpy.data$.next(pageWithReports([
+        { ...mockSummaryPage.content[0], duplicateCount: 3 },
+      ]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      const badge: HTMLElement = fixture.nativeElement.querySelector(
+        'tr.ur-report-row .ur-duplicate-count-pill'
+      );
+      expect(badge).withContext('count badge must render when duplicateCount > 0').not.toBeNull();
+      expect(badge.textContent?.trim()).toBe('3 duplicate reports');
+    });
+
+    it('does not render the count badge when duplicateCount is 0', () => {
+      storeSpy.data$.next(pageWithReports([
+        { ...mockSummaryPage.content[0], duplicateCount: 0 },
+      ]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      const badge = fixture.nativeElement.querySelector('tr.ur-report-row .ur-duplicate-count-pill');
+      expect(badge).withContext('no count badge when duplicateCount is 0').toBeNull();
+    });
+
+    it('renders the "Duplicate of #X" link when duplicateOfId is present, and clicking it opens the canonical report', () => {
+      storeSpy.data$.next(pageWithReports([
+        { ...mockSummaryPage.content[0], status: 'duplicate', duplicateOfId: 99 },
+      ]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      const link: HTMLAnchorElement = fixture.nativeElement.querySelector(
+        'tr.ur-report-row .ur-duplicate-link'
+      );
+      expect(link).withContext('duplicate-of link must render').not.toBeNull();
+      expect(link.textContent?.trim()).toBe('Duplicate of #99');
+
+      const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail');
+      link.click();
+      fixture.detectChanges();
+
+      expect(openSpy).withContext('the link opens the canonical report by id').toHaveBeenCalledOnceWith('99');
+    });
+
+    it('does not render the duplicate-of link when duplicateOfId is null', () => {
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], duplicateOfId: null }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      const link = fixture.nativeElement.querySelector('tr.ur-report-row .ur-duplicate-link');
+      expect(link).withContext('no link when duplicateOfId is null').toBeNull();
+    });
+
+    function actionButtonTexts(): string[] {
+      const buttons: HTMLButtonElement[] = Array.from(
+        fixture.nativeElement.querySelectorAll('tr.ur-report-row .ur-actions-cell button')
+      );
+      return buttons.map((b) => b.textContent?.trim() ?? '');
+    }
+
+    it('an ADMIN sees the Mark action for an eligible (new) report and the Unmark action for a duplicate report', () => {
+      // authServiceSpy already defaults to ['admin'] (outer beforeEach) — the
+      // component's isAdmin flag is fixed at ngOnInit (the first
+      // detectChanges below), so this must not change role after that point
+      // (see the owner-only test below, which uses a fresh fixture instead).
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], status: 'new' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      expect(actionButtonTexts())
+        .withContext('admin must see the Mark action on an eligible report')
+        .toContain('Mark as duplicate');
+      expect(actionButtonTexts()).not.toContain('Unmark duplicate');
+
+      // Admin — unmark visible on an already-duplicate report.
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], status: 'duplicate' }]));
+      fixture.detectChanges();
+
+      expect(actionButtonTexts())
+        .withContext('admin must see the Unmark action on a duplicate report')
+        .toContain('Unmark duplicate');
+      expect(actionButtonTexts()).not.toContain('Mark as duplicate');
+    });
+
+    it('an OWNER sees neither the Mark action nor the Unmark action, on any status', () => {
+      // isAdmin is resolved once, at ngOnInit — the role must be set BEFORE
+      // the first detectChanges() (which is what triggers ngOnInit), unlike
+      // the admin test above which relies on the outer beforeEach's default.
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], status: 'new' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      expect(actionButtonTexts())
+        .withContext('owner must never see the Mark action')
+        .not.toContain('Mark as duplicate');
+
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], status: 'duplicate' }]));
+      fixture.detectChanges();
+      expect(actionButtonTexts())
+        .withContext('owner must never see the Unmark action')
+        .not.toContain('Unmark duplicate');
+    });
+
+    it('openDuplicatePicker excludes the report itself and any report already status==="duplicate" from the candidate list', () => {
+      const reports: UsabilityReportPage['content'] = [
+        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'new' },
+        { ...mockSummaryPage.content[0], id: 'rep-2', status: 'in_review' },
+        { ...mockSummaryPage.content[0], id: 'rep-3', status: 'duplicate' },
+      ];
+      storeSpy.data$.next(pageWithReports(reports));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      component['openDuplicatePicker']('rep-1');
+
+      const candidateIds = component['pickerCandidates'].map((c: { id: string }) => c.id);
+      expect(candidateIds)
+        .withContext('candidates exclude the source report itself and any already-duplicate report')
+        .toEqual(['rep-2']);
+      expect(component['isPickerOpen']).toBeTrue();
+    });
+
+    it('onPickerConfirm calls markUsabilityReportAsDuplicate with the numeric canonical id, then refreshes and shows success', () => {
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
+        of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
+      );
+
+      component['openDuplicatePicker']('rep-1');
+      component['onPickerConfirm']('42');
+
+      expect(adminApiServiceSpy.markUsabilityReportAsDuplicate)
+        .withContext('canonical id is sent as a number')
+        .toHaveBeenCalledOnceWith('rep-1', 42);
+      expect(alertServiceSpy.success).toHaveBeenCalled();
+      expect(storeSpy.refresh).toHaveBeenCalled();
+      expect(component['isPickerOpen']).withContext('picker closes on success').toBeFalse();
+    });
+
+    it('onPickerConfirm maps REPORT_CANONICAL_SELF_REFERENCE to the self-reference error toast and keeps the picker open', () => {
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
+        throwError(() => new HttpErrorResponse({
+          status: 400,
+          error: { errorCode: 'REPORT_CANONICAL_SELF_REFERENCE' },
+        }))
+      );
+
+      component['openDuplicatePicker']('rep-1');
+      component['onPickerConfirm']('1');
+
+      expect(alertServiceSpy.error).toHaveBeenCalled();
+      expect(component['isPickerOpen']).withContext('picker stays open on error').toBeTrue();
+    });
+
+    it('unmarkDuplicate confirms, then PUTs status in_review (reusing updateUsabilityReportStatus, not a dedicated endpoint) and shows success', async () => {
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      await component['unmarkDuplicate']('rep-1');
+
+      expect(alertServiceSpy.confirm).toHaveBeenCalled();
+      expect(adminApiServiceSpy.updateUsabilityReportStatus)
+        .withContext('un-mark reuses the existing status endpoint, not a new one')
+        .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
+      expect(alertServiceSpy.success).toHaveBeenCalled();
+      expect(storeSpy.refresh).toHaveBeenCalled();
+    });
+
+    it('unmarkDuplicate does nothing when the confirm dialog is dismissed', async () => {
+      alertServiceSpy.confirm.and.resolveTo(false);
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      await component['unmarkDuplicate']('rep-1');
+
+      expect(adminApiServiceSpy.updateUsabilityReportStatus).not.toHaveBeenCalled();
     });
   });
 });

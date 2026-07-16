@@ -1,11 +1,15 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   DECISION_STATUSES,
   DETAIL_STATUS_VALUES,
+  MARK_AS_DUPLICATE_STATUSES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
+  canMarkAsDuplicate,
   categoryLabel,
   displayDateTime,
+  extractUsabilityReportErrorCode,
   formatBytes,
   seedDecisionStatus,
   statusClass,
@@ -21,12 +25,20 @@ import {
 
 describe('usability-reports-page.mappers', () => {
   describe('STATUS_FILTER_VALUES / DETAIL_STATUS_VALUES', () => {
-    it('the table filter offers all 5 statuses in order', () => {
-      expect(STATUS_FILTER_VALUES).toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected']);
+    it('the table filter offers all 6 statuses (including duplicate, OBRS-376) in order', () => {
+      expect(STATUS_FILTER_VALUES).toEqual([
+        'new',
+        'in_review',
+        'accepted',
+        'resolved',
+        'rejected',
+        'duplicate',
+      ]);
     });
 
-    it('the detail dropdown offers only the 3 decision statuses in order', () => {
+    it('the detail dropdown offers only the 3 decision statuses in order — duplicate is never dropdown-selectable', () => {
       expect(DETAIL_STATUS_VALUES).toEqual(['accepted', 'resolved', 'rejected']);
+      expect(DETAIL_STATUS_VALUES).not.toContain('duplicate' as UsabilityReportStatus);
     });
   });
 
@@ -89,6 +101,10 @@ describe('usability-reports-page.mappers', () => {
       expect(statusClass('rejected')).toBe('is-danger');
     });
 
+    it('maps duplicate to is-neutral (OBRS-376, design-system.md §2.4)', () => {
+      expect(statusClass('duplicate')).toBe('is-neutral');
+    });
+
     it('returns an empty string for an unknown status', () => {
       expect(statusClass('unknown')).toBe('');
       expect(statusClass('')).toBe('');
@@ -141,6 +157,43 @@ describe('usability-reports-page.mappers', () => {
     });
   });
 
+  describe('MARK_AS_DUPLICATE_STATUSES / canMarkAsDuplicate', () => {
+    it('contains exactly new/in_review/accepted', () => {
+      expect([...MARK_AS_DUPLICATE_STATUSES].sort()).toEqual(['accepted', 'in_review', 'new']);
+    });
+
+    it('canMarkAsDuplicate is true for new/in_review/accepted', () => {
+      expect(canMarkAsDuplicate('new')).toBeTrue();
+      expect(canMarkAsDuplicate('in_review')).toBeTrue();
+      expect(canMarkAsDuplicate('accepted')).toBeTrue();
+    });
+
+    it('canMarkAsDuplicate is false for terminal decisions and for an already-duplicate report', () => {
+      expect(canMarkAsDuplicate('resolved')).toBeFalse();
+      expect(canMarkAsDuplicate('rejected')).toBeFalse();
+      expect(canMarkAsDuplicate('duplicate')).toBeFalse();
+    });
+  });
+
+  describe('extractUsabilityReportErrorCode', () => {
+    it('extracts error.error.errorCode from an HttpErrorResponse', () => {
+      const error = new HttpErrorResponse({
+        status: 400,
+        error: { errorCode: 'REPORT_CANONICAL_SELF_REFERENCE' },
+      });
+      expect(extractUsabilityReportErrorCode(error)).toBe('REPORT_CANONICAL_SELF_REFERENCE');
+    });
+
+    it('returns null when the error body has no errorCode', () => {
+      const error = new HttpErrorResponse({ status: 500, error: { message: 'boom' } });
+      expect(extractUsabilityReportErrorCode(error)).toBeNull();
+    });
+
+    it('returns null for a non-HttpErrorResponse error', () => {
+      expect(extractUsabilityReportErrorCode(new Error('network down'))).toBeNull();
+    });
+  });
+
   describe('toUsabilityReportDetailFallback', () => {
     const summary: UsabilityReportSummary = {
       id: 'rep-1',
@@ -150,6 +203,8 @@ describe('usability-reports-page.mappers', () => {
       descriptionPreview: 'Preview text',
       imageCount: 3,
       createdAt: '2026-01-01T00:00:00Z',
+      duplicateOfId: null,
+      duplicateCount: 0,
     };
 
     it('carries id/category/status/userId/imageCount/createdAt straight through', () => {
@@ -160,6 +215,13 @@ describe('usability-reports-page.mappers', () => {
       expect(detail.userId).toBe(42);
       expect(detail.imageCount).toBe(3);
       expect(detail.createdAt).toBe('2026-01-01T00:00:00Z');
+    });
+
+    it('carries duplicateOfId/duplicateCount straight through (OBRS-376 — already known from the summary row)', () => {
+      const withDuplicateMeta: UsabilityReportSummary = { ...summary, duplicateOfId: 7, duplicateCount: 2 };
+      const detail = toUsabilityReportDetailFallback(withDuplicateMeta);
+      expect(detail.duplicateOfId).toBe(7);
+      expect(detail.duplicateCount).toBe(2);
     });
 
     it('mirrors descriptionPreview into both description and descriptionPreview', () => {
@@ -202,6 +264,8 @@ describe('usability-reports-page.mappers', () => {
         descriptionPreview: 'a',
         imageCount: 0,
         createdAt: '2026-01-01T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
       },
       {
         id: 'rep-2',
@@ -211,6 +275,8 @@ describe('usability-reports-page.mappers', () => {
         descriptionPreview: 'b',
         imageCount: 0,
         createdAt: '2026-01-02T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
       },
     ];
 
