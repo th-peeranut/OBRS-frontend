@@ -1,0 +1,78 @@
+@import "../../../../../styles/variables.scss";
+
+.parcel-btn-primary {
+  height: 48px;
+  padding: 0 32px;
+  border: none;
+  border-radius: $radius-xl;
+  background-color: $brand-customer;
+  color: $text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: $font-weight-medium;
+}
+
+.text-error {
+  color: $text-red;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.parcel-details-form__sender-name {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: $primary-grey;
+  color: $text-softblack;
+  font-weight: $font-weight-medium;
+}
+
+.parcel-details-form__help {
+  color: $text-lightgrey;
+  font-size: 0.8rem;
+  margin-top: 4px;
+}
+
+.parcel-details-form__quote {
+  margin: 20px 0;
+  font-weight: $font-weight-medium;
+}
+
+.parcel-details-form__prohibited {
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid $primary-grey;
+  border-radius: 12px;
+}
+
+.parcel-details-form__prohibited-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+}
+
+.parcel-details-form__server-error {
+  margin-top: 12px;
+}
+
+.parcel-details-form__actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}

@@ -1,0 +1,124 @@
+<app-navbar></app-navbar>
+
+<section class="my-parcels" *ngIf="vm$ | async as vm">
+  <div class="my-parcels__inner">
+    <header class="my-parcels__header">
+      <h1>{{ "PARCEL_BOOKING.MY_PARCELS.TITLE" | translate }}</h1>
+      <p>{{ "PARCEL_BOOKING.MY_PARCELS.SUBTITLE" | translate }}</p>
+    </header>
+
+    <nav class="filter-pills" aria-label="status filter">
+      <button
+        *ngFor="let filter of statusFilters"
+        type="button"
+        class="filter-pill"
+        [class.is-active]="selectedStatus === filter.value"
+        (click)="onStatusChange(filter.value)"
+      >
+        {{ filter.labelKey | translate }}
+      </button>
+    </nav>
+
+    <ng-container *ngIf="vm.loading && !vm.loaded">
+      <div class="booking-card booking-card--skeleton" *ngFor="let row of skeletonRows">
+        <span class="skeleton skeleton--line"></span>
+        <span class="skeleton skeleton--line skeleton--short"></span>
+        <span class="skeleton skeleton--line skeleton--short"></span>
+      </div>
+    </ng-container>
+
+    <div class="state-card state-card--error" *ngIf="vm.error && !vm.loading">
+      <span class="material-symbols-outlined">error</span>
+      <p>{{ vm.error }}</p>
+      <button type="button" class="btn-secondary" (click)="onRetry()">
+        {{ "PARCEL_BOOKING.MY_PARCELS.RETRY" | translate }}
+      </button>
+    </div>
+
+    <div
+      class="state-card state-card--empty"
+      *ngIf="vm.loaded && !vm.error && vm.items.length === 0"
+    >
+      <span class="material-symbols-outlined">local_shipping</span>
+      <p>{{ "PARCEL_BOOKING.MY_PARCELS.EMPTY" | translate }}</p>
+      <a class="parcel-btn-primary" routerLink="/parcel-booking">
+        {{ "PARCEL_BOOKING.MY_PARCELS.BOOK_NOW" | translate }}
+      </a>
+    </div>
+
+    <ng-container *ngIf="!vm.error">
+      <article class="parcel-card" *ngFor="let row of vm.items; trackBy: trackByParcelId">
+        <div class="parcel-card__top">
+          <div class="parcel-card__tracking">
+            <span class="parcel-card__tracking-number">{{ row.trackingNumber }}</span>
+            <button
+              type="button"
+              class="icon-btn"
+              [attr.aria-label]="'PARCEL_BOOKING.MY_PARCELS.COPY_TRACKING_NUMBER' | translate"
+              (click)="copyTrackingNumber(row.trackingNumber)"
+            >
+              <span class="material-symbols-outlined">content_copy</span>
+            </button>
+          </div>
+          <span class="admin-status" [ngClass]="chipToken(row.deliveryStatus)">
+            {{ statusLabelKey(row.deliveryStatus) | translate }}
+          </span>
+        </div>
+
+        <div class="parcel-card__route">
+          <span>{{ stopLabel(row.pickupStop) }} → {{ stopLabel(row.dropoffStop) }}</span>
+          <span class="parcel-card__departure">{{ displayDateTime(row.departureDateTime) }}</span>
+        </div>
+
+        <dl class="parcel-card__meta">
+          <div>
+            <dt>{{ "PARCEL_BOOKING.MY_PARCELS.RECIPIENT" | translate }}</dt>
+            <dd>{{ row.recipientName }}</dd>
+          </div>
+          <div>
+            <dt>{{ "PARCEL_BOOKING.MY_PARCELS.WEIGHT" | translate }}</dt>
+            <dd>{{ row.weightKg }} kg</dd>
+          </div>
+          <div>
+            <dt>
+              {{
+                (row.bookingStatus === "confirmed"
+                  ? "PARCEL_BOOKING.MY_PARCELS.AMOUNT_PAID"
+                  : "PARCEL_BOOKING.MY_PARCELS.AMOUNT_DUE"
+                ) | translate
+              }}
+            </dt>
+            <dd>{{ row.amount }}</dd>
+          </div>
+        </dl>
+
+        <div class="parcel-card__pending" *ngIf="isPending(row)">
+          <span class="admin-status is-warning">
+            {{ "PARCEL_BOOKING.MY_PARCELS.UNPAID_BADGE" | translate }}
+          </span>
+          <span *ngIf="row.expiresAt">
+            {{ "PARCEL_BOOKING.MY_PARCELS.EXPIRES_AT" | translate: { time: displayDateTime(row.expiresAt) } }}
+          </span>
+        </div>
+
+        <p class="parcel-card__hint" *ngIf="isCreatedAndPaid(row)">
+          {{ "PARCEL_BOOKING.MY_PARCELS.CREATED_ACTION_HINT" | translate }}
+        </p>
+
+        <div class="parcel-card__actions">
+          <button type="button" class="btn-link" (click)="copyTrackingLink(row.trackingNumber)">
+            {{ "PARCEL_BOOKING.MY_PARCELS.COPY_TRACKING_LINK" | translate }}
+          </button>
+        </div>
+      </article>
+    </ng-container>
+
+    <div class="my-parcels__load-more" *ngIf="!vm.loading && vm.hasMore">
+      <button type="button" class="btn-secondary" (click)="onLoadMore(vm.page + 1)">
+        {{ "PARCEL_BOOKING.MY_PARCELS.LOAD_MORE" | translate }}
+      </button>
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>

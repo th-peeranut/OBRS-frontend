@@ -1,0 +1,272 @@
+@import "../../../styles/variables.scss";
+
+// Same cross-shell re-scoping idiom as `parcel-tracking-page.component.scss`
+// (design-system §12 new-pattern note) — the `.admin-status.is-*` chip and
+// the inline "unpaid" badge (`is-warning`) need their custom properties
+// re-declared here since this is a customer-shell page.
+:host {
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
+  --admin-accepted-bg: #b7f3c0;
+  --admin-accepted-text: #0a3d1d;
+  --admin-inreview-bg: #e2e5ea;
+  --admin-inreview-text: #3a4250;
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+  --admin-danger-bg: #ffdad6;
+  --admin-danger-text: #93000a;
+  --admin-success-bg: #d4e3ff;
+  --admin-success-text: #154c85;
+}
+
+:host-context(body.is-dark) {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
+  --admin-inreview-bg: #29323d;
+  --admin-inreview-text: #c7d3de;
+}
+
+.my-parcels {
+  min-height: 60vh;
+  padding: $space-xl clamp(16px, 6vw, 120px);
+  background-color: $secondary-grey;
+}
+
+.my-parcels__inner {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.my-parcels__header {
+  margin-bottom: 20px;
+
+  h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: $font-weight-bold;
+    color: $text-black;
+  }
+
+  p {
+    margin: 0;
+    font-size: 15px;
+    color: $text-lightblack;
+  }
+}
+
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+  margin-bottom: 20px;
+}
+
+.filter-pill {
+  padding: 7px 16px;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-pill;
+  background-color: $primary-white;
+  color: $text-softblack;
+  font-size: $font-size-sm;
+  cursor: pointer;
+
+  &.is-active {
+    background-color: $secondary-blue;
+    border-color: $secondary-blue;
+    color: $text-white;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.parcel-card {
+  background-color: $primary-white;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 10px rgba(13, 21, 37, 0.04);
+}
+
+.parcel-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-xs;
+}
+
+.parcel-card__tracking {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.parcel-card__tracking-number {
+  font-family: monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: $font-weight-bold;
+  font-size: $font-size-md;
+}
+
+.icon-btn {
+  border: none;
+  background: transparent;
+  color: $text-lightgrey;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.parcel-card__route {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 12px 0;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.parcel-card__departure {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-regular;
+  color: $text-lightgrey;
+}
+
+.parcel-card__meta {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-xs;
+  margin: 0 0 16px;
+  padding: 14px 0;
+  border-top: 1px dashed $primary-lightgrey;
+  border-bottom: 1px dashed $primary-lightgrey;
+
+  dt {
+    font-size: $font-size-xs;
+    color: $text-lightgrey;
+    margin-bottom: 4px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 15px;
+    color: $text-softblack;
+    font-weight: $font-weight-semibold;
+  }
+}
+
+.parcel-card__pending {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+.parcel-card__hint {
+  background: $secondary-grey;
+  border-radius: $radius-md;
+  padding: 12px;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+}
+
+.parcel-card__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-link {
+  border: none;
+  background: transparent;
+  color: $secondary-blue;
+  font-size: $font-size-sm;
+  cursor: pointer;
+}
+
+.state-card {
+  text-align: center;
+  background-color: $primary-white;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 14px;
+  padding: $space-2xl 24px;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+    color: $primary-grey;
+  }
+
+  p {
+    margin: 14px 0 18px;
+    font-size: 15px;
+    color: $text-lightblack;
+  }
+}
+
+.parcel-btn-primary,
+.btn-secondary {
+  display: inline-block;
+  padding: 10px 22px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid $secondary-blue;
+}
+
+.parcel-btn-primary {
+  background-color: $secondary-blue;
+  color: $text-white;
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $secondary-blue;
+}
+
+.booking-card--skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  background-color: $primary-white;
+  border: 1px solid $primary-lightgrey;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.skeleton {
+  display: block;
+  height: 16px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, $primary-lightgrey 25%, $secondary-grey 37%, $primary-lightgrey 63%);
+  background-size: 400% 100%;
+  animation: my-parcels-shimmer 1.4s ease infinite;
+
+  &--line {
+    width: 100%;
+  }
+
+  &--short {
+    width: 45%;
+  }
+}
+
+@keyframes my-parcels-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.my-parcels__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
