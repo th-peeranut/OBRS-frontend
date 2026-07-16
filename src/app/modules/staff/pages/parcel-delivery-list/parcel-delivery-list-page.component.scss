@@ -1,17 +1,7 @@
-// Reuses the global .admin-status / .admin-btn primitives.
+// Reuses the global .admin-status / .admin-btn primitives — no component-scoped
+// overrides needed.
 //
-// OBRS-396: the shared .admin-btn has no :disabled style at all, so a disabled
-// action button (unpaid row here, or the in-flight isRowBusy state) looks
-// identical to a live one — the block is invisible to staff. Scope the missing
-// affordance to this page rather than editing the shared primitive; the global
-// gap is tracked separately (see the card's follow-up).
-.admin-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-
-.admin-btn:disabled:hover {
-  // cancel the primitive's hover lift so a blocked button doesn't look reactive
-  border-color: rgba(189, 200, 207, 0.5);
-  background: var(--admin-surface-card);
-}
+// OBRS-396 added a page-scoped .admin-btn:disabled affordance here as a
+// stop-gap; OBRS-406 lifted it into the shared .admin-btn primitive
+// (src/styles/admin-theme.scss), so this file is back to relying on the global
+// styles alone.

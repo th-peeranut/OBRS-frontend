@@ -730,9 +730,25 @@
   border-color: var(--admin-outline);
 }
 
-.admin-btn:hover {
+.admin-btn:not(:disabled):hover {
   border-color: rgba(0, 102, 135, 0.24);
   background: var(--accent-soft);
+}
+
+/* OBRS-406: shared disabled affordance for every .admin-btn (and its
+   -primary/-danger variants). The primitive had none, so a [disabled] button
+   was visually identical to a live one (opacity 1, cursor pointer) — invisible
+   to the user on every page that disables an action (in-flight isRowBusy,
+   unpaid parcel rows on the delivery list, a validating modal submit). Lifted
+   here from the OBRS-396 page-scoped workaround; additive to an
+   already-reachable state, so nothing that was enabled changes. The three
+   variant :hover rules are gated on :not(:disabled) (rather than re-setting
+   colours on :disabled:hover) so a disabled button simply holds its own base
+   look dimmed — no colour "jump" on hover, and the primary gradient isn't
+   flattened to a surface card the moment the cursor lands on it. */
+.admin-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .admin-btn-primary {
@@ -742,7 +758,7 @@
   box-shadow: 0 8px 18px rgba(0, 102, 135, 0.24);
 }
 
-.admin-btn-primary:hover {
+.admin-btn-primary:not(:disabled):hover {
   background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
   opacity: 0.9;
 }
@@ -763,7 +779,7 @@
   border-color: var(--admin-danger-border);
 }
 
-.admin-btn-danger:hover {
+.admin-btn-danger:not(:disabled):hover {
   background: var(--admin-danger-bg);
   border-color: var(--admin-danger-border);
 }
