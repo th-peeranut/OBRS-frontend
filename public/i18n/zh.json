@@ -1927,6 +1927,7 @@
       "LOCK_BANNER": "本班次已到达。登车功能已锁定，无法再更改。",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "此班次目前无法切换到该状态。",
+        "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "您只能更新分配给您驾驶的班次。",
         "GENERIC": "无法更新班次状态，请重试。"
       }
     },

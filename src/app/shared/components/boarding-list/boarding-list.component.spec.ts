@@ -22,10 +22,20 @@ function createAlertServiceStub(confirmResult = true): any {
   };
 }
 
-function createAuthServiceStub(opts: { canUnboard?: boolean; username?: string | null } = {}): any {
+// OBRS-434: the component's role gates no longer share one answer — a driver may
+// now transition the schedule but still may not unboard/unflag/delay — so the stub
+// answers per requested role instead of returning one blanket boolean. The legacy
+// `canUnboard` option is kept as the shorthand it always meant: true = salesperson,
+// false = driver.
+function createAuthServiceStub(
+  opts: { canUnboard?: boolean; username?: string | null; roles?: string[] } = {}
+): any {
   const { canUnboard = true, username = 'operator1' } = opts;
+  const roles = opts.roles ?? (canUnboard ? ['salesperson'] : ['driver']);
   return {
-    hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canUnboard),
+    hasAnyRole: jasmine
+      .createSpy('hasAnyRole')
+      .and.callFake((wanted: string[]) => wanted.some((role) => roles.includes(role))),
     getUsername: () => username,
   };
 }
@@ -685,22 +695,58 @@ describe('BoardingListComponent — OBRS-256 schedule status pill/action getters
     expect(component['scheduleStatusAction']).toBeNull();
   });
 
-  it('canControlScheduleStatus is hidden for a driver — identical role gate to canUnboard', () => {
+  // OBRS-434: this asserted the opposite until the owner decided the driver — the
+  // only person actually at the final stop — must be able to mark the trip
+  // departed/arrived. The backend confines a driver to their own assigned schedule.
+  it('canControlScheduleStatus is shown for a driver AND a salesperson', () => {
     const driverComponent = createComponent(
       { boardingScan: jasmine.createSpy() },
       undefined,
       undefined,
-      createAuthServiceStub({ canUnboard: false })
+      createAuthServiceStub({ roles: ['driver'] })
     );
-    expect(driverComponent['canControlScheduleStatus']).toBeFalse();
+    expect(driverComponent['canControlScheduleStatus']).toBeTrue();
 
     const salespersonComponent = createComponent(
       { boardingScan: jasmine.createSpy() },
       undefined,
       undefined,
-      createAuthServiceStub({ canUnboard: true })
+      createAuthServiceStub({ roles: ['salesperson'] })
     );
     expect(salespersonComponent['canControlScheduleStatus']).toBeTrue();
+  });
+
+  // OBRS-434: the delay gate was split OUT of canControlScheduleStatus. Its endpoint
+  // (PATCH /schedules/{id}/delay) is still hasRole('SALESPERSON'), so a driver seeing
+  // this button would only earn a 403 — it must stay hidden.
+  it('canDelaySchedule stays salesperson-only and is NOT opened to a driver', () => {
+    const driverComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    expect(driverComponent['canDelaySchedule']).toBeFalse();
+
+    const salespersonComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['salesperson'] })
+    );
+    expect(salespersonComponent['canDelaySchedule']).toBeTrue();
+  });
+
+  // OBRS-434 regression: unboard/unflag must NOT ride along with the transition gate.
+  it('canUnboard and canUnflagChildFare stay hidden for a driver', () => {
+    const driverComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    expect(driverComponent['canUnboard']).toBeFalse();
+    expect(driverComponent['canUnflagChildFare']).toBeFalse();
   });
 });
 
@@ -1593,7 +1639,12 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   let fixture: ComponentFixture<BoardingListComponent>;
   let component: BoardingListComponent;
 
-  function render(opts: { scheduleStatus: string; canControl: boolean }): void {
+  // OBRS-434: `canControl` is the legacy blanket switch (true = salesperson,
+  // false = plain user with no staff role). Pass `roles` instead when the case
+  // cares about WHICH role — a driver now answers true for the transition gate
+  // but false for delay/unboard.
+  function render(opts: { scheduleStatus: string; canControl: boolean; roles?: string[] }): void {
+    const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
       declarations: [BoardingListComponent],
@@ -1619,7 +1670,7 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
         {
           provide: AuthService,
           useValue: {
-            hasAnyRole: () => opts.canControl,
+            hasAnyRole: (wanted: string[]) => wanted.some((role) => roles.includes(role)),
             getUsername: () => 'operator1',
             authStatus$: of(true),
           },
@@ -1644,12 +1695,39 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
     fixture?.destroy();
   });
 
-  it('hides the transition button entirely when canControlScheduleStatus is false (driver)', fakeAsync(() => {
+  it('hides the transition button entirely for a user with no staff role', fakeAsync(() => {
     render({ scheduleStatus: 'scheduled', canControl: false });
     tick();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('.boarding-trip-header-status .admin-btn')).toBeFalsy();
+  }));
+
+  // OBRS-434: the AC that matters — the backend gate is worthless if the driver
+  // never sees the button. Renders the REAL template against a driver-only role.
+  it('renders the transition button in the DOM for a DRIVER', fakeAsync(() => {
+    render({ scheduleStatus: 'departed', canControl: false, roles: ['driver'] });
+    tick();
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.boarding-trip-header-status .admin-btn');
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED');
+  }));
+
+  // OBRS-434: ...and the delay pill must NOT come along for the ride (its endpoint
+  // is still salesperson-only, so a driver clicking it would just get a 403).
+  it('does NOT render the delay pill for a DRIVER on a scheduled trip', fakeAsync(() => {
+    render({ scheduleStatus: 'scheduled', canControl: false, roles: ['driver'] });
+    tick();
+    fixture.detectChanges();
+
+    const buttons = Array.from<HTMLElement>(
+      fixture.nativeElement.querySelectorAll('.boarding-trip-header-status .admin-btn')
+    );
+    expect(buttons.length).toBe(1); // the transition button only
+    expect(buttons[0].textContent).toContain('STAFF.SCHEDULE_STATUS.ACTION.MARK_DEPARTED');
+    expect(buttons.some((b) => b.textContent?.includes('SCHEDULE_DELAY'))).toBeFalse();
   }));
 
   it('shows the transition button for salesperson on a scheduled trip', fakeAsync(() => {
@@ -1798,7 +1876,14 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
         { provide: AlertService, useValue: createAlertServiceStub() },
         {
           provide: AuthService,
-          useValue: { hasAnyRole: () => opts.canControl, getUsername: () => 'operator1', authStatus$: of(true) },
+          // OBRS-434: role-aware — `canControl: true` means salesperson here (this
+          // suite is about the delay pill, which stays salesperson-only).
+          useValue: {
+            hasAnyRole: (wanted: string[]) =>
+              opts.canControl && wanted.includes('salesperson'),
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
         },
       ],
       schemas: [NO_ERRORS_SCHEMA],
