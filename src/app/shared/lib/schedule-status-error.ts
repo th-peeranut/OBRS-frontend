@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 
 /**
  * OBRS-256: maps `PATCH /api/private/schedules/{id}/status`'s
@@ -23,11 +23,5 @@ export function mapScheduleStatusErrorCode(errorCode: string | null | undefined)
 /** Extracts `error.error.errorCode` from a failed schedule-status-update HTTP
  * call. Mirrors `extractBoardingScanErrorCode()` exactly. */
 export function extractScheduleStatusErrorCode(error: unknown): string {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC');
 }

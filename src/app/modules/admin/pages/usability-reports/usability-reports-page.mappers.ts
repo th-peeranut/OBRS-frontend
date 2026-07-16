@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   UsabilityReportDetail,
   UsabilityReportStatus,
@@ -201,13 +201,7 @@ export function updateRowStatus(
 // boarding-action-error.ts's extractBoardingActionErrorCode() — branch on the
 // stable code, never the localized `message` (design-system §9).
 export function extractUsabilityReportErrorCode(error: unknown): string | null {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code;
-    }
-  }
-  return null;
+  return extractApiErrorCode(error, null);
 }
 
 // OBRS-378: pure list-mutate helper for a row that moved OUT of the currently

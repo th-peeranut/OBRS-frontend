@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { ChangeSeatErrorCode } from '../interfaces/change-seat.interface';
 import { HttpFallbackTier } from './http-error-fallback';
 
@@ -66,11 +66,5 @@ export function isTerminalChangeSeatError(errorCode: string | null | undefined):
 
 /** Extracts `error.error.errorCode` from a failed change-seat HTTP call. */
 export function extractChangeSeatErrorCode(error: unknown): ChangeSeatErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as ChangeSeatErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as ChangeSeatErrorCode;
 }
