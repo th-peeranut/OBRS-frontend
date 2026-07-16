@@ -40,6 +40,13 @@
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
   </p-calendar>
+
+  <app-export-button
+    class="ms-auto"
+    datasetKey="revenue-daily"
+    requiredRole="owner"
+    [params]="{ from: store.range.from, to: store.range.to }"
+  ></app-export-button>
 </section>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the tiles

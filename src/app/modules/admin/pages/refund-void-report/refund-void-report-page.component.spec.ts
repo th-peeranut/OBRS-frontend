@@ -1,14 +1,20 @@
 import { BehaviorSubject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { CalendarModule } from 'primeng/calendar';
+import { MenuModule } from 'primeng/menu';
 import { RefundVoidReportPageComponent } from './refund-void-report-page.component';
 import { RefundVoidReportStore } from './refund-void-report.store';
 import { RefundVoidReportDto } from '../../../../shared/interfaces/refund-void-report.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { AuthService } from '../../../../auth/auth.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { ExportService } from '../../../../services/export/export.service';
 
 function makeReport(overrides: Partial<RefundVoidReportDto> = {}): RefundVoidReportDto {
   return {
@@ -338,9 +344,16 @@ describe('RefundVoidReportPageComponent (template rendering)', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, AdminSharedModule],
-      declarations: [RefundVoidReportPageComponent],
-      providers: [{ provide: RefundVoidReportStore, useValue: storeStub }],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      // OBRS-442: the template now also renders <app-export-button>, so it must be declared
+      // (with its own DI deps stubbed) or this block 304s on the unknown element.
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      providers: [
+        { provide: RefundVoidReportStore, useValue: storeStub },
+        { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(RefundVoidReportPageComponent);
@@ -375,5 +388,102 @@ describe('RefundVoidReportPageComponent (template rendering)', () => {
 
     expect(fixture.nativeElement.textContent).not.toContain('GRAND_TOTAL');
     expect(fixture.nativeElement.querySelector('.refund-void-grand-total-row')).toBeNull();
+  });
+});
+
+// OBRS-442: proves the export button is wired to the STORE's `range` getter (wire-format
+// yyyy-MM-dd strings the displayed data was actually fetched with), never the component's
+// `Date` fields — applyRange() deliberately skips dispatch on an invalid range, so the two
+// can diverge. Renders the real ExportButtonComponent (not NO_ERRORS_SCHEMA) so role-gated
+// show/hide is proven end to end, not assumed.
+describe('RefundVoidReportPageComponent (export button, OBRS-442)', () => {
+  let fixture: ComponentFixture<RefundVoidReportPageComponent>;
+  let storeStub: {
+    data$: BehaviorSubject<RefundVoidReportDto | null>;
+    refreshing$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<boolean>;
+    range: { from: string; to: string };
+    hasValue: boolean;
+    refresh: jasmine.Spy;
+    setRange: jasmine.Spy;
+  };
+  let authServiceSpy: jasmine.SpyObj<AuthService>;
+
+  function configure(hasRole: boolean): void {
+    storeStub = {
+      data$: new BehaviorSubject<RefundVoidReportDto | null>(null),
+      refreshing$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<boolean>(false),
+      range: { from: '2026-07-01', to: '2026-07-07' },
+      hasValue: false,
+      refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+      setRange: jasmine.createSpy('setRange'),
+    };
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['hasAnyRole']);
+    authServiceSpy.hasAnyRole.and.returnValue(hasRole);
+
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      declarations: [RefundVoidReportPageComponent, ExportButtonComponent],
+      providers: [
+        { provide: RefundVoidReportStore, useValue: storeStub },
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RefundVoidReportPageComponent);
+  }
+
+  it('renders for an authorized (owner) role and requests the "owner" role', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    expect(authServiceSpy.hasAnyRole).toHaveBeenCalledWith(['owner']);
+    const button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect(button).withContext('export button should render for an authorized role').not.toBeNull();
+  });
+
+  it('is absent for an unauthorized role', () => {
+    configure(false);
+    fixture.detectChanges();
+
+    // ExportButtonComponent's own *ngIf="canExport" is INSIDE its template (wrapping the
+    // trigger button), not on the <app-export-button> host tag, so the host element always
+    // renders — assert on the visible trigger, mirroring export-button.component.spec.ts.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger must not render for an unauthorized role').toBeNull();
+  });
+
+  it('has datasetKey exactly "refund-void"', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).datasetKey).toBe('refund-void');
+  });
+
+  // Load-bearing: proves [params] is bound to the STORE getter (not the component's Date
+  // fields) and tracks it live — a test only checking the initial default range would pass
+  // even if bound to the wrong source.
+  it('[params] binds to store.range and follows it when the store range changes', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    let button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({
+      from: '2026-07-01',
+      to: '2026-07-07',
+    });
+
+    storeStub.range = { from: '2026-08-15', to: '2026-08-20' };
+    fixture.detectChanges();
+
+    button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({
+      from: '2026-08-15',
+      to: '2026-08-20',
+    });
   });
 });

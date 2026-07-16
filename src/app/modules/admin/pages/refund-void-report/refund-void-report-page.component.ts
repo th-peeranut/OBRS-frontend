@@ -40,7 +40,7 @@ export class RefundVoidReportPageComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private readonly store: RefundVoidReportStore,
+    protected readonly store: RefundVoidReportStore,
     private readonly translate: TranslateService
   ) {}
 
