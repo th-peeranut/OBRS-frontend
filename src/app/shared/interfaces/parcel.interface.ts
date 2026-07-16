@@ -139,10 +139,11 @@ export interface ParcelTrackRespDto {
 }
 
 /**
- * ASSUMED — not yet in `../OBRS-backend/docs/api/parcels-consigned-delivery.md`
- * at time of writing. Backs the driver/salesperson delivery-handoff list for
- * one schedule (`GET /api/private/schedules/{scheduleId}/parcels/consigned`).
- * See `docs/handoff.md` Contract Requests (OBRS-305) for the flagged gap.
+ * Backs the driver/salesperson delivery-handoff list for one schedule
+ * (`GET /api/private/schedules/{scheduleId}/parcels/consigned`). No longer
+ * ASSUMED — OBRS-359 documented this response in
+ * `../OBRS-backend/docs/api/parcels-consigned-delivery.md`, closing the
+ * contract gap `docs/handoff.md` flagged under OBRS-305.
  */
 export interface ParcelDeliveryListItemDto {
   parcelId: number;
@@ -155,6 +156,17 @@ export interface ParcelDeliveryListItemDto {
   dropoffStop: ParcelStopRefDto | string;
   weightKg: number;
   deliveryStatus: string;
+  /**
+   * OBRS-359/396: the booking's `EBookingStatus` slug — `deliveryStatus`
+   * tracks where the box is, this tracks whether anyone paid for it. Anything
+   * other than `confirmed` means the backend 409s every delivery transition
+   * on this parcel (`PARCEL_BOOKING_NOT_CONFIRMED`).
+   *
+   * Optional on purpose: a backend older than OBRS-359 omits the field, and
+   * the row must stay usable then — see `parcelPaymentFlag` for why absent is
+   * "no opinion" rather than "blocked".
+   */
+  bookingStatus?: string | null;
 }
 
 /**

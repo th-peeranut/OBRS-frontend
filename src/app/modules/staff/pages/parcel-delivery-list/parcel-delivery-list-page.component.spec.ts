@@ -20,6 +20,10 @@ function makeRow(overrides: Partial<ParcelDeliveryListItemDto> = {}): ParcelDeli
     dropoffStop: { name: 'Chiang Mai' },
     weightKg: 5,
     deliveryStatus: 'accepted',
+    // Mirror what a post-OBRS-359 backend actually sends for an everyday row:
+    // a paid booking. The unpaid row is built explicitly, and the field being
+    // absent (an older backend) is its own test — never the silent default.
+    bookingStatus: 'confirmed',
     ...overrides,
   };
 }
@@ -146,6 +150,90 @@ describe('ParcelDeliveryListPageComponent', () => {
 
     expect(component['collectErrorKey']).toBe('STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH');
     expect(component['collectDialogParcelId']).toBe(7); // stays open so staff can retry
+  });
+
+  describe('OBRS-396 — unpaid rows are flagged and blocked, never hidden', () => {
+    function makeComponent(rows: ParcelDeliveryListItemDto[], staffApi: any = {}) {
+      const store = makeStoreStub(rows);
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'),
+        staffApi,
+        makeAlertStub(),
+        createTranslateStub(),
+        store
+      );
+      component.ngOnInit();
+      return component;
+    }
+
+    it('keeps the unpaid row in the list (product decision: staff hold the box, the row must not vanish)', () => {
+      const component = makeComponent([
+        makeRow({ parcelId: 1, bookingStatus: 'pending' }),
+        makeRow({ parcelId: 2, bookingStatus: 'confirmed' }),
+      ]);
+      expect(component['rows'].length).toBe(2);
+    });
+
+    it('flags a pending row and blocks its actions', () => {
+      const component = makeComponent([makeRow({ bookingStatus: 'pending' })]);
+      const row = component['rows'][0];
+      expect(component['paymentFlagFor'](row)?.i18nKey).toBe('STAFF.PARCEL_DELIVERY.PAYMENT.PENDING');
+      expect(component['isRowBlocked'](row)).toBeTrue();
+    });
+
+    it('flags an expired row and blocks its actions', () => {
+      const component = makeComponent([makeRow({ bookingStatus: 'expired' })]);
+      const row = component['rows'][0];
+      expect(component['paymentFlagFor'](row)?.i18nKey).toBe('STAFF.PARCEL_DELIVERY.PAYMENT.EXPIRED');
+      expect(component['isRowBlocked'](row)).toBeTrue();
+    });
+
+    it('leaves a paid row completely untouched — no badge, not blocked (no regression)', () => {
+      const component = makeComponent([makeRow({ bookingStatus: 'confirmed' })]);
+      const row = component['rows'][0];
+      expect(component['paymentFlagFor'](row)).toBeNull();
+      expect(component['isRowBlocked'](row)).toBeFalse();
+    });
+
+    it('stays usable when the backend omits bookingStatus (pre-OBRS-359 backend must not brick the page)', () => {
+      const component = makeComponent([makeRow({ bookingStatus: undefined })]);
+      const row = component['rows'][0];
+      expect(component['paymentFlagFor'](row)).toBeNull();
+      expect(component['isRowBlocked'](row)).toBeFalse();
+    });
+
+    it('refuses to open the collect dialog for an unpaid row, even if the disabled button is bypassed', () => {
+      const component = makeComponent([makeRow({ parcelId: 7, deliveryStatus: 'arrived_notified', bookingStatus: 'expired' })]);
+      component['openCollectDialog'](component['rows'][0]);
+      expect(component['collectDialogParcelId']).toBeNull();
+    });
+
+    it('maps the 409 PARCEL_BOOKING_NOT_CONFIRMED race to its own message, not the generic wrong-state one', () => {
+      const alertService = makeAlertStub();
+      const store = makeStoreStub([makeRow()]);
+      const staffApi = {
+        loadParcel: jasmine.createSpy().and.returnValue(
+          throwError(() => ({ error: { errorCode: 'PARCEL_BOOKING_NOT_CONFIRMED' } }))
+        ),
+      } as any;
+      const component = new ParcelDeliveryListPageComponent(
+        makeRouteStub('42'),
+        staffApi,
+        alertService,
+        createTranslateStub(),
+        store
+      );
+      component.ngOnInit();
+
+      // A row that was paid when the page loaded, but expired while it sat open.
+      component['onLoad'](makeRow());
+
+      expect(alertService.toast).toHaveBeenCalledWith(
+        'STAFF.PARCEL_DELIVERY.ERROR.BOOKING_NOT_CONFIRMED',
+        'error'
+      );
+      expect(store.refresh).toHaveBeenCalledTimes(2); // re-sync so the badge appears
+    });
   });
 
   it('cleans up on destroy without throwing', () => {

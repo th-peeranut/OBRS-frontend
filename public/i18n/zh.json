@@ -2215,7 +2215,15 @@
       "ERROR": {
         "CODE_MISMATCH": "取件码不匹配。",
         "ALREADY_COLLECTED": "此包裹已被取走。",
-        "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。"
+        "WRONG_STATE": "此包裹状态与预期不符，列表已刷新。",
+        "BOOKING_NOT_CONFIRMED": "此包裹尚未付款。交付前请先在预订上收款。"
+      },
+      "PAYMENT": {
+        "PENDING": "待付款",
+        "EXPIRED": "付款已过期",
+        "CANCELLED": "预订已取消",
+        "REFUNDED": "已退款",
+        "UNKNOWN": "付款状态未确认"
       },
       "STATUS": {
         "ACCEPTED": "已受理",

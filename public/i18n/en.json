@@ -2216,7 +2216,15 @@
       "ERROR": {
         "CODE_MISMATCH": "This collection code does not match.",
         "ALREADY_COLLECTED": "This parcel has already been collected.",
-        "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed."
+        "WRONG_STATE": "This parcel is not in the expected state. The list has been refreshed.",
+        "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Take payment on the booking before handing it over."
+      },
+      "PAYMENT": {
+        "PENDING": "Awaiting payment",
+        "EXPIRED": "Payment expired",
+        "CANCELLED": "Booking cancelled",
+        "REFUNDED": "Refunded",
+        "UNKNOWN": "Payment unverified"
       },
       "STATUS": {
         "ACCEPTED": "Accepted",
