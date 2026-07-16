@@ -1158,6 +1158,8 @@
     "EMAIL_EXIST": "This email is already in use",
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
+    "PHONE_NO_REQUIRED": "Please enter your phone number",
+    "PHONE_NO_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678)",
     "PHONE_NO_EXIST": "This phone number is already in use",
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
