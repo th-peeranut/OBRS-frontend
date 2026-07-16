@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   UsabilityReportDetail,
   UsabilityReportStatus,
@@ -19,10 +20,14 @@ export interface StatusOption {
   label: string;
 }
 
-// The table filter offers all 6 statuses, non-terminal states grouped before
-// terminal ones per the UX spec; 'new'/'in_review' are triage states, not
-// outcomes, so they are excluded from the decision-only detail dropdowns below
-// (design-system.md §3.1: no pre-seeded default).
+// The table filter offers all 7 statuses (OBRS-378's 6 plus 'duplicate' from
+// OBRS-376, so the table can also be filtered down to just the merged-away
+// reports), non-terminal states grouped before terminal ones per the UX
+// spec; 'new'/'in_review' are triage states, not outcomes, so they are
+// excluded from the decision-only detail dropdowns below (design-system.md
+// §3.1: no pre-seeded default). 'duplicate' is ALSO excluded from the detail
+// dropdown (see DETAIL_STATUS_VALUES below) — it is never a
+// dropdown-selectable decision, only reachable via the mark/un-mark actions.
 export const STATUS_FILTER_VALUES: readonly UsabilityReportStatus[] = [
   'new',
   'in_review',
@@ -30,6 +35,7 @@ export const STATUS_FILTER_VALUES: readonly UsabilityReportStatus[] = [
   'dismissed',
   'resolved',
   'rejected',
+  'duplicate',
 ];
 
 // OBRS-378: 'dismissed' is a non-terminal screen-out decision (no email, can
@@ -60,6 +66,18 @@ export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
 export const DECISION_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>(
   ['accepted', 'resolved', 'rejected']
 );
+
+// OBRS-376: a report may be marked as a duplicate from any non-terminal,
+// non-already-duplicate status — 'resolved'/'rejected' are terminal decisions
+// and 'duplicate' is reached only through this same action (can't re-mark an
+// already-duplicate report).
+export const MARK_AS_DUPLICATE_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<
+  UsabilityReportStatus
+>(['new', 'in_review', 'accepted']);
+
+export function canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
+  return MARK_AS_DUPLICATE_STATUSES.has(status);
+}
 
 // Builds the translated {value,label} options for a status dropdown from a
 // fixed list of status values. `translateFn` is the caller's
@@ -95,6 +113,11 @@ export function statusClass(status: string): string {
   if (status === 'dismissed') return 'is-neutral';
   if (status === 'resolved') return 'is-success';
   if (status === 'rejected') return 'is-danger';
+  // OBRS-376/378 (PO decision, 2026-07-16): 'duplicate' originally reused the
+  // plain-grey is-neutral token, but that collided with 'dismissed' above —
+  // both rendered as identical grey chips. Moved to its own --admin-duplicate-*
+  // violet token (admin-theme.scss); 'dismissed' keeps is-neutral unchanged.
+  if (status === 'duplicate') return 'is-duplicate';
   return '';
 }
 
@@ -153,6 +176,12 @@ export function toUsabilityReportDetailFallback(
     triagedAt: null,
     jiraIssueKey: null,
     reporterNotifiedAt: null,
+    // OBRS-376: carried straight through — unlike routeUrl/userAgent/images,
+    // duplicateOfId/duplicateCount ARE already known from the summary row
+    // (they're columns on the list response too), so the optimistic-open
+    // fallback doesn't need to blank them out pending the real GET.
+    duplicateOfId: summary.duplicateOfId,
+    duplicateCount: summary.duplicateCount,
   };
 }
 
@@ -165,6 +194,20 @@ export function updateRowStatus(
   status: UsabilityReportStatus
 ): UsabilityReportSummary[] {
   return content.map((r) => (r.id === id ? { ...r, status } : r));
+}
+
+// OBRS-376: extracts `error.error.errorCode` from a failed mark-as-duplicate
+// call, mirroring schedules.mappers.ts's extractScheduleErrorCode() /
+// boarding-action-error.ts's extractBoardingActionErrorCode() — branch on the
+// stable code, never the localized `message` (design-system §9).
+export function extractUsabilityReportErrorCode(error: unknown): string | null {
+  if (error instanceof HttpErrorResponse) {
+    const code = (error.error as { errorCode?: string } | null)?.errorCode;
+    if (code) {
+      return code;
+    }
+  }
+  return null;
 }
 
 // OBRS-378: pure list-mutate helper for a row that moved OUT of the currently

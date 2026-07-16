@@ -277,7 +277,7 @@ describe('StaffApiService', () => {
       expect(isOpenSeatingTrip({ seatingMode: 'ASSIGNED' })).toBeFalse();
     });
 
-    it('returns false when seatingMode is missing (safe default — backend does not yet expose it here)', () => {
+    it('returns false when seatingMode is missing (safe default — a cached row predating OBRS-360)', () => {
       expect(isOpenSeatingTrip({})).toBeFalse();
     });
 

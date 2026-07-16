@@ -108,12 +108,12 @@ export interface WalkInTripDto {
   // OBRS-324 (Epic OBRS-318 open seating, 318-d): 'OPEN' | 'ASSIGNED' —
   // `schedules.seating_mode` (OBRS-321). Verified passthrough — same pattern
   // as `Schedule.seatingMode` in `shared/interfaces/schedule.interface.ts`
-  // (OBRS-323): no manual mapper needed once the backend response includes
-  // it. Optional because `GET /api/private/schedules/walk-in`
-  // (`WalkInTripRespDto`) does NOT yet expose this field — see the OBRS-324
-  // Contract Request in docs/handoff.md. Until the backend adds it, this is
-  // always `undefined` here and every walk-in trip is treated as ASSIGNED
-  // (the safe default — see `isOpenSeatingTrip` below).
+  // (OBRS-323): no manual mapper needed, the backend response includes it.
+  // OBRS-360 shipped it on `GET /api/private/schedules/walk-in`
+  // (`WalkInTripRespDto.seatingMode`), per-schedule; `ScheduleWalkInBrowseIT`
+  // pins that it reaches the DTO. Optional only for a cached row predating
+  // OBRS-360 — a live response always carries it, so the OPEN flow below is
+  // reached in production, not dormant.
   seatingMode?: 'OPEN' | 'ASSIGNED';
   // OBRS-358: `base - walk_in_only seat count` — the online-visible seat
   // count for this trip (e.g. minibus base=21, normalCapacity=20; seat 1 is
@@ -135,10 +135,11 @@ export interface WalkInRouteGroupDto {
 
 /**
  * OBRS-324: whether a walk-in trip sells on OPEN seating (headcount only, no
- * seat map). Missing/unknown `seatingMode` (today, always — see the field's
- * doc comment above) safely resolves to `false` (ASSIGNED), preserving the
- * pre-existing seat-picker flow byte-for-byte until the backend ships the
- * field on this endpoint.
+ * seat map). The backend ships `seatingMode` on this endpoint since OBRS-360,
+ * so this returns `true` for real OPEN trips. Missing/unknown `seatingMode`
+ * (a cached row predating OBRS-360) resolves to `false` (ASSIGNED), falling
+ * back to the seat-picker flow — the conservative default, since it asks the
+ * operator for more information rather than assuming headcount-only.
  */
 export function isOpenSeatingTrip(
   trip: Pick<WalkInTripDto, 'seatingMode'> | null | undefined

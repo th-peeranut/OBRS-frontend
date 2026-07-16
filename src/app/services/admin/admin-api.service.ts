@@ -1203,6 +1203,20 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-376: mark a report as a duplicate of `canonicalId`. Admin-only —
+  // returns the updated report detail (duplicateOfId/duplicateCount included).
+  // Un-marking is NOT a separate endpoint: it reuses updateUsabilityReportStatus
+  // above with status 'in_review' (the backend clears the link server-side).
+  markUsabilityReportAsDuplicate(
+    id: string,
+    canonicalId: number
+  ): Observable<ResponseAPI<UsabilityReportDetail>> {
+    return this.patchRequest<UsabilityReportDetail>(
+      `${this.baseUrl}/private/admin/usability-reports/${id}/duplicate-of`,
+      { canonicalId }
+    );
+  }
+
   // OBRS-85: the round-trip promotion is a singleton config row (slug
   // 'round_trip'), so there is no {id} in the path.
   getRoundTripPromotion(): Observable<ResponseAPI<PromotionRespDto>> {

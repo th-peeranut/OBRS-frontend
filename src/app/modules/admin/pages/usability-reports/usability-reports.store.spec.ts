@@ -74,6 +74,8 @@ describe('UsabilityReportsStore', () => {
           descriptionPreview: 'x',
           imageCount: 0,
           createdAt: '2026-01-01T00:00:00Z',
+          duplicateOfId: null,
+          duplicateCount: 0,
         },
       ],
       totalElements: 1,
