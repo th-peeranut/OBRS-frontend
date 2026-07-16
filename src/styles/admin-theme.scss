@@ -1596,7 +1596,11 @@ textarea.admin-field {
     position: relative;
     height: 100%;
     width: 76px;
-    overflow: hidden;
+    /* overflow-x clips the 280px-wide labels while the rail animates to 76px.
+       overflow-y must stay auto: the nav is taller than a 1080p/125%-scaled
+       viewport, and the `overflow` shorthand used to reset it to hidden (OBRS-402). */
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--admin-surface-soft);
     border-right: 1px solid var(--admin-outline);
     padding: 28px 12px;
