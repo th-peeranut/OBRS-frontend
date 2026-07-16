@@ -33,13 +33,14 @@ import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 // OBRS-147: fake WebSocket badge push — a plain Subject the test drives
 // directly, so specs don't need a real STOMP connection (mirrored per test
 // group, same pattern as `createWithCountSource` for AdminApiService below).
+// OBRS-378: the message now carries both counts (counts$, renamed from count$).
 function createBadgeSocketServiceStub(): {
-  count$: Subject<number>;
+  counts$: Subject<{ newReportCount: number; acceptedReportCount: number }>;
   connect: jasmine.Spy;
   disconnect: jasmine.Spy;
 } {
   return {
-    count$: new Subject<number>(),
+    counts$: new Subject<{ newReportCount: number; acceptedReportCount: number }>(),
     connect: jasmine.createSpy('connect'),
     disconnect: jasmine.createSpy('disconnect'),
   };
@@ -48,10 +49,16 @@ function createBadgeSocketServiceStub(): {
 describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
 
+  // OBRS-378: getRoles() drives badgeStatus (raw-role: owner -> 'new', admin
+  // -> 'accepted'). Defaults to 'owner' here so the pre-existing badge specs
+  // below (written before the role-split existed) keep exercising the
+  // 'new'-watching badge unchanged; the admin-specific behavior is covered by
+  // its own describe block further down.
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    getRoles: () => ['owner'],
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -78,7 +85,7 @@ describe('AdminLayoutComponent', () => {
         { provide: LanguageService, useValue: createLanguageServiceStub() },
         {
           provide: AdminApiService,
-          useValue: { getNewUsabilityReportCount: () => of(0) },
+          useValue: { getUsabilityReportCountByStatus: () => of(0) },
         },
         { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
         {
@@ -368,10 +375,17 @@ describe('AdminLayoutComponent — usability report badge', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
   let badgeSocketServiceStub: ReturnType<typeof createBadgeSocketServiceStub>;
 
+  // OBRS-378: getRoles() drives badgeStatus. Defaults to 'owner' (badgeStatus
+  // = 'new') so every pre-existing test below (written before the role-split
+  // existed) keeps exercising the same badge behavior; the admin variant
+  // (badgeStatus = 'accepted') is covered by its own describe block below,
+  // which reassigns getRoles before creating the component (same mutation
+  // pattern as the outer describe's hasAnyRole override).
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
     hasAnyRole: (_roles: string[]) => false,
+    getRoles: () => ['owner'],
   };
 
   const themeMode$ = new BehaviorSubject<ThemeMode>('light');
@@ -385,6 +399,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
   beforeEach(async () => {
     clearSidebarStorage();
     badgeSocketServiceStub = createBadgeSocketServiceStub();
+    authStub.getRoles = () => ['owner'];
     await TestBed.configureTestingModule({
       declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
       imports: [RouterTestingModule, TranslateModule.forRoot()],
@@ -398,7 +413,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
         // via TestBed.overrideProvider before creating the component, so the
         // resulting timer(0, ...) subscription is registered inside that
         // test's own fakeAsync zone and can be flushed deterministically.
-        { provide: AdminApiService, useValue: { getNewUsabilityReportCount: () => of(0) } },
+        { provide: AdminApiService, useValue: { getUsabilityReportCountByStatus: () => of(0) } },
         { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
         {
           provide: NotificationInboxService,
@@ -414,7 +429,11 @@ describe('AdminLayoutComponent — usability report badge', () => {
     source: () => Observable<number>
   ): ComponentFixture<AdminLayoutComponent> {
     TestBed.overrideProvider(AdminApiService, {
-      useValue: { getNewUsabilityReportCount: jasmine.createSpy('getNewUsabilityReportCount').and.callFake(source) },
+      useValue: {
+        getUsabilityReportCountByStatus: jasmine
+          .createSpy('getUsabilityReportCountByStatus')
+          .and.callFake(source),
+      },
     });
     const f = TestBed.createComponent(AdminLayoutComponent);
     f.detectChanges();
@@ -449,17 +468,37 @@ describe('AdminLayoutComponent — usability report badge', () => {
     discardPeriodicTasks();
     const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
 
-    badgeService.adjustBy(-1); // auto-promote on open: instant -1
+    badgeService.adjustBy('new', -1); // auto-promote on open: instant -1
     fixture.detectChanges();
     let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
       .withContext('optimistic delta must apply without a GET round-trip')
       .toBe('2');
 
-    badgeService.adjustBy(-5); // never goes negative
+    badgeService.adjustBy('new', -5); // never goes negative
     fixture.detectChanges();
     badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge).withContext('count clamps at 0 → badge hidden').toBeNull();
+  }));
+
+  // ── OBRS-378: delta-gating — a badge must ignore an adjustBy for a status
+  // it isn't displaying (the fix for a real bug: an admin's badge showing
+  // 'accepted' must not react to a 'new'-tab adjustBy elsewhere on the page).
+  it('ignores a countAdjustments delta tagged for a different status than badgeStatus', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(3));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+    const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
+
+    // This layout's badgeStatus is 'new' (owner stub) — an 'accepted' delta
+    // must be ignored.
+    badgeService.adjustBy('accepted', -1);
+    fixture.detectChanges();
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('a delta for a non-displayed status must not move this badge')
+      .toBe('3');
   }));
 
   it('caps the displayed badge text at "99+" when the count exceeds 99', fakeAsync(() => {
@@ -499,19 +538,21 @@ describe('AdminLayoutComponent — usability report badge', () => {
 
   // ── OBRS-147: real-time WebSocket push (additive 4th signal) ────────────────
 
-  it('updates newReportCount when badgeSocketService.count$ emits (real-time push)', fakeAsync(() => {
+  it('updates badgeCount from newReportCount when badgeSocketService.counts$ emits (real-time push, badgeStatus="new")', fakeAsync(() => {
     fixture = createWithCountSource(() => of(0));
     tick();
     fixture.detectChanges();
 
-    badgeSocketServiceStub.count$.next(7);
+    badgeSocketServiceStub.counts$.next({ newReportCount: 7, acceptedReportCount: 40 });
     fixture.detectChanges();
 
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge)
       .withContext('a pushed WS frame should update the badge without waiting for a poll tick')
       .toBeTruthy();
-    expect(badge.nativeElement.textContent.trim()).toBe('7');
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('an owner (badgeStatus="new") reads newReportCount from the message, not acceptedReportCount')
+      .toBe('7');
 
     discardPeriodicTasks();
   }));
@@ -539,12 +580,155 @@ describe('AdminLayoutComponent — usability report badge', () => {
     discardPeriodicTasks();
     const badgeRefreshService = TestBed.inject(UsabilityReportBadgeRefreshService);
 
-    badgeRefreshService.adjustBy(-1);
+    badgeRefreshService.adjustBy('new', -1);
     fixture.detectChanges();
 
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
       .withContext('optimistic adjustBy must still apply now that the WS signal is also wired in')
       .toBe('2');
+  }));
+});
+
+// ── OBRS-378: admin badgeStatus = 'accepted' ──────────────────────────────────
+// Separate top-level describe (same fakeAsync-friendly beforeEach shape as the
+// 'owner' badge describe above) covering the admin variant of the role-split:
+// the raw-role admin identity watches 'accepted' (owner-vetted), not 'new'.
+describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', () => {
+  let fixture: ComponentFixture<AdminLayoutComponent>;
+  let badgeSocketServiceStub: ReturnType<typeof createBadgeSocketServiceStub>;
+
+  const authStub = {
+    getUsername: () => 'admin@obrs.test',
+    logout: jasmine.createSpy('logout'),
+    hasAnyRole: (_roles: string[]) => true,
+    getRoles: () => ['admin'],
+  };
+
+  const themeMode$ = new BehaviorSubject<ThemeMode>('light');
+  const themeServiceStub: Partial<ThemeService> = {
+    getStoredMode: () => 'light',
+    setMode: jasmine.createSpy('setMode'),
+    toggle: jasmine.createSpy('toggle'),
+    mode$: themeMode$.asObservable(),
+  };
+
+  beforeEach(async () => {
+    clearSidebarStorage();
+    badgeSocketServiceStub = createBadgeSocketServiceStub();
+    await TestBed.configureTestingModule({
+      declarations: [AdminLayoutComponent, LangSwitcherComponent, NotificationBellStubComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: ThemeService, useValue: themeServiceStub },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: AdminApiService, useValue: { getUsabilityReportCountByStatus: () => of(0) } },
+        { provide: BadgeSocketService, useValue: badgeSocketServiceStub },
+        {
+          provide: NotificationInboxService,
+          useValue: { startPolling: () => {}, stopPolling: jasmine.createSpy('stopPolling') },
+        },
+      ],
+    }).compileComponents();
+  });
+
+  afterEach(() => { clearSidebarStorage(); });
+
+  function createWithCountSource(
+    source: () => Observable<number>
+  ): ComponentFixture<AdminLayoutComponent> {
+    TestBed.overrideProvider(AdminApiService, {
+      useValue: {
+        getUsabilityReportCountByStatus: jasmine
+          .createSpy('getUsabilityReportCountByStatus')
+          .and.callFake(source),
+      },
+    });
+    const f = TestBed.createComponent(AdminLayoutComponent);
+    f.detectChanges();
+    return f;
+  }
+
+  it('fetches the count with status="accepted" (not "new") for an admin identity', fakeAsync(() => {
+    const countSpy = jasmine.createSpy('getUsabilityReportCountByStatus').and.returnValue(of(9));
+    TestBed.overrideProvider(AdminApiService, {
+      useValue: { getUsabilityReportCountByStatus: countSpy },
+    });
+    fixture = TestBed.createComponent(AdminLayoutComponent);
+    fixture.detectChanges();
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    expect(countSpy).toHaveBeenCalledWith('accepted');
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim()).toBe('9');
+  }));
+
+  it('reads acceptedReportCount (not newReportCount) from a socket push', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(0));
+    tick();
+    fixture.detectChanges();
+
+    badgeSocketServiceStub.counts$.next({ newReportCount: 40, acceptedReportCount: 6 });
+    fixture.detectChanges();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('admin (badgeStatus="accepted") must read acceptedReportCount, not newReportCount')
+      .toBe('6');
+
+    discardPeriodicTasks();
+  }));
+
+  it('applies an adjustBy("accepted", …) delta but ignores an adjustBy("new", …) delta', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(5));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+    const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
+
+    // A 'new'-tab adjustment must not move the admin's 'accepted' badge — this
+    // is the exact regression the delta-gating fix targets.
+    badgeService.adjustBy('new', -1);
+    fixture.detectChanges();
+    let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('an adjustBy for "new" must not move an admin badge showing "accepted"')
+      .toBe('5');
+
+    badgeService.adjustBy('accepted', -2);
+    fixture.detectChanges();
+    badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.textContent.trim())
+      .withContext('an adjustBy matching badgeStatus must still apply')
+      .toBe('3');
+  }));
+
+  it('shows the accepted-badge aria-label (ACCEPTED_BADGE_ARIA) rather than the new-badge one', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(4));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {
+      ADMIN: {
+        USABILITY_REPORTS: {
+          ACCEPTED_BADGE_ARIA: '{{count}} usability reports awaiting action',
+          NEW_BADGE_ARIA: '{{count}} new usability reports',
+        },
+      },
+    });
+    translate.use('en');
+    fixture.detectChanges();
+
+    const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
+    expect(badge.nativeElement.getAttribute('aria-label'))
+      .withContext('admin badgeStatus="accepted" must use ACCEPTED_BADGE_ARIA, not NEW_BADGE_ARIA')
+      .toBe('4 usability reports awaiting action');
   }));
 });

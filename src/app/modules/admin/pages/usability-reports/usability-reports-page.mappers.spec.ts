@@ -1,13 +1,17 @@
 import {
   DECISION_STATUSES,
   DETAIL_STATUS_VALUES,
+  FIFO_STATUSES,
+  OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
   categoryLabel,
   displayDateTime,
   formatBytes,
+  removeRow,
   seedDecisionStatus,
+  sortForStatus,
   statusClass,
   statusLabel,
   toUsabilityReportDetailFallback,
@@ -21,12 +25,23 @@ import {
 
 describe('usability-reports-page.mappers', () => {
   describe('STATUS_FILTER_VALUES / DETAIL_STATUS_VALUES', () => {
-    it('the table filter offers all 5 statuses in order', () => {
-      expect(STATUS_FILTER_VALUES).toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected']);
+    it('the table filter offers all 6 statuses in order (non-terminal before terminal)', () => {
+      expect(STATUS_FILTER_VALUES).toEqual([
+        'new',
+        'in_review',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+      ]);
     });
 
-    it('the detail dropdown offers only the 3 decision statuses in order', () => {
-      expect(DETAIL_STATUS_VALUES).toEqual(['accepted', 'resolved', 'rejected']);
+    it('the admin detail dropdown offers the 4 decision statuses in order, including dismissed', () => {
+      expect(DETAIL_STATUS_VALUES).toEqual(['accepted', 'dismissed', 'resolved', 'rejected']);
+    });
+
+    it('the owner detail dropdown offers in_review/accepted/dismissed (owner may screen-out, never terminate)', () => {
+      expect(OWNER_DETAIL_STATUS_VALUES).toEqual(['in_review', 'accepted', 'dismissed']);
     });
   });
 
@@ -46,7 +61,7 @@ describe('usability-reports-page.mappers', () => {
 
     it('preserves the input order', () => {
       const options = buildStatusOptionList(DETAIL_STATUS_VALUES, (key) => key);
-      expect(options.map((o) => o.value)).toEqual(['accepted', 'resolved', 'rejected']);
+      expect(options.map((o) => o.value)).toEqual(['accepted', 'dismissed', 'resolved', 'rejected']);
     });
   });
 
@@ -85,6 +100,7 @@ describe('usability-reports-page.mappers', () => {
       expect(statusClass('new')).toBe('is-warning');
       expect(statusClass('in_review')).toBe('is-info');
       expect(statusClass('accepted')).toBe('is-accepted');
+      expect(statusClass('dismissed')).toBe('is-neutral');
       expect(statusClass('resolved')).toBe('is-success');
       expect(statusClass('rejected')).toBe('is-danger');
     });
@@ -230,6 +246,70 @@ describe('usability-reports-page.mappers', () => {
       const result = updateRowStatus(content, 'does-not-exist', 'resolved');
       expect(result).not.toBe(content);
       expect(result.map((r) => r.status)).toEqual(['new', 'new']);
+    });
+  });
+
+  // ── OBRS-378: removeRow — a row leaving the active tab is REMOVED ────────
+  describe('removeRow', () => {
+    const content: UsabilityReportSummary[] = [
+      {
+        id: 'rep-1',
+        category: 'bug',
+        status: 'new',
+        userId: 1,
+        descriptionPreview: 'a',
+        imageCount: 0,
+        createdAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'rep-2',
+        category: 'suggestion',
+        status: 'new',
+        userId: 2,
+        descriptionPreview: 'b',
+        imageCount: 0,
+        createdAt: '2026-01-02T00:00:00Z',
+      },
+    ];
+
+    it('removes only the matching row, leaving other rows untouched', () => {
+      const result = removeRow(content, 'rep-1');
+      expect(result.map((r) => r.id)).toEqual(['rep-2']);
+    });
+
+    it('does not mutate the input array', () => {
+      const original = content.map((r) => ({ ...r }));
+      removeRow(content, 'rep-1');
+      expect(content).toEqual(original);
+    });
+
+    it('is a no-op (new array, same rows) when the id does not match any row', () => {
+      const result = removeRow(content, 'does-not-exist');
+      expect(result).not.toBe(content);
+      expect(result.map((r) => r.id)).toEqual(['rep-1', 'rep-2']);
+    });
+  });
+
+  // ── OBRS-378: sortForStatus — FIFO for actively-worked tabs ───────────────
+  describe('sortForStatus / FIFO_STATUSES', () => {
+    it('FIFO_STATUSES contains exactly accepted/in_review', () => {
+      expect([...FIFO_STATUSES].sort()).toEqual(['accepted', 'in_review']);
+    });
+
+    it('sorts ascending (oldest first) for accepted and in_review', () => {
+      expect(sortForStatus('accepted')).toEqual(['createdAt,asc', 'id,asc']);
+      expect(sortForStatus('in_review')).toEqual(['createdAt,asc', 'id,asc']);
+    });
+
+    it('sorts descending (newest first) for every other status, including dismissed', () => {
+      expect(sortForStatus('new')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('dismissed')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('resolved')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('rejected')).toEqual(['createdAt,desc', 'id,desc']);
+    });
+
+    it('sorts descending for the empty (all-statuses) selection', () => {
+      expect(sortForStatus('')).toEqual(['createdAt,desc', 'id,desc']);
     });
   });
 
