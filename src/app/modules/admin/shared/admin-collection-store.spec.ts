@@ -80,6 +80,38 @@ describe('AdminCollectionStore', () => {
     expect(store.value).toEqual({ items: [9] });
   });
 
+  // OBRS-467: an axis change (a subclass's setPage/setStatus) clear()s the
+  // single-slot cache, then revalidates. If that revalidate FAILS, the just-
+  // discarded value must NOT come back — the base leaves value=null +
+  // error=true and never resurrects the cleared value as stale SWR data. The
+  // keep-stale-on-error contract above is only correct for a SAME-axis
+  // revalidate that still HAS a cached value; a cleared cache has none to keep.
+  // (This is the store-side half of the fix: a consumer that guards `if(data)`
+  // and ignores the null emission is what re-surfaced the discarded rows under
+  // the error banner — see usability-reports-page.component.spec.ts.)
+  it('does not resurrect a cleared value when the following refresh fails (value stays null, error flagged)', async () => {
+    const store = new TestStore();
+    store.fetchImpl = () => Promise.resolve({ items: [1, 2] });
+    await store.refresh();
+    expect(store.value).toEqual({ items: [1, 2] });
+
+    // Axis change: clear() first (data -> null), then revalidate.
+    store.clear();
+    expect(store.value).toBeNull();
+
+    let errored = false;
+    store.error$.subscribe((value) => (errored = value));
+
+    store.fetchImpl = () => Promise.reject(new Error('network'));
+    await store.refresh();
+
+    expect(store.value)
+      .withContext('a cleared value must not reappear as stale data on a failed reload')
+      .toBeNull();
+    expect(store.hasValue).toBeFalse();
+    expect(errored).toBeTrue();
+  });
+
   it('dedupes a concurrent refresh into a single extra fetch (post-write freshness)', async () => {
     const store = new TestStore();
     const first = deferred<Data>();

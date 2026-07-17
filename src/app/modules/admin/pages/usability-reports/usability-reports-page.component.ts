@@ -132,13 +132,22 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     this.store.data$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
-        if (data) {
-          this.allReports = data.content;
-          this.totalElements = data.totalElements;
-          // Spring's `number` is 0-based; the paginator/footer render 1-based.
-          this.currentPage = data.number + 1;
-          this.totalPages = data.totalPages;
-        }
+        // OBRS-467: honor a null emission. The store emits null when it
+        // clear()s its single-slot cache on a tab/page change (setStatus/
+        // setPage) — that value is one the store has DISCARDED. Keeping the
+        // previous tab/page's rows here (the old `if (data)` guard) is what
+        // left them visible under the error banner when the following fetch
+        // FAILED: value stayed null + error=true, but allReports still held
+        // the discarded rows, reading as "this is the requested page". Reset
+        // to empty so a cleared-then-failed reload shows LOAD_FAILED over an
+        // empty table, not stale rows. On the success path the store never
+        // emits null (a same-axis revalidate keeps its value), so this is
+        // unobservable there — the skeleton covers the cleared→reload window.
+        this.allReports = data?.content ?? [];
+        this.totalElements = data?.totalElements ?? 0;
+        // Spring's `number` is 0-based; the paginator/footer render 1-based.
+        this.currentPage = (data?.number ?? 0) + 1;
+        this.totalPages = data?.totalPages ?? 0;
       });
 
     this.store.refreshing$
