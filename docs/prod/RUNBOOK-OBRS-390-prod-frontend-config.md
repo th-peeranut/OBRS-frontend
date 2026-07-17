@@ -61,6 +61,17 @@ If a `ci-smoke` bundle ever reached prod it would fail loudly and instantly (it 
 `localhost:8080`, so nothing loads) — that is why OBRS-472 was a rename rather than a
 guard: the failure was never silent, only confusing.
 
+### There is no container image, on purpose
+
+Prod is **static files behind Caddy on the Oracle VM**, same box as the backend, so the
+browser talks to one origin and `apiUrl` is a relative `/api` (OBRS-205, owner decision
+2026-07-15). Serving the bundle from its own nginx container would put it back on a second
+origin and re-open the cross-origin question that topology exists to remove.
+
+The repo used to carry a `Dockerfile` + `nginx.conf` + `docker-compose.yml` from before that
+decision; OBRS-481 deleted them. If you find yourself reaching for `docker build` here, the
+answer is `npm run build:prod` and ship `dist/obrs/browser` to the VM.
+
 ---
 
 ## The two gates
