@@ -4,11 +4,9 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import { StationService } from '../../../../services/station/station.service';
-import { ScheduleService } from '../../../../services/schedule/schedule.service';
 import { ParcelBookingService } from '../../../../services/parcel-booking/parcel-booking.service';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
-import { ScheduleFilterPayload } from '../../../../shared/interfaces/schedule.interface';
 import { ParcelOnlineQuoteParams, ParcelOnlineReqDto, ParcelQuoteRespDto } from '../../../../shared/interfaces/parcel.interface';
 import { ParcelBookingProgressStep } from '../../components/parcel-booking-progress/parcel-booking-progress.component';
 import { ParcelScheduleOption, ParcelTripFormValue } from '../../components/parcel-trip-form/parcel-trip-form.component';
@@ -54,9 +52,17 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
  * directly (not the routed `PaymentModule`) is the whole point.
  *
  * Bypasses NgRx for station/schedule search entirely (UX §3) — calls the
- * EXISTING `StationService`/`ScheduleService` directly rather than dispatching
- * through the `station`/`scheduleFilter`/`scheduleList` feature stores, which
- * are built around multi-passenger/round-trip concepts this flow doesn't have.
+ * EXISTING `StationService` directly rather than dispatching through the
+ * `station`/`scheduleFilter`/`scheduleList` feature stores, which are built
+ * around multi-passenger/round-trip concepts this flow doesn't have.
+ *
+ * Schedule search (OBRS-415 rewire) goes through
+ * `ParcelBookingService.searchParcelSchedules` — the dedicated
+ * `POST /api/private/parcels/schedules/search` endpoint — NOT the passenger
+ * `ScheduleService.getByFilter`. The passenger search filters on seat
+ * availability (`numberOfPassengers`), which silently hides a schedule that
+ * is seat-full but still has free cargo quota; a consigned parcel takes zero
+ * seats, so that filter is wrong here.
  */
 @Component({
   selector: 'app-parcel-booking-page',
@@ -106,7 +112,6 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly stationService: StationService,
-    private readonly scheduleService: ScheduleService,
     private readonly parcelBookingService: ParcelBookingService,
     private readonly bookingService: BookingService
   ) {}
@@ -170,9 +175,7 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const payload: ScheduleFilterPayload = {
-      bookingType: 'one_way',
-      numberOfPassengers: 1,
+    const payload = {
       fromStop: fromSlug,
       toStop: toSlug,
       departureDate: dayjs(this.selectedDate).format('YYYY-MM-DD'),
@@ -180,12 +183,17 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
 
     this.isLoadingSchedules = true;
     this.noSchedulesFound = false;
-    this.scheduleService
-      .getByFilter(payload)
+    this.parcelBookingService
+      .searchParcelSchedules(payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
-          const schedules = resp?.data?.departureSchedules ?? [];
+          // Plain array in `data` (NOT `{departureSchedules,arrivalSchedules}`
+          // like the passenger search) — and deliberately NOT filtered on
+          // `availableSeats` here either: a schedule with `availableSeats:0`
+          // still has free cargo quota and MUST still appear as an option
+          // (that's the entire reason this endpoint exists, OBRS-415).
+          const schedules = resp?.data ?? [];
           this.scheduleOptions = schedules.map((s) => ({
             id: s.id,
             label: `${dayjs(s.departureDateTime).format('DD/MM/YYYY HH:mm')} - ${dayjs(s.arrivalDateTime).format('HH:mm')}${s.vehicleType ? ' · ' + s.vehicleType : ''}`,
@@ -223,9 +231,20 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
       .subscribe({
         next: (resp) => {
           const profile = resp?.data;
-          this.senderNameDisplay =
-            profile?.fullName?.trim() ||
-            [profile?.firstName, profile?.lastName].filter(Boolean).join(' ').trim();
+          // Scrutinize R2 (2026-07-17): firstName + lastName ONLY — must mirror
+          // `ParcelIntakeService#resolveSenderName`'s derivation byte-for-byte.
+          // This previously preferred `profile.fullName`, which the backend
+          // builds from title + firstName + middleName + lastName
+          // (`UserProfile#getFullName`) — so an account with a title/middle name
+          // was SHOWN "Mr. Somchai K. Jaidee" on the read-only sender line while
+          // the backend persisted (and the waybill/counter-verification reads)
+          // "Somchai Jaidee". The name is deliberately non-editable here (spec
+          // §1.4), so this display is the customer's only chance to see it — it
+          // must be the value that is actually stored, not a prettier one.
+          this.senderNameDisplay = [profile?.firstName, profile?.lastName]
+            .filter(Boolean)
+            .join(' ')
+            .trim();
           this.senderPhonePrefill = profile?.phoneNumber ?? null;
         },
         error: () => {

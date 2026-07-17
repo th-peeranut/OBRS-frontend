@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { PageResponse } from '../../shared/interfaces/payment.interface';
+import { Schedule } from '../../shared/interfaces/schedule.interface';
 import {
   ParcelConsignedRespDto,
   ParcelMeDto,
@@ -12,13 +13,30 @@ import {
   ParcelQuoteRespDto,
 } from '../../shared/interfaces/parcel.interface';
 
+/** POST /api/private/parcels/schedules/search request body (OBRS-415 rewire).
+ * Deliberately NOT `ScheduleFilterPayload` — no `bookingType`/
+ * `numberOfPassengers` and no return leg; this endpoint is one-way,
+ * cargo-only by construction. */
+export interface ParcelScheduleSearchReqDto {
+  fromStop: string;
+  toStop: string;
+  departureDate: string;
+}
+
 /** The current user's own profile, the fields this flow reads (§3 of
  * UX-OBRS-415). `phoneNumber` is nullable — a social-login account may have
- * none. */
+ * none.
+ *
+ * `fullName` is deliberately NOT modeled here even though the endpoint
+ * returns it (Scrutinize R2, 2026-07-17): the sender name this flow displays
+ * must mirror `ParcelIntakeService#resolveSenderName`, which derives it from
+ * `firstName` + `lastName` ONLY — whereas `fullName` (`UserProfile#getFullName`)
+ * also folds in title + middleName. Binding `fullName` once made the read-only
+ * sender line show a name the backend never persists; omitting the field from
+ * the type is what keeps it from coming back. */
 export interface ParcelBookingProfile {
   firstName?: string;
   lastName?: string;
-  fullName?: string;
   phoneNumber?: string | null;
 }
 
@@ -68,6 +86,26 @@ export class ParcelBookingService {
   ): Observable<ResponseAPI<ParcelConsignedRespDto>> {
     return this.http.post<ResponseAPI<ParcelConsignedRespDto>>(
       `${environment.apiUrl}/api/private/parcels/online`,
+      payload
+    );
+  }
+
+  /** POST /api/private/parcels/schedules/search — OBRS-415 rewire (this
+   * card). The PASSENGER search (`ScheduleService.getByFilter` →
+   * `GET .../schedules/filter`) filters on seat availability, silently
+   * hiding a schedule that is seat-full but still has free CARGO quota — a
+   * consigned parcel takes zero seats, so that filter is wrong for this
+   * flow. This dedicated endpoint does not filter on `availableSeats` at
+   * all: `data` is a PLAIN ARRAY (not `{departureSchedules,arrivalSchedules}`
+   * like the passenger search), and a schedule with `availableSeats:0` is
+   * expected to appear — do not filter/hide/disable on that field client-side
+   * either, surfacing exactly those trips is the point of this endpoint.
+   * Reuses the existing `Schedule` interface for the array element shape
+   * (field-for-field identical to the passenger search's row type) rather
+   * than declaring a duplicate DTO. */
+  searchParcelSchedules(payload: ParcelScheduleSearchReqDto): Observable<ResponseAPI<Schedule[]>> {
+    return this.http.post<ResponseAPI<Schedule[]>>(
+      `${environment.apiUrl}/api/private/parcels/schedules/search`,
       payload
     );
   }

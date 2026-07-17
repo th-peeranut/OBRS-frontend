@@ -82,6 +82,51 @@ describe('ParcelBookingService', () => {
     });
   });
 
+  // OBRS-415 rewire: the parcel trip picker must use the dedicated
+  // cargo-only search, NOT the passenger `ScheduleService.getByFilter`
+  // (which filters on seat availability and would hide a seat-full-but-
+  // cargo-open schedule). `data` is a plain array here, unlike the
+  // passenger search's `{departureSchedules,arrivalSchedules}` envelope —
+  // and a schedule with `availableSeats:0` must still come through
+  // untouched (that's the regression this endpoint exists to fix).
+  it('searchParcelSchedules POSTs {fromStop,toStop,departureDate} and maps the plain-array response, including an availableSeats:0 row', () => {
+    const payload = { fromStop: 'a', toStop: 'b', departureDate: '2026-08-01' };
+    let result: any;
+    service.searchParcelSchedules(payload).subscribe((resp) => (result = resp));
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/private/parcels/schedules/search`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(payload);
+    // No numberOfPassengers/bookingType/returnDate on the wire.
+    expect(req.request.body.numberOfPassengers).toBeUndefined();
+    expect(req.request.body.bookingType).toBeUndefined();
+
+    req.flush({
+      code: 200,
+      message: 'OK',
+      data: [
+        {
+          id: 123,
+          vehicleType: 'van_std',
+          departureDateTime: '2026-08-01T08:00:00+07:00',
+          arrivalDateTime: '2026-08-01T10:00:00+07:00',
+          pricePerSeat: '300.00',
+          availableSeats: 0,
+          availableSeatNumbers: [],
+          routeSlug: 'route-ab',
+          seatingMode: 'OPEN',
+        },
+      ],
+    });
+
+    expect(Array.isArray(result.data)).toBe(true);
+    expect(result.data.length).toBe(1);
+    expect(result.data[0].id).toBe(123);
+    expect(result.data[0].availableSeats).toBe(0);
+  });
+
   // ParcelController#getMyParcels(Pageable) takes ONLY page/size/sort — a
   // `status` param would be silently dropped by Spring's binder, never
   // filtered on, so this call sends page/size only (Scrutinize finding).

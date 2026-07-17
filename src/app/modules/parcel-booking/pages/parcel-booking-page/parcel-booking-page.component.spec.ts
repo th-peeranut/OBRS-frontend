@@ -1,7 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { StationService } from '../../../../services/station/station.service';
-import { ScheduleService } from '../../../../services/schedule/schedule.service';
 import { ParcelBookingService } from '../../../../services/parcel-booking/parcel-booking.service';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { ParcelBookingPageComponent } from './parcel-booking-page.component';
@@ -10,7 +9,6 @@ describe('ParcelBookingPageComponent', () => {
   let component: ParcelBookingPageComponent;
   let fixture: ComponentFixture<ParcelBookingPageComponent>;
   let stationService: jasmine.SpyObj<StationService>;
-  let scheduleService: jasmine.SpyObj<ScheduleService>;
   let parcelBookingService: jasmine.SpyObj<ParcelBookingService>;
   let bookingService: jasmine.SpyObj<BookingService>;
 
@@ -21,11 +19,11 @@ describe('ParcelBookingPageComponent', () => {
 
   beforeEach(async () => {
     stationService = jasmine.createSpyObj('StationService', ['getAll']);
-    scheduleService = jasmine.createSpyObj('ScheduleService', ['getByFilter']);
     parcelBookingService = jasmine.createSpyObj('ParcelBookingService', [
       'getMyProfile',
       'getParcelQuote',
       'createOnlineParcelBooking',
+      'searchParcelSchedules',
     ]);
     bookingService = jasmine.createSpyObj('BookingService', [
       'setActiveBookingId',
@@ -38,7 +36,6 @@ describe('ParcelBookingPageComponent', () => {
       declarations: [ParcelBookingPageComponent],
       providers: [
         { provide: StationService, useValue: stationService },
-        { provide: ScheduleService, useValue: scheduleService },
         { provide: ParcelBookingService, useValue: parcelBookingService },
         { provide: BookingService, useValue: bookingService },
       ],
@@ -60,25 +57,22 @@ describe('ParcelBookingPageComponent', () => {
     expect((component as any).allStations.length).toBe(2);
   });
 
-  it('searches schedules once from/to/date are all set, using station SLUGS', () => {
-    scheduleService.getByFilter.and.returnValue(
+  it('searches schedules once from/to/date are all set, using station SLUGS, via the dedicated parcel search endpoint (NOT the passenger schedule search)', () => {
+    parcelBookingService.searchParcelSchedules.and.returnValue(
       of({
         code: 200,
         message: 'OK',
-        data: {
-          departureSchedules: [
-            {
-              id: 42,
-              vehicleType: 'Van',
-              departureDateTime: '2026-08-01T08:00:00+07:00',
-              arrivalDateTime: '2026-08-01T10:00:00+07:00',
-              pricePerSeat: 100,
-              availableSeats: 10,
-              availableSeatNumbers: [],
-            },
-          ],
-          arrivalSchedules: null,
-        },
+        data: [
+          {
+            id: 42,
+            vehicleType: 'Van',
+            departureDateTime: '2026-08-01T08:00:00+07:00',
+            arrivalDateTime: '2026-08-01T10:00:00+07:00',
+            pricePerSeat: 100,
+            availableSeats: 10,
+            availableSeatNumbers: [],
+          },
+        ],
       })
     );
 
@@ -86,12 +80,65 @@ describe('ParcelBookingPageComponent', () => {
     (component as any).onToStationChange(2);
     (component as any).onDateChange(new Date('2026-08-01'));
 
-    expect(scheduleService.getByFilter).toHaveBeenCalled();
-    const payload = scheduleService.getByFilter.calls.mostRecent().args[0];
+    expect(parcelBookingService.searchParcelSchedules).toHaveBeenCalled();
+    const payload = parcelBookingService.searchParcelSchedules.calls.mostRecent().args[0] as any;
     expect(payload.fromStop).toBe('a');
     expect(payload.toStop).toBe('b');
+    expect(payload.departureDate).toBe('2026-08-01');
+    // No numberOfPassengers/bookingType — this endpoint is cargo-only.
+    expect(payload.numberOfPassengers).toBeUndefined();
+    expect(payload.bookingType).toBeUndefined();
     expect((component as any).scheduleOptions.length).toBe(1);
     expect((component as any).scheduleOptions[0].id).toBe(42);
+    expect((component as any).noSchedulesFound).toBe(false);
+  });
+
+  // This is the regression OBRS-415 exists to fix: the passenger schedule
+  // search filters on seat availability and would silently hide a
+  // seat-full schedule that still has free cargo quota. A consigned parcel
+  // takes zero seats, so a schedule with availableSeats:0 MUST still
+  // surface as a pickable option here — it must not be filtered, hidden,
+  // or dropped client-side.
+  it('still surfaces a schedule with availableSeats:0 as a pickable option (seat-full-but-cargo-open)', () => {
+    parcelBookingService.searchParcelSchedules.and.returnValue(
+      of({
+        code: 200,
+        message: 'OK',
+        data: [
+          {
+            id: 123,
+            vehicleType: 'van_std',
+            departureDateTime: '2026-08-01T08:00:00+07:00',
+            arrivalDateTime: '2026-08-01T10:00:00+07:00',
+            pricePerSeat: '300.00',
+            availableSeats: 0,
+            availableSeatNumbers: [],
+            routeSlug: 'route-ab',
+            seatingMode: 'OPEN',
+          },
+        ],
+      })
+    );
+
+    (component as any).onFromStationChange(1);
+    (component as any).onToStationChange(2);
+    (component as any).onDateChange(new Date('2026-08-01'));
+
+    expect((component as any).scheduleOptions.length).toBe(1);
+    expect((component as any).scheduleOptions[0].id).toBe(123);
+    expect((component as any).noSchedulesFound).toBe(false);
+  });
+
+  it('on a search error: clears scheduleOptions and sets noSchedulesFound', () => {
+    parcelBookingService.searchParcelSchedules.and.returnValue(throwError(() => new Error('boom')));
+
+    (component as any).onFromStationChange(1);
+    (component as any).onToStationChange(2);
+    (component as any).onDateChange(new Date('2026-08-01'));
+
+    expect((component as any).scheduleOptions.length).toBe(0);
+    expect((component as any).noSchedulesFound).toBe(true);
+    expect((component as any).isLoadingSchedules).toBe(false);
   });
 
   it('advances to details phase on trip next and loads the profile', () => {
