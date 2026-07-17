@@ -1,0 +1,93 @@
+@import "../../../../../styles/variables.scss";
+
+// Same cross-shell re-scoping idiom as `parcel-tracking-page.component.scss`
+// (design-system §12 new-pattern note, OBRS-305 precedent) — this is a
+// customer-shell page with no `.admin-shell` ancestor, so the
+// `--admin-*-bg`/`-text` custom properties `.admin-status.is-*` reads (only
+// ever defined inside `.admin-shell`) are re-declared here with the SAME
+// values, scoped to :host instead of .admin-shell.
+:host {
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
+}
+
+:host-context(body.is-dark) {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
+}
+
+.parcel-booking-success-page {
+  max-width: 640px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+
+.parcel-booking-success-card {
+  background: $primary-white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.parcel-booking-success-card__meta {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 24px 0;
+
+  dt {
+    color: $text-lightgrey;
+    font-size: 0.85rem;
+  }
+
+  dd {
+    font-weight: $font-weight-medium;
+    font-size: 1.1rem;
+  }
+}
+
+.parcel-booking-success-card__next-steps {
+  color: $text-softblack;
+  text-align: left;
+  background: $primary-grey;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.parcel-booking-success-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 24px;
+  align-items: center;
+}
+
+.parcel-btn-primary {
+  height: 48px;
+  padding: 0 32px;
+  border: none;
+  border-radius: $radius-xl;
+  background-color: $brand-customer;
+  color: $text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.parcel-btn-secondary {
+  height: 48px;
+  padding: 0 32px;
+  border: 1px solid $primary-grey;
+  border-radius: $radius-xl;
+  background: transparent;
+  color: $text-softblack;
+  font-size: $font-size-md;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

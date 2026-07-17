@@ -1,0 +1,82 @@
+<app-navbar></app-navbar>
+
+<section class="parcel-booking-page">
+  <div class="parcel-booking-card">
+    <h1>{{ "PARCEL_BOOKING.TITLE" | translate }}</h1>
+
+    <app-parcel-booking-progress
+      [steps]="steps"
+      [currentIndex]="currentStepIndex"
+    ></app-parcel-booking-progress>
+
+    <app-parcel-trip-form
+      *ngIf="phase === 'trip'"
+      [fromStationOptions]="fromStationOptions"
+      [toStationOptions]="toStationOptions"
+      [minDate]="minDate"
+      [scheduleOptions]="scheduleOptions"
+      [isLoadingSchedules]="isLoadingSchedules"
+      [noSchedulesFound]="noSchedulesFound"
+      (fromStationChange)="onFromStationChange($event)"
+      (toStationChange)="onToStationChange($event)"
+      (dateChange)="onDateChange($event)"
+      (scheduleChange)="onScheduleChange($event)"
+      (next)="onTripNext($event)"
+    ></app-parcel-trip-form>
+
+    <app-parcel-details-form
+      *ngIf="phase === 'details'"
+      [senderNameDisplay]="senderNameDisplay"
+      [senderPhonePrefill]="senderPhonePrefill"
+      [scheduleId]="detailsScheduleId"
+      [pickupStopId]="detailsPickupStopId"
+      [dropoffStopId]="detailsDropoffStopId"
+      [quote]="quote"
+      [isLoadingQuote]="isLoadingQuote"
+      [quoteErrorKey]="quoteErrorKey"
+      [serverErrorKey]="serverErrorKey"
+      [isSubmitting]="isSubmitting"
+      (quoteParamsChange)="onQuoteParamsChange($event)"
+      (submitForm)="onDetailsSubmit($event)"
+    ></app-parcel-details-form>
+
+    <div class="parcel-booking-page__payment" *ngIf="phase === 'payment'">
+      <div class="tab-group">
+        <button
+          type="button"
+          class="tab"
+          [class.is-active]="activeTab === 'creditcard'"
+          (click)="onPaymentTabChange('creditcard')"
+        >
+          {{ "PAYMENT.TAB.CREDIT" | translate }}
+        </button>
+        <button
+          type="button"
+          class="tab"
+          [class.is-active]="activeTab === 'qrcode'"
+          (click)="onPaymentTabChange('qrcode')"
+        >
+          {{ "PAYMENT.TAB.QR" | translate }}
+        </button>
+      </div>
+
+      <app-payment-creditcard
+        *ngIf="activeTab === 'creditcard'"
+        [amountOverride]="amount"
+        [successRedirect]="successRedirect"
+        (tabChange)="onPaymentTabChange($event)"
+        (paymentCompleted)="onPaymentCompleted()"
+      ></app-payment-creditcard>
+
+      <app-payment-qrcode
+        *ngIf="activeTab === 'qrcode'"
+        [amountOverride]="amount"
+        [successRedirect]="successRedirect"
+        (tabChange)="onPaymentTabChange($event)"
+        (paymentCompleted)="onPaymentCompleted()"
+      ></app-payment-qrcode>
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>
