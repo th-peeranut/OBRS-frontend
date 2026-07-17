@@ -55,6 +55,30 @@ describe('MyReportEditFormComponent', () => {
     expect(component['keepImageIds']).toEqual([5]);
   });
 
+  // ── Scrutinize fix: existingImages is a SNAPSHOT, not a live getter ───────
+  it('existingImagesSnapshot is captured ONCE at ngOnInit — a later @Input reseat does not change it', () => {
+    const initialSnapshot = component['existingImagesSnapshot'];
+    expect(initialSnapshot).toEqual(detail.images);
+
+    // Simulate the parent modal reseating `detail` to a wholesale new object
+    // (e.g. a background re-fetch landing) WHILE this form is still mounted —
+    // Angular re-binds @Input()s on every parent CD pass regardless of
+    // OnChanges, so this assigns the new reference exactly the way the real
+    // binding would.
+    component.detail = {
+      ...detail,
+      images: [
+        { id: '99', publicUrl: 'https://x/99.png', contentType: 'image/png', sizeBytes: 1, position: 1 },
+      ],
+    };
+    fixture.detectChanges();
+
+    expect(component['existingImagesSnapshot'])
+      .withContext('the snapshot must be immune to a later parent reseat of detail.images')
+      .toEqual(initialSnapshot);
+    expect(component['existingImagesSnapshot']).not.toEqual(component.detail.images);
+  });
+
   it('blocks submit and shows the required error for a blank description', () => {
     component['form'].get('description')?.setValue('   ');
     component['onSubmit']();

@@ -89,13 +89,92 @@ describe('MyReportDetailModalComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it('startEdit()/cancelEdit() toggle isEditing', () => {
-    fixture.detectChanges();
+  it('startEdit()/cancelEdit() toggle isEditing once the real detail has loaded', () => {
+    fixture.detectChanges(); // synchronous of(detail) mock -> realDetailLoaded true
     expect(component['isEditing']).toBeFalse();
     component['startEdit']();
     expect(component['isEditing']).toBeTrue();
     component['cancelEdit']();
     expect(component['isEditing']).toBeFalse();
+  });
+
+  // ── Scrutinize fix: edit can never start off the optimistic fallback ──────
+
+  it('realDetailLoaded stays false while the fallback is showing (before the GET resolves)', () => {
+    const notYetResolved = new Subject<{ code: number; message: string; data: MyUsabilityReportDetail }>();
+    serviceSpy.getMyReportById.and.returnValue(notYetResolved.asObservable());
+
+    component.ngOnInit();
+
+    expect(component['realDetailLoaded']).toBeFalse();
+  });
+
+  it('startEdit() is a NO-OP while realDetailLoaded is false (blocks editing off the truncated preview)', () => {
+    const notYetResolved = new Subject<{ code: number; message: string; data: MyUsabilityReportDetail }>();
+    serviceSpy.getMyReportById.and.returnValue(notYetResolved.asObservable());
+    component.ngOnInit();
+
+    // Sanity: still the fallback (truncated preview), not the real description.
+    expect(component['detail']?.description).toBe('Preview text');
+
+    component['startEdit']();
+
+    expect(component['isEditing'])
+      .withContext('startEdit() must be a no-op while realDetailLoaded is false')
+      .toBeFalse();
+  });
+
+  it('the Edit button is disabled in the template while the real detail has not loaded yet', () => {
+    const notYetResolved = new Subject<{ code: number; message: string; data: MyUsabilityReportDetail }>();
+    serviceSpy.getMyReportById.and.returnValue(notYetResolved.asObservable());
+    fixture.detectChanges();
+
+    const editButton: HTMLButtonElement = fixture.nativeElement.querySelector('.mr-btn-primary');
+    expect(editButton).withContext('Edit button renders (fallback status looks editable)').not.toBeNull();
+    expect(editButton.disabled).withContext('must be disabled until real detail has loaded').toBeTrue();
+
+    editButton.click();
+    expect(component['isEditing']).withContext('a disabled-button click must not start editing').toBeFalse();
+  });
+
+  it('realDetailLoaded flips true once the real GET resolves, enabling the Edit button', () => {
+    const resolvesLater = new Subject<{ code: number; message: string; data: MyUsabilityReportDetail }>();
+    serviceSpy.getMyReportById.and.returnValue(resolvesLater.asObservable());
+    fixture.detectChanges();
+
+    let editButton: HTMLButtonElement = fixture.nativeElement.querySelector('.mr-btn-primary');
+    expect(editButton.disabled).toBeTrue();
+
+    resolvesLater.next({ code: 200, message: 'OK', data: detail });
+    fixture.detectChanges();
+
+    expect(component['realDetailLoaded']).toBeTrue();
+    editButton = fixture.nativeElement.querySelector('.mr-btn-primary');
+    expect(editButton.disabled).toBeFalse();
+
+    editButton.click();
+    expect(component['isEditing']).toBeTrue();
+    // The edit path is now seeded from the REAL detail, never the fallback's
+    // truncated `descriptionPreview` — the caller (MyReportEditFormComponent)
+    // reads `this.detail.description`, and `this.detail` is the real object
+    // by the time editing becomes reachable at all.
+    expect(component['detail']?.description).toBe('Full description');
+  });
+
+  it('startEdit() stays blocked PERMANENTLY after a GET error (fails closed, not open)', () => {
+    serviceSpy.getMyReportById.and.returnValue(throwError(() => ({ status: 500 })));
+    fixture.detectChanges();
+
+    expect(component['isDetailFetching']).toBeFalse();
+    expect(component['realDetailLoaded'])
+      .withContext('a failed fetch must never flip this true')
+      .toBeFalse();
+
+    component['startEdit']();
+    expect(component['isEditing']).toBeFalse();
+
+    const editButton: HTMLButtonElement = fixture.nativeElement.querySelector('.mr-btn-primary');
+    expect(editButton.disabled).toBeTrue();
   });
 
   it('onEditSaved() replaces detail, exits edit mode, and emits reportUpdated with a truncated preview', () => {

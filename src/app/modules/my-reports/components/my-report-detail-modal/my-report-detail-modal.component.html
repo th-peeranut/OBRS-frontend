@@ -66,10 +66,18 @@
             </div>
           </div>
 
+          <!-- Scrutinize fix: visible as soon as the fallback SUGGESTS the
+               report might be editable (so it doesn't pop in late), but
+               disabled/inert until realDetailLoaded — the reporter must
+               never start editing off the fallback's truncated preview,
+               during the fetch OR after a fetch error (realDetailLoaded's
+               own doc comment). startEdit() also re-guards this. -->
           <button
             *ngIf="detail.editable"
             type="button"
             class="mr-btn-primary mt-3"
+            [disabled]="!realDetailLoaded"
+            [attr.aria-busy]="!realDetailLoaded"
             (click)="startEdit()"
           >
             {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.EDIT_ACTION' | translate }}

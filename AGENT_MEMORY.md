@@ -3722,3 +3722,29 @@ Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check a
   find a guard missing at a second call site, the fix is to make the guard a single named unit
   BOTH sites call — not to hand-copy it to the site you just found. Copying it forward means the
   family now has two members to keep in sync instead of one, which is how the gap opened.
+
+## OBRS-433 Scrutinize — Reviewer self-fix (errorCode mismatch) + returned finding
+
+- SELF-FIXED (my-report-edit-form.component.ts `mapErrorCodeKey`): the FE mapped `VALIDATION_FAILED`,
+  but the backend derives its errorCode by upper-casing the message key. `report.validation-failed`
+  (thrown for a keepImageId that doesn't belong to the report, an invalid category, or a blank
+  description) → `REPORT_VALIDATION_FAILED` (see backend `DomainException.deriveErrorCode`:
+  `.toUpperCase().replace('.', '_').replace('-', '_')`). The old key was never emitted by this
+  multipart endpoint, so that case fell through to the GENERIC toast. Added the real
+  `REPORT_VALIDATION_FAILED` key (kept `VALIDATION_FAILED` as a harmless fallback). Lesson: FE error
+  branching must read the LIVE backend code derivation, not a paraphrase — a domain BadRequest key
+  keeps its `report.` prefix in the derived code (`REPORT_*`), it does NOT collapse to the generic
+  bean-validation `VALIDATION_FAILED`.
+
+- RETURNED (my-report-detail-modal + my-report-edit-form): the optimistic-open edit path is NOT
+  immune to the clobber family (DEV-GOTCHAS "Every control an optimistic-open modal patches after
+  fetch needs its own pristine-guard", 3 prior occurrences). The form fields are read once in
+  ngOnInit (safe), but (a) the Edit button is reachable during the ~2s background GET / after a GET
+  error, so it seeds from `toDetailFallback()` whose `description` is the TRUNCATED preview — saving
+  then persists truncated text; and (b) `existingImages` is a LIVE getter (`this.detail.images`), so
+  when the background GET reseats the parent `detail` mid-edit, the image picker's ngOnChanges
+  re-seeds and discards any files the reporter attached during that window. Fix direction: gate entry
+  to edit mode on "real detail loaded" (a flag set true only in the successful GET next-handler), not
+  merely on `detail.editable`, so the form never seeds from the fallback and `detail` is stable for
+  the edit's lifetime. Left for the developer because it is a behaviour/UX change that QA should
+  verify and the unit specs don't cover the button-during-fetch gate.

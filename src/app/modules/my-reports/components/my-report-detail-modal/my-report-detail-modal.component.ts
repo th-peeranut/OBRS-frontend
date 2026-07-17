@@ -49,6 +49,17 @@ export class MyReportDetailModalComponent implements OnInit, OnDestroy {
   protected isDetailFetching = false;
   protected isEditing = false;
   protected pendingFollowUp: UsabilityReportPendingFollowUp | null = null;
+  // OBRS-433 Scrutinize fix: true ONLY once a real (non-fallback) GET /{id}
+  // has actually resolved with data — never true while `detail` is still the
+  // optimistic `toDetailFallback()` seed, and never flipped true by a failed
+  // fetch. Gates entry to edit mode (see startEdit()) so the reporter can
+  // never start editing off the fallback's TRUNCATED descriptionPreview
+  // (previously reachable during the ~2s background GET, and permanently
+  // reachable after a GET error since `isDetailFetching` alone had already
+  // gone false there). Same "pristine-guard every control an optimistic-open
+  // modal patches after fetch" family as the 3 prior admin-modal occurrences
+  // (design-system §11) — this is the 4th, on this modal specifically.
+  protected realDetailLoaded = false;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -69,10 +80,13 @@ export class MyReportDetailModalComponent implements OnInit, OnDestroy {
           this.isDetailFetching = false;
           if (response.data) {
             this.detail = response.data;
+            this.realDetailLoaded = true;
           }
         },
         error: () => {
           this.isDetailFetching = false;
+          // realDetailLoaded stays false — `detail` is still the fallback,
+          // and it must stay un-editable rather than fail open.
         },
       });
   }
@@ -87,6 +101,12 @@ export class MyReportDetailModalComponent implements OnInit, OnDestroy {
   }
 
   protected startEdit(): void {
+    // Defense-in-depth alongside the template's [disabled] binding — entry
+    // to edit mode must never happen off the optimistic fallback (see
+    // realDetailLoaded's doc comment).
+    if (!this.realDetailLoaded) {
+      return;
+    }
     this.isEditing = true;
   }
 
@@ -145,6 +165,7 @@ export class MyReportDetailModalComponent implements OnInit, OnDestroy {
           this.isDetailFetching = false;
           if (response.data) {
             this.detail = response.data;
+            this.realDetailLoaded = true;
           }
         },
         error: () => {

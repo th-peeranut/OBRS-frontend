@@ -28,7 +28,7 @@
   <div class="mr-edit-form__field mt-2">
     <label class="mr-detail-label">{{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}</label>
     <app-usability-report-image-picker
-      [existingImages]="existingImages"
+      [existingImages]="existingImagesSnapshot"
       (imagesChange)="onImagesChange($event)"
     ></app-usability-report-image-picker>
   </div>

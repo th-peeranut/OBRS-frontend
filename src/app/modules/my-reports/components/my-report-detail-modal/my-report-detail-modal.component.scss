@@ -117,4 +117,9 @@
   cursor: pointer;
   background-color: $brand-customer-strong;
   color: $text-white;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }

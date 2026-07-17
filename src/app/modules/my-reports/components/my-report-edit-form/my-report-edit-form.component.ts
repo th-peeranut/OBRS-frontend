@@ -68,7 +68,19 @@ export class MyReportEditFormComponent implements OnInit, OnDestroy {
       category: [this.detail.category],
       description: [this.detail.description, this.trimmedRequired],
     });
-    this.keepImageIds = this.detail.images.map((img) => Number(img.id));
+    // Scrutinize fix: SNAPSHOT the existing images once, at edit-start — the
+    // old implementation exposed a live getter reading `this.detail.images`
+    // on every template re-evaluation. `detail` is an `@Input()` Angular
+    // re-binds on every parent change-detection pass regardless of whether
+    // this component reacts via OnChanges, so a later parent reseat of
+    // `detail` (a wholesale new object — e.g. a background re-fetch) would
+    // silently swap the array reference the picker sees, re-triggering its
+    // `ngOnChanges` and DISCARDING any new files the reporter had already
+    // attached during this edit session. Snapshotting once means this
+    // component's own copy is immune to any later parent reseat for the
+    // rest of the edit session.
+    this.existingImagesSnapshot = [...this.detail.images];
+    this.keepImageIds = this.existingImagesSnapshot.map((img) => Number(img.id));
     this.buildCategoryOptions();
 
     this.translate.onLangChange
@@ -86,9 +98,8 @@ export class MyReportEditFormComponent implements OnInit, OnDestroy {
     return !!(ctrl?.invalid && ctrl.touched);
   }
 
-  protected get existingImages(): MyUsabilityReportDetail['images'] {
-    return this.detail.images;
-  }
+  // Populated once in ngOnInit — see the doc comment there. Not a getter.
+  protected existingImagesSnapshot: MyUsabilityReportDetail['images'] = [];
 
   // DropdownObrsComponent emits the WHOLE matched option object on
   // (currentValue) — read `.id` for the category value (design-system's
@@ -168,6 +179,12 @@ export class MyReportEditFormComponent implements OnInit, OnDestroy {
       REPORT_TOO_MANY_IMAGES: 'USABILITY_REPORT.ERROR.REPORT_TOO_MANY_IMAGES',
       REPORT_IMAGE_TOO_LARGE: 'USABILITY_REPORT.ERROR.REPORT_IMAGE_TOO_LARGE',
       REPORT_UNSUPPORTED_MEDIA_TYPE: 'USABILITY_REPORT.ERROR.REPORT_UNSUPPORTED_MEDIA_TYPE',
+      // Backend derives errorCode by upper-casing the message key `report.validation-failed`
+      // -> REPORT_VALIDATION_FAILED (DomainException.deriveErrorCode). The bare
+      // VALIDATION_FAILED is the generic bean-validation code and is NOT what this
+      // multipart endpoint emits for a bad keepImageId / category — keep it only as a
+      // harmless fallback and map the code the service actually throws.
+      REPORT_VALIDATION_FAILED: 'USABILITY_REPORT.ERROR.VALIDATION_FAILED',
       VALIDATION_FAILED: 'USABILITY_REPORT.ERROR.VALIDATION_FAILED',
       REPORT_NOT_FOUND: 'USABILITY_REPORT.MY_REPORTS.ERROR.REPORT_NOT_FOUND',
     };
