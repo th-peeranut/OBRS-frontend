@@ -146,6 +146,34 @@
   gap: $space-xs;
 }
 
+// OBRS-269: "Navigate to pickup" button. Static tokens only ($primary-blue /
+// $primary-white) — the ticket page is intentionally exempt from dark theming
+// (dark-theme.scss §15 paper look) — do NOT use a runtime --accent* var.
+// Excluded from the downloaded PNG via `ignoreElements` in downloadTicketImage()
+// (same treatment as .download-btn).
+.ticket-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+  padding: 6px 12px;
+  border-radius: $radius-xl;
+  background: $primary-blue;
+  color: $primary-white;
+  font-size: 12px;
+  font-weight: $font-weight-semibold;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease-in-out;
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
 .ticket-passengers {
   display: flex;
   flex-direction: column;
@@ -309,6 +337,16 @@
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
   color: $text-softblack;
+}
+
+// OBRS-296: child-fare boarding-check note. Static token only
+// ($text-lightblack) — this ticket paper is intentionally exempt from dark
+// theming (dark-theme.scss §15), matching the existing static-token
+// precedent on this surface (see .ticket-nav-btn above).
+.child-fare-note {
+  display: block;
+  font-size: 11px;
+  color: $text-lightblack;
 }
 
 .download-btn {

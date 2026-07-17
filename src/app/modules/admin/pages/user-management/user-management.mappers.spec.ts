@@ -8,15 +8,41 @@ import {
   filterUsers,
   parseNameFromFullName,
   parseStatus,
+  prettifyRoleSlug,
   roleRequiredValidator,
   statusClass,
   toCreateUserPayload,
   toRoleOptions,
   toStatusOptions,
+  translateRoleSlug,
+  translateStatusCode,
   toUpdateUserPayload,
   toUserDtoFallback,
   toUserRow,
 } from './user-management.mappers';
+
+// Stub mirroring TranslateService.instant()'s "missing key" contract: returns
+// the key itself when there's no translation for it. Mirrors ADMIN.USERS.ROLE_NAMES
+// in public/i18n/en.json for the 5 system role slugs (OBRS-330).
+const ROLE_NAME_STUB: Record<string, string> = {
+  'ADMIN.USERS.ROLE_NAMES.admin': 'Admin',
+  'ADMIN.USERS.ROLE_NAMES.owner': 'Owner',
+  'ADMIN.USERS.ROLE_NAMES.salesperson': 'Salesperson',
+  'ADMIN.USERS.ROLE_NAMES.driver': 'Driver',
+  'ADMIN.USERS.ROLE_NAMES.customer': 'Customer',
+};
+const stubTranslateFn = (key: string): string => ROLE_NAME_STUB[key] ?? key;
+
+// Same missing-key contract, mirrors ADMIN.USERS.STATUS_NAMES in
+// public/i18n/en.json for the 5 known `user_status` codes (OBRS-353).
+const STATUS_NAME_STUB: Record<string, string> = {
+  'ADMIN.USERS.STATUS_NAMES.active': 'Active',
+  'ADMIN.USERS.STATUS_NAMES.inactive': 'Inactive',
+  'ADMIN.USERS.STATUS_NAMES.pending_verification': 'Pending verification',
+  'ADMIN.USERS.STATUS_NAMES.suspended': 'Suspended',
+  'ADMIN.USERS.STATUS_NAMES.deleted': 'Deleted',
+};
+const stubStatusTranslateFn = (key: string): string => STATUS_NAME_STUB[key] ?? key;
 import { AdminLookupDto, AdminRoleDto, AdminUserDto } from '../../../../services/admin/admin-api.service';
 
 describe('user-management.mappers', () => {
@@ -65,14 +91,76 @@ describe('user-management.mappers', () => {
     });
   });
 
+  // OBRS-330: role chips localize via a fixed slug -> i18n-key mapping since
+  // the user-summary endpoint sends roles as bare slug strings with no
+  // translations attached (unlike status).
+  describe('prettifyRoleSlug', () => {
+    it('title-cases a simple slug', () => {
+      expect(prettifyRoleSlug('driver')).toBe('Driver');
+    });
+
+    it('splits on underscores/hyphens/whitespace and title-cases each word', () => {
+      expect(prettifyRoleSlug('some_role')).toBe('Some Role');
+      expect(prettifyRoleSlug('another-custom-role')).toBe('Another Custom Role');
+      expect(prettifyRoleSlug('MIXED_Case')).toBe('Mixed Case');
+    });
+  });
+
+  describe('translateRoleSlug', () => {
+    it('translates a known slug via the provided translateFn', () => {
+      expect(translateRoleSlug('driver', stubTranslateFn)).toBe('Driver');
+      expect(translateRoleSlug('owner', stubTranslateFn)).toBe('Owner');
+    });
+
+    it('is case-insensitive on the slug when building the i18n key', () => {
+      expect(translateRoleSlug('DRIVER', stubTranslateFn)).toBe('Driver');
+    });
+
+    it('falls back to a prettified slug — never a raw i18n key — for an unknown slug', () => {
+      expect(translateRoleSlug('some_role', stubTranslateFn)).toBe('Some Role');
+      expect(translateRoleSlug('some_role', stubTranslateFn)).not.toContain('ADMIN.USERS.ROLE_NAMES');
+    });
+  });
+
+  // OBRS-353: Status chip localizes the same way roles do (OBRS-330) —
+  // Option A FE i18n takeover, since the backend's lookup_translations has
+  // no zh rows for user_status.
+  describe('translateStatusCode', () => {
+    it('translates a known status code via the provided translateFn', () => {
+      expect(translateStatusCode('active', stubStatusTranslateFn)).toBe('Active');
+      expect(translateStatusCode('pending_verification', stubStatusTranslateFn)).toBe(
+        'Pending verification'
+      );
+    });
+
+    it('is case-insensitive on the code when building the i18n key', () => {
+      expect(translateStatusCode('ACTIVE', stubStatusTranslateFn)).toBe('Active');
+    });
+
+    it('falls back to a prettified code — never a raw i18n key — for an unknown status code', () => {
+      expect(translateStatusCode('some_status', stubStatusTranslateFn)).toBe('Some Status');
+      expect(translateStatusCode('some_status', stubStatusTranslateFn)).not.toContain(
+        'ADMIN.USERS.STATUS_NAMES'
+      );
+    });
+  });
+
   describe('extractRoleLabels', () => {
     it('returns [] for null/undefined/empty input', () => {
       expect(extractRoleLabels(null, 'en')).toEqual([]);
       expect(extractRoleLabels(undefined, 'en')).toEqual([]);
     });
 
-    it('passes through a string[] input as-is', () => {
+    it('passes through a string[] input as-is when no translateFn is supplied', () => {
       expect(extractRoleLabels(['admin', 'staff'], 'en')).toEqual(['admin', 'staff']);
+    });
+
+    it('localizes string-slug input via translateFn, falling back to prettified for unknown slugs', () => {
+      expect(extractRoleLabels(['admin', 'driver', 'some_role'], 'en', stubTranslateFn)).toEqual([
+        'Admin',
+        'Driver',
+        'Some Role',
+      ]);
     });
 
     it('prefers name, then localized translation, then en translation, then slug', () => {
@@ -127,10 +215,11 @@ describe('user-management.mappers', () => {
       // as locale (so role/status resolve to English) while passing 'th' as
       // dateLang must produce the TH-formatted date, proving the two are wired
       // to separate parameters and never collapsed into one.
-      const rowThDate = toUserRow(baseUser, 'en', 'th');
-      const rowEnDate = toUserRow(baseUser, 'en', 'en');
+      const userWithLogin: AdminUserDto = { ...baseUser, lastLoginAt: '2026-07-10T02:00:00Z' };
+      const rowThDate = toUserRow(userWithLogin, 'en', 'th');
+      const rowEnDate = toUserRow(userWithLogin, 'en', 'en');
 
-      expect(rowThDate.lastUpdated).not.toBe(rowEnDate.lastUpdated);
+      expect(rowThDate.lastLogin).not.toBe(rowEnDate.lastLogin);
     });
 
     it('defaults missing fields to "-" and empty roles to ["-"]', () => {
@@ -143,14 +232,65 @@ describe('user-management.mappers', () => {
       expect(row.locked).toBeFalse();
     });
 
-    it('falls back updatedAt to createdAt when updatedAt is missing', () => {
-      const user: AdminUserDto = {
-        ...baseUser,
-        updatedAt: undefined,
-        createdAt: '2026-01-01T00:00:00Z',
-      };
+    // OBRS-182: real last-login activity.
+    it('formats lastLogin and sets hasLoggedIn when lastLoginAt is present', () => {
+      const user: AdminUserDto = { ...baseUser, lastLoginAt: '2026-07-10T02:00:00Z' };
       const row = toUserRow(user, 'en', 'en');
-      expect(row.lastUpdated).not.toBe('-');
+      expect(row.hasLoggedIn).toBeTrue();
+      expect(row.lastLogin).not.toBe('-');
+    });
+
+    it('CRITICAL: does not fall back to updatedAt/createdAt when lastLoginAt is null — hasLoggedIn is false and lastLogin is the never-logged-in sentinel', () => {
+      // baseUser has a real updatedAt; lastLoginAt is explicitly null. If a
+      // fallback to updatedAt/createdAt were ever reintroduced into lastLogin,
+      // this would fail because lastLogin would stop being '-'.
+      const user: AdminUserDto = { ...baseUser, lastLoginAt: null };
+      const row = toUserRow(user, 'en', 'en');
+      expect(row.hasLoggedIn).toBeFalse();
+      expect(row.lastLogin).toBe('-');
+    });
+
+    it('sets hasLoggedIn false when lastLoginAt is absent entirely (never provided by backend)', () => {
+      const row = toUserRow(baseUser, 'en', 'en');
+      expect(row.hasLoggedIn).toBeFalse();
+    });
+
+    // OBRS-330: the user-summary endpoint sends roles as bare slug strings
+    // (unlike baseUser above, which uses the richer AdminRoleDto object
+    // shape). Threading translateFn through toUserRow is what makes the
+    // Roles column chip localize the same way the Status chip already does.
+    it('localizes bare string role slugs via translateFn, falling back for an unknown slug', () => {
+      const summaryUser: AdminUserDto = { ...baseUser, roles: ['owner', 'driver', 'some_role'] };
+      const row = toUserRow(summaryUser, 'en', 'en', stubTranslateFn);
+      expect(row.roleSlugs).toEqual(['owner', 'driver', 'some_role']);
+      expect(row.roles).toEqual(['Owner', 'Driver', 'Some Role']);
+    });
+
+    it('without translateFn, string role slugs pass through unlocalized (backward-compatible default)', () => {
+      const summaryUser: AdminUserDto = { ...baseUser, roles: ['owner'] };
+      const row = toUserRow(summaryUser, 'en', 'en');
+      expect(row.roles).toEqual(['owner']);
+    });
+
+    // OBRS-353: Status chip localization, mirroring the role tests above.
+    it('localizes the status via translateFn using the STATUS_NAMES key, leaving statusCode untouched', () => {
+      const row = toUserRow(baseUser, 'en', 'en', stubStatusTranslateFn);
+      expect(row.statusCode).toBe('active');
+      expect(row.status).toBe('Active');
+    });
+
+    it('without translateFn, status falls back to the BE label (old behavior preserved)', () => {
+      const row = toUserRow(baseUser, 'en', 'en');
+      expect(row.statusCode).toBe('active');
+      expect(row.status).toBe('ACTIVE');
+    });
+
+    it('falls back to a prettified label — never a raw i18n key — for an unknown status code', () => {
+      const summaryUser: AdminUserDto = { ...baseUser, status: 'some_status' };
+      const row = toUserRow(summaryUser, 'en', 'en', stubStatusTranslateFn);
+      expect(row.statusCode).toBe('some_status');
+      expect(row.status).toBe('Some Status');
+      expect(row.status).not.toContain('ADMIN.USERS.STATUS_NAMES');
     });
   });
 
@@ -165,7 +305,8 @@ describe('user-management.mappers', () => {
         roles: ['Administrator', 'Staff'],
         status: 'ACTIVE',
         statusCode: 'active',
-        lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       };
 
@@ -243,7 +384,8 @@ describe('user-management.mappers', () => {
       roles: ['Administrator'],
       status: 'ACTIVE',
       statusCode: 'active',
-      lastUpdated: '-',
+      lastLogin: '-',
+      hasLoggedIn: false,
       locked: false,
     };
 
@@ -425,7 +567,8 @@ describe('user-management.mappers', () => {
         roles: ['Administrator'],
         status: 'ACTIVE',
         statusCode: 'active',
-        lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       },
       {
@@ -437,7 +580,8 @@ describe('user-management.mappers', () => {
         roles: ['Staff'],
         status: 'PENDING',
         statusCode: 'pending',
-        lastUpdated: '-',
+        lastLogin: '-',
+        hasLoggedIn: false,
         locked: false,
       },
     ];
@@ -463,6 +607,18 @@ describe('user-management.mappers', () => {
     it('combines role, status and keyword filters', () => {
       expect(filterUsers(users, 'admin', 'active', 'john').map((u) => u.id)).toEqual([1]);
       expect(filterUsers(users, 'admin', 'pending', 'john')).toEqual([]);
+    });
+
+    // OBRS-330: user.roles now holds the LOCALIZED label (e.g. Thai "เจ้าของกิจการ"
+    // for slug "owner"), which shares no substring with the English slug —
+    // the keyword search must still match "owner" via roleSlugs, otherwise
+    // search-by-slug silently breaks once the chip is localized.
+    it('matches keyword search by raw role slug via roleSlugs, even when roles holds a non-overlapping localized label', () => {
+      const localizedUsers: UserRow[] = [
+        { ...users[0], roleSlugs: ['owner'], roles: ['เจ้าของกิจการ'] },
+        users[1],
+      ];
+      expect(filterUsers(localizedUsers, '', '', 'owner').map((u) => u.id)).toEqual([1]);
     });
   });
 });

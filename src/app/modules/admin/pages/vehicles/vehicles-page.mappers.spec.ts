@@ -158,6 +158,45 @@ describe('vehicles-page.mappers', () => {
       const values = buildVehicleFormValues(dto, row, 'en');
       expect(values['status']).toBe('inactive');
     });
+
+    // OBRS-316 Gap 1: all 7 attribute fields echo straight from the GET detail —
+    // this is what feeds the R1 pristine-patch in initEditForm, so a real value
+    // returned by the server must never be dropped here.
+    it('reads all 7 vehicle-attribute fields from the detail DTO', () => {
+      const dto: AdminVehicleDto = {
+        id: 1,
+        brand: 'Toyota',
+        model: 'Commuter',
+        manufactureYear: 2019,
+        colour: 'White',
+        engineCc: 2982,
+        chassisNumber: 'CH-000123',
+        note: 'Rear AC unit replaced.',
+      };
+      const values = buildVehicleFormValues(dto, row, 'en');
+      expect(values['brand']).toBe('Toyota');
+      expect(values['model']).toBe('Commuter');
+      expect(values['manufactureYear']).toBe(2019);
+      expect(values['colour']).toBe('White');
+      expect(values['engineCc']).toBe(2982);
+      expect(values['chassisNumber']).toBe('CH-000123');
+      expect(values['note']).toBe('Rear AC unit replaced.');
+    });
+
+    // The row fallback (toVehicleDtoFallback) never carries these 7 fields, so
+    // the immediate open (before the GET detail resolves) must render them
+    // blank/null rather than throwing or showing "undefined".
+    it('defaults the 7 vehicle-attribute fields to blank/null when absent from the DTO', () => {
+      const dto: AdminVehicleDto = { id: 1 };
+      const values = buildVehicleFormValues(dto, row, 'en');
+      expect(values['brand']).toBe('');
+      expect(values['model']).toBe('');
+      expect(values['manufactureYear']).toBeNull();
+      expect(values['colour']).toBe('');
+      expect(values['engineCc']).toBeNull();
+      expect(values['chassisNumber']).toBe('');
+      expect(values['note']).toBe('');
+    });
   });
 
   describe('toVehiclePayload', () => {
@@ -181,6 +220,80 @@ describe('vehicles-page.mappers', () => {
       expect(payload.numberPlate).toBe('');
       expect(payload.vehicleNumber).toBe('');
       expect(payload.status).toBe('');
+    });
+
+    // OBRS-316 Gap 1: PUT is a full-replace, so ALL 7 attribute keys must always
+    // be serialized (create AND edit) — this is the "echo all 7, no null-drop"
+    // contract the R1 guard exists to protect.
+    it('serializes all 7 vehicle-attribute fields, trimmed, with blanks normalized to null', () => {
+      const payload = toVehiclePayload({
+        vehicleType: 'van',
+        numberPlate: 'ABC-123',
+        vehicleNumber: 'V1',
+        status: 'active',
+        brand: '  Toyota  ',
+        model: '  Commuter  ',
+        manufactureYear: 2019,
+        colour: '  White  ',
+        engineCc: 2982,
+        chassisNumber: '  CH-000123  ',
+        note: '  Rear AC unit replaced.  ',
+      });
+
+      expect(payload.brand).toBe('Toyota');
+      expect(payload.model).toBe('Commuter');
+      expect(payload.manufactureYear).toBe(2019);
+      expect(payload.colour).toBe('White');
+      expect(payload.engineCc).toBe(2982);
+      expect(payload.chassisNumber).toBe('CH-000123');
+      expect(payload.note).toBe('Rear AC unit replaced.');
+    });
+
+    it('normalizes blank/missing vehicle-attribute fields to null (not dropped, not empty string)', () => {
+      const payload = toVehiclePayload({
+        vehicleType: 'van',
+        numberPlate: 'ABC-123',
+        vehicleNumber: 'V1',
+        status: 'active',
+        brand: '',
+        model: '   ',
+        manufactureYear: null,
+        colour: undefined,
+        engineCc: '',
+        chassisNumber: null,
+        note: '',
+      });
+
+      expect(payload.brand).toBeNull();
+      expect(payload.model).toBeNull();
+      expect(payload.manufactureYear).toBeNull();
+      expect(payload.colour).toBeNull();
+      expect(payload.engineCc).toBeNull();
+      expect(payload.chassisNumber).toBeNull();
+      expect(payload.note).toBeNull();
+    });
+
+    // brand/model/colour/chassisNumber/note are free-text display values, not
+    // lookup codes — unlike vehicleType/status above, they must NOT be
+    // lowercased.
+    it('does not lowercase brand/model/colour/chassisNumber/note', () => {
+      const payload = toVehiclePayload({
+        vehicleType: 'van',
+        numberPlate: 'ABC-123',
+        vehicleNumber: 'V1',
+        status: 'active',
+        brand: 'Toyota',
+        model: 'Commuter',
+        colour: 'White',
+        chassisNumber: 'CH-000123',
+        note: 'Rear AC Unit',
+      });
+
+      expect(payload.brand).toBe('Toyota');
+      expect(payload.model).toBe('Commuter');
+      expect(payload.colour).toBe('White');
+      expect(payload.chassisNumber).toBe('CH-000123');
+      expect(payload.note).toBe('Rear AC Unit');
     });
   });
 

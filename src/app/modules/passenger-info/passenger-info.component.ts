@@ -30,6 +30,7 @@ import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import dayjs from 'dayjs';
 import { toApiOffsetDateTime } from '../../shared/lib/api-date-time';
+import { normalizeSeatNumber as stripSeatDigits } from '../../shared/lib/seat-label';
 import { selectProvinceWithStation } from '../../shared/stores/station/station.selector';
 import { StationApi } from '../../shared/interfaces/station.interface';
 import { Observable } from 'rxjs';
@@ -188,6 +189,17 @@ export class PassengerInfoComponent {
       return;
     }
 
+    // OBRS-323: capacity-full rejection on this (promo-suppressed) call —
+    // the no-promo path already gets this from the BE's localized message via
+    // the global error interceptor, so this branch only fires when the global
+    // alert was suppressed for the applied-promo call.
+    if (errorCode.startsWith('BOOKING_ERROR_SEATS')) {
+      this.alertService.error(
+        this.translateService.instant('PASSENGER_INFO.ALERT.CAPACITY_FULL')
+      );
+      return;
+    }
+
     this.alertService.error(
       this.translateService.instant('PASSENGER_INFO.ALERT.CREATE_FAILED')
     );
@@ -219,13 +231,23 @@ export class PassengerInfoComponent {
     const departureSchedule = schedules[0];
     const arrivalSchedule = isReturnTrip ? schedules[1] : null;
 
+    // AC-361.5 (scrutinize blocker): never attach a seat preference/
+    // requirement to a leg whose schedule sells with no fixed seat — gate on
+    // the LEG's seatingMode, not just whether a seatNumber happens to be
+    // present, so a mixed round trip (e.g. OPEN outbound / ASSIGNED return)
+    // sends prefs on the ASSIGNED leg only.
     const departurePassengers = this.buildPassengersPayload(
       passengerInfo,
-      'outbound'
+      'outbound',
+      departureSchedule?.seatingMode === 'OPEN'
     );
     const arrivalPassengers =
       isReturnTrip && arrivalSchedule
-        ? this.buildPassengersPayload(passengerInfo, 'inbound')
+        ? this.buildPassengersPayload(
+            passengerInfo,
+            'inbound',
+            arrivalSchedule?.seatingMode === 'OPEN'
+          )
         : [];
 
     const totalAmount =
@@ -280,7 +302,8 @@ export class PassengerInfoComponent {
 
   private buildPassengersPayload(
     passengers: PassengerInfo[],
-    leg: 'outbound' | 'inbound' = 'outbound'
+    leg: 'outbound' | 'inbound' = 'outbound',
+    isLegOpen = false
   ): BookingSchedulePayload['passengers'] {
     return passengers.map((passenger) => ({
       passengerType: this.normalizePassengerType(passenger.gender),
@@ -291,7 +314,37 @@ export class PassengerInfoComponent {
       firstName: passenger.firstName,
       middleName: passenger.middleName || null,
       lastName: passenger.lastName,
+      // OBRS-296: separate from passengerType (gender) — the server computes
+      // the child discount off this field. isAdult is a real boolean control
+      // (property-bound radios, not the gender radios' string-attribute
+      // form), so this is never accidentally 'adult' for a falsy string.
+      fareCategory: passenger.isAdult ? 'adult' : 'child',
+      // OBRS-361 / AC-361.5: an OPEN leg never carries a preference, even if
+      // the passenger set one (e.g. while a mixed round trip's other leg was
+      // ASSIGNED) — best-effort fields, lowercase per the backend contract.
+      seatPreference: isLegOpen
+        ? null
+        : this.normalizeSeatPreference(passenger.seatPreference),
+      seatRequirement: isLegOpen
+        ? null
+        : this.normalizeSeatRequirement(passenger.seatRequirement),
     }));
+  }
+
+  private normalizeSeatPreference(
+    value: PassengerInfo['seatPreference']
+  ): 'window' | 'aisle' | null {
+    if (value === 'WINDOW') return 'window';
+    if (value === 'AISLE') return 'aisle';
+    return null;
+  }
+
+  private normalizeSeatRequirement(
+    value: PassengerInfo['seatRequirement']
+  ): 'wheelchair' | 'extra_legroom' | null {
+    if (value === 'WHEELCHAIR') return 'wheelchair';
+    if (value === 'EXTRA_LEGROOM') return 'extra_legroom';
+    return null;
   }
 
   private buildSchedulePayload(
@@ -380,11 +433,10 @@ export class PassengerInfoComponent {
   }
 
   private normalizeSeatNumber(seatNumber?: string | null): string | null {
-    if (!seatNumber) {
-      return null;
-    }
-
-    const digits = seatNumber.match(/\d+/g)?.join('') ?? '';
+    // Booking-payload seat number: reuse the shared digit-strip (OBRS-362), then
+    // apply the payload-specific null semantics ('' / no-digit means "no manual
+    // seat", which the backend expects as null, not an empty string).
+    const digits = stripSeatDigits(seatNumber);
     return digits.length > 0 ? digits : null;
   }
 

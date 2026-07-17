@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { ChangeStopErrorCode } from '../interfaces/change-stop.interface';
 import { classifyHttpFallback, HttpFallbackTier } from './http-error-fallback';
 
@@ -31,6 +31,10 @@ export function mapChangeStopErrorCode(
     CHANGE_STOP_ERROR_BOOKING_NOT_FOUND: 'MY_BOOKINGS.CHANGE_STOP.ERROR.BOOKING_NOT_FOUND',
     CHANGE_STOP_ERROR_MULTI_LEG_NOT_SUPPORTED:
       'MY_BOOKINGS.CHANGE_STOP.ERROR.MULTI_LEG_NOT_SUPPORTED',
+    // OBRS-358: shared jump-seat channel-guard code — see the identical
+    // entry in `change-seat-error.ts` for the full rationale; same
+    // `COMMON.ERROR.*` key, never duplicated per flow.
+    SEAT_ERROR_WALK_IN_ONLY: 'COMMON.ERROR.SEAT_WALK_IN_ONLY',
   };
 
   if (errorCode && knownCodes[errorCode]) {
@@ -79,11 +83,5 @@ export function isTerminalChangeStopError(errorCode: string | null | undefined):
 
 /** Extracts `error.error.errorCode` from a failed change-stop HTTP call. */
 export function extractChangeStopErrorCode(error: unknown): ChangeStopErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as ChangeStopErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as ChangeStopErrorCode;
 }

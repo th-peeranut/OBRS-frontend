@@ -152,6 +152,18 @@ const routes: Routes = [
   },
 
   {
+    // OBRS-305: public parcel tracking — same permitAll-style precedent as
+    // refund-policy (customerArea, no requireAuth). No access-model change.
+    path: 'track-parcel',
+    canActivate: [AuthGuard],
+    data: { customerArea: true },
+    loadChildren: () =>
+      import('./modules/parcel-tracking/parcel-tracking.module').then(
+        (m) => m.ParcelTrackingModule
+      ),
+  },
+
+  {
     path: 'verify-email',
     loadChildren: () =>
       import('./modules/verify-email/verify-email.module').then(

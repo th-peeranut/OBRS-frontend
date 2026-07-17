@@ -53,7 +53,7 @@ export class AuthGuard implements CanActivate {
     const requiredRoles = route.data['requiredRoles'];
     const routeRoles = Array.isArray(requiredRoles) ? requiredRoles : [];
     if (!this.authService.hasAnyRole(routeRoles)) {
-      this.alertService.error(this.translate.instant('LOGIN.NO_ADMIN_PERMISSION'));
+      this.alertService.permissionDenied(this.translate.instant('LOGIN.NO_ADMIN_PERMISSION'));
       // Send them to their own portal rather than the public home, so an admin
       // isn't bounced onto a customer page (which would bounce them again).
       return this.router.parseUrl(this.authService.getHomeRoute());

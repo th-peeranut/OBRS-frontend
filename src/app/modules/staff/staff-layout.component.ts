@@ -1,5 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
+import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 
 interface StaffNavItem {
   path: string;
@@ -12,7 +13,7 @@ interface StaffNavItem {
   templateUrl: './staff-layout.component.html',
   styleUrl: './staff-layout.component.scss',
 })
-export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements OnInit {
+export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements OnInit, OnDestroy {
   // ── Abstract member implementations ─────────────────────────────────────────
   protected readonly logoutSuccessKey = 'STAFF.LAYOUT.LOGOUT_SUCCESS';
   protected readonly defaultTitleKey = 'STAFF.PAGES.SELL';
@@ -56,6 +57,10 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     return item.path;
   }
 
+  constructor(private readonly notificationInboxService: NotificationInboxService) {
+    super();
+  }
+
   override ngOnInit(): void {
     // Build nav items and check admin role before calling super so that the
     // route subscription (which fires synchronously via startWith) already has
@@ -63,5 +68,19 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     this.navItems = this.buildNavItems();
     this.isAdmin = this.authService.hasAnyRole(['admin']);
     super.ngOnInit();
+  }
+
+  // OBRS-317: stop the notification-bell unread-count poll on leaving the
+  // staff shell / logging out — the service also self-tears-down on
+  // authStatus$ going false, this is the explicit per-layout teardown
+  // mirroring AdminLayoutComponent's BadgeSocketService.disconnect() pattern.
+  override ngOnDestroy(): void {
+    this.notificationInboxService.stopPolling();
+    super.ngOnDestroy();
+  }
+
+  protected override onLogout(): void {
+    this.notificationInboxService.stopPolling();
+    super.onLogout();
   }
 }

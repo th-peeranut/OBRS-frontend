@@ -78,10 +78,10 @@ Run with SIT configuration:
 npm run start:sit
 ```
 
-Build:
+Build (AOT + bundle-budget check, same as CI — builds against `environment.ts`, not deployable):
 
 ```bash
-npm run build
+npm run build          # = ng build --configuration ci-smoke
 ```
 
 Build SIT:
@@ -210,6 +210,40 @@ with departure-date occupancy but zero booking-date bookings is **not**
 empty (same divergent-basis reasoning as Reports' `isEmptyRange`, carried
 over as `isEmptyDay`).
 
+### Boarding manifest — schedule delay control (OBRS-272)
+
+`BoardingListComponent` (`src/app/shared/components/boarding-list/`) gained a
+staff-only "Mark delayed"/"Update ETA" pill in the `.boarding-trip-header`
+strip, next to OBRS-256's departed/arrived control — same role gate
+(`canControlScheduleStatus`), visible only while the schedule is still
+`scheduled`. Opening it shows an inline `*ngIf`-gated `.admin-modal-backdrop`/
+`.admin-modal` dialog (component-local `FormGroup`, no separate component, no
+NgRx — mirrors every other admin modal and OBRS-256's
+`onScheduleStatusAction()`): a split `p-calendar` date + `p-calendar`
+`[timeOnly]` pair (combined client-side via `combineBangkokDateTime()`, the
+same `shared/lib/api-date-time.ts` helper `SchedulesPageComponent` uses) plus
+an optional reason `textarea`. The ETA is client-validated as strictly after
+the schedule's original `departureDateTime` before any API call; the backend
+re-validates the same rule as `SCHEDULE_DELAY_ETA_INVALID`, which renders as
+an inline field error, never a toast (only `SCHEDULE_DELAY_NOT_SCHEDULED`/
+generic errors go through `AlertService.error()`).
+
+"Delayed" is a **derived** UI state — `AdminScheduleDto`/
+`BoardingManifestHeader.delayedDepartureDateTime` is a sibling field to
+`status`, not a new status value (`PATCH .../delay`'s response `status` is
+always `"scheduled"`). The on-screen indicator uses a new
+`.admin-status.is-delayed` token (`--admin-delayed-bg`/`--admin-delayed-text`,
+violet) distinct from the existing scheduled(grey)/departed(blue-grey)/
+arrived(blue) pills — see `docs/design-system.md` §2.4.
+
+This is also the first `.admin-modal-backdrop` dialog owned by a component
+declared in `SharedModule` rather than a lazy feature module, which required
+relocating `AdminModalBackdropDirective` from `AdminModule` into
+`SharedModule` (declare + export) — see
+`docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md` for
+the full rationale (module-cycle avoidance, why `SharedModule` over
+`AdminSharedModule`).
+
 ## Customer Account Page & Email-Change Flow
 
 `/account` (OBRS-84) is the first customer "account settings" page — a
@@ -277,6 +311,25 @@ not dependent on a simulated hover in tests). These mirror the backend's own
 prerequisites (`../OBRS-backend/docs/api/booking.md`, `POST .../reschedule`)
 so the action is never presented as available when the server would reject
 it — the server remains the final authority.
+
+## E-Ticket — open-seating display (OBRS-325)
+
+Both e-ticket surfaces — the shared `app-e-ticket-card` (used by the My
+Bookings ticket modal) and the booking-flow's own `ETicketComponent` page —
+swap the seat-cell's *text only* (same label/box, no new styling) when a
+ticket's `seatNumber` is null: instead of a blank/`'-'` seat value they show
+`E_TICKET.LABEL.SEAT_OPEN` ("ขึ้นนั่งตามที่ว่าง" / "Open seating" / 自由入座).
+This is the display side of the open-seating epic (OBRS-318/321) — a
+`schedules.seating_mode = OPEN` schedule leaves `tickets.seat_number` null by
+design, not as missing data.
+
+The FE has no `seatingMode` field on any read DTO yet (see `docs/handoff.md`
+Contract Requests, 2026-07-14), so OPEN is inferred client-side from
+`seatNumber == null`, computed once per leg/ticket (`TicketLeg.isOpenSeating`
+in `shared/lib/booking-ticket-view.ts`; `TicketPassenger.seatOpen` in
+`modules/e-ticket/e-ticket.component.ts`) rather than re-checked ad hoc in the
+template — reuse those flags for the next surface that renders a ticket's
+seat instead of re-deriving the null check inline.
 
 Clicking an enabled action dispatches `openRescheduleDialog({ bookingId })`,
 which the module-local `myBookings` NgRx state reflects **synchronously** —
@@ -488,3 +541,86 @@ the row's mere presence already implies availability.
 - The select button on both legs has no seat-based disable — every rendered
   row is already bookable per the search filter above, so it's always
   enabled.
+
+## Parcel Consigned Delivery — Staff Intake, Waybill, Handoff, Public Tracking (OBRS-305 Card 2)
+
+Four surfaces, built against
+`../OBRS-backend/docs/api/parcels-consigned-delivery.md` (see
+`docs/adr/0020-parcel-consigned-delivery-frontend.md` for the frontend-specific
+decisions and `docs/handoff.md` for one assumed endpoint + one shape
+ambiguity flagged back to the backend).
+
+**1. Staff consigned intake** (`/staff/parcels/consign`, `requiredRoles: ['salesperson']`).
+`ParcelConsignPageComponent` (smart) owns every HTTP call; `ParcelConsignFormComponent`
+(dumb reactive form) assembles sender/recipient/schedule/pickup/dropoff/weight/
+description/optional-dimensions/prohibited-acknowledgement and emits a debounced
+(400ms) `quoteParamsChange` the page uses to refetch the live quote (thin service
+call) and the cargo-remaining indicator (`ParcelCargoAvailabilityStore`,
+component-scoped `AdminCollectionStore` — providers: [], same reasoning as
+`BoardingListStore`) independently. Schedule/pickup/dropoff are all
+`app-admin-dropdown` (placeholder, no pre-seed, design-system §3.1); dropoff
+options are pre-filtered client-side to stops strictly after the chosen
+pickup's `stop_order` (the "client pre-check"). On success,
+`ParcelIntakeResultPanelComponent` replaces the form and shows the tracking
+number/collection code/a link to the waybill. Every documented 409/400
+`errorCode` maps to its own inline `STAFF.PARCEL_CONSIGN.ERROR.*` message
+(never the raw response message); the form is never reset on error.
+
+**2. Printable waybill** (`/staff/parcels/:id/waybill`, `requiredRoles: ['salesperson']`).
+`ParcelWaybillPageComponent` renders `WaybillRespDto` via the dumb
+`ParcelWaybillPaperComponent`, reused byte-identical for both the on-screen card
+and the CDK-portal print-only template — same
+`docs/adr/0015-boarding-manifest-print-isolation.md` idiom as
+`BoardingListComponent.printManifest()` (own marker-class pair,
+`.parcel-waybill-print-portal`/`body.parcel-waybill-printing`, in
+`admin-theme.scss`). The QR (encoding `collectionToken`) is rendered directly via
+the existing `qrcode` package (same call shape as `payment-qrcode.component.ts`) —
+no new dependency. `collectionToken`/its QR appear on this page ONLY, never on
+the public tracking response.
+
+**3. Delivery handoff** (`/staff/parcels/deliveries` → `/staff/parcels/deliveries/:scheduleId`,
+`requiredRoles: ['driver','salesperson']` — the role hierarchy note in the API
+doc means a salesperson session also satisfies the backend's `hasRole('DRIVER')`
+action guard). The entry page (`ParcelDeliveryEntryPageComponent`) mirrors
+`BoardingEntryPageComponent` exactly (same driver/staff schedule-store split),
+just navigating to the parcels-deliveries route. The list page
+(`ParcelDeliveryListPageComponent`, component-scoped `ParcelDeliveryListStore`)
+renders one row per consigned parcel with a state-driven action button
+(`accepted`→Load, `in_transit`→Mark arrived, `arrived_notified`→Collect via
+`ParcelCollectDialogComponent`, an inline `.admin-modal-backdrop` dialog using
+the existing `AdminModalBackdropDirective`, OBRS-272). Every action is
+**optimistic-disable-only**: the row's button disables while the request is in
+flight, but its displayed `deliveryStatus` only changes once the actual 200
+body's `deliveryStatus` is known — never guessed client-side. A wrong-state 409
+shows an `AlertService.toast()` and re-syncs the row via `store.refresh()`
+rather than trusting the stale local guess. The collect dialog ships a
+code-only input for MVP (see ADR 0020 Decision 2 for why the existing
+`BoardingListComponent` camera QR scanner isn't reused here).
+
+**4. Public tracking** (`/track-parcel`, `/track-parcel/:trackingNumber` — own
+lazy `ParcelTrackingModule`, `customerArea: true`, no `requireAuth`, same
+precedent as `/refund-policy`). `ParcelTrackingService.track()` sets
+`SKIP_AUTH_LOGOUT` (in addition to the usual `SKIP_GLOBAL_ERROR_ALERT`/
+`SKIP_GLOBAL_LOADING_ALERT`) — a logged-in staff member browsing this public,
+`permitAll` page with an expired token must never be force-logged-out by a bare
+401 on a page that never required auth. A deep-linked tracking number
+auto-runs the lookup on load; a 404 and any other failure both render the same
+neutral "not found" state (the API doc: "no distinction between not-found and
+any other state"). The status chip reuses the exact same `.admin-status.is-*`
+markup as the staff delivery-list even though this customer-shell page has no
+`.admin-shell` ancestor — see `docs/design-system.md` §12's new-pattern-log
+entry and ADR 0020 Decision 1 for the cross-shell token-reuse rationale.
+
+**Status-color mapping**: all 7 renderable `parcel_delivery_status` slugs map
+onto the existing `.admin-status.is-*` tokens (no new hex) — see
+`docs/design-system.md` §2.4.1 for the full slug→token table and
+`shared/lib/parcel-delivery-status.ts`/its spec for the implementation + lock.
+
+**DRY notes**: no new global NgRx slice was added (per the locked spec — thin
+service calls for quote/tracking, component-scoped `AdminCollectionStore`
+subclasses for cargo-availability/delivery-list). `StaffApiService` gained 8
+new methods rather than a new staff-domain service (existing domain service,
+same file). `RouteStopTimeDto.stop` gained an optional `id` field (additive) so
+the consign form can resolve numeric `pickupStopId`/`dropoffStopId` from the
+already-called `/private/route-stops/{slug}` endpoint, instead of adding a
+second stop-lookup call.

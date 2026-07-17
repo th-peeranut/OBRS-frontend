@@ -31,7 +31,7 @@ export class ReportsPageComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private readonly store: ReportsStore,
+    protected readonly store: ReportsStore,
     private readonly translate: TranslateService
   ) {}
 

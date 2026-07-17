@@ -1,0 +1,7 @@
+// Reuses the global .admin-status / .admin-btn primitives — no component-scoped
+// overrides needed.
+//
+// OBRS-396 added a page-scoped .admin-btn:disabled affordance here as a
+// stop-gap; OBRS-406 lifted it into the shared .admin-btn primitive
+// (src/styles/admin-theme.scss), so this file is back to relying on the global
+// styles alone.

@@ -51,6 +51,12 @@ export const CHANGE_SEAT_ERROR_CODES = [
   'CHANGE_SEAT_ERROR_MULTI_LEG_NOT_SUPPORTED',
   'CHANGE_SEAT_ERROR_UNAUTHORIZED',
   'CHANGE_SEAT_ERROR_BOOKING_NOT_FOUND',
+  // OBRS-358: the ONE shared jump-seat channel-guard code, also reachable
+  // from create-booking/reschedule/change-stop — a non-staff request
+  // targeting the walk-in-only seat (e.g. minibus seat 1). Mapped to the
+  // shared `COMMON.ERROR.SEAT_WALK_IN_ONLY` key (never duplicated per flow)
+  // in `shared/lib/change-seat-error.ts`.
+  'SEAT_ERROR_WALK_IN_ONLY',
 ] as const;
 
 export type ChangeSeatErrorCode = (typeof CHANGE_SEAT_ERROR_CODES)[number] | 'GENERIC';

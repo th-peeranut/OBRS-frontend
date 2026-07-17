@@ -1,6 +1,7 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
+import { InputSwitchModule } from 'primeng/inputswitch';
 import { SharedModule } from '../../shared/shared.module';
 import { AdminSharedModule } from './admin-shared.module';
 import { AdminLayoutComponent } from './admin-layout.component';
@@ -26,8 +27,8 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
-import { AdminModalBackdropDirective } from './components/admin-modal-backdrop.directive';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
+import { UsabilityReportDuplicatePickerComponent } from './pages/usability-reports/usability-report-duplicate-picker/usability-report-duplicate-picker.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { PromotionListTableComponent } from './pages/promotions/promotion-list-table/promotion-list-table.component';
@@ -35,11 +36,14 @@ import { PromotionFormModalComponent } from './pages/promotions/promotion-form-m
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
+import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
+import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
 import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
+import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -145,6 +149,38 @@ const routes: Routes = [
           requiredRoles: ['admin'],
         },
       },
+      {
+        // OBRS-358: jump-seat (walk-in-only seat channel) toggle, ADMIN-only
+        // (403 for non-admin) — mirrors reminder-config above.
+        path: 'jump-seat-config',
+        component: JumpSeatConfigPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
+          subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'refund-void-report',
+        component: RefundVoidReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REFUND_VOID_REPORT',
+          subtitleKey: 'ADMIN.REFUND_VOID_REPORT.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
+        path: 'cash-online-reconciliation-report',
+        component: CashOnlineReconciliationReportPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION',
+          subtitleKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -179,8 +215,8 @@ const routes: Routes = [
     RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
-    AdminModalBackdropDirective,
     UsabilityReportsPageComponent,
+    UsabilityReportDuplicatePickerComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
     PromotionListTableComponent,
@@ -188,12 +224,21 @@ const routes: Routes = [
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
     EodSalesReportPageComponent,
+    RefundVoidReportPageComponent,
+    CashOnlineReconciliationReportPageComponent,
     AppVehicleMaintenancePanelComponent,
     SettlementsPageComponent,
     SettlementsListComponent,
     SettlementDetailModalComponent,
     ReminderConfigPageComponent,
+    JumpSeatConfigPageComponent,
   ],
-  imports: [SharedModule, RouterModule.forChild(routes), CalendarModule, AdminSharedModule],
+  imports: [
+    SharedModule,
+    RouterModule.forChild(routes),
+    CalendarModule,
+    InputSwitchModule,
+    AdminSharedModule,
+  ],
 })
 export class AdminModule {}

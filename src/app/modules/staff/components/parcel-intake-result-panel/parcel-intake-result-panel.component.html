@@ -1,0 +1,19 @@
+<div class="parcel-intake-result" *ngIf="result as r">
+  <span class="material-symbols-outlined parcel-intake-result-icon">check_circle</span>
+  <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.RESULT.TITLE' | translate }}</h5>
+
+  <dl class="parcel-intake-result-list">
+    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.TRACKING_NUMBER' | translate }}</dt>
+    <dd>{{ r.trackingNumber }}</dd>
+
+    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.COLLECTION_CODE' | translate }}</dt>
+    <dd>{{ r.collectionCode }}</dd>
+
+    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.AMOUNT' | translate }}</dt>
+    <dd>{{ r.amount }}</dd>
+  </dl>
+
+  <a class="admin-btn admin-btn-primary" [routerLink]="['/staff/parcels', r.parcelId, 'waybill']">
+    {{ 'STAFF.PARCEL_CONSIGN.RESULT.VIEW_WAYBILL' | translate }}
+  </a>
+</div>

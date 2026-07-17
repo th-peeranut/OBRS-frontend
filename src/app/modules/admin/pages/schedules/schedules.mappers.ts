@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   AdminLookupDto,
   AdminRouteDto,
@@ -43,6 +43,12 @@ export interface ScheduleRow {
   status: string;
   statusCode: string;
   updatedAt: string;
+  // OBRS-283: only ever populated for kind==='schedule' (trip) rows — a
+  // Schedule SET (kind==='set') has no such field on its DTO and always
+  // stays undefined here, so its delete button keeps the unconditional
+  // hard-delete path (see shared/lib/schedule-delete-mode.ts).
+  deletable?: boolean;
+  confirmedBookingCount?: number;
 }
 
 export interface Option {
@@ -274,6 +280,8 @@ export function toGeneratedScheduleRow(
     status: status.name,
     statusCode: status.code,
     updatedAt: formatDisplayDateTime(schedule.updatedAt ?? schedule.createdAt, dateLang),
+    deletable: schedule.deletable,
+    confirmedBookingCount: schedule.confirmedBookingCount,
   };
 }
 
@@ -451,13 +459,7 @@ export function toSchedulePayload(
 // boarding-action-error.ts's extractBoardingActionErrorCode() — branch on
 // the stable code, never the localized `message` (design-system §9).
 export function extractScheduleErrorCode(error: unknown): string | null {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code;
-    }
-  }
-  return null;
+  return extractApiErrorCode(error, null);
 }
 
 export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): CreateSchedulePayload {

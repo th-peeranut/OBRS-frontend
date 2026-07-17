@@ -2,25 +2,23 @@ import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/co
 import { Store, select } from '@ngrx/store';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 import {
-  catchError,
   combineLatest,
   firstValueFrom,
-  forkJoin,
   map,
   Observable,
-  of,
   startWith,
   Subject,
   takeUntil,
 } from 'rxjs';
 import dayjs from 'dayjs';
 import { capitalizeVehicleType, parsePricePerSeat } from '../../shared/lib/trip-format';
+import { buildMapsDirectionsUrl } from '../../shared/lib/maps-directions-url';
 import html2canvas from 'html2canvas';
-import QRCode from 'qrcode';
 import { BookingService } from '../../services/booking/booking.service';
-import { TicketService } from '../../services/ticket/ticket.service';
+import { BoardingQrService } from '../../shared/services/boarding-qr.service';
 import { BookingState } from '../../shared/interfaces/booking.interface';
 import {
+  BookingTicketItem,
   BookingTicketJourney,
   BookingTicketsData,
 } from '../../shared/interfaces/booking-ticket.interface';
@@ -60,6 +58,17 @@ interface TicketPassenger {
    * (e.g. 409 TICKET_NOT_CONFIRMED on a cancelled/refunded leg) — renders a
    * placeholder instead of blanking the whole page (OBRS-96). */
   qrUnavailable: boolean;
+  /** OBRS-325: true when this ticket's `seatNumber` is null (an open-seating
+   * schedule, `schedules.seating_mode = OPEN`, OBRS-321) — the template shows
+   * the open-seating label instead of `seat` (which stays `'-'`, same as the
+   * pre-existing "no data" placeholder). Always `false` before the ticket API
+   * response lands (store-only rows never have a real ticket seat yet). */
+  seatOpen: boolean;
+  /** OBRS-296: server-authoritative fare category — `null` on the
+   *  pre-API/store-only render (derived from `PassengerInfo.isAdult` there;
+   *  see `buildPassengerRows()`) until `buildPassengersFromApi()` overrides
+   *  it from the ticket response. */
+  fareCategory: 'adult' | 'child' | null;
 }
 type Locale = 'en' | 'th' | 'zh';
 
@@ -67,6 +76,9 @@ type Locale = 'en' | 'th' | 'zh';
   selector: 'app-e-ticket',
   templateUrl: './e-ticket.component.html',
   styleUrl: './e-ticket.component.scss',
+  // Component-scoped so its dedupe/cache state doesn't leak across page
+  // visits — see the class comment on BoardingQrService.
+  providers: [BoardingQrService],
 })
 export class ETicketComponent implements OnInit, OnDestroy {
   @ViewChild('ticketPaper') private ticketPaper?: ElementRef<HTMLElement>;
@@ -81,10 +93,19 @@ export class ETicketComponent implements OnInit, OnDestroy {
   vehicleType = '-';
   vehiclePlate = '-';
   seats = '-';
+  /** OBRS-325: true when every ticket in the outbound journey has a null
+   *  `seatNumber` — mirrors `TicketLeg.isOpenSeating` on the shared card. */
+  seatsOpen = false;
   passengerSummary = '-';
   paymentDate = '-';
   totalAmount = '0.00';
   isDownloadingTicket = false;
+  /** OBRS-269: outbound pickup-stop coords, threaded through from the tickets
+   *  API's `fromStop.latitude`/`longitude` in `applyApiOverrides()`. `null` until
+   *  the API response lands (store-only pre-API render) — the Navigate button
+   *  hides until then. */
+  originLatitude: number | null = null;
+  originLongitude: number | null = null;
 
   passengers: TicketPassenger[] = [];
   booker: TicketPassenger | null = null;
@@ -92,18 +113,6 @@ export class ETicketComponent implements OnInit, OnDestroy {
   private latestLocale: Locale = 'en';
   private latestStorePassengers: PassengerInfo[] | null = null;
   private lastTicketRequestBookingId: number | null = null;
-  /** Resolved QR data-URL / unavailable-flag per `ticketId`, keyed outside the
-   * `passengers` array so it survives the array being rebuilt on every
-   * locale switch (`applyApiOverrides` re-runs on each `combineLatest`
-   * emission, including a bare language change). */
-  private readonly qrStateByTicketId = new Map<
-    number,
-    { qrDataUrl: string; qrUnavailable: boolean }
-  >();
-  /** Guards against re-issuing the boarding-token GET for a ticket that is
-   * already fetched or in flight (locale switches re-run `applyApiOverrides`
-   * on the same tickets). */
-  private readonly fetchedTicketIds = new Set<number>();
 
   private readonly destroy$ = new Subject<void>();
   private readonly titleMap: Record<number, { en: string; th: string; zh: string }> = {
@@ -127,7 +136,7 @@ export class ETicketComponent implements OnInit, OnDestroy {
   constructor(
     private store: Store,
     private bookingService: BookingService,
-    private ticketService: TicketService,
+    private boardingQrService: BoardingQrService,
     private translateService: TranslateService
   ) {
     this.scheduleBooking$ = this.store.pipe(
@@ -187,6 +196,18 @@ export class ETicketComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  /** OBRS-269: opens Google Maps Directions from the user's current location to
+   *  the outbound pickup stop — a deep-link only (no Directions API call). The
+   *  template hides the button entirely when either coord is null, so this is a
+   *  defensive no-op rather than the primary gate. */
+  navigateToPickup(): void {
+    if (this.originLatitude == null || this.originLongitude == null) {
+      return;
+    }
+    const url = buildMapsDirectionsUrl(this.originLatitude, this.originLongitude);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }
+
   async downloadTicketImage(): Promise<void> {
     const ticketElement = this.ticketPaper?.nativeElement;
     if (!ticketElement || this.isDownloadingTicket) {
@@ -205,7 +226,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
             .querySelector('.ticket-paper')
             ?.classList.add('is-exporting');
         },
-        ignoreElements: (element) => element.classList.contains('download-btn'),
+        ignoreElements: (element) =>
+          element.classList.contains('download-btn') ||
+          element.classList.contains('ticket-nav-btn'),
       });
 
       const imageUrl = canvas.toDataURL('image/png');
@@ -418,6 +441,14 @@ export class ETicketComponent implements OnInit, OnDestroy {
         ticketNumber: '-',
         qrDataUrl: '',
         qrUnavailable: false,
+        // No ticket exists yet at this stage, so there is no real
+        // seat_number to inspect — mirrors seat above (real value fills in
+        // once buildPassengersFromApi runs).
+        seatOpen: false,
+        // OBRS-296: pre-API render — derived from the form's isAdult, same
+        // adult/child mapping as buildPassengersPayload(). Overridden by the
+        // server-authoritative value once buildPassengersFromApi() runs.
+        fareCategory: passenger.isAdult ? 'adult' : 'child',
       };
     });
   }
@@ -610,6 +641,8 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (fromName || toName) {
       this.route = this.buildRouteLabel(fromName, toName, !!inbound);
     }
+    this.originLatitude = outbound?.fromStop?.latitude ?? null;
+    this.originLongitude = outbound?.fromStop?.longitude ?? null;
 
     const travelDate = this.buildTravelDate(
       outbound?.departureDateTime,
@@ -642,6 +675,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
     if (apiPassengers.length > 0) {
       this.passengers = apiPassengers;
       this.seats = this.buildSeatList(apiPassengers);
+      // OBRS-325: every ticket on the outbound leg shares one schedule, so
+      // either all of them are open-seating or none are.
+      this.seatsOpen = apiPassengers.every((passenger) => passenger.seatOpen);
       this.fetchBoardingTokensForPassengers();
     }
 
@@ -666,6 +702,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
       ticketNumber: '-',
       qrDataUrl: '',
       qrUnavailable: false,
+      seatOpen: false,
+      // OBRS-296: the booker row has no fare category of its own.
+      fareCategory: null,
     };
   }
 
@@ -725,36 +764,101 @@ export class ETicketComponent implements OnInit, OnDestroy {
     storePassengers: PassengerInfo[] | null
   ): TicketPassenger[] {
     const tickets = journey?.tickets ?? [];
-    return tickets.map((ticket) => {
-      const seat = ticket.seatNumber?.trim() || '-';
+    return tickets.map((ticket, index) => {
+      const rawSeatNumber = ticket.seatNumber?.trim();
+      const seatOpen = !rawSeatNumber;
+      const seat = rawSeatNumber || '-';
       const ticketId = Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null;
-      const qrState = ticketId !== null ? this.qrStateByTicketId.get(ticketId) : undefined;
+      const qrState = ticketId !== null ? this.boardingQrService.getState(ticketId) : undefined;
 
       return {
         name: ticket.passengerName?.trim() || '-',
-        phone: this.findPhoneForSeat(seat, storePassengers),
+        phone: this.findPhoneForPassenger(
+          ticket,
+          index,
+          tickets.length,
+          seat,
+          storePassengers
+        ),
         seat,
         ticketId,
         ticketNumber: ticket.ticketNumber?.trim() || '-',
         qrDataUrl: qrState?.qrDataUrl ?? '',
         qrUnavailable: qrState?.qrUnavailable ?? false,
+        seatOpen,
+        // OBRS-296: server-authoritative — replaces the pre-API isAdult-derived
+        // guess from buildPassengerRows() once the ticket API response lands.
+        fareCategory: ticket.fareCategory ?? null,
       };
     });
   }
 
-  private findPhoneForSeat(
+  /**
+   * OBRS-350: under OPEN seating (Epic OBRS-318/321) `ticket.seatNumber` is
+   * null for every ticket, so `seat` collapses to `'-'` for every passenger
+   * and the original seat-keyed match could never tell passengers apart —
+   * every row resolved to the same (non-)match and showed '-'. Re-keys off a
+   * stable identity instead, without touching the ASSIGNED path at all.
+   */
+  private findPhoneForPassenger(
+    ticket: BookingTicketItem,
+    index: number,
+    ticketCount: number,
     seat: string,
     storePassengers: PassengerInfo[] | null
   ): string {
-    if (!seat || seat === '-') {
+    const passengers = storePassengers ?? [];
+    if (passengers.length === 0) {
       return '-';
     }
 
-    const match = (storePassengers ?? []).find(
-      (passenger) => passenger.passengerSeat?.trim() === seat
-    );
+    if (seat && seat !== '-') {
+      // ASSIGNED seating: real seat number present — unchanged, byte-for-byte,
+      // from the pre-OBRS-350 behavior. Never falls through to the OPEN
+      // strategies below, so existing ASSIGNED bookings can't regress.
+      const bySeat = passengers.find(
+        (passenger) => passenger.passengerSeat?.trim() === seat
+      );
+      return bySeat?.phoneNumber?.trim() || '-';
+    }
 
-    return match?.phoneNumber?.trim() || '-';
+    // OBRS-350 OPEN fallback 1: match by passenger name. `ticket.passengerName`
+    // often carries a title the store doesn't ("Mr. Abc Def" vs.
+    // firstName/lastName "Abc"/"Def"), so compare by containment rather than
+    // strict equality. Only trust it when exactly one store passenger
+    // matches — a duplicate name is ambiguous, not a match, and must not risk
+    // handing back a stranger's phone number.
+    const ticketName = ticket.passengerName?.trim().toLowerCase();
+    if (ticketName) {
+      const nameMatches = passengers.filter((passenger) => {
+        const storeName = this.buildStorePassengerName(passenger).toLowerCase();
+        return !!storeName && ticketName.includes(storeName);
+      });
+      if (nameMatches.length === 1) {
+        return nameMatches[0].phoneNumber?.trim() || '-';
+      }
+    }
+
+    // OBRS-350 OPEN fallback 2: positional index. Only safe when
+    // `storePassengers` and this journey's `tickets` are known to correspond
+    // 1:1 (same length) — e.g. a one-way OPEN booking, or a duplicate-name
+    // case where fallback 1 above was ambiguous. A round-trip where the store
+    // holds every passenger for the whole booking while `tickets` is a single
+    // leg can have a different length; guessing positionally there risks
+    // showing the wrong person's phone, so bail to '-' instead (same as
+    // today) rather than guess.
+    if (passengers.length === ticketCount) {
+      return passengers[index]?.phoneNumber?.trim() || '-';
+    }
+
+    return '-';
+  }
+
+  private buildStorePassengerName(passenger: PassengerInfo): string {
+    return [passenger.firstName, passenger.middleName, passenger.lastName]
+      .map((part) => part?.trim())
+      .filter((part): part is string => !!part)
+      .join(' ');
   }
 
   private buildVehiclePlate(vehicleNumber: string, numberPlate: string): string {
@@ -766,78 +870,31 @@ export class ETicketComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * OBRS-96: fetch one boarding token per ticket and render each as its own
-   * QR — replaces the old single booking-level QR. `forkJoin` with a
-   * per-inner `catchError` means one ticket's failure (e.g. 409
-   * `TICKET_NOT_CONFIRMED` on a cancelled/refunded/rescheduled-away leg)
-   * resolves to a "no token" sentinel instead of erroring the whole
-   * `forkJoin` — every other ticket's QR still renders. `fetchedTicketIds`
-   * guards against re-issuing the GET on a locale switch (`applyApiOverrides`
-   * re-runs on every `combineLatest` emission, including a bare language
-   * change) for a ticket already fetched or in flight.
+   * OBRS-96 / OBRS-221: fetch one boarding token per ticket and render each
+   * as its own QR — replaces the old single booking-level QR. Delegates the
+   * dedupe guard, per-ticket failure isolation, and QR rendering to
+   * `BoardingQrService` (shared verbatim with `SellReceiptPageComponent`),
+   * which no-ops (emits nothing) when every ticket here is already
+   * fetched/in-flight — including on a locale switch, since
+   * `applyApiOverrides` re-runs on every `combineLatest` emission.
    */
   private fetchBoardingTokensForPassengers(): void {
-    const pendingTicketIds = this.passengers
-      .map((passenger) => passenger.ticketId)
-      .filter(
-        (ticketId): ticketId is number =>
-          ticketId !== null && !this.fetchedTicketIds.has(ticketId)
-      );
+    const ticketIds = this.passengers.map((passenger) => passenger.ticketId);
 
-    if (pendingTicketIds.length === 0) {
-      return;
-    }
-    pendingTicketIds.forEach((ticketId) => this.fetchedTicketIds.add(ticketId));
-
-    forkJoin(
-      pendingTicketIds.map((ticketId) =>
-        this.ticketService.getBoardingToken(ticketId).pipe(
-          map((response) => ({
-            ticketId,
-            boardingToken: response?.data?.boardingToken?.trim() ?? '',
-          })),
-          // Isolate this ticket's failure (409 TICKET_NOT_CONFIRMED, 404, a
-          // transient network error, ...) so it can't blank the rest of the
-          // page — surfaced downstream as an empty boardingToken (placeholder).
-          catchError(() => of({ ticketId, boardingToken: '' }))
-        )
-      )
-    )
-      .pipe(takeUntil(this.destroy$))
-      .subscribe((results) => {
-        void this.applyBoardingTokenResults(results);
-      });
+    this.boardingQrService.fetchBoardingTokens(ticketIds, () =>
+      this.applyBoardingQrStates()
+    );
   }
 
-  private async applyBoardingTokenResults(
-    results: { ticketId: number; boardingToken: string }[]
-  ): Promise<void> {
-    for (const result of results) {
-      if (!result.boardingToken) {
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
-        continue;
-      }
-
-      try {
-        const qrDataUrl = await QRCode.toDataURL(result.boardingToken, {
-          width: 140,
-          margin: 1,
-          errorCorrectionLevel: 'M',
-        });
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl, qrUnavailable: false });
-      } catch {
-        this.qrStateByTicketId.set(result.ticketId, { qrDataUrl: '', qrUnavailable: true });
-      }
-    }
-
-    // Re-derive from the now-populated qrStateByTicketId map rather than
-    // mutating passenger objects in place, so a stray re-render always
-    // reflects the latest resolved state.
+  // Re-derive from the service's now-populated state rather than mutating
+  // passenger objects in place, so a stray re-render always reflects the
+  // latest resolved state.
+  private applyBoardingQrStates(): void {
     this.passengers = this.passengers.map((passenger) => {
       if (passenger.ticketId === null) {
         return passenger;
       }
-      const qrState = this.qrStateByTicketId.get(passenger.ticketId);
+      const qrState = this.boardingQrService.getState(passenger.ticketId);
       return qrState ? { ...passenger, ...qrState } : passenger;
     });
   }

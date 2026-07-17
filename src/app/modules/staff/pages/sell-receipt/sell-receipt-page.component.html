@@ -139,7 +139,7 @@
             </div>
             <div class="passenger-field">
               <span class="label">{{ 'E_TICKET.LABEL.SEAT' | translate }}</span>
-              <span class="value">{{ ticket.seat }}</span>
+              <span class="value">{{ ticket.seatOpen ? ('E_TICKET.LABEL.SEAT_OPEN' | translate) : ticket.seat }}</span>
             </div>
           </div>
         </div>

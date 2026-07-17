@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { UserUnlockModalComponent } from './user-unlock-modal.component';
-import { AdminModalBackdropDirective } from '../../../components/admin-modal-backdrop.directive';
+import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UserRow } from '../user-management.mappers';
 
 const LOCKED_ROW: UserRow = {
@@ -15,7 +15,8 @@ const LOCKED_ROW: UserRow = {
   roles: ['Admin'],
   status: 'Active',
   statusCode: 'active',
-  lastUpdated: '-',
+  lastLogin: '-',
+  hasLoggedIn: false,
   locked: true,
 };
 

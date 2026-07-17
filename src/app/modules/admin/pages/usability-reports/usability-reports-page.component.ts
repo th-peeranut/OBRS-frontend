@@ -6,6 +6,7 @@ import { environment } from '../../../../../environments/environment';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { UsabilityReportBadgeRefreshService } from '../../../../shared/services/usability-report-badge-refresh.service';
+import { AuthService } from '../../../../auth/auth.service';
 import { UsabilityReportsStore } from './usability-reports.store';
 import {
   UsabilityReportDetail,
@@ -14,12 +15,16 @@ import {
 } from '../../../../shared/interfaces/usability-report.interface';
 import {
   DETAIL_STATUS_VALUES,
+  OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
+  canMarkAsDuplicate as canMarkAsDuplicatePure,
   categoryLabel as categoryLabelPure,
   displayDateTime as displayDateTimePure,
+  extractUsabilityReportErrorCode,
   formatBytes as formatBytesPure,
+  removeRow,
   seedDecisionStatus,
   statusClass as statusClassPure,
   statusLabel as statusLabelPure,
@@ -33,16 +38,45 @@ import {
   styleUrl: './usability-reports-page.component.scss',
 })
 export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
+  // OBRS-378: the list is now server-filtered by status (?status=), so
+  // allReports IS the active tab's rows — no more client-side filteredReports.
   protected allReports: UsabilityReportSummary[] = [];
+  // Total row count for the active tab, from the pagination envelope — drives
+  // the Showing X-Y of N footer text.
+  protected totalElements = 0;
+  // OBRS-403: server-side pagination — trust the backend's `number`/
+  // `totalPages` directly, never re-derive with Math.ceil(). pageSize mirrors
+  // UsabilityReportsStore.PAGE_SIZE (kept as a separate constant here — the
+  // rangeStart/rangeEnd getters are pure display math over currentPage, no
+  // dependency on the store's internals).
+  protected currentPage = 1;
+  protected totalPages = 1;
+  protected readonly pageSize = 20;
   protected isRefreshing = false;
   protected refreshFailed = false;
   protected errorMessage = '';
   protected readonly skeletonRows = Array.from({ length: 5 });
 
-  protected selectedStatusFilter = '';
+  // OBRS-378: seeded to a concrete role default in ngOnInit and kept concrete
+  // thereafter — the filter dropdown drops its [placeholder] binding
+  // (design-system.md §3.1 leak: a placeholder header would emit '' and
+  // re-enter the retired "show all" mode), so its visible label always comes
+  // from the seeded value via the dropdown's own selectedLabel. Typed to
+  // include '' only to match UsabilityReportsStore.setStatus()'s signature.
+  protected selectedStatusFilter: UsabilityReportStatus | '' = 'new';
   // Built from i18n in ngOnInit (and rebuilt on language change) so the admin
   // dropdowns match the translated status labels shown in the table.
   protected statusFilterOptions: StatusOption[] = [];
+
+  // OBRS-370: owner is a SCREEN-ONLY tier on this page — it may view and move
+  // a report FORWARD through non-terminal statuses, but the backend 403s a
+  // non-admin on the terminal decisions (resolved/rejected — terminal, email
+  // the reporter) and on the Jira key. Sourced from the *actual* held role
+  // (not hasAnyRole, which an owner satisfies for 'admin' too under the FE's
+  // area-based access widening — see boarding-entry-page.component.ts for the
+  // same raw-role precedent) so the gate here matches the backend's real
+  // authority check and the owner never sees a control that would 403.
+  protected isAdmin = false;
 
   // Detail modal
   protected selectedReportId: string | null = null;
@@ -61,6 +95,18 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // so dismissing it never closes the detail modal underneath.
   protected lightboxImageUrl: string | null = null;
 
+  // OBRS-376: mark-as-duplicate candidate picker — another layer above the
+  // detail modal (same modal-over-modal shape as the lightbox), but can also
+  // be opened standalone from a table row with no detail modal open at all.
+  protected isPickerOpen = false;
+  protected pickerCandidates: UsabilityReportSummary[] = [];
+  protected isMarkingDuplicate = false;
+  private pickerSourceId: string | null = null;
+  // Whether the picker was opened from the detail modal's secondary button
+  // (vs. the row's action) — only then does a successful mark also close the
+  // detail modal underneath.
+  private pickerOpenedFromDetail = false;
+
   // In-memory cache of full report detail, keyed by report id, so reopening
   // the same report doesn't re-issue the GET. Invalidated on status save.
   private readonly detailCache = new Map<string, UsabilityReportDetail>();
@@ -72,10 +118,12 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     private readonly adminApiService: AdminApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
-    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService
+    private readonly badgeRefreshService: UsabilityReportBadgeRefreshService,
+    private readonly authService: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.isAdmin = this.authService.getRoles().includes('admin');
     this.buildStatusOptions();
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
@@ -86,6 +134,10 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       .subscribe((data) => {
         if (data) {
           this.allReports = data.content;
+          this.totalElements = data.totalElements;
+          // Spring's `number` is 0-based; the paginator/footer render 1-based.
+          this.currentPage = data.number + 1;
+          this.totalPages = data.totalPages;
         }
       });
 
@@ -103,7 +155,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
             : '';
       });
 
-    void this.store.refresh();
+    // OBRS-378: the list is server-filtered by status — owner defaults to
+    // 'new' (awaiting screening), admin defaults to 'accepted' (owner-vetted).
+    // setStatus() already calls refresh() internally, so this replaces (not
+    // supplements) the old unconditional store.refresh() — calling both would
+    // double-fetch on first load.
+    this.selectedStatusFilter = this.isAdmin ? 'accepted' : 'new';
+    void this.store.setStatus(this.selectedStatusFilter);
   }
 
   ngOnDestroy(): void {
@@ -115,15 +173,43 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     return this.isRefreshing && !this.store.hasValue;
   }
 
-  protected get filteredReports(): UsabilityReportSummary[] {
-    if (!this.selectedStatusFilter) {
-      return this.allReports;
-    }
-    return this.allReports.filter((r) => r.status === this.selectedStatusFilter);
+  // OBRS-378: maps a '' selection (defensive — the dropdown's [placeholder]
+  // binding is dropped so this shouldn't fire in practice, design-system.md
+  // §3.1) back to the role default rather than ever sending an undefined
+  // status to the server.
+  protected onStatusFilterChange(value: string): void {
+    const status = (value || (this.isAdmin ? 'accepted' : 'new')) as UsabilityReportStatus;
+    this.selectedStatusFilter = status;
+    // OBRS-403 (Scrutinize): deliberately does NOT seed `currentPage = 1` here.
+    // The store owns the page (setStatus resets it to 0); `currentPage` is a
+    // pure mirror of `data.number + 1`. Writing it locally is unobservable on
+    // the real tab-switch path anyway — setStatus() clears the cache
+    // synchronously, so isLoading flips true and the whole footer (and with it
+    // the paginator) leaves the DOM until fresh data lands. Worse, in the one
+    // case it IS observable it renders a lie: re-picking the ALREADY-selected
+    // option still emits valueChange (admin-dropdown.selectOption emits
+    // unconditionally), setStatus's `if (this.status !== status)` guard then
+    // skips clear(), isLoading stays false, and the paginator would show
+    // "1 / N" while the store is still fetching page N.
+    void this.store.setStatus(status);
   }
 
-  protected onStatusFilterChange(value: string): void {
-    this.selectedStatusFilter = value ?? '';
+  // OBRS-403: server-side page change — 1-based in the template/paginator,
+  // 0-based on the wire (Spring Pageable).
+  protected onPageChange(page: number): void {
+    void this.store.setPage(page - 1);
+  }
+
+  // Mirrors bookings-page.component.ts's getters of the same name, but
+  // computed from the server's page number/total rather than a locally-sliced
+  // array — the backend already tells us exactly how many rows are on this
+  // page (data.number/totalElements), there is nothing to re-derive.
+  protected get rangeStart(): number {
+    return this.totalElements === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1;
+  }
+
+  protected get rangeEnd(): number {
+    return Math.min(this.currentPage * this.pageSize, this.totalElements);
   }
 
   // Whole-row click is a MOUSE convenience for opening the detail modal. The
@@ -213,8 +299,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // decision-only dropdown. 'new'/'in_review' are triage states, not outcomes
   // — the dropdown starts empty (placeholder, Save disabled) until the admin
   // actively picks one (design-system.md §3.1).
+  //
+  // OBRS-370: additionally never pre-seed a value the current role can't see
+  // in its own detailStatusOptions — e.g. an owner opening a report an admin
+  // already resolved/rejected must not land with that terminal value silently
+  // selected (Save enabled) behind a dropdown that no longer lists it.
   private seedStatus(status: UsabilityReportStatus | ''): UsabilityReportStatus | '' {
-    return seedDecisionStatus(status);
+    const seeded = seedDecisionStatus(status);
+    if (seeded && !this.detailStatusOptions.some((option) => option.value === seeded)) {
+      return '';
+    }
+    return seeded;
   }
 
   // Best-effort, toast-free promote of a freshly-opened 'new' report to
@@ -227,10 +322,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private autoPromoteToInReview(id: string): void {
     // Apply the promote OPTIMISTICALLY — before the PUT resolves — so the UI
     // reacts instantly instead of waiting on the live round-trip (~2s): flip
-    // the table row to in_review and drop the sidebar "new" badge by one. Both
-    // are reverted if the server rejects the promote.
-    this.setRowStatus(id, 'in_review');
-    this.badgeRefreshService.adjustBy(-1);
+    // the table row to in_review (or remove it, if that leaves the active
+    // tab — e.g. promoting out of the 'new' tab) and drop the sidebar "new"
+    // badge by one. Both are reverted if the server rejects the promote.
+    this.applyRowStatus(id, 'in_review');
+    this.badgeRefreshService.adjustBy('new', -1);
 
     this.adminApiService
       .updateUsabilityReportStatus(id, 'in_review', null)
@@ -247,18 +343,60 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           // Revert the optimistic changes (toast-free, per method doc). The
           // common failure is the stale cross-session 400 (the report was
           // already advanced elsewhere); the periodic count poll / NavigationEnd
-          // refetch reconciles the exact number regardless.
-          this.setRowStatus(id, 'new');
-          this.badgeRefreshService.adjustBy(1);
+          // refetch reconciles the exact number regardless. A promoted row may
+          // have been REMOVED (not just relabeled) by applyRowStatus above, so
+          // it can't be surgically restored — reconcile via a full refresh.
+          void this.store.refresh();
+          this.badgeRefreshService.adjustBy('new', 1);
         },
       });
   }
 
-  private setRowStatus(id: string, status: UsabilityReportStatus): void {
-    this.store.mutate((current) => ({
-      ...current,
-      content: updateRowStatus(current.content, id, status),
-    }));
+  // OBRS-378: shared optimistic-mutate helper for every status change on this
+  // page (auto-promote, decision save/dismiss). The list is server-filtered
+  // by ?status=, so a row whose NEW status no longer matches the active tab
+  // must be REMOVED from the client-side cache, not just relabeled in place —
+  // otherwise a patched-but-out-of-tab row keeps rendering until the next
+  // full refresh.
+  private applyRowStatus(id: string, status: UsabilityReportStatus): void {
+    const leavesTab = this.selectedStatusFilter !== '' && status !== this.selectedStatusFilter;
+    this.store.mutate((current) =>
+      leavesTab
+        ? {
+            ...current,
+            content: removeRow(current.content, id),
+            totalElements: Math.max(0, current.totalElements - 1),
+          }
+        : { ...current, content: updateRowStatus(current.content, id, status) }
+    );
+
+    // Only a row that LEFT the active tab can empty this page; a relabel-in-
+    // place keeps the row count identical, so there is nothing to step back
+    // from. The emptied-page rule itself lives in stepBackIfPageEmptied().
+    if (leavesTab) {
+      this.stepBackIfPageEmptied();
+    }
+  }
+
+  // The single owner of the "this mutation emptied a non-first page" rule —
+  // without it the admin is stranded on a blank page until they manually
+  // navigate back. Both of this page's status-mutation paths funnel here:
+  //
+  //  - applyRowStatus() (auto-promote, decision save/dismiss) calls it
+  //    synchronously after its optimistic cache mutate, gated on leavesTab;
+  //  - mark/un-mark-as-duplicate (OBRS-376) calls it from .then() after a full
+  //    store.refresh() — that path can't optimistically mutate, because
+  //    duplicateCount is server-derived, and 'duplicate' is itself a
+  //    selectable tab (STATUS_FILTER_VALUES), so marking/unmarking the last
+  //    row of a non-first page hits this same case.
+  //
+  // Both read post-mutation state: `currentPage` mirrors data.number + 1 via
+  // the data$ subscription, which the store emits synchronously before
+  // refresh() resolves.
+  private stepBackIfPageEmptied(): void {
+    if (this.currentPage > 1 && this.store.value?.content.length === 0) {
+      this.onPageChange(this.currentPage - 1);
+    }
   }
 
   protected closeDetail(): void {
@@ -273,9 +411,17 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   }
 
   // The detail modal's backdrop directive routes both ESC and backdrop-click
-  // here. When the lightbox is open it sits above the detail modal, so it
-  // must be dismissed first without closing the detail modal underneath.
+  // here. The duplicate picker and the lightbox each sit above the detail
+  // modal (in that priority — the picker can itself be opened while the
+  // detail modal is showing), so the topmost open layer must be dismissed
+  // first without closing the detail modal underneath. The picker owns its
+  // OWN `adminModalBackdrop` directive instance (see
+  // UsabilityReportDuplicatePickerComponent doc comment), so this only needs
+  // to no-op — not actively close it — when the picker is open.
   protected onDetailBackdropDismiss(): void {
+    if (this.isPickerOpen) {
+      return;
+    }
     if (this.lightboxImageUrl) {
       this.closeLightbox();
       return;
@@ -327,11 +473,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     const id = this.selectedReportId;
     const status = this.selectedDetailStatus as UsabilityReportStatus;
 
-    // Optimistic update
-    this.store.mutate((current) => ({
-      ...current,
-      content: updateRowStatus(current.content, id, status),
-    }));
+    // Optimistic update — this is also THE dismiss path: an owner or admin
+    // picking 'dismissed' in the modal saves through here, so it must go
+    // through the same tab-leaving-removal logic as the auto-promote above
+    // (design-system.md §6 / OBRS-378).
+    this.applyRowStatus(id, status);
 
     this.isSavingStatus = true;
     this.adminApiService
@@ -356,8 +502,185 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           this.alertService.error(
             this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED')
           );
+          // The optimistic applyRowStatus() above may have REMOVED the row
+          // (a leaves-tab status) — on a failed save that removal must not
+          // stick, so reconcile via a full refresh (parallel to the
+          // auto-promote-revert above; exactly-once, one line).
+          void this.store.refresh();
         },
       });
+  }
+
+  // OBRS-378: the admin-only "Pull Back to Review" action on an already-
+  // dismissed report's detail modal — sets the decision status to in_review
+  // and reuses saveStatus() end-to-end (optimistic mutate, cache
+  // invalidation, toasts, badge trigger, close-on-success) rather than a
+  // parallel HTTP call path.
+  protected pullBackToReview(): void {
+    this.selectedDetailStatus = 'in_review';
+    this.saveStatus();
+  }
+
+  // ── OBRS-376: mark / un-mark as duplicate ─────────────────────────────────
+
+  // Admin-only gate, mirrors detailStatusOptions' isAdmin gate above — owner
+  // is screen-only and must never see the mark/un-mark controls or the picker.
+  protected canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
+    return this.isAdmin && canMarkAsDuplicatePure(status);
+  }
+
+  protected canUnmarkDuplicate(status: UsabilityReportStatus): boolean {
+    return this.isAdmin && status === 'duplicate';
+  }
+
+  // Opens the picker with candidates pre-filtered to exclude the report
+  // itself and any report already status==='duplicate' — mirroring the
+  // backend's own REPORT_CANONICAL_SELF_REFERENCE / REPORT_CANONICAL_ALREADY_DUPLICATE
+  // guards so the admin can't even select an invalid target.
+  protected openDuplicatePicker(id: string): void {
+    this.pickerSourceId = id;
+    this.pickerOpenedFromDetail = this.selectedReportId === id;
+    this.pickerCandidates = this.allReports.filter(
+      (r) => r.id !== id && r.status !== 'duplicate'
+    );
+    this.isPickerOpen = true;
+  }
+
+  protected onPickerCancel(): void {
+    this.isPickerOpen = false;
+    this.pickerSourceId = null;
+    this.pickerCandidates = [];
+    this.pickerOpenedFromDetail = false;
+  }
+
+  protected onPickerConfirm(candidateId: string): void {
+    if (!this.pickerSourceId || this.isMarkingDuplicate) {
+      return;
+    }
+    // QA fix (OBRS-376 type-safety sweep): `candidateId` is typed string per
+    // the picker's `confirm: EventEmitter<string>` contract (locked UX
+    // spec), but its actual runtime value is whatever
+    // `UsabilityReportSummary.id` really is — a JSON number per the live API
+    // (confirmed by QA), despite that field's string type (a separate,
+    // wider follow-up card — not fixed here). `Number()` coerces either
+    // representation correctly; the NaN guard makes this an explicit, safe
+    // conversion for the PATCH body's `canonicalId: number` rather than
+    // something that only "happens to work" because both
+    // `Number(42)`/`Number('42')` resolve to `42`.
+    const canonicalId = Number(candidateId);
+    if (Number.isNaN(canonicalId)) {
+      return;
+    }
+    const id = this.pickerSourceId;
+    const openedFromDetail = this.pickerOpenedFromDetail;
+
+    this.isMarkingDuplicate = true;
+    this.adminApiService
+      .markUsabilityReportAsDuplicate(id, canonicalId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.isMarkingDuplicate = false;
+          this.isPickerOpen = false;
+          this.pickerSourceId = null;
+          this.pickerCandidates = [];
+          this.pickerOpenedFromDetail = false;
+          // Invalidate the cached detail — status/duplicate fields changed.
+          this.detailCache.delete(id);
+          this.alertService.success(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_SUCCESS')
+          );
+          // duplicateCount on the canonical report is server-derived —
+          // refetch rather than hand-compute it. Step back a page afterwards
+          // if this marked the last row off the active tab's last page.
+          void this.store.refresh().then(() => this.stepBackIfPageEmptied());
+          if (openedFromDetail) {
+            this.closeDetail();
+          }
+        },
+        error: (error: unknown) => {
+          this.isMarkingDuplicate = false;
+          this.alertService.error(
+            this.translate.instant(this.duplicateMarkErrorKey(error))
+          );
+          // Picker stays open so the admin can pick a different candidate.
+        },
+      });
+  }
+
+  private duplicateMarkErrorKey(error: unknown): string {
+    const code = extractUsabilityReportErrorCode(error);
+    switch (code) {
+      case 'REPORT_CANONICAL_NOT_FOUND':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_CANONICAL_NOT_FOUND';
+      case 'REPORT_CANONICAL_SELF_REFERENCE':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_SELF_REFERENCE';
+      case 'REPORT_CANONICAL_ALREADY_DUPLICATE':
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.ERROR_ALREADY_DUPLICATE';
+      default:
+        return 'ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_FAILED';
+    }
+  }
+
+  // Un-mark reuses the EXISTING status-update endpoint (status -> 'in_review')
+  // rather than a dedicated un-mark endpoint — the backend clears the
+  // duplicate link server-side on that transition.
+  protected async unmarkDuplicate(id: string): Promise<void> {
+    const confirmed = await this.alertService.confirm({
+      title: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TITLE'),
+      text: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_CONFIRM_TEXT'),
+      confirmButtonText: this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_ACTION'),
+      cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
+    });
+    if (!confirmed) {
+      return;
+    }
+
+    this.adminApiService
+      .updateUsabilityReportStatus(id, 'in_review', null)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.detailCache.delete(id);
+          this.alertService.success(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_SUCCESS')
+          );
+          // Same step-back as onPickerConfirm above — un-marking also leaves
+          // the 'duplicate' tab if that's the active filter.
+          void this.store.refresh().then(() => this.stepBackIfPageEmptied());
+          if (this.selectedReportId === id) {
+            this.closeDetail();
+          }
+        },
+        error: () => {
+          this.alertService.error(
+            this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_FAILED')
+          );
+        },
+      });
+  }
+
+  // Display-only helper for the "ซ้ำกับ #X" link — duplicateOfId is a
+  // number (backend PK), openDetail()'s id param is this page's string id
+  // shape; reuses the existing openDetail() rather than a second fetch path.
+  // No role gate here — an owner may click through to the canonical report,
+  // same read-only visibility as the status chip/count badge (§ OWNER
+  // visibility in the UX spec).
+  //
+  // QA fix (OBRS-376 type-safety sweep): openDetail()'s optimistic-open
+  // lookup (`allReports.find(r => r.id === id)`, design-system.md §6) is a
+  // strict `===` against whatever runtime value is passed in. Every OTHER
+  // call site passes `report.id` UNCONVERTED — its real runtime value is a
+  // JSON number (confirmed live by QA), despite `UsabilityReportSummary.id`
+  // being TYPED string (separate, wider follow-up card — not fixed here;
+  // see the picker's filteredCandidates fix, same root cause). Converting
+  // via `String(canonicalId)` would silently break that `===` match
+  // (`42 === "42"` is false), dropping the optimistic pre-fill for exactly
+  // this one entry point — so this deliberately forwards the real number
+  // through, matching every other caller's runtime shape, rather than
+  // "honestly" stringifying it.
+  protected openCanonicalReport(canonicalId: number): void {
+    this.openDetail(canonicalId as unknown as string);
   }
 
   protected categoryLabel(category: string): string {
@@ -395,6 +718,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   private buildStatusOptions(): void {
     const translateFn = (key: string) => this.translate.instant(key);
     this.statusFilterOptions = buildStatusOptionList(STATUS_FILTER_VALUES, translateFn);
-    this.detailStatusOptions = buildStatusOptionList(DETAIL_STATUS_VALUES, translateFn);
+    // OBRS-370: a non-admin (owner) is a screen-only tier — it may only move a
+    // report forward through the non-terminal statuses, never finalize it.
+    this.detailStatusOptions = buildStatusOptionList(
+      this.isAdmin ? DETAIL_STATUS_VALUES : OWNER_DETAIL_STATUS_VALUES,
+      translateFn
+    );
   }
 }

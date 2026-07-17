@@ -14,7 +14,10 @@ function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
     vehicleType: 'Van',
     vehiclePlate: '12/1234',
     seats: '1',
+    isOpenSeating: false,
     distanceKm: 45,
+    pickupLatitude: null,
+    pickupLongitude: null,
     ...overrides,
   };
 }
@@ -48,6 +51,26 @@ describe('ETicketCardComponent', () => {
     }).getTicketDownloadFilename();
 
     expect(filename).toBe('e-ticket-T-ABC--T-DEF.png');
+  });
+
+  it('navigateToPickup opens the Google Maps directions deep-link for the leg pickup coords', () => {
+    const openSpy = spyOn(window, 'open');
+
+    component.navigateToPickup(buildLeg({ pickupLatitude: 13.7563, pickupLongitude: 100.5018 }));
+
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://www.google.com/maps/dir/?api=1&destination=13.7563,100.5018&travelmode=driving',
+      '_blank',
+      'noopener,noreferrer'
+    );
+  });
+
+  it('navigateToPickup does nothing when the leg has no pickup coords', () => {
+    const openSpy = spyOn(window, 'open');
+
+    component.navigateToPickup(buildLeg({ pickupLatitude: null, pickupLongitude: null }));
+
+    expect(openSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -139,5 +162,46 @@ describe('ETicketCardComponent — leg rendering', () => {
     expect(fixture.debugElement.queryAll(By.css('.ticket-total')).length).toBe(1);
     expect(fixture.debugElement.queryAll(By.css('.ticket-qr')).length).toBe(1);
     expect(fixture.debugElement.queryAll(By.css('.passenger-row')).length).toBe(1);
+  });
+
+  it('OBRS-269: hides the Navigate button for a leg with no pickup coords', () => {
+    component.legs = [buildLeg({ pickupLatitude: null, pickupLongitude: null })];
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.ticket-nav-btn'))).toBeNull();
+  });
+
+  it('OBRS-269: shows the Navigate button for a leg with pickup coords', () => {
+    component.legs = [buildLeg({ pickupLatitude: 13.7563, pickupLongitude: 100.5018 })];
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.ticket-nav-btn'))).not.toBeNull();
+  });
+
+  it('OBRS-269: round-trip shows a Navigate button per leg that has pickup coords, independently', () => {
+    component.legs = [
+      buildLeg({ pickupLatitude: 13.7563, pickupLongitude: 100.5018 }),
+      buildLeg({ pickupLatitude: null, pickupLongitude: null }),
+    ];
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.queryAll(By.css('.ticket-nav-btn')).length).toBe(1);
+  });
+
+  it('OBRS-325: shows the open-seating label instead of the seat list when isOpenSeating is true', () => {
+    component.legs = [buildLeg({ isOpenSeating: true, seats: '-' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('E_TICKET.LABEL.SEAT_OPEN');
+  });
+
+  it('OBRS-325 (ASSIGNED regression): shows the real seat number unchanged when isOpenSeating is false', () => {
+    component.legs = [buildLeg({ isOpenSeating: false, seats: 'A5' })];
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement.textContent || '').replace(/\s+/g, ' ');
+    expect(text).toContain('A5');
+    expect(text).not.toContain('E_TICKET.LABEL.SEAT_OPEN');
   });
 });

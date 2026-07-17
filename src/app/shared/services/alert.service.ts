@@ -18,6 +18,23 @@ export class AlertService {
     return Swal.fire({ icon: 'error', title: message });
   }
 
+  /**
+   * Error alert for the AuthGuard no-permission bounce (OBRS-265). Same as
+   * error(), but obscures the just-bounced-to destination behind a blurred,
+   * slightly darker backdrop (via the `.swal-guard-backdrop` container class in
+   * styles.scss) so the page underneath reads as calm rather than a fully
+   * legible page with a modal floating on top. Not a security control — the
+   * destination is a page the user is already allowed to see.
+   */
+  permissionDenied(message: string) {
+    this.isLoadingVisible = false;
+    return Swal.fire({
+      icon: 'error',
+      title: message,
+      customClass: { container: 'swal-guard-backdrop' },
+    });
+  }
+
   info(message: string) {
     this.isLoadingVisible = false;
     return Swal.fire({ icon: 'info', title: message });

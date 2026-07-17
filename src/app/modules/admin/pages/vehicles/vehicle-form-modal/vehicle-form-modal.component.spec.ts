@@ -104,19 +104,18 @@ function fillValidForm(component: VehicleFormModalComponent): void {
 
 describe('VehicleFormModalComponent', () => {
   describe('create mode', () => {
-    // NOTE: this is the flagged discrepancy vs. the promotions/user form
-    // modals and vs. design-system.md §3.1 — the pre-split
-    // VehiclesPageComponent.openCreateModal actually pre-seeded
-    // vehicleType/status with the FIRST option's code (not an empty
-    // placeholder). Reproduced verbatim; see the split report.
-    it('opens with vehicleType/status pre-seeded to the first option (pre-existing behavior, not design-system §3.1 compliant)', () => {
+    // Per design-system.md §3.1 ("no pre-seeded default"), create mode opens
+    // with every select BLANK (empty = placeholder), matching the
+    // promotions/user form modals. OBRS-262 fixed the deviation OBRS-261 had
+    // carried over verbatim (first-option pre-seed) from the pre-split modal.
+    it('opens with vehicleType/status blank (design-system §3.1, no pre-seeded default)', () => {
       const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
 
       openCreate(component);
 
       const form = (component as any).vehicleForm;
-      expect(form.get('vehicleType').value).toBe('van');
-      expect(form.get('status').value).toBe('active');
+      expect(form.get('vehicleType').value).toBe('');
+      expect(form.get('status').value).toBe('');
       expect(form.get('numberPlate').value).toBe('');
       expect(form.get('vehicleNumber').value).toBe('');
     });
@@ -184,6 +183,79 @@ describe('VehicleFormModalComponent', () => {
     });
   });
 
+  // OBRS-316 Gap 1 R1 guard: PUT is a full-replace, so a save before the real
+  // detail fetch resolves (or after it fails) would silently NULL all 7 new
+  // attribute fields. isSaveBlocked backs both the disabled Save button and
+  // the submitVehicle() short-circuit (Enter-in-text-field bypasses [disabled]).
+  describe('isSaveBlocked / submitVehicle R1 guard', () => {
+    it('is blocked while the edit detail fetch is in flight', () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      openEdit(component, { ...VAN_ROW });
+
+      expect((component as any).isEditDetailLoading).toBeTrue();
+      expect((component as any).isSaveBlocked).toBeTrue();
+    });
+
+    it('is blocked after the edit detail fetch fails, and stays blocked (not silently swallowed)', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.error(new Error('network down'));
+      await promise;
+
+      expect((component as any).isEditDetailError).toBeTrue();
+      expect((component as any).isEditDetailLoading).toBeFalse();
+      expect((component as any).isSaveBlocked).toBeTrue();
+    });
+
+    it('is not blocked once the edit detail fetch succeeds', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      expect((component as any).isSaveBlocked).toBeFalse();
+    });
+
+    it('is never blocked in create mode', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+      openCreate(component);
+
+      expect((component as any).isSaveBlocked).toBeFalse();
+    });
+
+    it('submitVehicle() short-circuits (no API call) while blocked, even with a valid form', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+      openEdit(component, { ...VAN_ROW }); // fetch still in flight -> blocked
+      fillValidForm(component);
+
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).not.toHaveBeenCalled();
+    });
+
+    it('resets isEditDetailError to false on close', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.error(new Error('network down'));
+      await promise;
+      expect((component as any).isEditDetailError).toBeTrue();
+
+      (component as any).isOpen = false;
+      component.ngOnChanges({ isOpen: new SimpleChange(true, false, false) });
+
+      expect((component as any).isEditDetailError).toBeFalse();
+    });
+  });
+
   describe('isFieldInvalid', () => {
     it('is false until the field is touched/dirty', () => {
       const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
@@ -248,14 +320,81 @@ describe('VehicleFormModalComponent', () => {
     });
 
     it('updates a vehicle by id when in edit mode', async () => {
-      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
-      openEdit(component, { ...VAN_ROW });
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+      // OBRS-316 Gap 1 R1 guard: submit is blocked until the detail fetch
+      // resolves, so this must await it first (matching the real edit flow) —
+      // see the "isSaveBlocked / submitVehicle R1 guard" describe block below
+      // for the blocked-while-loading/failed cases.
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
       fillValidForm(component);
 
       await (component as any).submitVehicle();
 
       expect(adminApi.updateVehicle).toHaveBeenCalledWith(1, jasmine.any(Object));
       expect(component.reloadStructure).toHaveBeenCalled();
+    });
+
+    // OBRS-316 Gap 1: PUT is a full-replace, so create MUST serialize all 7
+    // vehicle-attribute keys (blank -> null) even though the admin never
+    // touched them.
+    it('sends all 7 vehicle-attribute keys (null when blank) on create', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+      openCreate(component);
+      fillValidForm(component);
+
+      await (component as any).submitVehicle();
+
+      expect(adminApi.createVehicle).toHaveBeenCalledWith({
+        vehicleType: 'van',
+        numberPlate: 'NEW-PLATE',
+        vehicleNumber: 'NEW-NUM',
+        status: 'active',
+        brand: null,
+        model: null,
+        manufactureYear: null,
+        colour: null,
+        engineCc: null,
+        chassisNumber: null,
+        note: null,
+      });
+    });
+
+    // Edit must echo the server-loaded attribute values back on the PUT — the
+    // whole point of the R1 guard is that these are never silently dropped.
+    it('echoes the loaded vehicle-attribute values (no null-drop) on edit', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(
+        detailResponse({
+          brand: 'Toyota',
+          model: 'Commuter',
+          manufactureYear: 2019,
+          colour: 'White',
+          engineCc: 2982,
+          chassisNumber: 'CH-000123',
+          note: 'Rear AC unit replaced.',
+        })
+      );
+      getVehicleById$.complete();
+      await promise;
+
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).toHaveBeenCalledWith(1, jasmine.objectContaining({
+        brand: 'Toyota',
+        model: 'Commuter',
+        manufactureYear: 2019,
+        colour: 'White',
+        engineCc: 2982,
+        chassisNumber: 'CH-000123',
+        note: 'Rear AC unit replaced.',
+      }));
     });
 
     // NOTE (flagged discrepancy vs. PromotionFormModalComponent): the

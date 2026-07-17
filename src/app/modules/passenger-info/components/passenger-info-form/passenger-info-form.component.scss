@@ -39,6 +39,20 @@
   text-align: center;
 }
 
+// OBRS-296: fare-category radio group (adult/child) — reuses the existing
+// gender-radio .form-check-inline styling below; only the label + child hint
+// need their own rule.
+.fare-category-label {
+  display: block;
+  font-weight: $font-weight-semibold;
+  color: $text-lightblack;
+}
+
+.fare-category-hint {
+  display: block;
+  color: $text-lightgrey;
+}
+
 .form-row {
   display: flex;
   row-gap: $space-2xs;
@@ -65,10 +79,204 @@
   display: flex;
   justify-content: center;
   width: 100%;
+  // Safety net (OBRS-242, design-system §8 responsiveness): the seat map
+  // itself never grows past its own fixed grid, but on very narrow
+  // viewports this keeps it scrolling in its own container instead of the
+  // page body ever having to scroll horizontally.
+  overflow-x: auto;
 }
 
 .seat-map-inner {
   width: 50%;
+}
+
+// Active-passenger chip selector (OBRS-242): one row per leg, above its
+// shared seat map. Chips wrap on narrow viewports (design-system §8).
+.seat-active-label {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $text-lightblack;
+}
+
+.seat-passenger-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+}
+
+.seat-passenger-chip {
+  display: flex;
+  align-items: center;
+  gap: $space-3xs;
+  padding: $space-3xs $space-sm;
+  border-radius: $radius-pill;
+  border: 1px solid $primary-lightgrey;
+  background: $primary-white;
+  color: $text-lightblack;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+  &.active {
+    border-color: $brand-customer-strong;
+    color: $brand-customer-strong;
+    background: $secondary-light-blue;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $brand-customer-strong;
+    outline-offset: 2px;
+  }
+}
+
+.seat-passenger-chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: $radius-circle;
+  background: $primary-lightgrey;
+  color: $text-lightblack;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+}
+
+.seat-passenger-chip.active .seat-passenger-chip-badge {
+  background: $brand-customer-strong;
+  color: $primary-white;
+}
+
+.seat-passenger-chip-seat {
+  color: inherit;
+  font-weight: $font-weight-regular;
+}
+
+// Seat preference / requirement p-selectButton item content (OBRS-361) —
+// icon + label, same token set as the rest of this form. PrimeNG owns the
+// button chrome (selected/unselected state); this only styles the inner
+// content row.
+.seat-pref-option-icon {
+  font-size: $font-size-base;
+  vertical-align: middle;
+  margin-right: $space-3xs;
+}
+
+.seat-pref-option-label {
+  vertical-align: middle;
+}
+
+// Seat-feature legend (OBRS-362) — explains the badges shown on the seat
+// map above it. Reuses the same filled-circle badge recipe as
+// passenger-seat-box's own badges (kept in sync manually since Angular view
+// encapsulation scopes styles per component).
+.seat-map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: $space-sm;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+.seat-map-legend-title {
+  font-weight: $font-weight-medium;
+  color: $text-lightgrey;
+}
+
+.seat-map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+}
+
+.seat-attribute-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-pill;
+  color: $primary-white;
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+}
+
+.seat-attribute-badge-wheelchair {
+  background: $brand-customer-strong;
+}
+
+.seat-attribute-badge-legroom {
+  background: $text-lightblack;
+}
+
+// OPEN-seating (OBRS-323) passenger-count card, shown in place of a leg's
+// seat map. Reuses the `.count-section`/`.passenger-icon` +/- markup and
+// disabled-state pattern from DropdownObrsPassengerComponent (same class
+// names — scoped per-component by Angular's default view encapsulation, so
+// no bleed) for visual consistency, on the same tokens as the rest of this card.
+.open-seat-card {
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-sm;
+  padding: $space-sm;
+}
+
+.open-seat-card-hint {
+  font-size: $font-size-sm;
+}
+
+.open-seat-card-label {
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  color: $text-black;
+}
+
+.open-seat-card-count {
+  min-width: 24px;
+  text-align: center;
+  font-size: $font-size-base;
+  font-weight: $font-weight-semibold;
+  color: $text-black;
+}
+
+.dropdown-passenger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: $space-sm;
+
+  .text-section {
+    .option-hint-text {
+      font-size: $font-size-xs;
+      color: $text-lightgrey;
+    }
+  }
+
+  .count-section {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+  }
+}
+
+.passenger-icon {
+  cursor: pointer;
+}
+
+.passenger-icon.passenger-add.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.passenger-max-hint {
+  padding-top: $space-3xs;
+  font-size: $font-size-xs;
+  color: $text-lightgrey;
 }
 
 @media (max-width: 992px) {

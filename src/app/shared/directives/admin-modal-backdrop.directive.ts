@@ -14,6 +14,17 @@ import {
  * `.admin-modal-backdrop` element: marks the inner `.admin-modal` as an
  * accessible dialog, locks body scroll while open, restores focus on close,
  * and emits `dismiss` on Escape or a click on the backdrop itself.
+ *
+ * OBRS-272: relocated from `modules/admin/components/` into `shared/directives/`
+ * and declared/exported by `SharedModule` rather than `AdminModule`. The
+ * directive is generic (backdrop/Escape/focus-trap/scroll-lock/aria, nothing
+ * admin-specific) — moving it here lets `BoardingListComponent` (declared in
+ * `SharedModule`, mounted by the staff shell) use `[adminModalBackdrop]` for
+ * its new delay-ETA dialog without `SharedModule` reaching into the lazy
+ * `AdminModule` (a module cycle, since `AdminModule` already imports
+ * `SharedModule`). Both `AdminModule` and `StaffModule` import `SharedModule`,
+ * so admin's existing modals keep resolving the directive unchanged. See
+ * docs/adr/0017-schedule-delay-control-and-modal-backdrop-relocation.md.
  */
 @Directive({
   selector: '[adminModalBackdrop]',
@@ -22,6 +33,17 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
   @Input() dismissOnBackdrop = true;
   @Output() dismiss = new EventEmitter<void>();
 
+  // OBRS-376: the body scroll-lock is REF-COUNTED across every mounted
+  // instance. Previously ngOnDestroy cleared `body.overflow` unconditionally,
+  // which was correct only while at most ONE backdrop was mounted at a time.
+  // The duplicate picker is the first modal-over-modal case that mounts two
+  // instances concurrently (picker above the usability-report detail modal),
+  // so closing the inner picker un-locked page scroll while the detail modal
+  // underneath was still open. Counting mounts holds the lock until the LAST
+  // backdrop unmounts; with a single modal the count is 1 -> 0 and behaviour
+  // is byte-identical to before.
+  private static openCount = 0;
+
   private previouslyFocused: HTMLElement | null = null;
   private dialog: HTMLElement | null = null;
 
@@ -29,6 +51,7 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.previouslyFocused = document.activeElement as HTMLElement | null;
+    AdminModalBackdropDirective.openCount++;
     document.body.style.overflow = 'hidden';
 
     const dialog = this.elementRef.nativeElement.querySelector<HTMLElement>(
@@ -59,7 +82,15 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    document.body.style.overflow = '';
+    AdminModalBackdropDirective.openCount = Math.max(
+      0,
+      AdminModalBackdropDirective.openCount - 1
+    );
+    // Only release the lock once no backdrop is left mounted — otherwise an
+    // inner modal closing would un-lock scroll for the outer one still open.
+    if (AdminModalBackdropDirective.openCount === 0) {
+      document.body.style.overflow = '';
+    }
     this.previouslyFocused?.focus?.();
   }
 

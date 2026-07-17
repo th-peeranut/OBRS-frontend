@@ -40,9 +40,32 @@ export interface Schedule {
    *  resolve the authoritative pickup→dropoff distance/duration estimate via
    *  `RouteMapService.getPickupDropoffCached`. */
   routeSlug?: string;
+  /** 'OPEN' | 'ASSIGNED' — whether this schedule sells seats without a fixed
+   *  seat number (OBRS-318/321). Same verified passthrough as `routeSlug`:
+   *  `ScheduleSearchRespDto` already carries it (OBRS-321), the schedule-list
+   *  store keeps `data` as-is, and the schedule-booking store keeps whichever
+   *  full `Schedule` row the user selected — no manual mapper needed on
+   *  either hop, so it's present by the time the booking page reads it. */
+  seatingMode?: string;
 }
 
 export interface ScheduleList {
   departureSchedules: Schedule[] | null;
   arrivalSchedules: Schedule[] | null;
+}
+
+/**
+ * GET /api/schedules/{id}/seats — physical seat map for a Schedule's vehicle
+ * type (`seatNumber`/`rowIndex`/`columnIndex` are documented today,
+ * `docs/api/scheduling.md`). `isWheelchairAccessible`/`isExtraLegroom` are
+ * additive booleans from a parallel backend task (OBRS-362) — optional so
+ * this stays undefined-safe until that ships; see `docs/handoff.md` Contract
+ * Requests. Public endpoint, no auth.
+ */
+export interface SeatMapRespDto {
+  seatNumber: string;
+  rowIndex?: number;
+  columnIndex?: number;
+  isWheelchairAccessible?: boolean;
+  isExtraLegroom?: boolean;
 }

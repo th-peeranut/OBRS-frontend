@@ -1,7 +1,20 @@
 import { BehaviorSubject } from 'rxjs';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TranslateModule } from '@ngx-translate/core';
+import { CalendarModule } from 'primeng/calendar';
+import { MenuModule } from 'primeng/menu';
 import { ReportsPageComponent } from './reports-page.component';
+import { ReportsStore } from './reports.store';
 import { ReportsSummaryDto } from '../../../../shared/interfaces/reports-summary.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import { AdminSharedModule } from '../../admin-shared.module';
+import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { AuthService } from '../../../../auth/auth.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { ExportService } from '../../../../services/export/export.service';
 
 function makeSummary(overrides: Partial<ReportsSummaryDto> = {}): ReportsSummaryDto {
   return {
@@ -260,5 +273,108 @@ describe('ReportsPageComponent', () => {
 
     store.data$.next(makeSummary({ tiles: { bookingCount: 999, ticketsSold: 1, occupancyRatePct: 1 } }));
     expect((component as any).tiles.bookingCount).not.toBe(999);
+  });
+});
+
+// OBRS-442: proves the export button is wired to the STORE's `range` getter (wire-format
+// yyyy-MM-dd strings the displayed data was actually fetched with), never the component's
+// `Date` fields — applyRange() deliberately skips dispatch on an invalid range, so the two
+// can diverge. Renders the real ExportButtonComponent (not NO_ERRORS_SCHEMA) so role-gated
+// show/hide is proven end to end, not assumed.
+describe('ReportsPageComponent (export button, OBRS-442)', () => {
+  let fixture: ComponentFixture<ReportsPageComponent>;
+  let storeStub: {
+    data$: BehaviorSubject<ReportsSummaryDto | null>;
+    refreshing$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<boolean>;
+    range: { from: string; to: string };
+    lastErrorCode: string | null;
+    hasValue: boolean;
+    refresh: jasmine.Spy;
+    setRange: jasmine.Spy;
+  };
+  let authServiceSpy: jasmine.SpyObj<AuthService>;
+
+  function configure(hasRole: boolean): void {
+    storeStub = {
+      data$: new BehaviorSubject<ReportsSummaryDto | null>(null),
+      refreshing$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<boolean>(false),
+      range: { from: '2026-07-01', to: '2026-07-07' },
+      lastErrorCode: null,
+      hasValue: false,
+      refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+      setRange: jasmine.createSpy('setRange'),
+    };
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['hasAnyRole']);
+    authServiceSpy.hasAnyRole.and.returnValue(hasRole);
+
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      declarations: [ReportsPageComponent, ExportButtonComponent],
+      providers: [
+        { provide: ReportsStore, useValue: storeStub },
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ReportsPageComponent);
+  }
+
+  it('renders for an authorized (owner) role and requests the "owner" role', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    expect(authServiceSpy.hasAnyRole).toHaveBeenCalledWith(['owner']);
+    // Assert the TRIGGER, not By.directive(ExportButtonComponent): the host tag renders
+    // unconditionally (canExport's *ngIf is inside the child template), so a By.directive
+    // assertion here passes even for an unauthorized role — vacuous. Mirrors the negative
+    // spec below so the pair actually brackets the role gate.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger should render for an authorized role').not.toBeNull();
+  });
+
+  it('is absent for an unauthorized role', () => {
+    configure(false);
+    fixture.detectChanges();
+
+    // ExportButtonComponent's own *ngIf="canExport" is INSIDE its template (wrapping the
+    // trigger button), not on the <app-export-button> host tag, so the host element always
+    // renders — assert on the visible trigger, mirroring export-button.component.spec.ts.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger must not render for an unauthorized role').toBeNull();
+  });
+
+  it('has datasetKey exactly "revenue-daily"', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).datasetKey).toBe('revenue-daily');
+  });
+
+  // Load-bearing: proves [params] is bound to the STORE getter (not the component's Date
+  // fields) and tracks it live — a test only checking the initial default range would pass
+  // even if bound to the wrong source.
+  it('[params] binds to store.range and follows it when the store range changes', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    let button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({
+      from: '2026-07-01',
+      to: '2026-07-07',
+    });
+
+    storeStub.range = { from: '2026-08-15', to: '2026-08-20' };
+    fixture.detectChanges();
+
+    button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({
+      from: '2026-08-15',
+      to: '2026-08-20',
+    });
   });
 });

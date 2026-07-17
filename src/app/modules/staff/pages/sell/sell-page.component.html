@@ -40,6 +40,8 @@
             [selectedSeats]="selectedSeats"
             [passengerGender]="selectedPassengerType"
             [seatPassengerTypes]="seatPassengerTypes"
+            [passengerCount]="passengerCount"
+            [jumpSeatOverflowUnits]="overflowUnits"
             [pickupOptions]="pickupOptions"
             [dropoffOptions]="dropoffOptions"
             [pickupSlug]="pickupSlug"
@@ -49,6 +51,7 @@
             [popularDropoffStops]="popularDropoffStops"
             (seatToggled)="onSeatToggled($event)"
             (passengerTypeChange)="onPassengerTypeChanged($event)"
+            (passengerCountChange)="onPassengerCountChanged($event)"
             (pickupChange)="onPickupChanged($event)"
             (dropoffChange)="onDropoffChanged($event)"
             (tripDetailsUpdated)="onTripDetailsUpdated($event)"
@@ -66,6 +69,8 @@
           <app-walk-in-checkout
             [selectedTrip]="selectedTrip"
             [selectedSeats]="selectedSeats"
+            [seatingMode]="isOpenSeating ? 'OPEN' : 'ASSIGNED'"
+            [passengerCount]="passengerCount"
             [isSelling]="isSelling"
             [pricePerSeat]="pricePerSeat"
             (sell)="onSell($event)">
@@ -168,11 +173,20 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_TITLE' | translate }}</h5>
+          <h5 class="modal-title">
+            {{ (scheduleDeleteModalMode === 'delete' ? 'ADMIN.MESSAGES.DELETE_CONFIRM_TITLE' : 'ADMIN.MESSAGES.CANCEL_TRIP_CONFIRM_TITLE') | translate }}
+          </h5>
           <button class="btn-close" (click)="closeScheduleDelete()"></button>
         </div>
         <div class="modal-body">
-          <p>{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_BODY' | translate }}</p>
+          <p *ngIf="scheduleDeleteModalMode === 'delete'">{{ 'ADMIN.MESSAGES.DELETE_CONFIRM_BODY' | translate }}</p>
+          <!-- OBRS-283: deletable===false — soft-cancel copy instead of the hard-delete warning above. -->
+          <p *ngIf="scheduleDeleteModalMode === 'cancel-refund'">
+            {{ 'ADMIN.MESSAGES.CANCEL_TRIP_REFUND_BODY' | translate: { count: deletingTrip?.confirmedBookingCount ?? 0 } }}
+          </p>
+          <p *ngIf="scheduleDeleteModalMode === 'cancel-no-refund'">
+            {{ 'ADMIN.MESSAGES.CANCEL_TRIP_NO_REFUND_BODY' | translate }}
+          </p>
         </div>
         <div class="modal-footer">
           <button class="btn btn-secondary" (click)="closeScheduleDelete()" [disabled]="isScheduleDeleting">
@@ -180,7 +194,7 @@
           </button>
           <button class="btn btn-danger" (click)="confirmDeleteSchedule()" [disabled]="isScheduleDeleting">
             <span *ngIf="isScheduleDeleting" class="spinner-border spinner-border-sm me-1"></span>
-            {{ 'ADMIN.MESSAGES.DELETE_BTN' | translate }}
+            {{ (scheduleDeleteModalMode === 'delete' ? 'ADMIN.MESSAGES.DELETE_BTN' : 'ADMIN.MESSAGES.CANCEL_TRIP_BTN') | translate }}
           </button>
         </div>
       </div>

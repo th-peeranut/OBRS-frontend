@@ -62,3 +62,8 @@ graphify-out/
 # Netlify generates this file at build time from env vars; see scripts/inject-sit-env.js
 # and src/environments/environment.local.example.ts.
 src/environments/environment.local.ts
+
+# Real PROD values (live Omise public key, prod API URL, PromptPay id) — never commit.
+# The prod host generates this at build time from env vars; see scripts/inject-prod-env.js
+# and src/environments/environment.prod.local.example.ts.
+src/environments/environment.prod.local.ts

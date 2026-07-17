@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { RescheduleErrorCode } from '../interfaces/reschedule.interface';
 
 /**
@@ -24,6 +24,10 @@ export function mapRescheduleErrorCode(errorCode: string | null | undefined): st
     RESCHEDULE_ERROR_UNAUTHORIZED: 'MY_BOOKINGS.RESCHEDULE.ERROR.UNAUTHORIZED',
     // Client-side-only guard (acceptance criterion #9) — not a backend code.
     RESCHEDULE_PRICE_CHANGED: 'MY_BOOKINGS.RESCHEDULE.PRICE_CHANGED',
+    // OBRS-358: shared jump-seat channel-guard code — see the identical
+    // entry in `change-seat-error.ts` for the full rationale; same
+    // `COMMON.ERROR.*` key, never duplicated per flow.
+    SEAT_ERROR_WALK_IN_ONLY: 'COMMON.ERROR.SEAT_WALK_IN_ONLY',
   };
 
   return errorCode && knownCodes[errorCode]
@@ -55,11 +59,5 @@ export function shouldReturnToOptions(errorCode: string | null | undefined): boo
 
 /** Extracts `error.error.errorCode` from a failed reschedule HTTP call. */
 export function extractRescheduleErrorCode(error: unknown): RescheduleErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as RescheduleErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as RescheduleErrorCode;
 }

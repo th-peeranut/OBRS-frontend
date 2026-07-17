@@ -17,6 +17,16 @@ export interface PassengerInfo {
    * channel (BookingReqDtoValidator).
    */
   email?: string;
+  /**
+   * OBRS-361: optional per-passenger seat preference. Never pre-seeded
+   * (design-system §3.1) — starts `null`, best-effort, never blocks a
+   * booking. Sent to the API lowercased (`'WINDOW'` -> `'window'`) at the
+   * payload boundary in `PassengerInfoComponent.buildPassengersPayload`.
+   */
+  seatPreference?: 'WINDOW' | 'AISLE' | null;
+  /** OBRS-361: optional per-passenger seat requirement — same contract as
+   *  `seatPreference` above. */
+  seatRequirement?: 'WHEELCHAIR' | 'EXTRA_LEGROOM' | null;
 }
 
 export type PassengerInfoState = PassengerInfo[];

@@ -137,35 +137,74 @@
         </div>
       </div>
 
-      <!-- Selected seat chips -->
-      <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
-        <span *ngFor="let seat of selectedSeats"
-              class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
-          {{ seat }}
-        </span>
+      <!-- OBRS-324: OPEN schedules sell by passenger count only — no seat map/picker. -->
+      <div *ngIf="isOpenSeating" class="open-seating-count d-flex flex-column align-items-center gap-2 py-4">
+        <div class="text-muted small">{{ 'STAFF.SELL.OPEN_SEATING_HINT' | translate }}</div>
+        <div class="d-flex align-items-center gap-3">
+          <button type="button"
+                  class="btn btn-outline-secondary rounded-circle"
+                  [disabled]="passengerCount <= 1"
+                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_DECREASE' | translate"
+                  (click)="decrementPassengerCount()">
+            <i class="bi bi-dash" aria-hidden="true"></i>
+          </button>
+          <span class="fs-3 fw-semibold text-center" style="min-width:2.5rem" aria-live="polite">{{ passengerCount }}</span>
+          <button type="button"
+                  class="btn btn-outline-secondary rounded-circle"
+                  [disabled]="passengerCount >= maxPassengerCount"
+                  [attr.aria-label]="'STAFF.SELL.PASSENGER_COUNT_INCREASE' | translate"
+                  (click)="incrementPassengerCount()">
+            <i class="bi bi-plus" aria-hidden="true"></i>
+          </button>
+        </div>
+        <div class="text-muted small">{{ 'STAFF.SELL.PASSENGER_COUNT_MAX' | translate: { max: maxPassengerCount } }}</div>
+        <!-- OBRS-358: this sale reaches into the jump seat (walk-in-only,
+             no backrest, sold last) — a staff-facing hint only; the
+             acknowledgment prompt itself fires from sell-page's onSell(). -->
+        <div class="text-warning small text-center" *ngIf="jumpSeatOverflowUnits > 0" role="status">
+          <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>{{ 'STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT' | translate }}
+        </div>
       </div>
 
-      <!-- Van seat map -->
-      <ng-container *ngIf="isVan">
-        <app-passenger-seat-van
-          [gender]="seatGender"
-          [takenSeats]="takenSeats"
-          [currentSeat]="currentSeat"
-          [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
-          [seatGenders]="seatGendersUpper"
-          (seatClicked)="seatToggled.emit($event)">
-        </app-passenger-seat-van>
-      </ng-container>
+      <ng-container *ngIf="!isOpenSeating">
+        <!-- Selected seat chips -->
+        <div *ngIf="selectedSeats.length > 0" class="d-flex flex-wrap gap-1 mb-2">
+          <span *ngFor="let seat of selectedSeats"
+                class="badge rounded-pill border border-primary text-primary bg-primary bg-opacity-10">
+            {{ seat }}
+          </span>
+        </div>
 
-      <!-- Bus seat map -->
-      <ng-container *ngIf="!isVan">
-        <app-passenger-seat-bus
-          [gender]="seatGender"
-          [takenSeats]="takenSeats"
-          [currentSeat]="currentSeat"
-          [seatGenders]="seatGendersUpper"
-          (seatClicked)="seatToggled.emit($event)">
-        </app-passenger-seat-bus>
+        <!-- Van seat map -->
+        <!-- OBRS-358 follow-up: ASSIGNED-mode jump-seat (walk-in-only, seat 1)
+             tile styling is DEFERRED this card — no seeded ASSIGNED minibus to
+             exercise it against, and this van template only renders 13 seat
+             boxes (A1-A13) vs. the real 21-seat minibus fleet (separate gap).
+             When both land, add a null-default `restrictedSeats: string[] |
+             null = null` @Input here (same optional-@Input contract as
+             `seatOwners`/`seatGenders`, design-system.md §10) rather than a
+             second seat-map variant. -->
+        <ng-container *ngIf="isVan">
+          <app-passenger-seat-van
+            [gender]="seatGender"
+            [takenSeats]="takenSeats"
+            [currentSeat]="currentSeat"
+            [availableSeatNumbers]="selectedTrip!.availableSeatNumbers"
+            [seatGenders]="seatGendersUpper"
+            (seatClicked)="seatToggled.emit($event)">
+          </app-passenger-seat-van>
+        </ng-container>
+
+        <!-- Bus seat map -->
+        <ng-container *ngIf="!isVan">
+          <app-passenger-seat-bus
+            [gender]="seatGender"
+            [takenSeats]="takenSeats"
+            [currentSeat]="currentSeat"
+            [seatGenders]="seatGendersUpper"
+            (seatClicked)="seatToggled.emit($event)">
+          </app-passenger-seat-bus>
+        </ng-container>
       </ng-container>
     </p-tabPanel>
 

@@ -6,6 +6,7 @@ import {
   SimpleChanges,
   Output,
 } from '@angular/core';
+import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 
 @Component({
   selector: 'app-passenger-seat-bus',
@@ -24,6 +25,28 @@ export class PassengerSeatBusComponent implements OnChanges {
    * flow is unaffected.
    */
   @Input() seatGenders: Record<string, string> | null = null;
+  /**
+   * Per-seat OWNER map for the collapsed shared seat map (OBRS-242): every
+   * seat already assigned to ANY passenger in this booking, keyed by seat
+   * label, with that passenger's badge label + gender. Null (the default)
+   * leaves every existing single-select/`seatGenders` call site untouched.
+   * When set, it takes priority over `seatGenders` for rendering — but the
+   * click-eligibility guard is unchanged: `currentSeat` still means "the
+   * ACTIVE passenger's own seat" and `takenSeats` still means "seats owned
+   * by every OTHER passenger", so the host needs no new guard logic.
+   */
+  @Input() seatOwners: Record<string, { label: string; gender: string }> | null = null;
+  /**
+   * Per-seat attribute map (OBRS-362) — which seats are wheelchair-accessible
+   * / have extra legroom, keyed by the backend's plain-numeric seat label
+   * (`normalizeSeatNumber('B1') === '1'`). Null (the default) renders no
+   * badges — every existing call site is unaffected (same null-default
+   * `@Input()` precedent as `seatOwners`/`seatGenders`, OBRS-242).
+   */
+  @Input() seatAttributes: Record<string, ('WHEELCHAIR' | 'EXTRA_LEGROOM')[]> | null = null;
+  /** Pre-translated aria-labels forwarded to every seat box's badge. */
+  @Input() wheelchairBadgeAriaLabel: string = '';
+  @Input() extraLegroomBadgeAriaLabel: string = '';
 
   @Output() passengerSeatPositionOnChange = new EventEmitter<string>();
   @Output() seatClicked = new EventEmitter<string>();
@@ -41,9 +64,11 @@ export class PassengerSeatBusComponent implements OnChanges {
   }
 
   setPassengerSeatPosition(passengerSeatPosition: string) {
-    // In multi-select mode allow click as long as a gender map exists (non-empty
-    // string guard is irrelevant — the map drives rendering, not `gender`).
-    const effectiveGender = this.seatGenders !== null ? 'multi' : this.gender;
+    // In multi-select/shared-map mode allow click as long as an owner or
+    // gender map exists (non-empty string guard is irrelevant — the map
+    // drives rendering, not `gender`).
+    const effectiveGender =
+      this.seatOwners !== null || this.seatGenders !== null ? 'multi' : this.gender;
     if (effectiveGender === '') {
       return;
     }
@@ -79,6 +104,9 @@ export class PassengerSeatBusComponent implements OnChanges {
    * Single-select mode: only the currently selected seat shows the gender.
    */
   seatGenderFor(label: string): string {
+    if (this.seatOwners !== null) {
+      return this.seatOwners[label]?.gender ?? '';
+    }
     if (this.seatGenders !== null) {
       return this.seatGenders[label] ?? '';
     }
@@ -87,13 +115,46 @@ export class PassengerSeatBusComponent implements OnChanges {
 
   /**
    * Whether a seat is "active" (selected/occupied by the current booking).
+   * Shared-map: any seat present in the seatOwners map.
    * Multi-select: any seat present in seatGenders map.
    * Single-select: only the one isSelected seat.
    */
   isSeatActive(label: string): boolean {
+    if (this.seatOwners !== null) {
+      return label in this.seatOwners;
+    }
     if (this.seatGenders !== null) {
       return label in this.seatGenders && (this.seatGenders[label] ?? '') !== '';
     }
     return this.isSelected === label;
+  }
+
+  /** Owner badge label for a seat in shared-map mode; null outside it. */
+  ownerLabelFor(label: string): string | null {
+    return this.seatOwners?.[label]?.label ?? null;
+  }
+
+  /**
+   * Whether this seat is the currently ACTIVE passenger's own assigned seat
+   * (shared-map mode only) — drives the emphasis ring.
+   */
+  isActiveOwnerFor(label: string): boolean {
+    return this.seatOwners !== null && !!this.currentSeat && label === this.currentSeat;
+  }
+
+  /** Attribute list for a seat label (OBRS-362); empty when unset/unknown. */
+  attributesFor(label: string): ('WHEELCHAIR' | 'EXTRA_LEGROOM')[] {
+    if (!this.seatAttributes) {
+      return [];
+    }
+    return this.seatAttributes[normalizeSeatNumber(label)] ?? [];
+  }
+
+  hasWheelchairBadge(label: string): boolean {
+    return this.attributesFor(label).includes('WHEELCHAIR');
+  }
+
+  hasExtraLegroomBadge(label: string): boolean {
+    return this.attributesFor(label).includes('EXTRA_LEGROOM');
   }
 }

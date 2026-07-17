@@ -1,0 +1,60 @@
+<app-navbar></app-navbar>
+
+<section class="parcel-tracking-page">
+  <div class="parcel-tracking-card">
+    <h1>{{ 'PARCEL_TRACKING.TITLE' | translate }}</h1>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()" class="parcel-tracking-form">
+      <input
+        type="text"
+        class="form-control"
+        [placeholder]="'PARCEL_TRACKING.INPUT_PLACEHOLDER' | translate"
+        formControlName="trackingNumber"
+      />
+      <button type="submit" class="btn btn-primary">
+        {{ 'PARCEL_TRACKING.SUBMIT' | translate }}
+      </button>
+    </form>
+
+    <div *ngIf="contentState === 'loading'" class="text-center py-4">
+      <span class="material-symbols-outlined">hourglass_empty</span>
+    </div>
+
+    <div *ngIf="contentState === 'not-found'" class="parcel-tracking-not-found">
+      {{ 'PARCEL_TRACKING.NOT_FOUND' | translate }}
+    </div>
+
+    <div *ngIf="contentState === 'found' && result as r" class="parcel-tracking-result">
+      <div class="parcel-tracking-status">
+        <span class="admin-status" [ngClass]="chipFor(r.deliveryStatus).token">
+          {{ chipFor(r.deliveryStatus).i18nKey | translate }}
+        </span>
+      </div>
+
+      <div class="parcel-tracking-timeline">
+        <div class="parcel-tracking-timeline-row">
+          <span class="text-muted">{{ 'PARCEL_TRACKING.PICKUP_STOP' | translate }}</span>
+          <span class="fw-semibold">{{ parcelStopLabel(r.pickupStop) }}</span>
+        </div>
+        <div class="parcel-tracking-timeline-row">
+          <span class="text-muted">{{ 'PARCEL_TRACKING.DROPOFF_STOP' | translate }}</span>
+          <span class="fw-semibold">{{ parcelStopLabel(r.dropoffStop) }}</span>
+        </div>
+        <div class="parcel-tracking-timeline-row" *ngIf="r.arrivedNotifiedAt">
+          <span class="text-muted">{{ 'PARCEL_TRACKING.ARRIVED_NOTIFIED_AT' | translate }}</span>
+          <span class="fw-semibold">{{ displayDateTime(r.arrivedNotifiedAt) }}</span>
+        </div>
+        <div class="parcel-tracking-timeline-row" *ngIf="r.collectedAt">
+          <span class="text-muted">{{ 'PARCEL_TRACKING.COLLECTED_AT' | translate }}</span>
+          <span class="fw-semibold">{{ displayDateTime(r.collectedAt) }}</span>
+        </div>
+        <div class="parcel-tracking-timeline-row">
+          <span class="text-muted">{{ 'PARCEL_TRACKING.RECIPIENT' | translate }}</span>
+          <span class="fw-semibold">{{ r.recipientNameMasked }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>

@@ -1,3 +1,4 @@
+import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   UsabilityReportDetail,
   UsabilityReportStatus,
@@ -19,21 +20,44 @@ export interface StatusOption {
   label: string;
 }
 
-// The table filter offers all 5 statuses; 'new'/'in_review' are triage
-// states, not outcomes, so they are excluded from the decision-only detail
-// dropdown below (design-system.md §3.1: no pre-seeded default).
+// The table filter offers all 7 statuses (OBRS-378's 6 plus 'duplicate' from
+// OBRS-376, so the table can also be filtered down to just the merged-away
+// reports), non-terminal states grouped before terminal ones per the UX
+// spec; 'new'/'in_review' are triage states, not outcomes, so they are
+// excluded from the decision-only detail dropdowns below (design-system.md
+// §3.1: no pre-seeded default). 'duplicate' is ALSO excluded from the detail
+// dropdown (see DETAIL_STATUS_VALUES below) — it is never a
+// dropdown-selectable decision, only reachable via the mark/un-mark actions.
 export const STATUS_FILTER_VALUES: readonly UsabilityReportStatus[] = [
   'new',
   'in_review',
   'accepted',
+  'dismissed',
+  'resolved',
+  'rejected',
+  'duplicate',
+];
+
+// OBRS-378: 'dismissed' is a non-terminal screen-out decision (no email, can
+// be pulled back into review) that both admin and owner may set — see
+// OWNER_DETAIL_STATUS_VALUES below.
+export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
+  'accepted',
+  'dismissed',
   'resolved',
   'rejected',
 ];
 
-export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
+// OBRS-370: owner is a SCREEN-ONLY tier on this page — the backend 403s a
+// non-admin on the terminal decisions (resolved/rejected, which are terminal
+// and email the reporter) and on the Jira key, so the owner's decision
+// dropdown only offers the non-terminal, forward-moving transitions.
+// OBRS-378 (PO lock): owner CAN set 'dismissed' — it is non-terminal and
+// non-email, so it stays within the owner's screening authority.
+export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
+  'in_review',
   'accepted',
-  'resolved',
-  'rejected',
+  'dismissed',
 ];
 
 // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
@@ -42,6 +66,18 @@ export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
 export const DECISION_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>(
   ['accepted', 'resolved', 'rejected']
 );
+
+// OBRS-376: a report may be marked as a duplicate from any non-terminal,
+// non-already-duplicate status — 'resolved'/'rejected' are terminal decisions
+// and 'duplicate' is reached only through this same action (can't re-mark an
+// already-duplicate report).
+export const MARK_AS_DUPLICATE_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<
+  UsabilityReportStatus
+>(['new', 'in_review', 'accepted']);
+
+export function canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
+  return MARK_AS_DUPLICATE_STATUSES.has(status);
+}
 
 // Builds the translated {value,label} options for a status dropdown from a
 // fixed list of status values. `translateFn` is the caller's
@@ -71,8 +107,17 @@ export function statusClass(status: string): string {
   if (status === 'new') return 'is-warning';
   if (status === 'in_review') return 'is-info';
   if (status === 'accepted') return 'is-accepted';
+  // OBRS-378: dismissed is a muted, distinct-from-danger screen-out state —
+  // reuses the existing plain-grey .is-neutral token (design-system.md §2.4),
+  // verified WCAG-safe in both themes (admin-theme.scss), not a new hex.
+  if (status === 'dismissed') return 'is-neutral';
   if (status === 'resolved') return 'is-success';
   if (status === 'rejected') return 'is-danger';
+  // OBRS-376/378 (PO decision, 2026-07-16): 'duplicate' originally reused the
+  // plain-grey is-neutral token, but that collided with 'dismissed' above —
+  // both rendered as identical grey chips. Moved to its own --admin-duplicate-*
+  // violet token (admin-theme.scss); 'dismissed' keeps is-neutral unchanged.
+  if (status === 'duplicate') return 'is-duplicate';
   return '';
 }
 
@@ -131,6 +176,12 @@ export function toUsabilityReportDetailFallback(
     triagedAt: null,
     jiraIssueKey: null,
     reporterNotifiedAt: null,
+    // OBRS-376: carried straight through — unlike routeUrl/userAgent/images,
+    // duplicateOfId/duplicateCount ARE already known from the summary row
+    // (they're columns on the list response too), so the optimistic-open
+    // fallback doesn't need to blank them out pending the real GET.
+    duplicateOfId: summary.duplicateOfId,
+    duplicateCount: summary.duplicateCount,
   };
 }
 
@@ -143,4 +194,37 @@ export function updateRowStatus(
   status: UsabilityReportStatus
 ): UsabilityReportSummary[] {
   return content.map((r) => (r.id === id ? { ...r, status } : r));
+}
+
+// OBRS-376: extracts `error.error.errorCode` from a failed mark-as-duplicate
+// call, mirroring schedules.mappers.ts's extractScheduleErrorCode() /
+// boarding-action-error.ts's extractBoardingActionErrorCode() — branch on the
+// stable code, never the localized `message` (design-system §9).
+export function extractUsabilityReportErrorCode(error: unknown): string | null {
+  return extractApiErrorCode(error, null);
+}
+
+// OBRS-378: pure list-mutate helper for a row that moved OUT of the currently
+// active tab (server-side ?status= filtering means a patched-but-out-of-tab
+// row must be dropped, not just re-labelled). Used by applyRowStatus()
+// alongside updateRowStatus() above.
+export function removeRow(
+  content: UsabilityReportSummary[],
+  id: string
+): UsabilityReportSummary[] {
+  return content.filter((r) => r.id !== id);
+}
+
+// OBRS-378: the two "actively worked" tabs (accepted awaiting resolution,
+// in_review awaiting a decision) sort oldest-first (FIFO — work the queue in
+// order); every other tab (new, dismissed, resolved, rejected) sorts
+// newest-first, matching this page's pre-existing default ordering.
+export const FIFO_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>([
+  'accepted',
+  'in_review',
+]);
+
+export function sortForStatus(status: UsabilityReportStatus | ''): string[] {
+  const dir = status !== '' && FIFO_STATUSES.has(status) ? 'asc' : 'desc';
+  return [`createdAt,${dir}`, `id,${dir}`];
 }

@@ -207,6 +207,13 @@ describe('SellPageComponent', () => {
       expect((comp as any).selectedSeats).toEqual([]);
     });
 
+    it('resets passengerCount to 1 on date change (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onDateChanged(new Date());
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
     it('resets seatPassengerTypes on date change', () => {
       const comp = makeComponent();
       (comp as any).seatPassengerTypes = { B1: 'male', B2: 'female' };
@@ -273,6 +280,13 @@ describe('SellPageComponent', () => {
       (comp as any).seatPassengerTypes = { B1: 'male' };
       (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
       expect((comp as any).seatPassengerTypes).toEqual({});
+    });
+
+    it('resets passengerCount to 1 when a new trip is selected (OBRS-324)', () => {
+      const comp = makeComponent();
+      (comp as any).passengerCount = 5;
+      (comp as any).onTripSelected({ trip: makeTrip(), routeSlug: 'bkk-cm' });
+      expect((comp as any).passengerCount).toBe(1);
     });
 
     it('resets activeTabIndex to 0 when a new trip is selected (the center panel\'s p-tabView remounts on tab 0)', () => {
@@ -656,6 +670,111 @@ describe('SellPageComponent', () => {
     });
   });
 
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d)
+  describe('isOpenSeating getter', () => {
+    it('is false when no trip is selected', () => {
+      const comp = makeComponent();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is false when the trip has no seatingMode (safe default)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip();
+      expect((comp as any).isOpenSeating).toBeFalse();
+    });
+
+    it('is true when the trip seatingMode is OPEN', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      expect((comp as any).isOpenSeating).toBeTrue();
+    });
+  });
+
+  describe('onPassengerCountChanged', () => {
+    it('clamps to the trip availableCount', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(9);
+      expect((comp as any).passengerCount).toBe(4);
+    });
+
+    it('floors at 1', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 4 });
+      (comp as any).onPassengerCountChanged(0);
+      expect((comp as any).passengerCount).toBe(1);
+    });
+
+    it('accepts a value within range unchanged', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ availableCount: 10 });
+      (comp as any).onPassengerCountChanged(3);
+      expect((comp as any).passengerCount).toBe(3);
+    });
+  });
+
+  describe('onSell — OPEN seating (OBRS-324)', () => {
+    it('builds passengerCount passengers with a blank seatNumber, ignoring selectedSeats', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1']; // must be ignored for OPEN
+      (comp as any).passengerCount = 3;
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      const passengers: { seatNumber: string }[] = callArg.departureSchedule.passengers;
+      expect(passengers.length).toBe(3);
+      for (const p of passengers) {
+        expect(p.seatNumber).toBe('');
+      }
+    });
+
+    it('totalAmount is fare * passengerCount (not selectedSeats.length)', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).selectedSeats = ['B1', 'B2']; // 2 seats, must be ignored
+      (comp as any).passengerCount = 5;
+      setSegmentFare(comp, 100);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.totalAmount).toBe(500);
+    });
+
+    it('ASSIGNED trip (default) is unaffected — still one passenger per selected seat', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip(); // no seatingMode → ASSIGNED
+      (comp as any).selectedSeats = ['B1', 'B2'];
+      (comp as any).passengerCount = 7; // must be ignored for ASSIGNED
+      setSegmentFare(comp, 300);
+
+      (comp as any).onSell(validPayload);
+
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.departureSchedule.passengers.length).toBe(2);
+      expect(callArg.totalAmount).toBe(600);
+    });
+
+    it('resets passengerCount to 1 after a successful sale', () => {
+      const api = createStaffApiStub();
+      const comp = makeComponent(api);
+      (comp as any).selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      (comp as any).passengerCount = 4;
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'loadTrips');
+
+      (comp as any).onSell(validPayload);
+
+      expect((comp as any).passengerCount).toBe(1);
+    });
+  });
+
   describe('re-localization on language change', () => {
     // Stop/route names come from the server resolved by Accept-Language, so they
     // are stale after a language switch unless re-fetched. These guard that the
@@ -1011,6 +1130,65 @@ describe('SellPageComponent', () => {
     });
   });
 
+  // OBRS-283: smart delete/cancel branch driven by the trip's `deletable` +
+  // `confirmedBookingCount` fields (see shared/lib/schedule-delete-mode.ts).
+  describe('schedule management — OBRS-283 smart cancel branch', () => {
+    it('deletable===false + confirmedBookingCount>0 resolves the "cancel-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 4 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-refund');
+    });
+
+    it('deletable===false + confirmedBookingCount===0 resolves the "cancel-no-refund" dialog mode', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 0 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('cancel-no-refund');
+    });
+
+    it('a trip missing `deletable` (undefined, the default from makeTrip()) falls through to "delete"', () => {
+      const comp = makeComponent();
+      const trip = makeTrip({ scheduleId: 10 });
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+      expect((comp as any).scheduleDeleteModalMode).toBe('delete');
+    });
+
+    it('cancel-refund mode calls adminApiService.cancelSchedule() (not deleteSchedule()) and shows the success toast with the response affectedBookingCount', async () => {
+      const cancelSchedule = jasmine.createSpy('cancelSchedule').and.returnValue(
+        of({ data: { scheduleId: 10, status: 'cancelled', affectedBookingCount: 5 } })
+      );
+      const adminApi = { ...createAdminApiStub(), cancelSchedule };
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: false, confirmedBookingCount: 5 });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(cancelSchedule).toHaveBeenCalledWith(10);
+      expect(adminApi.deleteSchedule).not.toHaveBeenCalled();
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.SCHEDULE_CANCELLED');
+    });
+
+    it('deletable===true still calls adminApiService.deleteSchedule() (unchanged)', async () => {
+      const adminApi = createAdminApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(createStaffApiStub(), alert, adminApi);
+
+      const trip = makeTrip({ scheduleId: 10, deletable: true });
+      (comp as any).routeGroups = [makeRouteGroup('r1', [trip])];
+      (comp as any).onDeleteScheduleClicked({ trip, routeSlug: 'r1' });
+
+      await (comp as any).confirmDeleteSchedule();
+
+      expect(adminApi.deleteSchedule).toHaveBeenCalledWith(10);
+      expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.DELETED');
+    });
+  });
+
   // Regression: AC-1/AC-6 cold-open "Add schedule" has a blank route.
   // When the store hasn't loaded yet on first modal open, scheduleRouteOptions is
   // empty — so the form.reset() defaults route to ''. Fix: applyScheduleLocalization
@@ -1135,6 +1313,321 @@ describe('SellPageComponent', () => {
       const comp = makeComponent();
       comp.ngOnInit();
       expect(() => comp.ngOnDestroy()).not.toThrow();
+    });
+  });
+
+  // OBRS-358: jump-seat overflow hint + staff-acknowledgment gate.
+  describe('overflowUnits / requiresJumpSeatAck getters', () => {
+    it('is 0 / false when the trip has no normalCapacity (backend predating this card)', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({ soldPaidCount: 20, reservedUnpaidCount: 0 });
+      (comp as any).selectedSeats = ['B1'];
+
+      expect((comp as any).overflowUnits).toBe(0);
+      expect((comp as any).requiresJumpSeatAck).toBeFalse();
+    });
+
+    it('is 0 / false when existing + ticketCount stays within normalCapacity', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 10,
+        reservedUnpaidCount: 5,
+        normalCapacity: 20,
+      });
+      (comp as any).selectedSeats = ['B1'];
+
+      expect((comp as any).overflowUnits).toBe(0);
+      expect((comp as any).requiresJumpSeatAck).toBeFalse();
+    });
+
+    it('computes overflowUnits as max(0, existing + ticketCount - normalCapacity) and flips requiresJumpSeatAck true', () => {
+      const comp = makeComponent();
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 15,
+        reservedUnpaidCount: 4,
+        normalCapacity: 20,
+      });
+      (comp as any).selectedSeats = ['B1', 'B2'];
+
+      // existing (19) + ticketCount (2) - normalCapacity (20) = 1
+      expect((comp as any).overflowUnits).toBe(1);
+      expect((comp as any).requiresJumpSeatAck).toBeTrue();
+    });
+  });
+
+  describe('onSell — jump-seat acknowledgment gate (OBRS-358)', () => {
+    function makeOverflowTrip(): WalkInTripDto {
+      // existing (soldPaidCount + reservedUnpaidCount = 20) + ticketCount (1) -
+      // normalCapacity (20) = 1 unit of overflow.
+      return makeTrip({ soldPaidCount: 20, reservedUnpaidCount: 0, normalCapacity: 20 });
+    }
+
+    it('does NOT call the jump-seat confirm prompt when the sale does not overflow', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      // Isolate the jump-seat ack gate from the unrelated post-sale
+      // "Print ticket" offer (offerPrintTicket() also calls
+      // alertService.confirm() — see OBRS-195), so this assertion only
+      // reflects OBRS-358's gate, not that later prompt.
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).not.toHaveBeenCalled();
+      expect(api.createWalkInBooking).toHaveBeenCalled();
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect('jumpSeatAcknowledged' in callArg).toBeFalse();
+    });
+
+    it('gates onSell on AlertService.confirm() when the sale overflows into the jump seat, and makes NO API call when declined', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub(); // confirm() defaults to resolving false
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeOverflowTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          title: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE',
+          text: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT',
+          confirmButtonText: 'STAFF.SELL.JUMP_SEAT_CONFIRM_OK',
+          icon: 'warning',
+        })
+      );
+      expect(api.createWalkInBooking).not.toHaveBeenCalled();
+    });
+
+    it('sends jumpSeatAcknowledged: true on the booking payload when staff confirms the overflow prompt', async () => {
+      const api = createStaffApiStub();
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeOverflowTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(api.createWalkInBooking).toHaveBeenCalled();
+      const callArg = api.createWalkInBooking.calls.mostRecent().args[0];
+      expect(callArg.jumpSeatAcknowledged).toBeTrue();
+    });
+  });
+
+  describe('onSell — jump-seat errorCode mapping (OBRS-358)', () => {
+    function errorWithCode(errorCode: string): unknown {
+      return { error: { errorCode } };
+    }
+
+    // BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED is deliberately excluded
+    // from this generic "always a plain toast" table — the reactive-retry
+    // follow-up below routes it through confirmJumpSeatSale() instead. See
+    // the dedicated 'onSell — reactive jump-seat ack retry' describe block.
+    ([
+      ['BOOKING_ERROR_JUMPSEAT_DISABLED', 'STAFF.SELL.ERR_JUMPSEAT_DISABLED'],
+      ['BOOKING_ERROR_JUMPSEAT_NORMAL_SEATS_AVAILABLE', 'STAFF.SELL.ERR_JUMPSEAT_NORMAL_AVAILABLE'],
+      ['SEAT_ERROR_WALK_IN_ONLY', 'COMMON.ERROR.SEAT_WALK_IN_ONLY'],
+    ] as const).forEach(([errorCode, i18nKey]) => {
+      it(`maps ${errorCode} -> ${i18nKey} (never the raw code) on booking-create failure`, async () => {
+        const alert = createAlertStub();
+        const api = createStaffApiStub({
+          createWalkInBooking: jasmine
+            .createSpy()
+            .and.returnValue(throwError(() => errorWithCode(errorCode))),
+        });
+        const comp = makeComponent(api, alert);
+        (comp as any).selectedTrip = makeTrip();
+        (comp as any).selectedSeats = ['B1'];
+        setSegmentFare(comp, 300);
+
+        await (comp as any).onSell(validPayload);
+
+        expect(alert.error).toHaveBeenCalledWith(i18nKey);
+      });
+    });
+
+    it('falls back to extractApiErrorMessage/SAVE_FAILED for an unrecognized errorCode', async () => {
+      const alert = createAlertStub();
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy()
+          .and.returnValue(throwError(() => errorWithCode('SOME_OTHER_ERROR'))),
+      });
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.error).toHaveBeenCalledWith('ADMIN.MESSAGES.SAVE_FAILED');
+    });
+  });
+
+  // OBRS-358 follow-up: the proactive overflowUnits hint under-reports on
+  // OPEN trips (findWalkInSchedulesByDate's soldPaidCount is always 0 there
+  // — a pre-existing backend bug, not FE's to fix), so the server's 400
+  // BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED must be treated as the
+  // authoritative, reactive trigger for the SAME ack dialog — otherwise
+  // staff hit a dead-end selling the 21st (jump) seat.
+  describe('onSell — reactive jump-seat ack retry (OBRS-358 follow-up)', () => {
+    function errorWithCode(errorCode: string): unknown {
+      return { error: { errorCode } };
+    }
+
+    it('on a 400 ACK_REQUIRED (no proactive hint), shows the SAME confirm dialog and, on Confirm, retries with jumpSeatAcknowledged:true using a FRESH idempotency key — then completes the sale', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValues(
+            throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED')),
+            of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
+          ),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip(); // no normalCapacity -> proactive hint does NOT fire
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      // Proactive gate never fired; the ONE confirm() call is the reactive one.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(alert.confirm).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          title: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TITLE',
+          text: 'STAFF.SELL.JUMP_SEAT_CONFIRM_TEXT',
+          confirmButtonText: 'STAFF.SELL.JUMP_SEAT_CONFIRM_OK',
+          icon: 'warning',
+        })
+      );
+
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(2);
+      const firstArg = api.createWalkInBooking.calls.argsFor(0)[0];
+      const retryArg = api.createWalkInBooking.calls.argsFor(1)[0];
+      expect('jumpSeatAcknowledged' in firstArg).toBeFalse();
+      expect(retryArg.jumpSeatAcknowledged).toBeTrue();
+
+      // The retry succeeds and pays with a key — that key must NOT be the
+      // one the failed first attempt would have used (fresh per retry).
+      expect(api.payWalkIn).toHaveBeenCalledTimes(1);
+      const payKey = api.payWalkIn.calls.mostRecent().args[1];
+      expect(typeof payKey).toBe('string');
+      expect(payKey.length).toBeGreaterThan(0);
+
+      // Sale completed end-to-end (no dead-end, no leftover error toast).
+      expect(alert.error).not.toHaveBeenCalled();
+      expect((comp as any).selectedTrip).toBeNull();
+    });
+
+    it('uses a DIFFERENT idempotency key on the retry than the one held after the failed first attempt (never reuses the failed key)', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValues(
+            throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED')),
+            of({ data: { bookingId: 99, bookingNumber: 'BK-99' } })
+          ),
+      });
+      const alert = createAlertStub();
+      // Snapshot the key the FAILED first attempt was holding at the moment
+      // the reactive dialog is shown (submitWalkInBooking() sets it
+      // unconditionally before the HTTP call, so it's already populated here).
+      let keyHeldAfterFailedFirstAttempt: string | null = null;
+      alert.confirm.and.callFake(() => {
+        keyHeldAfterFailedFirstAttempt = (comp as any).idempotencyKey;
+        return Promise.resolve(true);
+      });
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+      spyOn(comp as any, 'offerPrintTicket').and.returnValue(Promise.resolve());
+
+      await (comp as any).onSell(validPayload);
+
+      expect(keyHeldAfterFailedFirstAttempt).toEqual(jasmine.any(String));
+      const retryKeyUsedForPayment = api.payWalkIn.calls.mostRecent().args[1];
+      expect(retryKeyUsedForPayment).toEqual(jasmine.any(String));
+      expect(retryKeyUsedForPayment).not.toBe(keyHeldAfterFailedFirstAttempt);
+    });
+
+    it('does NOT retry when staff declines the reactive ack dialog — quiet abort, no toast, no second API call', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub(); // confirm() defaults to resolving false
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(1);
+      expect(alert.error).not.toHaveBeenCalled();
+      expect((comp as any).isSelling).toBeFalse();
+    });
+
+    it('guards against a retry loop: if the retry itself returns ACK_REQUIRED again, falls through to the plain error toast instead of retrying a second time', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true));
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip();
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      // Exactly one confirm prompt and one retry attempt (2 total create
+      // calls) — the second failure does NOT prompt again.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(2);
+      expect(alert.error).toHaveBeenCalledWith('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
+    });
+
+    it('does NOT reactively retry when the proactive hint already sent jumpSeatAcknowledged:true (defensive — should not occur once ack=true is sent)', async () => {
+      const api = createStaffApiStub({
+        createWalkInBooking: jasmine
+          .createSpy('createWalkInBooking')
+          .and.returnValue(throwError(() => errorWithCode('BOOKING_ERROR_JUMPSEAT_ACKNOWLEDGMENT_REQUIRED'))),
+      });
+      const alert = createAlertStub();
+      alert.confirm.and.returnValue(Promise.resolve(true)); // proactive gate confirms
+      const comp = makeComponent(api, alert);
+      (comp as any).selectedTrip = makeTrip({
+        soldPaidCount: 20,
+        reservedUnpaidCount: 0,
+        normalCapacity: 20,
+      }); // proactive hint DOES fire (overflowUnits = 1)
+      (comp as any).selectedSeats = ['B1'];
+      setSegmentFare(comp, 300);
+
+      await (comp as any).onSell(validPayload);
+
+      // Only the ONE proactive confirm — no second (reactive) prompt, since
+      // this attempt already carried jumpSeatAcknowledged:true.
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+      expect(api.createWalkInBooking).toHaveBeenCalledTimes(1);
+      expect(alert.error).toHaveBeenCalledWith('STAFF.SELL.ERR_JUMPSEAT_ACK_REQUIRED');
     });
   });
 });

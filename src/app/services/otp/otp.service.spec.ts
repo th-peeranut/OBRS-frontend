@@ -6,6 +6,7 @@ import {
 } from '@angular/common/http/testing';
 
 import { OtpService } from './otp.service';
+import { environment } from '../../../environments/environment';
 
 describe('OtpService', () => {
   let service: OtpService;
@@ -26,7 +27,7 @@ describe('OtpService', () => {
   it('uses the dev request endpoint in the local environment', async () => {
     const resultPromise = service.requestOTP({ msisdn: '0812345678' });
     const request = httpTesting.expectOne(
-      'http://localhost:8000/api/external/otp/request/test'
+      `${environment.apiUrl}/api/external/otp/request/test`
     );
 
     expect(request.request.method).toBe('POST');
@@ -42,7 +43,7 @@ describe('OtpService', () => {
   it('types the verify response independently from the request response', async () => {
     const resultPromise = service.verifyOTP({ token: 'token-1', pin: '123456' });
     const request = httpTesting.expectOne(
-      'http://localhost:8000/api/external/otp/verify/test'
+      `${environment.apiUrl}/api/external/otp/verify/test`
     );
 
     request.flush({

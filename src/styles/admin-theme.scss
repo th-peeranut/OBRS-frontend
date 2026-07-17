@@ -35,6 +35,36 @@
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
 
+  /* OBRS-272: "delayed" trip indicator (schedule-level, derived off
+     delayedDepartureDateTime — NOT a status code, status stays `scheduled`).
+     A distinct violet pastel so it never collides with is-info (blue-grey,
+     departed), is-success (blue, arrived), is-neutral (grey, scheduled/not
+     boarded), is-warning (orange — reserved, also the resolved theme-admin
+     --accent variant, design-system §11), or is-danger/is-accepted. Light bg +
+     dark text is a self-contained chip (like --admin-accepted-*): no
+     dark-mode override needed, same reasoning as the accepted-text note above. */
+  --admin-delayed-bg: #ede9fe;
+  --admin-delayed-text: #4c1d95;
+
+  /* OBRS-376/378 chip-colour collision (PO decision): duplicate and dismissed
+     usability-report statuses both landed on is-neutral, reading as identical
+     grey chips. dismissed KEEPS is-neutral; duplicate gets its OWN token
+     rather than reusing --admin-delayed-* (visually close, violet) — that
+     token is semantically "trip delayed" (OBRS-272, schedule-level) and
+     cross-using it would mislead the next reader, same reasoning as every
+     other distinct state getting its own --admin-*-* pair
+     (--admin-accepted-*, --admin-neutral-*, --admin-delayed-*). Distinct from
+     every colour already on this page: new #ffdcbe peach, in_review #e2e5ea
+     grey-blue, accepted #b7f3c0 green, resolved #d4e3ff blue, rejected
+     #ffdad6 red, dismissed #e4e4e7 grey. Light bg + dark text is a
+     self-contained chip on its own (like --admin-accepted-* and
+     --admin-delayed-* above) but gets a dark-mode override anyway (below) —
+     --admin-delayed-* skipped that override and renders as a near-white
+     lavender blob on the dark shell, the exact OBRS-100 bug
+     --admin-neutral-* was introduced to fix; don't reproduce it here. */
+  --admin-duplicate-bg: #ede9fe;
+  --admin-duplicate-text: #4c1d95;
+
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
   --accent: #4dbeef;
@@ -110,6 +140,68 @@
   --accent-text: #5eead4;
 }
 
+/* OBRS-317: notification-bell overlay panel — `p-overlayPanel`'s
+   `appendTo="body"` detaches the panel (and its `styleClass`) from
+   `.admin-shell`'s DOM subtree, so none of the `--admin-*`/`--accent-*`
+   custom properties above are in scope there (CSS custom properties inherit
+   down the actual DOM tree, not through Angular's view-encapsulation
+   attributes — same relocation issue already solved for
+   `.my-bookings-action-menu`, see `dark-theme.scss`). `NotificationBellComponent`
+   applies `styleClass="notification-inbox-overlay theme-{admin|staff}[ is-dark]"`
+   to the panel root (mirroring the shell's own `.admin-shell.theme-*`/`.is-dark`
+   class combination), so re-declare just the handful of tokens the panel/row
+   SCSS reference, scoped to that class instead of `.admin-shell`. */
+.notification-inbox-overlay {
+  --admin-surface-card: #ffffff;
+  --admin-outline: #bdc8cf;
+  --admin-muted: #55636c;
+  --admin-text: #191c1e;
+}
+
+.notification-inbox-overlay.theme-admin {
+  --accent-strong: #c2410c;
+  --accent-soft: rgba(234, 88, 12, 0.14);
+}
+
+.notification-inbox-overlay.theme-staff {
+  --accent-strong: #0d9488;
+  --accent-soft: rgba(13, 148, 136, 0.14);
+}
+
+.notification-inbox-overlay.is-dark {
+  --admin-surface-card: #1d2226;
+  --admin-outline: #3a444b;
+  --admin-muted: #9fb0bb;
+  --admin-text: #e7edf1;
+}
+
+/* QA follow-up fix (2026-07-14): the block above only re-declares the custom
+   PROPERTIES — it never set an actual background/color/border on the PrimeNG
+   panel ROOT itself, so the chrome kept PrimeNG's own hardcoded theme rule
+   (`.p-overlaypanel { background: #ffffff; color: #4b5563; border: 0 none; }`,
+   `lara-light-blue/theme.css`) regardless of our tokens: white card chrome in
+   dark mode behind now-correctly-themed light-gray header text — low
+   contrast, reads as broken. `.p-overlaypanel.notification-inbox-overlay`
+   (two classes, specificity 0-2-0) beats the plain `.p-overlaypanel` theme
+   rule (0-1-0) without `!important`. Also re-themes the little pointer arrow
+   (`.p-overlaypanel:after`/`:before`, hardcoded `#ffffff`/`#f2f2f2` in the
+   same theme file) so it matches the card in both modes. */
+.p-overlaypanel.notification-inbox-overlay {
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+  border: 1px solid var(--admin-outline);
+}
+
+.p-overlaypanel.notification-inbox-overlay:after,
+.p-overlaypanel.notification-inbox-overlay:before {
+  border-bottom-color: var(--admin-surface-card);
+}
+
+.p-overlaypanel.notification-inbox-overlay.p-overlaypanel-flipped:after,
+.p-overlaypanel.notification-inbox-overlay.p-overlaypanel-flipped:before {
+  border-top-color: var(--admin-surface-card);
+}
+
 /* OBRS-100: the neutral "not boarded" chip (.admin-status.is-neutral, boarding
    manifest) kept its light-grey bg (#e4e4e7) in dark mode, reading as a stark
    white blob on the dark shell — unlike the pastel colored status chips which
@@ -119,6 +211,22 @@
 .admin-shell.is-dark {
   --admin-neutral-bg: #333b42;
   --admin-neutral-text: #cdd8df;
+}
+
+/* OBRS-376/378 (PO decision, chip-colour collision follow-up): the new
+   --admin-duplicate-* pair above is a self-contained-looking light-violet
+   chip in light mode, same shape as --admin-delayed-* — but --admin-delayed-*
+   was never given a dark-mode override and, as a result, renders as a
+   near-white lavender blob on the dark shell (same failure class as the
+   --admin-neutral-* fix above, i.e. the OBRS-100 bug). Give duplicate a
+   recessed dark violet chip instead: bg a step lighter than the row, text
+   light enough to read. Verified contrast (WCAG relative-luminance formula):
+   bg #3b2f5c / text #ddd6fe ≈ 8.7:1, comfortably above the 4.5:1 AA floor
+   (light mode bg #ede9fe / text #4c1d95 ≈ 9.2:1, also verified). Light mode
+   is unchanged. */
+.admin-shell.is-dark {
+  --admin-duplicate-bg: #3b2f5c;
+  --admin-duplicate-text: #ddd6fe;
 }
 
 /* OBRS-256: `.is-info` (in_review / the schedule "departed" pill) had no
@@ -314,6 +422,91 @@
   font-weight: 800;
   line-height: 1;
   flex: 0 0 auto;
+}
+
+/* ── OBRS-290: sidebar menu search — filters nav by name + description ──
+   All colors map to existing --admin-* / --accent-* tokens (theme-aware,
+   dark overrides inherited); no new hex. */
+.admin-nav-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.admin-nav-search-icon {
+  position: absolute;
+  left: 10px;
+  font-size: 18px;
+  color: var(--admin-muted);
+  pointer-events: none;
+}
+
+.admin-nav-search-input {
+  width: 100%;
+  padding: 9px 32px 9px 34px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-outline);
+  background: var(--admin-surface);
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.admin-nav-search-input::placeholder {
+  color: var(--admin-muted);
+}
+
+.admin-nav-search-input:focus {
+  border-color: var(--accent-text);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.admin-nav-search-clear {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--admin-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+.admin-nav-search-clear .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.admin-nav-search-clear:hover {
+  color: var(--admin-text);
+}
+
+.admin-nav-empty {
+  color: var(--admin-muted);
+  font-size: 13px;
+  padding: 8px 12px;
+  margin: 0;
+}
+
+/* ── OBRS-289: nav section header ── muted, uppercase group label above each
+   cluster of nav links. Token-only color; no new hex. */
+.admin-nav-section-title {
+  margin: 12px 0 2px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+}
+
+.admin-nav-section-title:first-child {
+  margin-top: 0;
 }
 
 .admin-sidebar-footer {
@@ -572,9 +765,25 @@
   border-color: var(--admin-outline);
 }
 
-.admin-btn:hover {
+.admin-btn:not(:disabled):hover {
   border-color: rgba(0, 102, 135, 0.24);
   background: var(--accent-soft);
+}
+
+/* OBRS-406: shared disabled affordance for every .admin-btn (and its
+   -primary/-danger variants). The primitive had none, so a [disabled] button
+   was visually identical to a live one (opacity 1, cursor pointer) — invisible
+   to the user on every page that disables an action (in-flight isRowBusy,
+   unpaid parcel rows on the delivery list, a validating modal submit). Lifted
+   here from the OBRS-396 page-scoped workaround; additive to an
+   already-reachable state, so nothing that was enabled changes. The three
+   variant :hover rules are gated on :not(:disabled) (rather than re-setting
+   colours on :disabled:hover) so a disabled button simply holds its own base
+   look dimmed — no colour "jump" on hover, and the primary gradient isn't
+   flattened to a surface card the moment the cursor lands on it. */
+.admin-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .admin-btn-primary {
@@ -584,7 +793,7 @@
   box-shadow: 0 8px 18px rgba(0, 102, 135, 0.24);
 }
 
-.admin-btn-primary:hover {
+.admin-btn-primary:not(:disabled):hover {
   background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
   opacity: 0.9;
 }
@@ -605,7 +814,7 @@
   border-color: var(--admin-danger-border);
 }
 
-.admin-btn-danger:hover {
+.admin-btn-danger:not(:disabled):hover {
   background: var(--admin-danger-bg);
   border-color: var(--admin-danger-border);
 }
@@ -649,6 +858,27 @@
 .admin-kpi-icon.is-warning {
   background: var(--admin-warning-bg);
   color: var(--admin-warning-text);
+}
+
+// OBRS-98: refund/void report's "Voided" KPI card — composes the existing §2.4
+// danger tokens (no new hex), same modifier shape as is-success/is-warning above.
+.admin-kpi-icon.is-danger {
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+// OBRS-99: cash/online reconciliation report's "Online" and "Other" KPI cards —
+// reuse the SAME --admin-inreview-*/--admin-neutral-* tokens already bound to
+// `.admin-status.is-info`/`.is-neutral` (no new hex), same modifier shape as
+// is-success/is-warning/is-danger above.
+.admin-kpi-icon.is-info {
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+.admin-kpi-icon.is-neutral {
+  background: var(--admin-neutral-bg);
+  color: var(--admin-neutral-text);
 }
 
 .admin-kpi .admin-big-number {
@@ -999,6 +1229,23 @@
   color: var(--admin-neutral-text);
 }
 
+/* OBRS-272: "delayed" trip indicator pill — see the --admin-delayed-* token
+   comment above. */
+.admin-status.is-delayed {
+  background: var(--admin-delayed-bg);
+  color: var(--admin-delayed-text);
+}
+
+/* OBRS-376/378 (PO decision): "duplicate" usability-report status — see the
+   --admin-duplicate-* token comment above for why this is its own token
+   rather than reusing --admin-delayed-* (visually close, but semantically
+   the unrelated "trip delayed" pill) or --admin-neutral-* (already
+   "dismissed"'s token, and reusing it here read as identical grey chips). */
+.admin-status.is-duplicate {
+  background: var(--admin-duplicate-bg);
+  color: var(--admin-duplicate-text);
+}
+
 .admin-status--icon {
   gap: 4px;
 
@@ -1153,6 +1400,12 @@
   border-color: var(--admin-outline);
 }
 
+/* OBRS-316 Gap 1: wider variant for the vehicle form modal now that it carries 7
+   additional attribute fields across two sections — same shell, wider cap. */
+.admin-modal-lg {
+  width: min(880px, 100%);
+}
+
 .admin-modal-title {
   margin: 0;
   font-size: 22px;
@@ -1203,6 +1456,17 @@
 
 .admin-required {
   color: var(--admin-danger-text);
+}
+
+/* OBRS-316 Gap 1: section divider heading inside a multi-section admin form
+   (e.g. vehicle-form-modal's "Make & Model" / "Technical & Notes" groups). Sits
+   directly after a `<hr>` — the hairline itself uses the shared global `hr` rule
+   (design-system.md §5), this only styles the label text beneath it. */
+.admin-form-subheading {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-text);
 }
 
 /* design-system §5 — single input shape: pill (999px), matching app-admin-dropdown
@@ -1393,7 +1657,11 @@ textarea.admin-field {
     position: relative;
     height: 100%;
     width: 76px;
-    overflow: hidden;
+    /* overflow-x clips the 280px-wide labels while the rail animates to 76px.
+       overflow-y must stay auto: the nav is taller than a 1080p/125%-scaled
+       viewport, and the `overflow` shorthand used to reset it to hidden (OBRS-402). */
+    overflow-x: hidden;
+    overflow-y: auto;
     background: var(--admin-surface-soft);
     border-right: 1px solid var(--admin-outline);
     padding: 28px 12px;
@@ -1413,6 +1681,27 @@ textarea.admin-field {
   }
 
   /* ── NAV LINK: collapsed (icon rail) vs expanded states ── */
+
+  /* OBRS-290: the 76px icon rail has no room for the search field — hide it
+     when collapsed, reveal it only in the expanded 280px column. (The mobile
+     drawer is outside this min-width block, so it shows the search by default.) */
+  .admin-sidebar .admin-nav-search {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-search {
+    display: flex;
+  }
+
+  /* OBRS-289: same treatment for the section headers — the 76px icon rail has
+     no room for a group label, so hide it collapsed and reveal it expanded. */
+  .admin-sidebar .admin-nav-section-title {
+    display: none;
+  }
+
+  .admin-shell.is-sidebar-pinned .admin-nav-section-title {
+    display: block;
+  }
 
   /* Collapsed: icons centred, labels hidden */
   .admin-nav-link,
@@ -1641,6 +1930,24 @@ textarea.admin-field {
   }
 
   body.boarding-manifest-printing .boarding-manifest-print-portal {
+    display: block !important;
+  }
+}
+
+// OBRS-305: the parcel waybill's print-only portal (ParcelWaybillPageComponent.
+// printWaybill()) — same idiom as .boarding-manifest-print-portal immediately
+// above (docs/adr/0015-boarding-manifest-print-isolation.md), reused for the
+// next print feature rather than reinventing the reveal-rule pattern.
+.parcel-waybill-print-portal {
+  display: none;
+}
+
+@media print {
+  body.parcel-waybill-printing > *:not(.parcel-waybill-print-portal) {
+    display: none !important;
+  }
+
+  body.parcel-waybill-printing .parcel-waybill-print-portal {
     display: block !important;
   }
 }

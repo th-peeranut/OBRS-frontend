@@ -40,23 +40,56 @@
         <span class="material-symbols-outlined">{{ toggleIconName }}</span>
       </button>
 
-      <nav class="admin-nav">
-        <a
-          *ngFor="let item of navItems"
-          [routerLink]="item.path"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: true }"
-          class="admin-nav-link"
-          (click)="onNavLinkClick()"
+      <!-- OBRS-290: sidebar menu search — filters by menu name + description -->
+      <div class="admin-nav-search">
+        <span class="material-symbols-outlined admin-nav-search-icon" aria-hidden="true">search</span>
+        <input
+          #navSearchInput
+          type="text"
+          class="admin-nav-search-input"
+          [value]="navSearchQuery"
+          (input)="applyNavSearch(navSearchInput.value)"
+          (keydown.escape)="clearNavSearch(); navSearchInput.value = ''"
+          [attr.placeholder]="'ADMIN.NAV.SEARCH_PLACEHOLDER' | translate"
+          [attr.aria-label]="'ADMIN.NAV.SEARCH_PLACEHOLDER' | translate"
+          autocomplete="off"
+        />
+        <button
+          *ngIf="navSearchQuery"
+          type="button"
+          class="admin-nav-search-clear"
+          (click)="clearNavSearch(); navSearchInput.value = ''"
+          [attr.aria-label]="'ADMIN.NAV.SEARCH_CLEAR_ARIA' | translate"
         >
-          <span class="material-symbols-outlined">{{ item.icon }}</span>
-          <span>{{ item.labelKey | translate }}</span>
-          <span
-            *ngIf="item.showBadge && newReportCount > 0"
-            class="admin-nav-badge"
-            [attr.aria-label]="'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA' | translate: { count: newReportCount }"
-          >{{ newReportCount > 99 ? '99+' : newReportCount }}</span>
-        </a>
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      <!-- OBRS-289: nav grouped into labelled sections (presentational only —
+           grouping never changes which items show or their access). -->
+      <nav class="admin-nav">
+        <ng-container *ngFor="let section of filteredNavSections">
+          <p class="admin-nav-section-title">{{ section.titleKey | translate }}</p>
+          <a
+            *ngFor="let item of section.items"
+            [routerLink]="item.path"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="admin-nav-link"
+            (click)="onNavLinkClick(); clearNavSearch()"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span>{{ item.labelKey | translate }}</span>
+            <span
+              *ngIf="item.showBadge && badgeCount > 0"
+              class="admin-nav-badge"
+              [attr.aria-label]="(badgeStatus === 'accepted' ? 'ADMIN.USABILITY_REPORTS.ACCEPTED_BADGE_ARIA' : 'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA') | translate: { count: badgeCount }"
+            >{{ badgeCount > 99 ? '99+' : badgeCount }}</span>
+          </a>
+        </ng-container>
+        <p *ngIf="navSearchQuery && filteredNavSections.length === 0" class="admin-nav-empty">
+          {{ 'ADMIN.NAV.NO_RESULTS' | translate }}
+        </p>
       </nav>
 
       <div class="admin-sidebar-footer">
@@ -99,6 +132,8 @@
         >
           <span class="material-symbols-outlined">{{ isDarkMode ? 'light_mode' : 'dark_mode' }}</span>
         </button>
+
+        <app-notification-bell shellVariant="admin"></app-notification-bell>
 
         <app-lang-switcher></app-lang-switcher>
 

@@ -20,6 +20,8 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
+import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
+import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
   SettlementPendingPageDto,
@@ -86,6 +88,10 @@ export interface AdminUserDto {
   status?: string | AdminStatusDto;
   createdAt?: string;
   updatedAt?: string;
+  // OBRS-182: real last-login timestamp (set by the backend on successful
+  // authentication), distinct from updatedAt/createdAt which only reflect the
+  // record's last edit. Null/absent = the user has never signed in.
+  lastLoginAt?: string | null;
   roles: Array<string | AdminRoleDto>;
   locked?: boolean;
   accountLockedUntil?: string | null;
@@ -121,6 +127,14 @@ export interface AdminVehicleDto {
   vehicleType?: AdminVehicleTypeDto;
   createdAt?: string;
   updatedAt?: string;
+  /** OBRS-316 Gap 1: vehicle detail attributes, all optional/nullable on the backend. */
+  brand?: string | null;
+  model?: string | null;
+  manufactureYear?: number | null;
+  colour?: string | null;
+  engineCc?: number | null;
+  chassisNumber?: string | null;
+  note?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -235,6 +249,29 @@ export interface AdminScheduleDto {
   driver?: AdminDriverInfoDto;
   /** Overridden seating capacity; null means use vehicleType.totalSeats as the effective value. */
   seatingCapacity?: number | null;
+  /** OBRS-272: set once staff marks the trip delayed via
+   * `PATCH /api/private/schedules/{id}/delay` — `status` STAYS `scheduled`;
+   * "delayed" is a derived UI state off these two fields, never a status code
+   * (see `BoardingListComponent.isScheduleDelayed`). `null`/absent = not delayed. */
+  delayedDepartureDateTime?: string | null;
+  delayReason?: string | null;
+  // OBRS-283: whether this trip can still be hard-DELETEd (no booking history
+  // referencing it). `false` means the delete button must instead soft-cancel
+  // via `POST /schedules/{id}/cancel` — see shared/lib/schedule-delete-mode.ts.
+  // Optional/undefined on a cached row predating this field, or on a Schedule
+  // Set row (a different endpoint/DTO — sets never carry this field).
+  deletable?: boolean;
+  /** OBRS-283: count of CONFIRMED bookings affected by cancelling this trip
+   * (drives the refund vs. no-refund confirm-dialog copy). */
+  confirmedBookingCount?: number;
+}
+
+// OBRS-283: response of POST /api/private/schedules/{id}/cancel (soft-cancel —
+// flips status to CANCELLED; affected CONFIRMED bookings are refunded async).
+export interface CancelScheduleRespDto {
+  scheduleId: number;
+  status: string;
+  affectedBookingCount: number;
 }
 
 export interface AdminPersonDto {
@@ -310,6 +347,63 @@ export interface AdminPaymentTransactionDto {
   gatewayResponse?: string;
   paidAt?: string;
   remark?: string;
+}
+
+// OBRS-280: GET /api/private/bookings/{id} (admin booking detail dialog).
+// Shape verified against the live backend record types (not guessed):
+// `BookingDetailResponse.java` + its nested `business`/`business.localized`
+// records. Booking/ticket `status`, `bookingType`, `passengerType`, and the
+// journey `fromStop`/`toStop` all come back as `{code, label}`
+// (`LocalizedResponse` implementations) — structurally a subset of the
+// existing `AdminStatusDto`, so they're typed with it here rather than a new
+// interface (reuses `parseAdminStatus`/`getAdminLookupLabel` too).
+export interface AdminBookingTicketDto {
+  id?: number;
+  ticketNumber?: string;
+  passengerType?: AdminStatusDto;
+  passengerName?: string;
+  seatNumber?: string;
+  // Ticket status is included for EVERY ticket on the booking, including
+  // CANCELLED/REFUNDED legs — the detail dialog must not filter them out.
+  status?: string | AdminStatusDto;
+}
+
+export interface AdminBookingDetailJourneyDto {
+  legType?: AdminStatusDto;
+  fromStop?: AdminStatusDto;
+  toStop?: AdminStatusDto;
+  departureDateTime?: string;
+  arrivalDateTime?: string;
+  tickets?: AdminBookingTicketDto[];
+}
+
+export interface AdminBookingActorDetailDto {
+  id?: number;
+  name?: string;
+  type?: string;
+  channel?: string;
+  officeName?: string;
+}
+
+export interface AdminBookingContactDetailDto {
+  fullName?: string;
+  phoneNumber?: string;
+}
+
+export interface AdminBookingDetailDto {
+  id: number;
+  bookingNumber?: string;
+  bookingType?: AdminStatusDto;
+  status?: string | AdminStatusDto;
+  createdAt?: string;
+  expiredAt?: string;
+  actor?: AdminBookingActorDetailDto;
+  contact?: AdminBookingContactDetailDto;
+  journeys?: AdminBookingDetailJourneyDto[];
+  // Reuses the existing list-endpoint DTOs — `PriceSummaryResponse`/
+  // `PaymentSummaryResponse` on the backend match these field-for-field.
+  pricing?: AdminPriceSummaryDto;
+  payment?: AdminPaymentSummaryDto;
 }
 
 export function getAdminTranslationLabel(
@@ -466,11 +560,21 @@ export interface UpdateUserPayload {
   roles: string[];
 }
 
+// OBRS-316 Gap 1: PUT /api/private/vehicles/{id} is a full-replace, so the form
+// MUST send all 7 attribute fields on every submit (create AND edit) — they are
+// non-optional KEYS here (always serialized), even though each value is nullable.
 export interface CreateVehiclePayload {
   vehicleType: string;
   numberPlate: string;
   vehicleNumber: string;
   status: string;
+  brand: string | null;
+  model: string | null;
+  manufactureYear: number | null;
+  colour: string | null;
+  engineCc: number | null;
+  chassisNumber: string | null;
+  note: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.
@@ -588,6 +692,15 @@ export interface UpdateRoundTripPromotionPayload {
 export interface ReminderConfigDto {
   reminderHoursBeforeDeparture: number;
   boardingReminderMinutesBeforeDeparture: number;
+}
+
+// OBRS-358: jump-seat (walk-in-only seat channel) toggle, a singleton row —
+// same shape/lifecycle as ReminderConfigDto above — GET/PUT
+// `/api/private/admin/configs/jump-seat`, ADMIN-only. Disabling blocks staff
+// from selling the jump seat entirely (even when normal seats are full); has
+// no effect on the online channel, which never offers it.
+export interface JumpSeatConfigDto {
+  enabled: boolean;
 }
 
 @Injectable({
@@ -895,6 +1008,15 @@ export class AdminApiService {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/schedules/${id}`);
   }
 
+  // OBRS-283: soft-cancel — used instead of deleteSchedule() when the row's
+  // `deletable` field is `false` (see shared/lib/schedule-delete-mode.ts).
+  cancelSchedule(id: number): Observable<ResponseAPI<CancelScheduleRespDto>> {
+    return this.postRequest<CancelScheduleRespDto>(
+      `${this.baseUrl}/private/schedules/${id}/cancel`,
+      {}
+    );
+  }
+
   generateSchedulesFromSet(id: number): Observable<ResponseAPI<unknown>> {
     return this.postRequest<unknown>(
       `${this.baseUrl}/private/schedule-set/${id}/generate-schedules`,
@@ -919,6 +1041,14 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-280: read-only admin booking detail dialog. Same base path as
+  // getBookingPayments above (NOT the list endpoint's `/private/admin/bookings`).
+  getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
+    return this.getRequest<AdminBookingDetailDto>(
+      `${this.baseUrl}/private/bookings/${bookingId}`
+    );
+  }
+
   getPendingManualRefunds(
     page = 0,
     size = 20
@@ -940,9 +1070,29 @@ export class AdminApiService {
     );
   }
 
-  getUsabilityReports(): Observable<ResponseAPI<UsabilityReportPage>> {
+  // OBRS-378: status is the tab filter (?status=), sort is a multi-valued
+  // sort param (e.g. ['createdAt,asc','id,asc'] — see sortForStatus()).
+  // HttpParams.append is used per sort entry (NOT .set), which would
+  // collapse the two into one param and drop the id tiebreak.
+  // OBRS-403: page/size added, mirroring getPendingManualRefunds() above —
+  // always sent so the request is deterministic rather than relying on the
+  // backend's @PageableDefault.
+  getUsabilityReports(
+    status?: UsabilityReportStatus,
+    sort?: string[],
+    page = 0,
+    size = 20
+  ): Observable<ResponseAPI<UsabilityReportPage>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (status) {
+      params = params.set('status', status);
+    }
+    for (const s of sort ?? []) {
+      params = params.append('sort', s);
+    }
     return this.getRequest<UsabilityReportPage>(
-      `${this.baseUrl}/private/admin/usability-reports`
+      `${this.baseUrl}/private/admin/usability-reports`,
+      params
     );
   }
 
@@ -985,6 +1135,27 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-98: refund / void summary report — mirrors getReportsSummary's [from, to]
+  // HttpParams shape.
+  getRefundVoidReport(from: string, to: string): Observable<ResponseAPI<RefundVoidReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RefundVoidReportDto>(
+      `${this.baseUrl}/private/admin/reports/refund-void`,
+      params
+    );
+  }
+
+  getCashOnlineReconciliationReport(
+    from: string,
+    to: string
+  ): Observable<ResponseAPI<CashOnlineReconciliationReportDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<CashOnlineReconciliationReportDto>(
+      `${this.baseUrl}/private/admin/reports/cash-online-reconciliation`,
+      params
+    );
+  }
+
   getSettlementSchedule(id: number): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
     return this.getRequest<SettlementScheduleDetailDto>(
       `${this.baseUrl}/private/settlements/schedules/${id}`
@@ -1002,12 +1173,15 @@ export class AdminApiService {
     );
   }
 
-  // Backs the admin sidebar's "Usability Reports" nav badge — reuses the
+  // Backs the admin sidebar's usability-report nav badge — reuses the
   // existing list endpoint with size=1 so only the pagination envelope
   // (data.totalElements) is needed, not the report rows themselves.
-  getNewUsabilityReportCount(): Observable<number> {
+  // OBRS-378: parameterized by status — owner's badge counts 'new' (awaiting
+  // screening), admin's counts 'accepted' (owner-vetted) — see
+  // AdminLayoutComponent.badgeStatus.
+  getUsabilityReportCountByStatus(status: UsabilityReportStatus): Observable<number> {
     const params = new HttpParams()
-      .set('status', 'new')
+      .set('status', status)
       .set('size', '1')
       .set('page', '0');
 
@@ -1031,6 +1205,20 @@ export class AdminApiService {
     return this.putRequest<unknown>(
       `${this.baseUrl}/private/admin/usability-reports/${id}/status`,
       { status, triageNote }
+    );
+  }
+
+  // OBRS-376: mark a report as a duplicate of `canonicalId`. Admin-only —
+  // returns the updated report detail (duplicateOfId/duplicateCount included).
+  // Un-marking is NOT a separate endpoint: it reuses updateUsabilityReportStatus
+  // above with status 'in_review' (the backend clears the link server-side).
+  markUsabilityReportAsDuplicate(
+    id: string,
+    canonicalId: number
+  ): Observable<ResponseAPI<UsabilityReportDetail>> {
+    return this.patchRequest<UsabilityReportDetail>(
+      `${this.baseUrl}/private/admin/usability-reports/${id}/duplicate-of`,
+      { canonicalId }
     );
   }
 
@@ -1060,6 +1248,21 @@ export class AdminApiService {
   ): Observable<ResponseAPI<ReminderConfigDto>> {
     return this.putRequest<ReminderConfigDto>(
       `${this.baseUrl}/private/admin/configs/reminders`,
+      payload
+    );
+  }
+
+  // OBRS-358: jump-seat toggle is a singleton row (mirrors reminder-config
+  // above), ADMIN-only (403 for non-admin per the backend contract).
+  getJumpSeatConfig(): Observable<ResponseAPI<JumpSeatConfigDto>> {
+    return this.getRequest<JumpSeatConfigDto>(`${this.baseUrl}/private/admin/configs/jump-seat`);
+  }
+
+  updateJumpSeatConfig(
+    payload: JumpSeatConfigDto
+  ): Observable<ResponseAPI<JumpSeatConfigDto>> {
+    return this.putRequest<JumpSeatConfigDto>(
+      `${this.baseUrl}/private/admin/configs/jump-seat`,
       payload
     );
   }

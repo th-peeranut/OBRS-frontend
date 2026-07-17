@@ -27,7 +27,8 @@ export interface UserRow {
   roles: string[];
   status: string;
   statusCode: string;
-  lastUpdated: string;
+  lastLogin: string;
+  hasLoggedIn: boolean;
   locked: boolean;
 }
 
@@ -81,9 +82,84 @@ export function extractRoleSlugs(
     .filter((slug) => slug.length > 0);
 }
 
+// OBRS-330: the user-summary endpoint sends `roles` as bare slug strings
+// (Role::getSlug) with no translations attached — unlike status, which the
+// backend sends as a rich object with translations. To still localize the
+// role chips, the FE owns a fixed slug -> i18n-key mapping for the 5
+// system roles (see public/i18n/*.json ADMIN.USERS.ROLE_NAMES) and this
+// takes a translateFn callback (typically `key => translate.instant(key)`)
+// so the mapper itself stays a pure, Angular-free function per the file
+// header note. Any slug outside the known set (a future custom role) falls
+// back to a prettified version of the slug, never a raw i18n key.
+export const ROLE_NAME_TRANSLATION_PREFIX = 'ADMIN.USERS.ROLE_NAMES.';
+
+export function prettifyRoleSlug(slug: string): string {
+  return slug
+    .split(/[\s_-]+/)
+    .filter((part) => part.length > 0)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(' ');
+}
+
+export function translateRoleSlug(
+  slug: string,
+  translateFn: (key: string) => string
+): string {
+  const trimmedSlug = slug.trim();
+  if (trimmedSlug.length === 0) {
+    return trimmedSlug;
+  }
+
+  const key = `${ROLE_NAME_TRANSLATION_PREFIX}${trimmedSlug.toLowerCase()}`;
+  const translated = translateFn(key);
+
+  // ngx-translate's instant() returns the key itself when no translation is
+  // found — that's how we detect an unknown/custom slug and fall back to a
+  // readable label instead of leaking a raw i18n key into the UI.
+  if (!translated || translated === key) {
+    return prettifyRoleSlug(trimmedSlug);
+  }
+
+  return translated;
+}
+
+// OBRS-353: mirrors OBRS-330's role-slug takeover, applied to status. The
+// user-summary endpoint's `status` DOES come back as a rich AdminStatusDto
+// with a pre-localized `name`/`label` (unlike the bare role slugs above) —
+// but the backend's `lookup_translations` table only has en/th rows, no zh,
+// so under a Chinese UI that pre-localized label silently stays Thai. This
+// is a deliberate FE i18n takeover (Option A): the FE owns a fixed
+// code -> i18n-key mapping for the 5 known `user_status` codes (see
+// public/i18n/*.json ADMIN.USERS.STATUS_NAMES) instead of changing the
+// backend contract. Any code outside the known set falls back to the same
+// prettified-slug helper roles use, never a raw i18n key.
+export const STATUS_NAME_TRANSLATION_PREFIX = 'ADMIN.USERS.STATUS_NAMES.';
+
+export function translateStatusCode(
+  code: string,
+  translateFn: (key: string) => string
+): string {
+  const trimmedCode = code.trim();
+  if (trimmedCode.length === 0) {
+    return trimmedCode;
+  }
+
+  const key = `${STATUS_NAME_TRANSLATION_PREFIX}${trimmedCode.toLowerCase()}`;
+  const translated = translateFn(key);
+
+  // Same missing-key detection as translateRoleSlug: ngx-translate's
+  // instant() returns the key itself when there's no translation for it.
+  if (!translated || translated === key) {
+    return prettifyRoleSlug(trimmedCode);
+  }
+
+  return translated;
+}
+
 export function extractRoleLabels(
   roles: Array<string | AdminRoleDto> | null | undefined,
-  locale: string
+  locale: string,
+  translateFn?: (key: string) => string
 ): string[] {
   if (!roles || roles.length === 0) {
     return [];
@@ -92,7 +168,7 @@ export function extractRoleLabels(
   return roles
     .map((role) => {
       if (typeof role === 'string') {
-        return role;
+        return translateFn ? translateRoleSlug(role, translateFn) : role;
       }
 
       return (
@@ -109,10 +185,11 @@ export function extractRoleLabels(
 export function toUserRow(
   user: AdminUserDto,
   locale: string,
-  dateLang: string | null | undefined
+  dateLang: string | null | undefined,
+  translateFn?: (key: string) => string
 ): UserRow {
   const roleSlugs = extractRoleSlugs(user.roles);
-  const roleLabels = extractRoleLabels(user.roles, locale);
+  const roleLabels = extractRoleLabels(user.roles, locale, translateFn);
   const status = parseStatus(user.status, locale);
 
   return {
@@ -122,17 +199,23 @@ export function toUserRow(
     phone: user.phoneNumber ?? '-',
     roleSlugs,
     roles: roleLabels.length > 0 ? roleLabels : ['-'],
-    status: status.name,
+    // OBRS-353: FE i18n takeover for the Status chip (see translateStatusCode
+    // above) — without translateFn this preserves the old BE-label behavior
+    // exactly, same fallback contract as extractRoleLabels/roles above.
+    status: translateFn ? translateStatusCode(status.code, translateFn) : status.name,
     statusCode: status.code,
-    // The user record's last-modified time (updatedAt, falling back to createdAt).
-    // NOT a real login/activity time — labeled "อัปเดตล่าสุด" accordingly; a true
-    // last_login_at is tracked as a backlog item (OBRS-182).
-    //
     // dateLang is deliberately the RAW translate.currentLang, NOT the
     // th/en-normalized `locale` used above for role/status labels — passing the
     // normalized locale here would silently change the date format under en-US
     // (see toRouteRow in routes.mappers.ts for the same trap).
-    lastUpdated: formatDisplayDateTime(user.updatedAt ?? user.createdAt, dateLang),
+    //
+    // Real login activity (OBRS-182) — formatDisplayDateTime already returns
+    // '-' for a null/undefined lastLoginAt, but the row never displays that
+    // '-'; the template branches on hasLoggedIn and shows the
+    // NEVER_LOGGED_IN translation instead, so this never silently falls back
+    // to updatedAt/createdAt.
+    lastLogin: formatDisplayDateTime(user.lastLoginAt, dateLang),
+    hasLoggedIn: Boolean(user.lastLoginAt),
     locked: user.locked ?? false,
   };
 }
@@ -297,7 +380,17 @@ export function filterUsers(
       return true;
     }
 
-    const searchTarget = [user.fullName, user.email, user.phone, user.roles.join(' '), user.status]
+    // Roles are now localized display labels (OBRS-330), so include the raw
+    // slugs too — otherwise searching by the English slug (e.g. "owner")
+    // stops matching once the chip renders as "เจ้าของกิจการ" under Thai/中文.
+    const searchTarget = [
+      user.fullName,
+      user.email,
+      user.phone,
+      user.roles.join(' '),
+      user.roleSlugs.join(' '),
+      user.status,
+    ]
       .join(' ')
       .toLowerCase();
 

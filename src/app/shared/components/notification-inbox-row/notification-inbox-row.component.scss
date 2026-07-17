@@ -1,0 +1,54 @@
+.notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--admin-surface-card);
+  color: var(--admin-text);
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+// Unread = heavier weight + accent-soft background + leading dot; read =
+// normal weight + default surface + no dot. Tokens only (design-system §2).
+.notification-row.is-unread {
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.notification-row-indicator {
+  width: 8px;
+  flex: 0 0 auto;
+  margin-top: 6px;
+  display: flex;
+  justify-content: center;
+}
+
+.notification-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent-strong);
+}
+
+.notification-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.notification-row-message {
+  color: var(--admin-text);
+  font-size: 13px;
+  overflow-wrap: break-word;
+}
+
+.notification-row-timestamp {
+  color: var(--admin-muted);
+  font-size: 11px;
+}

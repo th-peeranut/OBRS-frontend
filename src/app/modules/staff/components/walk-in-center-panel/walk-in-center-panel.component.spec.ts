@@ -168,6 +168,103 @@ describe('WalkInCenterPanelComponent', () => {
     });
   });
 
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d)
+  describe('isOpenSeating getter', () => {
+    it('is false when selectedTrip is null', () => {
+      component.selectedTrip = null;
+      expect((component as unknown as { isOpenSeating: boolean }).isOpenSeating).toBeFalse();
+    });
+
+    it('is false when seatingMode is missing (safe default)', () => {
+      component.selectedTrip = makeTrip();
+      expect((component as unknown as { isOpenSeating: boolean }).isOpenSeating).toBeFalse();
+    });
+
+    it('is false when seatingMode is ASSIGNED', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'ASSIGNED' });
+      expect((component as unknown as { isOpenSeating: boolean }).isOpenSeating).toBeFalse();
+    });
+
+    it('is true when seatingMode is OPEN', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      expect((component as unknown as { isOpenSeating: boolean }).isOpenSeating).toBeTrue();
+    });
+  });
+
+  describe('passenger count stepper (OBRS-324)', () => {
+    type Internals = {
+      incrementPassengerCount: () => void;
+      decrementPassengerCount: () => void;
+      maxPassengerCount: number;
+    };
+    const internals = () => component as unknown as Internals;
+
+    it('maxPassengerCount mirrors the trip availableCount', () => {
+      component.selectedTrip = makeTrip({ availableCount: 7 });
+      expect(internals().maxPassengerCount).toBe(7);
+    });
+
+    it('maxPassengerCount floors at 1 when no trip is selected', () => {
+      component.selectedTrip = null;
+      expect(internals().maxPassengerCount).toBe(1);
+    });
+
+    it('increment emits passengerCount + 1 while under the max', () => {
+      component.selectedTrip = makeTrip({ availableCount: 5 });
+      component.passengerCount = 2;
+      const emitted: number[] = [];
+      component.passengerCountChange.subscribe((v) => emitted.push(v));
+      internals().incrementPassengerCount();
+      expect(emitted).toEqual([3]);
+    });
+
+    it('increment does NOT emit once at the max', () => {
+      component.selectedTrip = makeTrip({ availableCount: 3 });
+      component.passengerCount = 3;
+      const emitted: number[] = [];
+      component.passengerCountChange.subscribe((v) => emitted.push(v));
+      internals().incrementPassengerCount();
+      expect(emitted).toEqual([]);
+    });
+
+    it('decrement emits passengerCount - 1 while above 1', () => {
+      component.passengerCount = 2;
+      const emitted: number[] = [];
+      component.passengerCountChange.subscribe((v) => emitted.push(v));
+      internals().decrementPassengerCount();
+      expect(emitted).toEqual([1]);
+    });
+
+    it('decrement does NOT emit at 1 (floor)', () => {
+      component.passengerCount = 1;
+      const emitted: number[] = [];
+      component.passengerCountChange.subscribe((v) => emitted.push(v));
+      internals().decrementPassengerCount();
+      expect(emitted).toEqual([]);
+    });
+  });
+
+  // OBRS-358: jump-seat overflow hint, rendered inside the OPEN-mode stepper block.
+  describe('jump-seat overflow hint (OBRS-358)', () => {
+    it('does not render when jumpSeatOverflowUnits is 0 (default, byte-identical to before this card)', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      fixture.detectChanges();
+
+      const hint = fixture.nativeElement.querySelector('.text-warning');
+      expect(hint).toBeFalsy();
+    });
+
+    it('renders the hint when jumpSeatOverflowUnits > 0 on an OPEN trip', () => {
+      component.selectedTrip = makeTrip({ seatingMode: 'OPEN' });
+      component.jumpSeatOverflowUnits = 1;
+      fixture.detectChanges();
+
+      const hint = fixture.nativeElement.querySelector('.text-warning');
+      expect(hint).toBeTruthy();
+      expect(hint.textContent).toContain('STAFF.SELL.JUMP_SEAT_OVERFLOW_HINT');
+    });
+  });
+
   describe('stop selection outputs', () => {
     it('emits pickupChange', () => {
       const emitted: string[] = [];

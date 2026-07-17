@@ -1,13 +1,21 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   DECISION_STATUSES,
   DETAIL_STATUS_VALUES,
+  FIFO_STATUSES,
+  MARK_AS_DUPLICATE_STATUSES,
+  OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
+  canMarkAsDuplicate,
   categoryLabel,
   displayDateTime,
+  extractUsabilityReportErrorCode,
   formatBytes,
+  removeRow,
   seedDecisionStatus,
+  sortForStatus,
   statusClass,
   statusLabel,
   toUsabilityReportDetailFallback,
@@ -21,12 +29,25 @@ import {
 
 describe('usability-reports-page.mappers', () => {
   describe('STATUS_FILTER_VALUES / DETAIL_STATUS_VALUES', () => {
-    it('the table filter offers all 5 statuses in order', () => {
-      expect(STATUS_FILTER_VALUES).toEqual(['new', 'in_review', 'accepted', 'resolved', 'rejected']);
+    it('the table filter offers all 7 statuses (OBRS-378 dismissed + OBRS-376 duplicate) in order, non-terminal before terminal', () => {
+      expect(STATUS_FILTER_VALUES).toEqual([
+        'new',
+        'in_review',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+        'duplicate',
+      ]);
     });
 
-    it('the detail dropdown offers only the 3 decision statuses in order', () => {
-      expect(DETAIL_STATUS_VALUES).toEqual(['accepted', 'resolved', 'rejected']);
+    it('the admin detail dropdown offers the 4 decision statuses in order, including dismissed — duplicate is never dropdown-selectable', () => {
+      expect(DETAIL_STATUS_VALUES).toEqual(['accepted', 'dismissed', 'resolved', 'rejected']);
+      expect(DETAIL_STATUS_VALUES).not.toContain('duplicate' as UsabilityReportStatus);
+    });
+
+    it('the owner detail dropdown offers in_review/accepted/dismissed (owner may screen-out, never terminate)', () => {
+      expect(OWNER_DETAIL_STATUS_VALUES).toEqual(['in_review', 'accepted', 'dismissed']);
     });
   });
 
@@ -46,7 +67,7 @@ describe('usability-reports-page.mappers', () => {
 
     it('preserves the input order', () => {
       const options = buildStatusOptionList(DETAIL_STATUS_VALUES, (key) => key);
-      expect(options.map((o) => o.value)).toEqual(['accepted', 'resolved', 'rejected']);
+      expect(options.map((o) => o.value)).toEqual(['accepted', 'dismissed', 'resolved', 'rejected']);
     });
   });
 
@@ -85,8 +106,14 @@ describe('usability-reports-page.mappers', () => {
       expect(statusClass('new')).toBe('is-warning');
       expect(statusClass('in_review')).toBe('is-info');
       expect(statusClass('accepted')).toBe('is-accepted');
+      expect(statusClass('dismissed')).toBe('is-neutral');
       expect(statusClass('resolved')).toBe('is-success');
       expect(statusClass('rejected')).toBe('is-danger');
+    });
+
+    it('maps duplicate to its own is-duplicate token, distinct from dismissed (PO decision, 2026-07-16)', () => {
+      expect(statusClass('duplicate')).toBe('is-duplicate');
+      expect(statusClass('duplicate')).not.toBe(statusClass('dismissed'));
     });
 
     it('returns an empty string for an unknown status', () => {
@@ -141,6 +168,43 @@ describe('usability-reports-page.mappers', () => {
     });
   });
 
+  describe('MARK_AS_DUPLICATE_STATUSES / canMarkAsDuplicate', () => {
+    it('contains exactly new/in_review/accepted', () => {
+      expect([...MARK_AS_DUPLICATE_STATUSES].sort()).toEqual(['accepted', 'in_review', 'new']);
+    });
+
+    it('canMarkAsDuplicate is true for new/in_review/accepted', () => {
+      expect(canMarkAsDuplicate('new')).toBeTrue();
+      expect(canMarkAsDuplicate('in_review')).toBeTrue();
+      expect(canMarkAsDuplicate('accepted')).toBeTrue();
+    });
+
+    it('canMarkAsDuplicate is false for terminal decisions and for an already-duplicate report', () => {
+      expect(canMarkAsDuplicate('resolved')).toBeFalse();
+      expect(canMarkAsDuplicate('rejected')).toBeFalse();
+      expect(canMarkAsDuplicate('duplicate')).toBeFalse();
+    });
+  });
+
+  describe('extractUsabilityReportErrorCode', () => {
+    it('extracts error.error.errorCode from an HttpErrorResponse', () => {
+      const error = new HttpErrorResponse({
+        status: 400,
+        error: { errorCode: 'REPORT_CANONICAL_SELF_REFERENCE' },
+      });
+      expect(extractUsabilityReportErrorCode(error)).toBe('REPORT_CANONICAL_SELF_REFERENCE');
+    });
+
+    it('returns null when the error body has no errorCode', () => {
+      const error = new HttpErrorResponse({ status: 500, error: { message: 'boom' } });
+      expect(extractUsabilityReportErrorCode(error)).toBeNull();
+    });
+
+    it('returns null for a non-HttpErrorResponse error', () => {
+      expect(extractUsabilityReportErrorCode(new Error('network down'))).toBeNull();
+    });
+  });
+
   describe('toUsabilityReportDetailFallback', () => {
     const summary: UsabilityReportSummary = {
       id: 'rep-1',
@@ -150,6 +214,8 @@ describe('usability-reports-page.mappers', () => {
       descriptionPreview: 'Preview text',
       imageCount: 3,
       createdAt: '2026-01-01T00:00:00Z',
+      duplicateOfId: null,
+      duplicateCount: 0,
     };
 
     it('carries id/category/status/userId/imageCount/createdAt straight through', () => {
@@ -160,6 +226,13 @@ describe('usability-reports-page.mappers', () => {
       expect(detail.userId).toBe(42);
       expect(detail.imageCount).toBe(3);
       expect(detail.createdAt).toBe('2026-01-01T00:00:00Z');
+    });
+
+    it('carries duplicateOfId/duplicateCount straight through (OBRS-376 — already known from the summary row)', () => {
+      const withDuplicateMeta: UsabilityReportSummary = { ...summary, duplicateOfId: 7, duplicateCount: 2 };
+      const detail = toUsabilityReportDetailFallback(withDuplicateMeta);
+      expect(detail.duplicateOfId).toBe(7);
+      expect(detail.duplicateCount).toBe(2);
     });
 
     it('mirrors descriptionPreview into both description and descriptionPreview', () => {
@@ -202,6 +275,8 @@ describe('usability-reports-page.mappers', () => {
         descriptionPreview: 'a',
         imageCount: 0,
         createdAt: '2026-01-01T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
       },
       {
         id: 'rep-2',
@@ -211,6 +286,8 @@ describe('usability-reports-page.mappers', () => {
         descriptionPreview: 'b',
         imageCount: 0,
         createdAt: '2026-01-02T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
       },
     ];
 
@@ -230,6 +307,74 @@ describe('usability-reports-page.mappers', () => {
       const result = updateRowStatus(content, 'does-not-exist', 'resolved');
       expect(result).not.toBe(content);
       expect(result.map((r) => r.status)).toEqual(['new', 'new']);
+    });
+  });
+
+  // ── OBRS-378: removeRow — a row leaving the active tab is REMOVED ────────
+  describe('removeRow', () => {
+    const content: UsabilityReportSummary[] = [
+      {
+        id: 'rep-1',
+        category: 'bug',
+        status: 'new',
+        userId: 1,
+        descriptionPreview: 'a',
+        imageCount: 0,
+        createdAt: '2026-01-01T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
+      },
+      {
+        id: 'rep-2',
+        category: 'suggestion',
+        status: 'new',
+        userId: 2,
+        descriptionPreview: 'b',
+        imageCount: 0,
+        createdAt: '2026-01-02T00:00:00Z',
+        duplicateOfId: null,
+        duplicateCount: 0,
+      },
+    ];
+
+    it('removes only the matching row, leaving other rows untouched', () => {
+      const result = removeRow(content, 'rep-1');
+      expect(result.map((r) => r.id)).toEqual(['rep-2']);
+    });
+
+    it('does not mutate the input array', () => {
+      const original = content.map((r) => ({ ...r }));
+      removeRow(content, 'rep-1');
+      expect(content).toEqual(original);
+    });
+
+    it('is a no-op (new array, same rows) when the id does not match any row', () => {
+      const result = removeRow(content, 'does-not-exist');
+      expect(result).not.toBe(content);
+      expect(result.map((r) => r.id)).toEqual(['rep-1', 'rep-2']);
+    });
+  });
+
+  // ── OBRS-378: sortForStatus — FIFO for actively-worked tabs ───────────────
+  describe('sortForStatus / FIFO_STATUSES', () => {
+    it('FIFO_STATUSES contains exactly accepted/in_review', () => {
+      expect([...FIFO_STATUSES].sort()).toEqual(['accepted', 'in_review']);
+    });
+
+    it('sorts ascending (oldest first) for accepted and in_review', () => {
+      expect(sortForStatus('accepted')).toEqual(['createdAt,asc', 'id,asc']);
+      expect(sortForStatus('in_review')).toEqual(['createdAt,asc', 'id,asc']);
+    });
+
+    it('sorts descending (newest first) for every other status, including dismissed', () => {
+      expect(sortForStatus('new')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('dismissed')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('resolved')).toEqual(['createdAt,desc', 'id,desc']);
+      expect(sortForStatus('rejected')).toEqual(['createdAt,desc', 'id,desc']);
+    });
+
+    it('sorts descending for the empty (all-statuses) selection', () => {
+      expect(sortForStatus('')).toEqual(['createdAt,desc', 'id,desc']);
     });
   });
 

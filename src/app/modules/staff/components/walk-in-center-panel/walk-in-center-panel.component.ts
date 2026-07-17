@@ -15,7 +15,7 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import dayjs from 'dayjs';
 
-import { WalkInTripDto } from '../../../../services/staff/staff-api.service';
+import { WalkInTripDto, isOpenSeatingTrip } from '../../../../services/staff/staff-api.service';
 import { StopOption } from '../../pages/sell/sell-page.component';
 import {
   AdminVehicleDto,
@@ -53,6 +53,20 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   /** Per-seat passenger type map (seat label → passenger_type slug) for multi-select rendering. */
   @Input() seatPassengerTypes: Record<string, string> = {};
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN-mode headcount, owned by
+  // sell-page (mirrors `selectedSeats` for ASSIGNED). Only meaningful when
+  // `isOpenSeating` is true.
+  @Input() passengerCount = 1;
+  @Output() passengerCountChange = new EventEmitter<number>();
+
+  // OBRS-358: how many of the current sale's tickets spill into the jump
+  // seat (walk-in-only, sold last) — owned/computed by sell-page
+  // (`overflowUnits`), passed through for the inline warning hint below the
+  // stepper. Null-default `0` means "no overflow" — every existing call site
+  // that doesn't pass this binding renders no hint, byte-identical to before
+  // this card.
+  @Input() jumpSeatOverflowUnits = 0;
 
   // --- Stop selection inputs (lifted from checkout) ---
   @Input() pickupOptions: StopOption[] = [];
@@ -255,6 +269,31 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   protected get isVan(): boolean {
     return this.selectedTrip?.vehicleType === 'van';
+  }
+
+  // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN schedules sell by
+  // passenger count only — no seat map/picker. The endpoint returns
+  // seatingMode since OBRS-360, so this reflects the real mode. Missing/unknown
+  // (a cached row predating it) safely resolves to false/ASSIGNED.
+  protected get isOpenSeating(): boolean {
+    return isOpenSeatingTrip(this.selectedTrip);
+  }
+
+  /** Whole-trip availability (walk-in is whole-trip, never per-segment) caps the OPEN headcount. */
+  protected get maxPassengerCount(): number {
+    return Math.max(1, this.selectedTrip?.availableCount ?? 1);
+  }
+
+  protected incrementPassengerCount(): void {
+    if (this.passengerCount < this.maxPassengerCount) {
+      this.passengerCountChange.emit(this.passengerCount + 1);
+    }
+  }
+
+  protected decrementPassengerCount(): void {
+    if (this.passengerCount > 1) {
+      this.passengerCountChange.emit(this.passengerCount - 1);
+    }
   }
 
   protected get currentSeat(): string {
