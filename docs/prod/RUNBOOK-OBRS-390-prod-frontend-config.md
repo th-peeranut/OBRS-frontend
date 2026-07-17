@@ -44,19 +44,22 @@ Output: `dist/obrs/browser`.
 is safe in a browser. The Omise **secret** key (`skey_live_…`) belongs only to the
 backend and must never appear in this repo or in these env vars.
 
-### `--configuration prod` vs `--configuration production`
+### Which configurations deploy, and which do not
 
-They are different, and the names are one letter apart. **`prod` is the real one.**
+**`prod` is the real one.** Until OBRS-472 it had a neighbour called `production` — one
+letter apart, opposite meaning — and that name is now gone.
 
 - `prod` — swaps in `environment.prod.ts`. This is what you deploy.
-- `production` — Angular's default; **no** `fileReplacements`, so it builds with
-  `environment.ts` (= the base defaults above). CI runs it deliberately, as an AOT +
-  bundle-budget smoke check (`.github/workflows/ci.yml`), and its output is never
-  deployed anywhere.
+- `sit` — swaps in `environment.sit.ts`. Deployed to SIT by Netlify.
+- `ci-smoke` — **not deployable**. No `fileReplacements`, so it builds against
+  `environment.ts` (= the base defaults above: `localhost:8080`, `pkey_test_`). CI runs
+  it deliberately as an AOT + bundle-budget check (`.github/workflows/ci.yml`); its
+  output is never deployed. It is also `defaultConfiguration`, so a bare `ng build`
+  produces this and nothing shippable.
 
-A bundle built from `production` and deployed to prod would fail loudly and instantly
-(it reaches `localhost:8080`, so nothing loads), which is why this is a papercut rather
-than a money leak — but see OBRS-472 for renaming it.
+If a `ci-smoke` bundle ever reached prod it would fail loudly and instantly (it reaches
+`localhost:8080`, so nothing loads) — that is why OBRS-472 was a rename rather than a
+guard: the failure was never silent, only confusing.
 
 ---
 
@@ -100,7 +103,7 @@ fresh clone cannot build `--configuration prod` until that file exists. Copy
 are deliberately ones the boot guard **rejects** — a bundle built from the template must
 never be mistaken for a shippable one.
 
-`ng test`, `npm start`, `npm run build:sit` and CI's `--configuration production` are all
+`ng test`, `npm start`, `npm run build:sit` and CI's `--configuration ci-smoke` are all
 unaffected: none of them reach `environment.prod.ts`, and TypeScript only compiles files
 reachable from `src/main.ts` (`tsconfig.app.json` lists it as the sole entry).
 

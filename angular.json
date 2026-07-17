@@ -58,7 +58,7 @@
             ]
           },
           "configurations": {
-            "production": {
+            "ci-smoke": {
               "budgets": [
                 {
                   "type": "initial",
@@ -132,14 +132,11 @@
               ]
             }
           },
-          "defaultConfiguration": "production"
+          "defaultConfiguration": "ci-smoke"
         },
         "serve": {
           "builder": "@angular-devkit/build-angular:dev-server",
           "configurations": {
-            "production": {
-              "buildTarget": "OBRS:build:production"
-            },
             "development": {
               "buildTarget": "OBRS:build:development"
             },
