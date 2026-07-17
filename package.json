@@ -9,6 +9,7 @@
     "start:sit": "ng serve --configuration sit",
     "build": "ng build",
     "build:sit": "ng build --configuration sit",
+    "build:prod": "node scripts/inject-prod-env.js && ng build --configuration prod",
     "deploy:sit": "ng build --configuration sit",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
