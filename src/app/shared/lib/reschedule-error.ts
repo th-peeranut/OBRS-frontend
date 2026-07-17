@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { RescheduleErrorCode } from '../interfaces/reschedule.interface';
 
 /**
@@ -59,11 +59,5 @@ export function shouldReturnToOptions(errorCode: string | null | undefined): boo
 
 /** Extracts `error.error.errorCode` from a failed reschedule HTTP call. */
 export function extractRescheduleErrorCode(error: unknown): RescheduleErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as RescheduleErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as RescheduleErrorCode;
 }

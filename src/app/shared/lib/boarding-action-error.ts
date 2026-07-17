@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { BoardingActionErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -27,11 +27,5 @@ export function mapBoardingActionErrorCode(errorCode: string | null | undefined)
 
 /** Extracts `error.error.errorCode` from a failed board/unboard HTTP call. */
 export function extractBoardingActionErrorCode(error: unknown): BoardingActionErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as BoardingActionErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as BoardingActionErrorCode;
 }

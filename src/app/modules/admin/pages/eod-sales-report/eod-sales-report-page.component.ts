@@ -55,7 +55,7 @@ export class EodSalesReportPageComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
   constructor(
-    private readonly store: EodSalesReportStore,
+    protected readonly store: EodSalesReportStore,
     private readonly translate: TranslateService
   ) {}
 

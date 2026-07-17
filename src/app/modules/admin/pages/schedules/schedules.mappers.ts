@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import {
   AdminLookupDto,
   AdminRouteDto,
@@ -459,13 +459,7 @@ export function toSchedulePayload(
 // boarding-action-error.ts's extractBoardingActionErrorCode() — branch on
 // the stable code, never the localized `message` (design-system §9).
 export function extractScheduleErrorCode(error: unknown): string | null {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code;
-    }
-  }
-  return null;
+  return extractApiErrorCode(error, null);
 }
 
 export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): CreateSchedulePayload {

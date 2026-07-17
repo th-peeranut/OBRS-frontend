@@ -9,10 +9,13 @@
     "start:sit": "ng serve --configuration sit",
     "build": "ng build",
     "build:sit": "ng build --configuration sit",
+    "build:prod": "node scripts/inject-prod-env.js && ng build --configuration prod",
     "deploy:sit": "ng build --configuration sit",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
+    "test:i18n": "node scripts/check-i18n-parity.mjs",
     "e2e": "playwright test",
+    "e2e:local": "playwright test --config=playwright.local.config.ts",
     "e2e:ui": "playwright test --ui",
     "e2e:route-coverage": "node e2e/route-coverage.mjs"
   },

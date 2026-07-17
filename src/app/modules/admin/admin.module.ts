@@ -28,6 +28,7 @@ import { RouteListTableComponent } from './pages/routes/route-list-table/route-l
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
+import { UsabilityReportDuplicatePickerComponent } from './pages/usability-reports/usability-report-duplicate-picker/usability-report-duplicate-picker.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
 import { RoundTripPromotionCardComponent } from './pages/promotions/round-trip-promotion-card/round-trip-promotion-card.component';
 import { PromotionListTableComponent } from './pages/promotions/promotion-list-table/promotion-list-table.component';
@@ -219,6 +220,7 @@ const routes: Routes = [
     SchedulesPageComponent,
     BookingsPageComponent,
     UsabilityReportsPageComponent,
+    UsabilityReportDuplicatePickerComponent,
     PromotionsPageComponent,
     RoundTripPromotionCardComponent,
     PromotionListTableComponent,

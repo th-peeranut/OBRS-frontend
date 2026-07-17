@@ -38,6 +38,7 @@ import {
 import { extractBoardingActionErrorCode, mapBoardingActionErrorCode } from '../../lib/boarding-action-error';
 import { extractChildFareFlagErrorCode, mapChildFareFlagErrorCode } from '../../lib/child-fare-flag-error';
 import { extractScheduleStatusErrorCode, mapScheduleStatusErrorCode } from '../../lib/schedule-status-error';
+import { extractApiErrorMessage } from '../../lib/api-error';
 import { extractScheduleDelayErrorCode, mapScheduleDelayErrorCode } from '../../lib/schedule-delay-error';
 import { formatDisplayDateTime } from '../../lib/display-date-time';
 import {
@@ -184,10 +185,32 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * driver. Same shape as `canUnboard` above. */
   protected readonly canUnflagChildFare: boolean;
 
-  /** OBRS-256: the schedule departed/arrived control is salesperson/admin
-   * only — identical shape to `canUnboard` above (hidden, not disabled, for
-   * a driver). */
+  /** OBRS-256/OBRS-434: the schedule departed/arrived control. Salesperson/admin
+   * for any trip, and a DRIVER for the trip they are assigned to — the driver is
+   * the only person actually at the final stop when it ends, and the last stop is
+   * often not a station. The backend scopes a driver to their own assignment
+   * (`ScheduleService.transitionStatus`); this flag only decides whether the
+   * button renders at all, so a driver opening someone else's `:scheduleId` still
+   * sees the button and gets a 403 toast on click (see OBRS-451). */
   protected readonly canControlScheduleStatus: boolean;
+
+  /** OBRS-272/OBRS-434: the "mark delayed"/"update ETA" control stays
+   * salesperson/admin only — its endpoint (`PATCH /schedules/{id}/delay`) is
+   * still `hasRole('SALESPERSON')`, so rendering it for a driver would only
+   * produce a 403. Split out of `canControlScheduleStatus` when OBRS-434 opened
+   * the departed/arrived control to drivers; the two gates are no longer the
+   * same question. */
+  protected readonly canDelaySchedule: boolean;
+
+  /** OBRS-471: admin/owner-only escape hatch for the vehicle-turnaround gate
+   * (`VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED` on a `departed` transition) — the
+   * ROLE_GRANTS table already makes `hasAnyRole(['admin'])` true for an owner
+   * session (`auth.service.ts:46`), same precedent as `canUnboard`. Drives
+   * BOTH whether `onScheduleStatusAction()`'s error handler offers the
+   * override confirm dialog AND the `overrideTurnaroundGate` flag it sends
+   * on the confirmed retry — everyone else only sees the server's warning
+   * text, no override control (AC2/AC5). */
+  protected readonly canOverrideTurnaroundGate: boolean;
 
   /** OBRS-256: true while a departed/arrived PATCH is in flight — disables
    * the transition button and (together with `isScheduleArrived`) the
@@ -252,8 +275,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly cdr: ChangeDetectorRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
-    this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
+    this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson', 'driver']);
+    this.canDelaySchedule = this.authService.hasAnyRole(['salesperson']);
     this.canUnflagChildFare = this.authService.hasAnyRole(['salesperson']);
+    this.canOverrideTurnaroundGate = this.authService.hasAnyRole(['admin']);
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -1116,11 +1141,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * OBRS-256: fires the current schedule's forward transition
    * (`scheduled→departed` or `departed→arrived`). `arrived` requires an
    * `AlertService.confirm()` (irreversible from the UI — the backend is
-   * forward-only). On success, patches `tripHeader.statusCode` from the
-   * response so the pill/lock/button react immediately. On error, maps
-   * `error.error.errorCode` via `schedule-status-error.ts` and re-fetches
-   * `loadTripHeader()` to reconcile against actual server state (in case of
-   * a race/stale button).
+   * forward-only). Delegates the actual submit to `submitScheduleStatusUpdate()`
+   * (OBRS-471 — shared with the turnaround-gate override retry below).
    */
   protected async onScheduleStatusAction(): Promise<void> {
     const action = this.scheduleStatusAction;
@@ -1140,15 +1162,30 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       }
     }
 
+    await this.submitScheduleStatusUpdate(action.code, false);
+  }
+
+  /**
+   * OBRS-471: shared submit path for `onScheduleStatusAction()` — also
+   * re-invoked with `overrideTurnaroundGate=true` from
+   * `handleScheduleStatusError()` below, after the admin/owner confirms the
+   * override dialog. On success, patches `tripHeader.statusCode` from the
+   * response so the pill/lock/button react immediately. On error, delegates
+   * to `handleScheduleStatusError()`.
+   */
+  private async submitScheduleStatusUpdate(
+    code: 'departed' | 'arrived',
+    overrideTurnaroundGate: boolean
+  ): Promise<void> {
     this.isUpdatingScheduleStatus = true;
     const scheduleId = this.scheduleId;
     const successKey =
-      action.code === 'departed'
+      code === 'departed'
         ? 'STAFF.SCHEDULE_STATUS.ACTION.MARK_DEPARTED_SUCCESS'
         : 'STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED_SUCCESS';
 
     this.staffApiService
-      .updateScheduleStatus(scheduleId, action.code)
+      .updateScheduleStatus(scheduleId, code, overrideTurnaroundGate)
       .pipe(
         takeUntil(this.destroy$),
         finalize(() => {
@@ -1168,11 +1205,66 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           void this.alertService.success(this.translate.instant(successKey));
         },
         error: (error) => {
-          const errorCode = extractScheduleStatusErrorCode(error);
-          void this.alertService.error(this.translate.instant(mapScheduleStatusErrorCode(errorCode)));
-          void this.loadTripHeader(scheduleId);
+          void this.handleScheduleStatusError(error, code, scheduleId, overrideTurnaroundGate);
         },
       });
+  }
+
+  /**
+   * OBRS-471: `VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED` gets special handling — the
+   * server message (already localized, names the stuck trip) is shown
+   * VERBATIM rather than mapped to a static FE string (`schedule-status-error.ts`
+   * deliberately excludes this code from its `knownCodes` map for exactly this
+   * reason). Admin/owner (`canOverrideTurnaroundGate`) additionally get a
+   * confirm dialog offering to depart anyway; confirming re-submits with
+   * `overrideTurnaroundGate: true`. Everyone else only sees the warning — no
+   * override control (AC2/AC5). Every other error code keeps the existing
+   * generic mapped-toast + reconcile behavior.
+   *
+   * `alreadyOverridden` is the flag the failed request itself carried. The
+   * override retry routes its errors back through here, so without it a server
+   * that answered this same 409 to an `overrideTurnaroundGate=true` request
+   * would re-open the confirm dialog and loop forever on every confirm. The
+   * backend is not supposed to do that — but "safe because the other side
+   * promised" is not a guard, and this handler cannot see the backend.
+   */
+  private async handleScheduleStatusError(
+    error: unknown,
+    code: 'departed' | 'arrived',
+    scheduleId: number,
+    alreadyOverridden: boolean
+  ): Promise<void> {
+    const errorCode = extractScheduleStatusErrorCode(error);
+
+    if (errorCode === 'VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED') {
+      const serverMessage = extractApiErrorMessage(error);
+
+      if (this.canOverrideTurnaroundGate && !alreadyOverridden) {
+        const confirmed = await this.alertService.confirm({
+          title: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.TURNAROUND_OVERRIDE_TITLE'),
+          text: serverMessage,
+          confirmButtonText: this.translate.instant(
+            'STAFF.SCHEDULE_STATUS.CONFIRM.TURNAROUND_OVERRIDE_CONFIRM'
+          ),
+          cancelButtonText: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.TURNAROUND_OVERRIDE_CANCEL'),
+        });
+        if (confirmed) {
+          // The retry's own success/error handling (including reconcile on a
+          // further failure) takes over from here — nothing changed
+          // server-side yet, so no loadTripHeader() call belongs on this path.
+          await this.submitScheduleStatusUpdate(code, true);
+        }
+        // Cancelled: nothing changed server-side, nothing to reconcile.
+        return;
+      }
+
+      void this.alertService.error(serverMessage);
+      void this.loadTripHeader(scheduleId);
+      return;
+    }
+
+    void this.alertService.error(this.translate.instant(mapScheduleStatusErrorCode(errorCode)));
+    void this.loadTripHeader(scheduleId);
   }
 
   /**

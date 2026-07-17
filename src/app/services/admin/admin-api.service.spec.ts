@@ -71,25 +71,34 @@ describe('AdminApiService', () => {
   // multi-valued ?sort= (must be TWO separate params, not one collapsed
   // value — HttpParams.append vs .set).
   describe('getUsabilityReports', () => {
-    it('issues a plain GET with no params when status/sort are omitted', () => {
+    // OBRS-403: page/size are now always sent (default page=0/size=20), so
+    // "no params" no longer applies — only status/sort remain optional.
+    it('issues a GET with only page=0&size=20 when status/sort are omitted', () => {
       service.getUsabilityReports().subscribe();
 
+      // expectOne(string) matches on the full urlWithParams — now that
+      // page/size are always appended, match by base URL via a predicate
+      // instead (mirroring the status/sort tests below).
       const req = httpMock.expectOne(
-        `${environment.apiUrl}/api/private/admin/usability-reports`
+        (request) => request.url === `${environment.apiUrl}/api/private/admin/usability-reports`
       );
       expect(req.request.method).toBe('GET');
-      expect(req.request.params.keys().length).toBe(0);
+      expect(req.request.params.get('page')).toBe('0');
+      expect(req.request.params.get('size')).toBe('20');
+      expect(req.request.params.has('status')).toBeFalse();
 
       req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
     });
 
-    it('sends the status param when provided', () => {
+    it('sends the status param when provided, alongside the default page/size', () => {
       service.getUsabilityReports('accepted').subscribe();
 
       const req = httpMock.expectOne(
         (request) =>
           request.url === `${environment.apiUrl}/api/private/admin/usability-reports` &&
-          request.params.get('status') === 'accepted'
+          request.params.get('status') === 'accepted' &&
+          request.params.get('page') === '0' &&
+          request.params.get('size') === '20'
       );
       req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
     });
@@ -104,6 +113,18 @@ describe('AdminApiService', () => {
       );
       expect(req.request.params.getAll('sort')).toEqual(['createdAt,asc', 'id,asc']);
 
+      req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
+    });
+
+    it('sends an explicit page/size when provided', () => {
+      service.getUsabilityReports('accepted', ['createdAt,asc', 'id,asc'], 2, 20).subscribe();
+
+      const req = httpMock.expectOne(
+        (request) =>
+          request.url === `${environment.apiUrl}/api/private/admin/usability-reports` &&
+          request.params.get('page') === '2' &&
+          request.params.get('size') === '20'
+      );
       req.flush({ code: 200, message: 'OK', data: { content: [], totalElements: 0 } });
     });
   });
