@@ -1924,12 +1924,16 @@
         "ARRIVED_CONFIRM_TITLE": "确定此班次已到达吗？",
         "ARRIVED_CONFIRM_TEXT": "此操作将锁定本班次的登车功能 — 之后将无法再登记或取消旅客登车。",
         "ARRIVED_CONFIRM_CONFIRM": "标记为已到达",
-        "ARRIVED_CONFIRM_CANCEL": "取消"
+        "ARRIVED_CONFIRM_CANCEL": "取消",
+        "TURNAROUND_OVERRIDE_TITLE": "确定要发车吗？",
+        "TURNAROUND_OVERRIDE_CONFIRM": "仍然发车",
+        "TURNAROUND_OVERRIDE_CANCEL": "取消"
       },
       "LOCK_BANNER": "本班次已到达。登车功能已锁定，无法再更改。",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "此班次目前无法切换到该状态。",
         "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "您只能更新分配给您驾驶的班次。",
+        "SCHEDULE_OVERRIDE_NOT_PERMITTED": "您无权跳过此检查。",
         "GENERIC": "无法更新班次状态，请重试。"
       }
     },

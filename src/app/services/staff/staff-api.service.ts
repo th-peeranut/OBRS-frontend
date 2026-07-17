@@ -421,14 +421,22 @@ export class StaffApiService {
    * header strip. Reuses `boardingScanContext` — a domain 409
    * (`SCHEDULE_TRANSITION_ILLEGAL`) must never force-logout the operator nor
    * duplicate a global alert (OBRS-187 trap), same reasoning as
-   * `board()`/`unboard()`. */
+   * `board()`/`unboard()`.
+   *
+   * OBRS-471: `overrideTurnaroundGate` (defaults `false`, matching the DTO's
+   * default) is the admin/owner-only escape hatch for the vehicle-turnaround
+   * gate — set `true` only on the operator-confirmed retry after a 409
+   * `VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED`. A non-admin/owner sending `true`
+   * gets a 403 `SCHEDULE_OVERRIDE_NOT_PERMITTED` server-side; the FE never
+   * sends it unless `canOverrideTurnaroundGate` is true. */
   updateScheduleStatus(
     id: number,
-    status: 'departed' | 'arrived'
+    status: 'departed' | 'arrived',
+    overrideTurnaroundGate = false
   ): Observable<ResponseAPI<{ scheduleId: number; status: string }>> {
     return this.http.patch<ResponseAPI<{ scheduleId: number; status: string }>>(
       `${environment.apiUrl}/api/private/schedules/${id}/status`,
-      { status },
+      { status, overrideTurnaroundGate },
       { context: this.boardingScanContext }
     );
   }
