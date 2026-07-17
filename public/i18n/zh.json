@@ -1370,6 +1370,7 @@
       "PROFILE_MENU": "打开个人资料菜单",
       "THEME_TOGGLE": "切换深色模式",
       "MY_BOOKINGS": "我的预订",
+      "MY_PARCELS": "我的包裹",
       "ACCOUNT": "我的账户"
     },
     "HOME_BOOKING": {
@@ -2268,6 +2269,7 @@
         "LEFT_AT_STOP": "已留存于站点",
         "UNCLAIMED_RETURNED": "无人认领 / 已退回",
         "REJECTED": "已拒收",
+        "CREATED": "已申报 — 尚未到柜台",
         "UNKNOWN": "未知状态"
       }
     }
@@ -2281,6 +2283,102 @@
     "DROPOFF_STOP": "送达站点",
     "ARRIVED_NOTIFIED_AT": "已到达目的地",
     "COLLECTED_AT": "取件时间",
-    "RECIPIENT": "收件人"
+    "RECIPIENT": "收件人",
+    "STATUS": {
+      "CREATED": "已申报 — 等待到站寄件"
+    }
+  },
+  "PARCEL_BOOKING": {
+    "TITLE": "寄件预订",
+    "STEP": {
+      "TRIP": "行程",
+      "DETAILS": "包裹信息",
+      "PAYMENT": "付款"
+    },
+    "TRIP": {
+      "FROM_STATION": "起点站",
+      "TO_STATION": "终点站",
+      "DATE": "出发日期",
+      "SCHEDULE": "班次",
+      "NO_SCHEDULES": "未找到该路线和日期的班次，请更换日期或路线",
+      "NEXT": "下一步"
+    },
+    "DETAILS": {
+      "SENDER_NAME_LABEL": "寄件人",
+      "SENDER_NAME_HELP": "此寄件人姓名自动取自您的账户，此页面无法修改",
+      "SENDER_PHONE": "寄件人电话",
+      "RECIPIENT_NAME": "收件人姓名",
+      "RECIPIENT_PHONE": "收件人电话",
+      "WEIGHT": "重量（公斤）",
+      "LENGTH_CM": "长（厘米）",
+      "WIDTH_CM": "宽（厘米）",
+      "HEIGHT_CM": "高（厘米）",
+      "DESCRIPTION": "物品描述",
+      "PROHIBITED_ACK": "我已阅读上述违禁物品清单，并确认本包裹不含其中任何一项",
+      "QUOTE_LOADING": "正在计算价格…",
+      "QUOTE_AMOUNT": "价格：{{amount}} 泰铢",
+      "SUBMIT": "确认包裹信息",
+      "SUBMITTING": "正在提交…"
+    },
+    "PROHIBITED": {
+      "TITLE": "违禁物品",
+      "FLAMMABLE": "易燃液体/气体",
+      "EXPLOSIVE": "爆炸物或烟花",
+      "WEAPON": "武器或武器零件",
+      "NARCOTIC": "毒品或管制物品",
+      "CORPSE": "尸体或人体部分"
+    },
+    "VALIDATION": {
+      "REQUIRED": "此字段为必填项",
+      "PHONE_INVALID": "请输入10-15位数字",
+      "WEIGHT_POSITIVE": "重量必须大于0",
+      "WEIGHT_MAX": "重量不得超过100公斤",
+      "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空",
+      "FROM_TO_SAME": "起点站和终点站不能相同"
+    },
+    "ERROR": {
+      "PROHIBITED_NOT_ACK": "请先确认包裹不含违禁物品",
+      "WEIGHT_EXCEEDS_MAX": "包裹重量不得超过100公斤",
+      "RECIPIENT_REQUIRED": "请完整填写收件人姓名和电话",
+      "RECIPIENT_PHONE_INVALID": "收件人电话无效，请输入10-15位数字",
+      "STOP_ORDER_INVALID": "卸货点必须在同一路线上位于取件点之后，请重新选择",
+      "SENDER_PHONE_INVALID": "寄件人电话无效，请输入10-15位数字",
+      "SENDER_NAME_UNRESOLVED": "您的账户没有姓名记录，请先完善个人资料后再预订包裹",
+      "PROHIBITED_CATEGORY": "您填写的描述涉及违禁类别，请重新查看上方清单，如有疑问请联系工作人员",
+      "STOP_PAIR_NOT_PRICEABLE": "无法为所选取件/卸货点计价，请重新选择或联系工作人员",
+      "CARGO_NOT_CONFIGURED": "该班次尚未开放寄件，请选择其他班次或联系工作人员",
+      "CARGO_CAPACITY_EXCEEDED": "该班次货运配额已满，请选择其他班次",
+      "NOT_FOUND": "未找到所选班次或停靠点，请重试",
+      "GENERIC": "出现错误，请重试"
+    },
+    "SUCCESS": {
+      "TITLE": "预订成功",
+      "TRACKING_NUMBER": "包裹追踪号",
+      "AMOUNT_PAID": "已支付金额",
+      "NEXT_STEPS": "下一步：请在指定时间将包裹送至起点站，工作人员将在正式收件前进行查验，只有查验并接收后才会发放取件码",
+      "TRACK_CTA": "查看我的包裹",
+      "HOME_CTA": "返回首页"
+    },
+    "MY_PARCELS": {
+      "TITLE": "我的包裹",
+      "SUBTITLE": "您的所有寄件记录",
+      "COPY_TRACKING_NUMBER": "复制追踪号",
+      "COPY_TRACKING_NUMBER_SUCCESS": "已复制追踪号",
+      "COPY_TRACKING_LINK": "复制追踪链接",
+      "COPY_TRACKING_LINK_SUCCESS": "已复制追踪链接",
+      "UNPAID_BADGE": "未付款",
+      "EXPIRES_AT": "请于{{time}}前完成付款",
+      "RESUME_PAYMENT": "继续付款",
+      "CREATED_ACTION_HINT": "已付款 — 等待工作人员查验。请按预约时间将包裹送至起点站，尚无取件码，需工作人员查验并接收后才会发放",
+      "EMPTY": "您尚未预订任何包裹",
+      "BOOK_NOW": "预订寄件",
+      "LOAD_MORE": "加载更多",
+      "RETRY": "重试",
+      "RECIPIENT": "收件人",
+      "WEIGHT": "重量",
+      "WEIGHT_VALUE": "{{weight}} 公斤",
+      "AMOUNT_PAID": "已付金额",
+      "AMOUNT_DUE": "应付金额"
+    }
   }
 }

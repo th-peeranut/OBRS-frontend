@@ -45,6 +45,12 @@ export interface ParcelConsignedReqDto {
   dimensions?: ParcelDimensionsReqDto;
 }
 
+/**
+ * Reused UNCHANGED by the OBRS-415 online path (ADR-0080 Decision 3) — same
+ * record, two fields deliberately `null` there: `collectionCode` (minted at
+ * `accepted`, Card 3b/OBRS-416) and `waybillUrl` (no waybill exists before
+ * `accepted`). Walk-in consigned intake still returns both populated.
+ */
 export interface ParcelConsignedRespDto {
   parcelId: number;
   trackingNumber: string;
@@ -52,9 +58,9 @@ export interface ParcelConsignedRespDto {
   bookingNumber: string;
   amount: number;
   deliveryStatus: string;
-  collectionCode: string;
+  collectionCode: string | null;
   recipientName?: string;
-  waybillUrl: string;
+  waybillUrl: string | null;
 }
 
 export interface ParcelQuoteReqParams {
@@ -170,13 +176,18 @@ export interface ParcelDeliveryListItemDto {
 }
 
 /**
- * All 7 `parcel_delivery_status` slugs that are ever actually rendered as a
- * chip. Migration V15 seeds 8 lookup rows total (`created` is also seeded)
- * but `created` is never surfaced client-side — consigned intake sets the row
- * directly to `accepted` (`ParcelConsignedRespDto.deliveryStatus`), so no chip
- * ever needs to render the `created` slug.
+ * All 8 `parcel_delivery_status` slugs that are ever actually rendered as a
+ * chip. `created` (OBRS-415) is the online-intake starting state — a
+ * consigned parcel booked and paid for online via `POST /parcels/online`
+ * stays `created` until staff physically verify it at the counter (Card
+ * 3b/OBRS-416 mints `accepted`). It IS surfaced client-side: the parcel
+ * booking success screen, `/my-parcels`, and (via `/track-parcel`) the
+ * public tracking page all render it. Walk-in consigned intake still sets
+ * the row directly to `accepted` (verified at the counter), so `created`
+ * only ever appears on an online-originated parcel.
  */
 export type ParcelDeliveryStatus =
+  | 'created'
   | 'accepted'
   | 'in_transit'
   | 'arrived_notified'
@@ -184,3 +195,90 @@ export type ParcelDeliveryStatus =
   | 'left_at_stop'
   | 'unclaimed_returned'
   | 'rejected';
+
+/**
+ * `POST /api/private/parcels/online` body — OBRS-415, the customer online
+ * consigned-parcel booking endpoint. A DELIBERATELY NEW dto (ADR-0080
+ * Decision 1), not a reuse of `ParcelConsignedReqDto`/`ParcelWalkInReqDto`:
+ * there is no `sender` block (name is derived server-side from the
+ * authenticated account — the client cannot supply it, see `senderPhone`
+ * below), no `paymentMethod` (payment is the separate `POST
+ * /private/payments` call), no `parcelType` (this endpoint is consigned-only
+ * by construction) and no `seatCount`/`seatNumbers` (consigned never touches
+ * seats). The nested `ParcelDimensionsReqDto`/`ParcelPersonReqDto` (for
+ * `recipient`) ARE reused verbatim.
+ */
+export interface ParcelOnlineReqDto {
+  scheduleId: number;
+  pickupStopId: number;
+  dropoffStopId: number;
+  weightKg: number;
+  dimensions?: ParcelDimensionsReqDto;
+  description: string;
+  prohibitedAcknowledged: boolean;
+  /**
+   * Required, `\d{10,15}` (byte-identical to `ParcelSenderReqDto.phone` —
+   * ADR-0082 Option A, no new regex). FE prefills from the account's
+   * `User.phoneNumber` when present; the field stays editable and is NOT
+   * blocked when absent (a Google-login customer has no phone on file).
+   * Unlike the sender NAME (derived server-side, not on this DTO at all),
+   * the phone is a genuine request field — the person physically dropping
+   * the parcel off may not be the account holder.
+   */
+  senderPhone: string;
+  recipient: ParcelPersonReqDto;
+}
+
+/** Query params for `GET /api/private/parcels/quote` on the online path.
+ * `parcelType: 'consigned'` is added by the service call site — this
+ * endpoint is consigned-only from the customer flow, so it's not a caller
+ * concern. */
+export interface ParcelOnlineQuoteParams {
+  scheduleId: number;
+  pickupStopId: number;
+  dropoffStopId: number;
+  weightKg: number;
+}
+
+/**
+ * One row of `GET /api/private/parcels/me` (OBRS-415 §12.7) — the
+ * customer's own paginated parcel list, the durable recovery path for a
+ * tracking number lost after closing the success-screen tab (no SMS/email
+ * notification exists yet, OBRS-346). Scoped server-side to the
+ * authenticated customer's `actor_id` — never accepts a `userId` param
+ * (would be IDOR).
+ *
+ * Field-for-field match to the backend's `ParcelMineRespDto` record
+ * (verified against the backend worktree 2026-07-16, post their own
+ * scrutinize fix) — do not add a field this record doesn't have
+ * (`arrivedNotifiedAt`/`collectedAt` do NOT exist on this response; they
+ * were a copy-paste from `ParcelTrackRespDto` and have been removed here) or
+ * omit one it does (`bookingNumber`/`collectionCode` were missing and are
+ * now added). `collectionCode` is always `null` on this path today (minted
+ * only at `accepted`, Card 3b/OBRS-416) but the field exists on the wire.
+ */
+export interface ParcelMeDto {
+  parcelId: number;
+  trackingNumber: string;
+  bookingId: number;
+  bookingNumber: string;
+  amount: number;
+  deliveryStatus: string;
+  /** The booking's `EBookingStatus` slug (`pending`/`confirmed`/...) —
+   * distinct from `deliveryStatus`, same split as `ParcelDeliveryListItemDto`.
+   * Load-bearing, not decorative: `deliveryStatus` is `created` for BOTH a
+   * paid and an unpaid online parcel (a pending parcel holds cargo quota
+   * exactly like a seat, SPEC-OBRS-415 §0.1), so this is the ONLY field
+   * that tells "unpaid, finish paying" apart from "paid, bring it to the
+   * origin stop". */
+  bookingStatus: string;
+  collectionCode: string | null;
+  recipientName: string;
+  pickupStop: ParcelStopRefDto | string;
+  dropoffStop: ParcelStopRefDto | string;
+  departureDateTime: string;
+  weightKg: number;
+  /** Only meaningful while `bookingStatus === 'pending'` — the reservation
+   * hold's expiry, after which `BookingExpirationScheduler` sweeps it. */
+  expiresAt?: string | null;
+}

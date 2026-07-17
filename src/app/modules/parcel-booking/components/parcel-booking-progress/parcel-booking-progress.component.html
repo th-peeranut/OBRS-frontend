@@ -1,0 +1,12 @@
+<ol class="parcel-booking-progress" aria-label="Booking progress">
+  <li
+    class="parcel-booking-progress__step"
+    *ngFor="let step of steps; let i = index"
+    [class.is-active]="i === currentIndex"
+    [class.is-done]="i < currentIndex"
+    [attr.aria-current]="i === currentIndex ? 'step' : null"
+  >
+    <span class="parcel-booking-progress__index">{{ i + 1 }}</span>
+    <span class="parcel-booking-progress__label">{{ step.labelKey | translate }}</span>
+  </li>
+</ol>

@@ -1,0 +1,37 @@
+<app-navbar></app-navbar>
+
+<section class="parcel-booking-success-page">
+  <div class="parcel-booking-success-card">
+    <h1>{{ "PARCEL_BOOKING.SUCCESS.TITLE" | translate }}</h1>
+
+    <span class="admin-status" [ngClass]="createdStatus.token">
+      {{ "PARCEL_TRACKING.STATUS.CREATED" | translate }}
+    </span>
+
+    <dl class="parcel-booking-success-card__meta">
+      <div>
+        <dt>{{ "PARCEL_BOOKING.SUCCESS.TRACKING_NUMBER" | translate }}</dt>
+        <dd>{{ trackingNumber }}</dd>
+      </div>
+      <div *ngIf="amountPaid != null">
+        <dt>{{ "PARCEL_BOOKING.SUCCESS.AMOUNT_PAID" | translate }}</dt>
+        <dd>{{ amountPaid }}</dd>
+      </div>
+    </dl>
+
+    <p class="parcel-booking-success-card__next-steps">
+      {{ "PARCEL_BOOKING.SUCCESS.NEXT_STEPS" | translate }}
+    </p>
+
+    <div class="parcel-booking-success-card__actions">
+      <a class="parcel-btn-primary" routerLink="/my-parcels">
+        {{ "PARCEL_BOOKING.SUCCESS.TRACK_CTA" | translate }}
+      </a>
+      <a class="parcel-btn-secondary" routerLink="/">
+        {{ "PARCEL_BOOKING.SUCCESS.HOME_CTA" | translate }}
+      </a>
+    </div>
+  </div>
+</section>
+
+<app-footer></app-footer>

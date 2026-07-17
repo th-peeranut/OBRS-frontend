@@ -72,6 +72,19 @@ describe('ParcelTrackingPageComponent', () => {
     expect(component['chipFor']('collected').token).toBe('is-success');
   });
 
+  // OBRS-415/UX §8: `created` renders the CUSTOMER copy (PARCEL_TRACKING.STATUS.CREATED),
+  // never the driver copy `chipFor().i18nKey` would give — the exact OBRS-427 mistake.
+  it('renders the customer-facing label for "created", not the driver copy', () => {
+    const component = makeComponent({ track: () => of({ code: 200, message: 'OK', data: {} as never }) });
+    expect(component['statusLabelKey']('created')).toBe('PARCEL_TRACKING.STATUS.CREATED');
+    expect(component['statusLabelKey']('created')).not.toBe(component['chipFor']('created').i18nKey);
+  });
+
+  it('falls through to the shared chip i18n key for every other status', () => {
+    const component = makeComponent({ track: () => of({ code: 200, message: 'OK', data: {} as never }) });
+    expect(component['statusLabelKey']('collected')).toBe(component['chipFor']('collected').i18nKey);
+  });
+
   it('cleans up on destroy without throwing', () => {
     const component = makeComponent({ track: () => of({ code: 200, message: 'OK', data: {} as never }) });
     expect(() => component.ngOnDestroy()).not.toThrow();
