@@ -1180,6 +1180,8 @@
     "EMAIL_EXIST": "此电子邮件已被使用",
     "PHONE_NO": "手机号码",
     "PHONE_NO_PLACEHOLDER": "请输入您的手机号码",
+    "PHONE_NO_REQUIRED": "请输入您的手机号码",
+    "PHONE_NO_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678）",
     "PHONE_NO_EXIST": "此手机号码已被使用",
     "PASSWORD": "密码",
     "PASSWORD_PLACEHOLDER": "请输入您的密码",
@@ -1206,7 +1208,7 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "VERIFY OTP": "请通过您的手机号码验证您的订阅。",
+    "VERIFY_OTP": "请通过您的手机号码验证您的订阅。",
     "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
     "EMAIL_VERIFY_SIGNIN": "登录"
   },

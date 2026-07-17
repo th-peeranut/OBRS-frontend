@@ -1208,7 +1208,7 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "VERIFY OTP": "Please verify your subscription via your phone number.",
+    "VERIFY_OTP": "Please verify your subscription via your phone number.",
     "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
     "EMAIL_VERIFY_SIGNIN": "Sign in"
   },
@@ -1387,7 +1387,6 @@
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
       "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
-      "PASSENGER_VALIDATION": "Please select at least one passenger before searching.",
       "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
     },
     "STATION": {
