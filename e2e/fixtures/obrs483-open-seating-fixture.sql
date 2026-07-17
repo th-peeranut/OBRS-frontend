@@ -7,6 +7,24 @@
 -- same relative-date + idempotency pattern — but with ONE deliberate difference that
 -- is the entire point of this card:
 --
+-- ── Four bookings, not one (QA round 2 correction) ──────────────────────────────
+-- round 1 seeded a SINGLE booking (OBRS483-OPEN) and ran reschedule, then
+-- change-stop, then change-seat-disabled against it in sequence. Each of the first
+-- two actions is one-shot (`reschedule_count`/`stop_change_count` gate at >=1), so by
+-- the third capture the booking had ALL THREE actions greyed out -- reschedule and
+-- change-stop disabled by ALREADY_USED, change-seat disabled by the real OPEN rule --
+-- and a screenshot of that state cannot tell a reader which reason is which. Four
+-- separate pristine bookings (same shape, all counts 0) isolate each capture so it
+-- proves only the one thing it claims to prove:
+--   * OBRS483-OPEN  — the committed spec's own three sequential tests (unchanged).
+--   * OBRS483-RS    — QA's dedicated reschedule BEFORE/AFTER capture, never touched
+--                      by anything else.
+--   * OBRS483-CS    — QA's dedicated change-stop BEFORE/AFTER capture, likewise.
+--   * OBRS483-SEAT  — QA's change-seat-disabled capture. NEVER mutated by any other
+--                      flow, so its menu isolates the OPEN change-seat rule: reschedule
+--                      and change-stop render ENABLED (counts still 0), change-seat is
+--                      the ONLY disabled item.
+--
 --   * schedules.seating_mode = 'OPEN' set EXPLICITLY (not left at the column
 --     default). OBRS-475 documented the trap: DRV-FIXTURE-1 is OPEN only because
 --     nobody set it, while its tickets carry seat_number '1'..'8' — a state the
@@ -89,26 +107,33 @@ FROM schedules sc
 JOIN route_stops rs ON rs.route_id = sc.route_id
 ON CONFLICT (schedule_id, stop_id) DO NOTHING;
 
--- ── Booking ──────────────────────────────────────────────────────────────────
--- One OPEN one-way booking, confirmed, owned by customer@system.local, riding BOOK
--- nong_chak -> mo_chit_2_bus_terminal at the seeded 200.00 fare. Same-fare net-zero
--- design (see reschedule-fixture.sql) means no `payments` row is required for
--- reschedule/change-stop to complete inline.
+-- ── Bookings ─────────────────────────────────────────────────────────────────
+-- Four OPEN one-way bookings, confirmed, owned by customer@system.local, all
+-- identically shaped (all counts 0) and all riding BOOK nong_chak ->
+-- mo_chit_2_bus_terminal at the seeded 200.00 fare. Same-fare net-zero design
+-- (see reschedule-fixture.sql) means no `payments` row is required for
+-- reschedule/change-stop to complete inline. See the header for why there are
+-- four rather than one.
 INSERT INTO bookings (actor_id, status_id, booking_type_id, booking_channel_id,
                       booking_number, total_amount, net_amount, discount_amount_snapshot,
                       reschedule_count, expires_at,
                       contact_name_snapshot, contact_phone_snapshot, contact_email_snapshot)
-VALUES (
+SELECT
     (SELECT id FROM users   WHERE email = 'customer@system.local'),
     (SELECT id FROM lookups WHERE category = 'booking_status'  AND slug = 'confirmed'),
     (SELECT id FROM lookups WHERE category = 'booking_type'    AND slug = 'one_way'),
     (SELECT id FROM lookups WHERE category = 'booking_channel' AND slug = 'online'),
-    'OBRS483-OPEN', 200.00, 200.00, 0.00, 0,
+    v.booking_number, 200.00, 200.00, 0.00, 0,
     (((timezone('Asia/Bangkok', now()))::date + 11)::text || ' 08:00:00+07')::timestamptz,
     'OBRS483 Open Seating', '0810000483', 'e2e-obrs483@example.com'
-);
+FROM (VALUES
+    ('OBRS483-OPEN'),
+    ('OBRS483-RS'),
+    ('OBRS483-CS'),
+    ('OBRS483-SEAT')
+) AS v(booking_number);
 
--- ── Booking schedule ─────────────────────────────────────────────────────────
+-- ── Booking schedules ────────────────────────────────────────────────────────
 INSERT INTO booking_schedules (booking_id, schedule_id, from_stop_id, to_stop_id, leg_type_id,
                                departure_date_time, arrival_date_time)
 SELECT
@@ -126,12 +151,15 @@ CROSS JOIN (SELECT id FROM stops WHERE slug = 'nong_chak') from_stop
 CROSS JOIN (SELECT id FROM stops WHERE slug = 'mo_chit_2_bus_terminal') to_stop
 JOIN schedule_stop_times st_from ON st_from.schedule_id = sc.id AND st_from.stop_id = from_stop.id
 JOIN schedule_stop_times st_to   ON st_to.schedule_id   = sc.id AND st_to.stop_id   = to_stop.id
-WHERE b.booking_number = 'OBRS483-OPEN';
+WHERE b.booking_number LIKE 'OBRS483-%';
 
--- ── Ticket ───────────────────────────────────────────────────────────────────
--- seat_number = NULL — the OPEN invariant. This is the exact row the old FE
--- `!!ticket.seatNumber` filter would drop, emptying the reschedule/change-stop
--- ticket list and turning both dialogs into silent no-ops.
+-- ── Tickets ──────────────────────────────────────────────────────────────────
+-- seat_number = NULL on every ticket — the OPEN invariant. This is the exact
+-- row the old FE `!!ticket.seatNumber` filter would drop, emptying the
+-- reschedule/change-stop ticket list and turning both dialogs into silent
+-- no-ops. ticket_number mirrors its booking's suffix (OBRS483-TK-OPEN,
+-- -TK-RS, -TK-CS, -TK-SEAT) so the idempotent DELETE above (`LIKE
+-- 'OBRS483-TK-%'`) still catches all four on re-run.
 INSERT INTO tickets (schedule_id, booking_id, booking_schedule_id, passenger_type_id, status_id,
                      route_id, from_stop_id, to_stop_id, ticket_number,
                      title_snapshot, first_name_snapshot, last_name_snapshot,
@@ -145,7 +173,7 @@ SELECT
     (SELECT id FROM lookups WHERE category = 'ticket_status'  AND slug = 'confirmed'),
     sc.route_id,
     bs.from_stop_id, bs.to_stop_id,
-    'OBRS483-TK-OPEN',
+    replace(b.booking_number, 'OBRS483-', 'OBRS483-TK-'),
     'Mr', 'OpenSeating', 'Tester',
     'Nong Chak', 'Mo Chit 2 Bus Terminal', 'van',
     bs.departure_date_time, bs.arrival_date_time,
@@ -154,6 +182,6 @@ SELECT
 FROM bookings b
 JOIN booking_schedules bs ON bs.booking_id = b.id
 JOIN schedules sc ON sc.id = bs.schedule_id
-WHERE b.booking_number = 'OBRS483-OPEN';
+WHERE b.booking_number LIKE 'OBRS483-%';
 
 COMMIT;
