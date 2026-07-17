@@ -15,13 +15,20 @@
     construction: no state survives between runs, which is precisely what the old
     live-SIT setup could not offer (its fixtures were consumed by the previous run).
 
+    Building the database itself is delegated to OBRS-backend's own
+    `scripts/new-local-db.ps1` (OBRS-292) — this script only adds the reschedule
+    fixture and boots the app. Two copies of the seed steps in two repos would have
+    been one drift away from an E2E lane that seeds differently from every other
+    local database.
+
     The database, the backend port and the frontend origin are all lane-private
     (obrs184qa / 8181 / 4210) so this can run alongside a developer's own
     :8080 + :4200 stack without either disturbing the other.
 
 .NOTES
     Requires `psql` on PATH and a local Postgres superuser connection.
-    Requires OBRS-backend checked out as a sibling (override with OBRS_BACKEND_DIR).
+    Requires OBRS-backend checked out as a sibling (override with OBRS_BACKEND_DIR),
+    on a revision that has scripts/new-local-db.ps1.
 #>
 [CmdletBinding()]
 param()
@@ -40,72 +47,47 @@ $FrontendUrl = if ($env:E2E_FRONTEND_URL)   { $env:E2E_FRONTEND_URL }   else { '
 $JavaHome    = if ($env:JAVA_HOME)          { $env:JAVA_HOME }          else { 'C:\Program Files\Java\jdk-21.0.11' }
 
 $FixtureSql  = Join-Path (Split-Path -Parent $PSScriptRoot) 'fixtures\reschedule-fixture.sql'
-$SchemaSql   = Join-Path $BackendDir 'src\main\resources\schema.sql'
-$DataSql     = Join-Path $BackendDir 'src\main\resources\data.sql'
-$SeedPwSql   = Join-Path $BackendDir 'seed-password.local.sql'
+$NewLocalDb  = Join-Path $BackendDir 'scripts\new-local-db.ps1'
 
 function Fail([string]$msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }
 
 if (-not (Test-Path $BackendDir)) { Fail "OBRS-backend not found at '$BackendDir'. Set OBRS_BACKEND_DIR." }
-if (-not (Get-Command psql -ErrorAction SilentlyContinue)) { Fail "psql is not on PATH (needed to seed the E2E database)." }
-foreach ($f in @($SchemaSql, $DataSql, $FixtureSql)) {
-    if (-not (Test-Path $f)) { Fail "required SQL file missing: $f" }
+if (-not (Test-Path $FixtureSql)) { Fail "required SQL file missing: $FixtureSql" }
+if (-not (Test-Path $NewLocalDb)) {
+    Fail "OBRS-backend/scripts/new-local-db.ps1 not found (OBRS-292). Update '$BackendDir' to a dev that has it."
 }
 
-# seed-password.local.sql is gitignored by design: data.sql ships no password and
-# takes every account's hash from the `app.seed_password_hash` session setting, so a
-# known credential can never reach a deployed environment. That means a fresh clone
-# has to generate it once -- say so plainly instead of failing later inside psql with
-# data.sql's own guard regex, which reads like a corrupt-seed error.
-if (-not (Test-Path $SeedPwSql)) {
+# We boot with the `local` profile, which is where every secret placeholder in
+# application-dev.yml gets its value. application-local.yml is gitignored, so a FRESH
+# CHECKOUT (a new worktree in particular) does not have one -- and without it the app dies
+# ~40s into boot on `Could not resolve placeholder 'JWT_SECRET_KEY'`, buried in a bean
+# cascade, which Playwright then reports only as "webServer was not able to start".
+# Check for it up front and name the fix instead.
+$LocalYml = Join-Path $BackendDir 'src\main\resources\application-local.yml'
+if (-not (Test-Path $LocalYml)) {
     Fail @"
-$SeedPwSql is missing.
+$LocalYml is missing.
 
-The E2E lane logs in as a seeded account, so the local seed hash must encode the
-password the spec uses (E2E_CUSTOMER_PASSWORD, default 'P@ssw0rd'). Generate it with
-the application's own encoder and save the printed SET line to that path:
+The E2E backend boots with the 'dev,local' profiles, and 'local' is what supplies the
+secrets application-dev.yml leaves as placeholders (JWT key, DB password, mail/SMS/Omise
+keys). It is gitignored, so a fresh checkout has none -- copy the template and fill it in:
 
     cd $BackendDir
-    .\scripts\seed-hash.ps1 -Password 'P@ssw0rd' | Out-File -Encoding utf8 seed-password.local.sql
+    cp src/main/resources/application-local.yml.example src/main/resources/application-local.yml
+
+See OBRS-backend's README, "Local Dev Setup (Secrets)".
 "@
 }
 
-$env:PGPASSWORD = $DbPassword
-
-function Invoke-Psql([string]$database, [string[]]$psqlArgs, [string]$what) {
-    $target = "postgresql://${DbUser}@${DbHost}:${DbPort}/${database}"
-    $output = & psql $target -v ON_ERROR_STOP=1 -q @psqlArgs 2>&1 | Out-String
-    if ($LASTEXITCODE -ne 0) {
-        # Print psql's own diagnostic before failing. This used to go to
-        # Write-Verbose, which is to say nowhere: a broken seed reported only
-        # "applying data.sql failed (psql exit 3)" and the line that actually
-        # explained it (`column "max_discount_amount" is of type numeric but
-        # expression is of type text` — the OBRS-457 defect) had to be reproduced by
-        # hand before anyone could read it. The whole value of failing here rather
-        # than inside Flyway is that the reason is on screen.
-        Write-Host $output.Trim() -ForegroundColor Red
-        Fail "$what failed (psql exit $LASTEXITCODE)."
-    }
-}
-
-Write-Host "[e2e] rebuilding database '$DbName'..." -ForegroundColor Cyan
-# Terminate stragglers first: a leftover connection (a previous run's backend, or an
-# open psql) makes DROP DATABASE fail outright rather than wait.
-Invoke-Psql 'postgres' @('-c', "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$DbName' AND pid <> pg_backend_pid();") 'terminating existing connections'
-Invoke-Psql 'postgres' @('-c', "DROP DATABASE IF EXISTS $DbName;") 'dropping database'
-Invoke-Psql 'postgres' @('-c', "CREATE DATABASE $DbName;") 'creating database'
-
-Write-Host "[e2e] applying schema.sql..." -ForegroundColor Cyan
-Invoke-Psql $DbName @('-f', $SchemaSql) 'applying schema.sql'
-
-# The password SET and data.sql MUST share one psql invocation: `SET` is
-# session-scoped, so splitting them silently seeds every account with an empty hash
-# and login fails much later with no obvious cause.
-Write-Host "[e2e] applying seed password + data.sql..." -ForegroundColor Cyan
-Invoke-Psql $DbName @('-f', $SeedPwSql, '-f', $DataSql) 'applying data.sql'
-
-Write-Host "[e2e] applying reschedule fixture..." -ForegroundColor Cyan
-Invoke-Psql $DbName @('-f', $FixtureSql) 'applying reschedule-fixture.sql'
+# Building the database is the BACKEND's job, and it owns the details that go wrong:
+# schema.sql -> seed-password + data.sql in ONE psql invocation, terminating stragglers
+# before the drop, printing psql's own diagnostic on failure. This script used to carry
+# its own copy of all of that; two copies of the same steps in two repos is one drift
+# away from an E2E lane that seeds differently from every other local database, which is
+# exactly the class of problem this lane exists to avoid. The fixture below is the only
+# part that is genuinely ours.
+& $NewLocalDb -DbName $DbName -ExtraSql $FixtureSql -DbHost $DbHost -DbPort $DbPort -DbUser $DbUser -DbPassword $DbPassword
+if ($LASTEXITCODE -ne 0) { Fail "new-local-db.ps1 failed (exit $LASTEXITCODE) -- see its output above." }
 
 Write-Host "[e2e] booting backend on :$BackendPort against '$DbName'..." -ForegroundColor Cyan
 $env:JAVA_HOME             = $JavaHome
