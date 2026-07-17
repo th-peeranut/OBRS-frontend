@@ -109,6 +109,27 @@
                   "with": "src/environments/environment.e2e.ts"
                 }
               ]
+            },
+            "prod": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "1.5mb",
+                  "maximumError": "2mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "6kB",
+                  "maximumError": "10kB"
+                }
+              ],
+              "outputHashing": "all",
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -127,6 +148,9 @@
             },
             "e2e": {
               "buildTarget": "OBRS:build:e2e"
+            },
+            "prod": {
+              "buildTarget": "OBRS:build:prod"
             }
           },
           "defaultConfiguration": "development"

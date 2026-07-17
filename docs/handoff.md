@@ -70,7 +70,20 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
-### [Frontend] 2026-07-14 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2): one assumed endpoint + one shape ambiguity
+### ✅ RESOLVED — [Frontend] 2026-07-14 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2): one assumed endpoint + one shape ambiguity
+
+<!-- contract-request
+card: OBRS-305
+status: resolved
+resolved: 2026-07-17 (OBRS-460) - backend commit 55250fd6 feat(OBRS-305), the SAME card's other half, landed the endpoint on 2026-07-14: ScheduleController.getConsignedParcelsForSchedule (@GetMapping PRIVATE_SCHEDULES + "/{id}/parcels/consigned", @PreAuthorize hasRole('DRIVER') exactly as asked) -> ParcelDeliveryService.listConsignedByScheduleId -> ParcelRepository.findByScheduleIdAndParcelTypeOrderByCreatedAtAsc, returning ParcelDeliveryListItemRespDto.
+-->
+
+> **RESOLVED 2026-07-17 (OBRS-460).** The "ASSUMED, does not exist yet" endpoint below **exists** — it was
+> shipped the same day this entry was written, by the backend half of **this same card** (`55250fd6
+> feat(OBRS-305)`), with the exact path and role gate requested. The parallel-lane pattern worked; nobody came
+> back to close the note, so the entry kept reading as an open gap. The `pickupStop`/`dropoffStop` shape
+> question is still unconfirmed, but `parcelStopLabel()` degrades gracefully by design (worst case a stop
+> renders its `code` instead of a name), so it is not a blocker. Entry kept for history.
 
 **Affected endpoint**: `GET /api/private/schedules/{scheduleId}/parcels/consigned` (new, ASSUMED)
 **Also affected**: `pickupStop`/`dropoffStop` shape on `ParcelTrackRespDto` (`GET /api/parcels/track/{tn}`) and `WaybillRespDto` (`GET /api/private/parcels/{id}/waybill`)
@@ -118,7 +131,17 @@ promoting either side.
 
 ---
 
-### [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+### ✅ RESOLVED — [Frontend] 2026-07-14 — `seatingMode` missing on `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`) (OBRS-324, open-seating epic 318-d)
+
+<!-- contract-request
+card: OBRS-324
+status: resolved
+resolved: 2026-07-16 (OBRS-452) - OBRS-360 shipped WalkInTripRespDto.seatingMode:87; ScheduleWalkInBrowseIT pins per-schedule passthrough. This is the entry whose dead claim had spread into 5 code comments, one of them a passing test's NAME.
+-->
+
+> **RESOLVED 2026-07-16 (OBRS-452).** **OBRS-360** shipped exactly what this asked for: `WalkInTripRespDto.seatingMode` exists, `findWalkInSchedulesByDate` selects `s.seating_mode AS seatingMode`, and `ScheduleWalkInBrowseIT` (extended by OBRS-386) pins per-schedule passthrough to the DTO. So the "will not activate for any real trip" and "every walk-in trip reads as ASSIGNED today" claims below are **historical, not current** — OBRS-324's OPEN sell flow is live. Nothing further is needed from the backend; the entry is kept for history.
+>
+> Nothing grepped this entry when OBRS-360 falsified it, so the same stale claim sat in 5 places across `staff-api.service.ts`, its spec, `sell-page.component.ts` and `walk-in-center-panel.component.ts` for two days — OBRS-452 corrected all of them together.
 
 **Affected endpoint**: `GET /api/private/schedules/walk-in` (`WalkInTripRespDto`, consumed by the staff walk-in/POS sell page).
 
@@ -129,7 +152,25 @@ promoting either side.
 **What I did instead**: added `seatingMode?: 'OPEN' | 'ASSIGNED'` to the FE's `WalkInTripDto` (`services/staff/staff-api.service.ts`) as a verified-passthrough optional field (same pattern as `Schedule.seatingMode` — `getWalkInSchedules()` is a raw `http.get<ResponseAPI<WalkInRouteGroupDto[]>>` passthrough, no manual per-field mapper, so the field will populate automatically the moment the backend adds it, no further FE change needed then). Added `isOpenSeatingTrip(trip)` next to it, which resolves missing/undefined to `false` (ASSIGNED) — the walk-in OPEN-sell UI (passenger-count-only checkout, no seat map) is fully built and tested against this helper, but **will not activate for any real trip until this field is added**, since every walk-in trip reads as ASSIGNED today regardless of its actual `seating_mode`.
 
 **What the frontend needs**: add `schedule.getSeatingMode()` as a 14th constructor argument to the `WalkInTripRespDto` build in `ScheduleService.getWalkInTrips()` (mirroring the `searchSchedules()` call), plus the matching field + Lombok `@Data` getter on `WalkInTripRespDto` itself. Until this ships, walk-in OPEN-seating schedules are still sold through the ASSIGNED (seat-map) flow in the POS, same as before this card.
-### [Frontend] 2026-07-14 — Advanced-booking passenger preferences (OBRS-361/362): built against the contract described in the task brief, not yet confirmed in `docs/api/`
+### ✅ RESOLVED — [Frontend] 2026-07-14 — Advanced-booking passenger preferences (OBRS-361/362): built against the contract described in the task brief, not yet confirmed in `docs/api/`
+
+<!-- contract-request
+card: OBRS-361/362
+status: resolved
+resolved: 2026-07-17 (OBRS-460) - all four fields exist AND the shapes match what the FE assumed. seatPreference/seatRequirement: PassengerReqDto:35,44 ("window"|"aisle" / "wheelchair"|"extra_legroom", case-insensitive, lenient) from da4689d2 feat(OBRS-134) 2026-07-13. isWheelchairAccessible/isExtraLegroom: SeatMapRespDto:14,16 from 4e38419a feat(OBRS-362) 2026-07-14 - this card's own backend half.
+-->
+
+> **RESOLVED 2026-07-17 (OBRS-460).** The claim below that a grep "found **zero** mentions" of these four
+> fields is **dead — and two of the four were already live when it was written**: `seatPreference` /
+> `seatRequirement` shipped the day before (`da4689d2 feat(OBRS-134)`), and `isWheelchairAccessible` /
+> `isExtraLegroom` landed the same day via `4e38419a feat(OBRS-362)`, the backend half of **this same card**.
+> The grep that returned zero was run against `docs/api/*.md` — **the docs were the stale thing, not the
+> backend.** Grepping the contract docs is not grepping the contract.
+>
+> **Shape verified, not just the field names** (2026-07-17): the FE's assumed lowercase `'window'|'aisle'` and
+> `'wheelchair'|'extra_legroom'` match the backend exactly — it compares case-insensitively and is lenient by
+> design (an unknown or blank value means "no preference" and never rejects a booking), and both seat-map flags
+> are `Boolean`. Nothing to change on either side. Entry kept for history.
 
 **Affected endpoints**: `POST /api/private/bookings` (`BookingScheduleReqDto.passengers[]`) and `GET /api/schedules/{id}/seats` (`SeatMapRespDto`).
 
@@ -153,6 +194,20 @@ If the backend lands under different field names, `seatPreference`/`seatRequirem
 
 ### [Frontend] 2026-07-14 — `seatingMode` not exposed on any FE-reachable read DTO (OBRS-325, open-seating epic 318-e)
 
+<!-- contract-request
+card: OBRS-325
+status: open
+absent: seatingMode :: src/main/java/com/example/demo/dto/response/business/*Ticket*.java
+note: RE-VERIFIED 2026-07-17 (OBRS-460) - still genuinely open, the only one of the 14 that is. seatingMode exists on exactly 3 backend DTOs (ScheduleRespDto:18, ScheduleSearchRespDto:26, WalkInTripRespDto:87) and no ticket DTO (BookingTicketResponse, JourneyTicketResponse, TicketDetailResponse, UnboardTicketResponse). The glob covers all 4 - if a ticket DTO is renamed the ls-tree check fails loudly rather than passing vacuously.
+note: the entry's SECOND ask ("and to Schedule") is already satisfied - ScheduleSearchRespDto carries seatingMode (OBRS-321) and the FE's Schedule.seatingMode was added by OBRS-323. Only the ticket-DTO half below is still open.
+-->
+
+> **Scope narrowed 2026-07-17 (OBRS-460).** Half of this entry is already done: the "add `seatingMode` … to
+> `Schedule`" ask was satisfied by OBRS-321 (backend `ScheduleSearchRespDto`) + OBRS-323 (FE
+> `Schedule.seatingMode`). **What is still genuinely open is the ticket half** — no ticket DTO carries the
+> field, so the e-ticket surfaces still infer OPEN from a null `seatNumber`. Re-verified against backend
+> source, not docs.
+
 **Affected endpoints**: `GET /api/private/bookings/{id}/tickets` (`BookingTicketsData.journeys[].tickets[]`, consumed by both e-ticket surfaces) and, if a search-list "Open seating" badge is ever wanted, the schedule search endpoint behind `Schedule` (`shared/interfaces/schedule.interface.ts`).
 
 **Request type**: field addition (additive, R1) — not blocking, worked around for now.
@@ -165,7 +220,13 @@ If the backend lands under different field names, `seatPreference`/`seatRequirem
 
 ---
 
-### [Frontend] 2026-07-11 — Per-round revenue settlement + owner cash-handover sign-off (OBRS-196): endpoints not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-11 — Per-round revenue settlement + owner cash-handover sign-off (OBRS-196): endpoints not yet in contract
+
+<!-- contract-request
+card: OBRS-196
+status: resolved
+resolved: 2026-07-11 (self-marked, see the blockquote below) - backend landed at 037cdb1; two contract breaks were found and fixed against the real SettlementController. Re-confirmed 2026-07-17 (OBRS-460).
+-->
 
 > **RESOLVED 2026-07-11** — backend landed (commit `037cdb1`). Two contract breaks were found and fixed against the real
 > `SettlementController`/`docs/api/settlements.md`:
@@ -222,7 +283,13 @@ The settlements page is implemented and additive-safe (new route, new nav item, 
 > - **Usability Report triage workflow (OBRS-86)** — RESOLVED. Backend `EUsabilityReportStatus` (incl. `accepted`), `UpdateUsabilityReportStatusReqDto` (`triageNote`), `triagedBy`/`triagedAt`/`jiraIssueKey` on `UsabilityReportDetailRespDto` + `UsabilityReportTriageIT`; FE triage UI on `origin/dev` (see also OBRS-174).
 > - **Round-trip promotion admin endpoints (OBRS-85), incl. the OWNER/ADMIN access gap** — RESOLVED. Backend keeps `@PreAuthorize("hasRole('OWNER')")` but the `RoleHierarchyImpl` (`ROLE_ADMIN > ROLE_OWNER > …`) lets ADMIN satisfy it; FE **OBRS-176** made `owner` an all-access superset that can reach `/admin`. Live SIT: **both** owner and admin get `200` on `/admin/promotions` and `/admin/promotions/round-trip`.
 
-### [Frontend] 2026-07-10 — Staff pre-departure boarding management (OBRS-130): board/unboard endpoints + manifest field not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-10 — Staff pre-departure boarding management (OBRS-130): board/unboard endpoints + manifest field not yet in contract
+
+<!-- contract-request
+card: OBRS-130
+status: resolved
+resolved: 2026-07-17 (OBRS-460) - BoardingListItemResponse:27 carries boardedByName (its javadoc cites OBRS-130), and BoardingManifestExportService consumes it. This entry was the ONLY one below the 2026-07-09 reconciliation line with no update note of its own, so it was verified against source rather than trusted by position.
+-->
 **Affected endpoints/fields**:
 - `POST /api/private/tickets/{id}/board` (new — staff/operator manual board action, replaces `check-in` on this flow)
 - `POST /api/private/tickets/{id}/unboard` (new — salesperson/admin-only reversal of a boarding stamp)
@@ -247,7 +314,13 @@ The settlements page is implemented and additive-safe (new route, new nav item, 
 ### Impact if not addressed
 The boarding manifest's Board/Un-board buttons will both fail with a `404`/whatever the router returns for an unmapped path (degrades gracefully — the button re-enables and the optimistic stamp reverts, no broken UI), and every row's "Boarded by" line will stay blank until the backend adds `boardedByName`. Do not merge to `dev`/`sit` until the backend implements `board`/`unboard` and the manifest field — track against the paired backend worktree before promoting either side.
 
-### [Frontend] 2026-07-10 — Starter operational dashboard (OBRS-129): endpoint not yet in `docs/api/`
+### ✅ RESOLVED — [Frontend] 2026-07-10 — Starter operational dashboard (OBRS-129): endpoint not yet in `docs/api/`
+
+<!-- contract-request
+card: OBRS-129
+status: resolved
+resolved: 2026-07-10 (see the update note below); re-confirmed 2026-07-17 (OBRS-460) - DashboardService + DashboardTodayRespDto + DepartureRespDto all cite GET /api/private/admin/dashboard/today.
+-->
 **Affected endpoint**: `GET /api/private/admin/dashboard/today` (new)
 
 **Request type**: New endpoint. Built against the contract given directly in the locked OBRS-129 UX spec (mirroring the OBRS-40 `reports/summary` shape) — `../OBRS-backend/docs/api/` has no `dashboard.md` at time of writing, and the paired backend worktree (`OBRS-backend-wt-starter-dashboards`) has no `Dashboard*` controller/service class yet, only planning-doc commits. Per `CLAUDE.md`'s R0 rule this would normally block, but the contract was supplied explicitly by the task orchestrator as already-locked, so the frontend proceeded — flagging here per the same rule's "coordinate with the backend first" spirit.
@@ -265,7 +338,13 @@ The rebuilt dashboard page is implemented and additive-safe against the admin sh
 
 > **Update 2026-07-10:** both sides landed — `GET /api/private/admin/dashboard/today` is on `origin/dev` (backend OBRS-129 merge `2d9b4cd`) and this FE consumes it. Entry kept for history.
 
-### [Frontend] 2026-07-10 — Digital e-ticket QR + manual boarding-scan (OBRS-96): endpoints not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-10 — Digital e-ticket QR + manual boarding-scan (OBRS-96): endpoints not yet in contract
+
+<!-- contract-request
+card: OBRS-96
+status: resolved
+resolved: 2026-07-10 (see the update note below) - both sides landed together on origin/dev (backend merge 34fd611).
+-->
 **Affected endpoints**:
 - `GET /api/private/tickets/{id}/boarding-token` (new — customer-facing, per-ticket signed QR payload)
 - `POST /api/private/tickets/boarding-scan` (new — staff/operator-facing manual token validation + boarding)
@@ -291,7 +370,13 @@ The e-ticket page will show every ticket's QR as the "unavailable" placeholder (
 
 > **Update 2026-07-10:** both sides landed together on `origin/dev` (FE merge + backend OBRS-96 merge `34fd611`); the SIT Supabase `boarded_at`/`boarded_by` migration is applied and `TICKET_TOKEN_SECRET_KEY` is set in Koyeb. Entry kept for history.
 
-### [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-08 — Promo code system (OBRS-109 / #37): endpoints not yet in contract
+
+<!-- contract-request
+card: OBRS-109
+status: resolved
+resolved: 2026-07-09 (the RECONCILIATION sweep above) - PromotionController + AdminPromotionCrudController + the promotionCode booking field are all on origin/dev and verified live on SIT.
+-->
 **Affected endpoints**:
 - `POST /api/private/promotions/validate` (new — customer-facing preview, no auth-scoped side effects)
 - `GET /api/private/admin/promotions` (new — full list, all promotions including the round-trip singleton row)
@@ -299,7 +384,13 @@ The e-ticket page will show every ticket's QR as the "unavailable" placeholder (
 - `POST /api/private/bookings` — new optional request field `promotionCode`
 
 **Request type**: New endpoints + new request field. `docs/api/admin.md`'s `AdminPromotionController` section explicitly scopes itself to the round-trip singleton only and calls out "full promotion CRUD across every promotion is a separate, not-yet-built feature (#37)" — this is that feature. Checked `OBRS-backend-wt-promo-codes` (the paired backend worktree): still at `origin/dev` HEAD, no promo-code commits yet, so none of this exists server-side at time of writing.
-### [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-08 — Usability report submit: optional reporter email (OBRS-108): field not yet in contract
+
+<!-- contract-request
+card: OBRS-108
+status: resolved
+resolved: 2026-07-09 (the RECONCILIATION sweep above); re-confirmed 2026-07-17 (OBRS-460) - UsabilityReportController:45 accepts the reporterEmail request param.
+-->
 **Affected endpoints**:
 - `POST /api/usability-reports`
 - `GET /api/private/admin/usability-reports/{id}`
@@ -340,7 +431,13 @@ The email field renders and validates client-side regardless, but the value is d
 
 ---
 
-### [Frontend] 2026-07-08 — Change seat (OBRS-110, wave 1): built against a not-yet-documented backend contract, please verify on merge
+### ✅ RESOLVED — [Frontend] 2026-07-08 — Change seat (OBRS-110, wave 1): built against a not-yet-documented backend contract, please verify on merge
+
+<!-- contract-request
+card: OBRS-110
+status: resolved
+resolved: 2026-07-09 (the RECONCILIATION sweep above) - ChangeSeatService + DTOs on origin/dev; the label-vs-numeric seat-number mismatch this entry asked to "verify on merge" was found and fixed under OBRS-171. Re-confirmed 2026-07-17 (OBRS-460): BookingRespDto:28 carries seatChangeCount.
+-->
 **Affected endpoints**:
 - `GET /api/private/bookings/me` (`BookingRespDto.seatChangeCount`)
 - `GET /api/private/bookings/{id}/change-seat/availability` (new)
@@ -369,7 +466,13 @@ Everything above degrades gracefully if the live contract differs in shape (Type
 
 ---
 
-### [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
+### ✅ RESOLVED — [Frontend] 2026-07-08 — Usability Report triage workflow (OBRS-86): status/fields not yet in contract
+
+<!-- contract-request
+card: OBRS-86
+status: resolved
+resolved: 2026-07-09 (the RECONCILIATION sweep above); re-confirmed 2026-07-17 (OBRS-460) - UpdateUsabilityReportStatusReqDto:15 carries triageNote and SetUsabilityReportJiraKeyReqDto:12 carries jiraIssueKey.
+-->
 **Affected endpoints**:
 - `PUT /api/private/admin/usability-reports/{id}/status`
 - `GET /api/private/admin/usability-reports/{id}`
@@ -398,7 +501,13 @@ The frontend UI for OBRS-86 (triage note textarea, Triaged By/At rows, Jira link
 - `triagedBy`, `triagedAt`, `jiraIssueKey` will always render as absent (their UI rows are conditionally hidden on null/undefined, so this degrades gracefully — no broken UI, just missing data) until the backend returns them.
 
 **Classification**: per `CLAUDE.md` cross-repo governance, assuming an undocumented field/enum value is R0. This entry exists so the backend implementation (or an explicit decision to change the frontend spec) happens before this branch is merged/deployed — do not merge to `dev`/`sit` until this is resolved or a maintainer explicitly accepts the temporary contract drift.
-### [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85) — RESOLVED after Scrutinize
+### ✅ RESOLVED — [Frontend] 2026-07-08 — Round-trip promotion admin endpoints (OBRS-85) — RESOLVED after Scrutinize
+
+<!-- contract-request
+card: OBRS-85
+status: resolved
+resolved: 2026-07-09 (the RECONCILIATION sweep above) - the two contract breaks were fixed at the time, and the OWNER/ADMIN role-guard gap this entry flagged as "separate, still-open" was closed by OBRS-176 (owner is now an all-access superset) - verified live on SIT, both roles get 200.
+-->
 **Affected endpoint**: `GET /api/private/admin/promotions/round-trip`, `PATCH /api/private/admin/promotions/round-trip`
 **Request type**: Corrected the frontend's assumed contract to match the real backend implementation (`AdminPromotionController`, `RoundTripPromotionReqDto`, `PromotionRespDto` — found in `OBRS-backend-wt-round-trip-discount`, which had landed since this entry was first written).
 
@@ -415,7 +524,13 @@ The two Scrutinize-flagged breaks made `/admin/promotions` completely non-functi
 
 ---
 
-### [Frontend] 2026-06-15 — Admin booking list endpoint missing from API docs
+### ✅ RESOLVED — [Frontend] 2026-06-15 — Admin booking list endpoint missing from API docs
+
+<!-- contract-request
+card: OBRS-none (pre-dates the Jira board; 2026-06-15 admin-bookings)
+status: resolved
+resolved: 2026-07-17 (OBRS-460) - AdminBookingController exists and is mapped to EndpointConstant.PRIVATE_ADMIN_BOOKINGS ("/api/private/admin/bookings"); AuditRouteResolver registers its /{id}/cancel + /{id}/reschedule routes. The endpoint the entry feared might not exist has been real for some time.
+-->
 **Affected endpoint**: `GET /api/private/admin/bookings`
 **Request type**: New endpoint (or documentation of existing endpoint)
 

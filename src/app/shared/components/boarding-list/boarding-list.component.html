@@ -49,12 +49,13 @@
           {{ (isUpdatingScheduleStatus ? 'STAFF.SCHEDULE_STATUS.ACTION.UPDATING' : action.labelKey) | translate }}
         </button>
         <!-- OBRS-272: "Mark delayed"/"Update ETA" pill — next to OBRS-256's
-             departed/arrived control. Renders ONLY while still `scheduled` AND
-             for the same role gate as the transition button above (hidden once
-             departed/arrived/cancelled, making the 409 NOT_SCHEDULED path rare
-             by construction). -->
+             departed/arrived control. Renders ONLY while still `scheduled`
+             (hidden once departed/arrived/cancelled, making the 409
+             NOT_SCHEDULED path rare by construction). OBRS-434: no longer the
+             same role gate as the transition button above — delay stays
+             salesperson-only on the backend, so drivers must not see it. -->
         <button
-          *ngIf="canControlScheduleStatus && tripHeader.statusCode === 'scheduled'"
+          *ngIf="canDelaySchedule && tripHeader.statusCode === 'scheduled'"
           type="button"
           class="admin-btn"
           (click)="openDelayDialog()"
