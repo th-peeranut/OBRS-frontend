@@ -382,6 +382,7 @@
       "EXPORT": "导出",
       "PREVIOUS": "上一页",
       "NEXT": "下一页",
+      "PAGINATION_NAV_ARIA": "分页",
       "ENTRIES": "条",
       "SHOWING": "显示",
       "OF": "/",
@@ -876,13 +877,34 @@
         "accepted": "已接受",
         "dismissed": "已搁置",
         "resolved": "已解决",
-        "rejected": "已拒绝"
+        "rejected": "已拒绝",
+        "duplicate": "重复"
       },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
       "NEW_BADGE_ARIA": "{{count}} 条新的可用性反馈",
       "ACCEPTED_BADGE_ARIA": "{{count}} 条待处理的可用性反馈",
-      "PARTIAL_LIST_HINT": "此状态下显示 {{shown}} / {{total}} 份报告 — 还有更多记录未显示。"
+      "DUPLICATE": {
+        "MARK_ACTION": "标记为重复",
+        "UNMARK_ACTION": "取消重复标记",
+        "UNMARK_CONFIRM_TITLE": "取消此重复标记？",
+        "UNMARK_CONFIRM_TEXT": "该报告将返回审核队列（审核中）。",
+        "UNMARK_SUCCESS": "已取消重复标记。",
+        "UNMARK_FAILED": "取消重复标记失败，请重试。",
+        "PICKER_TITLE": "选择原始报告",
+        "PICKER_SEARCH_PLACEHOLDER": "按编号或描述搜索...",
+        "PICKER_EMPTY": "没有可选作原始报告的报告。",
+        "PICKER_CONFIRM": "确认",
+        "PICKER_CANCEL": "取消",
+        "MARK_SUCCESS": "已标记为重复。",
+        "MARK_FAILED": "标记为重复失败，请重试。",
+        "ERROR_CANONICAL_NOT_FOUND": "未找到所选原始报告，可能已发生变化。",
+        "ERROR_SELF_REFERENCE": "报告不能标记为自身的重复。",
+        "ERROR_ALREADY_DUPLICATE": "所选报告本身就是重复项，不能作为原始报告。",
+        "LINK_TEXT": "重复于 #{{id}}",
+        "LINK_ARIA": "打开原始报告 #{{id}}",
+        "COUNT_BADGE": "{{count}} 个重复报告"
+      }
     },
     "REPORTS": {
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
@@ -1158,6 +1180,8 @@
     "EMAIL_EXIST": "此电子邮件已被使用",
     "PHONE_NO": "手机号码",
     "PHONE_NO_PLACEHOLDER": "请输入您的手机号码",
+    "PHONE_NO_REQUIRED": "请输入您的手机号码",
+    "PHONE_NO_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678）",
     "PHONE_NO_EXIST": "此手机号码已被使用",
     "PASSWORD": "密码",
     "PASSWORD_PLACEHOLDER": "请输入您的密码",
@@ -1184,7 +1208,7 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "VERIFY OTP": "请通过您的手机号码验证您的订阅。",
+    "VERIFY_OTP": "请通过您的手机号码验证您的订阅。",
     "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
     "EMAIL_VERIFY_SIGNIN": "登录"
   },
@@ -1901,11 +1925,16 @@
         "ARRIVED_CONFIRM_TITLE": "确定此班次已到达吗？",
         "ARRIVED_CONFIRM_TEXT": "此操作将锁定本班次的登车功能 — 之后将无法再登记或取消旅客登车。",
         "ARRIVED_CONFIRM_CONFIRM": "标记为已到达",
-        "ARRIVED_CONFIRM_CANCEL": "取消"
+        "ARRIVED_CONFIRM_CANCEL": "取消",
+        "TURNAROUND_OVERRIDE_TITLE": "确定要发车吗？",
+        "TURNAROUND_OVERRIDE_CONFIRM": "仍然发车",
+        "TURNAROUND_OVERRIDE_CANCEL": "取消"
       },
       "LOCK_BANNER": "本班次已到达。登车功能已锁定，无法再更改。",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "此班次目前无法切换到该状态。",
+        "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "您只能更新分配给您驾驶的班次。",
+        "SCHEDULE_OVERRIDE_NOT_PERMITTED": "您无权跳过此检查。",
         "GENERIC": "无法更新班次状态，请重试。"
       }
     },

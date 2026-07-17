@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { BoardingScanErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -66,11 +66,5 @@ export function boardingScanErrorIcon(errorCode: string | null | undefined): str
 
 /** Extracts `error.error.errorCode` from a failed boarding-scan HTTP call. */
 export function extractBoardingScanErrorCode(error: unknown): BoardingScanErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as BoardingScanErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as BoardingScanErrorCode;
 }

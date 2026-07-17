@@ -24,6 +24,13 @@
       <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
     </ng-template>
   </p-calendar>
+
+  <app-export-button
+    class="ms-auto"
+    datasetKey="eod-salesperson"
+    requiredRole="owner"
+    [params]="{ date: store.date }"
+  ></app-export-button>
 </section>
 
 <!-- Fetch error: the message REPLACES the table — never shown next to stale/zero rows. -->

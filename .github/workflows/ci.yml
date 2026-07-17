@@ -36,6 +36,13 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # Pure-node, zero-dependency gate (OBRS-469): fail fast on i18n key-set drift
+      # BEFORE the expensive npm ci + Karma run, so a missing/space-typo'd translation
+      # key is caught here instead of printing a raw key onto a user's screen. Runs as
+      # a step in this existing job (not a new workflow) to spend no extra runner minutes.
+      - name: i18n key-set parity gate
+        run: npm run test:i18n
+
       - name: Install dependencies
         run: npm ci
 
@@ -45,7 +52,7 @@ jobs:
         run: npm test -- --watch=false --browsers=ChromeHeadless --reporters=dots
 
   build:
-    name: Production Build
+    name: Build Smoke Check (AOT + budgets)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -60,7 +67,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Catches what `ng test` cannot: AOT template errors, and the production
-      # bundle budgets in angular.json (initial > 2mb is an error, not a warning).
-      - name: Build production bundle
-        run: npm run build -- --configuration production
+      # Catches what `ng test` cannot: AOT template errors, and the bundle budgets
+      # in angular.json (initial > 2mb is an error, not a warning). This output is a
+      # smoke check and is never deployed -- `ci-smoke` has no fileReplacements, so it
+      # builds against environment.ts (localhost). Deploys use `sit` / `prod`.
+      - name: Build bundle (AOT + budget smoke check)
+        run: npm run build -- --configuration ci-smoke

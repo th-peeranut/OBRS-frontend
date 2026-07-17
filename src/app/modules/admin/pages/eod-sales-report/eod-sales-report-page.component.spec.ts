@@ -1,14 +1,20 @@
 import { BehaviorSubject } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TranslateModule } from '@ngx-translate/core';
 import { CalendarModule } from 'primeng/calendar';
+import { MenuModule } from 'primeng/menu';
 import { EodSalesReportPageComponent } from './eod-sales-report-page.component';
 import { EodSalesReportStore } from './eod-sales-report.store';
 import { EodSalesReportDto } from '../../../../shared/interfaces/eod-sales-report.interface';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 import { AdminSharedModule } from '../../admin-shared.module';
+import { ExportButtonComponent } from '../../../../shared/components/export-button/export-button.component';
+import { AuthService } from '../../../../auth/auth.service';
+import { AlertService } from '../../../../shared/services/alert.service';
+import { ExportService } from '../../../../services/export/export.service';
 
 function makeReport(overrides: Partial<EodSalesReportDto> = {}): EodSalesReportDto {
   return {
@@ -349,9 +355,16 @@ describe('EodSalesReportPageComponent (template rendering)', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, AdminSharedModule],
-      declarations: [EodSalesReportPageComponent],
-      providers: [{ provide: EodSalesReportStore, useValue: storeStub }],
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      // OBRS-442: the template now also renders <app-export-button>, so it must be declared
+      // (with its own DI deps stubbed) or this block 304s on the unknown element.
+      declarations: [EodSalesReportPageComponent, ExportButtonComponent],
+      providers: [
+        { provide: EodSalesReportStore, useValue: storeStub },
+        { provide: AuthService, useValue: jasmine.createSpyObj('AuthService', { hasAnyRole: true }) },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(EodSalesReportPageComponent);
@@ -379,5 +392,98 @@ describe('EodSalesReportPageComponent (template rendering)', () => {
 
     const grandTotalRow = fixture.nativeElement.querySelector('tbody tr.eod-report-grand-total-row');
     expect(grandTotalRow).not.toBeNull();
+  });
+});
+
+// OBRS-442: proves the export button is wired to the STORE's `date` getter (wire-format
+// yyyy-MM-dd the displayed data was actually fetched with), never the component's `Date`
+// field. Renders the real ExportButtonComponent (not NO_ERRORS_SCHEMA) so role-gated
+// show/hide is proven end to end, not assumed.
+describe('EodSalesReportPageComponent (export button, OBRS-442)', () => {
+  let fixture: ComponentFixture<EodSalesReportPageComponent>;
+  let storeStub: {
+    data$: BehaviorSubject<EodSalesReportDto | null>;
+    refreshing$: BehaviorSubject<boolean>;
+    error$: BehaviorSubject<boolean>;
+    date: string;
+    hasValue: boolean;
+    refresh: jasmine.Spy;
+    setDate: jasmine.Spy;
+  };
+  let authServiceSpy: jasmine.SpyObj<AuthService>;
+
+  function configure(hasRole: boolean): void {
+    storeStub = {
+      data$: new BehaviorSubject<EodSalesReportDto | null>(null),
+      refreshing$: new BehaviorSubject<boolean>(false),
+      error$: new BehaviorSubject<boolean>(false),
+      date: '2026-07-11',
+      hasValue: false,
+      refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+      setDate: jasmine.createSpy('setDate'),
+    };
+    authServiceSpy = jasmine.createSpyObj('AuthService', ['hasAnyRole']);
+    authServiceSpy.hasAnyRole.and.returnValue(hasRole);
+
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot(), CalendarModule, MenuModule, AdminSharedModule],
+      declarations: [EodSalesReportPageComponent, ExportButtonComponent],
+      providers: [
+        { provide: EodSalesReportStore, useValue: storeStub },
+        { provide: AuthService, useValue: authServiceSpy },
+        { provide: AlertService, useValue: jasmine.createSpyObj('AlertService', ['error']) },
+        { provide: ExportService, useValue: jasmine.createSpyObj('ExportService', ['export']) },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(EodSalesReportPageComponent);
+  }
+
+  it('renders for an authorized (owner) role and requests the "owner" role', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    expect(authServiceSpy.hasAnyRole).toHaveBeenCalledWith(['owner']);
+    // Assert the TRIGGER, not By.directive(ExportButtonComponent): the host tag renders
+    // unconditionally (canExport's *ngIf is inside the child template), so a By.directive
+    // assertion here passes even for an unauthorized role — vacuous. Mirrors the negative
+    // spec below so the pair actually brackets the role gate.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger should render for an authorized role').not.toBeNull();
+  });
+
+  it('is absent for an unauthorized role', () => {
+    configure(false);
+    fixture.detectChanges();
+
+    // ExportButtonComponent's own *ngIf="canExport" is INSIDE its template (wrapping the
+    // trigger button), not on the <app-export-button> host tag, so the host element always
+    // renders — assert on the visible trigger, mirroring export-button.component.spec.ts.
+    const trigger = fixture.nativeElement.querySelector('.export-button-trigger');
+    expect(trigger).withContext('export button trigger must not render for an unauthorized role').toBeNull();
+  });
+
+  it('has datasetKey exactly "eod-salesperson"', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    const button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).datasetKey).toBe('eod-salesperson');
+  });
+
+  // Load-bearing: proves [params] is bound to the STORE getter (not the component's Date
+  // field) and tracks it live.
+  it('[params] binds to store.date and follows it when the store date changes', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    let button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({ date: '2026-07-11' });
+
+    storeStub.date = '2026-08-20';
+    fixture.detectChanges();
+
+    button = fixture.debugElement.query(By.directive(ExportButtonComponent));
+    expect((button.componentInstance as ExportButtonComponent).params).toEqual({ date: '2026-08-20' });
   });
 });

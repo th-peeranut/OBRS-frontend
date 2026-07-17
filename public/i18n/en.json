@@ -382,6 +382,7 @@
       "EXPORT": "Export",
       "PREVIOUS": "Previous",
       "NEXT": "Next",
+      "PAGINATION_NAV_ARIA": "Pagination",
       "ENTRIES": "entries",
       "SHOWING": "Showing",
       "OF": "of",
@@ -876,13 +877,34 @@
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",
-        "rejected": "Rejected"
+        "rejected": "Rejected",
+        "duplicate": "Duplicate"
       },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
       "NEW_BADGE_ARIA": "{{count}} new usability reports",
       "ACCEPTED_BADGE_ARIA": "{{count}} usability reports awaiting action",
-      "PARTIAL_LIST_HINT": "Showing {{shown}} of {{total}} reports for this status — more exist but aren't shown yet."
+      "DUPLICATE": {
+        "MARK_ACTION": "Mark as duplicate",
+        "UNMARK_ACTION": "Unmark duplicate",
+        "UNMARK_CONFIRM_TITLE": "Unmark this as a duplicate?",
+        "UNMARK_CONFIRM_TEXT": "The report will return to the review queue (In review).",
+        "UNMARK_SUCCESS": "Duplicate mark removed.",
+        "UNMARK_FAILED": "Failed to unmark duplicate. Please try again.",
+        "PICKER_TITLE": "Select the canonical report",
+        "PICKER_SEARCH_PLACEHOLDER": "Search by ID or description...",
+        "PICKER_EMPTY": "No reports available to pick as canonical.",
+        "PICKER_CONFIRM": "Confirm",
+        "PICKER_CANCEL": "Cancel",
+        "MARK_SUCCESS": "Marked as duplicate.",
+        "MARK_FAILED": "Failed to mark as duplicate. Please try again.",
+        "ERROR_CANONICAL_NOT_FOUND": "The selected canonical report was not found. It may have changed.",
+        "ERROR_SELF_REFERENCE": "A report cannot be marked as a duplicate of itself.",
+        "ERROR_ALREADY_DUPLICATE": "The selected report is itself a duplicate and can't be used as canonical.",
+        "LINK_TEXT": "Duplicate of #{{id}}",
+        "LINK_ARIA": "Open canonical report #{{id}}",
+        "COUNT_BADGE": "{{count}} duplicate reports"
+      }
     },
     "REPORTS": {
       "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",
@@ -1158,6 +1180,8 @@
     "EMAIL_EXIST": "This email is already in use",
     "PHONE_NO": "Phone number",
     "PHONE_NO_PLACEHOLDER": "Please enter your phone number",
+    "PHONE_NO_REQUIRED": "Please enter your phone number",
+    "PHONE_NO_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678)",
     "PHONE_NO_EXIST": "This phone number is already in use",
     "PASSWORD": "Password",
     "PASSWORD_PLACEHOLDER": "Please enter your password",
@@ -1184,7 +1208,7 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "VERIFY OTP": "Please verify your subscription via your phone number.",
+    "VERIFY_OTP": "Please verify your subscription via your phone number.",
     "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
     "EMAIL_VERIFY_SIGNIN": "Sign in"
   },
@@ -1364,7 +1388,6 @@
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
       "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
-      "PASSENGER_VALIDATION": "Please select at least one passenger before searching.",
       "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
     },
     "STATION": {
@@ -1902,11 +1925,16 @@
         "ARRIVED_CONFIRM_TITLE": "Mark this trip as arrived?",
         "ARRIVED_CONFIRM_TEXT": "This locks boarding for this schedule — no passenger can be boarded or un-boarded afterwards.",
         "ARRIVED_CONFIRM_CONFIRM": "Mark arrived",
-        "ARRIVED_CONFIRM_CANCEL": "Cancel"
+        "ARRIVED_CONFIRM_CANCEL": "Cancel",
+        "TURNAROUND_OVERRIDE_TITLE": "Depart anyway?",
+        "TURNAROUND_OVERRIDE_CONFIRM": "Depart anyway",
+        "TURNAROUND_OVERRIDE_CANCEL": "Cancel"
       },
       "LOCK_BANNER": "This trip has arrived. Boarding is locked and can no longer be changed.",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "This schedule can't move to that status right now.",
+        "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "You can only update a trip you are assigned to drive.",
+        "SCHEDULE_OVERRIDE_NOT_PERMITTED": "You don't have permission to override this check.",
         "GENERIC": "Unable to update the schedule status. Please try again."
       }
     },

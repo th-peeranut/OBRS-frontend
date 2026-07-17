@@ -78,10 +78,10 @@ Run with SIT configuration:
 npm run start:sit
 ```
 
-Build:
+Build (AOT + bundle-budget check, same as CI — builds against `environment.ts`, not deployable):
 
 ```bash
-npm run build
+npm run build          # = ng build --configuration ci-smoke
 ```
 
 Build SIT:
