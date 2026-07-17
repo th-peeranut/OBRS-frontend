@@ -21,15 +21,7 @@ export interface ChangeStopEstimate {
 /** An existing ticket's seat, carried over as-is — change-stop never
  * reassigns seats, only the pickup/drop-off stops. `seatNumber` is `null` on
  * an `OPEN`-seating schedule (OBRS-483 — the backend normalizes every
- * ticket's seat to null there). NOTE: unlike reschedule, the backend
- * currently HARD-REJECTS `POST .../change-stop/confirm` on an OPEN schedule
- * with `change-stop.error.open-seating-not-supported`
- * (`CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED` below) — a deliberate v1
- * limitation (needs a 5th occupancy-query variant), not a domain law like
- * change-seat's. The FE gates `changeStopEligible=false` under OPEN
- * (`my-bookings.component.ts`) so the dialog never reaches this rejection in
- * practice; the type stays nullable for defensive correctness/parity with
- * reschedule. */
+ * ticket's seat to null there, and fully supports change-stop under OPEN). */
 export interface ChangeStopSeatAssignment {
   ticketId: number;
   seatNumber: string | null;
@@ -64,13 +56,6 @@ export const CHANGE_STOP_ERROR_CODES = [
   // from create-booking/reschedule/change-seat — see
   // change-seat.interface.ts's identical entry for the full rationale.
   'SEAT_ERROR_WALK_IN_ONLY',
-  // OBRS-483: change-stop confirm hard-rejects an OPEN-seating schedule
-  // (`change-stop.error.open-seating-not-supported`, verified against
-  // `ChangeStopService.java` — a deliberate v1 limitation, not implemented
-  // yet). The FE gates this off via `changeStopEligible=false` before the
-  // dialog can open, so this code is defense-in-depth only (e.g. a stale
-  // eligibility read racing a mode change).
-  'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
 ] as const;
 
 export type ChangeStopErrorCode = (typeof CHANGE_STOP_ERROR_CODES)[number] | 'GENERIC';

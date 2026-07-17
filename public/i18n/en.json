@@ -189,7 +189,6 @@
       "REASON": {
         "NOT_CONFIRMED": "Confirmed bookings only",
         "NOT_ONE_WAY": "One-way trips only",
-        "OPEN_SEATING": "This trip boards by open seating — changing pickup/drop-off isn't available for it yet",
         "ALREADY_USED": "Already changed once",
         "NO_WINDOW": "Too close to departure"
       },
@@ -222,7 +221,6 @@
         "UNAUTHORIZED": "You don't have permission to change stops on this booking.",
         "BOOKING_NOT_FOUND": "This booking is no longer available.",
         "MULTI_LEG_NOT_SUPPORTED": "Round-trip bookings can't change their stops.",
-        "OPEN_SEATING_NOT_SUPPORTED": "This trip boards by open seating — changing pickup/drop-off isn't available for it yet.",
         "GENERIC": "Unable to change stops. Please try again.",
         "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later.",
         "ACTION_UNAVAILABLE": "This action can't be completed right now."

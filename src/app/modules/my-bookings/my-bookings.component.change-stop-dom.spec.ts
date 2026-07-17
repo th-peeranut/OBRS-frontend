@@ -126,7 +126,7 @@ describe('MyBookingsComponent (change stop action — action menu)', () => {
     expect(changeStopItem().reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NOT_ONE_WAY');
   });
 
-  it('is disabled with OPEN_SEATING when the schedule is OPEN-seating (OBRS-483 — backend hard-rejects change-stop confirm under OPEN today)', () => {
+  it('stays ENABLED, no reason text, when the schedule is OPEN-seating (OBRS-483 — change-stop is the headline feature this card ships for OPEN, unlike change-seat which has no seat to change there)', () => {
     render(
       buildBooking({
         bookingSchedules: [
@@ -146,8 +146,8 @@ describe('MyBookingsComponent (change stop action — action menu)', () => {
     openMenu();
 
     const item = changeStopItem();
-    expect(item.disabled).toBeTrue();
-    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.OPEN_SEATING');
+    expect(item.disabled).toBeFalse();
+    expect(item.reasonText).toBeUndefined();
   });
 
   it('is disabled with ALREADY_USED when stopChangeCount is already 1', () => {

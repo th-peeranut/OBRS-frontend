@@ -342,6 +342,26 @@ describe('ChangeStopEffect', () => {
       expect(emitted).toEqual([confirmChangeStopSuccess({ result })]);
     });
 
+    it('OBRS-483: sends a null seatNumber through untouched and still succeeds — change-stop is fully supported on an OPEN-seating schedule', () => {
+      const result: ChangeStopResult = { bookingId: 5, bookingNumber: 'B-5', status: 'CONFIRMED' };
+      bookingService.confirmChangeStop.and.returnValue(
+        of({ code: 200, message: 'OK', data: result } as ResponseAPI<ChangeStopResult>)
+      );
+
+      const emitted: Action[] = [];
+      effect.confirmChangeStop$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        confirmChangeStop({ ...CONFIRM_PAYLOAD, seatAssignments: { 11: null } })
+      );
+
+      expect(bookingService.confirmChangeStop).toHaveBeenCalledWith(
+        5,
+        jasmine.objectContaining({ seatAssignments: { 11: null } })
+      );
+      expect(emitted).toEqual([confirmChangeStopSuccess({ result })]);
+    });
+
     it('maps a failed call to confirmChangeStopFailure with the extracted errorCode', () => {
       const httpError = new HttpErrorResponse({
         error: { errorCode: 'CHANGE_STOP_ERROR_NO_SEATS' },
@@ -360,43 +380,6 @@ describe('ChangeStopEffect', () => {
           error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.NO_SEATS',
         }),
       ]);
-    });
-  });
-
-  describe('OBRS-483: CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED (backend hard-rejects change-stop confirm on an OPEN schedule)', () => {
-    it('maps the errorCode to its localized message', () => {
-      const httpError = new HttpErrorResponse({
-        error: { errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED' },
-        status: 400,
-      });
-      bookingService.confirmChangeStop.and.returnValue(throwError(() => httpError));
-
-      const emitted: Action[] = [];
-      effect.confirmChangeStop$.subscribe((a) => emitted.push(a));
-
-      actionsSubject.next(confirmChangeStop(CONFIRM_PAYLOAD));
-
-      expect(emitted).toEqual([
-        confirmChangeStopFailure({
-          errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
-          error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.OPEN_SEATING_NOT_SUPPORTED',
-        }),
-      ]);
-    });
-
-    it('is terminal — closes the dialog and toasts, rather than staying inline', () => {
-      const emitted: Action[] = [];
-      effect.confirmChangeStopTerminalFailure$.subscribe((a) => emitted.push(a));
-
-      actionsSubject.next(
-        confirmChangeStopFailure({
-          errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
-          error: 'nope',
-        })
-      );
-
-      expect(alertService.error).toHaveBeenCalledWith('nope');
-      expect(emitted).toEqual([closeChangeStopDialog()]);
     });
   });
 

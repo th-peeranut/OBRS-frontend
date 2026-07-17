@@ -304,8 +304,8 @@ export const confirmChangeStop = createAction(
     bookingId: number;
     newFromStopId: number;
     newToStopId: number;
-    /** `null` under `OPEN` seating (OBRS-483) — see `change-stop.interface.ts`
-     * for why this path is gated off before the dialog can build it. */
+    /** `null` under `OPEN` seating (OBRS-483) — the backend fully supports
+     * change-stop there. */
     seatAssignments: Record<number, string | null>;
     clientNetAmount: number;
   }>()

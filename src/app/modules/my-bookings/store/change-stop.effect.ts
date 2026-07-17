@@ -298,11 +298,8 @@ export class ChangeStopEffect {
     // leftover ticket from a prior change-seat/reschedule still carrying a
     // seatNumber under ASSIGNED) instead of `!!ticket.seatNumber`, which
     // silently excluded EVERY ticket under OPEN. `seatNumber` is carried
-    // through as-is (null under OPEN) — NOTE: the backend currently
-    // hard-rejects `POST .../change-stop/confirm` on an OPEN schedule
-    // regardless (`CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED`, a
-    // deliberate v1 limitation); the FE gates `changeStopEligible=false`
-    // under OPEN so this path stays defensive/unreachable in practice.
+    // through as-is (null under OPEN) — the backend fully supports
+    // `POST .../change-stop/confirm` on an OPEN schedule.
     return tickets
       .filter((ticket) => normalizeStatusCode(ticket.status?.code) === 'confirmed')
       .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber ?? null }));

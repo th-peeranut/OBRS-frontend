@@ -63,10 +63,7 @@ export interface ConfirmChangeStopPayload {
   newToStopId: number;
   /** Existing `Ticket.id` → its (unchanged) seat number — change-stop never
    * reassigns seats, only the pickup/drop-off stops. `null` under `OPEN`
-   * seating (OBRS-483); kept nullable for type parity with reschedule even
-   * though the backend currently rejects an OPEN confirm outright (see
-   * `change-stop.interface.ts`) — the FE gates this off before the dialog
-   * can build this payload. */
+   * seating (OBRS-483) — the backend fully supports change-stop there. */
   seatAssignments: Record<number, string | null>;
   clientNetAmount: number;
 }

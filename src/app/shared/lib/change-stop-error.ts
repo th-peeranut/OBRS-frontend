@@ -35,11 +35,6 @@ export function mapChangeStopErrorCode(
     // entry in `change-seat-error.ts` for the full rationale; same
     // `COMMON.ERROR.*` key, never duplicated per flow.
     SEAT_ERROR_WALK_IN_ONLY: 'COMMON.ERROR.SEAT_WALK_IN_ONLY',
-    // OBRS-483: defense-in-depth only — `changeStopEligible=false` under
-    // OPEN keeps the dialog from reaching the backend's hard rejection in
-    // practice (see change-stop.interface.ts).
-    CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED:
-      'MY_BOOKINGS.CHANGE_STOP.ERROR.OPEN_SEATING_NOT_SUPPORTED',
   };
 
   if (errorCode && knownCodes[errorCode]) {
@@ -80,9 +75,6 @@ export function mapChangeStopStopsLoadError(error: unknown): string {
 const TERMINAL_ERROR_CODES: readonly string[] = [
   'CHANGE_STOP_ERROR_NOT_CONFIRMED',
   'CHANGE_STOP_ERROR_MAX_COUNT',
-  // OBRS-483: a permanent-for-now rejection, not a "state moved, retry"
-  // case — closes the dialog rather than staying inline on the estimate step.
-  'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
 ];
 
 export function isTerminalChangeStopError(errorCode: string | null | undefined): boolean {
