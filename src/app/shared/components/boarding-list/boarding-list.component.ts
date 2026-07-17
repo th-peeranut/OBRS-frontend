@@ -184,10 +184,22 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * driver. Same shape as `canUnboard` above. */
   protected readonly canUnflagChildFare: boolean;
 
-  /** OBRS-256: the schedule departed/arrived control is salesperson/admin
-   * only — identical shape to `canUnboard` above (hidden, not disabled, for
-   * a driver). */
+  /** OBRS-256/OBRS-434: the schedule departed/arrived control. Salesperson/admin
+   * for any trip, and a DRIVER for the trip they are assigned to — the driver is
+   * the only person actually at the final stop when it ends, and the last stop is
+   * often not a station. The backend scopes a driver to their own assignment
+   * (`ScheduleService.transitionStatus`); this flag only decides whether the
+   * button renders at all, so a driver opening someone else's `:scheduleId` still
+   * sees the button and gets a 403 toast on click (see OBRS-451). */
   protected readonly canControlScheduleStatus: boolean;
+
+  /** OBRS-272/OBRS-434: the "mark delayed"/"update ETA" control stays
+   * salesperson/admin only — its endpoint (`PATCH /schedules/{id}/delay`) is
+   * still `hasRole('SALESPERSON')`, so rendering it for a driver would only
+   * produce a 403. Split out of `canControlScheduleStatus` when OBRS-434 opened
+   * the departed/arrived control to drivers; the two gates are no longer the
+   * same question. */
+  protected readonly canDelaySchedule: boolean;
 
   /** OBRS-256: true while a departed/arrived PATCH is in flight — disables
    * the transition button and (together with `isScheduleArrived`) the
@@ -252,7 +264,8 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     private readonly cdr: ChangeDetectorRef
   ) {
     this.canUnboard = this.authService.hasAnyRole(['salesperson']);
-    this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson']);
+    this.canControlScheduleStatus = this.authService.hasAnyRole(['salesperson', 'driver']);
+    this.canDelaySchedule = this.authService.hasAnyRole(['salesperson']);
     this.canUnflagChildFare = this.authService.hasAnyRole(['salesperson']);
   }
 

@@ -285,14 +285,30 @@
               (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
             "
           />
+          <!--
+            OBRS-409: these were one block keyed on `errors` (any error at all) showing
+            PHONE_NO_REQUIRED. Adding the pattern validator to a blanket message would have told a
+            user who typed 0212345678 to "enter a phone number" - which they did. Key each message
+            on its own error instead.
+          -->
           <div
             class="text-error"
             *ngIf="
-              getForm('phoneNumber')?.errors &&
+              getForm('phoneNumber')?.errors?.['required'] &&
               (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
             "
           >
             {{ "REGISTER.PHONE_NO_REQUIRED" | translate }}
+          </div>
+
+          <div
+            class="text-error"
+            *ngIf="
+              getForm('phoneNumber')?.errors?.['pattern'] &&
+              (getForm('phoneNumber')?.touched || getForm('phoneNumber')?.dirty)
+            "
+          >
+            {{ "REGISTER.PHONE_NO_INVALID" | translate }}
           </div>
 
           <div

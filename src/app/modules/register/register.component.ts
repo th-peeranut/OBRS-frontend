@@ -16,6 +16,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { Dropdown } from '../../shared/interfaces/dropdown.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { TITLE_OPTIONS } from '../../shared/constants/title-options';
+import { THAI_MOBILE_PATTERN } from '../../shared/constants/thai-msisdn';
 
 @Component({
   selector: 'app-register',
@@ -63,7 +64,11 @@ export class RegisterComponent implements OnDestroy {
       middleName: [''],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      phoneNumber: ['', [Validators.required]],
+      // OBRS-409: this field had no pattern at all, while the OTP request it feeds only accepts a
+      // Thai mobile (OBRS-136/ADR-0079). Submitting sent the user to /otp/register/<phone>, where
+      // the request 400s — a dead end with no account created and nothing explaining why. Rejecting
+      // it here, next to the field, is the difference between a validation message and a trap.
+      phoneNumber: ['', [Validators.required, Validators.pattern(THAI_MOBILE_PATTERN)]],
       username: ['', Validators.required],
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],

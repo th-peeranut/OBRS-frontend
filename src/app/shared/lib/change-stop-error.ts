@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { extractApiErrorCode } from './api-error-code';
 import { ChangeStopErrorCode } from '../interfaces/change-stop.interface';
 import { classifyHttpFallback, HttpFallbackTier } from './http-error-fallback';
 
@@ -83,11 +83,5 @@ export function isTerminalChangeStopError(errorCode: string | null | undefined):
 
 /** Extracts `error.error.errorCode` from a failed change-stop HTTP call. */
 export function extractChangeStopErrorCode(error: unknown): ChangeStopErrorCode {
-  if (error instanceof HttpErrorResponse) {
-    const code = (error.error as { errorCode?: string } | null)?.errorCode;
-    if (code) {
-      return code as ChangeStopErrorCode;
-    }
-  }
-  return 'GENERIC';
+  return extractApiErrorCode(error, 'GENERIC') as ChangeStopErrorCode;
 }

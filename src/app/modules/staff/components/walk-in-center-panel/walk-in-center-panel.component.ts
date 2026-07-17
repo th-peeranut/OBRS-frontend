@@ -272,9 +272,9 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   }
 
   // OBRS-324 (Epic OBRS-318 open seating, 318-d): OPEN schedules sell by
-  // passenger count only — no seat map/picker. Missing/unknown seatingMode
-  // (the field isn't on this endpoint's response yet — see the OBRS-324
-  // Contract Request in docs/handoff.md) safely resolves to false/ASSIGNED.
+  // passenger count only — no seat map/picker. The endpoint returns
+  // seatingMode since OBRS-360, so this reflects the real mode. Missing/unknown
+  // (a cached row predating it) safely resolves to false/ASSIGNED.
   protected get isOpenSeating(): boolean {
     return isOpenSeatingTrip(this.selectedTrip);
   }
