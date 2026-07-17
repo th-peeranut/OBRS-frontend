@@ -1,3 +1,14 @@
+<!-- OBRS-415: amountOverride bypasses the seat-booking-derived breakdown
+     entirely (see the @Input doc comment) — a parcel booking has no
+     passengers/discount snapshot to show, just a single total. -->
+<div class="card-container" [ngClass]="{ inline: variant === 'inline' }" *ngIf="amountOverride != null">
+  <div class="card-footer">
+    <span>{{ "PAYMENT.SUMMARY.TOTAL" | translate }}</span>
+    <span>{{ amountOverride }} {{ "PAYMENT.SUMMARY.TOTAL_UNIT" | translate }}</span>
+  </div>
+</div>
+
+<ng-container *ngIf="amountOverride == null">
 <div
   class="card-container"
   [ngClass]="{ inline: variant === 'inline' }"
@@ -114,6 +125,7 @@
     </ng-template>
   </ng-container>
 </div>
+</ng-container>
 
 <div class="btn-confirm" *ngIf="variant === 'default'">
   {{ "PAYMENT.SUMMARY.CONFIRM" | translate }}

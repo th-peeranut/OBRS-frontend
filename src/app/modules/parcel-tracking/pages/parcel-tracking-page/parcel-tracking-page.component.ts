@@ -6,7 +6,11 @@ import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { ParcelTrackingService } from '../../../../services/parcel-tracking/parcel-tracking.service';
 import { ParcelTrackRespDto } from '../../../../shared/interfaces/parcel.interface';
-import { parcelDeliveryStatusChip, ParcelStatusChip } from '../../../../shared/lib/parcel-delivery-status';
+import {
+  parcelCustomerStatusLabelKey,
+  parcelDeliveryStatusChip,
+  ParcelStatusChip,
+} from '../../../../shared/lib/parcel-delivery-status';
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 
@@ -88,6 +92,14 @@ export class ParcelTrackingPageComponent implements OnInit, OnDestroy {
 
   protected chipFor(status: string): ParcelStatusChip {
     return parcelDeliveryStatusChip(status);
+  }
+
+  /** OBRS-415/UX §8: the CUSTOMER-facing label for a status — for `created`
+   * specifically this is `PARCEL_TRACKING.STATUS.CREATED`, not the driver
+   * copy `chipFor().i18nKey` would otherwise render (the exact OBRS-427
+   * mistake this card is told not to repeat). Every other slug is unchanged. */
+  protected statusLabelKey(status: string): string {
+    return parcelCustomerStatusLabelKey(status);
   }
 
   protected displayDateTime(value: string | null | undefined): string {
