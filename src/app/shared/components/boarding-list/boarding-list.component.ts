@@ -1205,7 +1205,7 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
           void this.alertService.success(this.translate.instant(successKey));
         },
         error: (error) => {
-          void this.handleScheduleStatusError(error, code, scheduleId);
+          void this.handleScheduleStatusError(error, code, scheduleId, overrideTurnaroundGate);
         },
       });
   }
@@ -1220,18 +1220,26 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * `overrideTurnaroundGate: true`. Everyone else only sees the warning — no
    * override control (AC2/AC5). Every other error code keeps the existing
    * generic mapped-toast + reconcile behavior.
+   *
+   * `alreadyOverridden` is the flag the failed request itself carried. The
+   * override retry routes its errors back through here, so without it a server
+   * that answered this same 409 to an `overrideTurnaroundGate=true` request
+   * would re-open the confirm dialog and loop forever on every confirm. The
+   * backend is not supposed to do that — but "safe because the other side
+   * promised" is not a guard, and this handler cannot see the backend.
    */
   private async handleScheduleStatusError(
     error: unknown,
     code: 'departed' | 'arrived',
-    scheduleId: number
+    scheduleId: number,
+    alreadyOverridden: boolean
   ): Promise<void> {
     const errorCode = extractScheduleStatusErrorCode(error);
 
     if (errorCode === 'VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED') {
       const serverMessage = extractApiErrorMessage(error);
 
-      if (this.canOverrideTurnaroundGate) {
+      if (this.canOverrideTurnaroundGate && !alreadyOverridden) {
         const confirmed = await this.alertService.confirm({
           title: this.translate.instant('STAFF.SCHEDULE_STATUS.CONFIRM.TURNAROUND_OVERRIDE_TITLE'),
           text: serverMessage,

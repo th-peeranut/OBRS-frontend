@@ -939,6 +939,43 @@ describe('BoardingListComponent — OBRS-471 turnaround-gate override (VEHICLE_P
     expect(alertServiceStub.error).not.toHaveBeenCalled();
   }));
 
+  it('admin: if the override retry ITSELF comes back 409 VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED, the confirm dialog is NOT re-offered — it surfaces the error and stops (no infinite confirm→retry loop)', fakeAsync(() => {
+    // The backend is not supposed to answer this 409 to an overrideTurnaroundGate=true
+    // request. But the retry routes its own errors back through the same handler, so
+    // without a guard "the server misbehaves" escalates from a bad response into an
+    // unbreakable dialog loop the operator cannot escape. A contract the other side
+    // promises to honour is not a guard — this pins that the FE stops on its own.
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValue(throwError(() => gateError())); // 409 EVERY time, override or not
+    const staffApiServiceStub = { updateScheduleStatus, getScheduleById: jasmine.createSpy('getScheduleById') };
+    const alertServiceStub = createAlertServiceStub(true); // confirm() always resolves true
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['admin'] })
+    );
+    tick(); // flush the constructor-time loadTripHeader() from ngOnChanges
+    withTripHeader(component, 'scheduled');
+
+    void component['onScheduleStatusAction']();
+    tick();
+
+    // Exactly one dialog, and exactly one retry: the initial call plus the single
+    // overridden retry. A third call would mean the guard is gone and this loops.
+    expect(alertServiceStub.confirm).toHaveBeenCalledTimes(1);
+    expect(updateScheduleStatus).toHaveBeenCalledTimes(2);
+    expect(updateScheduleStatus.calls.argsFor(0)).toEqual([42, 'departed', false]);
+    expect(updateScheduleStatus.calls.argsFor(1)).toEqual([42, 'departed', true]);
+    // Having exhausted the override, the operator is told what happened rather than
+    // being asked the same question again.
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      "Schedule #17's previous trip (schedule #12) has not arrived yet."
+    );
+    expect(alertServiceStub.success).not.toHaveBeenCalled();
+  }));
+
   it('admin: cancelling the override confirm does NOT resubmit and does NOT reconcile via loadTripHeader (nothing changed server-side)', fakeAsync(() => {
     const updateScheduleStatus = jasmine
       .createSpy('updateScheduleStatus')
