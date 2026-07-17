@@ -45,8 +45,10 @@ export interface ConfirmReschedulePayload {
   newScheduleId: number;
   newFromStopId: number;
   newToStopId: number;
-  /** Existing `Ticket.id` → new seat number on the new schedule. */
-  seatAssignments: Record<number, string>;
+  /** Existing `Ticket.id` → new seat number on the new schedule. `null` under
+   * `OPEN` seating (OBRS-483) — OBRS-475 made the backend accept exactly
+   * that. */
+  seatAssignments: Record<number, string | null>;
   clientNetAmount?: number;
 }
 
@@ -60,8 +62,12 @@ export interface ConfirmChangeStopPayload {
   newFromStopId: number;
   newToStopId: number;
   /** Existing `Ticket.id` → its (unchanged) seat number — change-stop never
-   * reassigns seats, only the pickup/drop-off stops. */
-  seatAssignments: Record<number, string>;
+   * reassigns seats, only the pickup/drop-off stops. `null` under `OPEN`
+   * seating (OBRS-483); kept nullable for type parity with reschedule even
+   * though the backend currently rejects an OPEN confirm outright (see
+   * `change-stop.interface.ts`) — the FE gates this off before the dialog
+   * can build this payload. */
+  seatAssignments: Record<number, string | null>;
   clientNetAmount: number;
 }
 

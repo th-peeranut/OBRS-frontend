@@ -10,6 +10,7 @@ import { RescheduleOption } from '../../../../shared/interfaces/reschedule.inter
 import {
   closeRescheduleDialog,
   confirmReschedule,
+  loadRescheduleEstimate,
   loadRescheduleOptions,
   openRescheduleDialog,
   rescheduleAbandoned,
@@ -209,6 +210,99 @@ describe('RescheduleDialogComponent', () => {
     component.close();
 
     expect(store.dispatch).toHaveBeenCalledWith(closeRescheduleDialog());
+  });
+
+  describe('OBRS-483: OPEN-seating (null seatNumber) no longer silently no-ops', () => {
+    it('does NOT dispatch loadRescheduleEstimate while tickets are still resolving in the background, even though tickets.length is 0 (loaded-vs-empty guard)', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          stopsLookup: { a: 10, b: 20 },
+          rescheduleTickets: [],
+          rescheduleTicketsLoading: true, // still in flight
+        })
+      );
+      component.ngOnInit();
+      store.dispatch.calls.reset();
+
+      component.onOptionSelect(sampleOption);
+
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        jasmine.objectContaining({ type: loadRescheduleEstimate.type })
+      );
+    });
+
+    it('dispatches loadRescheduleEstimate once tickets finish loading, even with a null seatNumber (OPEN seating) — mapped to an empty-string placeholder for the seats param', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          stopsLookup: { a: 10, b: 20 },
+          rescheduleTickets: [],
+          rescheduleTicketsLoading: true,
+        })
+      );
+      component.ngOnInit();
+      component.onOptionSelect(sampleOption);
+      store.dispatch.calls.reset();
+
+      // The background load resolves: OPEN seating, null seat, loading clears.
+      store.next({
+        myBookings: buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          stopsLookup: { a: 10, b: 20 },
+          rescheduleTickets: [{ ticketId: 11, seatNumber: null }],
+          rescheduleTicketsLoading: false,
+        }),
+      });
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        loadRescheduleEstimate({
+          bookingId: 5,
+          newScheduleId: sampleOption.scheduleId,
+          newFromStopId: 10,
+          newToStopId: 20,
+          seats: [''],
+        })
+      );
+    });
+
+    it('confirm sends the null seatNumber through untouched in seatAssignments (OBRS-475 made the backend accept it)', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          rescheduleDialogBookingId: 5,
+          stopsLookup: { a: 10, b: 20 },
+          rescheduleTickets: [{ ticketId: 11, seatNumber: null }],
+          rescheduleTicketsLoading: false,
+          rescheduleEstimate: {
+            oldFare: '100',
+            newFare: '120',
+            fareDiff: '20',
+            rescheduleFee: '30',
+            netAmount: '50.00',
+            paymentDirection: 'TOP_UP',
+          },
+        })
+      );
+      component.ngOnInit();
+      component.selectedOption = sampleOption;
+
+      component.onConfirm();
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        confirmReschedule({
+          bookingId: 5,
+          newScheduleId: sampleOption.scheduleId,
+          newFromStopId: 10,
+          newToStopId: 20,
+          seatAssignments: { 11: null },
+          clientNetAmount: 50,
+        })
+      );
+    });
   });
 
   describe('NO_SEATS confirm failure (regression)', () => {

@@ -144,7 +144,8 @@ export const confirmReschedule = createAction(
     newScheduleId: number;
     newFromStopId: number;
     newToStopId: number;
-    seatAssignments: Record<number, string>;
+    /** `null` under `OPEN` seating (OBRS-483). */
+    seatAssignments: Record<number, string | null>;
     clientNetAmount: number;
   }>()
 );
@@ -303,7 +304,9 @@ export const confirmChangeStop = createAction(
     bookingId: number;
     newFromStopId: number;
     newToStopId: number;
-    seatAssignments: Record<number, string>;
+    /** `null` under `OPEN` seating (OBRS-483) — see `change-stop.interface.ts`
+     * for why this path is gated off before the dialog can build it. */
+    seatAssignments: Record<number, string | null>;
     clientNetAmount: number;
   }>()
 );

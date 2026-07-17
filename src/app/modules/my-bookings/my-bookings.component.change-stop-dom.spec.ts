@@ -126,6 +126,30 @@ describe('MyBookingsComponent (change stop action — action menu)', () => {
     expect(changeStopItem().reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.NOT_ONE_WAY');
   });
 
+  it('is disabled with OPEN_SEATING when the schedule is OPEN-seating (OBRS-483 — backend hard-rejects change-stop confirm under OPEN today)', () => {
+    render(
+      buildBooking({
+        bookingSchedules: [
+          {
+            id: 1,
+            departureDateTime: dayjs().add(10, 'day').toISOString(),
+            fromStop: { code: 'a', display: { en: { label: 'A' } } },
+            toStop: { code: 'b', display: { en: { label: 'B' } } },
+            tickets: [{ id: 1, seatNumber: null }],
+            routeSlug: 'bkk-cnx',
+            seatingMode: 'OPEN',
+          },
+        ],
+      })
+    );
+
+    openMenu();
+
+    const item = changeStopItem();
+    expect(item.disabled).toBeTrue();
+    expect(item.reasonText).toBe('MY_BOOKINGS.CHANGE_STOP.REASON.OPEN_SEATING');
+  });
+
   it('is disabled with ALREADY_USED when stopChangeCount is already 1', () => {
     render(buildBooking({ stopChangeCount: 1 }));
 

@@ -120,6 +120,44 @@ describe('ChangeSeatEffect', () => {
       ]);
     });
 
+    it('OBRS-483: includes a CONFIRMED ticket with a null seatNumber (OPEN seating) instead of dropping it — change-seat itself stays gated off for OPEN via changeSeatEligible=false, but the effect must not additionally rely on `!!ticket.seatNumber`', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-OPEN1',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 31,
+                    ticketNumber: 'T-31',
+                    seatNumber: null,
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeSeatTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeSeatDialog({ bookingId: 4 }));
+
+      // `ChangeSeatTicket.seatNumber` stays typed `string` (change-seat is
+      // ASSIGNED-only in practice, gated off for OPEN by `changeSeatEligible`)
+      // — the cast documents that this path is never really null in
+      // production, only in this defense-in-depth proof.
+      expect(emitted).toEqual([
+        loadChangeSeatTicketsSuccess({ tickets: [{ ticketId: 31, seatNumber: null as unknown as string }] }),
+      ]);
+    });
+
     it('is case/whitespace-insensitive on the confirmed-status check, mirroring normalizeStatusCode', () => {
       bookingService.getBookingTickets.and.returnValue(
         of({

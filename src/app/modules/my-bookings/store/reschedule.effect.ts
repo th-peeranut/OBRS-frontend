@@ -163,7 +163,16 @@ export class RescheduleEffect {
             newScheduleId,
             newFromStopId,
             newToStopId,
-            seats: Object.values(seatAssignments),
+            // GET .../reschedule-estimate takes `seats: string[]` — under
+            // OPEN seating every value is null (OBRS-483), and HttpParams
+            // can't append a null value. The backend only reads this
+            // array's LENGTH (to multiply the per-seat reschedule fee;
+            // verified against RescheduleService.estimateReschedule — the
+            // fare/netAmount itself comes from the booking's own confirmed
+            // tickets in the DB, never this param's string values), so a
+            // placeholder empty string preserves the correct count without
+            // asserting a seat identity that doesn't exist.
+            seats: Object.values(seatAssignments).map((seatNumber) => seatNumber ?? ''),
           })
           .pipe(
             switchMap((estimateResponse) => {
@@ -306,8 +315,21 @@ export class RescheduleEffect {
   private toSeatAssignments(journeys: BookingTicketJourney[] | undefined): RescheduleSeatAssignment[] {
     // Reschedule only supports single-leg bookings — the first (only) journey.
     const tickets = journeys?.[0]?.tickets ?? [];
+    // OBRS-483: filtering on `!!ticket.seatNumber` alone (the pre-483 code)
+    // silently excluded EVERY ticket on an OPEN-seating schedule (the
+    // backend normalizes seatNumber to null there) — reschedule looked like
+    // it did nothing at all, no request, no error. Filter on CONFIRMED
+    // status instead: it is the actual invariant ("every confirmed ticket
+    // must be included, seat or no seat") and it also guards against a
+    // cancelled leftover ticket from a prior change-seat/change-stop action
+    // (same `GET .../tickets` response) that still carries a non-null
+    // seatNumber under ASSIGNED (see the identical guard/comment in
+    // `change-seat.effect.ts`, OBRS-171) — without this, removing the
+    // seatNumber filter alone would let a stale cancelled ticket id leak
+    // into `seatAssignments`. `seatNumber` itself is carried through as-is
+    // (null under OPEN, OBRS-475 made `POST .../reschedule` accept that).
     return tickets
-      .filter((ticket) => !!ticket.seatNumber)
-      .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber as string }));
+      .filter((ticket) => normalizeStatusCode(ticket.status?.code) === 'confirmed')
+      .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber ?? null }));
   }
 }

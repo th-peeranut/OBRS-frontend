@@ -11,10 +11,13 @@ import { StationService } from '../../../services/station/station.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
 import { RescheduleEstimate, RescheduleResult } from '../../../shared/interfaces/reschedule.interface';
+import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
   confirmReschedule,
   confirmRescheduleFailure,
   confirmRescheduleSuccess,
+  loadRescheduleTicketsSuccess,
+  openRescheduleDialog,
   rescheduleRequiresPayment,
   rescheduleSettled,
 } from './my-bookings.action';
@@ -78,6 +81,116 @@ describe('RescheduleEffect', () => {
     store.resetSelectors();
   });
 
+  describe('loadRescheduleTickets$ (OBRS-483: OPEN-seating no longer silently no-ops)', () => {
+    it('includes a CONFIRMED ticket with a null seatNumber (OPEN seating) instead of dropping it', () => {
+      // Before OBRS-483, `.filter((ticket) => !!ticket.seatNumber)` dropped
+      // EVERY ticket on an OPEN-seating schedule (seatNumber is null by
+      // backend invariant, OBRS-321) — reschedule looked like it did
+      // nothing at all: no request, no error, `tickets.length === 0`
+      // forever.
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-OPEN1',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 31,
+                    ticketNumber: 'T-31',
+                    seatNumber: null,
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadRescheduleTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openRescheduleDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadRescheduleTicketsSuccess({ tickets: [{ ticketId: 31, seatNumber: null }] }),
+      ]);
+    });
+
+    it('excludes a CANCELLED leftover ticket that still carries a seatNumber (mirrors the OBRS-171 change-seat guard)', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-P4HPH6',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 11,
+                    ticketNumber: 'T-11',
+                    seatNumber: '4',
+                    status: { code: 'cancelled', label: 'Cancelled' },
+                  },
+                  {
+                    id: 15,
+                    ticketNumber: 'T-15',
+                    seatNumber: '4',
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadRescheduleTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openRescheduleDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadRescheduleTicketsSuccess({ tickets: [{ ticketId: 15, seatNumber: '4' }] }),
+      ]);
+    });
+
+    it('still includes a normal ASSIGNED-mode confirmed ticket with its real seatNumber (byte-identical to pre-483 behavior)', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 9,
+            bookingNumber: 'B-9',
+            journeys: [
+              {
+                tickets: [
+                  { id: 40, ticketNumber: 'T-40', seatNumber: '12', status: { code: 'confirmed', label: 'Confirmed' } },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadRescheduleTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openRescheduleDialog({ bookingId: 9 }));
+
+      expect(emitted).toEqual([
+        loadRescheduleTicketsSuccess({ tickets: [{ ticketId: 40, seatNumber: '12' }] }),
+      ]);
+    });
+  });
+
   describe('confirmReschedule$', () => {
     it('re-fetches the estimate and sends clientNetAmount equal to the FRESH netAmount to confirmReschedule (never the stale client value)', () => {
       bookingService.getRescheduleEstimate.and.returnValue(
@@ -104,6 +217,33 @@ describe('RescheduleEffect', () => {
         jasmine.objectContaining({ clientNetAmount: 50 })
       );
       expect(emitted).toEqual([confirmRescheduleSuccess({ result })]);
+    });
+
+    it('OBRS-483: maps a null seatNumber (OPEN seating) to an empty-string placeholder for the seats query param, and preserves the null in seatAssignments to confirmReschedule', () => {
+      bookingService.getRescheduleEstimate.and.returnValue(
+        of({ code: 200, message: 'OK', data: ESTIMATE } as ResponseAPI<RescheduleEstimate>)
+      );
+      const result: RescheduleResult = { bookingId: 5, bookingNumber: 'B-5', status: 'CONFIRMED' };
+      bookingService.confirmReschedule.and.returnValue(
+        of({ code: 200, message: 'OK', data: result } as ResponseAPI<RescheduleResult>)
+      );
+
+      effect.confirmReschedule$.subscribe();
+
+      actionsSubject.next(
+        confirmReschedule({ ...CONFIRM_PAYLOAD, seatAssignments: { 11: null } })
+      );
+
+      expect(bookingService.getRescheduleEstimate).toHaveBeenCalledWith(5, {
+        newScheduleId: 999,
+        newFromStopId: 10,
+        newToStopId: 20,
+        seats: [''],
+      });
+      expect(bookingService.confirmReschedule).toHaveBeenCalledWith(
+        5,
+        jasmine.objectContaining({ seatAssignments: { 11: null } })
+      );
     });
 
     it('refuses to submit and emits a client-side PRICE_CHANGED failure when the re-fetched netAmount differs from what was submitted', () => {

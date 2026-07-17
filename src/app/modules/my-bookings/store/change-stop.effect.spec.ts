@@ -14,6 +14,7 @@ import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
 import { ChangeStopResult } from '../../../shared/interfaces/change-stop.interface';
 import { MyBookingDto } from '../../../shared/interfaces/my-booking.interface';
+import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
   changeStopAbandoned,
   changeStopRequiresPayment,
@@ -27,6 +28,7 @@ import {
   loadChangeStopEstimateFailure,
   loadChangeStopRouteStops,
   loadChangeStopRouteStopsFailure,
+  loadChangeStopTicketsSuccess,
   loadStopsLookupFailure,
   openChangeStopDialog,
 } from './my-bookings.action';
@@ -131,6 +133,85 @@ describe('ChangeStopEffect', () => {
 
       expect(emitted).toEqual([
         loadChangeStopRouteStopsFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR' }),
+      ]);
+    });
+  });
+
+  describe('loadChangeStopTickets$ (OBRS-483: OPEN-seating no longer silently no-ops)', () => {
+    it('includes a CONFIRMED ticket with a null seatNumber (OPEN seating) instead of dropping it', () => {
+      // Before OBRS-483, `.filter((ticket) => !!ticket.seatNumber)` dropped
+      // EVERY ticket on an OPEN-seating schedule (seatNumber is null by
+      // backend invariant) — change-stop looked like it did nothing at all.
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-OPEN1',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 31,
+                    ticketNumber: 'T-31',
+                    seatNumber: null,
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeStopTicketsSuccess({ tickets: [{ ticketId: 31, seatNumber: null }] }),
+      ]);
+    });
+
+    it('excludes a CANCELLED leftover ticket that still carries a seatNumber (mirrors the OBRS-171 change-seat guard)', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-P4HPH6',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 11,
+                    ticketNumber: 'T-11',
+                    seatNumber: '4',
+                    status: { code: 'cancelled', label: 'Cancelled' },
+                  },
+                  {
+                    id: 15,
+                    ticketNumber: 'T-15',
+                    seatNumber: '4',
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeStopTicketsSuccess({ tickets: [{ ticketId: 15, seatNumber: '4' }] }),
       ]);
     });
   });
@@ -279,6 +360,43 @@ describe('ChangeStopEffect', () => {
           error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.NO_SEATS',
         }),
       ]);
+    });
+  });
+
+  describe('OBRS-483: CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED (backend hard-rejects change-stop confirm on an OPEN schedule)', () => {
+    it('maps the errorCode to its localized message', () => {
+      const httpError = new HttpErrorResponse({
+        error: { errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED' },
+        status: 400,
+      });
+      bookingService.confirmChangeStop.and.returnValue(throwError(() => httpError));
+
+      const emitted: Action[] = [];
+      effect.confirmChangeStop$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(confirmChangeStop(CONFIRM_PAYLOAD));
+
+      expect(emitted).toEqual([
+        confirmChangeStopFailure({
+          errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
+          error: 'MY_BOOKINGS.CHANGE_STOP.ERROR.OPEN_SEATING_NOT_SUPPORTED',
+        }),
+      ]);
+    });
+
+    it('is terminal — closes the dialog and toasts, rather than staying inline', () => {
+      const emitted: Action[] = [];
+      effect.confirmChangeStopTerminalFailure$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        confirmChangeStopFailure({
+          errorCode: 'CHANGE_STOP_ERROR_OPEN_SEATING_NOT_SUPPORTED',
+          error: 'nope',
+        })
+      );
+
+      expect(alertService.error).toHaveBeenCalledWith('nope');
+      expect(emitted).toEqual([closeChangeStopDialog()]);
     });
   });
 

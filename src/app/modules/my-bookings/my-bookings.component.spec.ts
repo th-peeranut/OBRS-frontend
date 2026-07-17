@@ -305,6 +305,31 @@ describe('MyBookingsComponent', () => {
       expect(view.changeSeatReasonKey).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_ONE_WAY');
     });
 
+    it('REASON.OPEN_SEATING — the schedule is OPEN-seating (no assigned seat to change, OBRS-483)', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [
+            { id: 1, departureDateTime: eligibleDeparture, tickets: [{}], seatingMode: 'OPEN' },
+          ],
+        })
+      );
+
+      expect(view.changeSeatEligible).toBeFalse();
+      expect(view.changeSeatReasonKey).toBe('MY_BOOKINGS.CHANGE_SEAT.REASON.OPEN_SEATING');
+    });
+
+    it('is eligible for an ASSIGNED-seating schedule (explicit seatingMode, not just the field being absent)', () => {
+      const view = toView(
+        buildBooking({
+          bookingSchedules: [
+            { id: 1, departureDateTime: eligibleDeparture, tickets: [{}], seatingMode: 'ASSIGNED' },
+          ],
+        })
+      );
+
+      expect(view.changeSeatEligible).toBeTrue();
+    });
+
     it('REASON.ALREADY_USED — seatChangeCount >= 1', () => {
       const view = toView(
         buildBooking({

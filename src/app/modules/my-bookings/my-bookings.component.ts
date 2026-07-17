@@ -405,6 +405,15 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_ONE_WAY' };
     }
 
+    // OBRS-483: an OPEN-seating schedule (the real fleet's default,
+    // OBRS-358) has no assigned seat to change at all — a domain rule, not
+    // a limitation. Ineligible actions stay rendered but disabled with a
+    // reason (design-system §6/§11, my-bookings.component.ts's own
+    // established convention), never hidden.
+    if (schedules?.[0]?.seatingMode === 'OPEN') {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.OPEN_SEATING' };
+    }
+
     if (Number(booking.seatChangeCount ?? 0) >= 1) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.ALREADY_USED' };
     }
@@ -437,6 +446,19 @@ export class MyBookingsComponent implements OnInit {
     const bookingType = normalizeStatusCode(booking.bookingType) || 'one_way';
     if (bookingType !== 'one_way' || (schedules?.length ?? 0) !== 1) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.NOT_ONE_WAY' };
+    }
+
+    // OBRS-483: unlike reschedule (which the backend now fully supports
+    // under OPEN, OBRS-475), `POST .../change-stop/confirm` currently
+    // HARD-REJECTS an OPEN-seating schedule outright
+    // (`change-stop.error.open-seating-not-supported` — verified against
+    // `ChangeStopService.java`; a deliberate v1 limitation needing a 5th
+    // occupancy-query variant, not implemented yet). Gate it off the same
+    // way as change-seat (disabled + reason, never hidden) rather than let
+    // the traveler click through pickup/drop-off/estimate only to 400 at
+    // the final confirm step.
+    if (schedules?.[0]?.seatingMode === 'OPEN') {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.OPEN_SEATING' };
     }
 
     if (Number(booking.stopChangeCount ?? 0) >= 1) {

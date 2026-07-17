@@ -152,6 +152,7 @@
       "REASON": {
         "NOT_CONFIRMED": "仅限已确认预订",
         "NOT_ONE_WAY": "仅限单程",
+        "OPEN_SEATING": "此行程采用不指定座位的乘车方式，没有可更改的指定座位",
         "ALREADY_USED": "已更改过一次",
         "NO_WINDOW": "临近发车"
       },
@@ -188,6 +189,7 @@
       "REASON": {
         "NOT_CONFIRMED": "仅限已确认预订",
         "NOT_ONE_WAY": "仅限单程",
+        "OPEN_SEATING": "此行程采用不指定座位的乘车方式，暂不支持更改上下车点",
         "ALREADY_USED": "已更改过一次",
         "NO_WINDOW": "临近发车"
       },
@@ -220,6 +222,7 @@
         "UNAUTHORIZED": "您无权更改此预订的上下车点。",
         "BOOKING_NOT_FOUND": "此预订已不可用。",
         "MULTI_LEG_NOT_SUPPORTED": "往返预订无法更改上下车点。",
+        "OPEN_SEATING_NOT_SUPPORTED": "此行程采用不指定座位的乘车方式，暂不支持更改上下车点。",
         "GENERIC": "无法更改上下车点，请重试。",
         "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
         "ACTION_UNAVAILABLE": "目前无法完成此操作。"
