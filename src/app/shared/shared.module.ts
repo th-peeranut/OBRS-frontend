@@ -22,6 +22,10 @@ import { BoardingListComponent } from './components/boarding-list/boarding-list.
 import { NotificationBellComponent } from './components/notification-bell/notification-bell.component';
 import { NotificationInboxPanelComponent } from './components/notification-inbox-panel/notification-inbox-panel.component';
 import { NotificationInboxRowComponent } from './components/notification-inbox-row/notification-inbox-row.component';
+// OBRS-433: cross-shell shared components — the "My Reports" edit form/
+// composer AND the admin inline detail modal both reuse these.
+import { UsabilityReportImagePickerComponent } from './components/usability-report-image-picker/usability-report-image-picker.component';
+import { UsabilityReportFollowUpTimelineComponent } from './components/usability-report-follow-up-timeline/usability-report-follow-up-timeline.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -42,6 +46,8 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     NotificationBellComponent,
     NotificationInboxPanelComponent,
     NotificationInboxRowComponent,
+    UsabilityReportImagePickerComponent,
+    UsabilityReportFollowUpTimelineComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -76,6 +82,8 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     PromoCodeFieldComponent,
     BoardingListComponent,
     NotificationBellComponent,
+    UsabilityReportImagePickerComponent,
+    UsabilityReportFollowUpTimelineComponent,
 
     // Directives
     AdminModalBackdropDirective,

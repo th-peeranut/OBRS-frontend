@@ -107,6 +107,18 @@ const routes: Routes = [
       ),
   },
   {
+    // OBRS-433: reporter-facing "My Reports" — same shape as /my-bookings and
+    // /account (customerArea + requireAuth: true bounces an anonymous visitor
+    // to /login via the real guard, not just a hidden nav link).
+    path: 'my-reports',
+    canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
+    loadChildren: () =>
+      import('./modules/my-reports/my-reports.module').then(
+        (m) => m.MyReportsModule
+      ),
+  },
+  {
     path: 'refund-policy',
     canActivate: [AuthGuard],
     data: { customerArea: true },

@@ -54,8 +54,13 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
     AdminModalBackdropDirective.openCount++;
     document.body.style.overflow = 'hidden';
 
+    // OBRS-433: '.mr-detail-modal' is the "My Reports" customer-shell detail
+    // modal — its visual shell is its own scoped CSS (not `.admin-modal`,
+    // which depends on `--admin-*` vars only defined inside `.admin-shell`),
+    // but it still uses this SAME generic backdrop/ESC/focus-trap/scroll-lock
+    // directive, so its dialog element needs to be found here too.
     const dialog = this.elementRef.nativeElement.querySelector<HTMLElement>(
-      '.admin-modal, .user-editor-modal'
+      '.admin-modal, .user-editor-modal, .mr-detail-modal'
     );
     if (!dialog) {
       return;
@@ -67,7 +72,9 @@ export class AdminModalBackdropDirective implements OnInit, OnDestroy {
     }
     dialog.setAttribute('aria-modal', 'true');
 
-    const title = dialog.querySelector<HTMLElement>('.admin-modal-title, .user-editor-title');
+    const title = dialog.querySelector<HTMLElement>(
+      '.admin-modal-title, .user-editor-title, .mr-detail-title'
+    );
     if (title) {
       if (!title.id) {
         title.id = `admin-modal-title-${Math.random().toString(36).slice(2, 9)}`;

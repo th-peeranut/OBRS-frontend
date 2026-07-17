@@ -1,0 +1,120 @@
+@import "../../../../../styles/variables.scss";
+
+// `.admin-modal-backdrop` (admin-theme.scss) is reused as-is for the fixed
+// overlay positioning — it's fully static (fixed inset + rgba black + a
+// z-index), no `--admin-*` custom-property dependency, unlike `.admin-modal`
+// itself (which needs `--admin-surface-card` etc., only defined inside
+// `.admin-shell`). The dialog SHELL below is this component's own scoped
+// `.mr-detail-modal`, styled with static tokens — mirroring
+// report-usability-fab.component.scss's `.report-modal` recipe (the
+// established customer-shell modal-outside-`.admin-shell` idiom) rather than
+// depending on `.admin-modal`.
+
+.mr-detail-modal {
+  background: $primary-white;
+  border-radius: $radius-lg;
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: $shadow-lg;
+  padding: $space-lg;
+}
+
+.mr-detail-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: $space-xs;
+  margin-bottom: $space-md;
+}
+
+.mr-detail-title {
+  margin: 0;
+  font-weight: $font-weight-bold;
+  font-size: $font-size-lg;
+  color: $text-black;
+}
+
+.mr-detail-modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $text-lightgrey;
+  padding: 0;
+  line-height: 1;
+
+  &:hover {
+    color: $text-black;
+  }
+}
+
+.mr-detail-row {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: 6px 0;
+}
+
+.mr-detail-label {
+  min-width: 120px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-lightgrey;
+  margin: 0;
+}
+
+.mr-detail-description {
+  display: flex;
+  flex-direction: column;
+  gap: $space-3xs;
+}
+
+.mr-description-text {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: $text-black;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mr-detail-muted {
+  margin: 0;
+  font-size: $font-size-sm;
+  color: $text-lightgrey;
+  font-style: italic;
+}
+
+.mr-inline-updating {
+  font-size: $font-size-xs;
+  color: $text-lightgrey;
+  font-weight: $font-weight-regular;
+  margin-left: $space-2xs;
+}
+
+.mr-images-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-2xs;
+}
+
+.mr-image-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: $radius-sm;
+  border: 1px solid $primary-lightgrey;
+}
+
+// Single primary action per screen (design-system §4) — the customer-shell
+// brand token, matching account/my-bookings' own `.btn-primary` recipe.
+.mr-btn-primary {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $brand-customer-strong;
+  color: $text-white;
+}

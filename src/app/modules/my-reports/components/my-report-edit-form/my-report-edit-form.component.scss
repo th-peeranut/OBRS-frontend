@@ -1,0 +1,92 @@
+@import "../../../../../styles/variables.scss";
+
+// Angular's emulated view encapsulation scopes a component's styles to its
+// OWN template only — `.mr-detail-label`/`.mr-btn-primary` rendered here (a
+// child of MyReportDetailModalComponent) need their own copies, same token
+// values as my-report-detail-modal.component.scss, not a raw-hex re-derive.
+
+.mr-detail-label {
+  min-width: 120px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-lightgrey;
+  margin: 0 0 $space-2xs;
+  display: block;
+}
+
+.mr-edit-form__field {
+  display: flex;
+  flex-direction: column;
+}
+
+// Multi-line exception to the single pill input shape (design-system §5) —
+// a moderate radius, matching the admin `.admin-field` textarea recipe's
+// same deliberate departure, expressed with this module's own tokens.
+.mr-textarea {
+  width: 100%;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-md;
+  padding: $space-2xs $space-xs;
+  font-family: inherit;
+  font-size: $font-size-sm;
+  resize: vertical;
+  min-height: 100px;
+
+  &.is-invalid {
+    border-color: $text-red;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $brand-customer-strong;
+    box-shadow: $shadow-focus;
+  }
+}
+
+.mr-edit-form__error {
+  font-size: $font-size-xs;
+  color: $text-red;
+  margin-top: $space-3xs;
+}
+
+.mr-edit-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+}
+
+.mr-btn-primary {
+  display: inline-block;
+  padding: 10px 22px;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $brand-customer-strong;
+  color: $text-white;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// Page-scoped secondary-button recipe (account/my-bookings precedent,
+// design-system §4) — Cancel is the secondary action here, Save is primary.
+.mr-btn-secondary {
+  display: inline-block;
+  padding: 10px 22px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

@@ -339,6 +339,16 @@
           ></textarea>
         </div>
 
+        <!-- OBRS-433: read-only follow-up timeline (reporter + admin notes/
+             images) — same shared component the customer "My Reports" detail
+             modal uses, no composer here (admin never posts a follow-up). -->
+        <div class="mt-3">
+          <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.DETAIL.FOLLOW_UPS_LABEL' | translate }}</p>
+          <app-usability-report-follow-up-timeline
+            [followUps]="detailReport.followUps"
+          ></app-usability-report-follow-up-timeline>
+        </div>
+
         <!-- Status update: normal (existing dropdown + Save). OBRS-378: hidden
              once the report is already dismissed — that state renders its own
              branch below instead (exactly one primary button per state). -->

@@ -1,0 +1,32 @@
+<form class="mr-follow-up-composer" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <label class="mr-detail-label" for="mr-follow-up-note">
+    {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_PLACEHOLDER' | translate }}
+  </label>
+  <textarea
+    id="mr-follow-up-note"
+    class="mr-textarea"
+    [class.is-invalid]="noteInvalid"
+    rows="3"
+    formControlName="note"
+    [placeholder]="'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_PLACEHOLDER' | translate"
+  ></textarea>
+  <div *ngIf="noteInvalid" class="mr-edit-form__error">
+    {{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.NOTE_REQUIRED' | translate }}
+  </div>
+
+  <app-usability-report-image-picker
+    class="mt-2"
+    [existingImages]="existingImagesInput"
+    (imagesChange)="onImagesChange($event)"
+  ></app-usability-report-image-picker>
+
+  <div class="mr-follow-up-composer__actions mt-2">
+    <button type="submit" class="mr-btn-secondary" [disabled]="isSubmitting">
+      {{
+        isSubmitting
+          ? ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMITTING' | translate)
+          : ('USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.SUBMIT' | translate)
+      }}
+    </button>
+  </div>
+</form>

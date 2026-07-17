@@ -14,6 +14,7 @@ import { AuthService } from '../../../../auth/auth.service';
 import { AdminSharedModule } from '../../admin-shared.module';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
 import { UsabilityReportDuplicatePickerComponent } from './usability-report-duplicate-picker/usability-report-duplicate-picker.component';
+import { UsabilityReportFollowUpTimelineComponent } from '../../../../shared/components/usability-report-follow-up-timeline/usability-report-follow-up-timeline.component';
 import {
   UsabilityReportPage,
   UsabilityReportDetail,
@@ -117,6 +118,7 @@ describe('UsabilityReportsPageComponent', () => {
         UsabilityReportsPageComponent,
         AdminModalBackdropDirective,
         UsabilityReportDuplicatePickerComponent,
+        UsabilityReportFollowUpTimelineComponent,
       ],
       providers: [
         { provide: UsabilityReportsStore, useValue: storeSpy },
@@ -228,6 +230,7 @@ describe('UsabilityReportsPageComponent', () => {
       reporterNotifiedAt: null,
       duplicateOfId: null,
       duplicateCount: 0,
+      followUps: [],
     };
 
     const detailResponse: ResponseAPI<UsabilityReportDetail> = {
@@ -309,6 +312,7 @@ describe('UsabilityReportsPageComponent', () => {
     reporterNotifiedAt: null,
     duplicateOfId: null,
     duplicateCount: 0,
+    followUps: [],
   };
 
   function primeReportList(): void {

@@ -1,0 +1,50 @@
+<form class="mr-edit-form mt-3" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+  <div class="mr-edit-form__field">
+    <label class="mr-detail-label">{{ 'USABILITY_REPORT.CATEGORY.LABEL' | translate }}</label>
+    <app-dropdown-obrs
+      [value]="detail.category"
+      [options]="categoryOptions"
+      (currentValue)="onCategoryChange($event)"
+    ></app-dropdown-obrs>
+  </div>
+
+  <div class="mr-edit-form__field mt-2">
+    <label class="mr-detail-label" for="mr-edit-description">
+      {{ 'USABILITY_REPORT.DESCRIPTION.LABEL' | translate }}
+    </label>
+    <textarea
+      id="mr-edit-description"
+      class="mr-textarea"
+      [class.is-invalid]="descriptionInvalid"
+      rows="5"
+      formControlName="description"
+      [placeholder]="'USABILITY_REPORT.DESCRIPTION.PLACEHOLDER' | translate"
+    ></textarea>
+    <div *ngIf="descriptionInvalid" class="mr-edit-form__error">
+      {{ 'USABILITY_REPORT.DESCRIPTION.REQUIRED' | translate }}
+    </div>
+  </div>
+
+  <div class="mr-edit-form__field mt-2">
+    <label class="mr-detail-label">{{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}</label>
+    <app-usability-report-image-picker
+      [existingImages]="existingImages"
+      (imagesChange)="onImagesChange($event)"
+    ></app-usability-report-image-picker>
+  </div>
+
+  <div *ngIf="inlineError" class="mr-edit-form__error mt-2">{{ inlineError }}</div>
+
+  <div class="mr-edit-form__actions mt-3">
+    <button type="button" class="mr-btn-secondary" [disabled]="isSaving" (click)="onCancel()">
+      {{ 'USABILITY_REPORT.MY_REPORTS.EDIT_FORM.CANCEL' | translate }}
+    </button>
+    <button type="submit" class="mr-btn-primary" [disabled]="isSaving">
+      {{
+        isSaving
+          ? ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVING' | translate)
+          : ('USABILITY_REPORT.MY_REPORTS.EDIT_FORM.SAVE' | translate)
+      }}
+    </button>
+  </div>
+</form>

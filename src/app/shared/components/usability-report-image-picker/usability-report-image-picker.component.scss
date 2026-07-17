@@ -1,0 +1,99 @@
+@import "../../../../styles/variables.scss";
+
+// This is a cross-shell shared component (used by the customer "My Reports"
+// modal today) — styled with static SCSS tokens only, never `--admin-*`/
+// `--accent*` runtime vars (those only resolve inside `.admin-shell`).
+
+.ur-image-picker__hint {
+  font-size: $font-size-xs;
+  color: $text-lightgrey;
+  margin: 0 0 $space-2xs;
+}
+
+.ur-image-picker__file-input {
+  display: none;
+}
+
+// Page-scoped secondary-button recipe (account/my-bookings precedent,
+// design-system §4/§12) reused here as the component's own scoped class —
+// `$brand-customer-strong`, outlined, not a raw hex.
+.ur-image-picker__add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-3xs;
+  padding: 8px 16px;
+  border-radius: $radius-sm;
+  border: 1px solid $brand-customer-strong;
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.ur-image-picker__error {
+  font-size: $font-size-xs;
+  color: $text-red;
+  margin-top: $space-2xs;
+}
+
+// ── Reused verbatim from report-usability-fab.component.scss (own scope) ────
+
+.report-previews {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2xs;
+}
+
+.report-preview-item {
+  display: flex;
+  align-items: center;
+  gap: $space-2xs;
+  background: $secondary-grey;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-sm;
+  padding: 6px 10px;
+}
+
+.report-preview-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: $radius-sm - 2px;
+  flex-shrink: 0;
+}
+
+.report-preview-name {
+  flex: 1;
+  font-size: $font-size-sm;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-preview-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: $text-lightgrey;
+  flex-shrink: 0;
+  line-height: 1;
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  &:hover {
+    color: $text-red;
+  }
+}

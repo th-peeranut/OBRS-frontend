@@ -32,6 +32,7 @@
       "HINT": "Up to 5 images, max 5 MB each. JPEG, PNG, WebP, GIF.",
       "ADD": "Add Images",
       "REMOVE": "Remove",
+      "EXISTING": "Existing image",
       "TOO_MANY": "You can attach up to 5 images only.",
       "TOO_LARGE": "One or more images exceed the 5 MB limit.",
       "INVALID_TYPE": "Only JPEG, PNG, WebP, and GIF images are allowed."
@@ -46,6 +47,57 @@
       "REPORT_RATE_LIMITED": "You have submitted too many reports recently. Please wait before trying again.",
       "VALIDATION_FAILED": "Please check your input and try again.",
       "GENERIC": "Something went wrong. Please try again."
+    },
+    "MY_REPORTS": {
+      "TITLE": "My Reports",
+      "SUBTITLE": "Track the usability reports you've submitted and add follow-up notes anytime.",
+      "LOAD_FAILED": "Unable to load your reports. Please try again.",
+      "RETRY": "Try again",
+      "EMPTY_TITLE": "You haven't submitted any reports yet",
+      "EMPTY_BODY": "Use the Report Issue button anywhere in the app to send us a bug or suggestion.",
+      "LOAD_MORE": "Load more",
+      "LOADING_MORE": "Loading...",
+      "DETAIL": {
+        "TITLE": "Report Detail",
+        "CLOSE": "Close",
+        "CATEGORY_LABEL": "Category",
+        "STATUS_LABEL": "Status",
+        "CREATED_AT_LABEL": "Submitted",
+        "UPDATING": "Updating...",
+        "EDIT_ACTION": "Edit",
+        "TRIAGE_NOTE_LABEL": "Note from our team",
+        "TRIAGE_NOTE_EMPTY": "No note from our team yet."
+      },
+      "EDIT_FORM": {
+        "SAVE": "Save changes",
+        "SAVING": "Saving...",
+        "CANCEL": "Cancel",
+        "SUCCESS": "Your report has been updated."
+      },
+      "FOLLOW_UP": {
+        "TITLE": "Follow-up notes",
+        "EMPTY": "No follow-up notes yet.",
+        "NOTE_PLACEHOLDER": "Add a follow-up note...",
+        "NOTE_REQUIRED": "Enter a note before submitting.",
+        "SUBMIT": "Post note",
+        "SUBMITTING": "Posting...",
+        "SUCCESS": "Your follow-up note has been added.",
+        "AUTHOR_YOU": "You"
+      },
+      "ERROR": {
+        "REPORT_NOT_EDITABLE": "This report can no longer be edited.",
+        "CONCURRENT_MODIFICATION": "This report was updated elsewhere. Please review the latest version.",
+        "REPORT_NOT_FOUND": "This report could not be found."
+      },
+      "STATUS": {
+        "new": "New",
+        "in_review": "In Review",
+        "accepted": "Accepted",
+        "dismissed": "Dismissed",
+        "resolved": "Resolved",
+        "rejected": "Rejected",
+        "duplicate": "Duplicate"
+      }
     }
   },
   "MY_BOOKINGS": {
@@ -861,6 +913,7 @@
         "CLOSE": "Close",
         "TRIAGE_NOTE_LABEL": "Triage Note",
         "TRIAGE_NOTE_PLACEHOLDER": "Add a note for this report...",
+        "FOLLOW_UPS_LABEL": "Follow-up notes",
         "TRIAGED_BY": "Triaged By",
         "TRIAGED_AT": "Triaged At",
         "JIRA_LINK_LABEL": "Jira Issue",
@@ -1370,7 +1423,8 @@
       "PROFILE_MENU": "Open profile menu",
       "THEME_TOGGLE": "Toggle dark mode",
       "MY_BOOKINGS": "My Bookings",
-      "ACCOUNT": "Account"
+      "ACCOUNT": "Account",
+      "MY_REPORTS": "My Reports"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "One-way",

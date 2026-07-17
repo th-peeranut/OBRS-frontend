@@ -1,0 +1,107 @@
+<div
+  class="admin-modal-backdrop mr-detail-backdrop"
+  adminModalBackdrop
+  (dismiss)="close()"
+>
+  <div class="mr-detail-modal">
+    <div class="mr-detail-modal__header">
+      <h4 class="mr-detail-title">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TITLE' | translate }}</h4>
+      <button
+        type="button"
+        class="mr-detail-modal__close"
+        [attr.aria-label]="'USABILITY_REPORT.MY_REPORTS.DETAIL.CLOSE' | translate"
+        (click)="close()"
+      >
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </div>
+
+    <ng-container *ngIf="detail">
+      <div class="mr-detail-modal__body">
+        <div class="mr-detail-row">
+          <span class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.CATEGORY_LABEL' | translate }}</span>
+          <span>{{ categoryLabel(detail.category) }}</span>
+        </div>
+        <div class="mr-detail-row">
+          <span class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.STATUS_LABEL' | translate }}</span>
+          <span class="admin-status" [ngClass]="statusClass(detail.status)">
+            {{ statusLabel(detail.status) }}
+          </span>
+        </div>
+        <div class="mr-detail-row">
+          <span class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.CREATED_AT_LABEL' | translate }}</span>
+          <span>{{ displayDateTime(detail.createdAt) }}</span>
+        </div>
+
+        <!-- Edit form replaces the read-only description/images while editing. -->
+        <ng-container *ngIf="isEditing; else readOnlyBlock">
+          <app-my-report-edit-form
+            [detail]="detail"
+            (saved)="onEditSaved($event)"
+            (stale)="onEditStale()"
+            (cancelled)="cancelEdit()"
+          ></app-my-report-edit-form>
+        </ng-container>
+
+        <ng-template #readOnlyBlock>
+          <div class="mr-detail-description mt-3">
+            <p class="mr-detail-label">
+              {{ 'USABILITY_REPORT.DESCRIPTION.LABEL' | translate }}
+              <span *ngIf="isDetailFetching" class="mr-inline-updating">
+                {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.UPDATING' | translate }}
+              </span>
+            </p>
+            <p class="mr-description-text">{{ detail.description }}</p>
+          </div>
+
+          <div class="mt-3" *ngIf="detail.images.length > 0">
+            <p class="mr-detail-label">{{ 'USABILITY_REPORT.IMAGES.LABEL' | translate }}</p>
+            <div class="mr-images-grid">
+              <img
+                *ngFor="let img of detail.images"
+                [src]="img.publicUrl"
+                [alt]="'Image ' + img.position"
+                class="mr-image-thumb"
+              />
+            </div>
+          </div>
+
+          <button
+            *ngIf="detail.editable"
+            type="button"
+            class="mr-btn-primary mt-3"
+            (click)="startEdit()"
+          >
+            {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.EDIT_ACTION' | translate }}
+          </button>
+        </ng-template>
+
+        <!-- Admin's triage note — reporter-visible per AC#2. -->
+        <div class="mr-detail-description mt-3">
+          <p class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TRIAGE_NOTE_LABEL' | translate }}</p>
+          <p *ngIf="detail.triageNote" class="mr-description-text">{{ detail.triageNote }}</p>
+          <p *ngIf="!detail.triageNote" class="mr-detail-muted">
+            {{ 'USABILITY_REPORT.MY_REPORTS.DETAIL.TRIAGE_NOTE_EMPTY' | translate }}
+          </p>
+        </div>
+
+        <!-- Follow-up timeline (read-only) + composer (any status). -->
+        <div class="mt-3">
+          <p class="mr-detail-label">{{ 'USABILITY_REPORT.MY_REPORTS.FOLLOW_UP.TITLE' | translate }}</p>
+          <app-usability-report-follow-up-timeline
+            [followUps]="detail.followUps"
+            [pendingEntry]="pendingFollowUp"
+          ></app-usability-report-follow-up-timeline>
+        </div>
+
+        <app-my-report-follow-up-composer
+          class="mt-3"
+          [reportId]="detail.id"
+          (pending)="onFollowUpPending($event)"
+          (added)="onFollowUpAdded($event)"
+          (failed)="onFollowUpFailed()"
+        ></app-my-report-follow-up-composer>
+      </div>
+    </ng-container>
+  </div>
+</div>

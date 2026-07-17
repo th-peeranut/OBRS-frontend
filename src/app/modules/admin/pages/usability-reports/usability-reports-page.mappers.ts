@@ -182,6 +182,10 @@ export function toUsabilityReportDetailFallback(
     // fallback doesn't need to blank them out pending the real GET.
     duplicateOfId: summary.duplicateOfId,
     duplicateCount: summary.duplicateCount,
+    // OBRS-433: like routeUrl/userAgent/images, the follow-up timeline only
+    // arrives with the real detail fetch — the fallback renders an empty list
+    // pending it.
+    followUps: [],
   };
 }
 
