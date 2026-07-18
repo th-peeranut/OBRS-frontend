@@ -1,0 +1,37 @@
+@import "../../../../../styles/variables.scss";
+
+.parcel-booking-page {
+  max-width: 800px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+
+.parcel-booking-card {
+  background: $primary-white;
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.parcel-booking-page__payment {
+  .tab-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px 16px;
+    border: 1px solid $primary-grey;
+    border-radius: $radius-xl;
+    background: transparent;
+    color: $text-softblack;
+
+    &.is-active {
+      background: $brand-customer;
+      color: $text-white;
+      border-color: $brand-customer;
+    }
+  }
+}

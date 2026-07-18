@@ -1,0 +1,109 @@
+<form class="parcel-details-form" [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="row g-3">
+    <div class="col-12">
+      <label>{{ "PARCEL_BOOKING.DETAILS.SENDER_NAME_LABEL" | translate }}</label>
+      <div class="parcel-details-form__sender-name">{{ senderNameDisplay }}</div>
+      <div class="parcel-details-form__help">
+        {{ "PARCEL_BOOKING.DETAILS.SENDER_NAME_HELP" | translate }}
+      </div>
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label for="senderPhone">{{ "PARCEL_BOOKING.DETAILS.SENDER_PHONE" | translate }}</label>
+      <input id="senderPhone" class="form-control" type="text" formControlName="senderPhone" />
+      <div class="text-error" *ngIf="fieldError('senderPhone') as err">{{ err | translate }}</div>
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label for="weightKg">{{ "PARCEL_BOOKING.DETAILS.WEIGHT" | translate }}</label>
+      <input
+        id="weightKg"
+        class="form-control"
+        type="number"
+        step="0.1"
+        formControlName="weightKg"
+      />
+      <div class="text-error" *ngIf="fieldError('weightKg') as err">{{ err | translate }}</div>
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label for="recipientName">{{ "PARCEL_BOOKING.DETAILS.RECIPIENT_NAME" | translate }}</label>
+      <input id="recipientName" class="form-control" type="text" formControlName="recipientName" />
+      <div class="text-error" *ngIf="fieldError('recipientName') as err">{{ err | translate }}</div>
+    </div>
+
+    <div class="col-12 col-md-6">
+      <label for="recipientPhone">{{ "PARCEL_BOOKING.DETAILS.RECIPIENT_PHONE" | translate }}</label>
+      <input id="recipientPhone" class="form-control" type="text" formControlName="recipientPhone" />
+      <div class="text-error" *ngIf="fieldError('recipientPhone') as err">{{ err | translate }}</div>
+    </div>
+
+    <ng-container formGroupName="dimensions">
+      <div class="col-12 col-md-4">
+        <label for="lengthCm">{{ "PARCEL_BOOKING.DETAILS.LENGTH_CM" | translate }}</label>
+        <input id="lengthCm" class="form-control" type="number" formControlName="lengthCm" />
+      </div>
+      <div class="col-12 col-md-4">
+        <label for="widthCm">{{ "PARCEL_BOOKING.DETAILS.WIDTH_CM" | translate }}</label>
+        <input id="widthCm" class="form-control" type="number" formControlName="widthCm" />
+      </div>
+      <div class="col-12 col-md-4">
+        <label for="heightCm">{{ "PARCEL_BOOKING.DETAILS.HEIGHT_CM" | translate }}</label>
+        <input id="heightCm" class="form-control" type="number" formControlName="heightCm" />
+      </div>
+      <div class="col-12">
+        <div class="text-error" *ngIf="isDimensionsIncomplete">
+          {{ "PARCEL_BOOKING.VALIDATION.DIMENSIONS_ALL_OR_NONE" | translate }}
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="col-12">
+      <label for="description">{{ "PARCEL_BOOKING.DETAILS.DESCRIPTION" | translate }}</label>
+      <textarea id="description" class="form-control" rows="3" formControlName="description"></textarea>
+      <div class="text-error" *ngIf="fieldError('description') as err">{{ err | translate }}</div>
+    </div>
+  </div>
+
+  <div class="parcel-details-form__quote">
+    <ng-container *ngIf="isLoadingQuote">
+      {{ "PARCEL_BOOKING.DETAILS.QUOTE_LOADING" | translate }}
+    </ng-container>
+    <ng-container *ngIf="!isLoadingQuote && quote as q">
+      {{ "PARCEL_BOOKING.DETAILS.QUOTE_AMOUNT" | translate: { amount: q.amount } }}
+    </ng-container>
+    <div class="text-error" *ngIf="!isLoadingQuote && quoteErrorKey as err">{{ err | translate }}</div>
+  </div>
+
+  <section class="parcel-details-form__prohibited" aria-labelledby="prohibited-title">
+    <h2 id="prohibited-title">{{ "PARCEL_BOOKING.PROHIBITED.TITLE" | translate }}</h2>
+    <ul class="parcel-details-form__prohibited-list">
+      <li *ngFor="let category of prohibitedCategories">
+        <span class="material-symbols-outlined" aria-hidden="true">{{ category.icon }}</span>
+        <span>{{ category.i18nKey | translate }}</span>
+      </li>
+    </ul>
+
+    <div class="form-check">
+      <input
+        id="prohibitedAcknowledged"
+        class="form-check-input"
+        type="checkbox"
+        formControlName="prohibitedAcknowledged"
+      />
+      <label class="form-check-label" for="prohibitedAcknowledged">
+        {{ "PARCEL_BOOKING.DETAILS.PROHIBITED_ACK" | translate }}
+      </label>
+    </div>
+  </section>
+
+  <div class="text-error parcel-details-form__server-error" *ngIf="serverErrorKey as err">
+    {{ err | translate }}
+  </div>
+
+  <div class="parcel-details-form__actions">
+    <button type="submit" class="parcel-btn-primary" [disabled]="!canSubmit">
+      {{ (isSubmitting ? "PARCEL_BOOKING.DETAILS.SUBMITTING" : "PARCEL_BOOKING.DETAILS.SUBMIT") | translate }}
+    </button>
+  </div>
+</form>

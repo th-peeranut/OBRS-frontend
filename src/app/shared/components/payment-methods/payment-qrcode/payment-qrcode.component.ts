@@ -47,6 +47,19 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
    * as an inline step and reacts to `(paymentCompleted)` instead.
    */
   @Input() successRedirect: string[] | null = ['/e-ticket'];
+  /**
+   * OBRS-415: the default `amountDisplay`/QR-trigger path (`watchAmount()`)
+   * derives the total entirely from the seat-booking `scheduleBooking`/
+   * `scheduleFilter` NgRx stores, which a parcel booking never populates —
+   * left as null-default this would show "0.00" AND never trigger
+   * `ensurePromptPayQrCode()` (it only fires when the derived total is > 0),
+   * so a parcel customer's QR tab would never even load a QR code. Optional,
+   * null-default so every existing call site (seat booking, reschedule/
+   * change-stop dialogs) stays byte-identical (design-system §10); when set,
+   * `ngOnInit` uses it directly instead of `watchAmount()`. Also forwarded to
+   * `<app-payment-summary>`.
+   */
+  @Input() amountOverride: number | null = null;
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();
@@ -76,6 +89,13 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.startCountdown();
+    if (this.amountOverride != null) {
+      this.amountDisplay = this.formatAmount(this.amountOverride);
+      if (this.amountOverride > 0) {
+        void this.ensurePromptPayQrCode();
+      }
+      return;
+    }
     this.watchAmount();
   }
 

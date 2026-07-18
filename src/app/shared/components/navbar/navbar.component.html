@@ -71,6 +71,15 @@
             <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
           </a>
           <a
+            class="navbar-profile-item"
+            role="menuitem"
+            [routerLink]="'/my-parcels'"
+            (click)="isProfileDropdownOpen = false"
+          >
+            <span class="material-symbols-outlined">local_shipping</span>
+            <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
+          </a>
+          <a
             *ngIf="isAdmin"
             class="navbar-profile-item"
             role="menuitem"
@@ -184,6 +193,14 @@
       >
         <span class="material-symbols-outlined">confirmation_number</span>
         <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
+      </a>
+      <a
+        class="navbar-mobile-link"
+        routerLink="/my-parcels"
+        (click)="closeMobileMenu()"
+      >
+        <span class="material-symbols-outlined">local_shipping</span>
+        <span>{{ "HOME.NAVBAR.MY_PARCELS" | translate }}</span>
       </a>
       <a
         *ngIf="isAdmin"

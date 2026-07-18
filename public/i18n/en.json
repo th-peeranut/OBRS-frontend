@@ -1209,7 +1209,7 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "VERIFY OTP": "Please verify your subscription via your phone number.",
+    "VERIFY_OTP": "Please verify your subscription via your phone number.",
     "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
     "EMAIL_VERIFY_SIGNIN": "Sign in"
   },
@@ -1371,6 +1371,7 @@
       "PROFILE_MENU": "Open profile menu",
       "THEME_TOGGLE": "Toggle dark mode",
       "MY_BOOKINGS": "My Bookings",
+      "MY_PARCELS": "My Parcels",
       "ACCOUNT": "Account"
     },
     "HOME_BOOKING": {
@@ -1388,7 +1389,6 @@
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
       "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
-      "PASSENGER_VALIDATION": "Please select at least one passenger before searching.",
       "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
     },
     "STATION": {
@@ -1926,12 +1926,16 @@
         "ARRIVED_CONFIRM_TITLE": "Mark this trip as arrived?",
         "ARRIVED_CONFIRM_TEXT": "This locks boarding for this schedule — no passenger can be boarded or un-boarded afterwards.",
         "ARRIVED_CONFIRM_CONFIRM": "Mark arrived",
-        "ARRIVED_CONFIRM_CANCEL": "Cancel"
+        "ARRIVED_CONFIRM_CANCEL": "Cancel",
+        "TURNAROUND_OVERRIDE_TITLE": "Depart anyway?",
+        "TURNAROUND_OVERRIDE_CONFIRM": "Depart anyway",
+        "TURNAROUND_OVERRIDE_CANCEL": "Cancel"
       },
       "LOCK_BANNER": "This trip has arrived. Boarding is locked and can no longer be changed.",
       "ERROR": {
         "SCHEDULE_TRANSITION_ILLEGAL": "This schedule can't move to that status right now.",
         "SCHEDULE_TRANSITION_NOT_ASSIGNED_DRIVER": "You can only update a trip you are assigned to drive.",
+        "SCHEDULE_OVERRIDE_NOT_PERMITTED": "You don't have permission to override this check.",
         "GENERIC": "Unable to update the schedule status. Please try again."
       }
     },
@@ -2266,6 +2270,7 @@
         "LEFT_AT_STOP": "Left at stop",
         "UNCLAIMED_RETURNED": "Unclaimed / returned",
         "REJECTED": "Rejected",
+        "CREATED": "Declared — not yet at counter",
         "UNKNOWN": "Unknown"
       }
     }
@@ -2279,6 +2284,102 @@
     "DROPOFF_STOP": "Drop-off stop",
     "ARRIVED_NOTIFIED_AT": "Arrived at destination",
     "COLLECTED_AT": "Collected",
-    "RECIPIENT": "Recipient"
+    "RECIPIENT": "Recipient",
+    "STATUS": {
+      "CREATED": "Declared — awaiting drop-off"
+    }
+  },
+  "PARCEL_BOOKING": {
+    "TITLE": "Book a parcel",
+    "STEP": {
+      "TRIP": "Trip",
+      "DETAILS": "Parcel details",
+      "PAYMENT": "Payment"
+    },
+    "TRIP": {
+      "FROM_STATION": "Origin stop",
+      "TO_STATION": "Destination stop",
+      "DATE": "Travel date",
+      "SCHEDULE": "Schedule",
+      "NO_SCHEDULES": "No schedules found for this route and date. Try a different date or route.",
+      "NEXT": "Next"
+    },
+    "DETAILS": {
+      "SENDER_NAME_LABEL": "Sender",
+      "SENDER_NAME_HELP": "This name is taken automatically from your account and can't be edited here.",
+      "SENDER_PHONE": "Sender phone",
+      "RECIPIENT_NAME": "Recipient name",
+      "RECIPIENT_PHONE": "Recipient phone",
+      "WEIGHT": "Weight (kg)",
+      "LENGTH_CM": "Length (cm)",
+      "WIDTH_CM": "Width (cm)",
+      "HEIGHT_CM": "Height (cm)",
+      "DESCRIPTION": "Parcel description",
+      "PROHIBITED_ACK": "I have read the prohibited-items list above and confirm this parcel contains none of them.",
+      "QUOTE_LOADING": "Calculating price…",
+      "QUOTE_AMOUNT": "Price: {{amount}} THB",
+      "SUBMIT": "Confirm parcel details",
+      "SUBMITTING": "Submitting…"
+    },
+    "PROHIBITED": {
+      "TITLE": "Prohibited items",
+      "FLAMMABLE": "Flammable liquids/gas",
+      "EXPLOSIVE": "Explosives or fireworks",
+      "WEAPON": "Weapons or weapon parts",
+      "NARCOTIC": "Narcotics or controlled substances",
+      "CORPSE": "Human remains"
+    },
+    "VALIDATION": {
+      "REQUIRED": "This field is required.",
+      "PHONE_INVALID": "Enter 10-15 digits.",
+      "WEIGHT_POSITIVE": "Weight must be greater than 0.",
+      "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
+      "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
+      "FROM_TO_SAME": "Origin and destination stops cannot be the same."
+    },
+    "ERROR": {
+      "PROHIBITED_NOT_ACK": "Please confirm your parcel has no prohibited items before continuing.",
+      "WEIGHT_EXCEEDS_MAX": "Parcel weight must not exceed 100 kg.",
+      "RECIPIENT_REQUIRED": "Please complete the recipient's name and phone.",
+      "RECIPIENT_PHONE_INVALID": "Recipient phone is invalid. Enter 10-15 digits.",
+      "STOP_ORDER_INVALID": "Dropoff must be after pickup on the same route. Please choose again.",
+      "SENDER_PHONE_INVALID": "Sender phone is invalid. Enter 10-15 digits.",
+      "SENDER_NAME_UNRESOLVED": "Your account has no name on file. Please complete your profile before booking a parcel.",
+      "PROHIBITED_CATEGORY": "Your description matches a prohibited category. Review the list above or contact staff if unsure.",
+      "STOP_PAIR_NOT_PRICEABLE": "This pickup/dropoff pair can't be priced. Choose again or contact staff.",
+      "CARGO_NOT_CONFIGURED": "This schedule isn't open for parcel booking yet. Choose another or contact staff.",
+      "CARGO_CAPACITY_EXCEEDED": "This schedule's cargo quota is full. Choose another schedule.",
+      "NOT_FOUND": "Schedule or stop not found. Please try again.",
+      "GENERIC": "Something went wrong. Please try again."
+    },
+    "SUCCESS": {
+      "TITLE": "Booking successful",
+      "TRACKING_NUMBER": "Tracking number",
+      "AMOUNT_PAID": "Amount paid",
+      "NEXT_STEPS": "Next: bring the parcel to the origin stop at the scheduled time. Staff will inspect it before accepting it. You'll receive a collection code only after staff has inspected and accepted the parcel.",
+      "TRACK_CTA": "View my parcels",
+      "HOME_CTA": "Back to home"
+    },
+    "MY_PARCELS": {
+      "TITLE": "My Parcels",
+      "SUBTITLE": "All your consigned parcels",
+      "COPY_TRACKING_NUMBER": "Copy tracking number",
+      "COPY_TRACKING_NUMBER_SUCCESS": "Tracking number copied",
+      "COPY_TRACKING_LINK": "Copy tracking link",
+      "COPY_TRACKING_LINK_SUCCESS": "Tracking link copied",
+      "UNPAID_BADGE": "Unpaid",
+      "EXPIRES_AT": "Complete payment by {{time}}",
+      "RESUME_PAYMENT": "Continue to payment",
+      "CREATED_ACTION_HINT": "Paid — awaiting staff inspection. Bring the parcel to the origin stop at the scheduled time. There's no collection code yet — you'll get one after staff inspects and accepts it.",
+      "EMPTY": "You haven't booked any parcels yet.",
+      "BOOK_NOW": "Book a parcel",
+      "LOAD_MORE": "Load more",
+      "RETRY": "Retry",
+      "RECIPIENT": "Recipient",
+      "WEIGHT": "Weight",
+      "WEIGHT_VALUE": "{{weight}} kg",
+      "AMOUNT_PAID": "Amount paid",
+      "AMOUNT_DUE": "Amount due"
+    }
   }
 }

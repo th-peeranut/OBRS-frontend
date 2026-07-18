@@ -774,7 +774,7 @@ describe('BoardingListComponent — OBRS-256 onScheduleStatusAction()', () => {
     await component['onScheduleStatusAction']();
 
     expect(alertServiceStub.confirm).not.toHaveBeenCalled();
-    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'departed');
+    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'departed', false);
     expect(component['tripHeader']?.statusCode).toBe('departed');
     expect(alertServiceStub.success).toHaveBeenCalled();
     expect(component['isUpdatingScheduleStatus']).toBeFalse();
@@ -805,7 +805,7 @@ describe('BoardingListComponent — OBRS-256 onScheduleStatusAction()', () => {
     await component['onScheduleStatusAction']();
 
     expect(alertServiceStub.confirm).toHaveBeenCalled();
-    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'arrived');
+    expect(staffApiServiceStub.updateScheduleStatus).toHaveBeenCalledWith(42, 'arrived', false);
     expect(component['tripHeader']?.statusCode).toBe('arrived');
   });
 
@@ -850,6 +850,249 @@ describe('BoardingListComponent — OBRS-256 onScheduleStatusAction()', () => {
     expect(alertServiceStub.error).toHaveBeenCalledWith('STAFF.SCHEDULE_STATUS.ERROR.SCHEDULE_TRANSITION_ILLEGAL');
     expect(staffApiServiceStub.getScheduleById).toHaveBeenCalledWith(42);
     expect(component['isUpdatingScheduleStatus']).toBeFalse();
+  });
+});
+
+describe('BoardingListComponent — OBRS-471 turnaround-gate override (VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED)', () => {
+  function withTripHeader(component: BoardingListComponent, statusCode: string): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode,
+    };
+  }
+
+  const gateError = () =>
+    new HttpErrorResponse({
+      status: 409,
+      error: {
+        errorCode: 'VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED',
+        message: "Schedule #17's previous trip (schedule #12) has not arrived yet.",
+      },
+    });
+
+  it('canOverrideTurnaroundGate is true for admin, false for salesperson and driver', () => {
+    const adminComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['admin'] })
+    );
+    expect(adminComponent['canOverrideTurnaroundGate']).toBeTrue();
+
+    const salespersonComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['salesperson'] })
+    );
+    expect(salespersonComponent['canOverrideTurnaroundGate']).toBeFalse();
+
+    const driverComponent = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    expect(driverComponent['canOverrideTurnaroundGate']).toBeFalse();
+  });
+
+  it('admin: on 409 VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED, shows the server message in a confirm dialog and — on confirm — RESUBMITS with overrideTurnaroundGate:true (asserts the actual second call, not just that the dialog opened)', fakeAsync(() => {
+    const successResponse = of({ code: 200, message: 'OK', data: { scheduleId: 42, status: 'departed' } });
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValues(throwError(() => gateError()), successResponse);
+    const staffApiServiceStub = { updateScheduleStatus, getScheduleById: jasmine.createSpy('getScheduleById') };
+    const alertServiceStub = createAlertServiceStub(true); // confirm() resolves true
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['admin'] })
+    );
+    tick(); // flush the constructor-time loadTripHeader() from ngOnChanges
+    withTripHeader(component, 'scheduled');
+
+    void component['onScheduleStatusAction']();
+    // handleScheduleStatusError() is fired with `void` (fire-and-forget) from
+    // the HTTP error callback, and itself awaits AlertService.confirm() before
+    // the retry — tick() drains that whole chain, unlike a fixed number of
+    // `await Promise.resolve()` hops which under/over-shoots by engine.
+    tick();
+
+    // The confirm dialog's `text` is the server's own localized message, verbatim.
+    expect(alertServiceStub.confirm).toHaveBeenCalledWith(
+      jasmine.objectContaining({
+        text: "Schedule #17's previous trip (schedule #12) has not arrived yet.",
+      })
+    );
+    // The load-bearing assertion: the RETRY actually carries the override flag.
+    expect(updateScheduleStatus).toHaveBeenCalledTimes(2);
+    expect(updateScheduleStatus.calls.argsFor(0)).toEqual([42, 'departed', false]);
+    expect(updateScheduleStatus.calls.argsFor(1)).toEqual([42, 'departed', true]);
+    expect(component['tripHeader']?.statusCode).toBe('departed');
+    expect(alertServiceStub.success).toHaveBeenCalled();
+    // The static generic/mapped error alert must never fire on this path — only
+    // the confirm dialog carrying the server text, and then success.
+    expect(alertServiceStub.error).not.toHaveBeenCalled();
+  }));
+
+  it('admin: if the override retry ITSELF comes back 409 VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED, the confirm dialog is NOT re-offered — it surfaces the error and stops (no infinite confirm→retry loop)', fakeAsync(() => {
+    // The backend is not supposed to answer this 409 to an overrideTurnaroundGate=true
+    // request. But the retry routes its own errors back through the same handler, so
+    // without a guard "the server misbehaves" escalates from a bad response into an
+    // unbreakable dialog loop the operator cannot escape. A contract the other side
+    // promises to honour is not a guard — this pins that the FE stops on its own.
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValue(throwError(() => gateError())); // 409 EVERY time, override or not
+    const staffApiServiceStub = { updateScheduleStatus, getScheduleById: jasmine.createSpy('getScheduleById') };
+    const alertServiceStub = createAlertServiceStub(true); // confirm() always resolves true
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['admin'] })
+    );
+    tick(); // flush the constructor-time loadTripHeader() from ngOnChanges
+    withTripHeader(component, 'scheduled');
+
+    void component['onScheduleStatusAction']();
+    tick();
+
+    // Exactly one dialog, and exactly one retry: the initial call plus the single
+    // overridden retry. A third call would mean the guard is gone and this loops.
+    expect(alertServiceStub.confirm).toHaveBeenCalledTimes(1);
+    expect(updateScheduleStatus).toHaveBeenCalledTimes(2);
+    expect(updateScheduleStatus.calls.argsFor(0)).toEqual([42, 'departed', false]);
+    expect(updateScheduleStatus.calls.argsFor(1)).toEqual([42, 'departed', true]);
+    // Having exhausted the override, the operator is told what happened rather than
+    // being asked the same question again.
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      "Schedule #17's previous trip (schedule #12) has not arrived yet."
+    );
+    expect(alertServiceStub.success).not.toHaveBeenCalled();
+  }));
+
+  it('admin: cancelling the override confirm does NOT resubmit and does NOT reconcile via loadTripHeader (nothing changed server-side)', fakeAsync(() => {
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValue(throwError(() => gateError()));
+    const staffApiServiceStub = { updateScheduleStatus, getScheduleById: jasmine.createSpy('getScheduleById') };
+    const alertServiceStub = createAlertServiceStub(false); // confirm() resolves false
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['admin'] })
+    );
+    tick(); // flush the constructor-time loadTripHeader() from ngOnChanges
+    // createComponent()'s ngOnChanges() already called loadTripHeader() once —
+    // capture that baseline so the assertion below is about the CANCEL path
+    // specifically, not the unrelated initial self-fetch.
+    const getScheduleByIdCallsBeforeCancel = staffApiServiceStub.getScheduleById.calls.count();
+    withTripHeader(component, 'scheduled');
+
+    void component['onScheduleStatusAction']();
+    tick();
+
+    expect(alertServiceStub.confirm).toHaveBeenCalled();
+    expect(updateScheduleStatus).toHaveBeenCalledTimes(1); // no retry
+    expect(staffApiServiceStub.getScheduleById.calls.count()).toBe(getScheduleByIdCallsBeforeCancel);
+    expect(alertServiceStub.error).not.toHaveBeenCalled();
+  }));
+
+  it('non-admin (driver): shows the server message via AlertService.error() verbatim — NO confirm dialog, NO override retry', async () => {
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValue(throwError(() => gateError()));
+    const staffApiServiceStub = {
+      updateScheduleStatus,
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } })),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    withTripHeader(component, 'scheduled');
+
+    await component['onScheduleStatusAction']();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(alertServiceStub.confirm).not.toHaveBeenCalled();
+    expect(updateScheduleStatus).toHaveBeenCalledTimes(1);
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      "Schedule #17's previous trip (schedule #12) has not arrived yet."
+    );
+    // still reconciles against real server state, same as every other error code
+    expect(staffApiServiceStub.getScheduleById).toHaveBeenCalledWith(42);
+  });
+
+  it('non-admin (salesperson): same verbatim-message behavior as driver — the gate is admin/owner-only, not role-symmetric with canControlScheduleStatus', async () => {
+    const updateScheduleStatus = jasmine
+      .createSpy('updateScheduleStatus')
+      .and.returnValue(throwError(() => gateError()));
+    const staffApiServiceStub = {
+      updateScheduleStatus,
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } })),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(
+      staffApiServiceStub,
+      undefined,
+      alertServiceStub,
+      createAuthServiceStub({ roles: ['salesperson'] })
+    );
+    withTripHeader(component, 'scheduled');
+
+    await component['onScheduleStatusAction']();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(alertServiceStub.confirm).not.toHaveBeenCalled();
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      "Schedule #17's previous trip (schedule #12) has not arrived yet."
+    );
+  });
+
+  it('SCHEDULE_OVERRIDE_NOT_PERMITTED falls through to the generic mapped-toast path (defensive — the FE never sends override=true unless canOverrideTurnaroundGate)', async () => {
+    const staffApiServiceStub = {
+      updateScheduleStatus: jasmine
+        .createSpy('updateScheduleStatus')
+        .and.returnValue(
+          throwError(
+            () =>
+              new HttpErrorResponse({
+                status: 403,
+                error: { errorCode: 'SCHEDULE_OVERRIDE_NOT_PERMITTED', message: 'Not permitted' },
+              })
+          )
+        ),
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, status: 'scheduled' } })),
+    };
+    const alertServiceStub = createAlertServiceStub();
+    const component = createComponent(staffApiServiceStub, undefined, alertServiceStub);
+    withTripHeader(component, 'scheduled');
+
+    await component['onScheduleStatusAction']();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      'STAFF.SCHEDULE_STATUS.ERROR.SCHEDULE_OVERRIDE_NOT_PERMITTED'
+    );
   });
 });
 

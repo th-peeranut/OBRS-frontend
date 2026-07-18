@@ -107,6 +107,30 @@ const routes: Routes = [
       ),
   },
   {
+    // OBRS-415: customer online consigned-parcel booking wizard + Omise
+    // payment. Same guard/data as my-bookings/account — payment requires a
+    // real account, no guest checkout (everything ties to actor_id).
+    path: 'parcel-booking',
+    canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
+    loadChildren: () =>
+      import('./modules/parcel-booking/parcel-booking.module').then(
+        (m) => m.ParcelBookingModule
+      ),
+  },
+  {
+    // OBRS-415: the customer's own paginated parcel list — the durable
+    // recovery path for a tracking number lost after the one-time success
+    // screen (no SMS/email notification exists yet, OBRS-346).
+    path: 'my-parcels',
+    canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
+    loadChildren: () =>
+      import('./modules/my-parcels/my-parcels.module').then(
+        (m) => m.MyParcelsModule
+      ),
+  },
+  {
     path: 'refund-policy',
     canActivate: [AuthGuard],
     data: { customerArea: true },

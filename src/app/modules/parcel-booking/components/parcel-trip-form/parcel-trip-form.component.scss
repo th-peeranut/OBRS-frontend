@@ -1,0 +1,56 @@
+@import "../../../../../styles/variables.scss";
+
+// Customer-shell primary button — same recipe as home-booking's `.btn-search`
+// (design-system §4: brand-filled primary; §5: single pill input shape).
+// No shared class exists yet to extend (design-system §13 consolidation
+// debt), so this follows the established per-component convention rather
+// than introducing a second, differently-styled "primary button" look.
+.parcel-btn-primary {
+  height: 48px;
+  padding: 0 32px;
+  border: none;
+  border-radius: $radius-xl;
+  background-color: $brand-customer;
+  color: $text-white;
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.parcel-trip-form__stations {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.parcel-trip-form__gap-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.parcel-trip-form__error {
+  color: $text-red;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.parcel-trip-form__empty {
+  color: $text-lightgrey;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.parcel-trip-form__actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.form-group-obrs {
+  margin-top: 16px;
+}
