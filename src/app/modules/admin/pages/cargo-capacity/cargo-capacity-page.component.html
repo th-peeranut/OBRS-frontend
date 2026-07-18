@@ -59,9 +59,14 @@
               </small>
             </td>
             <td class="text-right">
+              <!-- design-system §4: a repeated per-row action is not "the one
+                   main action of the screen" (this table has one identical
+                   Save per row), so it stays the neutral .admin-btn — never
+                   .admin-btn-primary — matching the boarding-list Board/
+                   Un-board precedent (§13 consolidation debt, OBRS-130). -->
               <button
                 type="button"
-                class="admin-btn admin-btn-primary admin-btn-small"
+                class="admin-btn admin-btn-small"
                 [disabled]="isRowSaving(row) || !isRowDirty(row)"
                 (click)="saveRow(row)"
               >
