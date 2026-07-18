@@ -41,6 +41,17 @@
 
 // Sticky top strip: vehicle dropdown + odometer + progress pill. Sits under
 // the shell topbar so orientation survives scrolling 23 rows.
+//
+// `top: 0` here is only the PRE-MEASUREMENT fallback. The shared shell
+// topbar (.admin-topbar, admin-theme.scss) is ALSO `position: sticky; top: 0`
+// with a higher z-index (20 vs. this strip's 5) — two sticky siblings both
+// targeting `top: 0` overlap once genuinely scrolled, and the topbar's
+// higher z-index then paints over (hides) this strip entirely. The
+// component measures the topbar's live rendered height at runtime
+// (`measureTopOffset()`) and binds it via `[style.top.px]` in the template,
+// which always wins over this rule (inline style beats an external
+// stylesheet). See ADR 0023 §1 for the full root-cause and the real-scroll
+// reproduction.
 .inspection-top-strip {
   position: sticky;
   top: 0;
@@ -145,43 +156,106 @@
   padding: 0 12px;
 }
 
-// The one net-new visual this card introduces: a 2-segment verdict toggle
-// themed against the fixed --admin-success-*/--admin-danger-* status tokens
-// (never the runtime --accent*, which resolves to the staff shell's teal-green
-// and would collide with "selected" reading as brand rather than a verdict) —
-// no fixed hex, so it inherits dark mode instead of needing a hand-written
-// counterpart (see design-system.md cross-cutting constraints).
-:host ::ng-deep .inspection-verdict-toggle {
+// The one net-new visual this card introduces: a 2-segment verdict toggle.
+//
+// QA/owner review (dark mode, real screenshot): the original implementation
+// used PrimeNG's raw `p-selectButton` and only overrode the SELECTED
+// (`.p-highlight`) state via `::ng-deep`. PrimeNG's own `.p-button` base has
+// no dark-mode-aware background, so every UNSELECTED segment rendered as a
+// solid white block on the dark card — 23 rows means ~46 white boxes at
+// night. Fixed by dropping raw PrimeNG here entirely: the template now
+// renders two plain `.admin-btn` elements (`.inspection-verdict-btn`), the
+// SAME shared primitive `boarding-list.component.scss`'s Board/Un-board
+// action already relies on for correct theming — its `background:
+// var(--admin-surface-card)` / `color: var(--admin-text)` are dark-aware
+// (admin-theme.scss), so the UNSELECTED state themes for free with zero
+// rules here. This also removes the `::ng-deep .p-highlight:nth-child(1)/(2)`
+// selectors, which depended on PrimeNG's internal DOM order and would have
+// broken silently on a library upgrade.
+.inspection-verdict-toggle {
   display: flex;
+  gap: 8px;
   width: 100%;
+}
 
-  .p-button {
-    flex: 1 1 0;
-    min-height: 44px; // tap-target minimum
-    justify-content: center;
+.inspection-verdict-btn {
+  flex: 1 1 0;
+  min-height: 44px; // tap-target minimum
+  border-radius: 999px;
+}
+
+// Selected state — light mode: the existing --admin-success-*/--admin-danger-*
+// pastel-bg/dark-text pair (design-system §2.4), same as every `.admin-status`
+// chip. Never the runtime --accent* (resolves to the staff shell's
+// teal-green and would collide with "selected" reading as brand rather than
+// a verdict).
+.inspection-verdict-btn.is-selected.is-ok {
+  background: var(--admin-success-bg);
+  border-color: var(--admin-success-bg);
+  color: var(--admin-success-text);
+}
+
+.inspection-verdict-btn.is-selected.is-needs-repair {
+  background: var(--admin-danger-bg);
+  border-color: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+// Selected state — dark mode: admin-theme.scss deliberately does NOT
+// dark-override --admin-success-*/--admin-danger-* (they're designed as a
+// self-contained SMALL CHIP — light pastel bg + dark text stays legible at
+// badge size in either theme, see that file's `.is-accepted` comment). At
+// FULL-BUTTON size that reasoning doesn't hold: a bright pastel block next to
+// an unselected dark-card-toned button reads as a light-mode leftover, not a
+// selected state. Rather than inventing a new hex (forbidden per
+// design-system §2.2) or touching the shared token file (which would recolor
+// every other consumer of these tokens), invert the EXISTING pair: the dark
+// `-text` token becomes the background and the light `-bg` token becomes the
+// foreground. The contrast ratio is identical to the light-mode pairing
+// (contrast is symmetric under a fg/bg swap) — already the established
+// AA-passing combination — and the darker fill reads as a genuine "selected,
+// colored, dark-mode-appropriate" button against the near-black card instead
+// of a stark pastel block.
+:host-context(.admin-shell.is-dark) {
+  .inspection-verdict-btn.is-selected.is-ok {
+    background: var(--admin-success-text);
+    border-color: var(--admin-success-text);
+    color: var(--admin-success-bg);
   }
 
-  .p-button.p-highlight:nth-child(1) {
-    background: var(--admin-success-bg);
-    border-color: var(--admin-success-bg);
-    color: var(--admin-success-text);
-  }
-
-  .p-button.p-highlight:nth-child(2) {
-    background: var(--admin-danger-bg);
-    border-color: var(--admin-danger-bg);
-    color: var(--admin-danger-text);
+  .inspection-verdict-btn.is-selected.is-needs-repair {
+    background: var(--admin-danger-text);
+    border-color: var(--admin-danger-text);
+    color: var(--admin-danger-bg);
   }
 }
 
 // Sticky bottom bar: the single primary Submit button, always reachable.
+//
+// QA/owner review (real screenshot): the global "Report Issue" FAB
+// (`ReportUsabilityFabComponent`, `position: fixed; bottom: 24px; right: 24px;
+// z-index: 900` — shared/components/report-usability-fab/
+// report-usability-fab.component.scss) sits on top of this bar's right end,
+// a tap-target collision with the page's PRIMARY action. Fixed entirely on
+// this side (the FAB is a shared, app-wide component — not touched): reserve
+// enough right-side padding on the bar that the Submit button's box never
+// extends into the FAB's footprint. The two breakpoint values mirror the
+// FAB's OWN breakpoint (576px, where it collapses from a labeled pill to a
+// 48×48 circle) — if that breakpoint or size ever changes, re-check this.
 .inspection-bottom-bar {
   position: sticky;
   bottom: 0;
   z-index: 5;
   padding: 12px;
+  padding-right: 210px; // clears the desktop/tablet FAB pill (~150px wide + 24px inset + gap)
   background: var(--admin-surface-card);
   border-top: 1px solid var(--admin-outline);
+}
+
+@media (max-width: 576px) {
+  .inspection-bottom-bar {
+    padding-right: 88px; // clears the mobile 48×48 FAB circle (24px inset + 48px + gap)
+  }
 }
 
 .inspection-submit-btn {

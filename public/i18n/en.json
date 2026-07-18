@@ -2325,7 +2325,8 @@
         "ODOMETER_BELOW_LAST_RECORDED": "The odometer reading is lower than the last recorded value.",
         "ACTION_UNAVAILABLE": "Couldn't submit the inspection right now. Please try again.",
         "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
-      }
+      },
+      "VERDICT_GROUP_ARIA": "Verdict — OK or Needs repair"
     }
   },
   "PARCEL_TRACKING": {

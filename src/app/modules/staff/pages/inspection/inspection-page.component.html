@@ -22,8 +22,11 @@
   *ngIf="!itemsErrorMessage && !isEmpty"
   (ngSubmit)="onSubmit()"
 >
-  <!-- Sticky top strip: vehicle + odometer + progress pill. -->
-  <div class="inspection-top-strip">
+  <!-- Sticky top strip: vehicle + odometer + progress pill. `top` is bound
+       (not left to the SCSS `top: 0` fallback) because the shared shell
+       topbar above is ALSO sticky at top:0 with a higher z-index — see
+       `topOffsetPx`'s doc comment on the component. -->
+  <div class="inspection-top-strip" [style.top.px]="topOffsetPx">
     <div class="inspection-top-field">
       <app-admin-dropdown
         formControlName="vehicleId"
@@ -86,17 +89,38 @@
       [formGroupName]="i"
       [id]="'inspection-row-' + row.itemId"
       [class.is-highlighted]="highlightedItemId === row.itemId"
+      [style.scrollMarginTop.px]="rowScrollMarginTopPx"
     >
       <div class="inspection-row-label">{{ row.label }}</div>
 
-      <p-selectButton
-        formControlName="verdict"
-        [options]="verdictOptions"
-        optionLabel="label"
-        optionValue="value"
-        [allowEmpty]="false"
-        styleClass="inspection-verdict-toggle"
-      ></p-selectButton>
+      <!-- Plain admin-btn toggle, not PrimeNG's p-selectButton — the shared
+           .admin-btn primitive already has correct light/dark theming (see
+           boarding-list.component.scss's Board/Un-board precedent), so this
+           gets dark mode for free instead of hand-theming PrimeNG's raw
+           .p-button/.p-highlight internals (which also depend on PrimeNG's
+           own DOM order and would break silently on a library upgrade). A tap
+           on the ALREADY-selected segment is a no-op (selectVerdict()), which
+           is what used to be PrimeNG's [allowEmpty]="false" job. -->
+      <div class="inspection-verdict-toggle" role="group" [attr.aria-label]="'STAFF.INSPECTION.VERDICT_GROUP_ARIA' | translate">
+        <button
+          type="button"
+          class="admin-btn inspection-verdict-btn is-ok"
+          [class.is-selected]="verdictAt(i) === 'ok'"
+          [attr.aria-pressed]="verdictAt(i) === 'ok'"
+          (click)="selectVerdict(i, 'ok')"
+        >
+          {{ 'STAFF.INSPECTION.VERDICT_OK' | translate }}
+        </button>
+        <button
+          type="button"
+          class="admin-btn inspection-verdict-btn is-needs-repair"
+          [class.is-selected]="verdictAt(i) === 'needs_repair'"
+          [attr.aria-pressed]="verdictAt(i) === 'needs_repair'"
+          (click)="selectVerdict(i, 'needs_repair')"
+        >
+          {{ 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' | translate }}
+        </button>
+      </div>
 
       <div class="inspection-row-note" *ngIf="verdictAt(i) === 'needs_repair'">
         <textarea

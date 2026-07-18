@@ -5,12 +5,11 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslateModule } from '@ngx-translate/core';
-import { SelectButtonModule } from 'primeng/selectbutton';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { AdminDropdownComponent } from '../../../admin/components/admin-dropdown/admin-dropdown.component';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { InspectionPageComponent } from './inspection-page.component';
-import { createTranslateStub } from '../../../../testing/test-stubs';
+import { createElementRefStub, createTranslateStub } from '../../../../testing/test-stubs';
 import { StaffApiService, VehicleInspectionItemDto } from '../../../../services/staff/staff-api.service';
 import { VehicleInspectionItemsStore } from './vehicle-inspection-items.store';
 import { InspectableVehiclesStore } from './inspectable-vehicles.store';
@@ -69,6 +68,7 @@ function makeComponent(options: {
     staffApiService as any,
     alertService as any,
     createTranslateStub(),
+    createElementRefStub(),
     itemsStore as any,
     vehiclesStore as any,
     myInspectionsStore as any
@@ -324,19 +324,19 @@ describe('InspectionPageComponent', () => {
   });
 });
 
-// Real-template regression for the Scrutinize-directed fix: [allowEmpty]="false"
-// on the verdict p-selectButton. A repeated tap on the ALREADY-SELECTED segment
-// must be a no-op, not a deselect-to-null — deselecting would fire the same
-// "switching away from needs_repair" branch that clears the note control's
-// value, silently destroying a defect note the driver just typed. This needs a
-// real p-selectButton (SelectButtonModule) rendered and clicked — the
-// direct-instantiation specs above never exercise PrimeNG's own allowEmpty
-// gate, only the component's reaction to a value the FormControl already
-// received. Mirrors the same TestBed + real-click technique already used for
-// this exact PrimeNG gotcha in passenger-info-form.component.spec.ts
-// ("OBRS-361: seat preference/requirement selectButtons... re-click clears to
-// null" — that one is intentionally allowEmpty=true; this one intentionally is not).
-describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (real click)', () => {
+// Real-template regression for the verdict toggle. QA/owner review found the
+// original PrimeNG `p-selectButton` rendered UNSELECTED segments as solid
+// white blocks in dark mode (PrimeNG's `.p-button` has no dark-aware
+// background) — fixed by dropping raw PrimeNG entirely for two plain
+// `.admin-btn`-based buttons (see the component/SCSS doc comments). A tap on
+// the ALREADY-selected segment must still be a no-op (selectVerdict()'s
+// same-value guard, replacing PrimeNG's old `[allowEmpty]="false"` job) —
+// deselecting would fire the "switching away from needs_repair" branch that
+// clears the note control's value, silently destroying a defect note the
+// driver just typed. This needs a REAL click on a REAL rendered button — the
+// direct-instantiation specs above only exercise the component's reaction to
+// a value already sitting in the FormControl, not the click wiring itself.
+describe('InspectionPageComponent — verdict toggle (real click, plain admin-btn)', () => {
   let fixture: ComponentFixture<InspectionPageComponent>;
   let component: InspectionPageComponent;
   let itemsStore: ReturnType<typeof makeCollectionStoreStub<VehicleInspectionItemDto[]>>;
@@ -365,13 +365,7 @@ describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (r
       // ControlValueAccessor on its host element (NG01203) even when that
       // control is irrelevant to this test.
       declarations: [InspectionPageComponent, AdminDropdownComponent],
-      imports: [
-        CommonModule,
-        ReactiveFormsModule,
-        SelectButtonModule,
-        InputNumberModule,
-        TranslateModule.forRoot(),
-      ],
+      imports: [CommonModule, ReactiveFormsModule, InputNumberModule, TranslateModule.forRoot()],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [
         FormBuilder,
@@ -390,15 +384,25 @@ describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (r
 
   function verdictButtons(rowIndex: number) {
     const rows = fixture.debugElement.queryAll(By.css('.inspection-row'));
-    return rows[rowIndex].queryAll(By.css('.p-button'));
+    return rows[rowIndex].queryAll(By.css('.inspection-verdict-btn'));
   }
 
-  it('renders [allowEmpty]="false" on the verdict toggle', () => {
-    const selectButtons = fixture.debugElement.queryAll(By.css('p-selectbutton'));
-    expect(selectButtons.length).toBeGreaterThan(0);
-    for (const sb of selectButtons) {
-      expect(sb.componentInstance.allowEmpty).toBeFalse();
-    }
+  it('renders two plain admin-btn segments per row — no PrimeNG p-selectButton', () => {
+    expect(fixture.debugElement.queryAll(By.css('p-selectbutton')).length).toBe(0);
+    const buttons = verdictButtons(0);
+    expect(buttons.length).toBe(2);
+    expect(buttons[0].nativeElement.classList.contains('admin-btn')).toBeTrue();
+    expect(buttons[1].nativeElement.classList.contains('admin-btn')).toBeTrue();
+  });
+
+  it('clicking a segment selects it and applies the is-selected class', () => {
+    const buttons = verdictButtons(0);
+    buttons[1].nativeElement.click(); // needs_repair
+    fixture.detectChanges();
+
+    expect((component as any).verdictAt(0)).toBe('needs_repair');
+    expect(buttons[1].nativeElement.classList.contains('is-selected')).toBeTrue();
+    expect(buttons[0].nativeElement.classList.contains('is-selected')).toBeFalse();
   });
 
   it('a repeated tap on the already-selected needs_repair segment is a no-op — the note survives', () => {
@@ -419,7 +423,7 @@ describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (r
     fixture.detectChanges();
 
     expect((component as any).verdictAt(rowIndex))
-      .withContext('allowEmpty=false must block the deselect-to-null')
+      .withContext('a tap on the already-selected segment must not change the verdict')
       .toBe('needs_repair');
     expect(noteControl.value)
       .withContext('a mis-tap on the selected segment must never wipe the note')
@@ -441,5 +445,78 @@ describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (r
 
     expect((component as any).verdictAt(rowIndex)).toBe('ok');
     expect(noteControl.value).toBe('');
+  });
+});
+
+// Real-template regression for the sticky top-strip / shell-topbar stacking
+// fix (QA/owner review, phone-375 keyboard-open screenshot): the shared
+// staff-shell topbar is ALSO `position: sticky; top: 0` with a higher
+// z-index, so without an offset this strip renders exactly underneath it,
+// invisible. `measureTopOffset()` reads the topbar's live height and binds it
+// as this strip's `top` — this needs a REAL `.admin-topbar` element in the
+// DOM (unlike the direct-instantiation specs above) to prove the measurement
+// actually reaches across the component boundary.
+describe('InspectionPageComponent — sticky top-strip offset (real DOM measurement)', () => {
+  let fixture: ComponentFixture<InspectionPageComponent>;
+
+  beforeEach(async () => {
+    const itemsStore = makeCollectionStoreStub<VehicleInspectionItemDto[]>(ITEMS);
+    const vehiclesStore = makeCollectionStoreStub<{ id: number; label: string }[]>([]);
+    const myInspectionsStore = makeCollectionStoreStub<{ id: number; inspectedAt: string }[]>([]);
+
+    await TestBed.configureTestingModule({
+      declarations: [InspectionPageComponent, AdminDropdownComponent],
+      imports: [CommonModule, ReactiveFormsModule, InputNumberModule, TranslateModule.forRoot()],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        FormBuilder,
+        { provide: StaffApiService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+        { provide: VehicleInspectionItemsStore, useValue: itemsStore },
+        { provide: InspectableVehiclesStore, useValue: vehiclesStore },
+        { provide: MyInspectionsStore, useValue: myInspectionsStore },
+      ],
+    }).compileComponents();
+
+    // A stand-in for the shared shell's sticky topbar, appended to the
+    // document so `document.querySelector('.admin-topbar')` (which reaches
+    // OUTSIDE this component's own template on purpose — the real topbar is
+    // a sibling in the shared shell, not an ancestor within this component)
+    // finds something with a real, measurable height.
+    const fakeTopbar = document.createElement('header');
+    fakeTopbar.className = 'admin-topbar';
+    fakeTopbar.style.height = '123px';
+    document.body.appendChild(fakeTopbar);
+
+    fixture = TestBed.createComponent(InspectionPageComponent);
+    fixture.detectChanges(); // ngOnInit
+    fixture.componentInstance.ngAfterViewInit();
+    await new Promise((resolve) => setTimeout(resolve, 0)); // flush measureTopOffset()'s setTimeout(0)
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    document.querySelectorAll('.admin-topbar').forEach((el) => el.remove());
+  });
+
+  it('binds the top strip\'s `top` to the measured topbar height, not the CSS top:0 fallback', () => {
+    const strip = fixture.debugElement.query(By.css('.inspection-top-strip'));
+    expect((strip.nativeElement as HTMLElement).style.top).toBe('123px');
+  });
+
+  it('re-measures on window resize (debounced)', async () => {
+    // 200px, comfortably above admin-theme.scss's real `.admin-topbar { min-height: 80px }`
+    // (loaded globally even in this test run) — otherwise a smaller height
+    // gets floor-clamped by that unrelated rule and this assertion would be
+    // measuring the CSS floor, not the resize recompute.
+    const fakeTopbar = document.querySelector('.admin-topbar') as HTMLElement;
+    fakeTopbar.style.height = '200px';
+
+    (fixture.componentInstance as any).onWindowResize();
+    await new Promise((resolve) => setTimeout(resolve, 150)); // clears the 100ms debounce
+    fixture.detectChanges();
+
+    const strip = fixture.debugElement.query(By.css('.inspection-top-strip'));
+    expect((strip.nativeElement as HTMLElement).style.top).toBe('200px');
   });
 });

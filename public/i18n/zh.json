@@ -2325,7 +2325,8 @@
         "ODOMETER_BELOW_LAST_RECORDED": "里程读数低于上次记录的数值。",
         "ACTION_UNAVAILABLE": "暂时无法提交检查，请重试。",
         "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后重试。"
-      }
+      },
+      "VERDICT_GROUP_ARIA": "检查结果 — 正常或需要维修"
     }
   },
   "PARCEL_TRACKING": {

@@ -496,18 +496,50 @@ enforced rule with a test behind it.
   precedent to follow — 23 rows scrolling under a phone viewport (375–414px) needed
   the vehicle/odometer/progress context and the single Submit action to survive the
   scroll. `position: sticky` (not `fixed`, so it stays inside the shell's own scroll
-  container) on a `top: 0` strip and a `bottom: 0` bar, both on `--admin-surface-card`
+  container) on a top strip and a `bottom: 0` bar, both on `--admin-surface-card`
   (the card token — `--admin-surface`, the page-bg token, would blend into the
   background instead of reading as chrome). Each row carries `scroll-margin-top`
   matching the top strip's height so the incomplete-row `scrollIntoView()` highlight
   doesn't tuck the target under the sticky strip. Reuse this pattern for the next
   phone-first data-entry form with a long list and one persistent primary action.
-  The verdict toggle inside it (`p-selectButton`, 2-segment OK/Needs-repair) is the
-  one net-new visual — themed against the EXISTING `--admin-success-*`/
-  `--admin-danger-*` status tokens (§2.4), never the runtime `--accent*` (which
-  resolves to the staff shell's teal-green and would read "selected" as brand color
-  rather than a verdict). See
+  **Owner review correction (real screenshots), two follow-ups baked into the
+  same pattern:**
+  1. The shared shell topbar (`.admin-topbar`) is ALSO `position: sticky; top: 0`
+     with a higher z-index — a strip that ALSO hardcodes `top: 0` renders directly
+     underneath it, invisible, once actually scrolled (worst on a short/
+     keyboard-squeezed viewport, where the topbar's wrapped title also grows
+     taller). The strip must instead **measure the topbar's live rendered height**
+     and bind its own `top` (and each row's `scroll-margin-top`) to that value,
+     recomputed on resize/language change — never a second hardcoded `top: 0`
+     sibling to an already-sticky shell element. This is a page-local fix (reading
+     the shared topbar's height, not changing it) — see ADR 0023.
+  2. The global "Report Issue" FAB (`position: fixed; bottom: 24px; right: 24px`)
+     can sit on top of a page's own `bottom: 0` sticky bar. Reserve right-side
+     padding on the bar (mirroring the FAB's own mobile breakpoint) so the
+     bar's primary action never shares a tap target with the FAB, rather than
+     touching the shared FAB component.
+
+  The verdict toggle inside the form (2-segment OK/Needs-repair) is the one
+  net-new visual. **Superseded design, corrected post-review:** it originally used
+  PrimeNG's raw `p-selectButton`, hand-themed via `::ng-deep .p-highlight`, which
+  left the UNSELECTED segments on PrimeNG's own white `.p-button` background —
+  invisible as "correct" until a real dark-mode screenshot showed a wall of white
+  boxes. Now two plain `.admin-btn` elements (`.inspection-verdict-btn`) — the SAME
+  primitive `boarding-list.component.scss`'s Board/Un-board action already uses,
+  so the unselected state gets dark-mode theming for free with zero rules (no
+  `::ng-deep`, no dependency on PrimeNG's internal DOM order). The SELECTED state
+  still reads the `--admin-success-*`/`--admin-danger-*` status tokens (§2.4) in
+  light mode; in dark mode the pair is **inverted** (the `-text` token becomes the
+  background, the `-bg` token becomes the foreground) — those tokens deliberately
+  have no dark override at chip scale (§2.4's `.is-accepted` note), but a
+  full-width button is not chip scale, and inverting preserves the exact same
+  (already AA-passing) contrast ratio while avoiding both a new hex and a change
+  to the shared token file. See
   `docs/adr/0023-weekly-vehicle-inspection-mobile-form-and-switchable-window-filter.md`.
+  **Reuse `.admin-btn`-based hand-rolled toggles (not raw PrimeNG `p-button`/
+  `p-selectButton`) for the next 2-or-3-segment choice control that needs
+  per-segment semantic coloring** — PrimeNG's own button primitives have no
+  dark-mode-aware base styling anywhere in this codebase.
 
 - **Switchable time-window filter, not a hard query bound** (OBRS-312,
   `AppVehicleInspectionPanelComponent`'s pending-review filter): the owner

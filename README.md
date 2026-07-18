@@ -222,17 +222,30 @@ Two surfaces, sharing one backend contract:
 for the sticky-bar layout rationale. A `position: sticky` top strip (vehicle
 `app-admin-dropdown` + `p-inputNumber` odometer + a "ตรวจแล้ว X / 23" progress
 pill) and a `position: sticky` bottom bar (the single primary Submit button) keep
-both reachable through a 23-row scroll. Each checklist row is a card
-(`p-selectButton` OK/Needs-repair toggle, `[allowEmpty]="false"`, ≥44px tap targets)
-— `verdict` starts `null` on every row via the control's initial value, not via
-`allowEmpty` (design-system §3.1), and switching a row **away** from
-`needs_repair` clears that row's note control **value**, not just hides it.
-`allowEmpty` is `false` specifically so a repeated tap on the *already-selected*
-segment is a no-op rather than a deselect-to-null that would trigger the same
-clear-on-switch-away path and silently wipe a just-typed defect note (see ADR
-0023 §2). Submit is never disabled for incompleteness — only while actually
-submitting — an incomplete attempt scrolls to and highlights the first offending
-row plus a non-blocking toast.
+both reachable through a 23-row scroll. The strip's `top` is **bound to the
+shared shell topbar's measured live height** (`measureTopOffset()`, recomputed
+on resize/language change), not a hardcoded `top: 0` — the topbar is itself
+sticky at `top: 0` with a higher z-index, so a naive `top: 0` on the strip
+renders it invisibly underneath the topbar the moment the page is genuinely
+scrolled (worst on a keyboard-squeezed viewport, where the topbar's wrapped
+title also grows taller). The bottom bar reserves right-side padding so the
+global "Report Issue" FAB (`position: fixed; bottom: 24px; right: 24px`) never
+shares a tap target with Submit. Both are owner-review corrections — see ADR
+0023 for the full root-cause writeups.
+
+Each checklist row is a card with a plain **`.admin-btn`-based** OK/Needs-repair
+toggle (`.inspection-verdict-btn`, ≥44px tap targets) — **not** PrimeNG's
+`p-selectButton`** (an owner-review correction: PrimeNG's own `.p-button` has no
+dark-mode-aware background, so every unselected segment rendered as a solid
+white block in dark mode). `verdict` starts `null` on every row via the
+control's initial value (design-system §3.1), and switching a row **away**
+from `needs_repair` clears that row's note control **value**, not just hides
+it. A repeated tap on the *already-selected* segment is a no-op
+(`selectVerdict()`'s same-value guard) rather than a deselect-to-null that
+would trigger the same clear-on-switch-away path and silently wipe a just-typed
+defect note (see ADR 0023). Submit is never disabled for incompleteness — only
+while actually submitting — an incomplete attempt scrolls to and highlights the
+first offending row plus a non-blocking toast.
 
 Three root-scoped `AdminCollectionStore` subclasses back the form
 (`VehicleInspectionItemsStore`, `InspectableVehiclesStore`, `MyInspectionsStore`,

@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject, firstValueFrom } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
@@ -33,11 +33,6 @@ import {
   toVehicleOptions,
 } from './inspection-page.mappers';
 
-interface VerdictOption {
-  value: InspectionVerdict;
-  label: string;
-}
-
 /**
  * OBRS-312: driver weekly vehicle inspection form (`/staff/inspection`),
  * sibling of `/staff/driver` and `/staff/boarding/:scheduleId`. Phone-first
@@ -50,11 +45,10 @@ interface VerdictOption {
   templateUrl: './inspection-page.component.html',
   styleUrl: './inspection-page.component.scss',
 })
-export class InspectionPageComponent implements OnInit, OnDestroy {
+export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly form: FormGroup;
   protected itemRows: InspectionItemRow[] = [];
   protected vehicleOptions: Option[] = [];
-  protected verdictOptions: VerdictOption[] = [];
 
   protected isItemsRefreshing = false;
   protected itemsErrorMessage = '';
@@ -67,18 +61,46 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
   protected showAlreadyInspectedBanner = false;
   protected isBannerDismissed = false;
 
+  /**
+   * QA/owner review (real phone-375 keyboard-open screenshot): the shared
+   * staff-shell topbar (`.admin-topbar`, admin-theme.scss) is ALSO
+   * `position: sticky; top: 0` with a HIGHER z-index (20 vs. this strip's 5).
+   * Both siblings targeting `top: 0` is exactly the classic stacked-sticky
+   * bug — CSS sticky positioning has no awareness of a sticky SIBLING's
+   * height, so once scrolled far enough both simultaneously try to pin to
+   * viewport y:0 and overlap; the topbar's higher z-index then paints over
+   * this strip, hiding it completely. This is worst on a short viewport
+   * (an on-screen keyboard) because the topbar's title/subtitle wrap to
+   * more lines there (taller topbar) with very little room left to reveal
+   * anything below it.
+   *
+   * Not a shared-shell fix: `.admin-topbar`'s sticky/z-index rules are
+   * untouched. Instead, THIS strip measures the topbar's actual (dynamic,
+   * language/viewport-dependent) rendered height and stacks itself directly
+   * below it via an inline `top` binding, which always wins over the SCSS
+   * `top: 0` fallback (inline style has higher specificity). Recomputed on
+   * window resize and on language change (translated text wraps differently).
+   */
+  protected topOffsetPx = 0;
+  /** `.inspection-row`'s `scroll-margin-top` for the incomplete-row
+   * highlight's `scrollIntoView()` — must clear BOTH the topbar and this
+   * strip, so it is `topOffsetPx` + the strip's own measured height + a gap. */
+  protected rowScrollMarginTopPx = 90;
+
   private rawItems: VehicleInspectionItemDto[] = [];
   private myInspections: MyInspectionDto[] = [];
   private readonly destroy$ = new Subject<void>();
   /** Fires immediately before each FormArray rebuild, unsubscribing the
    * outgoing generation of per-row verdict listeners. */
   private readonly rowSubscriptions$ = new Subject<void>();
+  private resizeDebounceHandle: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private readonly fb: FormBuilder,
     private readonly staffApiService: StaffApiService,
     private readonly alertService: AlertService,
     private readonly translate: TranslateService,
+    private readonly elementRef: ElementRef<HTMLElement>,
     protected readonly itemsStore: VehicleInspectionItemsStore,
     protected readonly vehiclesStore: InspectableVehiclesStore,
     private readonly myInspectionsStore: MyInspectionsStore
@@ -89,11 +111,6 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
       odometerKm: [null, [Validators.required]],
       notes: [''],
       items: this.fb.array([]),
-    });
-
-    this.buildVerdictOptions();
-    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
-      this.buildVerdictOptions();
     });
 
     this.form
@@ -133,9 +150,33 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
     void this.itemsStore.refresh();
     void this.vehiclesStore.refresh();
     void this.myInspectionsStore.refresh();
+
+    // Recompute whenever a language switch changes translated text length —
+    // the shell topbar's title/subtitle can wrap to a different number of
+    // lines (and so a different height) after the swap.
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      setTimeout(() => this.measureTopOffset(), 0);
+    });
+  }
+
+  ngAfterViewInit(): void {
+    // Deferred a tick: on first load the topbar's title/subtitle render from
+    // an i18n key that may resolve a beat after view init.
+    setTimeout(() => this.measureTopOffset(), 0);
+  }
+
+  @HostListener('window:resize')
+  protected onWindowResize(): void {
+    if (this.resizeDebounceHandle) {
+      clearTimeout(this.resizeDebounceHandle);
+    }
+    this.resizeDebounceHandle = setTimeout(() => this.measureTopOffset(), 100);
   }
 
   ngOnDestroy(): void {
+    if (this.resizeDebounceHandle) {
+      clearTimeout(this.resizeDebounceHandle);
+    }
     this.rowSubscriptions$.next();
     this.rowSubscriptions$.complete();
     this.destroy$.next();
@@ -172,6 +213,19 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
   protected verdictAt(index: number): InspectionVerdict | null {
     const value = this.itemsFormArray.at(index)?.get('verdict')?.value;
     return (value ?? null) as InspectionVerdict | null;
+  }
+
+  /** Plain-button verdict toggle (replaces PrimeNG `p-selectButton` — see the
+   * template comment). A tap on the segment ALREADY selected is a no-op: it
+   * must never re-fire the verdict `valueChanges` handler, which would clear
+   * the note control's value on a false "switching away from needs_repair"
+   * signal even though the row never actually changed. */
+  protected selectVerdict(rowIndex: number, verdict: InspectionVerdict): void {
+    const control = this.itemsFormArray.at(rowIndex)?.get('verdict');
+    if (!control || control.value === verdict) {
+      return;
+    }
+    control.setValue(verdict);
   }
 
   protected isNoteInvalid(index: number): boolean {
@@ -390,10 +444,18 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
     }, 2500);
   }
 
-  private buildVerdictOptions(): void {
-    this.verdictOptions = [
-      { value: 'ok', label: this.translate.instant('STAFF.INSPECTION.VERDICT_OK') },
-      { value: 'needs_repair', label: this.translate.instant('STAFF.INSPECTION.VERDICT_NEEDS_REPAIR') },
-    ];
+  /** Measures the shared shell topbar's CURRENT rendered height (it grows
+   * when the title/subtitle wrap to more lines on a narrow/short viewport —
+   * out of this component's control) and stacks this page's own sticky top
+   * strip directly below it, instead of both competing for `top: 0`. See the
+   * `topOffsetPx` field doc comment for the full root-cause. */
+  private measureTopOffset(): void {
+    const topbar = document.querySelector('.admin-topbar');
+    const topbarHeight = topbar instanceof HTMLElement ? topbar.getBoundingClientRect().height : 0;
+    this.topOffsetPx = topbarHeight;
+
+    const strip = this.elementRef.nativeElement.querySelector('.inspection-top-strip');
+    const stripHeight = strip instanceof HTMLElement ? strip.getBoundingClientRect().height : 0;
+    this.rowScrollMarginTopPx = topbarHeight + stripHeight + 16;
   }
 }
