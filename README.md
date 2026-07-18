@@ -223,10 +223,14 @@ for the sticky-bar layout rationale. A `position: sticky` top strip (vehicle
 `app-admin-dropdown` + `p-inputNumber` odometer + a "ตรวจแล้ว X / 23" progress
 pill) and a `position: sticky` bottom bar (the single primary Submit button) keep
 both reachable through a 23-row scroll. Each checklist row is a card
-(`p-selectButton` OK/Needs-repair toggle, `[allowEmpty]="true"`, ≥44px tap targets)
-— `verdict` starts `null` on every row (design-system §3.1), and switching a row
-**away** from `needs_repair` clears that row's note control **value**, not just
-hides it. Submit is never disabled for incompleteness — only while actually
+(`p-selectButton` OK/Needs-repair toggle, `[allowEmpty]="false"`, ≥44px tap targets)
+— `verdict` starts `null` on every row via the control's initial value, not via
+`allowEmpty` (design-system §3.1), and switching a row **away** from
+`needs_repair` clears that row's note control **value**, not just hides it.
+`allowEmpty` is `false` specifically so a repeated tap on the *already-selected*
+segment is a no-op rather than a deselect-to-null that would trigger the same
+clear-on-switch-away path and silently wipe a just-typed defect note (see ADR
+0023 §2). Submit is never disabled for incompleteness — only while actually
 submitting — an incomplete attempt scrolls to and highlights the first offending
 row plus a non-blocking toast.
 

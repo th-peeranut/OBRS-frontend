@@ -47,12 +47,24 @@ wizard.
 `p-selectButton`'s 2-segment OK/Needs-repair toggle is styled against the EXISTING
 `--admin-success-*`/`--admin-danger-*` tokens (§2.4 of the design system), never the
 runtime `--accent*` — the staff shell's `--accent*` resolves to teal-green, which
-would make "selected" read as brand color rather than a verdict. `[allowEmpty]="true"`
-is set **explicitly** even though it's PrimeNG's default (the well-known
-`p-selectButton` gotcha is the opposite case — a *required* selection needing
-`[allowEmpty]="false"`); here the field is genuinely optional until submit-time
-validation, so the default is correct and the explicit binding documents that this
-was a decision, not an oversight.
+would make "selected" read as brand color rather than a verdict.
+
+`[allowEmpty]="false"` — **corrected post-Scrutinize** from an initial
+`[allowEmpty]="true"`. The first pass reasoned "the field is optional until
+submit-time validation, so PrimeNG's own default is correct" and set it
+explicitly to document that as a decision. That missed a second-order effect:
+combined with the clear-on-switch-away rule (`buildItemGroup()`'s verdict
+`valueChanges` handler), `allowEmpty=true` lets
+a driver tap an **already-selected** `needs_repair` segment to deselect it back to
+`null` — which fires the exact same "switching away from `needs_repair`" branch
+that wipes the note control's value. On a 44px target, on a phone, a mis-tap
+silently destroys a defect note the driver just typed. Rows still start with no
+segment selected (unaffected — that's `formControlName="verdict"` seeding `null`,
+not `allowEmpty`), and `needs_repair` → `ok` still legitimately clears the note as
+designed; what `allowEmpty=false` removes is only the ability to tap the *current*
+selection back to nothing, turning an accidental second tap into a no-op instead
+of data loss. Locked by a spec asserting the note survives a repeated tap on the
+selected segment.
 
 ### 3. `VehicleInspectionHistoryStore` is component-scoped, mirroring `VehicleMaintenanceStore` exactly
 

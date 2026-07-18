@@ -70,6 +70,9 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
   private rawItems: VehicleInspectionItemDto[] = [];
   private myInspections: MyInspectionDto[] = [];
   private readonly destroy$ = new Subject<void>();
+  /** Fires immediately before each FormArray rebuild, unsubscribing the
+   * outgoing generation of per-row verdict listeners. */
+  private readonly rowSubscriptions$ = new Subject<void>();
 
   constructor(
     private readonly fb: FormBuilder,
@@ -133,6 +136,8 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.rowSubscriptions$.next();
+    this.rowSubscriptions$.complete();
     this.destroy$.next();
     this.destroy$.complete();
   }
@@ -302,6 +307,11 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
   }
 
   private applyRowsToFormArray(rows: InspectionRowValue[]): void {
+    // Tear down the PREVIOUS generation's per-row verdict subscriptions before
+    // discarding their FormGroups — takeUntil(destroy$) alone would keep every
+    // orphaned group's subscription alive for the component's whole lifetime,
+    // and the array is rebuilt on every items-store emit + every submit.
+    this.rowSubscriptions$.next();
     this.itemsFormArray.clear();
     for (const row of rows) {
       this.itemsFormArray.push(this.buildItemGroup(row));
@@ -310,13 +320,19 @@ export class InspectionPageComponent implements OnInit, OnDestroy {
 
   private buildItemGroup(row: InspectionRowValue): FormGroup {
     const group = this.fb.group({
+      // Seed the note validator from the row's CARRIED-FORWARD verdict: the
+      // valueChanges subscription below does not fire for a value supplied at
+      // construction, so a rebuild (INSPECTION_ITEM_INACTIVE recovery, or any
+      // items-store re-emit mid-edit) would otherwise resurrect a
+      // needs_repair row with its mandatory-note validator silently dropped —
+      // the inline "note required" error then never renders again.
       verdict: [row.verdict],
-      note: [row.note],
+      note: [row.note, row.verdict === 'needs_repair' ? [Validators.required] : []],
     });
 
     group
       .get('verdict')!
-      .valueChanges.pipe(takeUntil(this.destroy$))
+      .valueChanges.pipe(takeUntil(this.rowSubscriptions$), takeUntil(this.destroy$))
       .subscribe((verdict: InspectionVerdict | null) => {
         const noteControl = group.get('note')!;
         if (verdict === 'needs_repair') {

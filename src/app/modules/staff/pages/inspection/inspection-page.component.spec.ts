@@ -1,9 +1,21 @@
-import { FormBuilder } from '@angular/forms';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { CommonModule } from '@angular/common';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { By } from '@angular/platform-browser';
 import { HttpErrorResponse } from '@angular/common/http';
+import { TranslateModule } from '@ngx-translate/core';
+import { SelectButtonModule } from 'primeng/selectbutton';
+import { InputNumberModule } from 'primeng/inputnumber';
+import { AdminDropdownComponent } from '../../../admin/components/admin-dropdown/admin-dropdown.component';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { InspectionPageComponent } from './inspection-page.component';
 import { createTranslateStub } from '../../../../testing/test-stubs';
-import { VehicleInspectionItemDto } from '../../../../services/staff/staff-api.service';
+import { StaffApiService, VehicleInspectionItemDto } from '../../../../services/staff/staff-api.service';
+import { VehicleInspectionItemsStore } from './vehicle-inspection-items.store';
+import { InspectableVehiclesStore } from './inspectable-vehicles.store';
+import { MyInspectionsStore } from './my-inspections.store';
+import { AlertService } from '../../../../shared/services/alert.service';
 
 const ITEMS: VehicleInspectionItemDto[] = [
   { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true },
@@ -109,6 +121,34 @@ describe('InspectionPageComponent', () => {
 
     group.get('verdict').setValue('ok');
     expect(group.get('note').value).toBe(''); // cleared, not just hidden
+  });
+
+  it('flipping BACK to needs_repair does not resurrect the cleared note (no stale resubmit)', () => {
+    const { component } = makeComponent();
+    component.ngOnInit();
+
+    const group = (component as any).itemsFormArray.at(0);
+    group.get('verdict').setValue('needs_repair');
+    group.get('note').setValue('cracked windshield');
+    group.get('verdict').setValue('ok');
+    group.get('verdict').setValue('needs_repair'); // flip BACK
+
+    expect(group.get('note').value).toBe('');
+    expect(group.get('note').hasError('required')).toBeTrue();
+  });
+
+  it('a needs_repair row rebuilt by an items refresh keeps its mandatory-note validator', () => {
+    const { component, itemsStore } = makeComponent();
+    component.ngOnInit();
+    (component as any).itemsFormArray.at(0).get('verdict').setValue('needs_repair');
+    (component as any).itemsFormArray.at(0).get('note').setValue('cracked windshield');
+
+    // INSPECTION_ITEM_INACTIVE recovery: the store re-emits and the FormArray
+    // is rebuilt. The carried-forward needs_repair row must still validate.
+    itemsStore.data$.next([{ id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true }]);
+    (component as any).itemsFormArray.at(0).get('note').setValue('');
+
+    expect((component as any).itemsFormArray.at(0).get('note').hasError('required')).toBeTrue();
   });
 
   it('blocks submit and toasts when a row has no verdict yet (Submit is never disabled for this)', async () => {
@@ -281,5 +321,125 @@ describe('InspectionPageComponent', () => {
     itemsStore.refreshing$.next(true);
 
     expect((component as any).isLoading).toBeTrue();
+  });
+});
+
+// Real-template regression for the Scrutinize-directed fix: [allowEmpty]="false"
+// on the verdict p-selectButton. A repeated tap on the ALREADY-SELECTED segment
+// must be a no-op, not a deselect-to-null — deselecting would fire the same
+// "switching away from needs_repair" branch that clears the note control's
+// value, silently destroying a defect note the driver just typed. This needs a
+// real p-selectButton (SelectButtonModule) rendered and clicked — the
+// direct-instantiation specs above never exercise PrimeNG's own allowEmpty
+// gate, only the component's reaction to a value the FormControl already
+// received. Mirrors the same TestBed + real-click technique already used for
+// this exact PrimeNG gotcha in passenger-info-form.component.spec.ts
+// ("OBRS-361: seat preference/requirement selectButtons... re-click clears to
+// null" — that one is intentionally allowEmpty=true; this one intentionally is not).
+describe('InspectionPageComponent — verdict p-selectButton allowEmpty=false (real click)', () => {
+  let fixture: ComponentFixture<InspectionPageComponent>;
+  let component: InspectionPageComponent;
+  let itemsStore: ReturnType<typeof makeCollectionStoreStub<VehicleInspectionItemDto[]>>;
+
+  beforeEach(async () => {
+    itemsStore = makeCollectionStoreStub<VehicleInspectionItemDto[]>(ITEMS);
+    const vehiclesStore = makeCollectionStoreStub<{ id: number; label: string }[]>([
+      { id: 9, label: 'Van 09' },
+    ]);
+    const myInspectionsStore = makeCollectionStoreStub<{ id: number; inspectedAt: string }[]>([]);
+    const staffApiStub = {
+      submitVehicleInspection: jasmine
+        .createSpy('submitVehicleInspection')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { inspectionId: 1, defectCount: 0 } })),
+    };
+    const alertStub = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+      warning: jasmine.createSpy('warning').and.resolveTo(undefined),
+      toast: jasmine.createSpy('toast'),
+    };
+
+    await TestBed.configureTestingModule({
+      // AdminDropdownComponent (vehicleId) and InputNumberModule (odometerKm)
+      // are the REAL components — a formControlName needs SOME
+      // ControlValueAccessor on its host element (NG01203) even when that
+      // control is irrelevant to this test.
+      declarations: [InspectionPageComponent, AdminDropdownComponent],
+      imports: [
+        CommonModule,
+        ReactiveFormsModule,
+        SelectButtonModule,
+        InputNumberModule,
+        TranslateModule.forRoot(),
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+      providers: [
+        FormBuilder,
+        { provide: StaffApiService, useValue: staffApiStub },
+        { provide: AlertService, useValue: alertStub },
+        { provide: VehicleInspectionItemsStore, useValue: itemsStore },
+        { provide: InspectableVehiclesStore, useValue: vehiclesStore },
+        { provide: MyInspectionsStore, useValue: myInspectionsStore },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(InspectionPageComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges(); // runs ngOnInit — itemsStore's BehaviorSubject already holds ITEMS
+  });
+
+  function verdictButtons(rowIndex: number) {
+    const rows = fixture.debugElement.queryAll(By.css('.inspection-row'));
+    return rows[rowIndex].queryAll(By.css('.p-button'));
+  }
+
+  it('renders [allowEmpty]="false" on the verdict toggle', () => {
+    const selectButtons = fixture.debugElement.queryAll(By.css('p-selectbutton'));
+    expect(selectButtons.length).toBeGreaterThan(0);
+    for (const sb of selectButtons) {
+      expect(sb.componentInstance.allowEmpty).toBeFalse();
+    }
+  });
+
+  it('a repeated tap on the already-selected needs_repair segment is a no-op — the note survives', () => {
+    const rowIndex = 1; // second item row ("Brakes")
+    const buttons = verdictButtons(rowIndex);
+    expect(buttons.length).toBe(2);
+
+    buttons[1].nativeElement.click(); // select "needs_repair"
+    fixture.detectChanges();
+    expect((component as any).verdictAt(rowIndex)).toBe('needs_repair');
+
+    const noteControl = (component as any).itemsFormArray.at(rowIndex).get('note');
+    noteControl.setValue('worn brake pad');
+    fixture.detectChanges();
+
+    // Re-click the SAME (already-selected) segment.
+    buttons[1].nativeElement.click();
+    fixture.detectChanges();
+
+    expect((component as any).verdictAt(rowIndex))
+      .withContext('allowEmpty=false must block the deselect-to-null')
+      .toBe('needs_repair');
+    expect(noteControl.value)
+      .withContext('a mis-tap on the selected segment must never wipe the note')
+      .toBe('worn brake pad');
+  });
+
+  it('switching needs_repair -> ok (a genuinely DIFFERENT segment) still legitimately clears the note', () => {
+    const rowIndex = 1;
+    const buttons = verdictButtons(rowIndex);
+
+    buttons[1].nativeElement.click(); // needs_repair
+    fixture.detectChanges();
+    const noteControl = (component as any).itemsFormArray.at(rowIndex).get('note');
+    noteControl.setValue('worn brake pad');
+    fixture.detectChanges();
+
+    buttons[0].nativeElement.click(); // ok — a real transition, not a re-tap
+    fixture.detectChanges();
+
+    expect((component as any).verdictAt(rowIndex)).toBe('ok');
+    expect(noteControl.value).toBe('');
   });
 });
