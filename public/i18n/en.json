@@ -374,6 +374,7 @@
       "ROLE_MANAGEMENT": "Roles",
       "USER_MANAGEMENT": "Users",
       "VEHICLE_MANAGEMENT": "Vehicles",
+      "CARGO_CAPACITY": "Cargo Capacity",
       "ROUTE_MANAGEMENT": "Routes",
       "SCHEDULES": "Schedules",
       "BOOKINGS_MANAGEMENT": "Bookings",
@@ -468,7 +469,10 @@
       "FORM_INVALID": "Please complete the highlighted required fields.",
       "WHOLE_NUMBER": "Please enter a whole number (no decimals).",
       "POSITIVE_NUMBER": "Please enter a number greater than 0.",
-      "YEAR_RANGE": "Enter a year between {{min}} and {{max}}."
+      "YEAR_RANGE": "Enter a year between {{min}} and {{max}}.",
+      "CARGO_CAPACITY_INVALID": "Enter a valid number.",
+      "CARGO_CAPACITY_TOO_MANY_DECIMALS": "Enter up to 2 decimal places.",
+      "CARGO_CAPACITY_BELOW_MIN": "Must be at least 0.01 kg."
     },
     "MESSAGES": {
       "CREATED": "Created successfully.",
@@ -697,6 +701,16 @@
         "EMPTY_BODY": "This vehicle has no maintenance history. Add one to get started."
       }
     },
+    "CARGO_CAPACITY": {
+      "SUBTITLE": "Set the parcel cargo quota (kg) for each vehicle type.",
+      "TABLE_TITLE": "Cargo Capacity by Vehicle Type",
+      "COL_VEHICLE_TYPE": "Vehicle Type",
+      "COL_SEATS": "Seats",
+      "COL_CARGO_CAPACITY": "Cargo Quota (kg)",
+      "NOT_CONFIGURED": "Not configured",
+      "NOT_CONFIGURED_WARNING": "Empty means parcel booking will be refused for every trip using this vehicle type until a quota is set.",
+      "LOAD_FAILED": "Unable to load vehicle types."
+    },
     "ROUTES": {
       "TITLE": "Route Management",
       "SUBTITLE": "Manage route records, statuses, stop sequences, and fare segments.",
@@ -788,7 +802,9 @@
       "VIEW_SCHEDULES": "View generated schedules",
       "FOCUSED_BANNER": "Showing schedules generated from {{set}}.",
       "FOCUSED_CLEAR": "Show all schedules",
-      "VEHICLE_UNDER_MAINTENANCE": "This vehicle has an open maintenance record covering the selected date. Choose a different vehicle or date."
+      "VEHICLE_UNDER_MAINTENANCE": "This vehicle has an open maintenance record covering the selected date. Choose a different vehicle or date.",
+      "CARGO_CAPACITY_LABEL": "Cargo Quota Override for This Trip (kg)",
+      "CARGO_CAPACITY_HELPER": "Empty = use the vehicle type's quota."
     },
     "BOOKINGS": {
       "TITLE": "Bookings Management",

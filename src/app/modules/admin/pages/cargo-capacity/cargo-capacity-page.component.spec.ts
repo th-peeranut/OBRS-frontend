@@ -1,0 +1,163 @@
+import { BehaviorSubject, of, throwError } from 'rxjs';
+import { CargoCapacityPageComponent } from './cargo-capacity-page.component';
+import { AdminVehicleTypeDto } from '../../../../services/admin/admin-api.service';
+import { createTranslateStub } from '../../../../testing/test-stubs';
+
+function vehicleType(overrides: Partial<AdminVehicleTypeDto> = {}): AdminVehicleTypeDto {
+  return {
+    id: 1,
+    slug: 'minibus',
+    totalSeats: 21,
+    status: { code: 'active' },
+    translations: [{ locale: 'en', label: 'Minibus' }],
+    cargoCapacityKg: 200,
+    ...overrides,
+  };
+}
+
+function makeStoreStub() {
+  const data$ = new BehaviorSubject<{ vehicleTypes: AdminVehicleTypeDto[] } | null>(null);
+  return {
+    data$,
+    refreshing$: new BehaviorSubject<boolean>(false),
+    error$: new BehaviorSubject<boolean>(false),
+    refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    get hasValue() {
+      return data$.value !== null;
+    },
+  };
+}
+
+function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub()) {
+  const alert = {
+    success: jasmine.createSpy('success').and.resolveTo(undefined),
+    error: jasmine.createSpy('error').and.resolveTo(undefined),
+  };
+  const component = new CargoCapacityPageComponent(
+    adminApi as any,
+    alert as any,
+    createTranslateStub(),
+    store as any
+  );
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { component: component as any, store, alert };
+}
+
+describe('CargoCapacityPageComponent', () => {
+  it('subscribes to store.data$ and calls store.refresh() on init — no direct fetch', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    expect(store.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps the store data into rows, pre-filling each input from cargoCapacityKg', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+
+    expect(component.rows.length).toBe(1);
+    expect(component.rows[0].vehicleTypeLabel).toBe('Minibus');
+    expect(component.inputValue(component.rows[0])).toBe('200');
+  });
+
+  it('renders an empty input, and flags "not configured", when cargoCapacityKg is null', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType({ cargoCapacityKg: null })] });
+
+    const row = component.rows[0];
+    expect(component.inputValue(row)).toBe('');
+    expect(component.isRowUnconfigured(row)).toBeTrue();
+  });
+
+  it('a valid edit marks the row dirty; matching the original value keeps it clean', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    const row = component.rows[0];
+
+    component.onInputChange(row, '250');
+    expect(component.isRowDirty(row)).toBeTrue();
+
+    component.onInputChange(row, '200');
+    expect(component.isRowDirty(row)).toBeFalse();
+  });
+
+  it('a background revalidate does not clobber a row the admin already started editing', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    const row = component.rows[0];
+
+    component.onInputChange(row, '999');
+    // Background refresh lands with the OLD value still on the server.
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+
+    expect(component.inputValue(component.rows[0])).toBe('999');
+  });
+
+  it('saveRow() rejects an invalid value without calling the API', async () => {
+    const getVehicleTypeById = jasmine.createSpy('getVehicleTypeById');
+    const { component, store } = makeComponent({ getVehicleTypeById });
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    const row = component.rows[0];
+
+    component.onInputChange(row, 'abc');
+    await component.saveRow(row);
+
+    expect(getVehicleTypeById).not.toHaveBeenCalled();
+    expect(component.rowErrorKey(row)).toBe('ADMIN.VALIDATION.CARGO_CAPACITY_INVALID');
+  });
+
+  it('saveRow() fetches the full detail, patches only cargoCapacityKg, and forwards every other field', async () => {
+    const detail = vehicleType({
+      totalSeats: 21,
+      translations: [{ locale: 'en', label: 'Minibus' }],
+      seatMaps: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }] as any,
+    });
+    const getVehicleTypeById = jasmine
+      .createSpy('getVehicleTypeById')
+      .and.returnValue(of({ code: 200, message: 'OK', data: detail }));
+    const updateVehicleType = jasmine
+      .createSpy('updateVehicleType')
+      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
+    const { component, store, alert } = makeComponent({ getVehicleTypeById, updateVehicleType });
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    const row = component.rows[0];
+
+    component.onInputChange(row, '350');
+    await component.saveRow(row);
+
+    expect(getVehicleTypeById).toHaveBeenCalledOnceWith(1);
+    expect(updateVehicleType).toHaveBeenCalledOnceWith(
+      1,
+      jasmine.objectContaining({
+        slug: 'minibus',
+        totalSeat: 21,
+        cargoCapacityKg: 350,
+        seats: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }],
+      })
+    );
+    expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.UPDATED');
+    expect(store.refresh).toHaveBeenCalledTimes(2); // once on init, once after save
+  });
+
+  it('saveRow() shows an error alert and keeps the draft value on failure', async () => {
+    const getVehicleTypeById = jasmine
+      .createSpy('getVehicleTypeById')
+      .and.returnValue(throwError(() => new Error('boom')));
+    const { component, store, alert } = makeComponent({ getVehicleTypeById });
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    const row = component.rows[0];
+
+    component.onInputChange(row, '350');
+    await component.saveRow(row);
+
+    expect(alert.error).toHaveBeenCalled();
+    expect(component.inputValue(component.rows[0])).toBe('350');
+    expect(component.isRowSaving(row)).toBeFalse();
+  });
+});

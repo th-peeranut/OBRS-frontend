@@ -494,7 +494,7 @@ describe('schedules.mappers', () => {
 
   describe('toScheduleItemPayload', () => {
     it('combines date/time into departureDateTime and includes vehicleId/driverId only when positive', () => {
-      const payload = toScheduleItemPayload({
+      const { payload, cargoCapacityKgError } = toScheduleItemPayload({
         departureDate: '2026-06-20',
         departureTime: '08:30',
         route: 'bkk-cm',
@@ -508,6 +508,50 @@ describe('schedules.mappers', () => {
       expect(payload.vehicleId).toBe(9);
       expect(payload.driverId).toBeUndefined();
       expect(payload.departureDateTime).toContain('2026-06-20');
+      expect(payload.cargoCapacityKg).toBeNull();
+      expect(cargoCapacityKgError).toBeNull();
+    });
+
+    // OBRS-508: POST and PUT /api/private/schedules share one backend
+    // ScheduleReqDto shape, so this same builder feeds both the create and
+    // update path (see schedules-page.component.ts's shared scheduleItemForm).
+    it('parses a valid cargoCapacityKg override into the payload', () => {
+      const { payload, cargoCapacityKgError } = toScheduleItemPayload({
+        departureDate: '2026-06-20',
+        departureTime: '08:30',
+        route: 'bkk-cm',
+        vehicleType: 'van',
+        cargoCapacityKg: '150.5',
+      });
+
+      expect(payload.cargoCapacityKg).toBe(150.5);
+      expect(cargoCapacityKgError).toBeNull();
+    });
+
+    it('treats an empty cargoCapacityKg as null (inherit from vehicle type)', () => {
+      const { payload, cargoCapacityKgError } = toScheduleItemPayload({
+        departureDate: '2026-06-20',
+        departureTime: '08:30',
+        route: 'bkk-cm',
+        vehicleType: 'van',
+        cargoCapacityKg: '',
+      });
+
+      expect(payload.cargoCapacityKg).toBeNull();
+      expect(cargoCapacityKgError).toBeNull();
+    });
+
+    it('surfaces a validation error for a malformed cargoCapacityKg without throwing', () => {
+      const { payload, cargoCapacityKgError } = toScheduleItemPayload({
+        departureDate: '2026-06-20',
+        departureTime: '08:30',
+        route: 'bkk-cm',
+        vehicleType: 'van',
+        cargoCapacityKg: 'abc',
+      });
+
+      expect(payload.cargoCapacityKg).toBeNull();
+      expect(cargoCapacityKgError).toBe('INVALID_NUMBER');
     });
   });
 

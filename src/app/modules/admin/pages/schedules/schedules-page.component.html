@@ -586,6 +586,24 @@
             [placeholder]="'ADMIN.SCHEDULES.DRIVER_OPTIONAL' | translate"
           ></app-admin-dropdown>
         </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">{{ 'ADMIN.SCHEDULES.CARGO_CAPACITY_LABEL' | translate }}</label>
+          <input
+            class="admin-field"
+            type="number"
+            min="0.01"
+            step="0.01"
+            formControlName="cargoCapacityKg"
+            [attr.aria-invalid]="cargoCapacityKgErrorKey() ? true : null"
+          />
+          <small class="schedule-form-message admin-muted" *ngIf="!cargoCapacityKgErrorKey()">
+            {{ 'ADMIN.SCHEDULES.CARGO_CAPACITY_HELPER' | translate }}
+          </small>
+          <small class="schedule-form-message admin-error" *ngIf="cargoCapacityKgErrorKey() as errorKey">
+            {{ errorKey | translate }}
+          </small>
+        </div>
       </div>
 
       <div class="admin-modal-actions schedule-form-actions">

@@ -90,6 +90,9 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       { path: 'vehicles', labelKey: 'ADMIN.PAGES.VEHICLE_MANAGEMENT', icon: 'directions_bus', descriptionKey: 'ADMIN.VEHICLES.SUBTITLE', section: 'master' },
       { path: 'routes', labelKey: 'ADMIN.PAGES.ROUTE_MANAGEMENT', icon: 'route', descriptionKey: 'ADMIN.ROUTES.SUBTITLE', section: 'master' },
       { path: 'schedules', labelKey: 'ADMIN.PAGES.SCHEDULES', icon: 'calendar_month', descriptionKey: 'ADMIN.SCHEDULES.SUBTITLE', section: 'master' },
+      // OBRS-508: pushed conditionally below (owner-only), same gating shape
+      // as settlements/reminder-config/jump-seat-config — kept out of this
+      // always-shown array.
       { path: 'bookings', labelKey: 'ADMIN.PAGES.BOOKINGS_MANAGEMENT', icon: 'confirmation_number', descriptionKey: 'ADMIN.BOOKINGS.SUBTITLE', section: 'operations' },
       { path: 'promotions', labelKey: 'ADMIN.PAGES.PROMOTIONS', icon: 'sell', descriptionKey: 'ADMIN.PROMOTIONS.SUBTITLE', section: 'operations' },
       { path: 'usability-reports', labelKey: 'ADMIN.PAGES.USABILITY_REPORTS', icon: 'bug_report', showBadge: true, descriptionKey: 'ADMIN.USABILITY_REPORTS.SUBTITLE', section: 'reports' },
@@ -108,6 +111,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
 
     if (this.authService.hasAnyRole(['owner'])) {
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });
+    }
+
+    // OBRS-508: cargo-capacity settings is OWNER-only (route `requiredRoles:
+    // ['owner']` — the backend PUT it saves through requires OWNER), gated
+    // the same way Settlements is gated directly above. Lives in 'master'
+    // (fleet/vehicle-type data), next to Vehicles.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'cargo-capacity',
+        labelKey: 'ADMIN.PAGES.CARGO_CAPACITY',
+        icon: 'local_shipping',
+        descriptionKey: 'ADMIN.CARGO_CAPACITY.SUBTITLE',
+        section: 'master',
+      });
     }
 
     // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:

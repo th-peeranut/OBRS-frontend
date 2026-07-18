@@ -160,6 +160,12 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   private routeDateForForm = '';
   // Slug of the route for the PUT body.
   private routeSlugForForm = '';
+  // OBRS-508: this walk-in trip-edit form has no cargoCapacityKg control (out
+  // of that card's scope) — cached from the fetched detail purely so onSave()
+  // can carry the existing per-trip cargo override forward unchanged. Without
+  // this, PUT /schedules/{id}'s full-replace body would silently wipe it to
+  // null on every staff save (the exact "omitted field wiped" hazard).
+  private cargoCapacityKgFromDetail: number | null = null;
 
   private readonly destroy$ = new Subject<void>();
 
@@ -343,6 +349,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
           // Store route info for the form display and PUT payload.
           if (scheduleDetail) {
+            this.cargoCapacityKgFromDetail = scheduleDetail.cargoCapacityKg ?? null;
             this.routeSlugForForm = scheduleDetail.route?.slug ?? '';
             this.routeNameForForm = getAdminLookupLabel(scheduleDetail.route) ?? scheduleDetail.route?.slug ?? '';
             this.routeDateForForm = scheduleDetail.departureDateTime
@@ -390,6 +397,7 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     this.routeNameForForm = '';
     this.routeDateForForm = '';
     this.routeSlugForForm = '';
+    this.cargoCapacityKgFromDetail = null;
   }
 
   protected get editFormRouteName(): string {
@@ -425,6 +433,10 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
       driverId: formValue.driverId,
       departureDateTime: formValue.departureDateTime,
       seatingCapacity: formValue.seatingCapacity,
+      // OBRS-508: this form has no cargo-capacity control — carry the value
+      // fetched on edit-open forward unchanged so this full-replace PUT
+      // doesn't silently wipe it.
+      cargoCapacityKg: this.cargoCapacityKgFromDetail,
     };
 
     this.isSaving = true;

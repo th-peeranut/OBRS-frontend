@@ -1,0 +1,14 @@
+// OBRS-508: layout-only — every color comes from the shared --admin-* tokens
+// via .admin-field / .admin-status.is-warning / .admin-error / .admin-muted
+// (admin-theme.scss). No raw hex/inline color introduced here.
+
+.cargo-capacity-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cargo-capacity-input {
+  width: 140px;
+}

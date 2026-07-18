@@ -168,6 +168,39 @@ describe('SchedulesPageComponent edit modals', () => {
     expect((component as any).isScheduleEditDetailLoading).toBeTrue();
     expect((component as any).scheduleItemForm.get('route').value).toBe('a-b');
   });
+
+  // OBRS-508: the trip edit modal's cargoCapacityKg control seeds from the
+  // row fallback immediately, then patches to the server detail's real value
+  // once it lands — same optimistic-open + pristine-patch contract as every
+  // other field on this form.
+  it('seeds cargoCapacityKg empty from the row fallback, then patches the server value', async () => {
+    const getScheduleById$ = new Subject<ResponseAPI<AdminScheduleDto>>();
+    const component = makeComponent({
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(getScheduleById$.asObservable()),
+    });
+
+    const promise = (component as any).openScheduleEditModal({ ...TRIP_ROW });
+    expect((component as any).scheduleItemForm.get('cargoCapacityKg').value).toBe('');
+
+    getScheduleById$.next({
+      code: 200,
+      message: 'OK',
+      data: {
+        id: 2,
+        departureDateTime: '2026-06-20T08:00:00',
+        status: 'scheduled',
+        route: { id: 1, slug: 'a-b' },
+        vehicleType: { id: 1, slug: 'van' },
+        cargoCapacityKg: 250,
+      },
+    });
+    getScheduleById$.complete();
+    await promise;
+
+    expect((component as any).scheduleItemForm.get('cargoCapacityKg').value).toBe('250');
+  });
 });
 
 describe('SchedulesPageComponent confirmDelete — optimistic removal by kind branch', () => {
@@ -541,6 +574,120 @@ describe('SchedulesPageComponent submitSchedule — VEHICLE_UNDER_MAINTENANCE (O
     expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
     expect(alert.error).toHaveBeenCalled();
   });
+});
+
+// OBRS-508: per-trip cargo-capacity override on the same trip form exercised
+// by the VEHICLE_UNDER_MAINTENANCE suite above.
+describe('SchedulesPageComponent submitSchedule — cargoCapacityKg override (OBRS-508)', () => {
+  function makeSubmitReady(adminApi: Record<string, unknown>) {
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const component = new SchedulesPageComponent(
+      adminApi as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      makeStoreStub() as any
+    );
+    (component as any).routeOptions = [{ code: 'bkk-cm', label: 'BKK-CM' }];
+    (component as any).vehicleTypeOptions = [{ code: 'van', label: 'Van' }];
+    component['openCreateScheduleModal']();
+    const form = (component as any).scheduleItemForm;
+    form.patchValue({
+      departureDate: new Date(2026, 6, 10),
+      departureTime: new Date(2026, 6, 10, 8, 0),
+      route: 'bkk-cm',
+      vehicleType: 'van',
+    });
+    return { component, alert, form };
+  }
+
+  it('rejects a malformed cargoCapacityKg without calling the API, and shows the inline error', async () => {
+    const createSpy = jasmine.createSpy('createSchedule');
+    const { component, form } = makeSubmitReady({ createSchedule: createSpy });
+    form.get('cargoCapacityKg').setValue('abc');
+
+    await component['submitSchedule']();
+
+    expect(createSpy).not.toHaveBeenCalled();
+    expect((component as any).cargoCapacityKgErrorCode).toBe('INVALID_NUMBER');
+    expect((component as any).cargoCapacityKgErrorKey()).toBe(
+      'ADMIN.VALIDATION.CARGO_CAPACITY_INVALID'
+    );
+  });
+
+  it('sends the parsed cargoCapacityKg on create', async () => {
+    const createSpy = jasmine
+      .createSpy('createSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 201, message: 'OK', data: null }));
+    const { component, form } = makeSubmitReady({ createSchedule: createSpy });
+    form.get('cargoCapacityKg').setValue('300');
+
+    await component['submitSchedule']();
+
+    expect(createSpy).toHaveBeenCalledOnceWith(jasmine.objectContaining({ cargoCapacityKg: 300 }));
+  });
+
+  it('sends cargoCapacityKg as null when the field is left empty (inherit from vehicle type)', async () => {
+    const createSpy = jasmine
+      .createSpy('createSchedule')
+      .and.returnValue(new BehaviorSubject({ code: 201, message: 'OK', data: null }));
+    const { component } = makeSubmitReady({ createSchedule: createSpy });
+
+    await component['submitSchedule']();
+
+    expect(createSpy).toHaveBeenCalledOnceWith(jasmine.objectContaining({ cargoCapacityKg: null }));
+  });
+
+  // OBRS-508: same clear-on-change/clear-on-close contract as
+  // vehicleUnderMaintenanceMessage above, applied to the new field.
+  it('clears the cargoCapacityKg inline error when the field changes', () => {
+    const { component, form } = makeSubmitReady({});
+    (component as any).cargoCapacityKgErrorCode = 'INVALID_NUMBER';
+
+    form.get('cargoCapacityKg')?.setValue('123');
+
+    expect((component as any).cargoCapacityKgErrorCode).toBeNull();
+  });
+
+  it('clears the cargoCapacityKg inline error on modal close', () => {
+    const { component } = makeSubmitReady({});
+    (component as any).cargoCapacityKgErrorCode = 'INVALID_NUMBER';
+
+    component['closeScheduleFormModal'](true);
+
+    expect((component as any).cargoCapacityKgErrorCode).toBeNull();
+  });
+});
+
+describe('SchedulesPageComponent submitSchedule — inline message clearing', () => {
+  function makeSubmitReady(adminApi: Record<string, unknown>) {
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const component = new SchedulesPageComponent(
+      adminApi as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      makeStoreStub() as any
+    );
+    (component as any).routeOptions = [{ code: 'bkk-cm', label: 'BKK-CM' }];
+    (component as any).vehicleTypeOptions = [{ code: 'van', label: 'Van' }];
+    component['openCreateScheduleModal']();
+    const form = (component as any).scheduleItemForm;
+    form.patchValue({
+      departureDate: new Date(2026, 6, 10),
+      departureTime: new Date(2026, 6, 10, 8, 0),
+      route: 'bkk-cm',
+      vehicleType: 'van',
+      vehicleId: '3',
+    });
+    return { component, alert };
+  }
 
   it('clears the inline message when the vehicle selection changes', () => {
     const { component } = makeSubmitReady({});

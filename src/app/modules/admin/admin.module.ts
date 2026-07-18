@@ -44,6 +44,7 @@ import { SettlementsListComponent } from './pages/settlements/settlements-list/s
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
 import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
+import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -86,6 +87,19 @@ const routes: Routes = [
         path: 'schedules',
         component: SchedulesPageComponent,
         data: { titleKey: 'ADMIN.PAGES.SCHEDULES', subtitleKey: 'ADMIN.SCHEDULES.SUBTITLE' },
+      },
+      {
+        // OBRS-508: parcel cargo capacity settings, OWNER-only (the backend
+        // PUT /vehicle-types/{id} requires OWNER; ADMIN inherits it via
+        // ROLE_GRANTS — same gating shape as settlements/reminder-config).
+        path: 'cargo-capacity',
+        component: CargoCapacityPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CARGO_CAPACITY',
+          subtitleKey: 'ADMIN.CARGO_CAPACITY.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
       },
       {
         path: 'bookings',
@@ -236,6 +250,7 @@ const routes: Routes = [
     SettlementDetailModalComponent,
     ReminderConfigPageComponent,
     JumpSeatConfigPageComponent,
+    CargoCapacityPageComponent,
   ],
   imports: [
     SharedModule,

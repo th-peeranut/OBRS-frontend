@@ -10,7 +10,6 @@ import {
   AdminUserDto,
   AdminVehicleDto,
   AdminVehicleTypeDto,
-  CreateSchedulePayload,
   CreateScheduleSetPayload,
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
@@ -45,6 +44,11 @@ import {
   toVehicleOptions,
   toVehicleTypeOptions,
 } from './schedules.mappers';
+import {
+  cargoCapacityValidationErrorKey,
+  CargoCapacityValidationErrorCode,
+} from '../cargo-capacity/cargo-capacity.validators';
+import { formatCargoCapacityInputValue } from '../cargo-capacity/cargo-capacity-page.mappers';
 
 @Component({
   selector: 'app-schedules-page',
@@ -94,6 +98,10 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   // rendered under the vehicleId control instead of a second AlertService.error()
   // toast (no double surface). Cleared on vehicle/date change and modal close.
   protected vehicleUnderMaintenanceMessage = '';
+  // OBRS-508: per-trip cargo-capacity-override validation, rendered under the
+  // cargoCapacityKg control. Cleared on input change and modal close, same
+  // contract as vehicleUnderMaintenanceMessage above.
+  protected cargoCapacityKgErrorCode: CargoCapacityValidationErrorCode | null = null;
 
   protected readonly scheduleForm: FormGroup;
   protected readonly scheduleItemForm: FormGroup;
@@ -131,6 +139,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       vehicleType: ['', [Validators.required]],
       vehicleId: [''],
       driverId: [''],
+      cargoCapacityKg: [''],
     });
 
     // OBRS-209 AC10: the VEHICLE_UNDER_MAINTENANCE inline message is only
@@ -145,6 +154,11 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.scheduleItemForm.get('departureDate')?.valueChanges.subscribe(() => {
         this.vehicleUnderMaintenanceMessage = '';
+      })
+    );
+    this.subscriptions.add(
+      this.scheduleItemForm.get('cargoCapacityKg')?.valueChanges.subscribe(() => {
+        this.cargoCapacityKgErrorCode = null;
       })
     );
 
@@ -300,7 +314,9 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       vehicleType: '', // design-system §3.1: start on placeholder, user picks explicitly
       vehicleId: '',
       driverId: '',
+      cargoCapacityKg: '', // empty = inherit from the vehicle type, no silent default
     });
+    this.cargoCapacityKgErrorCode = null;
     this.isScheduleFormModalOpen = true;
   }
 
@@ -351,6 +367,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.selectedSchedule = schedule;
     this.isScheduleEditDetailLoading = true;
     this.vehicleUnderMaintenanceMessage = '';
+    this.cargoCapacityKgErrorCode = null;
     this.applyScheduleItemFormValues(toScheduleDetailFallback(schedule), schedule);
     this.isScheduleFormModalOpen = true;
 
@@ -415,6 +432,9 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
       vehicleType: scheduleDetail.vehicleType?.slug ?? schedule.vehicleTypeSlug,
       vehicleId: scheduleDetail.vehicle?.id ? String(scheduleDetail.vehicle.id) : '',
       driverId: scheduleDetail.driver?.id ? String(scheduleDetail.driver.id) : '',
+      cargoCapacityKg: formatCargoCapacityInputValue(
+        scheduleDetail.cargoCapacityKg ?? schedule.cargoCapacityKg ?? null
+      ),
     };
 
     if (!onlyPristine) {
@@ -451,6 +471,7 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     this.isScheduleEditDetailLoading = false;
     this.selectedSchedule = null;
     this.vehicleUnderMaintenanceMessage = '';
+    this.cargoCapacityKgErrorCode = null;
     this.scheduleItemForm.reset();
   }
 
@@ -548,17 +569,29 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
   }
 
+  protected cargoCapacityKgErrorKey(): string | null {
+    return cargoCapacityValidationErrorKey(this.cargoCapacityKgErrorCode);
+  }
+
   protected async submitSchedule(): Promise<void> {
     this.vehicleUnderMaintenanceMessage = '';
+    this.cargoCapacityKgErrorCode = null;
     if (this.scheduleItemForm.invalid) {
       this.scheduleItemForm.markAllAsTouched();
       return;
     }
 
+    const { payload, cargoCapacityKgError } = toScheduleItemPayloadValue(
+      this.scheduleItemForm.getRawValue()
+    );
+    if (cargoCapacityKgError) {
+      this.cargoCapacityKgErrorCode = cargoCapacityKgError;
+      this.scheduleItemForm.get('cargoCapacityKg')?.markAsTouched();
+      return;
+    }
+
     this.isSubmitting = true;
     try {
-      const payload = this.toScheduleItemPayload();
-
       if (this.isScheduleItemEditMode && this.selectedSchedule) {
         await firstValueFrom(
           this.adminApiService.updateSchedule(this.selectedSchedule.id, payload)
@@ -702,10 +735,6 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
     }
 
     return payload;
-  }
-
-  private toScheduleItemPayload(): CreateSchedulePayload {
-    return toScheduleItemPayloadValue(this.scheduleItemForm.getRawValue());
   }
 
   private getDefaultScheduleStatusCode(): string {
