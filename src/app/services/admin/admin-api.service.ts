@@ -115,7 +115,12 @@ export interface AdminVehicleTypeDto {
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
-  /** Seat-map options — only present on the vehicle-type detail endpoint. */
+  /** Seat-map options — only present on the vehicle-type detail endpoint.
+   * NOTE: the real backend shape here is `{seatNumber, rowIndex, columnIndex}`
+   * — `LayoutResponse` is a pre-existing mistyped interface (staff/
+   * walk-in-center-panel already reads this same field as a `{id, name,
+   * label}` seat-map-template picker option), tracked separately as OBRS-517
+   * and deliberately left as-is by OBRS-508. */
   seatMaps?: LayoutResponse[];
   /** OBRS-508: parcel cargo quota for this vehicle type, in kg. `null` = not
    * configured — effective capacity falls back to the per-schedule override
@@ -124,28 +129,12 @@ export interface AdminVehicleTypeDto {
   cargoCapacityKg?: number | null;
 }
 
-/** OBRS-508: PUT /vehicle-types/{id} `seats` entry — the backend's real
- * VehicleTypeReqDto.seats shape (docs/api/catalog.md). NOT the same shape as
- * the (pre-existing, unrelated-to-this-card) `LayoutResponse` interface below,
- * which staff/walk-in-center-panel already reads as a `{id, name, label}`
- * seat-map-template picker option off this same endpoint's `seatMaps` field —
- * a separate FE type mismatch left untouched here (out of scope). */
-export interface VehicleTypeSeatReqDto {
-  seatNumber: string;
-  rowIndex: number;
-  columnIndex: number;
-}
-
-/** OBRS-508: PUT /vehicle-types/{id} request body. This is a FULL REPLACE —
- * every field must be forwarded (fetch the current detail via
- * getVehicleTypeById() first and patch it) or the omitted ones are silently
- * wiped (seat map, translations). */
-export interface UpdateVehicleTypePayload {
-  slug: string;
-  status: string;
-  totalSeat: number;
-  translations: AdminTranslationReqDto[];
-  seats: VehicleTypeSeatReqDto[];
+/** OBRS-508: `PATCH /vehicle-types/{id}/cargo-capacity` request body — the
+ * ONLY field this endpoint accepts. Replaces an earlier full-replace-PUT
+ * design (which required forwarding every vehicle-type field to avoid
+ * wiping the seat map/translations); the backend now exposes this narrow
+ * PATCH instead, so the hazard doesn't apply here. */
+export interface UpdateVehicleTypeCargoCapacityPayload {
   cargoCapacityKg: number | null;
 }
 
@@ -453,43 +442,6 @@ export function getAdminTranslationDescription(
 ): string | null {
   const translation = getAdminTranslation(translations, locale);
   return translation?.description ?? null;
-}
-
-/**
- * OBRS-508: normalizes a detail response's `AdminTranslationCollection`
- * (array OR map-by-locale — see the type above) into the flat
- * `AdminTranslationReqDto[]` a full-replace PUT body expects, so a fetched
- * detail's translations can be forwarded byte-for-byte on save instead of
- * being silently dropped (`VehicleTypeReqDto.translations` is required,
- * non-empty). Entries missing a `label` are skipped — the request DTO
- * requires one per locale.
- */
-export function toAdminTranslationReqDtoArray(
-  translations: AdminTranslationCollection | null | undefined
-): AdminTranslationReqDto[] {
-  if (!translations) {
-    return [];
-  }
-
-  if (Array.isArray(translations)) {
-    return translations
-      .filter((translation): translation is AdminTranslationDto & { locale: string; label: string } =>
-        !!translation?.locale && !!translation?.label
-      )
-      .map((translation) => ({
-        locale: translation.locale,
-        label: translation.label,
-        description: translation.description,
-      }));
-  }
-
-  return Object.entries(translations)
-    .filter((entry): entry is [string, AdminTranslationDto] => !!entry[1]?.label)
-    .map(([locale, translation]) => ({
-      locale: translation.locale ?? locale,
-      label: translation.label as string,
-      description: translation.description,
-    }));
 }
 
 export function parseAdminStatus(
@@ -993,15 +945,20 @@ export class AdminApiService {
     return this.getRequest<AdminVehicleTypeDto>(`${this.baseUrl}/private/vehicle-types/${id}`);
   }
 
-  // OBRS-508: OWNER-only full-replace update — callers MUST build `payload`
-  // from a freshly-fetched getVehicleTypeById() detail (see
-  // toUpdateVehicleTypePayload in cargo-capacity-page.mappers.ts), never a
-  // partial object, or omitted fields (seat map, translations) are wiped.
-  updateVehicleType(
+  // OBRS-508: OWNER-only (ADMIN inherits via the backend's ROLE_ADMIN >
+  // ROLE_OWNER hierarchy) narrow update touching ONLY cargo_capacity_kg —
+  // replaces the earlier full-replace PUT design; the response echoes back
+  // the untouched seatMaps/translations/slug/totalSeats/status alongside the
+  // newly-saved cargoCapacityKg, so the caller can patch its row from the
+  // response directly with no separate re-fetch.
+  updateVehicleTypeCargoCapacity(
     id: number,
-    payload: UpdateVehicleTypePayload
-  ): Observable<ResponseAPI<unknown>> {
-    return this.putRequest<unknown>(`${this.baseUrl}/private/vehicle-types/${id}`, payload);
+    payload: UpdateVehicleTypeCargoCapacityPayload
+  ): Observable<ResponseAPI<AdminVehicleTypeDto>> {
+    return this.patchRequest<AdminVehicleTypeDto>(
+      `${this.baseUrl}/private/vehicle-types/${id}/cargo-capacity`,
+      payload
+    );
   }
 
   getRoutes(): Observable<ResponseAPI<AdminRouteDto[]>> {

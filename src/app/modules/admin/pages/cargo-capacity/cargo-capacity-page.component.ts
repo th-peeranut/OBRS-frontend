@@ -10,7 +10,6 @@ import {
   CargoCapacityRow,
   formatCargoCapacityInputValue,
   toCargoCapacityRows,
-  toUpdateVehicleTypePayload,
 } from './cargo-capacity-page.mappers';
 import {
   CargoCapacityValidationErrorCode,
@@ -22,12 +21,13 @@ import {
  * OBRS-508: narrow, single-purpose admin page — set (or clear) each vehicle
  * type's parcel cargo quota. Deliberately NOT a full vehicle-type CRUD
  * screen (design-system scope note). Each row saves independently via its
- * own PUT (row-level, not a form-wide submit), so per-row state (input text,
- * validation error, in-flight save) is plain component state keyed by
- * vehicle-type id rather than a FormArray — sidesteps the
- * debounced-store-round-trip-orphans-FormArray-controls gotcha entirely,
- * since a background `store.refresh()` never has to reconcile/rebuild
- * per-row controls (see `applyRows()`'s pristine-per-row patch below).
+ * own `PATCH .../cargo-capacity` (row-level, not a form-wide submit), so
+ * per-row state (input text, validation error, in-flight save) is plain
+ * component state keyed by vehicle-type id rather than a FormArray —
+ * sidesteps the debounced-store-round-trip-orphans-FormArray-controls
+ * gotcha entirely, since a background `store.refresh()`/`store.mutate()`
+ * never has to reconcile/rebuild per-row controls (see `applyLocalization()`'s
+ * pristine-per-row patch below).
  */
 @Component({
   selector: 'app-cargo-capacity-page',
@@ -139,21 +139,31 @@ export class CargoCapacityPageComponent implements OnInit, OnDestroy {
 
     this.savingIds = { ...this.savingIds, [row.id]: true };
     try {
-      // Full-replace PUT hazard: build the payload from the freshly-fetched
-      // DETAIL response, never the list row — see toUpdateVehicleTypePayload.
-      const detailResponse = await firstValueFrom(this.adminApiService.getVehicleTypeById(row.id));
-      const detail = detailResponse?.data;
-      if (!detail) {
-        throw new Error('Vehicle type not found');
-      }
-
-      const payload = toUpdateVehicleTypePayload(detail, value);
-      await firstValueFrom(this.adminApiService.updateVehicleType(row.id, payload));
+      // OBRS-508: the PATCH touches only cargo_capacity_kg and echoes back
+      // the untouched seatMaps/translations/slug/totalSeats/status alongside
+      // the newly-saved value — no getVehicleTypeById pre-fetch needed.
+      const response = await firstValueFrom(
+        this.adminApiService.updateVehicleTypeCargoCapacity(row.id, { cargoCapacityKg: value })
+      );
+      const updated = response?.data;
 
       this.touchedIds.delete(row.id);
       this.errorCodes[row.id] = null;
+
+      if (updated) {
+        // Patch the cached list from the response immediately (same
+        // optimistic-then-authoritative intent as AdminCollectionStore.mutate's
+        // other callers) — applyLocalization() re-derives this row's display
+        // value and input text from the fresh data via the store.data$
+        // subscription this triggers.
+        this.store.mutate((data) => ({
+          vehicleTypes: data.vehicleTypes.map((vehicleType) =>
+            vehicleType.id === row.id ? { ...vehicleType, ...updated } : vehicleType
+          ),
+        }));
+      }
+
       await this.alertService.success(this.translate.instant('ADMIN.MESSAGES.UPDATED'));
-      await this.store.refresh();
     } catch (error) {
       const message =
         extractApiErrorMessage(error) || this.translate.instant('ADMIN.MESSAGES.SAVE_FAILED');

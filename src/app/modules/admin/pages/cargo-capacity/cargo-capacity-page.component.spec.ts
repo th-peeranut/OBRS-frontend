@@ -22,6 +22,13 @@ function makeStoreStub() {
     refreshing$: new BehaviorSubject<boolean>(false),
     error$: new BehaviorSubject<boolean>(false),
     refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
+    mutate: jasmine.createSpy('mutate').and.callFake(
+      (transform: (current: { vehicleTypes: AdminVehicleTypeDto[] }) => { vehicleTypes: AdminVehicleTypeDto[] }) => {
+        if (data$.value !== null) {
+          data$.next(transform(data$.value));
+        }
+      }
+    ),
     get hasValue() {
       return data$.value !== null;
     },
@@ -97,8 +104,8 @@ describe('CargoCapacityPageComponent', () => {
   });
 
   it('saveRow() rejects an invalid value without calling the API', async () => {
-    const getVehicleTypeById = jasmine.createSpy('getVehicleTypeById');
-    const { component, store } = makeComponent({ getVehicleTypeById });
+    const updateVehicleTypeCargoCapacity = jasmine.createSpy('updateVehicleTypeCargoCapacity');
+    const { component, store } = makeComponent({ updateVehicleTypeCargoCapacity });
     component.ngOnInit();
     store.data$.next({ vehicleTypes: [vehicleType()] });
     const row = component.rows[0];
@@ -106,23 +113,28 @@ describe('CargoCapacityPageComponent', () => {
     component.onInputChange(row, 'abc');
     await component.saveRow(row);
 
-    expect(getVehicleTypeById).not.toHaveBeenCalled();
+    expect(updateVehicleTypeCargoCapacity).not.toHaveBeenCalled();
     expect(component.rowErrorKey(row)).toBe('ADMIN.VALIDATION.CARGO_CAPACITY_INVALID');
   });
 
-  it('saveRow() fetches the full detail, patches only cargoCapacityKg, and forwards every other field', async () => {
-    const detail = vehicleType({
+  it('saveRow() sends ONLY cargoCapacityKg — no getVehicleTypeById pre-fetch, no other field in the body', async () => {
+    const updated = vehicleType({
+      cargoCapacityKg: 350,
+      // Untouched fields the PATCH response echoes back — proves the save
+      // path does not need/send them itself (the old full-replace PUT hazard
+      // this endpoint replaces no longer applies).
       totalSeats: 21,
       translations: [{ locale: 'en', label: 'Minibus' }],
       seatMaps: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }] as any,
     });
-    const getVehicleTypeById = jasmine
-      .createSpy('getVehicleTypeById')
-      .and.returnValue(of({ code: 200, message: 'OK', data: detail }));
-    const updateVehicleType = jasmine
-      .createSpy('updateVehicleType')
-      .and.returnValue(of({ code: 200, message: 'OK', data: null }));
-    const { component, store, alert } = makeComponent({ getVehicleTypeById, updateVehicleType });
+    const getVehicleTypeById = jasmine.createSpy('getVehicleTypeById');
+    const updateVehicleTypeCargoCapacity = jasmine
+      .createSpy('updateVehicleTypeCargoCapacity')
+      .and.returnValue(of({ code: 200, message: 'OK', data: updated }));
+    const { component, store, alert } = makeComponent({
+      getVehicleTypeById,
+      updateVehicleTypeCargoCapacity,
+    });
     component.ngOnInit();
     store.data$.next({ vehicleTypes: [vehicleType()] });
     const row = component.rows[0];
@@ -130,25 +142,23 @@ describe('CargoCapacityPageComponent', () => {
     component.onInputChange(row, '350');
     await component.saveRow(row);
 
-    expect(getVehicleTypeById).toHaveBeenCalledOnceWith(1);
-    expect(updateVehicleType).toHaveBeenCalledOnceWith(
-      1,
-      jasmine.objectContaining({
-        slug: 'minibus',
-        totalSeat: 21,
-        cargoCapacityKg: 350,
-        seats: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }],
-      })
-    );
+    expect(getVehicleTypeById).not.toHaveBeenCalled();
+    expect(updateVehicleTypeCargoCapacity).toHaveBeenCalledOnceWith(1, { cargoCapacityKg: 350 });
+    expect(Object.keys(updateVehicleTypeCargoCapacity.calls.argsFor(0)[1])).toEqual([
+      'cargoCapacityKg',
+    ]);
     expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.UPDATED');
-    expect(store.refresh).toHaveBeenCalledTimes(2); // once on init, once after save
+    // No background store.refresh() needed — the response IS the fresh row.
+    expect(store.refresh).toHaveBeenCalledTimes(1); // only the initial load
+    expect(store.mutate).toHaveBeenCalledTimes(1);
+    expect(component.inputValue(component.rows[0])).toBe('350');
   });
 
   it('saveRow() shows an error alert and keeps the draft value on failure', async () => {
-    const getVehicleTypeById = jasmine
-      .createSpy('getVehicleTypeById')
+    const updateVehicleTypeCargoCapacity = jasmine
+      .createSpy('updateVehicleTypeCargoCapacity')
       .and.returnValue(throwError(() => new Error('boom')));
-    const { component, store, alert } = makeComponent({ getVehicleTypeById });
+    const { component, store, alert } = makeComponent({ updateVehicleTypeCargoCapacity });
     component.ngOnInit();
     store.data$.next({ vehicleTypes: [vehicleType()] });
     const row = component.rows[0];
@@ -159,5 +169,6 @@ describe('CargoCapacityPageComponent', () => {
     expect(alert.error).toHaveBeenCalled();
     expect(component.inputValue(component.rows[0])).toBe('350');
     expect(component.isRowSaving(row)).toBeFalse();
+    expect(store.mutate).not.toHaveBeenCalled();
   });
 });

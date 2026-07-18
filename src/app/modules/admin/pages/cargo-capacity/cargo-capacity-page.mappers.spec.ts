@@ -3,7 +3,6 @@ import {
   formatCargoCapacityInputValue,
   toCargoCapacityRow,
   toCargoCapacityRows,
-  toUpdateVehicleTypePayload,
 } from './cargo-capacity-page.mappers';
 
 function vehicleType(overrides: Partial<AdminVehicleTypeDto> = {}): AdminVehicleTypeDto {
@@ -66,46 +65,5 @@ describe('formatCargoCapacityInputValue', () => {
   it('renders a number as its string form', () => {
     expect(formatCargoCapacityInputValue(200)).toBe('200');
     expect(formatCargoCapacityInputValue(0.5)).toBe('0.5');
-  });
-});
-
-describe('toUpdateVehicleTypePayload', () => {
-  it('carries forward every existing field, changing only cargoCapacityKg', () => {
-    const detail = vehicleType({
-      seatMaps: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }] as unknown as AdminVehicleTypeDto['seatMaps'],
-    });
-
-    const payload = toUpdateVehicleTypePayload(detail, 350);
-
-    expect(payload).toEqual({
-      slug: 'minibus',
-      status: 'active',
-      totalSeat: 21,
-      translations: [
-        { locale: 'th', label: 'มินิบัส', description: '' },
-        { locale: 'en', label: 'Minibus', description: '' },
-        { locale: 'zh', label: '小巴', description: '' },
-      ],
-      seats: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }],
-      cargoCapacityKg: 350,
-    });
-  });
-
-  it('sends cargoCapacityKg as null when the admin clears the field', () => {
-    const payload = toUpdateVehicleTypePayload(vehicleType(), null);
-    expect(payload.cargoCapacityKg).toBeNull();
-  });
-
-  it('defaults totalSeat to 0 and seats to [] when the detail has neither', () => {
-    const detail = vehicleType({ totalSeats: undefined, seatMaps: undefined });
-    const payload = toUpdateVehicleTypePayload(detail, 100);
-
-    expect(payload.totalSeat).toBe(0);
-    expect(payload.seats).toEqual([]);
-  });
-
-  it('resolves a string status directly (no AdminStatusDto wrapper)', () => {
-    const payload = toUpdateVehicleTypePayload(vehicleType({ status: 'inactive' }), 100);
-    expect(payload.status).toBe('inactive');
   });
 });
