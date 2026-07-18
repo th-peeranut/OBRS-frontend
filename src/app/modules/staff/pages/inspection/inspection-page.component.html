@@ -1,0 +1,133 @@
+<!-- Title + subtitle are shown by the staff layout topbar (design-system §7). -->
+
+<!-- Error, no cache: reuse OBRS-209's full-section empty-state pattern + Retry. -->
+<div class="inspection-empty" *ngIf="!isLoading && itemsErrorMessage">
+  <span class="material-symbols-outlined" aria-hidden="true">error</span>
+  <p class="inspection-empty-title">{{ itemsErrorMessage }}</p>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="itemsStore.refresh()">
+    {{ 'STAFF.INSPECTION.RETRY' | translate }}
+  </button>
+</div>
+
+<!-- Empty (200 + [], or every item inactive): full-page blocking empty state, Submit hidden. -->
+<div class="inspection-empty" *ngIf="isEmpty">
+  <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+  <p class="inspection-empty-title">{{ 'STAFF.INSPECTION.EMPTY_TITLE' | translate }}</p>
+  <p class="inspection-empty-body">{{ 'STAFF.INSPECTION.EMPTY_BODY' | translate }}</p>
+</div>
+
+<form
+  class="inspection-form"
+  [formGroup]="form"
+  *ngIf="!itemsErrorMessage && !isEmpty"
+  (ngSubmit)="onSubmit()"
+>
+  <!-- Sticky top strip: vehicle + odometer + progress pill. -->
+  <div class="inspection-top-strip">
+    <div class="inspection-top-field">
+      <app-admin-dropdown
+        formControlName="vehicleId"
+        [options]="vehicleOptions"
+        valueKey="code"
+        labelKey="label"
+        [placeholder]="'STAFF.INSPECTION.VEHICLE_PLACEHOLDER' | translate"
+      ></app-admin-dropdown>
+    </div>
+    <div class="inspection-top-field">
+      <p-inputNumber
+        formControlName="odometerKm"
+        mode="decimal"
+        [min]="0"
+        [maxFractionDigits]="0"
+        [useGrouping]="true"
+        [placeholder]="'STAFF.INSPECTION.ODOMETER_PLACEHOLDER' | translate"
+        styleClass="w-100"
+        inputStyleClass="admin-field"
+      ></p-inputNumber>
+      <small class="admin-error" *ngIf="odometerServerError">{{ odometerServerError }}</small>
+    </div>
+    <div class="inspection-progress-pill" *ngIf="!isLoading">
+      {{ 'STAFF.INSPECTION.PROGRESS' | translate: { done: completedCount, total: totalCount } }}
+    </div>
+  </div>
+
+  <!-- Already-inspected-this-week hint: dismissible, non-blocking — the form
+       underneath stays fully usable, nothing is gated on it. -->
+  <div class="inspection-banner" *ngIf="showAlreadyInspectedBanner && !isBannerDismissed">
+    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+    <span class="inspection-banner-text">{{ 'STAFF.INSPECTION.ALREADY_INSPECTED_HINT' | translate }}</span>
+    <button
+      type="button"
+      class="inspection-banner-dismiss"
+      [attr.aria-label]="'COMMON.DISMISS' | translate"
+      (click)="dismissBanner()"
+    >
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </div>
+
+  <!-- Loading: 6 skeleton cards matching the real row's visual weight. -->
+  <ng-container *ngIf="isLoading">
+    <div class="inspection-row inspection-row--skeleton" *ngFor="let skeleton of skeletonRows">
+      <span class="admin-skeleton"></span>
+      <span class="admin-skeleton admin-skeleton--pill"></span>
+    </div>
+  </ng-container>
+
+  <!-- One card row per checklist item — not a dense table, illegible at phone width. -->
+  <div
+    class="inspection-item-list"
+    *ngIf="!isLoading"
+    formArrayName="items"
+  >
+    <div
+      class="inspection-row"
+      *ngFor="let row of itemRows; let i = index; trackBy: trackByItemId"
+      [formGroupName]="i"
+      [id]="'inspection-row-' + row.itemId"
+      [class.is-highlighted]="highlightedItemId === row.itemId"
+    >
+      <div class="inspection-row-label">{{ row.label }}</div>
+
+      <p-selectButton
+        formControlName="verdict"
+        [options]="verdictOptions"
+        optionLabel="label"
+        optionValue="value"
+        [allowEmpty]="true"
+        styleClass="inspection-verdict-toggle"
+      ></p-selectButton>
+
+      <div class="inspection-row-note" *ngIf="verdictAt(i) === 'needs_repair'">
+        <textarea
+          class="admin-field"
+          formControlName="note"
+          rows="2"
+          [placeholder]="'STAFF.INSPECTION.NOTE_PLACEHOLDER' | translate"
+        ></textarea>
+        <small class="admin-error" *ngIf="isNoteInvalid(i)">
+          {{ 'STAFF.INSPECTION.VALIDATION_NOTE_REQUIRED' | translate }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+  <!-- Optional whole-inspection notes. -->
+  <div class="inspection-general-notes" *ngIf="!isLoading">
+    <label class="admin-form-label">{{ 'STAFF.INSPECTION.GENERAL_NOTES_LABEL' | translate }}</label>
+    <textarea
+      class="admin-field"
+      formControlName="notes"
+      rows="2"
+      [placeholder]="'STAFF.INSPECTION.GENERAL_NOTES_PLACEHOLDER' | translate"
+    ></textarea>
+  </div>
+
+  <!-- Sticky bottom bar: single primary Submit — always reachable. Never
+       disabled for incompleteness, only while actually submitting. -->
+  <div class="inspection-bottom-bar" *ngIf="!isLoading">
+    <button type="submit" class="admin-btn admin-btn-primary inspection-submit-btn" [disabled]="isSubmitting">
+      {{ isSubmitting ? ('STAFF.INSPECTION.SUBMITTING' | translate) : ('STAFF.INSPECTION.SUBMIT' | translate) }}
+    </button>
+  </div>
+</form>

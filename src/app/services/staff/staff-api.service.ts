@@ -312,6 +312,64 @@ export interface BoardingListItemDto {
   childFareFlaggedByName?: string;
 }
 
+// ---------------------------------------------------------------------------
+// OBRS-312 — digital weekly vehicle inspection checklist (driver-facing calls).
+// ---------------------------------------------------------------------------
+
+/** GET /api/private/vehicle-inspection-items — the 23-item master checklist,
+ * `label` already resolved to the request locale by the backend and ordered
+ * by `displayOrder`. These labels are data, NOT i18n keys — never hardcode or
+ * mirror them into the locale bundles. */
+export interface VehicleInspectionItemDto {
+  id: number;
+  code: string;
+  label: string;
+  displayOrder: number;
+  active: boolean;
+}
+
+/** GET /api/private/vehicles/inspectable — the whole active fleet (any
+ * driver may cover any van); deliberately NOT derived from
+ * `DriverSchedulesStore`/assigned schedules, which an ad-hoc cover driver
+ * has none of for the van they're inspecting. */
+export interface InspectableVehicleDto {
+  id: number;
+  label: string;
+}
+
+export type InspectionVerdict = 'ok' | 'needs_repair';
+
+export interface InspectionItemSubmission {
+  itemId: number;
+  verdict: InspectionVerdict;
+  /** Always a string, never null/undefined on the wire — '' for an untouched/OK row. */
+  note: string;
+}
+
+export interface SubmitVehicleInspectionPayload {
+  odometerKm: number;
+  notes?: string;
+  items: InspectionItemSubmission[];
+}
+
+export interface SubmitVehicleInspectionRespDto {
+  inspectionId: number;
+  defectCount: number;
+}
+
+/** GET /api/private/inspections/me — the current driver's own inspections,
+ * newest first. Only `inspectedAt` is read today (the "already inspected
+ * this week" hint); the rest mirror the vehicle-scoped list item shape since
+ * both surface the same underlying record. */
+export interface MyInspectionDto {
+  id: number;
+  inspectedAt: string;
+  inspectedByName?: string;
+  odometerKm?: number;
+  defectCount?: number;
+  pendingMaintenance?: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StaffApiService {
   private readonly skipContext = new HttpContext()
@@ -633,6 +691,54 @@ export class StaffApiService {
       `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
       payload,
       { context: this.parcelActionContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-312 — digital weekly vehicle inspection checklist (driver-facing).
+  // ---------------------------------------------------------------------------
+
+  /** GET /api/private/vehicle-inspection-items — populates the form; not
+   * cached with `skipContext` suppressed error alerting since the page owns
+   * its own empty/error states. */
+  getInspectionItems(): Observable<ResponseAPI<VehicleInspectionItemDto[]>> {
+    return this.http.get<ResponseAPI<VehicleInspectionItemDto[]>>(
+      `${environment.apiUrl}/api/private/vehicle-inspection-items`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** GET /api/private/vehicles/inspectable — the vehicle picker source. */
+  getInspectableVehicles(): Observable<ResponseAPI<InspectableVehicleDto[]>> {
+    return this.http.get<ResponseAPI<InspectableVehicleDto[]>>(
+      `${environment.apiUrl}/api/private/vehicles/inspectable`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** POST /api/private/vehicles/{vehicleId}/inspections. Reuses
+   * `boardingScanContext` — a domain 4xx (INSPECTION_ITEMS_INCOMPLETE /
+   * INSPECTION_NOTE_REQUIRED / INSPECTION_ITEM_INACTIVE /
+   * ODOMETER_BELOW_LAST_RECORDED) must never force-logout the operator nor
+   * duplicate a global alert (OBRS-187 trap) — the component owns its own
+   * non-destructive error handling (see `vehicle-inspection-error.ts`). */
+  submitVehicleInspection(
+    vehicleId: number,
+    payload: SubmitVehicleInspectionPayload
+  ): Observable<ResponseAPI<SubmitVehicleInspectionRespDto>> {
+    return this.http.post<ResponseAPI<SubmitVehicleInspectionRespDto>>(
+      `${environment.apiUrl}/api/private/vehicles/${vehicleId}/inspections`,
+      payload,
+      { context: this.boardingScanContext }
+    );
+  }
+
+  /** GET /api/private/inspections/me — drives the "already inspected this
+   * week" hint banner. */
+  getMyInspections(): Observable<ResponseAPI<MyInspectionDto[]>> {
+    return this.http.get<ResponseAPI<MyInspectionDto[]>>(
+      `${environment.apiUrl}/api/private/inspections/me`,
+      { context: this.skipContext }
     );
   }
 }

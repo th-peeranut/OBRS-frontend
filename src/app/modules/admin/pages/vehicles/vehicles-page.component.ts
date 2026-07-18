@@ -62,7 +62,9 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   // OBRS-209: Maintenance tab — the tab bar mirrors SchedulesPageComponent's
   // pattern (set/schedule tabs). "Maintenance" starts disabled until a
   // vehicle row's "Manage maintenance" action focuses one.
-  protected activeTab: 'list' | 'maintenance' = 'list';
+  // OBRS-312: "Inspections" is a third tab reusing the SAME focusedVehicle
+  // mechanic — both non-'list' tabs stay disabled until a vehicle is focused.
+  protected activeTab: 'list' | 'maintenance' | 'inspections' = 'list';
   protected focusedVehicle: VehicleRow | null = null;
   protected maintenanceStatusOptions: AdminLookupDto[] = [];
   // Write affordances on the maintenance panel (Add + modal Save) are
@@ -162,10 +164,10 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
     this.applyVehicleFilter();
   }
 
-  protected setActiveTab(tab: 'list' | 'maintenance'): void {
-    // The Maintenance tab is disabled (visible, not hidden) until a vehicle
-    // is focused via the per-row "Manage maintenance" action.
-    if (tab === 'maintenance' && !this.focusedVehicle) {
+  protected setActiveTab(tab: 'list' | 'maintenance' | 'inspections'): void {
+    // Maintenance/Inspections are disabled (visible, not hidden) until a
+    // vehicle is focused via a per-row action.
+    if (tab !== 'list' && !this.focusedVehicle) {
       return;
     }
     this.activeTab = tab;
@@ -176,6 +178,13 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   protected viewMaintenanceForVehicle(vehicle: VehicleRow): void {
     this.focusedVehicle = vehicle;
     this.activeTab = 'maintenance';
+  }
+
+  // OBRS-312: per-row "View inspections" action, reusing the same
+  // focusedVehicle mechanic as viewMaintenanceForVehicle above.
+  protected viewInspectionsForVehicle(vehicle: VehicleRow): void {
+    this.focusedVehicle = vehicle;
+    this.activeTab = 'inspections';
   }
 
   protected clearFocusedVehicle(): void {

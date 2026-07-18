@@ -1,0 +1,122 @@
+:host {
+  display: block;
+}
+
+/* design-system §11 empty-state pattern (OBRS-209 precedent): replaces the
+ * whole table section, themed only via --admin-muted/--admin-text — no raw
+ * hex, themes for free in dark mode. */
+.vehicle-inspection-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.vehicle-inspection-empty-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-row {
+  cursor: pointer;
+}
+
+// The pending-filter toggle button — a filter control, not "the one main
+// action of the screen" (§4), so it stays a plain admin-btn with only an
+// active-state accent, never admin-btn-primary. Reads the runtime --accent*
+// vars (theme-safe, no raw hex) — appropriate here since this is an ordinary
+// interactive affordance, not a status/state chip (§11's fixed-token rule
+// only applies to those).
+.admin-btn.is-active {
+  background: var(--accent-soft, var(--accent));
+  border-color: var(--accent-strong, var(--accent));
+  color: var(--accent-strong, var(--accent));
+}
+
+.vehicle-inspection-detail-header {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px 16px;
+  margin: 12px 0;
+}
+
+.vehicle-inspection-detail-header dt {
+  margin: 0;
+  font-size: 12px;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-detail-header dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.vehicle-inspection-detail-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-detail-loading .spin {
+  animation: vehicle-inspection-spin 1s linear infinite;
+}
+
+@keyframes vehicle-inspection-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.vehicle-inspection-detail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.vehicle-inspection-detail-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--admin-surface-soft);
+}
+
+.vehicle-inspection-detail-item-label {
+  flex: 1 1 auto;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.vehicle-inspection-detail-item-note {
+  flex: 1 1 100%;
+  font-size: 13px;
+  color: var(--admin-muted);
+}

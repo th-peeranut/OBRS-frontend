@@ -46,6 +46,14 @@
                 <button
                   type="button"
                   class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.VEHICLES.INSPECTION.VIEW_ACTION' | translate"
+                  (click)="viewInspections.emit(vehicle)"
+                >
+                  <span class="material-symbols-outlined">checklist</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
                   [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
                   (click)="edit.emit(vehicle)"
                 >

@@ -35,6 +35,19 @@
     <span class="material-symbols-outlined">build</span>
     <span>{{ 'ADMIN.VEHICLES.MAINTENANCE.TAB' | translate }}</span>
   </button>
+  <button
+    type="button"
+    class="schedule-tab"
+    role="tab"
+    [class.is-active]="activeTab === 'inspections'"
+    [attr.aria-selected]="activeTab === 'inspections'"
+    [disabled]="!focusedVehicle"
+    [attr.title]="!focusedVehicle ? ('ADMIN.VEHICLES.INSPECTION.TAB_DISABLED_HINT' | translate) : null"
+    (click)="setActiveTab('inspections')"
+  >
+    <span class="material-symbols-outlined">checklist</span>
+    <span>{{ 'ADMIN.VEHICLES.INSPECTION.TAB' | translate }}</span>
+  </button>
 </nav>
 
 <ng-container *ngIf="activeTab === 'list'">
@@ -82,6 +95,7 @@
   (edit)="openEditModal($event)"
   (delete)="openDeleteModal($event)"
   (manageMaintenance)="viewMaintenanceForVehicle($event)"
+  (viewInspections)="viewInspectionsForVehicle($event)"
 ></app-vehicle-list-table>
 </ng-container>
 
@@ -100,6 +114,21 @@
     [canWrite]="canWriteMaintenance"
     [statusOptions]="maintenanceStatusOptions"
   ></app-vehicle-maintenance-panel>
+</ng-container>
+
+<ng-container *ngIf="activeTab === 'inspections' && focusedVehicle">
+  <div class="schedule-focus-banner">
+    <span class="material-symbols-outlined">directions_bus</span>
+    <span>{{ 'ADMIN.VEHICLES.INSPECTION.FOCUSED_BANNER' | translate: { vehicle: focusedVehicle.vehicleNumber } }}</span>
+    <button type="button" class="schedule-focus-clear" (click)="clearFocusedVehicle()">
+      {{ 'ADMIN.VEHICLES.MAINTENANCE.FOCUSED_CLEAR' | translate }}
+    </button>
+  </div>
+
+  <app-vehicle-inspection-panel
+    [vehicleId]="focusedVehicle.id"
+    [vehicleLabel]="focusedVehicle.vehicleNumber"
+  ></app-vehicle-inspection-panel>
 </ng-container>
 
 <app-vehicle-form-modal

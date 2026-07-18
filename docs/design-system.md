@@ -491,6 +491,37 @@ enforced rule with a test behind it.
   idiom for the next customer-shell surface that needs a staff/admin status
   chip rather than duplicating the token values into a new class name.
 
+- **Phone-first sticky top/bottom bars around a scrollable `FormArray`** (OBRS-312,
+  `InspectionPageComponent`): the driver weekly inspection form has no desktop
+  precedent to follow — 23 rows scrolling under a phone viewport (375–414px) needed
+  the vehicle/odometer/progress context and the single Submit action to survive the
+  scroll. `position: sticky` (not `fixed`, so it stays inside the shell's own scroll
+  container) on a `top: 0` strip and a `bottom: 0` bar, both on `--admin-surface-card`
+  (the card token — `--admin-surface`, the page-bg token, would blend into the
+  background instead of reading as chrome). Each row carries `scroll-margin-top`
+  matching the top strip's height so the incomplete-row `scrollIntoView()` highlight
+  doesn't tuck the target under the sticky strip. Reuse this pattern for the next
+  phone-first data-entry form with a long list and one persistent primary action.
+  The verdict toggle inside it (`p-selectButton`, 2-segment OK/Needs-repair) is the
+  one net-new visual — themed against the EXISTING `--admin-success-*`/
+  `--admin-danger-*` status tokens (§2.4), never the runtime `--accent*` (which
+  resolves to the staff shell's teal-green and would read "selected" as brand color
+  rather than a verdict). See
+  `docs/adr/0023-weekly-vehicle-inspection-mobile-form-and-switchable-window-filter.md`.
+
+- **Switchable time-window filter, not a hard query bound** (OBRS-312,
+  `AppVehicleInspectionPanelComponent`'s pending-review filter): the owner
+  inspection-history tab defaults to the current + previous Bangkok ISO week
+  (`isWithinRecentIsoWeeksBangkok`, `shared/lib/inspection-week.ts`) with a
+  client-side "Show all" toggle removing the window entirely — deliberately never a
+  hard-bound backend query param. A rejected defect (owner decided it's not worth
+  repairing) writes nothing, so it stays flagged pending forever, identically to a
+  genuinely ignored one; the 2-week default lets the rejected case age out of the
+  everyday view while "Show all" still surfaces the ignored one. A hard-bound query
+  would make both cases disappear identically, defeating the indicator's purpose.
+  Reuse this switchable-filter shape (not a query-param window) for the next
+  "pending forever unless acted on" indicator.
+
 - **CDK Portal print isolation reused for a second surface** (OBRS-305,
   `ParcelWaybillPageComponent.printWaybill()`): the exact
   `docs/adr/0015-boarding-manifest-print-isolation.md` recipe

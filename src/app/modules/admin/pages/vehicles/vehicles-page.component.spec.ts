@@ -156,6 +156,25 @@ describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {
     expect((component as any).activeTab).toBe('list');
   });
 
+  // OBRS-312: a third "Inspections" tab reusing the same focusedVehicle mechanic.
+  it('setActiveTab("inspections") is a no-op until a vehicle is focused (tab stays disabled)', () => {
+    const component = makeComponent(makeStoreStub(null));
+
+    (component as any).setActiveTab('inspections');
+
+    expect((component as any).activeTab).toBe('list');
+  });
+
+  it('viewInspectionsForVehicle() focuses the vehicle and switches to the inspections tab', () => {
+    const component = makeComponent(makeStoreStub(null));
+    const vehicle = { ...VEHICLE_ROW };
+
+    (component as any).viewInspectionsForVehicle(vehicle);
+
+    expect((component as any).focusedVehicle).toBe(vehicle);
+    expect((component as any).activeTab).toBe('inspections');
+  });
+
   it('canWriteMaintenance reflects authService.hasAnyRole(["owner"]) (admin inherits via ROLE_GRANTS)', () => {
     const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
     const authService = makeAuthServiceStub(true);
@@ -322,21 +341,24 @@ describe('VehiclesPageComponent template wiring to child components', () => {
     expect(modal.properties['reloadStructure']).toBe((component as any).reloadStructureBound);
   });
 
-  it('delegates (edit)/(delete)/(manageMaintenance) from the list table to the existing handlers', () => {
+  it('delegates (edit)/(delete)/(manageMaintenance)/(viewInspections) from the list table to the existing handlers', () => {
     fixture.detectChanges();
     spyOn(component as any, 'openEditModal');
     spyOn(component as any, 'openDeleteModal');
     spyOn(component as any, 'viewMaintenanceForVehicle');
+    spyOn(component as any, 'viewInspectionsForVehicle');
 
     const table = fixture.debugElement.query(By.css('app-vehicle-list-table'));
     const row = { id: 2, vehicleNumber: 'V2' };
     table.triggerEventHandler('edit', row);
     table.triggerEventHandler('delete', row);
     table.triggerEventHandler('manageMaintenance', row);
+    table.triggerEventHandler('viewInspections', row);
 
     expect((component as any).openEditModal).toHaveBeenCalledWith(row);
     expect((component as any).openDeleteModal).toHaveBeenCalledWith(row);
     expect((component as any).viewMaintenanceForVehicle).toHaveBeenCalledWith(row);
+    expect((component as any).viewInspectionsForVehicle).toHaveBeenCalledWith(row);
   });
 
   it('delegates (closed) from the form modal to onFormModalClosed', () => {

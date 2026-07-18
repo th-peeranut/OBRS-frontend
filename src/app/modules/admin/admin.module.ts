@@ -39,6 +39,7 @@ import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
 import { AppVehicleMaintenancePanelComponent } from './pages/vehicles/vehicle-maintenance/vehicle-maintenance-panel.component';
+import { AppVehicleInspectionPanelComponent } from './pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component';
 import { SettlementsPageComponent } from './pages/settlements/settlements-page.component';
 import { SettlementsListComponent } from './pages/settlements/settlements-list/settlements-list.component';
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
@@ -231,6 +232,7 @@ const routes: Routes = [
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
     AppVehicleMaintenancePanelComponent,
+    AppVehicleInspectionPanelComponent,
     SettlementsPageComponent,
     SettlementsListComponent,
     SettlementDetailModalComponent,

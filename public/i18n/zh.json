@@ -441,7 +441,8 @@
       "CANCEL_TRIP_NO_REFUND_BODY": "行程将被取消，不会产生退款。",
       "CANCEL_TRIP_BTN": "取消行程",
       "SCHEDULE_CANCELLED": "行程已成功取消。受影响的预订：{{count}} 个。",
-      "CANCEL_FAILED": "无法取消行程。"
+      "CANCEL_FAILED": "无法取消行程。",
+      "LOAD_INSPECTIONS_FAILED": "加载检查历史失败。"
     },
     "LOOKUP": {
       "TITLE": "查找设置",
@@ -643,6 +644,26 @@
         "DATE_RANGE_VALIDATION": "结束日期不能早于开始日期",
         "EMPTY_TITLE": "暂无维护记录",
         "EMPTY_BODY": "该车辆暂无维护记录，点击新增开始记录"
+      },
+      "INSPECTION": {
+        "TAB": "检查记录",
+        "TAB_DISABLED_HINT": "请先选择车辆",
+        "VIEW_ACTION": "查看检查记录",
+        "FOCUSED_BANNER": "正在查看 {{vehicle}} 的检查记录",
+        "TABLE_TITLE": "检查历史",
+        "INSPECTED_AT": "检查时间",
+        "INSPECTED_BY": "检查人",
+        "ODOMETER": "里程",
+        "ODOMETER_UNIT": "公里",
+        "DEFECTS": "问题数",
+        "PENDING": "待处理",
+        "PENDING_YES": "待处理",
+        "FILTER_SHOW_ALL": "显示全部",
+        "FILTER_SHOWING_ALL": "正在显示全部",
+        "EMPTY_TITLE": "暂无检查记录",
+        "EMPTY_BODY": "没有符合当前筛选条件的检查记录。",
+        "DETAIL_TITLE": "检查详情",
+        "DETAIL_LOAD_FAILED": "无法加载检查详情。"
       }
     },
     "ROUTES": {
@@ -1764,7 +1785,8 @@
       "BOARDING": "登车名单",
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_WAYBILL": "运单",
-      "PARCEL_DELIVERY": "包裹配送"
+      "PARCEL_DELIVERY": "包裹配送",
+      "INSPECTION": "车辆检查"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -1788,7 +1810,8 @@
       "SELL": "现场售票",
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
-      "BOARDING": "登车名单"
+      "BOARDING": "登车名单",
+      "INSPECTION": "车辆检查"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "无法加载登车名单。",
@@ -2272,6 +2295,36 @@
         "REJECTED": "已拒收",
         "CREATED": "已申报 — 尚未到柜台",
         "UNKNOWN": "未知状态"
+      }
+    },
+    "INSPECTION": {
+      "SUBTITLE": "每周车辆安全检查表",
+      "VEHICLE_PLACEHOLDER": "车辆",
+      "ODOMETER_PLACEHOLDER": "里程表 (公里)",
+      "PROGRESS": "已检查 {{done}} / {{total}}",
+      "GENERAL_NOTES_LABEL": "其他备注（可选）",
+      "GENERAL_NOTES_PLACEHOLDER": "本次检查的其他备注",
+      "NOTE_PLACEHOLDER": "描述问题（必填）",
+      "VERDICT_OK": "正常",
+      "VERDICT_NEEDS_REPAIR": "需要维修",
+      "ALREADY_INSPECTED_HINT": "您本周已提交过这辆车的检查记录。",
+      "SUBMIT": "提交检查",
+      "SUBMITTING": "提交中…",
+      "RETRY": "重试",
+      "LOAD_FAILED": "无法加载检查清单。",
+      "EMPTY_TITLE": "尚未配置检查项目",
+      "EMPTY_BODY": "请联系管理员设置检查清单。",
+      "VALIDATION_INCOMPLETE": "请在提交前为每个项目填写检查结果。",
+      "VALIDATION_NOTE_REQUIRED": "请为每个标记为\"需要维修\"的项目填写说明。",
+      "SUCCESS_NO_DEFECTS": "检查已提交 — 未发现问题。",
+      "SUCCESS_WITH_DEFECTS": "发现 {{count}} 个需要维修的项目，车主已收到通知。",
+      "ERROR": {
+        "ITEMS_INCOMPLETE": "请完成所有检查项目。",
+        "NOTE_REQUIRED": "请为每个需要维修的项目填写备注。",
+        "ITEM_INACTIVE": "检查项目已更改，请检查您的填写内容后重新提交。",
+        "ODOMETER_BELOW_LAST_RECORDED": "里程读数低于上次记录的数值。",
+        "ACTION_UNAVAILABLE": "暂时无法提交检查，请重试。",
+        "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后重试。"
       }
     }
   },

@@ -98,26 +98,30 @@ describe('VehicleListTableComponent (template)', () => {
     expect(footer.nativeElement.textContent).toContain('5');
   });
 
-  it('emits edit/delete/manageMaintenance with the vehicle row on each action button click', () => {
+  it('emits edit/delete/manageMaintenance/viewInspections with the vehicle row on each action button click', () => {
     component.isLoading = false;
     const row = makeRow();
     component.rows = [row];
     fixture.detectChanges();
 
     const manageMaintenanceSpy = jasmine.createSpy('manageMaintenance');
+    const viewInspectionsSpy = jasmine.createSpy('viewInspections');
     const editSpy = jasmine.createSpy('edit');
     const deleteSpy = jasmine.createSpy('delete');
     component.manageMaintenance.subscribe(manageMaintenanceSpy);
+    component.viewInspections.subscribe(viewInspectionsSpy);
     component.edit.subscribe(editSpy);
     component.delete.subscribe(deleteSpy);
 
     const buttons = fixture.debugElement.queryAll(By.css('tbody .admin-icon-btn'));
-    expect(buttons.length).toBe(3);
+    expect(buttons.length).toBe(4);
     buttons[0].nativeElement.click(); // manage maintenance
-    buttons[1].nativeElement.click(); // edit
-    buttons[2].nativeElement.click(); // delete
+    buttons[1].nativeElement.click(); // view inspections
+    buttons[2].nativeElement.click(); // edit
+    buttons[3].nativeElement.click(); // delete
 
     expect(manageMaintenanceSpy).toHaveBeenCalledWith(row);
+    expect(viewInspectionsSpy).toHaveBeenCalledWith(row);
     expect(editSpy).toHaveBeenCalledWith(row);
     expect(deleteSpy).toHaveBeenCalledWith(row);
   });

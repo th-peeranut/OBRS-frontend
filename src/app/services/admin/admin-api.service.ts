@@ -154,6 +154,37 @@ export interface AdminVehicleMaintenanceDto {
   updatedAt?: string;
 }
 
+/** OBRS-312: `GET /api/private/vehicles/{vehicleId}/inspections` list-row
+ * shape (owner/admin read-only history), newest first. `pendingMaintenance`
+ * drives the row's pending-review indicator and the default 2-week filter —
+ * see `vehicle-inspection.mappers.ts`. */
+export interface VehicleInspectionListItemDto {
+  id: number;
+  inspectedAt: string;
+  inspectedByName: string;
+  odometerKm: number;
+  defectCount: number;
+  pendingMaintenance: boolean;
+}
+
+/** OBRS-312: one checklist row in `GET
+ * /api/private/vehicles/{vehicleId}/inspections/{id}`, ordered by
+ * `displayOrder`. `itemLabelSnapshot` is the label AS INSPECTED (immutable
+ * history) — distinct from `VehicleInspectionItemDto.label`, which reflects
+ * the master list's CURRENT label and may have since changed/been retired. */
+export interface VehicleInspectionDetailItemDto {
+  itemId: number;
+  itemLabelSnapshot: string;
+  verdict: 'ok' | 'needs_repair';
+  note: string;
+}
+
+/** OBRS-312: `GET /api/private/vehicles/{vehicleId}/inspections/{id}` —
+ * the list-row header fields plus the ordered checklist. */
+export interface VehicleInspectionDetailDto extends VehicleInspectionListItemDto {
+  items: VehicleInspectionDetailItemDto[];
+}
+
 export interface AdminRouteDto {
   id: number;
   slug: string;
@@ -903,6 +934,25 @@ export class AdminApiService {
     return this.putRequest<unknown>(
       `${this.baseUrl}/private/vehicles/${vehicleId}/maintenance/${id}`,
       payload
+    );
+  }
+
+  // OBRS-312: owner/admin read-only inspection history — no create/update/delete,
+  // inspections are immutable and only drivers create them (StaffApiService).
+  getVehicleInspections(
+    vehicleId: number
+  ): Observable<ResponseAPI<VehicleInspectionListItemDto[]>> {
+    return this.getRequest<VehicleInspectionListItemDto[]>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/inspections`
+    );
+  }
+
+  getVehicleInspectionById(
+    vehicleId: number,
+    id: number
+  ): Observable<ResponseAPI<VehicleInspectionDetailDto>> {
+    return this.getRequest<VehicleInspectionDetailDto>(
+      `${this.baseUrl}/private/vehicles/${vehicleId}/inspections/${id}`
     );
   }
 

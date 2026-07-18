@@ -28,6 +28,7 @@ import { WalkInTripBrowserComponent } from './components/walk-in-trip-browser/wa
 import { WalkInCenterPanelComponent } from './components/walk-in-center-panel/walk-in-center-panel.component';
 import { WalkInCheckoutComponent } from './components/walk-in-checkout/walk-in-checkout.component';
 import { TripDetailsEditFormComponent } from './components/trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
+import { InspectionPageComponent } from './pages/inspection/inspection-page.component';
 
 // OBRS-305 Card 2 — parcel consigned intake + delivery handoff (staff-facing).
 import { ParcelConsignPageComponent } from './pages/parcel-consign/parcel-consign-page.component';
@@ -95,6 +96,14 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.BOARDING', subtitleKey: 'STAFF.BOARDING.SUBTITLE' },
       },
+      {
+        // OBRS-312: digital weekly vehicle inspection checklist — driver-only,
+        // sibling of 'driver'/'boarding/:scheduleId' above.
+        path: 'inspection',
+        component: InspectionPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver'], titleKey: 'STAFF.PAGES.INSPECTION', subtitleKey: 'STAFF.INSPECTION.SUBTITLE' },
+      },
       // OBRS-305 Card 2 — parcel consigned intake + delivery handoff.
       {
         path: 'parcels/consign',
@@ -137,6 +146,7 @@ export const staffRoutes: Routes = [
     WalkInCenterPanelComponent,
     WalkInCheckoutComponent,
     TripDetailsEditFormComponent,
+    InspectionPageComponent,
     ParcelConsignPageComponent,
     ParcelConsignFormComponent,
     ParcelIntakeResultPanelComponent,

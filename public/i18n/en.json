@@ -441,7 +441,8 @@
       "CANCEL_TRIP_NO_REFUND_BODY": "The trip will be cancelled. No refund will be issued.",
       "CANCEL_TRIP_BTN": "Cancel Trip",
       "SCHEDULE_CANCELLED": "Trip cancelled successfully. {{count}} booking(s) affected.",
-      "CANCEL_FAILED": "Unable to cancel the trip."
+      "CANCEL_FAILED": "Unable to cancel the trip.",
+      "LOAD_INSPECTIONS_FAILED": "Failed to load inspection history."
     },
     "LOOKUP": {
       "TITLE": "Lookup Settings",
@@ -643,6 +644,26 @@
         "DATE_RANGE_VALIDATION": "End date must be on or after the start date.",
         "EMPTY_TITLE": "No maintenance records yet",
         "EMPTY_BODY": "This vehicle has no maintenance history. Add one to get started."
+      },
+      "INSPECTION": {
+        "TAB": "Inspections",
+        "TAB_DISABLED_HINT": "Select a vehicle first",
+        "VIEW_ACTION": "View inspections",
+        "FOCUSED_BANNER": "Viewing inspections for {{vehicle}}",
+        "TABLE_TITLE": "Inspection history",
+        "INSPECTED_AT": "Inspected at",
+        "INSPECTED_BY": "Inspected by",
+        "ODOMETER": "Odometer",
+        "ODOMETER_UNIT": "km",
+        "DEFECTS": "Defects",
+        "PENDING": "Pending review",
+        "PENDING_YES": "Pending",
+        "FILTER_SHOW_ALL": "Show all",
+        "FILTER_SHOWING_ALL": "Showing all",
+        "EMPTY_TITLE": "No inspections recorded",
+        "EMPTY_BODY": "No inspections match the current filter for this vehicle.",
+        "DETAIL_TITLE": "Inspection detail",
+        "DETAIL_LOAD_FAILED": "Couldn't load the inspection detail."
       }
     },
     "ROUTES": {
@@ -1764,7 +1785,8 @@
       "BOARDING": "Boarding List",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_WAYBILL": "Waybill",
-      "PARCEL_DELIVERY": "Parcel Deliveries"
+      "PARCEL_DELIVERY": "Parcel Deliveries",
+      "INSPECTION": "Vehicle Inspection"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -1788,7 +1810,8 @@
       "SELL": "Walk-in Sales",
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
-      "BOARDING": "Boarding List"
+      "BOARDING": "Boarding List",
+      "INSPECTION": "Inspection"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
@@ -2272,6 +2295,36 @@
         "REJECTED": "Rejected",
         "CREATED": "Declared — not yet at counter",
         "UNKNOWN": "Unknown"
+      }
+    },
+    "INSPECTION": {
+      "SUBTITLE": "Weekly vehicle safety checklist",
+      "VEHICLE_PLACEHOLDER": "Vehicle",
+      "ODOMETER_PLACEHOLDER": "Odometer (km)",
+      "PROGRESS": "Checked {{done}} / {{total}}",
+      "GENERAL_NOTES_LABEL": "Additional notes (optional)",
+      "GENERAL_NOTES_PLACEHOLDER": "Anything else worth noting about this inspection",
+      "NOTE_PLACEHOLDER": "Describe the issue (required)",
+      "VERDICT_OK": "OK",
+      "VERDICT_NEEDS_REPAIR": "Needs repair",
+      "ALREADY_INSPECTED_HINT": "You've already submitted an inspection for this vehicle this week.",
+      "SUBMIT": "Submit inspection",
+      "SUBMITTING": "Submitting…",
+      "RETRY": "Retry",
+      "LOAD_FAILED": "Couldn't load the inspection checklist.",
+      "EMPTY_TITLE": "No inspection items configured",
+      "EMPTY_BODY": "Contact an administrator to set up the inspection checklist.",
+      "VALIDATION_INCOMPLETE": "Please give every item a verdict before submitting.",
+      "VALIDATION_NOTE_REQUIRED": "Please describe the issue for every item marked \"Needs repair\".",
+      "SUCCESS_NO_DEFECTS": "Inspection submitted — no defects found.",
+      "SUCCESS_WITH_DEFECTS": "Found {{count}} item(s) needing repair. The owner has been notified.",
+      "ERROR": {
+        "ITEMS_INCOMPLETE": "Please complete every checklist item.",
+        "NOTE_REQUIRED": "Please add a note for every item needing repair.",
+        "ITEM_INACTIVE": "One of the checklist items has changed — please review your entries and submit again.",
+        "ODOMETER_BELOW_LAST_RECORDED": "The odometer reading is lower than the last recorded value.",
+        "ACTION_UNAVAILABLE": "Couldn't submit the inspection right now. Please try again.",
+        "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
       }
     }
   },

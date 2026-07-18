@@ -53,7 +53,7 @@ The app has three shell identities (see `docs/design-system.md` §2.3). Feature 
 |---|---|
 | **Customer (B2C)** | `home`, `schedule-booking`, `review-schedule-booking`, `passenger-info`, `payment`, `e-ticket`, `my-bookings`, `how-to-book`, `business-policy`, `privacy-policy`, `refund-policy` |
 | **Admin** (`/admin`) | `admin` |
-| **Staff** (`/staff`) | `staff` (sell / schedules / driver / boarding) |
+| **Staff** (`/staff`) | `staff` (sell / schedules / driver / boarding / inspection) |
 | **Auth** (standalone pages) | `login`, `login-mobile`, `register`, `forget-password`, `otp-validate`, `verify-email` |
 
 Global NgRx slices live in `src/app/shared/stores/` (`booking`, `station`, `schedule-booking`, `schedule-filter`, `schedule-list`, `passenger-info`, plus root `app`); only `my-bookings` has a module-local store. For deeper structure and cross-file relationships, query the knowledge graph (`graphify query "..."` / `graphify-out/GRAPH_REPORT.md`) rather than maintaining a duplicate map here.

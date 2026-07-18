@@ -1,0 +1,149 @@
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.VEHICLES.INSPECTION.TABLE_TITLE' | translate }}</h4>
+    <button
+      type="button"
+      class="admin-btn"
+      [class.is-active]="showAll"
+      [attr.aria-pressed]="showAll"
+      (click)="toggleShowAll()"
+    >
+      <span class="material-symbols-outlined">filter_alt</span>
+      <span>{{ (showAll ? 'ADMIN.VEHICLES.INSPECTION.FILTER_SHOWING_ALL' : 'ADMIN.VEHICLES.INSPECTION.FILTER_SHOW_ALL') | translate }}</span>
+    </button>
+  </div>
+
+  <!-- Loading: skeleton rows while refreshing with no cached value. -->
+  <div class="admin-table-wrap mt-3" *ngIf="isLoading">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_AT' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_BY' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.ODOMETER' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.DEFECTS' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.PENDING' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+          <td><span class="admin-skeleton"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Error (no cached value): replaces the table, no toast. -->
+  <div class="vehicle-inspection-empty" *ngIf="!isLoading && errorMessage">
+    <span class="material-symbols-outlined" aria-hidden="true">error</span>
+    <p class="vehicle-inspection-empty-title">{{ errorMessage }}</p>
+  </div>
+
+  <!-- Empty (200 + [], or the window filter matches nothing): replaces the
+       whole table section, not a zero-row table under a banner. -->
+  <div class="vehicle-inspection-empty" *ngIf="isEmpty">
+    <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+    <p class="vehicle-inspection-empty-title">{{ 'ADMIN.VEHICLES.INSPECTION.EMPTY_TITLE' | translate }}</p>
+    <p class="vehicle-inspection-empty-body">{{ 'ADMIN.VEHICLES.INSPECTION.EMPTY_BODY' | translate }}</p>
+  </div>
+
+  <!-- Data table. Read-only — row click opens the detail modal; no
+       Add/Edit/Delete, inspections are immutable and only drivers create them. -->
+  <div class="admin-table-wrap mt-3" *ngIf="!isLoading && !errorMessage && filteredRows.length > 0">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_AT' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_BY' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.ODOMETER' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.DEFECTS' | translate }}</th>
+          <th>{{ 'ADMIN.VEHICLES.INSPECTION.PENDING' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          *ngFor="let row of filteredRows; let i = index; trackBy: trackById"
+          [class.zebra]="i % 2 === 1"
+          class="vehicle-inspection-row"
+          (click)="openDetail(row)"
+        >
+          <td class="admin-emphasis">{{ row.inspectedAtDisplay }}</td>
+          <td>{{ row.inspectedByName }}</td>
+          <td>{{ row.odometerKm | number }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="row.defectChipToken">{{ row.defectCount }}</span>
+          </td>
+          <td>
+            <span class="admin-status is-warning" *ngIf="row.pendingMaintenance">
+              {{ 'ADMIN.VEHICLES.INSPECTION.PENDING_YES' | translate }}
+            </span>
+            <span class="admin-muted" *ngIf="!row.pendingMaintenance">&mdash;</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- Read-only detail modal — opened optimistically with the row's summary
+     fields already in hand; a spinner covers only the items list. -->
+<div
+  class="admin-modal-backdrop"
+  *ngIf="isDetailModalOpen"
+  adminModalBackdrop
+  (dismiss)="closeDetailModal()"
+>
+  <div class="admin-modal" *ngIf="selectedRow as row">
+    <h4 class="admin-modal-title">{{ 'ADMIN.VEHICLES.INSPECTION.DETAIL_TITLE' | translate }}</h4>
+
+    <dl class="vehicle-inspection-detail-header">
+      <div>
+        <dt>{{ 'ADMIN.VEHICLES.TABLE_TITLE' | translate }}</dt>
+        <dd>{{ vehicleLabel }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_AT' | translate }}</dt>
+        <dd>{{ row.inspectedAtDisplay }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'ADMIN.VEHICLES.INSPECTION.INSPECTED_BY' | translate }}</dt>
+        <dd>{{ row.inspectedByName }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'ADMIN.VEHICLES.INSPECTION.ODOMETER' | translate }}</dt>
+        <dd>{{ row.odometerKm | number }} {{ 'ADMIN.VEHICLES.INSPECTION.ODOMETER_UNIT' | translate }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'ADMIN.VEHICLES.INSPECTION.DEFECTS' | translate }}</dt>
+        <dd><span class="admin-status" [ngClass]="row.defectChipToken">{{ row.defectCount }}</span></dd>
+      </div>
+    </dl>
+
+    <div class="vehicle-inspection-detail-loading" *ngIf="isDetailLoading">
+      <span class="material-symbols-outlined spin" aria-hidden="true">progress_activity</span>
+      <span>{{ 'ADMIN.COMMON.LOADING' | translate }}</span>
+    </div>
+
+    <p class="admin-error" *ngIf="!isDetailLoading && detailErrorMessage">{{ detailErrorMessage }}</p>
+
+    <ul class="vehicle-inspection-detail-list" *ngIf="!isDetailLoading && !detailErrorMessage">
+      <li class="vehicle-inspection-detail-item" *ngFor="let item of detailRows">
+        <span class="vehicle-inspection-detail-item-label">{{ item.itemLabelSnapshot }}</span>
+        <span class="admin-status" [ngClass]="item.verdictChipToken">
+          {{ (item.verdict === 'needs_repair' ? 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' : 'STAFF.INSPECTION.VERDICT_OK') | translate }}
+        </span>
+        <span class="vehicle-inspection-detail-item-note" *ngIf="item.note">{{ item.note }}</span>
+      </li>
+    </ul>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeDetailModal()">
+        {{ 'ADMIN.COMMON.CLOSE' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

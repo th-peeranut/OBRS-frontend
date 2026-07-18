@@ -31,6 +31,8 @@ export class VehicleListTableComponent {
   @Output() edit = new EventEmitter<VehicleRow>();
   @Output() delete = new EventEmitter<VehicleRow>();
   @Output() manageMaintenance = new EventEmitter<VehicleRow>();
+  // OBRS-312: row action opening the read-only inspection-history tab.
+  @Output() viewInspections = new EventEmitter<VehicleRow>();
 
   protected trackById(_index: number, item: VehicleRow): number {
     return item.id;

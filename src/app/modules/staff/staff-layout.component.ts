@@ -50,6 +50,11 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
       items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg' });
     }
 
+    // OBRS-312: weekly vehicle inspection checklist — driver-only.
+    if (isDriver) {
+      items.push({ path: 'inspection', labelKey: 'STAFF.NAV.INSPECTION', icon: 'checklist' });
+    }
+
     return items;
   }
 

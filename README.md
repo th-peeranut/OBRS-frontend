@@ -210,6 +210,51 @@ with departure-date occupancy but zero booking-date bookings is **not**
 empty (same divergent-basis reasoning as Reports' `isEmptyRange`, carried
 over as `isEmptyDay`).
 
+### Digital weekly vehicle inspection checklist (OBRS-312)
+
+Two surfaces, sharing one backend contract:
+
+**Driver form — `/staff/inspection`** (`InspectionPageComponent`,
+`src/app/modules/staff/pages/inspection/`), a sibling route of `/staff/driver` and
+`/staff/boarding/:scheduleId`, gated `requiredRoles: ['driver']`. Phone-first
+(375–414px primary viewport, desktop is the afterthought) — see
+`docs/adr/0023-weekly-vehicle-inspection-mobile-form-and-switchable-window-filter.md`
+for the sticky-bar layout rationale. A `position: sticky` top strip (vehicle
+`app-admin-dropdown` + `p-inputNumber` odometer + a "ตรวจแล้ว X / 23" progress
+pill) and a `position: sticky` bottom bar (the single primary Submit button) keep
+both reachable through a 23-row scroll. Each checklist row is a card
+(`p-selectButton` OK/Needs-repair toggle, `[allowEmpty]="true"`, ≥44px tap targets)
+— `verdict` starts `null` on every row (design-system §3.1), and switching a row
+**away** from `needs_repair` clears that row's note control **value**, not just
+hides it. Submit is never disabled for incompleteness — only while actually
+submitting — an incomplete attempt scrolls to and highlights the first offending
+row plus a non-blocking toast.
+
+Three root-scoped `AdminCollectionStore` subclasses back the form
+(`VehicleInspectionItemsStore`, `InspectableVehiclesStore`, `MyInspectionsStore`,
+mirroring `DriverSchedulesStore`) — the vehicle picker is the **whole active
+fleet** (`/vehicles/inspectable`), deliberately not derived from
+`DriverSchedulesStore`, since an ad-hoc cover driver has no assigned schedule for
+the van they're inspecting. Error handling branches on `errorCode`
+(`shared/lib/vehicle-inspection-error.ts`, mirroring `change-seat-error.ts`) and is
+**non-destructive** — a rejected 4xx never clears the form, since a driver's entries
+can represent many minutes of on-site work on a shaky mobile connection. A
+dismissible "already inspected this week" banner (`shared/lib/inspection-week.ts`,
+ISO week Mon–Sun Bangkok) never gates the form underneath.
+
+**Owner history — a third `/admin/vehicles` tab** (`AppVehicleInspectionPanelComponent`,
+`src/app/modules/admin/pages/vehicles/vehicle-inspection/`), reusing the exact
+`focusedVehicle` mechanic the Maintenance tab (above) established — same tab-bar
+markup, same per-row focus action, same component-scoped-store precedent
+(`VehicleInspectionHistoryStore` mirrors `VehicleMaintenanceStore` byte-for-byte).
+Read-only: no Add/Edit/Delete, inspections are immutable and only drivers create
+them. Defaults to the current + previous Bangkok ISO week via a **switchable**
+"Show all" filter, never a hard query bound — see the ADR above for why a rejected
+vs. an ignored defect must stay distinguishable. Row click opens a read-only detail
+modal (`.admin-modal-backdrop` idiom) optimistically, with the summary fields
+already in hand and a spinner over just the items list; a request token guards
+against the user opening a different row before the fetch resolves.
+
 ### Boarding manifest — schedule delay control (OBRS-272)
 
 `BoardingListComponent` (`src/app/shared/components/boarding-list/`) gained a

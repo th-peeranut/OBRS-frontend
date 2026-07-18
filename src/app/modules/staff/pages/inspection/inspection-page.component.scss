@@ -1,0 +1,190 @@
+:host {
+  display: block;
+}
+
+// design-system §11 empty-state pattern (OBRS-209 precedent): a centered
+// icon/title/body block that REPLACES the whole page section, themed only
+// with --admin-muted/--admin-text — no raw hex, themes for free in dark mode.
+.inspection-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 64px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.inspection-empty .material-symbols-outlined {
+  font-size: 44px;
+  color: var(--admin-muted);
+}
+
+.inspection-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.inspection-empty-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}
+
+.inspection-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 88px; // keeps the last row clear of the sticky bottom bar
+}
+
+// Sticky top strip: vehicle dropdown + odometer + progress pill. Sits under
+// the shell topbar so orientation survives scrolling 23 rows.
+.inspection-top-strip {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: var(--admin-surface-card);
+  border-bottom: 1px solid var(--admin-outline);
+}
+
+.inspection-top-field {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+
+.inspection-progress-pill {
+  flex: 0 0 auto;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.inspection-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--admin-inreview-bg);
+  color: var(--admin-inreview-text);
+}
+
+.inspection-banner-text {
+  flex: 1 1 auto;
+}
+
+.inspection-banner-dismiss {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.inspection-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.inspection-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--admin-surface-card);
+  border: 1px solid var(--admin-outline);
+  scroll-margin-top: 90px; // clears the sticky top strip on scrollIntoView
+
+  &.is-highlighted {
+    border-color: var(--admin-danger-border, var(--admin-danger-text));
+    box-shadow: 0 0 0 2px var(--admin-danger-bg);
+  }
+}
+
+.inspection-row--skeleton {
+  gap: 10px;
+}
+
+.inspection-row-label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
+.inspection-row-note {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.inspection-general-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 12px;
+}
+
+// The one net-new visual this card introduces: a 2-segment verdict toggle
+// themed against the fixed --admin-success-*/--admin-danger-* status tokens
+// (never the runtime --accent*, which resolves to the staff shell's teal-green
+// and would collide with "selected" reading as brand rather than a verdict) —
+// no fixed hex, so it inherits dark mode instead of needing a hand-written
+// counterpart (see design-system.md cross-cutting constraints).
+:host ::ng-deep .inspection-verdict-toggle {
+  display: flex;
+  width: 100%;
+
+  .p-button {
+    flex: 1 1 0;
+    min-height: 44px; // tap-target minimum
+    justify-content: center;
+  }
+
+  .p-button.p-highlight:nth-child(1) {
+    background: var(--admin-success-bg);
+    border-color: var(--admin-success-bg);
+    color: var(--admin-success-text);
+  }
+
+  .p-button.p-highlight:nth-child(2) {
+    background: var(--admin-danger-bg);
+    border-color: var(--admin-danger-bg);
+    color: var(--admin-danger-text);
+  }
+}
+
+// Sticky bottom bar: the single primary Submit button, always reachable.
+.inspection-bottom-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  padding: 12px;
+  background: var(--admin-surface-card);
+  border-top: 1px solid var(--admin-outline);
+}
+
+.inspection-submit-btn {
+  width: 100%;
+  justify-content: center;
+}
