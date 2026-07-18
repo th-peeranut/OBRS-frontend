@@ -107,6 +107,18 @@ const routes: Routes = [
       ),
   },
   {
+    // OBRS-433: reporter-facing "My Reports" — same shape as /my-bookings and
+    // /account (customerArea + requireAuth: true bounces an anonymous visitor
+    // to /login via the real guard, not just a hidden nav link).
+    path: 'my-reports',
+    canActivate: [AuthGuard],
+    data: { customerArea: true, requireAuth: true },
+    loadChildren: () =>
+      import('./modules/my-reports/my-reports.module').then(
+        (m) => m.MyReportsModule
+      ),
+  },
+  {
     // OBRS-415: customer online consigned-parcel booking wizard + Omise
     // payment. Same guard/data as my-bookings/account — payment requires a
     // real account, no guest checkout (everything ties to actor_id).

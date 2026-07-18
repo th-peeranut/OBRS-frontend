@@ -32,6 +32,7 @@
       "HINT": "最多5张图片，每张最大5 MB。支持 JPEG、PNG、WebP、GIF。",
       "ADD": "添加图片",
       "REMOVE": "删除",
+      "EXISTING": "现有图片",
       "TOO_MANY": "最多只能附加5张图片。",
       "TOO_LARGE": "一张或多张图片超过5 MB限制。",
       "INVALID_TYPE": "仅支持 JPEG、PNG、WebP 和 GIF 格式的图片。"
@@ -46,6 +47,57 @@
       "REPORT_RATE_LIMITED": "您最近提交报告过于频繁，请稍后再试。",
       "VALIDATION_FAILED": "请检查您的输入后重试。",
       "GENERIC": "出现错误，请重试。"
+    },
+    "MY_REPORTS": {
+      "TITLE": "我的报告",
+      "SUBTITLE": "跟踪您提交的可用性报告，并随时添加跟进备注。",
+      "LOAD_FAILED": "无法加载您的报告，请重试。",
+      "RETRY": "重试",
+      "EMPTY_TITLE": "您还没有提交过任何报告",
+      "EMPTY_BODY": "使用应用中任意位置的“报告问题”按钮向我们发送错误或建议。",
+      "LOAD_MORE": "加载更多",
+      "LOADING_MORE": "加载中...",
+      "DETAIL": {
+        "TITLE": "报告详情",
+        "CLOSE": "关闭",
+        "CATEGORY_LABEL": "类别",
+        "STATUS_LABEL": "状态",
+        "CREATED_AT_LABEL": "提交时间",
+        "UPDATING": "更新中...",
+        "EDIT_ACTION": "编辑",
+        "TRIAGE_NOTE_LABEL": "团队备注",
+        "TRIAGE_NOTE_EMPTY": "团队暂无备注。"
+      },
+      "EDIT_FORM": {
+        "SAVE": "保存更改",
+        "SAVING": "保存中...",
+        "CANCEL": "取消",
+        "SUCCESS": "您的报告已更新。"
+      },
+      "FOLLOW_UP": {
+        "TITLE": "跟进备注",
+        "EMPTY": "暂无跟进备注。",
+        "NOTE_PLACEHOLDER": "添加跟进备注...",
+        "NOTE_REQUIRED": "请输入备注后再提交。",
+        "SUBMIT": "发布备注",
+        "SUBMITTING": "发布中...",
+        "SUCCESS": "您的跟进备注已添加。",
+        "AUTHOR_YOU": "您"
+      },
+      "ERROR": {
+        "REPORT_NOT_EDITABLE": "此报告已无法编辑。",
+        "CONCURRENT_MODIFICATION": "此报告已在其他地方更新，请查看最新版本。",
+        "REPORT_NOT_FOUND": "未找到此报告。"
+      },
+      "STATUS": {
+        "new": "新建",
+        "in_review": "审核中",
+        "accepted": "已接受",
+        "dismissed": "已忽略",
+        "resolved": "已解决",
+        "rejected": "已拒绝",
+        "duplicate": "重复报告"
+      }
     }
   },
   "MY_BOOKINGS": {
@@ -322,6 +374,7 @@
       "ROLE_MANAGEMENT": "角色",
       "USER_MANAGEMENT": "用户",
       "VEHICLE_MANAGEMENT": "车辆",
+      "CARGO_CAPACITY": "货物承载量",
       "ROUTE_MANAGEMENT": "路线",
       "SCHEDULES": "班次",
       "BOOKINGS_MANAGEMENT": "预订",
@@ -416,7 +469,10 @@
       "FORM_INVALID": "请填写标记的必填字段。",
       "WHOLE_NUMBER": "请输入整数（不含小数）。",
       "POSITIVE_NUMBER": "请输入大于0的数字。",
-      "YEAR_RANGE": "请输入 {{min}} 至 {{max}} 之间的年份。"
+      "YEAR_RANGE": "请输入 {{min}} 至 {{max}} 之间的年份。",
+      "CARGO_CAPACITY_INVALID": "请输入有效的数字。",
+      "CARGO_CAPACITY_TOO_MANY_DECIMALS": "最多输入2位小数。",
+      "CARGO_CAPACITY_BELOW_MIN": "至少为0.01千克。"
     },
     "MESSAGES": {
       "CREATED": "创建成功。",
@@ -666,6 +722,16 @@
         "DETAIL_LOAD_FAILED": "无法加载检查详情。"
       }
     },
+    "CARGO_CAPACITY": {
+      "SUBTITLE": "为每种车型设置包裹货物配额（千克）。",
+      "TABLE_TITLE": "按车型划分的货物配额",
+      "COL_VEHICLE_TYPE": "车型",
+      "COL_SEATS": "座位数",
+      "COL_CARGO_CAPACITY": "货物配额（千克）",
+      "NOT_CONFIGURED": "尚未设置",
+      "NOT_CONFIGURED_WARNING": "留空表示在设置配额之前，使用此车型的所有班次都将拒绝包裹预订。",
+      "LOAD_FAILED": "无法加载车型数据。"
+    },
     "ROUTES": {
       "TITLE": "路线管理",
       "SUBTITLE": "管理路线记录、状态、停靠点顺序和票价区间。",
@@ -757,7 +823,9 @@
       "VIEW_SCHEDULES": "查看生成的班次",
       "FOCUSED_BANNER": "显示由 {{set}} 生成的班次。",
       "FOCUSED_CLEAR": "显示全部班次",
-      "VEHICLE_UNDER_MAINTENANCE": "该车辆在所选日期存在未关闭的维护记录，请更换车辆或日期"
+      "VEHICLE_UNDER_MAINTENANCE": "该车辆在所选日期存在未关闭的维护记录，请更换车辆或日期",
+      "CARGO_CAPACITY_LABEL": "本班次货物配额覆盖值（千克）",
+      "CARGO_CAPACITY_HELPER": "留空 = 使用该车型的配额。"
     },
     "BOOKINGS": {
       "TITLE": "预订管理",
@@ -883,6 +951,7 @@
         "CLOSE": "关闭",
         "TRIAGE_NOTE_LABEL": "处理备注",
         "TRIAGE_NOTE_PLACEHOLDER": "为此报告添加备注...",
+        "FOLLOW_UPS_LABEL": "跟进备注",
         "TRIAGED_BY": "处理人",
         "TRIAGED_AT": "处理时间",
         "JIRA_LINK_LABEL": "Jira 问题",
@@ -1393,7 +1462,8 @@
       "THEME_TOGGLE": "切换深色模式",
       "MY_BOOKINGS": "我的预订",
       "MY_PARCELS": "我的包裹",
-      "ACCOUNT": "我的账户"
+      "ACCOUNT": "我的账户",
+      "MY_REPORTS": "我的报告"
     },
     "HOME_BOOKING": {
       "ROUNDTRIP_1": "单程",

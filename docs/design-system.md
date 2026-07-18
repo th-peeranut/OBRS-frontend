@@ -153,7 +153,7 @@ do not add a fourth.
 | Need | Canonical component | Notes |
 |---|---|---|
 | **Select / dropdown in a form** | **`app-admin-dropdown`** | The only one with the placeholder-header contract (§3.1). Inputs: `[options]`, `[placeholder]`, `valueKey`, `labelKey`, `[icon]`, `[disabled]`, `formControlName`. |
-| Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. |
+| Localized name dropdown (stop/route pickers with i18n labels) | `app-dropdown-obrs` | Legacy Bootstrap dropdown; **no placeholder support**. Keep only where it's already wired for localized names; do **not** use for new plain selects. **Exception (OBRS-433):** a plain select on a **customer-shell** page that must not import `AdminSharedModule`/`AdminModule` (a lazy-module-boundary violation — `app-admin-dropdown` lives there and its styling depends on `--admin-*` vars only defined inside `.admin-shell`) may use the standalone `app-dropdown-obrs` instead, imported directly into that feature module's `imports`. See `docs/adr/0023-my-reports-customer-page.md`. Still **not** for a new select inside an admin/staff page — `app-admin-dropdown` remains canonical there. |
 | Date / time | PrimeNG `p-calendar` (date), the existing time control | Keep the **single input shape** (§5). |
 | **Export trigger** (download current view as CSV/Excel) | **`app-export-button`** (`src/app/shared/components/export-button/`) | Presentational, self-sufficient: `[datasetKey]`, `[requiredRole]`, `[params]`. Renders a **secondary** `admin-btn` (never `admin-btn-primary` — exporting is a supporting action) that opens a `p-menu[popup]` with CSV / Excel items, following the trigger-popup pattern already used by `walk-in-trip-browser.component` (not `p-splitButton` — unused in this codebase). **Hidden** (not disabled) when `authService.hasAnyRole([requiredRole])` is false, matching the staff-layout/navbar role-gating precedent. Success is silent (the browser download is the confirmation); errors branch on `ExportError.errorCode` via `AlertService.error()`. See `docs/adr/0001-export-button-component.md`. |
 | **Rich-content popup** (a trigger button opening a stateful, scrollable list — not a flat command menu) | **`p-overlayPanel`** | First used by `app-notification-bell` (OBRS-317) for the owner/staff notification inbox: `p-menu[popup]`'s `MenuItem[]` shape can't carry a row's message/timestamp/read-state/click-handler, so `p-overlayPanel` hosts the dumb `app-notification-inbox-panel` (→ `app-notification-inbox-row`) instead, keeping the same trigger-toggles-a-floating-panel model as the `app-export-button` precedent above (`appendTo="body"`). Use `p-menu[popup]` when the popup is a flat list of commands; reach for `p-overlayPanel` when it's a stateful list. See `docs/adr/0018-notification-inbox-overlay-panel-and-root-service-state.md`. |
@@ -553,6 +553,30 @@ enforced rule with a test behind it.
   would make both cases disappear identically, defeating the indicator's purpose.
   Reuse this switchable-filter shape (not a query-param window) for the next
   "pending forever unless acted on" indicator.
+- **Incremental "Load more" button for a low-volume customer-shell list**
+  (OBRS-433, `MyReportsComponent`): the reporter's own usability-report list
+  is low-volume/casual browsing, not a back-office table, so it does NOT use
+  `app-admin-paginator` (the page-number control every admin list uses).
+  Instead `MyReportsStore.loadMore()` fetches the next server page and
+  APPENDS it to the cached content (never replaces, no page-number/back
+  state) via `AdminCollectionStore.mutate()` — a subclass-only addition, the
+  base class itself is unchanged. The button is the established
+  `.btn-secondary` recipe (`$brand-customer-strong`, outlined — the
+  account/my-bookings precedent), centered below the list, and hides once the
+  cached page is the last page. See `docs/adr/0023-my-reports-customer-page.md`.
+  Reuse this idiom for the next low-volume customer-shell list instead of
+  reaching for `app-admin-paginator` or a NgRx slice.
+
+- **Cross-shell status-chip reuse needs only ONE `:host` declaration per
+  render tree, not per component** (OBRS-433, `MyReportsComponent` /
+  `MyReportDetailModalComponent`): extends the `ParcelTrackingPageComponent`
+  idiom (OBRS-305) above — because CSS custom properties inherit down the
+  real DOM tree regardless of Angular's emulated view encapsulation, only the
+  outermost customer-shell component needs to re-declare the 7
+  `--admin-*-bg`/`-text` values at its `:host`; any DOM descendant (including
+  a child component rendered via `*ngIf`, like the detail modal here) reads
+  the inherited values for free and needs no copy of its own. See
+  `docs/adr/0023-my-reports-customer-page.md`.
 
 - **CDK Portal print isolation reused for a second surface** (OBRS-305,
   `ParcelWaybillPageComponent.printWaybill()`): the exact

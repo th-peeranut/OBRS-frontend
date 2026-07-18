@@ -86,3 +86,55 @@ describe('AdminModalBackdropDirective — body scroll lock', () => {
       .toBe('');
   });
 });
+
+// OBRS-433: the "My Reports" detail modal uses its own scoped `.mr-detail-modal`
+// / `.mr-detail-title` shell (not `.admin-modal` — see the directive's own doc
+// comment) but the SAME shared directive for backdrop/ESC/focus-trap/scroll-lock
+// semantics, so the dialog/title selectors must find it too.
+@Component({
+  template: `
+    <div class="admin-modal-backdrop" *ngIf="open" adminModalBackdrop>
+      <div class="mr-detail-modal">
+        <h4 class="mr-detail-title">My Report</h4>
+        <button>close</button>
+      </div>
+    </div>
+  `,
+})
+class MrDetailBackdropHostComponent {
+  open = false;
+}
+
+describe('AdminModalBackdropDirective — .mr-detail-modal dialog semantics', () => {
+  let fixture: ComponentFixture<MrDetailBackdropHostComponent>;
+  let host: MrDetailBackdropHostComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [CommonModule],
+      declarations: [MrDetailBackdropHostComponent, AdminModalBackdropDirective],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(MrDetailBackdropHostComponent);
+    host = fixture.componentInstance;
+  });
+
+  afterEach(() => {
+    host.open = false;
+    fixture.detectChanges();
+    fixture.destroy();
+  });
+
+  it('marks .mr-detail-modal as role=dialog with aria-labelledby pointing at .mr-detail-title', () => {
+    host.open = true;
+    fixture.detectChanges();
+
+    const dialog: HTMLElement = fixture.nativeElement.querySelector('.mr-detail-modal');
+    const title: HTMLElement = fixture.nativeElement.querySelector('.mr-detail-title');
+
+    expect(dialog.getAttribute('role')).toBe('dialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(title.id).toBeTruthy();
+    expect(dialog.getAttribute('aria-labelledby')).toBe(title.id);
+  });
+});

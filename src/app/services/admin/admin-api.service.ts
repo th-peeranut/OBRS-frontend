@@ -115,8 +115,27 @@ export interface AdminVehicleTypeDto {
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
-  /** Seat-map options — only present on the vehicle-type detail endpoint. */
+  /** Seat-map options — only present on the vehicle-type detail endpoint.
+   * NOTE: the real backend shape here is `{seatNumber, rowIndex, columnIndex}`
+   * — `LayoutResponse` is a pre-existing mistyped interface (staff/
+   * walk-in-center-panel already reads this same field as a `{id, name,
+   * label}` seat-map-template picker option), tracked separately as OBRS-517
+   * and deliberately left as-is by OBRS-508. */
   seatMaps?: LayoutResponse[];
+  /** OBRS-508: parcel cargo quota for this vehicle type, in kg. `null` = not
+   * configured — effective capacity falls back to the per-schedule override
+   * only; if BOTH are null, parcel booking is refused
+   * (409 PARCEL_CARGO_CAPACITY_NOT_CONFIGURED). */
+  cargoCapacityKg?: number | null;
+}
+
+/** OBRS-508: `PATCH /vehicle-types/{id}/cargo-capacity` request body — the
+ * ONLY field this endpoint accepts. Replaces an earlier full-replace-PUT
+ * design (which required forwarding every vehicle-type field to avoid
+ * wiping the seat map/translations); the backend now exposes this narrow
+ * PATCH instead, so the hazard doesn't apply here. */
+export interface UpdateVehicleTypeCargoCapacityPayload {
+  cargoCapacityKg: number | null;
 }
 
 export interface AdminVehicleDto {
@@ -295,6 +314,9 @@ export interface AdminScheduleDto {
   /** OBRS-283: count of CONFIRMED bookings affected by cancelling this trip
    * (drives the refund vs. no-refund confirm-dialog copy). */
   confirmedBookingCount?: number;
+  /** OBRS-508: per-trip cargo quota override, in kg. `null`/absent = inherit
+   * from `vehicleType.cargoCapacityKg`. */
+  cargoCapacityKg?: number | null;
 }
 
 // OBRS-283: response of POST /api/private/schedules/{id}/cancel (soft-cancel —
@@ -643,6 +665,12 @@ export interface CreateSchedulePayload {
   vehicleType: string;
   vehicleId?: number;
   driverId?: number;
+  // OBRS-508: POST and PUT /api/private/schedules share one backend
+  // ScheduleReqDto shape (docs/api/scheduling.md), so the per-trip cargo
+  // override is valid on create too. Optional/omittable, unlike
+  // UpdateSchedulePayload's required field below — a brand-new schedule with
+  // no override simply doesn't send the key (null-equivalent on the backend).
+  cargoCapacityKg?: number | null;
 }
 
 export interface UpdateSchedulePayload {
@@ -652,6 +680,9 @@ export interface UpdateSchedulePayload {
   driverId: number | null;
   departureDateTime: string;
   seatingCapacity: number | null;
+  /** OBRS-508: per-trip cargo quota override, in kg. `null` = inherit from
+   * the vehicle type's own cargoCapacityKg. */
+  cargoCapacityKg: number | null;
 }
 
 export interface DriverDto {
@@ -962,6 +993,22 @@ export class AdminApiService {
 
   getVehicleTypeById(id: number): Observable<ResponseAPI<AdminVehicleTypeDto>> {
     return this.getRequest<AdminVehicleTypeDto>(`${this.baseUrl}/private/vehicle-types/${id}`);
+  }
+
+  // OBRS-508: OWNER-only (ADMIN inherits via the backend's ROLE_ADMIN >
+  // ROLE_OWNER hierarchy) narrow update touching ONLY cargo_capacity_kg —
+  // replaces the earlier full-replace PUT design; the response echoes back
+  // the untouched seatMaps/translations/slug/totalSeats/status alongside the
+  // newly-saved cargoCapacityKg, so the caller can patch its row from the
+  // response directly with no separate re-fetch.
+  updateVehicleTypeCargoCapacity(
+    id: number,
+    payload: UpdateVehicleTypeCargoCapacityPayload
+  ): Observable<ResponseAPI<AdminVehicleTypeDto>> {
+    return this.patchRequest<AdminVehicleTypeDto>(
+      `${this.baseUrl}/private/vehicle-types/${id}/cargo-capacity`,
+      payload
+    );
   }
 
   getRoutes(): Observable<ResponseAPI<AdminRouteDto[]>> {

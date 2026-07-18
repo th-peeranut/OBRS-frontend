@@ -16,6 +16,10 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { combineBangkokDateTime } from '../../../../shared/lib/api-date-time';
 import { formatDisplayDate, formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import {
+  CargoCapacityValidationErrorCode,
+  validateCargoCapacityKgInput,
+} from '../cargo-capacity/cargo-capacity.validators';
 
 // Pure mappers/formatters/normalizers extracted from SchedulesPageComponent
 // (OBRS-214, mirroring OBRS-208's routes.mappers.ts). No Angular/service
@@ -49,6 +53,11 @@ export interface ScheduleRow {
   // hard-delete path (see shared/lib/schedule-delete-mode.ts).
   deletable?: boolean;
   confirmedBookingCount?: number;
+  // OBRS-508: per-trip cargo quota override, in kg. Only populated for
+  // kind==='schedule' rows (same optional/undefined-on-a-set-row shape as
+  // deletable/confirmedBookingCount above — a Schedule SET has no such
+  // field). `null` = inherit from the vehicle type's own cargoCapacityKg.
+  cargoCapacityKg?: number | null;
 }
 
 export interface Option {
@@ -282,6 +291,7 @@ export function toGeneratedScheduleRow(
     updatedAt: formatDisplayDateTime(schedule.updatedAt ?? schedule.createdAt, dateLang),
     deletable: schedule.deletable,
     confirmedBookingCount: schedule.confirmedBookingCount,
+    cargoCapacityKg: schedule.cargoCapacityKg ?? null,
   };
 }
 
@@ -336,6 +346,7 @@ export function toScheduleDetailFallback(schedule: ScheduleRow): AdminScheduleDt
           fullName: schedule.driver,
         }
       : undefined,
+    cargoCapacityKg: schedule.cargoCapacityKg ?? null,
   };
 }
 
@@ -462,17 +473,35 @@ export function extractScheduleErrorCode(error: unknown): string | null {
   return extractApiErrorCode(error, null);
 }
 
-export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): CreateSchedulePayload {
+// OBRS-508: builds the create/update payload for a single trip (Schedule
+// item). POST and PUT /api/private/schedules share one backend ScheduleReqDto
+// shape (docs/api/scheduling.md), so `cargoCapacityKg` is included on both
+// paths — this function backs both submitSchedule() branches (create AND
+// edit) since they share the same scheduleItemForm. Returns the validation
+// error alongside the payload (mirroring toSchedulePayload()'s
+// departureTimesValid) so the caller can abort before submitting instead of
+// this function mutating component state directly.
+export function toScheduleItemPayload(rawFormValue: Record<string, unknown>): {
+  payload: CreateSchedulePayload;
+  cargoCapacityKgError: CargoCapacityValidationErrorCode | null;
+} {
   const vehicleId = toOptionalNumber(rawFormValue['vehicleId']);
   const driverId = toOptionalNumber(rawFormValue['driverId']);
   const departureDate = toDateInputValue(toDateValue(rawFormValue['departureDate']));
   const departureTime = toTimeInputValue(toDateValue(rawFormValue['departureTime']));
+  const { value: cargoCapacityKg, errorCode: cargoCapacityKgError } = validateCargoCapacityKgInput(
+    rawFormValue['cargoCapacityKg'] as string | number | null | undefined
+  );
 
   return {
-    departureDateTime: combineBangkokDateTime(departureDate, departureTime),
-    route: String(rawFormValue['route'] ?? '').trim(),
-    vehicleType: String(rawFormValue['vehicleType'] ?? '').trim(),
-    ...(vehicleId !== undefined ? { vehicleId } : {}),
-    ...(driverId !== undefined ? { driverId } : {}),
+    payload: {
+      departureDateTime: combineBangkokDateTime(departureDate, departureTime),
+      route: String(rawFormValue['route'] ?? '').trim(),
+      vehicleType: String(rawFormValue['vehicleType'] ?? '').trim(),
+      ...(vehicleId !== undefined ? { vehicleId } : {}),
+      ...(driverId !== undefined ? { driverId } : {}),
+      cargoCapacityKg,
+    },
+    cargoCapacityKgError,
   };
 }

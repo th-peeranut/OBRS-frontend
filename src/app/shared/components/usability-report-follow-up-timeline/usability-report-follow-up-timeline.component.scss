@@ -1,0 +1,84 @@
+// Theme-agnostic (design-system §12 new-pattern note): `color: inherit` and a
+// fixed neutral rgba border — reads on the admin shell's light card AND the
+// customer shell's white card AND either surface's dark variant, with no
+// dependency on `--admin-*`/`--accent*` runtime vars (only defined inside
+// `.admin-shell`).
+
+.ur-follow-up-timeline__empty {
+  color: inherit;
+  opacity: 0.65;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.ur-follow-up-timeline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ur-follow-up-timeline__item {
+  color: inherit;
+  border-left: 2px solid rgba(128, 134, 142, 0.35);
+  padding-left: 12px;
+}
+
+.ur-follow-up-timeline__meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.75rem;
+  opacity: 0.75;
+  margin-bottom: 4px;
+}
+
+.ur-follow-up-timeline__author {
+  font-weight: 600;
+}
+
+.ur-follow-up-timeline__note {
+  margin: 0 0 6px;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.ur-follow-up-timeline__images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ur-follow-up-timeline__thumb {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(128, 134, 142, 0.35);
+}
+
+.ur-follow-up-timeline__item.is-pending {
+  opacity: 0.7;
+}
+
+.ur-follow-up-timeline__spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border: 2px solid rgba(128, 134, 142, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  vertical-align: middle;
+  animation: ur-follow-up-spin 0.7s linear infinite;
+}
+
+@keyframes ur-follow-up-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

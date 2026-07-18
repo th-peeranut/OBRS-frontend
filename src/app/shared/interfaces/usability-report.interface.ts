@@ -73,6 +73,12 @@ export interface UsabilityReportDetail {
   // detail shape as well so the detail meta block can render the same link/badge.
   duplicateOfId: number | null;
   duplicateCount: number;
+  // OBRS-433: read-only follow-up timeline (reporter + admin notes/images),
+  // rendered in the admin inline detail modal via the shared
+  // UsabilityReportFollowUpTimelineComponent. Reuses the SAME
+  // UsabilityReportFollowUp shape as MyUsabilityReportDetail.followUps below —
+  // do not fork a parallel type.
+  followUps: UsabilityReportFollowUp[];
 }
 
 export interface UsabilityReportReceipt {
@@ -81,4 +87,53 @@ export interface UsabilityReportReceipt {
   status: string;
   imageCount: number;
   createdAt: string;
+}
+
+// ── OBRS-433: reporter-facing "My Reports" (customer area) ───────────────────
+// A DELIBERATELY separate interface family from UsabilityReportSummary/Detail
+// above rather than reusing them: those two carry `id: string`, which is the
+// OBRS-376-documented latent bug (BIGSERIAL id serializes as a JSON number —
+// see DEV-GOTCHAS "An FE field typed wrong survives until the first
+// type-specific method call"). This family is new code with no legacy call
+// sites depending on the wrong type, so it types `id: number` everywhere from
+// the start instead of inheriting the bug.
+
+export interface MyUsabilityReportSummary {
+  id: number;
+  category: UsabilityReportCategory;
+  status: UsabilityReportStatus;
+  descriptionPreview: string;
+  imageCount: number;
+  createdAt: string;
+}
+
+export type MyUsabilityReportPage = PageResponse<MyUsabilityReportSummary>;
+
+// A reporter or admin follow-up note on a report, addable in ANY status.
+// Reused as-is by BOTH the customer "My Reports" detail modal (read/write —
+// the reporter composes new ones) and the admin inline detail modal
+// (read-only timeline) — see UsabilityReportDetail.followUps below.
+export interface UsabilityReportFollowUp {
+  id: number;
+  note: string;
+  authorUserId: number;
+  authorName: string;
+  createdAt: string;
+  images: UsabilityReportImage[];
+}
+
+export interface MyUsabilityReportDetail {
+  id: number;
+  category: UsabilityReportCategory;
+  status: UsabilityReportStatus;
+  description: string;
+  routeUrl: string;
+  images: UsabilityReportImage[];
+  createdAt: string;
+  updatedAt: string;
+  // The admin's triage note — reporter-visible per OBRS-433 AC#2.
+  triageNote: string | null;
+  // True only while status === 'new'; drives whether the Edit form renders.
+  editable: boolean;
+  followUps: UsabilityReportFollowUp[];
 }

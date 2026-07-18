@@ -1,0 +1,74 @@
+@import "../../../../../styles/variables.scss";
+
+// Angular's emulated view encapsulation scopes styles per-component — same
+// token values as my-report-detail-modal.component.scss /
+// my-report-edit-form.component.scss, not a raw-hex re-derive.
+
+.mr-follow-up-composer {
+  display: flex;
+  flex-direction: column;
+}
+
+.mr-detail-label {
+  min-width: 120px;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-semibold;
+  color: $text-lightgrey;
+  margin: 0 0 $space-2xs;
+  display: block;
+}
+
+// Multi-line exception to the single pill input shape (design-system §5).
+.mr-textarea {
+  width: 100%;
+  border: 1px solid $primary-lightgrey;
+  border-radius: $radius-md;
+  padding: $space-2xs $space-xs;
+  font-family: inherit;
+  font-size: $font-size-sm;
+  resize: vertical;
+  min-height: 72px;
+
+  &.is-invalid {
+    border-color: $text-red;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $brand-customer-strong;
+    box-shadow: $shadow-focus;
+  }
+}
+
+.mr-edit-form__error {
+  font-size: $font-size-xs;
+  color: $text-red;
+  margin-top: $space-3xs;
+}
+
+.mr-follow-up-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+// A repeatable, supporting action (design-system §4/§13 boarding-list
+// precedent: "a repeated per-row action isn't the one main action of the
+// screen") — the composer's Post button stays secondary, keeping the modal's
+// single primary button (Edit/Save) rule intact even while the composer is
+// visible alongside it.
+.mr-btn-secondary {
+  display: inline-block;
+  padding: 8px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
