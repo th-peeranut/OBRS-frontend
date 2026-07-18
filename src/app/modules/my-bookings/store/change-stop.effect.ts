@@ -293,8 +293,15 @@ export class ChangeStopEffect {
   private toSeatAssignments(journeys: BookingTicketJourney[] | undefined): ChangeStopSeatAssignment[] {
     // Change stop only supports single-leg bookings — the first (only) journey.
     const tickets = journeys?.[0]?.tickets ?? [];
+    // OBRS-483: same fix as `RescheduleEffect.toSeatAssignments` — filter on
+    // CONFIRMED status (the real invariant, and a guard against a cancelled
+    // leftover ticket from a prior change-seat/reschedule still carrying a
+    // seatNumber under ASSIGNED) instead of `!!ticket.seatNumber`, which
+    // silently excluded EVERY ticket under OPEN. `seatNumber` is carried
+    // through as-is (null under OPEN) — the backend fully supports
+    // `POST .../change-stop/confirm` on an OPEN schedule.
     return tickets
-      .filter((ticket) => !!ticket.seatNumber)
-      .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber as string }));
+      .filter((ticket) => normalizeStatusCode(ticket.status?.code) === 'confirmed')
+      .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber ?? null }));
   }
 }

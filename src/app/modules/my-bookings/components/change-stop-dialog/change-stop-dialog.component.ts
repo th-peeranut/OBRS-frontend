@@ -39,6 +39,7 @@ import {
   selectChangeStopRouteStopsLoading,
   selectChangeStopSubmitting,
   selectChangeStopTickets,
+  selectChangeStopTicketsLoading,
   selectStopsLookup,
 } from '../../store/my-bookings.selector';
 
@@ -101,6 +102,10 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
   private booking: MyBookingDto | null = null;
   private stopsLookup: Record<string, number> = {};
   private tickets: ChangeStopSeatAssignment[] = [];
+  /** Distinguishes "tickets still resolving in the background" from
+   * "loaded, genuinely empty" (OBRS-483) — see the matching property on
+   * `RescheduleDialogComponent` for the full rationale. */
+  private ticketsLoading = true;
   private currentEstimate: ChangeStopEstimate | null = null;
   private pendingEstimateDispatch = false;
   private pristineSeeded = false;
@@ -121,6 +126,7 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
       this.store.pipe(select(selectChangeStopBooking)),
       this.store.pipe(select(selectStopsLookup)),
       this.store.pipe(select(selectChangeStopTickets)),
+      this.store.pipe(select(selectChangeStopTicketsLoading)),
       this.store.pipe(select(selectChangeStopRouteStopsLoading)),
       this.store.pipe(select(selectChangeStopRouteStopsError)),
       this.store.pipe(select(selectChangeStopPickupStops)),
@@ -133,6 +139,7 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
           booking,
           stopsLookup,
           tickets,
+          ticketsLoading,
           routeStopsLoading,
           routeStopsError,
           pickupStops,
@@ -142,6 +149,7 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
           this.booking = booking;
           this.stopsLookup = stopsLookup;
           this.tickets = tickets;
+          this.ticketsLoading = ticketsLoading;
           this.routeStopsLoading = routeStopsLoading;
           this.routeStopsError = routeStopsError;
           this.pickupStops = pickupStops;
@@ -296,12 +304,12 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
 
     const newFromStopId = this.resolveStopId(this.selectedPickupSlug);
     const newToStopId = this.resolveStopId(this.selectedDropoffSlug);
-    if (!newFromStopId || !newToStopId || this.tickets.length === 0) {
+    if (!newFromStopId || !newToStopId || this.ticketsLoading || this.tickets.length === 0) {
       return;
     }
 
     // Current seats unchanged — change-stop never reassigns seats.
-    const seatAssignments: Record<number, string> = {};
+    const seatAssignments: Record<number, string | null> = {};
     for (const ticket of this.tickets) {
       seatAssignments[ticket.ticketId] = ticket.seatNumber;
     }
@@ -336,10 +344,17 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
 
     const newFromStopId = this.resolveStopId(this.selectedPickupSlug);
     const newToStopId = this.resolveStopId(this.selectedDropoffSlug);
-    if (!newFromStopId || !newToStopId || this.tickets.length === 0) {
+    if (!newFromStopId || !newToStopId || this.ticketsLoading) {
       // Stops lookup / tickets still resolving in the background — retried
       // automatically the next time this method runs (design-system §6:
       // optimistic open, no blank overlay while background data loads).
+      // OBRS-483: gated on `ticketsLoading`, NOT `tickets.length === 0` —
+      // see the matching comment in `RescheduleDialogComponent.tryDispatchEstimate`.
+      return;
+    }
+    if (this.tickets.length === 0) {
+      // Loaded and genuinely empty — nothing to dispatch (data-integrity
+      // edge case; see the matching guard on the reschedule dialog).
       return;
     }
 
@@ -349,7 +364,11 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
         bookingId: this.bookingId,
         newFromStopId,
         newToStopId,
-        seats: this.tickets.map((t) => t.seatNumber),
+        // `null` under OPEN seating — see the matching comment in
+        // `RescheduleDialogComponent.tryDispatchEstimate` for why an
+        // empty-string placeholder (count preserved) is safe here; this
+        // GET param is unread server-side for change-stop's own estimate.
+        seats: this.tickets.map((t) => t.seatNumber ?? ''),
       })
     );
   }

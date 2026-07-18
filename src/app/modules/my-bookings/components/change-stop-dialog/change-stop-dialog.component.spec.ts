@@ -204,6 +204,100 @@ describe('ChangeStopDialogComponent', () => {
     expect(store.dispatch).not.toHaveBeenCalledWith(jasmine.objectContaining({ type: loadChangeStopEstimate.type }));
   });
 
+  describe('OBRS-483: OPEN-seating (null seatNumber) no longer silently no-ops', () => {
+    it('does NOT dispatch loadChangeStopEstimate while tickets are still resolving in the background, even though tickets.length is 0 (loaded-vs-empty guard)', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          changeStopPickupStops: PICKUP_STOPS,
+          changeStopDropoffStops: DROPOFF_STOPS,
+          stopsLookup: { a: 10, b: 20, c: 30 },
+          changeStopTickets: [],
+          changeStopTicketsLoading: true,
+        })
+      );
+      component.ngOnInit();
+      component.step = 'dropoff';
+      component.selectedPickupSlug = 'a';
+      component.selectedDropoffSlug = 'b';
+      store.dispatch.calls.reset();
+
+      component.onDropoffConfirmed();
+
+      expect(store.dispatch).not.toHaveBeenCalledWith(
+        jasmine.objectContaining({ type: loadChangeStopEstimate.type })
+      );
+    });
+
+    it('dispatches loadChangeStopEstimate once tickets finish loading, even with a null seatNumber (OPEN seating) — mapped to an empty-string placeholder for the seats param', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          changeStopPickupStops: PICKUP_STOPS,
+          changeStopDropoffStops: DROPOFF_STOPS,
+          stopsLookup: { a: 10, b: 20, c: 30 },
+          changeStopTickets: [],
+          changeStopTicketsLoading: true,
+        })
+      );
+      component.ngOnInit();
+      component.step = 'dropoff';
+      component.selectedPickupSlug = 'a';
+      component.selectedDropoffSlug = 'b';
+      component.onDropoffConfirmed(); // arms pendingEstimateDispatch; no-ops while tickets are loading
+      store.dispatch.calls.reset();
+
+      store.next({
+        myBookings: buildState({
+          bookings: [buildBooking()],
+          changeStopDialogBookingId: 5,
+          changeStopPickupStops: PICKUP_STOPS,
+          changeStopDropoffStops: DROPOFF_STOPS,
+          stopsLookup: { a: 10, b: 20, c: 30 },
+          changeStopTickets: [{ ticketId: 11, seatNumber: null }],
+          changeStopTicketsLoading: false,
+        }),
+      });
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        loadChangeStopEstimate({ bookingId: 5, newFromStopId: 10, newToStopId: 20, seats: [''] })
+      );
+    });
+
+    it('confirm sends the null seatNumber through untouched (OBRS-475-equivalent contract, defense-in-depth)', () => {
+      const { component, store } = create(
+        buildState({
+          bookings: [buildBooking()],
+          stopsLookup: { a: 10, b: 20 },
+          changeStopTickets: [{ ticketId: 11, seatNumber: null }],
+          changeStopTicketsLoading: false,
+          changeStopEstimate: {
+            oldFare: '100',
+            newFare: '120',
+            fareDiff: '20',
+            netAmount: '20.00',
+            paymentDirection: 'TOP_UP',
+          },
+        })
+      );
+      component.ngOnInit();
+      component.selectedPickupSlug = 'a';
+      component.selectedDropoffSlug = 'b';
+
+      component.onEstimateConfirm();
+
+      expect(store.dispatch).toHaveBeenCalledWith(
+        confirmChangeStop({
+          bookingId: 5,
+          newFromStopId: 10,
+          newToStopId: 20,
+          seatAssignments: { 11: null },
+          clientNetAmount: 20,
+        })
+      );
+    });
+  });
+
   it('confirm sends clientNetAmount exactly equal to the current estimate netAmount', () => {
     const { component, store } = create(
       buildState({

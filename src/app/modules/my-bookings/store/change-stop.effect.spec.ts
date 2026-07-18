@@ -14,6 +14,7 @@ import { AlertService } from '../../../shared/services/alert.service';
 import { ResponseAPI } from '../../../shared/interfaces/response.interface';
 import { ChangeStopResult } from '../../../shared/interfaces/change-stop.interface';
 import { MyBookingDto } from '../../../shared/interfaces/my-booking.interface';
+import { BookingTicketsData } from '../../../shared/interfaces/booking-ticket.interface';
 import {
   changeStopAbandoned,
   changeStopRequiresPayment,
@@ -27,6 +28,7 @@ import {
   loadChangeStopEstimateFailure,
   loadChangeStopRouteStops,
   loadChangeStopRouteStopsFailure,
+  loadChangeStopTicketsSuccess,
   loadStopsLookupFailure,
   openChangeStopDialog,
 } from './my-bookings.action';
@@ -131,6 +133,85 @@ describe('ChangeStopEffect', () => {
 
       expect(emitted).toEqual([
         loadChangeStopRouteStopsFailure({ error: 'MY_BOOKINGS.CHANGE_STOP.STOPS_LOAD_ERROR' }),
+      ]);
+    });
+  });
+
+  describe('loadChangeStopTickets$ (OBRS-483: OPEN-seating no longer silently no-ops)', () => {
+    it('includes a CONFIRMED ticket with a null seatNumber (OPEN seating) instead of dropping it', () => {
+      // Before OBRS-483, `.filter((ticket) => !!ticket.seatNumber)` dropped
+      // EVERY ticket on an OPEN-seating schedule (seatNumber is null by
+      // backend invariant) — change-stop looked like it did nothing at all.
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-OPEN1',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 31,
+                    ticketNumber: 'T-31',
+                    seatNumber: null,
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeStopTicketsSuccess({ tickets: [{ ticketId: 31, seatNumber: null }] }),
+      ]);
+    });
+
+    it('excludes a CANCELLED leftover ticket that still carries a seatNumber (mirrors the OBRS-171 change-seat guard)', () => {
+      bookingService.getBookingTickets.and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: {
+            bookingId: 4,
+            bookingNumber: 'B-P4HPH6',
+            journeys: [
+              {
+                tickets: [
+                  {
+                    id: 11,
+                    ticketNumber: 'T-11',
+                    seatNumber: '4',
+                    status: { code: 'cancelled', label: 'Cancelled' },
+                  },
+                  {
+                    id: 15,
+                    ticketNumber: 'T-15',
+                    seatNumber: '4',
+                    status: { code: 'confirmed', label: 'Confirmed' },
+                  },
+                ],
+              },
+            ],
+          },
+        } as ResponseAPI<BookingTicketsData>)
+      );
+
+      const emitted: Action[] = [];
+      effect.loadChangeStopTickets$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(openChangeStopDialog({ bookingId: 4 }));
+
+      expect(emitted).toEqual([
+        loadChangeStopTicketsSuccess({ tickets: [{ ticketId: 15, seatNumber: '4' }] }),
       ]);
     });
   });
@@ -258,6 +339,26 @@ describe('ChangeStopEffect', () => {
         seatAssignments: { 11: 'B4' },
         clientNetAmount: 50,
       });
+      expect(emitted).toEqual([confirmChangeStopSuccess({ result })]);
+    });
+
+    it('OBRS-483: sends a null seatNumber through untouched and still succeeds — change-stop is fully supported on an OPEN-seating schedule', () => {
+      const result: ChangeStopResult = { bookingId: 5, bookingNumber: 'B-5', status: 'CONFIRMED' };
+      bookingService.confirmChangeStop.and.returnValue(
+        of({ code: 200, message: 'OK', data: result } as ResponseAPI<ChangeStopResult>)
+      );
+
+      const emitted: Action[] = [];
+      effect.confirmChangeStop$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(
+        confirmChangeStop({ ...CONFIRM_PAYLOAD, seatAssignments: { 11: null } })
+      );
+
+      expect(bookingService.confirmChangeStop).toHaveBeenCalledWith(
+        5,
+        jasmine.objectContaining({ seatAssignments: { 11: null } })
+      );
       expect(emitted).toEqual([confirmChangeStopSuccess({ result })]);
     });
 

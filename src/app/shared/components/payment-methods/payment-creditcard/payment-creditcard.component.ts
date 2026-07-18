@@ -40,6 +40,12 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
    * as an inline step and reacts to `(paymentCompleted)` instead.
    */
   @Input() successRedirect: string[] | null = ['/e-ticket'];
+  /**
+   * OBRS-415: forwarded to `<app-payment-summary>` — see that component's own
+   * doc comment. Optional, null-default so every existing call site stays
+   * byte-identical.
+   */
+  @Input() amountOverride: number | null = null;
   @Output() tabChange = new EventEmitter<PaymentTab>();
   @Output() back = new EventEmitter<void>();
   @Output() paymentCompleted = new EventEmitter<void>();

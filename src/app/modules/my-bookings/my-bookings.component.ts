@@ -405,6 +405,15 @@ export class MyBookingsComponent implements OnInit {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.NOT_ONE_WAY' };
     }
 
+    // OBRS-483: an OPEN-seating schedule (the real fleet's default,
+    // OBRS-358) has no assigned seat to change at all — a domain rule, not
+    // a limitation. Ineligible actions stay rendered but disabled with a
+    // reason (design-system §6/§11, my-bookings.component.ts's own
+    // established convention), never hidden.
+    if (schedules?.[0]?.seatingMode === 'OPEN') {
+      return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.OPEN_SEATING' };
+    }
+
     if (Number(booking.seatChangeCount ?? 0) >= 1) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_SEAT.REASON.ALREADY_USED' };
     }
@@ -438,6 +447,12 @@ export class MyBookingsComponent implements OnInit {
     if (bookingType !== 'one_way' || (schedules?.length ?? 0) !== 1) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.NOT_ONE_WAY' };
     }
+
+    // OBRS-483: unlike change-seat (OPEN has no assigned seat to change — a
+    // permanent domain rule), change-stop is fully available on OPEN — the
+    // backend now supports it (the headline feature of this card; the
+    // pickup/drop-off segment concept is independent of seating mode).
+    // Deliberately no OPEN gate here.
 
     if (Number(booking.stopChangeCount ?? 0) >= 1) {
       return { eligible: false, reasonKey: 'MY_BOOKINGS.CHANGE_STOP.REASON.ALREADY_USED' };

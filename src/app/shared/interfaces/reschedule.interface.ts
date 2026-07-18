@@ -29,10 +29,13 @@ export interface RescheduleEstimate {
   paymentDirection: PaymentDirection;
 }
 
-/** An existing ticket's seat, carried over as-is to the new schedule. */
+/** An existing ticket's seat, carried over as-is to the new schedule.
+ * `seatNumber` is `null` on an `OPEN`-seating schedule (OBRS-483) — the
+ * backend normalizes every ticket's seat to null there, and OBRS-475 made
+ * `POST .../reschedule` accept exactly that in `seatAssignments`. */
 export interface RescheduleSeatAssignment {
   ticketId: number;
-  seatNumber: string;
+  seatNumber: string | null;
 }
 
 /** `RescheduleBookingRespDto` — result of `POST .../reschedule`. */

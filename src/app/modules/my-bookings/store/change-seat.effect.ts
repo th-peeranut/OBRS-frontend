@@ -222,9 +222,17 @@ export class ChangeSeatEffect {
       // CHANGE_SEAT_ERROR_TICKET_MISMATCH (OBRS-171 follow-up). Reuse the
       // same confirmed-status normalization `confirmChangeSeatConfirmed$`
       // already applies to `result.status`.
-      .filter(
-        (ticket) => !!ticket.seatNumber && normalizeStatusCode(ticket.status?.code) === 'confirmed'
-      )
+      //
+      // OBRS-483: dropped the additional `!!ticket.seatNumber` predicate —
+      // on an OPEN-seating schedule every ticket's seatNumber is null, so
+      // that extra check would (harmlessly, since change-seat is gated
+      // `changeSeatEligible=false` under OPEN, my-bookings.component.ts —
+      // OPEN has no seat to change, a domain rule, not a limitation) still
+      // exclude every ticket here too, the same silent-empty-list bug the
+      // reschedule/change-stop effects had. `seatNumber as string` stays —
+      // in practice this path only ever runs for ASSIGNED bookings, where
+      // it's always non-null.
+      .filter((ticket) => normalizeStatusCode(ticket.status?.code) === 'confirmed')
       .map((ticket) => ({ ticketId: ticket.id, seatNumber: ticket.seatNumber as string }));
   }
 }

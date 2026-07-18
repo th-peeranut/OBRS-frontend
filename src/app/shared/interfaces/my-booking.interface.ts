@@ -21,7 +21,9 @@ export interface BookingStopLookup {
 export interface MyBookingScheduleTicketDto {
   id?: number;
   ticketNumber?: string;
-  seatNumber?: string;
+  /** `null` (not just absent) on an `OPEN`-seating schedule (OBRS-321/483) —
+   * mirrors `BookingTicketItem.seatNumber` in `booking-ticket.interface.ts`. */
+  seatNumber?: string | null;
   status?: string;
 }
 
@@ -39,6 +41,16 @@ export interface MyBookingScheduleDto {
    * See OBRS-backend/docs/api/booking.md `GET /bookings/me`.
    */
   routeSlug?: string;
+  /**
+   * `schedules.seating_mode` (OBRS-321), never null for a real schedule
+   * (OBRS-483). Drives the reschedule/change-seat/change-stop eligibility
+   * gates — build against this field directly, never re-derive OPEN-ness
+   * from a ticket's `seatNumber` being null (that inference can't tell
+   * "OPEN" from "tickets not loaded yet"; see `booking-ticket-view.ts`'s
+   * `isJourneyOpenSeating`, an existing, separately-tracked limitation this
+   * card does not touch).
+   */
+  seatingMode?: 'OPEN' | 'ASSIGNED';
 }
 
 export interface MyBookingContactDto {

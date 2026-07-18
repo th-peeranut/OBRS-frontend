@@ -38,7 +38,10 @@ export interface BookingTicketItem {
   ticketNumber: string;
   passengerType?: CodeLabel;
   passengerName?: string;
-  seatNumber?: string;
+  /** `null` (not just absent) on an `OPEN`-seating schedule — the backend
+   * normalizes every ticket's seat to null there (OBRS-321/483), it is
+   * never merely omitted from the response. */
+  seatNumber?: string | null;
   status?: CodeLabel;
   /** OBRS-296: per-passenger fare category the booking was created with —
    *  server-authoritative (drives the 50% child-discount and the boarding
@@ -55,6 +58,15 @@ export interface BookingTicketJourney {
   arrivalDateTime?: string;
   vehicle?: BookingTicketVehicle;
   tickets?: BookingTicketItem[];
+  /**
+   * `schedules.seating_mode` (OBRS-321), never null for a real schedule
+   * (OBRS-483) — mirrors `MyBookingScheduleDto.seatingMode`. Not yet
+   * consumed here: `booking-ticket-view.ts`'s `isJourneyOpenSeating` still
+   * infers OPEN-ness from `seatNumber`, a separately-tracked limitation
+   * (OBRS-325); this field is added so a future fix can read it directly
+   * instead of re-deriving.
+   */
+  seatingMode?: 'OPEN' | 'ASSIGNED';
 }
 
 export interface BookingTicketsData {

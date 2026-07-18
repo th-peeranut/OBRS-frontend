@@ -19,10 +19,12 @@ export interface ChangeStopEstimate {
 }
 
 /** An existing ticket's seat, carried over as-is — change-stop never
- * reassigns seats, only the pickup/drop-off stops. */
+ * reassigns seats, only the pickup/drop-off stops. `seatNumber` is `null` on
+ * an `OPEN`-seating schedule (OBRS-483 — the backend normalizes every
+ * ticket's seat to null there, and fully supports change-stop under OPEN). */
 export interface ChangeStopSeatAssignment {
   ticketId: number;
-  seatNumber: string;
+  seatNumber: string | null;
 }
 
 /** `ChangeStopBookingRespDto` — result of `POST .../change-stop/confirm`. */

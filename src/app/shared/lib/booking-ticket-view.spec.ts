@@ -310,3 +310,146 @@ describe('mapBookingTicketsToCard — isOpenSeating (OBRS-325)', () => {
     expect(card.legs[1].isOpenSeating).toBeTrue();
   });
 });
+
+describe('mapBookingTicketsToCard — province-level route heading (OBRS-264)', () => {
+  it('uses the stop province names for the route line while keeping stop labels in origin/destination', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'Mo Chit 2 Bus Terminal',
+            province: { code: 'bangkok', label: 'Bangkok' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    // Route line = province pair ...
+    expect(card.legs[0].route).toBe('Chonburi - Bangkok');
+    // ... while the specific stop names stay on the origin/destination detail rows.
+    expect(card.legs[0].origin).toBe('Nong Chak');
+    expect(card.legs[0].destination).toBe('Mo Chit 2 Bus Terminal');
+  });
+
+  it('reverses the province pair on the return leg of a round trip', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'Mo Chit',
+            province: { code: 'bangkok', label: 'Bangkok' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+        {
+          legType: { code: 'inbound', label: 'Inbound' },
+          fromStop: {
+            code: 'b',
+            label: 'Mo Chit',
+            province: { code: 'bangkok', label: 'Bangkok' },
+          },
+          toStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          departureDateTime: '2026-12-25T08:00:00',
+          arrivalDateTime: '2026-12-25T09:00:00',
+          tickets: [
+            { id: 2, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].route).toBe('Chonburi - Bangkok');
+    expect(card.legs[1].route).toBe('Bangkok - Chonburi');
+  });
+
+  it('falls back to both stop labels (not mixed granularity) when one stop has no province', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          // from has a province, to does not -> the whole line uses stop labels, so the
+          // heading is not a mixed "Chonburi - Mo Chit 2 Bus Terminal".
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: { code: 'b', label: 'Mo Chit 2 Bus Terminal' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].route).toBe('Nong Chak - Mo Chit 2 Bus Terminal');
+  });
+
+  it('uses stop labels (not "Province - Province") for a same-province segment', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          // both stops sit in Chonburi -> province pair would be a useless "Chonburi - Chonburi".
+          fromStop: {
+            code: 'a',
+            label: 'Nong Chak',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          toStop: {
+            code: 'b',
+            label: 'Ban Bueng Hospital',
+            province: { code: 'chonburi', label: 'Chonburi' },
+          },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs[0].route).toBe('Nong Chak - Ban Bueng Hospital');
+    // detail rows unchanged
+    expect(card.legs[0].origin).toBe('Nong Chak');
+    expect(card.legs[0].destination).toBe('Ban Bueng Hospital');
+  });
+});

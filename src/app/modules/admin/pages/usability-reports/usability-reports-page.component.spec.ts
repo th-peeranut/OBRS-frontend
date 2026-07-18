@@ -1540,6 +1540,44 @@ describe('UsabilityReportsPageComponent', () => {
         .toBeNull();
     });
 
+    // OBRS-467: a page/tab change clear()s the single-slot cache (data$ emits
+    // null) then re-fetches. If that fetch FAILS, the store leaves value=null +
+    // error=true — the previous page's rows are DISCARDED and must not survive
+    // on screen. The old `if (data)` guard ignored the null emission and kept
+    // them, rendering the discarded rows under the LOAD_FAILED banner as if
+    // they were the requested page.
+    it('clears the previous page rows when the cache is cleared then the reload fails — no stale rows under the error banner (OBRS-467)', () => {
+      // Page 2 of 3 is showing a real row.
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 1, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      expect(component['allReports'].length).toBe(1);
+      expect(fixture.nativeElement.querySelectorAll('tr.ur-report-row').length).toBe(1);
+
+      // The user changes page: setPage() clear()s the cache (data$ -> null),
+      // then the reload fails (error$ -> true) with no cached value to fall
+      // back on. isLoading is false (refreshing settled), so the table body
+      // renders — the old guard would have rendered the discarded page-2 row.
+      storeSpy.hasValue = false;
+      storeSpy.data$.next(null);
+      storeSpy.error$.next(true);
+      fixture.detectChanges();
+
+      expect(component['allReports'])
+        .withContext('the discarded page must not remain as stale rows under the error banner')
+        .toEqual([]);
+      expect(component['totalElements']).toBe(0);
+      expect(fixture.nativeElement.querySelectorAll('tr.ur-report-row').length)
+        .withContext('no data rows may render once the cleared page failed to reload')
+        .toBe(0);
+      expect(component['errorMessage'])
+        .withContext('with no cached value the full LOAD_FAILED message shows')
+        .toBeTruthy();
+      expect(component['refreshFailed'])
+        .withContext('refreshFailed is the "kept the cache" inline banner — not this cleared-then-failed path')
+        .toBeFalse();
+    });
+
     it('renders the Showing X - Y of N range computed from currentPage/totalElements', () => {
       storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 1, totalPages: 3 }));
       storeSpy.hasValue = true;

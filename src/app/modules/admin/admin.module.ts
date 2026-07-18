@@ -124,6 +124,10 @@ const routes: Routes = [
         data: {
           titleKey: 'ADMIN.PAGES.SETTLEMENTS',
           subtitleKey: 'ADMIN.SETTLEMENTS.SUBTITLE',
+          // OBRS-446: this does NOT exclude admin, despite how it reads —
+          // AuthService.ROLE_GRANTS has admin granting owner, so ['owner'],
+          // ['admin'] and ['admin', 'owner'] are one predicate here. Intent
+          // only, inert until owner-scoping (OBRS-148/150).
           requiredRoles: ['owner'],
         },
       },

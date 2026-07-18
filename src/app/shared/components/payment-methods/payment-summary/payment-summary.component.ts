@@ -19,6 +19,18 @@ import { selectScheduleFilter } from '../../../../shared/stores/schedule-filter/
 })
 export class PaymentSummaryComponent {
   @Input() variant: 'default' | 'inline' = 'default';
+  /**
+   * OBRS-415: this component's default rendering derives the total entirely
+   * from the seat-booking `scheduleBooking`/`scheduleFilter`/`booking` NgRx
+   * stores (passenger count × fare, discount snapshot) — none of which a
+   * non-seat booking (e.g. a parcel) ever populates, which would otherwise
+   * render a silent "0 บาท" total while the real amount is charged
+   * server-side. Optional, null-default so every existing call site (seat
+   * booking, reschedule/change-stop dialogs) stays byte-identical
+   * (design-system §10 "extend, don't fork"); when set, the template renders
+   * a single total line from this value instead of the seat-booking
+   * breakdown. */
+  @Input() amountOverride: number | null = null;
   scheduleBooking: Observable<ScheduleBooking>;
   scheduleFilter: Observable<ScheduleFilter>;
   // OBRS-85: only the post-booking-creation payment summary can show a real

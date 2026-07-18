@@ -27,7 +27,7 @@
     <div *ngIf="contentState === 'found' && result as r" class="parcel-tracking-result">
       <div class="parcel-tracking-status">
         <span class="admin-status" [ngClass]="chipFor(r.deliveryStatus).token">
-          {{ chipFor(r.deliveryStatus).i18nKey | translate }}
+          {{ statusLabelKey(r.deliveryStatus) | translate }}
         </span>
       </div>
 

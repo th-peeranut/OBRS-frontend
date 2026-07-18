@@ -48,6 +48,7 @@ import {
   selectRescheduleOptionsLoading,
   selectRescheduleSubmitting,
   selectRescheduleTickets,
+  selectRescheduleTicketsLoading,
   selectStopsLookup,
 } from '../../store/my-bookings.selector';
 
@@ -102,6 +103,13 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
   private booking: MyBookingDto | null = null;
   private stopsLookup: Record<string, number> = {};
   private tickets: RescheduleSeatAssignment[] = [];
+  /** Distinguishes "tickets still resolving in the background" from
+   * "loaded, genuinely empty" (OBRS-483) — `tickets.length === 0` alone is
+   * ambiguous between the two (a real OPEN-seating ticket has `seatNumber:
+   * null`, so it still populates `tickets`; only the LOAD itself tells you
+   * whether the array is final). Sourced from the store's own
+   * `rescheduleTicketsLoading`, reset to `true` on `openRescheduleDialog`. */
+  private ticketsLoading = true;
   private currentEstimateNetAmount: number | null = null;
   private pendingOptionSelection: RescheduleOption | null = null;
   private selectedDateIso: string | null = null;
@@ -163,12 +171,14 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
       this.store.pipe(select(selectRescheduleBooking)),
       this.store.pipe(select(selectStopsLookup)),
       this.store.pipe(select(selectRescheduleTickets)),
+      this.store.pipe(select(selectRescheduleTicketsLoading)),
     ])
       .pipe(takeUntil(this.destroy$))
-      .subscribe(([booking, stopsLookup, tickets]) => {
+      .subscribe(([booking, stopsLookup, tickets, ticketsLoading]) => {
         this.booking = booking;
         this.stopsLookup = stopsLookup;
         this.tickets = tickets;
+        this.ticketsLoading = ticketsLoading;
         if (booking) {
           this.computeDateBounds(booking);
         }
@@ -294,11 +304,11 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
 
     const fromStopId = this.resolveStopId(this.fromStopCode());
     const toStopId = this.resolveStopId(this.toStopCode());
-    if (!fromStopId || !toStopId || this.tickets.length === 0) {
+    if (!fromStopId || !toStopId || this.ticketsLoading || this.tickets.length === 0) {
       return;
     }
 
-    const seatAssignments: Record<number, string> = {};
+    const seatAssignments: Record<number, string | null> = {};
     for (const ticket of this.tickets) {
       seatAssignments[ticket.ticketId] = ticket.seatNumber;
     }
@@ -335,10 +345,21 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
 
     const fromStopId = this.resolveStopId(this.fromStopCode());
     const toStopId = this.resolveStopId(this.toStopCode());
-    if (!fromStopId || !toStopId || this.tickets.length === 0) {
+    if (!fromStopId || !toStopId || this.ticketsLoading) {
       // Stops lookup / tickets still resolving in the background — retried
       // automatically the next time this method runs (design-system §6:
       // optimistic open, no blank overlay while background data loads).
+      // OBRS-483: gated on `ticketsLoading` (the store's own load flag), NOT
+      // `tickets.length === 0` — a real OPEN-seating ticket has `seatNumber:
+      // null` but still populates the array, so length alone can't tell
+      // "still loading" apart from "loaded, genuinely empty".
+      return;
+    }
+    if (this.tickets.length === 0) {
+      // Loaded and genuinely empty — no confirmed ticket to reschedule (a
+      // reschedule-eligible, confirmed booking always has at least one;
+      // this is a data-integrity edge case, not the OPEN-seating case
+      // above). Nothing to dispatch.
       return;
     }
 
@@ -351,7 +372,11 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
         newScheduleId: option.scheduleId,
         newFromStopId: fromStopId,
         newToStopId: toStopId,
-        seats: this.tickets.map((t) => t.seatNumber),
+        // `null` under OPEN seating — the GET query param can't carry a
+        // null value; see the matching comment in
+        // `RescheduleEffect.confirmReschedule$` for why an empty-string
+        // placeholder (count preserved) is safe here.
+        seats: this.tickets.map((t) => t.seatNumber ?? ''),
       })
     );
   }
