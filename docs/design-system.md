@@ -695,6 +695,32 @@ enforced rule with a test behind it.
   its light-tiles precondition forward with it, don't assume it "just works" on
   a different surface.
 
+- **Leaflet + MapTiler extended to the first customer-facing map surface**
+  (OBRS-426, `TripTrackPanelComponent` / `TripTrackMapComponent`, the
+  my-bookings "where is my bus" tracker): the OBRS-424 entry above scoped its
+  reuse instruction to the next *internal/high-frequency* map feature; this
+  card is customer-facing and low-frequency, so it stands on its own
+  justification rather than inheriting that one — see
+  `docs/adr/0026-leaflet-customer-trip-map.md`. Two changes ride along:
+  (1) the tile URL/attribution composer moves one level up, from
+  `modules/staff/pages/fleet-map/fleet-map.constants.ts` to
+  `shared/lib/map-tiles.ts` (`mapTileUrl()` / `MAP_TILE_ATTRIBUTION`), with
+  the old names re-exported unchanged so OBRS-424 stays byte-identical;
+  (2) the Leaflet marker itself uses its OWN CSS custom-property names
+  (`--trip-track-marker-*`), never `--admin-*` directly — unlike the
+  `.admin-status` CHIP re-declaration precedent (`ParcelTrackingPageComponent`
+  below), a Leaflet marker's HTML is injected outside Angular's template
+  compiler, so a future edit copying `FleetMapPanelComponent`'s marker code
+  verbatim (reading `--admin-success-text` etc., which resolve to nothing
+  outside `.admin-shell`) would fail invisibly — using distinct names with
+  the SAME copied values, and asserting their absence in a unit test, closes
+  that specific silent-failure class rather than merely re-declaring the
+  admin names once more. The STALE marker (BR-11) swaps both the fill/halo
+  variable NAMES and adds a dashed halo + 0.55 opacity — never merely an
+  additive class on the live token. Reuse this "own token names, values
+  copied, never `--admin-*` on Leaflet-injected marker HTML" pattern for the
+  next map marker built for a customer-shell surface.
+
 - **`lastFetchedAt$` on `AdminCollectionStore`** (OBRS-424,
   `admin-collection-store.ts`): every SWR-backed page needs an honest way to
   say "the backend call is failing, this is how old the shown data actually

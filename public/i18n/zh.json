@@ -122,6 +122,35 @@
       "LOAD_FAILED": "无法加载电子票，请重试。",
       "CLOSE": "关闭"
     },
+    "TRIP_TRACK": {
+      "TITLE": "我的车在哪里",
+      "LOADING": "正在查询车辆位置…",
+      "LAST_UPDATE": "最后更新 {{time}}",
+      "MAP_UNAVAILABLE": "地图暂不可用 — 以上状态仍为最新",
+      "REFRESH_FAILED": "刷新失败 — 显示 {{time}} 的数据",
+      "STATE": {
+        "LIVE": "实时位置",
+        "LIVE_BODY": "这是车辆当前的位置。",
+        "STALE": "位置可能不是最新",
+        "STALE_BODY": "车辆最近未上报位置。此位置来自 {{time}}，车辆可能已经移动。",
+        "NO_SIGNAL": "信号丢失",
+        "NO_SIGNAL_BODY": "目前无法获取车辆位置，我们将持续尝试。",
+        "UNAVAILABLE": "位置暂不可用",
+        "UNAVAILABLE_BODY": "此行程的车辆尚未上报位置。如有更新会显示在此处。",
+        "NOT_YET_OPEN": "尚未开放查看",
+        "NOT_YET_OPEN_BODY": "您可以在车辆从您的上车点出发前 60 分钟查看车辆位置。",
+        "NOT_YET_OPEN_AT": "开放查看时间 {{time}}",
+        "CLOSED": "追踪已结束",
+        "CLOSED_BODY": "此行程已结束，实时追踪已关闭。"
+      },
+      "MARKER": {
+        "VEHICLE": "车辆",
+        "BOARDING_STOP": "您的上车点"
+      },
+      "ERROR": {
+        "UNAVAILABLE": "无法显示此票的车辆位置。"
+      }
+    },
     "FILTERS": {
       "ALL": "全部",
       "CONFIRMED": "已确认",

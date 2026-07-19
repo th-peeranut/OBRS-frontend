@@ -28,9 +28,7 @@ export function mapBookingTicketsToCard(
   locale: ETicketLocale
 ): ETicketCardData {
   const journeys = data.journeys ?? [];
-  const outbound = findJourney(journeys, 'outbound') ?? journeys[0] ?? null;
-  const inbound =
-    findJourney(journeys, 'inbound') ?? (journeys.length > 1 ? journeys[1] : null);
+  const { outbound, inbound } = resolveLegPair(journeys);
 
   const journeyToLeg = (journey: BookingTicketJourney): TicketLeg => ({
     travelDate: formatDate(journey.departureDateTime, locale) || '-',
@@ -100,6 +98,81 @@ function findJourney(
       (journey) => (journey.legType?.code ?? '').trim().toLowerCase() === code
     ) ?? null
   );
+}
+
+/**
+ * SPEC-OBRS-426 BR-4a: the ONE shared outbound/inbound pair-resolution rule,
+ * used by BOTH `mapBookingTicketsToCard` and `mapBookingTicketsToTrackTargets`
+ * below. Resolves by `legType.code`, never by `journeys[]` array order —
+ * `journeys[]` order is not guaranteed on the wire, and a booking can (and
+ * does, in practice) arrive inbound-first. Do not fork this selection logic
+ * into a second copy; two copies of a pairing rule is how they drift.
+ */
+function resolveLegPair(journeys: BookingTicketJourney[]): {
+  outbound: BookingTicketJourney | null;
+  inbound: BookingTicketJourney | null;
+} {
+  const outbound = findJourney(journeys, 'outbound') ?? journeys[0] ?? null;
+  const inbound =
+    findJourney(journeys, 'inbound') ?? (journeys.length > 1 ? journeys[1] : null);
+  return { outbound, inbound };
+}
+
+/** SPEC-OBRS-426 M1 output — one per journey leg, `null` when the leg has no
+ * eligible ticket to track. */
+export interface TripTrackTarget {
+  ticketId: number;
+  boardingStopLabel: string;
+  boardingStopLat: number | null;
+  boardingStopLon: number | null;
+}
+
+/** SPEC-OBRS-426 BR-6: selection heuristic only (never a security dispatch —
+ * the backend re-verifies ownership/window regardless). Deliberate LITERAL
+ * copy of the backend's `CustomerTripPositionService.OPEN_TICKET_STATUSES`;
+ * see the spec's "Known duplication, accepted with eyes open" note — a future
+ * backend change to that allow-list must grep this file in the same pass. */
+const TRACKABLE_TICKET_STATUSES = ['confirmed', 'checked_in'];
+
+/**
+ * M1 (SPEC-OBRS-426 BR-5): resolves the per-leg vehicle-tracking target for
+ * the my-bookings ticket modal. `TicketLeg` (the e-ticket card's own view
+ * model) drops `journey.tickets[].id` entirely — this mapper reads it from
+ * the raw `BookingTicketsData.journeys[].tickets[].id` the card mapper never
+ * exposes.
+ *
+ * Returns exactly two entries, `[outboundTarget, inboundTarget]`, resolved by
+ * the SAME `resolveLegPair` helper `mapBookingTicketsToCard` uses — so the two
+ * mappers can never disagree about which journey is "the outbound leg"
+ * (BR-4a). A leg with no eligible ticket yields a `null` HOLE at that index,
+ * never a shortened/filtered array: the caller indexes into this array by the
+ * same position it indexes into `ETicketCardData.legs`, so index alignment is
+ * the whole contract.
+ */
+export function mapBookingTicketsToTrackTargets(
+  data: BookingTicketsData
+): (TripTrackTarget | null)[] {
+  const journeys = data.journeys ?? [];
+  const { outbound, inbound } = resolveLegPair(journeys);
+  return [outbound, inbound].map(buildTrackTarget);
+}
+
+function buildTrackTarget(journey: BookingTicketJourney | null): TripTrackTarget | null {
+  const tickets = journey?.tickets ?? [];
+  if (tickets.length === 0) {
+    return null;
+  }
+  const ticket =
+    tickets.find((t) =>
+      TRACKABLE_TICKET_STATUSES.includes((t.status?.code ?? '').trim().toLowerCase())
+    ) ?? tickets[0];
+
+  return {
+    ticketId: ticket.id,
+    boardingStopLabel: journey?.fromStop?.label?.trim() || '-',
+    boardingStopLat: journey?.fromStop?.latitude ?? null,
+    boardingStopLon: journey?.fromStop?.longitude ?? null,
+  };
 }
 
 function collectTicketNumbers(journeys: BookingTicketJourney[]): string {
