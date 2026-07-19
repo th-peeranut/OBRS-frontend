@@ -381,10 +381,26 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
       // `active` is NOT a modal field (UX spec §4.2) — it is flipped only by
       // toggleActive(); create defaults true (SPEC §3.3's server default).
       active: current?.active ?? original?.active ?? true,
-      translations: raw.translations.map((translation) => ({
-        locale: translation.locale,
-        label: translation.label.trim(),
-      })),
+      // OBRS-529: a locale the owner left blank is OMITTED from the payload, not
+      // sent as `label: ''`. Two independent reasons, either one sufficient:
+      //   1. `TranslationReqDto.label` carries an unconditional `@NotBlank`, and
+      //      that DTO is shared with 7+ other domains (Lookup, Promotion, Province,
+      //      Role, Route, Stop, VehicleType) where every locale really IS required.
+      //      An empty string is rejected by bean validation before this feature's
+      //      own `validateLocales` ever runs — so sending '' 400s the request and
+      //      the Thai-only save this whole card exists for becomes impossible.
+      //   2. Even if it were accepted, '' is the wrong thing to mean. An empty
+      //      label is "no translation", not "a translation whose text is empty" —
+      //      and the backend's update path already reads "locale absent from the
+      //      payload" as "delete that translation row", which is exactly what
+      //      clearing the field should do. A persisted empty row would instead
+      //      shadow the `requested -> en -> code` fallback with a blank.
+      translations: raw.translations
+        .map((translation) => ({
+          locale: translation.locale,
+          label: translation.label.trim(),
+        }))
+        .filter((translation) => translation.label.length > 0),
     };
   }
 

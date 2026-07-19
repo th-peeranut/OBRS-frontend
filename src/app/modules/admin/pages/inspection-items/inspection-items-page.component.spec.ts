@@ -231,6 +231,50 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     expect(component.isFormModalOpen).toBeFalse();
   });
 
+  // OBRS-529 [caught in live full-stack QA, not by any unit or IT]: both halves of
+  // this card were green while being mutually incompatible. The backend ITs proved
+  // "th-only" by sending a ONE-element translations list; the frontend sent all
+  // THREE with `label: ''` for the blank ones. `TranslationReqDto.label` has an
+  // unconditional `@NotBlank`, so the real request 400'd before the relaxed
+  // `validateLocales` ever ran — the exact AC this card exists for, failing in the
+  // browser with a full green suite on both sides. These two specs pin the wire
+  // shape the backend actually accepts, which is the thing neither suite asserted.
+  it('OBRS-529: a blank locale is OMITTED from the payload, never sent as an empty label', async () => {
+    const createInspectionItem = jasmine
+      .createSpy('createInspectionItem')
+      .and.returnValue(of(ok(item({ id: 24 }))));
+    const { component, store } = makeComponent({ createInspectionItem });
+    component.ngOnInit();
+    store.data$.next([item()]);
+    component.openCreateModal();
+    // Thai only — EN and ZH left untouched, exactly what the owner does now that
+    // this card dropped their `Validators.required`.
+    component.translationsFormArray.at(0).get('label')?.setValue('น้ำมันเครื่อง');
+
+    await component.submitItem();
+
+    const payload = createInspectionItem.calls.argsFor(0)[0];
+    expect(payload.translations).toEqual([{ locale: 'th', label: 'น้ำมันเครื่อง' }]);
+    expect(payload.translations.some((t: any) => t.label === '')).toBeFalse();
+  });
+
+  it('OBRS-529: clearing a previously-filled locale on EDIT omits it, so the backend deletes that row', async () => {
+    const updateInspectionItem = jasmine
+      .createSpy('updateInspectionItem')
+      .and.returnValue(of(ok(item({ id: 1 }))));
+    const { component, store } = makeComponent({ updateInspectionItem });
+    component.ngOnInit();
+    store.data$.next([item()]);
+    component.openEditModal(component.rows[0]);
+    // Owner wipes the Chinese label — "no translation", not "an empty one".
+    component.translationsFormArray.at(2).get('label')?.setValue('   ');
+
+    await component.submitItem();
+
+    const payload = updateInspectionItem.calls.argsFor(0)[1];
+    expect(payload.translations.map((t: any) => t.locale)).toEqual(['th', 'en']);
+  });
+
   it('edit carries forward the row\'s current `active` value (an edit never silently un-retires)', async () => {
     const retiredRow = item({ id: 1, active: false });
     const updateInspectionItem = jasmine
