@@ -734,7 +734,7 @@ describe('UsabilityReportsPageComponent', () => {
     return buildPage([{ ...mockSummaryPage.content[0], status }], overrides.totalElements ?? 1, overrides);
   }
 
-  it('builds the admin detail dropdown from accepted/dismissed/resolved/rejected, while the table filter keeps all 7 statuses (including duplicate, OBRS-376)', () => {
+  it('builds the admin detail dropdown from accepted/dismissed/resolved/rejected, while the table filter keeps "all" (OBRS-524) plus all 7 statuses (including duplicate, OBRS-376)', () => {
     primeReportList();
 
     const detailValues = component['detailStatusOptions'].map((o) => o.value);
@@ -744,8 +744,8 @@ describe('UsabilityReportsPageComponent', () => {
 
     const filterValues = component['statusFilterOptions'].map((o) => o.value);
     expect(filterValues)
-      .withContext('the table filter above the table must still offer every status, including dismissed and duplicate')
-      .toEqual(['new', 'in_review', 'accepted', 'dismissed', 'resolved', 'rejected', 'duplicate']);
+      .withContext('the table filter above the table must offer "all" plus every status, including dismissed and duplicate')
+      .toEqual(['all', 'new', 'in_review', 'accepted', 'dismissed', 'resolved', 'rejected', 'duplicate']);
   });
 
   it('fires the silent auto-promote (new -> in_review) exactly once when opening a "new" report', () => {
@@ -1372,6 +1372,29 @@ describe('UsabilityReportsPageComponent', () => {
       expect(row?.status).toBe('in_review');
       expect(mutated?.totalElements).toBe(2);
     });
+
+    // OBRS-524: under the 'all' filter every status is in view, so a status
+    // change can never move a row out of what's shown — it must always be
+    // relabeled in place, never removed, regardless of the new status.
+    it('OBRS-524: does NOT remove the row under the "all" filter, even though the new status differs from every other row', () => {
+      const page = primeOnNewTab();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      let mutated: UsabilityReportPage | undefined;
+      storeSpy.mutate.and.callFake((transformFn: (current: UsabilityReportPage) => UsabilityReportPage) => {
+        mutated = transformFn(page);
+      });
+
+      component['selectedStatusFilter'] = 'all';
+      component['openDetail']('rep-1'); // auto-promotes 'new' -> 'in_review'
+
+      const row = mutated?.content.find((r) => r.id === 'rep-1');
+      expect(row)
+        .withContext('under "all", a status change must relabel the row, never remove it')
+        .toBeTruthy();
+      expect(row?.status).toBe('in_review');
+      expect(mutated?.totalElements).toBe(2);
+    });
   });
 
   // ── OBRS-378: dismissed detail-modal 3-way branch ─────────────────────────
@@ -1458,6 +1481,20 @@ describe('UsabilityReportsPageComponent', () => {
 
       expect(component['selectedStatusFilter']).toBe('new');
       expect(storeSpy.setStatus).toHaveBeenCalledWith('new');
+    });
+
+    // ── OBRS-524: 'all' is a real, concrete option value — NOT the retired
+    // OBRS-378 empty-placeholder "show all" shape — so it must pass straight
+    // through to the store like any other status, never fall back to the
+    // role default.
+    it('OBRS-524: forwards the "all" selection to store.setStatus unchanged (not treated as an empty/placeholder selection)', () => {
+      primeReportList();
+      storeSpy.setStatus.calls.reset();
+
+      component['onStatusFilterChange']('all');
+
+      expect(component['selectedStatusFilter']).toBe('all');
+      expect(storeSpy.setStatus).toHaveBeenCalledWith('all');
     });
   });
 

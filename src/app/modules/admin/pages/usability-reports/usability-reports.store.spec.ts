@@ -95,6 +95,21 @@ describe('UsabilityReportsStore', () => {
     );
   });
 
+  // OBRS-524: 'all' is a real, explicit filter value one layer up (the
+  // component/dropdown), but the backend has no "all" slug — the store is
+  // the single place that collapses it back to "omit ?status=" on the wire,
+  // confirmed against the live backend (a null/blank status runs an
+  // unfiltered findAll(), including 'duplicate'/'dismissed' rows).
+  it('setStatus("all") (OBRS-524) omits the status param, so the backend returns every status', async () => {
+    await store.setStatus('all');
+    expect(adminApiServiceSpy.getUsabilityReports).toHaveBeenCalledWith(
+      undefined,
+      ['createdAt,desc', 'id,desc'],
+      0,
+      20
+    );
+  });
+
   // ── OBRS-403: server-side page ──────────────────────────────────────────
   describe('setPage (OBRS-403)', () => {
     it('fetches page 2 (0-based: 1) with the current status/sort preserved', async () => {

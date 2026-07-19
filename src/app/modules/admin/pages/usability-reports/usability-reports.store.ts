@@ -3,18 +3,17 @@ import { firstValueFrom } from 'rxjs';
 import { AdminApiService } from '../../../../services/admin/admin-api.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { AdminCollectionStore } from '../../shared/admin-collection-store';
-import {
-  UsabilityReportPage,
-  UsabilityReportStatus,
-} from '../../../../shared/interfaces/usability-report.interface';
-import { sortForStatus } from './usability-reports-page.mappers';
+import { UsabilityReportPage } from '../../../../shared/interfaces/usability-report.interface';
+import { sortForStatus, StatusFilterValue } from './usability-reports-page.mappers';
 
 @Injectable({ providedIn: 'root' })
 export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportPage> {
-  // OBRS-378: '' means "no status filter" (not used by default anymore — the
-  // page always seeds a concrete role-default status — but kept so setStatus
-  // can still be called with '' if a future caller needs the unfiltered view).
-  private status: UsabilityReportStatus | '' = '';
+  // '' means "no status ever set" (the store's own pre-init default, before
+  // the page's first setStatus() call) and 'all' (OBRS-524) means "the admin
+  // explicitly chose to see every status" — both resolve to the SAME wire
+  // behavior below (omit ?status=), but are kept as distinct values so a
+  // future caller can tell "never asked" apart from "asked for everything".
+  private status: StatusFilterValue | '' = '';
   // OBRS-403: 0-based, matches Spring's Pageable — reset to 0 on every tab
   // switch (see setStatus below) so a stale page number never survives a
   // status change.
@@ -33,7 +32,7 @@ export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportP
   // previous tab's rows briefly replay as the new tab's before the fresh
   // fetch lands (a visible wrong-data flash). Also resets to page 1 — a tab
   // switch is a fresh view, not a continuation of the previous tab's paging.
-  setStatus(status: UsabilityReportStatus | ''): Promise<void> {
+  setStatus(status: StatusFilterValue | ''): Promise<void> {
     if (this.status !== status) {
       this.status = status;
       this.page = 0;
@@ -54,9 +53,16 @@ export class UsabilityReportsStore extends AdminCollectionStore<UsabilityReportP
   }
 
   protected async fetch(): Promise<UsabilityReportPage> {
+    // OBRS-524: 'all' is a real, explicit filter value at the component
+    // layer, but the backend has no "all" slug — GET .../usability-reports
+    // returns every status when ?status= is simply omitted (confirmed
+    // against UsabilityReportService.listReports: a null/blank status runs
+    // an unfiltered findAll(), including 'duplicate'/'dismissed' rows). This
+    // is the ONE place that distinction is collapsed back to the wire shape.
+    const statusParam = this.status && this.status !== 'all' ? this.status : undefined;
     const response = await firstValueFrom(
       this.adminApiService.getUsabilityReports(
-        this.status || undefined,
+        statusParam,
         sortForStatus(this.status),
         this.page,
         UsabilityReportsStore.PAGE_SIZE

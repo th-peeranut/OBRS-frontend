@@ -963,13 +963,14 @@
       "STATUS": {
         "LABEL": "Status",
         "SAVE": "Save",
+        "all": "All statuses",
         "new": "New",
         "in_review": "In Review",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",
         "rejected": "Rejected",
-        "duplicate": "Duplicate"
+        "duplicate": "Duplicate of another report"
       },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",

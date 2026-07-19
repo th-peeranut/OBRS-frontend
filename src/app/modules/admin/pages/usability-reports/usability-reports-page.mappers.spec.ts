@@ -29,8 +29,9 @@ import {
 
 describe('usability-reports-page.mappers', () => {
   describe('STATUS_FILTER_VALUES / DETAIL_STATUS_VALUES', () => {
-    it('the table filter offers all 7 statuses (OBRS-378 dismissed + OBRS-376 duplicate) in order, non-terminal before terminal', () => {
+    it('the table filter offers "all" (OBRS-524) plus all 7 statuses (OBRS-378 dismissed + OBRS-376 duplicate) in order, non-terminal before terminal', () => {
       expect(STATUS_FILTER_VALUES).toEqual([
+        'all',
         'new',
         'in_review',
         'accepted',
@@ -373,8 +374,12 @@ describe('usability-reports-page.mappers', () => {
       expect(sortForStatus('rejected')).toEqual(['createdAt,desc', 'id,desc']);
     });
 
-    it('sorts descending for the empty (all-statuses) selection', () => {
+    it('sorts descending for the empty (pre-init, unset) selection', () => {
       expect(sortForStatus('')).toEqual(['createdAt,desc', 'id,desc']);
+    });
+
+    it('sorts descending for the "all" (OBRS-524) selection — no single FIFO queue when every status is mixed', () => {
+      expect(sortForStatus('all')).toEqual(['createdAt,desc', 'id,desc']);
     });
   });
 

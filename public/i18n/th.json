@@ -963,13 +963,14 @@
       "STATUS": {
         "LABEL": "สถานะ",
         "SAVE": "บันทึก",
+        "all": "ทั้งหมด",
         "new": "ใหม่",
         "in_review": "กำลังตรวจสอบ",
         "accepted": "ยอมรับแล้ว",
         "dismissed": "พักไว้ก่อน",
         "resolved": "แก้ไขแล้ว",
         "rejected": "ปฏิเสธ",
-        "duplicate": "ซ้ำ"
+        "duplicate": "ซ้ำกับรายงานอื่น"
       },
       "STATUS_UPDATE_SUCCESS": "อัปเดตสถานะเรียบร้อยแล้ว",
       "STATUS_UPDATE_FAILED": "อัปเดตสถานะไม่สำเร็จ กรุณาลองใหม่",
