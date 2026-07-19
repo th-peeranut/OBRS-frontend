@@ -293,6 +293,20 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     return !!field && field.invalid && (field.dirty || field.touched);
   }
 
+  /**
+   * Scrutinize self-fix: `code` carries THREE validators (required / maxLength
+   * / pattern) and the template rendered CODE_PATTERN_ERROR for all of them —
+   * an empty code told the owner "lowercase letters, numbers, underscore, or
+   * hyphen only", which describes neither the failure nor the fix. "A
+   * validator covering multiple failure reasons needs one message each"
+   * (OBRS-223). Both keys already exist; no new i18n key is added.
+   */
+  protected codeErrorKey(): string {
+    return this.itemForm.get('code')?.hasError('required')
+      ? 'ADMIN.VALIDATION.REQUIRED'
+      : 'ADMIN.INSPECTION_ITEMS.CODE_PATTERN_ERROR';
+  }
+
   protected isTranslationInvalid(index: number): boolean {
     const control = this.translationsFormArray.at(index)?.get('label');
     return !!control && control.invalid && (control.dirty || control.touched);
@@ -347,12 +361,22 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
       translations: { locale: string; label: string }[];
     };
 
+    // Scrutinize self-fix: `original` is the row snapshotted at modal-OPEN
+    // time. `rows` is replaced by every accepted store.data$ emission while
+    // the modal stays open (the trailing refresh() after any write, or another
+    // owner's change), so the snapshot's `active` can be stale by save time —
+    // and PUT sends the full shape, so a stale `true` silently UN-RETIRES an
+    // item retired since the modal opened. That is exactly the F2 defect
+    // SPEC §3.4.1 eliminated on the backend, re-entering through the client.
+    // Re-read `active` from the current rows by id; fall back to the snapshot
+    // only if the row is genuinely gone (create → default true, SPEC §3.3).
+    const current = original ? this.rows.find((row) => row.id === original.id) : null;
+
     return {
       code: raw.code.trim().toLowerCase(),
-      // Create defaults true (SPEC §3.3's server default); edit carries
-      // forward the row's current value — this field is NOT a modal field
-      // (UX spec §4.2), it's flipped only by toggleActive() below.
-      active: original?.active ?? true,
+      // `active` is NOT a modal field (UX spec §4.2) — it is flipped only by
+      // toggleActive(); create defaults true (SPEC §3.3's server default).
+      active: current?.active ?? original?.active ?? true,
       translations: raw.translations.map((translation) => ({
         locale: translation.locale,
         label: translation.label.trim(),

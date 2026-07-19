@@ -168,6 +168,29 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
       jasmine.objectContaining({ active: false })
     );
   });
+
+  it('edit re-reads `active` from the CURRENT rows, so a mid-modal retire is not silently undone', async () => {
+    const updateInspectionItem = jasmine
+      .createSpy('updateInspectionItem')
+      .and.returnValue(of(ok(item({ active: false }))));
+    const { component, store } = makeComponent({ updateInspectionItem });
+    component.ngOnInit();
+    store.data$.next([item({ id: 1, active: true })]);
+    component.openEditModal(component.rows[0]); // snapshot says active: true
+
+    // The row is retired elsewhere (another owner, or this page's own trailing
+    // refresh()) WHILE the modal is open. `rows` updates; the snapshot does not.
+    store.data$.next([item({ id: 1, active: false })]);
+    component.translationsFormArray.at(1).get('label')?.setValue('Updated TH');
+
+    await component.submitItem();
+
+    // Without the re-read this sends `active: true` and un-retires the item.
+    expect(updateInspectionItem).toHaveBeenCalledOnceWith(
+      1,
+      jasmine.objectContaining({ active: false })
+    );
+  });
 });
 
 describe('InspectionItemsPageComponent — retire/restore (AC#4)', () => {

@@ -176,7 +176,7 @@
         </label>
         <input class="admin-field" formControlName="code" />
         <small class="admin-error" *ngIf="isCodeInvalid()">
-          {{ 'ADMIN.INSPECTION_ITEMS.CODE_PATTERN_ERROR' | translate }}
+          {{ codeErrorKey() | translate }}
         </small>
         <small class="admin-muted" *ngIf="isEditMode">
           {{ 'ADMIN.INSPECTION_ITEMS.CODE_READONLY_HINT' | translate }}
