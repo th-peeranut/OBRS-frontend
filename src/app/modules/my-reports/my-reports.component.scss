@@ -14,6 +14,14 @@
   --admin-warning-text: #673a00;
   --admin-inreview-bg: #e2e5ea;
   --admin-inreview-text: #3a4250;
+  // OBRS-527 (Scrutinize self-fix): my-reports.mappers.ts::statusClass now
+  // returns 'is-owner-accepted', so this cross-shell page must re-declare the
+  // owner_accepted pair too — it is only ever defined inside `.admin-shell`
+  // (admin-theme.scss), so without this the chip renders with an unresolved
+  // background AND an unresolved color (transparent pill, inherited text).
+  // Same values as the admin tokens; no new hex.
+  --admin-owner-accepted-bg: #b8f2e6;
+  --admin-owner-accepted-text: #003d33;
   --admin-accepted-bg: #b7f3c0;
   --admin-accepted-text: #0a3d1d;
   --admin-neutral-bg: #e4e4e7;
@@ -31,6 +39,10 @@
   --admin-neutral-text: #cdd8df;
   --admin-inreview-bg: #29323d;
   --admin-inreview-text: #c7d3de;
+  // OBRS-527 (Scrutinize self-fix): BOTH sides of the pair, matching the
+  // admin dark override — a one-sided override is the recorded OBRS-86 bug.
+  --admin-owner-accepted-bg: #1b3b35;
+  --admin-owner-accepted-text: #9fedde;
   --admin-duplicate-bg: #3b2f5c;
   --admin-duplicate-text: #ddd6fe;
 }

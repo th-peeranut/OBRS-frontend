@@ -34,13 +34,15 @@ import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 // directly, so specs don't need a real STOMP connection (mirrored per test
 // group, same pattern as `createWithCountSource` for AdminApiService below).
 // OBRS-378: the message now carries both counts (counts$, renamed from count$).
+// OBRS-527: acceptedReportCount RENAMED to ownerAcceptedReportCount (wire
+// rename, not add — see badge-socket.service.ts's LOCKED CONTRACT comment).
 function createBadgeSocketServiceStub(): {
-  counts$: Subject<{ newReportCount: number; acceptedReportCount: number }>;
+  counts$: Subject<{ newReportCount: number; ownerAcceptedReportCount: number }>;
   connect: jasmine.Spy;
   disconnect: jasmine.Spy;
 } {
   return {
-    counts$: new Subject<{ newReportCount: number; acceptedReportCount: number }>(),
+    counts$: new Subject<{ newReportCount: number; ownerAcceptedReportCount: number }>(),
     connect: jasmine.createSpy('connect'),
     disconnect: jasmine.createSpy('disconnect'),
   };
@@ -50,10 +52,10 @@ describe('AdminLayoutComponent', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
 
   // OBRS-378: getRoles() drives badgeStatus (raw-role: owner -> 'new', admin
-  // -> 'accepted'). Defaults to 'owner' here so the pre-existing badge specs
-  // below (written before the role-split existed) keep exercising the
-  // 'new'-watching badge unchanged; the admin-specific behavior is covered by
-  // its own describe block further down.
+  // -> 'owner_accepted', OBRS-527). Defaults to 'owner' here so the
+  // pre-existing badge specs below (written before the role-split existed)
+  // keep exercising the 'new'-watching badge unchanged; the admin-specific
+  // behavior is covered by its own describe block further down.
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
@@ -378,9 +380,9 @@ describe('AdminLayoutComponent — usability report badge', () => {
   // OBRS-378: getRoles() drives badgeStatus. Defaults to 'owner' (badgeStatus
   // = 'new') so every pre-existing test below (written before the role-split
   // existed) keeps exercising the same badge behavior; the admin variant
-  // (badgeStatus = 'accepted') is covered by its own describe block below,
-  // which reassigns getRoles before creating the component (same mutation
-  // pattern as the outer describe's hasAnyRole override).
+  // (badgeStatus = 'owner_accepted', OBRS-527) is covered by its own describe
+  // block below, which reassigns getRoles before creating the component (same
+  // mutation pattern as the outer describe's hasAnyRole override).
   const authStub = {
     getUsername: () => 'admin@obrs.test',
     logout: jasmine.createSpy('logout'),
@@ -440,6 +442,32 @@ describe('AdminLayoutComponent — usability report badge', () => {
     return f;
   }
 
+  // OBRS-527 regression: badgeStatus must be driven by the RAW getRoles()
+  // check, never hasAnyRole — an owner satisfies hasAnyRole(['admin']) too
+  // under this FE's ROLE_GRANTS superset semantics (see AuthService), which
+  // would wrongly flip a pure owner's badge (and its whole 'owner_accepted'
+  // queue) to the admin variant. getRoles() returning ['owner'] must give
+  // 'new' regardless of what hasAnyRole(['admin']) answers.
+  it('fetches status="new" for getRoles()=["owner"] even when hasAnyRole(["admin"]) is true (no hasAnyRole superset)', fakeAsync(() => {
+    const originalHasAnyRole = authStub.hasAnyRole;
+    authStub.hasAnyRole = (_roles: string[]) => true; // simulate the ROLE_GRANTS superset an owner satisfies
+    try {
+      const countSpy = jasmine.createSpy('getUsabilityReportCountByStatus').and.returnValue(of(2));
+      TestBed.overrideProvider(AdminApiService, {
+        useValue: { getUsabilityReportCountByStatus: countSpy },
+      });
+      fixture = TestBed.createComponent(AdminLayoutComponent);
+      fixture.detectChanges();
+      tick();
+      fixture.detectChanges();
+      discardPeriodicTasks();
+
+      expect(countSpy).toHaveBeenCalledWith('new');
+    } finally {
+      authStub.hasAnyRole = originalHasAnyRole;
+    }
+  }));
+
   it('hides the badge when the fetched count is 0', fakeAsync(() => {
     fixture = createWithCountSource(() => of(0));
     tick();
@@ -483,7 +511,8 @@ describe('AdminLayoutComponent — usability report badge', () => {
 
   // ── OBRS-378: delta-gating — a badge must ignore an adjustBy for a status
   // it isn't displaying (the fix for a real bug: an admin's badge showing
-  // 'accepted' must not react to a 'new'-tab adjustBy elsewhere on the page).
+  // 'owner_accepted' (OBRS-527) must not react to a 'new'-tab adjustBy
+  // elsewhere on the page).
   it('ignores a countAdjustments delta tagged for a different status than badgeStatus', fakeAsync(() => {
     fixture = createWithCountSource(() => of(3));
     tick();
@@ -491,9 +520,9 @@ describe('AdminLayoutComponent — usability report badge', () => {
     discardPeriodicTasks();
     const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
 
-    // This layout's badgeStatus is 'new' (owner stub) — an 'accepted' delta
-    // must be ignored.
-    badgeService.adjustBy('accepted', -1);
+    // This layout's badgeStatus is 'new' (owner stub) — an 'owner_accepted'
+    // delta must be ignored.
+    badgeService.adjustBy('owner_accepted', -1);
     fixture.detectChanges();
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
@@ -543,7 +572,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
     tick();
     fixture.detectChanges();
 
-    badgeSocketServiceStub.counts$.next({ newReportCount: 7, acceptedReportCount: 40 });
+    badgeSocketServiceStub.counts$.next({ newReportCount: 7, ownerAcceptedReportCount: 40 });
     fixture.detectChanges();
 
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
@@ -551,7 +580,7 @@ describe('AdminLayoutComponent — usability report badge', () => {
       .withContext('a pushed WS frame should update the badge without waiting for a poll tick')
       .toBeTruthy();
     expect(badge.nativeElement.textContent.trim())
-      .withContext('an owner (badgeStatus="new") reads newReportCount from the message, not acceptedReportCount')
+      .withContext('an owner (badgeStatus="new") reads newReportCount from the message, not ownerAcceptedReportCount')
       .toBe('7');
 
     discardPeriodicTasks();
@@ -590,10 +619,12 @@ describe('AdminLayoutComponent — usability report badge', () => {
   }));
 });
 
-// ── OBRS-378: admin badgeStatus = 'accepted' ──────────────────────────────────
+// ── OBRS-378/OBRS-527: admin badgeStatus = 'owner_accepted' ────────────────────
 // Separate top-level describe (same fakeAsync-friendly beforeEach shape as the
 // 'owner' badge describe above) covering the admin variant of the role-split:
-// the raw-role admin identity watches 'accepted' (owner-vetted), not 'new'.
+// the raw-role admin identity watches 'owner_accepted' (owner-vetted, awaiting
+// platform adoption), not 'new'. Renamed from 'accepted' by OBRS-527 — the
+// admin badge no longer watches 'accepted' at all (nobody's badge now).
 describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', () => {
   let fixture: ComponentFixture<AdminLayoutComponent>;
   let badgeSocketServiceStub: ReturnType<typeof createBadgeSocketServiceStub>;
@@ -652,7 +683,7 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     return f;
   }
 
-  it('fetches the count with status="accepted" (not "new") for an admin identity', fakeAsync(() => {
+  it('fetches the count with status="owner_accepted" (not "new"/"accepted") for an admin identity', fakeAsync(() => {
     const countSpy = jasmine.createSpy('getUsabilityReportCountByStatus').and.returnValue(of(9));
     TestBed.overrideProvider(AdminApiService, {
       useValue: { getUsabilityReportCountByStatus: countSpy },
@@ -663,44 +694,64 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
     fixture.detectChanges();
     discardPeriodicTasks();
 
-    expect(countSpy).toHaveBeenCalledWith('accepted');
+    expect(countSpy).toHaveBeenCalledWith('owner_accepted');
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim()).toBe('9');
   }));
 
-  it('reads acceptedReportCount (not newReportCount) from a socket push', fakeAsync(() => {
+  it('reads ownerAcceptedReportCount (not newReportCount) from a socket push', fakeAsync(() => {
     fixture = createWithCountSource(() => of(0));
     tick();
     fixture.detectChanges();
 
-    badgeSocketServiceStub.counts$.next({ newReportCount: 40, acceptedReportCount: 6 });
+    badgeSocketServiceStub.counts$.next({ newReportCount: 40, ownerAcceptedReportCount: 6 });
     fixture.detectChanges();
 
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
-      .withContext('admin (badgeStatus="accepted") must read acceptedReportCount, not newReportCount')
+      .withContext('admin (badgeStatus="owner_accepted") must read ownerAcceptedReportCount, not newReportCount')
       .toBe('6');
 
     discardPeriodicTasks();
   }));
 
-  it('applies an adjustBy("accepted", …) delta but ignores an adjustBy("new", …) delta', fakeAsync(() => {
+  // OBRS-527: a version-skewed backend (dev not yet redeployed) could still
+  // emit the pre-rename shape with no ownerAcceptedReportCount key at all —
+  // `?? 0` must render a real 0, not NaN/undefined, from that emission.
+  it('reads badgeCount as 0 (not NaN) from a socket push missing ownerAcceptedReportCount', fakeAsync(() => {
+    fixture = createWithCountSource(() => of(3));
+    tick();
+    fixture.detectChanges();
+    discardPeriodicTasks();
+
+    badgeSocketServiceStub.counts$.next({ newReportCount: 40 } as unknown as {
+      newReportCount: number;
+      ownerAcceptedReportCount: number;
+    });
+    fixture.detectChanges();
+
+    const comp = fixture.componentInstance as unknown as { badgeCount: number };
+    expect(comp.badgeCount).withContext('missing key must fall back to 0, never NaN/undefined').toBe(0);
+    expect(Number.isNaN(comp.badgeCount)).toBeFalse();
+  }));
+
+  it('applies an adjustBy("owner_accepted", …) delta but ignores an adjustBy("new", …) delta', fakeAsync(() => {
     fixture = createWithCountSource(() => of(5));
     tick();
     fixture.detectChanges();
     discardPeriodicTasks();
     const badgeService = TestBed.inject(UsabilityReportBadgeRefreshService);
 
-    // A 'new'-tab adjustment must not move the admin's 'accepted' badge — this
-    // is the exact regression the delta-gating fix targets.
+    // A 'new'-tab adjustment must not move the admin's 'owner_accepted' badge
+    // — this is the exact regression the delta-gating fix targets.
     badgeService.adjustBy('new', -1);
     fixture.detectChanges();
     let badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
-      .withContext('an adjustBy for "new" must not move an admin badge showing "accepted"')
+      .withContext('an adjustBy for "new" must not move an admin badge showing "owner_accepted"')
       .toBe('5');
 
-    badgeService.adjustBy('accepted', -2);
+    badgeService.adjustBy('owner_accepted', -2);
     fixture.detectChanges();
     badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.textContent.trim())
@@ -728,7 +779,7 @@ describe('AdminLayoutComponent — usability report badge (admin badgeStatus)', 
 
     const badge = fixture.debugElement.query(By.css('.admin-nav-badge'));
     expect(badge.nativeElement.getAttribute('aria-label'))
-      .withContext('admin badgeStatus="accepted" must use ACCEPTED_BADGE_ARIA, not NEW_BADGE_ARIA')
+      .withContext('admin badgeStatus="owner_accepted" must use ACCEPTED_BADGE_ARIA, not NEW_BADGE_ARIA')
       .toBe('4 usability reports awaiting action');
   }));
 });

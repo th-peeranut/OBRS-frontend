@@ -48,6 +48,7 @@ export const STATUS_FILTER_VALUES: readonly StatusFilterValue[] = [
   'all',
   'new',
   'in_review',
+  'owner_accepted',
   'accepted',
   'dismissed',
   'resolved',
@@ -58,6 +59,10 @@ export const STATUS_FILTER_VALUES: readonly StatusFilterValue[] = [
 // OBRS-378: 'dismissed' is a non-terminal screen-out decision (no email, can
 // be pulled back into review) that both admin and owner may set — see
 // OWNER_DETAIL_STATUS_VALUES below.
+// OBRS-527: unchanged — admin is never restricted, so the admin decision
+// dropdown still offers exactly these four (owner_accepted is reachable by
+// admin too, but only via detailStatusValuesFor's admin branch, which always
+// returns this whole list regardless of the report's current status).
 export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'accepted',
   'dismissed',
@@ -71,26 +76,82 @@ export const DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
 // dropdown only offers the non-terminal, forward-moving transitions.
 // OBRS-378 (PO lock): owner CAN set 'dismissed' — it is non-terminal and
 // non-email, so it stays within the owner's screening authority.
+// OBRS-527: 'accepted' DROPPED (PO-2 — every transition out of/into 'accepted'
+// is admin-only) and 'owner_accepted' ADDED — this is now "the owner's full
+// set", filtered per-report by detailStatusValuesFor() below to the legal
+// edges from the report's current status.
 export const OWNER_DETAIL_STATUS_VALUES: readonly UsabilityReportStatus[] = [
   'in_review',
-  'accepted',
+  'owner_accepted',
   'dismissed',
 ];
+
+// OBRS-527: mirrors the backend's ALLOWED_TRANSITIONS matrix
+// (UsabilityReportService.java), restricted to the targets an OWNER (not
+// admin) may legally reach — i.e. with every ADMIN_ONLY_TARGET_STATUSES
+// target ('accepted'/'resolved'/'rejected') removed from each source's set.
+// This is a MIRROR, not the authority — the backend still enforces every
+// transition; this only drives which options the owner's dropdown shows so
+// they don't hit an avoidable 403. Sources the owner cannot act on at all
+// (accepted/resolved/rejected/duplicate — PO-2 makes these admin-only
+// SOURCES too) map to an empty array.
+export const OWNER_ALLOWED_TARGETS: Record<
+  UsabilityReportStatus,
+  readonly UsabilityReportStatus[]
+> = {
+  new: ['in_review', 'dismissed'],
+  in_review: ['owner_accepted', 'dismissed'],
+  owner_accepted: ['in_review', 'dismissed'],
+  accepted: [],
+  dismissed: ['in_review'],
+  resolved: [],
+  rejected: [],
+  duplicate: [],
+};
+
+// OBRS-527: the source-aware detail dropdown (solves PO-2 and the
+// owner-undo case with one mechanism). Admin is never restricted. An owner's
+// options depend on the report's CURRENT status (sourceStatus) — a report
+// already 'accepted'/'resolved'/'rejected'/'duplicate' has no legal owner
+// move at all (the source-side guard already 403s these; offering options
+// here would just eat a free 403), and every other source is filtered to
+// OWNER_DETAIL_STATUS_VALUES minus itself and minus any target that isn't a
+// legal edge per OWNER_ALLOWED_TARGETS above.
+export function detailStatusValuesFor(
+  isAdmin: boolean,
+  sourceStatus: UsabilityReportStatus | ''
+): readonly UsabilityReportStatus[] {
+  if (isAdmin) {
+    return DETAIL_STATUS_VALUES;
+  }
+  if (sourceStatus === '') {
+    return OWNER_DETAIL_STATUS_VALUES;
+  }
+  const legalTargets = OWNER_ALLOWED_TARGETS[sourceStatus];
+  return OWNER_DETAIL_STATUS_VALUES.filter(
+    (value) => value !== sourceStatus && legalTargets.includes(value)
+  );
+}
 
 // Statuses a decision-only dropdown may hold — 'new'/'in_review' are triage
 // states, not outcomes an admin picks (design-system.md §3.1: no pre-seeded
 // default; the admin must actively choose an outcome).
+// OBRS-527: 'owner_accepted' added — owner screening IS a decision (it stamps
+// triagedBy/triagedAt on the backend), so a report already sitting at
+// 'owner_accepted' pre-seeds the dropdown to it, same as the other three.
 export const DECISION_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<UsabilityReportStatus>(
-  ['accepted', 'resolved', 'rejected']
+  ['accepted', 'resolved', 'rejected', 'owner_accepted']
 );
 
 // OBRS-376: a report may be marked as a duplicate from any non-terminal,
 // non-already-duplicate status — 'resolved'/'rejected' are terminal decisions
 // and 'duplicate' is reached only through this same action (can't re-mark an
 // already-duplicate report).
+// OBRS-527: 'owner_accepted' added — matches the backend's markAsDuplicate
+// allowed-from set.
 export const MARK_AS_DUPLICATE_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<
   UsabilityReportStatus
->(['new', 'in_review', 'accepted']);
+>(['new', 'in_review', 'owner_accepted', 'accepted']);
 
 export function canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
   return MARK_AS_DUPLICATE_STATUSES.has(status);
@@ -123,6 +184,8 @@ export function statusLabel(status: string, translateFn: (key: string) => string
 export function statusClass(status: string): string {
   if (status === 'new') return 'is-warning';
   if (status === 'in_review') return 'is-info';
+  // OBRS-527: owner-screened stage, between in_review and accepted.
+  if (status === 'owner_accepted') return 'is-owner-accepted';
   if (status === 'accepted') return 'is-accepted';
   // OBRS-378: dismissed is a muted, distinct-from-danger screen-out state —
   // reuses the existing plain-grey .is-neutral token (design-system.md §2.4),

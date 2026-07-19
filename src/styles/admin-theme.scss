@@ -23,6 +23,18 @@
      in both themes, so no dark-mode override (see the --admin-accepted-text note). */
   --admin-inreview-bg: #e2e5ea;
   --admin-inreview-text: #3a4250;
+
+  /* OBRS-527: owner_accepted — the owner-screened stage that sits BETWEEN
+     in_review (neutral blue-grey, above) and accepted (green, --admin-accepted-*
+     above) in the triage lifecycle. A distinct teal/mint hue — not yet used by
+     any is-* token, and distinct from the active theme-admin accent (--accent:
+     #ff7a45 orange), which is what collides with is-warning/new. Light bg +
+     dark text, WITH a dark-mode override on BOTH sides (see the .admin-shell.
+     is-dark block below) — a one-sided override is the exact OBRS-86 bug: a
+     text-only override on an unchanged bg gave ~1.3:1. */
+  --admin-owner-accepted-bg: #b8f2e6;
+  --admin-owner-accepted-text: #003d33;
+
   /* OBRS-130: "not boarded" — a plain, un-tinted grey (no blue cast), so it
      reads distinctly against --admin-inreview-* (blue-grey) and every other
      status color, including the *resolved* theme-admin accent (orange), which
@@ -240,6 +252,19 @@
 .admin-shell.is-dark {
   --admin-inreview-bg: #29323d;
   --admin-inreview-text: #c7d3de;
+}
+
+/* OBRS-527: recessed dark teal chip (bg a step lighter than the row, light
+   mint text) for --admin-owner-accepted-* above — same treatment as
+   --admin-duplicate-* / --admin-inreview-* above, NOT the --admin-delayed-*
+   gap (the OBRS-100 class of bug: a light-mode-only token rendering as a
+   near-white blob on the dark shell). Verified contrast (WCAG
+   relative-luminance formula): bg #1b3b35 / text #9fedde ≈ 9.07:1, light mode
+   bg #b8f2e6 / text #003d33 ≈ 9.85:1 — both comfortably above the 4.5:1 AA
+   floor. */
+.admin-shell.is-dark {
+  --admin-owner-accepted-bg: #1b3b35;
+  --admin-owner-accepted-text: #9fedde;
 }
 
 /* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels
@@ -1219,6 +1244,14 @@
 .admin-status.is-info {
   background: var(--admin-inreview-bg);
   color: var(--admin-inreview-text);
+}
+
+/* OBRS-527: "owner_accepted" usability-report status — see the
+   --admin-owner-accepted-* token comment above. Sits between is-info
+   (in_review) and is-accepted (accepted) in the triage severity ordering. */
+.admin-status.is-owner-accepted {
+  background: var(--admin-owner-accepted-bg);
+  color: var(--admin-owner-accepted-text);
 }
 
 /* OBRS-130: "Not boarded" state on the boarding manifest — see the

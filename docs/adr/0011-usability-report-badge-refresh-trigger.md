@@ -124,3 +124,47 @@ second fetch path was added.
   and its revert) now call `adjustBy('new', ...)` explicitly instead of the
   old untagged `adjustBy(delta)` — the badge these correspond to is always the
   `new`-tab count regardless of which role is currently viewing the page.
+
+## Addendum (OBRS-527, 2026-07-19) — `owner_accepted` splits `accepted`; ADR-0011's core decision still holds
+
+`accepted` was one status encoding two workflow stages ("owner screened it
+through" and "platform took it on"). Both roles could set it, so an admin
+accepting a report pushed it into the **admin's own** badge queue — a
+meaningless self-loop. OBRS-527 splits the states: `new` → `in_review` →
+`owner_accepted` (owner-screened, **admin's new badge**) → `accepted`
+(platform-adopted, **nobody's badge**) → terminal. Every mechanism this ADR
+describes is **unchanged in shape** — still one fetch path, one
+`adjustBy`/`countAdjustments$` gate, one socket destination — only the
+**status value each of them is parameterized by** moves from `accepted` to
+`owner_accepted`:
+
+- `AdminLayoutComponent.badgeStatus` is now `this.authService.getRoles()
+  .includes('admin') ? 'owner_accepted' : 'new'` (was `'accepted'`) — same raw-role
+  expression, same rationale, just a different target status.
+- `saveStatus()` (`usability-reports-page.component.ts`) gains the delta calls
+  the OBRS-378 addendum above didn't need: `adjustBy('owner_accepted', ±1)`
+  when a save moves a report into/out of `owner_accepted`, with the mirror
+  revert in the error handler — the same `adjustBy`/`trigger()` pairing
+  `autoPromoteToInReview` already established, applied to the new stage.
+  `onPickerConfirm` (mark-as-duplicate) and `unmarkDuplicate` gained their own
+  `badgeRefreshService` calls for the first time (previously neither touched
+  it at all) — see the SA spec's status-write-family table for the exact
+  per-path duties.
+- The socket payload field is **renamed**, not added: `acceptedReportCount` →
+  `ownerAcceptedReportCount` (`BadgeSocketService.UsabilityReportCountMessage`,
+  `admin-layout.component.ts` line ~333, read with a `?? 0` fallback for a
+  version-skewed backend). `accepted` never had a badge meaning worth keeping
+  a stale field name for — see `docs/api/websocket.md` (backend) for the wire
+  contract.
+- `ACCEPTED_BADGE_ARIA` (the i18n key) is **unchanged** — its copy ("…awaiting
+  action") already described the admin's inbound queue generically enough to
+  keep serving `owner_accepted`; only the `admin-layout.component.html`
+  condition selecting it moved from `badgeStatus === 'accepted'` to
+  `badgeStatus === 'owner_accepted'`.
+- `UsabilityReportsPageComponent`'s decision dropdown is now **source-aware**
+  (`detailStatusValuesFor()`, `usability-reports-page.mappers.ts`) rather than
+  a fixed per-role list — see `docs/design-system.md` §2.4's `.is-owner-accepted`
+  row and the SA spec for the full transition-matrix rationale (PO-2: every
+  transition into/out of `accepted` is admin-only, closing the owner's
+  screen-only tier at exactly the boundary this ADR's OBRS-370 addendum first
+  established).

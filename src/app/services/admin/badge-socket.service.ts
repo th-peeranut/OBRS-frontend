@@ -14,18 +14,24 @@ import { AuthService } from '../../auth/auth.service';
 //   - STOMP endpoint: native WebSocket (no SockJS) at `/ws` on the backend
 //     HOST ROOT (NOT under `/api`).
 //   - Subscribe destination: `/topic/admin/usability-report-count`.
-//   - Payload (OBRS-378): `{ "newReportCount": <number>, "acceptedReportCount":
-//     <number> }` — backward-compatible on the wire (the pre-OBRS-378 FE only
-//     read newReportCount, and the backend still always sends it). The whole
-//     message is emitted on counts$ so AdminLayoutComponent can select the
-//     field for its own badgeStatus, keeping that role decision in one file.
+//   - Payload (OBRS-527, RENAME not add — see UsabilityReportCountBroadcast.java):
+//     `{ "newReportCount": <number>, "ownerAcceptedReportCount": <number> }`.
+//     `acceptedReportCount` meant "the queue admin must act on"; that meaning
+//     moved wholesale to `owner_accepted` (the admin's inbound queue —
+//     'accepted' itself is nobody's badge any more), so the FIELD renamed
+//     with it rather than adding a third field nobody would render. This is
+//     a breaking cross-repo wire change (both repos ship together, local
+//     lane) — read with a numeric fallback (`?? 0`) so a version-skewed
+//     backend can't render NaN. The whole message is emitted on counts$ so
+//     AdminLayoutComponent can select the field for its own badgeStatus,
+//     keeping that role decision in one file.
 const ADMIN_REPORT_COUNT_DESTINATION = '/topic/admin/usability-report-count';
 const STOMP_RECONNECT_DELAY_MS = 5000;
 const STOMP_HEARTBEAT_MS = 10000;
 
 export interface UsabilityReportCountMessage {
   newReportCount: number;
-  acceptedReportCount: number;
+  ownerAcceptedReportCount: number;
 }
 
 @Injectable({ providedIn: 'root' })

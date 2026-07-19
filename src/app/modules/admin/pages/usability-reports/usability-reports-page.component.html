@@ -356,8 +356,16 @@
 
         <!-- Status update: normal (existing dropdown + Save). OBRS-378: hidden
              once the report is already dismissed — that state renders its own
-             branch below instead (exactly one primary button per state). -->
-        <div class="ur-status-update mt-3" *ngIf="detailReport.status !== 'dismissed'">
+             branch below instead (exactly one primary button per state).
+             OBRS-527 AMENDMENT A2: also hidden when detailStatusOptions is
+             empty — that only happens for an OWNER viewing a report the
+             platform already finalized (accepted/resolved/rejected/
+             duplicate); admin's detailStatusOptions is never empty (always
+             DETAIL_STATUS_VALUES), so this ngIf never fires for isAdmin. -->
+        <div
+          class="ur-status-update mt-3"
+          *ngIf="detailReport.status !== 'dismissed' && detailStatusOptions.length"
+        >
           <p class="ur-detail-label">{{ 'ADMIN.USABILITY_REPORTS.STATUS.LABEL' | translate }}</p>
           <div class="ur-status-controls">
             <app-admin-dropdown
@@ -402,6 +410,23 @@
               {{ 'ADMIN.USABILITY_REPORTS.DETAIL.DISMISSED_OWNER_NOTE' | translate }}
             </p>
           </ng-template>
+        </div>
+
+        <!-- Status update: owner has no legal move out of this status
+             (OBRS-527 AMENDMENT A2). Owner-only by construction — admin's
+             detailStatusOptions is never empty, so this ngIf never fires for
+             isAdmin. Mirrors the "muted note, no controls" half of the
+             dismissed idiom above; no admin/owner ng-container split is
+             needed since it is already owner-only. Reuses .ur-dismissed-note
+             as-is (design-system §12 new-pattern log / UX spec §2 — a shared
+             style primitive, not renamed despite the name). -->
+        <div
+          class="ur-status-update mt-3"
+          *ngIf="detailReport.status !== 'dismissed' && !detailStatusOptions.length"
+        >
+          <p class="ur-dismissed-note">
+            {{ 'ADMIN.USABILITY_REPORTS.DETAIL.OWNER_NO_ACTION_NOTE' | translate }}
+          </p>
         </div>
       </div>
     </ng-container>

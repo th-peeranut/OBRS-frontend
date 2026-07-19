@@ -92,6 +92,7 @@
       "STATUS": {
         "new": "New",
         "in_review": "In Review",
+        "owner_accepted": "Owner-screened",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",
@@ -999,7 +1000,8 @@
         "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab",
         "PULL_BACK_TO_REVIEW": "Pull Back to Review",
         "DISMISSED_ADMIN_HINT": "Owner marked this report as not important. You can bring it back into review if needed.",
-        "DISMISSED_OWNER_NOTE": "This report has been dismissed. An admin can bring it back for review."
+        "DISMISSED_OWNER_NOTE": "This report has been dismissed. An admin can bring it back for review.",
+        "OWNER_NO_ACTION_NOTE": "The platform team has taken this report on — there's nothing further for you to do here."
       },
       "STATUS": {
         "LABEL": "Status",
@@ -1007,6 +1009,7 @@
         "all": "All statuses",
         "new": "New",
         "in_review": "In Review",
+        "owner_accepted": "Owner-screened",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",

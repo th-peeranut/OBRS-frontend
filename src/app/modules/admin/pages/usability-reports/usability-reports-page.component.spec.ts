@@ -146,7 +146,7 @@ describe('UsabilityReportsPageComponent', () => {
     // default authServiceSpy in this outer describe returns ['admin']).
     expect(storeSpy.setStatus)
       .withContext('store.setStatus() must be called on init with the role-default status')
-      .toHaveBeenCalledOnceWith('accepted');
+      .toHaveBeenCalledOnceWith('owner_accepted');
 
     // setStatus() already triggers a refresh internally — calling the bare
     // refresh() too would double-fetch.
@@ -169,12 +169,12 @@ describe('UsabilityReportsPageComponent', () => {
     expect(component['selectedStatusFilter']).toBe('new');
   });
 
-  it('seeds the admin default status to "accepted" on init', () => {
+  it('seeds the admin default status to "owner_accepted" on init (OBRS-527)', () => {
     authServiceSpy.getRoles.and.returnValue(['admin']);
     fixture.detectChanges();
 
-    expect(storeSpy.setStatus).toHaveBeenCalledOnceWith('accepted');
-    expect(component['selectedStatusFilter']).toBe('accepted');
+    expect(storeSpy.setStatus).toHaveBeenCalledOnceWith('owner_accepted');
+    expect(component['selectedStatusFilter']).toBe('owner_accepted');
   });
 
   // (e) Status update calls store.mutate with a FUNCTION (not a partial object)
@@ -734,7 +734,7 @@ describe('UsabilityReportsPageComponent', () => {
     return buildPage([{ ...mockSummaryPage.content[0], status }], overrides.totalElements ?? 1, overrides);
   }
 
-  it('builds the admin detail dropdown from accepted/dismissed/resolved/rejected, while the table filter keeps "all" (OBRS-524) plus all 7 statuses (including duplicate, OBRS-376)', () => {
+  it('builds the admin detail dropdown from accepted/dismissed/resolved/rejected, while the table filter keeps "all" (OBRS-524) plus all 8 statuses (including duplicate/OBRS-376 and owner_accepted/OBRS-527)', () => {
     primeReportList();
 
     const detailValues = component['detailStatusOptions'].map((o) => o.value);
@@ -744,8 +744,18 @@ describe('UsabilityReportsPageComponent', () => {
 
     const filterValues = component['statusFilterOptions'].map((o) => o.value);
     expect(filterValues)
-      .withContext('the table filter above the table must offer "all" plus every status, including dismissed and duplicate')
-      .toEqual(['all', 'new', 'in_review', 'accepted', 'dismissed', 'resolved', 'rejected', 'duplicate']);
+      .withContext('the table filter above the table must offer "all" plus every status, including dismissed, duplicate and owner_accepted')
+      .toEqual([
+        'all',
+        'new',
+        'in_review',
+        'owner_accepted',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+        'duplicate',
+      ]);
   });
 
   it('fires the silent auto-promote (new -> in_review) exactly once when opening a "new" report', () => {
@@ -805,7 +815,7 @@ describe('UsabilityReportsPageComponent', () => {
       .toHaveBeenCalled();
   });
 
-  (['in_review', 'accepted', 'dismissed', 'resolved', 'rejected'] as UsabilityReportStatus[]).forEach((status) => {
+  (['in_review', 'owner_accepted', 'accepted', 'dismissed', 'resolved', 'rejected'] as UsabilityReportStatus[]).forEach((status) => {
     it(`does not fire the auto-promote when opening a report already in status "${status}"`, () => {
       storeSpy.data$.next(pageWithStatus(status));
       storeSpy.hasValue = true;
@@ -939,20 +949,27 @@ describe('UsabilityReportsPageComponent', () => {
       expect(jiraLink).withContext('admin must still see the Jira key field').not.toBeNull();
     });
 
-    it('a NON-admin (owner) sees only the non-terminal options (in_review/accepted) and never the Jira key field', () => {
+    it('a NON-admin (owner) sees only the non-terminal options (in_review/owner_accepted) and never the Jira key field', () => {
       authServiceSpy.getRoles.and.returnValue(['owner']);
       primeReportList();
 
       expect(component['isAdmin']).withContext('a pure owner must not be detected as isAdmin').toBeFalse();
 
+      // No report is open yet — sourceStatus falls back to '', which
+      // detailStatusValuesFor resolves to the full OWNER_DETAIL_STATUS_VALUES
+      // set (OBRS-527: 'accepted' dropped, PO-2 — owner can no longer accept
+      // onto the platform; 'owner_accepted' added).
       const detailValues = component['detailStatusOptions'].map((o) => o.value);
       expect(detailValues)
-        .withContext('owner is screen-only: forward-moving + dismiss, never a terminal outcome')
-        .toEqual(['in_review', 'accepted', 'dismissed']);
+        .withContext('owner is screen-only: forward-moving + dismiss, never a terminal outcome, never accepts onto the platform')
+        .toEqual(['in_review', 'owner_accepted', 'dismissed']);
       expect(detailValues)
         .withContext('owner must never be offered resolved/rejected — the backend 403s those')
         .not.toContain('resolved');
       expect(detailValues).not.toContain('rejected');
+      expect(detailValues)
+        .withContext('owner must never be offered accepted — PO-2, every transition into accepted is admin-only')
+        .not.toContain('accepted');
 
       // Even when the report already carries a Jira key (an admin set it
       // earlier), the owner must never see that field.
@@ -1163,6 +1180,53 @@ describe('UsabilityReportsPageComponent', () => {
       expect(component['isPickerOpen']).withContext('picker closes on success').toBeFalse();
     });
 
+    // OBRS-527: marking an 'owner_accepted' report as duplicate removes it
+    // from the admin's inbound queue — this path never touched
+    // badgeRefreshService at all before this card.
+    it('onPickerConfirm on an owner_accepted report fires adjustBy("owner_accepted", -1) then trigger()', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      const triggerSpy = spyOn(badge, 'trigger');
+      storeSpy.data$.next(pageWithReports([
+        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'owner_accepted' },
+      ]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
+        of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
+      );
+
+      component['openDuplicatePicker']('rep-1');
+      component['onPickerConfirm']('42');
+
+      expect(adjustSpy)
+        .withContext('marking an owner_accepted source out of the admin queue nudges the badge by -1')
+        .toHaveBeenCalledOnceWith('owner_accepted', -1);
+      expect(triggerSpy)
+        .withContext('an authoritative refetch must also fire, matching saveStatus\'s pattern')
+        .toHaveBeenCalled();
+    });
+
+    it('onPickerConfirm on a non-owner_accepted report (e.g. "new") never touches badgeRefreshService', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      const triggerSpy = spyOn(badge, 'trigger');
+      storeSpy.data$.next(pageWithReports([
+        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'new' },
+      ]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
+        of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
+      );
+
+      component['openDuplicatePicker']('rep-1');
+      component['onPickerConfirm']('42');
+
+      expect(adjustSpy).not.toHaveBeenCalled();
+      expect(triggerSpy).not.toHaveBeenCalled();
+    });
+
     // OBRS-403 (merge with OBRS-376): mark/unmark-as-duplicate is a SECOND
     // status-mutation path (a full store.refresh() round-trip, unlike
     // applyRowStatus()'s optimistic mutate) — 'duplicate' is itself a
@@ -1231,6 +1295,22 @@ describe('UsabilityReportsPageComponent', () => {
         .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
       expect(alertServiceSpy.success).toHaveBeenCalled();
       expect(storeSpy.refresh).toHaveBeenCalled();
+    });
+
+    // OBRS-527: this path never touched badgeRefreshService at all — a real
+    // pre-existing gap (target is 'in_review', so no adjustBy delta is
+    // needed, but the badge could still be up to 60s stale with no trigger()).
+    it('unmarkDuplicate fires badgeRefreshService.trigger() (it does not today)', async () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const triggerSpy = spyOn(badge, 'trigger');
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      await component['unmarkDuplicate']('rep-1');
+
+      expect(triggerSpy).toHaveBeenCalled();
     });
 
     it('steps back one page when un-marking the last row of the active tab\'s last page', async () => {
@@ -1700,6 +1780,296 @@ describe('UsabilityReportsPageComponent', () => {
       expect(storeSpy.setPage)
         .withContext('page 1 emptying is the natural empty-tab state, not a step-back case')
         .not.toHaveBeenCalled();
+    });
+  });
+
+  // ── OBRS-527: owner_accepted status ───────────────────────────────────────
+  describe('OBRS-527: owner_accepted status', () => {
+    it('maps an empty selection back to the ADMIN role default "owner_accepted" (line 194 fallback)', () => {
+      authServiceSpy.getRoles.and.returnValue(['admin']);
+      primeReportList();
+      storeSpy.setStatus.calls.reset();
+
+      component['onStatusFilterChange']('');
+
+      expect(component['selectedStatusFilter']).toBe('owner_accepted');
+      expect(storeSpy.setStatus).toHaveBeenCalledWith('owner_accepted');
+    });
+
+    // ── AMENDMENT A1: rebuildDetailStatusOptions MUST run before the seed at
+    // each of the three call sites, or seedStatus() validates the newly
+    // opened report's status against the PREVIOUSLY opened report's stale
+    // option list. 'accepted' cannot demonstrate the leak post-OBRS-527 (it
+    // is never in an owner's option list at all, correct or stale), so these
+    // tests use 'owner_accepted' — a value that IS legitimately present in
+    // one report's owner option list (in_review's) but must NOT leak into
+    // seeding a DIFFERENT report whose own status is 'owner_accepted' (whose
+    // correct option list excludes itself).
+    it('AMENDMENT A1 (optimistic-open site): opening report B after report A does not seed B against A\'s stale option list', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      const page = buildPage(
+        [
+          { ...mockSummaryPage.content[0], id: 'rep-a', status: 'in_review' },
+          { ...mockSummaryPage.content[0], id: 'rep-b', status: 'owner_accepted' },
+        ],
+        2
+      );
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      // Never resolves — isolates the optimistic-open (cache-miss) seed site.
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      component['openDetail']('rep-a'); // rebuild(in_review) -> options = [owner_accepted, dismissed]
+      fixture.detectChanges();
+      component['closeDetail']();
+      fixture.detectChanges();
+
+      component['openDetail']('rep-b'); // must rebuild(owner_accepted) BEFORE seeding
+      fixture.detectChanges();
+
+      expect(component['selectedDetailStatus'])
+        .withContext(
+          'B\'s seed must validate against B\'s OWN rebuilt options (which exclude owner_accepted, ' +
+            'its own source status) — not A\'s stale options (which legitimately contained owner_accepted)'
+        )
+        .toBe('');
+    });
+
+    it('AMENDMENT A1 (cache-hit site): reopening a cached report after viewing a different report does not leak the other report\'s option list', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      const page = buildPage(
+        [
+          { ...mockSummaryPage.content[0], id: 'rep-a', status: 'in_review' },
+          { ...mockSummaryPage.content[0], id: 'rep-b', status: 'owner_accepted' },
+        ],
+        2
+      );
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      // Prime the cache for B via a real fetch, then close.
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, id: 'rep-b', status: 'owner_accepted' },
+      }));
+      component['openDetail']('rep-b');
+      fixture.detectChanges();
+      component['closeDetail']();
+      fixture.detectChanges();
+
+      // Open A — leaves stale options (owner_accepted/dismissed) behind.
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+      component['openDetail']('rep-a');
+      fixture.detectChanges();
+      component['closeDetail']();
+      fixture.detectChanges();
+
+      // Reopen B — now a CACHE HIT.
+      component['openDetail']('rep-b');
+      fixture.detectChanges();
+
+      expect(component['selectedDetailStatus'])
+        .withContext('B\'s cache-hit seed must validate against B\'s OWN rebuilt options, not A\'s stale ones')
+        .toBe('');
+    });
+
+    it('AMENDMENT A1 (detail-fetch handler site): the async detail response is rebuilt before it is seeded', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      const page = buildPage([{ ...mockSummaryPage.content[0], id: 'rep-c', status: 'in_review' }], 1);
+      storeSpy.data$.next(page);
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      const detail$ = new Subject<{ code: number; message: string; data: UsabilityReportDetail }>();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(detail$.asObservable());
+
+      // Optimistic-open seed: summary.status='in_review' is not a decision
+      // status, so this leaves selectedDetailStatus empty regardless of
+      // ordering — but the optimistic rebuild still correctly sets options to
+      // in_review's set (owner_accepted/dismissed) by the time the fetch
+      // handler below runs.
+      component['openDetail']('rep-c');
+      fixture.detectChanges();
+      expect(component['selectedDetailStatus']).toBe('');
+
+      // The real detail resolves with a DIFFERENT status than the summary had
+      // (the between-list-fetch-and-detail-fetch race the pristine-patch
+      // guard exists for) — now a decision status, owner_accepted, which IS
+      // present in the stale in_review-sourced options above.
+      detail$.next({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, id: 'rep-c', status: 'owner_accepted' },
+      });
+      detail$.complete();
+      fixture.detectChanges();
+
+      expect(component['selectedDetailStatus'])
+        .withContext(
+          'the fetch-handler seed must validate against the FRESHLY rebuilt owner_accepted options ' +
+            '(which exclude owner_accepted itself), not the stale in_review-sourced options that happened to contain it'
+        )
+        .toBe('');
+    });
+
+    // ── AMENDMENT A2: an owner viewing an already-finalized report has no
+    // legal move — the dropdown/Save must be replaced by a muted note.
+    it('AMENDMENT A2: owner opening an accepted report renders neither dropdown nor Save, and shows the muted note', () => {
+      authServiceSpy.getRoles.and.returnValue(['owner']);
+      storeSpy.data$.next(pageWithStatus('accepted'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
+      expect(modal.querySelector('app-admin-dropdown'))
+        .withContext('no dropdown for an owner viewing an already-accepted report')
+        .toBeNull();
+      expect(modal.querySelectorAll('.admin-btn-primary').length)
+        .withContext('no primary button (no Save) for an owner viewing an already-accepted report')
+        .toBe(0);
+      expect(modal.textContent).toContain('DETAIL.OWNER_NO_ACTION_NOTE');
+    });
+
+    it('admin opening an accepted report still sees the dropdown + Save (admin detailStatusOptions is never empty)', () => {
+      authServiceSpy.getRoles.and.returnValue(['admin']);
+      storeSpy.data$.next(pageWithStatus('accepted'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
+      expect(modal.querySelector('app-admin-dropdown')).not.toBeNull();
+      expect(modal.querySelectorAll('.admin-btn-primary').length).toBe(1);
+    });
+
+    // ── Status-write family: badge delta on saveStatus ──────────────────────
+    it('saveStatus moving owner_accepted -> accepted fires adjustBy("owner_accepted", -1) on success', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      storeSpy.data$.next(pageWithStatus('owner_accepted'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, status: 'owner_accepted' },
+      }));
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+      component['selectedDetailStatus'] = 'accepted';
+      component.saveStatus();
+
+      expect(adjustSpy).toHaveBeenCalledOnceWith('owner_accepted', -1);
+    });
+
+    it('saveStatus moving owner_accepted -> accepted REVERTS the delta (+1) when the save fails', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      storeSpy.data$.next(pageWithStatus('owner_accepted'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, status: 'owner_accepted' },
+      }));
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
+        throwError(() => ({ status: 500, error: {} }))
+      );
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+      component['selectedDetailStatus'] = 'accepted';
+      component.saveStatus();
+
+      expect(adjustSpy.calls.allArgs())
+        .withContext('optimistic -1 on save, then +1 reverted when the server rejects it')
+        .toEqual([['owner_accepted', -1], ['owner_accepted', 1]]);
+    });
+
+    it('saveStatus moving in_review -> owner_accepted fires adjustBy("owner_accepted", +1)', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      storeSpy.data$.next(pageWithStatus('in_review'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, status: 'in_review' },
+      }));
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+      component['selectedDetailStatus'] = 'owner_accepted';
+      component.saveStatus();
+
+      expect(adjustSpy).toHaveBeenCalledOnceWith('owner_accepted', 1);
+    });
+
+    it('saveStatus moving a non-owner_accepted-involved transition (e.g. resolved -> dismissed) never touches adjustBy', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      storeSpy.data$.next(pageWithStatus('resolved'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, status: 'resolved' },
+      }));
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+      component['selectedDetailStatus'] = 'dismissed';
+      component.saveStatus();
+
+      expect(adjustSpy).not.toHaveBeenCalled();
+    });
+
+    // ── CRITICAL: previousStatus must come from detailReport, never
+    // selectedDetailStatus — pullBackToReview() overwrites selectedDetailStatus
+    // to 'in_review' BEFORE calling saveStatus(), so sourcing previousStatus
+    // from it would always read the just-written target, never the true prior
+    // status, and this delta would never fire.
+    it('CRITICAL: pullBackToReview on an owner_accepted report fires adjustBy("owner_accepted", -1) — previousStatus must come from detailReport, not selectedDetailStatus', () => {
+      const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
+      const adjustSpy = spyOn(badge, 'adjustBy');
+      storeSpy.data$.next(pageWithStatus('owner_accepted'));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
+        code: 200,
+        message: 'OK',
+        data: { ...mockFullDetail, status: 'owner_accepted' },
+      }));
+      adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+      component['openDetail']('rep-1');
+      fixture.detectChanges();
+
+      component['pullBackToReview']();
+
+      expect(adjustSpy)
+        .withContext(
+          'pullBackToReview overwrites selectedDetailStatus to in_review BEFORE calling saveStatus — ' +
+            'previousStatus must be read from detailReport.status (owner_accepted), or this delta never fires'
+        )
+        .toHaveBeenCalledOnceWith('owner_accepted', -1);
     });
   });
 });
