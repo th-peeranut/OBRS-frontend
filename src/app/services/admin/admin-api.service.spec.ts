@@ -43,7 +43,10 @@ describe('AdminApiService', () => {
       expect(result).toBe(7);
     });
 
-    // OBRS-378: admin's badge counts 'accepted' (owner-vetted) instead of 'new'.
+    // OBRS-378: admin's badge counts a decision status instead of 'new'
+    // (OBRS-527: that status is 'owner_accepted', not 'accepted' — this test
+    // exercises the generic status-parameterized wiring with an arbitrary
+    // valid status value, not the specific one AdminLayoutComponent picks).
     it('issues a GET with status=accepted&size=1&page=0 and resolves to data.totalElements', () => {
       let result: number | undefined;
       service.getUsabilityReportCountByStatus('accepted').subscribe((count) => (result = count));

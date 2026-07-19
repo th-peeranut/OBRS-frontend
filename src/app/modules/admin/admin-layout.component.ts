@@ -127,6 +127,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-509: vehicle-inspection checklist master list is OWNER-only (route
+    // `requiredRoles: ['owner']` — every backend endpoint it saves through
+    // requires OWNER), gated the same way as cargo-capacity above. Lives in
+    // 'master' (fleet/vehicle data), next to Vehicles/Cargo Capacity.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'inspection-items',
+        labelKey: 'ADMIN.PAGES.INSPECTION_ITEMS',
+        icon: 'checklist',
+        descriptionKey: 'ADMIN.INSPECTION_ITEMS.SUBTITLE',
+        section: 'master',
+      });
+    }
+
     // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
     // ['admin']`), so it's gated the same way Settlements is gated above,
     // just on the admin role instead of owner.
@@ -157,18 +171,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   }
 
   // OBRS-378: the sidebar badge is now role-split — owner defaults to
-  // watching 'new' (awaiting screening), admin watches 'accepted'
-  // (owner-vetted). Sourced from the RAW held role
-  // (authService.getRoles().includes('admin')), NEVER hasAnyRole(['admin']) —
-  // under this FE's area-based access model an owner satisfies
-  // hasAnyRole(['admin']) too (ROLE_GRANTS superset), which would make the
-  // badge (and everything gated on it) behave as admin for an owner. Mirrors
-  // the same raw-role precedent as UsabilityReportsPageComponent.isAdmin
-  // (usability-reports-page.component.ts:92) and ADR-0011's addendum.
+  // watching 'new' (awaiting screening), admin watches 'owner_accepted'
+  // (OBRS-527: owner-screened, awaiting platform adoption — 'accepted' is
+  // nobody's badge any more, see UsabilityReportCountBroadcastService). RAW
+  // held role (authService.getRoles().includes('admin')), NEVER
+  // hasAnyRole(['admin']) — under this FE's area-based access model an owner
+  // satisfies hasAnyRole(['admin']) too (ROLE_GRANTS superset), which would
+  // make the badge (and everything gated on it) behave as admin for an
+  // owner. Mirrors the same raw-role precedent as
+  // UsabilityReportsPageComponent.isAdmin (usability-reports-page.component.ts:92)
+  // and ADR-0011's addendum.
   protected readonly badgeStatus: UsabilityReportStatus = this.authService
     .getRoles()
     .includes('admin')
-    ? 'accepted'
+    ? 'owner_accepted'
     : 'new';
 
   // Count of usability reports with status `badgeStatus`. Plain field (not a
@@ -324,13 +340,18 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // needed, unlike the poll/NavigationEnd/refreshRequested$ signal above.
     // This is purely additive: if the socket never connects/reconnects, the
     // 60s poll and the other signals above keep the badge correct on their
-    // own. OBRS-378: the message carries BOTH counts; select the one this
-    // layout's badgeStatus is watching.
+    // own. OBRS-378/OBRS-527: the message carries BOTH counts; select the one
+    // this layout's badgeStatus is watching. `?? 0` (not `|| 0`) guards a
+    // version-skewed backend that hasn't deployed the OBRS-527 field rename
+    // yet — a real zero count must still render as 0, only a missing/undefined
+    // key should fall back.
     this.badgeSocketService.counts$
       .pipe(takeUntil(this.destroy$))
       .subscribe((message) => {
         this.badgeCount =
-          this.badgeStatus === 'accepted' ? message.acceptedReportCount : message.newReportCount;
+          this.badgeStatus === 'owner_accepted'
+            ? message.ownerAcceptedReportCount ?? 0
+            : message.newReportCount ?? 0;
       });
   }
 }

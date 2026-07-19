@@ -7,9 +7,15 @@ export type UsabilityReportCategory = 'bug' | 'ux_ui_improvement' | 'suggestion'
 // reaches it via the mark-as-duplicate action, and only leaves it via the
 // un-mark action (PUT status 'in_review'). See usability-reports-page.mappers.ts
 // DETAIL_STATUS_VALUES/OWNER_DETAIL_STATUS_VALUES, which deliberately exclude it.
+// OBRS-527: 'owner_accepted' is the OWNER-screened stage that sits BEFORE
+// 'accepted' (platform adoption) — splits the single overloaded 'accepted'
+// status into the two workflow stages it was really encoding. Existing
+// 'accepted' rows are left untouched (no data migration); 'owner_accepted' is
+// a new, earlier stage, not a rename.
 export type UsabilityReportStatus =
   | 'new'
   | 'in_review'
+  | 'owner_accepted'
   | 'accepted'
   | 'dismissed'
   | 'resolved'

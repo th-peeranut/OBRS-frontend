@@ -206,6 +206,46 @@ export interface VehicleInspectionDetailDto extends VehicleInspectionListItemDto
   items: VehicleInspectionDetailItemDto[];
 }
 
+/** OBRS-509: one locale row on the inspection-item master list's admin
+ * editor (`GET /manage`, POST/PUT request+response) — distinct from the
+ * driver-facing `VehicleInspectionDetailItemDto` above (which carries a
+ * single locale-resolved `itemLabelSnapshot`, not raw per-locale rows). */
+export interface AdminInspectionItemTranslationDto {
+  locale: string;
+  label: string;
+  description?: string | null;
+}
+
+/** OBRS-509: one row of the vehicle-inspection checklist MASTER LIST, as
+ * seen by the owner/admin editor (`GET /manage`) — distinct from
+ * `getVehicleInspections()`/`getVehicleInspectionById()` above, which are the
+ * per-vehicle inspection HISTORY (read-only). `id` is a JSON **number**
+ * (BIGSERIAL), never a string (the OBRS-376 defect). `translations` always
+ * carries all 3 locale rows, sorted en/th/zh by the backend mapper. */
+export interface AdminInspectionItemDto {
+  id: number;
+  code: string;
+  displayOrder: number;
+  active: boolean;
+  translations: AdminInspectionItemTranslationDto[];
+}
+
+/** OBRS-509: POST/PUT request body — identical shape for create and edit
+ * (SPEC §3.3/§3.4). `displayOrder` is deliberately NOT a field here — it is
+ * server-owned, assigned `max+1` on create and mutated only via `/reorder`. */
+export interface InspectionItemPayload {
+  code: string;
+  active: boolean;
+  translations: AdminInspectionItemTranslationDto[];
+}
+
+/** OBRS-509: `PUT /vehicle-inspection-items/reorder` request body — the
+ * WHOLE table, every row including retired ones (display_order is unique
+ * table-wide, SPEC §3.5). */
+export interface InspectionItemReorderReqDto {
+  items: { id: number; displayOrder: number }[];
+}
+
 export interface AdminRouteDto {
   id: number;
   slug: string;
@@ -989,6 +1029,49 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-509: owner-facing admin CRUD for the vehicle-inspection checklist
+  // MASTER LIST — distinct from getVehicleInspections()/getVehicleInspectionById()
+  // above (per-vehicle inspection HISTORY, read-only). `/manage` returns every
+  // row (active + retired, SPEC §3.2); the plain `GET` (staff-api.service.ts,
+  // UNTOUCHED by this card) stays the driver form's own locale-resolved feed.
+  getInspectionItemsForManage(): Observable<ResponseAPI<AdminInspectionItemDto[]>> {
+    return this.getRequest<AdminInspectionItemDto[]>(
+      `${this.baseUrl}/private/vehicle-inspection-items/manage`
+    );
+  }
+
+  createInspectionItem(
+    payload: InspectionItemPayload
+  ): Observable<ResponseAPI<AdminInspectionItemDto>> {
+    return this.postRequest<AdminInspectionItemDto>(
+      `${this.baseUrl}/private/vehicle-inspection-items`,
+      payload
+    );
+  }
+
+  updateInspectionItem(
+    id: number,
+    payload: InspectionItemPayload
+  ): Observable<ResponseAPI<AdminInspectionItemDto>> {
+    return this.putRequest<AdminInspectionItemDto>(
+      `${this.baseUrl}/private/vehicle-inspection-items/${id}`,
+      payload
+    );
+  }
+
+  // OBRS-509: full-list reorder — `/reorder` is a literal path competing with
+  // `PUT /{id}` in the same backend controller; Spring's PathPattern
+  // comparator ranks the literal segment above the template, so this never
+  // reaches updateInspectionItem's {id} handler (SPEC §3.5).
+  reorderInspectionItems(
+    payload: InspectionItemReorderReqDto
+  ): Observable<ResponseAPI<AdminInspectionItemDto[]>> {
+    return this.putRequest<AdminInspectionItemDto[]>(
+      `${this.baseUrl}/private/vehicle-inspection-items/reorder`,
+      payload
+    );
+  }
+
   getVehicleTypes(): Observable<ResponseAPI<AdminVehicleTypeDto[]>> {
     return this.getRequest<AdminVehicleTypeDto[]>(`${this.baseUrl}/private/vehicle-types`);
   }
@@ -1276,8 +1359,9 @@ export class AdminApiService {
   // existing list endpoint with size=1 so only the pagination envelope
   // (data.totalElements) is needed, not the report rows themselves.
   // OBRS-378: parameterized by status — owner's badge counts 'new' (awaiting
-  // screening), admin's counts 'accepted' (owner-vetted) — see
-  // AdminLayoutComponent.badgeStatus.
+  // screening), admin's counts 'owner_accepted' (OBRS-527: owner-vetted,
+  // awaiting platform adoption — 'accepted' itself is nobody's badge any
+  // more) — see AdminLayoutComponent.badgeStatus.
   getUsabilityReportCountByStatus(status: UsabilityReportStatus): Observable<number> {
     const params = new HttpParams()
       .set('status', status)

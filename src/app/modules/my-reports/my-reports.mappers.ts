@@ -22,6 +22,9 @@ export function statusClass(status: string): string {
       return 'is-warning';
     case 'in_review':
       return 'is-info';
+    // OBRS-527: owner-screened stage, between in_review and accepted.
+    case 'owner_accepted':
+      return 'is-owner-accepted';
     case 'accepted':
       return 'is-accepted';
     case 'dismissed':

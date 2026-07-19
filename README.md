@@ -272,6 +272,46 @@ modal (`.admin-modal-backdrop` idiom) optimistically, with the summary fields
 already in hand and a spinner over just the items list; a request token guards
 against the user opening a different row before the fetch resolves.
 
+### Inspection checklist items master list (`/admin/inspection-items`, OBRS-509)
+
+Owner-facing admin CRUD + reorder for the vehicle-inspection checklist master
+list the driver form above (OBRS-312) reads from — `InspectionItemsPageComponent`
+(`src/app/modules/admin/pages/inspection-items/`), gated `requiredRoles: ['owner']`
+(ADMIN inherits via `ROLE_GRANTS`). One smart page, no dumb children, at the
+same scale as `CargoCapacityPageComponent`/`LookupSettingsPageComponent`.
+`InspectionItemsStore` follows the `CargoCapacityStore` (OBRS-508) precedent —
+root-scoped, real write path via `store.mutate()` at the page's own call
+sites — **not** `lookups.store.ts`, whose write path was never wired.
+
+**Reorder is move-buttons, not drag-and-drop**, and **Retire/Restore is a
+plain `.admin-icon-btn`, not a switch or a colored button** — both are new
+patterns with no local precedent before this card; the full reasoning (and
+the two rejected intermediate designs for the second one) is recorded in
+`docs/adr/0025-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
+Reorder fires one `PUT /reorder` per click immediately (no debounce), guarded
+against out-of-order **responses** by a monotonic `latestReorderSeq` counter;
+a `reorderPending` flag additionally gates the page's `store.data$`
+subscription so an unrelated background emission can't clobber the
+just-clicked local order before the reorder's own request resolves.
+
+**No delete, anywhere (AC#4).** `AdminApiService` gets no delete method for
+this feature and the Actions column renders exactly Edit + Retire/Restore —
+copying `LookupSettingsPageComponent`'s modal shell (`admin-modal-backdrop`/
+`admin-form-grid`) deliberately excludes its trash icon, delete-confirm modal,
+and `isDeleteModalOpen`/`confirmDelete()` members.
+
+**The 3-locale label editor** is a fixed-length (3), always `th, en, zh`,
+`FormArray` built once in the constructor and only ever `reset()` (never
+rebuilt/torn down) on modal open; the `store.data$` subscription updates only
+`rows`, never `itemForm` — the direct fix for the FormArray-orphaning bug this
+same feature (OBRS-312) already shipped once. All three languages are
+required client-side, mirroring the server's set-equality enforcement.
+**Thai comes first** in both the form and the list column: it is the only
+locale actually read here (`SNAPSHOT_LOCALE = "th"` writes every history row
+from it), so it is the line the eye should land on. `localeLabelKeys` is
+index-aligned with the `FormArray` and a spec pins that alignment — reordering
+one without the other silently mislabels every field.
+
 ### Internal fleet live map — layer 1 (OBRS-424)
 
 `/staff/fleet-map` (`FleetMapPageComponent`, `src/app/modules/staff/pages/fleet-map/`),

@@ -77,12 +77,12 @@ describe('BadgeSocketService', () => {
       body: string;
     }) => void;
 
-    let emitted: { newReportCount: number; acceptedReportCount: number } | undefined;
+    let emitted: { newReportCount: number; ownerAcceptedReportCount: number } | undefined;
     service.counts$.subscribe((counts) => (emitted = counts));
 
-    frameHandler({ body: JSON.stringify({ newReportCount: 3, acceptedReportCount: 9 }) });
+    frameHandler({ body: JSON.stringify({ newReportCount: 3, ownerAcceptedReportCount: 9 }) });
 
-    expect(emitted).toEqual({ newReportCount: 3, acceptedReportCount: 9 });
+    expect(emitted).toEqual({ newReportCount: 3, ownerAcceptedReportCount: 9 });
   });
 
   it('disconnect() deactivates the client', () => {

@@ -1,0 +1,219 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <p class="admin-muted" *ngIf="reorderPending">{{ 'ADMIN.INSPECTION_ITEMS.REORDER_SAVING' | translate }}</p>
+    <!-- AC#4: persistent, unconditional hint — renders regardless of loading/
+         error/data state (design-system §12 "mandatory notes independent of
+         contentState" precedent). -->
+    <p class="admin-muted">{{ 'ADMIN.INSPECTION_ITEMS.RETIRE_HINT' | translate }}</p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+  <button type="button" class="admin-btn admin-btn-primary" (click)="openCreateModal()">
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.INSPECTION_ITEMS.ADD' | translate }}</span>
+  </button>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.INSPECTION_ITEMS.TABLE_TITLE' | translate }}</h4>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_ORDER' | translate }}</th>
+          <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_CODE' | translate }}</th>
+          <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_LABELS' | translate }}</th>
+          <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_STATUS' | translate }}</th>
+          <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let skeletonRow of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td>
+              <div class="admin-cell-stack">
+                <span class="admin-skeleton"></span>
+                <span class="admin-skeleton admin-skeleton--sm"></span>
+              </div>
+            </td>
+            <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+            <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="!isLoading">
+          <tr
+            *ngFor="let row of rows; let i = index; trackBy: trackByRowId"
+            [class.zebra]="i % 2 === 1"
+          >
+            <td>
+              <div class="admin-inline-actions">
+                <span>{{ row.displayOrder }}</span>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [disabled]="!canMoveUp(i)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_UP' | translate: { label: currentLocaleLabel(row) }"
+                  (click)="moveUp(i)"
+                >
+                  <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [disabled]="!canMoveDown(i)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_DOWN' | translate: { label: currentLocaleLabel(row) }"
+                  (click)="moveDown(i)"
+                >
+                  <span class="material-symbols-outlined">arrow_downward</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [disabled]="!canMoveUp(i)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_TOP' | translate: { label: currentLocaleLabel(row) }"
+                  (click)="moveToTop(i)"
+                >
+                  <span class="material-symbols-outlined">keyboard_double_arrow_up</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [disabled]="!canMoveDown(i)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_BOTTOM' | translate: { label: currentLocaleLabel(row) }"
+                  (click)="moveToBottom(i)"
+                >
+                  <span class="material-symbols-outlined">keyboard_double_arrow_down</span>
+                </button>
+              </div>
+            </td>
+            <td><code>{{ row.code }}</code></td>
+            <td>
+              <div class="admin-cell-stack" [class.admin-muted]="!row.active">
+                <!-- Thai first: it is the only locale actually read here (history snapshots are
+                     written from it), so it should be the line the eye lands on. -->
+                <span><strong>TH:</strong> {{ row.labelTh }}</span>
+                <span><strong>EN:</strong> {{ row.labelEn }}</span>
+                <span><strong>ZH:</strong> {{ row.labelZh }}</span>
+              </div>
+            </td>
+            <td>
+              <!-- Absence means normal — no chip on active rows (UX spec §3.1
+                   Rev 3: .admin-status.is-success has no dark override anywhere
+                   in src/, so it is never used here). -->
+              <span class="admin-status is-neutral" *ngIf="!row.active">
+                {{ 'ADMIN.INSPECTION_ITEMS.RETIRED_BADGE' | translate }}
+              </span>
+            </td>
+            <td class="text-right">
+              <div class="admin-inline-actions">
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  [attr.aria-label]="'ADMIN.COMMON.EDIT' | translate"
+                  (click)="openEditModal(row)"
+                >
+                  <span class="material-symbols-outlined">edit</span>
+                </button>
+                <!-- AC#4: exactly Edit + Retire/Restore. No trash icon, no
+                     delete control of any kind, anywhere on this page. -->
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  *ngIf="row.active"
+                  [disabled]="isRowSaving(row)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.RETIRE_CONFIRM_BUTTON' | translate"
+                  (click)="toggleActive(row)"
+                >
+                  <span class="material-symbols-outlined">visibility_off</span>
+                </button>
+                <button
+                  type="button"
+                  class="admin-icon-btn"
+                  *ngIf="!row.active"
+                  [disabled]="isRowSaving(row)"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.RESTORE_BTN' | translate"
+                  (click)="toggleActive(row)"
+                >
+                  <span class="material-symbols-outlined">visibility</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="rows.length === 0 && !errorMessage" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<div class="admin-modal-backdrop" *ngIf="isFormModalOpen" adminModalBackdrop (dismiss)="closeFormModal()">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{
+        isEditMode
+          ? ('ADMIN.INSPECTION_ITEMS.EDIT_TITLE' | translate)
+          : ('ADMIN.INSPECTION_ITEMS.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.INSPECTION_ITEMS.LOCALES_REQUIRED_HINT' | translate }}</p>
+
+    <form [formGroup]="itemForm" class="admin-form-grid" (ngSubmit)="submitItem()">
+      <div class="admin-form-field full">
+        <label class="admin-form-label">
+          {{ 'ADMIN.INSPECTION_ITEMS.CODE_FIELD_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="code" />
+        <small class="admin-error" *ngIf="isCodeInvalid()">
+          {{ codeErrorKey() | translate }}
+        </small>
+        <small class="admin-muted" *ngIf="isEditMode">
+          {{ 'ADMIN.INSPECTION_ITEMS.CODE_READONLY_HINT' | translate }}
+        </small>
+      </div>
+
+      <ng-container formArrayName="translations">
+        <div
+          class="admin-form-field full"
+          *ngFor="let localeGroup of translationsFormArray.controls; let i = index"
+          [formGroupName]="i"
+        >
+          <label class="admin-form-label">
+            {{ localeLabelKeys[i] | translate }} <span class="admin-required">*</span>
+          </label>
+          <input class="admin-field" formControlName="label" />
+          <small class="admin-error" *ngIf="isTranslationInvalid(i)">
+            {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+          </small>
+        </div>
+      </ng-container>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="closeFormModal()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSubmitting"
+        (click)="submitItem()"
+      >
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

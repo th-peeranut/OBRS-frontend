@@ -3772,3 +3772,23 @@ The two `#fff` literals in `fleet-map-panel.component.scss` are correct — the 
 tiles pinned light in both themes, so a theme-aware token would invert and erase them. But an
 unannotated raw hex reads as a design-system §11 violation and the next reviewer "fixes" it. Commented
 both with the reason and the precondition (don't tokenise until the tiles darken).
+
+## OBRS-527 Scrutinize self-fix — a cross-shell chip needs its token pair re-declared, not just its mapper case
+
+`my-reports.mappers.ts::statusClass` gained `case 'owner_accepted' -> 'is-owner-accepted'`, and
+`my-reports.mappers.spec.ts` pinned it green. But `.admin-status.is-owner-accepted` reads
+`--admin-owner-accepted-bg/-text`, which are **only ever defined inside `.admin-shell`**
+(`admin-theme.scss`). `MyReportsComponent` is a CUSTOMER-shell page with no `.admin-shell`
+ancestor — that is exactly why its `.scss` carries a `:host` block re-declaring every
+`--admin-*` pair it uses (and a `:host-context(body.is-dark)` block for the dark half).
+The new pair was missing from both, so a reporter viewing their own `owner_accepted` report
+would have seen a transparent pill with inherited text. **The mapper spec cannot see this** —
+it asserts the class name, never the resolved custom property.
+
+Fixed by adding `--admin-owner-accepted-bg/-text` to BOTH blocks in
+`src/app/modules/my-reports/my-reports.component.scss` (same values as the admin tokens, no new hex).
+
+Rule: when you add an `.admin-status.is-<state>` token, `grep` for every `:host` block outside
+`.admin-shell` that re-declares `--admin-*` pairs and add yours to each — light AND dark sides.
+Today that set is `my-reports` (usability statuses), `my-parcels` / `parcel-tracking` (parcel
+statuses). Adding only the mapper case is a half-fix that ships green.

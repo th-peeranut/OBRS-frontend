@@ -14,14 +14,13 @@ import {
   UsabilityReportSummary,
 } from '../../../../shared/interfaces/usability-report.interface';
 import {
-  DETAIL_STATUS_VALUES,
-  OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusFilterValue,
   StatusOption,
   buildStatusOptionList,
   canMarkAsDuplicate as canMarkAsDuplicatePure,
   categoryLabel as categoryLabelPure,
+  detailStatusValuesFor,
   displayDateTime as displayDateTimePure,
   extractUsabilityReportErrorCode,
   formatBytes as formatBytesPure,
@@ -167,11 +166,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
       });
 
     // OBRS-378: the list is server-filtered by status — owner defaults to
-    // 'new' (awaiting screening), admin defaults to 'accepted' (owner-vetted).
+    // 'new' (awaiting screening), admin defaults to 'owner_accepted' (OBRS-527:
+    // the admin's inbound queue — owner-screened, awaiting platform adoption;
+    // 'accepted' itself is nobody's badge/default queue any more).
     // setStatus() already calls refresh() internally, so this replaces (not
     // supplements) the old unconditional store.refresh() — calling both would
     // double-fetch on first load.
-    this.selectedStatusFilter = this.isAdmin ? 'accepted' : 'new';
+    this.selectedStatusFilter = this.isAdmin ? 'owner_accepted' : 'new';
     void this.store.setStatus(this.selectedStatusFilter);
   }
 
@@ -191,7 +192,7 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // value from that same list, so it passes straight through unchanged —
   // only an actually-empty '' still falls back to the role default.
   protected onStatusFilterChange(value: string): void {
-    const status = (value || (this.isAdmin ? 'accepted' : 'new')) as StatusFilterValue;
+    const status = (value || (this.isAdmin ? 'owner_accepted' : 'new')) as StatusFilterValue;
     this.selectedStatusFilter = status;
     // OBRS-403 (Scrutinize): deliberately does NOT seed `currentPage = 1` here.
     // The store owns the page (setStatus resets it to 0); `currentPage` is a
@@ -252,6 +253,12 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     if (cached) {
       // Cache hit — render the full detail immediately, no spinner, no refetch.
       this.detailReport = cached;
+      // OBRS-527 AMENDMENT A1: rebuild MUST run before the seed — seedStatus()
+      // validates its result against this.detailStatusOptions, so seeding
+      // first would validate THIS report's status against the PREVIOUSLY
+      // opened report's option list (a leaked-state bug this card exists to
+      // close, not reopen).
+      this.rebuildDetailStatusOptions(cached.status);
       this.selectedDetailStatus = this.seedStatus(cached.status);
       this.selectedTriageNote = cached.triageNote ?? '';
       this.isDetailFetching = false;
@@ -262,6 +269,8 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     // (design-system.md §6) instead of gating the modal on the awaited fetch.
     const summary = this.allReports.find((r) => r.id === id) ?? null;
     this.detailReport = summary ? toUsabilityReportDetailFallback(summary) : null;
+    // OBRS-527 AMENDMENT A1: rebuild before seed, same reasoning as above.
+    this.rebuildDetailStatusOptions(summary?.status ?? '');
     this.selectedDetailStatus = this.seedStatus(summary?.status ?? '');
     this.selectedTriageNote = '';
     this.isDetailFetching = true;
@@ -294,6 +303,9 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           // window. The summary seeded selectedDetailStatus on open, so only
           // adopt the fetched status when nothing is selected yet.
           if (!this.selectedDetailStatus) {
+            // OBRS-527 AMENDMENT A1: rebuild before seed, same reasoning as
+            // the two openDetail sites above.
+            this.rebuildDetailStatusOptions(detail?.status ?? '');
             this.selectedDetailStatus = this.seedStatus(detail?.status ?? '');
           }
           if (!this.isTriageNoteDirty) {
@@ -491,11 +503,33 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     const id = this.selectedReportId;
     const status = this.selectedDetailStatus as UsabilityReportStatus;
 
+    // OBRS-527: previousStatus is the report's TRUE prior status. Read from
+    // detailReport — NEVER selectedDetailStatus, which is the *target*, and
+    // which pullBackToReview() overwrites before calling this method — with a
+    // fallback to the row already in allReports (applyRowStatus below mutates
+    // allReports, never detailReport, so detailReport.status still holds the
+    // true prior status even on that path).
+    const previousStatus: UsabilityReportStatus | null =
+      this.detailReport?.status ?? this.allReports.find((r) => r.id === id)?.status ?? null;
+
     // Optimistic update — this is also THE dismiss path: an owner or admin
     // picking 'dismissed' in the modal saves through here, so it must go
     // through the same tab-leaving-removal logic as the auto-promote above
     // (design-system.md §6 / OBRS-378).
     this.applyRowStatus(id, status);
+
+    // OBRS-527: badge delta — 'owner_accepted' is the admin's inbound queue
+    // (badge ownership moved off 'accepted'), so a save that moves a report
+    // INTO or OUT OF that status nudges the badge instantly, same
+    // optimistic-nudge/reconcile-on-poll pattern autoPromoteToInReview
+    // already uses for 'new' above (trigger() below is the ~2s-later
+    // authoritative reconciliation).
+    if (previousStatus === 'owner_accepted' && status !== 'owner_accepted') {
+      this.badgeRefreshService.adjustBy('owner_accepted', -1);
+    }
+    if (status === 'owner_accepted' && previousStatus !== 'owner_accepted') {
+      this.badgeRefreshService.adjustBy('owner_accepted', 1);
+    }
 
     this.isSavingStatus = true;
     this.adminApiService
@@ -520,6 +554,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           this.alertService.error(
             this.translate.instant('ADMIN.USABILITY_REPORTS.STATUS_UPDATE_FAILED')
           );
+          // OBRS-527: revert the optimistic badge delta above — mirror image
+          // of both conditions (same shape as autoPromoteToInReview's revert).
+          if (previousStatus === 'owner_accepted' && status !== 'owner_accepted') {
+            this.badgeRefreshService.adjustBy('owner_accepted', 1);
+          }
+          if (status === 'owner_accepted' && previousStatus !== 'owner_accepted') {
+            this.badgeRefreshService.adjustBy('owner_accepted', -1);
+          }
           // The optimistic applyRowStatus() above may have REMOVED the row
           // (a leaves-tab status) — on a failed save that removal must not
           // stick, so reconcile via a full refresh (parallel to the
@@ -591,6 +633,15 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
     }
     const id = this.pickerSourceId;
     const openedFromDetail = this.pickerOpenedFromDetail;
+    // OBRS-527: the SOURCE report's status before marking — needed to know
+    // whether marking-as-duplicate is removing it from the admin's
+    // 'owner_accepted' queue. Prefer the row already in allReports (this is
+    // the reliable source, whether the picker was opened from a table row or
+    // from the detail modal's secondary button); fall back to detailReport
+    // for the rare case the row was already optimistically removed from
+    // allReports by an earlier mutation this same session.
+    const sourceStatus: UsabilityReportStatus | null =
+      this.allReports.find((r) => r.id === id)?.status ?? this.detailReport?.status ?? null;
 
     this.isMarkingDuplicate = true;
     this.adminApiService
@@ -608,6 +659,14 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           this.alertService.success(
             this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.MARK_SUCCESS')
           );
+          // OBRS-527: marking an 'owner_accepted' report as duplicate removes
+          // it from the admin's inbound queue — nudge the badge instantly and
+          // trigger an authoritative refetch (this page previously never
+          // touched badgeRefreshService at all on this path).
+          if (sourceStatus === 'owner_accepted') {
+            this.badgeRefreshService.adjustBy('owner_accepted', -1);
+            this.badgeRefreshService.trigger();
+          }
           // duplicateCount on the canonical report is server-derived —
           // refetch rather than hand-compute it. Step back a page afterwards
           // if this marked the last row off the active tab's last page.
@@ -663,6 +722,13 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
           this.alertService.success(
             this.translate.instant('ADMIN.USABILITY_REPORTS.DUPLICATE.UNMARK_SUCCESS')
           );
+          // OBRS-527: this path never touched badgeRefreshService at all — a
+          // real pre-existing gap (target is 'in_review', so no adjustBy is
+          // needed, but the badge could still be up to 60s stale with no
+          // trigger()). Fires unconditionally, unlike onPickerConfirm's
+          // source-gated call above, since un-marking never has an
+          // 'owner_accepted' delta to compute.
+          this.badgeRefreshService.trigger();
           // Same step-back as onPickerConfirm above — un-marking also leaves
           // the 'duplicate' tab if that's the active filter.
           void this.store.refresh().then(() => this.stepBackIfPageEmptied());
@@ -734,13 +800,30 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   protected detailStatusOptions: StatusOption[] = [];
 
   private buildStatusOptions(): void {
-    const translateFn = (key: string) => this.translate.instant(key);
-    this.statusFilterOptions = buildStatusOptionList(STATUS_FILTER_VALUES, translateFn);
-    // OBRS-370: a non-admin (owner) is a screen-only tier — it may only move a
-    // report forward through the non-terminal statuses, never finalize it.
+    this.statusFilterOptions = buildStatusOptionList(
+      STATUS_FILTER_VALUES,
+      (key) => this.translate.instant(key)
+    );
+    // OBRS-527: detailStatusOptions is now SOURCE-aware (rebuildDetailStatusOptions
+    // below) — re-run it against whatever report is currently open (or '' if
+    // none) so a language change re-translates the SAME option set instead of
+    // resetting it to the role-only default.
+    this.rebuildDetailStatusOptions(this.detailReport?.status ?? '');
+  }
+
+  // OBRS-527: decision-only dropdown options, now keyed by the report's
+  // CURRENT status (sourceStatus), not just role — admin is never restricted
+  // (always DETAIL_STATUS_VALUES); an owner's options depend on the legal
+  // edges from sourceStatus (detailStatusValuesFor/OWNER_ALLOWED_TARGETS in
+  // usability-reports-page.mappers.ts), collapsing to [] once the platform
+  // has already finalized the report (accepted/resolved/rejected/duplicate —
+  // PO-2). Kept a plain field, NOT a getter (CD-churn precedent documented at
+  // admin-layout.component.ts:174) — called explicitly at the same three
+  // sites seedStatus() already runs, BEFORE the seed (AMENDMENT A1).
+  private rebuildDetailStatusOptions(sourceStatus: UsabilityReportStatus | ''): void {
     this.detailStatusOptions = buildStatusOptionList(
-      this.isAdmin ? DETAIL_STATUS_VALUES : OWNER_DETAIL_STATUS_VALUES,
-      translateFn
+      detailStatusValuesFor(this.isAdmin, sourceStatus),
+      (key) => this.translate.instant(key)
     );
   }
 }

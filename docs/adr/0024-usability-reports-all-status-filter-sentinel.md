@@ -40,9 +40,11 @@ reintroduce the exact defect that removal fixed.
   comes from whichever option is currently selected (the dropdown's own
   `selectedLabel`), including when that option is "All statuses"
   (`ADMIN.USABILITY_REPORTS.STATUS.all`).
-- The default on page load is **unchanged** — still role-based (`admin` ->
-  `'accepted'`, otherwise `'new'`, `ngOnInit`). `'all'` is an added *choice*
-  the admin must actively pick, never a new default.
+- The default on page load is **unchanged in mechanism** — still role-based
+  (`ngOnInit`). The admin value itself moved from `'accepted'` to
+  `'owner_accepted'` under OBRS-527 (see ADR-0011's OBRS-527 addendum) — the
+  owner default stays `'new'`. `'all'` is an added *choice* the admin must
+  actively pick, never a new default.
 
 Only the **service/store layer** — `UsabilityReportsStore.fetch()` — knows
 that `'all'` has no corresponding backend slug, and collapses it back to
