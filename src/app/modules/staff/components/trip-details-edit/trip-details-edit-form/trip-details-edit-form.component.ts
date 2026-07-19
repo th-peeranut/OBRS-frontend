@@ -67,7 +67,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
   // --- Outputs ---
   @Output() save = new EventEmitter<TripEditFormValue>();
   @Output() cancel = new EventEmitter<void>();
-  @Output() vehicleTypeChanged = new EventEmitter<string>();
 
   protected readonly form: FormGroup;
   private readonly destroy$ = new Subject<void>();
@@ -86,8 +85,7 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     this.form.get('vehicleType')!
       .valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe((slug: string) => {
-        this.vehicleTypeChanged.emit(slug);
+      .subscribe(() => {
         // If the current vehicleId isn't available for the new type, clear it.
         const currentVehicleId = this.form.get('vehicleId')!.value as string;
         const still = this.filteredVehicleOptions.some((o) => o.code === currentVehicleId);
