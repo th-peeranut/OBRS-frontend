@@ -963,13 +963,14 @@
       "STATUS": {
         "LABEL": "状态",
         "SAVE": "保存",
+        "all": "全部状态",
         "new": "新建",
         "in_review": "审查中",
         "accepted": "已接受",
         "dismissed": "已搁置",
         "resolved": "已解决",
         "rejected": "已拒绝",
-        "duplicate": "重复"
+        "duplicate": "与其他报告重复"
       },
       "STATUS_UPDATE_SUCCESS": "状态更新成功。",
       "STATUS_UPDATE_FAILED": "状态更新失败，请重试。",
