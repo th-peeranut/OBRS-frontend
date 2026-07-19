@@ -127,6 +127,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-509: vehicle-inspection checklist master list is OWNER-only (route
+    // `requiredRoles: ['owner']` — every backend endpoint it saves through
+    // requires OWNER), gated the same way as cargo-capacity above. Lives in
+    // 'master' (fleet/vehicle data), next to Vehicles/Cargo Capacity.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'inspection-items',
+        labelKey: 'ADMIN.PAGES.INSPECTION_ITEMS',
+        icon: 'checklist',
+        descriptionKey: 'ADMIN.INSPECTION_ITEMS.SUBTITLE',
+        section: 'master',
+      });
+    }
+
     // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
     // ['admin']`), so it's gated the same way Settlements is gated above,
     // just on the admin role instead of owner.

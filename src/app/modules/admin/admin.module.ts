@@ -46,6 +46,7 @@ import { SettlementDetailModalComponent } from './pages/settlements/settlement-d
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
 import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
 import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
+import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 const routes: Routes = [
@@ -99,6 +100,19 @@ const routes: Routes = [
         data: {
           titleKey: 'ADMIN.PAGES.CARGO_CAPACITY',
           subtitleKey: 'ADMIN.CARGO_CAPACITY.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
+      {
+        // OBRS-509: vehicle-inspection checklist master list, OWNER-only
+        // (the backend GET/POST/PUT/reorder all require OWNER; ADMIN inherits
+        // via ROLE_GRANTS) — same gating shape as cargo-capacity above.
+        path: 'inspection-items',
+        component: InspectionItemsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.INSPECTION_ITEMS',
+          subtitleKey: 'ADMIN.INSPECTION_ITEMS.SUBTITLE',
           requiredRoles: ['owner'],
         },
       },
@@ -253,6 +267,7 @@ const routes: Routes = [
     ReminderConfigPageComponent,
     JumpSeatConfigPageComponent,
     CargoCapacityPageComponent,
+    InspectionItemsPageComponent,
   ],
   imports: [
     SharedModule,

@@ -578,6 +578,36 @@ enforced rule with a test behind it.
   the inherited values for free and needs no copy of its own. See
   `docs/adr/0023-my-reports-customer-page.md`.
 
+- **Move-up/move-down/move-to-top/move-to-bottom buttons as a list-reorder
+  mechanism, in place of drag-and-drop** (OBRS-509, `InspectionItemsPageComponent`'s
+  checklist-item reorder): no `cdkDrag`/`p-orderList`/`pReorderableRow` exists
+  anywhere in this codebase, and a ~23-row admin table overflowing one
+  viewport makes "scroll vs. drag" a real gesture conflict on tablet. Four
+  `.admin-icon-btn` buttons per row give a one-step nudge and a one-click jump
+  to either end; each is natively focusable/operable, so there's no separate
+  keyboard/ARIA affordance to design on top. Paired with a monotonic
+  per-request sequence number (`latestReorderSeq`) as the out-of-order-
+  **response** guard for a no-debounce, immediate-PUT-per-click write, plus a
+  `reorderPending` flag gating the page's `store.data$` subscription so an
+  unrelated background emission can't clobber the just-clicked local order
+  mid-flight. See `docs/adr/0999-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
+  Reuse this shape for the next reorderable admin list instead of reaching
+  for `cdkDrag`/`p-orderList` as a first instinct.
+
+- **`.admin-icon-btn` Retire/Restore, no color, no chip on active rows, in
+  place of a toggle** (OBRS-509, same page): completes the retire-not-delete
+  pattern `.admin-btn-danger`'s §4 entry describes for a *destructive-reading*
+  row action — here the row action is explicitly **not** meant to read as
+  destructive (retiring is reversible and preserves history), so it uses the
+  same already-measured-dark-safe `.admin-icon-btn` the Edit button beside it
+  uses, with only the glyph (`visibility_off`/`visibility`) distinguishing
+  it — no new token, no new `.is-dark` rule. Went through two rejected
+  intermediate designs first (`p-inputSwitch`, then `.admin-btn-danger`/
+  `.is-success`), both for the identical "no `.is-dark` override exists for
+  this token" reason one level down — full writeup in the ADR above. Reuse
+  `.admin-icon-btn` (not `p-inputSwitch`, not a color-modified `.admin-btn`)
+  for the next "off but not deleted" row action.
+
 - **CDK Portal print isolation reused for a second surface** (OBRS-305,
   `ParcelWaybillPageComponent.printWaybill()`): the exact
   `docs/adr/0015-boarding-manifest-print-isolation.md` recipe

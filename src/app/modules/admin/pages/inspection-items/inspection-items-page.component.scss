@@ -1,0 +1,5 @@
+// OBRS-509: layout-only — every color/control comes from shared, already
+// dark-mode-verified classes (.admin-icon-btn, .admin-status.is-neutral,
+// .admin-btn/.admin-btn-primary, .admin-field, .admin-error, .admin-muted —
+// admin-theme.scss). No raw hex/inline color, no new pattern-scoped SCSS
+// needed for this page.
