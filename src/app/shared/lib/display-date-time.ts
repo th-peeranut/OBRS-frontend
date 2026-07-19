@@ -4,6 +4,7 @@
  * localized month, e.g.
  *   formatDisplayDateTime → `8 ก.ค. 2026 08:32` (th) · `8 Jul 2026 08:32` (en)
  *   formatDisplayDate     → `8 ก.ค. 2026`       (th) · `8 Jul 2026`       (en)
+ *   formatDisplayTime     → `08:32` (language-independent — no month name)
  *
  * Times are pinned to `Asia/Bangkok` — every OBRS timestamp is Bangkok-offset
  * and the product is Thailand-only, so the wall-clock reading is stable
@@ -40,6 +41,27 @@ export function formatDisplayDate(
   }
   const { day, month, year } = parts;
   return `${day} ${monthName(month, lang)} ${year}`;
+}
+
+/**
+ * 24h Bangkok time only, e.g. `14:32`. Same '-' / echo contract as its
+ * siblings. SPEC-OBRS-426 BR-12a: for a value that can only ever be "today"
+ * within the current Bangkok wall-clock day (e.g. a position `recordedAt`,
+ * which can only be reported inside a window that opens shortly before
+ * departure and closes shortly after arrival), the date is redundant and
+ * brevity is load-bearing on a 375px screen — use this instead of
+ * `formatDisplayDateTime`. For any value that can be genuinely multi-day-out
+ * (e.g. `windowOpensAt`, which can be days away), keep `formatDisplayDateTime`
+ * — stripping the date there would silently answer "when" with a time that
+ * reads as today. No `lang` parameter: the time render is already
+ * language-independent (only the month name was not).
+ */
+export function formatDisplayTime(value: string | null | undefined): string {
+  const parts = bangkokParts(value);
+  if (typeof parts === 'string') {
+    return parts;
+  }
+  return `${parts.hour}:${parts.minute}`;
 }
 
 interface DateParts {

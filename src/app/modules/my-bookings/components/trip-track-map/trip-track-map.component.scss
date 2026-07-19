@@ -1,0 +1,89 @@
+// SPEC-OBRS-426 BR-25: mobile-first — the canvas floor/ceiling are explicit
+// (a %/flex:1 height with no bounded ancestor renders Leaflet 0px tall,
+// silently — OBRS-424 precedent). 50vh preferred, never below 220px, never
+// above 320px so the state banner + chip above it stay in view on a phone.
+.trip-track-map-canvas {
+  height: clamp(220px, 50vh, 320px);
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+// The CSS custom properties referenced below (--trip-track-marker-*) are
+// declared ONCE at the outermost customer-shell component's :host
+// (TripTrackPanelComponent) — they inherit down the real DOM tree to this
+// Leaflet-injected marker HTML regardless of Angular's emulated view
+// encapsulation (design-system §12 "Cross-shell status-chip reuse needs only
+// ONE :host declaration per render tree"). Deliberately NOT --admin-* names
+// (BR-24/U28) even though the STALE values are copied from --admin-warning-*.
+//
+// The marker/popup DOM is injected by Leaflet directly (L.divIcon's html
+// string) — it never passes through Angular's template compiler, so
+// ::ng-deep is the correct tool (not a workaround): it's still scoped to
+// this component's own host, just needed because the injected DOM carries no
+// _ngcontent attribute.
+:host ::ng-deep {
+  .trip-track-marker {
+    position: relative;
+    display: block;
+  }
+
+  .trip-track-marker-halo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    opacity: 0.35;
+
+    // BR-11: the STALE halo carries a SECOND, independent signal (dashed
+    // ring) — never merely a color swap on the same shape as LIVE.
+    &.is-stale {
+      opacity: 0.55;
+      border: 2px dashed var(--trip-track-marker-stale-fill);
+      background: transparent !important;
+    }
+  }
+
+  .trip-track-marker-dot {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid #fff; // separates the dot from the (always-light) tile underneath.
+
+    // BR-11: STALE is also desaturated/dimmed at the dot itself — opacity
+    // degradation is not carried by the halo alone.
+    &.is-stale {
+      opacity: 0.55;
+    }
+  }
+
+  .trip-track-boarding-marker {
+    position: relative;
+    display: block;
+  }
+
+  .trip-track-boarding-pin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #fff;
+  }
+
+  .trip-track-boarding-pin-icon {
+    transform: rotate(45deg);
+    font-size: 14px;
+    color: #fff;
+  }
+}

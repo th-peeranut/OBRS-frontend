@@ -16,6 +16,8 @@ import { RescheduleEstimateSummaryComponent } from './components/reschedule-dial
 import { ChangeSeatDialogComponent } from './components/change-seat-dialog/change-seat-dialog.component';
 import { ChangeSeatMapComponent } from './components/change-seat-dialog/change-seat-map/change-seat-map.component';
 import { ChangeStopDialogComponent } from './components/change-stop-dialog/change-stop-dialog.component';
+import { TripTrackPanelComponent } from './components/trip-track-panel/trip-track-panel.component';
+import { TripTrackMapComponent } from './components/trip-track-map/trip-track-map.component';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
 import { RouteStopListModule } from '../home/components/route-map/route-stop-list/route-stop-list.module';
 import { myBookingsReducer } from './store/my-bookings.reducer';
@@ -38,6 +40,9 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     ChangeSeatDialogComponent,
     ChangeSeatMapComponent,
     ChangeStopDialogComponent,
+    // SPEC-OBRS-426 — "where is my bus" per-trip tracker (C1 smart / C2 dumb).
+    TripTrackPanelComponent,
+    TripTrackMapComponent,
   ],
   imports: [
     SharedModule,

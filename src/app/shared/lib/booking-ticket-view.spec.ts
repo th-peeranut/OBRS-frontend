@@ -1,5 +1,5 @@
 import { BookingTicketsData } from '../interfaces/booking-ticket.interface';
-import { mapBookingTicketsToCard } from './booking-ticket-view';
+import { mapBookingTicketsToCard, mapBookingTicketsToTrackTargets } from './booking-ticket-view';
 
 function buildData(overrides: Partial<BookingTicketsData> = {}): BookingTicketsData {
   return {
@@ -451,5 +451,167 @@ describe('mapBookingTicketsToCard — province-level route heading (OBRS-264)', 
     // detail rows unchanged
     expect(card.legs[0].origin).toBe('Nong Chak');
     expect(card.legs[0].destination).toBe('Ban Bueng Hospital');
+  });
+});
+
+// SPEC-OBRS-426 M1 — mapBookingTicketsToTrackTargets (BR-4a/BR-5/BR-6).
+describe('mapBookingTicketsToTrackTargets', () => {
+  it('U8: carries the real ticket id through — TicketLeg drops it entirely (BR-5)', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [{ id: 4321, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' }],
+        },
+      ],
+    });
+
+    const targets = mapBookingTicketsToTrackTargets(data);
+
+    expect(targets[0]?.ticketId).toBe(4321);
+  });
+
+  it('U9: an INBOUND-FIRST wire response still pairs by legType.code, not array order (the BR-4a headline bug)', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'inbound', label: 'Inbound' },
+          fromStop: { code: 'b', label: 'Station B' },
+          toStop: { code: 'a', label: 'Station A' },
+          tickets: [{ id: 222, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mr A' }],
+        },
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [{ id: 111, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' }],
+        },
+      ],
+    });
+
+    const targets = mapBookingTicketsToTrackTargets(data);
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    // targets[0] must be the OUTBOUND ticket (111), matching card.legs[0]
+    // (also outbound) — never the wire-order-first inbound ticket (222).
+    expect(targets[0]?.ticketId).toBe(111);
+    expect(targets[1]?.ticketId).toBe(222);
+    expect(card.legs[0].route).toBe('Station A - Station B'); // outbound
+    expect(card.legs[1].route).toBe('Station B - Station A'); // inbound
+  });
+
+  it('U9a: a THREE-journey fixture still emits exactly two targets, index-aligned with the card\'s two legs', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [{ id: 111, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' }],
+        },
+        {
+          legType: { code: 'inbound', label: 'Inbound' },
+          fromStop: { code: 'b', label: 'Station B' },
+          toStop: { code: 'a', label: 'Station A' },
+          tickets: [{ id: 222, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mr A' }],
+        },
+        {
+          legType: { code: 'outbound', label: 'Outbound (dup)' },
+          fromStop: { code: 'c', label: 'Station C' },
+          toStop: { code: 'd', label: 'Station D' },
+          tickets: [{ id: 333, ticketNumber: 'T-3', seatNumber: '3', passengerName: 'Mr A' }],
+        },
+      ],
+    });
+
+    const targets = mapBookingTicketsToTrackTargets(data);
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(targets.length).toBe(2);
+    expect(card.legs.length).toBe(2);
+  });
+
+  it('U10: carries fromStop lat/lon through when present; null (never 0) when absent — target still produced', () => {
+    const withCoords = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A', latitude: 13.7563, longitude: 100.5018 },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [{ id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' }],
+        },
+      ],
+    });
+    const withoutCoords = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [{ id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' }],
+        },
+      ],
+    });
+
+    expect(mapBookingTicketsToTrackTargets(withCoords)[0]).toEqual({
+      ticketId: 1,
+      boardingStopLabel: 'Station A',
+      boardingStopLat: 13.7563,
+      boardingStopLon: 100.5018,
+    });
+    const target = mapBookingTicketsToTrackTargets(withoutCoords)[0];
+    expect(target).not.toBeNull();
+    expect(target?.boardingStopLat).toBeNull();
+    expect(target?.boardingStopLon).toBeNull();
+  });
+
+  it('U11: outbound leg with zero tickets yields a NULL HOLE at index 0, never a shifted/filtered array', () => {
+    const data = buildRoundTripData();
+    data.journeys![0].tickets = []; // outbound now has no tickets
+
+    const targets = mapBookingTicketsToTrackTargets(data);
+
+    expect(targets.length).toBe(2);
+    expect(targets[0]).toBeNull();
+    expect(targets[1]?.ticketId).toBe(2); // still the inbound leg's id, still at index 1
+  });
+
+  it('U12: a partially-cancelled leg selects the confirmed ticket, not tickets[0] (BR-6)', () => {
+    const data = buildData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A', status: { code: 'cancelled', label: 'Cancelled' } },
+            { id: 2, ticketNumber: 'T-2', seatNumber: '2', passengerName: 'Mrs B', status: { code: 'confirmed', label: 'Confirmed' } },
+          ],
+        },
+      ],
+    });
+
+    const targets = mapBookingTicketsToTrackTargets(data);
+
+    expect(targets[0]?.ticketId).toBe(2);
+  });
+
+  it('U13: mapBookingTicketsToCard\'s own output is unchanged by the M1 addition (regression pin)', () => {
+    const card = mapBookingTicketsToCard(buildRoundTripData(), 'en');
+
+    expect(card).toEqual({
+      bookingNumber: 'B-1',
+      ticketNumber: 'T-1, T-2',
+      legs: [
+        jasmine.objectContaining({ route: 'Station A - Station B', seats: '1', distanceKm: 45 }),
+        jasmine.objectContaining({ route: 'Station B - Station C', seats: '2', distanceKm: 40 }),
+      ],
+      passengers: [jasmine.objectContaining({ name: 'Mr A' })],
+      booker: { name: '-', phone: '0812345678', seat: '-' },
+      paymentDate: '-',
+      totalAmount: '500.00',
+    });
   });
 });
