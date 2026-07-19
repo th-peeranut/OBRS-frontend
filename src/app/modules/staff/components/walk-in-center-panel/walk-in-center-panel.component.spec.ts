@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { WalkInCenterPanelComponent } from './walk-in-center-panel.component';
 import { WalkInTripDto } from '../../../../services/staff/staff-api.service';
 import { StopOption } from '../../pages/sell/sell-page.component';
@@ -7,10 +7,16 @@ import { StaffApiService } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
 import { HttpClientTestingModule } from '@angular/common/http/testing';
+import { NoopAnimationsModule } from '@angular/platform-browser/animations';
+import { CalendarModule } from 'primeng/calendar';
+import { InputNumberModule } from 'primeng/inputnumber';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { of } from 'rxjs';
+import { TripDetailsEditFormComponent } from '../trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
+import { AdminDropdownComponent } from '../../../admin/components/admin-dropdown/admin-dropdown.component';
 
 function makeTrip(overrides: Partial<WalkInTripDto> = {}): WalkInTripDto {
   return {
@@ -721,7 +727,6 @@ describe('WalkInCenterPanelComponent', () => {
         vehicleId: null,
         driverId: null,
         seatingCapacity: 21,
-        seatMapId: '',
         route: '',
       });
 
@@ -764,4 +769,121 @@ describe('WalkInCenterPanelComponent', () => {
       expect(emitted).toEqual([TICKET_SALES_TAB, TRIP_DETAILS_TAB, BOARDING_TAB]);
     });
   });
+});
+
+// ---------------------------------------------------------------------------
+// OBRS-517: the "Seating Plan" dropdown is a phantom control — this suite's
+// own beforeEach stubs getVehicleTypeById with `seatMaps: []`, which is
+// exactly why the bug above was invisible. This block renders the REAL child
+// form (app-trip-details-edit-form + app-admin-dropdown, not NO_ERRORS_SCHEMA
+// stand-ins) with a REAL populated vehicle type, and drives Save through an
+// actual DOM click — the same path a staff user takes.
+// ---------------------------------------------------------------------------
+describe('WalkInCenterPanelComponent — OBRS-517 seat-map phantom control (full render)', () => {
+  let component: WalkInCenterPanelComponent;
+  let fixture: ComponentFixture<WalkInCenterPanelComponent>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- jasmine.createSpyObj return type, matches the file's existing spy style above
+  let adminApiSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let staffApiSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let alertSpy: any;
+
+  beforeEach(() => {
+    adminApiSpy = jasmine.createSpyObj('AdminApiService', [
+      'getScheduleById',
+      'getVehicleTypes',
+      'getVehicles',
+      'getVehicleTypeById',
+      'updateSchedule',
+    ]);
+    adminApiSpy.getScheduleById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: {
+        departureDateTime: '2026-07-01T08:00:00+07:00',
+        vehicleType: { id: 5, slug: 'bus', totalSeats: 21 },
+        vehicle: { id: 10 },
+        driver: { id: 3, fullName: 'Somchai' },
+        seatingCapacity: 21,
+        route: { slug: 'bkk-cnx' },
+      },
+    }));
+    adminApiSpy.getVehicleTypes.and.returnValue(
+      of({ code: 200, message: 'OK', data: [{ id: 5, slug: 'bus', totalSeats: 21 }] })
+    );
+    adminApiSpy.getVehicles.and.returnValue(of({ code: 200, message: 'OK', data: [] }));
+    // The REAL populated backend shape — one seat record per array entry
+    // ({seatNumber, rowIndex, columnIndex}), NOT the lying {id, name, label}
+    // the FE historically assumed. This is the shape that made the bug
+    // invisible to the existing `seatMaps: []` stub.
+    adminApiSpy.getVehicleTypeById.and.returnValue(of({
+      code: 200,
+      message: 'OK',
+      data: {
+        seatMaps: [
+          { seatNumber: '1', rowIndex: 0, columnIndex: 0 },
+          { seatNumber: '2', rowIndex: 0, columnIndex: 1 },
+        ],
+      },
+    }));
+    adminApiSpy.updateSchedule.and.returnValue(of({ code: 200, message: 'OK', data: null }));
+
+    staffApiSpy = jasmine.createSpyObj('StaffApiService', ['getDrivers']);
+    staffApiSpy.getDrivers.and.returnValue(of({ code: 200, message: 'OK', data: [] }));
+
+    alertSpy = jasmine.createSpyObj('AlertService', ['success', 'error', 'warning']);
+    alertSpy.success.and.returnValue(Promise.resolve());
+    alertSpy.error.and.returnValue(Promise.resolve());
+    alertSpy.warning.and.returnValue(Promise.resolve());
+
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      declarations: [
+        WalkInCenterPanelComponent,
+        TripDetailsEditFormComponent,
+        AdminDropdownComponent,
+      ],
+      imports: [
+        CommonModule,
+        HttpClientTestingModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        ReactiveFormsModule,
+        CalendarModule,
+        InputNumberModule,
+        NoopAnimationsModule,
+      ],
+      providers: [
+        { provide: AdminApiService, useValue: adminApiSpy },
+        { provide: StaffApiService, useValue: staffApiSpy },
+        { provide: AlertService, useValue: alertSpy },
+        TranslateService,
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(WalkInCenterPanelComponent);
+    component = fixture.componentInstance;
+    component.selectedTrip = makeTrip({ scheduleId: 42, vehicleType: 'bus' });
+    fixture.detectChanges(); // ngOnInit + initial render (creates editFormRef)
+  });
+
+  it('lets staff actually save Trip Details for a trip whose vehicle type has a real populated seat map', fakeAsync(() => {
+    (component as unknown as { onTabChange: (i: number) => void }).onTabChange(1);
+    fixture.detectChanges();
+    tick(); // flush the openEditMode() Promise.resolve().then(...) applyUntouchedPatch microtask
+    fixture.detectChanges();
+
+    const saveButton = fixture.nativeElement.querySelector('.btn.btn-primary') as HTMLButtonElement | null;
+    expect(saveButton).withContext('Save button should be rendered inside the Trip Details form').toBeTruthy();
+
+    saveButton!.click();
+    fixture.detectChanges();
+    tick();
+
+    // Every genuinely required field (departureTime, vehicleType, seatingCapacity)
+    // was patched from the real schedule detail — saving must reach the backend.
+    expect(adminApiSpy.updateSchedule).toHaveBeenCalled();
+  }));
 });
