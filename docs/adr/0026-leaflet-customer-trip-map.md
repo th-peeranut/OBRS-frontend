@@ -1,4 +1,4 @@
-# ADR 0025 — Leaflet + MapTiler for the customer trip-track map (layer 2)
+# ADR 0026 — Leaflet + MapTiler for the customer trip-track map (layer 2)
 
 **Date:** 2026-07-19
 **Status:** Accepted

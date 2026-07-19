@@ -8,7 +8,7 @@
 // boundary). `fleetMapTileUrl`/`FLEET_MAP_TILE_ATTRIBUTION` re-export from
 // this module at their original location so OBRS-424's imports and specs
 // stay byte-identical. See docs/adr/0024-leaflet-fleet-live-map.md and
-// docs/adr/0025-leaflet-customer-trip-map.md.
+// docs/adr/0026-leaflet-customer-trip-map.md.
 
 /** The ONE place the tile request URL is composed. Takes the key as a
  * parameter rather than baking it in — the key itself is genuinely plumbed

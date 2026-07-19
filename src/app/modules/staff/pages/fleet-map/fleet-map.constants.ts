@@ -9,7 +9,7 @@ export const FLEET_MAP_POLL_INTERVAL_MS = 60000;
  * re-exported here under their original names so this card's existing
  * imports/specs stay byte-identical. See
  * docs/adr/0024-leaflet-fleet-live-map.md and
- * docs/adr/0025-leaflet-customer-trip-map.md. */
+ * docs/adr/0026-leaflet-customer-trip-map.md. */
 export const fleetMapTileUrl = mapTileUrl;
 export const FLEET_MAP_TILE_ATTRIBUTION = MAP_TILE_ATTRIBUTION;
 

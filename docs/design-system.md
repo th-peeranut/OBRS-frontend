@@ -701,7 +701,7 @@ enforced rule with a test behind it.
   reuse instruction to the next *internal/high-frequency* map feature; this
   card is customer-facing and low-frequency, so it stands on its own
   justification rather than inheriting that one — see
-  `docs/adr/0025-leaflet-customer-trip-map.md`. Two changes ride along:
+  `docs/adr/0026-leaflet-customer-trip-map.md`. Two changes ride along:
   (1) the tile URL/attribution composer moves one level up, from
   `modules/staff/pages/fleet-map/fleet-map.constants.ts` to
   `shared/lib/map-tiles.ts` (`mapTileUrl()` / `MAP_TILE_ATTRIBUTION`), with
