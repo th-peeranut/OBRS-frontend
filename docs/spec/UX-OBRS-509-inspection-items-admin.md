@@ -11,13 +11,22 @@ an existing §2–§10 token/component/role. The new patterns this screen introd
 an explicit Retire/Restore row action in place of a toggle) are each justified under §12's rule and
 logged as new-pattern candidates in §11.
 
-**Revision note (this file was revised once, against Scrutinize R1 findings):** the reorder write
-mechanism (§3.2.2) was rewritten from a debounce+single-flight design to an immediate-PUT +
-monotonic-sequence-number design after Scrutinize found the debounce version could silently drop a
-write on navigation and left the `rows` array unguarded against background store emits;
-`p-inputSwitch` (originally specified for the active toggle, §4.2) was replaced with an explicit
-Retire/Restore button pair after Scrutinize found it has no dark-mode coverage anywhere inside
-`.admin-shell` in this codebase. Both corrections are detailed inline at §0, §3.2.2, and §4.2.
+**Revision note (this file has been revised twice, against two rounds of Scrutinize findings):**
+**Rev 1 → Rev 2:** the reorder write mechanism (§3.2.2) was rewritten from a debounce+single-flight
+design to an immediate-PUT + monotonic-sequence-number design (the debounce version could silently
+drop a write on navigation and left the `rows` array unguarded against background store emits);
+`p-inputSwitch` (originally specified for the active toggle, §4.2) was replaced with an
+`.admin-btn.admin-btn-small`/`.admin-btn-danger` Retire/Restore button pair, reasoned from
+`boarding-list`'s Board/Un-board precedent, because `p-inputSwitch` has no dark-mode coverage
+anywhere inside `.admin-shell` in this codebase.
+**Rev 2 → Rev 3 (this revision):** that Rev 2 replacement was **itself** wrong for the identical
+reason — `.admin-btn-danger`/`.admin-status.is-success` have no `.is-dark` override anywhere in
+`src/` either (verified by grep; only `--admin-neutral-*` genuinely has one). Replaced again, this
+time with `.admin-icon-btn` (measured dark-safe) for Retire/Restore and **no chip at all** on active
+rows (§3.1, §4.2). Also: the reorder success path now fires a trailing background `store.refresh()`
+(§3.2.2), matching the shape create/edit already use, to close a server-commit-ordering hazard the
+sequence-number guard alone doesn't cover. All three corrections are detailed inline at §0, §3.2.2,
+and §4.2.
 
 ---
 
@@ -31,7 +40,7 @@ Retire/Restore button pair after Scrutinize found it has no dark-mode coverage a
 | Closest structural precedent: `LookupSettingsPageComponent` (list + create/edit modal + per-locale label fields, `admin-modal-backdrop`, `admin-form-grid`) | `lookup-settings-page.component.html/.ts` (read in full) |
 | Closest per-row-independent-save precedent: `CargoCapacityPageComponent` (row saves independently, no FormArray, pristine-guard via a touched-id set) | `cargo-capacity-page.component.ts` (read in full) |
 | **REVISED** — `p-inputSwitch` is **not** dark-safe inside `.admin-shell` and is **not used** on this page. Its only dark rules in the whole repo are scoped to `.npref-row` (notification-preferences, outside the admin shell); `jump-seat-config`'s own code comment says verbatim "no size/color overrides here" — that page has exactly one switch, this page would have had 23. Same reasoning error as OBRS-312's ~46 solid-white boxes. | `dark-theme.scss:781-796` (`.npref-row .p-inputswitch…` rules only); `jump-seat-config-page.component.scss:5-6` (comment) |
-| Corrected precedent for the retire/restore action: `.admin-btn.admin-btn-small` (forward action, no confirm) / `.admin-btn.admin-btn-small.admin-btn-danger` (reversal action, confirm-gated) — the exact Board/Un-board shape, already shipped on the dark admin/staff shell and closed as debt | `boarding-list.component.html:322-337`; classes defined at `admin-theme.scss:747-820` (`.admin-btn` base + `.is-dark .admin-btn` border override at `:764-766`, `.admin-btn-danger` composing `--admin-danger-text`/`--admin-danger-border` at `:812-820`); closed-debt status confirmed at `docs/design-system.md` §13 ("`.admin-status.is-neutral` + `.admin-btn-danger` added (OBRS-130)… both runtime-themed, no new hex") |
+| **SUPERSEDED, kept for the record** — Rev 2 of this document proposed `.admin-btn.admin-btn-small`/`.admin-btn-danger` for the retire/restore action, reasoning from `boarding-list`'s already-shipped Board/Un-board pair. That reasoning was **wrong**: `--admin-danger-bg`/`-text`/`-border` and `--admin-success-bg`/`-text` are declared once, light `:root` only, with zero `.is-dark` override anywhere in `src/` — "composes an existing token, no new hex" (the property that made it look safe) is not the same property as "dark-safe." `boarding-list` carries this same latent defect today; it is not proof the combination is safe. **Final (Rev 3): `.admin-icon-btn` for Retire/Restore (§4.2), no color modifier, no chip on active rows (§3.1).** | Grep of `admin-theme.scss` for `--admin-danger-*`/`--admin-success-*` → declared once each, `:10-18`; zero `.is-dark` matches for either, repo-wide |
 | `.admin-icon-btn` is 36×36, themed via `--accent-soft`/`--accent-strong`, dark-mode covered (`.is-dark .admin-icon-btn`) | `src/styles/admin-theme.scss:607-633` |
 | `.admin-status.is-neutral` is the existing token for "inactive/unset", **with both a light and an explicit dark value** (`--admin-neutral-bg`/`-text` defined once in the light `:root` block and again inside `.admin-shell.is-dark`) — genuinely dark-safe, not just var-shaped | `src/styles/admin-theme.scss:35-36` (light), `:212-213` (`.admin-shell.is-dark` override); `docs/design-system.md` §2.4 |
 | `AdminCollectionStore.rerunRequested`/`.inFlight` are `private` and not exposed on the public API (`data$`/`refreshing$`/`error$`/`value`/`hasValue`/`clear()`/`mutate()`/`refresh()`) — **cannot actually be reused** by page code; the original spec's "reuse" claim was a hand-copied shape, not a real dependency | `src/app/modules/admin/shared/admin-collection-store.ts:16-114` (read in full) |
@@ -91,7 +100,7 @@ InspectionItemsPageComponent (smart)
   ├─ reads: InspectionItemsStore (extends AdminCollectionStore<AdminInspectionItemDto[]>,
   │         per SPEC §6 — cited, not redesigned)
   └─ uses: inspection-items.mappers.ts (pure: locale resolution, row view-model, reorder-array math)
-           inspection-item-error.ts (NEW, mirrors schedule-status-error.ts — see §8)
+           inspection-item-error.ts (NEW, mirrors schedule-status-error.ts — see §10)
 ```
 
 No `@Input`/`@Output` boundary exists because there is no child component. If a future card grows
@@ -111,16 +120,16 @@ Single `admin-card` > `admin-table-wrap` > `admin-table`, columns:
 | 1 | Order | `ADMIN.INSPECTION_ITEMS.COL_ORDER` | the row's 1-based position + 4 move buttons (§3.2) |
 | 2 | Code | `ADMIN.INSPECTION_ITEMS.COL_CODE` | `<code>{{ item.code }}</code>`, same rendering as `lookup-settings`'s slug column |
 | 3 | Labels | `ADMIN.INSPECTION_ITEMS.COL_LABELS` | `admin-cell-stack` of all 3 locales, "EN: …", "TH: …", "ZH: …" — reused verbatim from `lookup-settings-page.component.html:76-79`'s stacked-label idiom, extended from 2 lines to 3. Showing all three (not just the UI's current language) matters here specifically because completeness-at-a-glance is the safety property (§8.3 of the hard problems) — the owner should be able to audit that the ZH row genuinely reads like a checklist item, not a raw code slug, without opening the modal for all 23 rows. |
-| 4 | Status | `ADMIN.INSPECTION_ITEMS.COL_STATUS` | `.admin-status.admin-status--icon`, `[class.is-success]="row.active"` / `[class.is-neutral]="!row.active"` showing `ACTIVE_BADGE`/`RETIRED_BADGE` — the identical dual-chip shape as `boarding-list`'s Boarded/Not-boarded column (`boarding-list.component.html:306-313`), not a new chip pattern |
-| 5 | Actions | `ADMIN.COMMON.ACTIONS` | `.admin-icon-btn` Edit (pencil), plus **one** row-action button: `.admin-btn.admin-btn-small.admin-btn-danger` "Retire" when `row.active`, or `.admin-btn.admin-btn-small` "Restore" when not — mutually exclusive `*ngIf`, exact shape of `boarding-list`'s Board/Un-board pair (`boarding-list.component.html:322-337`). **No trash icon, no delete control of any kind.** (AC#4 — see §5) |
+| 4 | Status | `ADMIN.INSPECTION_ITEMS.COL_STATUS` | **REVISED (Scrutinize R2):** no chip on active rows — absence means normal. `.admin-status.is-neutral` (`RETIRED_BADGE`, "เลิกใช้") renders **only** on retired rows. `.admin-status.is-success`'s tokens (`--admin-success-bg`/`-text`) have **no dark override anywhere in `src/`** (verified by grep, light `:root` only) — using it for 23 always-visible Active chips would ship the same class of defect §4.2 already rejected once. Dropping it also cuts visual noise on a list where most rows are active. |
+| 5 | Actions | `ADMIN.COMMON.ACTIONS` | **REVISED (Scrutinize R2):** `.admin-icon-btn` × 3 — Edit (pencil), plus **one** of Retire (`visibility_off`) / Restore (`visibility`) depending on `row.active`, mutually exclusive `*ngIf`. All three are the *same, verified dark-safe* control (`admin-theme.scss:607-633`) — no color modifier of any kind. **No trash icon, no delete control of any kind.** (AC#4 — see §5) |
 
 Retired rows are **not** filtered out, hidden behind a toggle, or moved to a second section — they
 render in the same single ordered list, in their normal position, because their `displayOrder`
 value is exactly as load-bearing as an active row's (SPEC §3.5's bolded point). A retired row is
 visually distinguished by:
-- the Status chip switching to `.is-neutral`/`RETIRED_BADGE` (§2.4's documented "inactive/unset
-  state" role, with a real light **and** dark token pair — `admin-theme.scss:35-36` / `:212-213` —
-  not a new color)
+- the `RETIRED_BADGE`/`.is-neutral` chip **appearing** (active rows show no chip at all — §3.1
+  revision) — §2.4's documented "inactive/unset state" role, with a real light **and** dark token
+  pair — `admin-theme.scss:35-36` / `:212-213` — not a new color
 - its Labels cell rendered with `.admin-muted` instead of default text color
 
 Its Order-column move buttons stay **fully interactive** — retiring an item does not freeze its
@@ -212,25 +221,43 @@ outright**, for four compounding reasons Scrutinize found, not one:
 3. Each response handler's **first line** is the guard: `if (seq !== this.latestReorderSeq) { return; }`
    — a response for a request that a later click has already superseded is dropped unread. Only the
    response matching the *current* `latestReorderSeq` (i.e., the most recently issued request) is
-   allowed to touch state. This is the "one real hazard" (out-of-order responses) called out
-   directly — nothing else needs guarding, because SPEC §4.7 already establishes the full-list PUT
-   as idempotent, so a superseded request completing late and being ignored loses nothing: the
-   winning (latest) request already carries the complete final intent.
+   allowed to touch state. **Softened claim (Scrutinize R2):** this guards the one hazard that
+   matters for what the client displays — out-of-order *responses* — but it does **not** by itself
+   guarantee out-of-order *server commits*: with several overlapping requests in flight (a burst of
+   clicks can open more than one connection), an earlier-issued request can still *commit* on the
+   server after a later one, even though its *response* is correctly dropped here. Step 4 below
+   closes that separate hole.
 4. **On the winning success:** set `this.reorderPending = false;` **before** calling
    `store.mutate(() => response.data)` — ordering matters, because `mutate` synchronously fires the
    `data$` emission that rule 3.2.2a below is gating on; the guard must already be open when that
-   emission lands.
+   emission lands. **Then fire a background `store.refresh()`** — the same trailing-refresh-after-
+   mutate shape SPEC §6.1 already specifies for create and edit, and the one thing the original
+   version of this section omitted, inconsistently, for reorder alone. This is what reconciles the
+   server-commit-order hazard from step 3: if a superseded request actually committed last on the
+   server (despite its response losing the client-side race), this refresh pulls the true current
+   order back down within one round-trip, rather than leaving the client silently one step out of
+   sync with the database until some unrelated future refresh happens to correct it.
 5. **On the winning error:** set `this.reorderPending = false;` **before** calling
    `store.refresh()`, for the identical reason, then `AlertService.error()` with the message
-   resolved from `errorCode` via `mapInspectionItemErrorCode()` (§8) — never the localized
+   resolved from `errorCode` via `mapInspectionItemErrorCode()` (§10) — never the localized
    `message` (design-system §9, SPEC §6.2).
 6. While any reorder request is outstanding, show the inline `REORDER_SAVING` caption in
    `admin-page-intro` (reusing the slot `app-admin-refresh-hint` occupies elsewhere) — not a
    blocking spinner/modal, and not gating any button's clickability.
 
-This is a small, fully testable state machine (~10 lines): every branch above is reachable by a
-real double-click, and the guard condition can be asserted directly in a spec by resolving two
-mocked PUT calls out of order and checking only the second (by issue order) response's data wins.
+This is a small, fully testable state machine (~10 lines plus the one added `refresh()` call): every
+branch above is reachable by a real double-click, and the guard condition can be asserted directly
+in a spec by resolving two mocked PUT calls out of order and checking only the second (by issue
+order) response's data wins.
+
+**One more clarifying line, so it isn't "fixed" as a bug later:** if a developer wraps the reorder
+call in this app's usual `takeUntil(this.destroy$)` habit (every other subscription in this
+component does), navigating away mid-request still lets that request **reach and commit on the
+server** — `takeUntil` only unsubscribes the *Angular-side* observable, which drops the response
+handler, not an in-flight HTTP request already sent to the browser's network stack. This is
+harmless (nothing depends on that response landing; the next page-load's `GET /manage` reflects
+whatever committed), but it looks, from the component code alone, like the write might have been
+"cancelled" — it was not. Worth a one-line code comment at the call site for the same reason.
 
 **3.2.2a — the explicit rule the store-emission clobber requires:**
 
@@ -349,29 +376,47 @@ is precedent-by-usage mistaken for precedent-by-rule — the same reasoning erro
 OBRS-312's ~46 solid-white boxes, this card's direct parent, and would have been its 4th occurrence
 (§0).
 
-**Replacement: an explicit Retire/Restore text button**, in the Actions cell alongside Edit (§3.1),
-reusing `boarding-list`'s Board/Un-board pair verbatim in shape (`boarding-list.component.html:322-337`):
+**REVISED again (Scrutinize R2) — not `.admin-btn-danger` either.** The R1 revision above replaced
+`p-inputSwitch` with `.admin-btn.admin-btn-small.admin-btn-danger` (Retire) / `.admin-btn.admin-btn-small`
+(Restore), reasoning that this exact combination is "already live on the dark admin shell via
+`boarding-list`'s Un-board button." Scrutinize verified by grep that this was the **identical
+reasoning error** one paragraph after rejecting it for `p-inputSwitch`: `--admin-danger-bg`/`-text`/
+`-border` and `--admin-success-bg`/`-text` are declared **once**, in the light `:root` block only
+(`admin-theme.scss:10-18`), with **zero** `.is-dark` overrides anywhere in `src/` — contrast
+`--admin-neutral-bg`/`-text`, which is genuinely redefined inside `.admin-shell.is-dark`
+(`:212-213`). "Composes an existing token, no new hex" (`docs/design-system.md:192`'s own framing
+for `.admin-btn-danger`) describes the CSS's *shape*; "dark-safe" describes its *rendered effect* —
+a `var()` that only ever resolves to one light value satisfies the first and fails the second.
+`boarding-list`'s Un-board button carries this same latent defect today; it is not evidence the
+combination is safe, only that nobody has looked at it on a dark shell yet.
 
-- **Active row → "Retire" button**, `.admin-btn.admin-btn-small.admin-btn-danger`, mirroring
-  Un-board's role exactly (a reversal action, styled with the danger role, confirm-gated).
-- **Retired row → "Restore" button**, plain `.admin-btn.admin-btn-small`, labelled with
-  `RESTORE_BTN` (§6), mirroring Board's role exactly (a forward/reactivating action, no confirm
-  needed).
-- Both classes are real, shipped, dark-covered tokens — `.admin-btn`'s base + `.is-dark .admin-btn`
-  border override (`admin-theme.scss:747-766`), `.admin-btn-danger` composing the already-dark-safe
-  `--admin-danger-text`/`--admin-danger-border` pair (`:812-820`) — and this exact class combination
-  is already live on the dark admin/staff shell today via `boarding-list`'s Un-board button, closed
-  as debt in `docs/design-system.md` §13. Nothing new is being asked of the theme.
+**Final replacement — `.admin-icon-btn`, matching the move buttons, no color modifier at all:**
+- **Active row →** an `.admin-icon-btn` with the `visibility_off` glyph, `[attr.aria-label]`
+  resolving `RETIRE_CONFIRM_BUTTON` ("Retire"), confirm-gated.
+- **Retired row →** an `.admin-icon-btn` with the `visibility` glyph, `[attr.aria-label]` resolving
+  `RESTORE_BTN` ("Restore"), no confirm.
+- `.admin-icon-btn` is the one control on this page-section allow-listed as measured dark-safe: a
+  real `.is-dark .admin-icon-btn` override exists at `admin-theme.scss:621-623` (base rule
+  `:607-619`). This makes the whole Actions column — Edit, Retire, Restore — **one single,
+  already-verified control**, not three different ones each needing its own dark-mode argument.
 
-This also directly serves AC#4 (§5): retiring is now phrased as an explicit, named, confirm-gated
-**action** ("Retire") rather than a state you flip — reading much closer to "this is the mechanism
-for retiring" than a switch ever could, and it removes the switch-vs-delete ambiguity a toggle
-control invites entirely.
+This still directly serves AC#4 (§5): retiring is phrased as an explicit, named, confirm-gated
+**action** (its `aria-label` says "Retire") rather than a state you flip — and it removes the
+switch-vs-delete ambiguity a toggle control invites entirely. It no longer relies on any color to
+carry that meaning, which is arguably more honest anyway: nothing on this page's action buttons
+says "destructive," because retiring is not destructive (§5's whole point).
 
 **Turning OFF (Retire):** gated behind `AlertService.confirm()` (`RETIRE_CONFIRM_TITLE`/`TEXT`/
 `BUTTON`, §6) — this is also a primary mechanism for AC#4 (§5). **Turning ON (Restore):** no
-confirmation, immediate — reactivating is not the action a user needs protecting from, matching
-Board's no-confirm precedent.
+confirmation, immediate — reactivating is not the action a user needs protecting from.
+
+**One clarifying line for whoever implements this, so it isn't "corrected" back to red:** the
+confirm dialog is rendered by `AlertService.confirm()`, i.e. SweetAlert2 — it has no `.admin-btn`/
+`.admin-btn-danger` class on its confirm button at all; that button's look comes entirely from
+SweetAlert2's own default theme, outside this app's admin-btn system. Do not add a `customClass`
+override to make it red. Retiring is reversible and preserves history — the whole point of §5 — so
+a destructive-red confirm button would actively contradict the message this screen is trying to
+send, on either surface (the row action or the confirm dialog).
 
 **Network model — not optimistic-flip-first, matching the switch design this replaces:** the
 clicked button disables (that row only, a plain per-row `savingIds`/`Record<number, boolean>` flag,
@@ -446,7 +491,6 @@ Thai values are written as natural Thai prose, not transliteration.
 | `ADMIN.INSPECTION_ITEMS.COL_CODE` | Code | รหัส | 代码 |
 | `ADMIN.INSPECTION_ITEMS.COL_LABELS` | Labels | ป้ายกำกับ | 标签 |
 | `ADMIN.INSPECTION_ITEMS.COL_STATUS` | Status | สถานะ | 状态 |
-| `ADMIN.INSPECTION_ITEMS.ACTIVE_BADGE` | Active | ใช้งาน | 启用 |
 | `ADMIN.INSPECTION_ITEMS.RESTORE_BTN` | Restore | เปิดใช้งาน | 恢复启用 |
 | `ADMIN.INSPECTION_ITEMS.CODE_FIELD_LABEL` | Code | รหัส | 代码 |
 | `ADMIN.INSPECTION_ITEMS.CODE_READONLY_HINT` | Code can't be changed here after creation, to avoid confusion. It's only an internal fallback identifier and never affects saved inspection history. | หลังสร้างแล้ว ไม่สามารถแก้รหัสนี้ผ่านหน้าจอนี้ได้ เพื่อลดความสับสน รหัสนี้ใช้เป็นเพียงตัวสำรองภายในเท่านั้น ไม่มีผลต่อประวัติการตรวจที่บันทึกไว้แล้ว | 创建后无法在此页面修改代码,以避免混乱。该代码仅作为内部备用标识,不会影响已保存的检查记录。 |
@@ -474,8 +518,11 @@ Thai values are written as natural Thai prose, not transliteration.
 | `ADMIN.INSPECTION_ITEMS.ERROR.GENERIC` | Something went wrong. Please try again. | เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง | 出现问题,请重试。 |
 
 **Note:** `RETIRE_CONFIRM_BUTTON` is deliberately reused for **two** surfaces — the confirm dialog's
-primary button *and* the row's Retire action button (§4.2) — both literally read "Retire" in all
-three languages, so this is intentional reuse, not a near-duplicate needing its own key.
+primary button *and* the `[attr.aria-label]` of the row's Retire `.admin-icon-btn` (§4.2) — both
+literally read "Retire" in all three languages, so this is intentional reuse, not a near-duplicate
+needing its own key. `RESTORE_BTN` is similarly reused as the Restore `.admin-icon-btn`'s
+`aria-label`, mirroring how the Edit icon button reuses `ADMIN.COMMON.EDIT` (§3.1) rather than
+getting a dedicated visible-text label.
 
 **Reused, not re-added** (already exist, confirmed live in sibling pages): `ADMIN.COMMON.LOADING`,
 `ADMIN.COMMON.NO_DATA`, `ADMIN.COMMON.ACTIONS`, `ADMIN.COMMON.EDIT`, `ADMIN.COMMON.CANCEL`,
@@ -612,33 +659,39 @@ not `cargo-capacity`'s bespoke numeric-parsing rules.
   `admin-table-wrap`/`admin-cell-stack`/`admin-skeleton-row`/`admin-empty-row` (list shell,
   `cargo-capacity`+`lookup-settings` precedent); `admin-modal-backdrop`+`adminModalBackdrop`+
   `admin-modal`+`admin-form-grid` (modal shell, `lookup-settings` precedent, minus the four
-  delete-surface members enumerated in §5); `.admin-status.admin-status--icon` with
-  `.is-success`/`.is-neutral` (the Status chip, `boarding-list`'s Boarded/Not-boarded dual-chip
-  precedent, `boarding-list.component.html:306-313`); `.admin-btn.admin-btn-small` /
-  `.admin-btn.admin-btn-small.admin-btn-danger` (Restore/Retire row actions, `boarding-list`'s
-  Board/Un-board precedent, `boarding-list.component.html:322-337`, dark coverage verified at
-  `admin-theme.scss:747-820` — §0); `.admin-icon-btn` (Edit action, pagination-chevron precedent
-  per design-system §3, dark coverage at `admin-theme.scss:607-633`); `admin-btn`/`admin-btn-primary`
-  (Add button, Save button — one primary on the page, one primary per modal);
-  `AlertService.{success,error,warning,confirm}` — never `Swal.fire()` directly;
-  `extractApiErrorCode()` — never branch on `message`; `AdminCollectionStore` (`mutate`/`refresh`/
-  `data$`/`refreshing$`/`error$`) exactly as SPEC §6 fixes it, its **public** surface only — the
-  reorder sequencing in §3.2.2 is this feature's own monotonic-counter guard, not a reuse of the
-  store's private `rerunRequested`/`inFlight` fields (§0 corrects the first draft's mislabeled claim
-  here).
+  delete-surface members enumerated in §5); `.admin-status.is-neutral` (the retired-only chip, §2.4's
+  documented inactive/unset role, genuinely dark-safe — light **and** dark values at `:35-36`/
+  `:212-213`); `.admin-icon-btn` **for all three Actions-column controls** (Edit, Retire, Restore —
+  one already-verified dark-safe control, `admin-theme.scss:607-633`/`.is-dark` override at
+  `:621-623`); `admin-btn`/`admin-btn-primary` **on unmodified rows only** (Add button, Save button —
+  one primary on the page, one primary per modal; base `.admin-btn` + its `.is-dark` border override
+  at `:747-766` are dark-safe, verified — no `-danger`/`-success` color modifier is used anywhere in
+  this spec, see the Confirm bullet below); `AlertService.{success,error,warning,confirm}` — never
+  `Swal.fire()` directly; `extractApiErrorCode()` — never branch on `message`; `AdminCollectionStore`
+  (`mutate`/`refresh`/`data$`/`refreshing$`/`error$`) exactly as SPEC §6 fixes it, its **public**
+  surface only — the reorder sequencing in §3.2.2 is this feature's own monotonic-counter guard, not
+  a reuse of the store's private `rerunRequested`/`inFlight` fields.
 - **New patterns:**
   1. **Move-up/move-down/move-to-top/move-to-bottom buttons as the reorder mechanism**, in place of
      drag-and-drop — justified in §3.2 (no drag precedent anywhere in this codebase;
      scrolling-while-dragging is a real failure mode on a 23-row list on tablet; buttons are
      accessible without a separate fallback path).
-  2. **An explicit Retire/Restore row-action button pair in place of a toggle control**, justified
-     in §4.2 (`p-inputSwitch` has no dark coverage inside `.admin-shell` anywhere in this codebase —
-     §0 — so a toggle here would be this card's own OBRS-312-shaped defect; the Board/Un-board
-     button pair is both already dark-safe and reads more clearly as "an action," reinforcing AC#4).
+  2. **`.admin-icon-btn` Retire/Restore actions, no chip on active rows, in place of a toggle
+     control** — justified in §3.1/§4.2. This pattern went through **two** corrections in review,
+     both worth logging so the next feature doesn't repeat either: `p-inputSwitch` was rejected
+     first (no dark rule anywhere inside `.admin-shell` in this codebase — its only dark rule is
+     `.npref-row`-scoped, outside the shell); a `.admin-btn-danger`/`.is-success` chip-and-button
+     design was specified next and was *also* wrong for the identical reason one level down —
+     `--admin-danger-*`/`--admin-success-*` are declared **once**, in the light `:root` only, with
+     no `.is-dark` override anywhere in `src/` (verified by grep), unlike `--admin-neutral-*` which
+     genuinely has one. The final design uses only `.admin-icon-btn` (measured dark-safe) and drops
+     the active-state chip entirely (absence-means-normal) rather than adding any new dark-mode
+     surface.
   3. **A monotonic per-request sequence number as the out-of-order-response guard** for a
      no-debounce, immediate-PUT reorder flow (§3.2.2) — justified there: the SA spec's own
-     idempotent-full-list-PUT design (SPEC §4.7) means a superseded request can simply be ignored
-     rather than queued or debounced.
+     idempotent-full-list-PUT design (SPEC §4.7) means a superseded *response* can simply be
+     ignored rather than queued or debounced (a trailing background `refresh()` after the winning
+     success closes the separate server-*commit*-order race — §3.2.2, revised).
 
   **Locking-spec candidates** (recommend adding to design-system §12's pattern log once the FE
   implementation lands):
@@ -653,15 +706,20 @@ not `cargo-capacity`'s bespoke numeric-parsing rules.
     phrasing for this exact check).
 - **Confirm:** no `app-admin-dropdown`/select control exists on this screen (§0) — the dropdown
   contract is not applicable here, not silently skipped. One primary button per screen (Add) and
-  per modal (Save). No raw hex — every color used (`.admin-status.is-success`/`.is-neutral`,
-  `.admin-btn`, `.admin-btn-danger`, `.admin-icon-btn`) is an existing runtime-themed token,
-  re-verified against an actual dark rule on disk for each, not against another page's usage (§0):
-  `.admin-icon-btn` at `admin-theme.scss:607-633` (explicit `.is-dark` override at `:621-623`);
-  `.admin-btn`/`.admin-btn-primary`/`.admin-btn-small`/`.admin-btn-danger` at `:747-820` (`.is-dark
-  .admin-btn` border override at `:764-766`; `-primary`/`-danger` read theme-swapped `--accent*`/
-  `--admin-danger-*` vars); `.is-success`/`.is-neutral` at `:1199-1230`, with `.is-neutral` carrying
-  an explicit light **and** dark value pair (`:35-36`, `:212-213`). `p-inputSwitch` is **not** used
-  (§4.2). Single title surface — the page renders no `<h2>/<h3>` of its own (§1, verified against
-  three sibling pages). Keys added to `en.json`/`th.json`/`zh.json` in the same commit (§6).
+  per modal (Save). **No raw hex, and — per the R2 correction above — no color-modified `.admin-btn`
+  variant or colored status chip anywhere in this document.** Only measured-dark-safe controls are
+  specified, each cited to an actual rule on disk rather than another page's usage: `.admin-icon-btn`
+  at `admin-theme.scss:607-633` (`.is-dark` override at `:621-623`); `.admin-btn` base (no modifier)
+  at `:747-762` (`.is-dark .admin-btn` border override at `:764-766`); `.admin-btn:disabled` at
+  `:784-787` (opacity-only, theme-agnostic by construction); `.admin-status.is-neutral` at
+  `:1227-1230` with an explicit light **and** dark value pair (`:35-36`, `:212-213`); `--admin-outline`
+  at `:112`/`:173`. `p-inputSwitch`, `.admin-btn-danger`, and `.admin-status.is-success` are **not**
+  used anywhere in this spec (§3.1, §4.2). Single title surface — the page renders no `<h2>/<h3>` of
+  its own (§1, verified against three sibling pages). Keys added to `en.json`/`th.json`/`zh.json` in
+  the same commit (§6).
+- **Follow-up flagged, not acted on here:** `docs/design-system.md:94` states `.is-neutral` has "no
+  dark-mode override," which is stale — the override exists at `admin-theme.scss:212-213` (confirmed
+  in this review). Left unedited; routing this correction is the coordinator's call, not this card's
+  scope.
 
 ##UX_COMPLETE##
