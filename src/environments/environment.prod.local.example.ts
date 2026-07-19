@@ -16,4 +16,9 @@ export const prodEnv = {
   promptpayId: '',
   mapsApiKey: '',
   googleClientId: '',
+  // OBRS-424: optional — a blank value degrades to the MAP_UNAVAILABLE
+  // placeholder (FleetMapPanelComponent.canShowMap), never a build failure.
+  // Unlike the values above, this one is intentionally NOT on
+  // inject-prod-env.js's required/failure list.
+  maptilerKey: '',
 };

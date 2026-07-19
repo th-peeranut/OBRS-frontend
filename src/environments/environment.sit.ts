@@ -12,4 +12,5 @@ export const environment = {
   useDevApiEndpoints: false,
   mapsApiKey: localEnv.mapsApiKey,
   googleClientId: localEnv.googleClientId,
+  maptilerKey: localEnv.maptilerKey,
 };

@@ -69,6 +69,16 @@ if (failures.length > 0) {
   throw new Error(message);
 }
 
+// OBRS-424: MapTiler key for the internal fleet live map. Deliberately NOT
+// added to `values`/`envVarNames`/the failures check above — those gates
+// exist specifically to stop a bundle that cannot take real money (this
+// file's own header comment). A missing MapTiler key costs only a map: it
+// degrades to the already-implemented MAP_UNAVAILABLE placeholder
+// (FleetMapPanelComponent.canShowMap), never a build failure. Defaults to ''
+// when unset so the prod build doesn't start failing before anyone has
+// provisioned the variable.
+const maptilerKey = process.env.PROD_MAPTILER_API_KEY || '';
+
 // JSON.stringify, not string interpolation: a value containing a quote or a newline
 // would otherwise emit a file that is either broken or, worse, silently valid TS
 // holding the wrong value.
@@ -79,6 +89,7 @@ export const prodEnv = {
   promptpayId: ${JSON.stringify(values.promptpayId)},
   mapsApiKey: ${JSON.stringify(values.mapsApiKey)},
   googleClientId: ${JSON.stringify(values.googleClientId)},
+  maptilerKey: ${JSON.stringify(maptilerKey)},
 };
 `;
 

@@ -40,6 +40,10 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     if (isSalesperson) {
       items.push({ path: 'sell', labelKey: 'STAFF.NAV.SELL', icon: 'sell' });
       items.push({ path: 'schedules', labelKey: 'STAFF.NAV.SCHEDULES', icon: 'calendar_month' });
+      // OBRS-424: fleet-map is salesperson-only (route data.requiredRoles),
+      // so the nav link lives ONLY in this branch — a driver, who would 403
+      // on the route itself, never sees a link to it (UX-OBRS-424 §1).
+      items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map' });
     }
 
     if (isDriver) {

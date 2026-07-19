@@ -1856,7 +1856,8 @@
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_DELIVERY": "包裹配送",
-      "INSPECTION": "车辆检查"
+      "INSPECTION": "车辆检查",
+      "FLEET_MAP": "车队实时地图"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -1881,7 +1882,8 @@
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
       "BOARDING": "登车名单",
-      "INSPECTION": "车辆检查"
+      "INSPECTION": "车辆检查",
+      "FLEET_MAP": "车队地图"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "无法加载登车名单。",
@@ -2397,6 +2399,37 @@
         "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后重试。"
       },
       "VERDICT_GROUP_ARIA": "检查结果 — 正常或需要维修"
+    },
+    "FLEET_MAP": {
+      "SUBTITLE": "在同一页面查看所有车辆的实时位置",
+      "CENTER_ON_FLEET": "居中显示车队",
+      "VEHICLE_LIST_TITLE": "车辆列表",
+      "MAP_UNAVAILABLE": "地图暂不可用 — 下方车辆状态仍为实时数据",
+      "STATUS": {
+        "LIVE": "实时",
+        "GPS_LOST": "GPS信号丢失",
+        "OFFLINE": "设备离线",
+        "AWAITING_SIGNAL": "等待首次信号",
+        "NOT_TRACKED": "未安装追踪器"
+      },
+      "UPDATED_JUST_NOW": "刚刚更新",
+      "UPDATED_MINUTES_AGO": "{{count}} 分钟前更新",
+      "UPDATED_HOURS_AGO": "{{count}} 小时前更新",
+      "NO_SIGNAL_LABEL": "无信号",
+      "EMPTY_FLEET_BANNER_TITLE": "尚无车辆上报GPS位置",
+      "EMPTY_FLEET_BANNER_BODY": "一旦为车辆安装并配置追踪器，位置将显示在此处",
+      "REFRESH_FAILED_BANNER": "无法刷新 — 显示 {{time}} 的数据",
+      "LOAD_FAILED": "无法加载车辆位置",
+      "COL": {
+        "PLATE": "车牌",
+        "STATUS": "状态",
+        "LAST_UPDATE": "最后更新"
+      },
+      "POPUP": {
+        "SPEED": "速度：{{value}} 公里/小时",
+        "ENGINE_ON": "引擎运转中",
+        "ENGINE_OFF": "引擎已关闭"
+      }
     }
   },
   "PARCEL_TRACKING": {

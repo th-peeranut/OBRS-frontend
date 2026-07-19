@@ -5,4 +5,7 @@
 export const localEnv = {
   mapsApiKey: '',
   googleClientId: '',
+  // OBRS-424: optional — a blank value degrades to the MAP_UNAVAILABLE
+  // placeholder (FleetMapPanelComponent.canShowMap), never a build failure.
+  maptilerKey: '',
 };

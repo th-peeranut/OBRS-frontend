@@ -1,0 +1,29 @@
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <caption class="visually-hidden">{{ 'STAFF.FLEET_MAP.VEHICLE_LIST_TITLE' | translate }}</caption>
+    <thead>
+      <tr>
+        <th scope="col">{{ 'STAFF.FLEET_MAP.COL.PLATE' | translate }}</th>
+        <th scope="col">{{ 'STAFF.FLEET_MAP.COL.STATUS' | translate }}</th>
+        <th scope="col">{{ 'STAFF.FLEET_MAP.COL.LAST_UPDATE' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let vehicle of vehicles; let i = index; trackBy: trackByVehicleId" [class.zebra]="i % 2 === 1">
+        <td class="admin-emphasis">{{ vehicle.numberPlate }}</td>
+        <td>
+          <span class="admin-status" [ngClass]="chipFor(vehicle).token">
+            {{ chipFor(vehicle).i18nKey | translate }}
+          </span>
+        </td>
+        <td *ngIf="lastUpdateLabelFor(vehicle) as label">
+          {{ label.key | translate: label.params }}
+        </td>
+      </tr>
+
+      <tr *ngIf="vehicles.length === 0" class="admin-empty-row">
+        <td colspan="3">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

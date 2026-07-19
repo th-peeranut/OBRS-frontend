@@ -17,6 +17,13 @@ export abstract class AdminCollectionStore<T> {
   private readonly dataSubject = new BehaviorSubject<T | null>(null);
   private readonly refreshingSubject = new BehaviorSubject<boolean>(false);
   private readonly errorSubject = new BehaviorSubject<boolean>(false);
+  // OBRS-424: "the backend call is failing, this is how old the shown data
+  // actually is" — distinct from any per-row staleness the payload itself
+  // might carry. Stamped only on a successful fetch (see run() below), so a
+  // consumer can render "Unable to refresh — showing data from {{time}}"
+  // without conflating "our poll is failing" with "one row's own data is
+  // stale" (design-system.md §12, OBRS-424 new-pattern log).
+  private readonly lastFetchedAtSubject = new BehaviorSubject<Date | null>(null);
 
   /** Cached value, or null before the first successful load. Replays on subscribe. */
   readonly data$: Observable<T | null> = this.dataSubject.asObservable();
@@ -24,6 +31,10 @@ export abstract class AdminCollectionStore<T> {
   readonly refreshing$: Observable<boolean> = this.refreshingSubject.asObservable();
   /** True when the most recent fetch failed (the cached value, if any, is kept). */
   readonly error$: Observable<boolean> = this.errorSubject.asObservable();
+  /** Wall-clock time of the most recent SUCCESSFUL fetch, or null before one
+   * has happened (or after logout — see clear()). Additive; every existing
+   * subclass is unaffected. */
+  readonly lastFetchedAt$: Observable<Date | null> = this.lastFetchedAtSubject.asObservable();
 
   /** Set when refresh() is called mid-flight, forcing one more fetch afterwards. */
   private rerunRequested = false;
@@ -53,6 +64,11 @@ export abstract class AdminCollectionStore<T> {
   clear(): void {
     this.dataSubject.next(null);
     this.errorSubject.next(false);
+    // OBRS-424: the store is root-scoped and outlives the session — without
+    // this, a stale lastFetchedAt$ value would survive into the next login
+    // and show a re-logged-in user a "last refreshed" time from the
+    // PREVIOUS session.
+    this.lastFetchedAtSubject.next(null);
   }
 
   /**
@@ -97,6 +113,7 @@ export abstract class AdminCollectionStore<T> {
         try {
           const data = await this.fetch();
           this.dataSubject.next(data);
+          this.lastFetchedAtSubject.next(new Date());
           this.errorSubject.next(false);
         } catch {
           // Keep the prior cached value; flag the error so the component can

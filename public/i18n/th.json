@@ -1856,7 +1856,8 @@
       "PARCEL_CONSIGN": "ฝากส่งพัสดุ",
       "PARCEL_WAYBILL": "ใบนำส่งพัสดุ",
       "PARCEL_DELIVERY": "การส่งพัสดุ",
-      "INSPECTION": "ตรวจสภาพรถ"
+      "INSPECTION": "ตรวจสภาพรถ",
+      "FLEET_MAP": "แผนที่ยานพาหนะสด"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -1881,7 +1882,8 @@
       "SCHEDULES": "ตารางเดินรถ",
       "MY_SCHEDULES": "ตารางของฉัน",
       "BOARDING": "รายชื่อผู้โดยสาร",
-      "INSPECTION": "ตรวจสภาพรถ"
+      "INSPECTION": "ตรวจสภาพรถ",
+      "FLEET_MAP": "แผนที่ยานพาหนะ"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "ไม่สามารถโหลดรายชื่อผู้โดยสารได้",
@@ -2397,6 +2399,37 @@
         "SERVICE_UNAVAILABLE": "ระบบขัดข้องชั่วคราว กรุณาลองใหม่ภายหลัง"
       },
       "VERDICT_GROUP_ARIA": "ผลตรวจ — ปกติ หรือ ต้องซ่อม"
+    },
+    "FLEET_MAP": {
+      "SUBTITLE": "ดูตำแหน่งรถทุกคันแบบเรียลไทม์ในที่เดียว",
+      "CENTER_ON_FLEET": "จัดกึ่งกลางที่รถทั้งหมด",
+      "VEHICLE_LIST_TITLE": "รายการรถ",
+      "MAP_UNAVAILABLE": "แผนที่ใช้งานไม่ได้ในขณะนี้ — สถานะรถด้านล่างยังคงเป็นข้อมูลล่าสุด",
+      "STATUS": {
+        "LIVE": "สัญญาณสด",
+        "GPS_LOST": "สัญญาณ GPS ขาดหาย",
+        "OFFLINE": "อุปกรณ์ออฟไลน์",
+        "AWAITING_SIGNAL": "รอสัญญาณครั้งแรก",
+        "NOT_TRACKED": "ไม่มีอุปกรณ์ติดตาม"
+      },
+      "UPDATED_JUST_NOW": "อัปเดตเมื่อสักครู่",
+      "UPDATED_MINUTES_AGO": "อัปเดตเมื่อ {{count}} นาทีที่แล้ว",
+      "UPDATED_HOURS_AGO": "อัปเดตเมื่อ {{count}} ชั่วโมงที่แล้ว",
+      "NO_SIGNAL_LABEL": "ไม่มีสัญญาณ",
+      "EMPTY_FLEET_BANNER_TITLE": "ยังไม่มีรถคันใดส่งตำแหน่ง GPS",
+      "EMPTY_FLEET_BANNER_BODY": "ตำแหน่งจะปรากฏที่นี่เมื่อมีการติดตั้งและตั้งค่าอุปกรณ์ติดตามให้กับรถ",
+      "REFRESH_FAILED_BANNER": "ไม่สามารถรีเฟรชได้ — แสดงข้อมูลล่าสุดเมื่อ {{time}}",
+      "LOAD_FAILED": "ไม่สามารถโหลดตำแหน่งรถได้",
+      "COL": {
+        "PLATE": "ทะเบียน",
+        "STATUS": "สถานะ",
+        "LAST_UPDATE": "อัปเดตล่าสุด"
+      },
+      "POPUP": {
+        "SPEED": "ความเร็ว: {{value}} กม./ชม.",
+        "ENGINE_ON": "เครื่องยนต์ทำงาน",
+        "ENGINE_OFF": "เครื่องยนต์ดับ"
+      }
     }
   },
   "PARCEL_TRACKING": {
