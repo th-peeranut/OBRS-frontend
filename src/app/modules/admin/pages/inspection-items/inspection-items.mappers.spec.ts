@@ -5,6 +5,7 @@ import {
   moveRowToBottom,
   moveRowToTop,
   moveRowUp,
+  resolveInspectionItemLabel,
   toInspectionItemRows,
   toReorderPayload,
   translationLabel,
@@ -121,6 +122,33 @@ describe('reorder array math (moveRowUp/Down/ToTop/ToBottom)', () => {
       { id: 3, displayOrder: 2 },
       { id: 2, displayOrder: 3 },
     ]);
+  });
+});
+
+describe('resolveInspectionItemLabel() (OBRS-529)', () => {
+  it('returns the selected locale label when present', () => {
+    const r = row({ labelTh: 'TH label', labelEn: 'EN label', labelZh: 'ZH label' });
+    expect(resolveInspectionItemLabel(r, 'th')).toBe('TH label');
+    expect(resolveInspectionItemLabel(r, 'en')).toBe('EN label');
+    expect(resolveInspectionItemLabel(r, 'zh')).toBe('ZH label');
+  });
+
+  it('falls back to the EN label when the selected locale has no translation', () => {
+    const r = row({ labelTh: '', labelEn: 'EN label', labelZh: '' });
+    expect(resolveInspectionItemLabel(r, 'th')).toBe('EN label');
+    expect(resolveInspectionItemLabel(r, 'zh')).toBe('EN label');
+  });
+
+  it('falls back to the raw code when NEITHER the selected locale NOR en has a translation — never renders empty', () => {
+    const r = row({ code: 'raw_code', labelTh: '', labelEn: '', labelZh: '' });
+    expect(resolveInspectionItemLabel(r, 'th')).toBe('raw_code');
+    expect(resolveInspectionItemLabel(r, 'zh')).toBe('raw_code');
+  });
+
+  it('mirrors the backend TranslationUtil ladder: selected -> en -> code, never skipping straight to code when en exists', () => {
+    const r = row({ code: 'raw_code', labelTh: '', labelEn: 'EN fallback', labelZh: '' });
+    // zh missing -> falls to en, NOT straight to code
+    expect(resolveInspectionItemLabel(r, 'zh')).toBe('EN fallback');
   });
 });
 

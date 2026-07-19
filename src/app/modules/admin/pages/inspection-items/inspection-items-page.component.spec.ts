@@ -2,7 +2,7 @@ import { FormBuilder } from '@angular/forms';
 import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule } from '@angular/forms';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { InspectionItemsPageComponent } from './inspection-items-page.component';
@@ -88,28 +88,64 @@ describe('InspectionItemsPageComponent — store cycle', () => {
   });
 });
 
+describe('InspectionItemsPageComponent — locale-aware label reactivity (OBRS-529)', () => {
+  it('displayLabel() reads the locale ACTIVE AT CALL TIME, not one captured at construction', () => {
+    const { component } = makeComponent();
+    const translate = (component as any).translate;
+    translate.currentLang = 'en';
+
+    const row = { id: 1, code: 'raw', displayOrder: 1, active: true, labelEn: 'EN', labelTh: 'TH', labelZh: 'ZH' };
+    expect(component.displayLabel(row)).toBe('EN');
+
+    // This is the whole risk this card calls out: a component that reads
+    // `translate.currentLang` ONCE (e.g. into a field set only in the
+    // constructor/ngOnInit) would freeze at 'en' forever. Firing the SAME
+    // mechanism the rest of the app uses to react to a topbar switch
+    // (`onLangChange`) — with NO re-construction, NO ngOnInit re-run — must
+    // change what displayLabel() returns for the SAME row object.
+    translate.currentLang = 'th';
+    translate.onLangChange.next({ lang: 'th', translations: {} });
+
+    expect(component.displayLabel(row)).toBe('TH');
+  });
+
+  it('falls back selected -> en -> code, mirroring the backend TranslationUtil ladder', () => {
+    const { component } = makeComponent();
+    const translate = (component as any).translate;
+    translate.currentLang = 'zh';
+    translate.onLangChange.next({ lang: 'zh', translations: {} });
+
+    const missingZh = { id: 1, code: 'raw_code', displayOrder: 1, active: true, labelEn: 'EN fallback', labelTh: 'TH', labelZh: '' };
+    expect(component.displayLabel(missingZh)).toBe('EN fallback');
+
+    const missingZhAndEn = { id: 2, code: 'raw_code_2', displayOrder: 2, active: true, labelEn: '', labelTh: 'TH', labelZh: '' };
+    expect(component.displayLabel(missingZhAndEn)).toBe('raw_code_2');
+  });
+});
+
 describe('InspectionItemsPageComponent — create/edit modal', () => {
-  it('openCreateModal resets the form empty and re-enables the code field', () => {
+  // OBRS-529: `code` is no longer a form control at all (server-generated,
+  // never edited here) — there is nothing left to assert about enabling/
+  // disabling/pre-filling it. These two tests now cover only the
+  // translations FormArray reset.
+  it('openCreateModal resets the translations FormArray empty', () => {
     const { component } = makeComponent();
     component.openEditModal({ id: 1, code: 'x', displayOrder: 1, active: true, labelEn: 'a', labelTh: 'b', labelZh: 'c' });
-    expect(component.itemForm.get('code').disabled).toBeTrue();
 
     component.openCreateModal();
 
-    expect(component.itemForm.get('code').enabled).toBeTrue();
-    expect(component.itemForm.get('code').value).toBe('');
+    expect(component.itemForm.get('code')).toBeNull();
     expect(component.translationsFormArray.length).toBe(3);
     expect(component.translationsFormArray.at(0).get('label').value).toBe('');
   });
 
-  it('openEditModal disables the code field and pre-fills all three labels', () => {
+  it('openEditModal pre-fills all three labels (no code field to disable)', () => {
     const { component } = makeComponent();
     const row = { id: 5, code: 'brake_fluid', displayOrder: 3, active: true, labelEn: 'Brake fluid', labelTh: 'TH', labelZh: 'ZH' };
 
     component.openEditModal(row);
 
-    expect(component.itemForm.get('code').disabled).toBeTrue();
-    expect(component.itemForm.get('code').value).toBe('brake_fluid');
+    expect(component.itemForm.get('code')).toBeNull();
 
     // Assert by locale, not by index: an index-keyed assertion silently passes if the
     // label/value pairing ever detaches. Each control must carry its OWN label.
@@ -120,6 +156,26 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     expect(byLocale['th']).toBe('TH');
     expect(byLocale['en']).toBe('Brake fluid');
     expect(byLocale['zh']).toBe('ZH');
+  });
+
+  it('OBRS-529: EN and ZH labels are optional — the form is valid with only Thai filled in', () => {
+    const { component } = makeComponent();
+    component.openCreateModal();
+
+    component.translationsFormArray.at(0).get('label')?.setValue('ผ้าเบรก'); // th
+    // en/zh left blank deliberately
+
+    expect(component.itemForm.valid).toBeTrue();
+  });
+
+  it('OBRS-529: Thai is still required — the form is invalid with Thai blank even if EN/ZH are filled', () => {
+    const { component } = makeComponent();
+    component.openCreateModal();
+
+    component.translationsFormArray.at(1).get('label')?.setValue('Brake pads'); // en
+    component.translationsFormArray.at(2).get('label')?.setValue('刹车片'); // zh
+
+    expect(component.itemForm.invalid).toBeTrue();
   });
 
   it('renders Thai first — the form order matches the heading order, index for index', () => {
@@ -157,16 +213,17 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     component.ngOnInit();
     store.data$.next([item()]);
     component.openCreateModal();
-    component.itemForm.get('code')?.setValue('wheel_nuts');
-    component.translationsFormArray.at(0).get('label')?.setValue('Wheel nuts');
-    component.translationsFormArray.at(1).get('label')?.setValue('น็อตล้อ');
+    component.translationsFormArray.at(0).get('label')?.setValue('น็อตล้อ');
+    component.translationsFormArray.at(1).get('label')?.setValue('Wheel nuts');
     component.translationsFormArray.at(2).get('label')?.setValue('轮毂螺母');
 
     await component.submitItem();
 
-    expect(createInspectionItem).toHaveBeenCalledOnceWith(
-      jasmine.objectContaining({ code: 'wheel_nuts', active: true })
-    );
+    expect(createInspectionItem).toHaveBeenCalledOnceWith(jasmine.objectContaining({ active: true }));
+    // OBRS-529: `code` is server-generated — CREATE must not send it at all
+    // (there is no form field left to source it from).
+    const createPayload = createInspectionItem.calls.argsFor(0)[0];
+    expect(createPayload.code).toBeUndefined();
     expect(store.mutate).toHaveBeenCalled();
     expect(component.rows.some((r: any) => r.id === 24)).toBeTrue();
     expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.CREATED');
@@ -189,7 +246,10 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
 
     expect(updateInspectionItem).toHaveBeenCalledOnceWith(
       1,
-      jasmine.objectContaining({ active: false })
+      // OBRS-529: EDIT still forwards the item's existing `code` even though
+      // there is no code input anywhere in the form — it's read from the row,
+      // not from a control.
+      jasmine.objectContaining({ active: false, code: retiredRow.code })
     );
   });
 
@@ -431,14 +491,15 @@ describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {
     const inputs: NodeListOf<HTMLInputElement> = fixture.nativeElement.querySelectorAll(
       '.admin-modal input.admin-field'
     );
-    // inputs[0] is the code field; the rest are the locale labels in FormArray order.
-    // Resolve each by LOCALE rather than a hardcoded index — the display order is a product
+    // OBRS-529: `code` is no longer a form field/input at all — every input in
+    // the modal is now a locale label, in FormArray order. Resolve each by
+    // LOCALE rather than a hardcoded index — the display order is a product
     // decision (Thai leads, OBRS-509 owner review) and this test must keep asserting the real
     // behaviour when that order changes, not silently start editing the wrong two fields.
     const localeOrder: string[] = (
       fixture.componentInstance as any
     ).translationsFormArray.controls.map((g: any) => g.get('locale').value);
-    const inputForLocale = (locale: string) => inputs[1 + localeOrder.indexOf(locale)];
+    const inputForLocale = (locale: string) => inputs[localeOrder.indexOf(locale)];
     const enInput = inputForLocale('en');
     const thInput = inputForLocale('th');
 
@@ -474,5 +535,36 @@ describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {
     const thTranslation = payload.translations.find((t: any) => t.locale === 'th');
     expect(enTranslation.label).toBe('Engine oil level');
     expect(thTranslation.label).toBe('ระดับน้ำมันเครื่อง');
+  });
+
+  it('OBRS-529: switching the app language re-renders the list table\'s label cell IMMEDIATELY — no reload, no re-init', () => {
+    // ROW's translations (see the `item()` helper at the top of the file):
+    // en: 'Engine oil', th: 'น้ำมันเครื่อง', zh: '机油'.
+    const labelCell = () => fixture.nativeElement.querySelector('.admin-table tbody tr td:nth-child(3) span');
+
+    // Default app locale is Thai (design-system §9 / CLAUDE.md §6) — starting
+    // state must already show the Thai label, no prefix.
+    expect(labelCell().textContent.trim()).toBe('น้ำมันเครื่อง');
+
+    // Pre-register empty translation tables (mirrors the OBRS-376 precedent,
+    // `usability-reports-page.component.spec.ts`) so `.use()` switches
+    // `currentLang`/fires `onLangChange` synchronously without a loader
+    // round-trip — nothing here depends on any actual translated string.
+    const translate = TestBed.inject(TranslateService);
+    translate.setTranslation('en', {}, true);
+    translate.setTranslation('zh', {}, true);
+
+    translate.use('en');
+    fixture.detectChanges();
+
+    // If this binding were a one-time read (a field captured once in the
+    // constructor/ngOnInit instead of a live method call), this assertion
+    // would fail — the cell would still show the Thai label.
+    expect(labelCell().textContent.trim()).toBe('Engine oil');
+
+    translate.use('zh');
+    fixture.detectChanges();
+
+    expect(labelCell().textContent.trim()).toBe('机油');
   });
 });

@@ -11,11 +11,13 @@ import {
 } from '../../../../shared/lib/inspection-item-error';
 import { InspectionItemsStore } from './inspection-items.store';
 import {
+  InspectionItemLocale,
   InspectionItemRow,
   moveRowDown,
   moveRowToBottom,
   moveRowToTop,
   moveRowUp,
+  resolveInspectionItemLabel,
   toInspectionItemRows,
   toReorderPayload,
 } from './inspection-items.mappers';
@@ -87,6 +89,17 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     'ADMIN.INSPECTION_ITEMS.LABEL_ZH',
   ];
 
+  // OBRS-529: the list table's label column renders exactly ONE line — the
+  // label for whichever locale is currently selected app-wide (design-system
+  // review: the column header already says "ป้ายกำกับ" and the language
+  // picker lives on the topbar, so a per-row TH/EN/ZH triple is redundant).
+  // Set once at construction AND re-set on every `onLangChange` emission
+  // (the `cargo-capacity-page.component.ts` precedent for a locale-dependent
+  // view over already-loaded data) so the table re-renders IMMEDIATELY on a
+  // topbar language switch — a field read only in the constructor/ngOnInit
+  // would silently freeze at whatever locale was active on first load.
+  protected currentLocale: InspectionItemLocale = 'th';
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -96,19 +109,24 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     private readonly translate: TranslateService,
     private readonly store: InspectionItemsStore
   ) {
+    this.currentLocale = this.getCurrentLocale();
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.currentLocale = this.getCurrentLocale();
+    });
+
     // Built once, fixed length (3), never rebuilt — see the class doc above
     // and UX spec §4.1.2. openCreateModal()/openEditModal() only `reset()`
     // this same FormGroup/FormArray with fresh values.
+    // OBRS-529: `code` is no longer a form field — it is server-generated on
+    // create and never edited here (§3.5 handoff). `en`/`zh` labels are no
+    // longer `Validators.required` (owner decision) — Thai is the only
+    // mandatory locale (`SNAPSHOT_LOCALE` above is why).
     this.itemForm = this.formBuilder.group({
-      code: [
-        '',
-        [Validators.required, Validators.maxLength(50), Validators.pattern(/^[a-z0-9_-]+$/)],
-      ],
       // Thai first — see `localeLabelKeys` above; the two are index-aligned.
       translations: this.formBuilder.array([
         this.formBuilder.group({ locale: ['th'], label: ['', Validators.required] }),
-        this.formBuilder.group({ locale: ['en'], label: ['', Validators.required] }),
-        this.formBuilder.group({ locale: ['zh'], label: ['', Validators.required] }),
+        this.formBuilder.group({ locale: ['en'], label: [''] }),
+        this.formBuilder.group({ locale: ['zh'], label: [''] }),
       ]),
     });
   }
@@ -167,15 +185,13 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     return index < this.rows.length - 1;
   }
 
-  protected currentLocaleLabel(row: InspectionItemRow): string {
-    const locale = this.getCurrentLocale();
-    if (locale === 'en') {
-      return row.labelEn;
-    }
-    if (locale === 'zh') {
-      return row.labelZh;
-    }
-    return row.labelTh;
+  /** OBRS-529: the list table's single label cell AND the move-button aria-labels
+   * — both read `this.currentLocale` (kept live by the `onLangChange` subscription
+   * in the constructor), so every caller reacts to a topbar language switch
+   * without re-subscribing. Falls back selected -> en -> code, mirroring the
+   * backend's `TranslationUtil.resolveLabel` (never renders an empty cell). */
+  protected displayLabel(row: InspectionItemRow): string {
+    return resolveInspectionItemLabel(row, this.currentLocale);
   }
 
   // ── Reorder ──────────────────────────────────────────────────────────────
@@ -258,14 +274,12 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.isEditMode = false;
     this.selectedItem = null;
     this.itemForm.reset({
-      code: '',
       translations: [
         { locale: 'th', label: '' },
         { locale: 'en', label: '' },
         { locale: 'zh', label: '' },
       ],
     });
-    this.itemForm.get('code')?.enable();
     this.isFormModalOpen = true;
   }
 
@@ -273,16 +287,12 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedItem = row;
     this.itemForm.reset({
-      code: row.code,
       translations: [
         { locale: 'th', label: row.labelTh },
         { locale: 'en', label: row.labelEn },
         { locale: 'zh', label: row.labelZh },
       ],
     });
-    // SPEC §5.5 / UX §4.1.1: code is FE-only discouraged after create, not
-    // backend-rejected — the PUT body below still carries it via getRawValue().
-    this.itemForm.get('code')?.disable();
     this.isFormModalOpen = true;
   }
 
@@ -293,25 +303,6 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.isFormModalOpen = false;
     this.selectedItem = null;
     this.itemForm.reset();
-  }
-
-  protected isCodeInvalid(): boolean {
-    const field = this.itemForm.get('code');
-    return !!field && field.invalid && (field.dirty || field.touched);
-  }
-
-  /**
-   * Scrutinize self-fix: `code` carries THREE validators (required / maxLength
-   * / pattern) and the template rendered CODE_PATTERN_ERROR for all of them —
-   * an empty code told the owner "lowercase letters, numbers, underscore, or
-   * hyphen only", which describes neither the failure nor the fix. "A
-   * validator covering multiple failure reasons needs one message each"
-   * (OBRS-223). Both keys already exist; no new i18n key is added.
-   */
-  protected codeErrorKey(): string {
-    return this.itemForm.get('code')?.hasError('required')
-      ? 'ADMIN.VALIDATION.REQUIRED'
-      : 'ADMIN.INSPECTION_ITEMS.CODE_PATTERN_ERROR';
   }
 
   protected isTranslationInvalid(index: number): boolean {
@@ -364,7 +355,6 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
 
   private toPayload(original: InspectionItemRow | null): InspectionItemPayload {
     const raw = this.itemForm.getRawValue() as {
-      code: string;
       translations: { locale: string; label: string }[];
     };
 
@@ -379,8 +369,15 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     // only if the row is genuinely gone (create → default true, SPEC §3.3).
     const current = original ? this.rows.find((row) => row.id === original.id) : null;
 
+    // OBRS-529: `code` is server-generated and no longer a form field — CREATE
+    // omits it entirely (nothing to send: the user never typed one). EDIT
+    // still forwards the item's existing code (current row first, falling
+    // back to the open-time snapshot) since it never changes here and the
+    // backend request DTO may still declare it.
+    const code = current?.code ?? original?.code;
+
     return {
-      code: raw.code.trim().toLowerCase(),
+      ...(code ? { code } : {}),
       // `active` is NOT a modal field (UX spec §4.2) — it is flipped only by
       // toggleActive(); create defaults true (SPEC §3.3's server default).
       active: current?.active ?? original?.active ?? true,

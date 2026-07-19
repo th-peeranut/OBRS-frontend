@@ -39,6 +39,27 @@ export function toInspectionItemRow(item: AdminInspectionItemDto): InspectionIte
   };
 }
 
+export type InspectionItemLocale = 'en' | 'th' | 'zh';
+
+/** OBRS-529: the list table's single locale-aware label cell. Mirrors the
+ * backend's own `TranslationUtil.resolveLabel` fallback ladder exactly
+ * (selected locale -> `en` -> the raw slug) so the two never disagree: a row
+ * missing the selected locale's translation (or missing it AND `en`) still
+ * renders something, never a blank cell. Pure function — the caller (the
+ * component) is responsible for re-invoking it whenever the selected locale
+ * changes, so this alone can't silently become a one-time read. */
+export function resolveInspectionItemLabel(
+  row: Pick<InspectionItemRow, 'code' | 'labelEn' | 'labelTh' | 'labelZh'>,
+  locale: InspectionItemLocale
+): string {
+  const byLocale: Record<InspectionItemLocale, string> = {
+    en: row.labelEn,
+    th: row.labelTh,
+    zh: row.labelZh,
+  };
+  return byLocale[locale] || row.labelEn || row.code;
+}
+
 // SPEC §3.2: "/manage" is already ordered `displayOrder ASC, id ASC` by the
 // backend — this re-sort is a defensive belt (never trust wire order alone)
 // so a background refresh always renders rows in a stable, correct sequence.

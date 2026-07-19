@@ -63,7 +63,7 @@
                   type="button"
                   class="admin-icon-btn"
                   [disabled]="!canMoveUp(i)"
-                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_UP' | translate: { label: currentLocaleLabel(row) }"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_UP' | translate: { label: displayLabel(row) }"
                   (click)="moveUp(i)"
                 >
                   <span class="material-symbols-outlined">arrow_upward</span>
@@ -72,7 +72,7 @@
                   type="button"
                   class="admin-icon-btn"
                   [disabled]="!canMoveDown(i)"
-                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_DOWN' | translate: { label: currentLocaleLabel(row) }"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_DOWN' | translate: { label: displayLabel(row) }"
                   (click)="moveDown(i)"
                 >
                   <span class="material-symbols-outlined">arrow_downward</span>
@@ -81,7 +81,7 @@
                   type="button"
                   class="admin-icon-btn"
                   [disabled]="!canMoveUp(i)"
-                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_TOP' | translate: { label: currentLocaleLabel(row) }"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_TOP' | translate: { label: displayLabel(row) }"
                   (click)="moveToTop(i)"
                 >
                   <span class="material-symbols-outlined">keyboard_double_arrow_up</span>
@@ -90,7 +90,7 @@
                   type="button"
                   class="admin-icon-btn"
                   [disabled]="!canMoveDown(i)"
-                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_BOTTOM' | translate: { label: currentLocaleLabel(row) }"
+                  [attr.aria-label]="'ADMIN.INSPECTION_ITEMS.MOVE_BOTTOM' | translate: { label: displayLabel(row) }"
                   (click)="moveToBottom(i)"
                 >
                   <span class="material-symbols-outlined">keyboard_double_arrow_down</span>
@@ -99,13 +99,12 @@
             </td>
             <td><code>{{ row.code }}</code></td>
             <td>
-              <div class="admin-cell-stack" [class.admin-muted]="!row.active">
-                <!-- Thai first: it is the only locale actually read here (history snapshots are
-                     written from it), so it should be the line the eye lands on. -->
-                <span><strong>TH:</strong> {{ row.labelTh }}</span>
-                <span><strong>EN:</strong> {{ row.labelEn }}</span>
-                <span><strong>ZH:</strong> {{ row.labelZh }}</span>
-              </div>
+              <!-- OBRS-529: one locale-aware line, no TH:/EN:/ZH: prefixes — the
+                   column header already says "ป้ายกำกับ" and the language picker
+                   lives on the topbar. `displayLabel()` reads `this.currentLocale`,
+                   which the constructor's `onLangChange` subscription keeps live,
+                   so this re-renders on every topbar language switch. -->
+              <span [class.admin-muted]="!row.active">{{ displayLabel(row) }}</span>
             </td>
             <td>
               <!-- Absence means normal — no chip on active rows (UX spec §3.1
@@ -172,19 +171,6 @@
     <p class="admin-modal-subtitle">{{ 'ADMIN.INSPECTION_ITEMS.LOCALES_REQUIRED_HINT' | translate }}</p>
 
     <form [formGroup]="itemForm" class="admin-form-grid" (ngSubmit)="submitItem()">
-      <div class="admin-form-field full">
-        <label class="admin-form-label">
-          {{ 'ADMIN.INSPECTION_ITEMS.CODE_FIELD_LABEL' | translate }} <span class="admin-required">*</span>
-        </label>
-        <input class="admin-field" formControlName="code" />
-        <small class="admin-error" *ngIf="isCodeInvalid()">
-          {{ codeErrorKey() | translate }}
-        </small>
-        <small class="admin-muted" *ngIf="isEditMode">
-          {{ 'ADMIN.INSPECTION_ITEMS.CODE_READONLY_HINT' | translate }}
-        </small>
-      </div>
-
       <ng-container formArrayName="translations">
         <div
           class="admin-form-field full"
@@ -192,7 +178,9 @@
           [formGroupName]="i"
         >
           <label class="admin-form-label">
-            {{ localeLabelKeys[i] | translate }} <span class="admin-required">*</span>
+            <!-- OBRS-529: only Thai (index 0) is mandatory now — EN/ZH show no
+                 asterisk, matching their dropped `Validators.required`. -->
+            {{ localeLabelKeys[i] | translate }} <span class="admin-required" *ngIf="i === 0">*</span>
           </label>
           <input class="admin-field" formControlName="label" />
           <small class="admin-error" *ngIf="isTranslationInvalid(i)">
