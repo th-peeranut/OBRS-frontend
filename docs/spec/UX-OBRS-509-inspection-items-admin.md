@@ -254,7 +254,8 @@ buttons mutate, which the original version of this document protected `itemForm`
 Because the only reorder mechanism is buttons, the "accessible path" the SA spec's hard-problem
 list asks for is not a parallel affordance to design — it *is* the affordance. Concretely: every
 move control is a real `<button type="button">` (never a `div` with a click handler), reachable by
-Tab in row order (order → code → labels → active → edit, top to bottom), each with an
+Tab in row order (the four move buttons → Edit → Retire/Restore, top to bottom; the Status column
+holds a non-focusable chip and is skipped), each with an
 `aria-label`, and disabled state conveyed by the native `disabled` attribute (which both suppresses
 the click and correctly reports as unavailable to assistive tech) — no separate keyboard handler or
 ARIA-only affordance layered on top.
@@ -353,8 +354,9 @@ reusing `boarding-list`'s Board/Un-board pair verbatim in shape (`boarding-list.
 
 - **Active row → "Retire" button**, `.admin-btn.admin-btn-small.admin-btn-danger`, mirroring
   Un-board's role exactly (a reversal action, styled with the danger role, confirm-gated).
-- **Retired row → "Restore" button**, plain `.admin-btn.admin-btn-small`, mirroring Board's role
-  exactly (a forward/reactivating action, no confirm needed).
+- **Retired row → "Restore" button**, plain `.admin-btn.admin-btn-small`, labelled with
+  `RESTORE_BTN` (§6), mirroring Board's role exactly (a forward/reactivating action, no confirm
+  needed).
 - Both classes are real, shipped, dark-covered tokens — `.admin-btn`'s base + `.is-dark .admin-btn`
   border override (`admin-theme.scss:747-766`), `.admin-btn-danger` composing the already-dark-safe
   `--admin-danger-text`/`--admin-danger-border` pair (`:812-820`) — and this exact class combination
@@ -547,7 +549,7 @@ three languages, so this is intentional reuse, not a near-duplicate needing its 
   and `rows` is guarded against unrelated background `store.data$` emissions for the same window
   (§3.2.2a).
 - **Error, any write:** `AlertService.error()` with the message resolved via
-  `mapInspectionItemErrorCode(extractInspectionItemErrorCode(error))` (§9) — **never** the raw
+  `mapInspectionItemErrorCode(extractInspectionItemErrorCode(error))` (§10) — **never** the raw
   `message` field. Reorder errors additionally trigger `store.refresh()` to reconcile the visible
   order back to the server (§3.2.2), only for the response matching the latest-issued request.
 - **Success, any write:** `AlertService.success()` with `ADMIN.MESSAGES.{CREATED|UPDATED}`
