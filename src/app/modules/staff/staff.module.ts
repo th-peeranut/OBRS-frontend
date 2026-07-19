@@ -40,6 +40,11 @@ import { ParcelDeliveryEntryPageComponent } from './pages/parcel-delivery-schedu
 import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
 import { ParcelCollectDialogComponent } from './components/parcel-collect-dialog/parcel-collect-dialog.component';
 
+// OBRS-416 (Epic OBRS-302, Card 3b) — staff/driver physical parcel verification.
+import { ParcelVerifyEntryPageComponent } from './pages/parcel-verify-schedule/parcel-verify-schedule-page.component';
+import { ParcelVerifyListPageComponent } from './pages/parcel-verify-list/parcel-verify-list-page.component';
+import { ParcelVerifyDialogComponent } from './components/parcel-verify-dialog/parcel-verify-dialog.component';
+
 // OBRS-424 — internal fleet live map (layer 1).
 import { FleetMapPageComponent } from './pages/fleet-map/fleet-map-page.component';
 import { FleetMapPanelComponent } from './components/fleet-map-panel/fleet-map-panel.component';
@@ -134,6 +139,24 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.LIST_SUBTITLE' },
       },
+      // OBRS-416 (Epic OBRS-302, Card 3b) — staff/driver physical parcel
+      // verification (created -> accepted|rejected). Same requiredRoles
+      // pair as boarding/parcels/deliveries above; the role hierarchy
+      // already admits salesperson/owner/admin over the backend's
+      // DRIVER-only endpoint gate (staff.module.ts:138-141's fleet-map
+      // comment documents the same expansion).
+      {
+        path: 'parcels/verify',
+        component: ParcelVerifyEntryPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_VERIFY', subtitleKey: 'STAFF.PARCEL_VERIFY.ENTRY_SUBTITLE' },
+      },
+      {
+        path: 'parcels/verify/:scheduleId',
+        component: ParcelVerifyListPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_VERIFY', subtitleKey: 'STAFF.PARCEL_VERIFY.LIST_SUBTITLE' },
+      },
       {
         // OBRS-424: internal fleet live map (layer 1). Single requiredRoles
         // entry, per the sell/schedules precedent — ROLE_GRANTS already
@@ -170,6 +193,9 @@ export const staffRoutes: Routes = [
     ParcelDeliveryEntryPageComponent,
     ParcelDeliveryListPageComponent,
     ParcelCollectDialogComponent,
+    ParcelVerifyEntryPageComponent,
+    ParcelVerifyListPageComponent,
+    ParcelVerifyDialogComponent,
     FleetMapPageComponent,
     FleetMapPanelComponent,
     FleetVehicleStatusListComponent,

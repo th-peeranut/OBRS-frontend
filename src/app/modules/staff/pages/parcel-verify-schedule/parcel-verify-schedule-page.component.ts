@@ -1,0 +1,130 @@
+import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
+import { TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../../../auth/auth.service';
+import { AdminScheduleDto, parseAdminStatus } from '../../../../services/admin/admin-api.service';
+import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
+import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
+
+interface ParcelVerifyScheduleRow {
+  id: number;
+  tripId: string;
+  departure: string;
+  route: string;
+  vehicle: string;
+  status: string;
+  statusCode: string;
+}
+
+/**
+ * `/staff/parcels/verify` — schedule picker for the physical verification
+ * flow (OBRS-416). Deliberately mirrors `ParcelDeliveryEntryPageComponent`
+ * byte-for-byte in shape (same driver/salesperson schedule-source split,
+ * same row shape, same empty/loading states) — only the navigation target
+ * differs (`/staff/parcels/verify/:scheduleId` instead of
+ * `/staff/parcels/deliveries/:scheduleId`). This is a deliberate
+ * near-duplicate of an existing page rather than a shared generic
+ * "schedule picker" component, matching the existing precedent:
+ * `ParcelDeliveryEntryPageComponent` itself does not attempt to generalize
+ * over `BoardingEntryPageComponent` (see that component's own doc comment)
+ * — extracting a shared component now would touch three existing pages, out
+ * of this card's scope (per UX-OBRS-416 §"Component hierarchy").
+ */
+@Component({
+  selector: 'app-parcel-verify-schedule-page',
+  templateUrl: './parcel-verify-schedule-page.component.html',
+  styleUrl: './parcel-verify-schedule-page.component.scss',
+})
+export class ParcelVerifyEntryPageComponent implements OnInit, OnDestroy {
+  protected rows: ParcelVerifyScheduleRow[] = [];
+  protected isLoading = false;
+  protected readonly skeletonRows = Array.from({ length: 4 });
+
+  private readonly subscriptions = new Subscription();
+  private readonly isDriver: boolean;
+  private readonly isSalesperson: boolean;
+
+  constructor(
+    private readonly router: Router,
+    private readonly translate: TranslateService,
+    private readonly authService: AuthService,
+    private readonly driverSchedulesStore: DriverSchedulesStore,
+    private readonly staffSchedulesStore: StaffSchedulesStore
+  ) {
+    this.isDriver = this.authService.getRoles().includes('driver');
+    this.isSalesperson = this.authService.hasAnyRole(['salesperson']);
+  }
+
+  ngOnInit(): void {
+    if (this.isDriver) {
+      this.subscriptions.add(
+        this.driverSchedulesStore.data$.subscribe((data) => {
+          this.buildRows(data ?? []);
+        })
+      );
+      this.subscriptions.add(
+        this.driverSchedulesStore.refreshing$.subscribe((r) => (this.isLoading = r))
+      );
+      void this.driverSchedulesStore.refresh();
+    } else if (this.isSalesperson) {
+      this.subscriptions.add(
+        this.staffSchedulesStore.data$.subscribe((data) => {
+          this.buildRows(data?.schedules ?? []);
+        })
+      );
+      this.subscriptions.add(
+        this.staffSchedulesStore.refreshing$.subscribe((r) => (this.isLoading = r))
+      );
+      void this.staffSchedulesStore.refresh();
+    }
+
+    this.subscriptions.add(
+      this.translate.onLangChange.subscribe(() => {
+        const raw = this.isDriver
+          ? (this.driverSchedulesStore.value ?? [])
+          : (this.staffSchedulesStore.value?.schedules ?? []);
+        this.buildRows(raw);
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  protected get isEmpty(): boolean {
+    return !this.isLoading && this.rows.length === 0;
+  }
+
+  protected viewVerify(row: ParcelVerifyScheduleRow): void {
+    void this.router.navigate(['/staff/parcels/verify', row.id]);
+  }
+
+  private buildRows(schedules: AdminScheduleDto[]): void {
+    this.rows = schedules.map((s) => {
+      const status = parseAdminStatus(s.status, this.currentLocale);
+      return {
+        id: s.id,
+        tripId: `#SCH-${s.id}`,
+        departure: s.departureDateTime ?? '-',
+        route: s.route?.slug ?? '-',
+        vehicle: s.vehicle?.vehicleNumber ?? s.vehicle?.numberPlate ?? '-',
+        status: status.name,
+        statusCode: status.code,
+      };
+    });
+  }
+
+  private get currentLocale(): string {
+    const raw = String(
+      this.translate.currentLang || this.translate.getDefaultLang() || 'th'
+    ).toLowerCase();
+    return raw.startsWith('en') ? 'en' : 'th';
+  }
+
+  protected displayDateTime(value: string | null | undefined): string {
+    return formatDisplayDateTime(value, this.currentLocale);
+  }
+}

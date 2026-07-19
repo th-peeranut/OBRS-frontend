@@ -23,6 +23,8 @@ import {
   ParcelArrivedRespDto,
   ParcelQuoteReqParams,
   ParcelQuoteRespDto,
+  ParcelVerifyReqDto,
+  ParcelVerifyRespDto,
   WaybillRespDto,
 } from '../../shared/interfaces/parcel.interface';
 import { AdminUserDto, DriverDto } from '../admin/admin-api.service';
@@ -716,6 +718,23 @@ export class StaffApiService {
   ): Observable<ResponseAPI<ParcelCollectRespDto>> {
     return this.http.post<ResponseAPI<ParcelCollectRespDto>>(
       `${environment.apiUrl}/api/private/parcels/${parcelId}/collect`,
+      payload,
+      { context: this.parcelActionContext }
+    );
+  }
+
+  /** POST /api/private/parcels/{id}/verify — created -> accepted | rejected
+   * (CAS). DRIVER-only (role hierarchy also admits SALESPERSON/OWNER/ADMIN,
+   * so one screen serves both the counter salesperson and the roadside
+   * driver). OBRS-416. Reuses `parcelActionContext` — same reasoning as
+   * load/arrived/collect above: a domain 409/404/400 on this action must
+   * never force-logout the operator nor duplicate the global alert. */
+  verifyParcel(
+    parcelId: number,
+    payload: ParcelVerifyReqDto
+  ): Observable<ResponseAPI<ParcelVerifyRespDto>> {
+    return this.http.post<ResponseAPI<ParcelVerifyRespDto>>(
+      `${environment.apiUrl}/api/private/parcels/${parcelId}/verify`,
       payload,
       { context: this.parcelActionContext }
     );

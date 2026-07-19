@@ -1,0 +1,76 @@
+<div class="container-fluid py-4">
+  <ng-container *ngIf="isEmpty">
+    <div class="text-center py-5">
+      <span class="material-symbols-outlined text-muted d-block mb-2" style="font-size:64px">inventory_2</span>
+      <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_VERIFY.LIST_EMPTY_TITLE' | translate }}</div>
+      <div class="text-muted">{{ 'STAFF.PARCEL_VERIFY.LIST_EMPTY_BODY' | translate }}</div>
+    </div>
+  </ng-container>
+
+  <div class="text-center py-5" *ngIf="hasError">
+    <div class="fw-semibold fs-5">{{ 'STAFF.PARCEL_VERIFY.LOAD_FAILED' | translate }}</div>
+  </div>
+
+  <div class="card shadow-sm border-0" *ngIf="!isEmpty && !hasError">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+          <thead class="table-light">
+            <tr>
+              <th>{{ 'STAFF.PARCEL_VERIFY.COL.TRACKING_NUMBER' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_VERIFY.COL.RECIPIENT' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_VERIFY.COL.DECLARED_WEIGHT' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_VERIFY.COL.DECLARED_DIMENSIONS' | translate }}</th>
+              <th>{{ 'STAFF.PARCEL_VERIFY.COL.PAID_AMOUNT' | translate }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows">
+              <td class="fw-semibold">{{ row.trackingNumber }}</td>
+              <td>{{ row.recipientName }}</td>
+              <td>{{ row.weightKg }} kg</td>
+              <td>{{ declaredDimensionsLabel(row) }}</td>
+              <td>
+                {{ paidAmountLabel(row) }}
+                <span
+                  *ngIf="paymentFlagFor(row) as paymentFlag"
+                  class="admin-status ms-1"
+                  [ngClass]="paymentFlag.token"
+                  data-testid="payment-flag"
+                >
+                  {{ paymentFlag.i18nKey | translate }}
+                </span>
+              </td>
+              <td>
+                <!-- Full-size .admin-btn (NOT -small): a deliberate departure
+                     from the sibling delivery list's compact row buttons —
+                     this list is read by the same thumb that's about to do
+                     the actual measuring, one-handed, possibly outdoors
+                     (design-system §9 / UX-OBRS-416 physical-context note). -->
+                <button
+                  class="admin-btn"
+                  [disabled]="isRowBlocked(row)"
+                  [title]="isRowBlocked(row) ? ('STAFF.PARCEL_VERIFY.ERROR.BOOKING_NOT_CONFIRMED' | translate) : ''"
+                  (click)="openVerifyDialog(row)"
+                >
+                  {{ 'STAFF.PARCEL_VERIFY.ACTION.VERIFY' | translate }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-parcel-verify-dialog
+  [isOpen]="dialogParcel !== null"
+  [parcel]="dialogParcel"
+  [isSubmitting]="isVerifying"
+  [serverErrorKey]="verifyErrorKey"
+  (dismiss)="closeVerifyDialog()"
+  (confirmAccept)="confirmAccept($event)"
+  (confirmReject)="onConfirmReject($event)"
+></app-parcel-verify-dialog>
