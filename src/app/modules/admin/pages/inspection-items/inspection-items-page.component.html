@@ -100,8 +100,10 @@
             <td><code>{{ row.code }}</code></td>
             <td>
               <div class="admin-cell-stack" [class.admin-muted]="!row.active">
-                <span><strong>EN:</strong> {{ row.labelEn }}</span>
+                <!-- Thai first: it is the only locale actually read here (history snapshots are
+                     written from it), so it should be the line the eye lands on. -->
                 <span><strong>TH:</strong> {{ row.labelTh }}</span>
+                <span><strong>EN:</strong> {{ row.labelEn }}</span>
                 <span><strong>ZH:</strong> {{ row.labelZh }}</span>
               </div>
             </td>

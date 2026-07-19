@@ -75,9 +75,15 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
   private latestReorderSeq = 0;
 
   protected readonly itemForm: FormGroup;
+  // OBRS-509 (owner review): Thai first. Thai is the only locale that is actually read here —
+  // `VehicleInspectionService.SNAPSHOT_LOCALE` is hardcoded "th", so every history row is written
+  // from the Thai label, and both audiences (drivers filling the form, the owner reading history)
+  // are Thai. English is only the fallback in `TranslationUtil.resolveLabel`; Chinese is read by
+  // essentially nobody on this screen. Index-aligned with the `translations` FormArray below —
+  // reorder both together or the headings detach from their inputs.
   protected readonly localeLabelKeys = [
-    'ADMIN.INSPECTION_ITEMS.LABEL_EN',
     'ADMIN.INSPECTION_ITEMS.LABEL_TH',
+    'ADMIN.INSPECTION_ITEMS.LABEL_EN',
     'ADMIN.INSPECTION_ITEMS.LABEL_ZH',
   ];
 
@@ -98,9 +104,10 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
         '',
         [Validators.required, Validators.maxLength(50), Validators.pattern(/^[a-z0-9_-]+$/)],
       ],
+      // Thai first — see `localeLabelKeys` above; the two are index-aligned.
       translations: this.formBuilder.array([
-        this.formBuilder.group({ locale: ['en'], label: ['', Validators.required] }),
         this.formBuilder.group({ locale: ['th'], label: ['', Validators.required] }),
+        this.formBuilder.group({ locale: ['en'], label: ['', Validators.required] }),
         this.formBuilder.group({ locale: ['zh'], label: ['', Validators.required] }),
       ]),
     });
@@ -253,8 +260,8 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.itemForm.reset({
       code: '',
       translations: [
-        { locale: 'en', label: '' },
         { locale: 'th', label: '' },
+        { locale: 'en', label: '' },
         { locale: 'zh', label: '' },
       ],
     });
@@ -268,8 +275,8 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.itemForm.reset({
       code: row.code,
       translations: [
-        { locale: 'en', label: row.labelEn },
         { locale: 'th', label: row.labelTh },
+        { locale: 'en', label: row.labelEn },
         { locale: 'zh', label: row.labelZh },
       ],
     });

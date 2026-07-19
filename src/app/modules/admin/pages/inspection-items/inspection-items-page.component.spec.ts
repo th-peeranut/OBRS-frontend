@@ -110,9 +110,33 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
 
     expect(component.itemForm.get('code').disabled).toBeTrue();
     expect(component.itemForm.get('code').value).toBe('brake_fluid');
-    expect(component.translationsFormArray.at(0).get('label').value).toBe('Brake fluid');
-    expect(component.translationsFormArray.at(1).get('label').value).toBe('TH');
-    expect(component.translationsFormArray.at(2).get('label').value).toBe('ZH');
+
+    // Assert by locale, not by index: an index-keyed assertion silently passes if the
+    // label/value pairing ever detaches. Each control must carry its OWN label.
+    const byLocale: Record<string, string> = {};
+    component.translationsFormArray.controls.forEach((group: any) => {
+      byLocale[group.get('locale').value] = group.get('label').value;
+    });
+    expect(byLocale['th']).toBe('TH');
+    expect(byLocale['en']).toBe('Brake fluid');
+    expect(byLocale['zh']).toBe('ZH');
+  });
+
+  it('renders Thai first — the form order matches the heading order, index for index', () => {
+    const { component } = makeComponent();
+
+    // OBRS-509 (owner review): Thai is the only locale actually read on this screen, so it leads.
+    // `localeLabelKeys` is index-aligned with the FormArray — if someone reorders one and not the
+    // other, every heading sits above the wrong input and nothing else in the suite would notice.
+    const locales = component.translationsFormArray.controls.map(
+      (g: any) => g.get('locale').value
+    );
+    expect(locales).toEqual(['th', 'en', 'zh']);
+    expect(component.localeLabelKeys).toEqual([
+      'ADMIN.INSPECTION_ITEMS.LABEL_TH',
+      'ADMIN.INSPECTION_ITEMS.LABEL_EN',
+      'ADMIN.INSPECTION_ITEMS.LABEL_ZH',
+    ]);
   });
 
   it('warns and skips the API when the form is invalid', async () => {
@@ -407,9 +431,16 @@ describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {
     const inputs: NodeListOf<HTMLInputElement> = fixture.nativeElement.querySelectorAll(
       '.admin-modal input.admin-field'
     );
-    // inputs[0] = code (disabled), [1] = EN label, [2] = TH label, [3] = ZH label.
-    const enInput = inputs[1];
-    const thInput = inputs[2];
+    // inputs[0] is the code field; the rest are the locale labels in FormArray order.
+    // Resolve each by LOCALE rather than a hardcoded index — the display order is a product
+    // decision (Thai leads, OBRS-509 owner review) and this test must keep asserting the real
+    // behaviour when that order changes, not silently start editing the wrong two fields.
+    const localeOrder: string[] = (
+      fixture.componentInstance as any
+    ).translationsFormArray.controls.map((g: any) => g.get('locale').value);
+    const inputForLocale = (locale: string) => inputs[1 + localeOrder.indexOf(locale)];
+    const enInput = inputForLocale('en');
+    const thInput = inputForLocale('th');
 
     enInput.value = 'Engine oil level';
     enInput.dispatchEvent(new Event('input'));
