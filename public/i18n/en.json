@@ -739,7 +739,7 @@
       "ADD": "Add item",
       "ADD_TITLE": "Add checklist item",
       "EDIT_TITLE": "Edit checklist item",
-      "LOCALES_REQUIRED_HINT": "All three languages (English, Thai, Chinese) are required before you can save.",
+      "LOCALES_REQUIRED_HINT": "All three languages (Thai, English, Chinese) are required before you can save.",
       "RETIRE_HINT": "There's no delete here. Turning an item off just retires it — it disappears from the driver's next inspection, but stays reorderable in this list, and every past inspection record keeps showing its original label. Turn it back on anytime.",
       "COL_ORDER": "Order",
       "COL_CODE": "Code",
@@ -763,7 +763,7 @@
       "RETIRE_CONFIRM_BUTTON": "Retire",
       "LOAD_FAILED": "Failed to load the checklist items.",
       "ERROR": {
-        "LOCALES_INVALID": "Labels must include exactly English, Thai, and Chinese — no more, no fewer.",
+        "LOCALES_INVALID": "Labels must include exactly Thai, English, and Chinese — no more, no fewer.",
         "CODE_TAKEN": "That code is already used by another item.",
         "ID_NOT_FOUND": "This item no longer exists. Refreshing the list.",
         "REORDER_MISSING_IDS": "The reorder didn't include every item. Refreshing to the last saved order.",
