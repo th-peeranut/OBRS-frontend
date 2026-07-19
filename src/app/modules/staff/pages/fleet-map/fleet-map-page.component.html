@@ -1,0 +1,43 @@
+<section class="admin-page-intro" *ngIf="showRefreshFailedBanner">
+  <p class="admin-muted">
+    {{ 'STAFF.FLEET_MAP.REFRESH_FAILED_BANNER' | translate: { time: refreshFailedTimeDisplay } }}
+  </p>
+</section>
+
+<!-- Day-one / defensive-empty banner (§8) — non-dismissible, sits ABOVE the
+     map+list; deliberately not the OBRS-209 full-section-empty-state, the map
+     and list stay rendered underneath. -->
+<div class="admin-card fleet-map-empty-banner mt-3" *ngIf="showEmptyFleetBanner">
+  <span class="material-symbols-outlined" aria-hidden="true">info</span>
+  <div>
+    <p class="admin-emphasis">{{ 'STAFF.FLEET_MAP.EMPTY_FLEET_BANNER_TITLE' | translate }}</p>
+    <p class="admin-muted">{{ 'STAFF.FLEET_MAP.EMPTY_FLEET_BANNER_BODY' | translate }}</p>
+  </div>
+</div>
+
+<!-- Error, no cache: LOAD_FAILED replaces the map+list entirely. -->
+<section class="admin-card mt-3 fleet-map-state-card" *ngIf="contentState === 'error'">
+  <p class="admin-muted">{{ loadError }}</p>
+</section>
+
+<div class="row mt-3 fleet-map-layout" *ngIf="contentState !== 'error'">
+  <div class="col-lg-8">
+    <section class="admin-card">
+      <app-fleet-map-panel [vehicles]="vehicles" [maptilerKey]="maptilerKey"></app-fleet-map-panel>
+    </section>
+  </div>
+
+  <div class="col-lg-4 mt-3 mt-lg-0">
+    <section class="admin-card">
+      <div class="admin-card-head">
+        <h4>{{ 'STAFF.FLEET_MAP.VEHICLE_LIST_TITLE' | translate }}</h4>
+      </div>
+
+      <div class="fleet-map-list-loading" *ngIf="isLoading">
+        <p-progressSpinner styleClass="fleet-map-spinner"></p-progressSpinner>
+      </div>
+
+      <app-fleet-vehicle-status-list *ngIf="!isLoading" [vehicles]="vehicles"></app-fleet-vehicle-status-list>
+    </section>
+  </div>
+</div>

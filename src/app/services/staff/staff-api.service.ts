@@ -370,6 +370,33 @@ export interface MyInspectionDto {
   pendingMaintenance?: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// OBRS-424 — internal fleet live map (layer 1). Backend contract shipped by
+// OBRS-423 (`GET /api/private/vehicles/positions`, already merged to
+// origin/dev, frozen — no changes made here).
+// ---------------------------------------------------------------------------
+
+/** GET /api/private/vehicles/positions response row. See
+ * UX-OBRS-424-fleet-live-map.md §3 for the resolver reading these flags
+ * (`shared/lib/fleet-vehicle-status.ts`) — `stale`/`deviceOnline` MUST NOT be
+ * read independently of `positionKnown`/`gpsImeiConfigured`. */
+export interface FleetPositionRespDto {
+  vehicleId: number;
+  numberPlate: string;
+  vehicleNumber: string;
+  lat: number | null;
+  lon: number | null;
+  speed: number | null;
+  course: number | null;
+  engineStatus: number | null; // 0 | 1
+  recordedAt: string | null;
+  lastSeenAt: string | null;
+  positionKnown: boolean;
+  stale: boolean;
+  deviceOnline: boolean | null;
+  gpsImeiConfigured: boolean;
+}
+
 @Injectable({ providedIn: 'root' })
 export class StaffApiService {
   private readonly skipContext = new HttpContext()
@@ -738,6 +765,22 @@ export class StaffApiService {
   getMyInspections(): Observable<ResponseAPI<MyInspectionDto[]>> {
     return this.http.get<ResponseAPI<MyInspectionDto[]>>(
       `${environment.apiUrl}/api/private/inspections/me`,
+      { context: this.skipContext }
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // OBRS-424 — internal fleet live map (layer 1).
+  // ---------------------------------------------------------------------------
+
+  /** GET /api/private/vehicles/positions — the whole fleet's latest known
+   * position + staleness flags (OBRS-423, frozen contract). Reuses
+   * `skipContext` (UX §9.4): the page owns its own loading/error UX and a
+   * genuine 401 must still force logout like any other authenticated
+   * background call, so `SKIP_AUTH_LOGOUT` is deliberately NOT set here. */
+  getFleetPositions(): Observable<ResponseAPI<FleetPositionRespDto[]>> {
+    return this.http.get<ResponseAPI<FleetPositionRespDto[]>>(
+      `${environment.apiUrl}/api/private/vehicles/positions`,
       { context: this.skipContext }
     );
   }

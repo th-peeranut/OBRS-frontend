@@ -3748,3 +3748,27 @@ Fixed by branching on `vehicleDetail` inside the same-vehicle/still-open check a
   merely on `detail.editable`, so the form never seeds from the fallback and `detail` is stable for
   the edit's lifetime. Left for the developer because it is a behaviour/UX change that QA should
   verify and the unit specs don't cover the button-during-fetch gate.
+
+## OBRS-424 — Scrutinize self-fixes (fleet live map)
+
+**1. A left-open `BehaviorSubject` subscription in a spec makes the assertion compare a value to itself.**
+`admin-collection-store.spec.ts` → "emits a new Date on every successful `run()`" subscribed to
+`lastFetchedAt$` to capture `first`, then never unsubscribed. The subscription stayed live across the
+second `refresh()`, so the second stamp overwrote `first` too — `second.getTime() >= first.getTime()`
+was comparing one Date to itself and **could not go red regardless of implementation**. This is the
+`DEV-GOTCHAS.md` "a test can be structured so it CANNOT go red" family, in its rxjs form. Cure:
+`.subscribe(...).unsubscribe()` for every point-in-time capture, and assert **instance identity**
+(`not.toBe`) when what you are proving is "it re-emitted", never a `>=` on a timestamp (two stamps in
+the same millisecond are `getTime()`-equal anyway).
+
+**2. `fitBounds()` on a single marker slams to the tile layer's `maxZoom`.**
+One marker-eligible vehicle produces zero-size bounds; Leaflet's `getBoundsZoom()` then returns 18 —
+street level on one van, no fleet context. Day one (one tracker installed) is exactly that state, so
+this was the *expected* first view, not an edge case. Added `FLEET_MAP_FIT_MAX_ZOOM = 14` and passed
+it as `fitBounds(..., { maxZoom })`. Any future `fitBounds` over a variable-size set needs this cap.
+
+**3. A deliberate raw hex needs to say it is deliberate.**
+The two `#fff` literals in `fleet-map-panel.component.scss` are correct — the marker ring/badge sit on
+tiles pinned light in both themes, so a theme-aware token would invert and erase them. But an
+unannotated raw hex reads as a design-system §11 violation and the next reviewer "fixes" it. Commented
+both with the reason and the precondition (don't tokenise until the tiles darken).

@@ -1,0 +1,33 @@
+:host {
+  display: block;
+}
+
+// Day-one / defensive-empty banner (§8) — a plain flex row on the existing
+// .admin-card surface, no new color. Not the OBRS-209 full-section-empty
+// pattern (that REPLACES a section); this sits above the still-rendered
+// map+list.
+.fleet-map-empty-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+
+  .material-symbols-outlined {
+    color: var(--admin-muted);
+    font-size: 24px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.fleet-map-state-card {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.fleet-map-list-loading {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 0;
+}

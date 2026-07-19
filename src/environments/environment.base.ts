@@ -24,4 +24,10 @@ export const environmentBase = {
   homeRouteSlug: 'chonburi_bangkok',
   mapsApiKey: '',
   googleClientId: '',
+  // OBRS-424: MapTiler tile key for the internal fleet live map (layer 1).
+  // Empty by default — no key has been provisioned yet (owner has been
+  // asked). The empty-key path is what CI and every fresh clone always take
+  // (FleetMapPanelComponent.canShowMap degrades to the MAP_UNAVAILABLE
+  // placeholder; the side list keeps working fully), same shape as mapsApiKey.
+  maptilerKey: '',
 };

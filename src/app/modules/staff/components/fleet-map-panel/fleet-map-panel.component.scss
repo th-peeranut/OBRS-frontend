@@ -1,0 +1,119 @@
+// UX-OBRS-424 §4.2: a %/flex:1 height with no bounded ancestor renders
+// Leaflet 0px tall, silently — the canvas needs an explicit height.
+.fleet-map-panel {
+  position: relative;
+}
+
+.fleet-map-canvas {
+  height: 560px;
+  width: 100%;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.fleet-map-center-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1000; // above Leaflet's own panes/controls
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// §12 "Full-section empty state" precedent (OBRS-209) — reused for the
+// no-MapTiler-key degradation state (§4.4). Only var(--admin-muted)/
+// var(--admin-text), no new hex.
+.fleet-map-unavailable {
+  height: 560px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--admin-muted);
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 48px;
+  }
+
+  p {
+    margin: 0;
+    color: var(--admin-text);
+  }
+}
+
+// The marker/popup DOM below is injected by Leaflet directly (L.divIcon's
+// html string, Popup.setContent) — it never passes through Angular's
+// template compiler, so it carries no _ngcontent scoping attribute and
+// emulated-encapsulation rules would silently not match it. ::ng-deep is the
+// correct tool here (not a workaround): the marker layer IS a descendant of
+// this component's host element (Leaflet attaches its panes inside the
+// #canvas div), so the ::ng-deep-generated ancestor-scoped selector still
+// only reaches this component's own map instance, not every map on the page.
+//
+// Deliberately NOT dark-mode themed: the map tiles stay light in both themes
+// (dark-theme.scss:562-565 precedent, ADR 0024) and the §3.3 marker fill/halo
+// tokens (--admin-success/-warning/-danger-*) have no dark override — see
+// design-system.md §2.4/§12. The marker only stays legible because it always
+// sits on a light tile surface; don't add a dark rule here without adding
+// those token overrides FIRST.
+:host ::ng-deep {
+  .fleet-marker {
+    position: relative;
+    display: block;
+  }
+
+  .fleet-marker-halo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    opacity: 0.35;
+  }
+
+  .fleet-marker-dot {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    // Deliberate raw literal, NOT a missing token (design-system §11): this
+    // ring separates the dot from the TILE underneath, and the tiles are
+    // pinned light in both themes (see the ADR). Any theme-aware token
+    // (--admin-card-bg etc.) would invert to dark and erase the ring in dark
+    // mode. Do not "fix" this to a token without first darkening the tiles.
+    border: 2px solid #fff;
+  }
+
+  .fleet-marker-overlay {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    font-size: 14px;
+    color: var(--admin-danger-text);
+    // Same deliberate literal as .fleet-marker-dot's ring above — this badge
+    // sits on the always-light tile, never on a themed app surface.
+    background: #fff;
+    border-radius: 50%;
+  }
+
+  .fleet-marker-popup {
+    p {
+      margin: 0 0 4px;
+    }
+  }
+
+  .fleet-marker-popup-plate {
+    font-weight: 600;
+  }
+
+  .fleet-marker-popup-time {
+    color: var(--admin-muted);
+    font-size: 0.85em;
+  }
+}

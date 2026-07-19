@@ -14,9 +14,20 @@ for (const [name, value] of Object.entries(values)) {
   }
 }
 
+// OBRS-424: MapTiler key for the internal fleet live map. Deliberately NOT
+// added to the `values` required-check loop above — those gates exist to stop
+// a bundle that cannot take real money (OBRS-390's own stated rationale for
+// mapsApiKey/googleClientId). A missing MapTiler key costs only a map: it
+// degrades to the already-implemented MAP_UNAVAILABLE placeholder
+// (FleetMapPanelComponent.canShowMap), never a build failure. Defaults to ''
+// when unset so the SIT Netlify build doesn't start failing before anyone has
+// provisioned the variable.
+const maptilerKey = process.env.MAPTILER_API_KEY || '';
+
 const content = `export const localEnv = {
   mapsApiKey: '${values.mapsApiKey}',
   googleClientId: '${values.googleClientId}',
+  maptilerKey: '${maptilerKey}',
 };
 `;
 
