@@ -15,6 +15,7 @@ describe('my-reports.mappers', () => {
     const cases: [string, string][] = [
       ['new', 'is-warning'],
       ['in_review', 'is-info'],
+      ['owner_accepted', 'is-owner-accepted'],
       ['accepted', 'is-accepted'],
       ['dismissed', 'is-neutral'],
       ['resolved', 'is-success'],

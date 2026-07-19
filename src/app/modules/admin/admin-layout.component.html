@@ -83,7 +83,7 @@
             <span
               *ngIf="item.showBadge && badgeCount > 0"
               class="admin-nav-badge"
-              [attr.aria-label]="(badgeStatus === 'accepted' ? 'ADMIN.USABILITY_REPORTS.ACCEPTED_BADGE_ARIA' : 'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA') | translate: { count: badgeCount }"
+              [attr.aria-label]="(badgeStatus === 'owner_accepted' ? 'ADMIN.USABILITY_REPORTS.ACCEPTED_BADGE_ARIA' : 'ADMIN.USABILITY_REPORTS.NEW_BADGE_ARIA') | translate: { count: badgeCount }"
             >{{ badgeCount > 99 ? '99+' : badgeCount }}</span>
           </a>
         </ng-container>

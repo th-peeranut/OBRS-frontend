@@ -4,12 +4,14 @@ import {
   DETAIL_STATUS_VALUES,
   FIFO_STATUSES,
   MARK_AS_DUPLICATE_STATUSES,
+  OWNER_ALLOWED_TARGETS,
   OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
   StatusOption,
   buildStatusOptionList,
   canMarkAsDuplicate,
   categoryLabel,
+  detailStatusValuesFor,
   displayDateTime,
   extractUsabilityReportErrorCode,
   formatBytes,
@@ -29,11 +31,12 @@ import {
 
 describe('usability-reports-page.mappers', () => {
   describe('STATUS_FILTER_VALUES / DETAIL_STATUS_VALUES', () => {
-    it('the table filter offers "all" (OBRS-524) plus all 7 statuses (OBRS-378 dismissed + OBRS-376 duplicate) in order, non-terminal before terminal', () => {
+    it('the table filter offers "all" (OBRS-524) plus all 8 statuses (OBRS-378 dismissed + OBRS-376 duplicate + OBRS-527 owner_accepted) in order, non-terminal before terminal', () => {
       expect(STATUS_FILTER_VALUES).toEqual([
         'all',
         'new',
         'in_review',
+        'owner_accepted',
         'accepted',
         'dismissed',
         'resolved',
@@ -47,8 +50,71 @@ describe('usability-reports-page.mappers', () => {
       expect(DETAIL_STATUS_VALUES).not.toContain('duplicate' as UsabilityReportStatus);
     });
 
-    it('the owner detail dropdown offers in_review/accepted/dismissed (owner may screen-out, never terminate)', () => {
-      expect(OWNER_DETAIL_STATUS_VALUES).toEqual(['in_review', 'accepted', 'dismissed']);
+    // OBRS-527: 'accepted' DROPPED (PO-2 — every transition out of/into
+    // 'accepted' is admin-only) and 'owner_accepted' ADDED — the owner's full
+    // set, filtered per-report by detailStatusValuesFor() below.
+    it('the owner detail dropdown offers in_review/owner_accepted/dismissed (owner may screen-out, never terminate, never accept onto the platform)', () => {
+      expect(OWNER_DETAIL_STATUS_VALUES).toEqual(['in_review', 'owner_accepted', 'dismissed']);
+    });
+  });
+
+  // OBRS-527: detailStatusValuesFor / OWNER_ALLOWED_TARGETS — the source-aware
+  // detail dropdown that solves PO-2 (no legal owner move out of an
+  // already-finalized report) and the owner-undo case with one mechanism.
+  describe('detailStatusValuesFor / OWNER_ALLOWED_TARGETS', () => {
+    it('OWNER_ALLOWED_TARGETS mirrors the backend ALLOWED_TRANSITIONS matrix, restricted to owner-legal targets, cell by cell', () => {
+      expect(OWNER_ALLOWED_TARGETS.new).toEqual(['in_review', 'dismissed']);
+      expect(OWNER_ALLOWED_TARGETS.in_review).toEqual(['owner_accepted', 'dismissed']);
+      expect(OWNER_ALLOWED_TARGETS.owner_accepted).toEqual(['in_review', 'dismissed']);
+      expect(OWNER_ALLOWED_TARGETS.accepted).toEqual([]);
+      expect(OWNER_ALLOWED_TARGETS.dismissed).toEqual(['in_review']);
+      expect(OWNER_ALLOWED_TARGETS.resolved).toEqual([]);
+      expect(OWNER_ALLOWED_TARGETS.rejected).toEqual([]);
+      expect(OWNER_ALLOWED_TARGETS.duplicate).toEqual([]);
+    });
+
+    it('admin (isAdmin=true) always gets DETAIL_STATUS_VALUES regardless of sourceStatus', () => {
+      const everyStatus: readonly (UsabilityReportStatus | '')[] = [
+        '',
+        'new',
+        'in_review',
+        'owner_accepted',
+        'accepted',
+        'dismissed',
+        'resolved',
+        'rejected',
+        'duplicate',
+      ];
+      for (const source of everyStatus) {
+        expect(detailStatusValuesFor(true, source)).toEqual(DETAIL_STATUS_VALUES);
+      }
+    });
+
+    it('owner viewing an already-finalized report (accepted/resolved/rejected/duplicate) gets [] — PO-2, no legal move exists', () => {
+      expect(detailStatusValuesFor(false, 'accepted')).toEqual([]);
+      expect(detailStatusValuesFor(false, 'resolved')).toEqual([]);
+      expect(detailStatusValuesFor(false, 'rejected')).toEqual([]);
+      expect(detailStatusValuesFor(false, 'duplicate')).toEqual([]);
+    });
+
+    it('owner viewing an owner_accepted report gets in_review/dismissed — excludes accepted and excludes itself', () => {
+      const options = detailStatusValuesFor(false, 'owner_accepted');
+      expect(options).toContain('in_review');
+      expect(options).toContain('dismissed');
+      expect(options).not.toContain('accepted' as UsabilityReportStatus);
+      expect(options).not.toContain('owner_accepted' as UsabilityReportStatus);
+    });
+
+    it('owner viewing a new report gets in_review/dismissed (owner_accepted is deliberately closed from "new")', () => {
+      expect(detailStatusValuesFor(false, 'new')).toEqual(['in_review', 'dismissed']);
+    });
+
+    it('owner viewing an in_review report gets owner_accepted/dismissed', () => {
+      expect(detailStatusValuesFor(false, 'in_review')).toEqual(['owner_accepted', 'dismissed']);
+    });
+
+    it('owner with no report open (sourceStatus="") gets the full OWNER_DETAIL_STATUS_VALUES set', () => {
+      expect(detailStatusValuesFor(false, '')).toEqual(OWNER_DETAIL_STATUS_VALUES);
     });
   });
 
@@ -106,10 +172,16 @@ describe('usability-reports-page.mappers', () => {
     it('maps each known status to its pill class', () => {
       expect(statusClass('new')).toBe('is-warning');
       expect(statusClass('in_review')).toBe('is-info');
+      expect(statusClass('owner_accepted')).toBe('is-owner-accepted');
       expect(statusClass('accepted')).toBe('is-accepted');
       expect(statusClass('dismissed')).toBe('is-neutral');
       expect(statusClass('resolved')).toBe('is-success');
       expect(statusClass('rejected')).toBe('is-danger');
+    });
+
+    it('owner_accepted gets its own token, distinct from in_review and accepted (OBRS-527)', () => {
+      expect(statusClass('owner_accepted')).not.toBe(statusClass('in_review'));
+      expect(statusClass('owner_accepted')).not.toBe(statusClass('accepted'));
     });
 
     it('maps duplicate to its own is-duplicate token, distinct from dismissed (PO decision, 2026-07-16)', () => {
@@ -148,6 +220,13 @@ describe('usability-reports-page.mappers', () => {
       expect(seedDecisionStatus('rejected')).toBe('rejected');
     });
 
+    // OBRS-527: owner_accepted is a decision (stamps triagedBy/triagedAt), so
+    // a report already sitting at owner_accepted pre-seeds the dropdown to
+    // it, same as the other three.
+    it('preserves owner_accepted', () => {
+      expect(seedDecisionStatus('owner_accepted')).toBe('owner_accepted');
+    });
+
     it('clears a triage-only status (new/in_review) to empty', () => {
       expect(seedDecisionStatus('new')).toBe('');
       expect(seedDecisionStatus('in_review')).toBe('');
@@ -159,8 +238,13 @@ describe('usability-reports-page.mappers', () => {
   });
 
   describe('DECISION_STATUSES', () => {
-    it('contains exactly accepted/resolved/rejected', () => {
-      expect([...DECISION_STATUSES].sort()).toEqual(['accepted', 'rejected', 'resolved']);
+    it('contains exactly accepted/resolved/rejected/owner_accepted', () => {
+      expect([...DECISION_STATUSES].sort()).toEqual([
+        'accepted',
+        'owner_accepted',
+        'rejected',
+        'resolved',
+      ]);
     });
 
     it('does not contain the triage statuses', () => {
@@ -170,13 +254,19 @@ describe('usability-reports-page.mappers', () => {
   });
 
   describe('MARK_AS_DUPLICATE_STATUSES / canMarkAsDuplicate', () => {
-    it('contains exactly new/in_review/accepted', () => {
-      expect([...MARK_AS_DUPLICATE_STATUSES].sort()).toEqual(['accepted', 'in_review', 'new']);
+    it('contains exactly new/in_review/owner_accepted/accepted', () => {
+      expect([...MARK_AS_DUPLICATE_STATUSES].sort()).toEqual([
+        'accepted',
+        'in_review',
+        'new',
+        'owner_accepted',
+      ]);
     });
 
-    it('canMarkAsDuplicate is true for new/in_review/accepted', () => {
+    it('canMarkAsDuplicate is true for new/in_review/owner_accepted/accepted', () => {
       expect(canMarkAsDuplicate('new')).toBeTrue();
       expect(canMarkAsDuplicate('in_review')).toBeTrue();
+      expect(canMarkAsDuplicate('owner_accepted')).toBeTrue();
       expect(canMarkAsDuplicate('accepted')).toBeTrue();
     });
 

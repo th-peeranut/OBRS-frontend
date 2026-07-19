@@ -92,6 +92,7 @@
       "STATUS": {
         "new": "新建",
         "in_review": "审核中",
+        "owner_accepted": "车主已初审",
         "accepted": "已接受",
         "dismissed": "已忽略",
         "resolved": "已解决",
@@ -958,7 +959,8 @@
         "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}",
         "PULL_BACK_TO_REVIEW": "撤回至审查中",
         "DISMISSED_ADMIN_HINT": "店主已将此报告标记为不重要。如有需要，您可以将其撤回重新审查。",
-        "DISMISSED_OWNER_NOTE": "此报告已搁置，管理员可以将其撤回重新审查。"
+        "DISMISSED_OWNER_NOTE": "此报告已搁置，管理员可以将其撤回重新审查。",
+        "OWNER_NO_ACTION_NOTE": "平台团队已接手处理此报告，您这边无需再进行任何操作。"
       },
       "STATUS": {
         "LABEL": "状态",
@@ -966,6 +968,7 @@
         "all": "全部状态",
         "new": "新建",
         "in_review": "审查中",
+        "owner_accepted": "车主已初审",
         "accepted": "已接受",
         "dismissed": "已搁置",
         "resolved": "已解决",
