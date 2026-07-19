@@ -540,7 +540,11 @@ describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {
   it('OBRS-529: switching the app language re-renders the list table\'s label cell IMMEDIATELY — no reload, no re-init', () => {
     // ROW's translations (see the `item()` helper at the top of the file):
     // en: 'Engine oil', th: 'น้ำมันเครื่อง', zh: '机油'.
-    const labelCell = () => fixture.nativeElement.querySelector('.admin-table tbody tr td:nth-child(3) span');
+    // Selected by data-testid, not `td:nth-child(N)`: this spec broke once already when
+    // the code column was dropped and every cell shifted left. A positional selector
+    // silently retargets a DIFFERENT cell, so the failure blames the reactivity this
+    // test exists to pin rather than the column change that actually moved it.
+    const labelCell = () => fixture.nativeElement.querySelector('.admin-table tbody tr [data-testid="label-cell"]');
 
     // Default app locale is Thai (design-system §9 / CLAUDE.md §6) — starting
     // state must already show the Thai label, no prefix.

@@ -29,7 +29,6 @@
       <thead>
         <tr>
           <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_ORDER' | translate }}</th>
-          <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_CODE' | translate }}</th>
           <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_LABELS' | translate }}</th>
           <th>{{ 'ADMIN.INSPECTION_ITEMS.COL_STATUS' | translate }}</th>
           <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
@@ -39,13 +38,10 @@
         <ng-container *ngIf="isLoading">
           <tr *ngFor="let skeletonRow of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
-            <td>
-              <div class="admin-cell-stack">
-                <span class="admin-skeleton"></span>
-                <span class="admin-skeleton admin-skeleton--sm"></span>
-              </div>
-            </td>
+            <!-- OBRS-529: one skeleton line, matching the single label line the real
+                 row now renders — a 2-line stack here would promise a taller row than
+                 the loaded table delivers and make it jump on settle. -->
+            <td><span class="admin-skeleton"></span></td>
             <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
             <td class="text-right"><span class="admin-skeleton admin-skeleton--sm"></span></td>
           </tr>
@@ -97,14 +93,20 @@
                 </button>
               </div>
             </td>
-            <td><code>{{ row.code }}</code></td>
+<!-- OBRS-529: the code column is gone. `code` is server-generated now, so the
+                 owner has no reason to read it — and leaving it while collapsing the
+                 three label lines to one would have kept the scanning cost this card
+                 exists to cut. It is no longer surfaced anywhere in this UI (the modal
+                 input went too) — it stays in the API response, and it is still the
+                 label fallback's last resort, which is the only way it can reach a
+                 user's eye now. -->
             <td>
               <!-- OBRS-529: one locale-aware line, no TH:/EN:/ZH: prefixes — the
                    column header already says "ป้ายกำกับ" and the language picker
                    lives on the topbar. `displayLabel()` reads `this.currentLocale`,
                    which the constructor's `onLangChange` subscription keeps live,
                    so this re-renders on every topbar language switch. -->
-              <span [class.admin-muted]="!row.active">{{ displayLabel(row) }}</span>
+              <span data-testid="label-cell" [class.admin-muted]="!row.active">{{ displayLabel(row) }}</span>
             </td>
             <td>
               <!-- Absence means normal — no chip on active rows (UX spec §3.1
@@ -151,7 +153,7 @@
           </tr>
 
           <tr *ngIf="rows.length === 0 && !errorMessage" class="admin-empty-row">
-            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+            <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
           </tr>
         </ng-container>
       </tbody>

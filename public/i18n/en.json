@@ -742,7 +742,6 @@
       "LOCALES_REQUIRED_HINT": "The Thai label is required. English and Chinese labels are optional.",
       "RETIRE_HINT": "There's no delete here. Turning an item off just retires it — it disappears from the driver's next inspection, but stays reorderable in this list, and every past inspection record keeps showing its original label. Turn it back on anytime.",
       "COL_ORDER": "Order",
-      "COL_CODE": "Code",
       "COL_LABELS": "Labels",
       "COL_STATUS": "Status",
       "RESTORE_BTN": "Restore",
