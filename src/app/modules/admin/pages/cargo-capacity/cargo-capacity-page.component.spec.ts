@@ -125,7 +125,7 @@ describe('CargoCapacityPageComponent', () => {
       // this endpoint replaces no longer applies).
       totalSeats: 21,
       translations: [{ locale: 'en', label: 'Minibus' }],
-      seatMaps: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }] as any,
+      seatMaps: [{ seatNumber: '1', rowIndex: 0, columnIndex: 0 }],
     });
     const getVehicleTypeById = jasmine.createSpy('getVehicleTypeById');
     const updateVehicleTypeCargoCapacity = jasmine

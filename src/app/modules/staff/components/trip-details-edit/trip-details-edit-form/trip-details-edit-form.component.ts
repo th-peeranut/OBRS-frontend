@@ -15,7 +15,6 @@ import {
   AdminVehicleDto,
   AdminVehicleTypeDto,
   DriverDto,
-  LayoutResponse,
 } from '../../../../../services/admin/admin-api.service';
 import { WalkInTripDto } from '../../../../../services/staff/staff-api.service';
 import dayjs from 'dayjs';
@@ -32,7 +31,6 @@ export interface TripEditFormValue {
   vehicleId: number | null;
   driverId: number | null;
   seatingCapacity: number | null;
-  seatMapId: string;
   route: string;
 }
 
@@ -64,13 +62,11 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
   @Input() vehicleTypes: AdminVehicleTypeDto[] = [];
   @Input() vehicles: AdminVehicleDto[] = [];
   @Input() drivers: DriverDto[] = [];
-  @Input() seatMapOptions: Option[] = [];
   @Input() capacityInlineError = '';
 
   // --- Outputs ---
   @Output() save = new EventEmitter<TripEditFormValue>();
   @Output() cancel = new EventEmitter<void>();
-  @Output() vehicleTypeChanged = new EventEmitter<string>();
 
   protected readonly form: FormGroup;
   private readonly destroy$ = new Subject<void>();
@@ -81,7 +77,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
       vehicleType: ['', [Validators.required]],
       vehicleId: [''],
       seatingCapacity: [null, [Validators.min(1), maxCapacityValidator(() => this.effectiveTotalSeats)]],
-      seatMapId: [''],
       driverId: [''],
     });
   }
@@ -90,8 +85,7 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     this.form.get('vehicleType')!
       .valueChanges
       .pipe(takeUntil(this.destroy$))
-      .subscribe((slug: string) => {
-        this.vehicleTypeChanged.emit(slug);
+      .subscribe(() => {
         // If the current vehicleId isn't available for the new type, clear it.
         const currentVehicleId = this.form.get('vehicleId')!.value as string;
         const still = this.filteredVehicleOptions.some((o) => o.code === currentVehicleId);
@@ -104,16 +98,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
   }
 
   ngOnChanges(changes: SimpleChanges): void {
-    // When seatMapOptions arrive or change, set required validator on seatMapId if >0 options.
-    if (changes['seatMapOptions']) {
-      const ctrl = this.form.get('seatMapId')!;
-      if (this.seatMapOptions.length > 0) {
-        ctrl.setValidators([Validators.required]);
-      } else {
-        ctrl.clearValidators();
-      }
-      ctrl.updateValueAndValidity({ emitEvent: false });
-    }
     // Re-run capacity validation when vehicle types change (effectiveTotalSeats may change).
     if (changes['vehicleTypes']) {
       this.form.get('seatingCapacity')!.updateValueAndValidity({ emitEvent: false });
@@ -132,7 +116,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     vehicleId: string;
     driverId: string;
     seatingCapacity: number | null;
-    seatMapId: string;
   }>): void {
     for (const key of Object.keys(values) as Array<keyof typeof values>) {
       const ctrl = this.form.get(key);
@@ -149,7 +132,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     vehicleId: string;
     driverId: string;
     seatingCapacity: number | null;
-    seatMapId: string;
   }): void {
     this.form.reset(values);
   }
@@ -198,25 +180,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
     }));
   }
 
-  protected get selectedSeatMapId(): string {
-    return this.form.get('seatMapId')!.value as string;
-  }
-
-  protected get selectedVehicleTypeSlug(): string {
-    return (this.form.get('vehicleType')!.value as string) ?? '';
-  }
-
-  protected get isVanType(): boolean {
-    return this.selectedVehicleTypeSlug === 'van';
-  }
-
-  protected get selectedSeatMap(): LayoutResponse | null {
-    const id = this.selectedSeatMapId;
-    if (!id) return null;
-    const opt = this.seatMapOptions.find((o) => o.code === id);
-    return opt ? ({ id: Number(id), name: opt.label } as LayoutResponse) : null;
-  }
-
   protected isFieldInvalid(name: string): boolean {
     const ctrl = this.form.get(name);
     return !!ctrl && ctrl.invalid && (ctrl.dirty || ctrl.touched);
@@ -237,7 +200,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
       vehicleId: string;
       driverId: string;
       seatingCapacity: number | null;
-      seatMapId: string;
     };
 
     if (!raw.departureTime || !this.trip) {
@@ -255,7 +217,6 @@ export class TripDetailsEditFormComponent implements OnInit, OnChanges, OnDestro
       vehicleId: raw.vehicleId ? Number(raw.vehicleId) : null,
       driverId: raw.driverId ? Number(raw.driverId) : null,
       seatingCapacity: raw.seatingCapacity ?? null,
-      seatMapId: raw.seatMapId,
       route: '', // filled by parent from selectedTrip's route slug
     };
 

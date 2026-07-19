@@ -31,7 +31,6 @@ import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { formatDisplayDate } from '../../../../shared/lib/display-date-time';
 import {
   TripDetailsEditFormComponent,
-  Option,
   TripEditFormValue,
 } from '../trip-details-edit/trip-details-edit-form/trip-details-edit-form.component';
 
@@ -153,7 +152,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
   protected vehicleTypes: AdminVehicleTypeDto[] = [];
   protected vehicles: AdminVehicleDto[] = [];
   protected drivers: DriverDto[] = [];
-  protected seatMapOptions: Option[] = [];
 
   // Cached route info from the detail response.
   private routeNameForForm = '';
@@ -355,12 +353,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
             this.routeDateForForm = scheduleDetail.departureDateTime
               ? formatDisplayDate(scheduleDetail.departureDateTime, this.translate.currentLang)
               : '';
-
-            // If a vehicle type is known, load the seat-plan options.
-            const vtId = scheduleDetail.vehicleType?.id;
-            if (vtId) {
-              this.loadSeatMaps(vtId);
-            }
           }
 
           // Wait for editFormRef to be available (it renders when isEditMode=true).
@@ -390,7 +382,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     this.isEditLoading = false;
     this.isSaving = false;
     this.capacityInlineError = '';
-    this.seatMapOptions = [];
     this.vehicleTypes = [];
     this.vehicles = [];
     this.drivers = [];
@@ -406,16 +397,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
 
   protected get editFormRouteDate(): string {
     return this.routeDateForForm;
-  }
-
-  protected onVehicleTypeChanged(slug: string): void {
-    // When user changes vehicle type in the form, reload seat maps for the new type.
-    const vt = this.vehicleTypes.find((t) => t.slug === slug);
-    if (vt?.id) {
-      this.loadSeatMaps(vt.id);
-    } else {
-      this.seatMapOptions = [];
-    }
   }
 
   protected onSave(formValue: TripEditFormValue): void {
@@ -512,7 +493,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     vehicleId: string;
     driverId: string;
     seatingCapacity: number | null;
-    seatMapId: string;
   } {
     const depDate = dayjs(trip.departureDateTime).toDate();
     return {
@@ -521,7 +501,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
       vehicleId: '',
       driverId: '',
       seatingCapacity: trip.capacity ?? null,
-      seatMapId: '',
     };
   }
 
@@ -540,7 +519,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     vehicleId: string;
     driverId: string;
     seatingCapacity: number | null;
-    seatMapId: string;
   }> {
     const patch: Partial<{
       departureTime: Date | null;
@@ -548,7 +526,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
       vehicleId: string;
       driverId: string;
       seatingCapacity: number | null;
-      seatMapId: string;
     }> = {};
 
     if (detail.departureDateTime) {
@@ -569,24 +546,6 @@ export class WalkInCenterPanelComponent implements OnInit, OnChanges, OnDestroy 
     }
 
     return patch;
-  }
-
-  private loadSeatMaps(vehicleTypeId: number): void {
-    this.adminApiService
-      .getVehicleTypeById(vehicleTypeId)
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: (resp) => {
-          const maps = resp?.data?.seatMaps ?? [];
-          this.seatMapOptions = maps.map((m) => ({
-            code: String(m.id),
-            label: m.name ?? m.label ?? String(m.id),
-          }));
-        },
-        error: () => {
-          this.seatMapOptions = [];
-        },
-      });
   }
 
   private getEffectiveTotalSeats(vehicleTypeSlug: string): number | null {

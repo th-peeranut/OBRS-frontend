@@ -101,10 +101,14 @@ export interface AdminUserDto {
   salesPointStop?: string | null;
 }
 
+/** A single seat on a vehicle type's seat map, as the backend actually returns it
+ * (record `LayoutResponse`: `seatNumber`, `rowIndex`, `columnIndex`). There is no
+ * seat-map-TEMPLATE entity on the backend — this is one seat's position, the same
+ * record shape `ChangeSeatAvailabilityRespDto` exposes under the field name `seats`. */
 export interface LayoutResponse {
-  id: number;
-  name?: string;
-  label?: string;
+  seatNumber: string;
+  rowIndex: number;
+  columnIndex: number;
 }
 
 export interface AdminVehicleTypeDto {
@@ -115,12 +119,10 @@ export interface AdminVehicleTypeDto {
   status?: string | AdminStatusDto;
   display?: AdminTranslationCollection;
   translations?: AdminTranslationCollection;
-  /** Seat-map options — only present on the vehicle-type detail endpoint.
-   * NOTE: the real backend shape here is `{seatNumber, rowIndex, columnIndex}`
-   * — `LayoutResponse` is a pre-existing mistyped interface (staff/
-   * walk-in-center-panel already reads this same field as a `{id, name,
-   * label}` seat-map-template picker option), tracked separately as OBRS-517
-   * and deliberately left as-is by OBRS-508. */
+  /** The vehicle type's individual seats — only present on the vehicle-type
+   * detail endpoint. Each entry is one physical seat (`seatNumber`,
+   * `rowIndex`, `columnIndex`); there is no seat-map-template entity to pick
+   * from (OBRS-517 removed the FE control that once assumed one existed). */
   seatMaps?: LayoutResponse[];
   /** OBRS-508: parcel cargo quota for this vehicle type, in kg. `null` = not
    * configured — effective capacity falls back to the per-schedule override

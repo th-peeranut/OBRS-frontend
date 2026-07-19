@@ -196,4 +196,96 @@ describe('AdminCollectionStore', () => {
       expect(store.value).toBeNull();
     });
   });
+
+  // OBRS-424: lastFetchedAt$ backs the "Unable to refresh — showing data from
+  // {{time}}" banner (UX-OBRS-424-fleet-live-map.md §9.5). It must be honest
+  // about the STORE's own fetch success/failure, independent of any
+  // per-row staleness the payload itself carries.
+  describe('lastFetchedAt$', () => {
+    it('is null before the first fetch', () => {
+      const store = new TestStore();
+      let value: Date | null | undefined = undefined;
+      store.lastFetchedAt$.subscribe((v) => (value = v));
+      expect(value).toBeNull();
+    });
+
+    it('emits a new Date on every successful run()', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.resolve({ items: [1] });
+
+      await store.refresh();
+      let first: Date | null | undefined;
+      // MUST unsubscribe before the second refresh. A left-open subscription
+      // on a BehaviorSubject keeps writing into `first`, so the later
+      // `first` vs `second` comparison compares the SECOND Date to itself —
+      // the assertion then holds no matter what run() does, including if the
+      // second fetch never stamped at all.
+      const sub = store.lastFetchedAt$.subscribe((v) => (first = v));
+      sub.unsubscribe();
+      expect(first).not.toBeNull();
+
+      await new Promise((r) => setTimeout(r, 5));
+      await store.refresh();
+      let second: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (second = v)).unsubscribe();
+
+      expect(second).not.toBeNull();
+      // Identity, not just >=: two stamps taken inside the same millisecond
+      // are `getTime()`-equal, so only a distinct instance proves the second
+      // successful run() actually re-stamped.
+      expect(second).not.toBe(first as unknown as Date);
+      expect((second as unknown as Date).getTime()).toBeGreaterThanOrEqual((first as unknown as Date).getTime());
+    });
+
+    it('does not update on a failed run()', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.resolve({ items: [1] });
+      await store.refresh();
+
+      let stamped: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (stamped = v));
+      const afterSuccess = stamped;
+
+      store.fetchImpl = () => Promise.reject(new Error('network'));
+      await store.refresh();
+
+      let afterFailure: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (afterFailure = v));
+
+      expect(afterFailure).toBe(afterSuccess as Date);
+    });
+
+    it('resets to null on clear()', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.resolve({ items: [1] });
+      await store.refresh();
+
+      let stamped: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (stamped = v));
+      expect(stamped).not.toBeNull();
+
+      store.clear();
+
+      let afterClear: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (afterClear = v));
+      expect(afterClear).toBeNull();
+    });
+
+    it('resets to null on logout (authStatus$ -> false)', async () => {
+      const authStatus$ = new BehaviorSubject<boolean>(true);
+      const store = new TestStore(authStatus$);
+      store.fetchImpl = () => Promise.resolve({ items: [1] });
+      await store.refresh();
+
+      let stamped: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (stamped = v));
+      expect(stamped).not.toBeNull();
+
+      authStatus$.next(false);
+
+      let afterLogout: Date | null | undefined;
+      store.lastFetchedAt$.subscribe((v) => (afterLogout = v));
+      expect(afterLogout).toBeNull();
+    });
+  });
 });

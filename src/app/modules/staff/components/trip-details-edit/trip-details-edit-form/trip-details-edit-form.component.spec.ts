@@ -8,9 +8,6 @@ import { AdminVehicleDto, AdminVehicleTypeDto } from '../../../../../services/ad
 import { CalendarModule } from 'primeng/calendar';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { NoopAnimationsModule } from '@angular/platform-browser/animations';
-import { PassengerSeatVanComponent } from '../../../../passenger-info/components/passenger-seat-van/passenger-seat-van.component';
-import { PassengerSeatBusComponent } from '../../../../passenger-info/components/passenger-seat-bus/passenger-seat-bus.component';
-import { PassengerSeatBoxComponent } from '../../../../passenger-info/components/passenger-seat-box/passenger-seat-box.component';
 
 describe('TripDetailsEditFormComponent', () => {
   let component: TripDetailsEditFormComponent;
@@ -36,9 +33,6 @@ describe('TripDetailsEditFormComponent', () => {
       declarations: [
         TripDetailsEditFormComponent,
         AdminDropdownComponent,
-        PassengerSeatVanComponent,
-        PassengerSeatBusComponent,
-        PassengerSeatBoxComponent,
       ],
       imports: [
         CommonModule,
@@ -55,7 +49,6 @@ describe('TripDetailsEditFormComponent', () => {
     component.vehicleTypes = mockVehicleTypes;
     component.vehicles = mockVehicles;
     component.drivers = [];
-    component.seatMapOptions = [];
     fixture.detectChanges();
   });
 

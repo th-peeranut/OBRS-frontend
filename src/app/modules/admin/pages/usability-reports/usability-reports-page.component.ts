@@ -17,6 +17,7 @@ import {
   DETAIL_STATUS_VALUES,
   OWNER_DETAIL_STATUS_VALUES,
   STATUS_FILTER_VALUES,
+  StatusFilterValue,
   StatusOption,
   buildStatusOptionList,
   canMarkAsDuplicate as canMarkAsDuplicatePure,
@@ -61,9 +62,10 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // thereafter — the filter dropdown drops its [placeholder] binding
   // (design-system.md §3.1 leak: a placeholder header would emit '' and
   // re-enter the retired "show all" mode), so its visible label always comes
-  // from the seeded value via the dropdown's own selectedLabel. Typed to
-  // include '' only to match UsabilityReportsStore.setStatus()'s signature.
-  protected selectedStatusFilter: UsabilityReportStatus | '' = 'new';
+  // from the seeded value via the dropdown's own selectedLabel. OBRS-524
+  // added 'all' as a real, concrete, selectable OPTION (not a placeholder) —
+  // the default itself is unchanged (still role-based, see ngOnInit below).
+  protected selectedStatusFilter: StatusFilterValue = 'new';
   // Built from i18n in ngOnInit (and rebuilt on language change) so the admin
   // dropdowns match the translated status labels shown in the table.
   protected statusFilterOptions: StatusOption[] = [];
@@ -185,9 +187,11 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // OBRS-378: maps a '' selection (defensive — the dropdown's [placeholder]
   // binding is dropped so this shouldn't fire in practice, design-system.md
   // §3.1) back to the role default rather than ever sending an undefined
-  // status to the server.
+  // status to the server. OBRS-524: 'all' is now a real, concrete option
+  // value from that same list, so it passes straight through unchanged —
+  // only an actually-empty '' still falls back to the role default.
   protected onStatusFilterChange(value: string): void {
-    const status = (value || (this.isAdmin ? 'accepted' : 'new')) as UsabilityReportStatus;
+    const status = (value || (this.isAdmin ? 'accepted' : 'new')) as StatusFilterValue;
     this.selectedStatusFilter = status;
     // OBRS-403 (Scrutinize): deliberately does NOT seed `currentPage = 1` here.
     // The store owns the page (setStatus resets it to 0); `currentPage` is a
@@ -368,7 +372,12 @@ export class UsabilityReportsPageComponent implements OnInit, OnDestroy {
   // otherwise a patched-but-out-of-tab row keeps rendering until the next
   // full refresh.
   private applyRowStatus(id: string, status: UsabilityReportStatus): void {
-    const leavesTab = this.selectedStatusFilter !== '' && status !== this.selectedStatusFilter;
+    // OBRS-524: when the active filter is 'all', every status is in view —
+    // a status change can never move a row out of the currently-shown set,
+    // so it must never be treated as leaving the tab (that would wrongly
+    // remove/hide a row that is still perfectly visible under 'all').
+    const leavesTab =
+      this.selectedStatusFilter !== 'all' && status !== this.selectedStatusFilter;
     this.store.mutate((current) =>
       leavesTab
         ? {

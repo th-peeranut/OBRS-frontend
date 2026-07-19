@@ -20,15 +20,32 @@ export interface StatusOption {
   label: string;
 }
 
-// The table filter offers all 7 statuses (OBRS-378's 6 plus 'duplicate' from
-// OBRS-376, so the table can also be filtered down to just the merged-away
-// reports), non-terminal states grouped before terminal ones per the UX
-// spec; 'new'/'in_review' are triage states, not outcomes, so they are
-// excluded from the decision-only detail dropdowns below (design-system.md
-// §3.1: no pre-seeded default). 'duplicate' is ALSO excluded from the detail
-// dropdown (see DETAIL_STATUS_VALUES below) — it is never a
-// dropdown-selectable decision, only reachable via the mark/un-mark actions.
-export const STATUS_FILTER_VALUES: readonly UsabilityReportStatus[] = [
+// OBRS-524: the status filter dropdown's value type. This is NOT a revert of
+// OBRS-378's removal of the old "show all" mode — that mode was an empty
+// [placeholder] option emitting '' (a design-system.md §3.1 violation: a
+// selectable empty row, and an undefined status silently sent to the
+// server). 'all' is a REAL option with a concrete value, sitting in the
+// option list exactly like every other status — the dropdown's visible
+// label always comes from a selected option, never a placeholder. Only the
+// service/store layer (usability-reports.store.ts's fetch()) treats 'all'
+// specially, by omitting the ?status= param — confirmed against the live
+// backend (UsabilityReportService.listReports: status==null -> findAll(),
+// no implicit filter, 'duplicate'/'dismissed' rows included) that omitting
+// the param really does mean "every status", not a partial view.
+export type StatusFilterValue = UsabilityReportStatus | 'all';
+
+// The table filter offers 'all' (OBRS-524) plus all 7 statuses (OBRS-378's 6
+// plus 'duplicate' from OBRS-376, so the table can also be filtered down to
+// just the merged-away reports), non-terminal states grouped before terminal
+// ones per the UX spec; 'new'/'in_review' are triage states, not outcomes,
+// so they are excluded from the decision-only detail dropdowns below
+// (design-system.md §3.1: no pre-seeded default). 'duplicate' is ALSO
+// excluded from the detail dropdown (see DETAIL_STATUS_VALUES below) — it is
+// never a dropdown-selectable decision, only reachable via the mark/un-mark
+// actions. 'all' is listed first — it is an added CHOICE, never the default
+// (the page still seeds a concrete role-based status in ngOnInit).
+export const STATUS_FILTER_VALUES: readonly StatusFilterValue[] = [
+  'all',
   'new',
   'in_review',
   'accepted',
@@ -84,7 +101,7 @@ export function canMarkAsDuplicate(status: UsabilityReportStatus): boolean {
 // `TranslateService.instant` (bound), kept as an explicit param so this stays
 // pure/unit-testable without a TranslateService instance.
 export function buildStatusOptionList(
-  statusValues: readonly UsabilityReportStatus[],
+  statusValues: readonly StatusFilterValue[],
   translateFn: (key: string) => string
 ): StatusOption[] {
   return statusValues.map((value) => ({
@@ -228,7 +245,10 @@ export const FIFO_STATUSES: ReadonlySet<UsabilityReportStatus> = new Set<Usabili
   'in_review',
 ]);
 
-export function sortForStatus(status: UsabilityReportStatus | ''): string[] {
-  const dir = status !== '' && FIFO_STATUSES.has(status) ? 'asc' : 'desc';
+// OBRS-524: 'all' sorts newest-first, same as every other non-FIFO tab —
+// there is no single "actively worked" queue to order oldest-first when
+// every status is mixed together.
+export function sortForStatus(status: StatusFilterValue | ''): string[] {
+  const dir = status !== '' && status !== 'all' && FIFO_STATUSES.has(status) ? 'asc' : 'desc';
   return [`createdAt,${dir}`, `id,${dir}`];
 }

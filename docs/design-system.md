@@ -90,8 +90,8 @@ token it's copied from:
 | `.is-warning` | `--admin-warning-bg` / `--admin-warning-text` | needs attention | |
 | `.is-danger` | `--admin-danger-bg` / `--admin-danger-text` | rejected / error | also the §2.1 `danger` role's runtime binding. |
 | `.is-accepted` | `--admin-accepted-bg` / `--admin-accepted-text` | accepted (usability reports) | green. |
-| `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text, no dark-mode override. |
-| `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text, no dark-mode override. |
+| `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text. **Has a dark-mode override** (OBRS-256, `admin-theme.scss:240-243`, inverts to bg `#29323d`/text `#c7d3de`, ≈8.6:1) — this row previously (incorrectly) said "no dark-mode override"; corrected during OBRS-424 review after the stale claim was cited as evidence in that card's UX spec. |
+| `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text. **Has a dark-mode override** (OBRS-100, `admin-theme.scss:211-214`, inverts to bg `#333b42`/text `#cdd8df`) — same correction as `.is-info` above. |
 | `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
 | `.is-duplicate` | `--admin-duplicate-bg` / `--admin-duplicate-text` | `duplicate` usability-report status (OBRS-376) | **violet** — same light-mode values as `.is-delayed` but a distinct token (PO decision, 2026-07-16): `duplicate` originally reused `.is-neutral`, colliding with OBRS-378's `dismissed` (both rendered as identical grey chips), and `.is-delayed` was ruled out as a reuse target because it's semantically the unrelated "trip delayed" pill. **Unlike `.is-delayed`, this ONE HAS a dark-mode override** (`--admin-duplicate-bg: #3b2f5c` / `--admin-duplicate-text: #ddd6fe`, ≈8.7:1) — `.is-delayed` skipping it renders as a near-white lavender blob on the dark shell, the exact OBRS-100 bug; don't copy that gap for new violet tokens. |
 
@@ -590,7 +590,7 @@ enforced rule with a test behind it.
   **response** guard for a no-debounce, immediate-PUT-per-click write, plus a
   `reorderPending` flag gating the page's `store.data$` subscription so an
   unrelated background emission can't clobber the just-clicked local order
-  mid-flight. See `docs/adr/0999-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
+  mid-flight. See `docs/adr/0025-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
   Reuse this shape for the next reorderable admin list instead of reaching
   for `cdkDrag`/`p-orderList` as a first instinct.
 
@@ -619,6 +619,92 @@ enforced rule with a test behind it.
   marker classes (a shared marker would let a boarding-manifest print and a
   waybill print interfere if ever triggered concurrently). Reuse this idiom
   (new marker-class pair per print surface) for the next print feature.
+
+- **Leaflet + MapTiler tiles as a second mapping stack, alongside `@angular/google-maps`**
+  (OBRS-424, `FleetMapPanelComponent`): the only existing map component
+  (`RouteMapPanelComponent`) is Google-specific and booking-coupled, and the
+  pre-decided direction (OBRS-301, `IMPLEMENTATION_CHECKLIST.md`) commits
+  Leaflet for the customer-facing layer 2 (OBRS-425/426) — building layer 1 on
+  Google would force layer 2 to either pay or be rewritten, so layer 1 builds
+  on the same stack layer 2 needs. The owner decided the tile provider is
+  **MapTiler**, not raw OSM tiles — **not for cost** (both are ฿0 at this
+  card's volume; Google Dynamic Maps' 10,000-free-load/month tier isn't close
+  to being reached by a 6-vehicle staff tool), but because (a) it avoids the
+  Google-vs-Leaflet fork above and (b) the existing `mapsApiKey` is
+  referrer-restricted with a documented `localhost` failure mode that would
+  have obstructed this card's own local QA. Two mapping libraries now coexist
+  in the bundle (accepted — never used on the same page; Leaflet is materially
+  smaller). The tile request URL is composed in one function
+  (`fleetMapTileUrl(key)`); the MapTiler key itself is normal multi-file
+  `environment.*.ts` plumbing (§4.3 of `UX-OBRS-424-fleet-live-map.md`),
+  mirrored exactly off the existing `mapsApiKey` shape — including its
+  empty-key degradation getter (`showMap` → `canShowMap`), since
+  `environment.base.ts` ships an empty key by default and CI/fresh clones hit
+  that path every time. Dark-mode tiles deliberately stay **light** in both
+  themes, same precedent as the Google map (`dark-theme.scss:562-565`) — and
+  that choice is a **prerequisite**, not incidental, for the marker-fill
+  pattern below (marker colors have no dark override of their own; they're
+  only legible because they always sit on a light tile). MapTiler's
+  attribution terms require both MapTiler and OpenStreetMap credited with the
+  link **visible** (not collapsed behind Leaflet's "i" toggle) — never disable
+  `attributionControl`. The key is visible in tile request URLs in the browser
+  network tab; that's inherent to client-side tile requests and is mitigated
+  by domain restriction in the MapTiler dashboard, not by hiding it — don't
+  flag it as a leak. See `docs/adr/0024-leaflet-fleet-live-map.md`. Reuse
+  Leaflet+MapTiler (not `@angular/google-maps`, not raw OSM tiles) for the next
+  internal/high-frequency map feature; if a future card wants dark tiles, add
+  dark-mode overrides to `--admin-success-*`/`--admin-warning-*`/`--admin-danger-*`
+  FIRST (they currently have none — see the `.is-success`/`.is-warning`/`.is-danger`
+  rows in §2.4, which coexist safely with this pattern only because tiles stay
+  light).
+
+- **Ordered-ladder status resolver for booleans with a backend-documented
+  implication relationship, not a flat per-flag lookup** (OBRS-424,
+  `resolveFleetVehicleStatus()`, `shared/lib/fleet-vehicle-status.ts`): the
+  fleet-position contract's four booleans aren't independent —
+  `stale` is `true` whenever `positionKnown` is `false` (backend
+  `FleetPositionService.java:47`), and `deviceOnline` is only meaningful once
+  `positionKnown` is confirmed true (`:49`). The flat `Record`-lookup shape used
+  by `parcel-delivery-status.ts` (one slug → one token) can't express that
+  without checking flags in the wrong order — which silently renders every
+  never-reported/not-tracked vehicle as a false "device offline" state (a
+  correctness bug caught by `obrs-scrutinize`, not a cosmetic one). Instead, a
+  single function evaluates checks **top to bottom, first match wins**, with
+  the ordering dependency documented inline. Every consumer (map panel, side
+  list) shares this ONE `resolveFleetVehicleStatus()` call, so they can never
+  disagree about which state a given row is in; a second, separate derived
+  predicate (`FLEET_STATUS_HAS_MARKER`) is read by the map panel ONLY, to
+  decide marker eligibility — the side list has no notion of "has marker" at
+  all, since it renders every vehicle regardless. Reuse this "ordered ladder,
+  shared resolver, map-only marker predicate" shape for the next status
+  derived from booleans with a documented implication relationship between
+  them, instead of a flat lookup table.
+
+- **Marker fill/halo from a status token's `-text`/`-bg` pair** (OBRS-424,
+  `FleetMapPanelComponent`): a map pin needs one legible solid color, unlike a
+  `.admin-status` chip's two-tone pill. Rather than a new hex, markers reuse the
+  same `--admin-*-text`/`--admin-*-bg` CSS vars already bound to each status
+  role (§2.4), assigning `-text` to the marker's fill and `-bg` to its halo —
+  the same tokens, a different visual role. **Conditional, not unconditional:**
+  legible in dark mode only because tiles stay light (see the Leaflet entry
+  above) — `--admin-success-*`/`--admin-warning-*`/`--admin-danger-*` (the
+  three tokens markers actually use) have no dark-mode override at all, unlike
+  `--admin-neutral-*`/`--admin-inreview-*` (§2.4, corrected above). Reuse this
+  fill/halo split for the next map-marker feature (OBRS-425/426) — and carry
+  its light-tiles precondition forward with it, don't assume it "just works" on
+  a different surface.
+
+- **`lastFetchedAt$` on `AdminCollectionStore`** (OBRS-424,
+  `admin-collection-store.ts`): every SWR-backed page needs an honest way to
+  say "the backend call is failing, this is how old the shown data actually
+  is" — distinct from any per-row staleness the payload itself might carry
+  (conflating the two was flagged as the same category error the fleet-map
+  card itself is designed to avoid for `stale` vs. `deviceOnline`). The base
+  class had no such signal, and deriving one page-locally from `data$`'s
+  replay-on-resubscribe (`BehaviorSubject`) would lie on re-entry after a long
+  gap. Added once, additively (`lastFetchedAtSubject`, stamped in `run()`'s
+  success branch only), so every existing subclass is unaffected and the next
+  page needing a "data might be behind" banner doesn't re-derive it.
 
 ---
 

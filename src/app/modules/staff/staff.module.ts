@@ -40,6 +40,11 @@ import { ParcelDeliveryEntryPageComponent } from './pages/parcel-delivery-schedu
 import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
 import { ParcelCollectDialogComponent } from './components/parcel-collect-dialog/parcel-collect-dialog.component';
 
+// OBRS-424 — internal fleet live map (layer 1).
+import { FleetMapPageComponent } from './pages/fleet-map/fleet-map-page.component';
+import { FleetMapPanelComponent } from './components/fleet-map-panel/fleet-map-panel.component';
+import { FleetVehicleStatusListComponent } from './components/fleet-vehicle-status-list/fleet-vehicle-status-list.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -129,6 +134,16 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.LIST_SUBTITLE' },
       },
+      {
+        // OBRS-424: internal fleet live map (layer 1). Single requiredRoles
+        // entry, per the sell/schedules precedent — ROLE_GRANTS already
+        // expands this to salesperson+owner+admin; 'owner'/'admin' would be
+        // inert and 'driver' must stay excluded (UX-OBRS-424 §1).
+        path: 'fleet-map',
+        component: FleetMapPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.FLEET_MAP', subtitleKey: 'STAFF.FLEET_MAP.SUBTITLE' },
+      },
     ],
   },
 ];
@@ -155,6 +170,9 @@ export const staffRoutes: Routes = [
     ParcelDeliveryEntryPageComponent,
     ParcelDeliveryListPageComponent,
     ParcelCollectDialogComponent,
+    FleetMapPageComponent,
+    FleetMapPanelComponent,
+    FleetVehicleStatusListComponent,
   ],
   imports: [
     SharedModule,

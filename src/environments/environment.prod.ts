@@ -29,4 +29,5 @@ export const environment = {
   },
   mapsApiKey: prodEnv.mapsApiKey,
   googleClientId: prodEnv.googleClientId,
+  maptilerKey: prodEnv.maptilerKey,
 };

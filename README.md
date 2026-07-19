@@ -287,7 +287,7 @@ sites — **not** `lookups.store.ts`, whose write path was never wired.
 plain `.admin-icon-btn`, not a switch or a colored button** — both are new
 patterns with no local precedent before this card; the full reasoning (and
 the two rejected intermediate designs for the second one) is recorded in
-`docs/adr/0999-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
+`docs/adr/0025-inspection-items-admin-reorder-buttons-and-icon-only-retire-restore.md`.
 Reorder fires one `PUT /reorder` per click immediately (no debounce), guarded
 against out-of-order **responses** by a monotonic `latestReorderSeq` counter;
 a `reorderPending` flag additionally gates the page's `store.data$`
@@ -300,12 +300,77 @@ copying `LookupSettingsPageComponent`'s modal shell (`admin-modal-backdrop`/
 `admin-form-grid`) deliberately excludes its trash icon, delete-confirm modal,
 and `isDeleteModalOpen`/`confirmDelete()` members.
 
-**The 3-locale label editor** is a fixed-length (3), always `en, th, zh`,
+**The 3-locale label editor** is a fixed-length (3), always `th, en, zh`,
 `FormArray` built once in the constructor and only ever `reset()` (never
 rebuilt/torn down) on modal open; the `store.data$` subscription updates only
 `rows`, never `itemForm` — the direct fix for the FormArray-orphaning bug this
 same feature (OBRS-312) already shipped once. All three languages are
 required client-side, mirroring the server's set-equality enforcement.
+**Thai comes first** in both the form and the list column: it is the only
+locale actually read here (`SNAPSHOT_LOCALE = "th"` writes every history row
+from it), so it is the line the eye should land on. `localeLabelKeys` is
+index-aligned with the `FormArray` and a spec pins that alignment — reordering
+one without the other silently mislabels every field.
+
+### Internal fleet live map — layer 1 (OBRS-424)
+
+`/staff/fleet-map` (`FleetMapPageComponent`, `src/app/modules/staff/pages/fleet-map/`),
+gated `requiredRoles: ['salesperson']` (salesperson+owner+admin, driver
+excluded), nav entry inside `staff-layout.component.ts`'s `isSalesperson`
+branch. Shows every fleet vehicle on one **Leaflet + MapTiler** map
+(`docs/adr/0024-leaflet-fleet-live-map.md` — a second, independent mapping
+stack alongside `@angular/google-maps`), auto-refreshing every 60s via the
+existing `pollWhileVisible()` helper, backed by `FleetMapStore`
+(root-scoped `AdminCollectionStore<FleetPositionRespDto[]>`, no route param).
+
+**Status resolution is one ordered ladder, not four independent flag
+checks** (`shared/lib/fleet-vehicle-status.ts`, `resolveFleetVehicleStatus()`):
+backend `stale` is `true` whenever `positionKnown` is `false` (not a
+"don't care"), so checking `stale` before `positionKnown`/`gpsImeiConfigured`
+would render every never-reported/not-tracked vehicle as a false "device
+offline" state. The five resulting states (`NOT_TRACKED` → `AWAITING_SIGNAL`
+→ `OFFLINE` → `GPS_LOST` → `LIVE`) map onto the existing `.admin-status.is-*`
+tokens (no new hex); a separate `FLEET_STATUS_HAS_MARKER` predicate (map-only)
+decides marker eligibility — `NOT_TRACKED`/`AWAITING_SIGNAL` never get a pin.
+`FleetVehicleStatusListComponent` renders every vehicle regardless (it never
+reads `FLEET_STATUS_HAS_MARKER`), making it the fallback source of truth when
+the map itself can't render at all.
+
+**`FleetMapPanelComponent`** (`components/fleet-map-panel/`) owns the actual
+`L.Map` instance. Two hard rules, each tied to a documented failure class in
+this codebase: markers are held in a `Map<vehicleId, L.Marker>` field and
+mutated in place every poll (`.setLatLng()`/`.setIcon()`/`.setPopupContent()`)
+— never rebuilt as a fresh array (`route-map-panel.component.ts:253-256`'s
+getter-landmine, same failure shape in the Leaflet world); and `ngOnChanges`
+is buffered into a `latestVehicles` field and replayed in `ngAfterViewInit`,
+since Angular always calls `ngOnChanges` before `ngAfterViewInit` and the
+root-scoped store replays cached data synchronously on every re-subscribe —
+so the `@Input` write reliably arrives before the view exists on re-entry.
+`ngOnDestroy` calls `this.map?.remove()` (this app has no
+`RouteReuseStrategy`, so every route entry builds a fresh map and the old one
+leaks without this). Marker fill/halo colors reuse the same
+`--admin-*-text`/`--admin-*-bg` CSS vars already bound to each `.admin-status`
+role, assigning `-text` to the marker's fill and `-bg` to its halo — legible
+in dark mode only because the tiles deliberately stay light in both themes
+(same precedent as the Google map, `dark-theme.scss:562-565` — see the ADR).
+
+**No MapTiler key is provisioned yet** — `environment.base.ts` ships
+`maptilerKey: ''`, so CI and every fresh clone take the empty-key path by
+default: `canShowMap` (mirroring `RouteMapPanelComponent.showMap`) skips
+`L.map(...)` entirely and renders the `STAFF.FLEET_MAP.MAP_UNAVAILABLE`
+placeholder in place of the canvas. The side list has no dependency on the
+map key at all, so the fleet's live/stale/offline/not-tracked status stays
+fully readable with zero key configured. `scripts/inject-sit-env.js` /
+`inject-prod-env.js` treat `MAPTILER_API_KEY`/`PROD_MAPTILER_API_KEY` as
+**optional** (default `''`) — unlike `mapsApiKey`/`googleClientId`/the prod
+payment vars, a missing map key costs only a map, never a build failure.
+
+`AdminCollectionStore` gained an additive `lastFetchedAt$` (stamped on every
+successful fetch, reset in `clear()`) so the page's
+`STAFF.FLEET_MAP.REFRESH_FAILED_BANNER` can honestly say how old the shown
+data is — distinct from any per-vehicle staleness the payload itself carries,
+the same category error the `stale`/`deviceOnline` split above is designed to
+avoid. Every other `AdminCollectionStore` subclass is unaffected.
 
 ### Boarding manifest — schedule delay control (OBRS-272)
 

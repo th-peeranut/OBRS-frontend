@@ -20,7 +20,12 @@
          re-entering the retired "show all" mode and sending an undefined
          status to the server. The dropdown always holds a concrete
          role-default status, so its label comes from the selected option
-         (the dropdown's own selectedLabel), not a placeholder. -->
+         (the dropdown's own selectedLabel), not a placeholder.
+         OBRS-524: "see everything" is now offered too, but NOT by reverting
+         to that placeholder shape — it's a REAL option (value 'all') in
+         statusFilterOptions below, selectable and de-selectable exactly like
+         'new'/'accepted'/etc. Only usability-reports.store.ts's fetch()
+         treats 'all' specially, by omitting ?status= server-side. -->
     <app-admin-dropdown
       [value]="selectedStatusFilter"
       [options]="statusFilterOptions"

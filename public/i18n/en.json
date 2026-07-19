@@ -1004,13 +1004,14 @@
       "STATUS": {
         "LABEL": "Status",
         "SAVE": "Save",
+        "all": "All statuses",
         "new": "New",
         "in_review": "In Review",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",
         "rejected": "Rejected",
-        "duplicate": "Duplicate"
+        "duplicate": "Duplicate of another report"
       },
       "STATUS_UPDATE_SUCCESS": "Status updated successfully.",
       "STATUS_UPDATE_FAILED": "Failed to update status. Please try again.",
@@ -1897,7 +1898,8 @@
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_DELIVERY": "Parcel Deliveries",
-      "INSPECTION": "Vehicle Inspection"
+      "INSPECTION": "Vehicle Inspection",
+      "FLEET_MAP": "Fleet Live Map"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -1922,7 +1924,8 @@
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
       "BOARDING": "Boarding List",
-      "INSPECTION": "Inspection"
+      "INSPECTION": "Inspection",
+      "FLEET_MAP": "Fleet Map"
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",
@@ -2227,9 +2230,6 @@
       "TRIP_DETAIL_EDIT_CAPACITY": "Seating Capacity",
       "TRIP_DETAIL_EDIT_CAPACITY_PH": "Enter seat count",
       "TRIP_DETAIL_EDIT_CAPACITY_HINT": "Max {{max}} seats ({{type}})",
-      "TRIP_DETAIL_EDIT_SEAT_PLAN": "Seating Plan",
-      "TRIP_DETAIL_EDIT_SEAT_PLAN_PH": "Select seating plan",
-      "TRIP_DETAIL_EDIT_SEAT_PREVIEW": "Seat Layout Preview",
       "TRIP_DETAIL_EDIT_DRIVER": "Driver",
       "TRIP_DETAIL_EDIT_DRIVER_PH": "Select driver",
       "TRIP_DETAIL_EDIT_NO_DRIVER": "— No driver —",
@@ -2438,6 +2438,37 @@
         "SERVICE_UNAVAILABLE": "The service is temporarily unavailable. Please try again later."
       },
       "VERDICT_GROUP_ARIA": "Verdict — OK or Needs repair"
+    },
+    "FLEET_MAP": {
+      "SUBTITLE": "See every vehicle's live position in one place",
+      "CENTER_ON_FLEET": "Center on fleet",
+      "VEHICLE_LIST_TITLE": "Vehicles",
+      "MAP_UNAVAILABLE": "Map unavailable — vehicle status below is still live.",
+      "STATUS": {
+        "LIVE": "Live",
+        "GPS_LOST": "GPS signal lost",
+        "OFFLINE": "Device offline",
+        "AWAITING_SIGNAL": "Awaiting first signal",
+        "NOT_TRACKED": "Not tracked"
+      },
+      "UPDATED_JUST_NOW": "Updated just now",
+      "UPDATED_MINUTES_AGO": "Updated {{count}} min ago",
+      "UPDATED_HOURS_AGO": "Updated {{count}} h ago",
+      "NO_SIGNAL_LABEL": "No signal",
+      "EMPTY_FLEET_BANNER_TITLE": "No vehicles are reporting GPS position yet",
+      "EMPTY_FLEET_BANNER_BODY": "Positions will appear here once a tracker is installed and configured for a vehicle.",
+      "REFRESH_FAILED_BANNER": "Unable to refresh — showing data from {{time}}",
+      "LOAD_FAILED": "Unable to load fleet positions.",
+      "COL": {
+        "PLATE": "Plate",
+        "STATUS": "Status",
+        "LAST_UPDATE": "Last update"
+      },
+      "POPUP": {
+        "SPEED": "Speed: {{value}} km/h",
+        "ENGINE_ON": "Engine on",
+        "ENGINE_OFF": "Engine off"
+      }
     }
   },
   "PARCEL_TRACKING": {
