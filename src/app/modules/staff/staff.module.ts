@@ -1,5 +1,5 @@
 import { inject, NgModule } from '@angular/core';
-import { RouterModule, Routes } from '@angular/router';
+import { Router, RouterModule, Routes, UrlTree } from '@angular/router';
 import { CalendarModule } from 'primeng/calendar';
 import { DropdownModule } from 'primeng/dropdown';
 import { TabViewModule } from 'primeng/tabview';
@@ -36,14 +36,29 @@ import { ParcelConsignFormComponent } from './components/parcel-consign-form/par
 import { ParcelIntakeResultPanelComponent } from './components/parcel-intake-result-panel/parcel-intake-result-panel.component';
 import { ParcelWaybillPageComponent } from './pages/parcel-waybill/parcel-waybill-page.component';
 import { ParcelWaybillPaperComponent } from './components/parcel-waybill-paper/parcel-waybill-paper.component';
-import { ParcelDeliveryEntryPageComponent } from './pages/parcel-delivery-schedule/parcel-delivery-schedule-page.component';
 import { ParcelDeliveryListPageComponent } from './pages/parcel-delivery-list/parcel-delivery-list-page.component';
 import { ParcelCollectDialogComponent } from './components/parcel-collect-dialog/parcel-collect-dialog.component';
 
 // OBRS-416 (Epic OBRS-302, Card 3b) — staff/driver physical parcel verification.
-import { ParcelVerifyEntryPageComponent } from './pages/parcel-verify-schedule/parcel-verify-schedule-page.component';
 import { ParcelVerifyListPageComponent } from './pages/parcel-verify-list/parcel-verify-list-page.component';
 import { ParcelVerifyDialogComponent } from './components/parcel-verify-dialog/parcel-verify-dialog.component';
+
+// OBRS-574 — the two pages above now share one schedule picker and one tabbed
+// page; the two entry pickers they used to have were deleted with this card.
+import { ParcelScheduleEntryPageComponent } from './pages/parcel-schedule/parcel-schedule-entry-page.component';
+import {
+  ParcelScheduleTab,
+  ParcelScheduleTabsPageComponent,
+} from './pages/parcel-schedule/parcel-schedule-tabs-page.component';
+
+/** Legacy `parcels/{verify,deliveries}/:scheduleId` → the merged page, on the
+ * tab that URL used to be. Built as a `UrlTree` rather than a string so the
+ * query param is encoded by the router, not by hand. */
+function legacyParcelScheduleUrl(scheduleId: string, tab: ParcelScheduleTab): UrlTree {
+  return inject(Router).createUrlTree(['/staff/parcels/schedule', scheduleId], {
+    queryParams: { tab },
+  });
+}
 
 // OBRS-424 — internal fleet live map (layer 1).
 import { FleetMapPageComponent } from './pages/fleet-map/fleet-map-page.component';
@@ -127,35 +142,44 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.PARCEL_WAYBILL', subtitleKey: 'STAFF.PARCEL_WAYBILL.SUBTITLE' },
       },
+      // OBRS-574 — one schedule selection for both parcel jobs on a trip:
+      // verifying boxes in (OBRS-416) and handing them over (OBRS-305). Those
+      // shipped as two routes with two byte-for-byte identical entry pickers,
+      // so a driver working one trip picked that trip twice per run. The
+      // requiredRoles pair is unchanged from both — the role hierarchy already
+      // admits salesperson/owner/admin over the backend's DRIVER-only endpoint
+      // gate (the fleet-map comment below documents the same expansion).
       {
-        path: 'parcels/deliveries',
-        component: ParcelDeliveryEntryPageComponent,
+        path: 'parcels/schedule',
+        component: ParcelScheduleEntryPageComponent,
         canActivate: [AuthGuard],
-        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.ENTRY_SUBTITLE' },
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_SCHEDULE', subtitleKey: 'STAFF.PARCEL_SCHEDULE.ENTRY_SUBTITLE' },
       },
+      {
+        path: 'parcels/schedule/:scheduleId',
+        component: ParcelScheduleTabsPageComponent,
+        canActivate: [AuthGuard],
+        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_SCHEDULE', subtitleKey: 'STAFF.PARCEL_SCHEDULE.TABS_SUBTITLE' },
+      },
+      // Legacy aliases. Both pairs of URLs shipped and may be bookmarked, so
+      // they resolve rather than 404 — carrying the tab, because a detail
+      // redirect that lands on the merged page's *default* tab would look like
+      // it worked while showing the other half of the job.
+      //
+      // pathMatch: 'full' is load-bearing on the two bare ones. A child route
+      // matches by PREFIX by default, so without it '/staff/parcels/verify/8'
+      // matches 'parcels/verify' first, and the router appends the leftover
+      // segment to the target — landing on '/staff/parcels/schedule/8' with no
+      // tab, quietly skipping the :scheduleId rule two lines below.
+      { path: 'parcels/deliveries', pathMatch: 'full', redirectTo: '/staff/parcels/schedule' },
+      { path: 'parcels/verify', pathMatch: 'full', redirectTo: '/staff/parcels/schedule' },
       {
         path: 'parcels/deliveries/:scheduleId',
-        component: ParcelDeliveryListPageComponent,
-        canActivate: [AuthGuard],
-        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_DELIVERY', subtitleKey: 'STAFF.PARCEL_DELIVERY.LIST_SUBTITLE' },
-      },
-      // OBRS-416 (Epic OBRS-302, Card 3b) — staff/driver physical parcel
-      // verification (created -> accepted|rejected). Same requiredRoles
-      // pair as boarding/parcels/deliveries above; the role hierarchy
-      // already admits salesperson/owner/admin over the backend's
-      // DRIVER-only endpoint gate (staff.module.ts:138-141's fleet-map
-      // comment documents the same expansion).
-      {
-        path: 'parcels/verify',
-        component: ParcelVerifyEntryPageComponent,
-        canActivate: [AuthGuard],
-        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_VERIFY', subtitleKey: 'STAFF.PARCEL_VERIFY.ENTRY_SUBTITLE' },
+        redirectTo: ({ params }) => legacyParcelScheduleUrl(params['scheduleId'], 'handover'),
       },
       {
         path: 'parcels/verify/:scheduleId',
-        component: ParcelVerifyListPageComponent,
-        canActivate: [AuthGuard],
-        data: { requiredRoles: ['driver', 'salesperson'], titleKey: 'STAFF.PAGES.PARCEL_VERIFY', subtitleKey: 'STAFF.PARCEL_VERIFY.LIST_SUBTITLE' },
+        redirectTo: ({ params }) => legacyParcelScheduleUrl(params['scheduleId'], 'verify'),
       },
       {
         // OBRS-424: internal fleet live map (layer 1). Single requiredRoles
@@ -190,12 +214,12 @@ export const staffRoutes: Routes = [
     ParcelIntakeResultPanelComponent,
     ParcelWaybillPageComponent,
     ParcelWaybillPaperComponent,
-    ParcelDeliveryEntryPageComponent,
     ParcelDeliveryListPageComponent,
     ParcelCollectDialogComponent,
-    ParcelVerifyEntryPageComponent,
     ParcelVerifyListPageComponent,
     ParcelVerifyDialogComponent,
+    ParcelScheduleEntryPageComponent,
+    ParcelScheduleTabsPageComponent,
     FleetMapPageComponent,
     FleetMapPanelComponent,
     FleetVehicleStatusListComponent,

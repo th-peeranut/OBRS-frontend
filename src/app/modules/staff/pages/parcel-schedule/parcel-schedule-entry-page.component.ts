@@ -8,7 +8,7 @@ import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time'
 import { DriverSchedulesStore } from '../driver-schedules/driver-schedules.store';
 import { StaffSchedulesStore } from '../staff-schedules/staff-schedules.store';
 
-interface ParcelVerifyScheduleRow {
+interface ParcelScheduleRow {
   id: number;
   tripId: string;
   departure: string;
@@ -19,26 +19,30 @@ interface ParcelVerifyScheduleRow {
 }
 
 /**
- * `/staff/parcels/verify` — schedule picker for the physical verification
- * flow (OBRS-416). Deliberately mirrors `ParcelDeliveryEntryPageComponent`
- * byte-for-byte in shape (same driver/salesperson schedule-source split,
- * same row shape, same empty/loading states) — only the navigation target
- * differs (`/staff/parcels/verify/:scheduleId` instead of
- * `/staff/parcels/deliveries/:scheduleId`). This is a deliberate
- * near-duplicate of an existing page rather than a shared generic
- * "schedule picker" component, matching the existing precedent:
- * `ParcelDeliveryEntryPageComponent` itself does not attempt to generalize
- * over `BoardingEntryPageComponent` (see that component's own doc comment)
- * — extracting a shared component now would touch three existing pages, out
- * of this card's scope (per UX-OBRS-416 §"Component hierarchy").
+ * `/staff/parcels/schedule` — the ONE schedule picker for parcel work
+ * (OBRS-574).
+ *
+ * It replaces two pickers that were identical apart from where their row
+ * button navigated: `ParcelVerifyEntryPageComponent` (OBRS-416) and
+ * `ParcelDeliveryEntryPageComponent` (OBRS-305). Verifying boxes in and handing
+ * them over are two moments of the SAME trip, so a driver working one trip was
+ * picking that trip twice per run and had to know which menu the current moment
+ * belonged to. Now the trip is chosen once and the moment is a tab
+ * ({@link ParcelScheduleTabsPageComponent}).
+ *
+ * The near-duplication those two pages documented as deliberate is what this
+ * page collapses; the remaining shape (driver/salesperson schedule-source
+ * split, row shape, empty/loading states) still mirrors
+ * `BoardingEntryPageComponent`, which serves a different job on the same trip
+ * and is deliberately left alone.
  */
 @Component({
-  selector: 'app-parcel-verify-schedule-page',
-  templateUrl: './parcel-verify-schedule-page.component.html',
-  styleUrl: './parcel-verify-schedule-page.component.scss',
+  selector: 'app-parcel-schedule-entry-page',
+  templateUrl: './parcel-schedule-entry-page.component.html',
+  styleUrl: './parcel-schedule-entry-page.component.scss',
 })
-export class ParcelVerifyEntryPageComponent implements OnInit, OnDestroy {
-  protected rows: ParcelVerifyScheduleRow[] = [];
+export class ParcelScheduleEntryPageComponent implements OnInit, OnDestroy {
+  protected rows: ParcelScheduleRow[] = [];
   protected isLoading = false;
   protected readonly skeletonRows = Array.from({ length: 4 });
 
@@ -98,8 +102,15 @@ export class ParcelVerifyEntryPageComponent implements OnInit, OnDestroy {
     return !this.isLoading && this.rows.length === 0;
   }
 
-  protected viewVerify(row: ParcelVerifyScheduleRow): void {
-    void this.router.navigate(['/staff/parcels/verify', row.id]);
+  /**
+   * No `tab` query param on purpose: arriving from this picker is exactly the
+   * case where the merged page should work out which half of the job is due,
+   * from the schedule's departure time. Pinning a tab here would override that
+   * for every arrival and leave the derivation reachable only from a legacy
+   * bookmark.
+   */
+  protected viewSchedule(row: ParcelScheduleRow): void {
+    void this.router.navigate(['/staff/parcels/schedule', row.id]);
   }
 
   private buildRows(schedules: AdminScheduleDto[]): void {

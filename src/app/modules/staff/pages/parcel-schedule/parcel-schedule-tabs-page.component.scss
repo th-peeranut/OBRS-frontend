@@ -1,0 +1,5 @@
+// No component-scoped styles — the tab strip is Bootstrap's global
+// .nav-tabs/.nav-link, and each tab's body is an existing page that keeps its
+// own styles. Deliberately NOT p-tabView (the walk-in centre panel's choice):
+// this tab strip is driven by the URL, and PrimeNG's index-based selection
+// would have to be kept in sync with the `tab` query param in both directions.

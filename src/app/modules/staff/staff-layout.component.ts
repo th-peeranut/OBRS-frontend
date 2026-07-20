@@ -113,9 +113,13 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
       items.push({ path: 'parcels/consign', labelKey: 'STAFF.NAV.PARCEL_CONSIGN', icon: 'inventory_2', section: 'parcels' });
     }
 
+    // OBRS-574: one entry, not two. 'parcels/deliveries' and 'parcels/verify'
+    // were two doors onto the same trip — the driver now picks the trip once
+    // and the two jobs are tabs on 'parcels/schedule'. The old paths still
+    // resolve (redirects in staff.module.ts) but are no longer offered here:
+    // leaving them would keep on screen exactly the choice this removed.
     if (isSalesperson || isDriver) {
-      items.push({ path: 'parcels/deliveries', labelKey: 'STAFF.NAV.PARCEL_DELIVERY', icon: 'local_shipping', section: 'parcels' });
-      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check', section: 'parcels' });
+      items.push({ path: 'parcels/schedule', labelKey: 'STAFF.NAV.PARCEL_SCHEDULE', icon: 'local_shipping', section: 'parcels' });
     }
 
     return items;

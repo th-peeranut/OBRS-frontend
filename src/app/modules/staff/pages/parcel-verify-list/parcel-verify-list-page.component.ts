@@ -37,7 +37,11 @@ const VERIFY_ERROR_KEYS: Record<string, string> = {
 };
 
 /**
- * Smart page: `/staff/parcels/verify/:scheduleId` (driver + salesperson —
+ * Smart page, rendered as the _ตรวจรับ_ tab of
+ * `/staff/parcels/schedule/:scheduleId` (OBRS-574 merged it with the handover
+ * list; `/staff/parcels/verify/:scheduleId` still redirects here). It reads
+ * `scheduleId` off the route it is rendered under, which is why the merge
+ * needed no change in this file. Driver + salesperson —
  * the role hierarchy means a salesperson session also satisfies the
  * DRIVER-only `POST .../verify` endpoint). Component-scoped
  * `ParcelVerifyListStore` drives the manifest, backed by the dedicated

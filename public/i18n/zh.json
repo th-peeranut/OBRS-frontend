@@ -1938,8 +1938,7 @@
       "BOARDING": "登车名单",
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_WAYBILL": "运单",
-      "PARCEL_DELIVERY": "包裹配送",
-      "PARCEL_VERIFY": "验收包裹",
+      "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队实时地图"
     },
@@ -1967,8 +1966,7 @@
       "MY_SCHEDULES": "我的班次",
       "BOARDING": "登车名单",
       "PARCEL_CONSIGN": "寄送包裹",
-      "PARCEL_DELIVERY": "包裹配送",
-      "PARCEL_VERIFY": "验收包裹",
+      "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队地图",
       "SECTION": {
@@ -2404,12 +2402,9 @@
       "LOAD_FAILED": "无法加载此运单。"
     },
     "PARCEL_DELIVERY": {
-      "ENTRY_TITLE": "选择班次",
-      "ENTRY_SUBTITLE": "选择班次以查看包裹配送。",
       "LIST_SUBTITLE": "管理此班次的包裹交接。",
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。",
-      "VIEW_BTN": "包裹配送",
       "LIST_EMPTY_TITLE": "此班次暂无寄送包裹",
       "LOAD_FAILED": "无法加载包裹配送信息。",
       "COL": {
@@ -2458,9 +2453,17 @@
         "UNKNOWN": "未知状态"
       }
     },
-    "PARCEL_VERIFY": {
+    "PARCEL_SCHEDULE": {
       "ENTRY_TITLE": "选择班次",
-      "ENTRY_SUBTITLE": "选择班次以验收包裹。",
+      "ENTRY_SUBTITLE": "选择班次以验收或交接包裹。",
+      "TABS_SUBTITLE": "出发前验收包裹，抵达后交接。",
+      "VIEW_BTN": "打开",
+      "TAB": {
+        "VERIFY": "验收",
+        "HANDOVER": "交接"
+      }
+    },
+    "PARCEL_VERIFY": {
       "LIST_SUBTITLE": "称重/测量后接受或拒绝本班次的包裹。",
       "LIST_EMPTY_TITLE": "本班次没有待验收的包裹",
       "LIST_EMPTY_BODY": "所有包裹均已验收，或尚无包裹预订。",

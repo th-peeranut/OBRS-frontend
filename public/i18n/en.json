@@ -1938,8 +1938,7 @@
       "BOARDING": "Boarding List",
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_WAYBILL": "Waybill",
-      "PARCEL_DELIVERY": "Parcel Deliveries",
-      "PARCEL_VERIFY": "Verify Parcels",
+      "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Fleet Live Map"
     },
@@ -1967,8 +1966,7 @@
       "MY_SCHEDULES": "My Schedules",
       "BOARDING": "Boarding List",
       "PARCEL_CONSIGN": "Consign Parcel",
-      "PARCEL_DELIVERY": "Parcel Deliveries",
-      "PARCEL_VERIFY": "Verify Parcels",
+      "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
       "FLEET_MAP": "Fleet Map",
       "SECTION": {
@@ -2404,12 +2402,9 @@
       "LOAD_FAILED": "Unable to load this waybill."
     },
     "PARCEL_DELIVERY": {
-      "ENTRY_TITLE": "Select a Schedule",
-      "ENTRY_SUBTITLE": "Choose a schedule to view its parcel deliveries.",
       "LIST_SUBTITLE": "Manage parcel handoff for this schedule.",
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "You have no schedules assigned. Please check back later.",
-      "VIEW_BTN": "Deliveries",
       "LIST_EMPTY_TITLE": "No consigned parcels for this schedule",
       "LOAD_FAILED": "Unable to load parcel deliveries.",
       "COL": {
@@ -2458,9 +2453,17 @@
         "UNKNOWN": "Unknown"
       }
     },
-    "PARCEL_VERIFY": {
+    "PARCEL_SCHEDULE": {
       "ENTRY_TITLE": "Select a Schedule",
-      "ENTRY_SUBTITLE": "Choose a schedule to verify its parcels.",
+      "ENTRY_SUBTITLE": "Choose a schedule to verify or hand over its parcels.",
+      "TABS_SUBTITLE": "Verify parcels before departure, hand them over on arrival.",
+      "VIEW_BTN": "Open",
+      "TAB": {
+        "VERIFY": "Verify",
+        "HANDOVER": "Handover"
+      }
+    },
+    "PARCEL_VERIFY": {
       "LIST_SUBTITLE": "Weigh/measure and accept or reject parcels for this schedule.",
       "LIST_EMPTY_TITLE": "No parcels awaiting verification for this schedule",
       "LIST_EMPTY_BODY": "Every parcel here has already been verified, or none have been booked yet.",

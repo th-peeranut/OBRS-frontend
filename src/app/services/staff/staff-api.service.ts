@@ -681,7 +681,8 @@ export class StaffApiService {
 
   /** ASSUMED endpoint, not yet in the backend contract doc — see
    * `docs/handoff.md` Contract Requests (OBRS-305). Backs the delivery-handoff
-   * list for one schedule (`/staff/parcels/deliveries/:scheduleId`). This
+   * list for one schedule (the _ส่งมอบ_ tab of
+   * `/staff/parcels/schedule/:scheduleId` since OBRS-574). This
    * endpoint's backing query deliberately EXCLUDES `deliveryStatus ===
    * 'created'` rows (OBRS-415/OBRS-348) — it can never back the verify-list
    * screen; use `getParcelsPendingVerification` for that (OBRS-416 fix). */
@@ -695,7 +696,8 @@ export class StaffApiService {
   }
 
   /** OBRS-416 fix: dedicated endpoint for the verify-list screen
-   * (`/staff/parcels/verify/:scheduleId`). The sibling
+   * (the _ตรวจรับ_ tab of `/staff/parcels/schedule/:scheduleId` since
+   * OBRS-574). The sibling
    * `getConsignedParcelsForSchedule` above deliberately excludes
    * `deliveryStatus === 'created'` rows server-side, so filtering ITS
    * response client-side down to `'created'` is always an empty

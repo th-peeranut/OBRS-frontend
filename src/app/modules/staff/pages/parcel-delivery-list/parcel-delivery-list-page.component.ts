@@ -23,7 +23,10 @@ const ACTION_ERROR_KEYS: Record<string, string> = {
 };
 
 /**
- * Smart page: `/staff/parcels/deliveries/:scheduleId` (driver + salesperson —
+ * Smart page, rendered as the _ส่งมอบ_ tab of
+ * `/staff/parcels/schedule/:scheduleId` (OBRS-574 merged it with the verify
+ * list; `/staff/parcels/deliveries/:scheduleId` still redirects here). Driver
+ * + salesperson —
  * the role hierarchy means a salesperson session also satisfies the
  * DRIVER-only action endpoints, see the API doc's `hasRole('DRIVER')` note).
  * Component-scoped `ParcelDeliveryListStore` (providers: [] — see that
