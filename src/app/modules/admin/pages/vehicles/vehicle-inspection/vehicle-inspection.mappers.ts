@@ -4,6 +4,10 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
 import { isWithinRecentIsoWeeksBangkok } from '../../../../../shared/lib/inspection-week';
+import {
+  CategoryGroup,
+  groupContiguousByCategory,
+} from '../../../../../shared/lib/vehicle-inspection-category';
 
 // Pure mappers for AppVehicleInspectionPanelComponent (OBRS-312), following
 // the pattern established by vehicle-maintenance.mappers.ts: no Angular/HTTP
@@ -68,10 +72,30 @@ export interface InspectionDetailRow {
   verdict: 'ok' | 'needs_repair';
   verdictChipToken: 'is-success' | 'is-danger';
   note: string;
+  /** OBRS-553: the category AS INSPECTED (frozen at submit time, same
+   * principle as `itemLabelSnapshot`) — a later re-group of the master
+   * checklist must not reshuffle a sheet a driver already signed. */
+  categorySnapshot: string;
 }
 
-/** Detail rows are already ordered by `displayOrder` per the API contract —
- * no re-sort needed, just the presentational chip-token derivation. */
+/** OBRS-553: one contiguous run of `InspectionDetailRow`s sharing a
+ * `categorySnapshot`, carrying each row's flat index — see
+ * `groupContiguousByCategory` for why this must never be built with
+ * `filter()`. */
+export type InspectionDetailGroup = CategoryGroup<InspectionDetailRow>;
+
+/**
+ * OBRS-553: the server is authoritative for row order (it sorts by
+ * `categorySnapshot`'s declaration order, then `displayOrderSnapshot`, then
+ * `id` — see `SNAPSHOT_ORDER` on the backend) — the FE does NOT re-sort here.
+ * It maps the response 1:1, then the presentational chip-token derivation.
+ *
+ * ⚠️ Was: "Detail rows are already ordered by `displayOrder` per the API
+ * contract" — false as of OBRS-553. The read path no longer orders by the
+ * MASTER item's live `displayOrder` at all (that field can differ from what
+ * was true when this sheet was submitted); it orders by the frozen
+ * `categorySnapshot`/`displayOrderSnapshot` pair instead.
+ */
 export function toInspectionDetailRows(
   items: readonly VehicleInspectionDetailItemDto[]
 ): InspectionDetailRow[] {
@@ -81,5 +105,16 @@ export function toInspectionDetailRows(
     verdict: item.verdict,
     verdictChipToken: item.verdict === 'needs_repair' ? 'is-danger' : 'is-success',
     note: item.note ?? '',
+    categorySnapshot: item.categorySnapshot,
   }));
+}
+
+/** OBRS-553: groups the already-server-ordered detail rows into contiguous
+ * per-`categorySnapshot` runs for the section-header rendering in the
+ * history detail modal — reuses the SAME never-`filter()` walk as the driver
+ * form's `groupRowsByCategory` (OBRS-530), never a second copy of it. */
+export function groupDetailRowsByCategory(
+  rows: readonly InspectionDetailRow[]
+): InspectionDetailGroup[] {
+  return groupContiguousByCategory(rows, (row) => row.categorySnapshot);
 }

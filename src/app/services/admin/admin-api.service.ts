@@ -189,15 +189,27 @@ export interface VehicleInspectionListItemDto {
 }
 
 /** OBRS-312: one checklist row in `GET
- * /api/private/vehicles/{vehicleId}/inspections/{id}`, ordered by
- * `displayOrder`. `itemLabelSnapshot` is the label AS INSPECTED (immutable
- * history) — distinct from `VehicleInspectionItemDto.label`, which reflects
- * the master list's CURRENT label and may have since changed/been retired. */
+ * /api/private/vehicles/{vehicleId}/inspections/{id}`. `itemLabelSnapshot` is
+ * the label AS INSPECTED (immutable history) — distinct from
+ * `VehicleInspectionItemDto.label`, which reflects the master list's CURRENT
+ * label and may have since changed/been retired.
+ *
+ * OBRS-553: `categorySnapshot` (stable enum CODE, e.g. `'TIRES'`) and
+ * `categoryOrder` (1-based, the backend enum's declaration order at SUBMIT
+ * time) join `itemLabelSnapshot` as the frozen-at-submit set — a later
+ * re-group of the master checklist must not reshuffle a sheet a driver
+ * already signed. The backend orders the response by
+ * `(categorySnapshot's declaration order, displayOrderSnapshot, id)`
+ * server-side; the FE never re-derives group order from the string, it only
+ * cuts contiguous runs on `categorySnapshot` — see `groupRowsByCategory` in
+ * `vehicle-inspection.mappers.ts`. */
 export interface VehicleInspectionDetailItemDto {
   itemId: number;
   itemLabelSnapshot: string;
   verdict: 'ok' | 'needs_repair';
   note: string;
+  categorySnapshot: string;
+  categoryOrder: number;
 }
 
 /** OBRS-312: `GET /api/private/vehicles/{vehicleId}/inspections/{id}` —

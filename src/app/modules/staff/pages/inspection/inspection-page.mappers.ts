@@ -5,7 +5,7 @@ import {
   SubmitVehicleInspectionPayload,
   VehicleInspectionItemDto,
 } from '../../../../services/staff/staff-api.service';
-import { categoryLabelKey } from '../../../../shared/lib/vehicle-inspection-category';
+import { groupContiguousByCategory } from '../../../../shared/lib/vehicle-inspection-category';
 
 // Pure mappers/formatters for InspectionPageComponent (OBRS-312), following the
 // pattern established by vehicle-maintenance.mappers.ts / schedules.mappers.ts:
@@ -41,36 +41,15 @@ export interface InspectionGroup {
  * `(categoryOrder, displayOrder, itemId)` — see `toActiveItemRows`) into
  * CONTIGUOUS RUNS by `category`, carrying each row's flat index.
  *
- * MUST walk the sorted array and cut runs on a category change — NEVER
- * `filter()` per category. A filter-based implementation
- * (`rows.filter(r => r.category === c).map((row, i) => ({row, flatIndex: i}))`)
- * looks correct (each group DOES get the right rows) but resets `flatIndex`
- * to 0 at the start of every group instead of continuing the running count —
- * so `itemsFormArray.at(flatIndex)` (which is built by iterating the SAME
- * flat `rows` array once, in order — see `applyRowsToFormArray`) silently
- * points at the wrong FormGroup for every row after the first group. The
- * verdict/note a driver taps on row N would write to a totally different
- * item's control with no error anywhere. FE-T1 pins this by asserting the
- * flattened `flatIndex` sequence is exactly `0, 1, ..., N-1` — a filter-based
- * implementation fails that assertion immediately.
+ * Thin wrapper over the shared `groupContiguousByCategory` (OBRS-553 lifted
+ * this walk out so the admin history-detail grouping could reuse the SAME
+ * never-`filter()` algorithm instead of a second copy) — see that function's
+ * doc for why a `filter()`-per-category rewrite silently corrupts
+ * `itemsFormArray.at(flatIndex)` indexing. FE-T1 below still pins the
+ * flattened `flatIndex` sequence as exactly `0, 1, ..., N-1`.
  */
 export function groupRowsByCategory(rows: readonly InspectionItemRow[]): InspectionGroup[] {
-  const groups: InspectionGroup[] = [];
-
-  rows.forEach((row, flatIndex) => {
-    const currentGroup = groups[groups.length - 1];
-    if (currentGroup && currentGroup.category === row.category) {
-      currentGroup.rows.push({ row, flatIndex });
-    } else {
-      groups.push({
-        category: row.category,
-        labelKey: categoryLabelKey(row.category),
-        rows: [{ row, flatIndex }],
-      });
-    }
-  });
-
-  return groups;
+  return groupContiguousByCategory(rows, (row) => row.category);
 }
 
 /** Per-group "X/Y" counter (e.g. "ยาง 2/2") — `rowValues` is indexed

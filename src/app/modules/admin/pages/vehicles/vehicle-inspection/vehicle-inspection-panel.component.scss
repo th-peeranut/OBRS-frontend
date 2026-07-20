@@ -89,14 +89,35 @@
 }
 
 .vehicle-inspection-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+/* OBRS-553: mirrors .inspection-group-header (driver form, OBRS-530) —
+ * themed only via --admin-muted/--admin-text, no raw hex, so it's legible in
+ * both light and dark mode for free. */
+.vehicle-inspection-group-header {
+  padding: 4px 2px 0;
+}
+
+.vehicle-inspection-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-muted);
+}
+
+.vehicle-inspection-detail-group-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 50vh;
-  overflow-y: auto;
 }
 
 .vehicle-inspection-detail-item {
