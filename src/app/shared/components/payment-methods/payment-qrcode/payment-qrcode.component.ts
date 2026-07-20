@@ -153,7 +153,9 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     const bookingId = this.bookingService.getActiveBookingId();
     if (!bookingId) {
       if (showMissingBookingAlert) {
-        this.alertService.error('Booking ID not found');
+        this.alertService.error(
+          this.translate.instant('PAYMENT.ALERT.BOOKING_NOT_FOUND')
+        );
       }
       return;
     }
@@ -185,11 +187,11 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       if (this.isSuccessfulResponse(response?.code)) {
         await this.handlePromptPayResponse(response.data);
       } else {
-        this.alertService.error('Payment failed');
+        this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       }
     } catch (error) {
       this.hasRequestedQrCode = false;
-      this.alertService.error('Payment failed');
+      this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       console.error('Payment request failed', error);
     } finally {
       this.isSubmittingPayment = false;
@@ -245,18 +247,26 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       this.startCountdown();
 
       if (!this.qrImageUrl) {
-        this.alertService.error('QR code not found');
+        this.alertService.error(
+        this.translate.instant('PAYMENT.ALERT.QR_UNAVAILABLE')
+      );
       }
       return;
     }
 
     if (this.isPendingStatus(paymentStatus)) {
-      this.alertService.error('QR code not found');
+      this.alertService.error(
+        this.translate.instant('PAYMENT.ALERT.QR_UNAVAILABLE')
+      );
       this.isWaitingForConfirmation = false;
       return;
     }
 
-    this.alertService.error(this.getFailureReason(payment) ?? 'Payment failed');
+    // The gateway's own failure wording (English, and phrased in Omise's terms) is
+    // support material, not a passenger-facing message — see the same call in
+    // payment-creditcard.component.ts (OBRS-569).
+    console.error('PromptPay payment failed', this.getFailureReason(payment));
+    this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
   }
 
   private watchAmount(): void {
@@ -377,7 +387,7 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
     this.hasRequestedQrCode = false;
     this.paymentIdempotencyKey = '';
     this.isWaitingForConfirmation = false;
-    this.alertService.success('Payment success');
+    this.alertService.success(this.translate.instant('PAYMENT.ALERT.SUCCESS'));
     this.paymentCompleted.emit();
     if (this.successRedirect) {
       this.router.navigate(this.successRedirect);

@@ -35,7 +35,15 @@ export const errorInterceptor: HttpInterceptorFn = (
   const shouldShowError = isApiRequest && !skipGlobalErrorAlert;
 
   if (shouldShowLoading) {
-    alertService.showLoading();
+    // AlertService.showLoading() defaults its title to the English 'Loading...',
+    // and this interceptor is its ONLY production caller — so that word was the
+    // spinner every Thai and Chinese user saw on every /api/ request (OBRS-569).
+    // Translating here rather than inside AlertService keeps the service free of
+    // TranslateService, whose HTTP loader would otherwise re-enter this very
+    // interceptor (the NG0200 cycle documented above).
+    alertService.showLoading(
+      translate ? translate.instant('COMMON.LOADING') : undefined
+    );
   }
 
   return next(req).pipe(

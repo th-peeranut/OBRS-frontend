@@ -47,7 +47,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     this.phoneNo = this.route.snapshot.paramMap.get('phoneno')?.toString();
 
     if (this.validateRouteError()) {
-      this.alertService.error('พบข้อผิดพลาด');
+      this.alertService.error(
+        this.translate.instant('LOGIN_BY_PHONE_NO.ROUTE_ERROR')
+      );
       this.router.navigateByUrl('/');
     }
 
@@ -102,7 +104,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         this.startTimer();
         this.token = res.data?.token ?? '';
       } else if (typeof res?.code === 'number') {
-        this.alertService.error('error');
+        this.alertService.error(
+          this.translate.instant('LOGIN_BY_PHONE_NO.OTP_REQUEST_FAILED')
+        );
       }
     } catch {
       // Error alert is handled by the global interceptor.
@@ -145,11 +149,15 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
               }
             }
           } else if (this.option === 'login') {
-            this.alertService.success('succ');
+            this.alertService.success(
+              this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS')
+            );
             await this.authService.navigateAfterLogin();
           }
         } else if (typeof resVerify?.code === 'number') {
-          this.alertService.error('error');
+          this.alertService.error(
+            this.translate.instant('LOGIN_BY_PHONE_NO.OTP_VERIFY_FAILED')
+          );
         }
       } catch {
         // Error alert is handled by the global interceptor.

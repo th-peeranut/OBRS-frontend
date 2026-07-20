@@ -152,7 +152,9 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
     const bookingId = this.bookingService.getActiveBookingId();
     if (!bookingId) {
-      this.alertService.error('Booking ID not found');
+      this.alertService.error(
+        this.translate.instant('PAYMENT.ALERT.BOOKING_NOT_FOUND')
+      );
       return;
     }
 
@@ -178,10 +180,16 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       if (this.isSuccessfulResponse(response?.code)) {
         this.handlePaymentResponse(response.data);
       } else {
-        this.alertService.error('Payment failed');
+        this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       }
     } catch (error) {
-      this.alertService.error('Payment failed');
+      // This catch also swallows the Omise tokenize rejection raised by
+      // OmiseTokenService.createCardToken (its only call site is resolveCardToken
+      // above). That rejection carries Omise's own English text — replacing it
+      // here is what keeps a third-party string off a Thai user's screen, so the
+      // service can keep throwing a developer-readable Error for the console
+      // (OBRS-569).
+      this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       console.error('Payment request failed', error);
     } finally {
       this.isSubmittingPayment = false;
@@ -237,11 +245,16 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     if (payment?.status === 'pending') {
       this.isWaitingForConfirmation = true;
       this.startPaymentPolling();
-      this.alertService.success('Payment is pending confirmation');
+      this.alertService.success(this.translate.instant('PAYMENT.ALERT.PENDING'));
       return;
     }
 
-    this.alertService.error(payment?.failureReason ?? 'Payment failed');
+    // `payment.failureReason` is the gateway's own wording, relayed by the backend
+    // (Omise codes such as "insufficient_fund" / "invalid_security_code"). It is
+    // English, and it names things the passenger has no way to act on — so it goes
+    // to the console for support, never to the dialog (OBRS-569).
+    console.error('Payment failed', payment?.failureReason);
+    this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
   }
 
   private startCountdown(): void {
@@ -344,7 +357,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.paymentIdempotencyKey = '';
     this.isWaitingForConfirmation = false;
     this.clearPaymentPolling();
-    this.alertService.success('Payment success');
+    this.alertService.success(this.translate.instant('PAYMENT.ALERT.SUCCESS'));
     this.paymentCompleted.emit();
     if (this.successRedirect) {
       this.router.navigate(this.successRedirect);

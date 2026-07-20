@@ -50,6 +50,14 @@ jobs:
       - name: auth split-layout style gate
         run: npm run test:auth-layout
 
+      # Third pure-node gate (OBRS-569). AlertService takes a plain string, so
+      # translation is every caller's job and there is no chokepoint to fix once --
+      # 21 call sites had drifted, including alertService.error('error') and
+      # .success('succ') on the OTP LOGIN path. design-system.md Sec.9 already
+      # forbade this in prose; prose does not fail a build. Costs no extra minutes.
+      - name: hardcoded alert string gate
+        run: npm run test:alert-i18n
+
       - name: Install dependencies
         run: npm ci
 

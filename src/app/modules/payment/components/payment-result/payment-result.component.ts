@@ -39,7 +39,9 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     const bookingId = this.bookingService.getActiveBookingId();
     if (!bookingId) {
-      this.alertService.error('Booking ID not found');
+      this.alertService.error(
+        this.translate.instant('PAYMENT.ALERT.BOOKING_NOT_FOUND')
+      );
       this.router.navigate(['/payment']);
       return;
     }
@@ -129,7 +131,7 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     this.isChecking = false;
     this.clearPolling();
     this.clearCountdown();
-    this.alertService.success('Payment success');
+    this.alertService.success(this.translate.instant('PAYMENT.ALERT.SUCCESS'));
     this.router.navigate(['/e-ticket']);
   }
 
@@ -147,7 +149,7 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     this.isChecking = false;
     this.clearPolling();
     this.clearCountdown();
-    this.alertService.info('Payment is pending confirmation');
+    this.alertService.info(this.translate.instant('PAYMENT.ALERT.PENDING'));
     this.router.navigate(['/payment']);
   }
 

@@ -131,4 +131,46 @@ describe('errorInterceptor', () => {
     expect(alertService.error).toHaveBeenCalledWith('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     httpMock.verify();
   });
+
+  // OBRS-569. This one needs a spec rather than the check-alert-i18n.mjs gate:
+  // the bug was showLoading() called with NO argument, silently taking the
+  // service's English 'Loading...' default. There is no string literal at the
+  // call site, so a source-scanning gate cannot see it — only asserting the
+  // argument can. Every /api/ request in the app went through this line, so the
+  // English word was on screen for a moment on literally every page.
+  it('translates the loading spinner title instead of the English default', () => {
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    translate.instant.and.returnValue('กำลังโหลด…');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+
+    expect(translate.instant).toHaveBeenCalledWith('COMMON.LOADING');
+    expect(alertService.showLoading).toHaveBeenCalledWith('กำลังโหลด…');
+    const title = alertService.showLoading.calls.mostRecent().args[0];
+    expect(title).not.toBe('Loading...');
+    expect(title).not.toBeUndefined();
+
+    httpMock.expectOne('/api/foo').flush({});
+    httpMock.verify();
+  });
+
+  it('leaves the spinner title to the service default when TranslateService is unavailable (non-/api/ path stays cycle-free)', () => {
+    // Guards the OBRS-352 cycle from creeping back in through the new call:
+    // the loading title must never be the reason TranslateService gets injected.
+    configure();
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/i18n/en.json').subscribe({ next: () => {} });
+    httpMock.expectOne('/i18n/en.json').flush({});
+
+    expect(alertService.showLoading).not.toHaveBeenCalled();
+    httpMock.verify();
+  });
 });

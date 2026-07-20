@@ -379,6 +379,7 @@
     "CLEAR": "清除",
     "CALENDAR_ICON_ALT": "日历图标",
     "CLOSE": "关闭",
+    "LOADING": "加载中…",
     "ERROR": {
       "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
       "NETWORK_OFFLINE": "您似乎已断开网络连接，请检查网络后重试。",
@@ -1850,6 +1851,13 @@
       "PAY_NOW": "立即付款",
       "MERCHANT_NAME": "商家名称",
       "MERCHANT_REF": "参考："
+    },
+    "ALERT": {
+      "BOOKING_NOT_FOUND": "未找到此预订。请检查您收到的链接，或联系工作人员。",
+      "SUCCESS": "付款成功，您的车票已可使用。",
+      "PENDING": "正在等待付款确认。收到款项后本页面将自动更新。",
+      "FAILED": "付款未成功。请检查您的银行卡信息或余额后重试。",
+      "QR_UNAVAILABLE": "二维码生成失败，请点击「刷新二维码」重试。"
     },
     "RESULT": {
       "FAILED_REDIRECT": "付款失败。请重新选择班次并再次预订。"

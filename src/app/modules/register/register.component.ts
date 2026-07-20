@@ -146,7 +146,9 @@ export class RegisterComponent implements OnDestroy {
     this.registerForm.markAllAsTouched();
 
     if (!this.checkSamePassword()) {
-      this.alertService.error('พบข้อผิดพลาด กรุณากรอกรหัสผ่านให้เหมือนกัน');
+      this.alertService.error(
+        this.translate.instant('REGISTER.SAME_PASSWORD_VALIDATE')
+      );
     }
 
     if (
