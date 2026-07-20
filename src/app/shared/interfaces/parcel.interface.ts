@@ -156,7 +156,14 @@ export interface ParcelDeliveryListItemDto {
   trackingNumber: string;
   senderName: string;
   senderPhone: string;
-  recipientName: string;
+  /**
+   * OBRS-548: nullable, and it always was — `parcel.recipient_name` carries no
+   * NOT NULL (`schema.sql`, `V14__add_parcel_carryon_seatcharge.sql`). Declaring
+   * it a plain `string` is what let the verify screen interpolate it into a
+   * confirm dialog unguarded and print a literal `{{recipient}}` on a real row.
+   * Every read of this field must handle absent.
+   */
+  recipientName: string | null;
   recipientPhone: string;
   pickupStop: ParcelStopRefDto | string;
   dropoffStop: ParcelStopRefDto | string;

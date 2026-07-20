@@ -4,6 +4,9 @@ import { ParcelVerifyListPageComponent } from './parcel-verify-list-page.compone
 import { ParcelDeliveryListItemDto } from '../../../../shared/interfaces/parcel.interface';
 import { ParcelVerifyFormValue } from '../../components/parcel-verify-dialog/parcel-verify-dialog.component';
 import { createTranslateStub } from '../../../../testing/test-stubs';
+import enI18n from '../../../../../../public/i18n/en.json';
+import thI18n from '../../../../../../public/i18n/th.json';
+import zhI18n from '../../../../../../public/i18n/zh.json';
 
 function makeRouteStub(scheduleId: string): ActivatedRoute {
   return { snapshot: { paramMap: convertToParamMap({ scheduleId }) } } as unknown as ActivatedRoute;
@@ -322,6 +325,75 @@ describe('ParcelVerifyListPageComponent', () => {
     const component = makeComponent(makeStoreStub());
     expect(component['declaredDimensionsLabel'](makeRow({ lengthCm: null }))).toBe('-');
     expect(component['declaredDimensionsLabel'](makeRow({ lengthCm: 30, widthCm: 20, heightCm: 15 }))).toBe('30×20×15 cm');
+  });
+
+  // OBRS-548. The reject-confirm copy used to name {{recipient}}, which was wrong twice
+  // over: the SENDER pays for a consigned parcel (so the refund never reaches the
+  // recipient), and `recipientName` is nullable in the schema, so ngx-translate rendered
+  // the literal string "{{recipient}}" onto the staff member's screen. These assert the
+  // rendered EFFECT against the three real locale files, not just the call shape — a
+  // stub that echoes the key back would happily pass a string still full of placeholders.
+  describe('reject-confirm copy (OBRS-548)', () => {
+    const BODIES: ReadonlyArray<readonly [string, string]> = [
+      ['en', enI18n.STAFF.PARCEL_VERIFY.REJECT_CONFIRM.BODY],
+      ['th', thI18n.STAFF.PARCEL_VERIFY.REJECT_CONFIRM.BODY],
+      ['zh', zhI18n.STAFF.PARCEL_VERIFY.REJECT_CONFIRM.BODY],
+    ];
+
+    /** ngx-translate's default interpolation, reduced to what this key needs. */
+    function interpolate(template: string, params: Record<string, unknown>): string {
+      return template.replace(/{{\s*([^{}\s]+)\s*}}/g, (whole, name) =>
+        params[name] == null ? whole : String(params[name])
+      );
+    }
+
+    /** Runs a real reject with a null-recipient row and returns the BODY params sent. */
+    async function captureBodyParams(): Promise<Record<string, unknown>> {
+      const row = makeRow({ parcelId: 7, amount: 350, recipientName: null });
+      const translate = createTranslateStub();
+      translate.instant = jasmine.createSpy('instant').and.callFake((key: string) => key);
+      const staffApi = {
+        verifyParcel: jasmine.createSpy().and.returnValue(
+          of({ code: 200, message: 'OK', data: { parcelId: 7, deliveryStatus: 'rejected', refundAmount: 350, refundStatus: 'refunded' } })
+        ),
+      } as any;
+      const component = new ParcelVerifyListPageComponent(
+        makeRouteStub('42'),
+        staffApi,
+        makeAlertStub(true),
+        translate,
+        makeStoreStub([row])
+      );
+      component.ngOnInit();
+      component['openVerifyDialog'](row);
+      await component['onConfirmReject'](makeFormValue({ rejectReason: 'Damaged' }));
+
+      const call = translate.instant.calls
+        .allArgs()
+        .find(([key]: [string]) => key === 'STAFF.PARCEL_VERIFY.REJECT_CONFIRM.BODY');
+      expect(call).withContext('BODY was never translated').toBeDefined();
+      return call[1] as Record<string, unknown>;
+    }
+
+    it('never asks for a person name — the refund goes to the payment channel', async () => {
+      const params = await captureBodyParams();
+
+      expect(params['recipient']).toBeUndefined();
+      for (const [lang, body] of BODIES) {
+        expect(body).withContext(`${lang} still names {{recipient}}`).not.toContain('{{recipient}}');
+      }
+    });
+
+    it('leaves no raw {{token}} on screen in any locale when recipientName is null', async () => {
+      const params = await captureBodyParams();
+
+      for (const [lang, body] of BODIES) {
+        const rendered = interpolate(body, params);
+        expect(rendered)
+          .withContext(`${lang} rendered an un-interpolated token: ${rendered}`)
+          .not.toMatch(/{{.*}}/);
+      }
+    });
   });
 
   it('cleans up on destroy without throwing', () => {

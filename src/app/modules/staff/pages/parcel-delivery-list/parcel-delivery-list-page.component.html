@@ -30,7 +30,7 @@
             <tr *ngFor="let row of rows">
               <td class="fw-semibold">{{ row.trackingNumber }}</td>
               <td>{{ row.senderName }}</td>
-              <td>{{ row.recipientName }}</td>
+              <td>{{ row.recipientName || '-' }}</td>
               <td>{{ parcelStopLabel(row.pickupStop) }}</td>
               <td>{{ parcelStopLabel(row.dropoffStop) }}</td>
               <td>{{ row.weightKg }} kg</td>

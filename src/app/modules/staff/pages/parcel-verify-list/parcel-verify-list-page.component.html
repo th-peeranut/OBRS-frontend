@@ -28,7 +28,7 @@
           <tbody>
             <tr *ngFor="let row of rows">
               <td class="fw-semibold">{{ row.trackingNumber }}</td>
-              <td>{{ row.recipientName }}</td>
+              <td>{{ row.recipientName || '-' }}</td>
               <td>{{ row.weightKg }} kg</td>
               <td>{{ declaredDimensionsLabel(row) }}</td>
               <td>
