@@ -3792,3 +3792,45 @@ Rule: when you add an `.admin-status.is-<state>` token, `grep` for every `:host`
 `.admin-shell` that re-declares `--admin-*` pairs and add yours to each — light AND dark sides.
 Today that set is `my-reports` (usability statuses), `my-parcels` / `parcel-tracking` (parcel
 statuses). Adding only the mapper case is a half-fix that ships green.
+
+## OBRS-564 Scrutinize self-fix — a new HttpClient call with no HttpContext inherits the GLOBAL blocking overlay + error modal
+
+`BookingPolicyService.getBookingPolicy()` did a bare `this.http.get(...)` with no context. Both
+its callers deliberately own their own failure UX — `business-policy` renders an inline error +
+Retry in place of policy item 1, `home-booking` silently keeps its date-picker fallback — but
+`error.interceptor.ts` keys purely on `req.url.includes('/api/')`, so with the tokens unset it
+would have (a) thrown the **blocking global loading overlay** over the HOME page and
+`/business-policy` on every single visit, for a background enhancement, and (b) popped a global
+error modal on failure, stacked on top of the inline error, and re-popped on every Retry click.
+
+Fixed by setting `SKIP_GLOBAL_LOADING_ALERT` + `SKIP_GLOBAL_ERROR_ALERT` on the request, pinned
+with a spec asserting both (both token defaults are `false`, so the assertion is discriminating).
+Also added an explicit no-op `error:` callback to `home-booking`'s observer — an observer with
+`next` only lets the interceptor's rethrow surface as an RxJS unhandled error, the opposite of
+the silent degradation the comment promises. NOT `SKIP_AUTH_LOGOUT`: the endpoint is public, so
+there is no 401 to tolerate.
+
+Rule: any NEW `/api/` call whose component renders its own error state, or whose failure is meant
+to be invisible, must set both context tokens at the service. The default is opt-IN to the global
+overlay and modal, so "I didn't set a context" means "I chose the global UX" — usually by accident.
+
+## OBRS-564 Scrutinize self-fix — a regression gate spelled as a denylist of yesterday's wrong answer does not hold the property
+
+`check-i18n-parity.mjs` gate 3 banned six literals (`60 days` / `60 วัน` / `60天` / `12 hours` /
+`12 ชั่วโมง` / `12小时`) from `POLICY.BUSINESS.SALES_CHANNELS`. It fires correctly on those — I
+walked it red. But the card's load-bearing property is *"the policy page can never display a number
+that disagrees with what the backend enforces"*, and a denylist cannot express that: I mutated the
+key to a hardcoded **`45 วัน` / `20 นาที`** — today's *correct* numbers, and the identical defect the
+moment an owner edits the config — and the gate passed green, exit 0. A `typeof !== 'string' →
+continue` also silently skipped a deleted/restructured key.
+
+Fixed by adding the positive assertion (`SALES_CHANNELS` must contain **both**
+`{{maxAdvanceDays}}` and `{{cutoffMinutes}}` in every locale) and making a missing/non-string key
+a failure instead of a skip. Denylist kept — it names the historical defect cheaply. Both new
+mutations now exit 1; the real files stay green. Also corrected the file header, which still
+claimed "ASCII-only source" after the Thai/Chinese denylist literals landed in it.
+
+Rule: a regression gate must assert the invariant that must HOLD, not enumerate the values that
+must not RECUR. Test the gate by mutating to a *plausible future wrong answer*, not just by
+restoring the historical one — restoring the historical one is the mutation the denylist was
+written to catch, so it can only ever confirm what you already know.

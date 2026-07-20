@@ -1,7 +1,21 @@
-import { FormBuilder } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { TranslateModule } from '@ngx-translate/core';
+import { CalendarModule } from 'primeng/calendar';
+import { Store } from '@ngrx/store';
+import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
+import dayjs from 'dayjs';
 
 import { HomeBookingComponent } from './home-booking.component';
+import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
+import { DropdownObrsPassengerComponent } from '../dropdown-obrs-passenger/dropdown-obrs-passenger.component';
+import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
+import { AuthService } from '../../../../auth/auth.service';
+import { BookingService } from '../../../../services/booking/booking.service';
+import { RecentRoutesQuickPickComponent } from '../recent-routes-quick-pick/recent-routes-quick-pick.component';
 import {
   createAuthServiceStub,
   createBookingServiceStub,
@@ -10,6 +24,42 @@ import {
 } from '../../../../testing/test-stubs';
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { RECENT_ROUTES_CACHE_KEY, saveRecentRoute } from '../../../../shared/lib/recent-routes';
+
+/** OBRS-564's `BookingPolicyService` resolves the real date-picker cap. */
+function createBookingPolicyServiceStub(): BookingPolicyService {
+  return {
+    getBookingPolicy: () => of({ code: 200, message: 'OK' }),
+  } as unknown as BookingPolicyService;
+}
+
+/**
+ * Single construction point for the component under test.
+ *
+ * Merging OBRS-564 into OBRS-575 added a 7th constructor dependency and broke
+ * all ten `new HomeBookingComponent(...)` call sites at once — the "adding a
+ * dep to a bean breaks every test that constructs it" trap. Routing every
+ * construction through here makes the NEXT dependency a one-line change, and
+ * lets each test name only the collaborators it actually cares about.
+ */
+function makeHomeBooking(
+  overrides: {
+    store?: unknown;
+    appStore?: unknown;
+    auth?: unknown;
+    booking?: unknown;
+    policy?: unknown;
+  } = {}
+): HomeBookingComponent {
+  return new HomeBookingComponent(
+    new FormBuilder(),
+    createRouterStub(),
+    (overrides.store ?? createStoreStub()) as never,
+    (overrides.appStore ?? createStoreStub()) as never,
+    (overrides.auth ?? createAuthServiceStub(false)) as never,
+    (overrides.booking ?? createBookingServiceStub()) as never,
+    (overrides.policy ?? createBookingPolicyServiceStub()) as never
+  );
+}
 
 function station(id: number): StationApi {
   return {
@@ -41,20 +91,17 @@ const STATION_3 = station(3);
 describe('HomeBookingComponent', () => {
   let component: HomeBookingComponent;
 
+  beforeEach(() => {
+    component = makeHomeBooking();
+  });
+
   afterEach(() => {
     localStorage.removeItem(RECENT_ROUTES_CACHE_KEY);
   });
 
   describe('smoke', () => {
     beforeEach(() => {
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStub(),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        createBookingServiceStub()
-      );
+      component = makeHomeBooking();
     });
 
     it('should create', () => {
@@ -75,14 +122,7 @@ describe('HomeBookingComponent', () => {
       const bookingServiceStub = createBookingServiceStub();
       spyOn(bookingServiceStub, 'getMyBookings').and.callThrough();
 
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        bookingServiceStub
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), booking: bookingServiceStub });
       component.ngOnInit();
 
       expect(bookingServiceStub.getMyBookings).not.toHaveBeenCalled();
@@ -95,14 +135,7 @@ describe('HomeBookingComponent', () => {
       const bookingServiceStub = createBookingServiceStub();
       spyOn(bookingServiceStub, 'getMyBookings').and.callThrough();
 
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(true),
-        bookingServiceStub
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), auth: createAuthServiceStub(true), booking: bookingServiceStub });
       component.ngOnInit();
 
       expect(bookingServiceStub.getMyBookings).toHaveBeenCalledWith(undefined, false, true);
@@ -123,14 +156,7 @@ describe('HomeBookingComponent', () => {
           },
         });
 
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(true),
-        bookingServiceStub
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), auth: createAuthServiceStub(true), booking: bookingServiceStub });
       component.ngOnInit();
 
       expect(component.recentRouteCandidates.length).toBe(1);
@@ -142,14 +168,7 @@ describe('HomeBookingComponent', () => {
       bookingServiceStub.getMyBookings = () => throwError(() => new Error('500'));
 
       expect(() => {
-        component = new HomeBookingComponent(
-          new FormBuilder(),
-          createRouterStub(),
-          createStoreStubWithValue([STATION_1, STATION_2]),
-          createStoreStub(),
-          createAuthServiceStub(true),
-          bookingServiceStub
-        );
+        component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]), auth: createAuthServiceStub(true), booking: bookingServiceStub });
         component.ngOnInit();
       }).not.toThrow();
 
@@ -159,28 +178,14 @@ describe('HomeBookingComponent', () => {
     it('AC#6: drops a route whose station is missing from the current active roster', () => {
       saveRecentRoute(1, 99); // 99 never resolves against the seeded station list
 
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        createBookingServiceStub()
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
       component.ngOnInit();
 
       expect(component.recentRouteCandidates).toEqual([]);
     });
 
     it('clicking a route patches both form controls and runs the existing syncStationOptions behavior', () => {
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2, STATION_3]),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        createBookingServiceStub()
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2, STATION_3]) });
       component.ngOnInit();
 
       component.onRecentRouteSelected({ originStation: STATION_1, destinationStation: STATION_2 });
@@ -194,14 +199,7 @@ describe('HomeBookingComponent', () => {
     });
 
     it('onSearch(): writes the searched route to localStorage only when both stations resolve', () => {
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        createBookingServiceStub()
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
       component.ngOnInit();
       component.bookingForm.patchValue({ startStationId: 1, stopStationId: 2 });
 
@@ -214,14 +212,7 @@ describe('HomeBookingComponent', () => {
     });
 
     it('onSearch(): does NOT write when the form is empty/unresolved (no validation gate exists on this call)', () => {
-      component = new HomeBookingComponent(
-        new FormBuilder(),
-        createRouterStub(),
-        createStoreStubWithValue([STATION_1, STATION_2]),
-        createStoreStub(),
-        createAuthServiceStub(false),
-        createBookingServiceStub()
-      );
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
       component.ngOnInit();
       // startStationId/stopStationId default to '' per createForm().
 
@@ -229,5 +220,85 @@ describe('HomeBookingComponent', () => {
 
       expect(localStorage.getItem(RECENT_ROUTES_CACHE_KEY)).toBeNull();
     });
+  });
+
+  it('seeds maxDate synchronously with the today+30-day fallback (before the API resolves)', () => {
+    const expected = dayjs().add(30, 'day');
+    expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
+  });
+});
+
+// OBRS-564: DOM-level regression guard for the actual bug this card
+// describes — binding maxDate only on the departure calendar lets a user
+// pick a return date past the real cap and eat a 400 from the server. A
+// unit-level construction test (above) can't see a missing template
+// binding, only a compiled-template render can, so this block renders the
+// real component via TestBed (same CalendarModule/ReactiveFormsModule/
+// standalone-dropdown-component recipe already proven for a PrimeNG
+// calendar form in parcel-trip-form.component.spec.ts).
+describe('HomeBookingComponent — maxDate bound to BOTH calendars (OBRS-564)', () => {
+  let fixture: ComponentFixture<HomeBookingComponent>;
+  let component: HomeBookingComponent;
+
+  const CONFIGURED_MAX_ADVANCE_DAYS = 45;
+
+  beforeEach(async () => {
+    const bookingPolicyServiceStub: Partial<BookingPolicyService> = {
+      getBookingPolicy: () =>
+        of({
+          code: 200,
+          message: 'OK',
+          data: { maxAdvanceDays: CONFIGURED_MAX_ADVANCE_DAYS, cutoffMinutes: 20 },
+        }),
+    };
+
+    await TestBed.configureTestingModule({
+      declarations: [HomeBookingComponent],
+      imports: [
+        ReactiveFormsModule,
+        TranslateModule.forRoot(),
+        CalendarModule,
+        DropdownObrsComponent,
+        DropdownGroupObrsComponent,
+        DropdownObrsPassengerComponent,
+        // OBRS-575's standalone child now appears in this template; without it
+        // the slice fails with NG0304 'not a known element'.
+        RecentRoutesQuickPickComponent,
+      ],
+      providers: [
+        { provide: Router, useValue: createRouterStub() },
+        { provide: Store, useValue: createStoreStub() },
+        { provide: BookingPolicyService, useValue: bookingPolicyServiceStub },
+        // OBRS-575 gave HomeBookingComponent two new collaborators. AuthService
+        // pulls HttpClient transitively, so without these this slice dies with
+        // "No provider for HttpClient!" before it ever reaches the calendars —
+        // a dependency added to a component breaks every slice that builds it.
+        // Anonymous (false) keeps the quick-pick off the network entirely, so
+        // this test stays about maxDate and nothing else.
+        { provide: AuthService, useValue: createAuthServiceStub(false) },
+        { provide: BookingService, useValue: createBookingServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(HomeBookingComponent);
+    component = fixture.componentInstance;
+  });
+
+  it('applies the resolved maxDate to BOTH the departure and return p-calendar controls', () => {
+    // Reveal the return-trip calendar too, so both p-calendar instances exist.
+    component.isRoundTripReturn = true;
+
+    fixture.detectChanges(); // ngOnInit -> bookingPolicyServiceStub resolves synchronously
+
+    const expected = dayjs().add(CONFIGURED_MAX_ADVANCE_DAYS, 'day');
+    expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
+
+    const calendars = fixture.debugElement.queryAll(By.css('p-calendar'));
+    expect(calendars.length).toBe(2);
+
+    for (const calendarDe of calendars) {
+      const boundMaxDate = calendarDe.componentInstance.maxDate as Date;
+      expect(dayjs(boundMaxDate).isSame(expected, 'day')).toBeTrue();
+    }
   });
 });

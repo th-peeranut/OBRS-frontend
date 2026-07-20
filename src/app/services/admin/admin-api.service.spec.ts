@@ -285,6 +285,46 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-564: booking-policy config (max advance-booking days, cutoff
+  // minutes), a singleton row mirroring reminder-config/jump-seat-config
+  // above (GET/PUT /api/private/admin/configs/booking-policy).
+  describe('getBookingPolicyConfig', () => {
+    it('issues a GET to /api/private/admin/configs/booking-policy', () => {
+      service.getBookingPolicyConfig().subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/booking-policy`
+      );
+      expect(req.request.method).toBe('GET');
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { maxAdvanceDays: 45, cutoffMinutes: 20 },
+      });
+    });
+  });
+
+  describe('updateBookingPolicyConfig', () => {
+    it('issues a PUT to /api/private/admin/configs/booking-policy with the full payload shape', () => {
+      service
+        .updateBookingPolicyConfig({ maxAdvanceDays: 45, cutoffMinutes: 20 })
+        .subscribe();
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/admin/configs/booking-policy`
+      );
+      expect(req.request.method).toBe('PUT');
+      expect(req.request.body).toEqual({ maxAdvanceDays: 45, cutoffMinutes: 20 });
+
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { maxAdvanceDays: 45, cutoffMinutes: 20 },
+      });
+    });
+  });
+
   // OBRS-196: regression for the wrong-URL contract break a coordinator
   // reconciliation found post-merge (base path is `/api/private/settlements`,
   // NO `/admin/` segment — `EndpointConstant.PRIVATE_SETTLEMENTS`) — a

@@ -82,15 +82,22 @@
 }
 
 // OBRS-115: "reporter notified" indicator — a soft success pill next to the
-// dispatch timestamp. Uses the admin success tokens (with graceful hex fallbacks
-// matching this file's `var(--…, #hex)` convention) so it reads positive and
-// stays theme-aware in dark mode.
+// dispatch timestamp.
+//
+// OBRS-520 correction: this comment used to claim the tokens made it "stay
+// theme-aware in dark mode". Measured, that was false — --admin-success-text is
+// declared light-only, so the pill rendered #154c85 on the #1d2226 dark card at
+// 1.84:1 and was effectively invisible. Referencing a themed token is NOT the
+// same property as that token being themed; the same misreading is recorded on
+// the card for `.admin-btn-danger` ("composes the existing tokens, no new hex"
+// read as "safe in dark mode"). The pill TEXT now uses --admin-success-fg, the
+// surface-role token that is defined in both modes.
 .ur-notified-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: var(--admin-success-text, #0f5132);
+  color: var(--admin-success-fg, #0f5132);
 }
 
 .ur-notified-check {

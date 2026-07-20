@@ -12,7 +12,10 @@
 // files directly with fs -- no Angular/Karma bundling -- so it is fast and runs even
 // before `npm ci`. Run locally with: npm run test:i18n
 //
-// ASCII-only source; the JSON values it validates are UTF-8 and untouched by this file.
+// Source is ASCII EXCEPT for the small set of historical Thai/Chinese literals named in
+// OLD_HARDCODED_POLICY_STRINGS below (gate 3) -- those must be spelled out verbatim to be
+// matchable. Node reads .mjs as UTF-8, so this is safe; the JSON values this script
+// validates are UTF-8 and untouched by it either way.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -64,6 +67,49 @@ for (const key of [...union].sort()) {
   if (present.length !== LANGS.length) {
     const missing = LANGS.filter((l) => !keysByLang[l].has(key));
     problems.push(`key "${key}" present in [${present.join(', ')}] but MISSING in [${missing.join(', ')}]`);
+  }
+}
+
+// 3) OBRS-564 regression guard: POLICY.BUSINESS.SALES_CHANNELS renders the
+//    two booking-policy numbers (advance-booking cap, cutoff) LIVE from the
+//    public /api/booking-policy config -- the original defect on this card
+//    was these numbers hardcoded here as a wrong "60 days / 12 hours". This
+//    key must never again contain that old hardcoded copy in any language.
+//
+//    A denylist of today's wrong numbers is NOT enough, and testing proved it:
+//    mutating the key to a hardcoded "45 days / 20 minutes" -- the numbers that
+//    happen to be correct right now -- passed a denylist gate green. That is the
+//    exact shape of this defect (a number correct on the day it was typed, drifting
+//    silently afterwards), so the load-bearing check is the POSITIVE one below:
+//    both placeholders must be present in every language. The denylist is kept
+//    only as an extra guard against the two specific strings we know were wrong.
+const REQUIRED_POLICY_PLACEHOLDERS = ['{{maxAdvanceDays}}', '{{cutoffMinutes}}'];
+const OLD_HARDCODED_POLICY_STRINGS = ['60 days', '60 วัน', '60天', '12 hours', '12 ชั่วโมง', '12小时'];
+for (const lang of LANGS) {
+  const raw = readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8');
+  const json = JSON.parse(raw);
+  const salesChannels = json?.POLICY?.BUSINESS?.SALES_CHANNELS;
+  // A missing or non-string key is a FAILURE, never a skip: `continue` here would let
+  // someone delete the key outright and still get a green gate.
+  if (typeof salesChannels !== 'string') {
+    problems.push(
+      `[${lang}] POLICY.BUSINESS.SALES_CHANNELS is missing or not a string -- the booking policy page renders this key from live config and cannot fall back (OBRS-564)`
+    );
+    continue;
+  }
+  for (const placeholder of REQUIRED_POLICY_PLACEHOLDERS) {
+    if (!salesChannels.includes(placeholder)) {
+      problems.push(
+        `[${lang}] POLICY.BUSINESS.SALES_CHANNELS is missing the ${placeholder} placeholder -- the advance-cap and cutoff numbers must interpolate from the live /api/booking-policy config, never be typed in as literals (OBRS-564)`
+      );
+    }
+  }
+  for (const oldString of OLD_HARDCODED_POLICY_STRINGS) {
+    if (salesChannels.includes(oldString)) {
+      problems.push(
+        `[${lang}] POLICY.BUSINESS.SALES_CHANNELS still contains the old hardcoded "${oldString}" -- must render from the live booking-policy config instead (OBRS-564)`
+      );
+    }
   }
 }
 
