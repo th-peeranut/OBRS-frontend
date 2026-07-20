@@ -422,6 +422,7 @@
       "REMINDER_CONFIG": "提醒时间设置",
       "JUMP_SEAT_CONFIG": "加座设置",
       "BOOKING_POLICY_CONFIG": "预订政策",
+      "CONFIG_CHANGE_HISTORY": "设置变更历史",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
     },
@@ -1236,6 +1237,65 @@
       "CUTOFF_MINUTES_LABEL": "预订截止时间（出发前分钟数）",
       "CUTOFF_MINUTES_HELPER": "出发前多少分钟内仍可在线预订车票。此值也决定车次何时开始显示\"座位所剩无几\"提示。柜台现场售票不受此限制。",
       "LOAD_FAILED": "无法加载预订政策设置。"
+    },
+    "CONFIG_CHANGE_HISTORY": {
+      "SUBTITLE": "查看所有系统设置的变更历史,包括修改人和时间",
+      "TABLE_TITLE": "变更记录",
+      "COL": {
+        "CHANGED_AT": "时间",
+        "CONFIG_KEY": "设置项",
+        "CHANGE": "从 → 到",
+        "ACTOR": "修改人"
+      },
+      "UNITS": "条",
+      "EMPTY": "未找到符合筛选条件的记录",
+      "LOAD_FAILED": "无法加载变更历史",
+      "FILTER": {
+        "ALL_KEYS": "全部设置",
+        "DATE_RANGE": "日期范围",
+        "DATE_FROM": "起始日期",
+        "DATE_TO": "结束日期"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "日期范围无效 —\"结束日期\"不能早于\"起始日期\""
+      },
+      "BOOL": {
+        "ON": "开启",
+        "OFF": "关闭"
+      },
+      "VALUE_DELETED": "已删除",
+      "VALUE": {
+        "MORE": "另外 {{count}} 项"
+      },
+      "ACTOR": {
+        "SYSTEM": "系统",
+        "UNATTRIBUTED": "未知修改人",
+        "UNATTRIBUTED_HINT": "无法判断这是系统外的合法直接修改,还是系统未能记录修改人的漏记情况",
+        "PRE_FEATURE": "—(记录功能上线前)",
+        "DELETED_USER": "已删除的用户"
+      },
+      "KEYS": {
+        "booking_max_advance_days": "提前预订上限(天)",
+        "booking_offset_minutes": "停售提前时间(分钟)",
+        "seat_reservation_minutes": "座位保留时长(分钟)",
+        "cancel_window_hours": "可取消时间窗口(小时)",
+        "cancel_refund_rate_early": "提前取消退款比例",
+        "cancel_refund_rate_late": "临近取消退款比例",
+        "reschedule_window_hours": "可改期时间窗口(小时)",
+        "reschedule_max_days_ahead": "最多可提前改期天数",
+        "reschedule_fee_late_thb": "临近改期手续费(泰铢)",
+        "reschedule_payment_timeout_minutes": "改期补差价支付时限(分钟)",
+        "reminder_hours_before_departure": "出发提醒提前时间(小时)",
+        "boarding_reminder_minutes_before_departure": "上车提醒提前时间(分钟)",
+        "no_show_cutoff_minutes": "未到站判定截止时间(分钟)",
+        "near_full_alert_threshold_percent": "座位将满提醒阈值(%)",
+        "jump_seat_enabled": "加座销售开关(现场售票)",
+        "parcel_max_weight_kg": "包裹最大重量(公斤)",
+        "parcel_prohibited_categories": "禁运包裹类别",
+        "parcel_carry_on_free_size_min_inch": "免费随身携带最小尺寸(英寸)",
+        "parcel_carry_on_free_size_max_inch": "免费随身携带最大尺寸(英寸)",
+        "parcel_carry_on_free_aisle_max_per_trip": "每趟免费随身携带件数上限"
+      }
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",

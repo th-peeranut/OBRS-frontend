@@ -1,0 +1,200 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  actorDisplayKind,
+  configKeyLabel,
+  displayChangedAt,
+  extractConfigHistoryErrorCode,
+  formatConfigValue,
+  roleLabel,
+} from './config-change-history-page.mappers';
+import { ConfigHistoryRow } from '../../../../shared/interfaces/config-history.interface';
+
+// A minimal translation table so translateFn behaves like ngx-translate's
+// instant(): known key -> its string, unknown key -> the key ITSELF (the
+// real ngx-translate miss-fallback — this is exactly what configKeyLabel's
+// own fallback detection depends on, G1/G2 below).
+function fakeTranslate(known: Record<string, string> = {}): (key: string, params?: Record<string, unknown>) => string {
+  return (key: string, params?: Record<string, unknown>) => {
+    if (key in known) {
+      const value = known[key];
+      if (params) {
+        return Object.entries(params).reduce(
+          (acc, [k, v]) => acc.replace(`{{${k}}}`, String(v)),
+          value
+        );
+      }
+      return value;
+    }
+    return key;
+  };
+}
+
+describe('config-change-history-page.mappers', () => {
+  // ── G1/G2: config-key label i18n fallback + dot-sanitize ────────────────
+  describe('configKeyLabel', () => {
+    it('translates a known config key', () => {
+      const t = fakeTranslate({ 'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.jump_seat_enabled': 'เปิดการขายเบาะเสริม (walk-in)' });
+      expect(configKeyLabel('jump_seat_enabled', t)).toBe('เปิดการขายเบาะเสริม (walk-in)');
+    });
+
+    // G1: an UNTRANSLATED config key must render the RAW key, never blank,
+    // never the i18n key PATH (design-system §0.5 lock — this is the whole
+    // reason the page exists).
+    it('G1 — falls back to the RAW config key (not the i18n key path, not blank) when no label exists', () => {
+      const t = fakeTranslate({});
+      expect(configKeyLabel('some_brand_new_config_key', t)).toBe('some_brand_new_config_key');
+    });
+
+    // G2: a config key containing a dot must resolve through the SANITIZED
+    // (`.` -> `_`) lookup key, not the raw dotted path (which ngx-translate
+    // would walk as nested KEYS -> parcel -> prohibited_categories).
+    it('G2 — sanitizes a dotted config key (`.` -> `_`) before lookup, and still falls back to the RAW (dotted) key on miss', () => {
+      const t = fakeTranslate({
+        'ADMIN.CONFIG_CHANGE_HISTORY.KEYS.parcel_prohibited_categories': 'หมวดหมู่พัสดุต้องห้าม',
+      });
+      expect(configKeyLabel('parcel.prohibited_categories', t)).toBe('หมวดหมู่พัสดุต้องห้าม');
+
+      const tMiss = fakeTranslate({});
+      expect(configKeyLabel('parcel.prohibited_categories', tMiss)).toBe('parcel.prohibited_categories');
+    });
+  });
+
+  // ── G3: every JsonNode shape ─────────────────────────────────────────────
+  describe('formatConfigValue', () => {
+    const t = fakeTranslate({
+      'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED': 'ถูกลบ',
+      'ADMIN.CONFIG_CHANGE_HISTORY.BOOL.ON': 'เปิด',
+      'ADMIN.CONFIG_CHANGE_HISTORY.BOOL.OFF': 'ปิด',
+      'ADMIN.CONFIG_CHANGE_HISTORY.VALUE.MORE': 'และอีก {{count}} รายการ',
+    });
+
+    it('renders a number as-is', () => {
+      expect(formatConfigValue(45, t)).toBe('45');
+      expect(formatConfigValue(0, t)).toBe('0');
+    });
+
+    it('renders a boolean via the ON/OFF i18n keys, never as "true"/"false"', () => {
+      expect(formatConfigValue(true, t)).toBe('เปิด');
+      expect(formatConfigValue(false, t)).toBe('ปิด');
+    });
+
+    it('renders a string quoted', () => {
+      expect(formatConfigValue('hello', t)).toBe('"hello"');
+    });
+
+    it('renders null as VALUE_DELETED (operation === DELETE)', () => {
+      expect(formatConfigValue(null, t)).toBe('ถูกลบ');
+    });
+
+    it('renders a short array joined with ", ", no truncation suffix', () => {
+      expect(formatConfigValue(['flammable', 'explosive'], t)).toBe('flammable, explosive');
+    });
+
+    it('truncates an array beyond 3 items and appends the +N more count', () => {
+      expect(formatConfigValue(['a', 'b', 'c', 'd', 'e'], t)).toBe('a, b, c และอีก 2 รายการ');
+    });
+
+    // Hard constraint #5: dispatch is by REAL JSON shape, never inferred from
+    // the config key's name — pin that a numeric-LOOKING string still quotes.
+    it('does not infer numeric type from a numeric-looking STRING value', () => {
+      expect(formatConfigValue('45', t)).toBe('"45"');
+    });
+  });
+
+  // ── G4/G5: all 5 actor render cases, PRE_FEATURE distinct from UNATTRIBUTED ──
+  describe('actorDisplayKind', () => {
+    it('USER with a name -> "user"', () => {
+      const row: Pick<ConfigHistoryRow, 'actorSource' | 'actorName'> = {
+        actorSource: 'USER',
+        actorName: 'สมชาย ใจดี',
+      };
+      expect(actorDisplayKind(row)).toBe('user');
+    });
+
+    it('USER with actorName null (deleted user) -> "user-deleted", NOT "pre-feature" or "unattributed"', () => {
+      const row: Pick<ConfigHistoryRow, 'actorSource' | 'actorName'> = {
+        actorSource: 'USER',
+        actorName: null,
+      };
+      const kind = actorDisplayKind(row);
+      expect(kind).toBe('user-deleted');
+      expect(kind).not.toBe('pre-feature');
+      expect(kind).not.toBe('unattributed');
+    });
+
+    it('SYSTEM -> "system"', () => {
+      expect(actorDisplayKind({ actorSource: 'SYSTEM', actorName: null })).toBe('system');
+    });
+
+    it('PRE_FEATURE -> "pre-feature"', () => {
+      expect(actorDisplayKind({ actorSource: 'PRE_FEATURE', actorName: null })).toBe('pre-feature');
+    });
+
+    it('UNATTRIBUTED -> "unattributed"', () => {
+      expect(actorDisplayKind({ actorSource: 'UNATTRIBUTED', actorName: null })).toBe('unattributed');
+    });
+
+    // G5: assert the two are NOT equal, not just each individually correct.
+    it('G5 — PRE_FEATURE and UNATTRIBUTED map to DIFFERENT kinds', () => {
+      const preFeature = actorDisplayKind({ actorSource: 'PRE_FEATURE', actorName: null });
+      const unattributed = actorDisplayKind({ actorSource: 'UNATTRIBUTED', actorName: null });
+      expect(preFeature).not.toBe(unattributed);
+    });
+
+    // G4: none of the 5 renderable kinds is ever an empty-string sentinel —
+    // exhaustive over every real actorSource value plus the actorName split.
+    it('G4 — every real (actorSource, actorName) combination maps to a non-empty, defined kind', () => {
+      const combos: Array<Pick<ConfigHistoryRow, 'actorSource' | 'actorName'>> = [
+        { actorSource: 'USER', actorName: 'สมชาย' },
+        { actorSource: 'USER', actorName: null },
+        { actorSource: 'SYSTEM', actorName: null },
+        { actorSource: 'PRE_FEATURE', actorName: null },
+        { actorSource: 'UNATTRIBUTED', actorName: null },
+      ];
+      for (const combo of combos) {
+        expect(actorDisplayKind(combo)).toBeTruthy();
+      }
+    });
+  });
+
+  describe('roleLabel', () => {
+    it('delegates to the shared role-slug translator (user-management.mappers.ts)', () => {
+      const t = fakeTranslate({ 'ADMIN.USERS.ROLE_NAMES.owner': 'เจ้าของ' });
+      expect(roleLabel('owner', t)).toBe('เจ้าของ');
+    });
+
+    it('returns an empty string for a null role (SYSTEM/UNATTRIBUTED/PRE_FEATURE rows)', () => {
+      const t = fakeTranslate({});
+      expect(roleLabel(null, t)).toBe('');
+    });
+  });
+
+  describe('extractConfigHistoryErrorCode', () => {
+    it('reads errorCode off an HttpErrorResponse', () => {
+      const error = new HttpErrorResponse({
+        status: 400,
+        error: { errorCode: 'CONFIG_HISTORY_RANGE_INVALID' },
+      });
+      expect(extractConfigHistoryErrorCode(error)).toBe('CONFIG_HISTORY_RANGE_INVALID');
+    });
+
+    it('returns null when there is no errorCode', () => {
+      expect(extractConfigHistoryErrorCode(new HttpErrorResponse({ status: 500 }))).toBeNull();
+      expect(extractConfigHistoryErrorCode(new Error('boom'))).toBeNull();
+    });
+  });
+
+  describe('displayChangedAt', () => {
+    it('renders the Bangkok-offset ISO timestamp without re-converting timezone', () => {
+      // The backend already applies +07:00 (SA §6.4) — this just needs to
+      // render, not shift, the wall-clock time it carries.
+      const result = displayChangedAt('2026-07-20T14:32:11.482+07:00', 'en');
+      expect(result).toContain('14:32');
+      expect(result).toContain('2026');
+    });
+
+    it('renders the "-" sentinel for an empty value', () => {
+      expect(displayChangedAt('', 'en')).toBe('-');
+    });
+  });
+});

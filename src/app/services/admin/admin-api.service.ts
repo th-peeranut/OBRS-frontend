@@ -27,6 +27,7 @@ import {
   SettlementPendingPageDto,
   SettlementScheduleDetailDto,
 } from '../../shared/interfaces/settlement.interface';
+import { ConfigHistoryRow } from '../../shared/interfaces/config-history.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -1324,6 +1325,35 @@ export class AdminApiService {
     }
     return this.getRequest<UsabilityReportPage>(
       `${this.baseUrl}/private/admin/usability-reports`,
+      params
+    );
+  }
+
+  // OBRS-576: config change history — read-only trail over
+  // system_configs_history (SA §6.1). `configKey` is an exact match against
+  // the history row's own config_key column (no lookup into system_configs,
+  // Hard constraint #3 — never surfaces which keys exist, only which keys
+  // have EVER been changed and paged into view). `from`/`to` are Bangkok
+  // calendar dates (yyyy-MM-dd), inclusive both ends, per SA §6.2.
+  getConfigChangeHistory(
+    configKey: string | undefined,
+    from: string | undefined,
+    to: string | undefined,
+    page = 0,
+    size = 20
+  ): Observable<ResponseAPI<PageResponse<ConfigHistoryRow>>> {
+    let params = new HttpParams().set('page', page).set('size', size);
+    if (configKey) {
+      params = params.set('configKey', configKey);
+    }
+    if (from) {
+      params = params.set('from', from);
+    }
+    if (to) {
+      params = params.set('to', to);
+    }
+    return this.getRequest<PageResponse<ConfigHistoryRow>>(
+      `${this.baseUrl}/private/admin/configs/history`,
       params
     );
   }

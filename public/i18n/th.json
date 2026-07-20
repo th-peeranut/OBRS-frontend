@@ -422,6 +422,7 @@
       "REMINDER_CONFIG": "ตั้งเวลาแจ้งเตือน",
       "JUMP_SEAT_CONFIG": "เบาะเสริม",
       "BOOKING_POLICY_CONFIG": "นโยบายการจอง",
+      "CONFIG_CHANGE_HISTORY": "ประวัติการแก้ไขการตั้งค่า",
       "REFUND_VOID_REPORT": "สรุปการคืนเงิน / ยกเลิกตั๋ว",
       "CASH_ONLINE_RECONCILIATION": "กระทบยอดเงินสด / ออนไลน์"
     },
@@ -1236,6 +1237,65 @@
       "CUTOFF_MINUTES_LABEL": "ระยะเวลาปิดรับจองก่อนออกเดินทาง (นาที)",
       "CUTOFF_MINUTES_HELPER": "ระยะเวลาก่อนออกเดินทางที่ยังสามารถจองตั๋วออนไลน์ได้ (หน่วยนาที) ค่านี้ยังใช้กำหนดจุดเริ่มแสดงข้อความ \"เหลือที่นั่งใกล้เต็ม\" บนเที่ยววิ่งด้วย การขายหน้าเคาน์เตอร์ (walk-in) ไม่ถูกจำกัดด้วยค่านี้",
       "LOAD_FAILED": "ไม่สามารถโหลดการตั้งค่านโยบายการจองได้"
+    },
+    "CONFIG_CHANGE_HISTORY": {
+      "SUBTITLE": "ดูประวัติการแก้ไขค่าตั้งค่าระบบทั้งหมด พร้อมผู้แก้ไขและช่วงเวลา",
+      "TABLE_TITLE": "รายการประวัติการแก้ไข",
+      "COL": {
+        "CHANGED_AT": "เวลา",
+        "CONFIG_KEY": "การตั้งค่า",
+        "CHANGE": "จาก → เป็น",
+        "ACTOR": "ผู้แก้ไข"
+      },
+      "UNITS": "รายการ",
+      "EMPTY": "ไม่พบรายการตามตัวกรอง",
+      "LOAD_FAILED": "ไม่สามารถโหลดประวัติได้",
+      "FILTER": {
+        "ALL_KEYS": "ทุกการตั้งค่า",
+        "DATE_RANGE": "ช่วงวันที่",
+        "DATE_FROM": "จากวันที่",
+        "DATE_TO": "ถึงวันที่"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "ช่วงวันที่ไม่ถูกต้อง — วันที่ \"ถึง\" ต้องไม่ก่อนวันที่ \"จาก\""
+      },
+      "BOOL": {
+        "ON": "เปิด",
+        "OFF": "ปิด"
+      },
+      "VALUE_DELETED": "ถูกลบ",
+      "VALUE": {
+        "MORE": "และอีก {{count}} รายการ"
+      },
+      "ACTOR": {
+        "SYSTEM": "ระบบ",
+        "UNATTRIBUTED": "ไม่ทราบผู้แก้ไข",
+        "UNATTRIBUTED_HINT": "ไม่สามารถระบุได้ว่าเป็นการแก้ไขโดยตรงจากภายนอกระบบที่ถูกต้อง หรือเป็นจุดที่ระบบลืมบันทึกผู้แก้ไข",
+        "PRE_FEATURE": "— (ก่อนมีบันทึก)",
+        "DELETED_USER": "ผู้ใช้ที่ถูกลบแล้ว"
+      },
+      "KEYS": {
+        "booking_max_advance_days": "เพดานขายล่วงหน้า (วัน)",
+        "booking_offset_minutes": "เวลาปิดการขาย (นาที)",
+        "seat_reservation_minutes": "ระยะเวลากันที่นั่ง (นาที)",
+        "cancel_window_hours": "ระยะเวลาที่ยกเลิกได้ก่อนเดินทาง (ชั่วโมง)",
+        "cancel_refund_rate_early": "อัตราคืนเงินเมื่อยกเลิกล่วงหน้า",
+        "cancel_refund_rate_late": "อัตราคืนเงินเมื่อยกเลิกกระชั้นชิด",
+        "reschedule_window_hours": "ระยะเวลาที่เลื่อนการเดินทางได้ก่อนออกเดินทาง (ชั่วโมง)",
+        "reschedule_max_days_ahead": "จำนวนวันสูงสุดที่เลื่อนการเดินทางล่วงหน้าได้",
+        "reschedule_fee_late_thb": "ค่าธรรมเนียมเลื่อนการเดินทางกระชั้นชิด (บาท)",
+        "reschedule_payment_timeout_minutes": "ระยะเวลาชำระส่วนต่างการเลื่อนการเดินทาง (นาที)",
+        "reminder_hours_before_departure": "แจ้งเตือนก่อนออกเดินทาง (ชั่วโมง)",
+        "boarding_reminder_minutes_before_departure": "แจ้งเตือนก่อนขึ้นรถ (นาที)",
+        "no_show_cutoff_minutes": "ระยะเวลาก่อนตัดสิทธิ์ผู้โดยสารไม่มาขึ้นรถ (นาที)",
+        "near_full_alert_threshold_percent": "เกณฑ์แจ้งเตือนที่นั่งใกล้เต็ม (%)",
+        "jump_seat_enabled": "เปิดการขายเบาะเสริม (walk-in)",
+        "parcel_max_weight_kg": "น้ำหนักพัสดุสูงสุด (กก.)",
+        "parcel_prohibited_categories": "หมวดหมู่พัสดุต้องห้าม",
+        "parcel_carry_on_free_size_min_inch": "ขนาดขั้นต่ำที่ถือขึ้นรถได้ฟรี (นิ้ว)",
+        "parcel_carry_on_free_size_max_inch": "ขนาดสูงสุดที่ถือขึ้นรถได้ฟรี (นิ้ว)",
+        "parcel_carry_on_free_aisle_max_per_trip": "จำนวนสูงสุดที่ถือขึ้นรถได้ฟรีต่อเที่ยว"
+      }
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "ยอดคืนเงิน ยอดรอคืนเงินแบบดำเนินการเอง และยอดตั๋วที่ถูกยกเลิก สำหรับช่วงวันที่ที่เลือก",

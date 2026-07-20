@@ -16,6 +16,19 @@
   /* danger role border (design-system §2 danger): used by invalid form fields.
      Runtime CSS var so it themes with the shell and isn't a raw hex per §13. */
   --admin-danger-border: rgba(186, 26, 26, 0.8);
+  /* OBRS-576: `.admin-error` is a BARE-foreground error message (no chip bg
+     behind it), unlike --admin-danger-text's other consumers (.admin-status.
+     is-danger / .admin-kpi-icon.is-danger), which always pair it with the
+     light --admin-danger-bg pastel — a self-contained chip that is already
+     dark-safe by construction and must NOT be touched here (overriding
+     --admin-danger-text itself for dark mode would fix this bare-text case
+     but break that chip's own light-bg contrast, since the chip's bg stays
+     the light pastel in both themes — this is exactly the split OBRS-520 is
+     doing elsewhere in this file, --admin-danger-text staying chip-only).
+     A dedicated bare-foreground token, light mode identical to
+     --admin-danger-text (no visible change there), dark mode overridden
+     below. */
+  --admin-error-text: var(--admin-danger-text);
   --admin-accepted-bg: #b7f3c0;
   --admin-accepted-text: #0a3d1d;
   /* in_review: neutral slate — distinct from new(orange)/accepted(green)/
@@ -252,6 +265,22 @@
 .admin-shell.is-dark {
   --admin-inreview-bg: #29323d;
   --admin-inreview-text: #c7d3de;
+}
+
+/* OBRS-576: `.admin-error` (bare-foreground validation/range-error text, no
+   chip bg behind it — reports-page's range-invalid message, and now this
+   card's own new config-change-history page) reads `--admin-danger-text`
+   (#93000a), which is deliberately kept dark-red for its OTHER, chip-paired
+   consumers (measured ~1.7:1 against `--admin-surface-card`/`--admin-surface`
+   here — fails WCAG AA). `--admin-error-text` (declared alongside
+   --admin-danger-text above) is the dedicated bare-foreground token; light
+   mode is unchanged (var() chain to --admin-danger-text), only dark mode
+   gets a lighter, standalone-safe red. Verified contrast (WCAG
+   relative-luminance formula): #f87171 on #1d2226 (.admin-card bg) ≈ 5.8:1,
+   on #14181b (.admin-shell bg) ≈ 6.45:1 — both comfortably above the 4.5:1 AA
+   floor for this 11px/600-weight text. */
+.admin-shell.is-dark {
+  --admin-error-text: #f87171;
 }
 
 /* OBRS-527: recessed dark teal chip (bg a step lighter than the row, light
@@ -1537,7 +1566,10 @@ textarea.admin-field {
 }
 
 .admin-error {
-  color: var(--admin-danger-text);
+  /* OBRS-576: bare-foreground token, NOT --admin-danger-text (that stays
+     chip-only — see the --admin-error-text declaration/dark-mode override
+     above for why splitting it was necessary rather than optional). */
+  color: var(--admin-error-text);
   font-size: 11px;
   font-weight: 600;
 }

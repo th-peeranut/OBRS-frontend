@@ -181,6 +181,22 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-576: config change history — one general page over EVERY config
+    // key (not a per-page panel), gated the same as booking-policy-config
+    // directly above (route `requiredRoles: ['admin', 'owner']`) since
+    // reading the history is granted to the same roles that can write it.
+    // Placed last in 'system' — it is the "meta" view over everything else
+    // in that section.
+    if (this.authService.hasAnyRole(['admin', 'owner'])) {
+      items.push({
+        path: 'config-change-history',
+        labelKey: 'ADMIN.PAGES.CONFIG_CHANGE_HISTORY',
+        icon: 'history',
+        descriptionKey: 'ADMIN.CONFIG_CHANGE_HISTORY.SUBTITLE',
+        section: 'system',
+      });
+    }
+
     return items;
   }
 
