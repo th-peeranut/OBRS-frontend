@@ -156,7 +156,14 @@ export interface ParcelDeliveryListItemDto {
   trackingNumber: string;
   senderName: string;
   senderPhone: string;
-  recipientName: string;
+  /**
+   * OBRS-548: nullable, and it always was — `parcel.recipient_name` carries no
+   * NOT NULL (`schema.sql`, `V14__add_parcel_carryon_seatcharge.sql`). Declaring
+   * it a plain `string` is what let the verify screen interpolate it into a
+   * confirm dialog unguarded and print a literal `{{recipient}}` on a real row.
+   * Every read of this field must handle absent.
+   */
+  recipientName: string | null;
   recipientPhone: string;
   pickupStop: ParcelStopRefDto | string;
   dropoffStop: ParcelStopRefDto | string;
@@ -173,6 +180,75 @@ export interface ParcelDeliveryListItemDto {
    * "no opinion" rather than "blocked".
    */
   bookingStatus?: string | null;
+  /**
+   * OBRS-416: DECLARED length/width/height (mirrors `weightKg` above, already
+   * declared at online intake) — purely additive to this same response row,
+   * confirmed against the backend's `ParcelDeliveryListItemRespDto` (flat
+   * fields, NOT a nested `dimensions` object — the parcel-verify UX spec's
+   * draft guessed a nested shape before the backend landed; this matches the
+   * real wire shape instead). The verify screen's whole job is comparing
+   * declared vs measured, so these need to be on the LIST row, not only
+   * inside the `POST /verify` response after the fact. `null`/absent when the
+   * sender never entered dimensions at online intake, or on a backend that
+   * predates OBRS-416.
+   */
+  lengthCm?: number | null;
+  widthCm?: number | null;
+  heightCm?: number | null;
+  /**
+   * OBRS-416: the PAID amount for this row's booking (read from the paid
+   * `payments` row server-side, never `booking.netAmount` — same rule as
+   * `ParcelCancellationService`/`ParcelVerificationService`). Needed to state
+   * the refund amount in the reject-confirmation step BEFORE the verify call
+   * is made, so it cannot come from that call's response. `null`/absent for a
+   * row whose booking has no paid payment (the unpaid-but-still-listed case
+   * OBRS-396 already established) or on a pre-OBRS-416 backend.
+   */
+  amount?: number | null;
+}
+
+/**
+ * `POST /api/private/parcels/{id}/verify` body — OBRS-416 (Epic OBRS-302,
+ * Card 3b), the driver/salesperson physical check of a `created` (online,
+ * unverified) consigned parcel intake against the actual package. Field
+ * names/shape confirmed against the backend's `ParcelVerifyReqDto`
+ * (`OBRS-backend` branch `ao/obrs-416-parcel-verify`, not yet merged to
+ * `dev`). The backend itself treats `actual*` as optional (a rejected parcel
+ * may never be measured at all) — this app's UX deliberately requires all
+ * four for BOTH outcomes (stricter than the backend minimum): the whole
+ * point of this screen is physically weighing/measuring, so the form never
+ * lets a submission skip it either way.
+ */
+export interface ParcelVerifyReqDto {
+  outcome: 'accept' | 'reject';
+  actualWeightKg: number;
+  actualLengthCm: number;
+  actualWidthCm: number;
+  actualHeightCm: number;
+  /** Required + non-blank server-side only when `outcome === 'reject'`
+   * (`PARCEL_VERIFY_REJECT_REASON_REQUIRED` 400 otherwise); the FE form
+   * itself already enforces this before submit. */
+  rejectReason?: string;
+}
+
+/**
+ * `POST .../verify` response — field names confirmed against the backend's
+ * `ParcelVerifyRespDto` record (`refundAmount`, not `refundedAmount` — the
+ * UX spec's draft flagged that name as a best guess pending confirmation;
+ * this is the real wire name). `refundAmount`/`refundStatus` are `null` on
+ * an accept (no money moves); populated on a reject. `refundStatus` is one
+ * of the `EPaymentStatus` slugs the refund actually landed in —
+ * `'refunded'`/`'partially_refunded'` (gateway refund succeeded) or
+ * `'manual_refund_required'` (e.g. a cash payment with no transaction id —
+ * the money has NOT been returned automatically and a human must hand it
+ * back). The UI must never collapse this distinction into one "refunded
+ * successfully" message.
+ */
+export interface ParcelVerifyRespDto {
+  parcelId: number;
+  deliveryStatus: string;
+  refundAmount: number | null;
+  refundStatus: string | null;
 }
 
 /**

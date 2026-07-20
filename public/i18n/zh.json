@@ -1936,6 +1936,7 @@
       "PARCEL_CONSIGN": "寄送包裹",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_DELIVERY": "包裹配送",
+      "PARCEL_VERIFY": "验收包裹",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队实时地图"
     },
@@ -1962,6 +1963,7 @@
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
       "BOARDING": "登车名单",
+      "PARCEL_VERIFY": "验收包裹",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队地图"
     },
@@ -2444,6 +2446,68 @@
         "REJECTED": "已拒收",
         "CREATED": "已申报 — 尚未到柜台",
         "UNKNOWN": "未知状态"
+      }
+    },
+    "PARCEL_VERIFY": {
+      "ENTRY_TITLE": "选择班次",
+      "ENTRY_SUBTITLE": "选择班次以验收包裹。",
+      "LIST_SUBTITLE": "称重/测量后接受或拒绝本班次的包裹。",
+      "LIST_EMPTY_TITLE": "本班次没有待验收的包裹",
+      "LIST_EMPTY_BODY": "所有包裹均已验收，或尚无包裹预订。",
+      "LOAD_FAILED": "无法加载包裹列表。",
+      "COL": {
+        "TRACKING_NUMBER": "追踪号码",
+        "RECIPIENT": "收件人",
+        "DECLARED_WEIGHT": "申报重量",
+        "DECLARED_DIMENSIONS": "申报尺寸（宽×长×高 cm）",
+        "PAID_AMOUNT": "已付金额"
+      },
+      "ACTION": {
+        "VERIFY": "验收"
+      },
+      "DIALOG": {
+        "TITLE": "验收包裹",
+        "DECLARED_LABEL": "申报值"
+      },
+      "FIELD": {
+        "WEIGHT_KG": "实际重量 (kg)",
+        "LENGTH_CM": "实际长度 (cm)",
+        "WIDTH_CM": "实际宽度 (cm)",
+        "HEIGHT_CM": "实际高度 (cm)",
+        "REJECT_REASON": "拒绝原因"
+      },
+      "MISMATCH_HINT": "与申报值不符",
+      "PRICE_NOTE": "实际重量/尺寸仅用于审计和货运配额记录，价格不会因此改变。",
+      "OUTCOME_LABEL": "验收结果",
+      "OUTCOME": {
+        "ACCEPT": "接受",
+        "REJECT": "拒绝"
+      },
+      "VALIDATION": {
+        "FIELD_REQUIRED": "请填写此字段",
+        "MUST_BE_POSITIVE": "数值必须大于 0",
+        "REJECT_REASON_REQUIRED": "请填写拒绝原因"
+      },
+      "CANCEL": "取消",
+      "SUBMIT_ACCEPT": "确认接受",
+      "SUBMIT_REJECT": "确认拒绝",
+      "SUBMITTING": "保存中…",
+      "REJECT_CONFIRM": {
+        "TITLE": "确认拒绝并退款",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
+        "CONFIRM_BTN": "拒绝并退款",
+        "CANCEL_BTN": "取消"
+      },
+      "ERROR": {
+        "ALREADY_VERIFIED": "该包裹已被他人验收，列表已刷新。",
+        "WRONG_STATE": "该包裹已无法验收，列表已刷新。",
+        "BOOKING_NOT_CONFIRMED": "该包裹尚未付款，请先确认付款。",
+        "NOT_FOUND": "未找到该包裹，列表已刷新。",
+        "VALIDATION": "数据无效，请重新检查。"
+      },
+      "SUCCESS": {
+        "REJECTED_REFUNDED": "包裹已拒绝，已退款 {{amount}} 泰铢。",
+        "REJECTED_MANUAL_REFUND": "包裹已拒绝，自动退款未成功，请将 {{amount}} 泰铢现金亲手退还收件人。"
       }
     },
     "INSPECTION": {

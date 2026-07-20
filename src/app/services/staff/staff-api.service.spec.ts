@@ -239,6 +239,16 @@ describe('StaffApiService', () => {
     req.flush({ code: 200, message: 'OK', data: [] });
   });
 
+  it('getParcelsPendingVerification() gets the dedicated verify-list endpoint (OBRS-416 fix)', () => {
+    service.getParcelsPendingVerification(42).subscribe((res) => expect(res).toBeTruthy());
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/private/schedules/42/parcels/pending-verification`
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ code: 200, message: 'OK', data: [] });
+  });
+
   it('loadParcel() posts to the load endpoint and sets SKIP_AUTH_LOGOUT', () => {
     service.loadParcel(1).subscribe((res) => expect(res).toBeTruthy());
 

@@ -1936,6 +1936,7 @@
       "PARCEL_CONSIGN": "Consign Parcel",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_DELIVERY": "Parcel Deliveries",
+      "PARCEL_VERIFY": "Verify Parcels",
       "INSPECTION": "Vehicle Inspection",
       "FLEET_MAP": "Fleet Live Map"
     },
@@ -1962,6 +1963,7 @@
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
       "BOARDING": "Boarding List",
+      "PARCEL_VERIFY": "Verify Parcels",
       "INSPECTION": "Inspection",
       "FLEET_MAP": "Fleet Map"
     },
@@ -2444,6 +2446,68 @@
         "REJECTED": "Rejected",
         "CREATED": "Declared — not yet at counter",
         "UNKNOWN": "Unknown"
+      }
+    },
+    "PARCEL_VERIFY": {
+      "ENTRY_TITLE": "Select a Schedule",
+      "ENTRY_SUBTITLE": "Choose a schedule to verify its parcels.",
+      "LIST_SUBTITLE": "Weigh/measure and accept or reject parcels for this schedule.",
+      "LIST_EMPTY_TITLE": "No parcels awaiting verification for this schedule",
+      "LIST_EMPTY_BODY": "Every parcel here has already been verified, or none have been booked yet.",
+      "LOAD_FAILED": "Unable to load the parcel list.",
+      "COL": {
+        "TRACKING_NUMBER": "Tracking number",
+        "RECIPIENT": "Recipient",
+        "DECLARED_WEIGHT": "Declared weight",
+        "DECLARED_DIMENSIONS": "Declared dimensions (W×L×H cm)",
+        "PAID_AMOUNT": "Paid amount"
+      },
+      "ACTION": {
+        "VERIFY": "Verify"
+      },
+      "DIALOG": {
+        "TITLE": "Verify parcel",
+        "DECLARED_LABEL": "Declared"
+      },
+      "FIELD": {
+        "WEIGHT_KG": "Actual weight (kg)",
+        "LENGTH_CM": "Actual length (cm)",
+        "WIDTH_CM": "Actual width (cm)",
+        "HEIGHT_CM": "Actual height (cm)",
+        "REJECT_REASON": "Reject reason"
+      },
+      "MISMATCH_HINT": "Differs from declared",
+      "PRICE_NOTE": "Actual weight/dimensions are recorded for audit and cargo capacity only. The price does not change.",
+      "OUTCOME_LABEL": "Verification result",
+      "OUTCOME": {
+        "ACCEPT": "Accept",
+        "REJECT": "Reject"
+      },
+      "VALIDATION": {
+        "FIELD_REQUIRED": "This field is required.",
+        "MUST_BE_POSITIVE": "Value must be greater than 0.",
+        "REJECT_REASON_REQUIRED": "Please provide a reject reason."
+      },
+      "CANCEL": "Cancel",
+      "SUBMIT_ACCEPT": "Confirm accept",
+      "SUBMIT_REJECT": "Confirm reject",
+      "SUBMITTING": "Saving…",
+      "REJECT_CONFIRM": {
+        "TITLE": "Confirm reject & refund",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
+        "CONFIRM_BTN": "Reject & refund",
+        "CANCEL_BTN": "Cancel"
+      },
+      "ERROR": {
+        "ALREADY_VERIFIED": "Someone else already verified this parcel. The list has been refreshed.",
+        "WRONG_STATE": "This parcel can no longer be verified. The list has been refreshed.",
+        "BOOKING_NOT_CONFIRMED": "This parcel is not paid for. Confirm payment before verifying it.",
+        "NOT_FOUND": "This parcel could not be found. The list has been refreshed.",
+        "VALIDATION": "Some values are invalid. Please check and try again."
+      },
+      "SUCCESS": {
+        "REJECTED_REFUNDED": "Parcel rejected. Refunded {{amount}} THB.",
+        "REJECTED_MANUAL_REFUND": "Parcel rejected. The automatic refund could not be processed — hand back {{amount}} THB to the recipient in cash."
       }
     },
     "INSPECTION": {

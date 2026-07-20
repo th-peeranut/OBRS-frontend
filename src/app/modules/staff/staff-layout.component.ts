@@ -52,6 +52,14 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
 
     if (isSalesperson || isDriver) {
       items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg' });
+      // OBRS-416: closes a pre-existing gap flagged by the UX spec — neither
+      // 'parcels/consign' nor 'parcels/deliveries' has a nav entry today
+      // (both are direct-URL-only), but a daily-use physical verification
+      // screen with no way to navigate to it from the UI is a worse version
+      // of the same gap. Same requiredRoles pair as the route itself
+      // (staff.module.ts) and the same isSalesperson||isDriver block as
+      // 'boarding' immediately above.
+      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check' });
     }
 
     // OBRS-312: weekly vehicle inspection checklist — driver-only.

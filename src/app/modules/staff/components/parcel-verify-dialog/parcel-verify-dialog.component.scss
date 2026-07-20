@@ -1,0 +1,126 @@
+:host {
+  display: block;
+}
+
+.pv-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+// The one net-new visual layout this card introduces: a read-only "declared"
+// value paired directly against the editable "measured" input for the same
+// physical quantity (design-system §12 new-pattern note — no existing screen
+// pairs a declared value against an editable control this way).
+.pv-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pv-declared {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+// Mismatch signaled by icon + text, never color alone (WCAG 1.4.1) — direct
+// sunlight on a phone screen can wash out a subtle color shift long before it
+// makes text/a glyph unreadable (design-system §9 physical-context note).
+.pv-mismatch-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--admin-danger-text);
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+}
+
+.pv-price-note {
+  margin: 0;
+}
+
+// Outcome toggle — the exact .admin-btn-based 2-segment pattern
+// design-system §12 locks in for InspectionPageComponent's verdict toggle,
+// not raw PrimeNG p-selectButton/p-button (no dark-mode-aware base styling
+// anywhere in this codebase).
+.pv-outcome-toggle {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.pv-outcome-btn {
+  flex: 1 1 0;
+  min-height: 44px; // tap-target minimum, §9 physical-context requirement
+  border-radius: 999px;
+}
+
+// Selected state — light mode: --admin-accepted-*/--admin-danger-* (design
+// system §2.4), the SAME token pair the accepted/rejected status chips use —
+// selecting "Accept" reads as the same meaning as the accepted chip, not a
+// re-derived brand color.
+.pv-outcome-btn.is-selected.is-accept {
+  background: var(--admin-accepted-bg);
+  border-color: var(--admin-accepted-bg);
+  color: var(--admin-accepted-text);
+}
+
+.pv-outcome-btn.is-selected.is-reject {
+  background: var(--admin-danger-bg);
+  border-color: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+// Selected state — dark mode: invert the EXISTING pair (dark -text becomes
+// bg, light -bg becomes fg) — same technique/justification as
+// InspectionPageComponent's verdict toggle (design-system §12): a
+// full-width button is not chip scale, and inversion preserves the already
+// AA-passing contrast (contrast is symmetric under an fg/bg swap) without a
+// new hex or a token-file change.
+:host-context(.admin-shell.is-dark) {
+  .pv-outcome-btn.is-selected.is-accept {
+    background: var(--admin-accepted-text);
+    border-color: var(--admin-accepted-text);
+    color: var(--admin-accepted-bg);
+  }
+
+  .pv-outcome-btn.is-selected.is-reject {
+    background: var(--admin-danger-text);
+    border-color: var(--admin-danger-text);
+    color: var(--admin-danger-bg);
+  }
+}
+
+.pv-reject-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+// Sticky bottom action bar, scoped to the modal's own scroll container
+// (`.admin-modal` already `overflow: auto`) — reuses only the sticky-bottom
+// half of ADR-0023's InspectionPageComponent precedent (the sticky-top half
+// is specific to sitting below the shell topbar, which doesn't apply inside
+// a modal). Keeps Submit/Cancel reachable one-handed when the 4 numeric
+// fields + toggle + conditional reject textarea exceed visible height with
+// the on-screen keyboard open.
+.pv-bottom-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  padding-top: 10px;
+  background: var(--admin-surface-card);
+  border-top: 1px solid var(--admin-outline);
+}
+
+.pv-bottom-bar .admin-btn {
+  min-height: 44px; // tap-target minimum, §9 physical-context requirement
+}
