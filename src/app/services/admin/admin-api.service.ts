@@ -201,8 +201,15 @@ export interface VehicleInspectionListItemDto {
  * already signed. The backend orders the response by
  * `(categorySnapshot's declaration order, displayOrderSnapshot, id)`
  * server-side; the FE never re-derives group order from the string, it only
- * cuts contiguous runs on `categorySnapshot` — see `groupRowsByCategory` in
- * `vehicle-inspection.mappers.ts`. */
+ * cuts contiguous runs on `categorySnapshot` — see `groupDetailRowsByCategory`
+ * in `vehicle-inspection.mappers.ts`. (`groupRowsByCategory` is the driver
+ * form's sibling caller of the same shared walk, in
+ * `staff/pages/inspection/inspection-page.mappers.ts` — not this surface.)
+ *
+ * `categoryOrder` is currently informational on this side: the FE deliberately
+ * does NOT sort, so nothing reads it. It is on the wire so that any future
+ * client-side ordering has the declaration order available and can never be
+ * tempted to alphabetise `categorySnapshot`. */
 export interface VehicleInspectionDetailItemDto {
   itemId: number;
   itemLabelSnapshot: string;
