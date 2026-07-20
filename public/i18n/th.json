@@ -1963,6 +1963,8 @@
       "SCHEDULES": "ตารางเดินรถ",
       "MY_SCHEDULES": "ตารางของฉัน",
       "BOARDING": "รายชื่อผู้โดยสาร",
+      "PARCEL_CONSIGN": "ฝากส่งพัสดุ",
+      "PARCEL_DELIVERY": "การส่งพัสดุ",
       "PARCEL_VERIFY": "ตรวจรับพัสดุ",
       "INSPECTION": "ตรวจสภาพรถ",
       "FLEET_MAP": "แผนที่ยานพาหนะ"

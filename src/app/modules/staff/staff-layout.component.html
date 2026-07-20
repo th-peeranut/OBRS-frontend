@@ -40,10 +40,19 @@
         <span class="material-symbols-outlined">{{ toggleIconName }}</span>
       </button>
 
+      <!-- OBRS-543: routerLink takes the STRING form, not ['/staff', item.path].
+           An array element is ONE path segment, so a multi-segment path like
+           'parcels/consign' came out percent-encoded as /staff/parcels%2Fconsign
+           — a URL that matches no route. OBRS-416's 'parcels/verify' entry
+           shipped that way and nobody noticed, because the menu item looked
+           perfectly correct; only clicking it revealed anything. A string is
+           parsed as a URL, so the slashes survive. It also stays CD-safe: string
+           bindings compare by value, unlike the fresh array a method call would
+           allocate every cycle (see the navItems comment in the component). -->
       <nav class="admin-nav">
         <a
           *ngFor="let item of navItems; trackBy: trackNavItem"
-          [routerLink]="['/staff', item.path]"
+          [routerLink]="'/staff/' + item.path"
           routerLinkActive="active"
           [routerLinkActiveOptions]="{ exact: false }"
           class="admin-nav-link"

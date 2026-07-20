@@ -2,7 +2,11 @@ import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
 import { AuthGuard } from './auth/auth.guard';
 
-const routes: Routes = [
+// OBRS-543: exported (was module-private) so nav-reachability.spec.ts can read
+// each portal shell's own `requiredRoles`. Most admin child routes carry no
+// guard of their own — they are protected solely by this shell entry — so a
+// per-page access check that ignored it would read them as unprotected.
+export const appRoutes: Routes = [
   {
     path: 'admin',
     canActivate: [AuthGuard],
@@ -226,7 +230,7 @@ const routes: Routes = [
 ];
 
 @NgModule({
-  imports: [RouterModule.forRoot(routes)],
+  imports: [RouterModule.forRoot(appRoutes)],
   exports: [RouterModule],
 })
 export class AppRoutingModule {}
