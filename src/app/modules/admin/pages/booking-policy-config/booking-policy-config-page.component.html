@@ -1,0 +1,100 @@
+<section class="admin-page-intro">
+  <div>
+    <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.COMMON.LOADING' | translate }}</p>
+    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.PAGES.BOOKING_POLICY_CONFIG' | translate }}</h4>
+  </div>
+
+  <ng-container *ngIf="isLoading">
+    <div class="admin-skeleton admin-skeleton--sm mb-2" *ngFor="let row of [1, 2]"></div>
+  </ng-container>
+
+  <form
+    *ngIf="!isLoading && config"
+    [formGroup]="bookingPolicyConfigForm"
+    class="admin-form-grid mt-3"
+    (ngSubmit)="save()"
+  >
+    <div class="admin-form-field">
+      <label class="admin-form-label" for="maxAdvanceDays">
+        {{ 'ADMIN.BOOKING_POLICY_CONFIG.MAX_ADVANCE_DAYS_LABEL' | translate }}
+        <span class="admin-required">*</span>
+      </label>
+      <input
+        #maxAdvanceDaysInput
+        id="maxAdvanceDays"
+        class="admin-field"
+        type="number"
+        min="1"
+        max="365"
+        step="1"
+        required
+        formControlName="maxAdvanceDays"
+        [attr.aria-invalid]="isFieldInvalid('maxAdvanceDays') ? true : null"
+        [attr.aria-describedby]="describedBy('maxAdvanceDays')"
+      />
+      <small class="admin-muted" id="maxAdvanceDays-helper">
+        {{ 'ADMIN.BOOKING_POLICY_CONFIG.MAX_ADVANCE_DAYS_HELPER' | translate }}
+      </small>
+      <small
+        class="admin-error"
+        role="alert"
+        id="maxAdvanceDays-error"
+        *ngIf="isFieldInvalid('maxAdvanceDays')"
+      >{{ errorKey('maxAdvanceDays') | translate: errorParams('maxAdvanceDays') }}</small>
+    </div>
+
+    <div class="admin-form-field">
+      <label class="admin-form-label" for="cutoffMinutes">
+        {{ 'ADMIN.BOOKING_POLICY_CONFIG.CUTOFF_MINUTES_LABEL' | translate }}
+        <span class="admin-required">*</span>
+      </label>
+      <input
+        #cutoffMinutesInput
+        id="cutoffMinutes"
+        class="admin-field"
+        type="number"
+        min="1"
+        max="1440"
+        step="1"
+        required
+        formControlName="cutoffMinutes"
+        [attr.aria-invalid]="isFieldInvalid('cutoffMinutes') ? true : null"
+        [attr.aria-describedby]="describedBy('cutoffMinutes')"
+      />
+      <small class="admin-muted" id="cutoffMinutes-helper">
+        {{ 'ADMIN.BOOKING_POLICY_CONFIG.CUTOFF_MINUTES_HELPER' | translate }}
+      </small>
+      <small
+        class="admin-error"
+        role="alert"
+        id="cutoffMinutes-error"
+        *ngIf="isFieldInvalid('cutoffMinutes')"
+      >{{ errorKey('cutoffMinutes') | translate: errorParams('cutoffMinutes') }}</small>
+    </div>
+
+    <div class="admin-form-field full">
+      <button
+        type="submit"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSaving || bookingPolicyConfigForm.invalid || bookingPolicyConfigForm.pristine"
+      >
+        {{ isSaving ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </form>
+
+  <p class="admin-muted" *ngIf="!isLoading && !config && !errorMessage">
+    {{ 'ADMIN.COMMON.NO_DATA' | translate }}
+  </p>
+</section>

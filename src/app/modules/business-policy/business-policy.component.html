@@ -1,8 +1,23 @@
-﻿<app-navbar></app-navbar>
+<app-navbar></app-navbar>
 
 <section class="policy-container">
   <div class="policy-card">
     <h1>{{ "POLICY.BUSINESS.TITLE" | translate }}</h1>
+    <p *ngIf="policyParams; else policyLoading"
+       [innerHTML]="'POLICY.BUSINESS.SALES_CHANNELS' | translate: policyParams"></p>
+    <ng-template #policyLoading>
+      <div *ngIf="!policyLoadFailed" class="policy-skeleton-block" aria-hidden="true">
+        <span class="policy-skeleton"></span>
+        <span class="policy-skeleton policy-skeleton--sm"></span>
+      </div>
+      <div *ngIf="policyLoadFailed" class="policy-inline-error" role="alert">
+        <span class="material-symbols-outlined policy-inline-error-icon" aria-hidden="true">error</span>
+        <span>{{ 'POLICY.BUSINESS.SALES_CHANNELS_ERROR' | translate }}</span>
+        <button type="button" class="btn btn-link p-0 policy-inline-retry" (click)="retryPolicyParams()">
+          {{ 'POLICY.BUSINESS.RETRY' | translate }}
+        </button>
+      </div>
+    </ng-template>
     <p [innerHTML]="'POLICY.BUSINESS.CONTENT' | translate"></p>
   </div>
 </section>

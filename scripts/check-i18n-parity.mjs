@@ -67,6 +67,28 @@ for (const key of [...union].sort()) {
   }
 }
 
+// 3) OBRS-564 regression guard: POLICY.BUSINESS.SALES_CHANNELS renders the
+//    two booking-policy numbers (advance-booking cap, cutoff) LIVE from the
+//    public /api/booking-policy config -- the original defect on this card
+//    was these numbers hardcoded here as a wrong "60 days / 12 hours". This
+//    key must never again contain that old hardcoded copy in any language.
+const OLD_HARDCODED_POLICY_STRINGS = ['60 days', '60 วัน', '60天', '12 hours', '12 ชั่วโมง', '12小时'];
+for (const lang of LANGS) {
+  const raw = readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8');
+  const json = JSON.parse(raw);
+  const salesChannels = json?.POLICY?.BUSINESS?.SALES_CHANNELS;
+  if (typeof salesChannels !== 'string') {
+    continue;
+  }
+  for (const oldString of OLD_HARDCODED_POLICY_STRINGS) {
+    if (salesChannels.includes(oldString)) {
+      problems.push(
+        `[${lang}] POLICY.BUSINESS.SALES_CHANNELS still contains the old hardcoded "${oldString}" -- must render from the live booking-policy config instead (OBRS-564)`
+      );
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {

@@ -43,3 +43,66 @@
     }
   }
 }
+
+// OBRS-564: loading/error state for the SALES_CHANNELS paragraph (policy
+// item 1), rendered while its numbers are being fetched from the public
+// booking-policy API. This page has no `.admin-shell` ancestor, so it copies
+// the shimmer VALUES from `.skeleton` in my-bookings.component.scss (the
+// customer-shell precedent) rather than reaching for `.admin-skeleton`,
+// which is scoped under `.admin-shell` and would resolve to nothing here.
+.policy-skeleton-block {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  margin-bottom: $space-md;
+}
+
+.policy-skeleton {
+  display: block;
+  height: 16px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    $primary-lightgrey 25%,
+    $secondary-grey 37%,
+    $primary-lightgrey 63%
+  );
+  background-size: 400% 100%;
+  animation: business-policy-shimmer 1.4s ease infinite;
+
+  &--sm {
+    width: 45%;
+  }
+}
+
+@keyframes business-policy-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+// Failure covers 1 paragraph of 6 — the UI's loudness matches the actual
+// damage (design-system.md §4 Link role for the retry, not a full p-button).
+// flex-wrap so icon+text+button wrap instead of crushing at a 390px viewport.
+.policy-inline-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: $space-md;
+  color: $text-red;
+  font-size: $font-size-sm;
+}
+
+.policy-inline-error-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.policy-inline-retry {
+  color: $text-red;
+  text-decoration: underline;
+}

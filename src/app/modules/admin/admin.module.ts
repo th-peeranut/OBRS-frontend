@@ -45,6 +45,7 @@ import { SettlementsListComponent } from './pages/settlements/settlements-list/s
 import { SettlementDetailModalComponent } from './pages/settlements/settlement-detail-modal/settlement-detail-modal.component';
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
 import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
+import { BookingPolicyConfigPageComponent } from './pages/booking-policy-config/booking-policy-config-page.component';
 import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -195,6 +196,21 @@ const routes: Routes = [
         },
       },
       {
+        // OBRS-564: booking-policy config (advance-booking cap in days,
+        // minutes-before-departure cutoff) — the backend PUT guard is
+        // hasRole('OWNER'); ROLE_GRANTS admits ADMIN automatically (OBRS-446
+        // comment on AuthService), so ['admin','owner'] states that intent
+        // honestly rather than excluding admin.
+        path: 'booking-policy-config',
+        component: BookingPolicyConfigPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.BOOKING_POLICY_CONFIG',
+          subtitleKey: 'ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         path: 'refund-void-report',
         component: RefundVoidReportPageComponent,
         canActivate: [AuthGuard],
@@ -266,6 +282,7 @@ const routes: Routes = [
     SettlementDetailModalComponent,
     ReminderConfigPageComponent,
     JumpSeatConfigPageComponent,
+    BookingPolicyConfigPageComponent,
     CargoCapacityPageComponent,
     InspectionItemsPageComponent,
   ],
