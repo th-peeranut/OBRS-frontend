@@ -104,6 +104,11 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
             this.maxDate = dayjs(this.minDate).add(response.data.maxAdvanceDays, 'day').toDate();
           }
         },
+        // Explicit no-op: keeping the fallback IS the handling. An observer
+        // with no `error` callback lets the interceptor's rethrow surface as
+        // an RxJS unhandled error on the home page, which is the opposite of
+        // the silent degradation intended above.
+        error: () => undefined,
       });
   }
 
