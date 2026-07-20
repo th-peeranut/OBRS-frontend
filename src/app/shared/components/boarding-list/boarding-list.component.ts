@@ -1237,7 +1237,13 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     const errorCode = extractScheduleStatusErrorCode(error);
 
     if (errorCode === 'VEHICLE_PREVIOUS_TRIP_NOT_ARRIVED') {
-      const serverMessage = extractApiErrorMessage(error);
+      // Fall back to the code's own mapped text: extractApiErrorMessage returns
+      // '' for a body with an errorCode but no message (OBRS-567), and this one
+      // is used as a confirm dialog's `text:` — an empty string there would ask
+      // the user to override a gate without saying which gate.
+      const serverMessage =
+        extractApiErrorMessage(error) ||
+        this.translate.instant(mapScheduleStatusErrorCode(errorCode));
 
       if (this.canOverrideTurnaroundGate && !alreadyOverridden) {
         const confirmed = await this.alertService.confirm({
