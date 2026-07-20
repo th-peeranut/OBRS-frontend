@@ -1966,6 +1966,8 @@
       "SCHEDULES": "班次",
       "MY_SCHEDULES": "我的班次",
       "BOARDING": "登车名单",
+      "PARCEL_CONSIGN": "寄送包裹",
+      "PARCEL_DELIVERY": "包裹配送",
       "PARCEL_VERIFY": "验收包裹",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队地图"

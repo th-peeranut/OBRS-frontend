@@ -1966,6 +1966,8 @@
       "SCHEDULES": "Schedules",
       "MY_SCHEDULES": "My Schedules",
       "BOARDING": "Boarding List",
+      "PARCEL_CONSIGN": "Consign Parcel",
+      "PARCEL_DELIVERY": "Parcel Deliveries",
       "PARCEL_VERIFY": "Verify Parcels",
       "INSPECTION": "Inspection",
       "FLEET_MAP": "Fleet Map"

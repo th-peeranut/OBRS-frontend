@@ -52,19 +52,36 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
 
     if (isSalesperson || isDriver) {
       items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg' });
-      // OBRS-416: closes a pre-existing gap flagged by the UX spec — neither
-      // 'parcels/consign' nor 'parcels/deliveries' has a nav entry today
-      // (both are direct-URL-only), but a daily-use physical verification
-      // screen with no way to navigate to it from the UI is a worse version
-      // of the same gap. Same requiredRoles pair as the route itself
-      // (staff.module.ts) and the same isSalesperson||isDriver block as
-      // 'boarding' immediately above.
-      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check' });
     }
 
     // OBRS-312: weekly vehicle inspection checklist — driver-only.
     if (isDriver) {
       items.push({ path: 'inspection', labelKey: 'STAFF.NAV.INSPECTION', icon: 'checklist' });
+    }
+
+    // ── Parcels ───────────────────────────────────────────────────────────────
+    // OBRS-543 closes the gap OBRS-416's comment documented but only half-fixed:
+    // 'parcels/verify' got a nav entry, 'parcels/consign' and 'parcels/deliveries'
+    // (both shipped under OBRS-305) stayed direct-URL-only, so the work in that
+    // card was in practice unshipped. Two more pages were orphaned transitively —
+    // 'parcels/:id/waybill' is reachable only from consign, and
+    // 'parcels/deliveries/:scheduleId' only from the deliveries entry page — so
+    // these two entries restore four pages, not two.
+    //
+    // Grouped at the end rather than left where 'parcels/verify' sat, so all
+    // three parcel screens render contiguously for both roles instead of being
+    // split by 'boarding'. Each push sits in the block matching its route's own
+    // requiredRoles (staff.module.ts): consign is salesperson-only, the other two
+    // admit drivers too. modules/nav-reachability.spec.ts enforces both halves —
+    // that no page is orphaned, and that no link is shown to a role the guard
+    // would bounce.
+    if (isSalesperson) {
+      items.push({ path: 'parcels/consign', labelKey: 'STAFF.NAV.PARCEL_CONSIGN', icon: 'inventory_2' });
+    }
+
+    if (isSalesperson || isDriver) {
+      items.push({ path: 'parcels/deliveries', labelKey: 'STAFF.NAV.PARCEL_DELIVERY', icon: 'local_shipping' });
+      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check' });
     }
 
     return items;
