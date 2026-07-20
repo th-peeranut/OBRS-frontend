@@ -40,10 +40,13 @@ const VERIFY_ERROR_KEYS: Record<string, string> = {
  * Smart page: `/staff/parcels/verify/:scheduleId` (driver + salesperson —
  * the role hierarchy means a salesperson session also satisfies the
  * DRIVER-only `POST .../verify` endpoint). Component-scoped
- * `ParcelVerifyListStore` drives the manifest (already filtered to
- * `deliveryStatus === 'created'`); the verify dialog is a dumb child, this
- * page owns the HTTP call — same split as `ParcelDeliveryListPageComponent`/
- * `ParcelCollectDialogComponent`.
+ * `ParcelVerifyListStore` drives the manifest, backed by the dedicated
+ * `getParcelsPendingVerification` endpoint (already filtered to
+ * `deliveryStatus === 'created'` server-side — see the store's Javadoc for
+ * OBRS-416's P0: the sibling delivery-handoff endpoint deliberately excludes
+ * that status and can never back this screen); the verify dialog is a dumb
+ * child, this page owns the HTTP call — same split as
+ * `ParcelDeliveryListPageComponent`/`ParcelCollectDialogComponent`.
  */
 @Component({
   selector: 'app-parcel-verify-list-page',

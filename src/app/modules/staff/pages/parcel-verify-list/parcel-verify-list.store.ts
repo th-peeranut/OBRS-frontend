@@ -11,16 +11,15 @@ import { ParcelDeliveryListItemDto } from '../../../../shared/interfaces/parcel.
  * reasoning to `ParcelDeliveryListStore`: a schedule-scoped manifest must not
  * leak into the next mount.
  *
- * Calls the SAME `getConsignedParcelsForSchedule(scheduleId)` endpoint the
- * sibling delivery-handoff list store already calls (no new list endpoint —
- * per the UX spec's contract note, the backend extended that one response
- * row additively with `lengthCm`/`widthCm`/`heightCm`/`amount` rather than
- * standing up a second endpoint) and filters to `deliveryStatus === 'created'`
- * client-side: this screen's whole job is checking parcels nobody has
- * physically inspected yet, and every other status belongs on the sibling
- * `ParcelDeliveryListStore`'s list instead. Same client-side status-driven
- * branching idiom `ParcelDeliveryListPageComponent` already uses off the same
- * one list response.
+ * Calls the dedicated `getParcelsPendingVerification(scheduleId)` endpoint,
+ * NOT the sibling delivery-handoff list's `getConsignedParcelsForSchedule`.
+ * That sibling endpoint's backing query deliberately EXCLUDES
+ * `deliveryStatus === 'created'` rows (OBRS-415/OBRS-348), so an earlier
+ * version of this store that called it and then filtered the response down
+ * to `'created'` client-side could never show a row — the intersection of
+ * "excluded server-side" and "the only status we want" is always empty. That
+ * was OBRS-416's P0 (fixed here). The filtering is the server's job now;
+ * this store trusts the response as-is.
  */
 @Injectable()
 export class ParcelVerifyListStore extends AdminCollectionStore<ParcelDeliveryListItemDto[]> {
@@ -45,8 +44,8 @@ export class ParcelVerifyListStore extends AdminCollectionStore<ParcelDeliveryLi
       return [];
     }
     const response = await firstValueFrom(
-      this.staffApiService.getConsignedParcelsForSchedule(this.currentScheduleId)
+      this.staffApiService.getParcelsPendingVerification(this.currentScheduleId)
     );
-    return (response?.data ?? []).filter((p) => p.deliveryStatus === 'created');
+    return response?.data ?? [];
   }
 }

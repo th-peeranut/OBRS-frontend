@@ -64,16 +64,27 @@ describe('ParcelVerifyListStore', () => {
     expect(other).not.toBe(store);
   });
 
-  it('filters the shared consigned-parcels response to only deliveryStatus === "created"', async () => {
+  it('OBRS-416: calls the dedicated pending-verification endpoint, NEVER the sibling delivery-list endpoint', async () => {
+    // Pinning test for the P0: getConsignedParcelsForSchedule's backing query
+    // deliberately EXCLUDES deliveryStatus === 'created' server-side
+    // (OBRS-415/OBRS-348), so a store that called it and filtered down to
+    // 'created' client-side could never show a row — the intersection is
+    // always empty. Assert BOTH the correct call AND the absence of the old
+    // one, so this can't regress back to that bug silently.
     const staffApi = TestBed.inject(StaffApiService);
-    spyOn(staffApi, 'getConsignedParcelsForSchedule').and.returnValue(
+    const wrongEndpointSpy = spyOn(staffApi, 'getConsignedParcelsForSchedule').and.returnValue(
+      of({ code: 200, message: 'OK', data: [] })
+    );
+    spyOn(staffApi, 'getParcelsPendingVerification').and.returnValue(
       of({
         code: 200,
         message: 'OK',
+        // A real backend response from this endpoint is ALREADY filtered to
+        // 'created' server-side — deliberately not mixing in other statuses
+        // here, unlike the old mock that encoded the bug by hand-crafting
+        // rows the real backend would never send.
         data: [
           makeRow({ parcelId: 1, deliveryStatus: 'created' }),
-          makeRow({ parcelId: 2, deliveryStatus: 'accepted' }),
-          makeRow({ parcelId: 3, deliveryStatus: 'rejected' }),
           makeRow({ parcelId: 4, deliveryStatus: 'created' }),
         ],
       })
@@ -82,13 +93,14 @@ describe('ParcelVerifyListStore', () => {
     store.setScheduleId(42);
     await store.refresh();
 
-    expect(staffApi.getConsignedParcelsForSchedule).toHaveBeenCalledWith(42);
+    expect(staffApi.getParcelsPendingVerification).toHaveBeenCalledWith(42);
+    expect(wrongEndpointSpy).not.toHaveBeenCalled();
     expect(store.value?.map((r) => r.parcelId)).toEqual([1, 4]);
   });
 
   it('returns an empty array when no scheduleId has been set yet', async () => {
     const staffApi = TestBed.inject(StaffApiService);
-    const spy = spyOn(staffApi, 'getConsignedParcelsForSchedule').and.returnValue(
+    const spy = spyOn(staffApi, 'getParcelsPendingVerification').and.returnValue(
       of({ code: 200, message: 'OK', data: [makeRow()] })
     );
 

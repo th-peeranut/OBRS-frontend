@@ -671,12 +671,33 @@ export class StaffApiService {
 
   /** ASSUMED endpoint, not yet in the backend contract doc — see
    * `docs/handoff.md` Contract Requests (OBRS-305). Backs the delivery-handoff
-   * list for one schedule (`/staff/parcels/deliveries/:scheduleId`). */
+   * list for one schedule (`/staff/parcels/deliveries/:scheduleId`). This
+   * endpoint's backing query deliberately EXCLUDES `deliveryStatus ===
+   * 'created'` rows (OBRS-415/OBRS-348) — it can never back the verify-list
+   * screen; use `getParcelsPendingVerification` for that (OBRS-416 fix). */
   getConsignedParcelsForSchedule(
     scheduleId: number
   ): Observable<ResponseAPI<ParcelDeliveryListItemDto[]>> {
     return this.http.get<ResponseAPI<ParcelDeliveryListItemDto[]>>(
       `${environment.apiUrl}/api/private/schedules/${scheduleId}/parcels/consigned`,
+      { context: this.skipContext }
+    );
+  }
+
+  /** OBRS-416 fix: dedicated endpoint for the verify-list screen
+   * (`/staff/parcels/verify/:scheduleId`). The sibling
+   * `getConsignedParcelsForSchedule` above deliberately excludes
+   * `deliveryStatus === 'created'` rows server-side, so filtering ITS
+   * response client-side down to `'created'` is always an empty
+   * intersection — that was the original bug. This endpoint filters to
+   * `deliveryStatus === 'created'` server-side and returns the same
+   * `ParcelDeliveryListItemDto[]` row shape (including `lengthCm`/`widthCm`/
+   * `heightCm`/`amount`) under the same `{ data: [...] }` envelope. */
+  getParcelsPendingVerification(
+    scheduleId: number
+  ): Observable<ResponseAPI<ParcelDeliveryListItemDto[]>> {
+    return this.http.get<ResponseAPI<ParcelDeliveryListItemDto[]>>(
+      `${environment.apiUrl}/api/private/schedules/${scheduleId}/parcels/pending-verification`,
       { context: this.skipContext }
     );
   }
