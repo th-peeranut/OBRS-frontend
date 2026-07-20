@@ -300,6 +300,26 @@ body.is-dark {
     .booking-card {
       background-color: $dk-bg-soft !important;
     }
+
+    // OBRS-575 (scrutinize fix): the recent-route quick-pick pills style their
+    // border + label with $brand-customer-strong (#4069b8). Against this card's
+    // dark background ($dk-bg-soft #22263a) that measures 2.79:1 — below AA for
+    // both text (4.5:1) and non-text/border (3:1). A transparent background is
+    // NOT by itself "dark-safe": per design-system §12 / OBRS-520, a token that
+    // resolves to the same light-mode value in both themes introduces no new hex
+    // and is still broken. Repoint to $dk-accent (#4bc2f7 on #22263a = 7.4:1),
+    // and invert hover onto the dark page bg rather than white text
+    // ($text-white on $dk-accent is only 2.0:1).
+    .recent-route-btn {
+      color: $dk-accent;
+      border-color: $dk-accent;
+
+      &:hover,
+      &:focus-visible {
+        background-color: $dk-accent;
+        color: $dk-bg;
+      }
+    }
   }
 }
 

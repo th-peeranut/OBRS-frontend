@@ -32,8 +32,10 @@
 // a customer-shell repeatable quick-pick action". Border + text use the
 // customer brand token; background is deliberately transparent (not
 // $primary-white, unlike MyReportsComponent's .btn-secondary) so it always
-// inherits the ancestor `.booking-card` background in both light and dark mode
-// — zero new dark-mode CSS required.
+// inherits the ancestor `.booking-card` background in both light and dark mode.
+// The border/label color below is LIGHT-MODE ONLY: $brand-customer-strong is
+// 2.79:1 on the dark card, so `dark-theme.scss` §6 repoints color/border-color
+// (and the hover inversion) to $dk-accent. Keep those two blocks in sync.
 .recent-route-btn {
   display: inline-flex;
   align-items: center;

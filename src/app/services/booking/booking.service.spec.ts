@@ -3,6 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { BookingService } from './booking.service';
 import { BookingPayload } from '../../shared/interfaces/booking.interface';
 import { environment } from '../../../environments/environment';
+import { SKIP_AUTH_LOGOUT } from '../../shared/interceptors/http-context-tokens';
 
 const PAYLOAD: BookingPayload = {
   bookingType: 'one_way',
@@ -122,6 +123,31 @@ describe('BookingService', () => {
         message: 'OK',
         data: { bookingId: 5, bookingNumber: 'BK5', status: 'CONFIRMED', paymentIntentId: null },
       });
+    });
+  });
+
+  // OBRS-575 scrutinize: the component spec only asserts the ARGUMENT
+  // (`getMyBookings(undefined, false, true)`) — a proxy, not the effect. If
+  // `listContext` ever stopped threading the flag, every suite stays green
+  // while Home silently force-logs-out an expired session again (OBRS-187).
+  // Pin the real request context, same shape as parcel-tracking.service.spec.ts:51.
+  describe('getMyBookings — SKIP_AUTH_LOGOUT context (OBRS-575 / AC#8)', () => {
+    const url = `${environment.apiUrl}/api/private/bookings/me?page=0&size=100`;
+
+    it('sets SKIP_AUTH_LOGOUT when skipAuthLogout=true (Home background fetch)', () => {
+      service.getMyBookings(undefined, false, true).subscribe();
+
+      const req = httpMock.expectOne(url);
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({ code: 200, message: 'OK', data: { content: [] } });
+    });
+
+    it('does NOT set SKIP_AUTH_LOGOUT by default — /my-bookings must still force-logout on a real 401', () => {
+      service.getMyBookings().subscribe();
+
+      const req = httpMock.expectOne(url);
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeFalse();
+      req.flush({ code: 200, message: 'OK', data: { content: [] } });
     });
   });
 });

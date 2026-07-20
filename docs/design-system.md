@@ -782,14 +782,24 @@ enforced rule with a test behind it.
   `p-selectButton` (§12, OBRS-312) on this page's `.booking-card` (which DOES
   have a dark override, `$dk-bg-soft`, OBRS-217). Fix: background
   **`transparent`**, so it always inherits whatever the ancestor card
-  background is in either theme — **zero new dark-mode CSS required**, because
-  there is nothing to override. `border-radius: $radius-xl` matches this same
+  background is in either theme. ⚠️ **Transparent background is necessary but
+  NOT sufficient — this pattern still needs its own dark-mode block.** The
+  card's first draft claimed *"zero new dark-mode CSS required, because there is
+  nothing to override"*; that reasoned only about the **background** and left
+  border + label at `$brand-customer-strong` (#4069b8), which measures
+  **2.79:1** on `$dk-bg-soft` — below AA for text (4.5:1) **and** for a border
+  (3:1). Exactly the OBRS-520 lesson: composing existing tokens with no new hex
+  is not the same as dark-safe. `dark-theme.scss` §6 therefore repoints both to
+  `$dk-accent` (7.4:1) and inverts hover onto `$dk-bg` instead of `$text-white`
+  (white on `$dk-accent` is only 2.0:1).
+  `border-radius: $radius-xl` matches this same
   page's `.btn-search` pill rather than `MyReportsComponent`'s `$radius-sm`.
   `min-height: 40px` (below `.btn-search`'s 52px — a secondary/optional action,
-  not the page's primary). Hover/focus fills with `$brand-customer-strong` +
-  white text — the standard outline-button inversion, no new token. Reuse this
-  transparent-bg fix (not `MyReportsComponent`'s white-bg recipe) for the next
-  customer-shell repeatable chip/tag control.
+  not the page's primary). Light-mode hover/focus fills with
+  `$brand-customer-strong` + white text — the standard outline-button inversion,
+  no new token. Reuse this transparent-bg recipe **together with its dark block**
+  (not `MyReportsComponent`'s white-bg recipe) for the next customer-shell
+  repeatable chip/tag control.
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
