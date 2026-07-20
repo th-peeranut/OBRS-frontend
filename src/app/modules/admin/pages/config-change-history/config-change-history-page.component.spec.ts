@@ -43,6 +43,12 @@ function makeStoreStub(data: HistoryPage | null) {
     error$,
     hasValue: data !== null,
     lastErrorCode: null as string | null,
+    // Root-scoped store: whatever filter the PREVIOUS visit left behind.
+    filters: {
+      configKey: undefined as string | undefined,
+      from: undefined as string | undefined,
+      to: undefined as string | undefined,
+    },
     refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
     setConfigKey: jasmine.createSpy('setConfigKey').and.resolveTo(undefined),
     setRange: jasmine.createSpy('setRange').and.resolveTo(undefined),
@@ -66,6 +72,23 @@ describe('ConfigChangeHistoryPageComponent', () => {
     expect(store.refresh).toHaveBeenCalledTimes(1);
     expect(store.setConfigKey).not.toHaveBeenCalled();
     expect(store.setRange).not.toHaveBeenCalled();
+  });
+
+  // Scrutinize regression gate: the store is root-scoped, so a RE-ENTRY renders
+  // the previous visit's filtered rows. If the controls are not re-seeded from
+  // it, the dropdown/date fields say "no filter" over a filtered table — the
+  // owner reads that as "there is no other config history".
+  it('re-seeds its filter controls from the root store on re-entry', () => {
+    const store = makeStoreStub(page([row()]));
+    store.filters = { configKey: 'jump_seat_enabled', from: '2026-07-01', to: '2026-07-07' };
+    const component = new ConfigChangeHistoryPageComponent(store as any, createTranslateStub());
+
+    component.ngOnInit();
+
+    expect((component as any).selectedConfigKey).toBe('jump_seat_enabled');
+    expect(((component as any).fromDate as Date).getMonth()).toBe(6);
+    expect(((component as any).fromDate as Date).getDate()).toBe(1);
+    expect(((component as any).toDate as Date).getDate()).toBe(7);
   });
 
   it('shows the loading skeleton state on first ever visit (no cache yet)', () => {

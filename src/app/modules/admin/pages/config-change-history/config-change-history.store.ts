@@ -41,6 +41,18 @@ export class ConfigChangeHistoryStore extends AdminCollectionStore<PageResponse<
     return this.lastErrorCodeValue;
   }
 
+  /**
+   * The filter currently cached / being fetched (dates as `yyyy-MM-dd`). This
+   * store is root-scoped and OUTLIVES the page component, so on re-entry it
+   * replays and revalidates the LAST-FETCHED filter, not a reset one — the
+   * page MUST re-read this on mount to seed its own controls, or the dropdown
+   * and date fields would read "no filter" above a table still showing the
+   * previous visit's filtered subset. Mirrors `ReportsStore#range`.
+   */
+  get filters(): { configKey: string | undefined; from: string | undefined; to: string | undefined } {
+    return { configKey: this.configKey, from: this.from, to: this.to };
+  }
+
   setConfigKey(configKey: string | undefined): Promise<void> {
     if (this.configKey !== configKey) {
       this.configKey = configKey;

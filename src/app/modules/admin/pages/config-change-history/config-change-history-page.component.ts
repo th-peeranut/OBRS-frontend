@@ -13,8 +13,6 @@ import {
   roleLabel as roleLabelPure,
 } from './config-change-history-page.mappers';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 type ConfigHistoryContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
 
 /**
@@ -69,6 +67,18 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // The store is root-scoped and OUTLIVES this component: re-entering the
+    // page replays and revalidates the LAST-FETCHED filter, not a reset one.
+    // Seed this component's own controls from it FIRST — otherwise the
+    // dropdown reads "ทุกการตั้งค่า" and both date fields read empty above a
+    // table still showing the previous visit's filtered subset, which reads as
+    // "there is no other config history" (the exact silent-omission this page
+    // exists to prevent). Mirrors ReportsPageComponent.ngOnInit.
+    const filters = this.store.filters;
+    this.selectedConfigKey = filters.configKey ?? '';
+    this.fromDate = ConfigChangeHistoryPageComponent.parseDateInputValue(filters.from);
+    this.toDate = ConfigChangeHistoryPageComponent.parseDateInputValue(filters.to);
+
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       this.rows = data?.content ?? [];
       this.totalElements = data?.totalElements ?? 0;
@@ -240,6 +250,20 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
         label: configKeyLabel(key, (k) => this.translate.instant(k)),
       })),
     ];
+  }
+
+  // Inverse of toDateInputValue, for seeding the p-calendar controls from the
+  // store's retained `yyyy-MM-dd` filter on mount (same helper shape as
+  // reports-page.component.ts:204).
+  private static parseDateInputValue(value: string | undefined): Date | null {
+    if (!value) {
+      return null;
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) {
+      return null;
+    }
+    return new Date(year, month - 1, day);
   }
 
   private static toDateInputValue(value: Date): string {
