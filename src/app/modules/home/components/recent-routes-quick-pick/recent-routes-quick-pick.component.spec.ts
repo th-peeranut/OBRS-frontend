@@ -57,6 +57,20 @@ describe('RecentRoutesQuickPickComponent', () => {
       component = fixture.componentInstance;
 
       const translate = TestBed.inject(TranslateService);
+
+      // `TranslateModule.forRoot()` registers NO loader, so without this the
+      // catalogue is empty and `translate.instant(key)` returns the key itself —
+      // which is exactly how the aria-label assertion below came back as
+      // 'HOME.HOME_BOOKING.RECENT_ROUTE_ARIA_LABEL' rather than a sentence.
+      // Values copied verbatim from public/i18n/{en,th}.json; those files stay the
+      // source of truth (that all three locales carry both {{from}} and {{to}} is
+      // verified against them, not here), so a change there must be mirrored here.
+      translate.setTranslation('en', {
+        HOME: { HOME_BOOKING: { RECENT_ROUTE_ARIA_LABEL: 'From {{from}} to {{to}}' } },
+      });
+      translate.setTranslation('th', {
+        HOME: { HOME_BOOKING: { RECENT_ROUTE_ARIA_LABEL: 'จาก {{from}} ไป {{to}}' } },
+      });
       translate.use('en');
 
       // fixture.componentRef.setInput (not a bare property assignment) so
