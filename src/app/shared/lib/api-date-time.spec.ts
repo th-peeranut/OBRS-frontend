@@ -1,4 +1,5 @@
 import {
+  bangkokInstantMs,
   combineBangkokDateTime,
   controlValueToDateString,
   controlValueToTimeString,
@@ -25,6 +26,37 @@ describe('API date-time helpers', () => {
     expect(combineBangkokDateTime('2026-06-20', '08:30')).toBe(
       '2026-06-20T08:30:00+07:00'
     );
+  });
+
+  // OBRS-574 — the helper a "has this trip left yet?" comparison runs on.
+  describe('bangkokInstantMs', () => {
+    // 08:00 Bangkok is 01:00 UTC on the same day.
+    const EXPECTED = Date.parse('2026-06-20T01:00:00Z');
+
+    it('reads an offset-less date-time as Bangkok, not as the viewer local time', () => {
+      // The bug this exists to prevent: prod and SIT run UTC, so `new Date()`
+      // on this exact string resolves seven hours off there and nowhere else.
+      expect(bangkokInstantMs('2026-06-20T08:00:00')).toBe(EXPECTED);
+    });
+
+    it('agrees with the same instant written with an explicit offset', () => {
+      expect(bangkokInstantMs('2026-06-20T08:00:00+07:00')).toBe(EXPECTED);
+      expect(bangkokInstantMs('2026-06-20T01:00:00Z')).toBe(EXPECTED);
+    });
+
+    it('accepts the space-separated shape the API also emits', () => {
+      // Seen in the parcel fixtures ('2026-12-20 08:00:00'); Safari refuses it
+      // outright, so normalising the separator is not cosmetic.
+      expect(bangkokInstantMs('2026-06-20 08:00:00')).toBe(EXPECTED);
+    });
+
+    it('returns null rather than NaN for empty or unparseable input', () => {
+      // A caller comparing NaN gets `false` from every operator, which reads as
+      // a confident answer. null forces the caller to state its fallback.
+      expect(bangkokInstantMs(null)).toBeNull();
+      expect(bangkokInstantMs('')).toBeNull();
+      expect(bangkokInstantMs('not a date')).toBeNull();
+    });
   });
 });
 

@@ -17,6 +17,33 @@ export function combineBangkokDateTime(date: string, time: string): string {
 }
 
 /**
+ * OBRS-574: an API date-time as an absolute instant (epoch ms), or `null` when
+ * it is empty or unparseable.
+ *
+ * Exists because `new Date(raw)` is NOT safe on these values. The API emits at
+ * least three shapes for the same field — `2026-07-10T08:00:00+07:00`,
+ * `2026-06-20T08:00:00` and `2026-12-20 08:00:00` — and an offset-less string
+ * is read by `Date` as the VIEWER's local wall clock. Prod and SIT run their
+ * JVM and Postgres in UTC, so a Bangkok departure comes back seven hours early
+ * there and any "has it left yet?" comparison flips around the wrong moment
+ * without ever looking broken. Normalising through `toApiOffsetDateTime()`
+ * first pins the offset-less case to Bangkok, which is what the value always
+ * meant (the product is Thailand-only).
+ *
+ * Compare the RESULT against `Date.now()`, never wall-clock components: both
+ * sides are then absolute instants and the viewer's own timezone drops out.
+ */
+export function bangkokInstantMs(value: string | null | undefined): number | null {
+  const normalized = toApiOffsetDateTime(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const ms = new Date(normalized).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/**
  * OBRS-272: splits an offset ISO date-time back into separate `date`
  * (`YYYY-MM-DD`) / `time` (`HH:mm`) strings for a date+time control pair (two
  * `p-calendar`s). A plain string split is safe here — every OBRS timestamp

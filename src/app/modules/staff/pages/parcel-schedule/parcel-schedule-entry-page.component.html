@@ -1,5 +1,5 @@
 <div class="container-fluid py-4">
-  <h4 class="fw-bold mb-3">{{ 'STAFF.PARCEL_DELIVERY.ENTRY_TITLE' | translate }}</h4>
+  <h4 class="fw-bold mb-3">{{ 'STAFF.PARCEL_SCHEDULE.ENTRY_TITLE' | translate }}</h4>
 
   <ng-container *ngIf="isEmpty">
     <div class="text-center py-5">
@@ -37,8 +37,8 @@
                 <td>{{ row.vehicle }}</td>
                 <td><span class="badge bg-secondary">{{ row.status }}</span></td>
                 <td>
-                  <button class="btn btn-sm btn-outline-primary" (click)="viewDeliveries(row)">
-                    {{ 'STAFF.PARCEL_DELIVERY.VIEW_BTN' | translate }}
+                  <button class="btn btn-sm btn-outline-primary" (click)="viewSchedule(row)">
+                    {{ 'STAFF.PARCEL_SCHEDULE.VIEW_BTN' | translate }}
                   </button>
                 </td>
               </tr>

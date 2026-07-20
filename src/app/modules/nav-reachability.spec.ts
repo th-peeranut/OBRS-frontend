@@ -70,10 +70,12 @@ const STAFF_LINKED_FROM: Record<string, string> = {
   'boarding/:scheduleId': 'boarding',
   // parcel-intake-result-panel, rendered inside parcel-consign-page
   'parcels/:id/waybill': 'parcels/consign',
-  // parcel-delivery-schedule-page — entry picker drills into the list
-  'parcels/deliveries/:scheduleId': 'parcels/deliveries',
-  // parcel-verify-schedule-page — entry picker drills into the list
-  'parcels/verify/:scheduleId': 'parcels/verify',
+  // OBRS-574: parcel-schedule-entry-page drills into the tabbed page that
+  // holds BOTH parcel jobs. Replaces the two entries this table used to carry
+  // ('parcels/deliveries/:scheduleId' and 'parcels/verify/:scheduleId', each
+  // linked from its own picker) — those paths are now redirects, and
+  // leafRoutes() already excludes componentless routes, so they need no entry.
+  'parcels/schedule/:scheduleId': 'parcels/schedule',
 };
 
 /** Admin has no detail-page routes today; kept for symmetry and future ones. */
