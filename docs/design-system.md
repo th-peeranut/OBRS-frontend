@@ -91,6 +91,7 @@ token it's copied from:
 | `.is-danger` | `--admin-danger-bg` / `--admin-danger-text` | rejected / error | also the §2.1 `danger` role's runtime binding. |
 | `.is-accepted` | `--admin-accepted-bg` / `--admin-accepted-text` | accepted (usability reports) | green. |
 | `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text. **Has a dark-mode override** (OBRS-256, `admin-theme.scss:240-243`, inverts to bg `#29323d`/text `#c7d3de`, ≈8.6:1) — this row previously (incorrectly) said "no dark-mode override"; corrected during OBRS-424 review after the stale claim was cited as evidence in that card's UX spec. |
+| `.is-owner-accepted` | `--admin-owner-accepted-bg` / `--admin-owner-accepted-text` | `owner_accepted` usability-report status (OBRS-527) — the owner-screened stage that sits BETWEEN `in_review` and `accepted` (platform adoption) | **teal/mint** — a new hue (none of the seven existing statuses were free): reusing `.is-info` would blend into `in_review`, reusing `.is-accepted` would make the chip indistinguishable from the status whose whole point is now being separate. Light bg `#b8f2e6` / dark text `#003d33` ≈9.85:1; **has a dark-mode override** (`--admin-owner-accepted-bg: #1b3b35` / `--admin-owner-accepted-text: #9fedde`, ≈9.07:1) — a one-sided override is the exact OBRS-86 bug (text-only override on an unchanged bg gave ~1.3:1), so both sides change together in each theme. Also splits the WS badge count that used to be keyed on `acceptedReportCount`: the admin sidebar badge now counts `owner_accepted`, and `accepted` is in nobody's badge. |
 | `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text. **Has a dark-mode override** (OBRS-100, `admin-theme.scss:211-214`, inverts to bg `#333b42`/text `#cdd8df`) — same correction as `.is-info` above. |
 | `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
 | `.is-duplicate` | `--admin-duplicate-bg` / `--admin-duplicate-text` | `duplicate` usability-report status (OBRS-376) | **violet** — same light-mode values as `.is-delayed` but a distinct token (PO decision, 2026-07-16): `duplicate` originally reused `.is-neutral`, colliding with OBRS-378's `dismissed` (both rendered as identical grey chips), and `.is-delayed` was ruled out as a reuse target because it's semantically the unrelated "trip delayed" pill. **Unlike `.is-delayed`, this ONE HAS a dark-mode override** (`--admin-duplicate-bg: #3b2f5c` / `--admin-duplicate-text: #ddd6fe`, ≈8.7:1) — `.is-delayed` skipping it renders as a near-white lavender blob on the dark shell, the exact OBRS-100 bug; don't copy that gap for new violet tokens. |
@@ -693,6 +694,32 @@ enforced rule with a test behind it.
   fill/halo split for the next map-marker feature (OBRS-425/426) — and carry
   its light-tiles precondition forward with it, don't assume it "just works" on
   a different surface.
+
+- **Leaflet + MapTiler extended to the first customer-facing map surface**
+  (OBRS-426, `TripTrackPanelComponent` / `TripTrackMapComponent`, the
+  my-bookings "where is my bus" tracker): the OBRS-424 entry above scoped its
+  reuse instruction to the next *internal/high-frequency* map feature; this
+  card is customer-facing and low-frequency, so it stands on its own
+  justification rather than inheriting that one — see
+  `docs/adr/0026-leaflet-customer-trip-map.md`. Two changes ride along:
+  (1) the tile URL/attribution composer moves one level up, from
+  `modules/staff/pages/fleet-map/fleet-map.constants.ts` to
+  `shared/lib/map-tiles.ts` (`mapTileUrl()` / `MAP_TILE_ATTRIBUTION`), with
+  the old names re-exported unchanged so OBRS-424 stays byte-identical;
+  (2) the Leaflet marker itself uses its OWN CSS custom-property names
+  (`--trip-track-marker-*`), never `--admin-*` directly — unlike the
+  `.admin-status` CHIP re-declaration precedent (`ParcelTrackingPageComponent`
+  below), a Leaflet marker's HTML is injected outside Angular's template
+  compiler, so a future edit copying `FleetMapPanelComponent`'s marker code
+  verbatim (reading `--admin-success-text` etc., which resolve to nothing
+  outside `.admin-shell`) would fail invisibly — using distinct names with
+  the SAME copied values, and asserting their absence in a unit test, closes
+  that specific silent-failure class rather than merely re-declaring the
+  admin names once more. The STALE marker (BR-11) swaps both the fill/halo
+  variable NAMES and adds a dashed halo + 0.55 opacity — never merely an
+  additive class on the live token. Reuse this "own token names, values
+  copied, never `--admin-*` on Leaflet-injected marker HTML" pattern for the
+  next map marker built for a customer-shell surface.
 
 - **`lastFetchedAt$` on `AdminCollectionStore`** (OBRS-424,
   `admin-collection-store.ts`): every SWR-backed page needs an honest way to

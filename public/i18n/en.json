@@ -92,6 +92,7 @@
       "STATUS": {
         "new": "New",
         "in_review": "In Review",
+        "owner_accepted": "Owner-screened",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",
@@ -120,6 +121,35 @@
       "LOADING": "Loading your e-ticket…",
       "LOAD_FAILED": "Unable to load the e-ticket. Please try again.",
       "CLOSE": "Close"
+    },
+    "TRIP_TRACK": {
+      "TITLE": "Where is my bus",
+      "LOADING": "Checking the vehicle's position…",
+      "LAST_UPDATE": "Last update {{time}}",
+      "MAP_UNAVAILABLE": "Map unavailable — the status above is still current.",
+      "REFRESH_FAILED": "Couldn't refresh — showing data from {{time}}",
+      "STATE": {
+        "LIVE": "Live position",
+        "LIVE_BODY": "This is the vehicle's current position.",
+        "STALE": "Position may be out of date",
+        "STALE_BODY": "The vehicle hasn't reported recently. This dot is from {{time}} — it may have moved since.",
+        "NO_SIGNAL": "Signal lost",
+        "NO_SIGNAL_BODY": "We can't see the vehicle's position right now. We'll keep trying.",
+        "UNAVAILABLE": "Position unavailable",
+        "UNAVAILABLE_BODY": "This trip's vehicle isn't reporting a position. If that changes, it will appear here.",
+        "NOT_YET_OPEN": "Not available yet",
+        "NOT_YET_OPEN_BODY": "You can see the vehicle's position from 60 minutes before it departs your pickup stop.",
+        "NOT_YET_OPEN_AT": "Available from {{time}}",
+        "CLOSED": "Tracking ended",
+        "CLOSED_BODY": "This trip has finished, so live tracking is closed."
+      },
+      "MARKER": {
+        "VEHICLE": "Vehicle",
+        "BOARDING_STOP": "Your pickup stop"
+      },
+      "ERROR": {
+        "UNAVAILABLE": "We can't show the vehicle position for this ticket."
+      }
     },
     "FILTERS": {
       "ALL": "All",
@@ -995,7 +1025,8 @@
         "JIRA_LINK_ARIA": "Open Jira issue {{key}} in a new tab",
         "PULL_BACK_TO_REVIEW": "Pull Back to Review",
         "DISMISSED_ADMIN_HINT": "Owner marked this report as not important. You can bring it back into review if needed.",
-        "DISMISSED_OWNER_NOTE": "This report has been dismissed. An admin can bring it back for review."
+        "DISMISSED_OWNER_NOTE": "This report has been dismissed. An admin can bring it back for review.",
+        "OWNER_NO_ACTION_NOTE": "The platform team has taken this report on — there's nothing further for you to do here."
       },
       "STATUS": {
         "LABEL": "Status",
@@ -1003,6 +1034,7 @@
         "all": "All statuses",
         "new": "New",
         "in_review": "In Review",
+        "owner_accepted": "Owner-screened",
         "accepted": "Accepted",
         "dismissed": "Dismissed",
         "resolved": "Resolved",

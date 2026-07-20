@@ -1,4 +1,4 @@
-import { formatDisplayDate, formatDisplayDateTime } from './display-date-time';
+import { formatDisplayDate, formatDisplayDateTime, formatDisplayTime } from './display-date-time';
 
 describe('formatDisplayDateTime', () => {
   const ISO = '2026-07-08T08:32:44.105575+07:00'; // Bangkok 08:32, day 8
@@ -57,5 +57,34 @@ describe('formatDisplayDate (date-only)', () => {
   it('pins to Asia/Bangkok — a late-UTC instant rolls to the next Bangkok day', () => {
     // 2026-07-08T19:00Z = 2026-07-09 02:00 Bangkok → date is the 9th.
     expect(formatDisplayDate('2026-07-08T19:00:00Z')).toBe('9 ก.ค. 2026');
+  });
+});
+
+// SPEC-OBRS-426 BR-12a: time-only formatter, deliberately separate from
+// formatDisplayDateTime — see that spec's table for why the split is
+// mandatory (recordedAt vs windowOpensAt).
+describe('formatDisplayTime (time-only, language-independent)', () => {
+  const ISO = '2026-07-08T08:32:44.105575+07:00'; // Bangkok 08:32
+
+  it('returns "-" for empty / nullish input', () => {
+    expect(formatDisplayTime('')).toBe('-');
+    expect(formatDisplayTime(null)).toBe('-');
+    expect(formatDisplayTime(undefined)).toBe('-');
+  });
+
+  it('echoes the raw value when it cannot be parsed', () => {
+    expect(formatDisplayTime('not-a-date')).toBe('not-a-date');
+  });
+
+  it('formats 24h time only, no date/month at all', () => {
+    expect(formatDisplayTime(ISO)).toBe('08:32');
+  });
+
+  it('pins the wall-clock time to Asia/Bangkok regardless of the input offset', () => {
+    expect(formatDisplayTime('2026-07-08T01:32:44Z')).toBe('08:32');
+  });
+
+  it('normalizes midnight (ICU "24") to "00"', () => {
+    expect(formatDisplayTime('2026-07-09T00:05:00+07:00')).toBe('00:05');
   });
 });

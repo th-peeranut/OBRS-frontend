@@ -1,5 +1,6 @@
 import { of, throwError } from 'rxjs';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { By } from '@angular/platform-browser';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
@@ -86,6 +87,9 @@ describe('MyBookingTicketModalComponent', () => {
     expect(component.card?.legs[0].route).toBe('Station A - Station B');
     expect(component.card?.passengers.length).toBe(1);
     expect(component.card?.booker?.phone).toBe('0812345678');
+    // SPEC-OBRS-426 M1: the tracker target is computed alongside the card.
+    expect(component.trackTargets.length).toBe(2);
+    expect(component.trackTargets[0]?.ticketId).toBe(1);
   });
 
   it('surfaces a localized error when the request fails', () => {
@@ -130,6 +134,12 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
 
     await TestBed.configureTestingModule({
       declarations: [MyBookingTicketModalComponent],
+      // app-trip-track-panel (SPEC-OBRS-426) is a real child component of a
+      // sibling module (MyBookingsModule) — not declared here, same NO_ERRORS_SCHEMA
+      // pattern as FleetMapPageComponent's own template-wiring spec: this
+      // suite only verifies the modal passes the right inputs down, not the
+      // tracker's own behavior (covered by trip-track-panel.component.spec.ts).
+      schemas: [NO_ERRORS_SCHEMA],
       imports: [ETicketCardModule, TranslateModule.forRoot()],
       providers: [{ provide: BookingService, useValue: bookingServiceStub }],
     }).compileComponents();
@@ -155,5 +165,39 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
 
     expect(cardInstance.legs.length).toBe(1);
     expect(cardInstance.legs[0].distanceKm).toBe(45);
+  });
+
+  // SPEC-OBRS-426 BR-2: the tracker renders as a SIBLING of app-e-ticket-card,
+  // below it, inside the modal body — never inside ETicketCardComponent.
+  it('renders app-trip-track-panel as a sibling of app-e-ticket-card, with the M1 target\'s fields', () => {
+    component.bookingId = 5;
+    component.ngOnChanges({
+      bookingId: {
+        currentValue: 5,
+        previousValue: null,
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    expect(component.trackTargets.length).toBe(2);
+    expect(component.trackTargets[0]?.ticketId).toBe(1);
+    expect(component.trackTargets[1]).toBeNull(); // one-way booking — no inbound leg
+
+    const panel = fixture.debugElement.query(By.css('app-trip-track-panel'));
+    expect(panel).withContext('exactly one tracker for the one leg with an eligible ticket').not.toBeNull();
+    expect(panel.properties['ticketId']).toBe(1);
+    expect(panel.properties['boardingStopLabel']).toBe('Station A');
+
+    const body = fixture.debugElement.query(By.css('.ticket-modal__body'));
+    const cardIndex = Array.from(body.nativeElement.children).findIndex(
+      (el: any) => el.tagName?.toLowerCase() === 'app-e-ticket-card'
+    );
+    const panelIndex = Array.from(body.nativeElement.children).findIndex(
+      (el: any) => el.tagName?.toLowerCase() === 'app-trip-track-panel'
+    );
+    expect(cardIndex).toBeGreaterThanOrEqual(0);
+    expect(panelIndex).toBeGreaterThan(cardIndex); // below the card, not inside it
   });
 });

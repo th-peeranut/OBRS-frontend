@@ -1363,8 +1363,9 @@ export class AdminApiService {
   // existing list endpoint with size=1 so only the pagination envelope
   // (data.totalElements) is needed, not the report rows themselves.
   // OBRS-378: parameterized by status — owner's badge counts 'new' (awaiting
-  // screening), admin's counts 'accepted' (owner-vetted) — see
-  // AdminLayoutComponent.badgeStatus.
+  // screening), admin's counts 'owner_accepted' (OBRS-527: owner-vetted,
+  // awaiting platform adoption — 'accepted' itself is nobody's badge any
+  // more) — see AdminLayoutComponent.badgeStatus.
   getUsabilityReportCountByStatus(status: UsabilityReportStatus): Observable<number> {
     const params = new HttpParams()
       .set('status', status)

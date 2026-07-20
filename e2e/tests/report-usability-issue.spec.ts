@@ -23,9 +23,27 @@ import schedulesFixture from '../fixtures/schedules.json';
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const USABILITY_ENDPOINT = '**/api/usability-reports';
-const ADMIN_LIST_ENDPOINT = '**/private/admin/usability-reports';
-const ADMIN_DETAIL_ENDPOINT = '**/private/admin/usability-reports/**';
-const ADMIN_STATUS_ENDPOINT = '**/private/admin/usability-reports/*/status';
+// OBRS-535: these were globs, and a route glob is compiled to an END-ANCHORED
+// regex (`globToRegexPattern` appends `$`). `**/private/admin/usability-reports`
+// therefore could NEVER match the real request, which always carries
+// `?page=&size=&status=&sort=` — so every "stubbed" admin call escaped to the
+// live SIT backend, came back 401 on the fake token, and `authInterceptor`
+// force-logged-out the page before any assertion ran. Predicate matchers read
+// the parsed URL, so the query string can't silently break them again.
+const ADMIN_REPORTS_PATH = '/private/admin/usability-reports';
+
+/**
+ * The triage page's own list GET. Excludes the sidebar badge's count probe
+ * below, which hits the SAME endpoint — without this split, the badge call
+ * would be counted as a page load by call-counting stubs (the status-save
+ * test serves a different body on the 2nd list GET).
+ */
+const isAdminListCall = (url: URL): boolean =>
+  url.pathname.endsWith(ADMIN_REPORTS_PATH) && url.searchParams.get('size') !== '1';
+
+/** `AdminLayoutComponent`'s sidebar badge count — same endpoint, `size=1`. */
+const isAdminBadgeCall = (url: URL): boolean =>
+  url.pathname.endsWith(ADMIN_REPORTS_PATH) && url.searchParams.get('size') === '1';
 
 const RECEIPT_STUB = {
   id: 'stub-receipt-id',
@@ -81,35 +99,104 @@ const REPORT_DETAIL_STUB = {
   },
 };
 
-/** Inject fake admin auth into localStorage before Angular boots. */
-function injectAdminAuth(page: Page): Promise<void> {
-  return page.addInitScript(() => {
+const EMPTY_PAGE_RESPONSE = { code: 200, message: 'OK', data: { content: [], totalElements: 0 } };
+
+/** Authenticated calls that reached the catch-all in `stubAdminShell`, per page. */
+const escapedPrivateCalls = new WeakMap<Page, string[]>();
+
+/**
+ * Fails the test — by name — if an admin spec let an authenticated call through
+ * to the live SIT backend. Pages that never called `injectAdminAuth` are not
+ * instrumented, so this is a no-op for them.
+ */
+function expectNoEscapedPrivateCalls(page: Page): void {
+  const escaped = escapedPrivateCalls.get(page);
+  if (!escaped) return;
+  expect(escaped, 'authenticated call(s) reached live SIT instead of a stub').toEqual([]);
+}
+
+/**
+ * Stubs every OTHER authenticated call the admin shell fires on boot, so the
+ * only thing an admin spec exercises is what it deliberately stubbed.
+ *
+ * `AdminLayoutComponent.ngOnInit` starts `NotificationInboxService` polling
+ * (OBRS-317, landed 2026-07-14 — two weeks AFTER this spec was written) and
+ * fetches the sidebar usability-report badge count. Neither was stubbed, both
+ * 401 against live SIT on the fake token, and one 401 is enough for
+ * `authInterceptor.handleUnauthorized()` to clear the session and redirect to
+ * `/login` — which is why all six admin specs died on a session-expiry dialog
+ * instead of their own assertion. (OBRS-535)
+ *
+ * Registered FIRST (from `injectAdminAuth`) on purpose: Playwright matches
+ * routes in reverse registration order, so a test's own later, narrower stub
+ * still wins.
+ */
+async function stubAdminShell(page: Page): Promise<void> {
+  // Backstop, registered before everything else so any narrower stub still
+  // wins: an authenticated call nobody stubbed is ABORTED rather than allowed
+  // out to live SIT. Aborting yields a network error, not a 401, so it can
+  // never trigger the force-logout that hid this class of bug for two weeks —
+  // and `expectNoEscapedPrivateCalls` turns it into a named failure. (OBRS-535)
+  const escaped: string[] = [];
+  escapedPrivateCalls.set(page, escaped);
+  await page.route('**/api/private/**', (route) => {
+    escaped.push(`${route.request().method()} ${route.request().url()}`);
+    return route.abort();
+  });
+
+  await page.route(isAdminBadgeCall, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(EMPTY_PAGE_RESPONSE),
+    })
+  );
+  await page.route('**/private/notifications/unread-count', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 200, message: 'OK', data: { unreadCount: 0 } }),
+    })
+  );
+  await page.route(
+    (url) => url.pathname.endsWith('/private/notifications'),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(EMPTY_PAGE_RESPONSE),
+      })
+  );
+}
+
+/**
+ * Inject fake admin auth into localStorage before Angular boots, and stub the
+ * admin shell's own boot-time calls (see `stubAdminShell` — without them the
+ * fake token triggers a real 401 and a forced logout).
+ */
+async function injectAdminAuth(page: Page): Promise<void> {
+  await page.addInitScript(() => {
     localStorage.setItem('app_language', 'en');
     // auth_token only needs to be a non-empty string for isAuthenticated() to return true
     localStorage.setItem('auth_token', 'qa-fake-admin-token');
     localStorage.setItem('auth_username', 'admin@system.local');
     localStorage.setItem('auth_roles', JSON.stringify(['admin']));
   });
+  await stubAdminShell(page);
 }
 
 /** Stub admin API list to return the provided response. */
 async function stubAdminList(page: Page, response: unknown): Promise<void> {
-  await page.route(ADMIN_LIST_ENDPOINT, (route) => {
+  await page.route(isAdminListCall, (route) => {
     if (route.request().method() === 'GET') {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
     } else {
-      route.continue();
-    }
-  });
-}
-
-/** Stub admin API detail endpoint. */
-async function stubAdminDetail(page: Page, id: string, response: unknown): Promise<void> {
-  await page.route(`**/${id}`, (route) => {
-    if (route.request().method() === 'GET') {
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) });
-    } else {
-      route.continue();
+      // `fallback()`, never `continue()`: `continue()` sends the request
+      // straight to the network, skipping every remaining handler INCLUDING
+      // the catch-all abort in `stubAdminShell` — a non-GET here would escape
+      // to live SIT unrecorded, which is the exact hole this card closed on
+      // the GET path. `fallback()` re-enters handler matching. (OBRS-535)
+      route.fallback();
     }
   });
 }
@@ -469,6 +556,8 @@ test.describe('FAB + modal — i18n translations', () => {
 // ── Section 8: Admin triage page (stubbed) ────────────────────────────────────
 
 test.describe('Admin usability-reports triage page (stubbed)', () => {
+  test.afterEach(({ page }) => expectNoEscapedPrivateCalls(page));
+
   test('GET returns empty list → empty-state row renders (not error)', async ({ page }) => {
     await injectAdminAuth(page);
 
@@ -516,6 +605,17 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
     await injectAdminAuth(page);
     await stubAdminList(page, REPORT_LIST_STUB);
 
+    // Opening a 'new' report silently auto-promotes it to 'in_review'
+    // (`autoPromoteToInReview`, OBRS-370) — a PUT this test never asked for.
+    // It has to be stubbed or it reaches the real backend. (OBRS-535)
+    await page.route('**/private/admin/usability-reports/rep-001/status', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 200, message: 'OK', data: null }),
+      })
+    );
+
     // Stub the detail endpoint for rep-001
     await page.route('**/private/admin/usability-reports/rep-001', (route) => {
       if (route.request().method() === 'GET') {
@@ -525,7 +625,7 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
           body: JSON.stringify(REPORT_DETAIL_STUB),
         });
       } else {
-        route.continue();
+        route.fallback(); // OBRS-535: fallback, not continue (see stubAdminList)
       }
     });
 
@@ -565,13 +665,13 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
       },
     };
 
-    await page.route(ADMIN_LIST_ENDPOINT, (route) => {
+    await page.route(isAdminListCall, (route) => {
       if (route.request().method() === 'GET') {
         listGetCount++;
         const body = listGetCount === 1 ? REPORT_LIST_STUB : updatedListStub;
         route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
       } else {
-        route.continue();
+        route.fallback(); // OBRS-535: fallback, not continue (see stubAdminList)
       }
     });
 
@@ -584,7 +684,7 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
           body: JSON.stringify(REPORT_DETAIL_STUB),
         });
       } else {
-        route.continue();
+        route.fallback(); // OBRS-535: fallback, not continue (see stubAdminList)
       }
     });
 
@@ -599,7 +699,7 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
           body: JSON.stringify({ code: 200, message: 'OK', data: null }),
         });
       } else {
-        route.continue();
+        route.fallback(); // OBRS-535: fallback, not continue (see stubAdminList)
       }
     });
 
@@ -619,8 +719,12 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
     await resolvedOpt.waitFor({ state: 'visible', timeout: 5_000 });
     await resolvedOpt.click();
 
-    // Save
-    const saveBtn = page.locator('.ur-detail-modal .admin-btn-primary', { hasText: 'Save Status' });
+    // Save. Selected structurally, not by label: the copy behind
+    // `ADMIN.USABILITY_REPORTS.STATUS.SAVE` has since changed from "Save
+    // Status" to "Save", and the old hasText filter silently matched nothing.
+    // The assertion under test is the optimistic update, not the button's
+    // wording. (OBRS-535)
+    const saveBtn = page.locator('.ur-detail-modal .ur-status-controls .admin-btn-primary');
     await saveBtn.click();
 
     // Verify PUT was called
@@ -653,6 +757,8 @@ test.describe('Admin usability-reports triage page (stubbed)', () => {
 // ── Section 9: Regression — FAB does NOT obstruct existing UI ─────────────────
 
 test.describe('Regression — FAB z-index / overlap', () => {
+  test.afterEach(({ page }) => expectNoEscapedPrivateCalls(page));
+
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => { localStorage.setItem('app_language', 'en'); });
     await page.route('**/api/stops', (route) => route.fulfill({ json: stationsFixture }));

@@ -1,0 +1,155 @@
+@import "../../../../../styles/variables.scss";
+
+// SPEC-OBRS-426 BR-24: the customer shell has NO --admin-* variables (they
+// are defined only inside .admin-shell, admin-theme.scss). This is the
+// OUTERMOST component in the tracker's render tree, so — per the
+// ParcelTrackingPageComponent / MyReportsComponent precedent
+// (design-system.md §12 "Cross-shell status-chip reuse needs only ONE :host
+// declaration per render tree, not per component") — every custom property
+// the tracker subtree needs (including the CHILD `app-trip-track-map`'s
+// marker fill/halo) is re-declared ONCE here. Values are copied from
+// admin-theme.scss (§2.4), not invented. The two "is-info"/"is-neutral"
+// tokens mirror admin-theme.scss's own .admin-shell.is-dark overrides,
+// gated on THIS app's public dark-mode class (body.is-dark) instead of
+// .admin-shell.is-dark — .is-success/.is-warning intentionally have none
+// (design-system §2.4: neither token has a dark-mode override anywhere in
+// this codebase).
+//
+// The --trip-track-marker-* names are deliberately NOT --admin-* (BR-24/U28)
+// even though the STALE pair's VALUES are copied from --admin-warning-*.
+:host {
+  --admin-success-bg: #d4e3ff;
+  --admin-success-text: #154c85;
+  --admin-warning-bg: #ffdcbe;
+  --admin-warning-text: #673a00;
+  --admin-neutral-bg: #e4e4e7;
+  --admin-neutral-text: #3f3f46;
+  --admin-inreview-bg: #e2e5ea;
+  --admin-inreview-text: #3a4250;
+
+  --trip-track-marker-live-fill: #{$brand-customer-strong};
+  --trip-track-marker-live-halo: #{$brand-customer};
+  --trip-track-marker-stale-fill: #673a00; // same value as --admin-warning-text
+  --trip-track-marker-stale-halo: #ffdcbe; // same value as --admin-warning-bg
+  --trip-track-marker-boarding-fill: #{$brand-customer-strong};
+}
+
+:host-context(body.is-dark) {
+  --admin-neutral-bg: #333b42;
+  --admin-neutral-text: #cdd8df;
+  --admin-inreview-bg: #29323d;
+  --admin-inreview-text: #c7d3de;
+}
+
+.trip-track-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background: $primary-white;
+  border: 1px solid $primary-grey;
+  border-radius: 12px;
+}
+
+:host-context(body.is-dark) .trip-track-panel {
+  background: #1d2226; // same dark-card value as admin-theme.scss's --admin-surface-card
+  border-color: #333b42;
+}
+
+.trip-track-panel__title {
+  font-weight: $font-weight-semibold;
+  margin: 0 0 8px;
+  color: $text-black;
+}
+
+:host-context(body.is-dark) .trip-track-panel__title {
+  color: #e7edf1;
+}
+
+.trip-track-panel__loading,
+.trip-track-panel__error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: $text-lightgrey;
+
+  p {
+    margin: 0;
+  }
+}
+
+.trip-track-panel__spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid $primary-grey;
+  border-top-color: $brand-customer-strong;
+  border-radius: 50%;
+  animation: trip-track-spin 0.8s linear infinite;
+}
+
+@keyframes trip-track-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.trip-track-panel__chip-row {
+  margin-bottom: 8px;
+}
+
+// BR-11: the STALE banner is the card's worst-case-failure guard — always
+// above the map, never inside a popup a customer has to tap.
+.trip-track-panel__banner--stale {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  font-size: $font-size-sm;
+}
+
+.trip-track-panel__map-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: clamp(220px, 50vh, 320px);
+  color: $text-lightgrey;
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.trip-track-panel__last-update {
+  margin: 8px 0 0;
+  font-size: $font-size-sm;
+  color: $text-lightgrey;
+}
+
+.trip-track-panel__state-body {
+  padding: 12px 0;
+
+  p {
+    margin: 0 0 4px;
+  }
+}
+
+.trip-track-panel__at {
+  font-weight: $font-weight-medium;
+  color: $text-black;
+}
+
+:host-context(body.is-dark) .trip-track-panel__at {
+  color: #e7edf1;
+}
+
+.trip-track-panel__refresh-failed {
+  margin: 8px 0 0;
+  font-size: $font-size-sm;
+  color: var(--admin-warning-text);
+}

@@ -15,6 +15,8 @@ import { ETicketCardData } from '../../../../shared/interfaces/e-ticket.interfac
 import {
   ETicketLocale,
   mapBookingTicketsToCard,
+  mapBookingTicketsToTrackTargets,
+  TripTrackTarget,
 } from '../../../../shared/lib/booking-ticket-view';
 
 /**
@@ -33,6 +35,9 @@ export class MyBookingTicketModalComponent implements OnChanges, OnDestroy {
   card: ETicketCardData | null = null;
   loading = false;
   error = '';
+  /** SPEC-OBRS-426 M1 — one per journey leg, index-aligned with `card.legs`
+   *  (BR-4a); `null` at an index whose leg has no eligible ticket to track. */
+  trackTargets: (TripTrackTarget | null)[] = [];
 
   private readonly destroy$ = new Subject<void>();
 
@@ -77,6 +82,7 @@ export class MyBookingTicketModalComponent implements OnChanges, OnDestroy {
     this.loading = true;
     this.error = '';
     this.card = null;
+    this.trackTargets = [];
 
     this.bookingService
       .getBookingTickets(bookingId, true)
@@ -89,6 +95,7 @@ export class MyBookingTicketModalComponent implements OnChanges, OnDestroy {
             response?.data
           ) {
             this.card = mapBookingTicketsToCard(response.data, this.currentLocale());
+            this.trackTargets = mapBookingTicketsToTrackTargets(response.data);
           } else {
             this.error = this.translate.instant('MY_BOOKINGS.TICKET_MODAL.LOAD_FAILED');
           }

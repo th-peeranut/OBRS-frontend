@@ -23,16 +23,31 @@
         </button>
       </div>
 
-      <app-e-ticket-card
-        *ngIf="!loading && !error && card"
-        [bookingNumber]="card.bookingNumber"
-        [ticketNumber]="card.ticketNumber"
-        [legs]="card.legs"
-        [paymentDate]="card.paymentDate"
-        [totalAmount]="card.totalAmount"
-        [passengers]="card.passengers"
-        [booker]="card.booker"
-      ></app-e-ticket-card>
+      <ng-container *ngIf="!loading && !error && card">
+        <app-e-ticket-card
+          [bookingNumber]="card.bookingNumber"
+          [ticketNumber]="card.ticketNumber"
+          [legs]="card.legs"
+          [paymentDate]="card.paymentDate"
+          [totalAmount]="card.totalAmount"
+          [passengers]="card.passengers"
+          [booker]="card.booker"
+        ></app-e-ticket-card>
+
+        <!-- SPEC-OBRS-426 BR-2: sibling of app-e-ticket-card, below it, never
+             inside it (the paper surface is dark-mode-exempt). One tracker
+             per leg with an eligible ticket (BR-4/BR-4a) — index-aligned with
+             card.legs, skip a null hole. -->
+        <ng-container *ngFor="let leg of card.legs; let i = index">
+          <app-trip-track-panel
+            *ngIf="trackTargets[i] as target"
+            [ticketId]="target.ticketId"
+            [boardingStopLabel]="target.boardingStopLabel"
+            [boardingStopLat]="target.boardingStopLat"
+            [boardingStopLon]="target.boardingStopLon"
+          ></app-trip-track-panel>
+        </ng-container>
+      </ng-container>
     </div>
   </div>
 </div>

@@ -92,6 +92,7 @@
       "STATUS": {
         "new": "新建",
         "in_review": "审核中",
+        "owner_accepted": "车主已初审",
         "accepted": "已接受",
         "dismissed": "已忽略",
         "resolved": "已解决",
@@ -120,6 +121,35 @@
       "LOADING": "正在加载您的电子票…",
       "LOAD_FAILED": "无法加载电子票，请重试。",
       "CLOSE": "关闭"
+    },
+    "TRIP_TRACK": {
+      "TITLE": "我的车在哪里",
+      "LOADING": "正在查询车辆位置…",
+      "LAST_UPDATE": "最后更新 {{time}}",
+      "MAP_UNAVAILABLE": "地图暂不可用 — 以上状态仍为最新",
+      "REFRESH_FAILED": "刷新失败 — 显示 {{time}} 的数据",
+      "STATE": {
+        "LIVE": "实时位置",
+        "LIVE_BODY": "这是车辆当前的位置。",
+        "STALE": "位置可能不是最新",
+        "STALE_BODY": "车辆最近未上报位置。此位置来自 {{time}}，车辆可能已经移动。",
+        "NO_SIGNAL": "信号丢失",
+        "NO_SIGNAL_BODY": "目前无法获取车辆位置，我们将持续尝试。",
+        "UNAVAILABLE": "位置暂不可用",
+        "UNAVAILABLE_BODY": "此行程的车辆尚未上报位置。如有更新会显示在此处。",
+        "NOT_YET_OPEN": "尚未开放查看",
+        "NOT_YET_OPEN_BODY": "您可以在车辆从您的上车点出发前 60 分钟查看车辆位置。",
+        "NOT_YET_OPEN_AT": "开放查看时间 {{time}}",
+        "CLOSED": "追踪已结束",
+        "CLOSED_BODY": "此行程已结束，实时追踪已关闭。"
+      },
+      "MARKER": {
+        "VEHICLE": "车辆",
+        "BOARDING_STOP": "您的上车点"
+      },
+      "ERROR": {
+        "UNAVAILABLE": "无法显示此票的车辆位置。"
+      }
     },
     "FILTERS": {
       "ALL": "全部",
@@ -995,7 +1025,8 @@
         "JIRA_LINK_ARIA": "在新标签页中打开 Jira 问题 {{key}}",
         "PULL_BACK_TO_REVIEW": "撤回至审查中",
         "DISMISSED_ADMIN_HINT": "店主已将此报告标记为不重要。如有需要，您可以将其撤回重新审查。",
-        "DISMISSED_OWNER_NOTE": "此报告已搁置，管理员可以将其撤回重新审查。"
+        "DISMISSED_OWNER_NOTE": "此报告已搁置，管理员可以将其撤回重新审查。",
+        "OWNER_NO_ACTION_NOTE": "平台团队已接手处理此报告，您这边无需再进行任何操作。"
       },
       "STATUS": {
         "LABEL": "状态",
@@ -1003,6 +1034,7 @@
         "all": "全部状态",
         "new": "新建",
         "in_review": "审查中",
+        "owner_accepted": "车主已初审",
         "accepted": "已接受",
         "dismissed": "已搁置",
         "resolved": "已解决",
