@@ -70,6 +70,47 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-19 — `code` optional/server-generated on inspection-item create (OBRS-529): built ahead of the paired backend worktree
+
+<!-- contract-request
+card: OBRS-529
+status: resolved
+resolved: 2026-07-19
+-->
+
+**Affected endpoint**: `POST /api/private/vehicle-inspection-items` (`VehicleInspectionItemReqDto.code`).
+
+**Request type**: relax an existing required field (additive-safe from the FE's side — R1).
+
+**Status at time of writing**: built per the OBRS-529 task brief, which states the backend half of this
+same card is making `code` server-generated and optional on create. Checked the paired backend worktree
+(`OBRS-backend-wt-obrs-529-inspection-label-th-only`) directly — at time of writing it is still at
+`origin/dev` HEAD (`VehicleInspectionItemReqDto.code` is still `@NotBlank`). This is the same parallel-lane
+build pattern already used for OBRS-96/OBRS-129/OBRS-305/etc. above, not an assumption that the relaxed
+contract already exists.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| `code` becomes optional (no `@NotBlank`) on `POST /api/private/vehicle-inspection-items`, server-generates a value when omitted | `VehicleInspectionItemReqDto` | The admin create/edit modal no longer has a `code` input at all (OBRS-529 card, item 3) — there is nothing left in the FE to source a value from on create |
+
+### What the frontend implemented (additive-safe)
+- The create/edit modal's `code` `FormControl` and its three validators (`required`/`maxLength`/`pattern`) are removed entirely — `code` is never rendered or collected in the UI anymore.
+- `InspectionItemPayload.code` (`admin-api.service.ts`) is now optional (`code?: string`). **CREATE** omits the field from the request body entirely (`InspectionItemsPageComponent.toPayload()`). **EDIT** still forwards the item's existing, unchanged `code` (read from the row, not a control) so the update path keeps working regardless of whether the backend has relaxed the constraint yet.
+- `resolveInspectionItemLabel()`'s raw-`code` last-resort fallback (OBRS-529 item 1) is unaffected — it still reads `code` from the GET response, which the backend continues to return either way. (The list table's `code` **column** was subsequently removed too — owner decision, later the same day: with `code` server-generated the owner has no reason to read it, and keeping a column while collapsing three label lines to one would have kept the scanning cost this card exists to cut.)
+
+### Impact if not addressed
+CREATE will 400 with a bean-validation error on the now-always-absent `code` field until the backend relaxes `@NotBlank`/server-generates it. EDIT is unaffected either way (it still sends the item's real code). Do not merge/deploy the frontend half until the backend confirms `code` is optional on create — track against the paired backend worktree `OBRS-backend-wt-obrs-529-inspection-label-th-only`.
+
+### RESOLVED 2026-07-19
+The backend half landed in the paired worktree as `929fbe8a`: `code` is gone from
+`VehicleInspectionItemReqDto` entirely (a client still sending it is silently ignored, matching how
+`displayOrder` already behaves), server-generated on CREATE by slugifying the EN label — falling back to
+the TH label — and deliberately never regenerated on UPDATE. `mvn clean verify` green: surefire 2330 /
+failsafe 646, 0 failures. Nothing is pending on this request; both halves merge together.
+
+---
+
 ### ✅ RESOLVED — [Frontend] 2026-07-14 — Parcel consigned intake + delivery handoff + public tracking (OBRS-305 Card 2): one assumed endpoint + one shape ambiguity
 
 <!-- contract-request

@@ -232,9 +232,13 @@ export interface AdminInspectionItemDto {
 
 /** OBRS-509: POST/PUT request body — identical shape for create and edit
  * (SPEC §3.3/§3.4). `displayOrder` is deliberately NOT a field here — it is
- * server-owned, assigned `max+1` on create and mutated only via `/reorder`. */
+ * server-owned, assigned `max+1` on create and mutated only via `/reorder`.
+ * OBRS-529: `code` is now optional — the backend generates it server-side on
+ * create, so the FE omits it entirely there (nothing to send: there is no
+ * form field for it anymore); an edit still forwards the item's existing,
+ * unchanged code. */
 export interface InspectionItemPayload {
-  code: string;
+  code?: string;
   active: boolean;
   translations: AdminInspectionItemTranslationDto[];
 }
