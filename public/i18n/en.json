@@ -1565,7 +1565,9 @@
       "ROUND_RETURN": "Round day to return",
       "SEARCH": "Search",
       "SEARCH_VALIDATION": "Please select an origin, a destination, and at least one passenger before searching.",
-      "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking."
+      "PASSENGER_MAX_HINT": "Up to {{max}} passengers per booking.",
+      "RECENT_ROUTES_TITLE": "Recent routes",
+      "RECENT_ROUTE_ARIA_LABEL": "From {{from}} to {{to}}"
     },
     "STATION": {
       "HEADER": "Service point route map",

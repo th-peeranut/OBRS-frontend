@@ -770,6 +770,27 @@ enforced rule with a test behind it.
   on a shared CVA-style dropdown, instead of reaching for `p-dropdown
   [filter]` or forking a second component.
 
+- **Transparent-background outline pill for a customer-shell repeatable
+  quick-pick action** (OBRS-575, `RecentRoutesQuickPickComponent`'s
+  `.recent-route-btn` on the Home search form): no existing component is "a
+  repeatable, tap-to-prefill-two-fields button that isn't a dropdown option, a
+  KPI hint, or an icon-only row action." `MyReportsComponent`'s `.btn-secondary`
+  (OBRS-433) has the right **color recipe** (border + text
+  `$brand-customer-strong`) but the wrong **background** — solid
+  `$primary-white`, with no dark-mode override anywhere, which would repeat the
+  "white box on a dark card" failure the design system already flags for
+  `p-selectButton` (§12, OBRS-312) on this page's `.booking-card` (which DOES
+  have a dark override, `$dk-bg-soft`, OBRS-217). Fix: background
+  **`transparent`**, so it always inherits whatever the ancestor card
+  background is in either theme — **zero new dark-mode CSS required**, because
+  there is nothing to override. `border-radius: $radius-xl` matches this same
+  page's `.btn-search` pill rather than `MyReportsComponent`'s `$radius-sm`.
+  `min-height: 40px` (below `.btn-search`'s 52px — a secondary/optional action,
+  not the page's primary). Hover/focus fills with `$brand-customer-strong` +
+  white text — the standard outline-button inversion, no new token. Reuse this
+  transparent-bg fix (not `MyReportsComponent`'s white-bg recipe) for the next
+  customer-shell repeatable chip/tag control.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

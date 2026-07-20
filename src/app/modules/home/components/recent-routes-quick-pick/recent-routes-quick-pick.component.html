@@ -1,0 +1,17 @@
+<!-- AC#5 hard gate: with zero routes this must render NOTHING — no wrapper div,
+     no caption, no reserved margin/padding. The *ngIf guards the entire root. -->
+<div class="recent-routes-quick-pick" *ngIf="routeViews.length > 0">
+  <span class="recent-routes-title">{{ 'HOME.HOME_BOOKING.RECENT_ROUTES_TITLE' | translate }}</span>
+
+  <div class="recent-routes-list">
+    <button
+      type="button"
+      class="recent-route-btn"
+      *ngFor="let view of routeViews; trackBy: trackByRoutePair"
+      [attr.aria-label]="view.ariaLabel"
+      (click)="onSelect(view)"
+    >
+      {{ view.displayLabel }}
+    </button>
+  </div>
+</div>
