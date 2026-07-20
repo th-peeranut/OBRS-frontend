@@ -12,7 +12,10 @@
 // files directly with fs -- no Angular/Karma bundling -- so it is fast and runs even
 // before `npm ci`. Run locally with: npm run test:i18n
 //
-// ASCII-only source; the JSON values it validates are UTF-8 and untouched by this file.
+// Source is ASCII EXCEPT for the small set of historical Thai/Chinese literals named in
+// OLD_HARDCODED_POLICY_STRINGS below (gate 3) -- those must be spelled out verbatim to be
+// matchable. Node reads .mjs as UTF-8, so this is safe; the JSON values this script
+// validates are UTF-8 and untouched by it either way.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
