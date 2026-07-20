@@ -1,0 +1,219 @@
+// =============================================================================
+// AUTH SPLIT LAYOUT (OBRS-463)
+// =============================================================================
+// The illustration-left / form-right shell shared by every public auth page:
+//   register · forget-password · login-mobile · otp-validate
+//   verify-email · change-email-confirm
+//
+// WHY THIS FILE EXISTS
+// --------------------
+// These rules used to live in `login.component.scss`, and the pages above got
+// them by `@import`-ing that component's stylesheet. OBRS-81 then redesigned
+// /login into a centered `.login-card` and deleted `.left-section` /
+// `.right-section` / `.bg-img` — which silently unstyled all four importers,
+// because CSS that does not exist raises no error and no warning. On mobile the
+// unstyled `<img class="bg-img">` rendered at its intrinsic 1064px inside a
+// 390px `overflow: hidden` container and pushed the form to x=627, entirely off
+// screen and unreachable by touch: users could not sign up at all
+// (usability report 2026-07-16, iPhone Safari — "สมัครสมาชิกไม่ได้").
+//
+// So this layout is owned HERE, by the pages that actually use it, and no
+// longer by a component that is free to redesign itself. /login deliberately
+// does NOT import this file — it owns its own centered-card layout.
+//
+// Angular emulated encapsulation means each importer compiles its own scoped
+// copy; that is expected. Keep only rules that are genuinely common to all six
+// pages here — page-specific pieces (`.state-container`, `.resend-section`,
+// `.otp-time`, tooltips …) stay in the component's own stylesheet.
+// =============================================================================
+
+@import "./variables.scss";
+
+.login-container {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  padding: $space-md;
+  margin: auto;
+  background: $primary-white;
+
+  // CHANGE LANGUAGE SWITCH + THEME TOGGLE — wraps shared components
+  .change-language {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-2xs;
+  }
+
+  // LEFT SECTION — the brand illustration
+  .left-section {
+    width: 60%;
+
+    .bg-img {
+      width: 100%;
+      height: 100%;
+      border-radius: $radius-xl;
+      object-fit: cover;
+    }
+  }
+
+  // RIGHT SECTION — the form / status column
+  .right-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    width: 40%;
+    padding-left: 80px;
+    padding-right: 80px;
+
+    .language-switch {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
+
+      span {
+        margin-right: 10px;
+        font-size: $font-size-base;
+        color: $text-black;
+      }
+    }
+
+    .logo-section {
+      display: flex;
+      justify-content: center;
+
+      .logo-img {
+        width: 200px;
+        height: 87px;
+      }
+    }
+
+    .welcome-text {
+      text-align: center;
+      font-size: 28px;
+      color: $text-black;
+    }
+
+    .hint-text {
+      text-align: center;
+      font-size: $font-size-md;
+      color: $text-black;
+    }
+
+    .option-section {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    // Scoped to `.right-section` rather than `.login-form` on purpose: the
+    // form pages nest the button inside `<form class="login-form">`, while
+    // verify-email / change-email-confirm put it directly in the column.
+    // One rule has to cover both or those two pages lose their button styling.
+    .login-btn {
+      width: 100%;
+      padding: $space-xs;
+      border: none;
+      border-radius: $radius-xl;
+      font-size: $font-size-base;
+      font-weight: bold;
+      cursor: pointer;
+      background-color: $primary-blue;
+      color: #fff;
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    }
+
+    .login-form {
+      .login-by-phone-no-btn {
+        width: 100%;
+        padding: $space-xs;
+        border: 1px solid $text-blue;
+        border-radius: $radius-xl;
+        font-size: $font-size-base;
+        font-weight: bold;
+        cursor: pointer;
+        background-color: #f6fcff;
+        color: $primary-blue;
+      }
+
+      .gis-btn-wrapper {
+        position: relative;
+
+        .gis-disabled-overlay {
+          position: absolute;
+          inset: 0;
+          cursor: not-allowed;
+        }
+      }
+
+      .register-link {
+        text-align: center;
+        font-size: $font-size-base;
+        color: $text-black;
+
+        a {
+          color: $secondary-blue;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+
+      .or-section {
+        display: flex;
+        align-items: center;
+      }
+    }
+  }
+}
+
+// STACK THE SPLIT BELOW 992px — this is the rule whose absence made the form
+// unreachable on phones. Without it the two columns stay side by side and the
+// form sits outside the clipped container.
+@media (max-width: 992px) {
+  .login-container {
+    flex-direction: column;
+    align-items: stretch;
+    height: auto;
+    padding: $space-sm;
+    gap: $space-lg;
+  }
+
+  .login-container .left-section {
+    width: 100%;
+
+    .bg-img {
+      height: 240px;
+      object-fit: cover;
+    }
+  }
+
+  .login-container .right-section {
+    width: 100%;
+    padding: 0 16px 24px;
+  }
+
+  .login-container .change-language {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 576px) {
+  .login-container {
+    padding: $space-xs;
+  }
+
+  .login-container .right-section {
+    padding: 0 8px 20px;
+  }
+
+  .login-container .logo-section .logo-img {
+    width: 160px;
+    height: auto;
+  }
+}

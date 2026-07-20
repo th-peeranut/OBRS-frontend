@@ -1,6 +1,14 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { extractApiErrorMessage, statusAlertMessageKey } from './api-error';
 
+/**
+ * A backend URL of the shape a user must never see. Every fixture below is
+ * built with it so `error.message` really does contain the leak — an
+ * HttpErrorResponse with no `url` synthesizes "for (unknown url)", which would
+ * make the guard tests vacuous (they would pass against the unfixed code too).
+ */
+const API_URL = 'https://obrs-backend.example.com/api/external/otp/request/test';
+
 describe('extractApiErrorMessage', () => {
   it('prefers the backend ApiErrorResponse message', () => {
     const error = new HttpErrorResponse({
@@ -25,11 +33,6 @@ describe('extractApiErrorMessage', () => {
     expect(extractApiErrorMessage(error)).toBe('');
   });
 
-  it('falls back to the transport message when the body has no message field', () => {
-    const error = new HttpErrorResponse({ status: 0, error: { errorCode: 'X' } });
-    expect(extractApiErrorMessage(error)).toBe(error.message);
-  });
-
   it('handles a plain Error', () => {
     expect(extractApiErrorMessage(new Error('boom'))).toBe('boom');
   });
@@ -37,6 +40,80 @@ describe('extractApiErrorMessage', () => {
   it('returns "" for unknown error shapes', () => {
     expect(extractApiErrorMessage('nope')).toBe('');
     expect(extractApiErrorMessage(null)).toBe('');
+  });
+
+  // OBRS-567. The suite used to assert the OPPOSITE of the block below —
+  // `expect(extractApiErrorMessage(error)).toBe(error.message)` on a status 0 —
+  // so the leak shipped with a green test certifying it. These cases are the
+  // repro: each one returned the transport string before the fix.
+  describe('never returns a transport-level message (OBRS-567)', () => {
+    it('returns "" for the real status-0 shape (ProgressEvent body)', () => {
+      // What Angular ACTUALLY sets on network loss / CORS / DNS / TLS failure:
+      // non-null, not a string, and no .message — which is exactly why it fell
+      // through every guard to error.message.
+      const error = new HttpErrorResponse({
+        status: 0,
+        url: API_URL,
+        error: new ProgressEvent('error'),
+      });
+
+      // Precondition: without it a fix that merely stopped populating
+      // error.message would make this test pass without closing the leak.
+      expect(error.message).toContain(API_URL);
+
+      expect(extractApiErrorMessage(error)).toBe('');
+    });
+
+    it('returns "" for a status-0 body that has an errorCode but no message', () => {
+      const error = new HttpErrorResponse({ status: 0, url: API_URL, error: { errorCode: 'X' } });
+      expect(extractApiErrorMessage(error)).toBe('');
+    });
+
+    it('returns "" for a gateway HTML body (502/504)', () => {
+      for (const status of [502, 504]) {
+        const error = new HttpErrorResponse({
+          status,
+          url: API_URL,
+          error:
+            '<!DOCTYPE html><html><head><title>502 Bad Gateway</title></head>' +
+            '<body>upstream obrs-backend-8f2a.internal did not respond</body></html>',
+        });
+        expect(extractApiErrorMessage(error)).toBe('');
+      }
+    });
+
+    it('returns "" for an HTML body with leading whitespace', () => {
+      const error = new HttpErrorResponse({
+        status: 504,
+        url: API_URL,
+        error: '\n  \n<html><body>Gateway Timeout</body></html>',
+      });
+      expect(extractApiErrorMessage(error)).toBe('');
+    });
+
+    // The gate: whatever shape a transport failure arrives in, nothing that
+    // reaches a user may carry a URL, a hostname, markup, or Angular's own
+    // wording. Asserting the absence of the leak (rather than a specific
+    // return value) is what makes this survive a future refactor of the
+    // fallback chain.
+    it('leaks neither URL nor markup for any transport-failure shape', () => {
+      const shapes: unknown[] = [
+        new HttpErrorResponse({ status: 0, url: API_URL, error: new ProgressEvent('error') }),
+        new HttpErrorResponse({ status: 0, url: API_URL, error: { errorCode: 'X' } }),
+        new HttpErrorResponse({ status: 0, url: API_URL, error: undefined }),
+        new HttpErrorResponse({ status: 502, url: API_URL, error: '<html>bad gateway</html>' }),
+        new HttpErrorResponse({ status: 504, url: API_URL, error: '<HTML>timeout</HTML>' }),
+        new HttpErrorResponse({ status: 500, url: API_URL, error: new ProgressEvent('error') }),
+      ];
+
+      for (const shape of shapes) {
+        const message = extractApiErrorMessage(shape);
+        expect(message).not.toContain('Http failure');
+        expect(message).not.toContain('obrs-backend.example.com');
+        expect(message).not.toContain('http');
+        expect(message).not.toContain('<');
+      }
+    });
   });
 });
 
@@ -49,8 +126,39 @@ describe('statusAlertMessageKey', () => {
     expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.SERVICE_UNAVAILABLE');
   });
 
-  it('returns null for other statuses so their message is unchanged', () => {
-    for (const status of [400, 401, 403, 404, 409, 429, 500, 502, 504]) {
+  // OBRS-567: 502 and 504 used to be in the "returns null" list below, which is
+  // how a gateway's HTML page reached the alert.
+  it('maps 502 and 504 to the service-unavailable key', () => {
+    for (const status of [502, 504]) {
+      const error = new HttpErrorResponse({ status, error: '<html>Bad Gateway</html>' });
+      expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.SERVICE_UNAVAILABLE');
+    }
+  });
+
+  it('maps 429 to the rate-limit key', () => {
+    const error = new HttpErrorResponse({ status: 429, error: null });
+    expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.TOO_MANY_REQUESTS');
+  });
+
+  describe('status 0', () => {
+    it('reports the service unreachable while the browser is online', () => {
+      spyOnProperty(navigator, 'onLine', 'get').and.returnValue(true);
+      const error = new HttpErrorResponse({ status: 0, url: API_URL, error: new ProgressEvent('error') });
+      expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.SERVICE_UNAVAILABLE');
+    });
+
+    it('blames the connection when the browser reports offline', () => {
+      // A different user action follows from each: reconnect vs. wait and retry.
+      spyOnProperty(navigator, 'onLine', 'get').and.returnValue(false);
+      const error = new HttpErrorResponse({ status: 0, url: API_URL, error: new ProgressEvent('error') });
+      expect(statusAlertMessageKey(error)).toBe('COMMON.ERROR.NETWORK_OFFLINE');
+    });
+  });
+
+  it('returns null for statuses whose backend message is written for the user', () => {
+    // Regression guard: blanketing these would replace "this trip is full" with
+    // a generic string, which is a downgrade, not a fix.
+    for (const status of [400, 401, 403, 404, 409, 422, 500]) {
       const error = new HttpErrorResponse({ status, error: { message: 'x' } });
       expect(statusAlertMessageKey(error)).toBeNull();
     }

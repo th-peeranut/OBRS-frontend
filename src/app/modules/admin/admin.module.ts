@@ -49,7 +49,11 @@ import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacit
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
-const routes: Routes = [
+// OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
+// assert against the REAL route list rather than a hand-mirrored copy — the same
+// reason staff.module.ts exports `staffRoutes`. A mirrored copy would drift with
+// exactly the change the sweep exists to catch.
+export const adminRoutes: Routes = [
   {
     path: '',
     component: AdminLayoutComponent,
@@ -271,7 +275,7 @@ const routes: Routes = [
   ],
   imports: [
     SharedModule,
-    RouterModule.forChild(routes),
+    RouterModule.forChild(adminRoutes),
     CalendarModule,
     InputSwitchModule,
     AdminSharedModule,
