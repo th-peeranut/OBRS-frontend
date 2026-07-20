@@ -372,6 +372,7 @@
   },
   "SHARED": {
     "NO_CONTENT": "No data found",
+    "SEARCH_PLACEHOLDER": "Search",
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {

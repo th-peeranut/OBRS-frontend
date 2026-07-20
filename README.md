@@ -120,6 +120,31 @@ Both the `/admin/*` and `/staff/*` shells share one sidebar implemented by the a
 
 Any list screen that needs a "download this view as a file" action reuses the shared `app-export-button` component (`src/app/shared/components/export-button/`) and its companion `ExportService` (`src/app/services/export/export.service.ts`) rather than hand-rolling a button + menu + blob-download flow per screen. Inputs are `[datasetKey]`, `[requiredRole]` (lowercase role slug), and `[params]` (filter query params); it has no outputs and no NgRx — it is a fully self-sufficient presentational component. It renders a secondary `admin-btn` (never the primary role) that opens a `p-menu[popup]` with CSV / Excel(XLSX) options, is **hidden** (not disabled) when the current user lacks `requiredRole`, and shows a small rotating spinner + `Exporting…` label while the request is in flight. Errors branch on the backend's stable `errorCode` via `AlertService.error()`; success is silent (the browser's own download is the confirmation — no toast). See `docs/adr/0001-export-button-component.md` and `docs/design-system.md` §3.
 
+### Searchable station dropdown (`app-dropdown-group-obrs [searchable]`)
+
+`DropdownGroupObrsComponent` (`src/app/shared/components/dropdown-group-obrs/`)
+gained an opt-in `@Input() searchable = false` (OBRS-562) that adds a sticky
+filter row inside the dropdown panel. It is `true` on 6 of the component's 7
+real instances — the origin/destination station pickers on `home-booking`,
+`schedule-booking-filter`, and `parcel-trip-form` — and left at its `false`
+default on the 7th (`parcel-trip-form`'s `scheduleId` picker), which renders
+byte-identical to before. The match is case-insensitive substring against the
+**same localized string the template renders** (`getValue()`'s fallback
+chain), never a raw untranslated field, so a query never matches text the
+user can't see on screen. Search keys are precomputed once per `options`
+change and once more on `translate.onLangChange` (never in a template getter
+— the component runs default, not `OnPush`, change detection). Bootstrap's
+own `shown.bs.dropdown` / `hidden.bs.dropdown` events, listened for on the
+**toggle button** (not the host, not `.dropdown-menu` — Bootstrap fires them
+on its own `this._element`, the button), now drive `isDropdownOpen`
+exclusively; the component's previous custom outside-click listener is
+deleted. The component's `isGroupedOptions()` branch (a `ProvinceStation[]`
+shape with a `stations` field) is dead code with today's `GET /api/stops`
+response and is left unfiltered. See `docs/adr/0027-searchable-station-dropdown-extends-bespoke-cva.md`
+and `docs/design-system.md` §3/§12 for why this extends the existing
+`ControlValueAccessor` rather than migrating to PrimeNG `p-dropdown [filter]`
+(already used, with a different binding contract, by `/staff/sell`).
+
 ### Reports (`/admin/reports`)
 
 The MVP reporting page (OBRS-40) consumes one endpoint,

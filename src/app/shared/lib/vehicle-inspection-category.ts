@@ -31,3 +31,57 @@ export const VEHICLE_INSPECTION_CATEGORIES: readonly string[] = [
 export function categoryLabelKey(category: string): string {
   return `ADMIN.INSPECTION_ITEMS.CATEGORY.${category}`;
 }
+
+/** One contiguous run of rows sharing a category, carrying each row's FLAT
+ * index into the original array — see `groupContiguousByCategory`'s doc for
+ * why this must never be a per-group-local index. */
+export interface CategoryGroup<T> {
+  category: string;
+  labelKey: string;
+  rows: { row: T; flatIndex: number }[];
+}
+
+/**
+ * OBRS-530 (`groupRowsByCategory`, driver form) / OBRS-553 (admin history
+ * detail) share this ONE grouping algorithm — parameterized by `categoryOf`
+ * since the two callers' row shapes name their category field differently
+ * (`InspectionItemRow.category` vs `InspectionDetailRow.categorySnapshot`),
+ * never forked into two copies of the same walk.
+ *
+ * Partitions an ALREADY-SORTED flat `rows` array into CONTIGUOUS RUNS by
+ * `categoryOf(row)`, carrying each row's flat index.
+ *
+ * MUST walk the sorted array and cut runs on a category change — NEVER
+ * `filter()` per category. A filter-based implementation
+ * (`rows.filter(r => categoryOf(r) === c).map((row, i) => ({row, flatIndex: i}))`)
+ * looks correct (each group DOES get the right rows) but resets `flatIndex`
+ * to 0 at the start of every group instead of continuing the running count —
+ * so any caller indexing a parallel structure built by iterating the SAME
+ * flat `rows` array once (e.g. the driver form's `itemsFormArray`) silently
+ * points at the wrong entry for every row after the first group, with no
+ * error anywhere. Callers' own tests pin the flattened `flatIndex` sequence
+ * as exactly `0, 1, ..., N-1` — a filter-based implementation fails that
+ * assertion immediately.
+ */
+export function groupContiguousByCategory<T>(
+  rows: readonly T[],
+  categoryOf: (row: T) => string
+): CategoryGroup<T>[] {
+  const groups: CategoryGroup<T>[] = [];
+
+  rows.forEach((row, flatIndex) => {
+    const category = categoryOf(row);
+    const currentGroup = groups[groups.length - 1];
+    if (currentGroup && currentGroup.category === category) {
+      currentGroup.rows.push({ row, flatIndex });
+    } else {
+      groups.push({
+        category,
+        labelKey: categoryLabelKey(category),
+        rows: [{ row, flatIndex }],
+      });
+    }
+  });
+
+  return groups;
+}

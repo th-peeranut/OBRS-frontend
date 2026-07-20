@@ -130,15 +130,25 @@
 
     <p class="admin-error" *ngIf="!isDetailLoading && detailErrorMessage">{{ detailErrorMessage }}</p>
 
-    <ul class="vehicle-inspection-detail-list" *ngIf="!isDetailLoading && !detailErrorMessage">
-      <li class="vehicle-inspection-detail-item" *ngFor="let item of detailRows">
-        <span class="vehicle-inspection-detail-item-label">{{ item.itemLabelSnapshot }}</span>
-        <span class="admin-status" [ngClass]="item.verdictChipToken">
-          {{ (item.verdict === 'needs_repair' ? 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' : 'STAFF.INSPECTION.VERDICT_OK') | translate }}
-        </span>
-        <span class="vehicle-inspection-detail-item-note" *ngIf="item.note">{{ item.note }}</span>
-      </li>
-    </ul>
+    <!-- OBRS-553: grouped by the FROZEN categorySnapshot, not the master
+         list's current category — a later re-group of the checklist must
+         never reshuffle a sheet already signed. -->
+    <div class="vehicle-inspection-detail-list" *ngIf="!isDetailLoading && !detailErrorMessage">
+      <ng-container *ngFor="let group of detailGroups; trackBy: trackByCategory">
+        <div class="vehicle-inspection-group-header" [attr.data-testid]="'inspection-detail-group-header-' + group.category">
+          <span class="vehicle-inspection-group-title">{{ group.labelKey | translate }}</span>
+        </div>
+        <ul class="vehicle-inspection-detail-group-list">
+          <li class="vehicle-inspection-detail-item" *ngFor="let entry of group.rows">
+            <span class="vehicle-inspection-detail-item-label">{{ entry.row.itemLabelSnapshot }}</span>
+            <span class="admin-status" [ngClass]="entry.row.verdictChipToken">
+              {{ (entry.row.verdict === 'needs_repair' ? 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' : 'STAFF.INSPECTION.VERDICT_OK') | translate }}
+            </span>
+            <span class="vehicle-inspection-detail-item-note" *ngIf="entry.row.note">{{ entry.row.note }}</span>
+          </li>
+        </ul>
+      </ng-container>
+    </div>
 
     <div class="admin-modal-actions">
       <button type="button" class="admin-btn" (click)="closeDetailModal()">

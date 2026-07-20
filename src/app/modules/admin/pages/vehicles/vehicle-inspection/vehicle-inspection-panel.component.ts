@@ -7,9 +7,11 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { VehicleInspectionHistoryStore } from './vehicle-inspection-history.store';
 import {
+  InspectionDetailGroup,
   InspectionDetailRow,
   InspectionHistoryRow,
   filterInspectionRowsByWindow,
+  groupDetailRowsByCategory,
   toInspectionDetailRows,
   toInspectionHistoryRow,
 } from './vehicle-inspection.mappers';
@@ -45,6 +47,10 @@ export class AppVehicleInspectionPanelComponent implements OnChanges, OnInit, On
   protected isDetailModalOpen = false;
   protected selectedRow: InspectionHistoryRow | null = null;
   protected detailRows: InspectionDetailRow[] = [];
+  /** OBRS-553: `detailRows` re-grouped by `categorySnapshot` for the section
+   * headers below — recomputed alongside `detailRows` on every fetch/close,
+   * never re-derived in the template. */
+  protected detailGroups: InspectionDetailGroup[] = [];
   protected isDetailLoading = false;
   protected detailErrorMessage = '';
 
@@ -126,6 +132,7 @@ export class AppVehicleInspectionPanelComponent implements OnChanges, OnInit, On
     this.isDetailModalOpen = true;
     this.selectedRow = row;
     this.detailRows = [];
+    this.detailGroups = [];
     this.detailErrorMessage = '';
     this.isDetailLoading = true;
 
@@ -136,6 +143,7 @@ export class AppVehicleInspectionPanelComponent implements OnChanges, OnInit, On
           return; // superseded by opening a different row (or closing) meanwhile
         }
         this.detailRows = toInspectionDetailRows(response?.data?.items ?? []);
+        this.detailGroups = groupDetailRowsByCategory(this.detailRows);
         this.isDetailLoading = false;
       })
       .catch(() => {
@@ -153,8 +161,13 @@ export class AppVehicleInspectionPanelComponent implements OnChanges, OnInit, On
     this.isDetailModalOpen = false;
     this.selectedRow = null;
     this.detailRows = [];
+    this.detailGroups = [];
     this.detailErrorMessage = '';
     this.detailRequestToken++; // invalidate any still-in-flight fetch
+  }
+
+  protected trackByCategory(_index: number, group: InspectionDetailGroup): string {
+    return group.category;
   }
 
   private applyLocalization(): void {

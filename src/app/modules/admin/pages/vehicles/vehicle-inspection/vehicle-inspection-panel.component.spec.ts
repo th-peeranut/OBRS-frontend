@@ -108,7 +108,16 @@ describe('AppVehicleInspectionPanelComponent — pending filter (switchable, not
 describe('AppVehicleInspectionPanelComponent — read-only detail modal', () => {
   it('openDetail() opens optimistically with the row already in hand, then resolves the item list', async () => {
     const row = buildRow({ id: 7 });
-    const detailItems = [{ itemId: 1, itemLabelSnapshot: 'Tires', verdict: 'ok', note: '' }];
+    const detailItems = [
+      {
+        itemId: 1,
+        itemLabelSnapshot: 'Tires',
+        verdict: 'ok',
+        note: '',
+        categorySnapshot: 'TIRES',
+        categoryOrder: 2,
+      },
+    ];
     const adminApi = {
       getVehicleInspectionById: jasmine
         .createSpy('getVehicleInspectionById')
@@ -162,7 +171,19 @@ describe('AppVehicleInspectionPanelComponent — read-only detail modal', () => 
     resolveA({
       code: 200,
       message: 'OK',
-      data: { ...rowA, items: [{ itemId: 99, itemLabelSnapshot: 'STALE', verdict: 'ok', note: '' }] },
+      data: {
+        ...rowA,
+        items: [
+          {
+            itemId: 99,
+            itemLabelSnapshot: 'STALE',
+            verdict: 'ok',
+            note: '',
+            categorySnapshot: 'TIRES',
+            categoryOrder: 2,
+          },
+        ],
+      },
     });
     await Promise.resolve();
     await Promise.resolve();
@@ -202,5 +223,79 @@ describe('AppVehicleInspectionPanelComponent — read-only detail modal', () => 
 
     expect((component as any).detailErrorMessage).toBe('ADMIN.VEHICLES.INSPECTION.DETAIL_LOAD_FAILED');
     expect((component as any).isDetailLoading).toBeFalse();
+  });
+});
+
+describe('AppVehicleInspectionPanelComponent — OBRS-553 category-snapshot grouping', () => {
+  it('openDetail() groups detailRows by categorySnapshot into contiguous runs, running flatIndex across groups', async () => {
+    const row = buildRow({ id: 7 });
+    const detailItems = [
+      { itemId: 15, itemLabelSnapshot: 'A', verdict: 'ok', note: '', categorySnapshot: 'CABIN', categoryOrder: 5 },
+      { itemId: 17, itemLabelSnapshot: 'B', verdict: 'ok', note: '', categorySnapshot: 'CABIN', categoryOrder: 5 },
+      {
+        itemId: 16,
+        itemLabelSnapshot: 'C',
+        verdict: 'ok',
+        note: '',
+        categorySnapshot: 'SAFETY_DOCS',
+        categoryOrder: 6,
+      },
+    ];
+    const adminApi = {
+      getVehicleInspectionById: jasmine
+        .createSpy('getVehicleInspectionById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { ...row, items: detailItems } })),
+    };
+    const component = createComponent(adminApi, createStoreStub([row]));
+
+    (component as any).openDetail(row);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const groups = (component as any).detailGroups;
+    expect(groups.map((g: any) => g.category)).toEqual(['CABIN', 'SAFETY_DOCS']);
+    const flattened = groups.flatMap((g: any) => g.rows);
+    // The tell for a filter()-per-category rewrite: it would reset flatIndex
+    // to 0 at the start of the SAFETY_DOCS group, producing [0, 1, 0] instead
+    // of the running count [0, 1, 2].
+    expect(flattened.map((r: any) => r.flatIndex)).toEqual([0, 1, 2]);
+    expect(flattened.map((r: any) => r.row.itemId)).toEqual([15, 17, 16]);
+  });
+
+  it('closeDetailModal() clears detailGroups along with detailRows', async () => {
+    const row = buildRow({ id: 1 });
+    const adminApi = {
+      getVehicleInspectionById: jasmine
+        .createSpy('getVehicleInspectionById')
+        .and.returnValue(
+          of({
+            code: 200,
+            message: 'OK',
+            data: {
+              ...row,
+              items: [
+                {
+                  itemId: 1,
+                  itemLabelSnapshot: 'Tires',
+                  verdict: 'ok',
+                  note: '',
+                  categorySnapshot: 'TIRES',
+                  categoryOrder: 2,
+                },
+              ],
+            },
+          })
+        ),
+    };
+    const component = createComponent(adminApi, createStoreStub([row]));
+
+    (component as any).openDetail(row);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect((component as any).detailGroups.length).toBe(1);
+
+    (component as any).closeDetailModal();
+
+    expect((component as any).detailGroups).toEqual([]);
   });
 });

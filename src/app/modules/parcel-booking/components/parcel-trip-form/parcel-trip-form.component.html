@@ -6,6 +6,7 @@
       [label]="'PARCEL_BOOKING.TRIP.FROM_STATION'"
       [value]="form.get('fromStationId')?.value"
       [options]="fromStationOptions"
+      [searchable]="true"
       (currentValue)="onFromStationSelect($event)"
     ></app-dropdown-group-obrs>
 
@@ -22,6 +23,7 @@
       [label]="'PARCEL_BOOKING.TRIP.TO_STATION'"
       [value]="form.get('toStationId')?.value"
       [options]="toStationOptions"
+      [searchable]="true"
       (currentValue)="onToStationSelect($event)"
     ></app-dropdown-group-obrs>
   </div>

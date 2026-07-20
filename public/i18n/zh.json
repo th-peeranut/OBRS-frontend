@@ -372,6 +372,7 @@
   },
   "SHARED": {
     "NO_CONTENT": "未找到数据",
+    "SEARCH_PLACEHOLDER": "搜索",
     "ERROR_GENERAL": "发生错误，请重试。"
   },
   "COMMON": {
