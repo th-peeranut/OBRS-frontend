@@ -41,13 +41,24 @@ export const errorInterceptor: HttpInterceptorFn = (
   return next(req).pipe(
     catchError((error: unknown) => {
       if (shouldShowError) {
-        // A dedicated message for transient-outage statuses (503 -> dependency
-        // outage, OBRS-216); every other status keeps the backend-provided text.
+        // A dedicated message for the statuses whose body says nothing a user
+        // can act on (0 / 429 / 502 / 503 / 504 — OBRS-216, OBRS-567); every
+        // other status keeps the backend-provided text, which is written for
+        // the user and must not be blanketed over.
         const statusKey = statusAlertMessageKey(error);
+        // Skip the body entirely once a status key applies: on those statuses
+        // the body is a ProgressEvent or the gateway's HTML, never our message.
+        // Note for whoever throttles /external/otp (OBRS-136): if the backend
+        // starts sending a useful 429 body ("try again in 5 minutes"), this
+        // rule would suppress it — make 429 prefer the body then.
+        const backendMessage = statusKey ? '' : extractApiErrorMessage(error);
+        // translate is non-null here in practice (shouldShowError implies
+        // isApiRequest implies it was injected), but the type says otherwise.
         const message =
-          statusKey && translate
-            ? translate.instant(statusKey)
-            : extractApiErrorMessage(error) || 'Request failed.';
+          backendMessage ||
+          (translate
+            ? translate.instant(statusKey ?? 'COMMON.ERROR.REQUEST_FAILED')
+            : 'Request failed.');
         alertService.error(message);
       }
       return throwError(() => error);

@@ -381,6 +381,9 @@
     "CLOSE": "关闭",
     "ERROR": {
       "SERVICE_UNAVAILABLE": "服务暂时不可用，请稍后再试。",
+      "NETWORK_OFFLINE": "您似乎已断开网络连接，请检查网络后重试。",
+      "TOO_MANY_REQUESTS": "请求过于频繁，请稍候再试。",
+      "REQUEST_FAILED": "操作失败，请重试。",
       "SEAT_WALK_IN_ONLY": "该座位仅限工作人员现场售票选用，无法在线选择。"
     },
     "EXPORT": {

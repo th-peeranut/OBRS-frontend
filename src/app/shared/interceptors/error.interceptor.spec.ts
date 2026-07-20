@@ -78,4 +78,57 @@ describe('errorInterceptor', () => {
     );
     httpMock.verify();
   });
+
+  // OBRS-567: the end-to-end assertion the unit tests on api-error.ts cannot
+  // make — what the USER is actually shown. Before the fix this alert read
+  // "Http failure response for /api/external/otp/request/test: 0 Unknown Error".
+  it('shows a translated message, never the transport string, when the request never reached the server', () => {
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    translate.instant.and.returnValue('ระบบมีปัญหาชั่วคราว กรุณาลองใหม่ภายหลัง');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http
+      .get('/api/external/otp/request/test')
+      .subscribe({ next: () => {}, error: () => {} });
+    // error() with a ProgressEvent is how HttpClient reports a connection that
+    // never completed — status 0, the exact shape the OTP page hit.
+    httpMock
+      .expectOne('/api/external/otp/request/test')
+      .error(new ProgressEvent('error'));
+
+    expect(alertService.error).toHaveBeenCalledTimes(1);
+    const shown = alertService.error.calls.mostRecent().args[0] as string;
+    expect(shown).toBe('ระบบมีปัญหาชั่วคราว กรุณาลองใหม่ภายหลัง');
+    expect(shown).not.toContain('Http failure');
+    expect(shown).not.toContain('/api/');
+    httpMock.verify();
+  });
+
+  it('falls back to a translated generic message when the body carries nothing readable', () => {
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    translate.instant.and.returnValue('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+
+    http.get('/api/foo').subscribe({ next: () => {}, error: () => {} });
+    // A 400 keeps the backend-message path (statusAlertMessageKey returns null),
+    // but this body has no message — so the hardcoded English 'Request failed.'
+    // used to appear here regardless of the user's language.
+    httpMock
+      .expectOne('/api/foo')
+      .flush({ errorCode: 'SOMETHING' }, { status: 400, statusText: 'Bad Request' });
+
+    expect(translate.instant).toHaveBeenCalledWith('COMMON.ERROR.REQUEST_FAILED');
+    expect(alertService.error).toHaveBeenCalledWith('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    httpMock.verify();
+  });
 });
