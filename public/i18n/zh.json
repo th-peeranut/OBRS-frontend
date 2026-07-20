@@ -2484,7 +2484,7 @@
       "SUBMITTING": "保存中…",
       "REJECT_CONFIRM": {
         "TITLE": "确认拒绝并退款",
-        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢给 {{recipient}}。此操作无法撤销。",
+        "BODY": "拒绝包裹 {{tracking}} 并立即全额退款 {{amount}} 泰铢至寄件人付款时使用的支付渠道。此操作无法撤销。",
         "CONFIRM_BTN": "拒绝并退款",
         "CANCEL_BTN": "取消"
       },

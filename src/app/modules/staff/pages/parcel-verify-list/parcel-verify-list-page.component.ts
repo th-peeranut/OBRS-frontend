@@ -149,6 +149,12 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
    * note: the response's refund amount cannot be known ahead of the call).
    * Cancelling returns the staff member to the same filled-in dialog —
    * nothing is sent.
+   *
+   * The copy names the *payment channel*, never a person (OBRS-548). A
+   * consigned parcel's booking is minted with the SENDER as payer, so the
+   * refund goes back the way the sender paid — naming the recipient told
+   * staff the opposite. Interpolating no name also keeps a null
+   * `recipientName` from leaking a raw `{{recipient}}` token onto the screen.
    */
   protected async onConfirmReject(value: ParcelVerifyFormValue): Promise<void> {
     const parcel = this.dialogParcel;
@@ -160,7 +166,6 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
       title: this.translate.instant('STAFF.PARCEL_VERIFY.REJECT_CONFIRM.TITLE'),
       text: this.translate.instant('STAFF.PARCEL_VERIFY.REJECT_CONFIRM.BODY', {
         tracking: parcel.trackingNumber,
-        recipient: parcel.recipientName,
         amount,
       }),
       confirmButtonText: this.translate.instant('STAFF.PARCEL_VERIFY.REJECT_CONFIRM.CONFIRM_BTN'),

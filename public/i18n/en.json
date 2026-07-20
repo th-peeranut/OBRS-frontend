@@ -2484,7 +2484,7 @@
       "SUBMITTING": "Saving…",
       "REJECT_CONFIRM": {
         "TITLE": "Confirm reject & refund",
-        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to {{recipient}}. This action cannot be undone.",
+        "BODY": "Reject parcel {{tracking}} and immediately refund {{amount}} THB in full to the payment method the sender used. This action cannot be undone.",
         "CONFIRM_BTN": "Reject & refund",
         "CANCEL_BTN": "Cancel"
       },
