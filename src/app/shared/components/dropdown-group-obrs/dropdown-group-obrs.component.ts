@@ -97,6 +97,12 @@ export class DropdownGroupObrsComponent
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['options']) {
       this.rebuildSearchKeys();
+    }
+    // `searchable` is included deliberately: applyFilter()'s first branch keys
+    // off it, so a call site that ever binds it dynamically (rather than to a
+    // static literal, as all 7 do today) would otherwise leave displayList
+    // stuck on the last filtered result after searchable flips to false.
+    if (changes['options'] || changes['searchable']) {
       this.applyFilter();
     }
 

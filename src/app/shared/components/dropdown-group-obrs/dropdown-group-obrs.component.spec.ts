@@ -121,7 +121,10 @@ describe('DropdownGroupObrsComponent', () => {
         expect(component.displayList.map((o) => o.id)).toEqual([1]);
       });
 
-      it('clears the query and resets the list when the panel closes (hidden.bs.dropdown)', () => {
+      it('clears the query and resets the list when the panel closes (hidden.bs.dropdown)', async () => {
+        // AC: "คำค้นถูกล้าง ... และค่าที่เลือกไว้เดิมยังคงอยู่" — the close reset
+        // must clear the query WITHOUT dropping the already-selected option.
+        component.setCurrentValue(STATION_OPTIONS[1]);
         typeQuery('Chit');
         expect(component.displayList.length).toBe(1);
 
@@ -132,6 +135,15 @@ describe('DropdownGroupObrsComponent', () => {
         expect(component.searchQuery).toBe('');
         expect(component.isDropdownOpen).toBeFalse();
         expect(component.displayList.map((o) => o.id)).toEqual([1, 2]);
+        // Assert the RENDERED input too, not just the field — clearing
+        // searchQuery only wipes the visible box via the [ngModel] binding,
+        // and a field-only assertion stays green if that binding is dropped
+        // (user would see stale query text over a full list). NgModel defers
+        // its write-back to a microtask (resolvedPromise.then in
+        // NgModel#_updateValue), so this needs whenStable, not detectChanges.
+        await fixture.whenStable();
+        expect(searchInput()!.value).toBe('');
+        expect(component.selectedValue).toBe(STATION_OPTIONS[1]);
       });
 
       it('focuses the search input and sets isDropdownOpen on shown.bs.dropdown, fired on the TOGGLE BUTTON', () => {
