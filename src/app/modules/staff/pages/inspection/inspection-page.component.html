@@ -77,63 +77,77 @@
     </div>
   </ng-container>
 
-  <!-- One card row per checklist item — not a dense table, illegible at phone width. -->
+  <!-- One card row per checklist item, grouped into vehicle-zone sections
+       (OBRS-530) — not a dense table, illegible at phone width. The section
+       header is the scannable anchor for a driver scrolling through 23 items
+       one-handed at dawn: group name + "done/total" so they always know
+       which zone they're in and how much of it is left. -->
   <div
     class="inspection-item-list"
     *ngIf="!isLoading"
     formArrayName="items"
   >
-    <div
-      class="inspection-row"
-      *ngFor="let row of itemRows; let i = index; trackBy: trackByItemId"
-      [formGroupName]="i"
-      [id]="'inspection-row-' + row.itemId"
-      [class.is-highlighted]="highlightedItemId === row.itemId"
-      [style.scrollMarginTop.px]="rowScrollMarginTopPx"
-    >
-      <div class="inspection-row-label">{{ row.label }}</div>
-
-      <!-- Plain admin-btn toggle, not PrimeNG's p-selectButton — the shared
-           .admin-btn primitive already has correct light/dark theming (see
-           boarding-list.component.scss's Board/Un-board precedent), so this
-           gets dark mode for free instead of hand-theming PrimeNG's raw
-           .p-button/.p-highlight internals (which also depend on PrimeNG's
-           own DOM order and would break silently on a library upgrade). A tap
-           on the ALREADY-selected segment is a no-op (selectVerdict()), which
-           is what used to be PrimeNG's [allowEmpty]="false" job. -->
-      <div class="inspection-verdict-toggle" role="group" [attr.aria-label]="'STAFF.INSPECTION.VERDICT_GROUP_ARIA' | translate">
-        <button
-          type="button"
-          class="admin-btn inspection-verdict-btn is-ok"
-          [class.is-selected]="verdictAt(i) === 'ok'"
-          [attr.aria-pressed]="verdictAt(i) === 'ok'"
-          (click)="selectVerdict(i, 'ok')"
-        >
-          {{ 'STAFF.INSPECTION.VERDICT_OK' | translate }}
-        </button>
-        <button
-          type="button"
-          class="admin-btn inspection-verdict-btn is-needs-repair"
-          [class.is-selected]="verdictAt(i) === 'needs_repair'"
-          [attr.aria-pressed]="verdictAt(i) === 'needs_repair'"
-          (click)="selectVerdict(i, 'needs_repair')"
-        >
-          {{ 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' | translate }}
-        </button>
+    <ng-container *ngFor="let group of itemGroups; trackBy: trackByCategory">
+      <div class="inspection-group-header" [attr.data-testid]="'inspection-group-header-' + group.category">
+        <span class="inspection-group-title">{{ group.labelKey | translate }}</span>
+        <span class="inspection-group-counter">
+          {{ 'STAFF.INSPECTION.GROUP_PROGRESS' | translate: groupProgress(group) }}
+        </span>
       </div>
 
-      <div class="inspection-row-note" *ngIf="verdictAt(i) === 'needs_repair'">
-        <textarea
-          class="admin-field"
-          formControlName="note"
-          rows="2"
-          [placeholder]="'STAFF.INSPECTION.NOTE_PLACEHOLDER' | translate"
-        ></textarea>
-        <small class="admin-error" *ngIf="isNoteInvalid(i)">
-          {{ 'STAFF.INSPECTION.VALIDATION_NOTE_REQUIRED' | translate }}
-        </small>
+      <div
+        class="inspection-row"
+        *ngFor="let entry of group.rows; trackBy: trackByItemId"
+        [attr.data-testid]="'inspection-row-' + entry.row.itemId"
+        [formGroupName]="entry.flatIndex"
+        [id]="'inspection-row-' + entry.row.itemId"
+        [class.is-highlighted]="highlightedItemId === entry.row.itemId"
+        [style.scrollMarginTop.px]="rowScrollMarginTopPx"
+      >
+        <div class="inspection-row-label">{{ entry.row.label }}</div>
+
+        <!-- Plain admin-btn toggle, not PrimeNG's p-selectButton — the shared
+             .admin-btn primitive already has correct light/dark theming (see
+             boarding-list.component.scss's Board/Un-board precedent), so this
+             gets dark mode for free instead of hand-theming PrimeNG's raw
+             .p-button/.p-highlight internals (which also depend on PrimeNG's
+             own DOM order and would break silently on a library upgrade). A tap
+             on the ALREADY-selected segment is a no-op (selectVerdict()), which
+             is what used to be PrimeNG's [allowEmpty]="false" job. -->
+        <div class="inspection-verdict-toggle" role="group" [attr.aria-label]="'STAFF.INSPECTION.VERDICT_GROUP_ARIA' | translate">
+          <button
+            type="button"
+            class="admin-btn inspection-verdict-btn is-ok"
+            [class.is-selected]="verdictAt(entry.flatIndex) === 'ok'"
+            [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'ok'"
+            (click)="selectVerdict(entry.flatIndex, 'ok')"
+          >
+            {{ 'STAFF.INSPECTION.VERDICT_OK' | translate }}
+          </button>
+          <button
+            type="button"
+            class="admin-btn inspection-verdict-btn is-needs-repair"
+            [class.is-selected]="verdictAt(entry.flatIndex) === 'needs_repair'"
+            [attr.aria-pressed]="verdictAt(entry.flatIndex) === 'needs_repair'"
+            (click)="selectVerdict(entry.flatIndex, 'needs_repair')"
+          >
+            {{ 'STAFF.INSPECTION.VERDICT_NEEDS_REPAIR' | translate }}
+          </button>
+        </div>
+
+        <div class="inspection-row-note" *ngIf="verdictAt(entry.flatIndex) === 'needs_repair'">
+          <textarea
+            class="admin-field"
+            formControlName="note"
+            rows="2"
+            [placeholder]="'STAFF.INSPECTION.NOTE_PLACEHOLDER' | translate"
+          ></textarea>
+          <small class="admin-error" *ngIf="isNoteInvalid(entry.flatIndex)">
+            {{ 'STAFF.INSPECTION.VALIDATION_NOTE_REQUIRED' | translate }}
+          </small>
+        </div>
       </div>
-    </div>
+    </ng-container>
   </div>
 
   <!-- Optional whole-inspection notes. -->

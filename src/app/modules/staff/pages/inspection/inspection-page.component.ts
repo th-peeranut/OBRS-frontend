@@ -21,13 +21,16 @@ import { VehicleInspectionItemsStore } from './vehicle-inspection-items.store';
 import { InspectableVehiclesStore } from './inspectable-vehicles.store';
 import { MyInspectionsStore } from './my-inspections.store';
 import {
+  InspectionGroup,
   InspectionItemRow,
   InspectionRowValue,
   Option,
   buildInspectionPayload,
   countCompletedRows,
+  countGroupCompleted,
   findFirstIncompleteRowIndex,
   findFirstMissingNoteRowIndex,
+  groupRowsByCategory,
   mergeRowValues,
   toActiveItemRows,
   toVehicleOptions,
@@ -48,6 +51,9 @@ import {
 export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy {
   protected readonly form: FormGroup;
   protected itemRows: InspectionItemRow[] = [];
+  /** OBRS-530: `itemRows` partitioned into contiguous per-category runs
+   * (SPEC D2/D3), recomputed alongside `itemRows` — never independently. */
+  protected itemGroups: InspectionGroup[] = [];
   protected vehicleOptions: Option[] = [];
 
   protected isItemsRefreshing = false;
@@ -206,8 +212,22 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
     return this.itemRows.length;
   }
 
-  protected trackByItemId(_index: number, row: InspectionItemRow): number {
-    return row.itemId;
+  /** OBRS-530: the inner (per-row) loop now iterates `group.rows` — wrapper
+   * objects of `{ row, flatIndex }`, not bare `InspectionItemRow`s — so this
+   * trackBy reaches through `.row.itemId`. Same function, same inner loop,
+   * just the shape trackBy receives per SPEC ("trackByItemId stays on the
+   * inner loop"). */
+  protected trackByItemId(_index: number, entry: { row: InspectionItemRow; flatIndex: number }): number {
+    return entry.row.itemId;
+  }
+
+  protected trackByCategory(_index: number, group: InspectionGroup): string {
+    return group.category;
+  }
+
+  /** Per-group "X/Y" counter for the section header (e.g. "ยาง 2/2"). */
+  protected groupProgress(group: InspectionGroup): { done: number; total: number } {
+    return countGroupCompleted(group, this.currentRowValues());
   }
 
   protected verdictAt(index: number): InspectionVerdict | null {
@@ -350,6 +370,7 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
     const merged = mergeRowValues(items, previous);
     this.rawItems = items;
     this.itemRows = toActiveItemRows(items);
+    this.itemGroups = groupRowsByCategory(this.itemRows);
     this.applyRowsToFormArray(merged);
   }
 

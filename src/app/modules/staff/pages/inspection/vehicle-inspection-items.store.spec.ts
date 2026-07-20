@@ -19,7 +19,9 @@ describe('VehicleInspectionItemsStore', () => {
   });
 
   it('refresh() fetches via StaffApiService.getInspectionItems() and caches the result', async () => {
-    const items = [{ id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true }];
+    const items = [
+      { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true, category: 'TIRES', categoryOrder: 2 },
+    ];
     const staffApiStub = {
       getInspectionItems: jasmine
         .createSpy('getInspectionItems')

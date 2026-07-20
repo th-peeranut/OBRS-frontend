@@ -1,6 +1,7 @@
 import { AdminInspectionItemDto } from '../../../../services/admin/admin-api.service';
 import {
   InspectionItemRow,
+  isCategoryHeaderRow,
   moveRowDown,
   moveRowToBottom,
   moveRowToTop,
@@ -17,6 +18,8 @@ function item(overrides: Partial<AdminInspectionItemDto> = {}): AdminInspectionI
     code: 'engine_oil',
     displayOrder: 1,
     active: true,
+    category: 'ENGINE_FLUIDS',
+    categoryOrder: 1,
     translations: [
       { locale: 'en', label: 'Engine oil' },
       { locale: 'th', label: 'น้ำมันเครื่อง' },
@@ -26,12 +29,19 @@ function item(overrides: Partial<AdminInspectionItemDto> = {}): AdminInspectionI
   };
 }
 
+// Default category/categoryOrder are the SAME for every call unless
+// overridden, so every existing fixture array below (built from `row({...})`
+// with only id/displayOrder varied) stays a SINGLE category run — the
+// degenerate case where group-scoped move bounds equal the old whole-array
+// bounds (see inspection-items.mappers.ts's categoryRunBounds doc).
 function row(overrides: Partial<InspectionItemRow> = {}): InspectionItemRow {
   return {
     id: 1,
     code: 'a',
     displayOrder: 1,
     active: true,
+    category: 'TIRES',
+    categoryOrder: 2,
     labelEn: 'A',
     labelTh: 'A-TH',
     labelZh: 'A-ZH',
@@ -58,6 +68,8 @@ describe('toInspectionItemRows()', () => {
         code: 'engine_oil',
         displayOrder: 1,
         active: true,
+        category: 'ENGINE_FLUIDS',
+        categoryOrder: 1,
         labelEn: 'Engine oil',
         labelTh: 'น้ำมันเครื่อง',
         labelZh: '机油',
@@ -65,13 +77,43 @@ describe('toInspectionItemRows()', () => {
     ]);
   });
 
-  it('sorts by displayOrder (then id as a tiebreak), defensively — never trusts wire order', () => {
+  it('sorts by displayOrder (then id as a tiebreak) WITHIN a category, defensively — never trusts wire order', () => {
     const rows = toInspectionItemRows([
       item({ id: 3, displayOrder: 2 }),
       item({ id: 1, displayOrder: 1 }),
       item({ id: 2, displayOrder: 3 }),
     ]);
     expect(rows.map((r) => r.id)).toEqual([1, 3, 2]);
+  });
+
+  // OBRS-530 / this comment WAS "a defensive belt" — it is now LOAD-BEARING
+  // for grouping (see the function's own doc comment).
+  it('sorts by categoryOrder FIRST — a higher displayOrder in an earlier group still sorts first', () => {
+    const rows = toInspectionItemRows([
+      item({ id: 1, displayOrder: 20, category: 'ENGINE_FLUIDS', categoryOrder: 1 }),
+      item({ id: 2, displayOrder: 1, category: 'TIRES', categoryOrder: 2 }),
+    ]);
+    expect(rows.map((r) => r.id)).toEqual([1, 2]);
+  });
+});
+
+describe('isCategoryHeaderRow() (OBRS-530)', () => {
+  it('is true for index 0 and for the first row of every subsequent category run', () => {
+    const rows = [
+      row({ id: 1, category: 'ENGINE_FLUIDS' }),
+      row({ id: 2, category: 'ENGINE_FLUIDS' }),
+      row({ id: 3, category: 'TIRES' }),
+      row({ id: 4, category: 'TIRES' }),
+      row({ id: 5, category: 'LIGHTING' }),
+    ];
+
+    expect(rows.map((_, i) => isCategoryHeaderRow(rows, i))).toEqual([
+      true, // index 0
+      false,
+      true, // first TIRES row
+      false,
+      true, // first LIGHTING row
+    ]);
   });
 });
 
@@ -122,6 +164,66 @@ describe('reorder array math (moveRowUp/Down/ToTop/ToBottom)', () => {
       { id: 3, displayOrder: 2 },
       { id: 2, displayOrder: 3 },
     ]);
+  });
+});
+
+describe('reorder array math — group-scoped bounds (OBRS-530)', () => {
+  // Two categories: ENGINE_FLUIDS (ids 1,2), TIRES (ids 3,4).
+  const multiGroupRows = () => [
+    row({ id: 1, displayOrder: 1, category: 'ENGINE_FLUIDS', categoryOrder: 1 }),
+    row({ id: 2, displayOrder: 2, category: 'ENGINE_FLUIDS', categoryOrder: 1 }),
+    row({ id: 3, displayOrder: 3, category: 'TIRES', categoryOrder: 2 }),
+    row({ id: 4, displayOrder: 4, category: 'TIRES', categoryOrder: 2 }),
+  ];
+
+  it('moveRowUp is a no-op at the FIRST row of its group, even though earlier groups exist above it', () => {
+    const rows = multiGroupRows();
+    // index 2 (id=3) is the first row of the TIRES group — table position 3,
+    // not position 1, but it must still be a no-op.
+    expect(moveRowUp(rows, 2)).toBe(rows);
+  });
+
+  it('moveRowDown is a no-op at the LAST row of its group, even though later groups exist below it', () => {
+    const rows = multiGroupRows();
+    // index 1 (id=2) is the last row of ENGINE_FLUIDS — must not spill into TIRES.
+    expect(moveRowDown(rows, 1)).toBe(rows);
+  });
+
+  it('moveRowUp/Down permute freely within the group interior', () => {
+    const rows = multiGroupRows();
+    const result = moveRowDown(rows, 2); // id=3 (first of TIRES) swaps with id=4
+    expect(result.map((r) => r.id)).toEqual([1, 2, 4, 3]);
+    expect(result.map((r) => r.displayOrder)).toEqual([1, 2, 3, 4]); // still dense 1..N globally
+  });
+
+  // FE-T3 (first half): moveRowToTop within a NON-FIRST group must not move
+  // the row to table position 1 — only to the top of its OWN group.
+  it("FE-T3: moveRowToTop on a TIRES row does NOT move it to table position 1", () => {
+    const rows = multiGroupRows();
+    const result = moveRowToTop(rows, 3); // id=4, last row of TIRES
+    expect(result.map((r) => r.id)).toEqual([1, 2, 4, 3]); // lands at TIRES' own top (index 2), not index 0
+    expect(result[0].id).toBe(1); // ENGINE_FLUIDS' first row is untouched at position 1
+  });
+
+  it('moveRowToBottom on the first row of a group jumps to the LAST position within that same group, not row N', () => {
+    const rows = multiGroupRows();
+    const result = moveRowToBottom(rows, 2); // id=3, first row of TIRES
+    expect(result.map((r) => r.id)).toEqual([1, 2, 4, 3]);
+  });
+
+  // FE-T2: a within-group move, re-sorted by (categoryOrder, displayOrder, id),
+  // reproduces the SAME array — proves the global renumber never breaks group
+  // contiguity (a cross-group leak would show up as a category run no longer
+  // being contiguous after the re-sort).
+  it('FE-T2: moveRowDown inside a group, re-sorted by (categoryOrder, displayOrder, id), is identical to the moved array', () => {
+    const rows = multiGroupRows();
+    const moved = moveRowDown(rows, 2); // id=3 <-> id=4 within TIRES
+
+    const resorted = [...moved].sort(
+      (a, b) => a.categoryOrder - b.categoryOrder || a.displayOrder - b.displayOrder || a.id - b.id
+    );
+
+    expect(resorted).toEqual(moved);
   });
 });
 

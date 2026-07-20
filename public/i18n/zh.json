@@ -788,6 +788,16 @@
       "RETIRE_CONFIRM_TEXT": "该项目将不再出现在司机下一次的检查表单中。过去的检查记录不受影响,您可以随时重新启用。",
       "RETIRE_CONFIRM_BUTTON": "停用",
       "LOAD_FAILED": "加载检查项目失败。",
+      "CATEGORY_LABEL": "分组",
+      "CATEGORY": {
+        "ENGINE_FLUIDS": "发动机/油液",
+        "TIRES": "轮胎",
+        "LIGHTING": "灯光系统",
+        "DRIVING": "驾驶系统",
+        "CABIN": "客舱",
+        "SAFETY_DOCS": "安全/证件",
+        "WALKAROUND": "绕车检查"
+      },
       "ERROR": {
         "LOCALES_INVALID": "标签必须且只能包含泰文、英文和中文三种语言。",
         "CODE_TAKEN": "该代码已被其他项目使用。",
@@ -2441,6 +2451,7 @@
       "VEHICLE_PLACEHOLDER": "车辆",
       "ODOMETER_PLACEHOLDER": "里程表 (公里)",
       "PROGRESS": "已检查 {{done}} / {{total}}",
+      "GROUP_PROGRESS": "{{done}}/{{total}}",
       "GENERAL_NOTES_LABEL": "其他备注（可选）",
       "GENERAL_NOTES_PLACEHOLDER": "本次检查的其他备注",
       "NOTE_PLACEHOLDER": "描述问题（必填）",

@@ -3,3 +3,18 @@
 // .admin-btn/.admin-btn-primary, .admin-field, .admin-error, .admin-muted —
 // admin-theme.scss). No raw hex/inline color, no new pattern-scoped SCSS
 // needed for this page.
+
+// OBRS-530: one section header row per vehicle-zone group, inserted just
+// before its contiguous run of item rows. Same token family as
+// `.admin-table thead th` (admin-theme.scss) — a soft surface fill + the
+// standard muted-table-heading treatment — so it themes for free in dark
+// mode with no new hex.
+.admin-table-group-header td {
+  background: var(--admin-surface-soft);
+  color: var(--admin-text);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 14px;
+}

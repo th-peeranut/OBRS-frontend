@@ -318,14 +318,24 @@ export interface BoardingListItemDto {
 
 /** GET /api/private/vehicle-inspection-items — the 23-item master checklist,
  * `label` already resolved to the request locale by the backend and ordered
- * by `displayOrder`. These labels are data, NOT i18n keys — never hardcode or
- * mirror them into the locale bundles. */
+ * by `(categoryOrder, displayOrder)` (OBRS-530 SPEC D2) — NOT `displayOrder`
+ * alone anymore. These labels are data, NOT i18n keys — never hardcode or
+ * mirror them into the locale bundles.
+ *
+ * OBRS-530: `category` is the stable enum CODE (e.g. `'TIRES'`), resolved to a
+ * display name client-side via `ADMIN.INSPECTION_ITEMS.CATEGORY.<category>`
+ * (`categoryLabelKey()`, shared/lib/vehicle-inspection-category.ts) — never a
+ * second translation table (D1). `categoryOrder` is the backend enum's
+ * declaration-order position (1-based); it is THE only correct sort key for
+ * group order — never re-derive it from a client-side list. */
 export interface VehicleInspectionItemDto {
   id: number;
   code: string;
   label: string;
   displayOrder: number;
   active: boolean;
+  category: string;
+  categoryOrder: number;
 }
 
 /** GET /api/private/vehicles/inspectable — the whole active fleet (any

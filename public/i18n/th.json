@@ -788,6 +788,16 @@
       "RETIRE_CONFIRM_TEXT": "รายการนี้จะไม่แสดงในแบบฟอร์มตรวจสภาพรถของคนขับครั้งถัดไป ประวัติการตรวจเดิมจะไม่ได้รับผลกระทบ และเปิดใช้งานกลับเมื่อไรก็ได้",
       "RETIRE_CONFIRM_BUTTON": "ปิดใช้งาน",
       "LOAD_FAILED": "โหลดรายการตรวจสภาพรถไม่สำเร็จ",
+      "CATEGORY_LABEL": "หมวดหมู่",
+      "CATEGORY": {
+        "ENGINE_FLUIDS": "เครื่องยนต์/ของเหลว",
+        "TIRES": "ยาง",
+        "LIGHTING": "ระบบไฟ",
+        "DRIVING": "ระบบขับขี่",
+        "CABIN": "ห้องโดยสาร",
+        "SAFETY_DOCS": "ความปลอดภัย/เอกสาร",
+        "WALKAROUND": "ตรวจรอบคัน"
+      },
       "ERROR": {
         "LOCALES_INVALID": "ป้ายกำกับต้องมีครบและมีเฉพาะภาษาไทย อังกฤษ และจีน เท่านั้น",
         "CODE_TAKEN": "รหัสนี้ถูกใช้โดยรายการอื่นแล้ว",
@@ -2441,6 +2451,7 @@
       "VEHICLE_PLACEHOLDER": "รถ",
       "ODOMETER_PLACEHOLDER": "เลขไมล์ (กม.)",
       "PROGRESS": "ตรวจแล้ว {{done}} / {{total}}",
+      "GROUP_PROGRESS": "{{done}}/{{total}}",
       "GENERAL_NOTES_LABEL": "หมายเหตุเพิ่มเติม (ถ้ามี)",
       "GENERAL_NOTES_PLACEHOLDER": "หมายเหตุอื่น ๆ เกี่ยวกับการตรวจครั้งนี้",
       "NOTE_PLACEHOLDER": "อธิบายปัญหา (จำเป็นต้องกรอก)",

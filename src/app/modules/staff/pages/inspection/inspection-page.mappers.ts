@@ -5,6 +5,7 @@ import {
   SubmitVehicleInspectionPayload,
   VehicleInspectionItemDto,
 } from '../../../../services/staff/staff-api.service';
+import { categoryLabelKey } from '../../../../shared/lib/vehicle-inspection-category';
 
 // Pure mappers/formatters for InspectionPageComponent (OBRS-312), following the
 // pattern established by vehicle-maintenance.mappers.ts / schedules.mappers.ts:
@@ -17,6 +18,75 @@ export interface InspectionItemRow {
    * NOT an i18n key, never hardcode/mirror into the locale bundles). */
   label: string;
   displayOrder: number;
+  /** OBRS-530: the stable enum CODE (e.g. `'TIRES'`) — groups rows by vehicle
+   * zone. See `groupRowsByCategory` below. */
+  category: string;
+  /** OBRS-530: the backend enum's declaration-order position (1-based) — THE
+   * sort key for group order (SPEC D2). */
+  categoryOrder: number;
+}
+
+/** OBRS-530: one contiguous run of `InspectionItemRow`s sharing a `category`,
+ * carrying each row's FLAT index into the original sorted array (the
+ * `itemsFormArray`/`itemRows` index — see `groupRowsByCategory`'s doc below
+ * for why this must never be a per-group-local index). */
+export interface InspectionGroup {
+  category: string;
+  labelKey: string;
+  rows: { row: InspectionItemRow; flatIndex: number }[];
+}
+
+/**
+ * Partitions the ALREADY-SORTED flat `rows` array (sorted by
+ * `(categoryOrder, displayOrder, itemId)` — see `toActiveItemRows`) into
+ * CONTIGUOUS RUNS by `category`, carrying each row's flat index.
+ *
+ * MUST walk the sorted array and cut runs on a category change — NEVER
+ * `filter()` per category. A filter-based implementation
+ * (`rows.filter(r => r.category === c).map((row, i) => ({row, flatIndex: i}))`)
+ * looks correct (each group DOES get the right rows) but resets `flatIndex`
+ * to 0 at the start of every group instead of continuing the running count —
+ * so `itemsFormArray.at(flatIndex)` (which is built by iterating the SAME
+ * flat `rows` array once, in order — see `applyRowsToFormArray`) silently
+ * points at the wrong FormGroup for every row after the first group. The
+ * verdict/note a driver taps on row N would write to a totally different
+ * item's control with no error anywhere. FE-T1 pins this by asserting the
+ * flattened `flatIndex` sequence is exactly `0, 1, ..., N-1` — a filter-based
+ * implementation fails that assertion immediately.
+ */
+export function groupRowsByCategory(rows: readonly InspectionItemRow[]): InspectionGroup[] {
+  const groups: InspectionGroup[] = [];
+
+  rows.forEach((row, flatIndex) => {
+    const currentGroup = groups[groups.length - 1];
+    if (currentGroup && currentGroup.category === row.category) {
+      currentGroup.rows.push({ row, flatIndex });
+    } else {
+      groups.push({
+        category: row.category,
+        labelKey: categoryLabelKey(row.category),
+        rows: [{ row, flatIndex }],
+      });
+    }
+  });
+
+  return groups;
+}
+
+/** Per-group "X/Y" counter (e.g. "ยาง 2/2") — `rowValues` is indexed
+ * identically to `itemRows`/`itemsFormArray` (both built from the same
+ * `toActiveItemRows` order), so `rowValues[flatIndex]` is always the value
+ * for `group.rows[i].row`, never a mismatched one. */
+export function countGroupCompleted(
+  group: InspectionGroup,
+  rowValues: readonly InspectionRowValue[]
+): { done: number; total: number } {
+  const total = group.rows.length;
+  const done = group.rows.reduce(
+    (count, { flatIndex }) => (rowValues[flatIndex]?.verdict != null ? count + 1 : count),
+    0
+  );
+  return { done, total };
 }
 
 export interface InspectionRowValue {
@@ -37,14 +107,30 @@ export function toVehicleOptions(vehicles: InspectableVehicleDto[]): Option[] {
   return vehicles.map((vehicle) => ({ code: String(vehicle.id), label: vehicle.label }));
 }
 
-/** Active checklist rows ordered by `displayOrder` — inactive items (retired
- * mid-week, or simply not yet enabled) never appear as a row to fill in. */
+/** Active checklist rows ordered by `(categoryOrder, displayOrder, itemId)`
+ * (OBRS-530 SPEC D2 — group order first, then displayOrder within the group)
+ * — inactive items (retired mid-week, or simply not yet enabled) never appear
+ * as a row to fill in.
+ *
+ * ⚠️ RISK-2: this sort is the ONLY thing standing between the backend's
+ * grouped order and a silently ungrouped UI. `mergeRowValues` below calls this
+ * SAME function internally, so the FormArray build order and `itemRows`'
+ * render order always agree — changing the sort here re-orders both at once. */
 export function toActiveItemRows(items: VehicleInspectionItemDto[]): InspectionItemRow[] {
   return items
     .filter((item) => item.active)
     .slice()
-    .sort((a, b) => a.displayOrder - b.displayOrder)
-    .map((item) => ({ itemId: item.id, label: item.label, displayOrder: item.displayOrder }));
+    .sort(
+      (a, b) =>
+        a.categoryOrder - b.categoryOrder || a.displayOrder - b.displayOrder || a.id - b.id
+    )
+    .map((item) => ({
+      itemId: item.id,
+      label: item.label,
+      displayOrder: item.displayOrder,
+      category: item.category,
+      categoryOrder: item.categoryOrder,
+    }));
 }
 
 /**

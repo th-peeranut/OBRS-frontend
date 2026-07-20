@@ -788,6 +788,16 @@
       "RETIRE_CONFIRM_TEXT": "It will no longer appear in the driver's next inspection. Past inspection records are unaffected, and you can turn it back on anytime.",
       "RETIRE_CONFIRM_BUTTON": "Retire",
       "LOAD_FAILED": "Failed to load the checklist items.",
+      "CATEGORY_LABEL": "Category",
+      "CATEGORY": {
+        "ENGINE_FLUIDS": "Engine & fluids",
+        "TIRES": "Tires",
+        "LIGHTING": "Lighting",
+        "DRIVING": "Driving controls",
+        "CABIN": "Passenger cabin",
+        "SAFETY_DOCS": "Safety & documents",
+        "WALKAROUND": "Walkaround"
+      },
       "ERROR": {
         "LOCALES_INVALID": "Labels must include exactly Thai, English, and Chinese — no more, no fewer.",
         "CODE_TAKEN": "That code is already used by another item.",
@@ -2441,6 +2451,7 @@
       "VEHICLE_PLACEHOLDER": "Vehicle",
       "ODOMETER_PLACEHOLDER": "Odometer (km)",
       "PROGRESS": "Checked {{done}} / {{total}}",
+      "GROUP_PROGRESS": "{{done}}/{{total}}",
       "GENERAL_NOTES_LABEL": "Additional notes (optional)",
       "GENERAL_NOTES_PLACEHOLDER": "Anything else worth noting about this inspection",
       "NOTE_PLACEHOLDER": "Describe the issue (required)",

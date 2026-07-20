@@ -13,6 +13,8 @@ function item(overrides: Partial<AdminInspectionItemDto> = {}): AdminInspectionI
     code: 'engine_oil',
     displayOrder: 1,
     active: true,
+    category: 'ENGINE_FLUIDS',
+    categoryOrder: 1,
     translations: [
       { locale: 'en', label: 'Engine oil' },
       { locale: 'th', label: 'น้ำมันเครื่อง' },

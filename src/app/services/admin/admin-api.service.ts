@@ -221,12 +221,19 @@ export interface AdminInspectionItemTranslationDto {
  * `getVehicleInspections()`/`getVehicleInspectionById()` above, which are the
  * per-vehicle inspection HISTORY (read-only). `id` is a JSON **number**
  * (BIGSERIAL), never a string (the OBRS-376 defect). `translations` always
- * carries all 3 locale rows, sorted en/th/zh by the backend mapper. */
+ * carries all 3 locale rows, sorted en/th/zh by the backend mapper.
+ *
+ * OBRS-530: `category` (stable enum CODE, e.g. `'TIRES'`) and `categoryOrder`
+ * (1-based, the backend enum's declaration order) group the checklist by
+ * vehicle zone — see `VehicleInspectionItemDto` in staff-api.service.ts for
+ * the driver-facing twin of these same two fields. */
 export interface AdminInspectionItemDto {
   id: number;
   code: string;
   displayOrder: number;
   active: boolean;
+  category: string;
+  categoryOrder: number;
   translations: AdminInspectionItemTranslationDto[];
 }
 
@@ -236,10 +243,15 @@ export interface AdminInspectionItemDto {
  * OBRS-529: `code` is now optional — the backend generates it server-side on
  * create, so the FE omits it entirely there (nothing to send: there is no
  * form field for it anymore); an edit still forwards the item's existing,
- * unchanged code. */
+ * unchanged code.
+ * OBRS-530: `category` is required on BOTH create and update (mirrors the
+ * backend's `@NotNull` on `VehicleInspectionItemReqDto.category`) — unlike
+ * `active`'s nullable carry-forward, editing `category` IS the cross-group
+ * move mechanism, so an edit must always REPLACE it, never omit it. */
 export interface InspectionItemPayload {
   code?: string;
   active: boolean;
+  category: string;
   translations: AdminInspectionItemTranslationDto[];
 }
 

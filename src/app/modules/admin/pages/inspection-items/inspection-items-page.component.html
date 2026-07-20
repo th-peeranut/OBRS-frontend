@@ -48,10 +48,21 @@
         </ng-container>
 
         <ng-container *ngIf="!isLoading">
-          <tr
-            *ngFor="let row of rows; let i = index; trackBy: trackByRowId"
-            [class.zebra]="i % 2 === 1"
-          >
+          <ng-container *ngFor="let row of rows; let i = index; trackBy: trackByRowId">
+            <!-- OBRS-530: one header row per vehicle-zone group, inserted just
+                 before its contiguous run — derived from the SAME `rows` array
+                 the item rows below iterate, never a second sorted structure. -->
+            <tr
+              *ngIf="isGroupHeaderRow(i)"
+              class="admin-table-group-header"
+              [attr.data-testid]="'inspection-category-header-' + row.category"
+            >
+              <td colspan="4">{{ resolveCategoryLabelKey(row.category) | translate }}</td>
+            </tr>
+            <tr
+              [class.zebra]="i % 2 === 1"
+              [attr.data-testid]="'inspection-item-row-' + row.id"
+            >
             <td>
               <div class="admin-inline-actions">
                 <span>{{ row.displayOrder }}</span>
@@ -150,7 +161,8 @@
                 </button>
               </div>
             </td>
-          </tr>
+            </tr>
+          </ng-container>
 
           <tr *ngIf="rows.length === 0 && !errorMessage" class="admin-empty-row">
             <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
@@ -173,6 +185,26 @@
     <p class="admin-modal-subtitle">{{ 'ADMIN.INSPECTION_ITEMS.LOCALES_REQUIRED_HINT' | translate }}</p>
 
     <form [formGroup]="itemForm" class="admin-form-grid" (ngSubmit)="submitItem()">
+      <!-- OBRS-530: which vehicle-zone group this item belongs to — the
+           cross-group move mechanism (SPEC: editing category IS the move).
+           design-system §3.1: app-admin-dropdown, field-name placeholder, no
+           pre-seeded default. -->
+      <div class="admin-form-field full">
+        <label class="admin-form-label">
+          {{ 'ADMIN.INSPECTION_ITEMS.CATEGORY_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="category"
+          [options]="categoryOptions"
+          valueKey="code"
+          labelKey="label"
+          [placeholder]="'ADMIN.INSPECTION_ITEMS.CATEGORY_LABEL' | translate"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="isCategoryInvalid()">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
       <ng-container formArrayName="translations">
         <div
           class="admin-form-field full"

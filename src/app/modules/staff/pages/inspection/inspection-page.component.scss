@@ -117,6 +117,37 @@
   padding: 0 12px;
 }
 
+// OBRS-530: one section header per vehicle-zone group, rendered right before
+// its contiguous run of rows. Design constraint: a driver scrolls all 23
+// items straight through, one-handed, on a ~375px phone at dawn — the header
+// must be scannable AT A GLANCE mid-scroll (bold, uppercase, high contrast
+// against the muted token), not a decorative divider. The live "done/total"
+// counter lets them tell at a glance whether a zone still has unchecked items
+// without counting rows. Tokens only (--admin-muted/--admin-text), same as
+// every other admin-shell label — themes for free in dark mode.
+.inspection-group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 2px 0;
+}
+
+.inspection-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--admin-muted);
+}
+
+.inspection-group-counter {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--admin-text);
+}
+
 .inspection-row {
   display: flex;
   flex-direction: column;

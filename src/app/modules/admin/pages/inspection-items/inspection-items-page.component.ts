@@ -13,6 +13,7 @@ import { InspectionItemsStore } from './inspection-items.store';
 import {
   InspectionItemLocale,
   InspectionItemRow,
+  isCategoryHeaderRow,
   moveRowDown,
   moveRowToBottom,
   moveRowToTop,
@@ -21,6 +22,10 @@ import {
   toInspectionItemRows,
   toReorderPayload,
 } from './inspection-items.mappers';
+import {
+  VEHICLE_INSPECTION_CATEGORIES,
+  categoryLabelKey,
+} from '../../../../shared/lib/vehicle-inspection-category';
 
 /**
  * OBRS-509: owner-facing admin CRUD for the vehicle-inspection checklist
@@ -100,6 +105,18 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
   // would silently freeze at whatever locale was active on first load.
   protected currentLocale: InspectionItemLocale = 'th';
 
+  /** OBRS-530: the 7-option category dropdown's options, `{code, label}`
+   * (design-system §3.1 `app-admin-dropdown` contract) — labels are
+   * translated client-side (ngx-translate), so unlike `currentLocale` above
+   * this is rebuilt (not just re-derived) on every `onLangChange` emission,
+   * the same "live, not captured-once" precedent. */
+  protected categoryOptions: { code: string; label: string }[] = [];
+  /** Bound in the template for the group header `<tr>`'s translated text —
+   * the SAME key-builder the driver form's `groupRowsByCategory` uses, so the
+   * two surfaces can never read a different i18n namespace for the same
+   * category code. */
+  protected readonly resolveCategoryLabelKey = categoryLabelKey;
+
   private readonly destroy$ = new Subject<void>();
 
   constructor(
@@ -110,8 +127,10 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     private readonly store: InspectionItemsStore
   ) {
     this.currentLocale = this.getCurrentLocale();
+    this.buildCategoryOptions();
     this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
       this.currentLocale = this.getCurrentLocale();
+      this.buildCategoryOptions();
     });
 
     // Built once, fixed length (3), never rebuilt — see the class doc above
@@ -121,7 +140,11 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     // create and never edited here (§3.5 handoff). `en`/`zh` labels are no
     // longer `Validators.required` (owner decision) — Thai is the only
     // mandatory locale (`SNAPSHOT_LOCALE` above is why).
+    // OBRS-530: `category` starts EMPTY (design-system §3.1 — no pre-seeded
+    // default, forcing an explicit choice) and is `Validators.required`,
+    // mirroring the backend's `@NotNull` client-side for a friendly message.
     this.itemForm = this.formBuilder.group({
+      category: ['', Validators.required],
       // Thai first — see `localeLabelKeys` above; the two are index-aligned.
       translations: this.formBuilder.array([
         this.formBuilder.group({ locale: ['th'], label: ['', Validators.required] }),
@@ -129,6 +152,18 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
         this.formBuilder.group({ locale: ['zh'], label: [''] }),
       ]),
     });
+  }
+
+  /** Rebuilt (not just re-derived) on every language switch — the option
+   * labels are translated TEXT baked into the array at build time, so a
+   * one-time construction would freeze the dropdown at whatever language was
+   * active on first load (the exact bug class `onLangChange` handling
+   * elsewhere in this file exists to avoid). */
+  private buildCategoryOptions(): void {
+    this.categoryOptions = VEHICLE_INSPECTION_CATEGORIES.map((code) => ({
+      code,
+      label: this.translate.instant(categoryLabelKey(code)),
+    }));
   }
 
   ngOnInit(): void {
@@ -177,12 +212,24 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     return !!this.savingIds[row.id];
   }
 
+  /** OBRS-530: group-scoped — a row at the top of its OWN category run can't
+   * move up even if earlier groups exist above it in the table. */
   protected canMoveUp(index: number): boolean {
-    return index > 0;
+    return index > 0 && this.rows[index - 1].category === this.rows[index].category;
   }
 
+  /** OBRS-530: group-scoped — a row at the bottom of its OWN category run
+   * can't move down even if later groups exist below it in the table. */
   protected canMoveDown(index: number): boolean {
-    return index < this.rows.length - 1;
+    return (
+      index < this.rows.length - 1 && this.rows[index + 1].category === this.rows[index].category
+    );
+  }
+
+  /** OBRS-530: is `this.rows[index]` the first row of a new category run? —
+   * drives the group header `<tr>` inserted just before it in the template. */
+  protected isGroupHeaderRow(index: number): boolean {
+    return isCategoryHeaderRow(this.rows, index);
   }
 
   /** OBRS-529: the list table's single label cell AND the move-button aria-labels
@@ -274,6 +321,8 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.isEditMode = false;
     this.selectedItem = null;
     this.itemForm.reset({
+      // design-system §3.1: no pre-seeded category — the owner must choose.
+      category: '',
       translations: [
         { locale: 'th', label: '' },
         { locale: 'en', label: '' },
@@ -287,6 +336,7 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.isEditMode = true;
     this.selectedItem = row;
     this.itemForm.reset({
+      category: row.category,
       translations: [
         { locale: 'th', label: row.labelTh },
         { locale: 'en', label: row.labelEn },
@@ -307,6 +357,11 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
 
   protected isTranslationInvalid(index: number): boolean {
     const control = this.translationsFormArray.at(index)?.get('label');
+    return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  protected isCategoryInvalid(): boolean {
+    const control = this.itemForm.get('category');
     return !!control && control.invalid && (control.dirty || control.touched);
   }
 
@@ -355,6 +410,7 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
 
   private toPayload(original: InspectionItemRow | null): InspectionItemPayload {
     const raw = this.itemForm.getRawValue() as {
+      category: string;
       translations: { locale: string; label: string }[];
     };
 
@@ -381,6 +437,11 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
       // `active` is NOT a modal field (UX spec §4.2) — it is flipped only by
       // toggleActive(); create defaults true (SPEC §3.3's server default).
       active: current?.active ?? original?.active ?? true,
+      // OBRS-530: required on BOTH create and update, always sourced from the
+      // form (never carried forward from `original`/`current`) — editing
+      // `category` on an existing item IS the cross-group move mechanism, so
+      // this must always REPLACE, unlike `active`'s carry-forward above.
+      category: raw.category,
       // OBRS-529: a locale the owner left blank is OMITTED from the payload, not
       // sent as `label: ''`. Two independent reasons, either one sufficient:
       //   1. `TranslationReqDto.label` carries an unconditional `@NotBlank`, and
@@ -424,6 +485,10 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
       const payload: InspectionItemPayload = {
         code: row.code,
         active: !row.active,
+        // OBRS-530: retire/restore never changes the item's group — carry the
+        // row's own category forward unchanged (the backend requires it on
+        // every PUT, but this action has no UI for changing it).
+        category: row.category,
         translations: [
           { locale: 'en', label: row.labelEn },
           { locale: 'th', label: row.labelTh },

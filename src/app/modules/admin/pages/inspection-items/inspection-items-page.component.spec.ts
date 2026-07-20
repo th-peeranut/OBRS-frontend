@@ -9,6 +9,7 @@ import { InspectionItemsPageComponent } from './inspection-items-page.component'
 import { AdminApiService, AdminInspectionItemDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AdminModalBackdropDirective } from '../../../../shared/directives/admin-modal-backdrop.directive';
+import { AdminDropdownComponent } from '../../components/admin-dropdown/admin-dropdown.component';
 import { InspectionItemsStore } from './inspection-items.store';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
@@ -18,6 +19,8 @@ function item(overrides: Partial<AdminInspectionItemDto> = {}): AdminInspectionI
     code: 'engine_oil',
     displayOrder: 1,
     active: true,
+    category: 'ENGINE_FLUIDS',
+    categoryOrder: 1,
     translations: [
       { locale: 'en', label: 'Engine oil' },
       { locale: 'th', label: 'น้ำมันเครื่อง' },
@@ -94,7 +97,17 @@ describe('InspectionItemsPageComponent — locale-aware label reactivity (OBRS-5
     const translate = (component as any).translate;
     translate.currentLang = 'en';
 
-    const row = { id: 1, code: 'raw', displayOrder: 1, active: true, labelEn: 'EN', labelTh: 'TH', labelZh: 'ZH' };
+    const row = {
+      id: 1,
+      code: 'raw',
+      displayOrder: 1,
+      active: true,
+      category: 'TIRES',
+      categoryOrder: 2,
+      labelEn: 'EN',
+      labelTh: 'TH',
+      labelZh: 'ZH',
+    };
     expect(component.displayLabel(row)).toBe('EN');
 
     // This is the whole risk this card calls out: a component that reads
@@ -115,10 +128,30 @@ describe('InspectionItemsPageComponent — locale-aware label reactivity (OBRS-5
     translate.currentLang = 'zh';
     translate.onLangChange.next({ lang: 'zh', translations: {} });
 
-    const missingZh = { id: 1, code: 'raw_code', displayOrder: 1, active: true, labelEn: 'EN fallback', labelTh: 'TH', labelZh: '' };
+    const missingZh = {
+      id: 1,
+      code: 'raw_code',
+      displayOrder: 1,
+      active: true,
+      category: 'TIRES',
+      categoryOrder: 2,
+      labelEn: 'EN fallback',
+      labelTh: 'TH',
+      labelZh: '',
+    };
     expect(component.displayLabel(missingZh)).toBe('EN fallback');
 
-    const missingZhAndEn = { id: 2, code: 'raw_code_2', displayOrder: 2, active: true, labelEn: '', labelTh: 'TH', labelZh: '' };
+    const missingZhAndEn = {
+      id: 2,
+      code: 'raw_code_2',
+      displayOrder: 2,
+      active: true,
+      category: 'TIRES',
+      categoryOrder: 2,
+      labelEn: '',
+      labelTh: 'TH',
+      labelZh: '',
+    };
     expect(component.displayLabel(missingZhAndEn)).toBe('raw_code_2');
   });
 });
@@ -130,20 +163,43 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
   // translations FormArray reset.
   it('openCreateModal resets the translations FormArray empty', () => {
     const { component } = makeComponent();
-    component.openEditModal({ id: 1, code: 'x', displayOrder: 1, active: true, labelEn: 'a', labelTh: 'b', labelZh: 'c' });
+    component.openEditModal({
+      id: 1,
+      code: 'x',
+      displayOrder: 1,
+      active: true,
+      category: 'TIRES',
+      categoryOrder: 2,
+      labelEn: 'a',
+      labelTh: 'b',
+      labelZh: 'c',
+    });
 
     component.openCreateModal();
 
     expect(component.itemForm.get('code')).toBeNull();
+    expect(component.itemForm.get('category')?.value).toBe('');
     expect(component.translationsFormArray.length).toBe(3);
     expect(component.translationsFormArray.at(0).get('label').value).toBe('');
   });
 
   it('openEditModal pre-fills all three labels (no code field to disable)', () => {
     const { component } = makeComponent();
-    const row = { id: 5, code: 'brake_fluid', displayOrder: 3, active: true, labelEn: 'Brake fluid', labelTh: 'TH', labelZh: 'ZH' };
+    const row = {
+      id: 5,
+      code: 'brake_fluid',
+      displayOrder: 3,
+      active: true,
+      category: 'ENGINE_FLUIDS',
+      categoryOrder: 1,
+      labelEn: 'Brake fluid',
+      labelTh: 'TH',
+      labelZh: 'ZH',
+    };
 
     component.openEditModal(row);
+
+    expect(component.itemForm.get('category')?.value).toBe('ENGINE_FLUIDS');
 
     expect(component.itemForm.get('code')).toBeNull();
 
@@ -158,20 +214,34 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     expect(byLocale['zh']).toBe('ZH');
   });
 
-  it('OBRS-529: EN and ZH labels are optional — the form is valid with only Thai filled in', () => {
+  it('OBRS-529: EN and ZH labels are optional — the form is valid with only Thai + a category filled in', () => {
     const { component } = makeComponent();
     component.openCreateModal();
 
+    component.itemForm.get('category')?.setValue('TIRES'); // OBRS-530: also required
     component.translationsFormArray.at(0).get('label')?.setValue('ผ้าเบรก'); // th
     // en/zh left blank deliberately
 
     expect(component.itemForm.valid).toBeTrue();
   });
 
+  it('OBRS-530: category is required — the form is invalid with no category chosen even if every label is filled in', () => {
+    const { component } = makeComponent();
+    component.openCreateModal();
+
+    component.translationsFormArray.at(0).get('label')?.setValue('ผ้าเบรก'); // th
+    component.translationsFormArray.at(1).get('label')?.setValue('Brake pads'); // en
+    component.translationsFormArray.at(2).get('label')?.setValue('刹车片'); // zh
+    // category left at its no-pre-seeded-default '' (design-system §3.1)
+
+    expect(component.itemForm.invalid).toBeTrue();
+  });
+
   it('OBRS-529: Thai is still required — the form is invalid with Thai blank even if EN/ZH are filled', () => {
     const { component } = makeComponent();
     component.openCreateModal();
 
+    component.itemForm.get('category')?.setValue('TIRES');
     component.translationsFormArray.at(1).get('label')?.setValue('Brake pads'); // en
     component.translationsFormArray.at(2).get('label')?.setValue('刹车片'); // zh
 
@@ -213,13 +283,16 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     component.ngOnInit();
     store.data$.next([item()]);
     component.openCreateModal();
+    component.itemForm.get('category')?.setValue('TIRES');
     component.translationsFormArray.at(0).get('label')?.setValue('น็อตล้อ');
     component.translationsFormArray.at(1).get('label')?.setValue('Wheel nuts');
     component.translationsFormArray.at(2).get('label')?.setValue('轮毂螺母');
 
     await component.submitItem();
 
-    expect(createInspectionItem).toHaveBeenCalledOnceWith(jasmine.objectContaining({ active: true }));
+    expect(createInspectionItem).toHaveBeenCalledOnceWith(
+      jasmine.objectContaining({ active: true, category: 'TIRES' })
+    );
     // OBRS-529: `code` is server-generated — CREATE must not send it at all
     // (there is no form field left to source it from).
     const createPayload = createInspectionItem.calls.argsFor(0)[0];
@@ -247,6 +320,7 @@ describe('InspectionItemsPageComponent — create/edit modal', () => {
     component.ngOnInit();
     store.data$.next([item()]);
     component.openCreateModal();
+    component.itemForm.get('category')?.setValue('ENGINE_FLUIDS');
     // Thai only — EN and ZH left untouched, exactly what the owner does now that
     // this card dropped their `Validators.required`.
     component.translationsFormArray.at(0).get('label')?.setValue('น้ำมันเครื่อง');
@@ -494,7 +568,12 @@ describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {
     };
 
     await TestBed.configureTestingModule({
-      declarations: [InspectionItemsPageComponent, AdminModalBackdropDirective],
+      // AdminDropdownComponent (the OBRS-530 category field) must be the REAL
+      // component — a formControlName needs SOME ControlValueAccessor on its
+      // host element (NG01203) even under NO_ERRORS_SCHEMA, which only
+      // suppresses the unknown-element/attribute check, not directive
+      // resolution (same precedent as InspectionPageComponent's real-click spec).
+      declarations: [InspectionItemsPageComponent, AdminModalBackdropDirective, AdminDropdownComponent],
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
       schemas: [NO_ERRORS_SCHEMA],
       providers: [

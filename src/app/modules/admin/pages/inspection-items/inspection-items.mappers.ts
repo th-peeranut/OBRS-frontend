@@ -3,6 +3,7 @@ import {
   AdminInspectionItemTranslationDto,
   InspectionItemReorderReqDto,
 } from '../../../../services/admin/admin-api.service';
+import { categoryLabelKey } from '../../../../shared/lib/vehicle-inspection-category';
 
 // Pure mappers/formatters/reorder-array-math extracted from
 // InspectionItemsPageComponent (OBRS-509), mirroring cargo-capacity-page.mappers.ts /
@@ -15,6 +16,10 @@ export interface InspectionItemRow {
   code: string;
   displayOrder: number;
   active: boolean;
+  /** OBRS-530: stable enum CODE (e.g. `'TIRES'`) — see
+   * `AdminInspectionItemDto` for the wire-shape doc. */
+  category: string;
+  categoryOrder: number;
   labelEn: string;
   labelTh: string;
   labelZh: string;
@@ -33,6 +38,8 @@ export function toInspectionItemRow(item: AdminInspectionItemDto): InspectionIte
     code: item.code,
     displayOrder: item.displayOrder,
     active: item.active,
+    category: item.category,
+    categoryOrder: item.categoryOrder,
     labelEn: translationLabel(item.translations, 'en'),
     labelTh: translationLabel(item.translations, 'th'),
     labelZh: translationLabel(item.translations, 'zh'),
@@ -60,13 +67,33 @@ export function resolveInspectionItemLabel(
   return byLocale[locale] || row.labelEn || row.code;
 }
 
-// SPEC §3.2: "/manage" is already ordered `displayOrder ASC, id ASC` by the
-// backend — this re-sort is a defensive belt (never trust wire order alone)
-// so a background refresh always renders rows in a stable, correct sequence.
+// OBRS-530: the backend already returns "/manage" ordered by
+// `(categoryOrder, displayOrder, id)` (SPEC D2 — `VehicleInspectionItemService
+// .EFFECTIVE_ORDER`) — this re-sort is NO LONGER just a defensive belt (never
+// trust wire order alone). It is now LOAD-BEARING: `isCategoryHeaderRow` below
+// assumes `rows` is already partitioned into
+// contiguous per-category runs, and every move-button bound (`moveRowUp` etc.)
+// assumes the same. A background refresh (or any future caller) skipping this
+// re-sort would silently un-group the table with no error.
 export function toInspectionItemRows(items: AdminInspectionItemDto[]): InspectionItemRow[] {
   return [...items]
-    .sort((a, b) => a.displayOrder - b.displayOrder || a.id - b.id)
+    .sort(
+      (a, b) =>
+        a.categoryOrder - b.categoryOrder || a.displayOrder - b.displayOrder || a.id - b.id
+    )
     .map(toInspectionItemRow);
+}
+
+/**
+ * OBRS-530: is `rows[index]` the FIRST row of its contiguous category run?
+ * Drives the group header `<tr>` inserted just before it. Walks the single
+ * already-sorted `rows` array by comparing a row to its immediate
+ * predecessor — deliberately NOT a second sorted/grouped structure (the
+ * template's existing `*ngFor="let row of rows; let i = index"` + move-button
+ * indices stay untouched; this only adds one more boolean check per row).
+ */
+export function isCategoryHeaderRow(rows: readonly InspectionItemRow[], index: number): boolean {
+  return index === 0 || rows[index - 1].category !== rows[index].category;
 }
 
 // Removes the item at fromIndex and reinserts it at toIndex, computed against
@@ -81,43 +108,89 @@ function moveItem<T>(array: T[], fromIndex: number, toIndex: number): T[] {
 }
 
 // Recomputes every row's displayOrder as its new 1-based array index — dense
-// `1..N` over the WHOLE array (retired rows included), per SPEC §3.5.
+// `1..N` over the WHOLE array (retired rows included), per SPEC §3.5. THE
+// GLOBAL renumber is unchanged by OBRS-530 (locked D2: `reorder()`'s
+// whole-table dense validation is untouched) — only the move functions'
+// BOUNDS below become group-scoped.
 function renumberDisplayOrder(rows: InspectionItemRow[]): InspectionItemRow[] {
   return rows.map((row, index) => ({ ...row, displayOrder: index + 1 }));
 }
 
-/** Swap with the row immediately above. No-op (same array reference) at the
- * top — callers must also disable the button via `canMoveUp`/`canMoveDown`,
- * this is the defensive second guard. */
+/**
+ * OBRS-530: the [start, end] index range of `index`'s own contiguous
+ * category run within the already-sorted `rows` array — expands outward from
+ * `index` by comparing immediate neighbors, never a separate grouped
+ * structure. Every move function below clamps to this range instead of the
+ * whole array, so a move can only permute rows WITHIN one group; the array
+ * stays group-contiguous, and the next `(categoryOrder, displayOrder)` re-sort
+ * (FE-T2) reproduces the exact array a within-group move produced.
+ */
+function categoryRunBounds(rows: InspectionItemRow[], index: number): { start: number; end: number } {
+  const category = rows[index].category;
+  let start = index;
+  while (start > 0 && rows[start - 1].category === category) {
+    start -= 1;
+  }
+  let end = index;
+  while (end < rows.length - 1 && rows[end + 1].category === category) {
+    end += 1;
+  }
+  return { start, end };
+}
+
+/** Swap with the row immediately above, WITHIN the same category group. No-op
+ * (same array reference) at the top of the row's group — callers must also
+ * disable the button via `canMoveUp`/`canMoveDown`, this is the defensive
+ * second guard. (In a single-group table this degenerates to "top of the
+ * whole array", the pre-OBRS-530 behavior.) */
 export function moveRowUp(rows: InspectionItemRow[], index: number): InspectionItemRow[] {
-  if (index <= 0 || index >= rows.length) {
+  if (index < 0 || index >= rows.length) {
+    return rows;
+  }
+  const { start } = categoryRunBounds(rows, index);
+  if (index <= start) {
     return rows;
   }
   return renumberDisplayOrder(moveItem(rows, index, index - 1));
 }
 
-/** Swap with the row immediately below. No-op at the bottom. */
+/** Swap with the row immediately below, WITHIN the same category group. No-op
+ * at the bottom of the row's group. */
 export function moveRowDown(rows: InspectionItemRow[], index: number): InspectionItemRow[] {
-  if (index < 0 || index >= rows.length - 1) {
+  if (index < 0 || index >= rows.length) {
+    return rows;
+  }
+  const { end } = categoryRunBounds(rows, index);
+  if (index >= end) {
     return rows;
   }
   return renumberDisplayOrder(moveItem(rows, index, index + 1));
 }
 
-/** Jump to position 1 (array index 0) in a single click. No-op if already there. */
+/** Jump to the FIRST position within this group in a single click (not row 1
+ * of the table). No-op if already there. */
 export function moveRowToTop(rows: InspectionItemRow[], index: number): InspectionItemRow[] {
-  if (index <= 0 || index >= rows.length) {
+  if (index < 0 || index >= rows.length) {
     return rows;
   }
-  return renumberDisplayOrder(moveItem(rows, index, 0));
+  const { start } = categoryRunBounds(rows, index);
+  if (index <= start) {
+    return rows;
+  }
+  return renumberDisplayOrder(moveItem(rows, index, start));
 }
 
-/** Jump to the last position in a single click. No-op if already there. */
+/** Jump to the LAST position within this group in a single click (not row N
+ * of the table). No-op if already there. */
 export function moveRowToBottom(rows: InspectionItemRow[], index: number): InspectionItemRow[] {
-  if (index < 0 || index >= rows.length - 1) {
+  if (index < 0 || index >= rows.length) {
     return rows;
   }
-  return renumberDisplayOrder(moveItem(rows, index, rows.length - 1));
+  const { end } = categoryRunBounds(rows, index);
+  if (index >= end) {
+    return rows;
+  }
+  return renumberDisplayOrder(moveItem(rows, index, end));
 }
 
 /** Builds the `/reorder` request body from the current `rows` array — the

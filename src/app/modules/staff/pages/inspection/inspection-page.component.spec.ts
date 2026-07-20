@@ -17,8 +17,8 @@ import { MyInspectionsStore } from './my-inspections.store';
 import { AlertService } from '../../../../shared/services/alert.service';
 
 const ITEMS: VehicleInspectionItemDto[] = [
-  { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true },
-  { id: 2, code: 'brakes', label: 'Brakes', displayOrder: 2, active: true },
+  { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true, category: 'TIRES', categoryOrder: 1 },
+  { id: 2, code: 'brakes', label: 'Brakes', displayOrder: 2, active: true, category: 'DRIVING', categoryOrder: 2 },
 ];
 
 function makeCollectionStoreStub<T>(initial: T | null = null) {
@@ -92,6 +92,31 @@ describe('InspectionPageComponent', () => {
     expect((component as any).itemsFormArray.length).toBe(2);
   });
 
+  // FE-T1 (OBRS-530, highest risk on this card): a filter()-per-category
+  // groupRowsByCategory implementation would still pass the test above (each
+  // group gets the right rows) while silently resetting flatIndex per group,
+  // misaligning every verdict tap after the first group. This test exercises
+  // the REAL wiring end to end: itemGroups is built from the SAME itemRows
+  // array applyRowsToFormArray iterates, so a correct flatIndex must always
+  // resolve to the FormGroup for that exact itemId.
+  it('FE-T1: itemGroups partitions itemRows into per-category runs whose flatIndex always resolves to the matching FormGroup', () => {
+    const { component } = makeComponent();
+    component.ngOnInit();
+
+    const groups = (component as any).itemGroups;
+    expect(groups.length).toBe(2); // TIRES, then DRIVING (categoryOrder 1, 2)
+    expect(groups[0].category).toBe('TIRES');
+    expect(groups[1].category).toBe('DRIVING');
+
+    const flattened = groups.flatMap((g: any) => g.rows);
+    expect(flattened.map((r: any) => r.flatIndex)).toEqual([0, 1]);
+
+    for (const entry of flattened) {
+      const formGroupItemId = (component as any).itemRows[entry.flatIndex].itemId;
+      expect(formGroupItemId).toBe(entry.row.itemId);
+    }
+  });
+
   it('every row starts with a null verdict (design-system §3.1 — no pre-seeded default)', () => {
     const { component } = makeComponent();
     component.ngOnInit();
@@ -145,7 +170,9 @@ describe('InspectionPageComponent', () => {
 
     // INSPECTION_ITEM_INACTIVE recovery: the store re-emits and the FormArray
     // is rebuilt. The carried-forward needs_repair row must still validate.
-    itemsStore.data$.next([{ id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true }]);
+    itemsStore.data$.next([
+      { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true, category: 'TIRES', categoryOrder: 1 },
+    ]);
     (component as any).itemsFormArray.at(0).get('note').setValue('');
 
     expect((component as any).itemsFormArray.at(0).get('note').hasError('required')).toBeTrue();
@@ -288,7 +315,7 @@ describe('InspectionPageComponent', () => {
 
     // Simulate the store re-emitting after item 2 (brakes) was retired mid-week.
     itemsStore.data$.next([
-      { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true },
+      { id: 1, code: 'tires', label: 'Tires', displayOrder: 1, active: true, category: 'TIRES', categoryOrder: 1 },
     ]);
 
     expect((component as any).itemRows.length).toBe(1);
