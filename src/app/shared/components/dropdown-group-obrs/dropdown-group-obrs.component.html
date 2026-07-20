@@ -13,7 +13,6 @@
       [class.dropdown-toggle-border]="isBorder"
       [class.disabled]="isDisabled"
       [disabled]="isDisabled"
-      (click)="!isDisabled && toggleDropdown()"
     >
       <div class="value-text">
         {{ getValue(selectedValue) }}
@@ -30,9 +29,26 @@
       [class.dropdown-menu-border]="isBorder"
       [class.disabled]="isDisabled"
       [attr.aria-disabled]="isDisabled ? 'true' : null"
-      aria-labelledby="dropdownObrs"
+      [attr.aria-labelledby]="'dropdownObrs' + label"
     >
+      <li class="dropdown-search-row" *ngIf="searchable" (click)="$event.stopPropagation()">
+        <span class="material-symbols-outlined dropdown-search-icon" aria-hidden="true">search</span>
+        <input
+          #stationSearchInput
+          type="search"
+          class="dropdown-search-input"
+          [attr.aria-label]="'SHARED.SEARCH_PLACEHOLDER' | translate"
+          [placeholder]="'SHARED.SEARCH_PLACEHOLDER' | translate"
+          [ngModel]="searchQuery"
+          (input)="onSearchInput($event)"
+          autocomplete="off"
+        />
+      </li>
+
       <ng-container *ngIf="isGroupedOptions(); else flatOptions">
+        <!-- UNCHANGED — dead branch with current data (StationApi has no `stations`
+             field, isGroupedOptions() is always false at runtime), left as-is,
+             unfiltered, untested (see UX-OBRS-562 §1). -->
         <ng-container *ngFor="let group of optionList">
           <li class="dropdown-header">
             {{ getValue(group) }}
@@ -49,7 +65,7 @@
         </ng-container>
       </ng-container>
       <ng-template #flatOptions>
-        <li class="option-items" *ngFor="let option of optionList">
+        <li class="option-items" *ngFor="let option of displayList; trackBy: trackByOptionId">
           <a
             class="dropdown-item dropdown-option"
             [class.disabled]="isDisabled"
@@ -61,6 +77,11 @@
       </ng-template>
 
       <ng-container *ngIf="optionList.length === 0">
+        <li class="px-3">
+          {{ "SHARED.NO_CONTENT" | translate }}
+        </li>
+      </ng-container>
+      <ng-container *ngIf="showNoSearchResults">
         <li class="px-3">
           {{ "SHARED.NO_CONTENT" | translate }}
         </li>

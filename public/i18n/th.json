@@ -372,6 +372,7 @@
   },
   "SHARED": {
     "NO_CONTENT": "ไม่พบข้อมูล",
+    "SEARCH_PLACEHOLDER": "ค้นหา",
     "ERROR_GENERAL": "พบข้อผิดพลาด กรุณาลองใหม่อีกครั้ง"
   },
   "COMMON": {

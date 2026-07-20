@@ -735,6 +735,38 @@ enforced rule with a test behind it.
 
 ---
 
+- **Opt-in `searchable` flag on a shared CVA dropdown, borderless embedded
+  search input inside an already-open popup** (OBRS-562,
+  `DropdownGroupObrsComponent`, `app-dropdown-group-obrs`): the 3 booking
+  pages' origin/destination station pickers needed search/filter, but 1 of the
+  component's 7 real instances (`parcel-trip-form`'s `scheduleId` picker) must
+  keep rendering byte-identical to before. `@Input() searchable: boolean =
+  false` (§10's "extend with an optional, false-default `@Input()`, not
+  fork") — set `true` only on the 6 station pickers. The search box is a
+  borderless input embedded in the already-open `.dropdown-menu` popup (same
+  category as a PrimeNG internal filter box, §5's "one input shape: pill"
+  standalone-control rule doesn't apply to it), sticky-positioned above the
+  option list (`position: sticky; top: 0`) with the panel gaining
+  `max-height: min(360px, 60vh); overflow-y: auto` (previously absent, needed
+  for the sticky row to mean anything as the stop list grows). Query match is
+  case-insensitive substring against the **same localized string `getValue()`
+  renders**, precomputed once per `options`/language change into a
+  `Map<option, searchKey>` — never a template getter (the component runs
+  default CD, and `getValue()`'s multi-shape localization fallback chain is
+  too expensive to re-run every tick). Reuses `SHARED.NO_CONTENT` for the
+  zero-match state (no second i18n key). Not built on PrimeNG `p-dropdown
+  [filter]` (already used by `/staff/sell`, a different CVA/binding contract)
+  — see `docs/adr/0027-searchable-station-dropdown-extends-bespoke-cva.md`.
+  Net simplification alongside the new feature: the component's previous
+  custom outside-click listener (a second, desync-prone source of truth for
+  `isDropdownOpen`) is deleted in favor of Bootstrap's own
+  `shown.bs.dropdown`/`hidden.bs.dropdown` events, listened for on the
+  **toggle button** specifically (Bootstrap fires them on `this._element`,
+  the button — not the host, not `.dropdown-menu`). Reuse the `searchable`
+  `@Input()` + precomputed-searchKey-Map shape for the next opt-in filter row
+  on a shared CVA-style dropdown, instead of reaching for `p-dropdown
+  [filter]` or forking a second component.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

@@ -29,6 +29,7 @@
             [label]="'HOME.HOME_BOOKING.START_STATION'"
             [value]="getFormValue('startStationId')"
             [options]="startProvinceStationList"
+            [searchable]="true"
             (currentValue)="onStartStationChange($event)"
           ></app-dropdown-group-obrs>
           <!-- STATION ICON -->
@@ -44,6 +45,7 @@
             [label]="'HOME.HOME_BOOKING.END_STATION'"
             [value]="getFormValue('stopStationId')"
             [options]="endProvinceStationList"
+            [searchable]="true"
             (currentValue)="onEndStationChange($event)"
           ></app-dropdown-group-obrs>
         </div>
