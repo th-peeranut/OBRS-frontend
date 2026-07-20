@@ -86,10 +86,17 @@ li {
     }
   }
 
+  // Measured on /register at 390px (OBRS-561): this component does NOT collapse the
+  // way `dropdown-group-obrs` did — every consumer gives `.dropdown` a full-width
+  // parent, so the panel came out at 200px with zero text overflow. What it *did*
+  // share is an unbounded panel height, so keep the 200px floor as a guard against a
+  // future flex-row consumer and bound the height like its sibling.
   .dropdown-menu,
   .dropdown-menu-border {
     width: 100%;
-    min-width: 0;
-    max-width: 100%;
+    min-width: 200px;
+    max-width: calc(100vw - #{$space-md * 2});
+    max-height: 60vh;
+    overflow-y: auto;
   }
 }

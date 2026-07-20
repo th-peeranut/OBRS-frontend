@@ -66,6 +66,17 @@
   min-width: 200px;
 }
 
+// 28 stops render a 1138px-tall panel, which overflows a 900px desktop viewport
+// just as it did the 664px phone one — the bottom entries cannot be reached.
+// Bounding it here rather than only in the mobile block keeps one rule for both
+// (OBRS-561). Width is untouched, so the panel looks identical; only its
+// overflow behaviour changes.
+.dropdown-menu,
+.dropdown-menu-border {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
 li.option-items {
   font-size: $font-size-base;
   color: $text-black;
@@ -103,10 +114,31 @@ button.disabled,
     }
   }
 
+  // The panel must NOT be sized from the toggle. `.dropdown` sits inside
+  // `.station-group`, a flex row, so it is a shrink-to-fit item and `width: 100%`
+  // resolved against ~60px; `min-width: 0` then dropped the 200px floor set above.
+  // The result was an opaque 60px box whose `white-space: nowrap` items overflowed
+  // it by ~229px, painting stop names directly onto the page behind (OBRS-561).
   .dropdown-menu,
   .dropdown-menu-border {
-    width: 100%;
-    min-width: 0;
-    max-width: 100%;
+    width: max-content;
+    min-width: 200px;
+    max-width: calc(100vw - #{$space-md * 2});
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  // Long stop names must wrap rather than be clipped by the fixed 40px row.
+  li.option-items {
+    display: flex;
+    align-items: center;
+    height: auto;
+    min-height: 40px;
+    line-height: 1.35;
+  }
+
+  .dropdown-option {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
