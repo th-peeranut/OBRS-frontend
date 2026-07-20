@@ -43,6 +43,13 @@ jobs:
       - name: i18n key-set parity gate
         run: npm run test:i18n
 
+      # Same shape and same rationale (OBRS-463): a pure-node gate before npm ci.
+      # An auth page that renders the split-layout shell without importing the
+      # partial that styles it produces NO error at build or runtime -- it just
+      # ships an unreachable signup form to phones. Costs no extra runner minutes.
+      - name: auth split-layout style gate
+        run: npm run test:auth-layout
+
       - name: Install dependencies
         run: npm ci
 
