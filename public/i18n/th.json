@@ -1967,7 +1967,12 @@
       "PARCEL_DELIVERY": "ส่งมอบพัสดุ",
       "PARCEL_VERIFY": "ตรวจรับพัสดุ",
       "INSPECTION": "ตรวจสภาพรถ",
-      "FLEET_MAP": "แผนที่ยานพาหนะ"
+      "FLEET_MAP": "แผนที่ยานพาหนะ",
+      "SECTION": {
+        "SALES": "งานขาย",
+        "OPERATIONS": "งานเดินรถ",
+        "PARCELS": "พัสดุ"
+      }
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "ไม่สามารถโหลดรายชื่อผู้โดยสารได้",

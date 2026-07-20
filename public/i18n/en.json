@@ -1967,7 +1967,12 @@
       "PARCEL_DELIVERY": "Parcel Deliveries",
       "PARCEL_VERIFY": "Verify Parcels",
       "INSPECTION": "Inspection",
-      "FLEET_MAP": "Fleet Map"
+      "FLEET_MAP": "Fleet Map",
+      "SECTION": {
+        "SALES": "Sales",
+        "OPERATIONS": "Operations",
+        "PARCELS": "Parcels"
+      }
     },
     "MESSAGES": {
       "LOAD_BOARDING_FAILED": "Unable to load boarding list.",

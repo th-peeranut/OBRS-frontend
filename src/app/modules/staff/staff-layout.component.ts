@@ -6,7 +6,30 @@ interface StaffNavItem {
   path: string;
   labelKey: string;
   icon: string;
+  // OBRS-573: which nav section this item belongs to (see SECTION_ORDER).
+  section: NavSectionKey;
 }
+
+// OBRS-573: group the staff nav into labelled sections, the same way the admin
+// nav has been grouped since OBRS-289. Purely presentational — grouping never
+// changes which items are shown or who may reach them. A section is a heading
+// over links that stay ONE click away, deliberately not a submenu to expand:
+// the parcel screens are opened several times per trip, so an extra click on
+// each is a real daily cost (the trade-off argued on OBRS-543 and settled by
+// the owner there). Order here IS the render order, top to bottom.
+type NavSectionKey = 'sales' | 'operations' | 'parcels';
+
+interface StaffNavSection {
+  key: NavSectionKey;
+  titleKey: string;
+  items: StaffNavItem[];
+}
+
+const SECTION_ORDER: { key: NavSectionKey; titleKey: string }[] = [
+  { key: 'sales', titleKey: 'STAFF.NAV.SECTION.SALES' },
+  { key: 'operations', titleKey: 'STAFF.NAV.SECTION.OPERATIONS' },
+  { key: 'parcels', titleKey: 'STAFF.NAV.SECTION.PARCELS' },
+];
 
 @Component({
   selector: 'app-staff-layout',
@@ -32,31 +55,37 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
   // and never lets change detection stabilise — hard-locking the browser.
   protected navItems: StaffNavItem[] = [];
 
+  // OBRS-573: what the template actually renders — navItems grouped into the
+  // ordered, non-empty sections. Stable field for the same change-detection
+  // reason as navItems above; NEVER a getter. navItems is kept alongside it
+  // because nav-reachability.spec.ts reads it as the flat nav model.
+  protected navSections: StaffNavSection[] = [];
+
   private buildNavItems(): StaffNavItem[] {
     const isSalesperson = this.authService.hasAnyRole(['salesperson']);
     const isDriver = this.authService.hasAnyRole(['driver']);
     const items: StaffNavItem[] = [];
 
     if (isSalesperson) {
-      items.push({ path: 'sell', labelKey: 'STAFF.NAV.SELL', icon: 'sell' });
-      items.push({ path: 'schedules', labelKey: 'STAFF.NAV.SCHEDULES', icon: 'calendar_month' });
+      items.push({ path: 'sell', labelKey: 'STAFF.NAV.SELL', icon: 'sell', section: 'sales' });
+      items.push({ path: 'schedules', labelKey: 'STAFF.NAV.SCHEDULES', icon: 'calendar_month', section: 'sales' });
       // OBRS-424: fleet-map is salesperson-only (route data.requiredRoles),
       // so the nav link lives ONLY in this branch — a driver, who would 403
       // on the route itself, never sees a link to it (UX-OBRS-424 §1).
-      items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map' });
+      items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map', section: 'operations' });
     }
 
     if (isDriver) {
-      items.push({ path: 'driver', labelKey: 'STAFF.NAV.MY_SCHEDULES', icon: 'directions_bus' });
+      items.push({ path: 'driver', labelKey: 'STAFF.NAV.MY_SCHEDULES', icon: 'directions_bus', section: 'operations' });
     }
 
     if (isSalesperson || isDriver) {
-      items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg' });
+      items.push({ path: 'boarding', labelKey: 'STAFF.NAV.BOARDING', icon: 'how_to_reg', section: 'operations' });
     }
 
     // OBRS-312: weekly vehicle inspection checklist — driver-only.
     if (isDriver) {
-      items.push({ path: 'inspection', labelKey: 'STAFF.NAV.INSPECTION', icon: 'checklist' });
+      items.push({ path: 'inspection', labelKey: 'STAFF.NAV.INSPECTION', icon: 'checklist', section: 'operations' });
     }
 
     // ── Parcels ───────────────────────────────────────────────────────────────
@@ -75,20 +104,42 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     // admit drivers too. modules/nav-reachability.spec.ts enforces both halves —
     // that no page is orphaned, and that no link is shown to a role the guard
     // would bounce.
+    //
+    // OBRS-573: contiguity is no longer load-bearing here — `section: 'parcels'`
+    // is what puts these three together under one heading, wherever they are
+    // pushed from. They stay at the end so the flat array still reads in render
+    // order.
     if (isSalesperson) {
-      items.push({ path: 'parcels/consign', labelKey: 'STAFF.NAV.PARCEL_CONSIGN', icon: 'inventory_2' });
+      items.push({ path: 'parcels/consign', labelKey: 'STAFF.NAV.PARCEL_CONSIGN', icon: 'inventory_2', section: 'parcels' });
     }
 
     if (isSalesperson || isDriver) {
-      items.push({ path: 'parcels/deliveries', labelKey: 'STAFF.NAV.PARCEL_DELIVERY', icon: 'local_shipping' });
-      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check' });
+      items.push({ path: 'parcels/deliveries', labelKey: 'STAFF.NAV.PARCEL_DELIVERY', icon: 'local_shipping', section: 'parcels' });
+      items.push({ path: 'parcels/verify', labelKey: 'STAFF.NAV.PARCEL_VERIFY', icon: 'fact_check', section: 'parcels' });
     }
 
     return items;
   }
 
+  // OBRS-573: group a flat item list into the ordered sections of SECTION_ORDER,
+  // DROPPING any section left with no items. That drop is the whole reason this
+  // is computed rather than hard-coded in the template: salesperson and driver
+  // see different item sets, so 'sales' is genuinely empty for a driver, and a
+  // heading floating over nothing reads as a menu that failed to load.
+  private buildSections(items: StaffNavItem[]): StaffNavSection[] {
+    return SECTION_ORDER.map(({ key, titleKey }) => ({
+      key,
+      titleKey,
+      items: items.filter((item) => item.section === key),
+    })).filter((section) => section.items.length > 0);
+  }
+
   protected trackNavItem(_index: number, item: StaffNavItem): string {
     return item.path;
+  }
+
+  protected trackNavSection(_index: number, section: StaffNavSection): string {
+    return section.key;
   }
 
   constructor(private readonly notificationInboxService: NotificationInboxService) {
@@ -100,6 +151,7 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
     // route subscription (which fires synchronously via startWith) already has
     // navItems in place.
     this.navItems = this.buildNavItems();
+    this.navSections = this.buildSections(this.navItems);
     this.isAdmin = this.authService.hasAnyRole(['admin']);
     super.ngOnInit();
   }

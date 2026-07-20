@@ -48,19 +48,27 @@
            perfectly correct; only clicking it revealed anything. A string is
            parsed as a URL, so the slashes survive. It also stays CD-safe: string
            bindings compare by value, unlike the fresh array a method call would
-           allocate every cycle (see the navItems comment in the component). -->
+           allocate every cycle (see the navItems comment in the component).
+
+           OBRS-573: the links are now grouped into labelled sections
+           (presentational only — same links, same order, same access). The
+           heading is inert text on purpose: making it a toggle would put every
+           parcel screen behind an extra click, which is the design we rejected. -->
       <nav class="admin-nav">
-        <a
-          *ngFor="let item of navItems; trackBy: trackNavItem"
-          [routerLink]="'/staff/' + item.path"
-          routerLinkActive="active"
-          [routerLinkActiveOptions]="{ exact: false }"
-          class="admin-nav-link"
-          (click)="onNavLinkClick()"
-        >
-          <span class="material-symbols-outlined">{{ item.icon }}</span>
-          <span>{{ item.labelKey | translate }}</span>
-        </a>
+        <ng-container *ngFor="let section of navSections; trackBy: trackNavSection">
+          <p class="admin-nav-section-title">{{ section.titleKey | translate }}</p>
+          <a
+            *ngFor="let item of section.items; trackBy: trackNavItem"
+            [routerLink]="'/staff/' + item.path"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="admin-nav-link"
+            (click)="onNavLinkClick()"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        </ng-container>
       </nav>
 
       <div class="admin-sidebar-footer">
