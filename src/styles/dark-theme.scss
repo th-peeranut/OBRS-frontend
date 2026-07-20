@@ -794,3 +794,93 @@ body.is-dark {
     background: $dk-accent-hover;
   }
 }
+
+// =============================================================================
+// O. App-wide usability report FAB + its dialog (OBRS-520)
+// =============================================================================
+// The FAB (`app-report-usability-fab`) is mounted in app.component.html as a
+// SIBLING of <router-outlet>, so it renders on every route — including the
+// admin/staff routes — while sitting OUTSIDE the `.admin-shell` DOM subtree.
+// That is why it was missed twice: it is not "a public page" (so it was never
+// reviewed with dark-theme.scss) and it is not inside the shell (so none of the
+// `--admin-*` custom properties are in scope for it, and `.admin-shell.is-dark`
+// cannot reach it).
+//
+// Its stylesheet is built on Bootstrap `--bs-*` fallbacks (`var(--bs-body-bg,
+// #fff)`), which OBRS never re-declares for dark mode, so the whole dialog
+// stayed a white card: measured on the real dark admin page, the unselected
+// p-selectButton options rendered rgb(255,255,255) — the literal "white block"
+// this card is named after, and the only raw PrimeNG button that renders inside
+// an admin/staff view anywhere in the app.
+//
+// Scoped to the component host on purpose: section 13's `app-route-map-home`
+// block notes that global `.p-selectbutton` rules must not leak between these
+// two components, and the same applies in reverse.
+body.is-dark app-report-usability-fab {
+  // --- dialog surface ---
+  .report-modal {
+    background: $dk-bg-card;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .report-modal__title,
+  .report-field__label,
+  .report-preview-name {
+    color: $dk-text;
+  }
+
+  .report-modal__subtitle,
+  .report-modal__close,
+  .report-field__hint,
+  .report-preview-remove {
+    color: $dk-text-muted;
+  }
+
+  .report-modal__close:hover {
+    color: $dk-text;
+  }
+
+  // --- inputs ---
+  .report-textarea {
+    background-color: $dk-bg-input;
+    border-color: $dk-border;
+    color: $dk-text;
+
+    &::placeholder {
+      color: $dk-text-muted;
+    }
+  }
+
+  .report-preview-item {
+    background: $dk-bg-soft;
+    border-color: $dk-border;
+  }
+
+  .report-submit-error,
+  .report-field__error {
+    color: $dk-danger;
+  }
+
+  // --- the p-selectButton: the actual white blocks ---
+  // PrimeNG paints an unselected option white with dark grey text and only
+  // themes the `.p-highlight` one, so in dark mode the two unpicked categories
+  // read as bright rectangles on the dialog. `!important` is required: the
+  // PrimeNG theme stylesheet is loaded after this file in angular.json's global
+  // styles array, so an equal-specificity rule here would lose.
+  .p-selectbutton .p-button {
+    background: $dk-bg-soft !important;
+    border-color: $dk-border !important;
+    color: $dk-text-muted !important;
+  }
+
+  .p-selectbutton .p-button:not(.p-highlight):hover {
+    background: $dk-border-muted !important;
+    color: $dk-text !important;
+  }
+
+  .p-selectbutton .p-button.p-highlight {
+    background: $dk-accent !important;
+    border-color: $dk-accent !important;
+    color: #0f1117 !important; // $dk-bg — dark ink on the bright accent fill
+  }
+}

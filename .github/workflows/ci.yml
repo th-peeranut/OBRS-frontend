@@ -58,6 +58,16 @@ jobs:
       - name: hardcoded alert string gate
         run: npm run test:alert-i18n
 
+      # Fourth pure-node gate (OBRS-520). An --admin-* token declared only in the
+      # light .admin-shell block, or a var(--admin-*) pointing at a token nobody
+      # declared, is silent everywhere: it compiles, it passes unit tests (which
+      # cannot see colour), and it looks correct until someone opens dark mode.
+      # That is how .admin-btn-danger shipped at 1.71:1 -- an invisible "Un-board"
+      # label -- and how a sticky table header stayed a bright band on the dark
+      # archive table. Costs no extra runner minutes.
+      - name: admin theme dark-mode token gate
+        run: npm run test:theme-tokens
+
       - name: Install dependencies
         run: npm ci
 

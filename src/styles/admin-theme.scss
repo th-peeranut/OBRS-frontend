@@ -77,6 +77,45 @@
   --admin-duplicate-bg: #ede9fe;
   --admin-duplicate-text: #4c1d95;
 
+  /* OBRS-520: danger as a FOREGROUND on the shell surface — a separate role
+     from the danger CHIP pair (--admin-danger-bg/-text) above.
+
+     Why a new token instead of giving --admin-danger-text a dark override:
+     that one token is doing three different jobs. It is chip text ON the light
+     pink --admin-danger-bg (.admin-status.is-danger, .admin-kpi-icon.is-danger),
+     it is a solid BACKGROUND (.admin-nav-badge), and it is standalone text ON
+     the shell surface (.admin-btn-danger, .admin-required). Those three want
+     OPPOSITE things in dark mode, so no single dark value is correct — flipping
+     it to a light red fixes the button and simultaneously turns the nav badge
+     into light-red-on-white. Splitting the surface role out is the only change
+     that fixes the broken call sites without breaking the working ones.
+
+     Measured on the real dark admin shell before this card (pixel-sampled, not
+     eyeballed): .admin-btn-danger rendered #93000a text on the #1d2226 card =
+     1.71:1 — the "Un-board"/"Reject" label was effectively invisible, and every
+     .admin-required asterisk across 19 admin forms with it. Dark #ffb4ab on
+     #1d2226 = 9.45:1; #ffb4ab on the #4a1512 hover fill = 8.79:1.
+
+     LIGHT VALUES ARE DELIBERATELY IDENTICAL to what the affected rules resolved
+     to before, so light mode is byte-for-byte unchanged. */
+  --admin-danger-fg: #93000a;
+  --admin-danger-surface: #ffdad6;
+
+  /* Same split, success side (OBRS-520). --admin-success-text is chip text on
+     the light --admin-success-bg and is correct there; used STANDALONE on the
+     shell surface it measured 1.84:1 in dark mode (#154c85 on #1d2226) — the
+     usability-reports "notified" pill. Dark #a8c8ff on #1d2226 = 9.45:1.
+     Light value identical to --admin-success-text, so light is unchanged. */
+  --admin-success-fg: #154c85;
+
+  /* OBRS-520: --admin-success-soft was REFERENCED by
+     usability-reports-page.component.scss (`.ur-notified-check`) since OBRS-115
+     but never declared anywhere — the rule silently fell through to its
+     `var(--…, #hex)` fallback. Declaring it with exactly the value that
+     fallback produced changes nothing on screen and makes the reference real,
+     so the token gate can see it. */
+  --admin-success-soft: #d1e7dd;
+
   /* Accent tokens — defaults mirror the original teal palette so the admin
      look is unchanged when no variant class is applied. */
   --accent: #4dbeef;
@@ -265,6 +304,35 @@
 .admin-shell.is-dark {
   --admin-owner-accepted-bg: #1b3b35;
   --admin-owner-accepted-text: #9fedde;
+}
+
+/* OBRS-520: the --admin-delayed-* gap that the --admin-duplicate-* comment
+   above has been pointing at since OBRS-376 ("renders as a near-white lavender
+   blob on the dark shell, the exact OBRS-100 bug ... don't reproduce it here")
+   — measured at fill rgb(237,233,254), the lightest chip on the whole dark
+   shell. Same recessed dark violet as --admin-duplicate-*, deliberately: the
+   two tokens already share IDENTICAL light values by PO decision (OBRS-378),
+   so giving delayed a *different* dark pair would invent a distinction in one
+   theme that does not exist in the other. Verified contrast (WCAG
+   relative-luminance): bg #3b2f5c / text #ddd6fe ~= 8.7:1.
+
+   Scope note (owner decision, 2026-07-20): the OTHER light-only chip pairs
+   — --admin-success-*, --admin-warning-*, --admin-danger-*, --admin-accepted-*
+   — are deliberately NOT overridden. They were pixel-sampled on the real dark
+   shell for this card and read at 6.75 / 7.44 / 7.24 / 9.77:1, i.e. they are
+   legible self-contained chips, not the "white block" this card was filed
+   about. Re-tinting them is a look-and-feel change across every shipped
+   admin/staff screen, so it is its own card, not a silent rider on this one. */
+.admin-shell.is-dark {
+  --admin-delayed-bg: #3b2f5c;
+  --admin-delayed-text: #ddd6fe;
+
+  /* Danger-on-surface (see the --admin-danger-fg comment in the light block).
+     The chip pair --admin-danger-bg/-text is intentionally NOT touched here. */
+  --admin-danger-fg: #ffb4ab;
+  --admin-danger-surface: #4a1512;
+  --admin-danger-border: rgba(255, 180, 171, 0.55);
+  --admin-success-fg: #a8c8ff;
 }
 
 /* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels
@@ -652,9 +720,13 @@
   color: var(--accent-strong);
 }
 
+/* OBRS-520: was a hardcoded rgba(255,218,214,.8) fill (a §13 raw-hex debt item)
+   plus the chip text token — a light pink hover that stayed light on the dark
+   shell. Now both halves come from the themed surface-role pair, so the hover
+   flips with the theme instead of punching a light hole in it. */
 .admin-icon-btn.danger:hover {
-  background: rgba(255, 218, 214, 0.8);
-  color: var(--admin-danger-text);
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
 }
 
 .admin-menu-toggle {
@@ -834,13 +906,28 @@
    introducing a fully-filled red button (that's reserved for a true
    irreversible-delete confirm, matching the `.admin-required`/`.admin-field.is-invalid`
    precedent for these tokens). */
+/* OBRS-520: repointed from --admin-danger-text (the CHIP text token) to
+   --admin-danger-fg / --admin-danger-surface, which are themed for both modes.
+   Light mode resolves to the same two values as before; dark mode goes from an
+   unreadable 1.71:1 to 9.45:1. See the --admin-danger-fg token comment. */
 .admin-btn-danger {
-  color: var(--admin-danger-text);
+  color: var(--admin-danger-fg);
   border-color: var(--admin-danger-border);
 }
 
 .admin-btn-danger:not(:disabled):hover {
-  background: var(--admin-danger-bg);
+  background: var(--admin-danger-surface);
+  border-color: var(--admin-danger-border);
+}
+
+/* OBRS-520: specificity, not colour. `.is-dark .admin-btn` above is (0,2,0) and
+   `.admin-btn-danger` is (0,1,0), so in dark mode the neutral --admin-outline
+   border won and the destructive button lost its red edge entirely — measured
+   rgb(58,68,75) on the rendered button. Pre-existing (the same override beat the
+   light-mode-only token before this card too), but it would have silently
+   swallowed the new --admin-danger-border dark value and left it dead code.
+   Re-stated at (0,2,0) so the danger role survives the theme. */
+.is-dark .admin-btn-danger {
   border-color: var(--admin-danger-border);
 }
 
@@ -1487,8 +1574,12 @@
   color: var(--admin-muted);
 }
 
+/* OBRS-520: the required-field asterisk sits on the shell/modal surface, not on
+   a danger chip, so it takes the surface-role token. It was #93000a on #1d2226
+   (1.71:1) in dark mode — present in the DOM on 19 admin forms and invisible on
+   all of them. */
 .admin-required {
-  color: var(--admin-danger-text);
+  color: var(--admin-danger-fg);
 }
 
 /* OBRS-316 Gap 1: section divider heading inside a multi-section admin form
