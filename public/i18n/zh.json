@@ -421,6 +421,7 @@
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
       "JUMP_SEAT_CONFIG": "加座设置",
+      "BOOKING_POLICY_CONFIG": "预订政策",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
     },
@@ -506,6 +507,7 @@
       "WHOLE_NUMBER": "请输入整数（不含小数）。",
       "POSITIVE_NUMBER": "请输入大于0的数字。",
       "YEAR_RANGE": "请输入 {{min}} 至 {{max}} 之间的年份。",
+      "INTEGER_RANGE": "请输入 {{min}} 至 {{max}} 之间的整数。",
       "CARGO_CAPACITY_INVALID": "请输入有效的数字。",
       "CARGO_CAPACITY_TOO_MANY_DECIMALS": "最多输入2位小数。",
       "CARGO_CAPACITY_BELOW_MIN": "至少为0.01千克。"
@@ -1227,6 +1229,14 @@
       "HELPER": "关闭后，即使普通座位已满，工作人员也无法出售加座——对在线渠道无影响。",
       "LOAD_FAILED": "无法加载加座设置。"
     },
+    "BOOKING_POLICY_CONFIG": {
+      "SUBTITLE": "设置公开政策页面显示的在线提前预订上限和最后预订截止时间。",
+      "MAX_ADVANCE_DAYS_LABEL": "最长提前预订天数",
+      "MAX_ADVANCE_DAYS_HELPER": "顾客最多可以在出发前多少天在线预订车票。柜台现场售票不受此限制。",
+      "CUTOFF_MINUTES_LABEL": "预订截止时间（出发前分钟数）",
+      "CUTOFF_MINUTES_HELPER": "出发前多少分钟内仍可在线预订车票。此值也决定车次何时开始显示\"座位所剩无几\"提示。柜台现场售票不受此限制。",
+      "LOAD_FAILED": "无法加载预订政策设置。"
+    },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",
       "FILTER_FROM": "起始日期",
@@ -1912,7 +1922,10 @@
     },
     "BUSINESS": {
       "TITLE": "服务条款",
-      "CONTENT": "&emsp;&emsp;1. 票务销售分为两种类型：\n      <br />&emsp;&emsp;&emsp;&emsp;? 普通票务销售：在出发地出发时间前12小时内购票，直至车辆到达该站\n      <br />&emsp;&emsp;&emsp;&emsp;? 预售票务：至少在出发地出发时间前12小时购票，预售最多提前60天\n      <br />&emsp;&emsp;2. 已取消不定期票的改签条件。\n      <br />&emsp;&emsp;3. 改签只能进行指定日期更改。\n      <br />&emsp;&emsp;4. 改签只能免费进行一次。如果票据已经改签，则不能再次改签，只能用于出行。\n      注意：改签可通过3个渠道进行：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 所有3个站的售票处\n      <br />&emsp;&emsp;&emsp;&emsp;2. https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;&emsp;&emsp;3. 指定日期改签只能从改签申请日起30天内设定出行日期\n      <br />&emsp;&emsp;&emsp;&emsp;4. 改签必须在原出发时间前至少24小时进行\n      <br />&emsp;&emsp;5. 重印票据分为两种情况：\n      <br />&emsp;&emsp;&emsp;&emsp;? 收费重印：票据丢失、撕毁、遗忘，或在其他站购买和打印的票据等。\n      <br />&emsp;&emsp;&emsp;&emsp;? 免费重印：通过网络渠道购买的票据，或交易期间打印机故障、停电、系统故障等。\n      <br />&emsp;&emsp;6. 以下情况允许退票：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 因不可抗力导致行程中断，如自然灾害或政治情况\n      <br />&emsp;&emsp;&emsp;&emsp;2. 乘客紧急情况、疾病或事故：必须在出行日期后3天内提交医疗证明；否则，旅行权利将被没收\n      注意：除上述情况外，不可退票。"
+      "SALES_CHANNELS": "&emsp;&emsp;1. 票务销售分为两种类型：\n      <br />&emsp;&emsp;&emsp;&emsp;• 普通票务销售：出发前 {{cutoffMinutes}} 分钟内购票，直至车辆到达该站\n      <br />&emsp;&emsp;&emsp;&emsp;• 预售票务：出发前 {{cutoffMinutes}} 分钟以上购票，最多可提前 {{maxAdvanceDays}} 天预订",
+      "SALES_CHANNELS_ERROR": "无法加载当前的提前预订政策。以下其他条款仍会显示。",
+      "RETRY": "重试",
+      "CONTENT": "&emsp;&emsp;2. 已取消不定期票的改签条件。\n      <br />&emsp;&emsp;3. 改签只能进行指定日期更改。\n      <br />&emsp;&emsp;4. 改签只能免费进行一次。如果票据已经改签，则不能再次改签，只能用于出行。\n      注意：改签可通过3个渠道进行：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 所有3个站的售票处\n      <br />&emsp;&emsp;&emsp;&emsp;2. https://www.facebook.com/nj.phuyaipu\n      <br />&emsp;&emsp;&emsp;&emsp;3. 指定日期改签只能从改签申请日起30天内设定出行日期\n      <br />&emsp;&emsp;&emsp;&emsp;4. 改签必须在原出发时间前至少24小时进行\n      <br />&emsp;&emsp;5. 重印票据分为两种情况：\n      <br />&emsp;&emsp;&emsp;&emsp;? 收费重印：票据丢失、撕毁、遗忘，或在其他站购买和打印的票据等。\n      <br />&emsp;&emsp;&emsp;&emsp;? 免费重印：通过网络渠道购买的票据，或交易期间打印机故障、停电、系统故障等。\n      <br />&emsp;&emsp;6. 以下情况允许退票：\n      <br />&emsp;&emsp;&emsp;&emsp;1. 因不可抗力导致行程中断，如自然灾害或政治情况\n      <br />&emsp;&emsp;&emsp;&emsp;2. 乘客紧急情况、疾病或事故：必须在出行日期后3天内提交医疗证明；否则，旅行权利将被没收\n      注意：除上述情况外，不可退票。"
     }
   },
   "HOW_TO_BOOK": {

@@ -842,6 +842,21 @@ export interface JumpSeatConfigDto {
   enabled: boolean;
 }
 
+// OBRS-564: booking-policy config, a singleton row (same shape/lifecycle as
+// ReminderConfigDto/JumpSeatConfigDto above) — GET/PUT
+// `/api/private/admin/configs/booking-policy`. Backend guard is
+// hasRole('OWNER') (ROLE_GRANTS admits ADMIN automatically, per the
+// OBRS-446 comment on AuthService — see admin.module.ts's
+// booking-policy-config route). Also backs the PUBLIC, unauthenticated
+// `GET /api/booking-policy` consumed by BookingPolicyService
+// (business-policy page + home-booking's date-picker maxDate) — same two
+// numbers, two different endpoints (this one read/write + admin-gated, that
+// one read-only + public).
+export interface BookingPolicyConfigDto {
+  maxAdvanceDays: number;
+  cutoffMinutes: number;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -1481,6 +1496,23 @@ export class AdminApiService {
   ): Observable<ResponseAPI<JumpSeatConfigDto>> {
     return this.putRequest<JumpSeatConfigDto>(
       `${this.baseUrl}/private/admin/configs/jump-seat`,
+      payload
+    );
+  }
+
+  // OBRS-564: booking-policy config (max advance-booking days, minutes-before
+  // -departure cutoff) — mirrors getJumpSeatConfig/updateJumpSeatConfig above.
+  getBookingPolicyConfig(): Observable<ResponseAPI<BookingPolicyConfigDto>> {
+    return this.getRequest<BookingPolicyConfigDto>(
+      `${this.baseUrl}/private/admin/configs/booking-policy`
+    );
+  }
+
+  updateBookingPolicyConfig(
+    payload: BookingPolicyConfigDto
+  ): Observable<ResponseAPI<BookingPolicyConfigDto>> {
+    return this.putRequest<BookingPolicyConfigDto>(
+      `${this.baseUrl}/private/admin/configs/booking-policy`,
       payload
     );
   }

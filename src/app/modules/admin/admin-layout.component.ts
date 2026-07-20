@@ -167,6 +167,20 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-564: booking-policy config — route `requiredRoles: ['admin',
+    // 'owner']` (the backend PUT guard is hasRole('OWNER'); ROLE_GRANTS
+    // admits ADMIN automatically), so the nav gate mirrors the route gate
+    // with the same hasAnyRole(['admin', 'owner']) check.
+    if (this.authService.hasAnyRole(['admin', 'owner'])) {
+      items.push({
+        path: 'booking-policy-config',
+        labelKey: 'ADMIN.PAGES.BOOKING_POLICY_CONFIG',
+        icon: 'event_available',
+        descriptionKey: 'ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE',
+        section: 'system',
+      });
+    }
+
     return items;
   }
 
