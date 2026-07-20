@@ -1,4 +1,5 @@
 import {
+  AfterViewInit,
   Component,
   ElementRef,
   EventEmitter,
@@ -6,14 +7,17 @@ import {
   Input,
   OnChanges,
   OnDestroy,
+  OnInit,
   Output,
   Renderer2,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
-import { NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
+import { NG_VALUE_ACCESSOR, ControlValueAccessor, FormsModule } from '@angular/forms';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { CommonModule } from '@angular/common';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { localizedDropdownName } from '../../lib/localized-dropdown-name';
 
 @Component({
@@ -28,36 +32,80 @@ import { localizedDropdownName } from '../../lib/localized-dropdown-name';
       multi: true,
     },
   ],
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, FormsModule],
 })
 export class DropdownGroupObrsComponent
-  implements ControlValueAccessor, OnChanges, OnDestroy
+  implements ControlValueAccessor, OnInit, OnChanges, AfterViewInit, OnDestroy
 {
   @Input() isLabel: boolean = false;
   @Input() label: string = '';
-  @Input() options: any[] = []; 
+  @Input() options: any[] = [];
   @Input() isBorder: boolean = false;
   @Input() value: any = null;
   @Input() isDisabled: boolean = false;
+  /** Opt-in search/filter row inside the dropdown panel. Default false keeps every
+   *  existing template byte-identical; only the station pickers set this to true
+   *  (design-system §10: extend with an optional, false-default @Input()). */
+  @Input() searchable: boolean = false;
 
   @Output() currentValue = new EventEmitter<any>();
 
   isDropdownOpen = false;
   selectedValue: any = null;
 
+  /** Current search box text. */
+  searchQuery = '';
+  /** Flat-branch render list — a plain field recomputed in onSearchInput/applyFilter,
+   *  never a template getter (getValue()'s localization fallback chain is too
+   *  expensive to re-run every CD tick — see UX-OBRS-562 §4). */
+  displayList: any[] = [];
+  /** True when a search query is active and matched nothing (distinct from
+   *  "no options at all"). */
+  showNoSearchResults = false;
+
   @ViewChild('dropdownButton', { static: true }) dropdownButton!: ElementRef;
+  @ViewChild('stationSearchInput') searchInputRef?: ElementRef<HTMLInputElement>;
+
+  /** trackBy MUST be an arrow-function class property — a bare method passed as
+   *  [trackBy] loses its `this` binding when Angular invokes it detached. */
+  trackByOptionId = (_: number, option: any): unknown => option?.id;
 
   private onChange: (value: any) => void = () => {};
   private onTouched: () => void = () => {};
-  private unlistenDropdown?: () => void;
+  private unlistenShown?: () => void;
+  private unlistenHidden?: () => void;
+  /** Precomputed lowercased searchKey per flat option, rebuilt on options change
+   *  and on language change — never derived inline in the filter predicate. */
+  private searchKeyMap = new Map<any, string>();
+  private destroy$ = new Subject<void>();
 
   constructor(
     private renderer: Renderer2,
-    private elementRef: ElementRef,
     public translate: TranslateService
   ) {}
 
+  ngOnInit(): void {
+    // The active language can change while a station list is already loaded
+    // (e.g. th -> en mid-session with stations cached) — the precomputed
+    // searchKey would otherwise go stale silently.
+    this.translate.onLangChange.pipe(takeUntil(this.destroy$)).subscribe(() => {
+      this.rebuildSearchKeys();
+      this.applyFilter();
+    });
+  }
+
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['options']) {
+      this.rebuildSearchKeys();
+    }
+    // `searchable` is included deliberately: applyFilter()'s first branch keys
+    // off it, so a call site that ever binds it dynamically (rather than to a
+    // static literal, as all 7 do today) would otherwise leave displayList
+    // stuck on the last filtered result after searchable flips to false.
+    if (changes['options'] || changes['searchable']) {
+      this.applyFilter();
+    }
+
     const options = this.getOptions();
 
     if (!this.value) {
@@ -82,28 +130,25 @@ export class DropdownGroupObrsComponent
     this.selectedValue = selected ?? null;
   }
 
-  toggleDropdown(): void {
-    this.isDropdownOpen = !this.isDropdownOpen;
-    if (this.isDropdownOpen) {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = this.renderer.listen('document', 'click', (event: Event) =>
-        this.handleOutsideClick(event)
-      );
-    } else {
-      this.unlistenDropdown?.();
-      this.unlistenDropdown = undefined;
-    }
+  ngAfterViewInit(): void {
+    // Bootstrap fires shown.bs.dropdown / hidden.bs.dropdown on the TOGGLE
+    // BUTTON (this._element in bootstrap.js), not the host and not
+    // .dropdown-menu — listening anywhere else silently never fires.
+    const btn = this.dropdownButton.nativeElement;
+    this.unlistenShown = this.renderer.listen(btn, 'shown.bs.dropdown', () => {
+      this.isDropdownOpen = true;
+      this.searchInputRef?.nativeElement.focus();
+    });
+    this.unlistenHidden = this.renderer.listen(btn, 'hidden.bs.dropdown', () => {
+      this.isDropdownOpen = false;
+      this.searchQuery = '';
+      this.applyFilter();
+    });
   }
 
-  handleOutsideClick(event: Event): void {
-    const targetElement = event.target as HTMLElement;
-    const inside =
-      this.elementRef.nativeElement.contains(targetElement) ||
-      this.dropdownButton.nativeElement.contains(targetElement);
-
-    if (!inside) {
-      this.isDropdownOpen = false;
-    }
+  onSearchInput(event: Event): void {
+    this.searchQuery = (event.target as HTMLInputElement).value;
+    this.applyFilter();
   }
 
   setCurrentValue(data: any): void {
@@ -125,7 +170,10 @@ export class DropdownGroupObrsComponent
   }
 
   ngOnDestroy(): void {
-    this.unlistenDropdown?.();
+    this.unlistenShown?.();
+    this.unlistenHidden?.();
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   setDisabledState?(isDisabled: boolean): void {}
@@ -153,6 +201,41 @@ export class DropdownGroupObrsComponent
 
   private getOptions(): any[] {
     return Array.isArray(this.options) ? this.options : [];
+  }
+
+  /** Precompute a lowercased searchKey per flat option ONCE — matched against
+   *  the same localized string getValue()/the template renders, never a raw
+   *  field, so a query never matches text the user can't see. Left unused for
+   *  the (currently unreachable) grouped branch — harmless, since that branch
+   *  never reads displayList/searchKeyMap. */
+  private rebuildSearchKeys(): void {
+    this.searchKeyMap = new Map<any, string>();
+    for (const option of this.getOptions()) {
+      this.searchKeyMap.set(option, this.normalize(this.getValue(option)));
+    }
+  }
+
+  /** Recomputes displayList into a plain field — called from onSearchInput,
+   *  ngOnChanges (options change) and the translate.onLangChange handler.
+   *  Never called from the template. */
+  private applyFilter(): void {
+    const options = this.getOptions();
+    const q = this.normalize(this.searchQuery);
+
+    if (!this.searchable || !q) {
+      this.displayList = options;
+      this.showNoSearchResults = false;
+      return;
+    }
+
+    const filtered = options.filter((option) => (this.searchKeyMap.get(option) ?? '').includes(q));
+
+    this.displayList = filtered;
+    this.showNoSearchResults = options.length > 0 && filtered.length === 0;
+  }
+
+  private normalize(text: string | null | undefined): string {
+    return (text ?? '').trim().toLocaleLowerCase();
   }
 
   get optionList(): any[] {

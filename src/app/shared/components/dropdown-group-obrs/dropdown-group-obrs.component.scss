@@ -71,10 +71,45 @@
 // Bounding it here rather than only in the mobile block keeps one rule for both
 // (OBRS-561). Width is untouched, so the panel looks identical; only its
 // overflow behaviour changes.
+// OBRS-562 kept OBRS-561's rule as-is rather than tightening it to
+// min(360px, 60vh): 561 is the landed decision and also covers
+// .dropdown-menu-border, which 562 had missed. 60vh already gives the sticky
+// search row below a bounded, scrollable list.
 .dropdown-menu,
 .dropdown-menu-border {
   max-height: 60vh;
   overflow-y: auto;
+}
+
+.dropdown-search-row {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: $space-3xs;
+  padding: $space-2xs $space-xs;
+  background-color: inherit; // inherits .dropdown-menu's bg, light or (future) dark alike
+  border-bottom: 1px solid $primary-grey;
+}
+
+.dropdown-search-icon {
+  flex: 0 0 auto;
+  font-size: $font-size-md;
+  color: $text-lightgrey;
+}
+
+.dropdown-search-input {
+  flex: 1 1 auto;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: $font-size-base;
+  color: inherit; // inherits whatever text color the panel resolves to
+
+  &::placeholder {
+    color: $text-lightgrey;
+  }
 }
 
 li.option-items {
