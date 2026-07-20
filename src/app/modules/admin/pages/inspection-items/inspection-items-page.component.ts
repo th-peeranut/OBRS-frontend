@@ -489,11 +489,20 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
         // row's own category forward unchanged (the backend requires it on
         // every PUT, but this action has no UI for changing it).
         category: row.category,
+        // OBRS-530 (Scrutinize): a locale the owner left blank must be OMITTED
+        // here for exactly the reasons `toPayload` above already documents —
+        // `TranslationReqDto.label` carries an unconditional `@NotBlank`, so a
+        // `label: ''` 400s the whole request. `toPayload` was fixed for this in
+        // OBRS-529 but this SECOND payload builder was missed, leaving retire/
+        // restore permanently broken (400 VALIDATION_FAILED) for any Thai-only
+        // item — i.e. every item the OBRS-529 card exists to make creatable.
+        // Invisible to the suite because every retire/restore spec's fixture is
+        // a full en+th+zh item, a shape the real caller need not produce.
         translations: [
           { locale: 'en', label: row.labelEn },
           { locale: 'th', label: row.labelTh },
           { locale: 'zh', label: row.labelZh },
-        ],
+        ].filter((translation) => translation.label.trim().length > 0),
       };
       const response = await firstValueFrom(this.adminApiService.updateInspectionItem(row.id, payload));
       const updated = response?.data;

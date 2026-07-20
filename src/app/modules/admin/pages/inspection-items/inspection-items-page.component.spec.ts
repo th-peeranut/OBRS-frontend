@@ -426,6 +426,26 @@ describe('InspectionItemsPageComponent — retire/restore (AC#4)', () => {
     );
   });
 
+  // OBRS-530 (Scrutinize): every other spec in this describe uses the default
+  // en+th+zh `item()` fixture — a shape the real caller need NOT produce since
+  // OBRS-529 made Thai-only items creatable. With blank en/zh labels the old
+  // payload sent `label: ''`, which `TranslationReqDto`'s unconditional
+  // `@NotBlank` rejects, so retire/restore 400'd for exactly those items.
+  it("retiring a THAI-ONLY row omits the blank en/zh locales instead of sending label: ''", async () => {
+    const updateInspectionItem = jasmine
+      .createSpy('updateInspectionItem')
+      .and.returnValue(of(ok(item({ active: false }))));
+    const { component, store, alert } = makeComponent({ updateInspectionItem });
+    alert.confirm.and.resolveTo(true);
+    component.ngOnInit();
+    store.data$.next([item({ active: true, translations: [{ locale: 'th', label: 'น้ำมันเครื่อง' }] })]);
+
+    await component.toggleActive(component.rows[0]);
+
+    const payload = updateInspectionItem.calls.mostRecent().args[1];
+    expect(payload.translations).toEqual([{ locale: 'th', label: 'น้ำมันเครื่อง' }]);
+  });
+
   it('restoring a RETIRED row sends no confirm dialog', async () => {
     const updateInspectionItem = jasmine
       .createSpy('updateInspectionItem')
