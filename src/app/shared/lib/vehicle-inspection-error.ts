@@ -1,4 +1,5 @@
 import { extractApiErrorCode } from './api-error-code';
+import { hasOwnKey } from './own-key';
 import { HttpFallbackTier } from './http-error-fallback';
 
 /**
@@ -36,7 +37,9 @@ export function mapVehicleInspectionErrorCode(
     ODOMETER_BELOW_LAST_RECORDED: 'STAFF.INSPECTION.ERROR.ODOMETER_BELOW_LAST_RECORDED',
   };
 
-  if (errorCode && knownCodes[errorCode]) {
+  // OBRS-601: `hasOwnKey` closes the `Object.prototype` hole (e.g.
+  // `knownCodes['constructor']`) that plain `knownCodes[errorCode]` opens.
+  if (errorCode && hasOwnKey(knownCodes, errorCode)) {
     return knownCodes[errorCode];
   }
 

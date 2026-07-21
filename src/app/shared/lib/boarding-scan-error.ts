@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 import { BoardingScanErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -22,7 +22,12 @@ export function mapBoardingScanErrorCode(errorCode: string | null | undefined): 
     BOARDING_ROUND_ARRIVED: 'STAFF.BOARDING.SCAN.ERROR.BOARDING_ROUND_ARRIVED',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'STAFF.BOARDING.SCAN.ERROR.GENERIC';
+  // OBRS-601: `||` is no guard here — `knownCodes['constructor']` is the
+  // `Object` function, which is truthy, so an errorCode naming a prototype
+  // member would be handed to `translate.instant()` and throw on `.split('.')`
+  // inside an error handler. The code is un-normalized server text, so all
+  // eight `Object.prototype` members are reachable, not just two.
+  return mapApiErrorCode(errorCode, knownCodes, 'STAFF.BOARDING.SCAN.ERROR.GENERIC');
 }
 
 /** `errorCode`s that describe an already-settled/timing state rather than a
@@ -61,7 +66,7 @@ const ICON_BY_ERROR_CODE: Record<string, string> = {
 /** Material Symbols Outlined glyph name for the result banner — always
  * rendered alongside the text/color so severity is never color-only. */
 export function boardingScanErrorIcon(errorCode: string | null | undefined): string {
-  return (errorCode && ICON_BY_ERROR_CODE[errorCode]) || ICON_BY_ERROR_CODE['GENERIC'];
+  return mapApiErrorCode(errorCode, ICON_BY_ERROR_CODE, ICON_BY_ERROR_CODE['GENERIC']);
 }
 
 /** Extracts `error.error.errorCode` from a failed boarding-scan HTTP call. */

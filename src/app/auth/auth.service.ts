@@ -7,6 +7,7 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
+import { hasOwnKey } from '../shared/lib/own-key';
 import {
   EmailChangeConfirmResponse,
   EmailChangeRequestResponse,
@@ -208,7 +209,17 @@ export class AuthService {
     // unrecognised role only matches itself.
     const effectiveRoles = new Set<string>();
     for (const role of this.getRoles()) {
-      const grants = AuthService.ROLE_GRANTS[role];
+      // OBRS-601: hasOwnKey, not a bare lookup. `getRoles()` reads
+      // localStorage, which the browser user can edit, and lower-cases each
+      // entry — leaving `constructor` and `__proto__` as valid JSON strings
+      // that resolve to the `Object` function. `if (grants)` would pass and
+      // `grants.forEach` would throw, taking `hasAnyRole()` and therefore
+      // every route guard down with it. The `else` below is exactly the
+      // intended handling ("an unrecognised role only matches itself") and is
+      // what the unguarded lookup skipped.
+      const grants = hasOwnKey(AuthService.ROLE_GRANTS, role)
+        ? AuthService.ROLE_GRANTS[role]
+        : undefined;
       if (grants) {
         grants.forEach((granted) => effectiveRoles.add(granted));
       } else {

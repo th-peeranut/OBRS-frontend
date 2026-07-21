@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 
 /**
  * OBRS-509: maps the inspection-item admin CRUD/reorder endpoints'
@@ -23,7 +23,7 @@ export function mapInspectionItemErrorCode(errorCode: string | null | undefined)
     INSPECTION_ITEM_REORDER_INVALID_SEQUENCE: 'ADMIN.INSPECTION_ITEMS.ERROR.REORDER_INVALID_SEQUENCE',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'ADMIN.INSPECTION_ITEMS.ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'ADMIN.INSPECTION_ITEMS.ERROR.GENERIC');
 }
 
 /** Extracts `error.error.errorCode` from a failed inspection-item HTTP call.

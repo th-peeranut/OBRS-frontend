@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 import { BoardingActionErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -22,7 +22,7 @@ export function mapBoardingActionErrorCode(errorCode: string | null | undefined)
     BOARDING_ROUND_ARRIVED: 'STAFF.BOARDING.ACTION_ERROR.BOARDING_ROUND_ARRIVED',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'STAFF.BOARDING.ACTION_ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'STAFF.BOARDING.ACTION_ERROR.GENERIC');
 }
 
 /** Extracts `error.error.errorCode` from a failed board/unboard HTTP call. */

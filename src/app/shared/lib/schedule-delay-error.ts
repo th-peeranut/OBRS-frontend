@@ -1,4 +1,5 @@
 import { extractScheduleStatusErrorCode } from './schedule-status-error';
+import { mapApiErrorCode } from './api-error-code';
 
 /**
  * OBRS-272: maps `PATCH /api/private/schedules/{id}/delay`'s
@@ -16,7 +17,7 @@ export function mapScheduleDelayErrorCode(errorCode: string | null | undefined):
     SCHEDULE_DELAY_ETA_INVALID: 'STAFF.SCHEDULE_DELAY.ERROR.SCHEDULE_DELAY_ETA_INVALID',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'STAFF.SCHEDULE_DELAY.ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'STAFF.SCHEDULE_DELAY.ERROR.GENERIC');
 }
 
 /**

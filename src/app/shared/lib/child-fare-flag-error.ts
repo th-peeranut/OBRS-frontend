@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 import { ChildFareFlagErrorCode } from '../interfaces/ticket-boarding.interface';
 
 /**
@@ -16,7 +16,7 @@ export function mapChildFareFlagErrorCode(errorCode: string | null | undefined):
     NOT_FLAGGED: 'STAFF.BOARDING.CHILD_FARE_ERROR.NOT_FLAGGED',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'STAFF.BOARDING.CHILD_FARE_ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'STAFF.BOARDING.CHILD_FARE_ERROR.GENERIC');
 }
 
 /** Extracts `error.error.errorCode` from a failed flag/unflag HTTP call. */

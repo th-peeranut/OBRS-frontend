@@ -12,6 +12,7 @@ import { ParcelBookingProgressStep } from '../../components/parcel-booking-progr
 import { ParcelScheduleOption, ParcelTripFormValue } from '../../components/parcel-trip-form/parcel-trip-form.component';
 import { ParcelDetailsFormValue } from '../../components/parcel-details-form/parcel-details-form.component';
 import { stashParcelBookingAmount } from '../../parcel-booking-amount-session';
+import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 
 type ParcelBookingPhase = 'trip' | 'details' | 'payment';
 type PaymentTab = 'creditcard' | 'qrcode';
@@ -338,7 +339,7 @@ export class ParcelBookingPageComponent implements OnInit, OnDestroy {
 
   private mapErrorCode(err: unknown, map: Record<string, string>, fallbackKey: string): string {
     const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
-    return (errorCode && map[errorCode]) || fallbackKey;
+    return mapApiErrorCode(errorCode, map, fallbackKey);
   }
 
   // ---------------------------------------------------------------------

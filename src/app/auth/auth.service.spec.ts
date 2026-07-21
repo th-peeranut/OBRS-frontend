@@ -119,6 +119,31 @@ describe('AuthService', () => {
       expect(service.hasAnyRole(['driver', 'salesperson'])).toBe(false);
     });
 
+    // OBRS-601: `auth_roles` lives in localStorage, which the browser user can
+    // edit by hand. `ROLE_GRANTS` is an object literal, so before the fix a
+    // role of `constructor` resolved to the `Object` FUNCTION — truthy, so the
+    // `if (grants)` branch was taken and `grants.forEach` threw. hasAnyRole()
+    // is called from every route guard and the navbar, so that single crafted
+    // string took the whole app down rather than being ignored. The correct
+    // handling was already written (the `else`: an unrecognised role only
+    // matches itself) — the unguarded lookup just skipped past it.
+    ['constructor', '__proto__', 'toString', 'hasOwnProperty'].forEach((planted) => {
+      it(`ignores a hand-planted "${planted}" role instead of throwing`, () => {
+        setRoles([planted]);
+        expect(() => service.hasAnyRole(['admin'])).not.toThrow();
+        expect(service.hasAnyRole(['admin'])).withContext(planted).toBe(false);
+        expect(service.hasAnyRole(['customer'])).withContext(planted).toBe(false);
+        // It still matches itself, which is the documented fallback.
+        expect(service.hasAnyRole([planted])).withContext(planted).toBe(true);
+      });
+    });
+
+    it('is not derailed when a planted role sits alongside a real one', () => {
+      setRoles(['constructor', 'salesperson']);
+      expect(service.hasAnyRole(['driver'])).toBe(true);
+      expect(service.hasAnyRole(['admin'])).toBe(false);
+    });
+
     it('grants an owner access to salesperson/driver routes (owner is all-access)', () => {
       setRoles(['owner']);
       expect(service.hasAnyRole(['salesperson'])).toBe(true);

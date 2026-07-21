@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 
 /**
  * OBRS-256: maps `PATCH /api/private/schedules/{id}/status`'s
@@ -28,7 +28,7 @@ export function mapScheduleStatusErrorCode(errorCode: string | null | undefined)
     SCHEDULE_OVERRIDE_NOT_PERMITTED: 'STAFF.SCHEDULE_STATUS.ERROR.SCHEDULE_OVERRIDE_NOT_PERMITTED',
   };
 
-  return (errorCode && knownCodes[errorCode]) || 'STAFF.SCHEDULE_STATUS.ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'STAFF.SCHEDULE_STATUS.ERROR.GENERIC');
 }
 
 /** Extracts `error.error.errorCode` from a failed schedule-status-update HTTP

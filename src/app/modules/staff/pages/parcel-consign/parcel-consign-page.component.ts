@@ -22,6 +22,7 @@ import {
   ParcelQuoteParams,
 } from '../../components/parcel-consign-form/parcel-consign-form.component';
 import { ParcelCargoAvailabilityStore } from './parcel-cargo-availability.store';
+import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 
 interface OrderedStop {
   id: number;
@@ -295,6 +296,6 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
   private mapErrorCode(err: unknown, map: Record<string, string>, fallbackKey: string): string {
     const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
-    return (errorCode && map[errorCode]) || fallbackKey;
+    return mapApiErrorCode(errorCode, map, fallbackKey);
   }
 }

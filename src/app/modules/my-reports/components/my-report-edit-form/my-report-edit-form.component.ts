@@ -9,7 +9,7 @@ import {
   MyUsabilityReportDetail,
   UsabilityReportCategory,
 } from '../../../../shared/interfaces/usability-report.interface';
-import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { UsabilityReportImagePickerChange } from '../../../../shared/components/usability-report-image-picker/usability-report-image-picker.component';
 
 interface CategoryOption {
@@ -188,7 +188,7 @@ export class MyReportEditFormComponent implements OnInit, OnDestroy {
       VALIDATION_FAILED: 'USABILITY_REPORT.ERROR.VALIDATION_FAILED',
       REPORT_NOT_FOUND: 'USABILITY_REPORT.MY_REPORTS.ERROR.REPORT_NOT_FOUND',
     };
-    return code && knownCodes[code] ? knownCodes[code] : 'USABILITY_REPORT.ERROR.GENERIC';
+    return mapApiErrorCode(code, knownCodes, 'USABILITY_REPORT.ERROR.GENERIC');
   }
 
   private buildCategoryOptions(): void {

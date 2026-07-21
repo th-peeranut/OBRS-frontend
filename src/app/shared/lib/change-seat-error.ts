@@ -1,4 +1,5 @@
 import { extractApiErrorCode } from './api-error-code';
+import { hasOwnKey } from './own-key';
 import { ChangeSeatErrorCode } from '../interfaces/change-seat.interface';
 import { HttpFallbackTier } from './http-error-fallback';
 
@@ -37,7 +38,9 @@ export function mapChangeSeatErrorCode(
     SEAT_ERROR_WALK_IN_ONLY: 'COMMON.ERROR.SEAT_WALK_IN_ONLY',
   };
 
-  if (errorCode && knownCodes[errorCode]) {
+  // OBRS-601: `hasOwnKey` closes the `Object.prototype` hole (e.g.
+  // `knownCodes['constructor']`) that plain `knownCodes[errorCode]` opens.
+  if (errorCode && hasOwnKey(knownCodes, errorCode)) {
     return knownCodes[errorCode];
   }
 

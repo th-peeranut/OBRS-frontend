@@ -18,6 +18,7 @@ import {
 } from '../../../../shared/lib/parcel-booking-status';
 import { ParcelVerifyFormValue } from '../../components/parcel-verify-dialog/parcel-verify-dialog.component';
 import { ParcelVerifyListStore } from './parcel-verify-list.store';
+import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 
 /** Error-code -> i18n key lookup, same shape as
  * `parcel-delivery-list-page.component.ts`'s `ACTION_ERROR_KEYS` (branches on
@@ -251,7 +252,7 @@ export class ParcelVerifyListPageComponent implements OnInit, OnDestroy {
     // either gone (someone else verified it) or this page's cached state no
     // longer matches the server.
     const isAlreadyVerified = errorCode === 'PARCEL_NOT_CREATED_STATE';
-    const toastKey = (errorCode && VERIFY_ERROR_KEYS[errorCode]) || 'STAFF.PARCEL_VERIFY.ERROR.WRONG_STATE';
+    const toastKey = mapApiErrorCode(errorCode, VERIFY_ERROR_KEYS, 'STAFF.PARCEL_VERIFY.ERROR.WRONG_STATE');
     this.alertService.toast(this.translate.instant(toastKey), isAlreadyVerified ? 'info' : 'error');
     this.dialogParcel = null;
     void this.store.refresh();

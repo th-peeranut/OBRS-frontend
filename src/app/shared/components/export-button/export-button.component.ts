@@ -6,6 +6,7 @@ import { takeUntil } from 'rxjs/operators';
 import { AuthService } from '../../../auth/auth.service';
 import { AlertService } from '../../services/alert.service';
 import { ExportError, ExportFormat, ExportService } from '../../../services/export/export.service';
+import { mapApiErrorCode } from '../../lib/api-error-code';
 
 const ERROR_CODE_TO_I18N_KEY: Record<string, string> = {
   EXPORT_ERROR_ACCESS_DENIED: 'COMMON.EXPORT.ERROR_ACCESS_DENIED',
@@ -92,6 +93,6 @@ export class ExportButtonComponent implements OnInit, OnDestroy {
   }
 
   private mapErrorCode(errorCode: string | undefined): string {
-    return errorCode ? ERROR_CODE_TO_I18N_KEY[errorCode] ?? GENERIC_ERROR_KEY : GENERIC_ERROR_KEY;
+    return mapApiErrorCode(errorCode, ERROR_CODE_TO_I18N_KEY, GENERIC_ERROR_KEY);
   }
 }
