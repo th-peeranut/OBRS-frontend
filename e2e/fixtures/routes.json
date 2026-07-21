@@ -1,0 +1,26 @@
+{
+  "code": 200,
+  "message": "OK",
+  "data": [
+    {
+      "id": 1,
+      "slug": "chonburi_bangkok",
+      "status": "ACTIVE",
+      "translations": {
+        "en": { "label": "Chonburi - Bangkok", "description": null },
+        "th": { "label": "ชลบุรี - กรุงเทพฯ", "description": null },
+        "zh": { "label": "春武里 - 曼谷", "description": null }
+      }
+    },
+    {
+      "id": 2,
+      "slug": "bangkok_chonburi",
+      "status": "ACTIVE",
+      "translations": {
+        "en": { "label": "Bangkok - Chonburi", "description": null },
+        "th": { "label": "กรุงเทพฯ - ชลบุรี", "description": null },
+        "zh": { "label": "曼谷 - 春武里", "description": null }
+      }
+    }
+  ]
+}
