@@ -33,6 +33,9 @@ export class RouteStopListComponent implements OnChanges {
    * Distance to a stop rounded for display, or null when unknown. Values under
    * 10 km keep one decimal (e.g. 1.2); larger ones round to whole km.
    */
+  // proto-key-ok: ADR-0028 -- `stop.slug` is server-enumerated, so reaching
+  // Object.prototype needs a stop literally slugged "constructor". Same call the ADR
+  // made for the rest of the stop/seat-label family: left unguarded, not padded.
   distanceLabel(stop: RouteStop): string | null {
     const km = this.distancesKm?.[stop.slug];
     if (km === undefined) {

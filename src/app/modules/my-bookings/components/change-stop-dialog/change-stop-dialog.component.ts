@@ -373,6 +373,8 @@ export class ChangeStopDialogComponent implements OnInit, OnDestroy {
     );
   }
 
+  // proto-key-ok: ADR-0028 names this site by name -- `slug` is a server-enumerated
+  // stop slug, so reaching Object.prototype needs a stop literally slugged "constructor".
   private resolveStopId(slug: string): number | null {
     return this.stopsLookup[slug] ?? null;
   }

@@ -79,6 +79,10 @@ const FLEET_STATUS_CHIP_MAP: Record<FleetVehicleStatus, FleetStatusChip> = {
 };
 
 /** Resolve a {@link FleetVehicleStatus} to its chip token + i18n key (§3.3). */
+// proto-key-ok: ADR-0028 audited this one and left it -- `FleetVehicleStatus` is not a
+// server string narrowed by assertion, it is COMPUTED in this file by
+// resolveFleetVehicleStatus() from booleans, so no runtime string reaches the index and
+// there is no `as` cast anywhere in the chain.
 export function fleetVehicleStatusChip(status: FleetVehicleStatus): FleetStatusChip {
   return FLEET_STATUS_CHIP_MAP[status];
 }

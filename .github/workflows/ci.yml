@@ -78,6 +78,17 @@ jobs:
       - name: store null-handling gate
         run: npm run test:store-null
 
+      # Sixth pure-node gate (OBRS-608, enforcing ADR-0028). Every object literal
+      # inherits from Object.prototype, so `MAP[key] ?? f`, `(key && MAP[key]) || f`
+      # and `key in MAP` all resolve a key of 'constructor'/'__proto__' to the Object
+      # FUNCTION -- non-nullish AND truthy, so no fallback fires and the caller holds a
+      # function where it expected a record. OBRS-427 SHIPPED this in the very fix
+      # meant to prevent it; OBRS-601 then found 23 instances in 5 clusters, including
+      # one that threw inside every route guard. Those 23 are fixed and nothing stopped
+      # the 24th -- this is the 24th's stop. Costs no extra runner minutes.
+      - name: prototype-chain map lookup gate
+        run: npm run test:proto-key
+
       - name: Install dependencies
         run: npm ci
 

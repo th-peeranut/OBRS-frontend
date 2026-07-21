@@ -527,6 +527,9 @@ export class ETicketComponent implements OnInit, OnDestroy {
     };
 
     const day = date.date();
+    // proto-key-ok: `Locale` is the inline union declared at the top of this file, and
+    // every value reaching here has passed through normalizeLocale(), which returns one
+    // of the three literals rather than asserting the raw ngx-translate lang string.
     const month = months[locale][date.month()];
     const year = date.year();
 

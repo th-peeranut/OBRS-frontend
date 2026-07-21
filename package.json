@@ -18,6 +18,7 @@
     "test:alert-i18n": "node scripts/check-alert-i18n.mjs",
     "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",
     "test:store-null": "node scripts/check-store-null-handling.mjs",
+    "test:proto-key": "node scripts/check-prototype-key-lookup.mjs",
     "e2e": "playwright test",
     "e2e:local": "playwright test --config=playwright.local.config.ts",
     "e2e:ui": "playwright test --ui",

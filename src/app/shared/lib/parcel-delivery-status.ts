@@ -81,6 +81,10 @@ function isKnownStatusSlug(slug: string): slug is ParcelDeliveryStatus {
  * i18n key. An unrecognized/empty value (e.g. a future status this FE hasn't
  * been updated for) degrades to the neutral chip rather than throwing or
  * rendering blank. */
+// proto-key-ok: already guarded, just not in a shape this scan can follow --
+// `isKnownStatusSlug()` above IS hasOwnKey (Object.prototype.hasOwnProperty.call) written
+// as a named type predicate, and the gate only recognises the call spelled `hasOwnKey`
+// near the lookup. A local predicate is a documented blind spot, not a hole.
 export function parcelDeliveryStatusChip(status: string | null | undefined): ParcelStatusChip {
   const slug = normalizeStatusSlug(status);
   return isKnownStatusSlug(slug) ? PARCEL_STATUS_CHIP_MAP[slug] : FALLBACK_CHIP;

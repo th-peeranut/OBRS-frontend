@@ -111,6 +111,9 @@ export class PassengerSeatVanComponent implements OnChanges {
    * Multi-select mode: look up from seatGenders map.
    * Single-select mode: only the currently selected seat shows the gender.
    */
+  // proto-key-ok: ADR-0028 names seatGenders/seatOwners by name -- `label` is a seat
+  // label this component itself renders from the server's seat list, so reaching
+  // Object.prototype needs a seat literally labelled "constructor".
   seatGenderFor(label: string): string {
     if (this.seatOwners !== null) {
       return this.seatOwners[label]?.gender ?? '';
@@ -127,6 +130,8 @@ export class PassengerSeatVanComponent implements OnChanges {
    * Multi-select: any seat present in seatGenders map.
    * Single-select: only the one isSelected seat.
    */
+  // proto-key-ok: ADR-0028 -- `label in this.seatOwners` included; same server-enumerated
+  // seat label as seatGenderFor() above.
   isSeatActive(label: string): boolean {
     if (this.seatOwners !== null) {
       return label in this.seatOwners;
@@ -151,6 +156,7 @@ export class PassengerSeatVanComponent implements OnChanges {
   }
 
   /** Attribute list for a seat label (OBRS-362); empty when unset/unknown. */
+  // proto-key-ok: ADR-0028 -- seat label again, normalized; same reachability argument.
   attributesFor(label: string): ('WHEELCHAIR' | 'EXTRA_LEGROOM')[] {
     if (!this.seatAttributes) {
       return [];

@@ -104,7 +104,35 @@ name now reaches the documented `else` instead of crashing.
   the `?? ''` and the `label in ...` form). All are keyed by server-enumerated
   stop codes / seat labels, so reaching them needs a stop literally named
   `constructor`. Left as-is rather than padding the diff.
-- A lint rule would beat a convention here. None exists yet; until then the
-  probe tests in `own-key.spec.ts` pin the three broken idioms as broken, so a
-  reader who wonders why the helper exists gets the answer from a failing
-  assertion rather than from prose.
+- A lint rule would beat a convention here. **OBRS-608 built one**:
+  `scripts/check-prototype-key-lookup.mjs`, run in CI as
+  `npm run test:proto-key` before `npm ci` (so it costs no runner minutes),
+  alongside the five existing `check-*.mjs` gates. Not ESLint — this repo has
+  none, and adopting a toolchain for one rule would have buried the finding
+  under unrelated legacy noise. The probe tests in `own-key.spec.ts` remain, and
+  still answer "why does this helper exist" with a failing assertion.
+
+  The gate flags a dynamic index read or an `in` test on any binding it can see
+  is an object-literal map, unless `hasOwnKey(MAP, ...)` appears nearby or the
+  site carries a `// proto-key-ok: <reason>` comment. It is proven to fire, not
+  merely declared: run against `7f1505c` (the commit before OBRS-601's fix) it
+  reports 51 findings covering all five clusters in the table above; against
+  today's tree it is green over 32 lookups.
+
+  **The sites this ADR left unfixed now carry `proto-key-ok` markers** naming
+  the reason, so the exception list lives next to the code instead of only here:
+  `stopsLookup` (both dialogs), `seatGenders`/`seatOwners`/`seatAttributes` (bus
+  and van), plus three the sweep did not enumerate — `distancesKm[stop.slug]`,
+  `seatPassengerTypes[seat]`, and `pickFirstString`'s `source[key]`.
+
+  **One correction to the bullet above.** It excused six `Record`-keyed lookups
+  as having "a locally computed literal union" key. Building the gate showed
+  that rationale was doing more work than it could bear: a *named* alias
+  (`UsabilityReportStatus`, `Exclude<ParcelBookingStatus, 'confirmed'>`) is
+  indistinguishable at the declaration from an *inline* union, and the two
+  lookups this ADR was written about are precisely the named kind — their
+  narrowing was an assertion made far upstream at the API boundary. So the gate
+  excuses only an inline union, and the three genuinely-local aliases (`Locale`,
+  `InspectionItemLocale`, `FleetVehicleStatus`) each state their case in a
+  marker. Cost: three comments. Benefit: the next `Record<SomeStatus, T>` cannot
+  ride in on a resemblance.

@@ -381,6 +381,8 @@ export class RescheduleDialogComponent implements OnInit, OnDestroy {
     );
   }
 
+  // proto-key-ok: ADR-0028 names this site by name -- `code` is a server-enumerated
+  // stop code, so reaching Object.prototype needs a stop literally coded "constructor".
   private resolveStopId(code: string): number | null {
     return this.stopsLookup[code] ?? null;
   }

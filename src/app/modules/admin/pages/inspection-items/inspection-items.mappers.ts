@@ -55,6 +55,11 @@ export type InspectionItemLocale = 'en' | 'th' | 'zh';
  * renders something, never a blank cell. Pure function — the caller (the
  * component) is responsible for re-invoking it whenever the selected locale
  * changes, so this alone can't silently become a one-time read. */
+// proto-key-ok: `InspectionItemLocale` is the inline union declared 9 lines up, and its
+// only producer (InspectionItemsPageComponent.getCurrentLocale()) RETURNS one of the
+// three literals from startsWith() branches rather than asserting a raw lang string --
+// so no runtime value reaches this index. Contrast auth.interceptor.ts (OBRS-601), the
+// one locale map whose key WAS read raw from localStorage.
 export function resolveInspectionItemLabel(
   row: Pick<InspectionItemRow, 'code' | 'labelEn' | 'labelTh' | 'labelZh'>,
   locale: InspectionItemLocale

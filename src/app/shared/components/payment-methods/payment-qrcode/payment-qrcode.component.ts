@@ -536,6 +536,10 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       return undefined;
     }
 
+    // proto-key-ok: guarded twice over, neither in a shape the gate can read. `keys` is
+    // always a hardcoded literal list at every call site (e.g. ['downloadUri','uri',
+    // 'url']), so no runtime string ever reaches this index; and the `typeof value ===
+    // 'string'` below rejects the Object function even if one did.
     for (const key of keys) {
       const value = source[key];
       if (typeof value === 'string' && value.trim()) {

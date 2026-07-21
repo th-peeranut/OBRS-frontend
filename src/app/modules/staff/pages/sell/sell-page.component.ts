@@ -440,6 +440,8 @@ export class SellPageComponent implements OnInit, OnDestroy {
         // Use the per-seat type captured at click time; fall back to the current
         // global type if somehow the seat isn't in the map (and, for OPEN, always
         // — there is no seat to key a per-seat type off).
+        // proto-key-ok: ADR-0028 -- `seat` is a label this page's own seat map rendered
+        // from the server's seat list, same family as seatGenders/seatOwners.
         passengerType: this.seatPassengerTypes[seat] ?? this.selectedPassengerType,
         // The seat maps render/select letter-prefixed labels (van "A1".."A13", bus
         // "B1".."B21" — see `selectedSeats` / `busSeatLabels` in
