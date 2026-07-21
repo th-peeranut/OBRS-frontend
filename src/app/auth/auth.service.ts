@@ -389,6 +389,10 @@ export class AuthService {
       .then((response) => response);
   }
 
+  // OBRS-613: public endpoint — the reset link is opened logged out. Mirrors
+  // confirmEmailChange() for SKIP_GLOBAL_ERROR_ALERT: a reset link is single-use and
+  // expires, so "invalid or already used" is the ordinary case, and the page renders it
+  // inline with a way forward instead of a red global toast.
   confirmPasswordReset(payload: {
     token: string;
     newPassword: string;
@@ -396,7 +400,8 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<PasswordResetConfirmResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/confirm`,
-        payload
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise()
       .then((response) => response);
@@ -465,6 +470,9 @@ export class AuthService {
       path.startsWith('/register') ||
       path.startsWith('/otp') ||
       path.startsWith('/forget-password') ||
+      // OBRS-613: without this, resetting from an emailed link and then signing in sends
+      // the user straight back to /reset-password carrying a token the reset just spent.
+      path.startsWith('/reset-password') ||
       path.startsWith('/verify-email')
     );
   }

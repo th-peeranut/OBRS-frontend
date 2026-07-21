@@ -13,27 +13,11 @@
     </div>
     <!-- LOGO WEBSITE -->
     <div class="logo-section mt-5">
-      <img
-        *ngIf="option === 'login'"
-        class="logo-img"
-        src="images/logo.svg"
-        alt="Phuyaipu Logo"
-      />
-      <img
-        *ngIf="option === 'forget-password'"
-        class="logo-img"
-        src="images/forget-password-logo.svg"
-        alt="Forget Password Logo"
-      />
+      <img class="logo-img" src="images/logo.svg" alt="Phuyaipu Logo" />
     </div>
     <!-- HEADER TITLE -->
     <div class="welcome-text mt-3">
-      <ng-container *ngIf="option === 'login'">
-        {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
-      </ng-container>
-      <ng-container *ngIf="option === 'forget-password'">
-        {{ "FORGET_PASSWORD.WELCOME" | translate }}
-      </ng-container>
+      {{ "LOGIN_BY_PHONE_NO.WELCOME" | translate }}
     </div>
     <!-- SUB HEADER TITLE -->
     <div class="hint-text mt-3">

@@ -14,7 +14,6 @@ describe('OtpValidateComponent', () => {
       createTranslateStub(),
       new FormBuilder(),
       {} as never,
-      {} as never,
       createRouterStub(),
       {} as never,
       {} as never,
@@ -46,7 +45,6 @@ describe('OtpValidateComponent', () => {
       return new OtpValidateComponent(
         createTranslateStub(),
         new FormBuilder(),
-        {} as never,
         alertService as never,
         createRouterStub(),
         {} as never,
@@ -117,7 +115,7 @@ describe('OtpValidateComponent', () => {
    * fall through to sendOtp(): rejecting the route while still billing the SMS would leave
    * the abuse path open with only the UI removed.
    */
-  describe('the register option is gone (OBRS-605)', () => {
+  describe('only the phone-login option remains (OBRS-605, OBRS-613)', () => {
     function buildFor(option: string) {
       const router = jasmine.createSpyObj('Router', ['navigateByUrl']);
       router.navigateByUrl.and.resolveTo(true);
@@ -127,7 +125,6 @@ describe('OtpValidateComponent', () => {
       const target = new OtpValidateComponent(
         createTranslateStub(),
         new FormBuilder(),
-        {} as never,
         jasmine.createSpyObj('AlertService', ['error', 'success']) as never,
         router as never,
         {
@@ -143,32 +140,36 @@ describe('OtpValidateComponent', () => {
       return { target, router, requestOTP };
     }
 
-    it('redirects /otp/register/<phone> to the home page', async () => {
-      const { target, router } = buildFor('register');
-
-      await target.ngOnInit();
-
-      expect(target.validateRouteError()).toBeTrue();
-      expect(router.navigateByUrl).toHaveBeenCalledWith('/');
-    });
-
-    it('bills no SMS for the rejected route', async () => {
-      const { target, requestOTP } = buildFor('register');
-
-      await target.ngOnInit();
-
-      expect(requestOTP).not.toHaveBeenCalled();
-    });
-
-    it('still serves the two options that remain', async () => {
-      for (const option of ['login', 'forget-password']) {
-        const { target, router, requestOTP } = buildFor(option);
+    it('redirects both retired options to the home page', async () => {
+      for (const option of ['register', 'forget-password']) {
+        const { target, router } = buildFor(option);
 
         await target.ngOnInit();
 
-        expect(target.validateRouteError()).withContext(option).toBeFalse();
-        expect(router.navigateByUrl).withContext(option).not.toHaveBeenCalled();
-        expect(requestOTP).withContext(option).toHaveBeenCalled();
+        expect(target.validateRouteError()).withContext(option).toBeTrue();
+        expect(router.navigateByUrl).withContext(option).toHaveBeenCalledWith('/');
+      }
+    });
+
+    it('bills no SMS for a rejected route', async () => {
+      for (const option of ['register', 'forget-password']) {
+        const { target, requestOTP } = buildFor(option);
+
+        await target.ngOnInit();
+
+        expect(requestOTP).withContext(option).not.toHaveBeenCalled();
+      }
+    });
+
+    it('still serves phone login', async () => {
+      {
+        const { target, router, requestOTP } = buildFor('login');
+
+        await target.ngOnInit();
+
+        expect(target.validateRouteError()).toBeFalse();
+        expect(router.navigateByUrl).not.toHaveBeenCalled();
+        expect(requestOTP).toHaveBeenCalled();
       }
     });
   });

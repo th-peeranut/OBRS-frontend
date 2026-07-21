@@ -1585,14 +1585,39 @@
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",
-    "HINT": "Please fill in the information below to proceed with the password reset",
-    "PHONE_NO": "Phone number",
-    "PHONE_NO_PLACEHOLDER": "",
-    "PHONE_NO_REQUIRED": "Please fill in the phone number to proceed with the password reset",
-    "SEND_OTP": "Send OTP",
-    "NOACCOUNT": "Do you not have an account?",
+    "HINT": "Enter the email address on your account and we will send you a link to reset your password",
     "REGISTERLINK": "Do you not have an account?",
-    "REGISTERLINK_CLICK": "Register here"
+    "REGISTERLINK_CLICK": "Register here",
+    "EMAIL": "Email",
+    "EMAIL_PLACEHOLDER": "Please enter your email",
+    "EMAIL_REQUIRED": "Please enter your email",
+    "EMAIL_INVALID": "Please enter a valid email",
+    "SEND_LINK": "Send reset link",
+    "SEND_LINK_LOADING": "Sending...",
+    "SENT_MESSAGE": "If that email address belongs to an account, we have sent a password reset link to it. Please check your inbox.",
+    "BACK_TO_LOGIN": "Back to sign in"
+  },
+  "RESET_PASSWORD": {
+    "WELCOME": "Set a new password",
+    "HINT": "Choose a new password for your account",
+    "NEW_PASSWORD": "New password",
+    "NEW_PASSWORD_REQUIRED": "Please enter a new password",
+    "CONFIRM_PASSWORD": "Confirm new password",
+    "PASSWORD_RULE": "Password must be 8-128 characters and contain an uppercase letter, a lowercase letter and a digit",
+    "PASSWORD_MISMATCH": "The two passwords do not match",
+    "SUBMIT": "Set new password",
+    "SUBMIT_LOADING": "Saving...",
+    "SUCCESS_TITLE": "Password changed",
+    "SUCCESS_MESSAGE": "Your password has been changed. You can now sign in with it.",
+    "SUCCESS_SIGNIN": "Sign in",
+    "INVALID_TITLE": "This link cannot be used",
+    "REQUEST_NEW_LINK": "Request a new link",
+    "BACK_TO_LOGIN": "Back to sign in",
+    "ERROR": {
+      "TOKEN_MISSING": "No reset token found. Please check the link in your email, or request a new one.",
+      "TOKEN_INVALID": "This reset link is invalid, expired, or has already been used.",
+      "GENERIC": "Something went wrong. Please try again."
+    }
   },
   "HOME": {
     "NAVBAR": {

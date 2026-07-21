@@ -115,8 +115,18 @@ test.describe('route smoke coverage', () => {
   });
 
   test('auth-entry pages render', async ({ page }) => {
+    // OBRS-613: this page collects an EMAIL now. It used to ask for a phone number and
+    // send an OTP that verified into an empty block.
     await page.goto('/forget-password');
-    await expect(page.locator('#phoneNo')).toBeVisible();
+    await expect(page.locator('#email')).toBeVisible();
+    await expect(page.locator('#phoneNo')).toHaveCount(0);
+
+    // OBRS-613: the landing page for the emailed reset link. The path is fixed by the
+    // backend's app.mail.reset-password-path; before this route existed the link fell
+    // through to '**' and redirected home, so assert we did NOT end up at '/'.
+    await page.goto('/reset-password?token=route-smoke-token');
+    await expect(page.locator('#newPassword')).toBeVisible();
+    await expect(page.locator('#confirmPassword')).toBeVisible();
 
     await page.goto('/login-mobile');
     await expect(page.locator('#phoneNo')).toBeVisible();
@@ -128,12 +138,14 @@ test.describe('route smoke coverage', () => {
     await expect(page.locator('app-otp')).toBeVisible();
     await expect(page.locator('.otp-ref-text')).toContainText('OTP-ROUTE-SMOKE');
 
-    // OBRS-605: signup no longer routes through an OTP screen. Asserting the redirect
-    // (not just that the OTP form is absent) is what would catch the option quietly
-    // coming back - a blank render would pass a "not visible" check just as well.
-    await page.goto('/otp/register/0812345678');
-    await expect(page).toHaveURL(/\/$/);
-    await expect(page.locator('app-otp')).toHaveCount(0);
+    // OBRS-605 / OBRS-613: this screen serves phone login only. Asserting the redirect
+    // (not just that the OTP form is absent) is what would catch an option quietly coming
+    // back - a blank render would pass a "not visible" check just as well.
+    for (const retired of ['register', 'forget-password']) {
+      await page.goto(`/otp/${retired}/0812345678`);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('app-otp')).toHaveCount(0);
+    }
   });
 
   test('admin management pages render with empty mocked data', async ({ page }) => {
