@@ -141,7 +141,7 @@
     {
       "spec": "obrs-296-child-fare-qa.spec.ts",
       "lane": "CAPTURE",
-      "config": "playwright.gate.config.ts (manually, with --grep)",
+      "config": "none -- no committed config runs it. It is hermetic and uses baseURL-relative navigation, so it needs only a `testMatch` pointing at it; run it with `npx playwright test --config=playwright.gate.config.ts` ONLY after temporarily adding it, which the lane gate will then reject. Adding it to the GATE lane for real is the clean fix if the capture is still wanted.",
       "why": "Fully mocked and technically hermetic, but its purpose is producing the OBRS-296 before/after e-ticket screenshots, not asserting behaviour."
     },
     {

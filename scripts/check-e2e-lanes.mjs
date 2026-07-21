@@ -68,8 +68,22 @@ const GATE_CONFIG = join(ROOT, 'playwright.gate.config.ts');
 
 const VALID_LANES = new Set(['GATE', 'GATE-BLOCKED', 'SIT-LIVE', 'OWN-DB', 'CAPTURE']);
 
-const ABSOLUTE_PATH = /['"`](?:[A-Za-z]:[\\/]|\/(?:Users|home)\/)[^'"`\n]+['"`]/g;
-const HARDCODED_HOST = /['"`]https?:\/\/(?!\{)[^'"`\n]+['"`]/g;
+// Rule 3 is an ALLOW-LIST on the one sink that matters, not a deny-list of path shapes.
+// The first draft denied drive letters and /Users|/home roots, which caught the two
+// instances that prompted the rule and missed the likelier next one: a RELATIVE
+// '../../obrs-agent-office/docs/...' reaches the same foreign repository and looks
+// portable while doing it. Screenshots must land under e2e-evidence/ (gitignored) or in
+// Playwright's own output dir; anything else is a finding regardless of how it is spelt.
+const SCREENSHOT_PATH = /\bpath:\s*(['"`])([^'"`\n]*)\1/g;
+const ALLOWED_EVIDENCE = /^(e2e-evidence\/|test-results\/|\$\{ASSETS\})/;
+const ABSOLUTE_PATH = /(['"`])(?:[A-Za-z]:[\\/]|\/(?:Users|home)\/)[^'"`\n]*\1/g;
+const HARDCODED_HOST = /(['"`])https?:\/\/(?!\{)[^'"`\n]*\1/g;
+
+// A root config that declares a directory but not what it runs adopts every spec in it.
+// That is the exact defect this card exists to undo, and it existed in TWO configs, so
+// spot-fixing the named one would have left the family intact. Any new root config must
+// declare a testMatch (or be listed here with a reason).
+const CONFIGS_WITHOUT_TESTMATCH_OK = new Set([]);
 
 const errors = [];
 const fail = (msg) => errors.push(msg);
@@ -158,32 +172,74 @@ if (!matchBlock) {
 
 // --- Rules 3 & 4: per-spec source hygiene ---------------------------------
 
+// Resolve a match's 1-based line from its INDEX, never by searching for its text. The
+// first version did `src.indexOf(hit)`, which always finds the first occurrence of that
+// literal -- so the same URL appearing in a header comment and again in a real
+// `page.goto()` reported the comment's line, read the comment as context, and let the
+// navigation through. Neither direction of that bug is reachable by a test that only
+// checks the rule fires.
+const lineAt = (src, index) => src.slice(0, index).split('\n').length;
+
+// Look backwards from the match to the start of its statement, so a call wrapped across
+// lines by the formatter is still seen as a call. Single-line context was the second
+// half of the same blind spot.
+const statementAround = (src, index) => {
+  const start = src.lastIndexOf(';', index);
+  return src.slice(start + 1, index + 200);
+};
+
 for (const file of specsOnDisk) {
   const src = readFileSync(join(TESTS_DIR, file), 'utf8');
   const entry = declared.get(file);
 
-  for (const hit of src.match(ABSOLUTE_PATH) ?? []) {
+  for (const m of src.matchAll(SCREENSHOT_PATH)) {
+    const value = m[2];
+    if (!ALLOWED_EVIDENCE.test(value)) {
+      fail(
+        `${file}:${lineAt(src, m.index)} writes a screenshot to "${value}". Evidence must ` +
+          `land under e2e-evidence/ (gitignored). Two specs used to write to an absolute ` +
+          `path inside a DIFFERENT git repository, and a relative '../..' escape reaches ` +
+          `the same place while looking portable.`
+      );
+    }
+  }
+
+  for (const m of src.matchAll(ABSOLUTE_PATH)) {
     fail(
-      `${file} writes to an absolute path ${hit} -- machine-specific, and in at least two ` +
-        `cases a path inside a different git repository. Use a repo-relative directory ` +
-        `under e2e-evidence/ (gitignored).`
+      `${file}:${lineAt(src, m.index)} contains an absolute path ${m[0]} -- machine-specific ` +
+        `(it embeds one developer's username) and not reproducible on any other checkout.`
     );
   }
 
   if (entry?.lane === 'GATE') {
-    for (const hit of src.match(HARDCODED_HOST) ?? []) {
+    for (const m of src.matchAll(HARDCODED_HOST)) {
       // A stub PAYLOAD may legitimately contain a URL (a photo link, a maps link); those
       // are data the app renders, never a request this spec issues. Only flag a literal
       // that appears in a navigation or request call.
-      const line = src.slice(0, src.indexOf(hit)).split('\n').length;
-      const context = src.split('\n')[line - 1] ?? '';
-      if (/\b(goto|request\.(get|post|put|delete)|fetch)\s*\(/.test(context)) {
+      if (/\b(goto|request\.(get|post|put|delete)|fetch)\s*\(\s*$|\b(goto|fetch)\s*\(/.test(
+          statementAround(src, m.index))) {
         fail(
-          `${file} is in the GATE lane but navigates to a hardcoded host ${hit} (line ${line}). ` +
-            `The gate lane runs with no backend and no fixed port -- use baseURL-relative paths.`
+          `${file}:${lineAt(src, m.index)} is in the GATE lane but navigates to a hardcoded ` +
+            `host ${m[0]}. The gate lane runs with no backend and no fixed port -- use ` +
+            `baseURL-relative paths.`
         );
       }
     }
+  }
+}
+
+// --- Rule 5: no root config may sweep a directory without declaring what it runs ------
+
+for (const file of readdirSync(ROOT)) {
+  if (!/^playwright.*\.config\.ts$/.test(file)) continue;
+  if (CONFIGS_WITHOUT_TESTMATCH_OK.has(file)) continue;
+  const src = readFileSync(join(ROOT, file), 'utf8');
+  if (!/\btestMatch\s*:/.test(src)) {
+    fail(
+      `${file} declares a testDir but no testMatch, so it adopts every spec in that ` +
+        `directory -- the exact defect OBRS-602 undid, which existed in two configs at ` +
+        `once. Give it a testMatch (deriving from e2e/lanes.json is fine) or delete it.`
+    );
   }
 }
 

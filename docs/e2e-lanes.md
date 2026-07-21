@@ -73,6 +73,19 @@ Shared stubs for the public pages live in `e2e/fixtures/public-page-mocks.ts`. C
 first in `beforeEach`, then add spec-specific stubs — Playwright matches handlers in
 reverse registration order, so later registrations win.
 
+**What stubbing `/api/routes` cost, and why the trade is acceptable.** `route-map.spec.ts`
+no longer exercises the real `GET /api/routes` response shape. That coverage moved rather
+than died: `direction-selector.spec.ts` is SIT-LIVE and deliberately leaves `/api/routes*`
+live, so contract drift on that endpoint still has somewhere to surface. If
+`direction-selector` is ever mocked or retired, this trade needs revisiting — say so on
+that card rather than discovering it here.
+
+`e2e/fixtures/routes.json` is **captured** from SIT, not hand-written, and its `$comment`
+records that. This matters more than it looks: the first draft hand-wrote `status` as the
+string `"ACTIVE"`, and `RouteMapService.isActiveStatus` accepts both a string and an
+object, so it passed while pinning a branch the server never takes. SIT sends the object
+form. Re-capture rather than hand-edit.
+
 **Debugging a GATE failure.** A timeout on an unrelated element usually means an
 unmocked call: the request fails, the global error interceptor raises a SweetAlert, and
 its backdrop swallows every subsequent click. Read the trace's `.network` file, or add
@@ -126,6 +139,29 @@ a spec to the merge gate is a claim about that spec someone should make delibera
 SIT config derives its list from the registry instead — it is long, changes often, and
 getting it wrong costs a skipped health check rather than a false green.
 
+## The configs
+
+Ten `playwright*.config.ts` files live at the repo root. Two of them ran whole lanes; the
+rest are per-spec.
+
+| Config | Runs | Note |
+|---|---|---|
+| `playwright.gate.config.ts` | 49 in 5 files | the merge gate; hand-written `testMatch` |
+| `playwright.config.ts` | 121 in 11 files | SIT lane, :4202; list derived from the registry |
+| `playwright.qa.config.ts` | 121 in 11 files | same lane on :4201 for when ports are contended |
+| `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
+| `playwright.obrs483.config.ts` | `obrs-483-open-seating` | own database + a specific backend branch |
+| `playwright.obrs433.config.ts` | `obrs-433-my-reports` | 1536×864; expects `obrs433qa` on :8080 |
+| `playwright.obrs561.config.ts` | `obrs-561-mobile-dropdown-overflow` | 390px — the whole point |
+| `playwright.obrs575.config.ts` | `obrs-575-{qa,capture}` | **no `webServer`**; servers started by hand |
+| `playwright-route-map.config.ts` | `route-map` | superseded: the spec is now in the gate lane |
+| `playwright-direction-selector.config.ts` | `direction-selector` | :4201 |
+
+`playwright.qa.config.ts` had the *same* directory sweep as the default config. Fixing only
+the one named on the card would have left an identical trapdoor one `--config` flag away —
+so `scripts/check-e2e-lanes.mjs` now refuses any root config that declares a directory
+without declaring what it runs, which closes the family rather than the two instances.
+
 ## Known gaps
 
 - **The 214/223 hang has not been reproduced.** It was reported on a full-sweep run and
@@ -140,3 +176,15 @@ getting it wrong costs a skipped health check rather than a false green.
 - **`b2c-critical-path` clicks `.btn-confirm` with `force: true`**, which reports success
   whether or not the click lands. It passes, but the assertion after it is what proves
   anything.
+- **Nothing pins the gate's case count.** `forbidOnly: true` stops the `test.only`
+  version of this, but a `describe.skip` still removes a file's worth of coverage from a
+  run that exits 0. The count is in the `list` output and no assertion reads it. A
+  `--list --reporter=json` check would close it.
+- **Three specs are run by no committed config** — `obrs-564-booking-policy`,
+  `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
+  hand-built database and say so in their headers. The third is genuinely hermetic and is
+  one `testMatch` line from joining the gate; it stays in CAPTURE because its purpose is
+  producing the OBRS-296 screenshots, not asserting behaviour.
+- **`e2e/lanes.json`'s `config` field is documentation, not enforcement.** Nothing checks
+  that the named config can actually run the spec — one entry was wrong on the first pass
+  and only a human reading caught it.

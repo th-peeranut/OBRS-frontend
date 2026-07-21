@@ -1,26 +1,45 @@
 {
+  "$comment": "CAPTURED from GET https://sit-obrs-backend.koyeb.app/api/routes on 2026-07-21 (OBRS-602), then trimmed to the two real routes. Provenance matters here: the first draft of this file hand-wrote status as the string \"ACTIVE\", and RouteMapService.isActiveStatus accepts BOTH a string and an object, so it passed while pinning a branch the server never takes. SIT sends the object form below. Three GATE specs share this fixture -- re-capture rather than hand-edit if the contract changes. Note the live payload has no zh translation for these routes; that is real, not an omission.",
   "code": 200,
   "message": "OK",
   "data": [
     {
       "id": 1,
       "slug": "chonburi_bangkok",
-      "status": "ACTIVE",
+      "status": {
+        "id": 35,
+        "code": "active",
+        "display": {
+          "th": { "label": "ใช้งาน", "description": null },
+          "en": { "label": "Active", "description": null },
+          "zh": { "label": "启用", "description": null }
+        }
+      },
       "translations": {
-        "en": { "label": "Chonburi - Bangkok", "description": null },
-        "th": { "label": "ชลบุรี - กรุงเทพฯ", "description": null },
-        "zh": { "label": "春武里 - 曼谷", "description": null }
-      }
+        "th": { "label": "ชลบุรี-กรุงเทพฯ", "description": null },
+        "en": { "label": "Chonburi-Bangkok", "description": null }
+      },
+      "createdAt": "2026-07-15T18:28:03.095772+07:00",
+      "updatedAt": "2026-07-15T18:28:03.095772+07:00"
     },
     {
       "id": 2,
       "slug": "bangkok_chonburi",
-      "status": "ACTIVE",
+      "status": {
+        "id": 35,
+        "code": "active",
+        "display": {
+          "th": { "label": "ใช้งาน", "description": null },
+          "en": { "label": "Active", "description": null },
+          "zh": { "label": "启用", "description": null }
+        }
+      },
       "translations": {
-        "en": { "label": "Bangkok - Chonburi", "description": null },
-        "th": { "label": "กรุงเทพฯ - ชลบุรี", "description": null },
-        "zh": { "label": "曼谷 - 春武里", "description": null }
-      }
+        "th": { "label": "กรุงเทพฯ-ชลบุรี", "description": null },
+        "en": { "label": "Bangkok-Chonburi", "description": null }
+      },
+      "createdAt": "2026-07-15T18:28:03.095772+07:00",
+      "updatedAt": "2026-07-15T18:28:03.095772+07:00"
     }
   ]
 }

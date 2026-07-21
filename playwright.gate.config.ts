@@ -28,8 +28,11 @@ import { defineConfig, devices } from '@playwright/test';
  *    `e2e/fixtures/admin-auth.json` (gitignored, never committed). That makes SIT a
  *    hard dependency of *every* test in that run — including the ones that mock 100%
  *    of their own traffic. A gate that a cold-starting Koyeb instance can turn red is
- *    not a gate. Specs here that need a session use `e2e/fixtures/gate-auth.json`, a
- *    committed synthetic one.
+ *    not a gate. No spec in this lane uses `storageState` at all: the two that need a
+ *    session (`route-smoke`, `report-usability-issue`) seed a fake `auth_token` into
+ *    localStorage from their own `addInitScript`, so there is no auth artefact for this
+ *    config to depend on. (Scrutinize OBRS-602: this paragraph previously named a
+ *    committed `e2e/fixtures/gate-auth.json`, which does not exist and never did.)
  *
  * 2. The frontend is served with the DEFAULT (local) configuration, not `sit`, so
  *    `apiUrl` points at `http://localhost:8080` — where nothing is listening. This is
@@ -73,6 +76,13 @@ export default defineConfig({
   timeout: 60_000,
   workers: 3,
   retries: 0,
+
+  // Unconditionally, not `!!process.env.CI`. This lane IS the merge gate and it runs on
+  // a developer's box, so the machine where a stray `test.only` would do its damage is
+  // exactly the machine CI-gating exempts. Without this, one forgotten `.only` shrinks
+  // the gate from 49 cases to 1 and still exits 0 — a green run asserting almost nothing,
+  // which is the failure mode this whole card exists to end. (Scrutinize OBRS-602.)
+  forbidOnly: true,
   reporter: [['list']],
 
   use: {

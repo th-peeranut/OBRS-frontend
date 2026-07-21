@@ -51,13 +51,13 @@ test('OBRS-433 My Reports: list -> detail -> edit-while-new -> follow-up', async
   await page.locator('.report-card:not(.report-card--skeleton)').first().waitFor({ timeout: 30_000 });
   const cards = page.locator('.report-card');
   await expect(cards).toHaveCount(4); // exactly the 4 seeded for customer@system.local
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/01-list-before.png', fullPage: true });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/01-list-before.png', fullPage: true });
 
   // Open the report seeded WITH a follow-up + status=new (LazyInit repro target).
   const targetCard = cards.filter({ hasText: 'report WITH an existing follow-up' });
   await targetCard.first().click();
   await page.locator('.mr-detail-modal').waitFor({ state: 'visible', timeout: 15_000 });
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/02-detail-new-with-followup.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/02-detail-new-with-followup.png' });
 
   // Follow-up timeline shows the pre-seeded note, and Edit is offered (status=new).
   await expect(page.locator('.mr-detail-modal')).toContainText('QA-SEED');
@@ -68,20 +68,20 @@ test('OBRS-433 My Reports: list -> detail -> edit-while-new -> follow-up', async
   await page.locator('.mr-edit-form').waitFor({ state: 'visible', timeout: 10_000 });
   const newDescription = 'OBRS-433 QA E2E: edited via browser while status=new';
   await page.locator('#mr-edit-description').fill(newDescription);
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/03-edit-form.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/03-edit-form.png' });
   await page.locator('.mr-edit-form button[type="submit"]').click();
   await page.locator('.mr-detail-modal').locator('text=' + newDescription).waitFor({ timeout: 15_000 });
   await waitForNoOverlay(page);
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/04-after-edit-saved.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/04-after-edit-saved.png' });
 
   // 3. Follow-up any status: add a follow-up note here (status=new).
   await waitForNoOverlay(page);
   await page.locator('#mr-follow-up-note').fill('OBRS-433 QA E2E: follow-up added via browser');
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/05-follow-up-composer.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/05-follow-up-composer.png' });
   await page.locator('.mr-follow-up-composer button[type="submit"]').click();
   await page.locator('.mr-detail-modal').locator('text=follow-up added via browser').waitFor({ timeout: 15_000 });
   await waitForNoOverlay(page);
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/06-after-follow-up.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/06-after-follow-up.png' });
 
   await page.locator('.mr-detail-modal__close').click();
 
@@ -90,7 +90,7 @@ test('OBRS-433 My Reports: list -> detail -> edit-while-new -> follow-up', async
   await resolvedCard.first().click();
   await page.locator('.mr-detail-modal').waitFor({ state: 'visible', timeout: 15_000 });
   await expect(page.locator('.mr-detail-modal button', { hasText: 'Edit' })).toHaveCount(0);
-  await page.screenshot({ path: 'docs/manual-tests/assets/OBRS-433/07-resolved-no-edit-affordance.png' });
+  await page.screenshot({ path: 'e2e-evidence/OBRS-433/07-resolved-no-edit-affordance.png' });
 
   // Follow-up composer still present/usable on a terminal-status report.
   await expect(page.locator('#mr-follow-up-note')).toBeVisible();

@@ -185,7 +185,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     await expect(dialog.locator('.reschedule-option-card')).toHaveCount(1, { timeout: 20_000 });
 
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-reschedule-options.png',
+      path: 'e2e-evidence/OBRS-483/after-reschedule-options.png',
       fullPage: true,
     });
 
@@ -198,7 +198,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     await expect(estimate.locator('.reschedule-estimate__net')).toContainText('No additional charge');
 
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-reschedule-estimate.png',
+      path: 'e2e-evidence/OBRS-483/after-reschedule-estimate.png',
       fullPage: true,
     });
 
@@ -213,7 +213,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     await expect(updatedCard.locator('.booking-card__meta dd').first()).toContainText('08:00');
 
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-reschedule-success.png',
+      path: 'e2e-evidence/OBRS-483/after-reschedule-success.png',
       fullPage: true,
     });
   });
@@ -243,7 +243,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     const pickupList = dialog.locator('app-route-stop-list .stop-row');
     await expect(pickupList.first()).toBeVisible({ timeout: 20_000 });
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-change-stop-pickup.png',
+      path: 'e2e-evidence/OBRS-483/after-change-stop-pickup.png',
       fullPage: true,
     });
 
@@ -258,7 +258,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     const dropoffList = dialog.locator('app-route-stop-list .stop-row');
     await expect(dropoffList.first()).toBeVisible({ timeout: 20_000 });
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-change-stop-dropoff.png',
+      path: 'e2e-evidence/OBRS-483/after-change-stop-dropoff.png',
       fullPage: true,
     });
 
@@ -278,7 +278,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     await expect(estimate).toContainText('Current fare', { timeout: 30_000 });
     await expect(estimate).toContainText('New fare');
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-change-stop-estimate.png',
+      path: 'e2e-evidence/OBRS-483/after-change-stop-estimate.png',
       fullPage: true,
     });
 
@@ -295,7 +295,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     const updatedCard = cardByBookingNumber(page, BOOKING_NUMBER);
     await expect(updatedCard.locator('.status-badge')).toHaveText(/Confirmed/i);
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-change-stop-success.png',
+      path: 'e2e-evidence/OBRS-483/after-change-stop-success.png',
       fullPage: true,
     });
   });
@@ -320,7 +320,7 @@ test.describe('My Bookings — OPEN-seating flows (OBRS-483)', () => {
     );
 
     await page.screenshot({
-      path: 'docs/manual-tests/assets/OBRS-483/after-change-seat-disabled.png',
+      path: 'e2e-evidence/OBRS-483/after-change-seat-disabled.png',
       fullPage: false,
     });
   });
