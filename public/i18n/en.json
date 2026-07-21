@@ -2474,7 +2474,8 @@
         "TRACKING_NUMBER": "Tracking number",
         "COLLECTION_CODE": "Collection code",
         "AMOUNT": "Amount",
-        "VIEW_WAYBILL": "View waybill"
+        "VIEW_WAYBILL": "View waybill",
+        "NEXT_ITEM": "Next item"
       },
       "CARRY_ON": {
         "SUBMIT": "Record carry-on item",
@@ -2504,14 +2505,21 @@
           "SEATS_UNAVAILABLE": "One or more selected seats are no longer available.",
           "SEATS_INSUFFICIENT": "Not enough seats are available on this trip.",
           "FREE_AISLE_CAP_EXCEEDED": "The free carry-on limit for this trip has been reached.",
-          "GENERIC": "Unable to record this carry-on item. Please try again."
+          "GENERIC": "Unable to record this carry-on item. Please try again.",
+          "PAY_FAILED": "Unable to record this payment. Please try again.",
+          "PAY_BOOKING_ALREADY_PAID": "This booking has already been paid.",
+          "PAY_IN_PROGRESS": "Another payment for this booking is already in progress. Please try again.",
+          "PAY_BOOKING_EXPIRED": "This booking has expired and can no longer be paid."
         },
         "RESULT": {
           "TITLE": "Carry-on item recorded",
           "BOOKING_NUMBER": "Booking number",
           "SEATS": "Seats",
           "FREE_AISLE": "Free — no seat used",
-          "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})"
+          "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
+          "PAY_CASH_BUTTON": "Collect cash",
+          "PAYING": "Recording payment…",
+          "PAID": "Paid — ฿{{amount}} collected"
         }
       }
     },

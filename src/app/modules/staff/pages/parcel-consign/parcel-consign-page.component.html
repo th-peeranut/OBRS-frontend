@@ -89,6 +89,11 @@
     <app-parcel-intake-result-panel
       *ngIf="result || carryOnResult"
       [result]="result || carryOnResult"
+      [carryOnPaid]="carryOnPaid"
+      [isPayingCarryOn]="isPayingCarryOn"
+      [carryOnPayErrorKey]="carryOnPayErrorKey"
+      (payCash)="onPayCash()"
+      (nextItem)="onNextItem()"
     ></app-parcel-intake-result-panel>
   </div>
 </div>

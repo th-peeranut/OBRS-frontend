@@ -27,6 +27,7 @@ import {
 } from '../../components/parcel-consign-form/parcel-consign-form.component';
 import { ParcelCargoAvailabilityStore } from './parcel-cargo-availability.store';
 import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
 
 interface OrderedStop {
   id: number;
@@ -65,6 +66,19 @@ const CARRY_ON_SUBMIT_ERROR_KEYS: Record<string, string> = {
   PARCEL_SEATS_UNAVAILABLE: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_UNAVAILABLE',
   PARCEL_SEATS_INSUFFICIENT: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_INSUFFICIENT',
   PARCEL_FREE_AISLE_CAP_EXCEEDED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.FREE_AISLE_CAP_EXCEEDED',
+};
+
+/** OBRS-341 (card AC follow-up) — `POST /payments/walk-in` error codes that
+ * are actually reachable from this call (`../OBRS-backend/docs/api/payment.md`
+ * §POST /payments/walk-in — same prerequisite checks as the main payment
+ * endpoint). `PAYMENT_METHOD_UNSUPPORTED`/`IDEMPOTENCY_MISMATCH` are not
+ * mapped — this call always sends `cash` and always reuses one key per
+ * booking, so either would indicate a client bug rather than something the
+ * salesperson can act on; both fall through to the GENERIC fallback. */
+const CARRY_ON_PAY_ERROR_KEYS: Record<string, string> = {
+  BOOKING_ALREADY_PAID: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAY_BOOKING_ALREADY_PAID',
+  PAYMENT_IN_PROGRESS: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAY_IN_PROGRESS',
+  BOOKING_EXPIRED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAY_BOOKING_EXPIRED',
 };
 
 /** Smart page: `/staff/parcels/consign` (salesperson-only). Owns every HTTP
@@ -117,6 +131,15 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * `onModeChange()`). */
   protected carryOnResult: ParcelCarryOnRespDto | null = null;
 
+  /** OBRS-341 (card AC follow-up) — the ON-SEAT branch mints a `pending`
+   * booking that still needs the existing walk-in cash payment call; these
+   * three drive the "เก็บเงินสด" button's three states (idle → paying →
+   * paid) plus its own error line. Never set for a free-aisle result (that
+   * branch shows no pay action at all — its 0.00 booking needs no payment). */
+  protected carryOnPaid = false;
+  protected isPayingCarryOn = false;
+  protected carryOnPayErrorKey: string | null = null;
+
   /** Scrutinize (OBRS-341) — bumped by every mode switch. `onModeChange()`
    * clearing the fields is NOT enough on its own: a quote or submit request
    * issued under the OLD mode is still in flight, and its `next` handler
@@ -127,6 +150,22 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * overlapping requests resolving out of order after a schedule/stop change
    * — is NOT closed by this and is left for a `switchMap` follow-up.) */
   private modeEpoch = 0;
+
+  /** OBRS-341 (card AC follow-up) — bumped by `clearSubmissionState()`
+   * (i.e. by BOTH `onModeChange()` and `onNextItem()`). Guards
+   * `payWalkIn()` the same way `modeEpoch` guards the quote/submit calls: a
+   * pay request issued for one item must not write its `paid`/error state
+   * onto whatever the page shows after the salesperson has already moved on
+   * (a mode switch, or "รับชิ้นต่อไป" on the SAME mode — the latter never
+   * bumps `modeEpoch`, which is why this is a separate counter, not a reuse
+   * of that one). See AGENT_MEMORY.md's OBRS-341 note on enumerating every
+   * writer of the state a reset clears. */
+  private resultEpoch = 0;
+  /** Minted ONCE per carry-on booking, on the FIRST pay attempt, and reused
+   * on every retry of that SAME booking — never regenerated per click, or a
+   * double-click / retry-after-error becomes a double charge. Cleared only
+   * by `clearSubmissionState()` (a new booking needs a new key). */
+  private carryOnIdempotencyKey: string | null = null;
 
   private routeGroups: WalkInRouteGroupDto[] = [];
   private scheduleRouteSlug = new Map<number, string>();
@@ -169,6 +208,20 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
     if (this.mode === mode) return;
     this.mode = mode;
     this.modeEpoch++;
+    this.clearSubmissionState();
+  }
+
+  /** OBRS-341 (card AC follow-up) — every field this page owns that belongs
+   * to ONE submission attempt: the live quote, the create-parcel result
+   * (either branch), and the carry-on payment sub-state. Factored out of
+   * `onModeChange()` so `onNextItem()` below shares the EXACT same clear
+   * rather than a hand-kept second list that can silently drift from it —
+   * the AGENT_MEMORY.md OBRS-341 note is precisely about a reset missing a
+   * field a sibling reset remembers. Always bumps `resultEpoch`; the caller
+   * additionally bumps `modeEpoch` and changes `this.mode` when the trigger
+   * is an actual mode switch (`onModeChange()` only). */
+  private clearSubmissionState(): void {
+    this.resultEpoch++;
 
     this.isSubmitting = false;
     this.quote = null;
@@ -177,11 +230,82 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
     this.serverErrorKey = null;
     this.result = null;
     this.carryOnResult = null;
+    this.carryOnPaid = false;
+    this.isPayingCarryOn = false;
+    this.carryOnPayErrorKey = null;
+    this.carryOnIdempotencyKey = null;
     this.pickupOptions = [];
     this.dropoffOptions = [];
     this.carryOnAvailableSeatNumbers = [];
     this.orderedStops = [];
     this.cargoStore.setScheduleId(null);
+  }
+
+  /** OBRS-341 (card AC follow-up) — "รับชิ้นต่อไป": resets the page to an
+   * empty form of the SAME mode (both branches) so the salesperson can take
+   * the next parcel without re-selecting the tab. Does NOT touch
+   * `this.mode`/`modeEpoch` — only `clearSubmissionState()`'s per-item
+   * fields, plus the form's own full reset for the current mode. */
+  protected onNextItem(): void {
+    this.clearSubmissionState();
+    this.formRef?.resetForNextItem();
+  }
+
+  /**
+   * OBRS-341 (card AC follow-up) — "เก็บเงินสด": settles the just-minted
+   * on-seat carry-on booking via the EXISTING walk-in cash payment call
+   * (`StaffApiService.payWalkIn`, the SAME endpoint the passenger walk-in
+   * sell flow already uses — see `sell-page.component.ts#submitWalkInBooking`
+   * for the precedent this mirrors), never a new payment endpoint. Free-
+   * aisle never reaches this method — the result panel does not render the
+   * button for that branch at all (its 0.00 booking needs no payment).
+   *
+   * The idempotency key is minted ONCE per booking, on the first attempt,
+   * and held across retries (`carryOnIdempotencyKey`) — regenerating it per
+   * click would let a double-click, or a resubmit after a network error,
+   * double-charge the same booking. `resultEpoch` guards the async response
+   * the same way `modeEpoch` guards quote/submit above: a response for THIS
+   * booking must not write `paid`/error state onto whatever the page shows
+   * after the salesperson has already moved on (mode switch or next item).
+   */
+  protected onPayCash(): void {
+    if (this.isPayingCarryOn || this.carryOnPaid) return;
+    // Defense-in-depth: the result panel's template never renders the pay
+    // button for a free-aisle result (design-system's "extend, don't fork"
+    // component), but this guard means a future template refactor can't
+    // silently make free-aisle payable by accident — that item genuinely
+    // has a 0.00 booking that needs no payment step at all.
+    if (this.carryOnResult?.freeAisle) return;
+    const bookingId = this.carryOnResult?.bookingId;
+    if (!bookingId) return;
+
+    if (!this.carryOnIdempotencyKey) {
+      this.carryOnIdempotencyKey = generateIdempotencyKey();
+    }
+    const key = this.carryOnIdempotencyKey;
+    const epoch = this.resultEpoch;
+
+    this.isPayingCarryOn = true;
+    this.carryOnPayErrorKey = null;
+    this.staffApiService
+      .payWalkIn(bookingId, key)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          if (epoch !== this.resultEpoch) return;
+          this.isPayingCarryOn = false;
+          this.carryOnPaid = true;
+        },
+        error: (err: unknown) => {
+          if (epoch !== this.resultEpoch) return;
+          this.isPayingCarryOn = false;
+          this.carryOnPayErrorKey = this.mapErrorCode(
+            err,
+            CARRY_ON_PAY_ERROR_KEYS,
+            'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAY_FAILED'
+          );
+        },
+      });
   }
 
   protected onDateChange(date: Date): void {

@@ -265,6 +265,16 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     this.quoteParamsChange.emit(null);
   }
 
+  /** OBRS-341 (card AC follow-up) — "รับชิ้นต่อไป": the parent page's
+   * `onNextItem()` calls this to blank the form for the NEXT item without a
+   * mode change (`resetForMode()` above only fires from `ngOnChanges` on an
+   * actual `mode` input change). Reuses the exact same reset — the current
+   * mode's validators are already correct, so re-applying them is a no-op,
+   * not a special case to maintain separately. */
+  resetForNextItem(): void {
+    this.resetForMode(this.mode);
+  }
+
   private applyModeValidators(): void {
     const recipientNameCtrl = this.form.get('recipientName');
     const recipientPhoneCtrl = this.form.get('recipientPhone');

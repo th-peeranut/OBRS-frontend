@@ -48,10 +48,43 @@
     </dl>
 
     <!-- A free-aisle item mints a 0.00 booking that stays `pending` and
-         needs no payment step at all — the unpaid note applies to the
-         on-seat (charged) outcome only. -->
-    <div class="parcel-intake-result-payment-note" *ngIf="!r.freeAisle">
-      {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.UNPAID_NOTE' | translate: { bookingNumber: r.bookingNumber } }}
-    </div>
+         needs no payment step at all — never offer the pay action there,
+         only the informational note is skipped too (nothing to collect). -->
+    <ng-container *ngIf="!r.freeAisle">
+      <div class="parcel-intake-result-payment-note" *ngIf="!carryOnPaid">
+        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.UNPAID_NOTE' | translate: { bookingNumber: r.bookingNumber } }}
+      </div>
+
+      <button
+        *ngIf="!carryOnPaid"
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isPayingCarryOn"
+        data-testid="parcel-carryon-pay-cash"
+        (click)="payCash.emit()"
+      >
+        {{ (isPayingCarryOn ? 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.PAYING' : 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.PAY_CASH_BUTTON') | translate }}
+      </button>
+
+      <div class="admin-error" *ngIf="carryOnPayErrorKey as err">{{ err | translate }}</div>
+
+      <div class="parcel-intake-result-paid-note" *ngIf="carryOnPaid" data-testid="parcel-carryon-paid-note">
+        {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.PAID' | translate: { amount: r.amount } }}
+      </div>
+    </ng-container>
   </ng-container>
+
+  <!-- OBRS-341 (card AC follow-up) — "รับชิ้นต่อไป", shared by every result
+       shape/state. Primary only when it's the sole action on screen (see
+       isNextItemPrimary's doc comment); otherwise a secondary/outline
+       button so it never competes with "View waybill" / "เก็บเงินสด". -->
+  <button
+    type="button"
+    class="admin-btn parcel-intake-result-next-item-btn"
+    [class.admin-btn-primary]="isNextItemPrimary"
+    data-testid="parcel-intake-next-item"
+    (click)="nextItem.emit()"
+  >
+    {{ 'STAFF.PARCEL_CONSIGN.RESULT.NEXT_ITEM' | translate }}
+  </button>
 </div>

@@ -2474,7 +2474,8 @@
         "TRACKING_NUMBER": "追踪单号",
         "COLLECTION_CODE": "取件码",
         "AMOUNT": "金额",
-        "VIEW_WAYBILL": "查看运单"
+        "VIEW_WAYBILL": "查看运单",
+        "NEXT_ITEM": "接收下一件"
       },
       "CARRY_ON": {
         "SUBMIT": "记录随身物品",
@@ -2504,14 +2505,21 @@
           "SEATS_UNAVAILABLE": "部分所选座位已不可用。",
           "SEATS_INSUFFICIENT": "此班次可用座位不足。",
           "FREE_AISLE_CAP_EXCEEDED": "此班次的免费随身物品名额已满。",
-          "GENERIC": "无法记录此随身物品，请重试。"
+          "GENERIC": "无法记录此随身物品，请重试。",
+          "PAY_FAILED": "无法记录此付款，请重试。",
+          "PAY_BOOKING_ALREADY_PAID": "此订单已付款。",
+          "PAY_IN_PROGRESS": "此订单的付款正在处理中，请重试。",
+          "PAY_BOOKING_EXPIRED": "此订单已过期，无法付款。"
         },
         "RESULT": {
           "TITLE": "随身物品登记成功",
           "BOOKING_NUMBER": "订单号",
           "SEATS": "座位",
           "FREE_AISLE": "免费 — 未占用座位",
-          "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）"
+          "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
+          "PAY_CASH_BUTTON": "收取现金",
+          "PAYING": "正在记录付款…",
+          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
         }
       }
     },

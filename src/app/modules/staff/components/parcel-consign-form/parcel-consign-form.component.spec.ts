@@ -264,6 +264,36 @@ describe('ParcelConsignFormComponent', () => {
     });
   });
 
+  // OBRS-341 (card AC follow-up) — "รับชิ้นต่อไป"
+  describe('resetForNextItem() — blanks the form WITHOUT a mode change', () => {
+    it('clears every field and keeps the CURRENT mode/validators (carry-on stays carry-on)', () => {
+      switchToCarryOn(component);
+      component['form'].patchValue({ senderName: 'Somchai', weightKg: 15 });
+      component['dimensionsGroup'].setValue({ lengthCm: 80, widthCm: 40, heightCm: 30 });
+      component['form'].get('seatCount')?.setValue(2);
+      component['selectedSeatNumbers'] = ['A1', 'A2'];
+
+      component.resetForNextItem();
+
+      expect(component['mode']).toBe('carry_on_seat'); // unchanged
+      expect(component['form'].get('senderName')?.value).toBe('');
+      expect(component['form'].get('weightKg')?.value).toBeNull();
+      expect(component['dimensionsGroup'].get('lengthCm')?.value).toBeNull();
+      expect(component['form'].get('seatCount')?.value).toBeNull();
+      expect(component['selectedSeatNumbers']).toEqual([]);
+      // Carry-on validators still apply (dimensions still required, not all-or-none):
+      expect(component['dimensionsGroup'].get('lengthCm')?.hasError('required')).toBeTrue();
+    });
+
+    it('emits quoteParamsChange(null) so a stale price cannot linger on the fresh form', () => {
+      const spy = spyOn(component.quoteParamsChange, 'emit');
+
+      component.resetForNextItem();
+
+      expect(spy).toHaveBeenCalledWith(null);
+    });
+  });
+
   describe('carry-on submit payload — seatCount/seatNumbers/recipient shape', () => {
     function fillCommonFields(c: ParcelConsignFormComponent): void {
       c['form'].patchValue({
