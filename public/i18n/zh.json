@@ -1575,7 +1575,9 @@
       "ROUND_RETURN": "返程日期",
       "SEARCH": "搜索",
       "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。",
-      "PASSENGER_MAX_HINT": "每次预订最多 {{max}} 名乘客。"
+      "PASSENGER_MAX_HINT": "每次预订最多 {{max}} 名乘客。",
+      "RECENT_ROUTES_TITLE": "最近路线",
+      "RECENT_ROUTE_ARIA_LABEL": "从{{from}}到{{to}}"
     },
     "STATION": {
       "HEADER": "服务点路线图",

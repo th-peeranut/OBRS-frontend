@@ -93,8 +93,49 @@ token it's copied from:
 | `.is-info` | `--admin-inreview-bg` / `--admin-inreview-text` | in-review | neutral **blue-grey**; light bg + dark text. **Has a dark-mode override** (OBRS-256, `admin-theme.scss:240-243`, inverts to bg `#29323d`/text `#c7d3de`, ≈8.6:1) — this row previously (incorrectly) said "no dark-mode override"; corrected during OBRS-424 review after the stale claim was cited as evidence in that card's UX spec. |
 | `.is-owner-accepted` | `--admin-owner-accepted-bg` / `--admin-owner-accepted-text` | `owner_accepted` usability-report status (OBRS-527) — the owner-screened stage that sits BETWEEN `in_review` and `accepted` (platform adoption) | **teal/mint** — a new hue (none of the seven existing statuses were free): reusing `.is-info` would blend into `in_review`, reusing `.is-accepted` would make the chip indistinguishable from the status whose whole point is now being separate. Light bg `#b8f2e6` / dark text `#003d33` ≈9.85:1; **has a dark-mode override** (`--admin-owner-accepted-bg: #1b3b35` / `--admin-owner-accepted-text: #9fedde`, ≈9.07:1) — a one-sided override is the exact OBRS-86 bug (text-only override on an unchanged bg gave ~1.3:1), so both sides change together in each theme. Also splits the WS badge count that used to be keyed on `acceptedReportCount`: the admin sidebar badge now counts `owner_accepted`, and `accepted` is in nobody's badge. |
 | `.is-neutral` | `--admin-neutral-bg` / `--admin-neutral-text` | inactive/unset state (e.g. boarding-list "Not boarded", OBRS-130) | plain **grey** (no blue cast) — distinct from `.is-info`'s blue-grey; light bg + dark text. **Has a dark-mode override** (OBRS-100, `admin-theme.scss:211-214`, inverts to bg `#333b42`/text `#cdd8df`) — same correction as `.is-info` above. |
-| `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). Light bg + dark text, no dark-mode override, same self-contained-chip reasoning as `.is-accepted`. |
+| `.is-delayed` | `--admin-delayed-bg` / `--admin-delayed-text` | schedule ETA-delayed indicator (boarding-list trip header, OBRS-272) | **violet** — a schedule-level DERIVED state (off `delayedDepartureDateTime`, never a status code; `status` stays `scheduled`), so it needs its own role rather than reusing `.is-info`(departed)/`.is-success`(arrived)/`.is-neutral`(scheduled)/`.is-warning`(reserved — also the resolved `theme-admin` accent, §11). **Has a dark-mode override** since OBRS-520 (`--admin-delayed-bg: #3b2f5c` / `--admin-delayed-text: #ddd6fe`, ≈8.7:1) — this row previously said "no dark-mode override, same self-contained-chip reasoning as `.is-accepted`", which was wrong: `#ede9fe` is a *near-white* lavender, not a saturated pastel, and it pixel-sampled as the lightest chip on the whole dark shell (rgb(237,233,254)). It takes the same recessed dark violet as `.is-duplicate`, whose light values it already shares by PO decision. |
 | `.is-duplicate` | `--admin-duplicate-bg` / `--admin-duplicate-text` | `duplicate` usability-report status (OBRS-376) | **violet** — same light-mode values as `.is-delayed` but a distinct token (PO decision, 2026-07-16): `duplicate` originally reused `.is-neutral`, colliding with OBRS-378's `dismissed` (both rendered as identical grey chips), and `.is-delayed` was ruled out as a reuse target because it's semantically the unrelated "trip delayed" pill. **Unlike `.is-delayed`, this ONE HAS a dark-mode override** (`--admin-duplicate-bg: #3b2f5c` / `--admin-duplicate-text: #ddd6fe`, ≈8.7:1) — `.is-delayed` skipping it renders as a near-white lavender blob on the dark shell, the exact OBRS-100 bug; don't copy that gap for new violet tokens. |
+
+#### 2.4.0 Chip tokens vs surface tokens — and why "no new hex" is not "dark-safe" (OBRS-520)
+
+The `*-bg`/`*-text` pairs above are **chip** tokens: a light fill with dark text
+on it, read as a unit. They are legible on the dark shell without an override —
+pixel-sampled on the real dark admin page: success 6.75:1, warning 7.44:1,
+danger 7.24:1, accepted 9.77:1.
+
+A **surface** token is different: a colour used as standalone text, an icon, or
+a border directly on `--admin-surface-card`. A chip's `*-text` value is chosen to
+sit on its own light `*-bg`, so reusing it as a surface colour puts dark ink on a
+dark card. That is a separate role and it gets its own token:
+
+| Surface role | Token | Light | Dark |
+|---|---|---|---|
+| danger foreground (`.admin-btn-danger`, `.admin-required`, inline errors) | `--admin-danger-fg` | `#93000a` | `#ffb4ab` |
+| danger recessed fill (danger hover states) | `--admin-danger-surface` | `#ffdad6` | `#4a1512` |
+| success foreground (the usability-reports "notified" pill) | `--admin-success-fg` | `#154c85` | `#a8c8ff` |
+
+**The trap this section exists to close.** The `.admin-btn-danger` row above used
+to say it "composes the existing tokens (**no new hex**)", and that was read as
+"therefore it is safe in dark mode". Those are different properties. A `var()`
+that resolves to exactly one light-toned value in both themes introduces no new
+hex *and* is broken in dark mode. Measured before OBRS-520, `.admin-btn-danger`
+rendered `#93000a` on `#1d2226` at **1.71:1** — the "Un-board" and "Reject"
+labels were effectively invisible — and every `.admin-required` asterisk across
+19 admin forms with them.
+
+**Rules**
+
+- Using a colour as standalone text/icon/border on the shell? Reach for a
+  `*-fg` token, never a chip's `*-text`.
+- Adding an `--admin-*` token? It needs an `.admin-shell.is-dark` value, or an
+  entry in `DARK_EXEMPT` in `scripts/check-admin-theme-tokens.mjs` stating why
+  it does not. `npm run test:theme-tokens` fails otherwise, in CI before
+  `npm ci`. It also fails on a `var(--admin-*)` pointing at a token nobody ever
+  declared — CSS treats that as a silent fallback, which is how a sticky table
+  header stayed a bright band on the dark archive table.
+- **Never verify dark mode by eye.** Sample the rendered pixel and compute the
+  contrast ratio. Both bugs above survived multiple reviews by people looking
+  right at them.
 
 #### 2.4.1 `parcel_delivery_status` → token mapping (OBRS-305)
 
@@ -190,7 +231,7 @@ One color = one meaning. Never pick a button color for looks.
 |---|---|---|
 | **Primary** | the one main action of a screen/modal (Confirm, Save, Sell) | the **brand** filled button (`admin-btn admin-btn-primary` on admin; the brand-green primary on staff) |
 | **Secondary** | cancel / back / dismiss | outlined or neutral (`admin-btn`, or `btn-outline-*`) |
-| **Destructive** | delete / irreversible | `danger` role (red `$text-red`); on an admin/staff themed surface use **`.admin-btn.admin-btn-danger`** (OBRS-130) — composes the existing `--admin-danger-text`/`--admin-danger-border` tokens (no new hex), same shape as `.admin-btn`, just themed to read as destructive. Used for a row-level reversal action (e.g. boarding-list "Un-board") that isn't a full delete-confirm. |
+| **Destructive** | delete / irreversible | `danger` role (red `$text-red`); on an admin/staff themed surface use **`.admin-btn.admin-btn-danger`** (OBRS-130) — composes `--admin-danger-fg`/`--admin-danger-border`, same shape as `.admin-btn`, just themed to read as destructive. Used for a row-level reversal action (e.g. boarding-list "Un-board") that isn't a full delete-confirm. |
 | **Link** | inline navigation, low emphasis | `btn btn-link p-0` |
 
 **Rules**
@@ -769,6 +810,37 @@ enforced rule with a test behind it.
   `@Input()` + precomputed-searchKey-Map shape for the next opt-in filter row
   on a shared CVA-style dropdown, instead of reaching for `p-dropdown
   [filter]` or forking a second component.
+
+- **Transparent-background outline pill for a customer-shell repeatable
+  quick-pick action** (OBRS-575, `RecentRoutesQuickPickComponent`'s
+  `.recent-route-btn` on the Home search form): no existing component is "a
+  repeatable, tap-to-prefill-two-fields button that isn't a dropdown option, a
+  KPI hint, or an icon-only row action." `MyReportsComponent`'s `.btn-secondary`
+  (OBRS-433) has the right **color recipe** (border + text
+  `$brand-customer-strong`) but the wrong **background** — solid
+  `$primary-white`, with no dark-mode override anywhere, which would repeat the
+  "white box on a dark card" failure the design system already flags for
+  `p-selectButton` (§12, OBRS-312) on this page's `.booking-card` (which DOES
+  have a dark override, `$dk-bg-soft`, OBRS-217). Fix: background
+  **`transparent`**, so it always inherits whatever the ancestor card
+  background is in either theme. ⚠️ **Transparent background is necessary but
+  NOT sufficient — this pattern still needs its own dark-mode block.** The
+  card's first draft claimed *"zero new dark-mode CSS required, because there is
+  nothing to override"*; that reasoned only about the **background** and left
+  border + label at `$brand-customer-strong` (#4069b8), which measures
+  **2.79:1** on `$dk-bg-soft` — below AA for text (4.5:1) **and** for a border
+  (3:1). Exactly the OBRS-520 lesson: composing existing tokens with no new hex
+  is not the same as dark-safe. `dark-theme.scss` §6 therefore repoints both to
+  `$dk-accent` (7.4:1) and inverts hover onto `$dk-bg` instead of `$text-white`
+  (white on `$dk-accent` is only 2.0:1).
+  `border-radius: $radius-xl` matches this same
+  page's `.btn-search` pill rather than `MyReportsComponent`'s `$radius-sm`.
+  `min-height: 40px` (below `.btn-search`'s 52px — a secondary/optional action,
+  not the page's primary). Light-mode hover/focus fills with
+  `$brand-customer-strong` + white text — the standard outline-button inversion,
+  no new token. Reuse this transparent-bg recipe **together with its dark block**
+  (not `MyReportsComponent`'s white-bg recipe) for the next customer-shell
+  repeatable chip/tag control.
 
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 

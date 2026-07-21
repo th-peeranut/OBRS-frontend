@@ -1575,7 +1575,9 @@
       "ROUND_RETURN": "รอบวันกลับ",
       "SEARCH": "ค้นหา",
       "SEARCH_VALIDATION": "กรุณาเลือกต้นทาง ปลายทาง และผู้โดยสารอย่างน้อย 1 คน ก่อนค้นหา",
-      "PASSENGER_MAX_HINT": "สูงสุด {{max}} คนต่อการจอง"
+      "PASSENGER_MAX_HINT": "สูงสุด {{max}} คนต่อการจอง",
+      "RECENT_ROUTES_TITLE": "เส้นทางล่าสุด",
+      "RECENT_ROUTE_ARIA_LABEL": "จาก {{from}} ไป {{to}}"
     },
     "STATION": {
       "HEADER": "แผนที่เส้นทางจุดรับบริการ",

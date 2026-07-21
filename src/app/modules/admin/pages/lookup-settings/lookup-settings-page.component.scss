@@ -7,7 +7,13 @@
 .admin-group-row td {
   position: sticky;
   top: 0;
-  background: var(--admin-surface-muted, #f1f5f9);
+  // OBRS-520: was `var(--admin-surface-muted, #f1f5f9)` — no such token has ever
+  // been declared, so this always resolved to the literal light grey and the
+  // sticky category header stayed a bright band across the dark archive table.
+  // --admin-surface-soft is the real token for a recessed surface and is themed
+  // in both modes (light #f2f4f6, a shade off the old literal; dark #23292e).
+  // Found by the check-admin-theme-tokens gate, not by eye.
+  background: var(--admin-surface-soft);
   font-weight: 600;
   text-transform: capitalize;
   letter-spacing: 0.01em;

@@ -16,6 +16,7 @@
     "test:i18n": "node scripts/check-i18n-parity.mjs",
     "test:auth-layout": "node scripts/check-auth-layout-styles.mjs",
     "test:alert-i18n": "node scripts/check-alert-i18n.mjs",
+    "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",
     "e2e": "playwright test",
     "e2e:local": "playwright test --config=playwright.local.config.ts",
     "e2e:ui": "playwright test --ui",

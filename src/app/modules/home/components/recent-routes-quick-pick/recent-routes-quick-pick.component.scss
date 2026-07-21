@@ -1,0 +1,63 @@
+@import "../../../../../styles/variables.scss";
+
+// AC#5: :host carries NO box styling (no margin/padding/min-height/display) of
+// its own — an empty `<app-recent-routes-quick-pick>` (zero routes) must
+// contribute zero layout even before Angular projects content into it.
+// Deliberately NOT `d-flex` as a direct child of `.booking-card` either — that
+// would be captured by `.booking-card > .d-flex { gap: $space-sm 24px }`
+// (home-booking.component.scss:31-34) and silently override this strip's own
+// $space-xs gap.
+
+.recent-routes-quick-pick {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  // Only applied when this block actually renders (guarded by the same *ngIf
+  // as the whole template root) — never contributes margin when empty.
+  margin-bottom: $space-sm;
+}
+
+.recent-routes-title {
+  font-size: $font-size-sm;
+  color: $text-lightgrey;
+}
+
+.recent-routes-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-xs;
+}
+
+// New pattern (design-system.md §12): "transparent-background outline pill for
+// a customer-shell repeatable quick-pick action". Border + text use the
+// customer brand token; background is deliberately transparent (not
+// $primary-white, unlike MyReportsComponent's .btn-secondary) so it always
+// inherits the ancestor `.booking-card` background in both light and dark mode.
+// The border/label color below is LIGHT-MODE ONLY: $brand-customer-strong is
+// 2.79:1 on the dark card, so `dark-theme.scss` §6 repoints color/border-color
+// (and the hover inversion) to $dk-accent. Keep those two blocks in sync.
+.recent-route-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 $space-sm;
+
+  background-color: transparent;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+  border-radius: $radius-xl;
+
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  cursor: pointer;
+
+  transition: background-color $duration-fast $easing-standard,
+    color $duration-fast $easing-standard;
+
+  &:hover,
+  &:focus-visible {
+    background-color: $brand-customer-strong;
+    color: $text-white;
+  }
+}

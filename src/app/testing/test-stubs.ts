@@ -1,4 +1,4 @@
-import { of, Subject } from 'rxjs';
+import { BehaviorSubject, of, Subject } from 'rxjs';
 
 // Lightweight dependency stubs for component "should create" smoke tests.
 // Components here are instantiated directly (no TestBed/template render), so the
@@ -75,5 +75,22 @@ export function createScheduleServiceStub(): any {
   return {
     getByFilter: () => of({ data: null }),
     getSeatMap: () => of({ data: [] }),
+  };
+}
+
+/** AuthService: `authStatus$` is a real BehaviorSubject so a test can `.next()`
+ *  auth-state transitions; defaults anonymous (false). */
+export function createAuthServiceStub(isAuthenticated = false): any {
+  return {
+    authStatus$: new BehaviorSubject<boolean>(isAuthenticated),
+    isAuthenticated: () => isAuthenticated,
+  };
+}
+
+/** BookingService: `getMyBookings` resolves to an empty page (no bookings) —
+ *  no fetch side-effects for a bare-instantiation "should create" smoke test. */
+export function createBookingServiceStub(): any {
+  return {
+    getMyBookings: () => of({ data: { content: [] } }),
   };
 }
