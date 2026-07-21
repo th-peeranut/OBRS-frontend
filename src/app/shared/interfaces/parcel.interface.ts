@@ -64,11 +64,72 @@ export interface ParcelConsignedRespDto {
 }
 
 export interface ParcelQuoteReqParams {
-  parcelType: 'consigned';
+  // OBRS-341: widened from the consigned-only literal — the SAME `GET
+  // /parcels/quote` endpoint is reused for the carry-on-on-seat live price
+  // preview (`farePerUnit` is identical regardless of parcelType; see
+  // `ParcelCarryOnReqDto` below and the OBRS-341 brief). The endpoint itself
+  // ignores `parcelType` server-side, but the caller still names one.
+  parcelType: 'consigned' | 'carry_on_seat';
   scheduleId: number;
   pickupStopId: number;
   dropoffStopId: number;
   weightKg: number;
+}
+
+/**
+ * `POST /api/private/parcels/walk-in` body, carry-on-on-seat branch
+ * (`parcelType: 'carry_on_seat'`) — OBRS-341. Same endpoint as
+ * `ParcelConsignedReqDto` above (`parcelType` discriminates server-side); see
+ * `../OBRS-backend/docs/api/parcels.md` §POST /parcels/walk-in.
+ *
+ * Three differences from the consigned branch:
+ * 1. `dimensions` is REQUIRED here (the service null-checks it to classify
+ *    free-aisle vs on-seat) — optional for consigned.
+ * 2. There is NO `recipient` field at all — it must be ABSENT on the wire,
+ *    not merely empty (a carry-on item has no delivery leg).
+ * 3. `seatCount`/`seatNumbers` only mean anything for the on-seat outcome.
+ *    `seatCount` MUST BE ABSENT once the item classifies free-aisle
+ *    (`PARCEL_SEAT_COUNT_NOT_ALLOWED` otherwise) and REQUIRED (>=1) once it
+ *    classifies on-seat (`PARCEL_SEAT_COUNT_REQUIRED` otherwise) — modeled
+ *    optional so a caller omits the key entirely rather than sending `null`.
+ *    `seatNumbers` is always optional; omitted, the server auto-assigns.
+ */
+export interface ParcelCarryOnReqDto {
+  parcelType: 'carry_on_seat';
+  scheduleId: number;
+  pickupStopId: number;
+  dropoffStopId: number;
+  weightKg: number;
+  dimensions: ParcelDimensionsReqDto;
+  seatCount?: number;
+  seatNumbers?: string[];
+  description: string;
+  prohibitedAcknowledged: boolean;
+  sender: ParcelPersonReqDto;
+  paymentMethod: 'cash';
+}
+
+/**
+ * `POST /api/private/parcels/walk-in` response, carry-on-on-seat branch —
+ * a DIFFERENT shape from `ParcelConsignedRespDto`: no `collectionCode`, no
+ * `waybillUrl`, no `deliveryStatus`, no `recipientName` (none of those exist
+ * for this branch — there is no delivery lifecycle). `freeAisle` is the
+ * discriminant the UI branches display on; `seatCount`/`seatNumbers` are
+ * `null` when `freeAisle` is `true`. `parcelType` here (unlike the consigned
+ * response, which omits the field) doubles as the result-panel's type guard
+ * discriminant (`isCarryOnResult()`, `parcel-intake-result-panel.component.ts`).
+ */
+export interface ParcelCarryOnRespDto {
+  parcelId: number;
+  trackingNumber: string;
+  bookingId: number;
+  bookingNumber: string;
+  parcelType: 'carry_on_seat';
+  freeAisle: boolean;
+  seatCount: number | null;
+  seatNumbers: string[] | null;
+  amount: number;
+  bookingNetAmount: number;
 }
 
 export interface ParcelQuoteRespDto {

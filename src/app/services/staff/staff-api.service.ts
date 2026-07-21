@@ -14,6 +14,8 @@ import {
 } from '../../shared/interfaces/ticket-boarding.interface';
 import {
   CargoAvailabilityRespDto,
+  ParcelCarryOnReqDto,
+  ParcelCarryOnRespDto,
   ParcelCollectReqDto,
   ParcelCollectRespDto,
   ParcelConsignedReqDto,
@@ -632,17 +634,36 @@ export class StaffApiService {
   // See ../OBRS-backend/docs/api/parcels-consigned-delivery.md.
   // ---------------------------------------------------------------------------
 
+  /** The one `POST /api/private/parcels/walk-in` call, shared by both
+   * branches below — `parcelType` on the payload discriminates server-side.
+   * Kept private so each branch keeps its own narrow request/response typing
+   * at the public call site (OBRS-341: extend, don't fork — this is the
+   * shared part factored out, not a second copy of the HTTP call). */
+  private postWalkInParcel<TReq, TResp>(payload: TReq): Observable<ResponseAPI<TResp>> {
+    return this.http.post<ResponseAPI<TResp>>(
+      `${environment.apiUrl}/api/private/parcels/walk-in`,
+      payload,
+      { context: this.skipContext }
+    );
+  }
+
   /** POST /api/private/parcels/walk-in, consigned branch. Reuses the Card-1
    * walk-in endpoint (SALESPERSON-authorized) — `parcelType: 'consigned'`
    * routes to the new consigned branch server-side. */
   createConsignedParcel(
     payload: ParcelConsignedReqDto
   ): Observable<ResponseAPI<ParcelConsignedRespDto>> {
-    return this.http.post<ResponseAPI<ParcelConsignedRespDto>>(
-      `${environment.apiUrl}/api/private/parcels/walk-in`,
-      payload,
-      { context: this.skipContext }
-    );
+    return this.postWalkInParcel<ParcelConsignedReqDto, ParcelConsignedRespDto>(payload);
+  }
+
+  /** POST /api/private/parcels/walk-in, carry-on-on-seat branch (OBRS-341) —
+   * same endpoint as `createConsignedParcel` above; `parcelType:
+   * 'carry_on_seat'` routes to the original Card-1 branch server-side (see
+   * `../OBRS-backend/docs/api/parcels.md`). */
+  createCarryOnParcel(
+    payload: ParcelCarryOnReqDto
+  ): Observable<ResponseAPI<ParcelCarryOnRespDto>> {
+    return this.postWalkInParcel<ParcelCarryOnReqDto, ParcelCarryOnRespDto>(payload);
   }
 
   /** GET /api/private/parcels/quote — live consigned quote, refetched

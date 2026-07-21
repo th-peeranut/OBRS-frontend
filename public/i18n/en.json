@@ -2414,11 +2414,17 @@
     },
     "PARCEL_CONSIGN": {
       "SUBTITLE": "Record a new consigned parcel for delivery.",
+      "MODE": {
+        "LABEL": "Parcel type",
+        "CONSIGNED": "Consigned",
+        "CARRY_ON": "Carry-on (on seat)"
+      },
       "SECTION": {
         "SENDER": "Sender",
         "RECIPIENT": "Recipient",
         "TRIP": "Trip",
-        "DIMENSIONS": "Dimensions (optional)"
+        "DIMENSIONS": "Dimensions (optional)",
+        "DIMENSIONS_REQUIRED": "Dimensions"
       },
       "FIELD": {
         "SENDER_NAME": "Sender name",
@@ -2451,7 +2457,8 @@
       "VALIDATION": {
         "WEIGHT_POSITIVE": "Weight must be greater than 0.",
         "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
-        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank."
+        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
+        "DIMENSION_POSITIVE": "Dimension must be greater than 0."
       },
       "ERROR": {
         "PROHIBITED_CATEGORY": "This parcel matches a prohibited category and cannot be accepted.",
@@ -2468,6 +2475,43 @@
         "COLLECTION_CODE": "Collection code",
         "AMOUNT": "Amount",
         "VIEW_WAYBILL": "View waybill"
+      },
+      "CARRY_ON": {
+        "FIELD": {
+          "SEAT_COUNT": "Seat count",
+          "SPECIFY_SEATS": "Choose seats myself",
+          "SEAT_NUMBERS": "Seat numbers"
+        },
+        "CLASSIFICATION": {
+          "FREE_AISLE": "Free — no charge, no seat used",
+          "FREE_AISLE_NOTE": "Free carry-on items are capped at 10 per trip.",
+          "ON_SEAT": "This item needs its own seat and will be charged."
+        },
+        "VALIDATION": {
+          "SEAT_COUNT_REQUIRED": "Enter how many seats this item needs."
+        },
+        "ERROR": {
+          "TYPE_NOT_SUPPORTED": "This parcel type is not supported here.",
+          "PROHIBITED_NOT_ACKNOWLEDGED": "Please confirm this item does not contain any prohibited item.",
+          "PAYMENT_METHOD_NOT_SUPPORTED": "This payment method is not supported for walk-in sales.",
+          "WEIGHT_EXCEEDS_MAX": "Weight exceeds the maximum allowed.",
+          "SEAT_COUNT_REQUIRED": "This item needs its own seat — enter how many seats it needs.",
+          "SEAT_COUNT_NOT_ALLOWED": "This item does not need a seat — remove the seat count.",
+          "SEAT_NUMBERS_MISMATCH": "The number of selected seats does not match the seat count.",
+          "SEATS_DUPLICATE": "The selected seats include a duplicate.",
+          "SEATS_NOT_FOUND": "One or more selected seats do not exist on this vehicle.",
+          "SEATS_UNAVAILABLE": "One or more selected seats are no longer available.",
+          "SEATS_INSUFFICIENT": "Not enough seats are available on this trip.",
+          "FREE_AISLE_CAP_EXCEEDED": "The free carry-on limit for this trip has been reached.",
+          "GENERIC": "Unable to record this carry-on item. Please try again."
+        },
+        "RESULT": {
+          "TITLE": "Carry-on item recorded",
+          "BOOKING_NUMBER": "Booking number",
+          "SEATS": "Seats",
+          "FREE_AISLE": "Free — no seat used",
+          "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})"
+        }
       }
     },
     "PARCEL_WAYBILL": {

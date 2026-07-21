@@ -113,11 +113,21 @@ describe('ParcelConsignFormComponent', () => {
       description: 'Documents',
       dimensions: { lengthCm: null, widthCm: null, heightCm: null },
       prohibitedAcknowledged: true,
+      // OBRS-341: always-present carry-on-only controls (inert in consigned
+      // mode) — FormGroup#setValue requires every control, unlike patchValue.
+      seatCount: null,
+      specifySeats: false,
     });
 
     component['onSubmit']();
 
+    // OBRS-341: the emitted business value now carries a `mode` discriminant
+    // ('consigned' here) so the page can tell the two shapes apart without
+    // relying on its own separately-tracked mode field — the wire DTO the
+    // page builds from this is unaffected (ParcelConsignedReqDto has no
+    // `mode` field; see parcel-consign-page.component.ts#submitConsigned).
     expect(spy).toHaveBeenCalledWith({
+      mode: 'consigned',
       sender: { name: 'Somchai', phone: '0812345678' },
       recipient: { name: 'Somsri', phone: '0898765432' },
       scheduleId: 42,
@@ -148,4 +158,180 @@ describe('ParcelConsignFormComponent', () => {
 
     expect(spy).toHaveBeenCalledWith(null);
   }));
+
+  // ---------------------------------------------------------------------------
+  // OBRS-341 — carry-on-on-seat mode
+  // ---------------------------------------------------------------------------
+
+  function switchToCarryOn(c: ParcelConsignFormComponent): void {
+    c.ngOnChanges({
+      mode: {
+        previousValue: 'consigned',
+        currentValue: 'carry_on_seat',
+        firstChange: false,
+        isFirstChange: () => false,
+      },
+    });
+  }
+
+  describe('carryOnClassification — live client-side classification hint', () => {
+    beforeEach(() => switchToCarryOn(component));
+
+    it('is null while dimensions are incomplete', () => {
+      expect(component['carryOnClassification']).toBeNull();
+    });
+
+    it('classifies exactly 71.12cm as free_aisle (server boundary)', () => {
+      component['dimensionsGroup'].setValue({ lengthCm: 71.12, widthCm: 10, heightCm: 10 });
+      expect(component['carryOnClassification']).toBe('free_aisle');
+      expect(component['isOnSeat']).toBeFalse();
+    });
+
+    it('classifies 71.13cm as on_seat (one hair past the boundary)', () => {
+      component['dimensionsGroup'].setValue({ lengthCm: 71.13, widthCm: 10, heightCm: 10 });
+      expect(component['carryOnClassification']).toBe('on_seat');
+      expect(component['isOnSeat']).toBeTrue();
+    });
+  });
+
+  describe('carryOnDisplayAmount — farePerUnit x seatCount, NOT quote.amount', () => {
+    beforeEach(() => {
+      switchToCarryOn(component);
+      component['dimensionsGroup'].setValue({ lengthCm: 100, widthCm: 40, heightCm: 30 }); // on-seat
+    });
+
+    it('is null with no quote yet', () => {
+      expect(component['carryOnDisplayAmount']).toBeNull();
+    });
+
+    it('is farePerUnit * seatCount, ignoring quote.amount entirely', () => {
+      // quote.amount deliberately != farePerUnit * seatCount here, so a test
+      // that accidentally read quote.amount instead would fail this exact case.
+      component.quote = { amount: 999, farePerUnit: 120, unitCount: 1, weightTierMultiplier: 1.5 };
+      component['form'].get('seatCount')?.setValue(3);
+
+      expect(component['carryOnDisplayAmount']).toBe(360); // 120 * 3, not 999
+    });
+
+    it('is null while seatCount is unset', () => {
+      component.quote = { amount: 100, farePerUnit: 100, unitCount: 1, weightTierMultiplier: 1 };
+      expect(component['carryOnDisplayAmount']).toBeNull();
+    });
+  });
+
+  describe('mode switching resets the form (no state leaks between branches)', () => {
+    it('clears recipient/dimensions/seatCount/specifySeats/selectedSeatNumbers on switch', () => {
+      component['form'].get('recipientName')?.setValue('Somsri');
+      component['form'].get('recipientPhone')?.setValue('0898765432');
+      component['selectedSeatNumbers'] = ['A1', 'A2'];
+
+      switchToCarryOn(component);
+
+      expect(component['form'].get('recipientName')?.value).toBe('');
+      expect(component['form'].get('recipientPhone')?.value).toBe('');
+      expect(component['selectedSeatNumbers']).toEqual([]);
+      expect(component['form'].get('seatCount')?.value).toBeNull();
+      expect(component['form'].get('specifySeats')?.value).toBeFalse();
+    });
+
+    it('recipient is NOT required in carry-on mode (contract: field does not exist on the wire)', () => {
+      switchToCarryOn(component);
+      expect(component['form'].get('recipientName')?.errors).toBeNull();
+      expect(component['form'].get('recipientPhone')?.errors).toBeNull();
+    });
+
+    it('dimensions become REQUIRED (all three) in carry-on mode, unlike consigned\'s optional all-or-none', () => {
+      switchToCarryOn(component);
+      expect(component['dimensionsGroup'].get('lengthCm')?.hasError('required')).toBeTrue();
+      expect(component['dimensionsGroup'].get('widthCm')?.hasError('required')).toBeTrue();
+      expect(component['dimensionsGroup'].get('heightCm')?.hasError('required')).toBeTrue();
+    });
+
+    it('switching a second time BACK to consigned restores the all-or-none dimensions validator', () => {
+      switchToCarryOn(component);
+      component.ngOnChanges({
+        mode: {
+          previousValue: 'carry_on_seat',
+          currentValue: 'consigned',
+          firstChange: false,
+          isFirstChange: () => false,
+        },
+      });
+
+      expect(component['dimensionsGroup'].get('lengthCm')?.hasError('required')).toBeFalse();
+      expect(component['dimensionsGroup'].valid).toBeTrue(); // none filled -> all-or-none passes
+      expect(component['form'].get('recipientName')?.hasError('required')).toBeTrue(); // required again
+    });
+  });
+
+  describe('carry-on submit payload — seatCount/seatNumbers/recipient shape', () => {
+    function fillCommonFields(c: ParcelConsignFormComponent): void {
+      c['form'].patchValue({
+        senderName: 'Somchai',
+        senderPhone: '0812345678',
+        scheduleId: '42',
+        pickupStopId: '1',
+        dropoffStopId: '2',
+        weightKg: 15,
+        description: 'Oversized backpack',
+        prohibitedAcknowledged: true,
+      });
+    }
+
+    it('emits mode carry_on_seat with seatCount set and NO recipient key at all when on-seat', () => {
+      switchToCarryOn(component);
+      fillCommonFields(component);
+      component['dimensionsGroup'].setValue({ lengthCm: 80, widthCm: 40, heightCm: 30 }); // on-seat
+      component['form'].get('seatCount')?.setValue(1);
+
+      const spy = spyOn(component.submitForm, 'emit');
+      component['onSubmit']();
+
+      expect(spy).toHaveBeenCalledWith(
+        jasmine.objectContaining({ mode: 'carry_on_seat', seatCount: 1 })
+      );
+      const emitted = spy.calls.mostRecent().args[0] as unknown as Record<string, unknown>;
+      expect('recipient' in emitted).toBeFalse();
+    });
+
+    it('omits seatCount entirely (contract: MUST BE ABSENT) when the item classifies free-aisle', () => {
+      switchToCarryOn(component);
+      fillCommonFields(component);
+      component['dimensionsGroup'].setValue({ lengthCm: 30, widthCm: 20, heightCm: 10 }); // free-aisle
+
+      const spy = spyOn(component.submitForm, 'emit');
+      component['onSubmit']();
+
+      expect(spy).toHaveBeenCalled();
+      const emitted = spy.calls.mostRecent().args[0] as unknown as Record<string, unknown>;
+      expect('seatCount' in emitted).toBeFalse();
+      expect('seatNumbers' in emitted).toBeFalse();
+    });
+
+    it('does not allow submit when specifySeats is checked but the chosen count mismatches seatCount', () => {
+      switchToCarryOn(component);
+      fillCommonFields(component);
+      component['dimensionsGroup'].setValue({ lengthCm: 80, widthCm: 40, heightCm: 30 }); // on-seat
+      component['form'].get('seatCount')?.setValue(2);
+      component['form'].get('specifySeats')?.setValue(true);
+      component['selectedSeatNumbers'] = ['A1']; // only 1, but seatCount is 2
+
+      expect(component['seatNumbersMismatch']).toBeTrue();
+      expect(component['canSubmit']).toBeFalse();
+    });
+
+    it('includes explicit seatNumbers only when specifySeats is checked and the count matches', () => {
+      switchToCarryOn(component);
+      fillCommonFields(component);
+      component['dimensionsGroup'].setValue({ lengthCm: 80, widthCm: 40, heightCm: 30 }); // on-seat
+      component['form'].get('seatCount')?.setValue(1);
+      component['form'].get('specifySeats')?.setValue(true);
+      component['selectedSeatNumbers'] = ['A1'];
+
+      const spy = spyOn(component.submitForm, 'emit');
+      component['onSubmit']();
+
+      expect(spy).toHaveBeenCalledWith(jasmine.objectContaining({ seatNumbers: ['A1'] }));
+    });
+  });
 });

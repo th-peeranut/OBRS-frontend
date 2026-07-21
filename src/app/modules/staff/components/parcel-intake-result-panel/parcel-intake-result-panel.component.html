@@ -1,19 +1,57 @@
 <div class="parcel-intake-result" *ngIf="result as r">
   <span class="material-symbols-outlined parcel-intake-result-icon">check_circle</span>
-  <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.RESULT.TITLE' | translate }}</h5>
 
-  <dl class="parcel-intake-result-list">
-    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.TRACKING_NUMBER' | translate }}</dt>
-    <dd>{{ r.trackingNumber }}</dd>
+  <!-- Consigned (unchanged markup/behavior). -->
+  <ng-container *ngIf="!isCarryOnResult(r)">
+    <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.RESULT.TITLE' | translate }}</h5>
 
-    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.COLLECTION_CODE' | translate }}</dt>
-    <dd>{{ r.collectionCode }}</dd>
+    <dl class="parcel-intake-result-list">
+      <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.TRACKING_NUMBER' | translate }}</dt>
+      <dd>{{ r.trackingNumber }}</dd>
 
-    <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.AMOUNT' | translate }}</dt>
-    <dd>{{ r.amount }}</dd>
-  </dl>
+      <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.COLLECTION_CODE' | translate }}</dt>
+      <dd>{{ r.collectionCode }}</dd>
 
-  <a class="admin-btn admin-btn-primary" [routerLink]="['/staff/parcels', r.parcelId, 'waybill']">
-    {{ 'STAFF.PARCEL_CONSIGN.RESULT.VIEW_WAYBILL' | translate }}
-  </a>
+      <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.AMOUNT' | translate }}</dt>
+      <dd>{{ r.amount }}</dd>
+    </dl>
+
+    <a class="admin-btn admin-btn-primary" [routerLink]="['/staff/parcels', r.parcelId, 'waybill']">
+      {{ 'STAFF.PARCEL_CONSIGN.RESULT.VIEW_WAYBILL' | translate }}
+    </a>
+  </ng-container>
+
+  <!-- OBRS-341: carry-on-on-seat — no waybill/collection-code UI (those
+       fields do not exist on this response shape). -->
+  <ng-container *ngIf="isCarryOnResult(r)">
+    <h5 class="fw-bold">{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.TITLE' | translate }}</h5>
+
+    <dl class="parcel-intake-result-list">
+      <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.TRACKING_NUMBER' | translate }}</dt>
+      <dd>{{ r.trackingNumber }}</dd>
+
+      <dt>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.BOOKING_NUMBER' | translate }}</dt>
+      <dd>{{ r.bookingNumber }}</dd>
+
+      <ng-container *ngIf="r.freeAisle">
+        <dt>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.SEATS' | translate }}</dt>
+        <dd>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.FREE_AISLE' | translate }}</dd>
+      </ng-container>
+
+      <ng-container *ngIf="!r.freeAisle">
+        <dt>{{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.SEATS' | translate }}</dt>
+        <dd>{{ (r.seatNumbers ?? []).join(', ') }}</dd>
+
+        <dt>{{ 'STAFF.PARCEL_CONSIGN.RESULT.AMOUNT' | translate }}</dt>
+        <dd>{{ r.amount }}</dd>
+      </ng-container>
+    </dl>
+
+    <!-- A free-aisle item mints a 0.00 booking that stays `pending` and
+         needs no payment step at all — the unpaid note applies to the
+         on-seat (charged) outcome only. -->
+    <div class="parcel-intake-result-payment-note" *ngIf="!r.freeAisle">
+      {{ 'STAFF.PARCEL_CONSIGN.CARRY_ON.RESULT.UNPAID_NOTE' | translate: { bookingNumber: r.bookingNumber } }}
+    </div>
+  </ng-container>
 </div>

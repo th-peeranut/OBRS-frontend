@@ -27,3 +27,17 @@
     color: var(--admin-text);
   }
 }
+
+// OBRS-341 — carry-on-on-seat "not yet paid" note. Deliberately --admin-text
+// (plain, bold), not a status color: this is informational ("collect cash
+// at the counter"), not an error, and design-system §2.4.0 forbids reusing a
+// CHIP token (--admin-warning-text/--admin-danger-text) as standalone text —
+// only a *-fg surface-role token is safe there, and no warning-fg token
+// exists yet (adding one is a global admin-theme.scss change out of scope
+// for this card). Bold weight carries the "needs attention" signal instead.
+.parcel-intake-result-payment-note {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--admin-text);
+}

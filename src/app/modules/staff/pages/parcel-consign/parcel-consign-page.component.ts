@@ -11,13 +11,17 @@ import {
 } from '../../../../services/staff/staff-api.service';
 import {
   CargoAvailabilityRespDto,
+  ParcelCarryOnReqDto,
+  ParcelCarryOnRespDto,
   ParcelConsignedReqDto,
   ParcelConsignedRespDto,
   ParcelQuoteRespDto,
 } from '../../../../shared/interfaces/parcel.interface';
 import {
+  ParcelCarryOnFormValue,
   ParcelConsignFormComponent,
   ParcelConsignFormValue,
+  ParcelConsignMode,
   ParcelDropdownOption,
   ParcelQuoteParams,
 } from '../../components/parcel-consign-form/parcel-consign-form.component';
@@ -42,12 +46,39 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
   PARCEL_STOP_PAIR_NOT_PRICEABLE: 'STAFF.PARCEL_CONSIGN.ERROR.STOP_PAIR_NOT_PRICEABLE',
 };
 
+/** OBRS-341 — carry-on-on-seat submit-time error codes, straight off
+ * `../OBRS-backend/docs/api/parcels.md`'s error table. Kept as its own map
+ * (rather than merged into `SUBMIT_ERROR_KEYS`) because several codes only
+ * make sense for this branch (seat-related) and the two branches' i18n
+ * namespaces are deliberately separate (`ERROR.*` vs `CARRY_ON.ERROR.*`). */
+const CARRY_ON_SUBMIT_ERROR_KEYS: Record<string, string> = {
+  PARCEL_TYPE_NOT_SUPPORTED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.TYPE_NOT_SUPPORTED',
+  PARCEL_PROHIBITED_NOT_ACKNOWLEDGED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PROHIBITED_NOT_ACKNOWLEDGED',
+  PARCEL_PAYMENT_METHOD_NOT_SUPPORTED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAYMENT_METHOD_NOT_SUPPORTED',
+  PARCEL_WEIGHT_EXCEEDS_MAX: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.WEIGHT_EXCEEDS_MAX',
+  PARCEL_SEAT_COUNT_REQUIRED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEAT_COUNT_REQUIRED',
+  PARCEL_SEAT_COUNT_NOT_ALLOWED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEAT_COUNT_NOT_ALLOWED',
+  PARCEL_SEAT_NUMBERS_MISMATCH: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEAT_NUMBERS_MISMATCH',
+  PARCEL_SEATS_DUPLICATE: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_DUPLICATE',
+  PARCEL_SEATS_NOT_FOUND: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_NOT_FOUND',
+  PARCEL_STOP_PAIR_NOT_PRICEABLE: 'STAFF.PARCEL_CONSIGN.ERROR.STOP_PAIR_NOT_PRICEABLE',
+  PARCEL_SEATS_UNAVAILABLE: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_UNAVAILABLE',
+  PARCEL_SEATS_INSUFFICIENT: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEATS_INSUFFICIENT',
+  PARCEL_FREE_AISLE_CAP_EXCEEDED: 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.FREE_AISLE_CAP_EXCEEDED',
+};
+
 /** Smart page: `/staff/parcels/consign` (salesperson-only). Owns every HTTP
  * call for the consigned-intake form (design-system: dumb form component
  * emits, smart page fetches). Component-scoped `ParcelCargoAvailabilityStore`
  * (providers: [] — see that store's doc comment) drives the cargo-remaining
  * indicator; the live quote is a thin direct service call (no store, per the
- * locked UX spec). */
+ * locked UX spec).
+ *
+ * OBRS-341: a mode toggle at the top switches between the CONSIGNED branch
+ * (unchanged) and the CARRY-ON-ON-SEAT branch, both against
+ * `POST /parcels/walk-in` — reusing this same page/form pair rather than a
+ * new route (locked decision, OBRS-341 brief). Consigned stays the default
+ * so existing behaviour is unchanged on load. */
 @Component({
   selector: 'app-parcel-consign-page',
   templateUrl: './parcel-consign-page.component.html',
@@ -57,11 +88,17 @@ const SUBMIT_ERROR_KEYS: Record<string, string> = {
 export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   @ViewChild(ParcelConsignFormComponent) formRef?: ParcelConsignFormComponent;
 
+  protected mode: ParcelConsignMode = 'consigned';
+
   protected selectedDate: Date = new Date();
   protected scheduleOptions: ParcelDropdownOption[] = [];
   protected pickupOptions: ParcelDropdownOption[] = [];
   protected dropoffOptions: ParcelDropdownOption[] = [];
   protected isLoadingStops = false;
+
+  /** OBRS-341 — the selected trip's whole-trip seat numbers, passed through
+   * to the form's optional explicit-seat-selection checklist. */
+  protected carryOnAvailableSeatNumbers: string[] = [];
 
   protected quote: ParcelQuoteRespDto | null = null;
   protected isLoadingQuote = false;
@@ -74,6 +111,11 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   protected isSubmitting = false;
   protected serverErrorKey: string | null = null;
   protected result: ParcelConsignedRespDto | null = null;
+  /** OBRS-341 — set on a successful carry-on-on-seat submit. Mutually
+   * exclusive with `result` above (only one branch's result is ever
+   * populated at a time — switching modes clears both, see
+   * `onModeChange()`). */
+  protected carryOnResult: ParcelCarryOnRespDto | null = null;
 
   private routeGroups: WalkInRouteGroupDto[] = [];
   private scheduleRouteSlug = new Map<number, string>();
@@ -102,6 +144,31 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /** OBRS-341 — switching modes clears every piece of per-submission state
+   * (quote, result, server error) AND the schedule/stop selection, in
+   * lockstep with the form's own full reset (`ParcelConsignFormComponent
+   * .resetForMode()`) — see that method's doc comment for why a full reset,
+   * rather than a hand-enumerated per-field clear, is the deliberate choice
+   * here. This is what guarantees "mode switching does not leak state
+   * between branches": nothing carried over from the old mode survives a
+   * switch on EITHER side of the page/form boundary. */
+  protected onModeChange(mode: ParcelConsignMode): void {
+    if (this.mode === mode) return;
+    this.mode = mode;
+
+    this.quote = null;
+    this.quoteErrorKey = null;
+    this.isLoadingQuote = false;
+    this.serverErrorKey = null;
+    this.result = null;
+    this.carryOnResult = null;
+    this.pickupOptions = [];
+    this.dropoffOptions = [];
+    this.carryOnAvailableSeatNumbers = [];
+    this.orderedStops = [];
+    this.cargoStore.setScheduleId(null);
   }
 
   protected onDateChange(date: Date): void {
@@ -140,6 +207,7 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
     this.pickupOptions = [];
     this.dropoffOptions = [];
     this.orderedStops = [];
+    this.carryOnAvailableSeatNumbers = [];
     this.formRef?.clearStopSelections();
     this.quote = null;
     this.quoteErrorKey = null;
@@ -153,7 +221,19 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
     this.cargoStore.setScheduleId(scheduleId);
     void this.cargoStore.refresh();
+    this.carryOnAvailableSeatNumbers = this.findTripSeatNumbers(scheduleId);
     this.loadStopsForRoute(routeSlug);
+  }
+
+  /** OBRS-341 — `WalkInTripDto.availableSeatNumbers` for the chosen trip, the
+   * same source `getWalkInSchedules()` already populated for the schedule
+   * dropdown above (no extra HTTP call). */
+  private findTripSeatNumbers(scheduleId: number): string[] {
+    for (const group of this.routeGroups) {
+      const trip = group.trips.find((t) => t.scheduleId === scheduleId);
+      if (trip) return trip.availableSeatNumbers ?? [];
+    }
+    return [];
   }
 
   private loadStopsForRoute(routeSlug: string): void {
@@ -244,7 +324,7 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
     this.isLoadingQuote = true;
     this.quoteErrorKey = null;
     this.staffApiService
-      .getParcelQuote({ parcelType: 'consigned', ...params })
+      .getParcelQuote({ parcelType: this.mode, ...params })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
@@ -259,11 +339,19 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       });
   }
 
-  protected onSubmit(value: ParcelConsignFormValue): void {
+  protected onSubmit(value: ParcelConsignFormValue | ParcelCarryOnFormValue): void {
     if (this.isSubmitting) return;
     this.isSubmitting = true;
     this.serverErrorKey = null;
 
+    if (value.mode === 'carry_on_seat') {
+      this.submitCarryOn(value);
+      return;
+    }
+    this.submitConsigned(value);
+  }
+
+  private submitConsigned(value: ParcelConsignFormValue): void {
     const payload: ParcelConsignedReqDto = {
       parcelType: 'consigned',
       scheduleId: value.scheduleId,
@@ -290,6 +378,43 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
         error: (err: unknown) => {
           this.isSubmitting = false;
           this.serverErrorKey = this.mapErrorCode(err, SUBMIT_ERROR_KEYS, 'STAFF.PARCEL_CONSIGN.ERROR.GENERIC');
+        },
+      });
+  }
+
+  private submitCarryOn(value: ParcelCarryOnFormValue): void {
+    const payload: ParcelCarryOnReqDto = {
+      parcelType: 'carry_on_seat',
+      scheduleId: value.scheduleId,
+      pickupStopId: value.pickupStopId,
+      dropoffStopId: value.dropoffStopId,
+      weightKg: value.weightKg,
+      dimensions: value.dimensions,
+      description: value.description,
+      prohibitedAcknowledged: value.prohibitedAcknowledged,
+      sender: value.sender,
+      paymentMethod: 'cash',
+      // MUST BE ABSENT (not null) for a free-aisle item — the form only
+      // sets these on its emitted value when the classification is on-seat.
+      ...(value.seatCount != null ? { seatCount: value.seatCount } : {}),
+      ...(value.seatNumbers ? { seatNumbers: value.seatNumbers } : {}),
+    };
+
+    this.staffApiService
+      .createCarryOnParcel(payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (resp) => {
+          this.isSubmitting = false;
+          this.carryOnResult = resp?.data ?? null;
+        },
+        error: (err: unknown) => {
+          this.isSubmitting = false;
+          this.serverErrorKey = this.mapErrorCode(
+            err,
+            CARRY_ON_SUBMIT_ERROR_KEYS,
+            'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.GENERIC'
+          );
         },
       });
   }

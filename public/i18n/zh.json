@@ -2414,11 +2414,17 @@
     },
     "PARCEL_CONSIGN": {
       "SUBTITLE": "登记一个新的寄送包裹以便配送。",
+      "MODE": {
+        "LABEL": "包裹类型",
+        "CONSIGNED": "寄送",
+        "CARRY_ON": "随身携带（占座）"
+      },
       "SECTION": {
         "SENDER": "寄件人",
         "RECIPIENT": "收件人",
         "TRIP": "行程",
-        "DIMENSIONS": "尺寸（选填）"
+        "DIMENSIONS": "尺寸（选填）",
+        "DIMENSIONS_REQUIRED": "尺寸"
       },
       "FIELD": {
         "SENDER_NAME": "寄件人姓名",
@@ -2451,7 +2457,8 @@
       "VALIDATION": {
         "WEIGHT_POSITIVE": "重量必须大于 0。",
         "WEIGHT_MAX": "重量不能超过 100 公斤。",
-        "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。"
+        "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。",
+        "DIMENSION_POSITIVE": "尺寸必须大于 0。"
       },
       "ERROR": {
         "PROHIBITED_CATEGORY": "此包裹属于违禁类别，无法受理。",
@@ -2468,6 +2475,43 @@
         "COLLECTION_CODE": "取件码",
         "AMOUNT": "金额",
         "VIEW_WAYBILL": "查看运单"
+      },
+      "CARRY_ON": {
+        "FIELD": {
+          "SEAT_COUNT": "座位数量",
+          "SPECIFY_SEATS": "自行选择座位",
+          "SEAT_NUMBERS": "座位号"
+        },
+        "CLASSIFICATION": {
+          "FREE_AISLE": "免费 — 不占用座位",
+          "FREE_AISLE_NOTE": "免费随身物品每趟限 10 件。",
+          "ON_SEAT": "此物品需占用一个座位并需收费。"
+        },
+        "VALIDATION": {
+          "SEAT_COUNT_REQUIRED": "请输入此物品需要的座位数量。"
+        },
+        "ERROR": {
+          "TYPE_NOT_SUPPORTED": "此处不支持该包裹类型。",
+          "PROHIBITED_NOT_ACKNOWLEDGED": "请确认此物品不含任何违禁物品。",
+          "PAYMENT_METHOD_NOT_SUPPORTED": "现场销售不支持此付款方式。",
+          "WEIGHT_EXCEEDS_MAX": "重量超过允许上限。",
+          "SEAT_COUNT_REQUIRED": "此物品需占用座位，请输入所需座位数量。",
+          "SEAT_COUNT_NOT_ALLOWED": "此物品无需占用座位，请移除座位数量。",
+          "SEAT_NUMBERS_MISMATCH": "所选座位数量与座位数量不符。",
+          "SEATS_DUPLICATE": "所选座位中有重复。",
+          "SEATS_NOT_FOUND": "此车辆上不存在部分所选座位。",
+          "SEATS_UNAVAILABLE": "部分所选座位已不可用。",
+          "SEATS_INSUFFICIENT": "此班次可用座位不足。",
+          "FREE_AISLE_CAP_EXCEEDED": "此班次的免费随身物品名额已满。",
+          "GENERIC": "无法记录此随身物品，请重试。"
+        },
+        "RESULT": {
+          "TITLE": "随身物品登记成功",
+          "BOOKING_NUMBER": "订单号",
+          "SEATS": "座位",
+          "FREE_AISLE": "免费 — 未占用座位",
+          "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）"
+        }
       }
     },
     "PARCEL_WAYBILL": {
