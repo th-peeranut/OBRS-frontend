@@ -333,6 +333,15 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     return this.mode === 'carry_on_seat';
   }
 
+  /** Scrutinize (OBRS-341) — the submit button read "Consign parcel" in
+   * carry-on mode too, which is the wrong verb for a branch that records a
+   * carry-on item and mints no consignment/waybill at all. */
+  protected get submitLabelKey(): string {
+    return this.isCarryOnMode
+      ? 'STAFF.PARCEL_CONSIGN.CARRY_ON.SUBMIT'
+      : 'STAFF.PARCEL_CONSIGN.SUBMIT';
+  }
+
   protected get isOnSeat(): boolean {
     return this.isCarryOnMode && this.carryOnClassification === 'on_seat';
   }
@@ -380,7 +389,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       if (this.carryOnClassification == null) return false;
       if (this.isOnSeat) {
         const seatCount = Number(this.form.get('seatCount')?.value);
-        if (!Number.isFinite(seatCount) || seatCount < 1) return false;
+        if (!Number.isInteger(seatCount) || seatCount < 1) return false;
         if (this.form.get('specifySeats')?.value && this.seatNumbersMismatch) return false;
       }
     }
@@ -517,7 +526,10 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     const ctrl = this.form.get('seatCount');
     if (!ctrl || !(ctrl.dirty || ctrl.touched)) return null;
     const value = Number(ctrl.value);
-    if (ctrl.value === null || ctrl.value === '' || !Number.isFinite(value) || value < 1) {
+    // Scrutinize (OBRS-341): `Number.isInteger`, not `isFinite` — the server
+    // field is an `Integer`, so a typo'd `2.5` used to reach the wire and
+    // come back as a generic deserialization 400 instead of this message.
+    if (ctrl.value === null || ctrl.value === '' || !Number.isInteger(value) || value < 1) {
       return 'STAFF.PARCEL_CONSIGN.CARRY_ON.VALIDATION.SEAT_COUNT_REQUIRED';
     }
     return null;

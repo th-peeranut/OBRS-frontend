@@ -251,7 +251,7 @@
 
     <div class="col-12">
       <button type="submit" class="admin-btn admin-btn-primary" [disabled]="!canSubmit">
-        {{ (isSubmitting ? 'STAFF.PARCEL_CONSIGN.SUBMITTING' : 'STAFF.PARCEL_CONSIGN.SUBMIT') | translate }}
+        {{ (isSubmitting ? 'STAFF.PARCEL_CONSIGN.SUBMITTING' : submitLabelKey) | translate }}
       </button>
     </div>
   </div>

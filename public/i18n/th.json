@@ -2477,6 +2477,7 @@
         "VIEW_WAYBILL": "ดูใบนำส่งพัสดุ"
       },
       "CARRY_ON": {
+        "SUBMIT": "บันทึกสัมภาระติดตัว",
         "FIELD": {
           "SEAT_COUNT": "จำนวนที่นั่ง",
           "SPECIFY_SEATS": "ระบุที่นั่งเอง",

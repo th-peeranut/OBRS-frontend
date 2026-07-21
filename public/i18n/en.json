@@ -2477,6 +2477,7 @@
         "VIEW_WAYBILL": "View waybill"
       },
       "CARRY_ON": {
+        "SUBMIT": "Record carry-on item",
         "FIELD": {
           "SEAT_COUNT": "Seat count",
           "SPECIFY_SEATS": "Choose seats myself",

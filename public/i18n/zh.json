@@ -2477,6 +2477,7 @@
         "VIEW_WAYBILL": "查看运单"
       },
       "CARRY_ON": {
+        "SUBMIT": "记录随身物品",
         "FIELD": {
           "SEAT_COUNT": "座位数量",
           "SPECIFY_SEATS": "自行选择座位",

@@ -8,7 +8,12 @@
          `.admin-btn-primary` (the page already has one true primary action —
          Submit — and a second simultaneously-primary-styled element would
          violate the "one primary per screen" rubric). -->
-    <ul class="nav nav-tabs mb-3" role="tablist" data-testid="parcel-consign-mode-tabs">
+    <ul
+      class="nav nav-tabs mb-3"
+      role="tablist"
+      [attr.aria-label]="'STAFF.PARCEL_CONSIGN.MODE.LABEL' | translate"
+      data-testid="parcel-consign-mode-tabs"
+    >
       <li class="nav-item">
         <button
           type="button"
@@ -16,6 +21,7 @@
           class="nav-link"
           [class.active]="mode === 'consigned'"
           [attr.aria-selected]="mode === 'consigned'"
+          [disabled]="isSubmitting"
           data-testid="parcel-consign-mode-consigned"
           (click)="onModeChange('consigned')"
         >
@@ -29,6 +35,7 @@
           class="nav-link"
           [class.active]="mode === 'carry_on_seat'"
           [attr.aria-selected]="mode === 'carry_on_seat'"
+          [disabled]="isSubmitting"
           data-testid="parcel-consign-mode-carry-on"
           (click)="onModeChange('carry_on_seat')"
         >

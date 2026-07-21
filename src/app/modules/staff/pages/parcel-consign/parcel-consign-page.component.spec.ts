@@ -1,4 +1,4 @@
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { ParcelConsignPageComponent } from './parcel-consign-page.component';
 
 function createStaffApiStub(): any {
@@ -286,6 +286,50 @@ describe('ParcelConsignPageComponent', () => {
       component['onModeChange']('consigned'); // already the default
 
       expect(component['quote']).not.toBeNull(); // untouched — no reset fired
+    });
+
+    // Scrutinize regression (OBRS-341): clearing the fields inside
+    // onModeChange() is NOT sufficient on its own — a request issued under the
+    // OLD mode is still in flight and its handler runs AFTER that clear,
+    // re-displaying the old branch's price / success panel under the new
+    // branch. Walked red by deleting the `epoch !== this.modeEpoch` guards.
+    it('DROPS a quote response that resolves after a mode switch (no stale price under the new mode)', () => {
+      component.ngOnInit();
+      const late$ = new Subject<any>();
+      staffApi.getParcelQuote.and.returnValue(late$.asObservable());
+
+      component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+      component['onModeChange']('carry_on_seat');
+      late$.next({
+        code: 200,
+        message: 'OK',
+        data: { amount: 100, farePerUnit: 100, unitCount: 1, weightTierMultiplier: 1 },
+      });
+
+      expect(component['quote']).toBeNull();
+    });
+
+    it('DROPS a submit response that resolves after a mode switch (no cross-branch result panel)', () => {
+      component.ngOnInit();
+      const late$ = new Subject<any>();
+      staffApi.createConsignedParcel.and.returnValue(late$.asObservable());
+
+      component['onSubmit']({
+        mode: 'consigned',
+        sender: { name: 'Somchai', phone: '0812345678' },
+        recipient: { name: 'Somsri', phone: '0898765432' },
+        scheduleId: 42,
+        pickupStopId: 1,
+        dropoffStopId: 2,
+        weightKg: 5,
+        description: 'Documents',
+        prohibitedAcknowledged: true,
+      });
+      component['onModeChange']('carry_on_seat');
+      late$.next({ code: 201, message: 'Created', data: { parcelId: 1, trackingNumber: 'PCL-LATE' } });
+
+      expect(component['result']).toBeNull();
+      expect(component['isSubmitting']).toBeFalse();
     });
 
     it('clears quote/result/serverErrorKey/stop selections/seat numbers on an ACTUAL mode switch', () => {

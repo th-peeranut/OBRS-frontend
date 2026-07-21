@@ -117,6 +117,17 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
    * `onModeChange()`). */
   protected carryOnResult: ParcelCarryOnRespDto | null = null;
 
+  /** Scrutinize (OBRS-341) — bumped by every mode switch. `onModeChange()`
+   * clearing the fields is NOT enough on its own: a quote or submit request
+   * issued under the OLD mode is still in flight, and its `next` handler
+   * writes `quote`/`result`/`carryOnResult` AFTER the clear, re-displaying
+   * the old branch's price or success panel under the new branch. Each
+   * request captures the epoch at issue time and drops its own response if
+   * the epoch has moved. (The pre-existing same-mode quote race — two
+   * overlapping requests resolving out of order after a schedule/stop change
+   * — is NOT closed by this and is left for a `switchMap` follow-up.) */
+  private modeEpoch = 0;
+
   private routeGroups: WalkInRouteGroupDto[] = [];
   private scheduleRouteSlug = new Map<number, string>();
   private orderedStops: OrderedStop[] = [];
@@ -157,7 +168,9 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
   protected onModeChange(mode: ParcelConsignMode): void {
     if (this.mode === mode) return;
     this.mode = mode;
+    this.modeEpoch++;
 
+    this.isSubmitting = false;
     this.quote = null;
     this.quoteErrorKey = null;
     this.isLoadingQuote = false;
@@ -323,15 +336,18 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
 
     this.isLoadingQuote = true;
     this.quoteErrorKey = null;
+    const epoch = this.modeEpoch;
     this.staffApiService
       .getParcelQuote({ parcelType: this.mode, ...params })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
+          if (epoch !== this.modeEpoch) return;
           this.quote = resp?.data ?? null;
           this.isLoadingQuote = false;
         },
         error: (err: unknown) => {
+          if (epoch !== this.modeEpoch) return;
           this.quote = null;
           this.isLoadingQuote = false;
           this.quoteErrorKey = this.mapErrorCode(err, QUOTE_ERROR_KEYS, 'STAFF.PARCEL_CONSIGN.ERROR.QUOTE_FAILED');
@@ -367,15 +383,18 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       ...(value.dimensions ? { dimensions: value.dimensions } : {}),
     };
 
+    const epoch = this.modeEpoch;
     this.staffApiService
       .createConsignedParcel(payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
+          if (epoch !== this.modeEpoch) return;
           this.isSubmitting = false;
           this.result = resp?.data ?? null;
         },
         error: (err: unknown) => {
+          if (epoch !== this.modeEpoch) return;
           this.isSubmitting = false;
           this.serverErrorKey = this.mapErrorCode(err, SUBMIT_ERROR_KEYS, 'STAFF.PARCEL_CONSIGN.ERROR.GENERIC');
         },
@@ -400,15 +419,18 @@ export class ParcelConsignPageComponent implements OnInit, OnDestroy {
       ...(value.seatNumbers ? { seatNumbers: value.seatNumbers } : {}),
     };
 
+    const epoch = this.modeEpoch;
     this.staffApiService
       .createCarryOnParcel(payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (resp) => {
+          if (epoch !== this.modeEpoch) return;
           this.isSubmitting = false;
           this.carryOnResult = resp?.data ?? null;
         },
         error: (err: unknown) => {
+          if (epoch !== this.modeEpoch) return;
           this.isSubmitting = false;
           this.serverErrorKey = this.mapErrorCode(
             err,
