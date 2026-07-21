@@ -54,3 +54,32 @@ behavior. Their duplication is the cheaper problem.
 - If Family C should converge, it is a separate, behavior-changing task: first decide
   whether a non-HTTP error carrying `.error.errorCode` should yield the code or the
   fallback, then change the tests deliberately under that decision.
+
+## Correction — 2026-07-21 (re-surveyed while closing OBRS-413)
+
+The Decision above stands unchanged. Two of the counts do not.
+
+**Family C is four named helpers, not two.** The original survey named `settlements-page`
+and `sell-page`; re-grepping for the cast itself (`error?: { errorCode`) rather than for
+helper *names* also finds `settlements.store.ts:83` and `reports.store.ts:91` — both
+`private static extractErrorCode(): string | null`, both byte-identical to the
+`settlements-page.component.ts:358` body, both unguarded. `reports.store` predates this
+ADR (OBRS-40, 2026-07-09), so it was missed, not added since.
+
+**And the field is read inline in five more files the survey never covered**, because it
+only looked for *helpers*: `login.component.ts:162`, `verify-email.component.ts:51,97`,
+`change-email-dialog.component.ts:159,189`, `change-email-confirm.component.ts:58`,
+`report-usability-fab.component.ts:191` — seven sites that duck-type the same read
+straight inside a `.catch()` and branch on the code. Same contract as Family C, no helper
+to migrate.
+
+So "Two call sites still read the field themselves" understates the remaining surface by
+an order of magnitude: **11 sites across 8 files**. The consequence that matters is
+unchanged — none of them may be moved onto `extractApiErrorCode` without deciding the
+non-HTTP question first — but a reader planning that task should size it from this
+number, not from the one above.
+
+**The delegation count is now ten, not nine**, and that is the healthy direction: OBRS-576
+(2026-07-20) added `extractConfigHistoryErrorCode` and it delegated on the first write.
+The consolidation is holding for new code; nothing enforces it, so that is convention, not
+a guarantee.
