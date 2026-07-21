@@ -1,6 +1,50 @@
 <div class="container-fluid py-4">
   <div class="card shadow-sm border-0 p-4">
-    <ng-container *ngIf="!result">
+    <!-- OBRS-341: mode toggle — reuses the plain Bootstrap nav-tabs idiom
+         already established for the parcel module's other 2-way page switch
+         (parcel-schedule-tabs-page.component.html, OBRS-574), not PrimeNG's
+         p-selectButton (its unselected-segment dark-mode gap is a documented
+         recurring bug, design-system.md §12/OBRS-312) and not a second
+         `.admin-btn-primary` (the page already has one true primary action —
+         Submit — and a second simultaneously-primary-styled element would
+         violate the "one primary per screen" rubric). -->
+    <ul
+      class="nav nav-tabs mb-3"
+      role="tablist"
+      [attr.aria-label]="'STAFF.PARCEL_CONSIGN.MODE.LABEL' | translate"
+      data-testid="parcel-consign-mode-tabs"
+    >
+      <li class="nav-item">
+        <button
+          type="button"
+          role="tab"
+          class="nav-link"
+          [class.active]="mode === 'consigned'"
+          [attr.aria-selected]="mode === 'consigned'"
+          [disabled]="isSubmitting"
+          data-testid="parcel-consign-mode-consigned"
+          (click)="onModeChange('consigned')"
+        >
+          {{ 'STAFF.PARCEL_CONSIGN.MODE.CONSIGNED' | translate }}
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          type="button"
+          role="tab"
+          class="nav-link"
+          [class.active]="mode === 'carry_on_seat'"
+          [attr.aria-selected]="mode === 'carry_on_seat'"
+          [disabled]="isSubmitting"
+          data-testid="parcel-consign-mode-carry-on"
+          (click)="onModeChange('carry_on_seat')"
+        >
+          {{ 'STAFF.PARCEL_CONSIGN.MODE.CARRY_ON' | translate }}
+        </button>
+      </li>
+    </ul>
+
+    <ng-container *ngIf="!result && !carryOnResult">
       <div class="row g-3 mb-3">
         <div class="col-md-4">
           <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.DATE' | translate }}</label>
@@ -21,10 +65,12 @@
       </div>
 
       <app-parcel-consign-form
+        [mode]="mode"
         [scheduleOptions]="scheduleOptions"
         [pickupOptions]="pickupOptions"
         [dropoffOptions]="dropoffOptions"
         [isLoadingStops]="isLoadingStops"
+        [availableSeatNumbers]="carryOnAvailableSeatNumbers"
         [quote]="quote"
         [isLoadingQuote]="isLoadingQuote"
         [quoteErrorKey]="quoteErrorKey"
@@ -40,6 +86,14 @@
       ></app-parcel-consign-form>
     </ng-container>
 
-    <app-parcel-intake-result-panel *ngIf="result" [result]="result"></app-parcel-intake-result-panel>
+    <app-parcel-intake-result-panel
+      *ngIf="result || carryOnResult"
+      [result]="result || carryOnResult"
+      [carryOnPaid]="carryOnPaid"
+      [isPayingCarryOn]="isPayingCarryOn"
+      [carryOnPayErrorKey]="carryOnPayErrorKey"
+      (payCash)="onPayCash()"
+      (nextItem)="onNextItem()"
+    ></app-parcel-intake-result-panel>
   </div>
 </div>

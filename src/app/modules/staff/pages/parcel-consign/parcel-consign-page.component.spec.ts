@@ -1,4 +1,4 @@
-import { BehaviorSubject, of, throwError } from 'rxjs';
+import { BehaviorSubject, of, Subject, throwError } from 'rxjs';
 import { ParcelConsignPageComponent } from './parcel-consign-page.component';
 
 function createStaffApiStub(): any {
@@ -24,7 +24,7 @@ function createStaffApiStub(): any {
                 availableCount: 10,
                 reservedUnpaidCount: 0,
                 soldPaidCount: 0,
-                availableSeatNumbers: [],
+                availableSeatNumbers: ['A1', 'A2'],
               },
             ],
           },
@@ -81,6 +81,33 @@ function createStaffApiStub(): any {
           collectionCode: 'ABC123',
           waybillUrl: '/staff/parcels/1/waybill',
         },
+      })
+    ),
+    // OBRS-341
+    createCarryOnParcel: jasmine.createSpy('createCarryOnParcel').and.returnValue(
+      of({
+        code: 201,
+        message: 'Created',
+        data: {
+          parcelId: 5,
+          trackingNumber: 'P-AB12CD34EF',
+          bookingId: 91,
+          bookingNumber: 'B-000091',
+          parcelType: 'carry_on_seat',
+          freeAisle: false,
+          seatCount: 1,
+          seatNumbers: ['A1'],
+          amount: 150,
+          bookingNetAmount: 150,
+        },
+      })
+    ),
+    // OBRS-341 (card AC follow-up)
+    payWalkIn: jasmine.createSpy('payWalkIn').and.returnValue(
+      of({
+        code: 200,
+        message: 'OK',
+        data: { id: 1, bookingId: 91, status: 'paid', paymentMethod: 'cash', amount: 150 },
       })
     ),
   };
@@ -211,6 +238,7 @@ describe('ParcelConsignPageComponent', () => {
 
   it('submits and sets the result on success (201)', () => {
     component['onSubmit']({
+      mode: 'consigned',
       sender: { name: 'Somchai', phone: '0812345678' },
       recipient: { name: 'Somsri', phone: '0898765432' },
       scheduleId: 42,
@@ -238,6 +266,7 @@ describe('ParcelConsignPageComponent', () => {
     for (const [errorCode, expectedKey] of cases) {
       staffApi.createConsignedParcel.and.returnValue(throwError(() => ({ error: { errorCode } })));
       component['onSubmit']({
+        mode: 'consigned',
         sender: { name: 'Somchai', phone: '0812345678' },
         recipient: { name: 'Somsri', phone: '0898765432' },
         scheduleId: 42,
@@ -250,5 +279,432 @@ describe('ParcelConsignPageComponent', () => {
       expect(component['serverErrorKey']).toBe(expectedKey);
       expect(component['result']).toBeNull();
     }
+  });
+
+  // ---------------------------------------------------------------------------
+  // OBRS-341 — carry-on-on-seat mode
+  // ---------------------------------------------------------------------------
+
+  describe('onModeChange() — mode switching must not leak state between branches', () => {
+    it('is a no-op when re-selecting the CURRENT mode', () => {
+      component.ngOnInit();
+      component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+      expect(component['quote']).not.toBeNull();
+
+      component['onModeChange']('consigned'); // already the default
+
+      expect(component['quote']).not.toBeNull(); // untouched — no reset fired
+    });
+
+    // Scrutinize regression (OBRS-341): clearing the fields inside
+    // onModeChange() is NOT sufficient on its own — a request issued under the
+    // OLD mode is still in flight and its handler runs AFTER that clear,
+    // re-displaying the old branch's price / success panel under the new
+    // branch. Walked red by deleting the `epoch !== this.modeEpoch` guards.
+    it('DROPS a quote response that resolves after a mode switch (no stale price under the new mode)', () => {
+      component.ngOnInit();
+      const late$ = new Subject<any>();
+      staffApi.getParcelQuote.and.returnValue(late$.asObservable());
+
+      component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+      component['onModeChange']('carry_on_seat');
+      late$.next({
+        code: 200,
+        message: 'OK',
+        data: { amount: 100, farePerUnit: 100, unitCount: 1, weightTierMultiplier: 1 },
+      });
+
+      expect(component['quote']).toBeNull();
+    });
+
+    it('DROPS a submit response that resolves after a mode switch (no cross-branch result panel)', () => {
+      component.ngOnInit();
+      const late$ = new Subject<any>();
+      staffApi.createConsignedParcel.and.returnValue(late$.asObservable());
+
+      component['onSubmit']({
+        mode: 'consigned',
+        sender: { name: 'Somchai', phone: '0812345678' },
+        recipient: { name: 'Somsri', phone: '0898765432' },
+        scheduleId: 42,
+        pickupStopId: 1,
+        dropoffStopId: 2,
+        weightKg: 5,
+        description: 'Documents',
+        prohibitedAcknowledged: true,
+      });
+      component['onModeChange']('carry_on_seat');
+      late$.next({ code: 201, message: 'Created', data: { parcelId: 1, trackingNumber: 'PCL-LATE' } });
+
+      expect(component['result']).toBeNull();
+      expect(component['isSubmitting']).toBeFalse();
+    });
+
+    it('clears quote/result/serverErrorKey/stop selections/seat numbers on an ACTUAL mode switch', () => {
+      component.ngOnInit();
+      component['onScheduleChange']('42');
+      component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+      component['result'] = {
+        parcelId: 1,
+        trackingNumber: 'PCL-1',
+        bookingId: 10,
+        bookingNumber: 'BK-1',
+        amount: 100,
+        deliveryStatus: 'accepted',
+        collectionCode: 'ABC123',
+        waybillUrl: null,
+      };
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.ERROR.GENERIC';
+      expect(component['pickupOptions'].length).toBeGreaterThan(0);
+      expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+
+      component['onModeChange']('carry_on_seat');
+
+      expect(component['mode']).toBe('carry_on_seat');
+      expect(component['quote']).toBeNull();
+      expect(component['result']).toBeNull();
+      expect(component['carryOnResult']).toBeNull();
+      expect(component['serverErrorKey']).toBeNull();
+      expect(component['pickupOptions']).toEqual([]);
+      expect(component['dropoffOptions']).toEqual([]);
+      expect(component['carryOnAvailableSeatNumbers']).toEqual([]);
+      expect(cargoStore.setScheduleId).toHaveBeenCalledWith(null);
+    });
+
+    it('clears a carry-on result when switching back to consigned (the reverse direction)', () => {
+      component.ngOnInit();
+      component['carryOnResult'] = {
+        parcelId: 5,
+        trackingNumber: 'P-1',
+        bookingId: 91,
+        bookingNumber: 'B-91',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+
+      component['onModeChange']('carry_on_seat'); // enter carry-on mode first
+      component['carryOnResult'] = {
+        parcelId: 5,
+        trackingNumber: 'P-1',
+        bookingId: 91,
+        bookingNumber: 'B-91',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+      component['onModeChange']('consigned'); // then back out
+
+      expect(component['carryOnResult']).toBeNull();
+    });
+  });
+
+  it('onScheduleChange() populates carryOnAvailableSeatNumbers from the matching trip (OBRS-341)', () => {
+    component.ngOnInit();
+    component['onScheduleChange']('42');
+
+    expect(component['carryOnAvailableSeatNumbers']).toEqual(['A1', 'A2']);
+  });
+
+  it('getParcelQuote() is called with parcelType=carry_on_seat once in carry-on mode', () => {
+    component.ngOnInit();
+    component['onModeChange']('carry_on_seat');
+    component['onQuoteParamsChange']({ scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 });
+
+    expect(staffApi.getParcelQuote).toHaveBeenCalledWith({
+      parcelType: 'carry_on_seat',
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+    });
+  });
+
+  describe('carry-on-on-seat submit', () => {
+    const onSeatFormValue = {
+      mode: 'carry_on_seat' as const,
+      sender: { name: 'Somchai', phone: '0812345678' },
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+      description: 'Oversized backpack',
+      prohibitedAcknowledged: true,
+      dimensions: { lengthCm: 80, widthCm: 40, heightCm: 30 },
+      seatCount: 1,
+      seatNumbers: ['A1'],
+    };
+
+    it('posts carry_on_seat with seatCount/seatNumbers and sets carryOnResult on success (201)', () => {
+      component['onSubmit'](onSeatFormValue);
+
+      expect(staffApi.createCarryOnParcel).toHaveBeenCalledWith(
+        jasmine.objectContaining({
+          parcelType: 'carry_on_seat',
+          paymentMethod: 'cash',
+          seatCount: 1,
+          seatNumbers: ['A1'],
+        })
+      );
+      expect(component['result']).toBeNull(); // the OTHER branch's result field is untouched
+      expect(component['carryOnResult']?.trackingNumber).toBe('P-AB12CD34EF');
+    });
+
+    it('omits seatCount/seatNumbers entirely for a free-aisle submission (contract: MUST BE ABSENT)', () => {
+      const freeAisleValue = {
+        ...onSeatFormValue,
+        dimensions: { lengthCm: 30, widthCm: 20, heightCm: 10 },
+        seatCount: undefined,
+        seatNumbers: undefined,
+      };
+
+      component['onSubmit'](freeAisleValue);
+
+      const body = staffApi.createCarryOnParcel.calls.mostRecent().args[0];
+      expect('seatCount' in body).toBeFalse();
+      expect('seatNumbers' in body).toBeFalse();
+    });
+
+    it('never sends a recipient field for carry_on_seat', () => {
+      component['onSubmit'](onSeatFormValue);
+
+      const body = staffApi.createCarryOnParcel.calls.mostRecent().args[0];
+      expect('recipient' in body).toBeFalse();
+    });
+
+    it('maps each documented carry-on errorCode to its own CARRY_ON.ERROR.* i18n key', () => {
+      const cases: [string, string][] = [
+        ['PARCEL_SEAT_COUNT_REQUIRED', 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEAT_COUNT_REQUIRED'],
+        ['PARCEL_SEAT_COUNT_NOT_ALLOWED', 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.SEAT_COUNT_NOT_ALLOWED'],
+        ['PARCEL_FREE_AISLE_CAP_EXCEEDED', 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.FREE_AISLE_CAP_EXCEEDED'],
+      ];
+
+      for (const [errorCode, expectedKey] of cases) {
+        staffApi.createCarryOnParcel.and.returnValue(throwError(() => ({ error: { errorCode } })));
+        component['onSubmit'](onSeatFormValue);
+        expect(component['serverErrorKey']).toBe(expectedKey);
+        expect(component['carryOnResult']).toBeNull();
+      }
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // OBRS-341 (card AC follow-up) — "เก็บเงินสด" (pay cash)
+  // ---------------------------------------------------------------------------
+
+  describe('onPayCash() — double-click / retry safety and free-aisle exclusion', () => {
+    function seedOnSeatResult(): void {
+      component['carryOnResult'] = {
+        parcelId: 5,
+        trackingNumber: 'P-AB12CD34EF',
+        bookingId: 91,
+        bookingNumber: 'B-000091',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+    }
+
+    it('calls payWalkIn with the bookingId from the carry-on result and flips carryOnPaid on success', () => {
+      seedOnSeatResult();
+
+      component['onPayCash']();
+
+      expect(staffApi.payWalkIn).toHaveBeenCalledWith(91, jasmine.any(String));
+      expect(component['carryOnPaid']).toBeTrue();
+      expect(component['isPayingCarryOn']).toBeFalse();
+    });
+
+    // Card AC follow-up hard requirement: "Generate the idempotency key ONCE
+    // per minted booking and reuse it on retry — do not mint a fresh key per
+    // click, or a double-click becomes a double charge."
+    it('reuses the SAME idempotency key across a synchronous double-click (in-flight guard blocks the 2nd)', () => {
+      seedOnSeatResult();
+      const late$ = new Subject<any>();
+      staffApi.payWalkIn.and.returnValue(late$.asObservable());
+
+      component['onPayCash'](); // 1st click — isPayingCarryOn flips true
+      component['onPayCash'](); // 2nd click while still in flight — must no-op
+
+      expect(staffApi.payWalkIn).toHaveBeenCalledTimes(1);
+    });
+
+    it('reuses the SAME idempotency key on a RETRY after a failed attempt (no fresh key minted)', () => {
+      seedOnSeatResult();
+      staffApi.payWalkIn.and.returnValue(throwError(() => ({ error: { errorCode: 'PAYMENT_IN_PROGRESS' } })));
+
+      component['onPayCash'](); // fails
+      expect(component['carryOnPaid']).toBeFalse();
+
+      staffApi.payWalkIn.and.returnValue(
+        of({ code: 200, message: 'OK', data: { id: 1, bookingId: 91, status: 'paid', paymentMethod: 'cash', amount: 150 } })
+      );
+      component['onPayCash'](); // retry
+
+      const keys = staffApi.payWalkIn.calls.allArgs().map((args: unknown[]) => args[1]);
+      expect(keys[0]).toBe(keys[1]); // SAME key both times, not regenerated
+      expect(component['carryOnPaid']).toBeTrue();
+    });
+
+    it('does nothing once already paid (button not reachable again)', () => {
+      seedOnSeatResult();
+      component['carryOnPaid'] = true;
+
+      component['onPayCash']();
+
+      expect(staffApi.payWalkIn).not.toHaveBeenCalled();
+    });
+
+    it('maps a failed pay attempt to its i18n key and leaves the action retryable', () => {
+      seedOnSeatResult();
+      staffApi.payWalkIn.and.returnValue(throwError(() => ({ error: { errorCode: 'BOOKING_ALREADY_PAID' } })));
+
+      component['onPayCash']();
+
+      expect(component['carryOnPayErrorKey']).toBe('STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.PAY_BOOKING_ALREADY_PAID');
+      expect(component['carryOnPaid']).toBeFalse();
+      expect(component['isPayingCarryOn']).toBeFalse(); // re-enabled, not stuck disabled
+    });
+
+    // Defense-in-depth: the result panel's template never renders the pay
+    // button for a free-aisle result (see that component's spec), but this
+    // pins the PAGE method itself also refuses to charge a 0.00 booking.
+    it('is a no-op for a free-aisle result even if called directly', () => {
+      component['carryOnResult'] = {
+        parcelId: 6,
+        trackingNumber: 'P-FREE1',
+        bookingId: 92,
+        bookingNumber: 'B-000092',
+        parcelType: 'carry_on_seat',
+        freeAisle: true,
+        seatCount: null,
+        seatNumbers: null,
+        amount: 0,
+        bookingNetAmount: 0,
+      };
+
+      component['onPayCash']();
+
+      expect(staffApi.payWalkIn).not.toHaveBeenCalled();
+    });
+
+    // Same shape as the modeEpoch quote/submit guards above (AGENT_MEMORY.md's
+    // OBRS-341 note): a pay response for one item must not write onto
+    // whatever the page shows after the salesperson has already moved on.
+    it('DROPS a pay response that resolves after the salesperson moved to the next item', () => {
+      seedOnSeatResult();
+      const late$ = new Subject<any>();
+      staffApi.payWalkIn.and.returnValue(late$.asObservable());
+
+      component['onPayCash']();
+      component['onNextItem'](); // resultEpoch bumps; carryOnResult cleared
+      late$.next({ code: 200, message: 'OK', data: { id: 1, bookingId: 91, status: 'paid', paymentMethod: 'cash', amount: 150 } });
+
+      expect(component['carryOnPaid']).toBeFalse();
+    });
+
+    it('DROPS a pay response that resolves after a mode switch', () => {
+      // Enter carry-on mode FIRST (default mode is already 'consigned', so
+      // switching straight to 'consigned' below would be a no-op and never
+      // bump resultEpoch — this mirrors the real flow: pay while IN
+      // carry-on mode, then the salesperson switches away).
+      component['onModeChange']('carry_on_seat');
+      seedOnSeatResult();
+      const late$ = new Subject<any>();
+      staffApi.payWalkIn.and.returnValue(late$.asObservable());
+
+      component['onPayCash']();
+      component['onModeChange']('consigned'); // an ACTUAL switch this time
+      late$.next({ code: 200, message: 'OK', data: { id: 1, bookingId: 91, status: 'paid', paymentMethod: 'cash', amount: 150 } });
+
+      expect(component['carryOnPaid']).toBeFalse();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // OBRS-341 (card AC follow-up) — "รับชิ้นต่อไป" (next item)
+  // ---------------------------------------------------------------------------
+
+  describe('onNextItem() — resets the page to an empty form of the SAME mode', () => {
+    it('clears the result/quote/payment state without changing mode', () => {
+      component.ngOnInit();
+      component['onModeChange']('carry_on_seat');
+      component['carryOnResult'] = {
+        parcelId: 5,
+        trackingNumber: 'P-1',
+        bookingId: 91,
+        bookingNumber: 'B-91',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+      component['carryOnPaid'] = true;
+      component['serverErrorKey'] = 'STAFF.PARCEL_CONSIGN.CARRY_ON.ERROR.GENERIC';
+
+      component['onNextItem']();
+
+      expect(component['mode']).toBe('carry_on_seat'); // SAME mode, not reset
+      expect(component['carryOnResult']).toBeNull();
+      expect(component['result']).toBeNull();
+      expect(component['carryOnPaid']).toBeFalse();
+      expect(component['isPayingCarryOn']).toBeFalse();
+      expect(component['serverErrorKey']).toBeNull();
+    });
+
+    it('calls the form\'s resetForNextItem() so the underlying FormGroup is blanked too', () => {
+      const resetSpy = jasmine.createSpy('resetForNextItem');
+      component['formRef'] = { resetForNextItem: resetSpy } as any;
+
+      component['onNextItem']();
+
+      expect(resetSpy).toHaveBeenCalled();
+    });
+
+    it('a NEW booking after "next item" mints a fresh idempotency key (not the previous booking\'s)', () => {
+      component['carryOnResult'] = {
+        parcelId: 5,
+        trackingNumber: 'P-1',
+        bookingId: 91,
+        bookingNumber: 'B-91',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+      component['onPayCash']();
+      const firstKey = staffApi.payWalkIn.calls.mostRecent().args[1];
+
+      component['onNextItem']();
+      component['carryOnResult'] = {
+        parcelId: 7,
+        trackingNumber: 'P-2',
+        bookingId: 93,
+        bookingNumber: 'B-93',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A2'],
+        amount: 150,
+        bookingNetAmount: 150,
+      };
+      component['onPayCash']();
+      const secondKey = staffApi.payWalkIn.calls.mostRecent().args[1];
+
+      expect(secondKey).not.toBe(firstKey);
+    });
   });
 });

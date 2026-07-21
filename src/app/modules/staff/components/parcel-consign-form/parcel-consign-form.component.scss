@@ -26,3 +26,34 @@
   color: var(--admin-text);
   width: fit-content;
 }
+
+// OBRS-341 (carry-on-on-seat) — classification hint's secondary note (the
+// free-aisle-per-trip cap). Same muted role as .parcel-consign-indicator,
+// just nested one level for visual grouping under the primary hint line.
+.parcel-carryon-free-note {
+  font-size: 12px;
+  color: var(--admin-muted);
+  margin-top: 2px;
+}
+
+// OBRS-341 — the optional explicit-seat-selection checklist. Plain
+// checkboxes (Bootstrap .form-check, already dark-themed globally), not a
+// PrimeNG p-multiSelect: this codebase has no existing dark-mode coverage
+// for PrimeNG's overlay-panel-based pickers outside p-calendar's own
+// hand-themed classes, and a small enumerable set (a trip's seat count) has
+// no need for a searchable/overlay control. See design-system.md §12 "New
+// pattern log" for the one-line justification this represents.
+.parcel-carryon-seat-checklist {
+  margin-top: 10px;
+}
+
+.parcel-carryon-seat-checklist-label {
+  display: block;
+  color: var(--admin-text);
+}
+
+.parcel-carryon-seat-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}

@@ -203,6 +203,48 @@ describe('StaffApiService', () => {
     });
   });
 
+  // OBRS-341 — carry-on-on-seat branch, same endpoint, different discriminant/shape.
+  it('createCarryOnParcel() posts the carry-on-on-seat walk-in payload (no recipient, dimensions required)', () => {
+    const payload = {
+      parcelType: 'carry_on_seat' as const,
+      scheduleId: 42,
+      pickupStopId: 1,
+      dropoffStopId: 2,
+      weightKg: 5,
+      dimensions: { lengthCm: 80, widthCm: 40, heightCm: 30 },
+      seatCount: 1,
+      seatNumbers: ['A1'],
+      description: 'Oversized backpack',
+      prohibitedAcknowledged: true,
+      sender: { name: 'Somchai', phone: '0812345678' },
+      paymentMethod: 'cash' as const,
+    };
+    service.createCarryOnParcel(payload).subscribe((res) => {
+      expect(res).toBeTruthy();
+    });
+
+    const req = httpMock.expectOne(`${environment.apiUrl}/api/private/parcels/walk-in`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(payload);
+    expect((req.request.body as Record<string, unknown>)['recipient']).toBeUndefined();
+    req.flush({
+      code: 201,
+      message: 'Created',
+      data: {
+        parcelId: 5,
+        trackingNumber: 'P-AB12CD34EF',
+        bookingId: 91,
+        bookingNumber: 'B-000091',
+        parcelType: 'carry_on_seat',
+        freeAisle: false,
+        seatCount: 1,
+        seatNumbers: ['A1'],
+        amount: 150,
+        bookingNetAmount: 150,
+      },
+    });
+  });
+
   it('getParcelQuote() gets the quote endpoint with the correct query params', () => {
     service
       .getParcelQuote({ parcelType: 'consigned', scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 })
@@ -210,6 +252,18 @@ describe('StaffApiService', () => {
 
     const req = httpMock.expectOne(
       `${environment.apiUrl}/api/private/parcels/quote?parcelType=consigned&scheduleId=42&pickupStopId=1&dropoffStopId=2&weightKg=5`
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush({ code: 200, message: 'OK', data: { amount: 100, farePerUnit: 100, unitCount: 1, weightTierMultiplier: 1 } });
+  });
+
+  it('getParcelQuote() also accepts parcelType=carry_on_seat (OBRS-341, same endpoint)', () => {
+    service
+      .getParcelQuote({ parcelType: 'carry_on_seat', scheduleId: 42, pickupStopId: 1, dropoffStopId: 2, weightKg: 5 })
+      .subscribe((res) => expect(res).toBeTruthy());
+
+    const req = httpMock.expectOne(
+      `${environment.apiUrl}/api/private/parcels/quote?parcelType=carry_on_seat&scheduleId=42&pickupStopId=1&dropoffStopId=2&weightKg=5`
     );
     expect(req.request.method).toBe('GET');
     req.flush({ code: 200, message: 'OK', data: { amount: 100, farePerUnit: 100, unitCount: 1, weightTierMultiplier: 1 } });

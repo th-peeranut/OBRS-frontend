@@ -1475,7 +1475,6 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "VERIFY_OTP": "请通过您的手机号码验证您的订阅。",
     "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
     "EMAIL_VERIFY_SIGNIN": "登录"
   },
@@ -1607,14 +1606,39 @@
   },
   "FORGET_PASSWORD": {
     "WELCOME": "忘记密码？",
-    "HINT": "请填写以下信息以重置密码",
-    "PHONE_NO": "手机号码",
-    "PHONE_NO_PLACEHOLDER": "",
-    "PHONE_NO_REQUIRED": "请填写手机号码以重置密码",
-    "SEND_OTP": "发送验证码",
-    "NOACCOUNT": "没有账户？",
+    "HINT": "请输入您账户的电子邮箱，我们将向您发送重置密码的链接",
     "REGISTERLINK": "没有账户？",
-    "REGISTERLINK_CLICK": "在此注册"
+    "REGISTERLINK_CLICK": "在此注册",
+    "EMAIL": "电子邮箱",
+    "EMAIL_PLACEHOLDER": "请输入电子邮箱",
+    "EMAIL_REQUIRED": "请输入电子邮箱",
+    "EMAIL_INVALID": "电子邮箱格式不正确",
+    "SEND_LINK": "发送重置链接",
+    "SEND_LINK_LOADING": "发送中...",
+    "SENT_MESSAGE": "如果该邮箱已绑定账户，我们已向其发送重置密码的链接。请查收您的邮箱。",
+    "BACK_TO_LOGIN": "返回登录"
+  },
+  "RESET_PASSWORD": {
+    "WELCOME": "设置新密码",
+    "HINT": "请为您的账户设置一个新密码",
+    "NEW_PASSWORD": "新密码",
+    "NEW_PASSWORD_REQUIRED": "请输入新密码",
+    "CONFIRM_PASSWORD": "确认新密码",
+    "PASSWORD_RULE": "密码需为 8-128 个字符，并至少包含一个大写字母、一个小写字母和一个数字",
+    "PASSWORD_MISMATCH": "两次输入的密码不一致",
+    "SUBMIT": "设置新密码",
+    "SUBMIT_LOADING": "保存中...",
+    "SUCCESS_TITLE": "密码已更改",
+    "SUCCESS_MESSAGE": "您的密码已更改，现在可以使用新密码登录。",
+    "SUCCESS_SIGNIN": "登录",
+    "INVALID_TITLE": "此链接无法使用",
+    "REQUEST_NEW_LINK": "重新获取链接",
+    "BACK_TO_LOGIN": "返回登录",
+    "ERROR": {
+      "TOKEN_MISSING": "未找到重置凭证。请检查邮件中的链接，或重新获取一个。",
+      "TOKEN_INVALID": "此重置链接无效、已过期或已被使用。",
+      "GENERIC": "出现错误，请重试。"
+    }
   },
   "HOME": {
     "NAVBAR": {
@@ -2041,7 +2065,7 @@
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
       "BOARDING": "登车名单",
-      "PARCEL_CONSIGN": "寄送包裹",
+      "PARCEL_INTAKE": "包裹收件",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
@@ -2433,13 +2457,21 @@
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     },
+    "PARCEL_INTAKE": {
+      "SUBTITLE": "登记寄送包裹，或需要占用座位的随身物品。"
+    },
     "PARCEL_CONSIGN": {
-      "SUBTITLE": "登记一个新的寄送包裹以便配送。",
+      "MODE": {
+        "LABEL": "包裹类型",
+        "CONSIGNED": "寄送",
+        "CARRY_ON": "随身携带（占座）"
+      },
       "SECTION": {
         "SENDER": "寄件人",
         "RECIPIENT": "收件人",
         "TRIP": "行程",
-        "DIMENSIONS": "尺寸（选填）"
+        "DIMENSIONS": "尺寸（选填）",
+        "DIMENSIONS_REQUIRED": "尺寸"
       },
       "FIELD": {
         "SENDER_NAME": "寄件人姓名",
@@ -2472,7 +2504,8 @@
       "VALIDATION": {
         "WEIGHT_POSITIVE": "重量必须大于 0。",
         "WEIGHT_MAX": "重量不能超过 100 公斤。",
-        "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。"
+        "DIMENSIONS_ALL_OR_NONE": "请填写全部三项尺寸，或全部留空。",
+        "DIMENSION_POSITIVE": "尺寸必须大于 0。"
       },
       "ERROR": {
         "PROHIBITED_CATEGORY": "此包裹属于违禁类别，无法受理。",
@@ -2488,7 +2521,53 @@
         "TRACKING_NUMBER": "追踪单号",
         "COLLECTION_CODE": "取件码",
         "AMOUNT": "金额",
-        "VIEW_WAYBILL": "查看运单"
+        "VIEW_WAYBILL": "查看运单",
+        "NEXT_ITEM": "接收下一件"
+      },
+      "CARRY_ON": {
+        "SUBMIT": "记录随身物品",
+        "FIELD": {
+          "SEAT_COUNT": "座位数量",
+          "SPECIFY_SEATS": "自行选择座位",
+          "SEAT_NUMBERS": "座位号"
+        },
+        "CLASSIFICATION": {
+          "FREE_AISLE": "免费 — 不占用座位",
+          "FREE_AISLE_NOTE": "免费随身物品每趟限 10 件。",
+          "ON_SEAT": "此物品需占用一个座位并需收费。"
+        },
+        "VALIDATION": {
+          "SEAT_COUNT_REQUIRED": "请输入此物品需要的座位数量。"
+        },
+        "ERROR": {
+          "TYPE_NOT_SUPPORTED": "此处不支持该包裹类型。",
+          "PROHIBITED_NOT_ACKNOWLEDGED": "请确认此物品不含任何违禁物品。",
+          "PAYMENT_METHOD_NOT_SUPPORTED": "现场销售不支持此付款方式。",
+          "WEIGHT_EXCEEDS_MAX": "重量超过允许上限。",
+          "SEAT_COUNT_REQUIRED": "此物品需占用座位，请输入所需座位数量。",
+          "SEAT_COUNT_NOT_ALLOWED": "此物品无需占用座位，请移除座位数量。",
+          "SEAT_NUMBERS_MISMATCH": "所选座位数量与座位数量不符。",
+          "SEATS_DUPLICATE": "所选座位中有重复。",
+          "SEATS_NOT_FOUND": "此车辆上不存在部分所选座位。",
+          "SEATS_UNAVAILABLE": "部分所选座位已不可用。",
+          "SEATS_INSUFFICIENT": "此班次可用座位不足。",
+          "FREE_AISLE_CAP_EXCEEDED": "此班次的免费随身物品名额已满。",
+          "GENERIC": "无法记录此随身物品，请重试。",
+          "PAY_FAILED": "无法记录此付款，请重试。",
+          "PAY_BOOKING_ALREADY_PAID": "此订单已付款。",
+          "PAY_IN_PROGRESS": "此订单的付款正在处理中，请重试。",
+          "PAY_BOOKING_EXPIRED": "此订单已过期，无法付款。"
+        },
+        "RESULT": {
+          "TITLE": "随身物品登记成功",
+          "BOOKING_NUMBER": "订单号",
+          "SEATS": "座位",
+          "FREE_AISLE": "免费 — 未占用座位",
+          "UNPAID_NOTE": "尚未付款 — 请在柜台收取现金（订单号 #{{bookingNumber}}）",
+          "PAY_CASH_BUTTON": "收取现金",
+          "PAYING": "正在记录付款…",
+          "PAID": "已付款 — 已收取现金 ฿{{amount}}"
+        }
       }
     },
     "PARCEL_WAYBILL": {

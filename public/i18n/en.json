@@ -1475,7 +1475,6 @@
     "LOGIN_LINK_CLICK": "Signin here",
     "REGISTER_SUCCESS": "Successful registration",
     "REGISTER_FAIL": "Error found. Registration failed.",
-    "VERIFY_OTP": "Please verify your subscription via your phone number.",
     "EMAIL_VERIFY_SENT": "We have sent a verification email to your inbox. Please check your email and click the link to complete registration.",
     "EMAIL_VERIFY_SIGNIN": "Sign in"
   },
@@ -1607,14 +1606,39 @@
   },
   "FORGET_PASSWORD": {
     "WELCOME": "Forgot your password?",
-    "HINT": "Please fill in the information below to proceed with the password reset",
-    "PHONE_NO": "Phone number",
-    "PHONE_NO_PLACEHOLDER": "",
-    "PHONE_NO_REQUIRED": "Please fill in the phone number to proceed with the password reset",
-    "SEND_OTP": "Send OTP",
-    "NOACCOUNT": "Do you not have an account?",
+    "HINT": "Enter the email address on your account and we will send you a link to reset your password",
     "REGISTERLINK": "Do you not have an account?",
-    "REGISTERLINK_CLICK": "Register here"
+    "REGISTERLINK_CLICK": "Register here",
+    "EMAIL": "Email",
+    "EMAIL_PLACEHOLDER": "Please enter your email",
+    "EMAIL_REQUIRED": "Please enter your email",
+    "EMAIL_INVALID": "Please enter a valid email",
+    "SEND_LINK": "Send reset link",
+    "SEND_LINK_LOADING": "Sending...",
+    "SENT_MESSAGE": "If that email address belongs to an account, we have sent a password reset link to it. Please check your inbox.",
+    "BACK_TO_LOGIN": "Back to sign in"
+  },
+  "RESET_PASSWORD": {
+    "WELCOME": "Set a new password",
+    "HINT": "Choose a new password for your account",
+    "NEW_PASSWORD": "New password",
+    "NEW_PASSWORD_REQUIRED": "Please enter a new password",
+    "CONFIRM_PASSWORD": "Confirm new password",
+    "PASSWORD_RULE": "Password must be 8-128 characters and contain an uppercase letter, a lowercase letter and a digit",
+    "PASSWORD_MISMATCH": "The two passwords do not match",
+    "SUBMIT": "Set new password",
+    "SUBMIT_LOADING": "Saving...",
+    "SUCCESS_TITLE": "Password changed",
+    "SUCCESS_MESSAGE": "Your password has been changed. You can now sign in with it.",
+    "SUCCESS_SIGNIN": "Sign in",
+    "INVALID_TITLE": "This link cannot be used",
+    "REQUEST_NEW_LINK": "Request a new link",
+    "BACK_TO_LOGIN": "Back to sign in",
+    "ERROR": {
+      "TOKEN_MISSING": "No reset token found. Please check the link in your email, or request a new one.",
+      "TOKEN_INVALID": "This reset link is invalid, expired, or has already been used.",
+      "GENERIC": "Something went wrong. Please try again."
+    }
   },
   "HOME": {
     "NAVBAR": {
@@ -2041,7 +2065,7 @@
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
       "BOARDING": "Boarding List",
-      "PARCEL_CONSIGN": "Consign Parcel",
+      "PARCEL_INTAKE": "Parcel Intake",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
@@ -2433,13 +2457,21 @@
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "You have no schedules assigned. Please check back later."
     },
+    "PARCEL_INTAKE": {
+      "SUBTITLE": "Record a consigned parcel, or a carry-on item that needs its own seat."
+    },
     "PARCEL_CONSIGN": {
-      "SUBTITLE": "Record a new consigned parcel for delivery.",
+      "MODE": {
+        "LABEL": "Parcel type",
+        "CONSIGNED": "Consigned",
+        "CARRY_ON": "Carry-on (on seat)"
+      },
       "SECTION": {
         "SENDER": "Sender",
         "RECIPIENT": "Recipient",
         "TRIP": "Trip",
-        "DIMENSIONS": "Dimensions (optional)"
+        "DIMENSIONS": "Dimensions (optional)",
+        "DIMENSIONS_REQUIRED": "Dimensions"
       },
       "FIELD": {
         "SENDER_NAME": "Sender name",
@@ -2472,7 +2504,8 @@
       "VALIDATION": {
         "WEIGHT_POSITIVE": "Weight must be greater than 0.",
         "WEIGHT_MAX": "Weight cannot exceed 100 kg.",
-        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank."
+        "DIMENSIONS_ALL_OR_NONE": "Enter all three dimensions, or leave all three blank.",
+        "DIMENSION_POSITIVE": "Dimension must be greater than 0."
       },
       "ERROR": {
         "PROHIBITED_CATEGORY": "This parcel matches a prohibited category and cannot be accepted.",
@@ -2488,7 +2521,53 @@
         "TRACKING_NUMBER": "Tracking number",
         "COLLECTION_CODE": "Collection code",
         "AMOUNT": "Amount",
-        "VIEW_WAYBILL": "View waybill"
+        "VIEW_WAYBILL": "View waybill",
+        "NEXT_ITEM": "Next item"
+      },
+      "CARRY_ON": {
+        "SUBMIT": "Record carry-on item",
+        "FIELD": {
+          "SEAT_COUNT": "Seat count",
+          "SPECIFY_SEATS": "Choose seats myself",
+          "SEAT_NUMBERS": "Seat numbers"
+        },
+        "CLASSIFICATION": {
+          "FREE_AISLE": "Free — no charge, no seat used",
+          "FREE_AISLE_NOTE": "Free carry-on items are capped at 10 per trip.",
+          "ON_SEAT": "This item needs its own seat and will be charged."
+        },
+        "VALIDATION": {
+          "SEAT_COUNT_REQUIRED": "Enter how many seats this item needs."
+        },
+        "ERROR": {
+          "TYPE_NOT_SUPPORTED": "This parcel type is not supported here.",
+          "PROHIBITED_NOT_ACKNOWLEDGED": "Please confirm this item does not contain any prohibited item.",
+          "PAYMENT_METHOD_NOT_SUPPORTED": "This payment method is not supported for walk-in sales.",
+          "WEIGHT_EXCEEDS_MAX": "Weight exceeds the maximum allowed.",
+          "SEAT_COUNT_REQUIRED": "This item needs its own seat — enter how many seats it needs.",
+          "SEAT_COUNT_NOT_ALLOWED": "This item does not need a seat — remove the seat count.",
+          "SEAT_NUMBERS_MISMATCH": "The number of selected seats does not match the seat count.",
+          "SEATS_DUPLICATE": "The selected seats include a duplicate.",
+          "SEATS_NOT_FOUND": "One or more selected seats do not exist on this vehicle.",
+          "SEATS_UNAVAILABLE": "One or more selected seats are no longer available.",
+          "SEATS_INSUFFICIENT": "Not enough seats are available on this trip.",
+          "FREE_AISLE_CAP_EXCEEDED": "The free carry-on limit for this trip has been reached.",
+          "GENERIC": "Unable to record this carry-on item. Please try again.",
+          "PAY_FAILED": "Unable to record this payment. Please try again.",
+          "PAY_BOOKING_ALREADY_PAID": "This booking has already been paid.",
+          "PAY_IN_PROGRESS": "Another payment for this booking is already in progress. Please try again.",
+          "PAY_BOOKING_EXPIRED": "This booking has expired and can no longer be paid."
+        },
+        "RESULT": {
+          "TITLE": "Carry-on item recorded",
+          "BOOKING_NUMBER": "Booking number",
+          "SEATS": "Seats",
+          "FREE_AISLE": "Free — no seat used",
+          "UNPAID_NOTE": "Not yet paid — collect cash at the counter (Booking #{{bookingNumber}})",
+          "PAY_CASH_BUTTON": "Collect cash",
+          "PAYING": "Recording payment…",
+          "PAID": "Paid — ฿{{amount}} collected"
+        }
       }
     },
     "PARCEL_WAYBILL": {

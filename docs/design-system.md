@@ -842,6 +842,38 @@ enforced rule with a test behind it.
   (not `MyReportsComponent`'s white-bg recipe) for the next customer-shell
   repeatable chip/tag control.
 
+- **Plain Bootstrap `nav nav-tabs` reused for a non-URL-driven 2-way page
+  mode toggle** (OBRS-341, `ParcelConsignPageComponent`'s consigned/carry-on
+  switch): the exact `nav nav-tabs`/`nav-link`/`.active` markup already
+  established for `ParcelScheduleTabsPageComponent`'s URL-driven tab strip
+  (OBRS-574) is reused here for a component-local mode field instead —
+  deliberately NOT PrimeNG's `p-selectButton` (its unselected-segment
+  dark-mode gap is the recurring §12/OBRS-312 bug) and NOT a second
+  `.admin-btn-primary`-styled toggle (the page already has one true primary
+  action, Submit; a second simultaneously-primary-styled element would read
+  as two competing CTAs, violating §4's "exactly one primary per screen").
+  Reuse plain `nav-tabs` for the next 2-or-3-way page-level mode/view switch
+  that isn't itself a verdict needing per-segment semantic coloring (that
+  case stays the `.admin-btn`-based toggle, OBRS-312, above).
+
+- **Checkbox list for optional explicit multi-value selection from a small
+  enumerable set, in place of a multi-select dropdown** (OBRS-341, the
+  carry-on-on-seat form's "ระบุที่นั่งเอง" explicit-seat-selection checklist):
+  offering a hand-pick of a *few* (single/double-digit) seat numbers off
+  `WalkInTripDto.availableSeatNumbers` doesn't need PrimeNG's `p-multiSelect`
+  — that overlay-panel-based picker has no existing dark-mode coverage
+  anywhere in this codebase (unlike `p-calendar`, which has its own hand-
+  themed `app-date-field-panel` classes), and a small flat list scans faster
+  as plain Bootstrap `.form-check` checkboxes (already dark-themed globally,
+  same primitive as `prohibitedAcknowledged` on the same form) than as a
+  searchable overlay. This is NOT a form-select `app-admin-dropdown` case
+  either (§3) — that contract is for single-value selects; a multi-value
+  checklist off a small enumerable set is a distinct, smaller-scope pattern
+  from both. Reuse plain checkboxes for the next "pick zero-or-more from a
+  short, already-known list" control; reach for a multi-select overlay only
+  once a genuinely large/searchable option set appears (and budget dark-mode
+  coverage for it then).
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

@@ -3876,3 +3876,87 @@ behavior on a code path your own logic never reaches, it is unverifiable by your
 your repo — say "unspecified, do not rely on" instead of guessing. Same family as DEV-GOTCHAS'
 Confirmed *"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's
 false reference"* (now 3 occurrences).
+
+---
+
+## OBRS-468 (Scrutinize self-fix) — a refactor comment claiming "lifted verbatim" when the shared component is a SUPERSET
+
+`bookings-page.component.html`'s new comment described `app-admin-paginator` as markup OBRS-403
+"lifted verbatim" from this very file. It did not: the shared component added a
+`<nav role="navigation" [attr.aria-label]>` wrapper, `aria-live="polite"` on the page counter, and a
+`disabled` `@Input()`. The conclusion the comment served (this swap is behavior-preserving) is
+correct — the mechanism it stated is not.
+
+Why it matters more here than usual: "verbatim" is precisely the claim a reviewer of a
+behavior-preserving refactor is supposed to verify. A future reader trusting that word skips the
+DOM diff and never learns that the host element now renders unconditionally (the `*ngIf` moved
+*inside* the component) or that the `disabled` default is what keeps the button predicates equal.
+Rewrote it to state the superset explicitly and to name the sibling call sites' `[disabled]="isRefreshing"`,
+so the omission here reads as deliberate rather than forgotten.
+
+Rule: when a comment asserts a code relationship ("lifted from", "same as", "mirrors"), diff the two
+artifacts before writing the verb. "Verbatim"/"identical" are falsifiable claims, not flourishes —
+if the target is a superset, say superset. **6th** occurrence of DEV-GOTCHAS' Confirmed
+*"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's false reference"*
+— written as "4th" before merging, which the OBRS-602 entry below (two more, same family, landed
+first) made stale on contact. The counter in a shared append-only file is itself a claim that decays.
+
+---
+
+## OBRS-602 — a merge gate has to gate its own case COUNT, not just its case list (Scrutinize)
+
+`playwright.gate.config.ts` was built as "the one deterministic merge gate": an explicit five-spec
+`testMatch`, cross-checked against `e2e/lanes.json` by `scripts/check-e2e-lanes.mjs`. The registry
+check answers *"which specs are in the gate?"* and answers it well. It cannot answer *"did they
+run?"* — and Playwright hands you two one-token ways to make the answer "no" while still exiting 0:
+a stray `test.only` collapses the lane from 49 cases to 1, and `test.describe.skip` removes a whole
+file's worth silently. Neither shows up in a green `list` reporter run unless somebody reads the
+count, and nothing in the repo pins the count.
+
+Added `forbidOnly: true` to the gate config — unconditionally, not the customary
+`!!process.env.CI`. This lane is deliberately NOT in CI (Actions is a hard $0 ceiling here), so it
+only ever runs on a developer's machine, which is precisely the machine the CI-gated form exempts.
+The idiom you copy from other repos is wrong for a gate that lives outside CI.
+
+Two false-reference comments in the same commit, both the DEV-GOTCHAS Confirmed *"a comment stating
+the WRONG MECHANISM"* family:
+- The gate config's rule 1 asserted specs needing a session use `e2e/fixtures/gate-auth.json`,
+  "a committed synthetic one". No such file exists anywhere in the repo. The real mechanism is a
+  fake `auth_token` seeded via `addInitScript` inside each spec. Rewritten to say that.
+- `e2e/lanes.json` told the reader to run `obrs-296-child-fare-qa.spec.ts` under
+  `playwright.gate.config.ts` "manually, with --grep". That config's `testMatch` does not list it,
+  so the instruction cannot work — and rule 2 of the new gate actively forbids adding it while the
+  spec stays in the CAPTURE lane. Corrected to state it has no runnable config.
+
+Rule: when a change's whole purpose is "this signal can now be trusted", enumerate the ways the
+signal can stay green while measuring nothing — for Playwright that is `.only`, `.skip`, an empty
+`testMatch`, and `testIgnore`/`grep` — and close them in the config, not in prose. A gate that
+verifies its own bookkeeping still needs something that verifies it ran.
+
+
+## OBRS-341 (Scrutinize self-fix) — clearing state on a mode switch does NOT cancel the requests already in flight
+
+`ParcelConsignPageComponent.onModeChange()` cleared `quote`/`result`/`carryOnResult`/`serverErrorKey`
+and the form reset in lockstep, and its doc comment claimed that *"nothing carried over from the old
+mode survives a switch on EITHER side of the page/form boundary."* Every field-clearing assertion in
+the spec passed. The claim was still false: a `getParcelQuote` or `create*Parcel` request issued
+under the OLD mode is still in flight across the switch, and its `next` handler writes those exact
+fields **after** the clear — re-displaying the old branch's price, or the old branch's success panel,
+under the new branch.
+
+The tell: a reset method is only as strong as the set of writers that can run after it. Enumerate
+every async handler that writes the state you just cleared, not just the fields you remembered to
+list. Same shape as DEV-GOTCHAS' *"a teardown/stop decision is only as strong as the set of paths
+that can restart it"* (OBRS-426), applied to state-clearing rather than to lifecycle.
+
+Fix pattern used here: a `modeEpoch` counter bumped by the switch; each request captures the epoch at
+issue time and drops its own response if the epoch has moved. Prefer `switchMap` off a params
+`Subject` when the flow is already reactive — the epoch token is the surgical option when the
+existing shipped call sites (here, live consigned intake) must stay byte-identical.
+
+Two related smaller ones from the same review, both worth generalizing:
+- A new i18n key can ship referenced 0 times even when 16 of its 17 siblings are wired
+  (`MODE.LABEL`). Grep **each** new key individually; a per-namespace spot check misses the one.
+- Reusing a shipped screen for a second mode inherits its **copy**, not just its markup: the submit
+  button still read "Consign parcel" in carry-on mode. When adding a mode toggle to an existing page,
+  re-read every user-visible string on it against the new branch, not only the fields you added.
