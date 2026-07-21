@@ -68,6 +68,16 @@ jobs:
       - name: admin theme dark-mode token gate
         run: npm run test:theme-tokens
 
+      # Fifth pure-node gate (OBRS-506). A `.data$` subscribe callback guarded as
+      # `if (data) { ... }` with no else silently KEEPS its previous cached rows on
+      # a null emission (AdminCollectionStore.clear(), e.g. on logout) instead of
+      # resetting them -- no error, no warning, stale rows visible under the next
+      # error banner. That exact shape shipped once (OBRS-467, usability-reports)
+      # and was found latent in 19 more subscribe sites by this card's sweep.
+      # Costs no extra runner minutes.
+      - name: store null-handling gate
+        run: npm run test:store-null
+
       - name: Install dependencies
         run: npm ci
 

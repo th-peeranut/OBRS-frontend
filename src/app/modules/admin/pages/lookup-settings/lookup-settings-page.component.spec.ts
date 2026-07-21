@@ -99,6 +99,29 @@ describe('LookupSettingsPageComponent', () => {
     // Re-fetch still runs in the background to reconcile with the server.
     expect(store.refresh).toHaveBeenCalled();
   });
+
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached entries/categories, not leave a previous session's rows on
+  // screen — same shape as the already-fixed
+  // usability-reports-page.component.ts (OBRS-467).
+  it('clears entries and categories when the store emits null (OBRS-506)', () => {
+    const { component, store } = makeComponent();
+    (component as any).ngOnInit();
+
+    const lookups: AdminLookupDto[] = [
+      { id: 1, category: 'role_status', slug: 'active', translations: {} },
+    ];
+    store.data$.next(lookups);
+    expect((component as any).entries.length).toBe(1);
+    expect((component as any).categories.length).toBeGreaterThan(0);
+
+    store.data$.next(null);
+
+    expect((component as any).entries)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+    expect((component as any).categories).toEqual([]);
+  });
 });
 
 describe('LookupSettingsPageComponent confirmDelete — composite category+slug key', () => {

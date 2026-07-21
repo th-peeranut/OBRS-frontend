@@ -174,17 +174,19 @@ export class SchedulesPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Render the cached schedules instantly on re-entry, then revalidate.
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+      // previous session's rows on screen. applyLocalization() is safe over
+      // empty arrays (map/filter of []).
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.rawScheduleSets = data.scheduleSets;
-          this.rawGeneratedSchedules = data.generatedSchedules;
-          this.rawRoutes = data.routes;
-          this.rawVehicles = data.vehicles;
-          this.rawVehicleTypes = data.vehicleTypes;
-          this.rawUsers = data.users;
-          this.rawLookups = data.lookups;
-          this.applyLocalization();
-        }
+        this.rawScheduleSets = data?.scheduleSets ?? [];
+        this.rawGeneratedSchedules = data?.generatedSchedules ?? [];
+        this.rawRoutes = data?.routes ?? [];
+        this.rawVehicles = data?.vehicles ?? [];
+        this.rawVehicleTypes = data?.vehicleTypes ?? [];
+        this.rawUsers = data?.users ?? [];
+        this.rawLookups = data?.lookups ?? [];
+        this.applyLocalization();
       })
     );
     this.subscriptions.add(

@@ -69,11 +69,13 @@ export class CargoCapacityPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+    // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+    // previous session's rows on screen. applyLocalization() is safe over an
+    // empty array (map of []).
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
-      if (data) {
-        this.rawVehicleTypes = data.vehicleTypes;
-        this.applyLocalization();
-      }
+      this.rawVehicleTypes = data?.vehicleTypes ?? [];
+      this.applyLocalization();
     });
 
     this.store.refreshing$

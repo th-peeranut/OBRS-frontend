@@ -1306,6 +1306,38 @@ describe('SellPageComponent', () => {
 
       comp.ngOnDestroy();
     });
+
+    // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+    // schedule option arrays this subscription populates, not leave a
+    // previous session's routes/vehicleTypes/vehicles/drivers selectable in
+    // the create-sale form — same shape as the already-fixed
+    // usability-reports-page.component.ts (OBRS-467).
+    it('clears the schedule option arrays when the store emits null (OBRS-506)', () => {
+      const { store, subject, hasValueRef } = createControllableScheduleStoreStub();
+      const comp = new SellPageComponent(
+        createStaffApiStub(),
+        createAlertStub(), createTranslateStub(), new FormBuilder(),
+        createAdminApiStub(), store, createRouterStub()
+      );
+      comp.ngOnInit();
+
+      hasValueRef.value = true;
+      subject.next(makeStoreData());
+      expect((comp as any).scheduleRouteOptions.length).toBeGreaterThan(0);
+      expect((comp as any).scheduleVehicleTypeOptions.length).toBeGreaterThan(0);
+
+      hasValueRef.value = false;
+      subject.next(null);
+
+      expect((comp as any).scheduleRouteOptions)
+        .withContext('a null emission must not leave the previous session\'s route options selectable')
+        .toEqual([]);
+      expect((comp as any).scheduleVehicleTypeOptions).toEqual([]);
+      expect((comp as any).scheduleVehicleOptions).toEqual([]);
+      expect((comp as any).scheduleDriverOptions).toEqual([]);
+
+      comp.ngOnDestroy();
+    });
   });
 
   describe('lifecycle', () => {

@@ -52,13 +52,15 @@ export class MyReportsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    // OBRS-506: honor a null emission (OBRS-467 shape) — the store emits null
+    // on clear() (e.g. logout), which DISCARDS the cached value; the old
+    // `if (data)` guard kept the previous page's rows visible under that
+    // discard instead of resetting to empty.
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
-      if (data) {
-        this.reports = data.content;
-        this.totalElements = data.totalElements;
-        this.currentPageNumber = data.number;
-        this.totalPages = data.totalPages;
-      }
+      this.reports = data?.content ?? [];
+      this.totalElements = data?.totalElements ?? 0;
+      this.currentPageNumber = data?.number ?? 0;
+      this.totalPages = data?.totalPages ?? 0;
     });
 
     this.store.refreshing$.pipe(takeUntil(this.destroy$)).subscribe((r) => (this.isRefreshing = r));

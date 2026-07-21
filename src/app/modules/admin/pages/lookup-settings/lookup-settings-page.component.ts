@@ -68,11 +68,13 @@ export class LookupSettingsPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Render the cached lookups instantly on re-entry, then revalidate.
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (lookups)` guard kept
+      // the previous session's rows on screen. Both mappers are safe over an
+      // empty array.
       this.store.data$.subscribe((lookups) => {
-        if (lookups) {
-          this.entries = lookups.map((lookup) => this.toLookupEntry(lookup));
-          this.categories = this.toCategorySummary(lookups);
-        }
+        this.entries = (lookups ?? []).map((lookup) => this.toLookupEntry(lookup));
+        this.categories = this.toCategorySummary(lookups ?? []);
       })
     );
     this.subscriptions.add(

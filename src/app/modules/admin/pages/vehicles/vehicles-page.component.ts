@@ -108,13 +108,15 @@ export class VehiclesPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Render the cached list instantly on re-entry, then revalidate.
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+      // previous session's rows on screen. applyLocalization() is safe over
+      // empty arrays (map/filter of []).
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.rawVehicles = data.vehicles;
-          this.rawVehicleTypes = data.vehicleTypes;
-          this.rawLookups = data.lookups;
-          this.applyLocalization();
-        }
+        this.rawVehicles = data?.vehicles ?? [];
+        this.rawVehicleTypes = data?.vehicleTypes ?? [];
+        this.rawLookups = data?.lookups ?? [];
+        this.applyLocalization();
       })
     );
     this.subscriptions.add(

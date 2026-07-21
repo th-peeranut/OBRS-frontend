@@ -70,6 +70,34 @@ describe('JumpSeatConfigPageComponent', () => {
     expect(component.jumpSeatConfigForm.get('enabled')?.value).toBe(false);
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must drop the cached
+  // `config` reference, but must NOT touch the live reactive form or
+  // hasLoadedOnce — resetting a form the admin may be mid-edit on a logout
+  // emit would be a behavior change, out of scope for this null-handling sweep.
+  it('drops the cached config but leaves the form and hasLoadedOnce untouched on a null emission (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+
+    component.ngOnInit();
+    store.data$.next({ ...CONFIG });
+    expect(component.config).toEqual(CONFIG);
+    expect(component['hasLoadedOnce']).toBeTrue();
+
+    component.jumpSeatConfigForm.get('enabled')?.markAsDirty();
+    component.jumpSeatConfigForm.get('enabled')?.setValue(false);
+
+    store.data$.next(null);
+
+    expect(component.config)
+      .withContext('the discarded cache must not still read as the previous config')
+      .toBeNull();
+    expect(component.jumpSeatConfigForm.get('enabled')?.value)
+      .withContext('a null emission must not reset the live form / wipe an in-progress edit')
+      .toBe(false);
+    expect(component['hasLoadedOnce'])
+      .withContext('hasLoadedOnce must not be flipped back by a null emission')
+      .toBeTrue();
+  });
+
   it('surfaces the LOAD_FAILED message when the store errors with no cached value', () => {
     const { component, store } = makeComponent({});
 

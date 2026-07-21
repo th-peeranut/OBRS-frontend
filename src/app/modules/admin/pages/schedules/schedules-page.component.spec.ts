@@ -716,3 +716,42 @@ describe('SchedulesPageComponent submitSchedule — inline message clearing', ()
     expect((component as any).vehicleUnderMaintenanceMessage).toBe('');
   });
 });
+
+// OBRS-506: a null emission (clear(), e.g. on logout) must reset every raw
+// array this subscription populates, not leave a previous session's rows on
+// screen — same shape as the already-fixed usability-reports-page.component.ts
+// (OBRS-467).
+describe('SchedulesPageComponent null-handling (OBRS-506)', () => {
+  it('clears schedules when the store emits null', () => {
+    const store = makeStoreStubWithMutate();
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const component = new SchedulesPageComponent(
+      {} as any,
+      new FormBuilder(),
+      alert as any,
+      createTranslateStub(),
+      store as any
+    );
+    component.ngOnInit();
+
+    store.data$.next({
+      scheduleSets: [{ id: 10, departureTimes: ['08:00'], status: 'scheduled' }],
+      generatedSchedules: [],
+      routes: [],
+      vehicles: [],
+      vehicleTypes: [],
+      users: [],
+      lookups: [],
+    } as unknown as SchedulesData);
+    expect((component as any).schedules.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect((component as any).schedules)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
+});

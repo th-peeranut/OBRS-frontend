@@ -76,6 +76,15 @@ export class RoundTripPromotionCardComponent implements OnInit, OnDestroy {
         this.promotion = data;
         this.applyFormValues(data, this.hasLoadedOnce);
         this.hasLoadedOnce = true;
+      } else {
+        // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+        // logout) DISCARDS the cached value. Drop only the cached reference;
+        // deliberately does NOT call applyFormValues(null, ...) or touch
+        // hasLoadedOnce — resetting the live reactive form on a logout emit
+        // is out of scope for this defensive sweep and would be a behavior
+        // change (the admin's in-progress edit would be wiped), not a
+        // null-handling fix.
+        this.promotion = null;
       }
     });
 

@@ -558,6 +558,46 @@ describe('InspectionItemsPageComponent — reorder (§3.2.2)', () => {
     // local order.
     expect(component.rows.map((r: any) => r.id)).toEqual([2, 1]);
   });
+
+  // OBRS-506: a null emission (clear(), e.g. on logout) must still be gated
+  // by reorderPending exactly like any other emission — the §3.2.2a rule is
+  // "only the winning reorder success/error handler may replace rows while a
+  // reorder is outstanding", not "only a non-null emission is gated".
+  it('§3.2.2a: while a reorder is outstanding, a null emission must ALSO NOT clear rows', () => {
+    const reorderInspectionItems = jasmine.createSpy('reorderInspectionItems').and.returnValue(new Subject());
+    const { component, store } = makeComponent({ reorderInspectionItems });
+    component.ngOnInit();
+    store.data$.next([item({ id: 1, displayOrder: 1 }), item({ id: 2, displayOrder: 2 })]);
+
+    component.moveDown(0); // reorderPending = true, local order = [2, 1]
+    expect(component.reorderPending).toBeTrue();
+
+    store.data$.next(null);
+
+    expect(component.rows.map((r: any) => r.id))
+      .withContext('a null emission mid-reorder must not clobber the just-clicked local order either')
+      .toEqual([2, 1]);
+  });
+});
+
+// OBRS-506: a null emission (clear(), e.g. on logout) must clear `rows`, not
+// leave a previous session's rows on screen — same shape as the
+// already-fixed usability-reports-page.component.ts (OBRS-467). This is
+// SPECIAL CASE A: the null path must still respect the §3.2.2a
+// reorderPending gate above, but is otherwise unconditional.
+describe('InspectionItemsPageComponent — null-handling (OBRS-506)', () => {
+  it('clears rows when the store emits null and no reorder is outstanding', () => {
+    const { component, store } = makeComponent();
+    component.ngOnInit();
+    store.data$.next([item({ id: 1 }), item({ id: 2, displayOrder: 2 })]);
+    expect(component.rows.length).toBe(2);
+
+    store.data$.next(null);
+
+    expect(component.rows)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
 });
 
 describe('InspectionItemsPageComponent — DOM-level (TestBed)', () => {

@@ -92,6 +92,29 @@ describe('BookingsPageComponent', () => {
     expect((component as any).currentPage).toBe(1);
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached bookings/status options, not leave a previous session's rows on
+  // screen — same shape as the already-fixed
+  // usability-reports-page.component.ts (OBRS-467).
+  it('clears bookings and status options when the store emits null (OBRS-506)', () => {
+    const store = makeStoreStub(makeData(3));
+    const component = new BookingsPageComponent(
+      createTranslateStub(),
+      store as any,
+      makeAdminApiServiceStub() as any
+    );
+    component.ngOnInit();
+    expect((component as any).allBookings.length).toBe(3);
+    expect((component as any).statusOptions.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect((component as any).allBookings)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+    expect((component as any).statusOptions).toEqual([]);
+  });
+
   describe('detail modal (OBRS-280)', () => {
     const row: BookingRow = {
       id: 42,

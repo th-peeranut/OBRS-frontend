@@ -129,10 +129,12 @@ export class InspectionPageComponent implements OnInit, AfterViewInit, OnDestroy
   }
 
   ngOnInit(): void {
+    // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+    // logout) DISCARDS the cached checklist; onItemsData([]) safely empties
+    // rawItems/itemRows/itemGroups and tears down the verdict FormArray
+    // rather than leaving a previous session's checklist on screen.
     this.itemsStore.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
-      if (data) {
-        this.onItemsData(data);
-      }
+      this.onItemsData(data ?? []);
     });
     this.itemsStore.refreshing$
       .pipe(takeUntil(this.destroy$))

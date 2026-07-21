@@ -161,4 +161,32 @@ describe('MyReportsComponent', () => {
     fixture.detectChanges();
     expect(() => component.ngOnDestroy()).not.toThrow();
   });
+
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the cached
+  // page state, not leave a previous session's rows visible — same shape as
+  // the already-fixed usability-reports-page.component.ts (OBRS-467).
+  it('clears the cached page when the store emits null (OBRS-506)', () => {
+    fixture.detectChanges();
+    storeSpy.data$.next(
+      buildPage(
+        [{ id: 1, category: 'bug', status: 'new', descriptionPreview: 'x', imageCount: 0, createdAt: '2026-01-01T00:00:00Z' }],
+        { totalPages: 2, number: 1, totalElements: 21 }
+      )
+    );
+    fixture.detectChanges();
+    expect(component['reports'].length).toBe(1);
+    expect(component['totalElements']).toBe(21);
+    expect(component['currentPageNumber']).toBe(1);
+    expect(component['totalPages']).toBe(2);
+
+    storeSpy.data$.next(null);
+    fixture.detectChanges();
+
+    expect(component['reports'])
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+    expect(component['totalElements']).toBe(0);
+    expect(component['currentPageNumber']).toBe(0);
+    expect(component['totalPages']).toBe(0);
+  });
 });

@@ -79,6 +79,34 @@ describe('ReminderConfigPageComponent', () => {
     ).toBe(60);
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must drop the cached
+  // `config` reference, but must NOT touch the live reactive form or
+  // hasLoadedOnce — resetting a form the admin may be mid-edit on a logout
+  // emit would be a behavior change, out of scope for this null-handling sweep.
+  it('drops the cached config but leaves the form and hasLoadedOnce untouched on a null emission (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+
+    component.ngOnInit();
+    store.data$.next({ ...CONFIG });
+    expect(component.config).toEqual(CONFIG);
+    expect(component['hasLoadedOnce']).toBeTrue();
+
+    component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.markAsDirty();
+    component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.setValue(30);
+
+    store.data$.next(null);
+
+    expect(component.config)
+      .withContext('the discarded cache must not still read as the previous config')
+      .toBeNull();
+    expect(component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.value)
+      .withContext('a null emission must not reset the live form / wipe an in-progress edit')
+      .toBe(30);
+    expect(component['hasLoadedOnce'])
+      .withContext('hasLoadedOnce must not be flipped back by a null emission')
+      .toBeTrue();
+  });
+
   describe('positiveIntegerValidator rejects invalid input (Save stays disabled)', () => {
     it('rejects a decimal (1.5) with `notInteger` -> WHOLE_NUMBER message (NOT "must be > 0", since 1.5 IS > 0)', () => {
       const { component, store } = makeComponent({});

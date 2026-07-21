@@ -77,6 +77,22 @@ describe('CargoCapacityPageComponent', () => {
     expect(component.isRowUnconfigured(row)).toBeTrue();
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached rows, not leave a previous session's rows on screen — same shape
+  // as the already-fixed usability-reports-page.component.ts (OBRS-467).
+  it('clears rows when the store emits null (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+    store.data$.next({ vehicleTypes: [vehicleType()] });
+    expect(component.rows.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect(component.rows)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
+
   it('a valid edit marks the row dirty; matching the original value keeps it clean', () => {
     const { component, store } = makeComponent({});
     component.ngOnInit();

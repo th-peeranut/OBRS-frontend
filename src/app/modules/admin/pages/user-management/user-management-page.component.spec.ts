@@ -138,6 +138,23 @@ describe('UserManagementPageComponent', () => {
     expect(component.users[0].hasLoggedIn).toBeFalse();
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached users, not leave a previous session's rows on screen — same shape
+  // as the already-fixed usability-reports-page.component.ts (OBRS-467).
+  it('clears users when the store emits null (OBRS-506)', () => {
+    const { component, store } = makeComponent();
+
+    component.ngOnInit();
+    store.data$.next({ users: [USER_DTO], roles: [], lookups: [] });
+    expect(component.users.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect(component.users)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
+
   // OBRS-257: the form/table/delete/unlock markup and their FormGroup/API
   // calls moved into child components (UserFormModalComponent /
   // UserListTableComponent / UserDeleteModalComponent /

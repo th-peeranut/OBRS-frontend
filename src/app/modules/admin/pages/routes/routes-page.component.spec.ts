@@ -166,6 +166,56 @@ describe('RoutesPageComponent delete modal', () => {
   });
 });
 
+// OBRS-506: a null emission (clear(), e.g. on logout) must reset the cached
+// route list AND the selected route/stops/segments, not leave a previous
+// session's data on screen — same shape as the already-fixed
+// usability-reports-page.component.ts (OBRS-467).
+describe('RoutesPageComponent null-handling (OBRS-506)', () => {
+  it('clears routes and the selected route/stops/segments when the store emits null', () => {
+    // selecting the first cached route fires a (fire-and-forget)
+    // loadRouteStructureBySlug() -- give it real stubs so it resolves
+    // cleanly instead of leaving an unhandled promise rejection.
+    const adminApi = {
+      deleteRouteById: jasmine.createSpy('deleteRouteById'),
+      getRouteStops: jasmine
+        .createSpy('getRouteStops')
+        .and.returnValue(of({ code: 200, message: 'OK', data: [] })),
+      getSegments: jasmine
+        .createSpy('getSegments')
+        .and.returnValue(of({ code: 200, message: 'OK', data: [] })),
+    };
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+    };
+    const store = makeStoreStub();
+    const component = new RoutesPageComponent(
+      adminApi as any,
+      alert as any,
+      createTranslateStub(),
+      store as any
+    );
+    component.ngOnInit();
+
+    store.data$.next({
+      routes: [{ id: 1, slug: 'a-b', status: 'active', translations: [] }],
+      lookups: [],
+    });
+    expect((component as any).routes.length).toBe(1);
+    expect((component as any).selectedRoute).not.toBeNull();
+
+    store.data$.next(null);
+
+    expect((component as any).routes)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+    expect((component as any).selectedRoute).toBeNull();
+    expect((component as any).selectedRouteSlug).toBe('');
+    expect((component as any).stops).toEqual([]);
+    expect((component as any).allSegments).toEqual([]);
+  });
+});
+
 // ── OBRS-213: child extraction — verify the page wires the right inputs to
 // app-route-list-table / app-route-detail-panel and delegates their outputs
 // to the existing handlers. Uses NO_ERRORS_SCHEMA (established pattern in

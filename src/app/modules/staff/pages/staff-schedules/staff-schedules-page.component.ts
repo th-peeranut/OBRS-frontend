@@ -99,16 +99,18 @@ export class StaffSchedulesPageComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — the store emits
+      // null on clear() (e.g. logout), which DISCARDS the cached value; the
+      // old `if (data)` guard kept the previous session's rows on screen.
+      // applyLocalization() is safe over empty arrays (map/filter of []).
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.rawSchedules = data.schedules;
-          this.rawRoutes = data.routes;
-          this.rawVehicles = data.vehicles;
-          this.rawVehicleTypes = data.vehicleTypes;
-          this.rawDrivers = data.drivers;
-          this.rawLookups = data.lookups;
-          this.applyLocalization();
-        }
+        this.rawSchedules = data?.schedules ?? [];
+        this.rawRoutes = data?.routes ?? [];
+        this.rawVehicles = data?.vehicles ?? [];
+        this.rawVehicleTypes = data?.vehicleTypes ?? [];
+        this.rawDrivers = data?.drivers ?? [];
+        this.rawLookups = data?.lookups ?? [];
+        this.applyLocalization();
       })
     );
     this.subscriptions.add(

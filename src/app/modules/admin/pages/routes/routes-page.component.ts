@@ -81,10 +81,13 @@ export class RoutesPageComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Render the cached route list instantly on re-entry, then revalidate.
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+      // previous session's rows/selection on screen. applyRouteListFromCache
+      // is safe over empty arrays and itself resets the selected route/stops/
+      // segments when there is no route left to select.
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.applyRouteListFromCache(data.routes, data.lookups);
-        }
+        this.applyRouteListFromCache(data?.routes ?? [], data?.lookups ?? []);
       })
     );
     this.subscriptions.add(

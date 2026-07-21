@@ -133,4 +133,28 @@ describe('StaffSchedulesPageComponent — OBRS-283 smart cancel branch', () => {
     expect(alert.success).toHaveBeenCalledWith('ADMIN.MESSAGES.DELETED');
     expect(store.mutate).toHaveBeenCalled();
   });
+
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached rows, not leave a previous session's rows on screen — same shape
+  // as the already-fixed usability-reports-page.component.ts (OBRS-467).
+  it('clears rows when the store emits null (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+    component.ngOnInit();
+
+    store.data$.next({
+      schedules: [{ id: 2, status: 'scheduled' }],
+      routes: [],
+      vehicles: [],
+      vehicleTypes: [],
+      drivers: [],
+      lookups: [],
+    } as any);
+    expect((component as any).rows.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect((component as any).rows)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
 });

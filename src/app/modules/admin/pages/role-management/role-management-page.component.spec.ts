@@ -232,3 +232,43 @@ describe('RoleManagementPageComponent applyLocalization — dateLang vs locale',
     expect((component as any).lastUpdatedAt).toContain('7月');
   });
 });
+
+// OBRS-506: a null emission (clear(), e.g. on logout) must reset the cached
+// roles, not leave a previous session's rows on screen — same shape as the
+// already-fixed usability-reports-page.component.ts (OBRS-467). Uses the
+// component's REAL ngOnInit() (not the manual re-subscribe makeComponent()
+// uses above) so the fix under test is actually exercised.
+describe('RoleManagementPageComponent null-handling (OBRS-506)', () => {
+  it('clears roles when the store emits null', () => {
+    const adminApi = {
+      deleteRoleById: jasmine
+        .createSpy('deleteRoleById')
+        .and.returnValue(new BehaviorSubject({ code: 200, message: 'OK', data: null })),
+    };
+    const alert = {
+      success: jasmine.createSpy('success').and.resolveTo(undefined),
+      error: jasmine.createSpy('error').and.resolveTo(undefined),
+      warning: jasmine.createSpy('warning').and.resolveTo(undefined),
+    };
+    const store = makeStoreStub();
+    const component = new RoleManagementPageComponent(
+      adminApi as any,
+      alert as any,
+      createTranslateStub() as any,
+      store as any
+    );
+    component.ngOnInit();
+
+    store.data$.next({
+      roles: [{ id: 7, slug: 'owner', status: 'active', translations: [] }],
+      lookups: [],
+    });
+    expect((component as any).roles.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect((component as any).roles)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
+});

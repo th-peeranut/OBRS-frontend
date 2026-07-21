@@ -70,14 +70,15 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     // Render the cached bookings instantly on re-entry (skipping the payment
     // N+1 burst), then revalidate in the background.
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+      // previous session's rows on screen.
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.allBookings = data.rows;
-          this.statusOptions = data.statusOptions;
-          // Preserve the user's current page across a background revalidate;
-          // only clamp it if the (possibly smaller) result set has fewer pages.
-          this.currentPage = Math.min(this.currentPage, this.totalPages);
-        }
+        this.allBookings = data?.rows ?? [];
+        this.statusOptions = data?.statusOptions ?? [];
+        // Preserve the user's current page across a background revalidate;
+        // only clamp it if the (possibly smaller) result set has fewer pages.
+        this.currentPage = Math.min(this.currentPage, this.totalPages);
       })
     );
     this.subscriptions.add(

@@ -118,6 +118,23 @@ describe('VehiclesPageComponent', () => {
     expect((component as any).refreshFailed).toBeTrue();
     expect((component as any).errorMessage).toBe(''); // cache kept, no blocking error
   });
+
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached vehicles/options, not leave a previous session's rows on screen —
+  // same shape as the already-fixed usability-reports-page.component.ts
+  // (OBRS-467).
+  it('clears vehicles when the store emits null (OBRS-506)', () => {
+    const store = makeStoreStub(makeData());
+    const component = makeComponent(store);
+    component.ngOnInit();
+    expect((component as any).vehicles.length).toBe(1);
+
+    store.data$.next(null);
+
+    expect((component as any).vehicles)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
 });
 
 describe('VehiclesPageComponent — Maintenance tab (OBRS-209)', () => {

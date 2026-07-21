@@ -80,11 +80,13 @@ export class PromotionsPageComponent implements OnInit, OnDestroy {
     this.buildOptionLists();
 
     this.subscriptions.add(
+      // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+      // logout) DISCARDS the cached value; the old `if (data)` guard kept the
+      // previous session's rows on screen. applyLocalization() is safe over
+      // an empty array (map of []).
       this.store.data$.subscribe((data) => {
-        if (data) {
-          this.rawPromotions = data;
-          this.applyLocalization();
-        }
+        this.rawPromotions = data ?? [];
+        this.applyLocalization();
       })
     );
     this.subscriptions.add(

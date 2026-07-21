@@ -75,6 +75,34 @@ describe('RoundTripPromotionCardComponent', () => {
     expect(component.promotionForm.get('minBookingAmount')?.value).toBe(200);
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must drop the cached
+  // `promotion` reference, but must NOT touch the live reactive form or
+  // hasLoadedOnce — resetting a form the admin may be mid-edit on a logout
+  // emit would be a behavior change, out of scope for this null-handling sweep.
+  it('drops the cached promotion but leaves the form and hasLoadedOnce untouched on a null emission (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+
+    component.ngOnInit();
+    store.data$.next({ ...PROMOTION });
+    expect(component.promotion).toEqual(PROMOTION);
+    expect(component['hasLoadedOnce']).toBeTrue();
+
+    component.promotionForm.get('discountValue')?.markAsDirty();
+    component.promotionForm.get('discountValue')?.setValue(35);
+
+    store.data$.next(null);
+
+    expect(component.promotion)
+      .withContext('the discarded cache must not still read as the previous promotion')
+      .toBeNull();
+    expect(component.promotionForm.get('discountValue')?.value)
+      .withContext('a null emission must not reset the live form / wipe an in-progress edit')
+      .toBe(35);
+    expect(component['hasLoadedOnce'])
+      .withContext('hasLoadedOnce must not be flipped back by a null emission')
+      .toBeTrue();
+  });
+
   it('marks all fields touched and warns when the form is invalid on save', async () => {
     const { component, alert } = makeComponent({ updateRoundTripPromotion: jasmine.createSpy() });
 

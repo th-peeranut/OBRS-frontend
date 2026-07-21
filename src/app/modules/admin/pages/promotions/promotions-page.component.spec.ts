@@ -95,6 +95,23 @@ describe('PromotionsPageComponent', () => {
     expect(component.rows[1].code).toBe('SUMMER10');
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must reset the
+  // cached rows, not leave a previous session's rows on screen — same shape
+  // as the already-fixed usability-reports-page.component.ts (OBRS-467).
+  it('clears rows when the store emits null (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+
+    component.ngOnInit();
+    store.data$.next([ROUND_TRIP, SUMMER_SALE]);
+    expect(component.rows.length).toBe(2);
+
+    store.data$.next(null);
+
+    expect(component.rows)
+      .withContext('a null emission must not leave the previous session\'s rows on screen')
+      .toEqual([]);
+  });
+
   // OBRS-251: the form/table/confirm markup and their FormGroup/API calls
   // moved into child components (PromotionFormModalComponent /
   // PromotionListTableComponent / PromotionDeactivateModalComponent) — the

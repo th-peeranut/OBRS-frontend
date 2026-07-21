@@ -178,6 +178,26 @@ describe('InspectionPageComponent', () => {
     expect((component as any).itemsFormArray.at(0).get('note').hasError('required')).toBeTrue();
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must clear the
+  // checklist and tear down the verdict FormArray, not leave a previous
+  // session's items on screen — same shape as the already-fixed
+  // usability-reports-page.component.ts (OBRS-467).
+  it('clears the checklist and FormArray when the items store emits null (OBRS-506)', () => {
+    const { component, itemsStore } = makeComponent();
+    component.ngOnInit();
+    expect((component as any).itemRows.length).toBe(2);
+    expect((component as any).itemsFormArray.length).toBe(2);
+
+    itemsStore.data$.next(null);
+
+    expect((component as any).rawItems)
+      .withContext('a null emission must not leave the previous session\'s checklist on screen')
+      .toEqual([]);
+    expect((component as any).itemRows).toEqual([]);
+    expect((component as any).itemGroups).toEqual([]);
+    expect((component as any).itemsFormArray.length).toBe(0);
+  });
+
   it('blocks submit and toasts when a row has no verdict yet (Submit is never disabled for this)', async () => {
     const { component, staffApiService, alertService } = makeComponent();
     component.ngOnInit();

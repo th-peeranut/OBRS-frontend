@@ -78,6 +78,36 @@ describe('BookingPolicyConfigPageComponent', () => {
     expect(component.bookingPolicyConfigForm.get('cutoffMinutes')?.value).toBe(25);
   });
 
+  // OBRS-506: a null emission (clear(), e.g. on logout) must drop the cached
+  // `config` reference, but must NOT touch the live reactive form or
+  // hasLoadedOnce — resetting a form the admin may be mid-edit on a logout
+  // emit would be a behavior change, out of scope for this null-handling
+  // sweep (unlike the list-page sweep sites, where clearing IS the whole fix).
+  it('drops the cached config but leaves the form and hasLoadedOnce untouched on a null emission (OBRS-506)', () => {
+    const { component, store } = makeComponent({});
+
+    component.ngOnInit();
+    store.data$.next({ ...CONFIG });
+    expect(component.config).toEqual(CONFIG);
+    expect(component['hasLoadedOnce']).toBeTrue();
+
+    // Simulate an in-progress edit surviving the clear — this must NOT be wiped.
+    component.bookingPolicyConfigForm.get('maxAdvanceDays')?.markAsDirty();
+    component.bookingPolicyConfigForm.get('maxAdvanceDays')?.setValue(60);
+
+    store.data$.next(null);
+
+    expect(component.config)
+      .withContext('the discarded cache must not still read as the previous config')
+      .toBeNull();
+    expect(component.bookingPolicyConfigForm.get('maxAdvanceDays')?.value)
+      .withContext('a null emission must not reset the live form / wipe an in-progress edit')
+      .toBe(60);
+    expect(component['hasLoadedOnce'])
+      .withContext('hasLoadedOnce must not be flipped back by a null emission')
+      .toBeTrue();
+  });
+
   describe('integerRangeValidator(1, 365) on maxAdvanceDays rejects invalid input (Save stays disabled)', () => {
     it('rejects blank with `required` -> ADMIN.VALIDATION.REQUIRED', () => {
       const { component, store } = makeComponent({});

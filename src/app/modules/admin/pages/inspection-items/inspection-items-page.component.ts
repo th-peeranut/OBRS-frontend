@@ -170,10 +170,15 @@ export class InspectionItemsPageComponent implements OnInit, OnDestroy {
     this.store.data$.pipe(takeUntil(this.destroy$)).subscribe((data) => {
       // §3.2.2a: while a reorder is outstanding, this subscription must NOT
       // replace `rows` — only the winning reorder success/error handlers may.
-      if (data === null || this.reorderPending) {
+      // OBRS-506: a null emission (OBRS-467 shape — clear() DISCARDING the
+      // cache, e.g. on logout) is NOT the same case as "reorder outstanding"
+      // and must still clear `rows` rather than early-return and leave the
+      // previous session's rows on screen; only the reorderPending gate skips
+      // the replace now.
+      if (this.reorderPending) {
         return;
       }
-      this.rows = toInspectionItemRows(data);
+      this.rows = data === null ? [] : toInspectionItemRows(data);
     });
 
     this.store.refreshing$

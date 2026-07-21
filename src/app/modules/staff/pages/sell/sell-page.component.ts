@@ -206,13 +206,30 @@ export class SellPageComponent implements OnInit, OnDestroy {
       .subscribe(() => this.reloadLocalizedData());
 
     // Populate schedule form option arrays from StaffSchedulesStore (lazy — no upfront fetch)
+    // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
+    // logout) DISCARDS the cached value; reset the option arrays this
+    // callback populates instead of leaving a previous session's data
+    // selectable in the create-sale form.
     this.scheduleStore.data$
       .pipe(takeUntil(this.destroy$))
       .subscribe((data) => {
-        if (data) { this.applyScheduleLocalization(data); }
+        if (data) {
+          this.applyScheduleLocalization(data);
+        } else {
+          this.scheduleRouteOptions = [];
+          this.scheduleVehicleTypeOptions = [];
+          this.scheduleVehicleOptions = [];
+          this.scheduleDriverOptions = [];
+        }
       });
 
     // Re-map labels on language change (store data$ won't re-emit on its own)
+    // store-null-ok: this is a one-shot RE-MAP of already-cached labels, not
+    // a state-copy subscription; the `:209` subscription above already owns
+    // clearing scheduleXOptions on a null emission (clear() fires its own
+    // dataSubject.next(null), which the :209 subscribe also receives), so
+    // there is nothing left to clear here. A `null` value at this take(1)
+    // means "no cache to re-map" and is correctly a no-op (OBRS-506).
     this.translate.onLangChange
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
