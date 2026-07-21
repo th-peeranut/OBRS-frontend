@@ -67,3 +67,6 @@ src/environments/environment.local.ts
 # The prod host generates this at build time from env vars; see scripts/inject-prod-env.js
 # and src/environments/environment.prod.local.example.ts.
 src/environments/environment.prod.local.ts
+
+# Session task-claim locks (enforce-task-claim.ps1) - machine-local, not shared
+.locks/
