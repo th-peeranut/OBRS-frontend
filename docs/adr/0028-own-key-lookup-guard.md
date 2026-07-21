@@ -26,7 +26,7 @@ verbatim. The fix manufactured the exact symptom the card existed to prevent,
 and it was caught in review, not by the test suite: a slug-based suite never
 generates these inputs.
 
-A sweep of `src/` then found the same shape in **21 places**, in three
+A sweep of `src/` then found the same shape in **23 places**, in five
 clusters:
 
 | Cluster | Key origin | Normalized? | Reachable members |
@@ -34,6 +34,16 @@ clusters:
 | 18 error-code lookups (17 → i18n key, 1 → icon glyph) | `error.error.errorCode`, raw server text | no | all 8 |
 | `parcelPaymentFlag` | `bookingStatus`, server text | `.toLowerCase()` | `constructor`, `__proto__` |
 | `AuthService.ROLE_GRANTS[role]` | `localStorage['auth_roles']` | `.toLowerCase()` | `constructor`, `__proto__` |
+| `detailStatusValuesFor()` | `report.status`, raw server text | no | all 8 |
+| `SESSION_EXPIRED_MESSAGE[appLanguage]` | `localStorage['app_language']` | no | all 8 |
+
+The last row was **missed by the first sweep and added at Scrutinize**. It is
+the one locale-keyed map in the repo whose key is *not* narrowed to the
+`en\|th\|zh` union before the lookup (`auth.interceptor.ts` reads localStorage
+raw, deliberately, to avoid a `LanguageService` DI cycle) — so the blanket
+"locale keys are a locally computed literal union" rationale below covers every
+locale map except this one. Symptom: Swal rejects a non-string title, so the
+force-logout dialog opens blank.
 
 Consequences ranged from cosmetic to app-wide:
 
@@ -78,7 +88,7 @@ name now reaches the documented `else` instead of crashing.
 
 ## Consequences
 
-- One guard, one place. 21 sites converted; 6 `Record`-keyed lookups audited
+- One guard, one place. 23 sites converted; 6 `Record`-keyed lookups audited
   and deliberately left alone because their key is a locally computed literal
   union (`resolveFleetVehicleStatus()` over booleans, a hardcoded locale
   ternary) with no `as` cast anywhere in the chain — see the OBRS-601 card for
@@ -90,9 +100,10 @@ name now reaches the documented `else` instead of crashing.
   New specs were added, which is the opposite signal. (ADR-0022's warning.)
 - Not fixed, and named here so the next reader does not think the sweep was
   exhaustive: `stopsLookup[code] ?? null` (reschedule/change-stop dialogs) and
-  `seatGenders[label]` (passenger-seat components). Both are keyed by
-  server-enumerated stop codes / seat labels, so reaching them needs a stop
-  literally named `constructor`. Left as-is rather than padding the diff.
+  `seatGenders[label]` / `seatOwners[label]` (passenger-seat components, both
+  the `?? ''` and the `label in ...` form). All are keyed by server-enumerated
+  stop codes / seat labels, so reaching them needs a stop literally named
+  `constructor`. Left as-is rather than padding the diff.
 - A lint rule would beat a convention here. None exists yet; until then the
   probe tests in `own-key.spec.ts` pin the three broken idioms as broken, so a
   reader who wonders why the helper exists gets the answer from a failing

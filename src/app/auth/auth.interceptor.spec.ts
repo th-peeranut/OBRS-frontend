@@ -200,4 +200,24 @@ describe('authInterceptor — SKIP_AUTH_LOGOUT governs force-logout (OBRS-181/OB
     expect(alertWarningSpy).toHaveBeenCalledWith(SESSION_EXPIRED_MESSAGE['th']);
     tick();
   }));
+
+  // OBRS-601 (Scrutinize): the site the sweep missed. `appLanguage` is raw,
+  // un-normalized localStorage — unlike every other locale-keyed map in this
+  // repo, which narrows to the en|th|zh union first — so all eight prototype
+  // members are reachable, not just the two that survive a lower-case.
+  ['constructor', '__proto__', 'toString', 'valueOf'].forEach((planted) => {
+    it(`OBRS-601: a planted "${planted}" app_language still shows a real message`, fakeAsync(() => {
+      localStorage.setItem(APP_LANGUAGE_KEY, planted);
+
+      http.get('/api/private/bookings').subscribe({ next: fail, error: () => {} });
+      httpTesting
+        .expectOne('/api/private/bookings')
+        .flush({}, { status: 401, statusText: 'Unauthorized' });
+
+      expect(alertWarningSpy)
+        .withContext(planted)
+        .toHaveBeenCalledWith(SESSION_EXPIRED_MESSAGE['th']);
+      tick();
+    }));
+  });
 });
