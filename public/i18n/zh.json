@@ -931,6 +931,27 @@
       "LOADING": "正在加载预订数据...",
       "LOAD_FAILED": "无法从后端加载预订数据。",
       "VIEW": "查看",
+      "PAYMENT_STATUS_CODES": {
+        "unpaid": "未付款",
+        "partial_paid": "部分付款",
+        "refunded_partial": "已付清（部分退款）",
+        "fully_paid": "已付清",
+        "overpaid": "多付款",
+        "refund_required": "待退款",
+        "refund_processed": "已退款",
+        "unknown": "未知状态"
+      },
+      "TRANSACTION_STATUS_CODES": {
+        "pending": "待处理",
+        "paid": "已付款",
+        "success": "已付款",
+        "failed": "失败",
+        "cancelled": "已取消",
+        "expired": "已过期",
+        "refunded": "已退款",
+        "manual_refund_required": "需人工退款",
+        "partially_refunded": "部分退款"
+      },
       "DETAIL": {
         "TITLE": "预订详情",
         "CLOSE": "关闭",

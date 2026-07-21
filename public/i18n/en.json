@@ -931,6 +931,27 @@
       "LOADING": "Loading booking data...",
       "LOAD_FAILED": "Unable to load booking data from backend.",
       "VIEW": "View",
+      "PAYMENT_STATUS_CODES": {
+        "unpaid": "Unpaid",
+        "partial_paid": "Partially Paid",
+        "refunded_partial": "Paid in Full (Partially Refunded)",
+        "fully_paid": "Paid in Full",
+        "overpaid": "Overpaid",
+        "refund_required": "Refund Pending",
+        "refund_processed": "Refunded",
+        "unknown": "Unknown"
+      },
+      "TRANSACTION_STATUS_CODES": {
+        "pending": "Pending",
+        "paid": "Paid",
+        "success": "Paid",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "expired": "Expired",
+        "refunded": "Refunded",
+        "manual_refund_required": "Manual Refund Required",
+        "partially_refunded": "Partially Refunded"
+      },
       "DETAIL": {
         "TITLE": "Booking Detail",
         "CLOSE": "Close",

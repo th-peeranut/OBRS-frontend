@@ -186,7 +186,11 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
       normalizedStatus === 'PAID' ||
       normalizedStatus === 'FULLY_PAID' ||
       normalizedStatus === 'REFUND_PROCESSED' ||
-      normalizedStatus === 'REFUNDED'
+      normalizedStatus === 'REFUNDED' ||
+      // OBRS-298: booking still live, gross collected >= total, part of it
+      // since refunded — nothing outstanding, so this reads as "success"
+      // (§2.4), not a warning like PARTIAL_PAID (which still owes money).
+      normalizedStatus === 'REFUNDED_PARTIAL'
     ) {
       return 'is-success';
     }
@@ -202,6 +206,54 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     }
 
     return 'is-danger';
+  }
+
+  // OBRS-298: these badges were rendered raw with no translate pipe.
+  //
+  // The value bound to the row badge is NOT one vocabulary. BookingsStore
+  // .toBookingRow picks the first of three sources and then humanises it with
+  // .replace(/_/g, ' ').toUpperCase():
+  //   1. the API's EOverallPaymentStatus code   -> unpaid/partial_paid/...
+  //   2. booking.payment?.status                -> EPaymentStatus (paid/...)
+  //   3. inferPaymentStatusFromBookingStatus()  -> FAILED/SUCCESS/PENDING
+  // Only (1) is the booking-level vocabulary this card is about, but all
+  // three land in the same badge, so translating only (1) would have turned
+  // the other two into "Unknown" — a regression introduced by the fix. Look
+  // the code up in the booking-level map first, then the transaction-level
+  // map, and only then fall back to a translated "unknown" (never a bare
+  // key). Source (3) fabricating a payment status out of a BOOKING status is
+  // its own defect and has its own card — it is not papered over here.
+  //
+  // The detail-modal summary passes the raw "partial_paid" straight through,
+  // so normalise both shapes back to lower_snake_case before the lookup.
+  protected paymentStatusLabel(status: string | null | undefined): string {
+    return this.lookupStatusLabel(status, [
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES',
+    ]);
+  }
+
+  // OBRS-298: the per-transaction row in the detail modal carries an
+  // EPaymentStatus value, a different vocabulary from the booking-level codes
+  // above — resolve it against the transaction map only, so a booking-level
+  // code can never be silently rendered with a transaction label.
+  protected transactionStatusLabel(status: string | null | undefined): string {
+    return this.lookupStatusLabel(status, ['ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES']);
+  }
+
+  private lookupStatusLabel(status: string | null | undefined, namespaces: string[]): string {
+    const code = (status ?? '').trim().replace(/\s+/g, '_').toLowerCase();
+    if (code) {
+      for (const namespace of namespaces) {
+        const key = `${namespace}.${code}`;
+        const translated = this.translate.instant(key);
+        // ngx-translate returns the key itself when the entry is missing.
+        if (translated && translated !== key) {
+          return translated;
+        }
+      }
+    }
+    return this.translate.instant('ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.unknown');
   }
 
   // ── Detail modal (OBRS-280) ────────────────────────────────────────────

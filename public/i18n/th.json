@@ -931,6 +931,27 @@
       "LOADING": "กำลังโหลดข้อมูลการจอง...",
       "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลการจองจากระบบได้",
       "VIEW": "ดูรายละเอียด",
+      "PAYMENT_STATUS_CODES": {
+        "unpaid": "ยังไม่ชำระ",
+        "partial_paid": "ชำระบางส่วน",
+        "refunded_partial": "ชำระครบ (คืนเงินบางส่วน)",
+        "fully_paid": "ชำระครบ",
+        "overpaid": "ชำระเกิน",
+        "refund_required": "รอคืนเงิน",
+        "refund_processed": "คืนเงินแล้ว",
+        "unknown": "ไม่ทราบสถานะ"
+      },
+      "TRANSACTION_STATUS_CODES": {
+        "pending": "รอดำเนินการ",
+        "paid": "ชำระแล้ว",
+        "success": "ชำระแล้ว",
+        "failed": "ไม่สำเร็จ",
+        "cancelled": "ยกเลิก",
+        "expired": "หมดอายุ",
+        "refunded": "คืนเงินแล้ว",
+        "manual_refund_required": "ต้องคืนเงินด้วยมือ",
+        "partially_refunded": "คืนเงินบางส่วน"
+      },
       "DETAIL": {
         "TITLE": "รายละเอียดการจอง",
         "CLOSE": "ปิด",
