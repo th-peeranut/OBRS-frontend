@@ -1,5 +1,12 @@
 import { test, expect } from '@playwright/test';
 
+// OBRS-602: these screenshots used to be written to an absolute path inside a DIFFERENT
+// git repository (obrs-agent-office/docs/manual-tests/assets/OBRS-296/), hardcoded down
+// to a specific developer's username. That is not a theoretical problem — the office
+// repo was carrying modified PNGs from an unrelated QA run. Evidence now lands in
+// e2e-evidence/, which is gitignored; copy it onto the Jira card from there.
+const ASSETS = 'e2e-evidence/OBRS-296';
+
 // OBRS-296 QA (Tier 2 — FE served against a stubbed booking-tickets response;
 // live local BE+PG was unavailable in-box due to a Docker Desktop crash mid-run).
 // Proves the e-ticket UI surface: fare-category badge + child-fare boarding note
@@ -121,7 +128,7 @@ test('BEFORE: adult-only e-ticket baseline (no child, no fare-category note)', a
   await expect(page.locator('.child-fare-note')).toHaveCount(0);
 
   await page.screenshot({
-    path: 'C:/Users/thpee/Desktop/workshop/obrs-agent-office/docs/manual-tests/assets/OBRS-296/before-adult-booking.png',
+    path: `${ASSETS}/before-adult-booking.png`,
     fullPage: true,
   });
 });
@@ -151,7 +158,7 @@ test('AFTER: adult + child e-ticket shows child fare-category badge and boarding
   await expect(adultCard).toContainText('Adult');
 
   await page.screenshot({
-    path: 'C:/Users/thpee/Desktop/workshop/obrs-agent-office/docs/manual-tests/assets/OBRS-296/after-child-discount.png',
+    path: `${ASSETS}/after-child-discount.png`,
     fullPage: true,
   });
 });

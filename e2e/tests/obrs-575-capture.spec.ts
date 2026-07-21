@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const ASSETS = 'C:/Users/thpee/Desktop/workshop/obrs-agent-office/docs/manual-tests/assets/OBRS-575';
+const ASSETS = 'e2e-evidence/OBRS-575';
 
 test('BEFORE — Home on origin/dev, LOGGED IN, no recent-route strip (port 4576)', async ({
   page,

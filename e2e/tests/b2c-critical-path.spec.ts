@@ -1,22 +1,11 @@
 import { test, expect } from '@playwright/test';
-import stationsFixture from '../fixtures/stations.json';
-import schedulesFixture from '../fixtures/schedules.json';
+import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 
 test.beforeEach(async ({ page }) => {
-  // Force English locale before Angular boots
-  await page.addInitScript(() => {
-    localStorage.setItem('app_language', 'en');
-  });
-
-  // Mock station list
-  await page.route('**/api/stops', (route) =>
-    route.fulfill({ json: stationsFixture })
-  );
-
-  // Mock schedule search
-  await page.route('**/api/schedules/search', (route) =>
-    route.fulfill({ json: schedulesFixture })
-  );
+  // OBRS-602: this spec used to stub only stops + schedule search. The three calls the
+  // shared set adds — route list, booking policy, seat map — were all being answered by
+  // SIT without anyone noticing, which is what "fully mocked" turned out to mean here.
+  await mockPublicPageApis(page);
 });
 
 test('B2C happy path: search → schedule → review → passenger info ready to pay', async ({
@@ -94,6 +83,12 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   await page.fill('#booker-firstName', 'John');
   await page.fill('#booker-lastName', 'Doe');
   await page.fill('#booker-phoneNumber', '0812345678');
+  // OBRS-602: OBRS-238 made the booker email required + format-checked for ONLINE
+  // bookings (e-ticket delivery; BookingReqDtoValidator 400s without one). This spec
+  // was never updated, so `.btn-next` had been correctly disabled — and this test
+  // correctly failing — ever since, on SIT as much as anywhere. Nobody read it as a
+  // real failure because the suite it lived in was red as a matter of routine.
+  await page.fill('#booker-email', 'john.doe@example.com');
   await page.locator('#booker-gender_male').click();
 
   // Fill passenger 0 form
