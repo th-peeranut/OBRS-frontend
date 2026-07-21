@@ -2682,7 +2682,15 @@
     "COLLECTED_AT": "Collected",
     "RECIPIENT": "Recipient",
     "STATUS": {
-      "CREATED": "Declared — awaiting drop-off"
+      "CREATED": "Declared — awaiting drop-off",
+      "ACCEPTED": "Accepted",
+      "IN_TRANSIT": "In transit",
+      "ARRIVED_NOTIFIED": "Arrived",
+      "COLLECTED": "Collected",
+      "LEFT_AT_STOP": "Left at stop",
+      "UNCLAIMED_RETURNED": "Unclaimed / returned",
+      "REJECTED": "Rejected",
+      "UNKNOWN": "Unknown"
     }
   },
   "PARCEL_BOOKING": {

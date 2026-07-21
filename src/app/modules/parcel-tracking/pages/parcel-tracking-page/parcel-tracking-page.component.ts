@@ -94,10 +94,10 @@ export class ParcelTrackingPageComponent implements OnInit, OnDestroy {
     return parcelDeliveryStatusChip(status);
   }
 
-  /** OBRS-415/UX §8: the CUSTOMER-facing label for a status — for `created`
-   * specifically this is `PARCEL_TRACKING.STATUS.CREATED`, not the driver
-   * copy `chipFor().i18nKey` would otherwise render (the exact OBRS-427
-   * mistake this card is told not to repeat). Every other slug is unchanged. */
+  /** OBRS-415/UX §8, OBRS-427: the CUSTOMER-facing label for a status — every
+   * slug resolves to its own `PARCEL_TRACKING.STATUS.*` key, never the
+   * driver/back-office copy `chipFor().i18nKey` renders (the exact STAFF.*
+   * namespace leak this card closes). */
   protected statusLabelKey(status: string): string {
     return parcelCustomerStatusLabelKey(status);
   }
