@@ -252,4 +252,159 @@ describe('BookingsPageComponent', () => {
       expect((component as any).paymentsLoadError).toBe('');
     });
   });
+
+  // OBRS-298: EOverallPaymentStatus grew a 7th code, refunded_partial (money
+  // fully collected, since partially refunded — nothing outstanding), and the
+  // owner decided all 7 codes (not just the new one) must be translated —
+  // previously all 7 rendered as a raw code with no `translate` pipe at all.
+  describe('paymentStatusLabel() (OBRS-298)', () => {
+    // Mimics real ngx-translate: returns the mapped string for a known key,
+    // or echoes the key back unchanged when missing — paymentStatusLabel()
+    // relies on that echo (translated === key) to detect a miss and fall
+    // back to the `.unknown` entry instead of printing the raw key.
+    const DICTIONARY: Record<string, string> = {
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.unpaid': 'Unpaid',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.partial_paid': 'Partially Paid',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refunded_partial':
+        'Paid in Full (Partially Refunded)',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.fully_paid': 'Paid in Full',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.overpaid': 'Overpaid',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refund_required': 'Refund Pending',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refund_processed': 'Refunded',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.unknown': 'Unknown',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.pending': 'Pending',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.paid': 'Paid',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.success': 'Paid',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.failed': 'Failed',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.cancelled': 'Cancelled',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.expired': 'Expired',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.refunded': 'Refunded',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.manual_refund_required':
+        'Manual Refund Required',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.partially_refunded': 'Partially Refunded',
+    };
+
+    function setupComponent(): BookingsPageComponent {
+      const translate = {
+        ...createTranslateStub(),
+        instant: (key: string) => DICTIONARY[key] ?? key,
+      };
+      return new BookingsPageComponent(
+        translate,
+        makeStoreStub(makeData(0)) as any,
+        makeAdminApiServiceStub() as any
+      );
+    }
+
+    it('translates all 7 EOverallPaymentStatus codes', () => {
+      const component = setupComponent();
+      expect((component as any).paymentStatusLabel('unpaid')).toBe('Unpaid');
+      expect((component as any).paymentStatusLabel('partial_paid')).toBe('Partially Paid');
+      expect((component as any).paymentStatusLabel('refunded_partial')).toBe(
+        'Paid in Full (Partially Refunded)'
+      );
+      expect((component as any).paymentStatusLabel('fully_paid')).toBe('Paid in Full');
+      expect((component as any).paymentStatusLabel('overpaid')).toBe('Overpaid');
+      expect((component as any).paymentStatusLabel('refund_required')).toBe('Refund Pending');
+      expect((component as any).paymentStatusLabel('refund_processed')).toBe('Refunded');
+    });
+
+    it('normalizes the list-row shape ("PARTIAL PAID", spaces+uppercase — BookingsStore.toBookingRow reformats the raw code before it reaches the row) to the same translation as the raw lower_snake_case code', () => {
+      const component = setupComponent();
+      expect((component as any).paymentStatusLabel('PARTIAL PAID')).toBe('Partially Paid');
+      expect((component as any).paymentStatusLabel('REFUNDED PARTIAL')).toBe(
+        'Paid in Full (Partially Refunded)'
+      );
+    });
+
+    it('falls back to the translated "unknown" entry — never the raw i18n key — for a null/empty/unrecognized code', () => {
+      const component = setupComponent();
+      expect((component as any).paymentStatusLabel(null)).toBe('Unknown');
+      expect((component as any).paymentStatusLabel(undefined)).toBe('Unknown');
+      expect((component as any).paymentStatusLabel('')).toBe('Unknown');
+      expect((component as any).paymentStatusLabel('   ')).toBe('Unknown');
+      expect((component as any).paymentStatusLabel('some_future_code')).toBe('Unknown');
+    });
+
+    // The row badge is fed by THREE vocabularies, not one. BookingsStore
+    // .toBookingRow falls back from the EOverallPaymentStatus code to
+    // booking.payment?.status (EPaymentStatus) and then to
+    // inferPaymentStatusFromBookingStatus(), which returns FAILED/SUCCESS/
+    // PENDING. Translating only the booking-level codes would have turned
+    // every one of those into "Unknown" — a regression caused by this fix.
+    it('still labels the EPaymentStatus fallback that BookingsStore drops into the same badge', () => {
+      const component = setupComponent();
+      expect((component as any).paymentStatusLabel('paid')).toBe('Paid');
+      expect((component as any).paymentStatusLabel('pending')).toBe('Pending');
+      expect((component as any).paymentStatusLabel('partially_refunded')).toBe(
+        'Partially Refunded'
+      );
+      expect((component as any).paymentStatusLabel('manual_refund_required')).toBe(
+        'Manual Refund Required'
+      );
+    });
+
+    it('still labels the inferred FAILED/SUCCESS/PENDING values, in the humanised shape the store emits', () => {
+      const component = setupComponent();
+      // inferPaymentStatusFromBookingStatus returns these bare uppercase words
+      expect((component as any).paymentStatusLabel('FAILED')).toBe('Failed');
+      expect((component as any).paymentStatusLabel('SUCCESS')).toBe('Paid');
+      expect((component as any).paymentStatusLabel('PENDING')).toBe('Pending');
+    });
+  });
+
+  describe('transactionStatusLabel() (OBRS-298)', () => {
+    const DICTIONARY: Record<string, string> = {
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.paid': 'Paid',
+      'ADMIN.BOOKINGS.TRANSACTION_STATUS_CODES.refunded': 'Refunded',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.unknown': 'Unknown',
+      'ADMIN.BOOKINGS.PAYMENT_STATUS_CODES.refunded_partial':
+        'Paid in Full (Partially Refunded)',
+    };
+
+    function setupComponent(): BookingsPageComponent {
+      const translate = {
+        ...createTranslateStub(),
+        instant: (key: string) => DICTIONARY[key] ?? key,
+      };
+      return new BookingsPageComponent(
+        translate,
+        makeStoreStub(makeData(0)) as any,
+        makeAdminApiServiceStub() as any
+      );
+    }
+
+    it('resolves per-transaction EPaymentStatus values', () => {
+      const component = setupComponent();
+      expect((component as any).transactionStatusLabel('paid')).toBe('Paid');
+      expect((component as any).transactionStatusLabel('refunded')).toBe('Refunded');
+    });
+
+    // The two vocabularies are separate on purpose: a transaction can never
+    // legitimately carry a booking-level code, so resolving one against the
+    // other would hide a real data problem behind a plausible label.
+    it('does NOT resolve a booking-level code against the transaction namespace', () => {
+      const component = setupComponent();
+      expect((component as any).transactionStatusLabel('refunded_partial')).toBe('Unknown');
+    });
+
+    it('falls back to the translated unknown entry, never a raw key', () => {
+      const component = setupComponent();
+      expect((component as any).transactionStatusLabel(null)).toBe('Unknown');
+      expect((component as any).transactionStatusLabel('nonsense')).toBe('Unknown');
+    });
+  });
+
+  describe('paymentClass() refunded_partial (OBRS-298)', () => {
+    it('maps refunded_partial to is-success (nothing outstanding), keeping partial_paid on is-warning', () => {
+      const component = new BookingsPageComponent(
+        createTranslateStub(),
+        makeStoreStub(makeData(0)) as any,
+        makeAdminApiServiceStub() as any
+      );
+      expect((component as any).paymentClass('refunded_partial')).toBe('is-success');
+      expect((component as any).paymentClass('REFUNDED PARTIAL')).toBe('is-success');
+      expect((component as any).paymentClass('partial_paid')).toBe('is-warning');
+    });
+  });
 });

@@ -143,6 +143,37 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
     expect(invokeIsPaymentConfirmed(payment)).toBeTrue();
   });
 
+  // OBRS-298: EOverallPaymentStatus grew a 7th code, refunded_partial — the
+  // booking is still live, money was fully collected, and part of it has
+  // since been refunded, so nothing is outstanding. isPaymentConfirmed()'s
+  // `summaryStatus === 'fully_paid'` check does not know that code, but a
+  // booking that reached refunded_partial always passed through a settled
+  // transaction first, so hasSuccessfulTransaction should still be true and
+  // carry this to a correct "confirmed" result. Verifying, not assuming.
+  it('isPaymentConfirmed is true for a refunded_partial summary when the originating transaction settled as paid (OBRS-298)', () => {
+    const payment: PaymentByBookingIdResponse = {
+      bookingId: 10,
+      paymentSummary: {
+        totalAmount: '100',
+        paidAmount: '100',
+        outstandingAmount: '0',
+        refundedAmount: '30',
+        currency: 'THB',
+        status: 'refunded_partial',
+      },
+      transactions: [
+        {
+          paymentMethod: 'card',
+          amount: 100,
+          currency: 'THB',
+          status: 'paid',
+        },
+      ],
+    };
+
+    expect(invokeIsPaymentConfirmed(payment)).toBeTrue();
+  });
+
   it('isPaymentConfirmed remains false when no transaction is paid/success and summary is not fully_paid', () => {
     const payment: PaymentByBookingIdResponse = {
       bookingId: 10,

@@ -91,7 +91,7 @@
             </td>
             <td>
               <span class="admin-status" [ngClass]="paymentClass(booking.paymentStatus)">
-                {{ booking.paymentStatus }}
+                {{ paymentStatusLabel(booking.paymentStatus) }}
               </span>
             </td>
             <td class="text-right">
@@ -271,7 +271,7 @@
             <span>{{ formatMoney(detailBooking.payment?.refundedAmount, detailBooking.payment?.currency) }}</span>
           </div>
           <span class="admin-status" *ngIf="detailBooking.payment?.status" [ngClass]="paymentClass(detailBooking.payment?.status ?? '')">
-            {{ detailBooking.payment?.status }}
+            {{ paymentStatusLabel(detailBooking.payment?.status) }}
           </span>
         </div>
         <span *ngIf="isPaymentsFetching" class="bk-inline-updating">{{ 'ADMIN.COMMON.UPDATING' | translate }}</span>
@@ -291,7 +291,11 @@
               <td>{{ tx.paymentMethod }}</td>
               <td class="admin-emphasis">{{ formatMoney(tx.amount, tx.currency) }}</td>
               <td>
-                <span class="admin-status" *ngIf="tx.status" [ngClass]="paymentClass(tx.status)">{{ tx.status }}</span>
+                <!-- OBRS-298: tx.status is the PER-TRANSACTION EPaymentStatus
+                     vocabulary, distinct from the booking-level
+                     EOverallPaymentStatus codes on the row badge — hence its
+                     own resolver against its own key namespace. -->
+                <span class="admin-status" *ngIf="tx.status" [ngClass]="paymentClass(tx.status)">{{ transactionStatusLabel(tx.status) }}</span>
               </td>
             </tr>
             <tr *ngIf="!paymentTransactions?.length" class="admin-empty-row">
