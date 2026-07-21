@@ -80,9 +80,12 @@ describe('ParcelTrackingPageComponent', () => {
     expect(component['statusLabelKey']('created')).not.toBe(component['chipFor']('created').i18nKey);
   });
 
-  it('falls through to the shared chip i18n key for every other status', () => {
+  // OBRS-427: EVERY status gets its own PARCEL_TRACKING.STATUS.* key — the customer
+  // surface must never fall through to chipFor()'s STAFF/driver copy for any status.
+  it('renders the customer namespace for every other status too, never the STAFF copy', () => {
     const component = makeComponent({ track: () => of({ code: 200, message: 'OK', data: {} as never }) });
-    expect(component['statusLabelKey']('collected')).toBe(component['chipFor']('collected').i18nKey);
+    expect(component['statusLabelKey']('collected')).toBe('PARCEL_TRACKING.STATUS.COLLECTED');
+    expect(component['statusLabelKey']('collected')).not.toBe(component['chipFor']('collected').i18nKey);
   });
 
   it('cleans up on destroy without throwing', () => {

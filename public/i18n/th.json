@@ -2682,7 +2682,15 @@
     "COLLECTED_AT": "รับพัสดุแล้วเมื่อ",
     "RECIPIENT": "ผู้รับ",
     "STATUS": {
-      "CREATED": "แจ้งแล้ว — รอนำส่งที่จุดต้นทาง"
+      "CREATED": "แจ้งแล้ว — รอนำส่งที่จุดต้นทาง",
+      "ACCEPTED": "รับฝากแล้ว",
+      "IN_TRANSIT": "อยู่ระหว่างขนส่ง",
+      "ARRIVED_NOTIFIED": "ถึงจุดหมายแล้ว",
+      "COLLECTED": "รับพัสดุแล้ว",
+      "LEFT_AT_STOP": "ฝากไว้ที่จุดจอด",
+      "UNCLAIMED_RETURNED": "ไม่มีผู้รับ / ส่งคืนแล้ว",
+      "REJECTED": "ถูกปฏิเสธ",
+      "UNKNOWN": "ไม่ทราบสถานะ"
     }
   },
   "PARCEL_BOOKING": {

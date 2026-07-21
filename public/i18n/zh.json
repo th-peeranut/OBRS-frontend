@@ -2682,7 +2682,15 @@
     "COLLECTED_AT": "取件时间",
     "RECIPIENT": "收件人",
     "STATUS": {
-      "CREATED": "已申报 — 等待到站寄件"
+      "CREATED": "已申报 — 等待到站寄件",
+      "ACCEPTED": "已受理",
+      "IN_TRANSIT": "运输中",
+      "ARRIVED_NOTIFIED": "已到达",
+      "COLLECTED": "已取件",
+      "LEFT_AT_STOP": "已留存于站点",
+      "UNCLAIMED_RETURNED": "无人认领 / 已退回",
+      "REJECTED": "已拒收",
+      "UNKNOWN": "未知状态"
     }
   },
   "PARCEL_BOOKING": {
