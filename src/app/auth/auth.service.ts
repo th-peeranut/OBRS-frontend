@@ -27,7 +27,6 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly ROLES_KEY = 'auth_roles';
-  private readonly REGISTER_VALUE_KEY = 'register_value';
   private readonly RETURN_URL_KEY = 'auth_return_url';
 
   // Area-based access model (frontend routing only — the backend keeps its own
@@ -76,8 +75,6 @@ export class AuthService {
     this.isAuthenticated()
   );
   authStatus$ = this.authStatusSubject.asObservable();
-
-  registerValue?: Register;
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -276,40 +273,10 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  setRegisterValue(payload: Register) {
-    this.registerValue = payload;
-    sessionStorage.setItem(this.REGISTER_VALUE_KEY, JSON.stringify(payload));
-  }
-
-  getRegisterValue(): Register | undefined {
-    if (this.registerValue) return this.registerValue;
-    const raw = sessionStorage.getItem(this.REGISTER_VALUE_KEY);
-    if (!raw) return undefined;
-    try {
-      this.registerValue = JSON.parse(raw) as Register;
-      return this.registerValue;
-    } catch {
-      return undefined;
-    }
-  }
-
-  clearRegisterValue() {
-    this.registerValue = {
-      title: null,
-      email: '',
-      firstName: '',
-      isPhoneNumberVerify: false,
-      lastName: '',
-      middleName: '',
-      password: '',
-      phoneNumber: '',
-      roles: [],
-      preferredLocale: '',
-      username: '',
-      pdpaConsent: false,
-    };
-    sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
-  }
+  // OBRS-605: setRegisterValue/getRegisterValue/clearRegisterValue existed only to carry
+  // the signup form ACROSS the phone-OTP screen. They stashed the whole form - including
+  // the plaintext password - in sessionStorage under 'register_value'. With the OTP screen
+  // out of the signup path the form never leaves the component, so the stash is gone too.
 
   register(payload: Register): Promise<ResponseAPI<unknown>> {
     const signUpPayload: SignUpPayload = {
@@ -422,6 +389,10 @@ export class AuthService {
       .then((response) => response);
   }
 
+  // OBRS-613: public endpoint — the reset link is opened logged out. Mirrors
+  // confirmEmailChange() for SKIP_GLOBAL_ERROR_ALERT: a reset link is single-use and
+  // expires, so "invalid or already used" is the ordinary case, and the page renders it
+  // inline with a way forward instead of a red global toast.
   confirmPasswordReset(payload: {
     token: string;
     newPassword: string;
@@ -429,7 +400,8 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<PasswordResetConfirmResponse>>(
         `${environment.apiUrl}/api/auth/password-reset/confirm`,
-        payload
+        payload,
+        { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise()
       .then((response) => response);
@@ -498,6 +470,9 @@ export class AuthService {
       path.startsWith('/register') ||
       path.startsWith('/otp') ||
       path.startsWith('/forget-password') ||
+      // OBRS-613: without this, resetting from an emailed link and then signing in sends
+      // the user straight back to /reset-password carrying a token the reset just spent.
+      path.startsWith('/reset-password') ||
       path.startsWith('/verify-email')
     );
   }

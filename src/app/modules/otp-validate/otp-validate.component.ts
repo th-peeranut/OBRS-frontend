@@ -19,7 +19,6 @@ import { AlertService } from '../../shared/services/alert.service';
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
   isShowPassword: boolean = false;
-  registrationEmailSent: boolean = false;
 
   option: string | undefined = 'login';
 
@@ -31,10 +30,11 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
   displayTime: string = '05:00';
   timerSubscription$: Subscription;
 
+  // OBRS-613: `service` (a second AuthService injection alongside `authService`) went
+  // with the empty 'forget-password' branch that was its only reader.
   constructor(
     private translate: TranslateService,
     private fb: FormBuilder,
-    private service: AuthService,
     private alertService: AlertService,
     private router: Router,
     private route: ActivatedRoute,
@@ -51,6 +51,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         this.translate.instant('LOGIN_BY_PHONE_NO.ROUTE_ERROR')
       );
       this.router.navigateByUrl('/');
+      // OBRS-605: the redirect used to fall through to sendOtp(), so a rejected route still
+      // billed an SMS. Now that /otp/register/<phone> is a rejected route, that mattered.
+      return;
     }
 
     this.sendOtp();
@@ -120,40 +123,22 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
       let resVerify;
 
       try {
-        if (this.option === 'login') {
-          const loginPayload: LoginOtpVerify = {
-            ...payload,
-            phoneNumber: this.phoneNo ? this.phoneNo : '',
-          };
+        // OBRS-613: 'login' is the only option left, so this is no longer a branch. The
+        // other arm called OtpService.verifyOTP, whose result nothing read - the
+        // 'forget-password' case below it was an empty block, so verifying a PIN there
+        // did nothing at all - and password reset is an emailed-token flow, not an OTP one.
+        const loginPayload: LoginOtpVerify = {
+          ...payload,
+          phoneNumber: this.phoneNo ? this.phoneNo : '',
+        };
 
-          resVerify = await this.authService.loginWithOtp(loginPayload);
-        } else {
-          resVerify = await this.otpService.verifyOTP(payload);
-        }
+        resVerify = await this.authService.loginWithOtp(loginPayload);
 
         if (resVerify?.code === 200) {
-          if (this.option === 'forget-password') {
-            // const res = await this.service.forgetPassword(payload);
-          } else if (this.option === 'register') {
-            const registerValue = this.service.getRegisterValue();
-            if (registerValue) {
-              const resRegister = await this.service.register(registerValue);
-
-              if (resRegister?.code === 201) {
-                this.service.clearRegisterValue();
-                this.registrationEmailSent = true;
-              } else if (typeof resRegister?.code === 'number') {
-                this.alertService.error(
-                  this.translate.instant('REGISTER.REGISTER_FAIL')
-                );
-              }
-            }
-          } else if (this.option === 'login') {
-            this.alertService.success(
-              this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS')
-            );
-            await this.authService.navigateAfterLogin();
-          }
+          this.alertService.success(
+            this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS')
+          );
+          await this.authService.navigateAfterLogin();
         } else if (typeof resVerify?.code === 'number') {
           this.alertService.error(
             this.translate.instant('LOGIN_BY_PHONE_NO.OTP_VERIFY_FAILED')
@@ -169,9 +154,10 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     return (
       !this.phoneNo ||
       !this.option ||
-      (this.option !== 'login' &&
-        this.option !== 'forget-password' &&
-        this.option !== 'register')
+      // This screen serves phone LOGIN and nothing else. 'register' went in OBRS-605
+      // (signup never needed an OTP) and 'forget-password' in OBRS-613 (reset is an
+      // emailed-token flow). Both now fail this check and redirect to '/'.
+      this.option !== 'login'
     );
   }
 }

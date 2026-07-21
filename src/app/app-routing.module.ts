@@ -48,6 +48,18 @@ export const appRoutes: Routes = [
       ),
   },
   {
+    // OBRS-613: the landing page for the emailed reset link. The path is NOT free to
+    // rename — the backend builds the link from `app.mail.reset-password-path`
+    // (`${app.frontend-url}/reset-password?token=`), and while this route did not exist
+    // every reset email fell through to the '**' wildcard and redirected to home.
+    // Public — no guard: it is opened logged out, by definition.
+    path: 'reset-password',
+    loadChildren: () =>
+      import('./modules/reset-password/reset-password.module').then(
+        (m) => m.ResetPasswordModule
+      ),
+  },
+  {
     path: 'schedule-booking',
     canActivate: [AuthGuard],
     data: { customerArea: true },

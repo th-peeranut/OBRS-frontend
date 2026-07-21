@@ -1,0 +1,160 @@
+{
+  "$comment": "OBRS-602. The declared partition of the Playwright suite. Enforced by scripts/check-e2e-lanes.mjs; explained in docs/e2e-lanes.md. A spec belongs to exactly one lane, and the lane says what the spec needs to be TRUE, not what it happens to run under today.",
+  "lanes": {
+    "GATE": "Hermetic. Intercepts every call it makes, so it needs no backend, no seeded data and no external service. This is the only lane that is a merge gate. Run: npm run e2e:gate",
+    "GATE-BLOCKED": "Mocks all of its own API traffic but still boots with a session minted from live SIT by e2e/global-setup.ts. One synthetic storageState away from GATE; until then it is as fragile as SIT.",
+    "SIT-LIVE": "Deliberately hits the deployed SIT backend, per docs/adr/0001-admin-e2e-hits-real-sit-backend.md -- mocking would defeat the point, which is catching contract drift. Not a gate: shared mutable environment.",
+    "OWN-DB": "Needs booking/report states that can only exist by construction, so it provisions its own database. See playwright.local.config.ts for the reasoning. Never runnable against SIT.",
+    "CAPTURE": "Not a test. A screenshot/evidence script kept for reproducing card artefacts. Asserts little and is not expected to pass unattended."
+  },
+  "specs": [
+    {
+      "spec": "route-smoke.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Single catch-all page.route on **/api/** fulfils every path; fake token seeded into localStorage. Nothing reaches the network."
+    },
+    {
+      "spec": "report-usability-issue.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Stubs its public calls and ABORTS unstubbed **/api/private/** traffic, failing by name if a call escapes (OBRS-535). Fake token, no real session."
+    },
+    {
+      "spec": "confirm-guidance-flow.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Anonymous, fixture-driven. Became hermetic in OBRS-602 once GET /api/routes -- the call that resolves the slug for its own pickup-dropoff mock -- was stubbed too."
+    },
+    {
+      "spec": "route-map.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Anonymous; stubs stops, schedules and pickup-dropoff per describe. OBRS-602 added the GET /api/routes stub it had always left live."
+    },
+    {
+      "spec": "b2c-critical-path.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Anonymous booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues."
+    },
+
+    {
+      "spec": "focus-retention.spec.ts",
+      "lane": "GATE-BLOCKED",
+      "config": "playwright.config.ts",
+      "why": "Every endpoint it touches is fulfilled from inline constants, but it carries storageState from e2e/fixtures/admin-auth.json, which only global-setup.ts can mint by logging into live SIT."
+    },
+    {
+      "spec": "trip-details-edit.spec.ts",
+      "lane": "GATE-BLOCKED",
+      "config": "playwright.config.ts",
+      "why": "23 routes / 28 fulfils cover the backend entirely, and one test reads i18n JSON off disk. Blocked on the same SIT-minted admin storageState."
+    },
+    {
+      "spec": "stop-filter-route-pair.spec.ts",
+      "lane": "GATE-BLOCKED",
+      "config": "playwright.config.ts",
+      "why": "Fully stubbed walk-in schedules and segments; blocked only by the SIT-minted admin storageState."
+    },
+    {
+      "spec": "staff-sell-walkin.spec.ts",
+      "lane": "GATE-BLOCKED",
+      "config": "playwright.config.ts",
+      "why": "56 fulfilling routes, but its own comment records that a fake token changes behaviour, so the real SIT JWT is load-bearing here and not merely inherited."
+    },
+
+    {
+      "spec": "admin-critical-paths.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.config.ts",
+      "why": "The spec ADR-0001 was written for: create Vehicle / ScheduleSet / Schedules against the real backend so a malformed payload cannot pass. Note it leaves TEST-e2e-schedules-route behind on SIT by design."
+    },
+    {
+      "spec": "admin-unlock-account.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.config.ts",
+      "why": "Stubs the users list and the unlock PUT because SIT pre-dates the locked field, but the rest of the admin shell is served live."
+    },
+    {
+      "spec": "dropoff-stop-photos.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.config.ts",
+      "why": "Queries the SIT API directly and asserts the six seeded dropoff stops still carry placehold.co URLs -- by design it goes red when the Places backfill succeeds."
+    },
+    {
+      "spec": "google-signin-email-verify.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.config.ts",
+      "why": "Zero mocks. Posts a real verify-email request and performs a real login, with a 60s allowance for Koyeb cold start."
+    },
+    {
+      "spec": "sidebar-hover-expand.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.config.ts",
+      "why": "Zero mocks and a real admin session across /staff and /admin shells; pure live-render coverage."
+    },
+    {
+      "spec": "direction-selector.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright-direction-selector.config.ts",
+      "why": "Deliberately leaves /api/routes* live and asserts the seeded SIT stop lists (19 pickup, first 'Nong chak') -- verified still accurate on 2026-07-21."
+    },
+    {
+      "spec": "obrs-561-mobile-dropdown-overflow.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.obrs561.config.ts",
+      "why": "MUST use its own config: the defect is a CSS rule below 576px and the assertions are meaningless at the default 1280px, where it would pass while measuring nothing."
+    },
+
+    {
+      "spec": "my-bookings-reschedule.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.local.config.ts",
+      "why": "Needs five E2E-* bookings including already-rescheduled, cancelled and seat-collision states, and mutates them. On SIT those states can only be produced by running the spec, which spends them."
+    },
+    {
+      "spec": "obrs-483-open-seating.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs483.config.ts",
+      "why": "Needs booking OBRS483-OPEN with a null seat from its SQL fixture, and a backend built from the OBRS-483 branch. The frontend alone is not sufficient."
+    },
+    {
+      "spec": "obrs-433-my-reports.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs433.config.ts",
+      "why": "Asserts exactly four seeded reports and a QA-SEED follow-up, then edits them irreversibly. Requires a fresh obrs433qa database."
+    },
+    {
+      "spec": "obrs-564-booking-policy.spec.ts",
+      "lane": "OWN-DB",
+      "config": "none -- run by hand against obrs564qa on :8080",
+      "why": "Calls http://localhost:8080 directly and writes the global booking cap to 45, resetting it in a separate test that a mid-suite failure skips. Must never point at a shared environment."
+    },
+    {
+      "spec": "obrs-576-config-change-history.spec.ts",
+      "lane": "OWN-DB",
+      "config": "none -- run by hand against obrs576qa on :8080",
+      "why": "Asserts hand-seeded synthetic history rows that no script in this repo creates, and appends new rows on every run. Provisions nothing itself."
+    },
+
+    {
+      "spec": "obrs-296-child-fare-qa.spec.ts",
+      "lane": "CAPTURE",
+      "config": "none -- no committed config runs it. It is hermetic and uses baseURL-relative navigation, so it needs only a `testMatch` pointing at it; run it with `npx playwright test --config=playwright.gate.config.ts` ONLY after temporarily adding it, which the lane gate will then reject. Adding it to the GATE lane for real is the clean fix if the capture is still wanted.",
+      "why": "Fully mocked and technically hermetic, but its purpose is producing the OBRS-296 before/after e-ticket screenshots, not asserting behaviour."
+    },
+    {
+      "spec": "obrs-575-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs575.config.ts",
+      "why": "Screenshot script. Expects two servers started by hand on :4575 and :4576 -- one of them serving origin/dev for the BEFORE shot."
+    },
+    {
+      "spec": "obrs-575-qa.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs575.config.ts",
+      "why": "Hardcodes http://localhost:4575 for every navigation, bypassing baseURL, and depends on recent-route history existing for the seeded customer."
+    }
+  ]
+}
