@@ -934,7 +934,7 @@
       "PAYMENT_STATUS_CODES": {
         "unpaid": "ยังไม่ชำระ",
         "partial_paid": "ชำระบางส่วน",
-        "refunded_partial": "ชำระครบ (คืนเงินบางส่วน)",
+        "refunded_partial": "ชำระครบ · คืนบางส่วน",
         "fully_paid": "ชำระครบ",
         "overpaid": "ชำระเกิน",
         "refund_required": "รอคืนเงิน",

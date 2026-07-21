@@ -934,7 +934,7 @@
       "PAYMENT_STATUS_CODES": {
         "unpaid": "未付款",
         "partial_paid": "部分付款",
-        "refunded_partial": "已付清（部分退款）",
+        "refunded_partial": "已付清 · 部分退款",
         "fully_paid": "已付清",
         "overpaid": "多付款",
         "refund_required": "待退款",

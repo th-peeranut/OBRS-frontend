@@ -934,7 +934,7 @@
       "PAYMENT_STATUS_CODES": {
         "unpaid": "Unpaid",
         "partial_paid": "Partially Paid",
-        "refunded_partial": "Paid in Full (Partially Refunded)",
+        "refunded_partial": "Paid · Partly Refunded",
         "fully_paid": "Paid in Full",
         "overpaid": "Overpaid",
         "refund_required": "Refund Pending",
