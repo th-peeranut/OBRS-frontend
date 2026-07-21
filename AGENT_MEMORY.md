@@ -3876,3 +3876,23 @@ behavior on a code path your own logic never reaches, it is unverifiable by your
 your repo — say "unspecified, do not rely on" instead of guessing. Same family as DEV-GOTCHAS'
 Confirmed *"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's
 false reference"* (now 3 occurrences).
+
+## OBRS-468 (Scrutinize self-fix) — a refactor comment claiming "lifted verbatim" when the shared component is a SUPERSET
+
+`bookings-page.component.html`'s new comment described `app-admin-paginator` as markup OBRS-403
+"lifted verbatim" from this very file. It did not: the shared component added a
+`<nav role="navigation" [attr.aria-label]>` wrapper, `aria-live="polite"` on the page counter, and a
+`disabled` `@Input()`. The conclusion the comment served (this swap is behavior-preserving) is
+correct — the mechanism it stated is not.
+
+Why it matters more here than usual: "verbatim" is precisely the claim a reviewer of a
+behavior-preserving refactor is supposed to verify. A future reader trusting that word skips the
+DOM diff and never learns that the host element now renders unconditionally (the `*ngIf` moved
+*inside* the component) or that the `disabled` default is what keeps the button predicates equal.
+Rewrote it to state the superset explicitly and to name the sibling call sites' `[disabled]="isRefreshing"`,
+so the omission here reads as deliberate rather than forgotten.
+
+Rule: when a comment asserts a code relationship ("lifted from", "same as", "mirrors"), diff the two
+artifacts before writing the verb. "Verbatim"/"identical" are falsifiable claims, not flourishes —
+if the target is a superset, say superset. 4th occurrence of DEV-GOTCHAS' Confirmed
+*"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's false reference"*.
