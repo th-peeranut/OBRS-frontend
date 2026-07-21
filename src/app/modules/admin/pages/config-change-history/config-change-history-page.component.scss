@@ -1,0 +1,10 @@
+// OBRS-576: the only page-specific rule this page needs — every color used
+// elsewhere in the template resolves against an existing global admin-theme.scss
+// token (.admin-muted/.admin-emphasis/.admin-status.is-warning/.admin-error),
+// so it themes for free in both light and dark modes with no new hex here.
+.cch-change-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}

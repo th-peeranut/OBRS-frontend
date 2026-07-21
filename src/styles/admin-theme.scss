@@ -1628,7 +1628,17 @@ textarea.admin-field {
 }
 
 .admin-error {
-  color: var(--admin-danger-text);
+  /* Bare-foreground danger text (no chip bg behind it), NOT --admin-danger-text
+     — that one stays chip-only: it is always paired with the light
+     --admin-danger-bg pastel, so it is dark-safe by construction and measures
+     only ~1.7:1 standing alone on --admin-surface-card.
+
+     OBRS-576 originally introduced its own --admin-error-text for this. OBRS-520
+     landed --admin-danger-fg on dev for the identical role, so the two were
+     collapsed into 520's name at merge rather than left as a synonym pair.
+     Dark mode improved as a side effect: #ffb4ab measures 9.20:1 on the
+     .admin-card bg (#1d2226) where 576's #f87171 measured 5.8:1. */
+  color: var(--admin-danger-fg);
   font-size: 11px;
   font-weight: 600;
 }

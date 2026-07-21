@@ -46,6 +46,7 @@ import { SettlementDetailModalComponent } from './pages/settlements/settlement-d
 import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-config-page.component';
 import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
 import { BookingPolicyConfigPageComponent } from './pages/booking-policy-config/booking-policy-config-page.component';
+import { ConfigChangeHistoryPageComponent } from './pages/config-change-history/config-change-history-page.component';
 import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -215,6 +216,20 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        // OBRS-576: one general config-change-history page under ระบบ,
+        // covering every config key (not a panel inside booking-policy-config)
+        // — access mirrors booking-policy-config's own guard, since reading
+        // the history is granted to the same roles that can write it.
+        path: 'config-change-history',
+        component: ConfigChangeHistoryPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CONFIG_CHANGE_HISTORY',
+          subtitleKey: 'ADMIN.CONFIG_CHANGE_HISTORY.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
+      {
         path: 'refund-void-report',
         component: RefundVoidReportPageComponent,
         canActivate: [AuthGuard],
@@ -287,6 +302,7 @@ export const adminRoutes: Routes = [
     ReminderConfigPageComponent,
     JumpSeatConfigPageComponent,
     BookingPolicyConfigPageComponent,
+    ConfigChangeHistoryPageComponent,
     CargoCapacityPageComponent,
     InspectionItemsPageComponent,
   ],

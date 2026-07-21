@@ -422,6 +422,7 @@
       "REMINDER_CONFIG": "Reminder Timing",
       "JUMP_SEAT_CONFIG": "Jump Seat",
       "BOOKING_POLICY_CONFIG": "Booking Policy",
+      "CONFIG_CHANGE_HISTORY": "Config Change History",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
     },
@@ -1236,6 +1237,65 @@
       "CUTOFF_MINUTES_LABEL": "Booking Cutoff (minutes before departure)",
       "CUTOFF_MINUTES_HELPER": "How close to departure an online booking can still be made, in minutes. This value also controls when the \"few seats left\" alert starts showing on a schedule. Walk-in counter sales are not limited by this.",
       "LOAD_FAILED": "Unable to load the booking-policy config."
+    },
+    "CONFIG_CHANGE_HISTORY": {
+      "SUBTITLE": "View the change history of all system config values, with who changed them and when",
+      "TABLE_TITLE": "Change history",
+      "COL": {
+        "CHANGED_AT": "Time",
+        "CONFIG_KEY": "Setting",
+        "CHANGE": "From → To",
+        "ACTOR": "Changed by"
+      },
+      "UNITS": "records",
+      "EMPTY": "No records match this filter",
+      "LOAD_FAILED": "Failed to load change history",
+      "FILTER": {
+        "ALL_KEYS": "All settings",
+        "DATE_RANGE": "Date range",
+        "DATE_FROM": "From date",
+        "DATE_TO": "To date"
+      },
+      "ERROR": {
+        "RANGE_INVALID": "Invalid date range — \"to\" cannot be before \"from\""
+      },
+      "BOOL": {
+        "ON": "On",
+        "OFF": "Off"
+      },
+      "VALUE_DELETED": "Deleted",
+      "VALUE": {
+        "MORE": "+{{count}} more"
+      },
+      "ACTOR": {
+        "SYSTEM": "System",
+        "UNATTRIBUTED": "Unknown editor",
+        "UNATTRIBUTED_HINT": "Could not determine whether this was a legitimate direct edit outside the app or a code path that failed to record the editor",
+        "PRE_FEATURE": "— (before this was tracked)",
+        "DELETED_USER": "Deleted user"
+      },
+      "KEYS": {
+        "booking_max_advance_days": "Advance booking limit (days)",
+        "booking_offset_minutes": "Booking cutoff (minutes)",
+        "seat_reservation_minutes": "Seat hold duration (minutes)",
+        "cancel_window_hours": "Cancellation window (hours)",
+        "cancel_refund_rate_early": "Refund rate — early cancellation",
+        "cancel_refund_rate_late": "Refund rate — late cancellation",
+        "reschedule_window_hours": "Reschedule window (hours)",
+        "reschedule_max_days_ahead": "Max days ahead for reschedule",
+        "reschedule_fee_late_thb": "Late reschedule fee (THB)",
+        "reschedule_payment_timeout_minutes": "Reschedule payment timeout (minutes)",
+        "reminder_hours_before_departure": "Departure reminder lead time (hours)",
+        "boarding_reminder_minutes_before_departure": "Boarding reminder lead time (minutes)",
+        "no_show_cutoff_minutes": "No-show cutoff (minutes)",
+        "near_full_alert_threshold_percent": "Near-full alert threshold (%)",
+        "jump_seat_enabled": "Jump-seat sales enabled (walk-in)",
+        "parcel_max_weight_kg": "Max parcel weight (kg)",
+        "parcel_prohibited_categories": "Prohibited parcel categories",
+        "parcel_carry_on_free_size_min_inch": "Free carry-on min size (inches)",
+        "parcel_carry_on_free_size_max_inch": "Free carry-on max size (inches)",
+        "parcel_carry_on_free_aisle_max_per_trip": "Max free carry-on items per trip"
+      }
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",
