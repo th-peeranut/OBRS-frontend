@@ -26,7 +26,8 @@ const childModules = [
 ];
 
 const dynamicSamples = new Map([
-  ['/otp/:option/:phoneno', '/otp/register/0812345678'],
+  // OBRS-605: 'register' is no longer an accepted option - it redirects to '/'.
+  ['/otp/:option/:phoneno', '/otp/login/0812345678'],
   ['/staff/boarding/:scheduleId', '/staff/boarding/e2e-schedule-id'],
 ]);
 

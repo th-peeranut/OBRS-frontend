@@ -75,3 +75,16 @@
 .form-control {
   height: 48px;
 }
+
+// OBRS-605: moved here with the panel it styles, from otp-validate.component.scss.
+.email-verify-panel {
+  .email-verify-icon {
+    font-size: 64px;
+    color: $brand-customer;
+  }
+
+  .email-verify-message {
+    font-size: $font-size-base;
+    color: $text-softblack;
+  }
+}

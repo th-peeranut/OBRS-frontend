@@ -19,7 +19,6 @@ import { AlertService } from '../../shared/services/alert.service';
 })
 export class OtpValidateComponent implements OnInit, OnDestroy {
   isShowPassword: boolean = false;
-  registrationEmailSent: boolean = false;
 
   option: string | undefined = 'login';
 
@@ -51,6 +50,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         this.translate.instant('LOGIN_BY_PHONE_NO.ROUTE_ERROR')
       );
       this.router.navigateByUrl('/');
+      // OBRS-605: the redirect used to fall through to sendOtp(), so a rejected route still
+      // billed an SMS. Now that /otp/register/<phone> is a rejected route, that mattered.
+      return;
     }
 
     this.sendOtp();
@@ -134,20 +136,6 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
         if (resVerify?.code === 200) {
           if (this.option === 'forget-password') {
             // const res = await this.service.forgetPassword(payload);
-          } else if (this.option === 'register') {
-            const registerValue = this.service.getRegisterValue();
-            if (registerValue) {
-              const resRegister = await this.service.register(registerValue);
-
-              if (resRegister?.code === 201) {
-                this.service.clearRegisterValue();
-                this.registrationEmailSent = true;
-              } else if (typeof resRegister?.code === 'number') {
-                this.alertService.error(
-                  this.translate.instant('REGISTER.REGISTER_FAIL')
-                );
-              }
-            }
           } else if (this.option === 'login') {
             this.alertService.success(
               this.translate.instant('LOGIN_BY_PHONE_NO.LOGIN_SUCCESS')
@@ -169,9 +157,9 @@ export class OtpValidateComponent implements OnInit, OnDestroy {
     return (
       !this.phoneNo ||
       !this.option ||
-      (this.option !== 'login' &&
-        this.option !== 'forget-password' &&
-        this.option !== 'register')
+      // OBRS-605: 'register' is gone - /otp/register/<phone> now fails this check and
+      // redirects to '/', which is the point: signup never needed an OTP.
+      (this.option !== 'login' && this.option !== 'forget-password')
     );
   }
 }
