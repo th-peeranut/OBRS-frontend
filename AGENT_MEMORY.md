@@ -3876,3 +3876,32 @@ behavior on a code path your own logic never reaches, it is unverifiable by your
 your repo — say "unspecified, do not rely on" instead of guessing. Same family as DEV-GOTCHAS'
 Confirmed *"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's
 false reference"* (now 3 occurrences).
+
+---
+
+## OBRS-341 (Scrutinize self-fix) — clearing state on a mode switch does NOT cancel the requests already in flight
+
+`ParcelConsignPageComponent.onModeChange()` cleared `quote`/`result`/`carryOnResult`/`serverErrorKey`
+and the form reset in lockstep, and its doc comment claimed that *"nothing carried over from the old
+mode survives a switch on EITHER side of the page/form boundary."* Every field-clearing assertion in
+the spec passed. The claim was still false: a `getParcelQuote` or `create*Parcel` request issued
+under the OLD mode is still in flight across the switch, and its `next` handler writes those exact
+fields **after** the clear — re-displaying the old branch's price, or the old branch's success panel,
+under the new branch.
+
+The tell: a reset method is only as strong as the set of writers that can run after it. Enumerate
+every async handler that writes the state you just cleared, not just the fields you remembered to
+list. Same shape as DEV-GOTCHAS' *"a teardown/stop decision is only as strong as the set of paths
+that can restart it"* (OBRS-426), applied to state-clearing rather than to lifecycle.
+
+Fix pattern used here: a `modeEpoch` counter bumped by the switch; each request captures the epoch at
+issue time and drops its own response if the epoch has moved. Prefer `switchMap` off a params
+`Subject` when the flow is already reactive — the epoch token is the surgical option when the
+existing shipped call sites (here, live consigned intake) must stay byte-identical.
+
+Two related smaller ones from the same review, both worth generalizing:
+- A new i18n key can ship referenced 0 times even when 16 of its 17 siblings are wired
+  (`MODE.LABEL`). Grep **each** new key individually; a per-namespace spot check misses the one.
+- Reusing a shipped screen for a second mode inherits its **copy**, not just its markup: the submit
+  button still read "Consign parcel" in carry-on mode. When adding a mode toggle to an existing page,
+  re-read every user-visible string on it against the new branch, not only the fields you added.
