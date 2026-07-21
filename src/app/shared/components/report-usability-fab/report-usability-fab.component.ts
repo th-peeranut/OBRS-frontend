@@ -6,6 +6,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { AlertService } from '../../services/alert.service';
 import { UsabilityReportService } from '../../../services/usability-report/usability-report.service';
+import { mapApiErrorCode } from '../../lib/api-error-code';
 
 interface SelectOption {
   label: string;
@@ -217,7 +218,7 @@ export class ReportUsabilityFabComponent implements OnInit, OnDestroy {
       VALIDATION_FAILED: 'USABILITY_REPORT.ERROR.VALIDATION_FAILED',
     };
 
-    return errorCode ? (knownCodes[errorCode] ?? 'USABILITY_REPORT.ERROR.GENERIC') : 'USABILITY_REPORT.ERROR.GENERIC';
+    return mapApiErrorCode(errorCode, knownCodes, 'USABILITY_REPORT.ERROR.GENERIC');
   }
 
   private buildCategoryOptions(): void {

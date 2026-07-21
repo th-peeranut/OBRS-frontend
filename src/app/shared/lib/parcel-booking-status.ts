@@ -1,3 +1,4 @@
+import { hasOwnKey } from './own-key';
 import { ParcelStatusToken } from './parcel-delivery-status';
 
 /** `EBookingStatus` slugs as they arrive on `ParcelDeliveryListItemDto.bookingStatus`. */
@@ -57,7 +58,12 @@ export function parcelPaymentFlag(bookingStatus: string | null | undefined): Par
   if (key === '' || key === 'confirmed') {
     return null;
   }
-  return PARCEL_PAYMENT_FLAG_MAP[key as Exclude<ParcelBookingStatus, 'confirmed'>] ?? UNRECOGNIZED_FLAG;
+  // OBRS-601: hasOwnKey, not `?? UNRECOGNIZED_FLAG` — the map inherits from
+  // `Object.prototype`, so a `constructor`/`__proto__` bookingStatus resolves
+  // to the `Object` function, which is non-nullish and therefore skips the
+  // fallback entirely. The predicate also retires the `as Exclude<...>` cast,
+  // which asserted at compile time the exact thing that was false at runtime.
+  return hasOwnKey(PARCEL_PAYMENT_FLAG_MAP, key) ? PARCEL_PAYMENT_FLAG_MAP[key] : UNRECOGNIZED_FLAG;
 }
 
 /** True when the backend will reject every delivery transition on this row

@@ -35,4 +35,36 @@ describe('parcelPaymentFlag', () => {
     expect(parcelPaymentFlag('some_future_slug')?.i18nKey).toBe('STAFF.PARCEL_DELIVERY.PAYMENT.UNKNOWN');
     expect(isParcelBookingBlocking('some_future_slug')).toBeTrue();
   });
+
+  // OBRS-601 (the same hole OBRS-427 closed one file over). A slug-based suite
+  // never generates these inputs, which is why `?? UNRECOGNIZED_FLAG` looked
+  // safe for so long: `PARCEL_PAYMENT_FLAG_MAP['constructor']` is the `Object`
+  // FUNCTION — non-nullish, so `??` never fired and the caller got a function
+  // whose `.token`/`.i18nKey` are both `undefined`, i.e. a chip with no colour
+  // and no text. `normalize()` lower-cases first, so only `constructor` and
+  // `__proto__` are genuinely reachable; the camelCase members are pinned here
+  // against a future refactor that drops the lower-casing.
+  const PROTOTYPE_PROBES = [
+    'constructor',
+    '__proto__',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    'toLocaleString',
+  ];
+
+  PROTOTYPE_PROBES.forEach((probe) => {
+    it(`returns UNRECOGNIZED_FLAG — a real flag object — for prototype member "${probe}"`, () => {
+      const flag = parcelPaymentFlag(probe);
+      expect(flag).withContext(probe).not.toBeNull();
+      expect(flag?.i18nKey).withContext(probe).toBe('STAFF.PARCEL_DELIVERY.PAYMENT.UNKNOWN');
+      expect(flag?.token).withContext(probe).toBe('is-danger');
+      // The pre-fix regression was a FUNCTION leaking through, so assert the
+      // shape rather than only the value — `typeof fn === 'object'` is false.
+      expect(typeof flag).withContext(probe).toBe('object');
+      expect(isParcelBookingBlocking(probe)).withContext(probe).toBeTrue();
+    });
+  });
 });

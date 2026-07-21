@@ -36,6 +36,10 @@ function createAuthServiceStub(
     hasAnyRole: jasmine
       .createSpy('hasAnyRole')
       .and.callFake((wanted: string[]) => wanted.some((role) => roles.includes(role))),
+    // OBRS-451: raw held roles, used by isPureDriver — deliberately NOT
+    // expanded through ROLE_GRANTS the way hasAnyRole() above is, mirroring
+    // the real AuthService.getRoles() contract.
+    getRoles: jasmine.createSpy('getRoles').and.returnValue(roles),
     getUsername: () => username,
   };
 }
@@ -556,6 +560,7 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       statusCode: 'unknown',
       delayedDepartureDateTime: null,
       delayReason: null,
+      assignedToMe: null,
     });
   });
 
@@ -578,7 +583,28 @@ describe('BoardingListComponent — trip header self-fetch (OBRS-100)', () => {
       statusCode: 'unknown',
       delayedDepartureDateTime: null,
       delayReason: null,
+      assignedToMe: null,
     });
+  });
+
+  it('OBRS-451: assignedToMe maps through verbatim from ScheduleRespDto — true and false alike, never derived client-side', async () => {
+    const trueStub = {
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, assignedToMe: true } })),
+    };
+    const trueComponent = createComponent(trueStub);
+    await trueComponent['loadTripHeader'](42);
+    expect(trueComponent['tripHeader']?.assignedToMe).toBeTrue();
+
+    const falseStub = {
+      getScheduleById: jasmine
+        .createSpy('getScheduleById')
+        .and.returnValue(of({ code: 200, message: 'OK', data: { id: 42, assignedToMe: false } })),
+    };
+    const falseComponent = createComponent(falseStub);
+    await falseComponent['loadTripHeader'](42);
+    expect(falseComponent['tripHeader']?.assignedToMe).toBeFalse();
   });
 
   it('OBRS-256: statusCode is parsed via parseAdminStatus(schedule.status) — reused, not a second parser', async () => {
@@ -747,6 +773,119 @@ describe('BoardingListComponent — OBRS-256 schedule status pill/action getters
     );
     expect(driverComponent['canUnboard']).toBeFalse();
     expect(driverComponent['canUnflagChildFare']).toBeFalse();
+  });
+});
+
+describe('BoardingListComponent — OBRS-451 isPureDriver / canShowScheduleStatusAction (driver assignment gate)', () => {
+  function withTripHeader(component: BoardingListComponent, overrides: { assignedToMe?: boolean | null } = {}): void {
+    (component as any).tripHeader = {
+      routeLabel: 'BKK-CNX',
+      departureDateTime: '10 Jul 2026 15:00',
+      departureDateTimeRaw: null,
+      vehicleLabel: '1กก-1234',
+      driverName: 'Somchai Driver',
+      statusCode: 'scheduled',
+      delayedDepartureDateTime: null,
+      delayReason: null,
+      assignedToMe: overrides.assignedToMe ?? null,
+    };
+  }
+
+  it('isPureDriver is true for a raw driver-only session', () => {
+    const component = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    expect(component['isPureDriver']).toBeTrue();
+  });
+
+  // OBRS-451: salesperson/admin/owner all satisfy hasAnyRole(['driver']) through
+  // ROLE_GRANTS — isPureDriver must use the RAW role list instead, or every one
+  // of them would wrongly get narrowed by the assignedToMe gate too.
+  it('isPureDriver is false for salesperson, admin, owner, and a salesperson who also holds driver', () => {
+    for (const roles of [['salesperson'], ['admin'], ['owner'], ['salesperson', 'driver']]) {
+      const component = createComponent(
+        { boardingScan: jasmine.createSpy() },
+        undefined,
+        undefined,
+        createAuthServiceStub({ roles })
+      );
+      expect(component['isPureDriver']).withContext(`roles=${JSON.stringify(roles)}`).toBeFalse();
+    }
+  });
+
+  // OBRS-451 AC: pure driver, assignedToMe = false -> button not rendered.
+  it('canShowScheduleStatusAction is false for a pure driver when assignedToMe=false', () => {
+    const component = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    withTripHeader(component, { assignedToMe: false });
+
+    expect(component['canShowScheduleStatusAction']).toBeFalse();
+  });
+
+  // OBRS-451 AC (OBRS-434 regression): pure driver, assignedToMe = true -> shown.
+  it('canShowScheduleStatusAction is true for a pure driver when assignedToMe=true', () => {
+    const component = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    withTripHeader(component, { assignedToMe: true });
+
+    expect(component['canShowScheduleStatusAction']).toBeTrue();
+  });
+
+  // OBRS-451 AC regression: salesperson/admin unaffected by the flag either way.
+  it('canShowScheduleStatusAction is always true for salesperson/admin, regardless of assignedToMe', () => {
+    for (const roles of [['salesperson'], ['admin']]) {
+      for (const assignedToMe of [true, false, null]) {
+        const component = createComponent(
+          { boardingScan: jasmine.createSpy() },
+          undefined,
+          undefined,
+          createAuthServiceStub({ roles })
+        );
+        withTripHeader(component, { assignedToMe });
+
+        expect(component['canShowScheduleStatusAction'])
+          .withContext(`roles=${JSON.stringify(roles)}, assignedToMe=${assignedToMe}`)
+          .toBeTrue();
+      }
+    }
+  });
+
+  // OBRS-451 scope item 3: tripHeader === null must fail closed for a pure driver.
+  it('canShowScheduleStatusAction is false for a pure driver when tripHeader is null', () => {
+    const component = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    (component as any).tripHeader = null;
+
+    expect(component['canShowScheduleStatusAction']).toBeFalse();
+  });
+
+  // A response predating this field (assignedToMe undefined -> mapped to null by
+  // loadTripHeader()) must never be read as "assigned" for a pure driver.
+  it('canShowScheduleStatusAction is false for a pure driver when assignedToMe is null (field predates this card)', () => {
+    const component = createComponent(
+      { boardingScan: jasmine.createSpy() },
+      undefined,
+      undefined,
+      createAuthServiceStub({ roles: ['driver'] })
+    );
+    withTripHeader(component, { assignedToMe: null });
+
+    expect(component['canShowScheduleStatusAction']).toBeFalse();
   });
 });
 
@@ -1886,7 +2025,16 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
   // false = plain user with no staff role). Pass `roles` instead when the case
   // cares about WHICH role — a driver now answers true for the transition gate
   // but false for delay/unboard.
-  function render(opts: { scheduleStatus: string; canControl: boolean; roles?: string[] }): void {
+  // OBRS-451: `assignedToMe` seeds `ScheduleRespDto.assignedToMe` on the
+  // `getScheduleById()` stub response; `undefined` (the default) mirrors a
+  // real response predating this field and maps to `tripHeader.assignedToMe
+  // === null` (see loadTripHeader()).
+  function render(opts: {
+    scheduleStatus: string;
+    canControl: boolean;
+    roles?: string[];
+    assignedToMe?: boolean;
+  }): void {
     const roles = opts.roles ?? (opts.canControl ? ['salesperson'] : []);
     TestBed.configureTestingModule({
       imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
@@ -1906,7 +2054,11 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
                 ],
               }),
             getScheduleById: () =>
-              of({ code: 200, message: 'OK', data: { id: 42, status: opts.scheduleStatus } }),
+              of({
+                code: 200,
+                message: 'OK',
+                data: { id: 42, status: opts.scheduleStatus, assignedToMe: opts.assignedToMe },
+              }),
           },
         },
         { provide: AlertService, useValue: createAlertServiceStub() },
@@ -1914,6 +2066,9 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
           provide: AuthService,
           useValue: {
             hasAnyRole: (wanted: string[]) => wanted.some((role) => roles.includes(role)),
+            // OBRS-451: isPureDriver reads raw roles directly — see
+            // createAuthServiceStub()'s matching getRoles() above.
+            getRoles: () => roles,
             getUsername: () => 'operator1',
             authStatus$: of(true),
           },
@@ -1948,8 +2103,10 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
 
   // OBRS-434: the AC that matters — the backend gate is worthless if the driver
   // never sees the button. Renders the REAL template against a driver-only role.
-  it('renders the transition button in the DOM for a DRIVER', fakeAsync(() => {
-    render({ scheduleStatus: 'departed', canControl: false, roles: ['driver'] });
+  // OBRS-451: `assignedToMe: true` is now REQUIRED for this to render — see the
+  // AC block below for the `assignedToMe: false` counterpart that must hide it.
+  it('renders the transition button in the DOM for a DRIVER assigned to this schedule', fakeAsync(() => {
+    render({ scheduleStatus: 'departed', canControl: false, roles: ['driver'], assignedToMe: true });
     tick();
     fixture.detectChanges();
 
@@ -1958,10 +2115,100 @@ describe('BoardingListComponent — OBRS-256 template render: header strip, stat
     expect(buttons[0].textContent).toContain('STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED');
   }));
 
+  // OBRS-451 AC: a driver who types another driver's :scheduleId into the URL
+  // must not see the button at all — no dead-end 403-on-click.
+  it('OBRS-451 AC: hides the transition button in the DOM for a DRIVER NOT assigned to this schedule (assignedToMe=false)', fakeAsync(() => {
+    render({ scheduleStatus: 'departed', canControl: false, roles: ['driver'], assignedToMe: false });
+    tick();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.boarding-trip-header-status .admin-btn')).toBeFalsy();
+  }));
+
+  // OBRS-451 AC regression: salesperson/admin must be COMPLETELY unaffected by
+  // assignedToMe — the flag only narrows a pure driver's own view.
+  it('OBRS-451 AC: salesperson still sees the button when assignedToMe=false', fakeAsync(() => {
+    render({ scheduleStatus: 'departed', canControl: true, assignedToMe: false });
+    tick();
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.boarding-trip-header-status .admin-btn');
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED');
+  }));
+
+  it('OBRS-451 AC: admin still sees the button when assignedToMe=false', fakeAsync(() => {
+    // OBRS-451: this harness's AuthService stub does literal role matching, not
+    // the real ROLE_GRANTS expansion (admin -> salesperson/driver/...), so
+    // 'salesperson' is included here to satisfy canControlScheduleStatus the
+    // same way a real admin session would via hasAnyRole(). isPureDriver is
+    // unaffected either way (it only checks for a HELD 'driver' role) — the
+    // assertion below is about canShowScheduleStatusAction being unaffected
+    // by assignedToMe for a non-pure-driver session.
+    render({ scheduleStatus: 'departed', canControl: false, roles: ['admin', 'salesperson'], assignedToMe: false });
+    tick();
+    fixture.detectChanges();
+
+    const buttons = fixture.nativeElement.querySelectorAll('.boarding-trip-header-status .admin-btn');
+    expect(buttons.length).toBe(1);
+    expect(buttons[0].textContent).toContain('STAFF.SCHEDULE_STATUS.ACTION.MARK_ARRIVED');
+  }));
+
+  // OBRS-451 AC: tripHeader === null (e.g. a driver 403'd off a schedule they
+  // don't own — loadTripHeader() degrades to null on any fetch failure) must
+  // fail closed — no button, in fact the whole trip-header strip disappears
+  // (*ngIf="tripHeader" on the containing element), which is the chosen/
+  // existing behavior this card deliberately preserves rather than replaces.
+  it('OBRS-451 AC: tripHeader === null (self-fetch failed) hides the transition button for a DRIVER', fakeAsync(() => {
+    TestBed.configureTestingModule({
+      imports: [CommonModule, FormsModule, TranslateModule.forRoot()],
+      declarations: [BoardingListComponent],
+      providers: [
+        BoardingListStore,
+        {
+          provide: StaffApiService,
+          useValue: {
+            getBoardingList: () => of({ code: 200, message: 'OK', data: [] }),
+            getScheduleById: () =>
+              throwError(() => new HttpErrorResponse({ status: 403, error: { errorCode: 'ACCESS_DENIED' } })),
+          },
+        },
+        { provide: AlertService, useValue: createAlertServiceStub() },
+        {
+          provide: AuthService,
+          useValue: {
+            hasAnyRole: (wanted: string[]) => wanted.includes('driver'),
+            getRoles: () => ['driver'],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
+        },
+      ],
+      schemas: [NO_ERRORS_SCHEMA],
+    }).compileComponents();
+
+    const nullHeaderFixture = TestBed.createComponent(BoardingListComponent);
+    nullHeaderFixture.componentInstance.scheduleId = 42;
+    nullHeaderFixture.componentInstance.ngOnChanges({ scheduleId: {} as any });
+    nullHeaderFixture.detectChanges();
+    tick();
+    nullHeaderFixture.detectChanges();
+
+    expect(nullHeaderFixture.componentInstance['tripHeader']).toBeNull();
+    expect(nullHeaderFixture.nativeElement.querySelector('.boarding-trip-header')).toBeFalsy();
+    expect(nullHeaderFixture.nativeElement.querySelector('.boarding-trip-header-status .admin-btn')).toBeFalsy();
+
+    nullHeaderFixture.destroy();
+  }));
+
   // OBRS-434: ...and the delay pill must NOT come along for the ride (its endpoint
   // is still salesperson-only, so a driver clicking it would just get a 403).
   it('does NOT render the delay pill for a DRIVER on a scheduled trip', fakeAsync(() => {
-    render({ scheduleStatus: 'scheduled', canControl: false, roles: ['driver'] });
+    // OBRS-451: assignedToMe: true — this test is about the delay pill being
+    // absent, not about the assignment gate; without it a pure driver's
+    // transition button would ALSO be hidden and the assertion below would
+    // fail for the wrong reason.
+    render({ scheduleStatus: 'scheduled', canControl: false, roles: ['driver'], assignedToMe: true });
     tick();
     fixture.detectChanges();
 
@@ -2124,6 +2371,9 @@ describe('BoardingListComponent — OBRS-272 delay pill / indicator / dialog (Te
           useValue: {
             hasAnyRole: (wanted: string[]) =>
               opts.canControl && wanted.includes('salesperson'),
+            // OBRS-451: isPureDriver reads raw roles; this suite's `canControl`
+            // switch is always salesperson-or-nobody, never a driver.
+            getRoles: () => (opts.canControl ? ['salesperson'] : []),
             getUsername: () => 'operator1',
             authStatus$: of(true),
           },
@@ -2233,7 +2483,12 @@ describe('BoardingListComponent — printManifest() portal lifecycle (OBRS-100, 
         { provide: AlertService, useValue: {} },
         {
           provide: AuthService,
-          useValue: { hasAnyRole: () => false, getUsername: () => 'operator1', authStatus$: of(true) },
+          useValue: {
+            hasAnyRole: () => false,
+            getRoles: () => [],
+            getUsername: () => 'operator1',
+            authStatus$: of(true),
+          },
         },
       ],
       schemas: [NO_ERRORS_SCHEMA],

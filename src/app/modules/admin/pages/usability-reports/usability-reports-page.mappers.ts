@@ -5,6 +5,7 @@ import {
   UsabilityReportSummary,
 } from '../../../../shared/interfaces/usability-report.interface';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { hasOwnKey } from '../../../../shared/lib/own-key';
 
 // Pure mappers/formatters/normalizers extracted from UsabilityReportsPageComponent
 // (OBRS-247, mirroring OBRS-208's routes.mappers.ts, OBRS-214's
@@ -127,7 +128,14 @@ export function detailStatusValuesFor(
   if (sourceStatus === '') {
     return OWNER_DETAIL_STATUS_VALUES;
   }
-  const legalTargets = OWNER_ALLOWED_TARGETS[sourceStatus];
+  // OBRS-601: `sourceStatus` is typed `UsabilityReportStatus`, but it reaches
+  // here from an HttpClient generic over server JSON — an implicit cast, not a
+  // runtime guarantee. A status this FE does not know yet (or a prototype
+  // member name) left `legalTargets` undefined and threw on `.includes()`
+  // below, blanking the detail modal. Degrade to "no legal owner move".
+  const legalTargets = hasOwnKey(OWNER_ALLOWED_TARGETS, sourceStatus)
+    ? OWNER_ALLOWED_TARGETS[sourceStatus]
+    : [];
   return OWNER_DETAIL_STATUS_VALUES.filter(
     (value) => value !== sourceStatus && legalTargets.includes(value)
   );

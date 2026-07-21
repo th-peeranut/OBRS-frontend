@@ -14,6 +14,7 @@ import { AuthService } from './auth.service';
 import { APP_LANGUAGE_KEY, DEFAULT_LANGUAGE } from '../shared/services/language.service';
 import { SKIP_AUTH_LOGOUT } from '../shared/interceptors/http-context-tokens';
 import { AlertService } from '../shared/services/alert.service';
+import { hasOwnKey } from '../shared/lib/own-key';
 
 let isHandlingAuthError = false;
 
@@ -116,8 +117,16 @@ function handleUnauthorized(
   authService.setPostLoginRedirectUrl(router.url);
   authService.clearAuthData();
 
-  const message =
-    SESSION_EXPIRED_MESSAGE[appLanguage] ?? SESSION_EXPIRED_MESSAGE[DEFAULT_LANGUAGE];
+  // OBRS-601 (Scrutinize): `appLanguage` is a RAW `localStorage.getItem()` —
+  // never normalized into the `en|th|zh` union that every other locale-keyed
+  // map in this repo relies on — so `SESSION_EXPIRED_MESSAGE['constructor']`
+  // resolved to the `Object` function, which `??` accepts as present. Swal
+  // rejects a non-string title, so the force-logout dialog opened blank.
+  // Same map-lookup family, same user-editable-localStorage threat model as
+  // `AuthService.ROLE_GRANTS` above.
+  const message = hasOwnKey(SESSION_EXPIRED_MESSAGE, appLanguage)
+    ? SESSION_EXPIRED_MESSAGE[appLanguage]
+    : SESSION_EXPIRED_MESSAGE[DEFAULT_LANGUAGE];
   void alertService.warning(message);
 
   setTimeout(() => {

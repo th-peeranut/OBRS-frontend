@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 
 describe('extractApiErrorCode', () => {
   it('reads error.error.errorCode off an HttpErrorResponse', () => {
@@ -36,5 +36,52 @@ describe('extractApiErrorCode', () => {
   it('returns the fallback for null/undefined', () => {
     expect(extractApiErrorCode(null, 'GENERIC')).toBe('GENERIC');
     expect(extractApiErrorCode(undefined, null)).toBeNull();
+  });
+});
+
+describe('mapApiErrorCode', () => {
+  const KNOWN: Record<string, string> = {
+    NO_SEATS: 'DOMAIN.ERROR.NO_SEATS',
+    TOO_LATE: 'DOMAIN.ERROR.TOO_LATE',
+  };
+  const FALLBACK = 'DOMAIN.ERROR.GENERIC';
+
+  it('maps a code the caller declared', () => {
+    expect(mapApiErrorCode('NO_SEATS', KNOWN, FALLBACK)).toBe('DOMAIN.ERROR.NO_SEATS');
+    expect(mapApiErrorCode('TOO_LATE', KNOWN, FALLBACK)).toBe('DOMAIN.ERROR.TOO_LATE');
+  });
+
+  it('falls back for an absent, empty or unknown code', () => {
+    expect(mapApiErrorCode(null, KNOWN, FALLBACK)).toBe(FALLBACK);
+    expect(mapApiErrorCode(undefined, KNOWN, FALLBACK)).toBe(FALLBACK);
+    expect(mapApiErrorCode('', KNOWN, FALLBACK)).toBe(FALLBACK);
+    expect(mapApiErrorCode('SOMETHING_NEW', KNOWN, FALLBACK)).toBe(FALLBACK);
+  });
+
+  it('is case-sensitive — server codes are stable UPPER_SNAKE, not normalized', () => {
+    expect(mapApiErrorCode('no_seats', KNOWN, FALLBACK)).toBe(FALLBACK);
+  });
+
+  // OBRS-601. This is the case the sixteen open-coded versions all got wrong:
+  // the map is an object literal, so `KNOWN['constructor']` is the `Object`
+  // FUNCTION — non-nullish (`??` never fires) and truthy (`||` never fires) —
+  // and the caller handed that function to `translate.instant()`, which throws
+  // on `.split('.')`. Server codes are NOT lower-cased anywhere on this path,
+  // so every prototype member is reachable, not just the lowercase pair.
+  [
+    'constructor',
+    '__proto__',
+    'toString',
+    'valueOf',
+    'hasOwnProperty',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    'toLocaleString',
+  ].forEach((member) => {
+    it(`falls back for inherited member "${member}" and returns a string`, () => {
+      const key = mapApiErrorCode(member, KNOWN, FALLBACK);
+      expect(key).withContext(member).toBe(FALLBACK);
+      expect(typeof key).withContext(member).toBe('string');
+    });
   });
 });

@@ -15,6 +15,7 @@ import {
 } from '../../../../shared/lib/parcel-booking-status';
 import { parcelStopLabel } from '../../../../shared/lib/parcel-stop-label';
 import { ParcelDeliveryListStore } from './parcel-delivery-list.store';
+import { mapApiErrorCode } from '../../../../shared/lib/api-error-code';
 
 const ACTION_ERROR_KEYS: Record<string, string> = {
   PARCEL_COLLECT_CODE_MISMATCH: 'STAFF.PARCEL_DELIVERY.ERROR.CODE_MISMATCH',
@@ -186,6 +187,6 @@ export class ParcelDeliveryListPageComponent implements OnInit, OnDestroy {
 
   private mapErrorCode(err: unknown): string {
     const errorCode = (err as HttpErrorResponse)?.error?.errorCode as string | undefined;
-    return (errorCode && ACTION_ERROR_KEYS[errorCode]) || 'STAFF.PARCEL_DELIVERY.ERROR.WRONG_STATE';
+    return mapApiErrorCode(errorCode, ACTION_ERROR_KEYS, 'STAFF.PARCEL_DELIVERY.ERROR.WRONG_STATE');
   }
 }

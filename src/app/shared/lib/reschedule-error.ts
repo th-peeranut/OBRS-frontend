@@ -1,4 +1,4 @@
-import { extractApiErrorCode } from './api-error-code';
+import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 import { RescheduleErrorCode } from '../interfaces/reschedule.interface';
 
 /**
@@ -30,9 +30,7 @@ export function mapRescheduleErrorCode(errorCode: string | null | undefined): st
     SEAT_ERROR_WALK_IN_ONLY: 'COMMON.ERROR.SEAT_WALK_IN_ONLY',
   };
 
-  return errorCode && knownCodes[errorCode]
-    ? knownCodes[errorCode]
-    : 'MY_BOOKINGS.RESCHEDULE.ERROR.GENERIC';
+  return mapApiErrorCode(errorCode, knownCodes, 'MY_BOOKINGS.RESCHEDULE.ERROR.GENERIC');
 }
 
 /** `errorCode`s that are terminal for the current dialog session — the
