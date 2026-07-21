@@ -431,6 +431,39 @@ relocating `AdminModalBackdropDirective` from `AdminModule` into
 the full rationale (module-cycle avoidance, why `SharedModule` over
 `AdminSharedModule`).
 
+### Boarding manifest — driver-assignment gate on the departed/arrived control (OBRS-451)
+
+OBRS-434 opened `BoardingListComponent`'s departed/arrived transition button
+(`canControlScheduleStatus`) to a driver, but that flag is **role only** — a
+driver who typed another driver's `:scheduleId` into the URL still saw the
+button and only found out it wasn't their trip from a 403 toast on click.
+This is a UX dead-end, not a security hole: the backend already rejects the
+write (`ScheduleService.transitionStatus` scopes a driver to their own
+assignment).
+
+The fix follows the same principle as every other role gate in this
+component: **the backend decides, the frontend only renders the answer** —
+never compare ids on the client. `ScheduleRespDto` (`GET
+/api/private/schedules/{id}`, mapped to `AdminScheduleDto` /
+`BoardingManifestHeader`) now carries `assignedToMe: boolean`. A new
+`canShowScheduleStatusAction()` getter is a second, narrower gate the
+template ANDs alongside `canControlScheduleStatus`:
+
+- Salesperson/admin/owner: unaffected — always `true`.
+- A **pure** driver (`isPureDriver`: the raw `driver` role held, and NOT
+  also salesperson/admin/owner — checked via `AuthService.getRoles()`,
+  never `hasAnyRole()`, since salesperson/admin/owner all GRANT `driver`
+  through `ROLE_GRANTS` and would otherwise misread as "pure"): `true` only
+  when `tripHeader.assignedToMe === true`.
+- `tripHeader === null` (any `loadTripHeader()` fetch failure, including a
+  driver 403'd off a schedule they don't own) already hides the ENTIRE
+  `.boarding-trip-header` strip via the template's own `*ngIf="tripHeader"`
+  — the button was already unreachable there before this card.
+  `canShowScheduleStatusAction()`'s own `=== true` check (not `!== false`)
+  is a second, explicit fail-closed guard for the remaining case: a
+  populated `tripHeader` whose `assignedToMe` is `null`/missing (a cached
+  response predating this field) never reads as "assigned".
+
 ## Customer Account Page & Email-Change Flow
 
 `/account` (OBRS-84) is the first customer "account settings" page — a
