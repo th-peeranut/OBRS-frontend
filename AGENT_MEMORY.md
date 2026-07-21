@@ -3879,6 +3879,30 @@ false reference"* (now 3 occurrences).
 
 ---
 
+## OBRS-468 (Scrutinize self-fix) — a refactor comment claiming "lifted verbatim" when the shared component is a SUPERSET
+
+`bookings-page.component.html`'s new comment described `app-admin-paginator` as markup OBRS-403
+"lifted verbatim" from this very file. It did not: the shared component added a
+`<nav role="navigation" [attr.aria-label]>` wrapper, `aria-live="polite"` on the page counter, and a
+`disabled` `@Input()`. The conclusion the comment served (this swap is behavior-preserving) is
+correct — the mechanism it stated is not.
+
+Why it matters more here than usual: "verbatim" is precisely the claim a reviewer of a
+behavior-preserving refactor is supposed to verify. A future reader trusting that word skips the
+DOM diff and never learns that the host element now renders unconditionally (the `*ngIf` moved
+*inside* the component) or that the `disabled` default is what keeps the button predicates equal.
+Rewrote it to state the superset explicitly and to name the sibling call sites' `[disabled]="isRefreshing"`,
+so the omission here reads as deliberate rather than forgotten.
+
+Rule: when a comment asserts a code relationship ("lifted from", "same as", "mirrors"), diff the two
+artifacts before writing the verb. "Verbatim"/"identical" are falsifiable claims, not flourishes —
+if the target is a superset, say superset. **6th** occurrence of DEV-GOTCHAS' Confirmed
+*"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's false reference"*
+— written as "4th" before merging, which the OBRS-602 entry below (two more, same family, landed
+first) made stale on contact. The counter in a shared append-only file is itself a claim that decays.
+
+---
+
 ## OBRS-602 — a merge gate has to gate its own case COUNT, not just its case list (Scrutinize)
 
 `playwright.gate.config.ts` was built as "the one deterministic merge gate": an explicit five-spec
@@ -3908,3 +3932,4 @@ Rule: when a change's whole purpose is "this signal can now be trusted", enumera
 signal can stay green while measuring nothing — for Playwright that is `.only`, `.skip`, an empty
 `testMatch`, and `testIgnore`/`grep` — and close them in the config, not in prose. A gate that
 verifies its own bookkeeping still needs something that verifies it ran.
+

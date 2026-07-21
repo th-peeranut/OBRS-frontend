@@ -119,25 +119,17 @@
       {{ 'ADMIN.COMMON.OF' | translate }} {{ filteredBookings.length }}
       {{ 'ADMIN.BOOKINGS.UNITS' | translate }}
     </span>
-    <div class="admin-inline-actions" *ngIf="totalPages > 1">
-      <button
-        type="button"
-        class="admin-btn admin-btn-small"
-        (click)="goToPage(currentPage - 1)"
-        [disabled]="currentPage === 1"
-      >
-        {{ 'ADMIN.COMMON.PREVIOUS' | translate }}
-      </button>
-      <span class="admin-muted">{{ currentPage }} / {{ totalPages }}</span>
-      <button
-        type="button"
-        class="admin-btn admin-btn-small"
-        (click)="goToPage(currentPage + 1)"
-        [disabled]="currentPage === totalPages"
-      >
-        {{ 'ADMIN.COMMON.NEXT' | translate }}
-      </button>
-    </div>
+    <!-- OBRS-468: renders the shared paginator. OBRS-403 promoted it from the
+         inline markup that used to live here, but not verbatim — it added the
+         nav/role/aria-label wrapper, an aria-live counter and a `disabled`
+         input, so treat it as a superset, not a copy. No `disabled` binding
+         here: paging is a local `.slice()` with nothing to await, unlike the
+         server-side call sites that pass `[disabled]="isRefreshing"`. -->
+    <app-admin-paginator
+      [currentPage]="currentPage"
+      [totalPages]="totalPages"
+      (pageChange)="goToPage($event)"
+    ></app-admin-paginator>
   </div>
 </section>
 
