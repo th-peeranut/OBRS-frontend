@@ -3,8 +3,12 @@
   color: var(--admin-muted);
   padding: 6px 0;
 
+  // OBRS-520: standalone error text on the staff shell surface, not chip text —
+  // --admin-danger-text is light-mode-only and rendered 1.71:1 here in dark
+  // mode. --admin-danger-fg is the themed surface-role token (identical value
+  // in light, so this line changes nothing there).
   &.is-error {
-    color: var(--admin-danger-text);
+    color: var(--admin-danger-fg);
   }
 }
 

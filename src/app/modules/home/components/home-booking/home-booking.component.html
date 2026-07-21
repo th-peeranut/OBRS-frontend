@@ -4,6 +4,12 @@
 
   <div class="booking-section">
     <div class="booking-card" [formGroup]="bookingForm" *ngIf="bookingForm">
+      <!-- RECENT ROUTES QUICK PICK (OBRS-575) — renders nothing when empty (AC#5) -->
+      <app-recent-routes-quick-pick
+        [routes]="recentRouteCandidates"
+        (routeSelected)="onRecentRouteSelected($event)"
+      ></app-recent-routes-quick-pick>
+
       <div class="d-flex gap-5">
         <!-- DROPDOWN ROUNDTRIP TYPE -->
         <app-dropdown-obrs

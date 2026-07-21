@@ -13,6 +13,13 @@ export interface LookupTranslation {
 
 /** A localized stop reference (`LookupResponse` on the backend). */
 export interface BookingStopLookup {
+  /**
+   * The stop's numeric id — always present on the wire (`StopDtoService.toLookupResponse()`,
+   * verified against live SIT: `fromStop` returns `{"id": 1, "code": "nong_chak", "display": {...}}`).
+   * Declared optional here only because nothing consumed it before OBRS-575; this is a
+   * TS-interface widening, not a backend/runtime change.
+   */
+  id?: number;
   code?: string;
   display?: Record<string, LookupTranslation | null | undefined>;
 }

@@ -166,10 +166,19 @@ export class BookingService {
    * List the current traveler's own bookings, optionally filtered by status.
    * Pass `showLoadingDialog` to surface the global loading dialog (e.g. when
    * switching the status filter); the page renders its own skeletons otherwise.
+   *
+   * @param skipAuthLogout OBRS-575 (#37-style null-default extension, not a fork):
+   *   the Home page's recent-route quick-pick calls this in the background to read
+   *   booking history for a logged-in user. Without opting out, `auth.interceptor.ts`
+   *   force-logouts on a real 401 regardless of `SKIP_GLOBAL_ERROR_ALERT` (OBRS-187) —
+   *   a background convenience fetch must never throw a logged-in-but-expired user to
+   *   /login. Defaults `false` so `/my-bookings`'s existing call (where force-logout on
+   *   401 is correct) stays byte-identical.
    */
   getMyBookings(
     status?: string | null,
-    showLoadingDialog = false
+    showLoadingDialog = false,
+    skipAuthLogout = false
   ): Observable<ResponseAPI<PageResponse<MyBookingDto>>> {
     let params = new HttpParams().set('page', '0').set('size', '100');
     if (status) {
@@ -178,7 +187,7 @@ export class BookingService {
 
     return this.http.get<ResponseAPI<PageResponse<MyBookingDto>>>(
       `${environment.apiUrl}/api/private/bookings/me`,
-      { params, context: this.listContext(showLoadingDialog) }
+      { params, context: this.listContext(showLoadingDialog, skipAuthLogout) }
     );
   }
 
@@ -315,10 +324,16 @@ export class BookingService {
 
   // The list always handles errors inline; the loading dialog is opt-in so the
   // first load can show skeletons while a filter switch shows the dialog.
-  private listContext(showLoadingDialog: boolean): HttpContext {
+  // `skipAuthLogout` (OBRS-575): default false keeps `/my-bookings`'s existing
+  // force-logout-on-401 behavior untouched; only a background caller (Home's
+  // recent-route quick-pick) opts in.
+  private listContext(showLoadingDialog: boolean, skipAuthLogout = false): HttpContext {
     const context = new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true);
     if (!showLoadingDialog) {
       context.set(SKIP_GLOBAL_LOADING_ALERT, true);
+    }
+    if (skipAuthLogout) {
+      context.set(SKIP_AUTH_LOGOUT, true);
     }
     return context;
   }
