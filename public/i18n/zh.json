@@ -2020,7 +2020,7 @@
       "SCHEDULES": "班次管理",
       "DRIVER": "我的班次",
       "BOARDING": "登车名单",
-      "PARCEL_CONSIGN": "寄送包裹",
+      "PARCEL_INTAKE": "包裹收件",
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
@@ -2412,8 +2412,10 @@
       "EMPTY_TITLE": "暂无可用班次",
       "EMPTY_BODY": "您没有分配的班次，请稍后再查。"
     },
+    "PARCEL_INTAKE": {
+      "SUBTITLE": "登记寄送包裹，或需要占用座位的随身物品。"
+    },
     "PARCEL_CONSIGN": {
-      "SUBTITLE": "登记一个新的寄送包裹以便配送。",
       "MODE": {
         "LABEL": "包裹类型",
         "CONSIGNED": "寄送",

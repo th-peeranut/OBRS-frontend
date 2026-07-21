@@ -129,12 +129,17 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard],
         data: { requiredRoles: ['driver'], titleKey: 'STAFF.PAGES.INSPECTION', subtitleKey: 'STAFF.INSPECTION.SUBTITLE' },
       },
-      // OBRS-305 Card 2 — parcel consigned intake + delivery handoff.
+      // OBRS-305 Card 2 (consigned) + OBRS-341 (carry-on-on-seat, mode toggle
+      // on the SAME page) — the shell-owned title/subtitle must read true in
+      // BOTH modes, since there is no per-mode route to carry a different
+      // one. 'PARCEL_INTAKE'/'PARCEL_INTAKE.SUBTITLE' are deliberately
+      // mode-neutral copy, not a per-mode swap mechanism (that would be more
+      // machinery than this problem deserves) — see the OBRS-341 card.
       {
         path: 'parcels/consign',
         component: ParcelConsignPageComponent,
         canActivate: [AuthGuard],
-        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.PARCEL_CONSIGN', subtitleKey: 'STAFF.PARCEL_CONSIGN.SUBTITLE' },
+        data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.PARCEL_INTAKE', subtitleKey: 'STAFF.PARCEL_INTAKE.SUBTITLE' },
       },
       {
         path: 'parcels/:id/waybill',

@@ -2020,7 +2020,7 @@
       "SCHEDULES": "Schedule Management",
       "DRIVER": "My Schedules",
       "BOARDING": "Boarding List",
-      "PARCEL_CONSIGN": "Consign Parcel",
+      "PARCEL_INTAKE": "Parcel Intake",
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
@@ -2412,8 +2412,10 @@
       "EMPTY_TITLE": "No schedules available",
       "EMPTY_BODY": "You have no schedules assigned. Please check back later."
     },
+    "PARCEL_INTAKE": {
+      "SUBTITLE": "Record a consigned parcel, or a carry-on item that needs its own seat."
+    },
     "PARCEL_CONSIGN": {
-      "SUBTITLE": "Record a new consigned parcel for delivery.",
       "MODE": {
         "LABEL": "Parcel type",
         "CONSIGNED": "Consigned",
