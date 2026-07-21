@@ -396,11 +396,18 @@ export interface AdminScheduleDto {
    * from `vehicleType.cargoCapacityKg`. */
   cargoCapacityKg?: number | null;
   /** OBRS-451: `true` when the backend resolves the CURRENT session as
-   * assigned to this schedule (a driver's own trip; always `true` for a
-   * non-driver session where "assignment" doesn't apply). The backend is the
-   * sole owner of this predicate — the frontend must never derive it from a
+   * assigned to this schedule (a driver's own trip). The backend is the sole
+   * owner of this predicate — the frontend must never derive it from a
    * client-held id (see `BoardingListComponent.canShowScheduleStatusAction`).
-   * Optional/undefined on a cached row predating this field. */
+   *
+   * The value for a NON-driver session (salesperson/admin/owner, where
+   * "assignment" doesn't apply) is deliberately unspecified here and MUST NOT
+   * be relied on: `canShowScheduleStatusAction` short-circuits `true` for any
+   * session that isn't a pure driver, so it never reads this field for them.
+   * Whether the backend answers `true` or `false` there is its own choice.
+   *
+   * Optional/undefined on a cached row predating this field — consumers must
+   * treat absent as NOT assigned (`=== true`), never as "unknown, so allow". */
   assignedToMe?: boolean;
 }
 
