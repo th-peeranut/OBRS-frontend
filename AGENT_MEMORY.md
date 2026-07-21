@@ -3834,3 +3834,22 @@ Rule: a regression gate must assert the invariant that must HOLD, not enumerate 
 must not RECUR. Test the gate by mutating to a *plausible future wrong answer*, not just by
 restoring the historical one — restoring the historical one is the mutation the denylist was
 written to catch, so it can only ever confirm what you already know.
+
+## OBRS-601 (Scrutinize self-fix) — a completeness claim needs a grep of the EXCEPTION, not of the rule
+
+The card swept 21 `MAP[key]` sites and wrote off every locale-keyed lookup with one
+rationale: "the key is a locally computed literal union (a hardcoded locale ternary)".
+That was true for five of the six locale maps. `auth.interceptor.ts` is the sixth, and it
+reads `localStorage.getItem(APP_LANGUAGE_KEY)` **raw** — on purpose, to avoid a
+`LanguageService` DI cycle in the TranslateModule HTTP loader. So the one map whose key is
+attacker-supplied is the one the blanket rationale excused, and `??` handed Swal the
+`Object` function: a blank force-logout dialog on every 401.
+
+The tell: the rationale was checked against the sites it covered, never against the sites
+it excluded. When writing "all N of these are safe because X", grep for the places X is
+deliberately NOT true — a comment explaining why a file breaks the convention (there was
+one, six lines above the bug) is exactly where the exception lives.
+
+Second, smaller: "21 sites across three clusters" where the clusters summed to 20 —
+`detailStatusValuesFor()` was converted but documented only under Consequences. If a count
+and a table disagree, the table is what the next reader greps.
