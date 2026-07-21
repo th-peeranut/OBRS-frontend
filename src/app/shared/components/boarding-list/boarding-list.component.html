@@ -39,7 +39,7 @@
           {{ 'STAFF.SCHEDULE_DELAY.INDICATOR_LABEL' | translate: { eta: formattedDelayedEta } }}
         </span>
         <button
-          *ngIf="canControlScheduleStatus && scheduleStatusAction as action"
+          *ngIf="canControlScheduleStatus && canShowScheduleStatusAction && scheduleStatusAction as action"
           type="button"
           class="admin-btn"
           [disabled]="isUpdatingScheduleStatus"
