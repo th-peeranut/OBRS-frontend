@@ -9,7 +9,7 @@
 // (usability-reports-page.component.ts) left a previous page's rows on screen under the
 // error banner after a clear()-then-failed-reload, because the null emission was ignored
 // instead of clearing `allReports`. OBRS-506 found the SAME shape latent in 19 more
-// `.data$` subscribe sites across 17 components -- this gate exists so a 20th can't ship
+// `.data$` subscribe sites across 18 components -- this gate exists so a 20th can't ship
 // the same way a 2nd time.
 //
 // What it flags: a `.data$` subscribe callback whose body contains an `if` statement
@@ -27,10 +27,23 @@
 // is REQUIRED -- a bare `store-null-ok` marker with nothing after the colon does not
 // suppress the finding, so an opt-out always self-documents why.
 //
+// Known blind spots -- this is a regex/brace-balance scan, NOT a TypeScript parser, and
+// these shapes are the ones it provably cannot see (each was written and run against the
+// gate during the OBRS-506 review; none of them exists in the tree today, which is why
+// the sweep is still complete). Stated explicitly rather than hedged as "unusual
+// formatting", because a reader who trusts this gate deserves to know its edges:
+//   1. Guard on a local, not the param:  `const rows = data?.rows; if (rows) { ... }`
+//   2. Guard moved into a helper:        `.subscribe((d) => this.apply(d))`, `if` in apply()
+//   3. Short-circuit instead of `if`:    `data && (this.rows = data.rows);`
+//   4. Destructured callback param:      `({ rows }) => { ... }` -- counted as SKIPPED
+// Shape 5, a null-swallowing `.pipe(filter(Boolean))`, WAS a blind spot and is now
+// flagged directly (see NULL_SWALLOWING_FILTER) -- it was the one that mattered most,
+// being ordinary RxJS rather than an oddity.
+// Any site the scan cannot read is counted in `sitesSkipped` and printed on success, so
+// the coverage it lost is a visible number and never a silent OK.
+//
 // Reads .ts files with fs -- no Angular/Karma bundling -- so it is fast and runs before
-// `npm ci`. This is a pragmatic regex/brace-balance scan, not a real TypeScript parser --
-// it can be fooled by sufficiently unusual formatting, same tradeoff every other check-*
-// gate in this directory makes. Run locally with: npm run test:store-null
+// `npm ci`. Run locally with: npm run test:store-null
 //
 // ASCII-only source.
 
@@ -224,10 +237,28 @@ function hasAssignment(text) {
 }
 
 const DATA_DOLLAR = /\.data\$(?!\w)/g;
-const OPT_OUT = /store-null-ok\s*:\s*\S/;
+// `[ \t]` NOT `\s` on both sides of the colon: `\s` crosses newlines, so a bare
+// `// store-null-ok:` would match the first character of the NEXT LINE OF CODE and
+// silence the gate while documenting nothing -- exactly the escape hatch this
+// marker must not have. The reason has to sit on the marker's own line.
+const OPT_OUT = /store-null-ok[ \t]*:[ \t]*\S/;
+// A `.pipe()` operator that swallows the null before the callback ever sees it. The
+// callback then looks unguarded and passes every check below, while the local copy is
+// left stale on clear() exactly as GUARD-COPY does -- same bug, no `if` to find.
+// NOTE the bare `\bfilter` with no leading dot: RxJS pipeable operators are plain
+// function calls INSIDE pipe(...) -- `pipe(filter(Boolean))`, not `.filter(...)`.
+// Requiring the dot made this whole check silently match nothing (caught by mutation
+// test, not by review -- which is the only way this class of bug ever gets caught).
+const NULL_SWALLOWING_FILTER =
+  /\bfilter\s*\(\s*(Boolean\b|(\(?\s*[A-Za-z_$][\w$]*\s*\)?\s*=>\s*(!!\s*[A-Za-z_$][\w$]*|[A-Za-z_$][\w$]*\s*(!==|!=)\s*(null|undefined))))/;
 
 const problems = [];
 let sitesChecked = 0;
+// Sites we found but could not analyse (destructured param, no braced body, an
+// unparseable argument list). Reported on success so a shape this scan cannot read
+// shows up as a NUMBER instead of silently shrinking coverage -- a gate that skips
+// half the tree still prints OK, and that is the failure mode worth surfacing.
+let sitesSkipped = 0;
 
 for (const file of walk(SRC_DIR)) {
   const source = readFileSync(file, 'utf8');
@@ -246,9 +277,29 @@ for (const file of walk(SRC_DIR)) {
     if (!subMatch) continue;
     const subOpenParen = dataDollarIndex + subMatch.index + subMatch[0].length - 1;
     const argSpan = readBalanced(masked, subOpenParen, '(', ')');
-    if (!argSpan) continue;
+    if (!argSpan) {
+      sitesSkipped += 1;
+      continue;
+    }
 
     const argText = argSpan.text;
+
+    // Everything between `.data$` and `.subscribe(` -- the operator chain. A filter
+    // that drops falsy values here means the callback is never invoked with null, so
+    // nothing resets and the stale copy survives. Flag it before looking at the body.
+    const pipeChain = masked.slice(dataDollarIndex, subOpenParen);
+    if (NULL_SWALLOWING_FILTER.test(pipeChain)) {
+      sitesChecked += 1;
+      const lookbackF = source.slice(Math.max(0, dataDollarIndex - 1500), dataDollarIndex);
+      if (!OPT_OUT.test(lookbackF)) {
+        const lineF = source.slice(0, dataDollarIndex).split('\n').length;
+        problems.push(
+          `${rel}:${lineF}  .data$ pipe filters out the null emission before the ` +
+            `callback runs -- the local copy is never reset (same effect as GUARD-COPY)`
+        );
+      }
+      continue;
+    }
 
     // Extract the callback's parameter name -- `(data) => ...`, `data => ...`,
     // `(data: T | null) => ...`. Falls back to the `next: (data) => ...`
@@ -257,17 +308,30 @@ for (const file of walk(SRC_DIR)) {
     if (!paramMatch) {
       paramMatch = /\bnext\s*:\s*\(?\s*([A-Za-z_$][\w$]*)\s*(?::[^=)]+)?\)?\s*=>/.exec(argText);
     }
-    if (!paramMatch) continue;
+    if (!paramMatch) {
+      // Includes the destructured shape `({ rows }) => {...}`, which this scan
+      // cannot follow back to the emitted value. Counted, not silently dropped.
+      sitesSkipped += 1;
+      continue;
+    }
     const paramName = paramMatch[1];
 
     // Locate the arrow function's `{ ... }` body. No braces means a single
     // implicit-return expression -- no `if` is possible there, nothing to check.
     const arrowIdx = argText.indexOf('=>', paramMatch.index);
-    if (arrowIdx === -1) continue;
+    if (arrowIdx === -1) {
+      sitesSkipped += 1;
+      continue;
+    }
     const braceIdx = skipTrivia(argText, arrowIdx + 2);
+    // No braces means a single implicit-return expression -- no `if` is possible
+    // there, so there is genuinely nothing to check. Not a coverage gap.
     if (argText[braceIdx] !== '{') continue;
     const bodySpan = readBalanced(argText, braceIdx, '{', '}');
-    if (!bodySpan) continue;
+    if (!bodySpan) {
+      sitesSkipped += 1;
+      continue;
+    }
     const body = bodySpan.text;
 
     sitesChecked += 1;
@@ -333,5 +397,8 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `store null-handling gate OK: all ${sitesChecked} .data$ subscribe site(s) honor a null emission.`
+  `store null-handling gate OK: all ${sitesChecked} .data$ subscribe site(s) honor a null emission` +
+    (sitesSkipped > 0
+      ? ` (${sitesSkipped} site(s) SKIPPED as unreadable by this scan -- see "Known blind spots" in this file's header).`
+      : '.')
 );

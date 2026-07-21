@@ -59,12 +59,15 @@ export class ReminderConfigPageComponent implements OnInit, OnDestroy {
         this.hasLoadedOnce = true;
       } else {
         // OBRS-506: honor a null emission (OBRS-467 shape) — clear() (e.g.
-        // logout) DISCARDS the cached config. Drop only the cached reference;
-        // deliberately does NOT call applyFormValues(null, ...) or touch
-        // hasLoadedOnce — resetting the live reactive form on a logout emit
-        // is out of scope for this defensive sweep and would be a behavior
-        // change (the admin's in-progress edit would be wiped), not a
-        // null-handling fix.
+        // logout) DISCARDS the cached value, so drop the cached reference.
+        // Deliberately does NOT call applyFormValues(null, ...) or touch
+        // hasLoadedOnce. Note this is NOT about preserving an in-progress edit:
+        // the template gates the whole form on `*ngIf="!isLoading && config"`,
+        // so once config is null the form is unmounted and anything typed into
+        // it is unreachable either way. The reason to leave them alone is the
+        // sweep's invariant — hasLoadedOnce must keep its value so the NEXT
+        // non-null emission takes the same applyFormValues(data, true) branch it
+        // takes today, leaving the success path byte-identical.
         this.config = null;
       }
     });
