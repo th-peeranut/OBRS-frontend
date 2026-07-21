@@ -3877,6 +3877,8 @@ your repo — say "unspecified, do not rely on" instead of guessing. Same family
 Confirmed *"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's
 false reference"* (now 3 occurrences).
 
+---
+
 ## OBRS-468 (Scrutinize self-fix) — a refactor comment claiming "lifted verbatim" when the shared component is a SUPERSET
 
 `bookings-page.component.html`'s new comment described `app-admin-paginator` as markup OBRS-403
@@ -3894,5 +3896,40 @@ so the omission here reads as deliberate rather than forgotten.
 
 Rule: when a comment asserts a code relationship ("lifted from", "same as", "mirrors"), diff the two
 artifacts before writing the verb. "Verbatim"/"identical" are falsifiable claims, not flourishes —
-if the target is a superset, say superset. 4th occurrence of DEV-GOTCHAS' Confirmed
-*"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's false reference"*.
+if the target is a superset, say superset. **6th** occurrence of DEV-GOTCHAS' Confirmed
+*"a comment stating the WRONG MECHANISM for a right conclusion becomes the next reader's false reference"*
+— written as "4th" before merging, which the OBRS-602 entry below (two more, same family, landed
+first) made stale on contact. The counter in a shared append-only file is itself a claim that decays.
+
+---
+
+## OBRS-602 — a merge gate has to gate its own case COUNT, not just its case list (Scrutinize)
+
+`playwright.gate.config.ts` was built as "the one deterministic merge gate": an explicit five-spec
+`testMatch`, cross-checked against `e2e/lanes.json` by `scripts/check-e2e-lanes.mjs`. The registry
+check answers *"which specs are in the gate?"* and answers it well. It cannot answer *"did they
+run?"* — and Playwright hands you two one-token ways to make the answer "no" while still exiting 0:
+a stray `test.only` collapses the lane from 49 cases to 1, and `test.describe.skip` removes a whole
+file's worth silently. Neither shows up in a green `list` reporter run unless somebody reads the
+count, and nothing in the repo pins the count.
+
+Added `forbidOnly: true` to the gate config — unconditionally, not the customary
+`!!process.env.CI`. This lane is deliberately NOT in CI (Actions is a hard $0 ceiling here), so it
+only ever runs on a developer's machine, which is precisely the machine the CI-gated form exempts.
+The idiom you copy from other repos is wrong for a gate that lives outside CI.
+
+Two false-reference comments in the same commit, both the DEV-GOTCHAS Confirmed *"a comment stating
+the WRONG MECHANISM"* family:
+- The gate config's rule 1 asserted specs needing a session use `e2e/fixtures/gate-auth.json`,
+  "a committed synthetic one". No such file exists anywhere in the repo. The real mechanism is a
+  fake `auth_token` seeded via `addInitScript` inside each spec. Rewritten to say that.
+- `e2e/lanes.json` told the reader to run `obrs-296-child-fare-qa.spec.ts` under
+  `playwright.gate.config.ts` "manually, with --grep". That config's `testMatch` does not list it,
+  so the instruction cannot work — and rule 2 of the new gate actively forbids adding it while the
+  spec stays in the CAPTURE lane. Corrected to state it has no runnable config.
+
+Rule: when a change's whole purpose is "this signal can now be trusted", enumerate the ways the
+signal can stay green while measuring nothing — for Playwright that is `.only`, `.skip`, an empty
+`testMatch`, and `testIgnore`/`grep` — and close them in the config, not in prose. A gate that
+verifies its own bookkeeping still needs something that verifies it ran.
+

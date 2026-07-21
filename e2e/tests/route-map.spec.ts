@@ -18,8 +18,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import stationsFixture from '../fixtures/stations.json';
-import schedulesFixture from '../fixtures/schedules.json';
+import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 
 // ---------------------------------------------------------------------------
 // Mock payloads
@@ -95,15 +94,12 @@ const emptyPayload = {
 // ---------------------------------------------------------------------------
 
 async function setupCommonMocks(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    localStorage.setItem('app_language', 'en');
-  });
-  await page.route('**/api/stops', (route) =>
-    route.fulfill({ json: stationsFixture })
-  );
-  await page.route('**/api/schedules/search', (route) =>
-    route.fulfill({ json: schedulesFixture })
-  );
+  // OBRS-602: this now includes GET /api/routes, the one call the spec used to leave
+  // live — which is the only reason playwright-route-map.config.ts:20-21 ever had to
+  // reason about CORS for it. Each describe still registers its own
+  // `**/api/routes/*/pickup-dropoff` payload afterwards, which is what makes the
+  // success / empty / error states differ.
+  await mockPublicPageApis(page);
 }
 
 /** Wait until the route-map section has left the loading state. */

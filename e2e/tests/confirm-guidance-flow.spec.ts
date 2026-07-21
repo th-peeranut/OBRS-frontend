@@ -19,8 +19,7 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import stationsFixture from '../fixtures/stations.json';
-import schedulesFixture from '../fixtures/schedules.json';
+import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 
 // ---------------------------------------------------------------------------
 // Mock payloads — same as route-map.spec.ts
@@ -75,15 +74,11 @@ const successPayload = {
 // ---------------------------------------------------------------------------
 
 async function setupCommonMocks(page: Page): Promise<void> {
-  await page.addInitScript(() => {
-    localStorage.setItem('app_language', 'en');
-  });
-  await page.route('**/api/stops', (route) =>
-    route.fulfill({ json: stationsFixture })
-  );
-  await page.route('**/api/schedules/search', (route) =>
-    route.fulfill({ json: schedulesFixture })
-  );
+  // OBRS-602: the shared public-page set first (stops, schedule search, route list,
+  // booking policy, seat map), then this spec's own pickup-dropoff payload. It has to
+  // be this order: Playwright matches handlers last-registered-first, and the route
+  // LIST call is what resolves the slug the per-slug stub below is keyed to.
+  await mockPublicPageApis(page);
   await page.route('**/api/routes/*/pickup-dropoff', (route) =>
     route.fulfill({ json: successPayload })
   );

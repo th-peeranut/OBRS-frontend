@@ -89,6 +89,21 @@ jobs:
       - name: prototype-chain map lookup gate
         run: npm run test:proto-key
 
+      # OBRS-602. The Playwright suite had grown to 223 cases nobody had ever seen pass
+      # together, because playwright.config.ts swept the whole e2e/ directory while nine
+      # specs were written for environments it does not provide. Lane membership is now
+      # declared in e2e/lanes.json; this asserts the declaration still matches the files
+      # on disk and the gate config, so a new spec cannot silently belong to everything
+      # or to nothing. Pure file reads -- costs no extra runner minutes.
+      #
+      # It does NOT run the deterministic E2E lane itself (`npm run e2e:gate`, 49 cases,
+      # ~1.7 min plus a browser). That is deliberate: Actions here is a hard $0 ceiling
+      # of 2000 minutes/month shared with the SIT deploy, so adding a per-push browser
+      # job is a real trade rather than a free win. The lane runs locally before merge;
+      # wiring it into CI is a budget decision for the repo owner, not a default.
+      - name: E2E lane membership gate
+        run: npm run test:e2e-lanes
+
       - name: Install dependencies
         run: npm ci
 
