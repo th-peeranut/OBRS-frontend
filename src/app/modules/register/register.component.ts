@@ -2,7 +2,6 @@ import { Component, OnDestroy } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
-import { Router } from '@angular/router';
 import {
   debounceTime,
   distinctUntilChanged,
@@ -27,6 +26,9 @@ export class RegisterComponent implements OnDestroy {
   isShowPassword: boolean = false;
   isShowConfirmPassword: boolean = false;
 
+  // Swaps the form out for the "we emailed you a verification link" panel.
+  registrationEmailSent: boolean = false;
+
   registerForm: FormGroup;
 
   usernameSubscription$?: Subscription;
@@ -44,8 +46,7 @@ export class RegisterComponent implements OnDestroy {
     private fb: FormBuilder,
     private service: AuthService,
     private alertService: AlertService,
-    private usersService: UserService,
-    private router: Router
+    private usersService: UserService
   ) {
     this.createForm();
   }
@@ -64,10 +65,11 @@ export class RegisterComponent implements OnDestroy {
       middleName: [''],
       lastName: ['', Validators.required],
       email: ['', [Validators.required, Validators.email]],
-      // OBRS-409: this field had no pattern at all, while the OTP request it feeds only accepts a
-      // Thai mobile (OBRS-136/ADR-0079). Submitting sent the user to /otp/register/<phone>, where
-      // the request 400s — a dead end with no account created and nothing explaining why. Rejecting
-      // it here, next to the field, is the difference between a validation message and a trap.
+      // OBRS-409: this field had no pattern at all, while the backend only stores a Thai mobile
+      // (OBRS-136/ADR-0079). Submitting produced a 400 — a dead end with no account created and
+      // nothing explaining why. Rejecting it here, next to the field, is the difference between a
+      // validation message and a trap. (OBRS-605 removed the /otp/register hop that used to be
+      // where the 400 surfaced; the column it feeds is unchanged.)
       phoneNumber: ['', [Validators.required, Validators.pattern(THAI_MOBILE_PATTERN)]],
       username: ['', Validators.required],
       password: ['', Validators.required],
@@ -167,9 +169,24 @@ export class RegisterComponent implements OnDestroy {
         preferredLocale: this.translate.currentLang || 'th',
       };
 
-      this.service.setRegisterValue(registerPayload);
+      // OBRS-605: signup posts straight from here. The phone-OTP screen that used to sit
+      // between this form and /api/auth/signup proved nothing - the signup body carries no
+      // OTP token, and neither /register nor /api/auth/signup is guarded - so it stopped
+      // only the users who followed the UI, while billing an SMS for every attempt.
+      // ADR-0008 already decided signup requires email verification only.
+      try {
+        const res = await this.service.register(registerPayload);
 
-      this.router.navigate(['/otp', 'register', registerPayload.phoneNumber]);
+        if (res?.code === 201) {
+          this.registrationEmailSent = true;
+        } else if (typeof res?.code === 'number') {
+          this.alertService.error(
+            this.translate.instant('REGISTER.REGISTER_FAIL')
+          );
+        }
+      } catch {
+        // Error alert is handled by the global interceptor.
+      }
     }
   }
 

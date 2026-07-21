@@ -124,9 +124,16 @@ test.describe('route smoke coverage', () => {
     await page.goto('/register');
     await expect(page.locator('#firstName')).toBeVisible();
 
-    await page.goto('/otp/register/0812345678');
+    await page.goto('/otp/login/0812345678');
     await expect(page.locator('app-otp')).toBeVisible();
     await expect(page.locator('.otp-ref-text')).toContainText('OTP-ROUTE-SMOKE');
+
+    // OBRS-605: signup no longer routes through an OTP screen. Asserting the redirect
+    // (not just that the OTP form is absent) is what would catch the option quietly
+    // coming back - a blank render would pass a "not visible" check just as well.
+    await page.goto('/otp/register/0812345678');
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.locator('app-otp')).toHaveCount(0);
   });
 
   test('admin management pages render with empty mocked data', async ({ page }) => {

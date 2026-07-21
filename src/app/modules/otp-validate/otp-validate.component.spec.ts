@@ -106,4 +106,70 @@ describe('OtpValidateComponent', () => {
       expect(alertService.error.calls.mostRecent().args[0]).not.toBe('error');
     });
   });
+
+  /**
+   * OBRS-605. This screen used to serve a third option, 'register', which posted the signup
+   * once the vendor said the PIN matched. It gated nothing - /api/auth/signup takes no OTP
+   * token and neither route is guarded - so it only cost an SMS per signup attempt through a
+   * PUBLIC, unauthenticated request endpoint. Signup now posts from the register form itself.
+   *
+   * ngOnInit is asserted rather than validateRouteError alone because the redirect used to
+   * fall through to sendOtp(): rejecting the route while still billing the SMS would leave
+   * the abuse path open with only the UI removed.
+   */
+  describe('the register option is gone (OBRS-605)', () => {
+    function buildFor(option: string) {
+      const router = jasmine.createSpyObj('Router', ['navigateByUrl']);
+      router.navigateByUrl.and.resolveTo(true);
+      const requestOTP = jasmine
+        .createSpy('requestOTP')
+        .and.resolveTo({ code: 200, data: { token: 't' } });
+      const target = new OtpValidateComponent(
+        createTranslateStub(),
+        new FormBuilder(),
+        {} as never,
+        jasmine.createSpyObj('AlertService', ['error', 'success']) as never,
+        router as never,
+        {
+          snapshot: {
+            paramMap: {
+              get: (k: string) => (k === 'option' ? option : '0812345678'),
+            },
+          },
+        } as never,
+        { requestOTP } as never,
+        {} as never
+      );
+      return { target, router, requestOTP };
+    }
+
+    it('redirects /otp/register/<phone> to the home page', async () => {
+      const { target, router } = buildFor('register');
+
+      await target.ngOnInit();
+
+      expect(target.validateRouteError()).toBeTrue();
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/');
+    });
+
+    it('bills no SMS for the rejected route', async () => {
+      const { target, requestOTP } = buildFor('register');
+
+      await target.ngOnInit();
+
+      expect(requestOTP).not.toHaveBeenCalled();
+    });
+
+    it('still serves the two options that remain', async () => {
+      for (const option of ['login', 'forget-password']) {
+        const { target, router, requestOTP } = buildFor(option);
+
+        await target.ngOnInit();
+
+        expect(target.validateRouteError()).withContext(option).toBeFalse();
+        expect(router.navigateByUrl).withContext(option).not.toHaveBeenCalled();
+        expect(requestOTP).withContext(option).toHaveBeenCalled();
+      }
+    });
+  });
 });

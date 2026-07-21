@@ -1454,7 +1454,6 @@
     "LOGIN_LINK_CLICK": "在此登录",
     "REGISTER_SUCCESS": "注册成功",
     "REGISTER_FAIL": "遇到错误，注册失败。",
-    "VERIFY_OTP": "请通过您的手机号码验证您的订阅。",
     "EMAIL_VERIFY_SENT": "我们已向您的邮箱发送了一封验证邮件。请检查您的邮箱并点击链接完成注册。",
     "EMAIL_VERIFY_SIGNIN": "登录"
   },

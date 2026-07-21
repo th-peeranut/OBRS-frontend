@@ -27,7 +27,6 @@ export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly ROLES_KEY = 'auth_roles';
-  private readonly REGISTER_VALUE_KEY = 'register_value';
   private readonly RETURN_URL_KEY = 'auth_return_url';
 
   // Area-based access model (frontend routing only — the backend keeps its own
@@ -76,8 +75,6 @@ export class AuthService {
     this.isAuthenticated()
   );
   authStatus$ = this.authStatusSubject.asObservable();
-
-  registerValue?: Register;
 
   constructor(private http: HttpClient, private router: Router) {}
 
@@ -276,40 +273,10 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  setRegisterValue(payload: Register) {
-    this.registerValue = payload;
-    sessionStorage.setItem(this.REGISTER_VALUE_KEY, JSON.stringify(payload));
-  }
-
-  getRegisterValue(): Register | undefined {
-    if (this.registerValue) return this.registerValue;
-    const raw = sessionStorage.getItem(this.REGISTER_VALUE_KEY);
-    if (!raw) return undefined;
-    try {
-      this.registerValue = JSON.parse(raw) as Register;
-      return this.registerValue;
-    } catch {
-      return undefined;
-    }
-  }
-
-  clearRegisterValue() {
-    this.registerValue = {
-      title: null,
-      email: '',
-      firstName: '',
-      isPhoneNumberVerify: false,
-      lastName: '',
-      middleName: '',
-      password: '',
-      phoneNumber: '',
-      roles: [],
-      preferredLocale: '',
-      username: '',
-      pdpaConsent: false,
-    };
-    sessionStorage.removeItem(this.REGISTER_VALUE_KEY);
-  }
+  // OBRS-605: setRegisterValue/getRegisterValue/clearRegisterValue existed only to carry
+  // the signup form ACROSS the phone-OTP screen. They stashed the whole form - including
+  // the plaintext password - in sessionStorage under 'register_value'. With the OTP screen
+  // out of the signup path the form never leaves the component, so the stash is gone too.
 
   register(payload: Register): Promise<ResponseAPI<unknown>> {
     const signUpPayload: SignUpPayload = {
