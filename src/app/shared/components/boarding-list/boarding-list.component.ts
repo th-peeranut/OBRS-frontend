@@ -72,7 +72,15 @@ import { BoardingListStore } from './boarding-list.store';
  * `delayedDepartureDateTime`/`delayReason` mirror `AdminScheduleDto` — `null`
  * (the default) means the schedule isn't delayed; "delayed" is a DERIVED UI
  * state off these two fields, never a status code (`statusCode` stays
- * `scheduled`). */
+ * `scheduled`).
+ *
+ * OBRS-451: `assignedToMe` mirrors `AdminScheduleDto.assignedToMe` — the
+ * backend's own answer to "is the current session assigned to this
+ * schedule", used to hide the departed/arrived control from a driver on a
+ * schedule that isn't theirs (see `canShowScheduleStatusAction()` below).
+ * `null` means the fetch response omitted the field (a cached payload
+ * predating this card) — treated as "not assigned" for a pure driver, never
+ * as "assigned"; irrelevant for salesperson/admin/owner. */
 export interface BoardingManifestHeader {
   routeLabel: string;
   departureDateTime: string;
@@ -82,6 +90,7 @@ export interface BoardingManifestHeader {
   statusCode: string;
   delayedDepartureDateTime: string | null;
   delayReason: string | null;
+  assignedToMe: boolean | null;
 }
 
 /** OBRS-256: the single forward transition available from the CURRENT
@@ -189,10 +198,20 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
    * for any trip, and a DRIVER for the trip they are assigned to — the driver is
    * the only person actually at the final stop when it ends, and the last stop is
    * often not a station. The backend scopes a driver to their own assignment
-   * (`ScheduleService.transitionStatus`); this flag only decides whether the
-   * button renders at all, so a driver opening someone else's `:scheduleId` still
-   * sees the button and gets a 403 toast on click (see OBRS-451). */
+   * (`ScheduleService.transitionStatus`); this flag is ROLE ONLY, so a driver
+   * opening someone else's `:scheduleId` still passes it — `canShowScheduleStatusAction()`
+   * below narrows that case using the backend's own `assignedToMe` answer, so the
+   * button no longer renders just to 403 on click (OBRS-451). */
   protected readonly canControlScheduleStatus: boolean;
+
+  /** OBRS-451: raw held roles (`AuthService.getRoles()`), never `hasAnyRole()` —
+   * salesperson/admin/owner all GRANT 'driver' through `ROLE_GRANTS`, so
+   * `hasAnyRole(['driver'])` is true for them too and would wrongly count a
+   * salesperson as a "pure" driver. `true` only when the session holds
+   * `driver` and none of salesperson/admin/owner. Drives
+   * `canShowScheduleStatusAction()` — salesperson/admin/owner are completely
+   * unaffected by the `assignedToMe` gate. */
+  protected readonly isPureDriver: boolean;
 
   /** OBRS-272/OBRS-434: the "mark delayed"/"update ETA" control stays
    * salesperson/admin only — its endpoint (`PATCH /schedules/{id}/delay`) is
@@ -279,6 +298,10 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
     this.canDelaySchedule = this.authService.hasAnyRole(['salesperson']);
     this.canUnflagChildFare = this.authService.hasAnyRole(['salesperson']);
     this.canOverrideTurnaroundGate = this.authService.hasAnyRole(['admin']);
+    const heldRoles = this.authService.getRoles();
+    this.isPureDriver =
+      heldRoles.includes('driver') &&
+      !heldRoles.some((role) => role === 'salesperson' || role === 'admin' || role === 'owner');
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -419,6 +442,31 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
       default:
         return null;
     }
+  }
+
+  /**
+   * OBRS-451: second, narrower gate the template ANDs alongside
+   * `canControlScheduleStatus` before rendering the departed/arrived button.
+   * Salesperson/admin/owner: always `true` — this getter exists solely to
+   * further restrict a driver's OWN view, it must never affect anyone else.
+   * A pure driver (`isPureDriver`): `true` only when the backend's own
+   * `tripHeader.assignedToMe` says so.
+   *
+   * Fail-closed by construction, not just by intent: `tripHeader` is `null`
+   * on ANY `loadTripHeader()` failure (including a driver 403'd off a
+   * schedule they don't own), and the whole `.boarding-trip-header` strip —
+   * this button included — is already `*ngIf="tripHeader"`-gated in the
+   * template, so a null header hides the button regardless of this getter.
+   * The `=== true` check below (not `!== false`) is a second, explicit guard
+   * for the remaining case: `tripHeader` populated but `assignedToMe` itself
+   * `null`/missing (a response predating this field) — that also renders
+   * nothing for a pure driver, never "unknown, so show it".
+   */
+  protected get canShowScheduleStatusAction(): boolean {
+    if (!this.isPureDriver) {
+      return true;
+    }
+    return this.tripHeader?.assignedToMe === true;
   }
 
   /** OBRS-272: "delayed" is DERIVED off `delayedDepartureDateTime`, never a
@@ -1122,6 +1170,11 @@ export class BoardingListComponent implements OnInit, OnChanges, OnDestroy {
         // comment. `status` itself never becomes `delayed`.
         delayedDepartureDateTime: schedule?.delayedDepartureDateTime ?? null,
         delayReason: schedule?.delayReason ?? null,
+        // OBRS-451: the backend's own assignment answer — never derived from
+        // a client-held id. `?? null`, not `?? false`, so a response
+        // predating this field is distinguishable from an explicit `false`
+        // (both fail closed identically in canShowScheduleStatusAction()).
+        assignedToMe: schedule?.assignedToMe ?? null,
       };
       // OBRS-266: isScheduleArrived is a pure getter (no side effects), so the
       // camera-stop on an arrived transition has to be triggered explicitly
