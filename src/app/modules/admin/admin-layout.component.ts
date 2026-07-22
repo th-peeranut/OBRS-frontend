@@ -1,5 +1,5 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
-import { NavigationEnd } from '@angular/router';
+import { IsActiveMatchOptions, NavigationEnd } from '@angular/router';
 import { EMPTY, catchError, filter, merge, switchMap, takeUntil, timer } from 'rxjs';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { AdminApiService } from '../../services/admin/admin-api.service';
@@ -64,6 +64,21 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // stabilise (hard-locks the browser). Mirrors StaffLayoutComponent's
   // navItems, which is built the same way to role-gate its own entries.
   protected navItems: AdminNavItem[] = [];
+
+  // OBRS-586: sidebar active-state. The nav links previously used
+  // `[routerLinkActiveOptions]="{ exact: true }"`, whose boolean form expands
+  // to `queryParams: 'exact'` — so the active highlight was LOST the instant
+  // the URL carried any query param, matrix param, or fragment (e.g. an admin
+  // page reflecting a filter/page into the URL). The path is still matched
+  // EXACTLY (so sibling top-level routes never cross-highlight), but query
+  // params / matrix params / fragment are ignored, so the highlight tracks the
+  // page you are on rather than the exact query string.
+  protected readonly navLinkActiveMatch: IsActiveMatchOptions = {
+    paths: 'exact',
+    queryParams: 'ignored',
+    matrixParams: 'ignored',
+    fragment: 'ignored',
+  };
 
   // OBRS-290: sidebar menu search. `filteredNavItems` (what the template
   // renders) is a stable field recomputed only on query/language change — NOT

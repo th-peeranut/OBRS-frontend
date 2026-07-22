@@ -476,6 +476,7 @@
       "PREVIOUS": "ก่อนหน้า",
       "NEXT": "ถัดไป",
       "PAGINATION_NAV_ARIA": "การแบ่งหน้า",
+      "PAGINATION_STATUS_ARIA": "หน้า {{current}} จาก {{total}}",
       "ENTRIES": "รายการ",
       "SHOWING": "แสดง",
       "OF": "จาก",
@@ -1030,6 +1031,7 @@
       "TABLE_TITLE": "รายงานทั้งหมด",
       "FILTER_STATUS": "กรองตามสถานะ",
       "SEARCH_PLACEHOLDER": "ค้นหารายงาน...",
+      "NEW_REPORTS_PILL": "มีรายงานใหม่ {{count}} รายการ — รีเฟรช",
       "COL": {
         "ID": "รหัส",
         "CATEGORY": "หมวดหมู่",

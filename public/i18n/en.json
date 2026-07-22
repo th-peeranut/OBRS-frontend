@@ -476,6 +476,7 @@
       "PREVIOUS": "Previous",
       "NEXT": "Next",
       "PAGINATION_NAV_ARIA": "Pagination",
+      "PAGINATION_STATUS_ARIA": "Page {{current}} of {{total}}",
       "ENTRIES": "entries",
       "SHOWING": "Showing",
       "OF": "of",
@@ -1030,6 +1031,7 @@
       "TABLE_TITLE": "All Reports",
       "FILTER_STATUS": "Filter by Status",
       "SEARCH_PLACEHOLDER": "Search reports...",
+      "NEW_REPORTS_PILL": "{{count}} new — refresh",
       "COL": {
         "ID": "ID",
         "CATEGORY": "Category",

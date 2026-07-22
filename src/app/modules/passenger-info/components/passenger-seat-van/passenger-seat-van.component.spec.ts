@@ -235,3 +235,77 @@ describe('PassengerSeatVanComponent — badge placement (real DOM, OBRS-362)', (
     expect(a2?.query(By.css('.seat-attribute-badge-legroom'))).not.toBeNull();
   });
 });
+
+// OBRS-384: the van template was a hardcoded 13-box floor plan, so a vehicle
+// with a different seat count could not render. It now renders from a
+// data-driven SeatLayout, defaulting to the 13-seat van.
+describe('PassengerSeatVanComponent — data-driven seat layout (OBRS-384)', () => {
+  let fixture: ComponentFixture<PassengerSeatVanComponent>;
+  let component: PassengerSeatVanComponent;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      imports: [PassengerSeatModule],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(PassengerSeatVanComponent);
+    component = fixture.componentInstance;
+  });
+
+  function seatLabels(): string[] {
+    return fixture.debugElement
+      .queryAll(By.css('app-passenger-seat-box'))
+      .map((box) => box.componentInstance.label as string);
+  }
+
+  it('renders the built-in 13-seat van (A1–A13) with the driver + empty spacers unchanged when no layout is supplied', () => {
+    fixture.detectChanges();
+
+    expect(seatLabels()).toEqual([
+      'A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'A9', 'A10', 'A11', 'A12', 'A13',
+    ]);
+    // 5 rows, one driver, and the original empty spacers all still render.
+    expect(fixture.nativeElement.querySelectorAll('.seat-row').length).toBe(5);
+    expect(fixture.nativeElement.querySelectorAll('.driver-box').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('.empty-box').length)
+      .withContext('the default van has 6 empty spacers, same as the old hardcoded template')
+      .toBe(6);
+  });
+
+  it('renders a supplied 21-seat minibus layout in full (no longer capped at 13 boxes)', () => {
+    // A simple 7-row × 3-seat grid = 21 seats, plus a driver on row 1.
+    const labels = Array.from({ length: 21 }, (_, i) => `A${i + 1}`);
+    component.seatLayout = [
+      [{ kind: 'seat', label: 'A1' }, { kind: 'seat', label: 'A2' }, { kind: 'seat', label: 'A3' }, { kind: 'driver', label: '' }],
+      ...[0, 1, 2, 3, 4, 5].map((r) => [
+        { kind: 'seat' as const, label: `A${r * 3 + 4}` },
+        { kind: 'seat' as const, label: `A${r * 3 + 5}` },
+        { kind: 'seat' as const, label: `A${r * 3 + 6}` },
+      ]),
+    ];
+    fixture.detectChanges();
+
+    expect(seatLabels())
+      .withContext('all 21 seats render — the old template could only ever show 13')
+      .toEqual(labels);
+    expect(fixture.nativeElement.querySelectorAll('.seat-row').length).toBe(7);
+    expect(fixture.nativeElement.querySelectorAll('.driver-box').length).toBe(1);
+  });
+
+  it('drives seat-selection through a custom layout (clicking a seat that only exists in the 21-seat layout emits it)', () => {
+    component.gender = 'female';
+    component.availableSeatNumbers = null;
+    component.seatLayout = [[{ kind: 'seat', label: 'A20' }, { kind: 'empty', label: '' }]];
+    fixture.detectChanges();
+
+    const emitted: string[] = [];
+    component.seatClicked.subscribe((s) => emitted.push(s));
+
+    const a20 = fixture.debugElement
+      .queryAll(By.css('app-passenger-seat-box'))
+      .find((box) => box.componentInstance.label === 'A20');
+    a20?.componentInstance.passengerSeatOutput.emit('A20');
+
+    expect(emitted).toEqual(['A20']);
+  });
+});

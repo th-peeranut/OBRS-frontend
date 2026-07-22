@@ -1468,14 +1468,14 @@ export class AdminApiService {
     ).pipe(map((response) => response.data?.totalElements ?? 0));
   }
 
-  getUsabilityReportById(id: string): Observable<ResponseAPI<UsabilityReportDetail>> {
+  getUsabilityReportById(id: number): Observable<ResponseAPI<UsabilityReportDetail>> {
     return this.getRequest<UsabilityReportDetail>(
       `${this.baseUrl}/private/admin/usability-reports/${id}`
     );
   }
 
   updateUsabilityReportStatus(
-    id: string,
+    id: number,
     status: UsabilityReportStatus,
     triageNote: string | null
   ): Observable<ResponseAPI<unknown>> {
@@ -1490,7 +1490,7 @@ export class AdminApiService {
   // Un-marking is NOT a separate endpoint: it reuses updateUsabilityReportStatus
   // above with status 'in_review' (the backend clears the link server-side).
   markUsabilityReportAsDuplicate(
-    id: string,
+    id: number,
     canonicalId: number
   ): Observable<ResponseAPI<UsabilityReportDetail>> {
     return this.patchRequest<UsabilityReportDetail>(

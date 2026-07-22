@@ -113,6 +113,19 @@ describe('AdminLayoutComponent', () => {
     expect(badgeSocketServiceStub.disconnect).toHaveBeenCalled();
   });
 
+  // ── OBRS-586: sidebar active-state ──────────────────────────────────────────
+  it('matches the active nav link by exact PATH while ignoring query params / matrix params / fragment', () => {
+    // The old `{ exact: true }` boolean expanded to `queryParams: 'exact'`, so
+    // the highlight vanished the moment the URL carried a query string. `paths:
+    // 'exact'` still prevents sibling top-level routes from cross-highlighting.
+    expect(fixture.componentInstance['navLinkActiveMatch']).toEqual({
+      paths: 'exact',
+      queryParams: 'ignored',
+      matrixParams: 'ignored',
+      fragment: 'ignored',
+    });
+  });
+
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });

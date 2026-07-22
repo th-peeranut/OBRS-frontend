@@ -8,17 +8,16 @@ import { UsabilityReportDuplicatePickerComponent } from './usability-report-dupl
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { UsabilityReportSummary } from '../../../../../shared/interfaces/usability-report.interface';
 
-// OBRS-376 QA finding: `UsabilityReportSummary.id` is TYPED string
-// (usability-report.interface.ts) but the live API actually returns `id` as
-// a JSON NUMBER (`GET /api/private/admin/usability-reports` -> `"id":1`).
-// Every fixture below casts a real number through `as unknown as string` to
-// mirror that runtime reality — a fixture using genuine strings (as this
-// file originally did) does NOT reproduce the "calling a string method on
-// id crashes" class of bug, which is exactly how the original picker spec
-// missed the search-crash defect.
+// OBRS-436: `UsabilityReportSummary.id` is now correctly typed `number`
+// (the live API returns `id` as a JSON NUMBER — `"id":1`). These fixtures use
+// genuine numbers, so they encode the REAL API shape. This closes the
+// OBRS-376 loop: the earlier `id: 2 as unknown as string` casts existed only
+// to reproduce the type lie against a mistyped interface; with the interface
+// fixed there is nothing to launder, and using real number ids is what
+// [[existing-tests-can-encode-the-bug]] warns the fixtures must do.
 const CANDIDATES: UsabilityReportSummary[] = [
   {
-    id: 2 as unknown as string,
+    id: 2,
     category: 'bug',
     status: 'in_review',
     userId: 1,
@@ -29,7 +28,7 @@ const CANDIDATES: UsabilityReportSummary[] = [
     duplicateCount: 0,
   },
   {
-    id: 5 as unknown as string,
+    id: 5,
     category: 'suggestion',
     status: 'new',
     userId: 2,
@@ -79,11 +78,11 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     component.candidates = CANDIDATES;
     fixture.detectChanges();
 
-    // Before the fix, `c.id.toLowerCase()` inside filteredCandidates threw a
-    // TypeError the instant a non-empty search term ran the .filter() over
-    // any candidate whose id is a real number — reproducing the reported
-    // "open picker -> type ANY character -> crash" defect exactly as
-    // described (a numeric id, not a string one, is what the API sends).
+    // OBRS-376 origin: `c.id.toLowerCase()` inside filteredCandidates threw a
+    // TypeError on the first keystroke because the id is a runtime number.
+    // filteredCandidates now uses `String(c.id).includes(...)` and the id is
+    // correctly typed `number` (OBRS-436) — this guards that the id substring
+    // search stays crash-free over numeric ids.
     expect(() => {
       component['onSearchTermChange']('2');
       fixture.detectChanges();
@@ -172,12 +171,10 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     ).nativeElement;
     confirmBtn.click();
 
-    // The picker never converts candidate.id — it forwards whatever value
-    // row-click handed it (selectCandidate(candidate.id)), which is the real
-    // runtime number 5. Downstream, UsabilityReportsPageComponent.onPickerConfirm()
-    // is responsible for turning this into a safe `Number(...)` for the
-    // PATCH body's `canonicalId`.
-    expect(confirmSpy).toHaveBeenCalledOnceWith(5 as unknown as string);
+    // The picker forwards the candidate's real number id (5) unchanged.
+    // OBRS-436: `confirm` now emits `number`, and onPickerConfirm consumes it
+    // directly — the old downstream `Number(...)` coercion is gone.
+    expect(confirmSpy).toHaveBeenCalledOnceWith(5);
   });
 
   it('emits cancel on the Cancel button and on backdrop dismiss', () => {
@@ -197,7 +194,7 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
   it('disables both buttons while isSaving, and Confirm stays disabled even with a selection', () => {
     component.candidates = CANDIDATES;
     fixture.detectChanges();
-    component['selectCandidate'](2 as unknown as string);
+    component['selectCandidate'](2);
     component.isSaving = true;
     fixture.detectChanges();
 
@@ -220,8 +217,8 @@ describe('UsabilityReportDuplicatePickerComponent', () => {
     fixture.detectChanges();
 
     component['onSearchTermChange']('5');
-    component['selectCandidate'](5 as unknown as string);
-    expect(component['selectedId']).toBe(5 as unknown as string);
+    component['selectCandidate'](5);
+    expect(component['selectedId']).toBe(5);
 
     const nextCandidates = [...CANDIDATES]; // a new array reference — simulates a fresh picker open
     component.candidates = nextCandidates;

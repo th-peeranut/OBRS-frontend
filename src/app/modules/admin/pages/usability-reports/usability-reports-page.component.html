@@ -33,6 +33,20 @@
       labelKey="label"
       (valueChange)="onStatusFilterChange($event)"
     ></app-admin-dropdown>
+
+    <!-- OBRS-373: live-refresh pill — appears when the background poll finds
+         the active filter has more rows on the server than this view loaded.
+         aria-live so a screen-reader admin is told new reports arrived; click
+         pulls them in (jump to page 1 + refresh). -->
+    <button
+      *ngIf="newReportCount > 0"
+      type="button"
+      class="admin-btn admin-btn-small ur-new-reports-pill"
+      aria-live="polite"
+      (click)="showNewReports()"
+    >
+      {{ 'ADMIN.USABILITY_REPORTS.NEW_REPORTS_PILL' | translate: { count: newReportCount } }}
+    </button>
   </div>
 
   <div class="admin-table-wrap">
@@ -137,11 +151,16 @@
     </table>
   </div>
 
-  <!-- OBRS-403: real server-side paginator. *ngIf="!isLoading" is deliberate
-       — the footer must not show a stale count/page under the skeleton rows
-       (a page change re-triggers isLoading via the store's clear()). -->
-  <div class="admin-table-footer" *ngIf="!isLoading">
-    <span *ngIf="totalElements > 0" aria-live="polite">
+  <!-- OBRS-403: real server-side paginator.
+       OBRS-466 (a11y): the footer used to be gated wholesale on *ngIf="!isLoading",
+       so a page change (which clear()s the cache → isLoading flips true) unmounted
+       the paginator mid-turn, dropping keyboard focus to <body> and destroying the
+       aria-live region so the page was never announced. The paginator now stays
+       MOUNTED across the loading window (disabled while refreshing) so it can
+       restore focus + announce; only the "Showing X-Y of N" count is still gated
+       on !isLoading so no stale count shows under the skeleton rows. -->
+  <div class="admin-table-footer" *ngIf="!isLoading || totalPages > 1">
+    <span *ngIf="!isLoading && totalElements > 0" aria-live="polite">
       {{ 'ADMIN.COMMON.SHOWING' | translate }} {{ rangeStart }} - {{ rangeEnd }}
       {{ 'ADMIN.COMMON.OF' | translate }} {{ totalElements }}
       {{ 'ADMIN.USABILITY_REPORTS.UNITS' | translate }}
