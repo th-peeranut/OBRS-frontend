@@ -1,10 +1,61 @@
+import { FormBuilder } from '@angular/forms';
+import { of, throwError } from 'rxjs';
 import { AccountPageComponent } from './account-page.component';
+import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
+import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 
 describe('AccountPageComponent', () => {
-  function create(username: string | null): { component: AccountPageComponent } {
+  function profileOf(overrides: Partial<MyAccountProfile> = {}): MyAccountProfile {
+    return {
+      id: 1,
+      title: 'นาย',
+      firstName: 'สมชาย',
+      middleName: null,
+      lastName: 'ใจดี',
+      email: 'user@example.com',
+      phoneNumber: '0811111111',
+      preferredLocale: 'th',
+      pdpaConsentVersion: PRIVACY_POLICY_VERSION,
+      ...overrides,
+    };
+  }
+
+  function create(
+    username: string | null,
+    myAccountOverrides: Record<string, unknown> = {}
+  ) {
     const authServiceStub = { getUsername: () => username };
-    const component = new AccountPageComponent(authServiceStub as never);
-    return { component };
+    const myAccountServiceStub = {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf() })
+      ),
+      updateProfile: jasmine
+        .createSpy('updateProfile')
+        .and.returnValue(of({ code: 200, message: 'OK' })),
+      acceptCurrentPrivacyPolicy: jasmine
+        .createSpy('acceptCurrentPrivacyPolicy')
+        .and.returnValue(of({ code: 200, message: 'OK' })),
+      // The real implementation, not a stubbed boolean — the whole point of the banner is that
+      // this predicate is right, so a spy returning `true` would test nothing.
+      needsReConsent: (p: MyAccountProfile | null) =>
+        !!p && p.pdpaConsentVersion !== PRIVACY_POLICY_VERSION,
+      ...myAccountOverrides,
+    };
+    const alertServiceStub = {
+      success: jasmine.createSpy('success'),
+      error: jasmine.createSpy('error'),
+    };
+    const translateStub = { instant: (key: string) => key };
+
+    const component = new AccountPageComponent(
+      new FormBuilder(),
+      authServiceStub as never,
+      myAccountServiceStub as never,
+      alertServiceStub as never,
+      translateStub as never
+    );
+
+    return { component, myAccountServiceStub, alertServiceStub };
   }
 
   it('should create', () => {
@@ -12,7 +63,7 @@ describe('AccountPageComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('reads the current login email from AuthService on init (no new GET)', () => {
+  it('reads the current login email from AuthService on init (no new GET for the email)', () => {
     const { component } = create('user@example.com');
 
     component.ngOnInit();
@@ -40,5 +91,147 @@ describe('AccountPageComponent', () => {
     component.closeChangeEmailDialog();
 
     expect(component.isChangeEmailDialogOpen).toBe(false);
+  });
+
+  // ── OBRS-632 ────────────────────────────────────────────────────────────────
+
+  it('loads the profile on init and fills the edit form from it (PDPA ม.35-36)', () => {
+    const { component, myAccountServiceStub } = create('user@example.com');
+
+    component.ngOnInit();
+
+    expect(myAccountServiceStub.getProfile).toHaveBeenCalled();
+    expect(component.isProfileLoading).toBe(false);
+    expect(component.profileForm.value.firstName).toBe('สมชาย');
+    expect(component.profileForm.value.phoneNumber).toBe('0811111111');
+  });
+
+  it('shows a retry state rather than a blank card when the profile GET fails', () => {
+    const { component } = create('user@example.com', {
+      getProfile: jasmine
+        .createSpy('getProfile')
+        .and.returnValue(throwError(() => ({ status: 500 }))),
+    });
+
+    component.ngOnInit();
+
+    expect(component.isProfileLoadFailed).toBe(true);
+    expect(component.isProfileLoading).toBe(false);
+  });
+
+  it('sends the corrected name and phone to PUT /users/me', () => {
+    const { component, myAccountServiceStub } = create('user@example.com');
+    component.ngOnInit();
+    component.startEditingProfile();
+    component.profileForm.patchValue({ firstName: 'สมหญิง', phoneNumber: '0822222222' });
+
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ firstName: 'สมหญิง', phoneNumber: '0822222222' })
+    );
+    expect(component.isProfileEditing).toBe(false);
+  });
+
+  it('sends an emptied middle name as null, not as an empty string the backend would reject', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ middleName: 'กลาง' }) })
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+    component.profileForm.patchValue({ middleName: '' });
+
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+      jasmine.objectContaining({ middleName: null })
+    );
+  });
+
+  it('does not call the API when the form is invalid', () => {
+    const { component, myAccountServiceStub } = create('user@example.com');
+    component.ngOnInit();
+    component.startEditingProfile();
+    component.profileForm.patchValue({ phoneNumber: 'not-a-number' });
+
+    component.saveProfile();
+
+    expect(myAccountServiceStub.updateProfile).not.toHaveBeenCalled();
+  });
+
+  it('names the phone-conflict error specifically instead of the generic one', () => {
+    const { component, alertServiceStub } = create('user@example.com', {
+      updateProfile: jasmine.createSpy('updateProfile').and.returnValue(
+        throwError(() => ({ error: { errorCode: 'USER_UPDATE_ERROR_PHONE_CONFLICT' } }))
+      ),
+    });
+    component.ngOnInit();
+    component.startEditingProfile();
+
+    component.saveProfile();
+
+    expect(alertServiceStub.error).toHaveBeenCalledWith(
+      'ACCOUNT.PROFILE_SAVE_ERROR_PHONE_CONFLICT'
+    );
+  });
+
+  it('hides the re-consent banner when the recorded version is the one this build serves', () => {
+    const { component } = create('user@example.com');
+
+    component.ngOnInit();
+
+    expect(component.needsReConsent).toBe(false);
+  });
+
+  it('shows the re-consent banner when the recorded version is older (PDPA ม.19)', () => {
+    const { component } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ pdpaConsentVersion: '0.9' }) })
+      ),
+    });
+
+    component.ngOnInit();
+
+    expect(component.needsReConsent).toBe(true);
+  });
+
+  it('shows the re-consent banner for an account that consented before versioning existed', () => {
+    const { component } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValue(
+        of({ code: 200, message: 'OK', data: profileOf({ pdpaConsentVersion: null }) })
+      ),
+    });
+
+    component.ngOnInit();
+
+    expect(component.needsReConsent).toBe(true);
+  });
+
+  it('records re-consent and re-reads the profile so the banner clears', () => {
+    const { component, myAccountServiceStub } = create('user@example.com', {
+      getProfile: jasmine.createSpy('getProfile').and.returnValues(
+        of({ code: 200, message: 'OK', data: profileOf({ pdpaConsentVersion: '0.9' }) }),
+        of({ code: 200, message: 'OK', data: profileOf() })
+      ),
+    });
+    component.ngOnInit();
+    expect(component.needsReConsent).toBe(true);
+
+    component.acceptCurrentPolicy();
+
+    expect(myAccountServiceStub.acceptCurrentPrivacyPolicy).toHaveBeenCalled();
+    expect(component.needsReConsent).toBe(false);
+  });
+
+  it('starts with the close-account dialog closed and opens it on demand', () => {
+    const { component } = create('user@example.com');
+
+    expect(component.isCloseAccountDialogOpen).toBe(false);
+    component.openCloseAccountDialog();
+    expect(component.isCloseAccountDialogOpen).toBe(true);
+    component.closeCloseAccountDialog();
+    expect(component.isCloseAccountDialogOpen).toBe(false);
   });
 });

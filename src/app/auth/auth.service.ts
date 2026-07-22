@@ -19,6 +19,7 @@ import {
 } from '../shared/interfaces/auth.interface';
 import { ResponseAPI } from '../shared/interfaces/response.interface';
 import { LoginOtpVerify } from '../shared/interfaces/otp.interface';
+import { PRIVACY_POLICY_VERSION } from '../modules/privacy-policy/privacy-policy.version';
 
 @Injectable({
   providedIn: 'root',
@@ -289,6 +290,10 @@ export class AuthService {
       password: payload.password,
       preferredLocale: payload.preferredLocale,
       pdpaConsent: payload.pdpaConsent,
+      // OBRS-632: stamped here, not in the form. PDPA ม.19 only means something against a specific
+      // text, and the text this build showed is the one this build knows — a component that had to
+      // remember to pass it would eventually forget and the column would fill with nulls.
+      pdpaConsentVersion: PRIVACY_POLICY_VERSION,
     };
 
     return this.http
@@ -338,7 +343,9 @@ export class AuthService {
     return this.http
       .post<ResponseAPI<LoginResponseData>>(
         `${environment.apiUrl}/api/auth/social/google`,
-        payload,
+        // OBRS-632: same stamp as the email signup above — the Google button sits beside the same
+        // consent box, so it must record the same fact.
+        { ...payload, pdpaConsentVersion: PRIVACY_POLICY_VERSION },
         { context: new HttpContext().set(SKIP_GLOBAL_ERROR_ALERT, true) }
       )
       .toPromise()

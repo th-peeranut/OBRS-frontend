@@ -1,0 +1,70 @@
+<div class="close-account-modal-backdrop" (click)="onBackdropClick($event)">
+  <div
+    class="close-account-modal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="close-account-dialog-title"
+  >
+    <button
+      type="button"
+      class="close-account-modal__close"
+      (click)="close()"
+      [attr.aria-label]="'ACCOUNT.CLOSE_CANCEL' | translate"
+    >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="close-account-modal__body">
+      <h2 id="close-account-dialog-title" class="close-account-modal__title">
+        {{ "ACCOUNT.CLOSE_DIALOG_TITLE" | translate }}
+      </h2>
+
+      <p class="close-account-modal__lead" data-testid="close-account-what-happens">
+        {{ "ACCOUNT.CLOSE_WHAT_HAPPENS" | translate }}
+      </p>
+
+      <!-- OBRS-632: this list is the honest description of anonymise-in-place. Do not replace it
+           with "all your data will be deleted" — the transaction rows are kept on purpose. -->
+      <ul class="close-account-modal__list">
+        <li>{{ "ACCOUNT.CLOSE_EFFECT_IDENTITY" | translate }}</li>
+        <li>{{ "ACCOUNT.CLOSE_EFFECT_LOGIN" | translate }}</li>
+        <li>{{ "ACCOUNT.CLOSE_EFFECT_RECORDS" | translate }}</li>
+      </ul>
+
+      <p class="close-account-modal__warning">
+        {{ "ACCOUNT.CLOSE_IRREVERSIBLE" | translate }}
+      </p>
+
+      <form [formGroup]="confirmForm" (ngSubmit)="submit()">
+        <label for="close-account-confirmation">
+          {{ "ACCOUNT.CLOSE_CONFIRM_LABEL" | translate: { phrase: confirmPhrase } }}
+        </label>
+        <input
+          #confirmInput
+          class="form-control mt-1"
+          type="text"
+          id="close-account-confirmation"
+          data-testid="close-account-confirmation"
+          formControlName="confirmation"
+          autocomplete="off"
+        />
+
+        <div class="close-account-modal__actions">
+          <button type="button" class="btn-secondary" (click)="close()">
+            {{ "ACCOUNT.CLOSE_CANCEL" | translate }}
+          </button>
+          <button
+            type="submit"
+            class="btn-danger"
+            data-testid="close-account-submit"
+            [disabled]="!isPhraseCorrect || isSubmitting"
+          >
+            <span *ngIf="isSubmitting" class="spinner" aria-hidden="true"></span>
+            <ng-container *ngIf="!isSubmitting">{{ "ACCOUNT.CLOSE_SUBMIT" | translate }}</ng-container>
+            <ng-container *ngIf="isSubmitting">{{ "ACCOUNT.CLOSE_SUBMIT_LOADING" | translate }}</ng-container>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

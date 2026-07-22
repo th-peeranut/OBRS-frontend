@@ -61,4 +61,11 @@ export interface SignUpPayload {
   password: string;
   preferredLocale: string;
   pdpaConsent: boolean;
+  /**
+   * OBRS-632: the privacy-notice version this build rendered beside the consent box. Filled in by
+   * `AuthService.register` from `PRIVACY_POLICY_VERSION`, never by the form — the value recorded
+   * has to be the one that was actually on screen, and a caller cannot be trusted to remember to
+   * pass it.
+   */
+  pdpaConsentVersion: string;
 }

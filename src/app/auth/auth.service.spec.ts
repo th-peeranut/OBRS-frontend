@@ -8,6 +8,7 @@ import { Router } from '@angular/router';
 
 import { AuthService } from './auth.service';
 import { Register } from '../shared/interfaces/auth.interface';
+import { PRIVACY_POLICY_VERSION } from '../modules/privacy-policy/privacy-policy.version';
 import { environment } from '../../environments/environment';
 import {
   SKIP_AUTH_LOGOUT,
@@ -75,10 +76,57 @@ describe('AuthService', () => {
       password: 'Password1',
       preferredLocale: 'th',
       pdpaConsent: true,
+      // OBRS-632: stamped by the service, never taken from the form.
+      pdpaConsentVersion: PRIVACY_POLICY_VERSION,
     });
 
     request.flush({ code: 201, message: 'Created' });
     expect((await resultPromise).code).toBe(201);
+  });
+
+  /**
+   * OBRS-632 — the frontend half of the consent-version contract. The backend field is optional at
+   * the wire on purpose (a required one would turn a backend-lands-first deploy into a signup
+   * outage), so nothing on the server can fail when this stops being sent. This test and its
+   * backend twin (`AuthenticationServiceTest#signUp_recordsThePrivacyNoticeVersionThatWasDisplayed`)
+   * are what keep `users.pdpa_consent_version` from silently filling with NULLs.
+   */
+  it('OBRS-632: stamps the privacy-notice version this build serves onto the signup', async () => {
+    const register: Register = {
+      title: 'Mr.',
+      firstName: 'Test',
+      middleName: '',
+      lastName: 'User',
+      email: 'test@example.com',
+      phoneNumber: '0812345678',
+      password: 'Password1',
+      preferredLocale: 'th',
+      pdpaConsent: true,
+    };
+
+    const resultPromise = service.register(register);
+    const request = httpTesting.expectOne(`${environment.apiUrl}/api/auth/signup`);
+
+    expect(request.request.body.pdpaConsentVersion).toBe(PRIVACY_POLICY_VERSION);
+
+    request.flush({ code: 201, message: 'Created' });
+    await resultPromise;
+  });
+
+  it('OBRS-632: stamps the same version onto the Google sign-in, which shares the consent box', async () => {
+    const resultPromise = service.loginWithGoogle({ idToken: 'tok', pdpaConsent: true });
+    const request = httpTesting.expectOne(
+      `${environment.apiUrl}/api/auth/social/google`
+    );
+
+    expect(request.request.body).toEqual({
+      idToken: 'tok',
+      pdpaConsent: true,
+      pdpaConsentVersion: PRIVACY_POLICY_VERSION,
+    });
+
+    request.flush({ code: 200, message: 'OK', data: {} });
+    await resultPromise;
   });
 
   describe('hasAnyRole (area-based access model)', () => {

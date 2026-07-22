@@ -51,9 +51,95 @@
   color: $text-softblack;
 }
 
+// OBRS-632: the page grew from two cards to five, so they need separating.
+.account-card + .account-card,
+.account-consent-notice + .account-card {
+  margin-top: $space-md;
+}
+
+.account-card__desc,
+.account-card__muted {
+  margin: 0 0 $space-md;
+  font-size: $font-size-sm;
+  color: $text-lightblack;
+}
+
+.account-card__error {
+  p {
+    margin: 0 0 $space-2xs;
+    font-size: $font-size-sm;
+    color: $text-red;
+  }
+}
+
+.account-card__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+.account-profile {
+  margin: 0 0 $space-md;
+
+  > div {
+    display: flex;
+    gap: $space-xs;
+    padding: 6px 0;
+  }
+
+  dt {
+    min-width: 140px;
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $text-lightblack;
+  }
+
+  dd {
+    margin: 0;
+    font-size: $font-size-base;
+    color: $text-softblack;
+  }
+}
+
+// OBRS-632 (PDPA ม.19): a re-consent prompt is a request, not an error — visible but not alarming.
+.account-consent-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  margin-bottom: $space-md;
+  padding: 16px 20px;
+  border: 1px solid $brand-customer-strong;
+  border-radius: 14px;
+  background-color: $primary-white;
+
+  &__title {
+    margin: 0 0 4px;
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $text-black;
+  }
+
+  &__desc {
+    margin: 0 0 4px;
+    font-size: $font-size-sm;
+    color: $text-softblack;
+  }
+}
+
+// OBRS-632: the close-account card is the only irreversible action on this page, so it is set
+// apart rather than being a fourth identical card the eye slides over.
+.account-card--danger {
+  border-color: $text-red;
+}
+
 // Single primary action on this screen (design-system §4) — the shell's
 // brand token, same value as reschedule/change-stop's primary button.
-.btn-primary {
+.btn-primary,
+.btn-secondary,
+.btn-danger {
   display: inline-block;
   padding: 10px 22px;
   border: none;
@@ -61,6 +147,25 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   cursor: pointer;
+}
+
+.btn-primary {
   background-color: $brand-customer-strong;
+  color: $text-white;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+}
+
+.btn-danger {
+  background-color: $text-red;
   color: $text-white;
 }

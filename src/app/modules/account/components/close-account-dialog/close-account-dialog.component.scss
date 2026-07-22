@@ -1,0 +1,146 @@
+@import "../../../../../styles/variables.scss";
+
+// Same modal chrome as change-email-dialog.component.scss — a third modal pattern is exactly what
+// ADR-0010 exists to prevent (design-system §6).
+.close-account-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: $space-xl 16px;
+  background: rgba(13, 21, 37, 0.55);
+  overflow-y: auto;
+  animation: close-account-modal-fade 0.15s ease;
+}
+
+.close-account-modal {
+  position: relative;
+  width: min(480px, 100%);
+  margin: auto;
+}
+
+.close-account-modal__close {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: $radius-circle;
+  background: $primary-white;
+  color: $text-black;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: $shadow-md;
+  transition: transform 0.15s ease;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+.close-account-modal__body {
+  width: 100%;
+  background: $primary-white;
+  border-radius: 18px;
+  padding: $space-lg;
+}
+
+.close-account-modal__title {
+  margin: 0 0 $space-sm;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $text-black;
+}
+
+.close-account-modal__lead {
+  margin: 0 0 $space-xs;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+}
+
+.close-account-modal__list {
+  margin: 0 0 $space-sm;
+  padding-left: 20px;
+  font-size: $font-size-sm;
+  color: $text-softblack;
+
+  li + li {
+    margin-top: 4px;
+  }
+}
+
+.close-account-modal__warning {
+  margin: 0 0 $space-md;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $text-red;
+}
+
+.close-account-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-2xs;
+  margin-top: $space-md;
+}
+
+.btn-danger,
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2xs;
+  padding: 9px 20px;
+  border-radius: $radius-sm;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  cursor: pointer;
+}
+
+// Destructive, so it is NOT the customer brand colour: this is the one button on the site whose
+// action cannot be undone, and it must not look like the "Change email" button next to it.
+.btn-danger {
+  background-color: $text-red;
+  color: $text-white;
+  border: 1px solid $text-red;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.btn-secondary {
+  background-color: $primary-white;
+  color: $brand-customer-strong;
+  border: 1px solid $brand-customer-strong;
+}
+
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: $radius-circle;
+  animation: close-account-spin 0.7s linear infinite;
+}
+
+@keyframes close-account-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes close-account-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
