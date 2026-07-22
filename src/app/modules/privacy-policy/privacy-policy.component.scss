@@ -27,6 +27,16 @@
   p + p {
     margin-top: 16px;
   }
+
+  // OBRS-628 AC-3: the version/date stamp sits under the title as metadata, not
+  // as another paragraph of the notice — de-emphasised so it is never read as
+  // part of the policy text itself.
+  p.policy-version {
+    margin-top: -12px;
+    margin-bottom: 20px;
+    font-size: $font-size-sm;
+    opacity: 0.75;
+  }
 }
 
 @media (max-width: 768px) {

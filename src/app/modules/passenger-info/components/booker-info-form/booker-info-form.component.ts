@@ -53,6 +53,13 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       middleName: [''],
       lastName: ['', Validators.required],
       phoneNumber: ['', [Validators.required, Validators.pattern(/^0\d{9}$/)]],
+      // NOT a display-only field, despite the name. `gender` is this form's local
+      // name for the wire's `passengerType`: PassengerInfoComponent renames it at
+      // the payload boundary (normalizePassengerType) and the backend persists it
+      // on ticket.passenger_type_id + passenger_type_snapshot, whence it reaches
+      // the e-ticket and the confirmation email. An OBRS-628 audit grepped the
+      // backend for "gender", found nothing, and concluded the radios were dead
+      // and should be deleted under PDPA data minimisation - they are not.
       gender: ['', Validators.required],
       // OBRS-238: ONLINE bookings require a contact email (e-ticket delivery +
       // BookingReqDtoValidator 400s without one) — required + format-checked,

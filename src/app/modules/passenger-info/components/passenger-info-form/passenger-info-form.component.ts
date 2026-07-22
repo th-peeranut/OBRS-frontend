@@ -724,6 +724,9 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       middleName: [''],
       lastName: ['', Validators.required],
       phoneNumber: ['', [Validators.pattern(/^0\d{9}$/)]],
+      // See booker-info-form: `gender` is the local name for the wire's
+      // `passengerType`, renamed at the payload boundary and persisted on the
+      // ticket. It also drives the seat-map colouring here. Not a dead field.
       gender: ['', Validators.required],
       isSelectSeat: [true],
       passengerSeat: [''],

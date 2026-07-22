@@ -40,7 +40,11 @@ jobs:
       # BEFORE the expensive npm ci + Karma run, so a missing/space-typo'd translation
       # key is caught here instead of printing a raw key onto a user's screen. Runs as
       # a step in this existing job (not a new workflow) to spend no extra runner minutes.
-      - name: i18n key-set parity gate
+      # It has since grown three more checks that need no extra tooling and belong on
+      # the same cheap step: the booking-policy numbers must interpolate (OBRS-564), the
+      # privacy notice must stay tied to a published version (OBRS-628 AC-3), and no
+      # locale may hold a visibly truncated copy of a long text (OBRS-628 AC-9).
+      - name: i18n parity, policy-number and privacy-version gates
         run: npm run test:i18n
 
       # Same shape and same rationale (OBRS-463): a pure-node gate before npm ci.

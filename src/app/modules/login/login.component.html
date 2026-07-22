@@ -131,7 +131,11 @@
       >
         {{ "LOGIN.LOGINMOBILE" | translate }}
       </button>
-      <!-- GOOGLE SIGN-IN PDPA CONSENT -->
+      <!-- GOOGLE SIGN-IN PDPA CONSENT — OBRS-628 AC-1: same rule as /register.
+           This box really does gate the Google button (the overlay below swallows
+           the click until it is ticked), so it is a live consent point and must
+           offer the notice being consented to. New tab, so a typed username and
+           password survive the trip. -->
       <div class="form-check mt-2">
         <input
           class="form-check-input"
@@ -142,6 +146,15 @@
         <label class="form-check-label" for="pdpaGoogleConsent">
           {{ "LOGIN.GOOGLE_SIGNIN_PDPA" | translate }}
         </label>
+        <a
+          class="obrs-link ms-1"
+          data-testid="pdpa-privacy-policy-link"
+          routerLink="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
+        </a>
       </div>
       <div
         class="text-error"

@@ -17,6 +17,7 @@
 // matchable. Node reads .mjs as UTF-8, so this is safe; the JSON values this script
 // validates are UTF-8 and untouched by it either way.
 
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -113,13 +114,197 @@ for (const lang of LANGS) {
   }
 }
 
+// 4) OBRS-628 AC-3: the privacy notice must stay tied to a published version.
+//
+//    Consent is only meaningful against a specific text, and this page carried
+//    neither a version nor a date -- nothing could answer "which wording did
+//    this customer agree to?". A version constant alone would not have fixed
+//    that: nobody would remember to bump it, exactly the failure this repo has
+//    already paid for elsewhere. So the ledger below is append-only and the
+//    Thai text is fingerprinted. Editing POLICY.PRIVACY.{TITLE,CONTENT_1,
+//    CONTENT_2} without adding a ledger entry FAILS here; re-using an existing
+//    version number for different text collides with that version's own entry.
+//    Thai is the source language for this notice (en/zh are translations of it),
+//    so it is the one that defines the version.
+//
+//    To publish new wording: add an entry to the END of the ledger with a new
+//    version, today's date and the hash this gate prints, and set the same
+//    version/date in src/app/modules/privacy-policy/privacy-policy.version.ts.
+const PRIVACY_VERSION_FILE = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  'src',
+  'app',
+  'modules',
+  'privacy-policy',
+  'privacy-policy.version.ts'
+);
+const PRIVACY_LEDGER = [
+  {
+    version: '1.0',
+    effectiveDate: '2026-07-22',
+    fingerprint: '617bea18d7fe1952bf74fb67feead72bb4e22ff40d48a86d014cb13c0e9e1c57',
+  },
+];
+
+function privacyFingerprint(json) {
+  const p = json?.POLICY?.PRIVACY;
+  if (!p || typeof p.TITLE !== 'string' || typeof p.CONTENT_1 !== 'string' || typeof p.CONTENT_2 !== 'string') {
+    return null;
+  }
+  return createHash('sha256')
+    .update(JSON.stringify([p.TITLE, p.CONTENT_1, p.CONTENT_2]), 'utf8')
+    .digest('hex');
+}
+
+{
+  // The ledger is history, so it has to be self-consistent before it can judge anything.
+  const seenVersions = new Set();
+  const seenFingerprints = new Set();
+  let previousDate = '';
+  for (const entry of PRIVACY_LEDGER) {
+    if (seenVersions.has(entry.version)) {
+      problems.push(`privacy-policy ledger lists version ${entry.version} twice -- a version number identifies one text forever (OBRS-628)`);
+    }
+    if (seenFingerprints.has(entry.fingerprint)) {
+      problems.push(`privacy-policy ledger lists the same fingerprint under two versions -- unchanged text must not be re-published as a new version (OBRS-628)`);
+    }
+    if (entry.effectiveDate <= previousDate) {
+      problems.push(`privacy-policy ledger entry ${entry.version} has effectiveDate ${entry.effectiveDate}, which does not come after the previous entry's ${previousDate} (OBRS-628)`);
+    }
+    seenVersions.add(entry.version);
+    seenFingerprints.add(entry.fingerprint);
+    previousDate = entry.effectiveDate;
+  }
+
+  const published = PRIVACY_LEDGER[PRIVACY_LEDGER.length - 1];
+  const declared = readFileSync(PRIVACY_VERSION_FILE, 'utf8');
+  const declaredVersion = /PRIVACY_POLICY_VERSION\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  const declaredDate = /PRIVACY_POLICY_EFFECTIVE_DATE\s*=\s*'([^']*)'/.exec(declared)?.[1];
+  if (declaredVersion !== published.version || declaredDate !== published.effectiveDate) {
+    problems.push(
+      `privacy-policy.version.ts declares ${declaredVersion} / ${declaredDate} but the newest ledger entry is ${published.version} / ${published.effectiveDate} -- the page renders the .ts values, so they are what customers see (OBRS-628)`
+    );
+  }
+
+  // Same rule as OBRS-564 above, same reason: the version and date render from
+  // privacy-policy.version.ts, so the sentence around them must interpolate. A
+  // translator who drops or renames a placeholder produces a version line that
+  // silently omits the very thing it exists to state.
+  for (const lang of LANGS) {
+    const line = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'))?.POLICY?.PRIVACY?.VERSION_LINE;
+    if (typeof line !== 'string') {
+      problems.push(`[${lang}] POLICY.PRIVACY.VERSION_LINE is missing or not a string -- the privacy page states its version through this key (OBRS-628)`);
+      continue;
+    }
+    for (const placeholder of ['{{version}}', '{{effectiveDate}}']) {
+      if (!line.includes(placeholder)) {
+        problems.push(`[${lang}] POLICY.PRIVACY.VERSION_LINE is missing the ${placeholder} placeholder -- both values come from privacy-policy.version.ts and must never be typed into a translation file (OBRS-628)`);
+      }
+    }
+  }
+
+  const actual = privacyFingerprint(JSON.parse(readFileSync(join(I18N_DIR, 'th.json'), 'utf8')));
+  if (actual === null) {
+    problems.push(`[th] POLICY.PRIVACY.{TITLE,CONTENT_1,CONTENT_2} is missing or not a string -- the privacy notice cannot be versioned if its text is not there (OBRS-628)`);
+  } else if (actual !== published.fingerprint) {
+    problems.push(
+      `[th] POLICY.PRIVACY text no longer matches published version ${published.version}. Its fingerprint is now ${actual}. Publish it: append {version, effectiveDate, fingerprint} to PRIVACY_LEDGER in this file and set the same version/date in privacy-policy.version.ts (OBRS-628)`
+    );
+  }
+}
+
+// 5) OBRS-628 AC-9: a translation that exists but stops halfway.
+//
+//    Gate 2 above compares KEY SETS, so a zh value holding the first two
+//    paragraphs of a fourteen-paragraph notice passes it green -- which is
+//    exactly what shipped: zh POLICY.PRIVACY.CONTENT_2 held 14% of the Thai
+//    text and zh POLICY.BUSINESS.CONTENT held 8%, both invisible to every gate
+//    and every test in the repo.
+//
+//    The thresholds are measured, not guessed. Across the whole bundle only six
+//    keys are long enough to compare, and they split cleanly: translations that
+//    are COMPLETE sit at zh 0.30-0.42 and en 0.90-1.20 of the longest language,
+//    while the two truncated ones sit at 0.08 and 0.14. Chinese is genuinely far
+//    more compact than Thai, which is why it gets its own floor -- a single
+//    shared ratio would either miss the truncation or fail every honest zh
+//    translation. Ratios are taken against the LONGEST language rather than
+//    against Thai, so a truncated Thai value is caught too.
+const LENGTH_COMPARE_MIN_CHARS = 200;
+const LENGTH_FLOOR_BY_LANG = { en: 0.55, th: 0.55, zh: 0.22 };
+// Known debt, each owned by a card. New drift fails immediately; these two are
+// listed so the gate can go green today WITHOUT hiding them. An entry that
+// starts passing is itself a failure -- otherwise this list would quietly
+// outlive the problem and go on excusing a key nobody is watching any more.
+const KNOWN_SHORT_TRANSLATIONS = [
+  { key: 'POLICY.PRIVACY.CONTENT_2', lang: 'zh', owner: 'OBRS-628 AC-8' },
+  { key: 'POLICY.BUSINESS.CONTENT', lang: 'zh', owner: 'OBRS-623 / OBRS-629' },
+];
+
+/** Characters a reader actually sees: no markup, no entities, no whitespace. */
+function visibleLength(value) {
+  if (typeof value !== 'string') return 0;
+  return value
+    .replace(/&emsp;|&nbsp;|&thinsp;/g, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, '').length;
+}
+
+{
+  const valuesByLang = {};
+  for (const lang of LANGS) {
+    const json = JSON.parse(readFileSync(join(I18N_DIR, `${lang}.json`), 'utf8'));
+    const out = {};
+    (function walk(obj, prefix) {
+      for (const [k, v] of Object.entries(obj)) {
+        const key = prefix ? `${prefix}.${k}` : k;
+        if (v !== null && typeof v === 'object' && !Array.isArray(v)) walk(v, key);
+        else out[key] = v;
+      }
+    })(json, '');
+    valuesByLang[lang] = out;
+  }
+
+  const excused = new Set(KNOWN_SHORT_TRANSLATIONS.map((e) => `${e.key}|${e.lang}`));
+  const stillShort = new Set();
+
+  // Only keys present in every language are considered -- a missing key is gate 2's
+  // job to report, and comparing against a zero would double-report it here.
+  const sharedKeys = Object.keys(valuesByLang.th).filter((k) =>
+    LANGS.every((l) => typeof valuesByLang[l][k] === 'string')
+  );
+  for (const key of sharedKeys.sort()) {
+    const lengths = Object.fromEntries(LANGS.map((l) => [l, visibleLength(valuesByLang[l][key])]));
+    const longest = Math.max(...Object.values(lengths));
+    if (longest < LENGTH_COMPARE_MIN_CHARS) continue;
+    const longestLang = LANGS.find((l) => lengths[l] === longest);
+    for (const lang of LANGS) {
+      const ratio = lengths[lang] / longest;
+      if (ratio >= LENGTH_FLOOR_BY_LANG[lang]) continue;
+      stillShort.add(`${key}|${lang}`);
+      if (excused.has(`${key}|${lang}`)) continue;
+      problems.push(
+        `[${lang}] "${key}" is ${lengths[lang]} visible chars against ${longest} in ${longestLang} (${ratio.toFixed(2)}, floor ${LENGTH_FLOOR_BY_LANG[lang]}) -- the translation looks truncated, not merely more compact. Finish it, or add it to KNOWN_SHORT_TRANSLATIONS with the card that owns it (OBRS-628)`
+      );
+    }
+  }
+
+  for (const entry of KNOWN_SHORT_TRANSLATIONS) {
+    if (!stillShort.has(`${entry.key}|${entry.lang}`)) {
+      problems.push(
+        `KNOWN_SHORT_TRANSLATIONS still excuses [${entry.lang}] "${entry.key}" (${entry.owner}), but that translation now passes the length floor -- delete the entry so the key is guarded again (OBRS-628)`
+      );
+    }
+  }
+}
+
 const counts = LANGS.map((l) => `${l}=${keysByLang[l].size}`).join(' ');
 
 if (problems.length > 0) {
   console.error(`i18n parity gate FAILED (${counts}):`);
   for (const p of problems) console.error(`  - ${p}`);
   // GitHub Actions surfaces ::error:: lines in the PR checks summary.
-  console.error(`::error::i18n key-set drift across public/i18n/{en,th,zh}.json -- ${problems.length} problem(s). Fix so all three files share the exact same key set (see OBRS-469).`);
+  console.error(`::error::i18n gate: ${problems.length} problem(s) in public/i18n/{en,th,zh}.json -- key-set drift (OBRS-469), hardcoded booking-policy numbers (OBRS-564), or an unpublished/truncated privacy notice (OBRS-628). Each line above says which.`);
   process.exit(1);
 }
 

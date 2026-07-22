@@ -105,6 +105,38 @@ describe('LoginComponent', () => {
   it('does not show the email-changed banner without ?reason=email-changed', () => {
     expect(component.showEmailChangedBanner).toBe(false);
   });
+
+  // OBRS-628 AC-1. This checkbox is a real consent point — the overlay above the
+  // Google button swallows the click until it is ticked — yet the only route to
+  // /privacy-policy anywhere in the app was the home-page footer, which this page
+  // does not render. So people consented to a notice they had no way to open.
+  describe('PDPA consent links to the notice being consented to (OBRS-628)', () => {
+    function link(): HTMLAnchorElement | null {
+      return (fixture.nativeElement as HTMLElement).querySelector(
+        'a[data-testid="pdpa-privacy-policy-link"]'
+      );
+    }
+
+    it('renders a link to /privacy-policy beside the consent checkbox', () => {
+      const anchor = link();
+      expect(anchor).toBeTruthy();
+      expect(anchor?.getAttribute('href')).toBe('/privacy-policy');
+    });
+
+    it('sits inside the same block as the consent checkbox, not adrift on the page', () => {
+      // A link somewhere on the screen is not the same as a link AT the consent.
+      const block = link()?.closest('.form-check');
+      expect(block?.querySelector('#pdpaGoogleConsent')).toBeTruthy();
+    });
+
+    it('opens in a new tab so a typed username and password survive the trip', () => {
+      // Load-bearing: an in-tab navigation would tear down the login form. rel is
+      // asserted with it because target="_blank" without noopener hands the opened
+      // page a window.opener handle back into this one.
+      expect(link()?.getAttribute('target')).toBe('_blank');
+      expect(link()?.getAttribute('rel')).toContain('noopener');
+    });
+  });
 });
 
 describe('LoginComponent — email-changed banner (OBRS-84)', () => {

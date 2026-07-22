@@ -3,6 +3,15 @@
 <section class="policy-container">
   <div class="policy-card">
     <h1>{{ "POLICY.PRIVACY.TITLE" | translate }}</h1>
+    <!-- OBRS-628 AC-3: version + date, so consent can be tied to a specific text.
+         Both values come from privacy-policy.version.ts; the i18n key holds only
+         the sentence around them. Never type the date into a translation file. -->
+    <p class="policy-version" data-testid="privacy-policy-version">
+      {{
+        "POLICY.PRIVACY.VERSION_LINE"
+          | translate: { version: version, effectiveDate: effectiveDate }
+      }}
+    </p>
     <p [innerHTML]="'POLICY.PRIVACY.CONTENT_1' | translate"></p>
     <p [innerHTML]="'POLICY.PRIVACY.CONTENT_2' | translate"></p>
   </div>

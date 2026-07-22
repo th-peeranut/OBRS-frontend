@@ -1,6 +1,14 @@
-import { FormBuilder } from '@angular/forms';
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { RouterTestingModule } from '@angular/router/testing';
+import { TranslateModule } from '@ngx-translate/core';
 
 import { RegisterComponent } from './register.component';
+import { DropdownObrsComponent } from '../../shared/components/dropdown-obrs/dropdown-obrs.component';
+import { AuthService } from '../../auth/auth.service';
+import { AlertService } from '../../shared/services/alert.service';
+import { UserService } from '../../services/user/user.service';
 import { createTranslateStub } from '../../testing/test-stubs';
 
 describe('RegisterComponent', () => {
@@ -159,5 +167,74 @@ describe('RegisterComponent', () => {
       expect(control.hasError('pattern')).toBeTrue();
       expect(control.hasError('required')).toBeFalse();
     });
+  });
+});
+
+/**
+ * OBRS-628 AC-1. Signup is where PDPA consent is actually collected, and the box
+ * offered no way to read what was being consented to: grepping the whole app for
+ * `privacy-policy` found exactly one hit, the home-page footer, which /register
+ * does not render. PDPA ม.19 wants the purpose stated plainly and reachable at
+ * the moment consent is given.
+ *
+ * Rendered rather than asserted on the class, because the defect lives entirely
+ * in the template — the component would look identical either way.
+ */
+describe('RegisterComponent — PDPA consent links to the notice (OBRS-628)', () => {
+  let fixture: ComponentFixture<RegisterComponent>;
+
+  beforeEach(async () => {
+    await TestBed.configureTestingModule({
+      declarations: [RegisterComponent],
+      imports: [
+        ReactiveFormsModule,
+        RouterTestingModule,
+        TranslateModule.forRoot(),
+        // Real, not stubbed: it is the ControlValueAccessor behind
+        // formControlName="title", so CUSTOM_ELEMENTS_SCHEMA alone gets NG01203.
+        DropdownObrsComponent,
+      ],
+      providers: [
+        // Nothing is typed into the form here, so the debounced duplicate-check
+        // streams never reach these.
+        { provide: AuthService, useValue: {} },
+        { provide: AlertService, useValue: {} },
+        { provide: UserService, useValue: {} },
+      ],
+      // app-theme-toggle / app-lang-switcher / app-dropdown-obrs have their own specs.
+      schemas: [CUSTOM_ELEMENTS_SCHEMA],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(RegisterComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => {
+    fixture.destroy();
+  });
+
+  function link(): HTMLAnchorElement | null {
+    return (fixture.nativeElement as HTMLElement).querySelector(
+      'a[data-testid="pdpa-privacy-policy-link"]'
+    );
+  }
+
+  it('renders a link to /privacy-policy beside the consent checkbox', () => {
+    const anchor = link();
+    expect(anchor).toBeTruthy();
+    expect(anchor?.getAttribute('href')).toBe('/privacy-policy');
+  });
+
+  it('sits inside the same block as the consent checkbox, not adrift on the page', () => {
+    const block = link()?.closest('.form-check');
+    expect(block?.querySelector('#pdpaConsent')).toBeTruthy();
+  });
+
+  it('opens in a new tab so the half-filled signup form is not destroyed', () => {
+    // The whole point of the new tab: an in-tab routerLink would tear down a form
+    // the user may have spent a minute on. rel is asserted with it because
+    // target="_blank" alone hands the opened page a handle back into this one.
+    expect(link()?.getAttribute('target')).toBe('_blank');
+    expect(link()?.getAttribute('rel')).toContain('noopener');
   });
 });

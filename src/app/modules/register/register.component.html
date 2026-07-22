@@ -472,7 +472,12 @@
           </div>
         </div>
       </div>
-      <!-- PDPA CONSENT -->
+      <!-- PDPA CONSENT — OBRS-628 AC-1: a consent tick-box has to sit next to a way
+           to READ what is being consented to; PDPA ม.19 wants the purpose stated
+           plainly and easy to reach at the moment consent is given, and until now
+           the only route to /privacy-policy on the whole site was the home footer,
+           which this page does not render. `target="_blank"` is load-bearing, not
+           decoration: an in-tab routerLink would tear down this half-filled form. -->
       <div class="form-check mt-3">
         <input
           class="form-check-input"
@@ -483,6 +488,15 @@
         <label class="form-check-label ms-2" for="pdpaConsent">
           {{ "REGISTER.PDPA_CONSENT" | translate }}
         </label>
+        <a
+          class="obrs-link ms-1"
+          data-testid="pdpa-privacy-policy-link"
+          routerLink="/privacy-policy"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ "COMMON.READ_PRIVACY_POLICY" | translate }}
+        </a>
         <div
           class="text-error"
           *ngIf="
