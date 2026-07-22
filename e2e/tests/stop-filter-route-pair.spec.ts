@@ -7,9 +7,11 @@
  */
 
 import { test, expect } from '@playwright/test';
-import path from 'path';
-
-const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
+import {
+  expectNoEscapedGateCalls,
+  seedGateAdminSession,
+  stubWalkInSellShell,
+} from '../support/gate-admin-session';
 
 const SEGMENTS_RESP = {
   code: 200, message: 'OK',
@@ -35,11 +37,19 @@ const WALK_IN_SCHEDULES_RESP = {
 };
 
 test.describe('Criterion 5: route-pair regression with active dropoff filter', () => {
-  test.use({ storageState: ADMIN_AUTH });
-
+  // OBRS-618: was `storageState: fixtures/admin-auth.json`, a file only a live SIT login
+  // could mint — so this fully-stubbed spec could go red because Koyeb was cold-starting.
+  // The synthetic session is seeded before Angular boots instead; nothing decodes the
+  // token (see e2e/support/gate-admin-session.ts).
   test.beforeEach(async ({ page }) => {
+    await seedGateAdminSession(page);
+    await stubWalkInSellShell(page);
     await page.route('**/api/private/schedules/walk-in**', route => route.fulfill({ json: WALK_IN_SCHEDULES_RESP }));
     await page.route('**/api/private/segments/**', route => route.fulfill({ json: SEGMENTS_RESP }));
+  });
+
+  test.afterEach(async ({ page }) => {
+    expectNoEscapedGateCalls(page);
   });
 
   test('changing pickup with dropoff filter active: list re-filters by route-pair AND text filter', async ({ page }) => {

@@ -22,8 +22,34 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
 import * as fs from 'fs';
+import {
+  expectNoEscapedGateCalls,
+  seedGateAdminSession,
+  stubWalkInSellShell,
+} from '../support/gate-admin-session';
 
-const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
+/**
+ * OBRS-618: every describe below used to open with
+ * `test.use({ storageState: fixtures/admin-auth.json })`. That file is gitignored and
+ * only `e2e/global-setup.ts` can produce it, by logging into the live SIT deployment —
+ * so this suite, which the header above correctly calls "fully independent from the
+ * running backend", could still go red because Koyeb was cold-starting. The session is
+ * synthesised in-browser instead (nothing decodes the token — see
+ * e2e/support/gate-admin-session.ts), which is what let this spec join the merge gate.
+ *
+ * The `afterEach` is not decoration: with no backend behind the gate lane, an
+ * unstubbed authenticated call is aborted, and an aborted call presents as a control
+ * that never renders — a timeout pointing at the wrong thing. This names the call.
+ */
+const useSyntheticAdminSession = (): void => {
+  test.beforeEach(async ({ page }) => {
+    await seedGateAdminSession(page);
+    await stubWalkInSellShell(page);
+  });
+  test.afterEach(async ({ page }) => {
+    expectNoEscapedGateCalls(page);
+  });
+};
 
 // ── Endpoint matchers ─────────────────────────────────────────────────────────
 const WALK_IN_SCHEDULES_ENDPOINT  = '**/api/private/schedules/walk-in**';
@@ -219,7 +245,7 @@ async function openEditForm(page: Page): Promise<void> {
 // =============================================================================
 
 test.describe('AC-9: Trip Details edit mode — read-only fields vs editable time', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('Route name and Date are read-only static text in edit form; Departure Time is an interactive input', async ({ page }) => {
     await mountStandardMocks(page);
@@ -257,7 +283,7 @@ test.describe('AC-9: Trip Details edit mode — read-only fields vs editable tim
 // =============================================================================
 
 test.describe('AC-10: Vehicle-type change refilters vehicle dropdown', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('Changing vehicle type updates the vehicle dropdown options and clears an invalid selection', async ({ page }) => {
     await mountStandardMocks(page);
@@ -305,7 +331,7 @@ test.describe('AC-10: Vehicle-type change refilters vehicle dropdown', () => {
 // =============================================================================
 
 test.describe('AC-11: Capacity inline error — inline message, not silent failure', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('Entering capacity > max shows inline validation error in the form before save', async ({ page }) => {
     await mountStandardMocks(page);
@@ -438,7 +464,7 @@ test.describe('AC-11: Capacity inline error — inline message, not silent failu
 // =============================================================================
 
 test.describe('AC-12: Seating-plan preview is read-only (pointer-events overlay)', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('Seat preview area has the pointer-events overlay that blocks clicks', async ({ page }) => {
     await mountStandardMocks(page);
@@ -495,7 +521,7 @@ test.describe('AC-12: Seating-plan preview is read-only (pointer-events overlay)
 // =============================================================================
 
 test.describe('AC-13: Driver dropdown — preselection and save', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('Driver dropdown preselects the current driver from the schedule detail', async ({ page }) => {
     await mountStandardMocks(page);
@@ -594,7 +620,7 @@ test.describe('AC-13: Driver dropdown — preselection and save', () => {
 // =============================================================================
 
 test.describe('AC-14: Save success — read-only view and trip row update without reload', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test('After successful save: edit form closes; success alert visible; no full page reload', async ({ page }) => {
     let navigationCount = 0;
@@ -674,28 +700,31 @@ test.describe('AC-14: Save success — read-only view and trip row update withou
 // =============================================================================
 
 test.describe('i18n: trip-details-edit keys present in all 3 locales', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
-  test('required STAFF.SELL.TRIP_DETAIL_EDIT_* keys are present in en, th, zh', async ({ page: _page }) => {
-    const requiredKeys = [
-      'TRIP_DETAIL_EDIT_BTN',
-      'TRIP_DETAIL_EDIT_LOADING',
-      'TRIP_DETAIL_EDIT_LOAD_FAILED',
-      'TRIP_DETAIL_ROUTE',
-      'TRIP_DETAIL_DATE',
-      'TRIP_DETAIL_EDIT_TIME',
-      'TRIP_DETAIL_EDIT_VEHICLE_TYPE',
-      'TRIP_DETAIL_EDIT_VEHICLE',
-      'TRIP_DETAIL_EDIT_CAPACITY',
-      'TRIP_DETAIL_EDIT_SEAT_PLAN',
-      'TRIP_DETAIL_EDIT_SEAT_PREVIEW',
-      'TRIP_DETAIL_EDIT_DRIVER',
-      'TRIP_DETAIL_SAVE_BTN',
-      'TRIP_DETAIL_CANCEL_BTN',
-      'TRIP_DETAIL_SAVE_SUCCESS',
-      'TRIP_DETAIL_ERR_CAPACITY_MAX',
-      'TRIP_DETAIL_ERR_CAPACITY_BELOW_OCCUPIED',
-    ];
+  test('every STAFF.SELL.TRIP_DETAIL* key the app renders exists in en, th, zh', async ({ page: _page }) => {
+    // OBRS-618: this list used to be hand-maintained, and it had drifted in BOTH
+    // directions — it demanded `TRIP_DETAIL_EDIT_SEAT_PLAN` and
+    // `TRIP_DETAIL_EDIT_SEAT_PREVIEW`, which exist in no locale file and are referenced
+    // nowhere in src/app (the seat-preview UI labels its section differently), while
+    // silently not checking five keys the templates really do render
+    // (`*_CAPACITY_HINT`, `*_CAPACITY_PH`, `*_DRIVER_PH`, `*_NO_VEHICLES`, `*_TIME_PH`,
+    // `*_VEHICLE_PH`, `*_VEHICLE_TYPE_PH`, `TRIP_DETAIL_SAVING`). Nobody noticed because
+    // the spec sat in the GATE-BLOCKED lane, whose runs are expected to be partly red.
+    //
+    // Deriving the set from the source instead means the assertion is the invariant that
+    // actually matters — *a label the UI renders has a translation in every locale* — and
+    // it cannot drift, because adding a key to a template adds it to this check.
+    const componentDir = path.resolve(__dirname, '../../src/app/modules/staff');
+    const requiredKeys = [...new Set(collectTranslateKeys(componentDir))].sort();
+
+    // A regex that quietly stops matching is indistinguishable from a clean result, and
+    // the whole check would pass vacuously. 22 keys were in use when this was written.
+    expect(
+      requiredKeys.length,
+      'expected to find the STAFF.SELL.TRIP_DETAIL* keys the staff templates render — ' +
+        'finding none would make this test assert nothing'
+    ).toBeGreaterThanOrEqual(20);
 
     // Read directly from the frontend's public i18n files (avoids SIT backend proxy)
     const i18nDir = path.resolve(__dirname, '../../public/i18n');
@@ -716,3 +745,31 @@ test.describe('i18n: trip-details-edit keys present in all 3 locales', () => {
     }
   });
 });
+
+/**
+ * Every `STAFF.SELL.TRIP_DETAIL*` key referenced by a staff template or component, found
+ * by walking the source. Templates and TS both, because `TRIP_DETAIL_EDIT_LOAD_FAILED` is
+ * only ever reached through `translate.instant(...)` in a component — a template-only
+ * scan would have missed it, and missing a key is the failure mode this test exists for.
+ */
+function collectTranslateKeys(dir: string): string[] {
+  const KEY_PATTERN = /STAFF\.SELL\.(TRIP_DETAIL[A-Z_]*)/g;
+  const found: string[] = [];
+
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      found.push(...collectTranslateKeys(full));
+      continue;
+    }
+    // `.spec.ts` excluded on purpose: a unit test may reference a key it also stubs, and
+    // a key that only a test names is not a label any user ever sees.
+    if (!/\.(html|ts)$/.test(entry.name) || entry.name.endsWith('.spec.ts')) continue;
+
+    const source = fs.readFileSync(full, 'utf-8');
+    for (const match of source.matchAll(KEY_PATTERN)) {
+      found.push(match[1]);
+    }
+  }
+  return found;
+}

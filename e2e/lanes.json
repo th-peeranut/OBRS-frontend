@@ -2,7 +2,7 @@
   "$comment": "OBRS-602. The declared partition of the Playwright suite. Enforced by scripts/check-e2e-lanes.mjs; explained in docs/e2e-lanes.md. A spec belongs to exactly one lane, and the lane says what the spec needs to be TRUE, not what it happens to run under today.",
   "lanes": {
     "GATE": "Hermetic. Intercepts every call it makes, so it needs no backend, no seeded data and no external service. This is the only lane that is a merge gate. Run: npm run e2e:gate",
-    "GATE-BLOCKED": "Mocks all of its own API traffic but still boots with a session minted from live SIT by e2e/global-setup.ts. One synthetic storageState away from GATE; until then it is as fragile as SIT.",
+    "GATE-BLOCKED": "Mocks all of its own API traffic but still boots with a session minted from live SIT by e2e/global-setup.ts -- as fragile as SIT despite needing nothing from it. EMPTY since OBRS-618 moved all four members into GATE via e2e/support/gate-admin-session.ts, and that is the intended steady state: a spec parked here should leave again, not settle.",
     "SIT-LIVE": "Deliberately hits the deployed SIT backend, per docs/adr/0001-admin-e2e-hits-real-sit-backend.md -- mocking would defeat the point, which is catching contract drift. Not a gate: shared mutable environment.",
     "OWN-DB": "Needs booking/report states that can only exist by construction, so it provisions its own database. See playwright.local.config.ts for the reasoning. Never runnable against SIT.",
     "CAPTURE": "Not a test. A screenshot/evidence script kept for reproducing card artefacts. Asserts little and is not expected to pass unattended."
@@ -41,27 +41,27 @@
 
     {
       "spec": "focus-retention.spec.ts",
-      "lane": "GATE-BLOCKED",
-      "config": "playwright.config.ts",
-      "why": "Every endpoint it touches is fulfilled from inline constants, but it carries storageState from e2e/fixtures/admin-auth.json, which only global-setup.ts can mint by logging into live SIT."
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Every endpoint it touches is fulfilled from inline constants. OBRS-618 replaced its SIT-minted storageState with a synthetic in-browser session (e2e/support/gate-admin-session.ts); it now passes against no backend at all."
     },
     {
       "spec": "trip-details-edit.spec.ts",
-      "lane": "GATE-BLOCKED",
-      "config": "playwright.config.ts",
-      "why": "23 routes / 28 fulfils cover the backend entirely, and one test reads i18n JSON off disk. Blocked on the same SIT-minted admin storageState."
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "23 routes / 28 fulfils cover the backend entirely, and one test reads i18n JSON off disk -- no network. OBRS-618 swapped the SIT-minted storageState for the synthetic session and added an afterEach that fails by name if any authenticated call escapes its stubs."
     },
     {
       "spec": "stop-filter-route-pair.spec.ts",
-      "lane": "GATE-BLOCKED",
-      "config": "playwright.config.ts",
-      "why": "Fully stubbed walk-in schedules and segments; blocked only by the SIT-minted admin storageState."
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "Fully stubbed walk-in schedules and segments; the SIT-minted storageState was the only thing keeping it out, and OBRS-618 removed that dependency."
     },
     {
       "spec": "staff-sell-walkin.spec.ts",
-      "lane": "GATE-BLOCKED",
-      "config": "playwright.config.ts",
-      "why": "56 fulfilling routes, but its own comment records that a fake token changes behaviour, so the real SIT JWT is load-bearing here and not merely inherited."
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "56 fulfilling routes. Its comment blamed a fake token for changing behaviour; OBRS-618 checked the code and nothing in src/app decodes a JWT -- AuthService treats it as an opaque string and reads roles from a separate localStorage key. The real cause was the OBRS-535 one: an unmocked authenticated call 401s and force-logs-out, which cannot happen in a lane with no backend. Promoted only after all 42 cases passed here."
     },
 
     {

@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 49 cases, ~1.7 min, no backend. THIS is the merge gate.
+npm run e2e:gate       # 102 cases, ~2.9 min, no backend. THIS is the merge gate.
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -49,7 +49,7 @@ Two failures found while building the gate lane show what that habit was coverin
 | Lane | Needs | Gate? | Run with |
 |---|---|---|---|
 | `GATE` | nothing but a browser | **yes** | `npm run e2e:gate` |
-| `GATE-BLOCKED` | a SIT-minted admin JWT, nothing else | not yet | `npm run e2e` |
+| `GATE-BLOCKED` | a SIT-minted admin JWT, nothing else | not yet | `npm run e2e` — **empty since OBRS-618** |
 | `SIT-LIVE` | the deployed SIT backend, on purpose | no | `npm run e2e` |
 | `OWN-DB` | a database it seeds itself | no | its own config |
 | `CAPTURE` | a screenshot script, not a test | no | by hand |
@@ -94,10 +94,45 @@ as the first handler, to see which URL escaped.
 
 ### GATE-BLOCKED
 
-Mocks all of its own API traffic, but boots with a session minted from live SIT. One
-committed synthetic `storageState` away from joining the gate — except
-`staff-sell-walkin`, whose own comments record that a fake token changes behaviour, so
-its dependency on a real JWT is load-bearing rather than inherited.
+Mocks all of its own API traffic, but boots with a session minted from live SIT.
+
+**Empty since OBRS-618, and that is the point of the lane** — it exists to name a spec
+that is one dependency away from the gate, so the dependency gets removed instead of
+becoming permanent. All four members moved to `GATE`: `focus-retention`,
+`stop-filter-route-pair`, `trip-details-edit` and `staff-sell-walkin` (49 → **102**
+gated cases). If a new spec lands here, it should leave again.
+
+What actually blocked them, since the file recorded the wrong reason for two years'
+worth of reading:
+
+- **The storageState.** `test.use({ storageState: fixtures/admin-auth.json })` — a
+  gitignored file only `e2e/global-setup.ts` can mint, by logging into live SIT. The
+  replacement is `e2e/support/gate-admin-session.ts`, which seeds `auth_token` /
+  `auth_username` / `auth_roles` via `addInitScript`. Deliberately **not** a committed
+  `storageState` JSON: that keys its localStorage to an absolute `origins` entry, so it
+  would silently apply to nothing the day `E2E_GATE_PORT` changed.
+- **Not the token being fake.** `staff-sell-walkin` carried a comment saying a fake
+  token "changes behaviour", and the card that opened this work repeated it, guessing
+  that something decodes the JWT's claims. Nothing does: `AuthService.isAuthenticated()`
+  is `!!getToken()`, roles come from a separate `auth_roles` key, and no JWT decoder is
+  imported anywhere under `src/app`. The real mechanism is the OBRS-535 one — an
+  **unmocked** authenticated call 401s against SIT and `authInterceptor` force-logs-out
+  before the assertion runs — and it cannot occur in a lane with no backend to answer.
+- **Calls nobody had stubbed.** All four specs described themselves as fully mocked and
+  none of them were: `GET /private/users/me`, `/private/route-stops/{slug}`,
+  `/private/schedules/{id}`, `/private/schedules/{id}/boarding-list` (all four specs),
+  plus `/private/vehicle-types`, `/private/vehicles`, `/private/users/drivers` and
+  `/private/bookings/{id}/{tickets,payments}` in two `staff-sell-walkin` cases. Against
+  SIT they simply succeeded, so nothing ever reported them. They were found by aborting
+  every unstubbed authenticated call and **recording** it, which is what
+  `expectNoEscapedGateCalls` now asserts in `afterEach` — an abort otherwise shows up as
+  a control that never renders, i.e. a timeout pointing at the wrong thing.
+
+The shared stubs' bodies are deliberately empty rather than invented. Each consumer is
+written to tolerate no data (`getMe` maps failure to `null`; `routeStops?.data?.stops ??
+[]`; `getScheduleById`'s error branch "keeps fallback values silently"), so an empty body
+matches the state the assertions were actually written against. Fabricating plausible
+rows would put page state under those assertions that no server ever produced.
 
 ### SIT-LIVE
 
@@ -146,9 +181,9 @@ rest are per-spec.
 
 | Config | Runs | Note |
 |---|---|---|
-| `playwright.gate.config.ts` | 49 in 5 files | the merge gate; hand-written `testMatch` |
-| `playwright.config.ts` | 121 in 11 files | SIT lane, :4202; list derived from the registry |
-| `playwright.qa.config.ts` | 121 in 11 files | same lane on :4201 for when ports are contended |
+| `playwright.gate.config.ts` | 102 in 9 files | the merge gate; hand-written `testMatch` |
+| `playwright.config.ts` | 68 in 7 files | SIT lane, :4202; list derived from the registry |
+| `playwright.qa.config.ts` | 68 in 7 files | same lane on :4201 for when ports are contended |
 | `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
 | `playwright.obrs483.config.ts` | `obrs-483-open-seating` | own database + a specific backend branch |
 | `playwright.obrs433.config.ts` | `obrs-433-my-reports` | 1536×864; expects `obrs433qa` on :8080 |
@@ -168,8 +203,15 @@ without declaring what it runs, which closes the family rather than the two inst
   is not seen in the gate lane. The `html` reporter's `open: 'on-failure'` default does
   block on a server after a failing run, but it is gated on `process.stdin.isTTY` and a
   coding-agent check, so it cannot explain an agent run; both configs now use the `list`
-  reporter anyway. The remaining hypothesis is headless Chrome dying under CPU contention
-  from parallel sessions on this box, which is a measured failure mode here — untested.
+  reporter anyway. The remaining hypothesis was headless Chrome dying under CPU
+  contention from parallel sessions on this box — **and OBRS-618 observed it directly.**
+  Growing the lane from 49 to 60 cases at `workers: 3` made `b2c-critical-path` — which
+  the card never touched, and which passed in the 49-case baseline in 18.9 s — time out
+  at 60 s waiting for a navigation, twice in a row; run alone under the same config it
+  takes 7.8 s. The gate now uses `workers: 2` and the full 102 cases pass in ~2.9 min.
+  So the failure mode is real, it presents as a timeout on an unrelated spec, and the
+  first thing to suspect when the gate reds on something you did not change is the load
+  on the box — not that spec.
 - **The gate lane is not wired into CI.** Actions on this repo is a hard $0 ceiling of
   2000 minutes/month shared with the SIT deploy, so a per-push browser job is a budget
   decision for the owner. Only the free membership check runs in CI today.

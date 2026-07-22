@@ -28,11 +28,14 @@ import { defineConfig, devices } from '@playwright/test';
  *    `e2e/fixtures/admin-auth.json` (gitignored, never committed). That makes SIT a
  *    hard dependency of *every* test in that run — including the ones that mock 100%
  *    of their own traffic. A gate that a cold-starting Koyeb instance can turn red is
- *    not a gate. No spec in this lane uses `storageState` at all: the two that need a
- *    session (`route-smoke`, `report-usability-issue`) seed a fake `auth_token` into
- *    localStorage from their own `addInitScript`, so there is no auth artefact for this
- *    config to depend on. (Scrutinize OBRS-602: this paragraph previously named a
- *    committed `e2e/fixtures/gate-auth.json`, which does not exist and never did.)
+ *    not a gate. No spec in this lane uses `storageState` at all: every spec that needs
+ *    a session seeds a fake `auth_token` into localStorage from its own `addInitScript`,
+ *    so there is no auth artefact for this config to depend on. (Scrutinize OBRS-602:
+ *    this paragraph previously named a committed `e2e/fixtures/gate-auth.json`, which
+ *    does not exist and never did. OBRS-618 kept it that way deliberately — a committed
+ *    storageState file keys its localStorage to an absolute `origins` entry, so it would
+ *    silently apply to nothing the day `E2E_GATE_PORT` changed. `addInitScript` has no
+ *    such coupling; the shared helper is `e2e/support/gate-admin-session.ts`.)
  *
  * 2. The frontend is served with the DEFAULT (local) configuration, not `sit`, so
  *    `apiUrl` points at `http://localhost:8080` — where nothing is listening. This is
@@ -71,10 +74,29 @@ export default defineConfig({
     '**/report-usability-issue.spec.ts',
     '**/route-map.spec.ts',
     '**/b2c-critical-path.spec.ts',
+    // OBRS-618. These three mocked all of their own traffic from the day they were
+    // written; the only thing keeping them out was `storageState: admin-auth.json`,
+    // minted by logging into live SIT. They seed a synthetic session in-browser now
+    // (e2e/support/gate-admin-session.ts) and were admitted only after passing here —
+    // against a backend that does not exist, which is what makes membership mean
+    // something rather than being a bookkeeping edit.
+    '**/focus-retention.spec.ts',
+    '**/stop-filter-route-pair.spec.ts',
+    '**/trip-details-edit.spec.ts',
+    '**/staff-sell-walkin.spec.ts',
   ],
 
   timeout: 60_000,
-  workers: 3,
+  // OBRS-618 dropped this from 3 to 2. Growing the lane from 49 to 60 cases added three
+  // admin specs that each boot the staff shell repeatedly, and at 3 workers
+  // `b2c-critical-path` — untouched by that card, green in the 49-case baseline at 18.9s
+  // — began timing out at 60s waiting for a navigation, twice in a row. Run alone under
+  // this same config it takes 7.8s, so the cause is contention on this box, not the spec:
+  // several Claude sessions, an `ng serve`, and N headless Chromes compete for the same
+  // cores, which is the measured failure mode that set this number in the first place.
+  // A gate that reds because the machine was busy teaches people to re-run it until it
+  // is green, and a gate nobody believes is not a gate. Wall-clock cost is ~30s.
+  workers: 2,
   retries: 0,
 
   // Unconditionally, not `!!process.env.CI`. This lane IS the merge gate and it runs on

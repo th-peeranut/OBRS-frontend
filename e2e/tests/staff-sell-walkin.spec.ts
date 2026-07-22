@@ -28,9 +28,36 @@
  */
 
 import { test, expect, Page } from '@playwright/test';
-import path from 'path';
+import {
+  expectNoEscapedGateCalls,
+  seedGateAdminSession,
+  stubWalkInSellShell,
+} from '../support/gate-admin-session';
 
-const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
+/**
+ * OBRS-618: the four authenticated describes below used to open with
+ * `test.use({ storageState: fixtures/admin-auth.json })`, a file minted by logging into
+ * live SIT — so 42 fully-mocked cases were hostage to a Koyeb cold start.
+ *
+ * One of them carried a comment blaming the fake token itself for changing behaviour.
+ * That reading was wrong, and worth correcting because it is precisely what kept this
+ * spec out of the merge gate: `AuthService` never decodes the token
+ * (`isAuthenticated()` is `!!getToken()`, roles come from a separate `auth_roles`
+ * localStorage key, and nothing under `src/app` imports a JWT decoder). What actually
+ * happened is the OBRS-535 mechanism — an *unmocked* authenticated call 401s against
+ * SIT and `authInterceptor` force-logs-out before the assertion runs. In this lane
+ * there is no backend to answer 401 at all, and `stubWalkInSellShell` covers the calls
+ * that were escaping.
+ */
+const useSyntheticAdminSession = (): void => {
+  test.beforeEach(async ({ page }) => {
+    await seedGateAdminSession(page);
+    await stubWalkInSellShell(page);
+  });
+  test.afterEach(async ({ page }) => {
+    expectNoEscapedGateCalls(page);
+  });
+};
 
 // ── Endpoint matchers ─────────────────────────────────────────────────────────
 
@@ -256,7 +283,7 @@ test.describe('RA-3: Role boundaries — redirect behaviour', () => {
 // =============================================================================
 
 test.describe('Walk-in POS single-screen (authenticated)', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   // Every authenticated test gets the route stop pairs by default (selecting a
   // trip triggers a /segments fetch for pickup/drop-off + pricing). Tests that
@@ -670,9 +697,19 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     // before the async detail fetch completes, so we do not need to mock the
     // schedule-detail / vehicle-types / vehicles / drivers endpoints here.
     // Full editable-form coverage lives in trip-details-edit.spec.ts.
+    //
+    // OBRS-618: "do not need to mock" was true of the ASSERTION and false of the
+    // REQUEST — the form's `forkJoin` fired all three the moment the tab activated, and
+    // against live SIT they quietly succeeded. Empty lists keep the intent (this test
+    // asserts the form mounts, not what it is populated with) while making the claim in
+    // the comment above literally true.
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, (route) =>
       route.fulfill({ json: WALK_IN_SCHEDULES_RESP })
     );
+    const emptyList = { code: 200, message: 'OK', data: [] };
+    await page.route('**/api/private/vehicle-types', (route) => route.fulfill({ json: emptyList }));
+    await page.route('**/api/private/vehicles', (route) => route.fulfill({ json: emptyList }));
+    await page.route('**/api/private/users/drivers', (route) => route.fulfill({ json: emptyList }));
     await gotoSellPage(page);
 
     await page.locator('.trip-row').first().waitFor({ timeout: 10_000 });
@@ -799,6 +836,15 @@ test.describe('Walk-in POS single-screen (authenticated)', () => {
     });
     await page.route(PAYMENT_ENDPOINT, (route) =>
       route.fulfill({ json: PAYMENT_RESP })
+    );
+    // OBRS-618: the receipt screen this path ends on loads the booking's tickets and
+    // payments. Both were escaping to live SIT — the assertions here are about reaching
+    // /staff/sell/receipt, not about its contents, so empty lists preserve the intent.
+    await page.route('**/api/private/bookings/*/tickets', (route) =>
+      route.fulfill({ json: { code: 200, message: 'OK', data: [] } })
+    );
+    await page.route('**/api/private/bookings/*/payments', (route) =>
+      route.fulfill({ json: { code: 200, message: 'OK', data: [] } })
     );
 
     await gotoSellPage(page);
@@ -1024,7 +1070,7 @@ const MULTI_STOP_SEGMENTS_RESP = {
 // =============================================================================
 
 test.describe('Stop filter — searchable input above จาก/ถึง lists', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   test.beforeEach(async ({ page }) => {
     await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));
@@ -1200,7 +1246,7 @@ const POPULAR_SEGMENTS_RESP = {
 };
 
 test.describe('Popular stops — data-driven pinned stops (PS-a..e)', () => {
-  test.use({ storageState: ADMIN_AUTH });
+  useSyntheticAdminSession();
 
   /**
    * Navigate to /staff/sell, click the first trip, and wait for the regular stop
@@ -1396,10 +1442,12 @@ function isVisibleHighlight(bg: string): boolean {
 }
 
 test.describe('Multi-stop pickup/drop-off — selected stop is visibly highlighted', () => {
-  // Real admin storageState (like the PS-* and POS suites) — a fake token now triggers a
-  // real 401 on a non-mocked authed call, which logs the session out and redirects to
-  // /login before the stop list can render. Real auth lets the highlight assertion run.
-  test.use({ storageState: ADMIN_AUTH });
+  // This describe used to insist on the real SIT storageState, on the reading that "a
+  // fake token triggers a real 401 ... which logs the session out". The observation was
+  // right; the diagnosis pointed at the wrong half. The 401 came from the **non-mocked
+  // call**, not from the token being fake — see the header comment. Stubbing the sell
+  // page's boot traffic removes the 401, and this lane has no backend to issue one.
+  useSyntheticAdminSession();
 
   test('default + clicked From stop have a visible (non-transparent) highlight', async ({ page }) => {
     await page.route(SEGMENTS_ENDPOINT, (route) => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));

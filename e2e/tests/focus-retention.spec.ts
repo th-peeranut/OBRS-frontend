@@ -6,9 +6,12 @@
  */
 
 import { test, expect } from '@playwright/test';
-import path from 'path';
+import {
+  expectNoEscapedGateCalls,
+  seedGateAdminSession,
+  stubWalkInSellShell,
+} from '../support/gate-admin-session';
 
-const ADMIN_AUTH = path.resolve(__dirname, '../fixtures/admin-auth.json');
 const WALK_IN_SCHEDULES_ENDPOINT = '**/api/private/schedules/walk-in**';
 const SEGMENTS_ENDPOINT = '**/api/private/segments/**';
 
@@ -35,11 +38,18 @@ const MULTI_STOP_SEGMENTS_RESP = {
 };
 
 test.describe('Scrutinize: filter input focus retention during typing', () => {
-  test.use({ storageState: ADMIN_AUTH });
-
+  // OBRS-618: was `storageState: fixtures/admin-auth.json` — mintable only by logging
+  // into live SIT, which made a spec that mocks every call it issues depend on Koyeb
+  // being warm. Seeded synthetically now; see e2e/support/gate-admin-session.ts.
   test.beforeEach(async ({ page }) => {
+    await seedGateAdminSession(page);
+    await stubWalkInSellShell(page);
     await page.route(WALK_IN_SCHEDULES_ENDPOINT, route => route.fulfill({ json: WALK_IN_SCHEDULES_RESP }));
     await page.route(SEGMENTS_ENDPOINT, route => route.fulfill({ json: MULTI_STOP_SEGMENTS_RESP }));
+  });
+
+  test.afterEach(async ({ page }) => {
+    expectNoEscapedGateCalls(page);
   });
 
   test('filter input keeps focus when typing character by character (no *ngFor re-render focus loss)', async ({ page }) => {
