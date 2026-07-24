@@ -47,6 +47,12 @@
     requiredRole="owner"
     [params]="{ from: store.range.from, to: store.range.to }"
   ></app-export-button>
+
+  <app-export-button
+    datasetKey="revenue-per-vehicle"
+    requiredRole="owner"
+    [params]="{ from: store.range.from, to: store.range.to }"
+  ></app-export-button>
 </section>
 
 <!-- Invalid range (client guard) or fetch error: the message REPLACES the tiles
