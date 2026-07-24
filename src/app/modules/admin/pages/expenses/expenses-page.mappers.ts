@@ -102,7 +102,11 @@ export function toExpenseVehicleOptions(vehicles: AdminVehicleDto[], centralLabe
   ];
 }
 
-function vehicleIdentifier(vehicle: AdminVehicleDto): string {
+/** The human-readable vehicle identifier (`[vehicleNumber, numberPlate]`
+ * joined, falling back to `#id`). Exported so the page's vehicle FILTER
+ * option list (§6.2) reuses this exact formula instead of re-inlining it —
+ * keeping the form-dropdown and filter-dropdown labels from drifting. */
+export function vehicleIdentifier(vehicle: AdminVehicleDto): string {
   return [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') || `#${vehicle.id}`;
 }
 

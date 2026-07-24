@@ -15,6 +15,7 @@ import {
   toExpenseCategoryOptions,
   toExpenseRow,
   toExpenseVehicleOptions,
+  vehicleIdentifier,
 } from './expenses-page.mappers';
 
 /**
@@ -246,7 +247,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     this.vehicleFilterOptions = [
       ...this.rawVehicles.map((vehicle) => ({
         code: String(vehicle.id),
-        label: [vehicle.vehicleNumber, vehicle.numberPlate].filter(Boolean).join(' / ') || `#${vehicle.id}`,
+        label: vehicleIdentifier(vehicle),
       })),
       {
         code: VEHICLE_CENTRAL_SENTINEL,
