@@ -174,7 +174,6 @@
                       <tr>
                         <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_STATUS' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
-                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_COLLECTED' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_REFUNDED' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_RETAINED' | translate }}</th>
                       </tr>
@@ -183,14 +182,13 @@
                       <tr *ngFor="let row of detail.live.notTravelled.byStatus; trackBy: trackByNotTravelledKey">
                         <td>{{ notTravelledStatusLabel(row.key) }}</td>
                         <td>{{ row.ticketCount }}</td>
-                        <td>{{ formatMoney(row.collectedAmount, detail.currency) }}</td>
                         <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
                         <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
                           {{ formatMoney(row.retainedAmount, detail.currency) }}
                         </td>
                       </tr>
                       <tr *ngIf="detail.live.notTravelled.byStatus.length === 0" class="admin-empty-row">
-                        <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                        <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -206,7 +204,6 @@
                       <tr>
                         <th>{{ 'ADMIN.SETTLEMENTS.COL.METHOD' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
-                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_COLLECTED' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_REFUNDED' | translate }}</th>
                         <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_RETAINED' | translate }}</th>
                       </tr>
@@ -215,14 +212,13 @@
                       <tr *ngFor="let row of detail.live.notTravelled.byMethod; trackBy: trackByNotTravelledKey">
                         <td>{{ methodLabel(row.key) }}</td>
                         <td>{{ row.ticketCount }}</td>
-                        <td>{{ formatMoney(row.collectedAmount, detail.currency) }}</td>
                         <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
                         <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
                           {{ formatMoney(row.retainedAmount, detail.currency) }}
                         </td>
                       </tr>
                       <tr *ngIf="detail.live.notTravelled.byMethod.length === 0" class="admin-empty-row">
-                        <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                        <td colspan="4">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
                       </tr>
                     </tbody>
                   </table>

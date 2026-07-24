@@ -1197,7 +1197,6 @@
         "BY_STATUS": "按状态",
         "BY_METHOD": "按支付方式",
         "COL_STATUS": "状态",
-        "COL_COLLECTED": "已收",
         "COL_REFUNDED": "已退",
         "COL_RETAINED": "留存",
         "CASH_NOTE": "只有现金会真正离开钱箱。通过银行卡或网关退款不会减少需要上交的现金。",

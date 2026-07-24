@@ -1,7 +1,11 @@
 @import "../../../../../../styles/variables.scss";
 
 .settlement-detail-modal {
-  max-width: 640px;
+  // OBRS-670: widened from 640 → 720 (the `.admin-modal` ceiling) so the
+  // not-travelled breakdown's Refunded + Retained money columns fit without the
+  // Retained figure — where a negative over-refund shows — sliding under the
+  // horizontal-scroll edge.
+  max-width: 720px;
   width: 100%;
 }
 
