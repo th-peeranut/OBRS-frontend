@@ -418,6 +418,7 @@
       "PROMOTIONS": "促销活动",
       "USABILITY_REPORTS": "可用性报告",
       "REPORTS": "报告",
+      "REVENUE_ANALYTICS": "收入分析",
       "SETTLEMENTS": "分账结算",
       "EOD_SALES_REPORT": "每日销售报告",
       "REMINDER_CONFIG": "提醒时间设置",
@@ -1107,6 +1108,19 @@
         "LINK_TEXT": "重复于 #{{id}}",
         "LINK_ARIA": "打开原始报告 #{{id}}",
         "COUNT_BADGE": "{{count}} 个重复报告"
+      }
+    },
+    "REVENUE_ANALYTICS": {
+      "SUBTITLE": "指定日期范围内的净收入总额、趋势及与上一周期的对比。",
+      "LOAD_FAILED": "无法加载收入分析，请重试。",
+      "TREND_TITLE": "每日净收入",
+      "VS_PREV": "对比上一周期",
+      "CHANGE_VS_PREV": "{{pct}} 对比上一周期",
+      "CHANGE_NA": "无上一周期数据",
+      "TILE": {
+        "NET": "净收入",
+        "PAID": "已收款",
+        "REFUNDED": "已退款"
       }
     },
     "REPORTS": {

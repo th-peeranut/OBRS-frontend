@@ -74,8 +74,17 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 <!-- contract-request
 card: OBRS-151
-status: open
+status: partially-resolved
+resolved: 2026-07-24 (foundation increment)
 -->
+
+> **PARTIALLY RESOLVED 2026-07-24.** The **foundation** of this endpoint now exists and is documented:
+> backend `ao/obrs-151-revenue-analytics` `57a7cea6` ships `GET /api/private/admin/reports/revenue-analytics`
+> with **totals + daily net-revenue trend + period-over-period** (server-computed `netBarPct`/`netChangePct`),
+> built on the already-IT-covered `findDailyRevenue` query (ReportService +5 unit tests, 49/49 green). The
+> frontend page consuming it shipped on `ao/revenue-analytics-obrs151` (interface/service/store/page/chart/
+> i18n/route/nav + specs; ci-smoke green). **Still OPEN:** the **by-route** and **by-payment-method**
+> breakdowns below — they need their own native aggregation queries and are the next increment.
 
 **Affected endpoint**: `GET /api/private/admin/reports/revenue-analytics?from&to` — **NEW, does not exist yet.**
 

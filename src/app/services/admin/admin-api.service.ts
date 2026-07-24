@@ -19,6 +19,7 @@ import {
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
+import { RevenueAnalyticsDto } from '../../shared/interfaces/revenue-analytics.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -1423,6 +1424,16 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<ReportsSummaryDto>(
       `${this.baseUrl}/private/admin/reports/summary`,
+      params
+    );
+  }
+
+  // OBRS-151: deep revenue analytics — totals + daily net-revenue trend +
+  // period-over-period. Same [from, to] contract as getReportsSummary.
+  getRevenueAnalytics(from: string, to: string): Observable<ResponseAPI<RevenueAnalyticsDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RevenueAnalyticsDto>(
+      `${this.baseUrl}/private/admin/reports/revenue-analytics`,
       params
     );
   }

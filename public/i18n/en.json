@@ -418,6 +418,7 @@
       "PROMOTIONS": "Promotions",
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
+      "REVENUE_ANALYTICS": "Revenue Analytics",
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
@@ -1107,6 +1108,19 @@
         "LINK_TEXT": "Duplicate of #{{id}}",
         "LINK_ARIA": "Open canonical report #{{id}}",
         "COUNT_BADGE": "{{count}} duplicate reports"
+      }
+    },
+    "REVENUE_ANALYTICS": {
+      "SUBTITLE": "Net revenue totals, trend, and period-over-period change for a date range.",
+      "LOAD_FAILED": "Could not load revenue analytics. Please try again.",
+      "TREND_TITLE": "Daily net revenue",
+      "VS_PREV": "vs previous period",
+      "CHANGE_VS_PREV": "{{pct}} versus the previous period",
+      "CHANGE_NA": "No previous-period data",
+      "TILE": {
+        "NET": "Net revenue",
+        "PAID": "Collected",
+        "REFUNDED": "Refunded"
       }
     },
     "REPORTS": {
