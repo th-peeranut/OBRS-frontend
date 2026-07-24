@@ -234,4 +234,28 @@ describe('AccountPageComponent', () => {
     component.closeCloseAccountDialog();
     expect(component.isCloseAccountDialogOpen).toBe(false);
   });
+
+  // ── OBRS-646 AC-7: phone validation must be no weaker than signup ─────────────
+  // Signup accepts only a real Thai mobile (THAI_MOBILE_PATTERN = 0[689]XXXXXXXX). Before this card
+  // the /account form used the backend DTO's looser `\d{10,15}`, which accepted numbers signup
+  // rejects. These pin the tightened rule (must-catch) without over-rejecting a real mobile.
+  describe('phone validation is no weaker than signup (AC-7)', () => {
+    it('rejects a Bangkok landline that the old \\d{10,15} rule accepted', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('0212345678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(false);
+    });
+
+    it('rejects a 15-digit international number that the old rule accepted', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('123456789012345');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(false);
+    });
+
+    it('accepts a valid Thai mobile (0[689]XXXXXXXX), same as signup', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('0812345678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(true);
+    });
+  });
 });

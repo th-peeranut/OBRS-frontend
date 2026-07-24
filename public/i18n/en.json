@@ -1546,7 +1546,7 @@
     "PROFILE_SAVE_BUTTON": "Save",
     "PROFILE_CANCEL_BUTTON": "Cancel",
     "PROFILE_FIELD_REQUIRED": "This field is required (2-50 characters).",
-    "PROFILE_PHONE_INVALID": "Enter a phone number of 10-15 digits.",
+    "PROFILE_PHONE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678)",
     "PROFILE_SAVE_SUCCESS": "Your personal details have been saved.",
     "PROFILE_SAVE_ERROR_PHONE_CONFLICT": "That phone number is already used by another account.",
     "PROFILE_SAVE_ERROR_GENERIC": "Could not save. Please try again.",

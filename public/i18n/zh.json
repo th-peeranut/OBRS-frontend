@@ -1546,7 +1546,7 @@
     "PROFILE_SAVE_BUTTON": "保存",
     "PROFILE_CANCEL_BUTTON": "取消",
     "PROFILE_FIELD_REQUIRED": "此项为必填（2-50 个字符）。",
-    "PROFILE_PHONE_INVALID": "请输入 10-15 位数字的电话号码。",
+    "PROFILE_PHONE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678）",
     "PROFILE_SAVE_SUCCESS": "已保存您的个人资料。",
     "PROFILE_SAVE_ERROR_PHONE_CONFLICT": "该电话号码已被其他账户使用。",
     "PROFILE_SAVE_ERROR_GENERIC": "保存失败，请重试。",

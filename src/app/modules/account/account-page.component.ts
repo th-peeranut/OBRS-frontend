@@ -7,6 +7,7 @@ import { AlertService } from '../../shared/services/alert.service';
 import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
+import { THAI_MOBILE_PATTERN } from '../../shared/constants/thai-msisdn';
 
 /**
  * Minimal customer identity-settings page (OBRS-84). Guard/route shape is
@@ -58,15 +59,18 @@ export class AccountPageComponent implements OnInit {
     private readonly alertService: AlertService,
     private readonly translate: TranslateService
   ) {
-    // Mirrors the backend `UserProfileUpdateReqDto` constraints (2-50 chars, phone 10-15 digits)
-    // so the form rejects what the server would reject, instead of discovering it as a 400 with no
-    // field attached to it.
+    // Name fields mirror the backend `UserProfileUpdateReqDto` (2-50 chars). Phone uses
+    // THAI_MOBILE_PATTERN - the SAME rule the signup form enforces - NOT the backend DTO's looser
+    // `\d{10,15}`: OBRS-646 AC-7 requires profile validation to be no weaker than signup, and
+    // signup only accepts a real Thai mobile (0[689]XXXXXXXX). The canonical stored form is exactly
+    // this shape (OBRS-409) and is a strict subset of what the server accepts, so nothing the server
+    // would have taken is rejected here.
     this.profileForm = this.fb.group({
       title: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
-      phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
+      phoneNumber: ['', [Validators.required, Validators.pattern(THAI_MOBILE_PATTERN)]],
     });
   }
 
