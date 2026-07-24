@@ -56,7 +56,8 @@
   [isFetching]="isDetailFetching"
   [isConfirming]="isConfirming"
   [fetchError]="detailFetchError"
+  [handoverCandidates]="handoverCandidates"
   (closed)="closeDetail()"
-  (confirmRequested)="requestConfirm()"
+  (confirmRequested)="requestConfirm($event)"
   (retryFetch)="retryFetch()"
 ></app-settlement-detail-modal>

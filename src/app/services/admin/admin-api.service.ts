@@ -24,6 +24,7 @@ import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
+  SettlementConfirmPayload,
   SettlementPendingPageDto,
   SettlementScheduleDetailDto,
 } from '../../shared/interfaces/settlement.interface';
@@ -1438,11 +1439,15 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-671: the confirm body is now REQUIRED and carries the counted cash,
+  // who handed it over, and a reason only when the count doesn't reconcile.
+  // The old optional `acknowledgedTotalAmount` guard (and its
+  // `409 SETTLEMENT_AMOUNT_MISMATCH`) is retired — sending the stale shape now
+  // gets `400 VALIDATION_FAILED` from the backend.
   confirmSettlement(
     id: number,
-    acknowledgedTotalAmount?: string
+    payload: SettlementConfirmPayload
   ): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
-    const payload = acknowledgedTotalAmount !== undefined ? { acknowledgedTotalAmount } : {};
     return this.postRequest<SettlementScheduleDetailDto>(
       `${this.baseUrl}/private/settlements/schedules/${id}/confirm`,
       payload

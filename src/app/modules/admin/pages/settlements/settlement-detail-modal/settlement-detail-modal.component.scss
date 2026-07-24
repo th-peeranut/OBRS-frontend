@@ -70,3 +70,37 @@
   color: var(--admin-danger-fg);
   font-weight: 700;
 }
+
+// ── OBRS-671: cash sign-off form ─────────────────────────────────────────
+.settlement-signoff-title {
+  margin-bottom: 0.5rem;
+}
+
+.settlement-field {
+  margin-top: 0.75rem;
+}
+
+.settlement-field-label {
+  display: block;
+  color: $text-lightgrey;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.settlement-field-input {
+  width: 100%;
+}
+
+.settlement-field-help {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-field-error {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-reconcile {
+  margin-top: 0.75rem;
+}

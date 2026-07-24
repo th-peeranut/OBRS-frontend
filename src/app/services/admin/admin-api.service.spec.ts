@@ -357,26 +357,41 @@ describe('AdminApiService', () => {
     });
   });
 
+  // OBRS-671: the confirm body is now REQUIRED — counted cash + hander (+ a
+  // reason only when the count doesn't reconcile). The old optional
+  // `acknowledgedTotalAmount` guard is retired.
   describe('confirmSettlement', () => {
-    it('issues a POST to /api/private/settlements/schedules/{id}/confirm with the acknowledged amount', () => {
-      service.confirmSettlement(42, '1950.00').subscribe();
+    it('issues a POST to /api/private/settlements/schedules/{id}/confirm with the counted cash + hander body', () => {
+      service
+        .confirmSettlement(42, { countedCashAmount: '480.00', handedOverBy: 7 })
+        .subscribe();
 
       const req = httpMock.expectOne(
         `${environment.apiUrl}/api/private/settlements/schedules/42/confirm`
       );
       expect(req.request.method).toBe('POST');
-      expect(req.request.body).toEqual({ acknowledgedTotalAmount: '1950.00' });
+      expect(req.request.body).toEqual({ countedCashAmount: '480.00', handedOverBy: 7 });
 
       req.flush({ code: 200, message: 'OK', data: null });
     });
 
-    it('posts an empty body when no acknowledged amount is given', () => {
-      service.confirmSettlement(42).subscribe();
+    it('includes the discrepancyReason when the drawer does not reconcile', () => {
+      service
+        .confirmSettlement(42, {
+          countedCashAmount: '460.00',
+          handedOverBy: 7,
+          discrepancyReason: 'ขาด 20',
+        })
+        .subscribe();
 
       const req = httpMock.expectOne(
         `${environment.apiUrl}/api/private/settlements/schedules/42/confirm`
       );
-      expect(req.request.body).toEqual({});
+      expect(req.request.body).toEqual({
+        countedCashAmount: '460.00',
+        handedOverBy: 7,
+        discrepancyReason: 'ขาด 20',
+      });
 
       req.flush({ code: 200, message: 'OK', data: null });
     });
