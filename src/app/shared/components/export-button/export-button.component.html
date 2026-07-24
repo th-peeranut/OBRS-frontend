@@ -13,7 +13,7 @@
       class="material-symbols-outlined admin-loading-spinner export-button-spinner"
       aria-hidden="true"
     >sync</span>
-    <span>{{ (loading ? 'COMMON.EXPORT.IN_PROGRESS' : 'COMMON.EXPORT.BUTTON_LABEL') | translate }}</span>
+    <span>{{ (loading ? 'COMMON.EXPORT.IN_PROGRESS' : (label || 'COMMON.EXPORT.BUTTON_LABEL')) | translate }}</span>
     <span class="material-symbols-outlined">expand_more</span>
   </button>
   <p-menu #menu [popup]="true" [model]="menuItems" appendTo="body"></p-menu>

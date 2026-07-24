@@ -116,4 +116,23 @@ describe('ExportButtonComponent', () => {
 
     expect(exportServiceSpy.export).toHaveBeenCalledTimes(1);
   });
+
+  // OBRS-668 (scrutinize follow-up): `label` is optional so every existing call
+  // site (no [label] bound) stays byte-identical — falls back to the generic key.
+  it('falls back to the generic COMMON.EXPORT.BUTTON_LABEL key when no label is provided', () => {
+    setup(true);
+    fixture.detectChanges();
+
+    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(2)');
+    expect(labelSpan.textContent.trim()).toBe('COMMON.EXPORT.BUTTON_LABEL');
+  });
+
+  it('uses the provided label key instead of the generic default', () => {
+    setup(true);
+    component.label = 'ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE';
+    fixture.detectChanges();
+
+    const labelSpan = fixture.nativeElement.querySelector('button.export-button-trigger > span:nth-child(2)');
+    expect(labelSpan.textContent.trim()).toBe('ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE');
+  });
 });

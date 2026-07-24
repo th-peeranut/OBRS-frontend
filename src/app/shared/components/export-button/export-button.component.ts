@@ -37,6 +37,11 @@ export class ExportButtonComponent implements OnInit, OnDestroy {
   @Input() datasetKey!: string;
   @Input() requiredRole!: string;
   @Input() params: Record<string, string> = {};
+  // Optional i18n key override for the trigger label — lets two buttons on
+  // the same screen (e.g. Reports' revenue-daily + revenue-per-vehicle) read
+  // as distinct. Omitting it keeps every existing call site byte-identical:
+  // falls back to the generic COMMON.EXPORT.BUTTON_LABEL key.
+  @Input() label?: string;
 
   protected loading = false;
   protected canExport = false;

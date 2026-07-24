@@ -1113,6 +1113,8 @@
       "SUBTITLE": "Bookings, tickets sold, occupancy, and revenue for a date range.",
       "FILTER_FROM": "From",
       "FILTER_TO": "To",
+      "EXPORT_REVENUE_DAILY": "Daily revenue",
+      "EXPORT_REVENUE_PER_VEHICLE": "Revenue per vehicle",
       "TILE": {
         "BOOKINGS": "Bookings",
         "TICKETS_SOLD": "Tickets Sold",

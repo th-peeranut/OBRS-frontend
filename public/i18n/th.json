@@ -1113,6 +1113,8 @@
       "SUBTITLE": "จำนวนการจอง ตั๋วที่ขาย อัตราการเข้าใช้ที่นั่ง และรายได้ ตามช่วงวันที่",
       "FILTER_FROM": "จากวันที่",
       "FILTER_TO": "ถึงวันที่",
+      "EXPORT_REVENUE_DAILY": "รายได้รายวัน",
+      "EXPORT_REVENUE_PER_VEHICLE": "รายได้ต่อคัน",
       "TILE": {
         "BOOKINGS": "การจอง",
         "TICKETS_SOLD": "ตั๋วที่ขาย",

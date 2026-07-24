@@ -1113,6 +1113,8 @@
       "SUBTITLE": "指定日期范围内的预订数、售出票数、座位使用率和收入。",
       "FILTER_FROM": "起始日期",
       "FILTER_TO": "结束日期",
+      "EXPORT_REVENUE_DAILY": "每日营收",
+      "EXPORT_REVENUE_PER_VEHICLE": "每车营收",
       "TILE": {
         "BOOKINGS": "预订数",
         "TICKETS_SOLD": "售出票数",
