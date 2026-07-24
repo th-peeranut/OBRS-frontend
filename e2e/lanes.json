@@ -68,7 +68,13 @@
       "spec": "admin-critical-paths.spec.ts",
       "lane": "SIT-LIVE",
       "config": "playwright.config.ts",
-      "why": "The spec ADR-0001 was written for: create Vehicle / ScheduleSet / Schedules against the real backend so a malformed payload cannot pass. Note it leaves TEST-e2e-schedules-route behind on SIT by design."
+      "why": "The spec ADR-0001 was written for: create Vehicle / ScheduleSet / Schedules against the real backend so a malformed payload cannot pass. OBRS-617 added e2e/support/sit-sweep.ts, called in beforeAll (self-heal) and afterAll (leave zero) -- it no longer leaves TEST- litter behind on SIT."
+    },
+    {
+      "spec": "obrs-617-sit-sweep.spec.ts",
+      "lane": "SIT-LIVE",
+      "config": "playwright.obrs617.config.ts",
+      "why": "OBRS-617 AC-4. Purely API-driven: seeds a TEST- route + ScheduleSet on the real backend, runs sweepSitTestLitter(), and asserts both are gone. MUST use its own config -- it has no page.goto, so it needs no webServer/globalSetup, and riding playwright.config.ts would drag the ng-serve build that a fresh worktree cannot compile (OBRS-536). Mutates SIT by design, self-cleaning."
     },
     {
       "spec": "admin-unlock-account.spec.ts",

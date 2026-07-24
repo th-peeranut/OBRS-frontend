@@ -84,4 +84,29 @@ describe('RouteMapService', () => {
       done();
     });
   });
+
+  // OBRS-617: the guard was narrowed from /(^test[-_])|e2e/i to /^TEST-/. It must still
+  // hide the ADR TEST- fixtures, but must NOT hide a real route merely because its slug
+  // contains the substring "e2e" or starts with a lowercase "test".
+  it('getActiveRoutes hides only ^TEST- slugs, not real slugs containing "e2e"', (done) => {
+    const mockResponse = {
+      status: 'success',
+      message: 'ok',
+      data: [
+        { slug: 'chonburi_bangkok', status: 'active' },
+        { slug: 'TEST-e2e-schedules-route', status: 'active' }, // fixture — hidden
+        { slug: 'e2e-riverside', status: 'active' }, // real route, substring only — shown
+        { slug: 'test_market', status: 'active' }, // lowercase, not the TEST- prefix — shown
+      ],
+    };
+    const service = new RouteMapService(createHttpStub(mockResponse));
+    service.getActiveRoutes().subscribe((routes) => {
+      expect(routes.map((r) => r.slug)).toEqual([
+        'chonburi_bangkok',
+        'e2e-riverside',
+        'test_market',
+      ]);
+      done();
+    });
+  });
 });

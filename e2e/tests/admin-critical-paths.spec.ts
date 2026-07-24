@@ -1,9 +1,8 @@
 import { test, expect, Page } from '@playwright/test';
 import path from 'path';
+import { SIT_API, sitLogin, sweepSitTestLitter } from '../support/sit-sweep';
 
 test.use({ storageState: path.resolve(__dirname, '../fixtures/admin-auth.json') });
-
-const SIT_API = 'https://sit-obrs-backend.koyeb.app/api';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -22,16 +21,6 @@ function daysFromToday(n: number): string {
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
-}
-
-async function sitLogin(): Promise<string> {
-  const res = await fetch(`${SIT_API}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'admin@system.local', password: 'P@ssw0rd' }),
-  });
-  const json = await res.json() as { data: { accessToken: string } };
-  return json.data.accessToken;
 }
 
 // ── Vehicles ───────────────────────────────────────────────────────────────────
@@ -75,10 +64,9 @@ test.describe('Admin — Vehicles', () => {
 
 // ── Schedules ──────────────────────────────────────────────────────────────────
 
-// Fixed slug so the route persists between test runs. This avoids orphaned ScheduleSets:
-// if a test deletes the route but not its ScheduleSets, GET /api/private/schedule-set
-// returns 500 (backend JOIN fails on the missing route FK). By keeping a permanent fixture
-// route we never orphan new records. The route is created on first use and left in place.
+// `TEST-` prefix so the fixture is swept by e2e/support/sit-sweep.ts (OBRS-617) and hidden
+// by the production guard RouteMapService.isTestRoute. The route is (re)created fresh each
+// run by beforeAll and removed by afterAll, so nothing accumulates on SIT between runs.
 const E2E_ROUTE_SLUG = 'TEST-e2e-schedules-route';
 
 test.describe('Admin — Schedules', () => {
@@ -87,33 +75,37 @@ test.describe('Admin — Schedules', () => {
   test.beforeAll(async () => {
     adminToken = await sitLogin();
 
-    // Create the test route only if it does not already exist
-    const listRes = await fetch(`${SIT_API}/routes`);
-    const listJson = await listRes.json() as { data: Array<{ slug: string }> };
-    const exists = listJson.data?.some((r) => r.slug === E2E_ROUTE_SLUG);
+    // Self-heal first: remove any TEST- litter a previous run left behind (a SIT-LIVE
+    // run can fail mid-suite and skip its afterAll). Sweeping ScheduleSets before routes
+    // means we never orphan a ScheduleSet, which would 500 GET /api/private/schedule-set.
+    await sweepSitTestLitter(adminToken);
 
-    if (!exists) {
-      const createRes = await fetch(`${SIT_API}/private/routes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
-        body: JSON.stringify({
-          slug: E2E_ROUTE_SLUG,
-          status: 'active',
-          translations: [
-            { locale: 'en', label: E2E_ROUTE_SLUG, description: null },
-            { locale: 'th', label: E2E_ROUTE_SLUG, description: null },
-            { locale: 'zh', label: E2E_ROUTE_SLUG, description: null },
-          ],
-        }),
-      });
-      if (!createRes.ok) {
-        throw new Error(`Failed to seed E2E route: HTTP ${createRes.status}`);
-      }
+    // Seed the fixture route the ScheduleSet test needs. The sweep above just cleared it,
+    // so this always creates it fresh.
+    const createRes = await fetch(`${SIT_API}/private/routes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` },
+      body: JSON.stringify({
+        slug: E2E_ROUTE_SLUG,
+        status: 'active',
+        translations: [
+          { locale: 'en', label: E2E_ROUTE_SLUG, description: null },
+          { locale: 'th', label: E2E_ROUTE_SLUG, description: null },
+          { locale: 'zh', label: E2E_ROUTE_SLUG, description: null },
+        ],
+      }),
+    });
+    if (!createRes.ok) {
+      throw new Error(`Failed to seed E2E route: HTTP ${createRes.status}`);
     }
   });
 
-  // afterAll intentionally omitted: the permanent fixture route is never deleted so
-  // ScheduleSets created with it remain valid and the list endpoint never 500s from this test.
+  // Leave zero behind after a clean run (OBRS-617): delete the ScheduleSet(s) this run
+  // created and the fixture route, in FK-safe order. Best-effort — if it is skipped
+  // because the suite crashed, the next run's beforeAll sweep recovers.
+  test.afterAll(async () => {
+    await sweepSitTestLitter(adminToken);
+  });
 
   test('create ScheduleSet → verify success response', async ({ page }) => {
     // GET /api/private/schedule-set returns 500 on SIT due to orphaned records from

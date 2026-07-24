@@ -105,10 +105,18 @@ export class RouteMapService {
   }
 
   // Guard against E2E test fixtures leaking into the public direction selector.
-  // Test runs occasionally seed routes whose slug is prefixed/marked as a test
-  // (e.g. "TEST-e2e-schedules-route") and leave them active; never show those.
+  // The SIT-LIVE admin E2E lane (ADR-0001) writes routes prefixed `TEST-` to the real
+  // backend; e2e/support/sit-sweep.ts now removes them at the start and end of that run
+  // (OBRS-617). This guard stays as defense-in-depth: a `TEST-` route still exists on SIT
+  // *during* a run, when anonymous /home visitors are hitting GET /api/routes, and the
+  // sweep is best-effort (a crashed run leaves the route until the next sweep).
+  //
+  // Anchored `^TEST-` on purpose. The old pattern also matched `e2e` anywhere in a slug,
+  // which would silently hide any real route that happened to contain the substring
+  // `e2e`. Test fixtures follow the ADR's `TEST-{runId}` convention, so the prefix alone
+  // is the exact, non-overreaching signal.
   private isTestRoute(slug: string | undefined | null): boolean {
-    return /(^test[-_])|e2e/i.test(String(slug ?? ''));
+    return /^TEST-/.test(String(slug ?? ''));
   }
 
   private isActiveStatus(status: RouteStatusValue | undefined | null): boolean {
