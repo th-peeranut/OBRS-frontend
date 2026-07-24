@@ -61,6 +61,37 @@ export interface SettlementChannelBreakdownDto {
   remote: boolean;
 }
 
+/**
+ * OBRS-670 — one not-travelled bucket (a cancelled/no-show ticket that still
+ * received money). Used for BOTH the `byMethod` and `byStatus` breakdowns of
+ * `live.notTravelled`: identical shape, only `key`'s meaning differs (a payment
+ * method slug vs. `cancelled`/`no_show`). `retainedAmount = collected - refunded`
+ * and CAN be negative when a booking was over-refunded (never clamped — see
+ * `docs/api/settlements.md`).
+ */
+export interface SettlementNotTravelledBucketDto {
+  key: string;
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+}
+
+/**
+ * `live.notTravelled` (OBRS-670) — always present on a live round, zeroed (with
+ * empty breakdowns) when the round has no cancelled/no-show tickets. Its
+ * `retainedAmount` is ALREADY folded into `live.totalAmount`; the UI must read
+ * as "included", never "add this on top".
+ */
+export interface SettlementLiveNotTravelledDto {
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+  byMethod: SettlementNotTravelledBucketDto[];
+  byStatus: SettlementNotTravelledBucketDto[];
+}
+
 /** `SettlementLiveRespDto` — always present, zeroed (never omitted) at zero tickets. */
 export interface SettlementLiveDto {
   totalAmount: string;
@@ -70,6 +101,7 @@ export interface SettlementLiveDto {
   byChannel: SettlementChannelBreakdownDto[];
   onSiteTotal: string;
   agencyTotal: string;
+  notTravelled: SettlementLiveNotTravelledDto;
 }
 
 /**
@@ -91,6 +123,22 @@ export interface SettlementSettledChannelDto {
   amount: string;
 }
 
+/**
+ * Frozen `settled.notTravelled` (OBRS-670) — the four totals only, NO
+ * per-method/per-status breakdown (the snapshot stores amounts, not buckets).
+ *
+ * It is **`null` for any round settled before OBRS-670 shipped** — read that as
+ * UNKNOWN, never as zero: those rounds were signed off against a total that had
+ * already dropped their cancelled tickets entirely. The UI shows "no data" for
+ * `null`, and shows `0.00` only when the field is genuinely present and zero.
+ */
+export interface SettlementSettledNotTravelledDto {
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+}
+
 /** `SettlementSettledRespDto` — `null` while the round is still PENDING. */
 export interface SettlementSettledDto {
   totalAmount: string;
@@ -99,6 +147,55 @@ export interface SettlementSettledDto {
   settledBy: number;
   settledByName: string;
   settledAt: string;
+  notTravelled: SettlementSettledNotTravelledDto | null;
+  /**
+   * OBRS-671 — the FROZEN cash reconciliation recorded at sign-off:
+   * `countedAmount` = physical cash counted in the drawer;
+   * `expectedCashAmount` = the round's expected cash (the `cash` method
+   * bucket, OBRS-670-corrected); `discrepancyAmount` = signed `counted −
+   * expectedCash` (NEGATIVE = short, un-clamped, same as `retainedAmount`);
+   * `discrepancyReason` = present only for a non-zero discrepancy;
+   * `handedOverBy`/`handedOverByName` = the person who handed the cash over
+   * (distinct from `settledBy`/`settledByName`, the OWNER signing off).
+   *
+   * ALL SIX are **`null` for any round settled before OBRS-671 shipped** —
+   * read that as UNKNOWN (show "no data"), never as `0.00`. This is a CASH
+   * figure, distinct from `SettlementDiscrepancyDto` below (a whole-round
+   * drift between the frozen total and the current live total).
+   */
+  countedAmount: string | null;
+  expectedCashAmount: string | null;
+  discrepancyAmount: string | null;
+  discrepancyReason: string | null;
+  handedOverBy: number | null;
+  handedOverByName: string | null;
+}
+
+/**
+ * OBRS-671 — request body for `POST /settlements/schedules/{id}/confirm`.
+ * The body is now REQUIRED (a breaking change from the old optional
+ * `acknowledgedTotalAmount` stale-screen guard, which is retired):
+ * `countedCashAmount` (the physical cash counted, a decimal string) and
+ * `handedOverBy` (the user id of whoever closed the shift) are both
+ * mandatory; `discrepancyReason` is required by the server ONLY when the
+ * counted cash does not reconcile against the round's expected cash, so it
+ * is omitted otherwise.
+ */
+export interface SettlementConfirmPayload {
+  countedCashAmount: string;
+  handedOverBy: number;
+  discrepancyReason?: string;
+}
+
+/**
+ * OBRS-671 — one selectable "handed over by" candidate for the sign-off
+ * modal's picker (a salesperson at the sales point). Derived from
+ * `AdminUserDto` (id + resolved full name) by the smart page, so the dumb
+ * modal never has to know the user-management DTO shape.
+ */
+export interface SettlementHandoverCandidate {
+  id: number;
+  name: string;
 }
 
 /**

@@ -1,7 +1,11 @@
 @import "../../../../../../styles/variables.scss";
 
 .settlement-detail-modal {
-  max-width: 640px;
+  // OBRS-670: widened from 640 → 720 (the `.admin-modal` ceiling) so the
+  // not-travelled breakdown's Refunded + Retained money columns fit without the
+  // Retained figure — where a negative over-refund shows — sliding under the
+  // horizontal-scroll edge.
+  max-width: 720px;
   width: 100%;
 }
 
@@ -48,4 +52,55 @@
 
 .settlement-detail-error {
   text-align: center;
+}
+
+// OBRS-670 — cancelled / no-show block.
+.settlement-nt-hint {
+  font-size: 0.8rem;
+  margin: 0.15rem 0 0.5rem;
+}
+
+.settlement-nt-unknown {
+  font-style: italic;
+}
+
+// AC 5: an over-refunded booking yields a negative retained figure — never
+// clamped server-side, and made to stand out here rather than blend in.
+.settlement-nt-negative {
+  color: var(--admin-danger-fg);
+  font-weight: 700;
+}
+
+// ── OBRS-671: cash sign-off form ─────────────────────────────────────────
+.settlement-signoff-title {
+  margin-bottom: 0.5rem;
+}
+
+.settlement-field {
+  margin-top: 0.75rem;
+}
+
+.settlement-field-label {
+  display: block;
+  color: $text-lightgrey;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.settlement-field-input {
+  width: 100%;
+}
+
+.settlement-field-help {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-field-error {
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+.settlement-reconcile {
+  margin-top: 0.75rem;
 }
