@@ -36,6 +36,15 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
       ticketCount: 4,
       byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],
       byChannel: [{ channel: 'walk_in', amount: '600.00', ticketCount: 2, remote: false }],
+      // OBRS-670: always present on a live round, zeroed when none.
+      notTravelled: {
+        ticketCount: 0,
+        collectedAmount: '0.00',
+        refundedAmount: '0.00',
+        retainedAmount: '0.00',
+        byMethod: [],
+        byStatus: [],
+      },
     },
     settled: null,
     discrepancy: null,
@@ -68,6 +77,14 @@ describe('SettlementDetailModalComponent', () => {
         ticketCount: 0,
         byMethod: [],
         byChannel: [],
+        notTravelled: {
+          ticketCount: 0,
+          collectedAmount: '0.00',
+          refundedAmount: '0.00',
+          retainedAmount: '0.00',
+          byMethod: [],
+          byStatus: [],
+        },
       },
     });
     expect(component['canConfirm']).toBeTrue();
@@ -128,6 +145,82 @@ describe('SettlementDetailModalComponent', () => {
     expect(component['channelLabel']('walk_in')).toBe('ADMIN.SETTLEMENTS.CHANNEL.WALK_IN');
   });
 
+  // OBRS-670 AC 2 — cancelled/no_show map to a key, never a raw slug.
+  it('resolves not-travelled status labels via the i18n key convention', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    expect(component['notTravelledStatusLabel']('cancelled')).toBe(
+      'ADMIN.SETTLEMENTS.NOT_TRAVELLED.STATUS.CANCELLED',
+    );
+    expect(component['notTravelledStatusLabel']('no_show')).toBe(
+      'ADMIN.SETTLEMENTS.NOT_TRAVELLED.STATUS.NO_SHOW',
+    );
+  });
+
+  // OBRS-670 AC 5 — an over-refunded booking's retained figure is negative and
+  // must be flagged (never zero-clamped).
+  it('isNegativeMoney flags only a genuinely negative retained amount', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    expect(component['isNegativeMoney']('-40.00')).toBeTrue();
+    expect(component['isNegativeMoney']('0.00')).toBeFalse();
+    expect(component['isNegativeMoney']('510.00')).toBeFalse();
+  });
+
+  // OBRS-670 — not-travelled buckets key on `key` (a method OR status slug).
+  it('trackByNotTravelledKey returns the bucket key', () => {
+    const component = new SettlementDetailModalComponent(createTranslateStub());
+    expect(component['trackByNotTravelledKey'](0, { key: 'no_show' })).toBe('no_show');
+  });
+
+  // OBRS-670 AC 4 — a round settled before OBRS-670 carries settled.notTravelled
+  // === null (UNKNOWN), distinct from a present-but-zero block.
+  it('a pre-OBRS-670 settled round carries settled.notTravelled === null', () => {
+    const preFeatureSettled = makeDetail({
+      status: 'SETTLED',
+      settled: {
+        totalAmount: '1950.00',
+        byMethod: [{ method: 'cash', amount: '1950.00' }],
+        byChannel: [{ channel: 'walk_in', amount: '1950.00' }],
+        settledBy: 9,
+        settledByName: 'Owner Somchai',
+        settledAt: '2026-07-10T09:00:00+07:00',
+        notTravelled: null,
+      },
+    });
+    expect(preFeatureSettled.settled?.notTravelled).toBeNull();
+  });
+
+  // OBRS-670 — the live block always carries a notTravelled totals object.
+  it('a live round always carries live.notTravelled totals', () => {
+    const detail = makeDetail({
+      live: {
+        totalAmount: '1000.00',
+        onSiteTotal: '600.00',
+        agencyTotal: '400.00',
+        passengerCount: 4,
+        ticketCount: 4,
+        byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],
+        byChannel: [{ channel: 'walk_in', amount: '600.00', ticketCount: 2, remote: false }],
+        notTravelled: {
+          ticketCount: 3,
+          collectedAmount: '950.00',
+          refundedAmount: '440.00',
+          retainedAmount: '510.00',
+          byMethod: [
+            { key: 'cash', ticketCount: 2, collectedAmount: '650.00', refundedAmount: '200.00', retainedAmount: '450.00' },
+            { key: 'card', ticketCount: 1, collectedAmount: '300.00', refundedAmount: '240.00', retainedAmount: '60.00' },
+          ],
+          byStatus: [
+            { key: 'cancelled', ticketCount: 2, collectedAmount: '550.00', refundedAmount: '440.00', retainedAmount: '110.00' },
+            { key: 'no_show', ticketCount: 1, collectedAmount: '400.00', refundedAmount: '0.00', retainedAmount: '400.00' },
+          ],
+        },
+      },
+    });
+    expect(detail.live.notTravelled.ticketCount).toBe(3);
+    expect(detail.live.notTravelled.byStatus.map((r) => r.key)).toEqual(['cancelled', 'no_show']);
+    expect(detail.live.notTravelled.byMethod[1].retainedAmount).toBe('60.00');
+  });
+
   // OBRS-196 contract reconciliation: the settled breakdown is a THINNER
   // shape than live (amount only, no ticketCount/remote) — trackBy must
   // still work on the thin rows since the template reuses it for both.
@@ -149,6 +242,12 @@ describe('SettlementDetailModalComponent', () => {
         settledBy: 9,
         settledByName: 'Owner Somchai',
         settledAt: '2026-07-10T09:00:00+07:00',
+        notTravelled: {
+          ticketCount: 1,
+          collectedAmount: '400.00',
+          refundedAmount: '0.00',
+          retainedAmount: '400.00',
+        },
       },
       discrepancy: {
         hasDiscrepancy: false,

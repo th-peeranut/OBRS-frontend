@@ -72,6 +72,27 @@ export class SettlementDetailModalComponent {
     return this.translate.instant(`ADMIN.SETTLEMENTS.CHANNEL.${channel.toUpperCase()}`);
   }
 
+  // OBRS-670. `cancelled` / `no_show` — mapped to an i18n key, never the raw
+  // slug. Distinct from methodLabel: these are ticket dispositions, not payment
+  // methods, and AC 2 keeps them conversationally separate (part-refunded vs.
+  // 100%-forfeit) even though the maths is identical.
+  protected notTravelledStatusLabel(status: string): string {
+    return this.translate.instant(`ADMIN.SETTLEMENTS.NOT_TRAVELLED.STATUS.${status.toUpperCase()}`);
+  }
+
+  // OBRS-670 AC 5. `retainedAmount` is deliberately un-clamped server-side, so
+  // an over-refunded booking yields a negative retained figure — the template
+  // flags it (never hides or zero-clamps it).
+  protected isNegativeMoney(value: string): boolean {
+    return Number(value) < 0;
+  }
+
+  // OBRS-670. Not-travelled buckets key on `key` (a method slug or a status
+  // slug), unlike the travelled rows which key on method/channel.
+  protected trackByNotTravelledKey(_index: number, row: { key: string }): string {
+    return row.key;
+  }
+
   protected onBackdropDismiss(): void {
     this.closed.emit();
   }

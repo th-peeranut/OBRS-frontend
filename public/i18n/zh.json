@@ -1187,6 +1187,26 @@
         "LOAD_FAILED": "无法加载班次详情。",
         "RETRY": "重试"
       },
+      "NOT_TRAVELLED": {
+        "TITLE": "未乘坐的车票（取消／未到）",
+        "INCLUDED_HINT": "这些车票所留存的金额已计入上方的班次总额，无需再另行相加。",
+        "TICKET_COUNT": "车票数",
+        "COLLECTED": "已收金额",
+        "REFUNDED": "已退金额",
+        "RETAINED": "留存金额（已计入班次）",
+        "BY_STATUS": "按状态",
+        "BY_METHOD": "按支付方式",
+        "COL_STATUS": "状态",
+        "COL_COLLECTED": "已收",
+        "COL_REFUNDED": "已退",
+        "COL_RETAINED": "留存",
+        "CASH_NOTE": "只有现金会真正离开钱箱。通过银行卡或网关退款不会减少需要上交的现金。",
+        "UNKNOWN": "无数据 — 此班次在系统开始记录未乘坐车票之前已完成结算，其结算总额已剔除取消的车票。",
+        "STATUS": {
+          "CANCELLED": "取消（部分退款）",
+          "NO_SHOW": "未到（全额扣留）"
+        }
+      },
       "CONFIRM": {
         "TITLE": "确认现金交接",
         "TEXT": "确认您已收到该班次共计 {{amount}} 吗？",

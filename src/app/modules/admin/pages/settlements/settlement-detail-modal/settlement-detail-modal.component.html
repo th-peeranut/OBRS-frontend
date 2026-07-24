@@ -132,6 +132,108 @@
             </p>
           </div>
 
+          <!-- ══════ OBRS-670: cancelled / no-show tickets that still took money ══════
+               `retainedAmount` here is ALREADY folded into `live.totalAmount`
+               above — the hint stops the owner reading it as a figure to add on
+               top. Hidden entirely when the round has none. -->
+          <ng-container *ngIf="detail.live.notTravelled.ticketCount > 0">
+            <div class="mt-3 settlement-nt">
+              <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.TITLE' | translate }}</p>
+              <p class="admin-muted settlement-nt-hint">
+                {{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.INCLUDED_HINT' | translate }}
+              </p>
+
+              <div class="settlement-detail-totals">
+                <div class="settlement-detail-row">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.TICKET_COUNT' | translate }}</span>
+                  <span>{{ detail.live.notTravelled.ticketCount }}</span>
+                </div>
+                <div class="settlement-detail-row">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COLLECTED' | translate }}</span>
+                  <span>{{ formatMoney(detail.live.notTravelled.collectedAmount, detail.currency) }}</span>
+                </div>
+                <div class="settlement-detail-row">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.REFUNDED' | translate }}</span>
+                  <span>{{ formatMoney(detail.live.notTravelled.refundedAmount, detail.currency) }}</span>
+                </div>
+                <div class="settlement-detail-row">
+                  <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.RETAINED' | translate }}</span>
+                  <span
+                    class="admin-emphasis"
+                    [class.settlement-nt-negative]="isNegativeMoney(detail.live.notTravelled.retainedAmount)"
+                  >{{ formatMoney(detail.live.notTravelled.retainedAmount, detail.currency) }}</span>
+                </div>
+              </div>
+
+              <!-- By status: cancelled (part-refunded) vs no_show (100% forfeit) — AC 2. -->
+              <div class="mt-3">
+                <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.BY_STATUS' | translate }}</p>
+                <div class="admin-table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_STATUS' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_COLLECTED' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_REFUNDED' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_RETAINED' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of detail.live.notTravelled.byStatus; trackBy: trackByNotTravelledKey">
+                        <td>{{ notTravelledStatusLabel(row.key) }}</td>
+                        <td>{{ row.ticketCount }}</td>
+                        <td>{{ formatMoney(row.collectedAmount, detail.currency) }}</td>
+                        <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
+                        <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
+                          {{ formatMoney(row.retainedAmount, detail.currency) }}
+                        </td>
+                      </tr>
+                      <tr *ngIf="detail.live.notTravelled.byStatus.length === 0" class="admin-empty-row">
+                        <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- By method: only cash actually leaves the drawer — AC 3. -->
+              <div class="mt-3">
+                <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.BY_METHOD' | translate }}</p>
+                <div class="admin-table-wrap">
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th>{{ 'ADMIN.SETTLEMENTS.COL.METHOD' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.COL.TICKETS' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_COLLECTED' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_REFUNDED' | translate }}</th>
+                        <th>{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COL_RETAINED' | translate }}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr *ngFor="let row of detail.live.notTravelled.byMethod; trackBy: trackByNotTravelledKey">
+                        <td>{{ methodLabel(row.key) }}</td>
+                        <td>{{ row.ticketCount }}</td>
+                        <td>{{ formatMoney(row.collectedAmount, detail.currency) }}</td>
+                        <td>{{ formatMoney(row.refundedAmount, detail.currency) }}</td>
+                        <td [class.settlement-nt-negative]="isNegativeMoney(row.retainedAmount)">
+                          {{ formatMoney(row.retainedAmount, detail.currency) }}
+                        </td>
+                      </tr>
+                      <tr *ngIf="detail.live.notTravelled.byMethod.length === 0" class="admin-empty-row">
+                        <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <p class="admin-muted settlement-method-note">
+                  {{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.CASH_NOTE' | translate }}
+                </p>
+              </div>
+            </div>
+          </ng-container>
+
           <!-- Confirm receipt — the modal's single primary action (design-system §4). -->
           <div class="settlement-detail-actions mt-3">
             <button
@@ -201,6 +303,42 @@
             <p class="admin-muted settlement-method-note">
               {{ 'ADMIN.SETTLEMENTS.DETAIL.METHOD_NOTE' | translate }}
             </p>
+          </div>
+
+          <!-- ══════ OBRS-670: frozen not-travelled totals (no breakdown) ══════
+               `settled.notTravelled` is `null` for rounds signed off before
+               OBRS-670 — show "no data" (AC 4), never 0.00: those rounds were
+               settled against a total that had already dropped these tickets.
+               Present-but-zero rounds are hidden. -->
+          <div
+            class="mt-3 settlement-nt"
+            *ngIf="settled.notTravelled === null || settled.notTravelled.ticketCount > 0"
+          >
+            <p class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.TITLE' | translate }}</p>
+            <p class="admin-muted settlement-nt-unknown" *ngIf="settled.notTravelled === null">
+              {{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.UNKNOWN' | translate }}
+            </p>
+            <div class="settlement-detail-totals" *ngIf="settled.notTravelled as nt">
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.TICKET_COUNT' | translate }}</span>
+                <span>{{ nt.ticketCount }}</span>
+              </div>
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.COLLECTED' | translate }}</span>
+                <span>{{ formatMoney(nt.collectedAmount, detail.currency) }}</span>
+              </div>
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.REFUNDED' | translate }}</span>
+                <span>{{ formatMoney(nt.refundedAmount, detail.currency) }}</span>
+              </div>
+              <div class="settlement-detail-row">
+                <span class="settlement-detail-label">{{ 'ADMIN.SETTLEMENTS.NOT_TRAVELLED.RETAINED' | translate }}</span>
+                <span
+                  class="admin-emphasis"
+                  [class.settlement-nt-negative]="isNegativeMoney(nt.retainedAmount)"
+                >{{ formatMoney(nt.retainedAmount, detail.currency) }}</span>
+              </div>
+            </div>
           </div>
 
           <div class="settlement-detail-row mt-3">

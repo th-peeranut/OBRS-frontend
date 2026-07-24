@@ -61,6 +61,37 @@ export interface SettlementChannelBreakdownDto {
   remote: boolean;
 }
 
+/**
+ * OBRS-670 — one not-travelled bucket (a cancelled/no-show ticket that still
+ * received money). Used for BOTH the `byMethod` and `byStatus` breakdowns of
+ * `live.notTravelled`: identical shape, only `key`'s meaning differs (a payment
+ * method slug vs. `cancelled`/`no_show`). `retainedAmount = collected - refunded`
+ * and CAN be negative when a booking was over-refunded (never clamped — see
+ * `docs/api/settlements.md`).
+ */
+export interface SettlementNotTravelledBucketDto {
+  key: string;
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+}
+
+/**
+ * `live.notTravelled` (OBRS-670) — always present on a live round, zeroed (with
+ * empty breakdowns) when the round has no cancelled/no-show tickets. Its
+ * `retainedAmount` is ALREADY folded into `live.totalAmount`; the UI must read
+ * as "included", never "add this on top".
+ */
+export interface SettlementLiveNotTravelledDto {
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+  byMethod: SettlementNotTravelledBucketDto[];
+  byStatus: SettlementNotTravelledBucketDto[];
+}
+
 /** `SettlementLiveRespDto` — always present, zeroed (never omitted) at zero tickets. */
 export interface SettlementLiveDto {
   totalAmount: string;
@@ -70,6 +101,7 @@ export interface SettlementLiveDto {
   byChannel: SettlementChannelBreakdownDto[];
   onSiteTotal: string;
   agencyTotal: string;
+  notTravelled: SettlementLiveNotTravelledDto;
 }
 
 /**
@@ -91,6 +123,22 @@ export interface SettlementSettledChannelDto {
   amount: string;
 }
 
+/**
+ * Frozen `settled.notTravelled` (OBRS-670) — the four totals only, NO
+ * per-method/per-status breakdown (the snapshot stores amounts, not buckets).
+ *
+ * It is **`null` for any round settled before OBRS-670 shipped** — read that as
+ * UNKNOWN, never as zero: those rounds were signed off against a total that had
+ * already dropped their cancelled tickets entirely. The UI shows "no data" for
+ * `null`, and shows `0.00` only when the field is genuinely present and zero.
+ */
+export interface SettlementSettledNotTravelledDto {
+  ticketCount: number;
+  collectedAmount: string;
+  refundedAmount: string;
+  retainedAmount: string;
+}
+
 /** `SettlementSettledRespDto` — `null` while the round is still PENDING. */
 export interface SettlementSettledDto {
   totalAmount: string;
@@ -99,6 +147,7 @@ export interface SettlementSettledDto {
   settledBy: number;
   settledByName: string;
   settledAt: string;
+  notTravelled: SettlementSettledNotTravelledDto | null;
 }
 
 /**

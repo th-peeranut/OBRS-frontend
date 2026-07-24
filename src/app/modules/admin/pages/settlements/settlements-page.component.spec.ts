@@ -40,6 +40,14 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
       ticketCount: 4,
       byMethod: [{ method: 'cash', amount: '600.00', ticketCount: 2 }],
       byChannel: [{ channel: 'walk_in', amount: '600.00', ticketCount: 2, remote: false }],
+      notTravelled: {
+        ticketCount: 0,
+        collectedAmount: '0.00',
+        refundedAmount: '0.00',
+        retainedAmount: '0.00',
+        byMethod: [],
+        byStatus: [],
+      },
     },
     settled: null,
     discrepancy: null,
@@ -354,6 +362,14 @@ describe('SettlementsPageComponent', () => {
         ticketCount: 0,
         byMethod: [],
         byChannel: [],
+        notTravelled: {
+          ticketCount: 0,
+          collectedAmount: '0.00',
+          refundedAmount: '0.00',
+          retainedAmount: '0.00',
+          byMethod: [],
+          byStatus: [],
+        },
       },
     });
     const store = makeStoreStub(makePage([makeItem({ scheduleId: 1, liveTotalAmount: '0.00' })]));
@@ -382,6 +398,7 @@ describe('SettlementsPageComponent', () => {
         settledBy: 9,
         settledByName: 'Owner',
         settledAt: '2026-07-10T09:00:00+07:00',
+        notTravelled: null,
       },
     });
     const adminApi = {

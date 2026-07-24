@@ -1187,6 +1187,26 @@
         "LOAD_FAILED": "Unable to load round details.",
         "RETRY": "Retry"
       },
+      "NOT_TRAVELLED": {
+        "TITLE": "Not-travelled Tickets (Cancelled / No-show)",
+        "INCLUDED_HINT": "The amount retained from these tickets is already included in the round total above — do not add it on top.",
+        "TICKET_COUNT": "Tickets",
+        "COLLECTED": "Collected",
+        "REFUNDED": "Refunded",
+        "RETAINED": "Retained (in round total)",
+        "BY_STATUS": "By Status",
+        "BY_METHOD": "By Payment Method",
+        "COL_STATUS": "Status",
+        "COL_COLLECTED": "Collected",
+        "COL_REFUNDED": "Refunded",
+        "COL_RETAINED": "Retained",
+        "CASH_NOTE": "Only cash actually leaves the drawer. A card or gateway refund does not reduce the cash you have to hand over.",
+        "UNKNOWN": "No data — this round was settled before not-travelled tickets were recorded. Its settled total had already dropped the cancelled tickets.",
+        "STATUS": {
+          "CANCELLED": "Cancelled (partially refunded)",
+          "NO_SHOW": "No-show (100% forfeited)"
+        }
+      },
       "CONFIRM": {
         "TITLE": "Confirm Cash Handover",
         "TEXT": "Confirm you have received {{amount}} in total for this round?",
