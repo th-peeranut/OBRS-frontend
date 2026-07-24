@@ -144,6 +144,128 @@ endpoints should be verified against seeded/synthetic data, and the analytics in
 ---
 
 
+### [Frontend] 2026-07-24 — Booking trend analysis endpoint (OBRS-152): new `GET /reports/booking-trend`
+
+<!-- contract-request
+card: OBRS-152
+status: open
+-->
+
+**Affected endpoint**: `GET /api/private/admin/reports/booking-trend?from&to&granularity=day|week|month` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Depends on OBRS-151 lane landing first (sequential).
+**Auth**: `hasAnyRole('ADMIN','OWNER')` (no revenue in this endpoint → no role-withholding needed).
+
+Deep version of `/summary`'s daily `bookingCount`. Adds trend decomposition the FE must not compute itself
+(counts are cheap ints, but the moving average / growth % / day-of-week seasonality are analytics the
+server should own for consistency with the query layer):
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "granularity": "day",
+  "series": [ { "bucket": "2026-07-01", "bookingCount": 42, "ticketsSold": 61, "movingAvg7": 39.5, "barPct": 88.0 } ],
+  "previousPeriod": { "totalBookings": 980, "changePct": 12.4 },
+  "byDayOfWeek": [ { "dow": 1, "bookingCount": 210, "sharePct": 18.0 } ],
+  "peak": { "bucket": "2026-07-14", "bookingCount": 73 }
+}
+```
+Server-computed: `movingAvg7`, `barPct` (bucket count / max bucket count × 100), `sharePct`, `changePct`.
+**FE plan** (built once documented): `/admin/booking-trend` page — granularity toggle, inline-SVG trend line
+(heights from `barPct`), a day-of-week bar strip (`sharePct`), and a period-over-period delta chip.
+**Impact if not addressed**: OBRS-152 page cannot be built (no endpoint). No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Route performance metrics endpoint (OBRS-153): new `GET /reports/route-performance`
+
+<!-- contract-request
+card: OBRS-153
+status: open
+-->
+
+**Affected endpoint**: `GET /api/private/admin/reports/route-performance?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-152.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`; revenue fields `@JsonInclude(NON_NULL)` (OBRS-129 withholding pattern).
+
+Per-route performance the existing reports don't break out. Load factor / share are server-computed:
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "routes": [
+    { "routeId": 3, "routeName": "Bangkok → Chiang Mai", "departures": 62,
+      "seatsSold": 1240, "seatCapacity": 1860, "loadFactorPct": 66.7,
+      "cancelledDepartures": 1, "cancellationRatePct": 1.6,
+      "revenue": { "net": "84000.00", "paid": "88000.00", "refunded": "4000.00", "currency": "THB" },
+      "revenueSharePct": 41.0 }
+  ],
+  "totals": { "seatsSold": 3020, "seatCapacity": 4800, "loadFactorPct": 62.9,
+              "revenue": { "net": "205000.00", "paid": "215000.00", "refunded": "10000.00", "currency": "THB" } }
+}
+```
+Occupancy/`loadFactorPct` follows `/summary`'s occupancy semantics (bucketed by departure date). Ordering:
+`revenue.net` desc, then `loadFactorPct` desc. Server-computed: `loadFactorPct`, `cancellationRatePct`,
+`revenueSharePct`. **FE plan**: `/admin/route-performance` sortable table + a load-factor bar column +
+top-N-routes-by-revenue bar list. **Impact**: OBRS-153 page cannot be built. No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Customer behavior analysis endpoint (OBRS-154): new `GET /reports/customer-behavior`
+
+<!-- contract-request
+card: OBRS-154
+status: open
+-->
+
+**Affected endpoint**: `GET /api/private/admin/reports/customer-behavior?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-153.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`. PII: return **aggregates only** — no per-customer rows, no names/emails.
+
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "totalCustomers": 640, "newCustomers": 210, "returningCustomers": 430, "returningRatePct": 67.2,
+  "avgBookingsPerCustomer": 1.8,
+  "leadTimeDays": { "p50": 3, "p90": 12, "avg": 5.4 },
+  "cancellationRatePct": 4.1,
+  "bookingsByChannel": [ { "channel": "web", "bookingCount": 820, "sharePct": 71.0 }, { "channel": "walk_in", "bookingCount": 335, "sharePct": 29.0 } ],
+  "repeatDistribution": [ { "bookings": 1, "customers": 430, "sharePct": 67.2 }, { "bookings": 2, "customers": 150, "sharePct": 23.4 } ]
+}
+```
+Server-computed: every `*Pct`, the percentiles, and `avgBookingsPerCustomer`. **FE plan**:
+`/admin/customer-behavior` page — new-vs-returning donut/bar, lead-time distribution, channel split
+(`sharePct`), repeat-frequency histogram. **PII note**: strictly aggregate; no drill-down to individuals.
+**Impact**: OBRS-154 page cannot be built. No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Operational efficiency reports endpoint (OBRS-155): new `GET /reports/ops-efficiency`
+
+<!-- contract-request
+card: OBRS-155
+status: open
+-->
+
+**Affected endpoint**: `GET /api/private/admin/reports/ops-efficiency?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-154; last in the lane.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`.
+
+Fleet/utilization efficiency across the range, aggregating schedules/departures/vehicles:
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "fleet": { "activeVehicles": 12, "utilizedVehicles": 11, "utilizationPct": 91.7 },
+  "departures": { "scheduled": 340, "completed": 332, "cancelled": 8, "completionRatePct": 97.6 },
+  "seatUtilization": { "seatsSold": 3020, "seatCapacity": 4800, "fillRatePct": 62.9 },
+  "refunds": { "count": 41, "grossRefunded": "10000.00", "currency": "THB", "refundRatePct": 3.4 },
+  "byVehicleType": [ { "vehicleType": "van_13", "departures": 210, "fillRatePct": 58.0, "sharePct": 63.0 } ]
+}
+```
+Server-computed: all `*Pct` / `*Rate`. Money (`grossRefunded`) stays a decimal string. Reuse `/refund-void`'s
+refund semantics where they overlap. **FE plan**: `/admin/ops-efficiency` KPI tiles (utilization, completion,
+fill rate, refund rate) + a per-vehicle-type fill-rate bar list. **Impact**: OBRS-155 page cannot be built.
+No-traffic caveat applies.
+
+---
+
 ### [Frontend] 2026-07-19 — `code` optional/server-generated on inspection-item create (OBRS-529): built ahead of the paired backend worktree
 
 <!-- contract-request
