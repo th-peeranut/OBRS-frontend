@@ -70,6 +70,80 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-24 — Deep revenue analytics endpoint (OBRS-151): new `GET /reports/revenue-analytics`
+
+<!-- contract-request
+card: OBRS-151
+status: open
+-->
+
+**Affected endpoint**: `GET /api/private/admin/reports/revenue-analytics?from&to` — **NEW, does not exist yet.**
+
+**Request type**: new read-only aggregation endpoint (R1 additive; no change to any existing endpoint).
+
+**Why this is a contract request and not FE code**: OBRS-151 ("Revenue analytics and reporting", the *deep*
+version of the Lane-A reporting layer) needs server-side revenue breakdowns the existing
+`GET /reports/summary` does not provide (per-route, per-payment-method across a range, and
+period-over-period). Two house rules forbid faking it on the FE: (1) *"Do not call an endpoint not yet
+documented in `../OBRS-backend/docs/api/`"* and (2) money fields are **decimal strings** and *"never do
+arithmetic on them client-side"* — so the chart scaling / shares / deltas must be **computed server-side**,
+not derived in the browser. Hence this spec instead of a guessed FE implementation.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| New endpoint `GET /reports/revenue-analytics?from&to` | `AdminReportController` | Backs a new "Revenue Analytics" admin page (deep revenue view) |
+| `@PreAuthorize("hasAnyRole('ADMIN','OWNER')")`, revenue fields `@JsonInclude(NON_NULL)` | same | Mirror `/summary`'s role model exactly (OBRS-129 revenue-withholding pattern) |
+| **Server-computed** `sharePct` / `netChangePct` / `netBarPct` (numbers, 0–100 or signed %) | response DTO | So the FE renders bars, shares and the period delta **without** any money arithmetic — it only formats the decimal-string money for display |
+
+### Proposed response shape (all money = decimal strings, same as `/summary`)
+```json
+{
+  "range":   { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "totals":  { "net": "125400.00", "paid": "131400.00", "refunded": "6000.00", "currency": "THB" },
+  "previousPeriod": {
+    "range":  { "from": "2026-06-01", "to": "2026-06-30" },
+    "totals": { "net": "110000.00", "paid": "114000.00", "refunded": "4000.00", "currency": "THB" },
+    "netChangePct": 14.0
+  },
+  "byRoute": [
+    { "routeId": 3, "routeName": "Bangkok → Chiang Mai", "ticketsSold": 210,
+      "revenue": { "net": "84000.00", "paid": "88000.00", "refunded": "4000.00", "currency": "THB" }, "sharePct": 67.0 }
+  ],
+  "byPaymentMethod": [
+    { "method": "credit_card", "count": 180, "revenue": { "net": "90000.00", "paid": "94000.00", "refunded": "4000.00", "currency": "THB" }, "sharePct": 71.8 },
+    { "method": "cash",        "count": 60,  "revenue": { "net": "35400.00", "paid": "37400.00", "refunded": "2000.00", "currency": "THB" }, "sharePct": 28.2 }
+  ],
+  "dailyTrend": [
+    { "date": "2026-07-01", "net": "4200.00", "paid": "4200.00", "refunded": "0.00", "currency": "THB", "netBarPct": 34.0 }
+  ]
+}
+```
+Semantics to match `/summary` exactly (docs/api/reports.md): `net = paid − refunded`; revenue = Payments
+against CONFIRMED bookings bucketed by booking-created-date; `paid` counts `paid` + `manual_refund_required`
+(`EPaymentStatus.countsAsPaid`); `refunded` counts `refunded`. `byRoute` ordered by `revenue.net` desc,
+`byPaymentMethod` mirrors `/eod-salesperson`'s method vocabulary. `netBarPct` = each day's net as a % of the
+max daily net in-range (0–100), `sharePct` = row net / totals net × 100, `netChangePct` = (net − prevNet) /
+prevNet × 100 — **all computed on the server** in `BigDecimal`.
+
+### Frontend plan (built once the endpoint is documented — NOT before, per §13)
+New `/admin/revenue-analytics` page (or a tab on `reports`), owner/revenue-gated off field presence like
+`reports-page`: totals KPI tiles + a period-over-period delta chip (`netChangePct`), an inline-SVG daily
+net-revenue trend chart (heights from `netBarPct`), a by-route bar list (`sharePct`), and a by-payment-method
+breakdown. Reuses `ReportsMoneyDto`/`formatMoney`, the `p-calendar` range filter, and an export twin
+(`revenue-analytics` dataset) matching the on-screen table (ADR-0084).
+
+### Impact if not addressed
+OBRS-151's page cannot be built — there is no endpoint to consume, and the deep breakdowns/shares/deltas
+cannot be computed client-side without violating the decimal-string-money rule. The follow-on sequence
+(OBRS-152 booking-trend, OBRS-153 route-performance, OBRS-154 customer-behavior, OBRS-155 ops-efficiency)
+each needs its own analogous aggregation endpoint and will file the same way. **Note:** the SIT/local
+environment currently has ~no booking traffic (`dont-extrapolate-metrics-from-a-no-traffic-env`), so these
+endpoints should be verified against seeded/synthetic data, and the analytics interpreted with that caveat.
+
+---
+
+
 ### [Frontend] 2026-07-19 — `code` optional/server-generated on inspection-item create (OBRS-529): built ahead of the paired backend worktree
 
 <!-- contract-request
