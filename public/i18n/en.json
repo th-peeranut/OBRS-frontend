@@ -425,7 +425,8 @@
       "BOOKING_POLICY_CONFIG": "Booking Policy",
       "CONFIG_CHANGE_HISTORY": "Config Change History",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
-      "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation"
+      "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
+      "EXPENSES": "Expenses"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -528,6 +529,7 @@
       "LOAD_SCHEDULES_FAILED": "Unable to load schedules.",
       "LOAD_PROMOTIONS_FAILED": "Unable to load promotions.",
       "LOAD_MAINTENANCE_FAILED": "Unable to load maintenance records.",
+      "LOAD_EXPENSES_FAILED": "Unable to load expenses.",
       "DELETE_CONFIRM_BODY": "This action cannot be undone. Do you want to continue?",
       "DELETE_BTN": "Delete",
       "UNLOCK_SUCCESS": "Account unlocked successfully.",
@@ -1381,6 +1383,47 @@
         "RANGE_INVALID": "The From date must be on or before the To date.",
         "RANGE_TOO_LARGE": "The selected range is too large. Please select a range of 366 days or fewer."
       }
+    },
+    "EXPENSES": {
+      "SUBTITLE": "Log vehicle and central expenses",
+      "TABLE_TITLE": "Expense List",
+      "ADD": "Add Expense",
+      "ADD_TITLE": "Record New Expense",
+      "EDIT_TITLE": "Edit Expense",
+      "MODAL_HINT": "Fill in the expense details",
+      "VEHICLE": "Vehicle",
+      "VEHICLE_CENTRAL_OPTION": "Central / Not linked to a vehicle",
+      "VEHICLE_HINT": "Choose \"Central / Not linked\" if this isn't tied to one vehicle — separate from the \"Central\" category below",
+      "CATEGORY": "Category",
+      "CATEGORY_OTHER_LABEL": "Specify category (Other)",
+      "CATEGORY_OTHER_REQUIRED": "Please specify the category when \"Other\" is selected",
+      "CATEGORIES": {
+        "FUEL": "Fuel",
+        "REPAIR": "Repair",
+        "VEHICLE_TAX": "Vehicle Tax",
+        "ACT": "Compulsory Insurance (พ.ร.บ.)",
+        "INSURANCE": "Insurance",
+        "INSPECTION": "Inspection",
+        "TIRE": "Tire",
+        "GPS": "GPS",
+        "CENTRAL": "Central",
+        "OTHER": "Other"
+      },
+      "AMOUNT": "Amount (THB)",
+      "VAT_AMOUNT": "VAT Amount (THB)",
+      "EXPENSE_DATE": "Expense Date",
+      "RECEIPT_NO": "Receipt / Tax Invoice No.",
+      "PAID_BY": "Paid By",
+      "NOTE": "Note",
+      "NOTE_PLACEHOLDER": "Additional details (optional)",
+      "FILTER_VEHICLE": "Vehicle: All",
+      "FILTER_VEHICLE_CENTRAL_ONLY": "Central / Not linked only",
+      "FILTER_CATEGORY": "Category: All",
+      "FILTER_DATE_FROM": "From Date",
+      "FILTER_DATE_TO": "To Date",
+      "EMPTY_TITLE": "No expenses recorded yet",
+      "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
+      "NO_MATCH": "No expenses match the current filters"
     }
   },
   "AUTH": {

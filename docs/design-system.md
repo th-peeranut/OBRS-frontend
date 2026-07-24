@@ -874,6 +874,37 @@ enforced rule with a test behind it.
   once a genuinely large/searchable option set appears (and budget dark-mode
   coverage for it then).
 
+- **Explicit, non-empty, required sentinel value on an optional-at-the-DTO-level
+  form select** (OBRS-685, `ExpenseFormModalComponent`'s `vehicleSelection`):
+  `ExpenseReqDto.vehicleId` is a nullable `Long` (`null` = a central/not-
+  linked-to-a-vehicle expense), but `app-admin-dropdown` coerces every option
+  value AND its own "nothing selected" state through `String(x ?? '')`
+  (verified against `admin-dropdown.component.ts`) — so a `null`-valued
+  option is indistinguishable from an untouched placeholder inside the
+  component, and would actually emit `''` on the wire, not `null` (a live
+  400 against the nullable `Long`, plus a resting-state/"central"
+  mis-attribution risk on a cost-tracking screen — caught at UX Scrutinize,
+  pre-code). Fix: the control stays placeholder-first per §3.1 (starts
+  genuinely empty, shows the field-name placeholder, no pre-seeded default)
+  but is made **required**, and the "central / not linked" choice is a real,
+  non-colliding, non-empty option value (`VEHICLE_CENTRAL_SENTINEL =
+  'CENTRAL_NONE'`) — a REAL selectable option, not a default. The sentinel is
+  translated to an actual `null` ONLY at the payload-mapper boundary
+  (`toExpensePayload()` in `expenses-page.mappers.ts`), never inside the
+  control's own value. Locked with a full-object `toEqual` payload assertion
+  (not `objectContaining`) proving `vehicleId: null` on the wire. Reuse this
+  exact shape — non-empty sentinel constant + required validator + edge-
+  mapping in the payload function, never inside the control's own value —
+  for the next optional-relationship dropdown anywhere in the admin module
+  that needs an explicit "none" choice distinguishable from "not yet
+  answered". Note the SAME sentinel constant is reused for a structurally
+  different purpose on the expenses page's vehicle FILTER (§6.2 of
+  `UX-OBRS-685-expense-screen.md`): there it means "narrow to central-only
+  rows client-side", layered on top of an unfiltered server fetch — not the
+  form's "this expense has no vehicle" meaning. Keep the two call sites'
+  comments explicit about which contract applies; don't assume one implies
+  the other just because the constant is shared.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

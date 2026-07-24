@@ -425,7 +425,8 @@
       "BOOKING_POLICY_CONFIG": "预订政策",
       "CONFIG_CHANGE_HISTORY": "设置变更历史",
       "REFUND_VOID_REPORT": "退款/作废汇总",
-      "CASH_ONLINE_RECONCILIATION": "现金/线上对账"
+      "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
+      "EXPENSES": "费用"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -528,6 +529,7 @@
       "LOAD_SCHEDULES_FAILED": "无法加载班次。",
       "LOAD_PROMOTIONS_FAILED": "无法加载促销活动。",
       "LOAD_MAINTENANCE_FAILED": "无法加载维护记录。",
+      "LOAD_EXPENSES_FAILED": "无法加载费用数据",
       "DELETE_CONFIRM_BODY": "此操作无法撤销，是否继续？",
       "DELETE_BTN": "删除",
       "UNLOCK_SUCCESS": "账户解锁成功。",
@@ -1381,6 +1383,47 @@
         "RANGE_INVALID": "起始日期必须早于或等于结束日期。",
         "RANGE_TOO_LARGE": "所选日期范围过大，请选择366天以内的范围。"
       }
+    },
+    "EXPENSES": {
+      "SUBTITLE": "记录车辆及中央费用",
+      "TABLE_TITLE": "费用列表",
+      "ADD": "添加费用",
+      "ADD_TITLE": "记录新费用",
+      "EDIT_TITLE": "编辑费用",
+      "MODAL_HINT": "填写费用详情",
+      "VEHICLE": "车辆",
+      "VEHICLE_CENTRAL_OPTION": "中央/不绑定车辆",
+      "VEHICLE_HINT": "若非针对单一车辆的支出请选择\"中央/不绑定\"——与下方\"中央\"类别无关",
+      "CATEGORY": "类别",
+      "CATEGORY_OTHER_LABEL": "请注明类别(其他)",
+      "CATEGORY_OTHER_REQUIRED": "选择\"其他\"时请注明类别",
+      "CATEGORIES": {
+        "FUEL": "燃油",
+        "REPAIR": "维修",
+        "VEHICLE_TAX": "车辆税",
+        "ACT": "强制保险",
+        "INSURANCE": "保险",
+        "INSPECTION": "车检",
+        "TIRE": "轮胎",
+        "GPS": "GPS",
+        "CENTRAL": "中央",
+        "OTHER": "其他"
+      },
+      "AMOUNT": "金额(泰铢)",
+      "VAT_AMOUNT": "增值税金额(泰铢)",
+      "EXPENSE_DATE": "支出日期",
+      "RECEIPT_NO": "收据/税务发票号",
+      "PAID_BY": "付款人/账户",
+      "NOTE": "备注",
+      "NOTE_PLACEHOLDER": "补充说明(可选)",
+      "FILTER_VEHICLE": "车辆:全部",
+      "FILTER_VEHICLE_CENTRAL_ONLY": "仅中央/不绑定",
+      "FILTER_CATEGORY": "类别:全部",
+      "FILTER_DATE_FROM": "起始日期",
+      "FILTER_DATE_TO": "截止日期",
+      "EMPTY_TITLE": "暂无费用记录",
+      "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
+      "NO_MATCH": "没有符合当前筛选条件的费用"
     }
   },
   "AUTH": {

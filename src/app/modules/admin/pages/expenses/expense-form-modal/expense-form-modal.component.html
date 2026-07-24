@@ -1,0 +1,128 @@
+<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
+  <div class="admin-modal">
+    <h4 class="admin-modal-title">
+      {{
+        mode === 'edit'
+          ? ('ADMIN.EXPENSES.EDIT_TITLE' | translate)
+          : ('ADMIN.EXPENSES.ADD_TITLE' | translate)
+      }}
+    </h4>
+    <p class="admin-modal-subtitle">{{ 'ADMIN.EXPENSES.MODAL_HINT' | translate }}</p>
+
+    <form [formGroup]="expenseForm" class="admin-form-grid" (ngSubmit)="submitExpense()">
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.VEHICLE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="vehicleSelection"
+          [options]="vehicleOptions"
+          valueKey="code"
+          labelKey="label"
+          [placeholder]="'ADMIN.EXPENSES.VEHICLE' | translate"
+        ></app-admin-dropdown>
+        <small class="admin-hint">{{ 'ADMIN.EXPENSES.VEHICLE_HINT' | translate }}</small>
+        <small class="admin-error" *ngIf="isFieldInvalid('vehicleSelection')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.CATEGORY' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="category"
+          [options]="categoryOptions"
+          valueKey="code"
+          labelKey="label"
+          [placeholder]="'ADMIN.EXPENSES.CATEGORY' | translate"
+        ></app-admin-dropdown>
+        <small class="admin-error" *ngIf="isFieldInvalid('category')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field" *ngIf="showCategoryOtherLabel">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_LABEL' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input class="admin-field" formControlName="categoryOtherLabel" maxlength="100" />
+        <small class="admin-error" *ngIf="isFieldInvalid('categoryOtherLabel')">
+          {{ 'ADMIN.EXPENSES.CATEGORY_OTHER_REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.AMOUNT' | translate }} <span class="admin-required">*</span>
+        </label>
+        <input type="number" class="admin-field" formControlName="amount" min="0.01" step="0.01" />
+        <small class="admin-error" *ngIf="isFieldInvalid('amount')">
+          {{ amountErrorKey('amount') | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.VAT_AMOUNT' | translate }}</label>
+        <input type="number" class="admin-field" formControlName="vatAmount" min="0" step="0.01" />
+        <small class="admin-error" *ngIf="isFieldInvalid('vatAmount')">
+          {{ amountErrorKey('vatAmount') | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }} <span class="admin-required">*</span>
+        </label>
+        <p-calendar
+          formControlName="expenseDate"
+          styleClass="schedule-calendar-filter"
+          inputStyleClass="schedule-calendar-filter-input"
+          panelStyleClass="schedule-calendar-filter-panel"
+          dateFormat="dd/mm/yy"
+          [showIcon]="true"
+          [showButtonBar]="true"
+          [placeholder]="'ADMIN.EXPENSES.EXPENSE_DATE' | translate"
+        ></p-calendar>
+        <small class="admin-error" *ngIf="isFieldInvalid('expenseDate')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.RECEIPT_NO' | translate }}</label>
+        <input class="admin-field" formControlName="receiptNo" maxlength="100" />
+      </div>
+
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.PAID_BY' | translate }}</label>
+        <input class="admin-field" formControlName="paidBy" maxlength="255" />
+      </div>
+
+      <div class="admin-form-field full">
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.NOTE' | translate }}</label>
+        <textarea
+          class="admin-field"
+          formControlName="note"
+          maxlength="500"
+          [placeholder]="'ADMIN.EXPENSES.NOTE_PLACEHOLDER' | translate"
+        ></textarea>
+      </div>
+    </form>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="requestClose()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSubmitting"
+        (click)="submitExpense()"
+      >
+        {{ isSubmitting ? ('ADMIN.COMMON.SAVING' | translate) : ('ADMIN.COMMON.SAVE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

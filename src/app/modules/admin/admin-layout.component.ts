@@ -107,6 +107,10 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       // OBRS-99: cash/online reconciliation report — same admin+owner audience
       // (route `requiredRoles: ['admin','owner']`) as refund-void-report above.
       { path: 'cash-online-reconciliation-report', labelKey: 'ADMIN.PAGES.CASH_ONLINE_RECONCILIATION', icon: 'account_balance_wallet', descriptionKey: 'ADMIN.CASH_ONLINE_RECONCILIATION.SUBTITLE', section: 'reports' },
+      // OBRS-685: vehicle/central expense log — admin+owner (route
+      // `requiredRoles: ['admin','owner']`), same always-shown audience as
+      // eod-sales-report above — operational record-keeping, not a report.
+      { path: 'expenses', labelKey: 'ADMIN.PAGES.EXPENSES', icon: 'receipt_long', descriptionKey: 'ADMIN.EXPENSES.SUBTITLE', section: 'operations' },
     ];
 
     if (this.authService.hasAnyRole(['owner'])) {

@@ -735,6 +735,52 @@ export interface CreateVehicleMaintenancePayload {
   notes?: string | null;
 }
 
+/** OBRS-685: `GET /api/private/expenses` / `GET /{id}` response row.
+ * `vehicleId` is `null` for a central/not-linked-to-a-vehicle expense — a
+ * REAL nullable Long on the wire, distinct from the FE form's own
+ * `VEHICLE_CENTRAL_SENTINEL` string, which only exists inside the form
+ * control (see `expenses-page.mappers.ts`). `category` is one of the 10
+ * fixed enum codes (FUEL/REPAIR/VEHICLE_TAX/ACT/INSURANCE/INSPECTION/TIRE/
+ * GPS/CENTRAL/OTHER). Audit fields are `@JsonUnwrapped` on the backend DTO —
+ * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
+export interface AdminExpenseDto {
+  id: number;
+  vehicleId: number | null;
+  category: string;
+  categoryOtherLabel?: string | null;
+  amount: number;
+  vatAmount?: number | null;
+  expenseDate: string;
+  receiptNo?: string | null;
+  paidBy?: string | null;
+  note?: string | null;
+  createdByName?: string;
+  createdAt?: string;
+  updatedByName?: string;
+  updatedAt?: string;
+}
+
+/** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
+ * (`toExpensePayload()` in `expenses-page.mappers.ts`). Every optional field
+ * is an explicit key (`null` when blank), never omitted — same full-replace
+ * contract as `CreateVehiclePayload` above, and PUT sends all 9 fields. */
+export interface CreateExpensePayload {
+  vehicleId: number | null;
+  category: string;
+  categoryOtherLabel: string | null;
+  amount: number;
+  vatAmount: number | null;
+  expenseDate: string;
+  receiptNo: string | null;
+  paidBy: string | null;
+  note: string | null;
+}
+
+/** OBRS-685: `POST /api/private/expenses` 201 response body. */
+export interface CreateExpenseRespDto {
+  expenseId: number;
+}
+
 export interface CreateRoutePayload {
   slug: string;
   status: string;
@@ -1584,5 +1630,36 @@ export class AdminApiService {
 
   deletePromotion(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/admin/promotions/${id}`);
+  }
+
+  // OBRS-685: vehicle/central expense log — owner+admin only (backend 403s
+  // salesperson on every endpoint). `vehicleId === null` fetches every
+  // expense (no query param); a caller passing a number scopes to that
+  // vehicle via `?vehicleId=`. There is no "central-only" query param — the
+  // vehicle filter's "central only" option ALSO calls this with `null` and
+  // narrows client-side (see `expenses-page.mappers.ts`
+  // `filterExpensesByCategoryAndRange`'s `centralOnly` predicate).
+  getExpenses(vehicleId: number | null): Observable<ResponseAPI<AdminExpenseDto[]>> {
+    if (vehicleId === null) {
+      return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses`);
+    }
+    const params = new HttpParams().set('vehicleId', String(vehicleId));
+    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses`, params);
+  }
+
+  getExpenseById(id: number): Observable<ResponseAPI<AdminExpenseDto>> {
+    return this.getRequest<AdminExpenseDto>(`${this.baseUrl}/private/expenses/${id}`);
+  }
+
+  createExpense(payload: CreateExpensePayload): Observable<ResponseAPI<CreateExpenseRespDto>> {
+    return this.postRequest<CreateExpenseRespDto>(`${this.baseUrl}/private/expenses`, payload);
+  }
+
+  updateExpense(id: number, payload: CreateExpensePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`, payload);
+  }
+
+  deleteExpense(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
   }
 }
