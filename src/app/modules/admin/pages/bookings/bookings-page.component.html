@@ -316,8 +316,29 @@
           </li>
         </ul>
       </section>
+
+      <!-- Override-cancel action (OBRS-690 / OBRS-661 AC9) — OWNER only, and
+           only for a CONFIRMED booking. This is the override path (cancel
+           outside the rules); the everyday act-on-behalf cancel is a separate
+           flow. -->
+      <div
+        class="admin-modal-actions bk-detail-actions"
+        *ngIf="canOverrideCancel && isDetailCancellable"
+      >
+        <button type="button" class="admin-btn admin-btn-danger" (click)="openOverrideCancel()">
+          {{ 'ADMIN.BOOKINGS.CANCEL_OVERRIDE.OPEN' | translate }}
+        </button>
+      </div>
     </ng-container>
 
     <p *ngIf="!detailBooking && detailLoadError" class="admin-muted text-center mt-3">{{ detailLoadError }}</p>
   </div>
 </div>
+
+<!-- Override-cancel dialog (OBRS-690 / OBRS-661 AC9) -->
+<app-override-cancel-modal
+  [isOpen]="isOverrideCancelOpen"
+  [booking]="detailBooking"
+  (cancelled)="onOverrideCancelled()"
+  (closed)="onOverrideCancelClosed()"
+></app-override-cancel-modal>

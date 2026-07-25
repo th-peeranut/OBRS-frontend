@@ -536,6 +536,19 @@ export interface AdminBookingContactDetailDto {
   phoneNumber?: string;
 }
 
+// OBRS-690 / OBRS-661 AC9: request body for the OWNER override-cancel endpoint.
+// `rateChoice` is a closed two-value enum — POLICY (refund the normal
+// window-based rate) or FULL (100% refund) — deliberately NOT a free BigDecimal
+// (ADR-0103: the numeric field is the fraud vector). Both fields are optional on
+// the wire (a bare POST = POLICY, no reason); `reason` becomes mandatory on the
+// backend only when a rule is broken.
+export type OverrideRefundRateChoice = 'POLICY' | 'FULL';
+
+export interface OverrideCancelReqDto {
+  rateChoice?: OverrideRefundRateChoice;
+  reason?: string;
+}
+
 export interface AdminBookingDetailDto {
   id: number;
   bookingNumber?: string;
@@ -1340,6 +1353,25 @@ export class AdminApiService {
   getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
     return this.getRequest<AdminBookingDetailDto>(
       `${this.baseUrl}/private/bookings/${bookingId}`
+    );
+  }
+
+  // OBRS-690 / OBRS-661 AC9: OWNER override-cancel. Backend endpoint is
+  // POST /api/private/admin/bookings/{id}/cancel, @PreAuthorize("hasRole('OWNER')")
+  // (ADMIN inherits via the role hierarchy; SALESPERSON gets 403 — the button is
+  // OWNER-gated on the FE too). The refund rate is a CLOSED enum, never a
+  // caller-supplied number: the free-numeric field IS the fraud vector this card
+  // exists to remove (ADR-0103). `reason` is required by the backend only when a
+  // rule is actually broken (out-of-window OR rateChoice=FULL) — it returns
+  // 400 `cancel.error.override-reason-required` otherwise; the modal mirrors that
+  // gate client-side so the field appears only when it is genuinely needed.
+  adminOverrideCancelBooking(
+    bookingId: number,
+    payload: OverrideCancelReqDto
+  ): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/admin/bookings/${bookingId}/cancel`,
+      payload
     );
   }
 

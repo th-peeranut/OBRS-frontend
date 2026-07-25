@@ -41,7 +41,14 @@ function makeAdminApiServiceStub() {
   return {
     getBookingById: jasmine.createSpy('getBookingById'),
     getBookingPayments: jasmine.createSpy('getBookingPayments'),
+    adminOverrideCancelBooking: jasmine.createSpy('adminOverrideCancelBooking'),
   };
+}
+
+// OBRS-690: default to owner so canOverrideCancel is true; pass false to
+// simulate a salesperson (button hidden).
+function makeAuthStub(hasRole = true) {
+  return { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(hasRole) };
 }
 
 describe('BookingsPageComponent', () => {
@@ -50,7 +57,8 @@ describe('BookingsPageComponent', () => {
     const component = new BookingsPageComponent(
       createTranslateStub(),
       store as any,
-      makeAdminApiServiceStub() as any
+      makeAdminApiServiceStub() as any,
+      makeAuthStub() as any
     );
 
     component.ngOnInit();
@@ -65,7 +73,8 @@ describe('BookingsPageComponent', () => {
     const component = new BookingsPageComponent(
       createTranslateStub(),
       store as any,
-      makeAdminApiServiceStub() as any
+      makeAdminApiServiceStub() as any,
+      makeAuthStub() as any
     );
     component.ngOnInit();
 
@@ -82,7 +91,8 @@ describe('BookingsPageComponent', () => {
     const component = new BookingsPageComponent(
       createTranslateStub(),
       store as any,
-      makeAdminApiServiceStub() as any
+      makeAdminApiServiceStub() as any,
+      makeAuthStub() as any
     );
     component.ngOnInit();
     (component as any).goToPage(3);
@@ -101,7 +111,8 @@ describe('BookingsPageComponent', () => {
     const component = new BookingsPageComponent(
       createTranslateStub(),
       store as any,
-      makeAdminApiServiceStub() as any
+      makeAdminApiServiceStub() as any,
+      makeAuthStub() as any
     );
     component.ngOnInit();
     expect((component as any).allBookings.length).toBe(3);
@@ -142,7 +153,8 @@ describe('BookingsPageComponent', () => {
       const component = new BookingsPageComponent(
         createTranslateStub(),
         store as any,
-        adminApiService as any
+        adminApiService as any,
+        makeAuthStub() as any
       );
       return { component, adminApiService };
     }
@@ -292,7 +304,8 @@ describe('BookingsPageComponent', () => {
       return new BookingsPageComponent(
         translate,
         makeStoreStub(makeData(0)) as any,
-        makeAdminApiServiceStub() as any
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
       );
     }
 
@@ -370,7 +383,8 @@ describe('BookingsPageComponent', () => {
       return new BookingsPageComponent(
         translate,
         makeStoreStub(makeData(0)) as any,
-        makeAdminApiServiceStub() as any
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
       );
     }
 
@@ -400,11 +414,71 @@ describe('BookingsPageComponent', () => {
       const component = new BookingsPageComponent(
         createTranslateStub(),
         makeStoreStub(makeData(0)) as any,
-        makeAdminApiServiceStub() as any
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
       );
       expect((component as any).paymentClass('refunded_partial')).toBe('is-success');
       expect((component as any).paymentClass('REFUNDED PARTIAL')).toBe('is-success');
       expect((component as any).paymentClass('partial_paid')).toBe('is-warning');
+    });
+  });
+
+  // OBRS-690 / OBRS-661 AC9: OWNER override-cancel gating.
+  describe('override-cancel gating (OBRS-690)', () => {
+    function make(hasRole: boolean) {
+      const store = makeStoreStub(makeData(0));
+      const api = makeAdminApiServiceStub();
+      const component = new BookingsPageComponent(
+        createTranslateStub(),
+        store as any,
+        api as any,
+        makeAuthStub(hasRole) as any
+      );
+      return { component, store, api };
+    }
+
+    it('canOverrideCancel mirrors hasAnyRole([owner]) — true for owner/admin', () => {
+      expect((make(true).component as any).canOverrideCancel).toBeTrue();
+    });
+
+    it('canOverrideCancel is false for a salesperson (hasAnyRole returns false)', () => {
+      expect((make(false).component as any).canOverrideCancel).toBeFalse();
+    });
+
+    it('isDetailCancellable is true only for a CONFIRMED booking', () => {
+      const { component } = make(true);
+      (component as any).detailBooking = { id: 1, status: { code: 'confirmed', label: 'Confirmed' } };
+      expect((component as any).isDetailCancellable).toBeTrue();
+
+      (component as any).detailBooking = { id: 1, status: { code: 'cancelled', label: 'Cancelled' } };
+      expect((component as any).isDetailCancellable).toBeFalse();
+
+      (component as any).detailBooking = null;
+      expect((component as any).isDetailCancellable).toBeFalse();
+    });
+
+    it('openOverrideCancel() opens only when owner AND booking is cancellable', () => {
+      const { component } = make(true);
+      (component as any).detailBooking = { id: 1, status: 'CONFIRMED' };
+      (component as any).openOverrideCancel();
+      expect((component as any).isOverrideCancelOpen).toBeTrue();
+    });
+
+    it('openOverrideCancel() is a no-op for a non-owner even on a CONFIRMED booking', () => {
+      const { component } = make(false);
+      (component as any).detailBooking = { id: 1, status: 'CONFIRMED' };
+      (component as any).openOverrideCancel();
+      expect((component as any).isOverrideCancelOpen).toBeFalse();
+    });
+
+    it('onOverrideCancelled() closes both dialogs and revalidates the list', () => {
+      const { component, store } = make(true);
+      (component as any).selectedBookingId = 1;
+      (component as any).isOverrideCancelOpen = true;
+      (component as any).onOverrideCancelled();
+      expect((component as any).isOverrideCancelOpen).toBeFalse();
+      expect((component as any).selectedBookingId).toBeNull();
+      expect(store.refresh).toHaveBeenCalled();
     });
   });
 });

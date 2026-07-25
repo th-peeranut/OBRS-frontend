@@ -27,6 +27,7 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
+import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { UsabilityReportDuplicatePickerComponent } from './pages/usability-reports/usability-report-duplicate-picker/usability-report-duplicate-picker.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
@@ -301,6 +302,7 @@ export const adminRoutes: Routes = [
     RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
+    OverrideCancelModalComponent,
     UsabilityReportsPageComponent,
     UsabilityReportDuplicatePickerComponent,
     PromotionsPageComponent,

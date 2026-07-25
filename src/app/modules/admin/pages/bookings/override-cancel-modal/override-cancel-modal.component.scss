@@ -1,0 +1,97 @@
+// OBRS-690 — OWNER override-cancel dialog. Reuses the shared .admin-modal /
+// .admin-form-field / .admin-btn primitives; only the booking summary, the
+// window banner, and the rate toggle need local rules.
+
+.override-cancel-summary {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--admin-muted-bg, rgba(0, 0, 0, 0.03));
+
+  .override-cancel-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+
+    & + .override-cancel-summary-row {
+      margin-top: 6px;
+    }
+
+    dt {
+      margin: 0;
+      color: var(--admin-text-muted);
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 600;
+      text-align: right;
+    }
+  }
+}
+
+// Window banner: neutral copy when inside the window, danger-tinted when past
+// it (out-of-window is one of the two rule-breaks that force a reason).
+.override-cancel-window {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--admin-text-muted);
+
+  &.is-violation {
+    color: var(--admin-danger-text);
+    font-weight: 600;
+  }
+}
+
+// Rate toggle — same house rule as the inspection verdict toggle: two plain
+// `.admin-btn` elements with `[class.is-selected]` + `aria-pressed`, NOT
+// `p-selectButton` (theming). POLICY reads as the safe/normal choice
+// (success pair), FULL as the policy-breaking one (danger pair).
+.override-rate-toggle {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.override-rate-btn {
+  flex: 1 1 0;
+  min-height: 44px; // tap-target minimum
+  border-radius: 999px;
+}
+
+// Selected state — light mode: reuse the existing pastel-bg / dark-text token
+// pairs (design-system §2.4), never the runtime --accent* brand colour.
+.override-rate-btn.is-selected.is-policy {
+  background: var(--admin-success-bg);
+  border-color: var(--admin-success-bg);
+  color: var(--admin-success-text);
+}
+
+.override-rate-btn.is-selected.is-full {
+  background: var(--admin-danger-bg);
+  border-color: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+// Selected state — dark mode: invert the same token pair (dark `-text` becomes
+// the fill, light `-bg` becomes the foreground) so a full-size button reads as
+// a genuine dark-mode selected state rather than a light-mode pastel leftover.
+// Identical reasoning to inspection-page.component.scss (contrast is symmetric
+// under a fg/bg swap).
+:host-context(.admin-shell.is-dark) {
+  .override-rate-btn.is-selected.is-policy {
+    background: var(--admin-success-text);
+    border-color: var(--admin-success-text);
+    color: var(--admin-success-bg);
+  }
+
+  .override-rate-btn.is-selected.is-full {
+    background: var(--admin-danger-text);
+    border-color: var(--admin-danger-text);
+    color: var(--admin-danger-bg);
+  }
+}
+
+.override-cancel-error {
+  margin: 12px 0 0;
+}
