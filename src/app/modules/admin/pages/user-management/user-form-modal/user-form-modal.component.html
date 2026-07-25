@@ -119,7 +119,13 @@
               <label>
                 {{ 'ADMIN.USERS.PHONE' | translate }} <span class="admin-required">*</span>
               </label>
-              <input class="admin-field user-input" formControlName="phoneNumber" type="tel" />
+              <input
+                class="admin-field user-input"
+                formControlName="phoneNumber"
+                type="tel"
+                (focus)="onPhoneFocus()"
+                (blur)="onPhoneBlur()"
+              />
               <small class="admin-error" *ngIf="isFieldInvalid('phoneNumber')">
                 {{ 'ADMIN.VALIDATION.PHONE' | translate }}
               </small>

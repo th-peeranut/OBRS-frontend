@@ -55,6 +55,7 @@ import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/e
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
+import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
 // OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
 // assert against the REAL route list rather than a hand-mirrored copy — the same
@@ -336,6 +337,7 @@ export const adminRoutes: Routes = [
     CalendarModule,
     InputSwitchModule,
     AdminSharedModule,
+    PhoneFormatPipe,
   ],
 })
 export class AdminModule {}

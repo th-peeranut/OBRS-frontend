@@ -183,7 +183,7 @@
           </div>
           <div class="bk-detail-row">
             <span class="bk-detail-label">{{ 'ADMIN.BOOKINGS.DETAIL.CONTACT_PHONE' | translate }}</span>
-            <span>{{ detailBooking.contact?.phoneNumber || '-' }}</span>
+            <span>{{ (detailBooking.contact?.phoneNumber | phoneFormat) || '-' }}</span>
           </div>
         </section>
         <section>

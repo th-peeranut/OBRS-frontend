@@ -6,6 +6,7 @@ import { SharedModule } from '../../shared/shared.module';
 // Components
 import { OtpValidateComponent } from './otp-validate.component';
 import { OtpComponent } from '../../shared/components/otp/otp.component';
+import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
 const routes: Routes = [{ path: '', component: OtpValidateComponent }];
 
@@ -17,6 +18,7 @@ const routes: Routes = [{ path: '', component: OtpValidateComponent }];
 
     // Add-ons
     OtpComponent,
+    PhoneFormatPipe,
   ],
 })
 export class OtpValidateModule {}

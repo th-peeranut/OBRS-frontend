@@ -14,6 +14,7 @@ import { PaymentResultComponent } from './components/payment-result/payment-resu
 // reschedule dialog without pulling in this module's own routes — see
 // PaymentMethodsModule and docs/adr).
 import { PaymentMethodsModule } from '../../shared/components/payment-methods/payment-methods.module';
+import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
 /// store
 import { EffectsModule } from '@ngrx/effects';
@@ -58,6 +59,7 @@ const routes: Routes = [
       // Components
       DropdownObrsComponent,
       DropdownObrsPassengerComponent,
+      PhoneFormatPipe,
     ],
 })
 export class PaymentModule { }

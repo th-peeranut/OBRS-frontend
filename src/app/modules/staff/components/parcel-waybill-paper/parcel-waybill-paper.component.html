@@ -6,12 +6,12 @@
     <div class="col-6">
       <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.SENDER' | translate }}</h5>
       <div>{{ w.sender.name }}</div>
-      <div>{{ w.sender.phone }}</div>
+      <div>{{ w.sender.phone | phoneFormat }}</div>
     </div>
     <div class="col-6">
       <h5 class="fw-bold">{{ 'STAFF.PARCEL_WAYBILL.RECIPIENT' | translate }}</h5>
       <div>{{ w.recipient.name }}</div>
-      <div>{{ w.recipient.phone }}</div>
+      <div>{{ w.recipient.phone | phoneFormat }}</div>
     </div>
   </div>
 

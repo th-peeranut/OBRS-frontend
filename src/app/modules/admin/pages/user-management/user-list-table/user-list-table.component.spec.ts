@@ -4,6 +4,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { UserListTableComponent } from './user-list-table.component';
 import { UserRow } from '../user-management.mappers';
+import { PhoneFormatPipe } from '../../../../../shared/pipes/phone-format.pipe';
 
 function makeRow(overrides: Partial<UserRow> = {}): UserRow {
   return {
@@ -41,7 +42,7 @@ describe('UserListTableComponent (template)', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [CommonModule, TranslateModule.forRoot()],
+      imports: [CommonModule, TranslateModule.forRoot(), PhoneFormatPipe],
       declarations: [UserListTableComponent],
     }).compileComponents();
 

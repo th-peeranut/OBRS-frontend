@@ -3,6 +3,7 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { TicketLeg } from '../../interfaces/e-ticket.interface';
 import { ETicketCardComponent } from './e-ticket-card.component';
+import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 
 function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   return {
@@ -81,7 +82,7 @@ describe('ETicketCardComponent — leg rendering', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent],
-      imports: [TranslateModule.forRoot()],
+      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ETicketCardComponent);

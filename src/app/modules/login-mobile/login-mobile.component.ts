@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { formatThaiMobile, stripPhoneSeparators } from '../../shared/constants/thai-msisdn';
 
 @Component({
   selector: 'app-login-mobile',
@@ -33,6 +34,19 @@ export class LoginMobileComponent {
     return this.loginForm.getRawValue()[controlName];
   }
 
+  // OBRS-691: display-only grouping — no pattern validator here (LOCKED
+  // decision: this field only carries Validators.required), so focus/blur
+  // just peel/regroup dashes; goToOTP() below strips before navigating.
+  onPhoneFocus(): void {
+    const control = this.loginForm.get('phoneNo');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  onPhoneBlur(): void {
+    const control = this.loginForm.get('phoneNo');
+    control?.setValue(formatThaiMobile(control.value));
+  }
+
   getFormErrors(controlName: string, errorName: string): boolean {
     const errors = this.loginForm.get(controlName)?.errors;
 
@@ -58,7 +72,9 @@ export class LoginMobileComponent {
 
     if (this.loginForm.valid) {
       const formValue = this.loginForm.value;
-      this.router.navigate(['/otp', 'login', formValue.phoneNo]);
+      // OBRS-691: the control may carry display dashes (regrouped on blur) —
+      // the OTP/login flow downstream needs the bare digits.
+      this.router.navigate(['/otp', 'login', stripPhoneSeparators(formValue.phoneNo)]);
     }
   }
 }

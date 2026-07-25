@@ -15,7 +15,12 @@ import { AlertService } from '../../shared/services/alert.service';
 import { Dropdown } from '../../shared/interfaces/dropdown.interface';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
 import { TITLE_OPTIONS } from '../../shared/constants/title-options';
-import { THAI_MOBILE_PATTERN } from '../../shared/constants/thai-msisdn';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+  THAI_MOBILE_PATTERN,
+} from '../../shared/constants/thai-msisdn';
 
 @Component({
   selector: 'app-register',
@@ -70,7 +75,7 @@ export class RegisterComponent implements OnDestroy {
       // nothing explaining why. Rejecting it here, next to the field, is the difference between a
       // validation message and a trap. (OBRS-605 removed the /otp/register hop that used to be
       // where the 400 surfaced; the column it feeds is unchanged.)
-      phoneNumber: ['', [Validators.required, Validators.pattern(THAI_MOBILE_PATTERN)]],
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(THAI_MOBILE_PATTERN)]],
       username: ['', Validators.required],
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
@@ -91,7 +96,9 @@ export class RegisterComponent implements OnDestroy {
       .pipe(
         debounceTime(500),
         distinctUntilChanged(),
-        switchMap(value => this.checkDuplicateData(value, REGISTER_OPTION.PHONENUMBER))
+        // OBRS-691: the control can carry display dashes (regrouped on blur) —
+        // the dup-check must see the same bare digits the backend stores.
+        switchMap(value => this.checkDuplicateData(stripPhoneSeparators(value), REGISTER_OPTION.PHONENUMBER))
       )
       .subscribe();
 
@@ -110,6 +117,19 @@ export class RegisterComponent implements OnDestroy {
 
   getFormValue(controlName: string) {
     return this.registerForm.getRawValue()[controlName];
+  }
+
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts's
+  // onPhoneFocus/onPhoneBlur — peel dashes off for typing, regroup on blur.
+  // The validator and register() below always read the stripped digits.
+  onPhoneFocus(): void {
+    const control = this.registerForm.get('phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  onPhoneBlur(): void {
+    const control = this.registerForm.get('phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
   }
 
   getFormErrors(controlName: string, errorName: string): boolean {
@@ -166,6 +186,9 @@ export class RegisterComponent implements OnDestroy {
       const registerPayload = {
         ...formValue,
         title: titleName,
+        // OBRS-691: the control may carry display dashes (regrouped on blur) —
+        // the backend stores/validates bare digits only.
+        phoneNumber: stripPhoneSeparators(formValue.phoneNumber),
         preferredLocale: this.translate.currentLang || 'th',
       };
 

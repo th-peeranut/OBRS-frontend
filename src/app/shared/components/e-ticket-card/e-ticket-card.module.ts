@@ -2,6 +2,7 @@ import { NgModule } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { ETicketCardComponent } from './e-ticket-card.component';
+import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 
 /**
  * Standalone-feature module for the shared e-ticket card. Kept out of
@@ -10,7 +11,7 @@ import { ETicketCardComponent } from './e-ticket-card.component';
  */
 @NgModule({
   declarations: [ETicketCardComponent],
-  imports: [CommonModule, TranslateModule],
+  imports: [CommonModule, TranslateModule, PhoneFormatPipe],
   exports: [ETicketCardComponent],
 })
 export class ETicketCardModule {}

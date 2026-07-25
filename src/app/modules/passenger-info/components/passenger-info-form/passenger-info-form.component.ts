@@ -45,6 +45,11 @@ import { MAX_PASSENGERS_PER_BOOKING, LOW_SEAT_THRESHOLD } from '../../../../shar
 import { isLowSeatCount } from '../../../../shared/lib/trip-format';
 import { normalizeSeatNumber } from '../../../../shared/lib/seat-label';
 import { ScheduleService } from '../../../../services/schedule/schedule.service';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../shared/constants/thai-msisdn';
 
 /** Seat-attribute list, keyed by the backend's plain-numeric seat label
  *  (OBRS-362). Shared shape between the fetch pipelines and the template. */
@@ -380,6 +385,20 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
     return this.passengerData.at(index).get(controlName) as FormControl;
   }
 
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts,
+  // scoped to ONE row of the passenger FormArray. buildPassengerInfoPayload()
+  // below strips the dashes back out before the value reaches the store
+  // (syncPassengerInfoToStore) or the final submit (validateAndGetPassengerInfo).
+  onPassengerPhoneFocus(index: number): void {
+    const control = this.getPassengerControl(index, 'phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  onPassengerPhoneBlur(index: number): void {
+    const control = this.getPassengerControl(index, 'phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
+  }
+
   insertPassenger(isAdult: boolean = false) {
     const passengerForm = this.createPassengerGroup(isAdult);
     this.passengerData.push(passengerForm);
@@ -477,7 +496,8 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       firstName: booker.firstName ?? '',
       middleName: booker.middleName ?? '',
       lastName: booker.lastName ?? '',
-      phoneNumber: booker.phoneNumber ?? '',
+      // OBRS-691: display grouped, same as every other phone field at rest.
+      phoneNumber: formatThaiMobile(booker.phoneNumber ?? ''),
       gender: booker.gender ?? '',
     });
     group.markAllAsTouched();
@@ -723,7 +743,7 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],
-      phoneNumber: ['', [Validators.pattern(/^0\d{9}$/)]],
+      phoneNumber: ['', [separatorTolerantPattern(/^0\d{9}$/)]],
       // See booker-info-form: `gender` is the local name for the wire's
       // `passengerType`, renamed at the payload boundary and persisted on the
       // ticket. It also drives the seat-map colouring here. Not a dead field.
@@ -776,6 +796,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       this.passengerData.at(index).patchValue({
         ...passenger,
         title: passenger.title,
+        // OBRS-691: the store holds bare digits (buildPassengerInfoPayload
+        // strips before dispatch) — display grouped, same as every other
+        // phone field at rest.
+        phoneNumber: formatThaiMobile(passenger.phoneNumber),
       });
     });
 
@@ -791,6 +815,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
         typeof p.title === 'object' && p.title !== null
           ? p.title.id
           : p.title ?? null,
+      // OBRS-691: the control may carry display dashes (regrouped on blur) —
+      // both consumers of this payload (the debounced store sync AND the
+      // final validateAndGetPassengerInfo submit) need bare digits.
+      phoneNumber: stripPhoneSeparators(p.phoneNumber),
     })) as PassengerInfo[];
   }
 

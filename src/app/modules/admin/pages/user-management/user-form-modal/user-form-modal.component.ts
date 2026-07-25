@@ -33,6 +33,11 @@ import {
   toUpdateUserPayload,
   toUserDtoFallback,
 } from '../user-management.mappers';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../../shared/constants/thai-msisdn';
 
 // Smart create/edit form modal, extracted from UserManagementPageComponent
 // (OBRS-257, mirroring OBRS-251's PromotionFormModalComponent /
@@ -98,7 +103,7 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       middleName: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
-      phoneNumber: ['', [Validators.required, Validators.pattern(/^\d{10,15}$/)]],
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(/^\d{10,15}$/)]],
       password: ['', this.passwordValidators],
       confirmPassword: ['', [Validators.required]],
       preferredLocale: [
@@ -169,6 +174,20 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     this.userForm.patchValue({ roles: currentRoles });
     this.userForm.get('roles')?.markAsTouched();
+  }
+
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts —
+  // peel dashes off for typing, regroup on blur. Validators and the
+  // create/update payload builders (user-management.mappers.ts) always read
+  // the stripped digits.
+  protected onPhoneFocus(): void {
+    const control = this.userForm.get('phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  protected onPhoneBlur(): void {
+    const control = this.userForm.get('phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
   }
 
   protected requestClose(): void {
@@ -410,7 +429,9 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
   }
 
   private checkDuplicatePhoneNumber(value: unknown) {
-    const phoneNumber = String(value ?? '').trim();
+    // OBRS-691: the control may carry display dashes (regrouped on blur) —
+    // the dup-check must see the same bare digits the backend stores.
+    const phoneNumber = stripPhoneSeparators(String(value ?? ''));
     if (
       !this.isCreateModeActive() ||
       phoneNumber.length === 0 ||

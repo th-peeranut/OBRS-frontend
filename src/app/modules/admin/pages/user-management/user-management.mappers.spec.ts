@@ -406,8 +406,8 @@ describe('user-management.mappers', () => {
       expect(values['title']).toBe('Mr');
       expect(values['firstName']).toBe('Jonathan');
       expect(values['lastName']).toBe('Smith');
-      // Non-digit characters stripped.
-      expect(values['phoneNumber']).toBe('0812345678');
+      // OBRS-691: displayed grouped 3-3-4, regardless of the separator style the detail arrived with.
+      expect(values['phoneNumber']).toBe('081-234-5678');
       expect(values['status']).toBe('pending');
       expect(values['roles']).toEqual(['admin', 'staff']);
       expect(values['preferredLocale']).toBe('en');

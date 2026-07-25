@@ -38,7 +38,9 @@
       <input class="form-control form-control-sm"
              formControlName="phoneNumber"
              inputmode="tel"
-             maxlength="10"
+             maxlength="12"
+             (focus)="onPhoneFocus()"
+             (blur)="onPhoneBlur()"
              [class.is-invalid]="isFieldInvalid('phoneNumber')" />
       <div class="invalid-feedback d-block" *ngIf="fieldError('phoneNumber') as key">{{ key | translate }}</div>
     </div>

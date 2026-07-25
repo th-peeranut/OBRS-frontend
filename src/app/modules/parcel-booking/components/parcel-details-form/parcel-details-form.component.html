@@ -10,7 +10,14 @@
 
     <div class="col-12 col-md-6">
       <label for="senderPhone">{{ "PARCEL_BOOKING.DETAILS.SENDER_PHONE" | translate }}</label>
-      <input id="senderPhone" class="form-control" type="text" formControlName="senderPhone" />
+      <input
+        id="senderPhone"
+        class="form-control"
+        type="text"
+        formControlName="senderPhone"
+        (focus)="onPhoneFocus('senderPhone')"
+        (blur)="onPhoneBlur('senderPhone')"
+      />
       <div class="text-error" *ngIf="fieldError('senderPhone') as err">{{ err | translate }}</div>
     </div>
 
@@ -34,7 +41,14 @@
 
     <div class="col-12 col-md-6">
       <label for="recipientPhone">{{ "PARCEL_BOOKING.DETAILS.RECIPIENT_PHONE" | translate }}</label>
-      <input id="recipientPhone" class="form-control" type="text" formControlName="recipientPhone" />
+      <input
+        id="recipientPhone"
+        class="form-control"
+        type="text"
+        formControlName="recipientPhone"
+        (focus)="onPhoneFocus('recipientPhone')"
+        (blur)="onPhoneBlur('recipientPhone')"
+      />
       <div class="text-error" *ngIf="fieldError('recipientPhone') as err">{{ err | translate }}</div>
     </div>
 
