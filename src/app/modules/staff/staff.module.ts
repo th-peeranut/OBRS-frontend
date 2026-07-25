@@ -12,6 +12,7 @@ import { EffectsModule } from '@ngrx/effects';
 import { SharedModule } from '../../shared/shared.module';
 import { AuthGuard } from '../../auth/auth.guard';
 import { AuthService } from '../../auth/auth.service';
+import { featureEnabledGuard } from '../../shared/guards/feature-flag.guard';
 import { AdminSharedModule } from '../admin/admin-shared.module';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
 import { ProvinceReducer } from '../../shared/stores/station/station.reducer';
@@ -191,9 +192,12 @@ export const staffRoutes: Routes = [
         // entry, per the sell/schedules precedent — ROLE_GRANTS already
         // expands this to salesperson+owner+admin; 'owner'/'admin' would be
         // inert and 'driver' must stay excluded (UX-OBRS-424 §1).
+        // OBRS-622: gated behind environment.features.fleetMap (go-live scope
+        // cut) — featureEnabledGuard runs AFTER AuthGuard so auth/role checks
+        // still gate first; flag off redirects to home.
         path: 'fleet-map',
         component: FleetMapPageComponent,
-        canActivate: [AuthGuard],
+        canActivate: [AuthGuard, featureEnabledGuard('fleetMap')],
         data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.FLEET_MAP', subtitleKey: 'STAFF.FLEET_MAP.SUBTITLE' },
       },
     ],

@@ -12,6 +12,7 @@ import { Subscription } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 import { Router } from '@angular/router';
 import { AlertService } from '../../services/alert.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-navbar',
@@ -31,6 +32,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isAdmin: boolean = false;
   isSalesperson: boolean = false;
   isDriver: boolean = false;
+
+  // OBRS-622 go-live scope cut: hides both My Parcels links (desktop profile
+  // dropdown + mobile menu) while online consigned-parcel booking is gated
+  // off. Single source of truth is environment.features.onlineParcelBooking
+  // (environment.base.ts) — flip that one value to re-enable.
+  isOnlineParcelBookingEnabled = environment.features.onlineParcelBooking;
 
   authSubscription$: Subscription;
   private unlistenProfileDropdown?: () => void;

@@ -1,6 +1,7 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { SidebarLayoutBaseComponent } from '../../shared/sidebar-layout/sidebar-layout-base.component';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+import { environment } from '../../../environments/environment';
 
 interface StaffNavItem {
   path: string;
@@ -72,7 +73,12 @@ export class StaffLayoutComponent extends SidebarLayoutBaseComponent implements 
       // OBRS-424: fleet-map is salesperson-only (route data.requiredRoles),
       // so the nav link lives ONLY in this branch — a driver, who would 403
       // on the route itself, never sees a link to it (UX-OBRS-424 §1).
-      items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map', section: 'operations' });
+      // OBRS-622: also gated behind environment.features.fleetMap (go-live
+      // scope cut) — flip that one value to restore the link for every
+      // salesperson without touching this branch.
+      if (environment.features.fleetMap) {
+        items.push({ path: 'fleet-map', labelKey: 'STAFF.NAV.FLEET_MAP', icon: 'map', section: 'operations' });
+      }
     }
 
     if (isDriver) {

@@ -29,6 +29,7 @@ import { ThemeService, ThemeMode } from '../../shared/services/theme.service';
 import { LanguageService } from '../../shared/services/language.service';
 import { createLanguageServiceStub } from '../../testing/test-stubs';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
+import { environment } from '../../../environments/environment';
 
 @Component({ selector: 'app-notification-bell', template: '' })
 class NotificationBellStubComponent {}
@@ -150,5 +151,56 @@ describe('OBRS-573 — staff sidebar sections', () => {
     expect(nav.querySelectorAll('button, details, summary').length)
       .withContext('a section header must not be clickable — that is the extra click we refused')
       .toBe(0);
+  });
+});
+
+describe('OBRS-622 — fleet-map nav item gated behind environment.features.fleetMap', () => {
+  let originalFleetMap: boolean;
+
+  beforeEach(() => {
+    originalFleetMap = environment.features.fleetMap;
+  });
+
+  afterEach(() => {
+    environment.features.fleetMap = originalFleetMap;
+  });
+
+  it('does not offer a fleet-map nav link to a salesperson when the flag is false', async () => {
+    environment.features.fleetMap = false;
+
+    const nav = await renderNav(StaffLayoutComponent, ['salesperson']);
+    const links = Array.from(nav.querySelectorAll('.admin-nav-link'));
+
+    expect(links.some((a) => (a.getAttribute('href') ?? '').includes('fleet-map')))
+      .withContext('fleet-map must be absent from the DOM while the flag is off, not just hidden')
+      .toBeFalse();
+    // The go-live scope cut removes ONE item from 'operations' (sell/schedules
+    // stay in 'sales'); the sales header itself must still have items under it.
+    expect(headersAlwaysHaveItems(nav)).toEqual([]);
+  });
+
+  it('offers the fleet-map nav link to a salesperson when the flag is true', async () => {
+    environment.features.fleetMap = true;
+
+    const nav = await renderNav(StaffLayoutComponent, ['salesperson']);
+    const links = Array.from(nav.querySelectorAll('.admin-nav-link'));
+
+    expect(links.some((a) => (a.getAttribute('href') ?? '').includes('fleet-map')))
+      .withContext('fleet-map should render once the flag is re-enabled')
+      .toBeTrue();
+    expect(headersAlwaysHaveItems(nav)).toEqual([]);
+  });
+
+  it('never offers the fleet-map link to a driver, regardless of the flag', async () => {
+    // fleet-map is salesperson-only by route data.requiredRoles — the flag
+    // narrows visibility further, it never widens who the route admits.
+    for (const flag of [false, true]) {
+      environment.features.fleetMap = flag;
+      const nav = await renderNav(StaffLayoutComponent, ['driver']);
+      const links = Array.from(nav.querySelectorAll('.admin-nav-link'));
+      expect(links.some((a) => (a.getAttribute('href') ?? '').includes('fleet-map')))
+        .withContext(`driver must not see fleet-map (flag=${flag})`)
+        .toBeFalse();
+    }
   });
 });

@@ -71,6 +71,7 @@
             <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
           </a>
           <a
+            *ngIf="isOnlineParcelBookingEnabled"
             class="navbar-profile-item"
             role="menuitem"
             [routerLink]="'/my-parcels'"
@@ -204,6 +205,7 @@
         <span>{{ "HOME.NAVBAR.MY_BOOKINGS" | translate }}</span>
       </a>
       <a
+        *ngIf="isOnlineParcelBookingEnabled"
         class="navbar-mobile-link"
         routerLink="/my-parcels"
         (click)="closeMobileMenu()"

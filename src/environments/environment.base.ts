@@ -30,4 +30,11 @@ export const environmentBase = {
   // (FleetMapPanelComponent.canShowMap degrades to the MAP_UNAVAILABLE
   // placeholder; the side list keeps working fully), same shape as mapsApiKey.
   maptilerKey: '',
+  // OBRS-622 go-live scope cut — reversible per-feature entry gates.
+  // Flip a value to `true` to re-enable the feature everywhere post-go-live
+  // (single-point-per-feature; no code revert needed).
+  features: {
+    onlineParcelBooking: false, // gates /parcel-booking + /my-parcels routes + navbar My Parcels link
+    fleetMap: false,            // gates the staff fleet-map route + its nav link
+  },
 };

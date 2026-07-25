@@ -17,6 +17,7 @@ import {
   createRouterStub,
   createTranslateStub,
 } from '../../../testing/test-stubs';
+import { environment } from '../../../../environments/environment';
 
 function createThemeServiceStub(): any {
   return {
@@ -381,6 +382,92 @@ describe('NavbarComponent template (logged in)', () => {
     );
     expect(dashboardLink)
       .withContext('admin users should see the dashboard link')
+      .toBeTruthy();
+  });
+});
+
+describe('OBRS-622 — My Parcels links gated behind environment.features.onlineParcelBooking', () => {
+  let fixture: ComponentFixture<NavbarComponent>;
+  let component: NavbarComponent;
+  let originalOnlineParcelBooking: boolean;
+
+  const authStub = {
+    authStatus$: new BehaviorSubject<boolean>(true),
+    getUsername: () => 'john.doe',
+    hasAnyRole: () => false,
+  };
+
+  beforeEach(() => {
+    originalOnlineParcelBooking = environment.features.onlineParcelBooking;
+  });
+
+  afterEach(() => {
+    environment.features.onlineParcelBooking = originalOnlineParcelBooking;
+  });
+
+  async function createNavbar(): Promise<void> {
+    await TestBed.configureTestingModule({
+      declarations: [NavbarComponent, LangSwitcherComponent, ThemeToggleComponent],
+      imports: [RouterTestingModule, TranslateModule.forRoot()],
+      providers: [
+        { provide: AuthService, useValue: authStub },
+        { provide: AlertService, useValue: { success: () => {} } },
+        { provide: PrimeNGConfig, useValue: { setTranslation: () => {} } },
+        { provide: LanguageService, useValue: createLanguageServiceStub() },
+        { provide: ThemeService, useValue: createThemeServiceStub() },
+      ],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(NavbarComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+  }
+
+  it('hides both the desktop and mobile My Parcels links when the flag is false', async () => {
+    environment.features.onlineParcelBooking = false;
+    await createNavbar();
+
+    // Desktop: open the profile dropdown so its *ngIf-gated menu renders.
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+    const desktopLink = fixture.debugElement.query(
+      By.css('.navbar-profile-item[href="/my-parcels"]'),
+    );
+    expect(desktopLink)
+      .withContext('desktop My Parcels link must be absent from the DOM when the flag is off')
+      .toBeNull();
+
+    // Mobile: open the hamburger panel so its *ngIf-gated links render.
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+    const mobileLink = fixture.debugElement.query(
+      By.css('a.navbar-mobile-link[href="/my-parcels"]'),
+    );
+    expect(mobileLink)
+      .withContext('mobile My Parcels link must be absent from the DOM when the flag is off')
+      .toBeNull();
+  });
+
+  it('shows both the desktop and mobile My Parcels links when the flag is true', async () => {
+    environment.features.onlineParcelBooking = true;
+    await createNavbar();
+
+    component.toggleProfileDropdown();
+    fixture.detectChanges();
+    const desktopLink = fixture.debugElement.query(
+      By.css('.navbar-profile-item[href="/my-parcels"]'),
+    );
+    expect(desktopLink)
+      .withContext('desktop My Parcels link should render once the flag is re-enabled')
+      .toBeTruthy();
+
+    component.isMobileMenuOpen = true;
+    fixture.detectChanges();
+    const mobileLink = fixture.debugElement.query(
+      By.css('a.navbar-mobile-link[href="/my-parcels"]'),
+    );
+    expect(mobileLink)
+      .withContext('mobile My Parcels link should render once the flag is re-enabled')
       .toBeTruthy();
   });
 });
