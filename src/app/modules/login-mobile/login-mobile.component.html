@@ -44,6 +44,8 @@
             type="text"
             id="phoneNo"
             formControlName="phoneNo"
+            (focus)="onPhoneFocus()"
+            (blur)="onPhoneBlur()"
             [class.form-error]="
               getForm('phoneNo')?.errors &&
               (getForm('phoneNo')?.touched || getForm('phoneNo')?.dirty)

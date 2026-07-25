@@ -3,6 +3,11 @@ import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, ValidatorFn,
 import { Subject } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
 import { ParcelOnlineQuoteParams, ParcelQuoteRespDto } from '../../../../shared/interfaces/parcel.interface';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../shared/constants/thai-msisdn';
 
 export interface ParcelDetailsFormValue {
   senderPhone: string;
@@ -97,9 +102,9 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
 
   constructor(private readonly fb: FormBuilder) {
     this.form = this.fb.group({
-      senderPhone: ['', [Validators.required, Validators.pattern(PHONE_PATTERN)]],
+      senderPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
       recipientName: ['', [Validators.required, Validators.maxLength(100)]],
-      recipientPhone: ['', [Validators.required, Validators.pattern(PHONE_PATTERN)]],
+      recipientPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
       weightKg: [null, [Validators.required, positiveWeightValidator(), Validators.max(100)]],
       description: ['', [Validators.required, Validators.maxLength(500)]],
       dimensions: this.fb.group(
@@ -121,9 +126,24 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
     // clobber what the customer has since typed (design-system: never let a
     // late response overwrite an in-progress edit).
     if (!this.prefillApplied && changes['senderPhonePrefill'] && this.senderPhonePrefill) {
-      this.form.get('senderPhone')?.setValue(this.senderPhonePrefill);
+      // OBRS-691: display grouped, same as every other phone field at rest.
+      this.form.get('senderPhone')?.setValue(formatThaiMobile(this.senderPhonePrefill));
       this.prefillApplied = true;
     }
+  }
+
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts,
+  // parameterized by control name since this form has two independent phone
+  // fields. onSubmit() below always strips dashes before the value reaches
+  // the emitted payload.
+  protected onPhoneFocus(controlName: 'senderPhone' | 'recipientPhone'): void {
+    const control = this.form.get(controlName);
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  protected onPhoneBlur(controlName: 'senderPhone' | 'recipientPhone'): void {
+    const control = this.form.get(controlName);
+    control?.setValue(formatThaiMobile(control.value));
   }
 
   ngOnDestroy(): void {
@@ -172,8 +192,10 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
     };
 
     const payload: ParcelDetailsFormValue = {
-      senderPhone: v.senderPhone.trim(),
-      recipient: { name: v.recipientName.trim(), phone: v.recipientPhone.trim() },
+      // OBRS-691: the controls may carry display dashes (regrouped on blur) —
+      // the backend stores/validates bare digits only.
+      senderPhone: stripPhoneSeparators(v.senderPhone),
+      recipient: { name: v.recipientName.trim(), phone: stripPhoneSeparators(v.recipientPhone) },
       weightKg: Number(v.weightKg),
       description: v.description.trim(),
       prohibitedAcknowledged: v.prohibitedAcknowledged,

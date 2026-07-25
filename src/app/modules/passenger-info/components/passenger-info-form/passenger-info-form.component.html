@@ -203,6 +203,8 @@
                 type="text"
                 id="phoneNumber-{{ i }}"
                 formControlName="phoneNumber"
+                (focus)="onPassengerPhoneFocus(i)"
+                (blur)="onPassengerPhoneBlur(i)"
                 [placeholder]="
                   'PASSENGER_INFO.FORM.PHONE_NUMBER_PLACEHOLDER' | translate
                 "

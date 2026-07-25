@@ -1,3 +1,5 @@
+import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
+
 /**
  * A Thai mobile number as the user types it: `0[689]XXXXXXXX`.
  *
@@ -37,4 +39,24 @@ export function formatThaiMobile(value: string | null | undefined): string {
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
   return digits;
+}
+
+/**
+ * OBRS-691 — drop-in replacement for `Validators.pattern(<regex>)` on any phone control that
+ * now carries display dashes at rest (`080-000-0000`): strips separators BEFORE testing, so a
+ * grouped value validates exactly like its bare-digit equivalent (same rule as
+ * `account-page.component.ts`'s `thaiMobileValidator`, generalized to an arbitrary pattern
+ * instead of being hardcoded to `THAI_MOBILE_PATTERN`). Returns the SAME `{ pattern: true }`
+ * error shape `Validators.pattern` produces, so every existing `hasError('pattern')` /
+ * `errors?.['pattern']` template binding keeps working unchanged. `required` still owns the
+ * empty case — a blank value returns null here so the two errors don't stack.
+ */
+export function separatorTolerantPattern(pattern: RegExp): ValidatorFn {
+  return (control: AbstractControl): ValidationErrors | null => {
+    const raw = control.value;
+    if (raw === null || raw === undefined || raw === '') {
+      return null;
+    }
+    return pattern.test(stripPhoneSeparators(raw)) ? null : { pattern: true };
+  };
 }

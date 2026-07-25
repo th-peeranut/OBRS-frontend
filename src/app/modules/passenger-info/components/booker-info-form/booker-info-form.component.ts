@@ -16,6 +16,11 @@ import { takeUntil } from 'rxjs/operators';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { PassengerInfo } from '../../../../shared/interfaces/passenger-info.interface';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../shared/constants/thai-msisdn';
 
 @Component({
   selector: 'app-booker-info-form',
@@ -52,7 +57,7 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],
-      phoneNumber: ['', [Validators.required, Validators.pattern(/^0\d{9}$/)]],
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(/^0\d{9}$/)]],
       // NOT a display-only field, despite the name. `gender` is this form's local
       // name for the wire's `passengerType`: PassengerInfoComponent renames it at
       // the payload boundary (normalizePassengerType) and the backend persists it
@@ -70,6 +75,19 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
 
   getControl(controlName: string): FormControl {
     return this.bookerForm.get(controlName) as FormControl;
+  }
+
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts.
+  // buildBookerPayload() below always strips dashes before the value reaches
+  // getCurrentBooker()/validateAndGetBooker() callers.
+  onPhoneFocus(): void {
+    const control = this.bookerForm.get('phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  onPhoneBlur(): void {
+    const control = this.bookerForm.get('phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
   }
 
   getFormErrors(controlName: string, errorName: string): boolean {
@@ -114,7 +132,9 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       firstName: raw.firstName,
       middleName: raw.middleName,
       lastName: raw.lastName,
-      phoneNumber: raw.phoneNumber,
+      // OBRS-691: the control may carry display dashes (regrouped on blur) —
+      // every downstream consumer of this payload needs bare digits.
+      phoneNumber: stripPhoneSeparators(raw.phoneNumber),
       gender: raw.gender,
       isSelectSeat: false,
       passengerSeat: '',

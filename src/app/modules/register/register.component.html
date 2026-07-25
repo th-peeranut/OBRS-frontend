@@ -279,6 +279,8 @@
             type="text"
             id="phoneNumber"
             formControlName="phoneNumber"
+            (focus)="onPhoneFocus()"
+            (blur)="onPhoneBlur()"
             [placeholder]="'REGISTER.PHONE_NO_PLACEHOLDER' | translate"
             [class.form-error]="
               (getForm('phoneNumber')?.errors || phoneNumberIsExist) &&

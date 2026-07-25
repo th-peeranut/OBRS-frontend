@@ -149,6 +149,8 @@
               type="text"
               id="booker-phoneNumber"
               formControlName="phoneNumber"
+              (focus)="onPhoneFocus()"
+              (blur)="onPhoneBlur()"
               [placeholder]="
                 'PASSENGER_INFO.FORM.PHONE_NUMBER_PLACEHOLDER' | translate
               "

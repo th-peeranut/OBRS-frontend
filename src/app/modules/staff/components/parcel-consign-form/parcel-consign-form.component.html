@@ -10,7 +10,14 @@
     </div>
     <div class="col-md-6">
       <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.SENDER_PHONE' | translate }}</label>
-      <input type="text" class="admin-field" formControlName="senderPhone" [class.is-invalid]="isFieldInvalid('senderPhone')" />
+      <input
+        type="text"
+        class="admin-field"
+        formControlName="senderPhone"
+        (focus)="onPhoneFocus('senderPhone')"
+        (blur)="onPhoneBlur('senderPhone')"
+        [class.is-invalid]="isFieldInvalid('senderPhone')"
+      />
       <small class="admin-error" *ngIf="fieldError('senderPhone') as err">{{ err | translate }}</small>
     </div>
 
@@ -29,7 +36,14 @@
       </div>
       <div class="col-md-6">
         <label>{{ 'STAFF.PARCEL_CONSIGN.FIELD.RECIPIENT_PHONE' | translate }}</label>
-        <input type="text" class="admin-field" formControlName="recipientPhone" [class.is-invalid]="isFieldInvalid('recipientPhone')" />
+        <input
+          type="text"
+          class="admin-field"
+          formControlName="recipientPhone"
+          (focus)="onPhoneFocus('recipientPhone')"
+          (blur)="onPhoneBlur('recipientPhone')"
+          [class.is-invalid]="isFieldInvalid('recipientPhone')"
+        />
         <small class="admin-error" *ngIf="fieldError('recipientPhone') as err">{{ err | translate }}</small>
       </div>
     </ng-container>

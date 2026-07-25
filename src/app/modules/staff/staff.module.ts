@@ -65,6 +65,7 @@ function legacyParcelScheduleUrl(scheduleId: string, tab: ParcelScheduleTab): Ur
 import { FleetMapPageComponent } from './pages/fleet-map/fleet-map-page.component';
 import { FleetMapPanelComponent } from './components/fleet-map-panel/fleet-map-panel.component';
 import { FleetVehicleStatusListComponent } from './components/fleet-vehicle-status-list/fleet-vehicle-status-list.component';
+import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
 export const staffRoutes: Routes = [
   {
@@ -245,6 +246,7 @@ export const staffRoutes: Routes = [
     MenuModule,
     AdminSharedModule,
     PassengerSeatModule,
+    PhoneFormatPipe,
 
     // Station list (stop dropdowns on the sell search step). Registered per
     // lazy module — same pattern as the public booking modules.

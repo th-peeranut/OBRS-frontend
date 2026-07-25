@@ -3968,3 +3968,17 @@ Two related smaller ones from the same review, both worth generalizing:
   reused it. Same formula in two lists (form dropdown + filter dropdown) is a silent
   label-drift hazard the moment the format changes — reuse the helper, don't re-inline,
   even for a one-line expression on the same page.
+
+## OBRS-691 Scrutinize self-fix (passenger-info-form store-echo regroup)
+The app-wide 3-3-4 phone idiom is "peel dashes on focus, regroup on blur". That idiom is
+safe on plain forms (account-page, register, login, walk-in, parcel, user-form) because
+nothing rewrites the control while focused. `passenger-info-form` is the ONE exception: it
+has a live debounced store round-trip (OBRS-361) — `valueChanges → 300ms → dispatch →
+invokeSetPassengerInfo (synchronous `of()` effect) → passengerInfo selector → setPassengerData`
+— that patches EVERY row on the echo of the user's own edit. OBRS-691's `setPassengerData`
+applied `formatThaiMobile` to all rows, so ~300ms after a user typed a complete 10-digit
+number and paused WHILE STILL FOCUSED, the echo injected dashes into the focused field and
+jumped the caret. Fix: track `focusedPhoneRow`; keep that one row bare in the echo, format
+the rest. Lesson for future phone/format work: when a form live-syncs to a store, any
+focus/blur display transform must be suppressed for the focused control on the store echo,
+not just relied on to re-run on blur.

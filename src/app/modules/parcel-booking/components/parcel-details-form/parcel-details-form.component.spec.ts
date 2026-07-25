@@ -40,7 +40,8 @@ describe('ParcelDetailsFormComponent', () => {
 
     expect(component['form'].get('senderPhone')).toBeTruthy();
     expect((component['form'] as any).contains('senderName')).toBeFalse();
-    expect(component['form'].get('senderPhone')?.value).toBe('0812345678');
+    // OBRS-691: the prefill now displays grouped (3-3-4), same as every other phone field at rest.
+    expect(component['form'].get('senderPhone')?.value).toBe('081-234-5678');
 
     const el: HTMLElement = fixture.nativeElement;
     expect(el.textContent).toContain('Somchai Jaidee');

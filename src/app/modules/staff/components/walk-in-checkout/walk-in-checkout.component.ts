@@ -9,6 +9,11 @@ import { TITLE_OPTIONS } from '../../../../shared/constants/title-options';
 import { Dropdown } from '../../../../shared/interfaces/dropdown.interface';
 import { localizedDropdownName } from '../../../../shared/lib/localized-dropdown-name';
 import { TranslateService } from '@ngx-translate/core';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../shared/constants/thai-msisdn';
 
 export interface WalkInCheckoutPayload {
   contact: {
@@ -65,7 +70,7 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
       title: ['', [Validators.required]],
       firstName: ['', [Validators.required, Validators.maxLength(100)]],
       lastName: ['', [Validators.required, Validators.maxLength(100)]],
-      phoneNumber: ['', [Validators.required, Validators.pattern(this.phonePattern)]],
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(this.phonePattern)]],
       identityCardNumber: ['', [Validators.pattern(this.idCardPattern)]],
       // OBRS-197: email is now OPTIONAL for walk-in/offline channels — the
       // backend accepts a blank contact email (contact_email_snapshot is
@@ -102,6 +107,18 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
 
   protected titleLabel(option: Dropdown): string {
     return localizedDropdownName(option, this.translate.currentLang);
+  }
+
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts.
+  // onSell() below always strips dashes before the value reaches the payload.
+  protected onPhoneFocus(): void {
+    const control = this.contactForm.get('phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  protected onPhoneBlur(): void {
+    const control = this.contactForm.get('phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
   }
 
   // OBRS-324: OPEN sells by headcount (no seat picker); ASSIGNED keeps counting
@@ -154,7 +171,9 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
         title: String(v.title ?? ''),
         firstName: String(v.firstName ?? ''),
         lastName: String(v.lastName ?? ''),
-        phoneNumber: String(v.phoneNumber ?? ''),
+        // OBRS-691: the control may carry display dashes (regrouped on blur) —
+        // the backend stores/validates bare digits only.
+        phoneNumber: stripPhoneSeparators(v.phoneNumber ?? ''),
       },
       cashReceived: this.cashReceived,
     };

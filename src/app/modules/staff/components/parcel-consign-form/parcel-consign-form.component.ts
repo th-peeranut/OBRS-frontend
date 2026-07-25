@@ -16,6 +16,11 @@ import {
   classifyCarryOn,
   ParcelCarryOnClassification,
 } from '../../../../shared/lib/parcel-carry-on-classification';
+import {
+  formatThaiMobile,
+  separatorTolerantPattern,
+  stripPhoneSeparators,
+} from '../../../../shared/constants/thai-msisdn';
 
 export interface ParcelDropdownOption {
   value: string;
@@ -174,9 +179,9 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   constructor(private readonly fb: FormBuilder) {
     this.form = this.fb.group({
       senderName: ['', [Validators.required, Validators.maxLength(100)]],
-      senderPhone: ['', [Validators.required, Validators.pattern(PHONE_PATTERN)]],
+      senderPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
       recipientName: ['', [Validators.required, Validators.maxLength(100)]],
-      recipientPhone: ['', [Validators.required, Validators.pattern(PHONE_PATTERN)]],
+      recipientPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
       scheduleId: ['', [Validators.required]],
       pickupStopId: ['', [Validators.required]],
       dropoffStopId: ['', [Validators.required]],
@@ -275,6 +280,20 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     this.resetForMode(this.mode);
   }
 
+  // OBRS-691: same focus/blur regrouping idiom as account-page.component.ts,
+  // parameterized by control name since this form has two independent phone
+  // fields. emitConsignedSubmit()/emitCarryOnSubmit() below always strip
+  // dashes before the value reaches the emitted payload.
+  protected onPhoneFocus(controlName: 'senderPhone' | 'recipientPhone'): void {
+    const control = this.form.get(controlName);
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  protected onPhoneBlur(controlName: 'senderPhone' | 'recipientPhone'): void {
+    const control = this.form.get(controlName);
+    control?.setValue(formatThaiMobile(control.value));
+  }
+
   private applyModeValidators(): void {
     const recipientNameCtrl = this.form.get('recipientName');
     const recipientPhoneCtrl = this.form.get('recipientPhone');
@@ -291,7 +310,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       heightCtrl?.setValidators([Validators.required, dimensionPositiveValidator()]);
     } else {
       recipientNameCtrl?.setValidators([Validators.required, Validators.maxLength(100)]);
-      recipientPhoneCtrl?.setValidators([Validators.required, Validators.pattern(PHONE_PATTERN)]);
+      recipientPhoneCtrl?.setValidators([Validators.required, separatorTolerantPattern(PHONE_PATTERN)]);
       this.dimensionsGroup.setValidators(dimensionsAllOrNoneValidator());
       lengthCtrl?.setValidators(null);
       widthCtrl?.setValidators(null);
@@ -435,8 +454,10 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
 
     const payload: ParcelConsignFormValue = {
       mode: 'consigned',
-      sender: { name: v.senderName.trim(), phone: v.senderPhone.trim() },
-      recipient: { name: v.recipientName.trim(), phone: v.recipientPhone.trim() },
+      // OBRS-691: the controls may carry display dashes (regrouped on blur) —
+      // the backend stores/validates bare digits only.
+      sender: { name: v.senderName.trim(), phone: stripPhoneSeparators(v.senderPhone) },
+      recipient: { name: v.recipientName.trim(), phone: stripPhoneSeparators(v.recipientPhone) },
       scheduleId: Number(v.scheduleId),
       pickupStopId: Number(v.pickupStopId),
       dropoffStopId: Number(v.dropoffStopId),
@@ -473,7 +494,8 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
 
     const payload: ParcelCarryOnFormValue = {
       mode: 'carry_on_seat',
-      sender: { name: v.senderName.trim(), phone: v.senderPhone.trim() },
+      // OBRS-691: same rationale as emitConsignedSubmit above.
+      sender: { name: v.senderName.trim(), phone: stripPhoneSeparators(v.senderPhone) },
       scheduleId: Number(v.scheduleId),
       pickupStopId: Number(v.pickupStopId),
       dropoffStopId: Number(v.dropoffStopId),

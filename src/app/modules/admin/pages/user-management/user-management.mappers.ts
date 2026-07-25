@@ -10,6 +10,7 @@ import {
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
+import { formatThaiMobile, stripPhoneSeparators } from '../../../../shared/constants/thai-msisdn';
 
 // Pure mappers/formatters/normalizers extracted from UserManagementPageComponent
 // (OBRS-232, mirroring OBRS-208's routes.mappers.ts and OBRS-214's
@@ -281,7 +282,10 @@ export function buildUserFormValues(
     middleName: String(userDetail.middleName ?? parsedName.middleName ?? '').trim(),
     lastName: String(userDetail.lastName ?? parsedName.lastName ?? '').trim(),
     email: userDetail.email ?? user.email,
-    phoneNumber: String(userDetail.phoneNumber ?? user.phone).replace(/\D/g, ''),
+    // OBRS-691: form field displays grouped (3-3-4), same as account-page's
+    // patchFormFromProfile — formatThaiMobile already strips non-digits before
+    // testing/grouping, so this replaces the old bare `.replace(/\D/g, '')`.
+    phoneNumber: formatThaiMobile(String(userDetail.phoneNumber ?? user.phone)),
     preferredLocale: userDetail.preferredLocale ?? 'th',
     status: status.code,
     roles: roles.length > 0 ? roles : [...user.roleSlugs],
@@ -296,7 +300,9 @@ export function toCreateUserPayload(raw: Record<string, unknown>): CreateUserPay
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
     email: String(raw['email'] ?? '').trim(),
-    phoneNumber: String(raw['phoneNumber'] ?? '').trim(),
+    // OBRS-691: the control may carry display dashes (regrouped on blur) —
+    // the backend stores/validates bare digits only.
+    phoneNumber: stripPhoneSeparators(String(raw['phoneNumber'] ?? '')),
     password: String(raw['password'] ?? '').trim(),
     preferredLocale: String(raw['preferredLocale'] ?? 'th').trim(),
     status: String(raw['status'] ?? '').trim().toLowerCase(),
@@ -314,7 +320,8 @@ export function toUpdateUserPayload(raw: Record<string, unknown>): UpdateUserPay
     middleName: String(raw['middleName'] ?? '').trim() || undefined,
     lastName: String(raw['lastName'] ?? '').trim(),
     email: String(raw['email'] ?? '').trim(),
-    phoneNumber: String(raw['phoneNumber'] ?? '').trim(),
+    // OBRS-691: same rationale as toCreateUserPayload above.
+    phoneNumber: stripPhoneSeparators(String(raw['phoneNumber'] ?? '')),
     isPhoneNumberVerify: Boolean(raw['isPhoneNumberVerify']),
     preferredLocale: String(raw['preferredLocale'] ?? 'th').trim(),
     status: String(raw['status'] ?? '').trim().toLowerCase(),
