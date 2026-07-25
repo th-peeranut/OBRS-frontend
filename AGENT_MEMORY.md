@@ -3960,3 +3960,11 @@ Two related smaller ones from the same review, both worth generalizing:
 - Reusing a shipped screen for a second mode inherits its **copy**, not just its markup: the submit
   button still read "Consign parcel" in carry-on mode. When adding a mode toggle to an existing page,
   re-read every user-visible string on it against the new branch, not only the fields you added.
+## OBRS-685 Scrutinize (self-fix)
+- Consolidated a within-page DRY duplication: the vehicle-identifier formula
+  (`[vehicleNumber, numberPlate].filter(Boolean).join(' / ') || '#id'`) lived in
+  `expenses-page.mappers.ts`'s private `vehicleIdentifier` AND was re-inlined in
+  `expenses-page.component.ts`'s `vehicleFilterOptions` map. Exported the helper and
+  reused it. Same formula in two lists (form dropdown + filter dropdown) is a silent
+  label-drift hazard the moment the format changes — reuse the helper, don't re-inline,
+  even for a one-line expression on the same page.

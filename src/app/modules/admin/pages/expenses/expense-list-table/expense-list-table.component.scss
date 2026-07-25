@@ -1,0 +1,42 @@
+:host {
+  display: block;
+}
+
+// design-system §12 "Right-aligned money columns" pattern (OBRS-231,
+// EodSalesReportPageComponent) — scoped to genuinely money-shaped columns
+// (Amount, VAT) so a cash-tracking table scans/sums visually top-to-bottom.
+.expense-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+// design-system §12 full-section empty-state pattern (OBRS-209,
+// AppVehicleMaintenancePanelComponent) — themed via the admin shell's
+// --admin-muted/--admin-text CSS vars only, no raw hex, themes for free in
+// dark mode.
+.expense-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--admin-muted);
+}
+
+.expense-empty .material-symbols-outlined {
+  font-size: 40px;
+  color: var(--admin-muted);
+}
+
+.expense-empty-title {
+  margin: 0;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.expense-empty-body {
+  margin: 0;
+  font-size: 13px;
+  color: var(--admin-muted);
+}

@@ -355,6 +355,38 @@ describe('ReportsPageComponent (export button, OBRS-442)', () => {
     expect((button.componentInstance as ExportButtonComponent).datasetKey).toBe('revenue-daily');
   });
 
+  // OBRS-668: a second, sibling export button for the revenue-per-vehicle
+  // dataset — same requiredRole="owner" and store.range-derived params as
+  // the revenue-daily button above, matched deliberately rather than a new
+  // scheme.
+  it('renders a second export button for datasetKey "revenue-per-vehicle" with the same role and params', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    const buttons = fixture.debugElement.queryAll(By.directive(ExportButtonComponent));
+    expect(buttons.length).toBe(2);
+
+    const perVehicleButton = buttons[1].componentInstance as ExportButtonComponent;
+    expect(perVehicleButton.datasetKey).toBe('revenue-per-vehicle');
+    expect(perVehicleButton.requiredRole).toBe('owner');
+    expect(perVehicleButton.params).toEqual({ from: '2026-07-01', to: '2026-07-07' });
+  });
+
+  // OBRS-668 (scrutinize follow-up): both buttons pass a distinct `label` i18n
+  // key so they no longer read as two identical "Export" buttons.
+  it('passes distinct label keys to the two export buttons', () => {
+    configure(true);
+    fixture.detectChanges();
+
+    const buttons = fixture.debugElement.queryAll(By.directive(ExportButtonComponent));
+    expect((buttons[0].componentInstance as ExportButtonComponent).label).toBe(
+      'ADMIN.REPORTS.EXPORT_REVENUE_DAILY'
+    );
+    expect((buttons[1].componentInstance as ExportButtonComponent).label).toBe(
+      'ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE'
+    );
+  });
+
   // Load-bearing: proves [params] is bound to the STORE getter (not the component's Date
   // fields) and tracks it live — a test only checking the initial default range would pass
   // even if bound to the wrong source.

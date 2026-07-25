@@ -1,0 +1,18 @@
+<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="cancel.emit()">
+  <div class="admin-modal admin-modal-confirm">
+    <h4 class="admin-modal-title">{{ 'ADMIN.COMMON.DELETE_CONFIRM_TITLE' | translate }}</h4>
+    <p class="admin-modal-subtitle">
+      {{ 'ADMIN.COMMON.DELETE_CONFIRM_MESSAGE' | translate }}
+      <strong *ngIf="expense">{{ expense.categoryDisplay }} — {{ expense.expenseDateDisplay }}</strong>
+    </p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" (click)="cancel.emit()">
+        {{ 'ADMIN.COMMON.CANCEL' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-primary" [disabled]="isDeleting" (click)="confirm.emit()">
+        {{ isDeleting ? ('ADMIN.COMMON.DELETING' | translate) : ('ADMIN.COMMON.DELETE' | translate) }}
+      </button>
+    </div>
+  </div>
+</div>

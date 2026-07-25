@@ -24,6 +24,7 @@ import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
 import { DashboardTodayDto } from '../../shared/interfaces/dashboard-today.interface';
 import {
+  SettlementConfirmPayload,
   SettlementPendingPageDto,
   SettlementScheduleDetailDto,
 } from '../../shared/interfaces/settlement.interface';
@@ -535,6 +536,19 @@ export interface AdminBookingContactDetailDto {
   phoneNumber?: string;
 }
 
+// OBRS-690 / OBRS-661 AC9: request body for the OWNER override-cancel endpoint.
+// `rateChoice` is a closed two-value enum — POLICY (refund the normal
+// window-based rate) or FULL (100% refund) — deliberately NOT a free BigDecimal
+// (ADR-0103: the numeric field is the fraud vector). Both fields are optional on
+// the wire (a bare POST = POLICY, no reason); `reason` becomes mandatory on the
+// backend only when a rule is broken.
+export type OverrideRefundRateChoice = 'POLICY' | 'FULL';
+
+export interface OverrideCancelReqDto {
+  rateChoice?: OverrideRefundRateChoice;
+  reason?: string;
+}
+
 export interface AdminBookingDetailDto {
   id: number;
   bookingNumber?: string;
@@ -733,6 +747,52 @@ export interface CreateVehicleMaintenancePayload {
   nextDueDate?: string | null;
   maintenanceStatus: string;
   notes?: string | null;
+}
+
+/** OBRS-685: `GET /api/private/expenses` / `GET /{id}` response row.
+ * `vehicleId` is `null` for a central/not-linked-to-a-vehicle expense — a
+ * REAL nullable Long on the wire, distinct from the FE form's own
+ * `VEHICLE_CENTRAL_SENTINEL` string, which only exists inside the form
+ * control (see `expenses-page.mappers.ts`). `category` is one of the 10
+ * fixed enum codes (FUEL/REPAIR/VEHICLE_TAX/ACT/INSURANCE/INSPECTION/TIRE/
+ * GPS/CENTRAL/OTHER). Audit fields are `@JsonUnwrapped` on the backend DTO —
+ * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
+export interface AdminExpenseDto {
+  id: number;
+  vehicleId: number | null;
+  category: string;
+  categoryOtherLabel?: string | null;
+  amount: number;
+  vatAmount?: number | null;
+  expenseDate: string;
+  receiptNo?: string | null;
+  paidBy?: string | null;
+  note?: string | null;
+  createdByName?: string;
+  createdAt?: string;
+  updatedByName?: string;
+  updatedAt?: string;
+}
+
+/** OBRS-685: `ExpenseReqDto` — sent verbatim by the create/edit form
+ * (`toExpensePayload()` in `expenses-page.mappers.ts`). Every optional field
+ * is an explicit key (`null` when blank), never omitted — same full-replace
+ * contract as `CreateVehiclePayload` above, and PUT sends all 9 fields. */
+export interface CreateExpensePayload {
+  vehicleId: number | null;
+  category: string;
+  categoryOtherLabel: string | null;
+  amount: number;
+  vatAmount: number | null;
+  expenseDate: string;
+  receiptNo: string | null;
+  paidBy: string | null;
+  note: string | null;
+}
+
+/** OBRS-685: `POST /api/private/expenses` 201 response body. */
+export interface CreateExpenseRespDto {
+  expenseId: number;
 }
 
 export interface CreateRoutePayload {
@@ -1296,6 +1356,25 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-690 / OBRS-661 AC9: OWNER override-cancel. Backend endpoint is
+  // POST /api/private/admin/bookings/{id}/cancel, @PreAuthorize("hasRole('OWNER')")
+  // (ADMIN inherits via the role hierarchy; SALESPERSON gets 403 — the button is
+  // OWNER-gated on the FE too). The refund rate is a CLOSED enum, never a
+  // caller-supplied number: the free-numeric field IS the fraud vector this card
+  // exists to remove (ADR-0103). `reason` is required by the backend only when a
+  // rule is actually broken (out-of-window OR rateChoice=FULL) — it returns
+  // 400 `cancel.error.override-reason-required` otherwise; the modal mirrors that
+  // gate client-side so the field appears only when it is genuinely needed.
+  adminOverrideCancelBooking(
+    bookingId: number,
+    payload: OverrideCancelReqDto
+  ): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/admin/bookings/${bookingId}/cancel`,
+      payload
+    );
+  }
+
   getPendingManualRefunds(
     page = 0,
     size = 20
@@ -1438,11 +1517,15 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-671: the confirm body is now REQUIRED and carries the counted cash,
+  // who handed it over, and a reason only when the count doesn't reconcile.
+  // The old optional `acknowledgedTotalAmount` guard (and its
+  // `409 SETTLEMENT_AMOUNT_MISMATCH`) is retired — sending the stale shape now
+  // gets `400 VALIDATION_FAILED` from the backend.
   confirmSettlement(
     id: number,
-    acknowledgedTotalAmount?: string
+    payload: SettlementConfirmPayload
   ): Observable<ResponseAPI<SettlementScheduleDetailDto>> {
-    const payload = acknowledgedTotalAmount !== undefined ? { acknowledgedTotalAmount } : {};
     return this.postRequest<SettlementScheduleDetailDto>(
       `${this.baseUrl}/private/settlements/schedules/${id}/confirm`,
       payload
@@ -1584,5 +1667,36 @@ export class AdminApiService {
 
   deletePromotion(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/admin/promotions/${id}`);
+  }
+
+  // OBRS-685: vehicle/central expense log — owner+admin only (backend 403s
+  // salesperson on every endpoint). `vehicleId === null` fetches every
+  // expense (no query param); a caller passing a number scopes to that
+  // vehicle via `?vehicleId=`. There is no "central-only" query param — the
+  // vehicle filter's "central only" option ALSO calls this with `null` and
+  // narrows client-side (see `expenses-page.mappers.ts`
+  // `filterExpensesByCategoryAndRange`'s `centralOnly` predicate).
+  getExpenses(vehicleId: number | null): Observable<ResponseAPI<AdminExpenseDto[]>> {
+    if (vehicleId === null) {
+      return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses`);
+    }
+    const params = new HttpParams().set('vehicleId', String(vehicleId));
+    return this.getRequest<AdminExpenseDto[]>(`${this.baseUrl}/private/expenses`, params);
+  }
+
+  getExpenseById(id: number): Observable<ResponseAPI<AdminExpenseDto>> {
+    return this.getRequest<AdminExpenseDto>(`${this.baseUrl}/private/expenses/${id}`);
+  }
+
+  createExpense(payload: CreateExpensePayload): Observable<ResponseAPI<CreateExpenseRespDto>> {
+    return this.postRequest<CreateExpenseRespDto>(`${this.baseUrl}/private/expenses`, payload);
+  }
+
+  updateExpense(id: number, payload: CreateExpensePayload): Observable<ResponseAPI<unknown>> {
+    return this.putRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`, payload);
+  }
+
+  deleteExpense(id: number): Observable<ResponseAPI<unknown>> {
+    return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
   }
 }

@@ -13,6 +13,7 @@ import {
   getAdminLookupLabel,
   parseAdminStatus,
 } from '../../../../services/admin/admin-api.service';
+import { AuthService } from '../../../../auth/auth.service';
 
 interface TimelineEvent {
   time: string | null;
@@ -51,13 +52,23 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
   protected detailLoadError = '';
   protected paymentsLoadError = '';
 
+  // Override-cancel (OBRS-690 / OBRS-661 AC9). OWNER-only — the backend endpoint
+  // is @PreAuthorize("hasRole('OWNER')") (ADMIN inherits, SALESPERSON gets 403),
+  // and hasAnyRole(['owner']) resolves to exactly {owner, admin} on the FE, so
+  // the button never shows to a salesperson who would only bounce off a 403.
+  protected readonly canOverrideCancel: boolean;
+  protected isOverrideCancelOpen = false;
+
   private readonly subscriptions = new Subscription();
 
   constructor(
     private readonly translate: TranslateService,
     private readonly store: BookingsStore,
-    private readonly adminApiService: AdminApiService
-  ) {}
+    private readonly adminApiService: AdminApiService,
+    private readonly authService: AuthService
+  ) {
+    this.canOverrideCancel = this.authService.hasAnyRole(['owner']);
+  }
 
   // Format a raw ISO timestamp for display in the current UI language. Called
   // from the template (not the store) so the cached, locale-independent rows
@@ -353,6 +364,38 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
 
   protected onDetailBackdropDismiss(): void {
     this.closeDetail();
+  }
+
+  // ── Override-cancel (OBRS-690) ─────────────────────────────────────────
+
+  // Only a CONFIRMED booking can be override-cancelled (the backend rejects
+  // anything else). Gates the button so an already-cancelled/pending booking
+  // never offers it.
+  protected get isDetailCancellable(): boolean {
+    const booking = this.detailBooking;
+    if (!booking) {
+      return false;
+    }
+    return this.bookingStatusCode(booking.status).toUpperCase() === 'CONFIRMED';
+  }
+
+  protected openOverrideCancel(): void {
+    if (!this.canOverrideCancel || !this.isDetailCancellable) {
+      return;
+    }
+    this.isOverrideCancelOpen = true;
+  }
+
+  protected onOverrideCancelClosed(): void {
+    this.isOverrideCancelOpen = false;
+  }
+
+  // A successful override-cancel: close both dialogs and revalidate the list so
+  // the row's status flips to CANCELLED.
+  protected onOverrideCancelled(): void {
+    this.isOverrideCancelOpen = false;
+    this.closeDetail();
+    void this.store.refresh();
   }
 
   protected bookingStatusCode(status: string | AdminStatusDto | undefined): string {

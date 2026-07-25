@@ -45,6 +45,14 @@
     class="ms-auto"
     datasetKey="revenue-daily"
     requiredRole="owner"
+    label="ADMIN.REPORTS.EXPORT_REVENUE_DAILY"
+    [params]="{ from: store.range.from, to: store.range.to }"
+  ></app-export-button>
+
+  <app-export-button
+    datasetKey="revenue-per-vehicle"
+    requiredRole="owner"
+    label="ADMIN.REPORTS.EXPORT_REVENUE_PER_VEHICLE"
     [params]="{ from: store.range.from, to: store.range.to }"
   ></app-export-button>
 </section>

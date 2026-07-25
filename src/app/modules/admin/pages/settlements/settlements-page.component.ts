@@ -3,9 +3,15 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import { SettlementsPendingStore } from './settlements.store';
-import { AdminApiService } from '../../../../services/admin/admin-api.service';
+import {
+  AdminApiService,
+  AdminUserDto,
+  parseAdminStatus,
+} from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
+  SettlementConfirmPayload,
+  SettlementHandoverCandidate,
   SettlementPendingItemDto,
   SettlementScheduleDetailDto,
 } from '../../../../shared/interfaces/settlement.interface';
@@ -45,6 +51,12 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
   protected isConfirming = false;
   protected detailFetchError = '';
 
+  // OBRS-671: salespeople selectable as the cash hand-over person. Loaded once
+  // on init (the picker is the same for every round) and passed to the modal.
+  // Left empty on failure — the modal shows an empty-picker note and blocks
+  // confirm rather than the page erroring out.
+  protected handoverCandidates: SettlementHandoverCandidate[] = [];
+
   // In-memory cache of full schedule detail, keyed by scheduleId, so
   // reopening the same round doesn't re-issue the GET (usability-reports
   // pattern). Invalidated on confirm success/ALREADY_SETTLED so the next
@@ -78,6 +90,58 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
     });
 
     void this.store.refresh();
+    this.loadHandoverCandidates();
+  }
+
+  // OBRS-671. The "handed over by" picker lists active salespeople (the staff
+  // who close a shift at the counter). The backend only validates that the id
+  // EXISTS — this is purely the UX shortlist, so a failure degrades to an empty
+  // picker rather than blocking the page.
+  private loadHandoverCandidates(): void {
+    this.adminApiService
+      .getUsers()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const users = response.data ?? [];
+          this.handoverCandidates = users
+            .filter((user) => SettlementsPageComponent.isSelectableHander(user))
+            .map((user) => ({ id: user.id, name: SettlementsPageComponent.handerName(user) }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        },
+        error: () => {
+          this.handoverCandidates = [];
+        },
+      });
+  }
+
+  // A salesperson (the role that mans the counter) who isn't locked/inactive.
+  // Roles come back as either a slug string or an AdminRoleDto — read whichever.
+  private static isSelectableHander(user: AdminUserDto): boolean {
+    const isSalesperson = (user.roles ?? []).some((role) => {
+      const slug = typeof role === 'string' ? role : role.slug ?? '';
+      return slug.toLowerCase() === 'salesperson';
+    });
+    if (!isSalesperson) {
+      return false;
+    }
+    // Exclude only explicitly non-active accounts; an absent/unknown status
+    // (older list rows) is left selectable rather than silently dropped.
+    const status = parseAdminStatus(user.status).code;
+    return status !== 'inactive' && status !== 'suspended' && !user.locked;
+  }
+
+  private static handerName(user: AdminUserDto): string {
+    const full = user.fullName?.trim();
+    if (full) {
+      return full;
+    }
+    const assembled = [user.firstName, user.lastName]
+      .map((part) => part?.trim())
+      .filter((part) => !!part)
+      .join(' ')
+      .trim();
+    return assembled || user.email || `#${user.id}`;
   }
 
   ngOnDestroy(): void {
@@ -191,18 +255,21 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
   // ── Confirm orchestration ────────────────────────────────────────────────
 
-  protected async requestConfirm(): Promise<void> {
+  // OBRS-671: the modal emits the counted cash + who handed it over (+ a reason
+  // only when the count doesn't reconcile). The final confirm dialog echoes the
+  // counted cash before the (irreversible) sign-off is posted.
+  protected async requestConfirm(payload: SettlementConfirmPayload): Promise<void> {
     const id = this.openScheduleId;
     const detail = this.modalDetail;
     if (id === null || !detail) {
       return;
     }
 
-    // Must show the exact amount, including "THB 0.00" for a zero round.
-    const amountText = this.formatMoney(detail.live.totalAmount, detail.currency);
+    // Echo the exact counted cash, including "THB 0.00" for a zero drawer.
+    const countedText = this.formatMoney(payload.countedCashAmount, detail.currency);
     const confirmed = await this.alertService.confirm({
       title: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.TITLE'),
-      text: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.TEXT', { amount: amountText }),
+      text: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.DIALOG_TEXT', { counted: countedText }),
       confirmButtonText: this.translate.instant('ADMIN.SETTLEMENTS.CONFIRM.CONFIRM_BTN'),
       cancelButtonText: this.translate.instant('ADMIN.COMMON.CANCEL'),
     });
@@ -212,7 +279,7 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
 
     this.isConfirming = true;
     this.adminApiService
-      .confirmSettlement(id, detail.live.totalAmount)
+      .confirmSettlement(id, payload)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (response) => {
@@ -260,11 +327,24 @@ export class SettlementsPageComponent implements OnInit, OnDestroy {
         this.removeRow(id);
         break;
 
-      case 'SETTLEMENT_AMOUNT_MISMATCH':
-        this.alertService.error(this.translate.instant('ADMIN.SETTLEMENTS.ERROR.AMOUNT_MISMATCH'));
-        // Never auto-resubmit the stale amount — force a fresh GET.
-        this.detailCache.delete(id);
-        this.openDetail(id);
+      // OBRS-671: the confirm body is validated server-side. These three keep
+      // the modal OPEN on the same round so the owner can fix the form and
+      // resubmit — the inline form already guards against them, so reaching one
+      // means the client and server briefly disagreed (e.g. a stale hander).
+      case 'VALIDATION_FAILED':
+        this.alertService.error(this.translate.instant('ADMIN.SETTLEMENTS.ERROR.VALIDATION_FAILED'));
+        break;
+
+      case 'SETTLEMENT_DISCREPANCY_REASON_REQUIRED':
+        this.alertService.error(
+          this.translate.instant('ADMIN.SETTLEMENTS.ERROR.DISCREPANCY_REASON_REQUIRED')
+        );
+        break;
+
+      case 'SETTLEMENT_HANDER_NOT_FOUND':
+        this.alertService.error(this.translate.instant('ADMIN.SETTLEMENTS.ERROR.HANDER_NOT_FOUND'));
+        // The shortlist the owner picked from may be stale — refresh it.
+        this.loadHandoverCandidates();
         break;
 
       case 'SETTLEMENT_SCOPE_FORBIDDEN':

@@ -27,6 +27,7 @@ import { RouteDetailPanelComponent } from './pages/routes/route-detail-panel/rou
 import { RouteListTableComponent } from './pages/routes/route-list-table/route-list-table.component';
 import { SchedulesPageComponent } from './pages/schedules/schedules-page.component';
 import { BookingsPageComponent } from './pages/bookings/bookings-page.component';
+import { OverrideCancelModalComponent } from './pages/bookings/override-cancel-modal/override-cancel-modal.component';
 import { UsabilityReportsPageComponent } from './pages/usability-reports/usability-reports-page.component';
 import { UsabilityReportDuplicatePickerComponent } from './pages/usability-reports/usability-report-duplicate-picker/usability-report-duplicate-picker.component';
 import { PromotionsPageComponent } from './pages/promotions/promotions-page.component';
@@ -49,6 +50,10 @@ import { BookingPolicyConfigPageComponent } from './pages/booking-policy-config/
 import { ConfigChangeHistoryPageComponent } from './pages/config-change-history/config-change-history-page.component';
 import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
+import { ExpensesPageComponent } from './pages/expenses/expenses-page.component';
+import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/expense-list-table.component';
+import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
+import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
 
 // OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
@@ -249,6 +254,20 @@ export const adminRoutes: Routes = [
           requiredRoles: ['admin', 'owner'],
         },
       },
+      {
+        // OBRS-685: vehicle/central expense log — admin+owner (backend 403s
+        // salesperson on every endpoint), same audience/shape as
+        // eod-sales-report above (whole always-shown admin+owner nav, not a
+        // further-restricted owner-only page like settlements).
+        path: 'expenses',
+        component: ExpensesPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.EXPENSES',
+          subtitleKey: 'ADMIN.EXPENSES.SUBTITLE',
+          requiredRoles: ['admin', 'owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -283,6 +302,7 @@ export const adminRoutes: Routes = [
     RouteListTableComponent,
     SchedulesPageComponent,
     BookingsPageComponent,
+    OverrideCancelModalComponent,
     UsabilityReportsPageComponent,
     UsabilityReportDuplicatePickerComponent,
     PromotionsPageComponent,
@@ -305,6 +325,10 @@ export const adminRoutes: Routes = [
     ConfigChangeHistoryPageComponent,
     CargoCapacityPageComponent,
     InspectionItemsPageComponent,
+    ExpensesPageComponent,
+    ExpenseListTableComponent,
+    ExpenseFormModalComponent,
+    ExpenseDeleteModalComponent,
   ],
   imports: [
     SharedModule,

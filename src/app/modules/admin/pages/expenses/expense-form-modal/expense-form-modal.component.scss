@@ -1,0 +1,19 @@
+@import "../../../../../../styles/variables.scss";
+
+:host {
+  display: block;
+}
+
+// design-system §5: touched inputs use the single pill shape.
+.admin-field {
+  border-radius: $radius-pill;
+}
+
+// Mirrors promotion-form-modal.component.scss's .admin-hint — a non-error
+// guidance line under the vehicle dropdown (§4.1: distinguishes "ส่วนกลาง /
+// ไม่ผูกคัน" from the unrelated "ส่วนกลาง" category, below it in the form).
+.admin-hint {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+}

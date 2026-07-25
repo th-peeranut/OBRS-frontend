@@ -1,10 +1,12 @@
 import { BehaviorSubject, Subject, of, throwError } from 'rxjs';
 import { SettlementsPageComponent } from './settlements-page.component';
 import {
+  SettlementConfirmPayload,
   SettlementPendingItemDto,
   SettlementPendingPageDto,
   SettlementScheduleDetailDto,
 } from '../../../../shared/interfaces/settlement.interface';
+import { AdminUserDto } from '../../../../services/admin/admin-api.service';
 import { createTranslateStub } from '../../../../testing/test-stubs';
 
 function makeItem(overrides: Partial<SettlementPendingItemDto> = {}): SettlementPendingItemDto {
@@ -55,9 +57,43 @@ function makeDetail(overrides: Partial<SettlementScheduleDetailDto> = {}): Settl
   };
 }
 
+function makeSettledDetail(): SettlementScheduleDetailDto {
+  return makeDetail({
+    status: 'SETTLED',
+    settled: {
+      totalAmount: '1000.00',
+      byMethod: [{ method: 'cash', amount: '1000.00' }],
+      byChannel: [{ channel: 'walk_in', amount: '1000.00' }],
+      settledBy: 9,
+      settledByName: 'Owner',
+      settledAt: '2026-07-10T09:00:00+07:00',
+      notTravelled: null,
+      countedAmount: '600.00',
+      expectedCashAmount: '600.00',
+      discrepancyAmount: '0.00',
+      discrepancyReason: null,
+      handedOverBy: 7,
+      handedOverByName: 'Sam Sales',
+    },
+  });
+}
+
 function ok<T>(data: T): { code: number; message: string; data: T } {
   return { code: 200, message: 'OK', data };
 }
+
+// OBRS-671: the users the confirm modal's hander picker is built from. Covers
+// the role-slug string form, the AdminRoleDto form + name assembly, plus two
+// users the filter must drop (a non-salesperson and a locked salesperson).
+const USERS: AdminUserDto[] = [
+  { id: 7, fullName: 'Sam Sales', roles: ['salesperson'], status: 'active' },
+  { id: 3, fullName: 'Anna Admin', roles: ['admin'], status: 'active' },
+  { id: 9, fullName: 'Lex Locked', roles: ['salesperson'], status: 'active', locked: true },
+  { id: 5, firstName: 'Bee', lastName: 'Counter', roles: [{ slug: 'salesperson' }], status: 'active' },
+];
+
+// OBRS-671: a valid confirm payload the modal would emit.
+const PAYLOAD: SettlementConfirmPayload = { countedCashAmount: '600.00', handedOverBy: 7 };
 
 // A store stub with a working `mutate()` (backed by the same BehaviorSubject
 // `data$` reads from) so optimistic row-removal is actually observable, mirroring
@@ -87,12 +123,14 @@ function makeStoreStub(
   };
 }
 
-function makeAdminApiStub() {
+// Always carries a `getUsers` (ngOnInit loads the hander shortlist on every
+// mount); override `getSettlementSchedule`/`confirmSettlement`/`getUsers` per test.
+function makeAdminApiStub(overrides: Record<string, jasmine.Spy> = {}) {
   return {
     getSettlementSchedule: jasmine.createSpy('getSettlementSchedule').and.returnValue(of(ok(makeDetail()))),
-    confirmSettlement: jasmine
-      .createSpy('confirmSettlement')
-      .and.returnValue(of(ok(makeDetail({ status: 'SETTLED' })))),
+    confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeDetail({ status: 'SETTLED' })))),
+    getUsers: jasmine.createSpy('getUsers').and.returnValue(of(ok(USERS))),
+    ...overrides,
   };
 }
 
@@ -131,6 +169,44 @@ describe('SettlementsPageComponent', () => {
     expect((component as any).fromDate.getDate()).toBe(1);
     expect((component as any).toDate.getDate()).toBe(7);
     expect(store.refresh).toHaveBeenCalled();
+  });
+
+  // OBRS-671 — the hander picker is the active salespeople only, name-mapped
+  // and sorted; admins and locked accounts are dropped.
+  it('loads the handover candidates (active salespeople only) on init, sorted by name', () => {
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub();
+    const component = new SettlementsPageComponent(
+      store as any,
+      adminApi as any,
+      makeAlertStub() as any,
+      createTranslateStub()
+    );
+
+    component.ngOnInit();
+
+    expect(adminApi.getUsers).toHaveBeenCalledTimes(1);
+    expect((component as any).handoverCandidates).toEqual([
+      { id: 5, name: 'Bee Counter' },
+      { id: 7, name: 'Sam Sales' },
+    ]);
+  });
+
+  it('degrades to an empty picker when the users lookup fails', () => {
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub({
+      getUsers: jasmine.createSpy('getUsers').and.returnValue(throwError(() => new Error('boom'))),
+    });
+    const component = new SettlementsPageComponent(
+      store as any,
+      adminApi as any,
+      makeAlertStub() as any,
+      createTranslateStub()
+    );
+
+    component.ngOnInit();
+
+    expect((component as any).handoverCandidates).toEqual([]);
   });
 
   it('contentState is "data" for a non-empty page', () => {
@@ -194,10 +270,9 @@ describe('SettlementsPageComponent', () => {
     // emit — lets us observe the optimistic-open window before the patch lands.
     const pending = new Subject<{ code: number; message: string; data: SettlementScheduleDetailDto }>();
     const store = makeStoreStub(makePage());
-    const adminApi = {
+    const adminApi = makeAdminApiStub({
       getSettlementSchedule: jasmine.createSpy().and.returnValue(pending.asObservable()),
-      confirmSettlement: jasmine.createSpy(),
-    };
+    });
     const component = new SettlementsPageComponent(
       store as any,
       adminApi as any,
@@ -240,10 +315,9 @@ describe('SettlementsPageComponent', () => {
 
   it('ignores a stale detail response after the admin moved to a different round', () => {
     const store = makeStoreStub(makePage([makeItem({ scheduleId: 1 }), makeItem({ scheduleId: 2 })]));
-    const adminApi = {
+    const adminApi = makeAdminApiStub({
       getSettlementSchedule: jasmine.createSpy().and.callFake((id: number) => of(ok(makeDetail({ scheduleId: id })))),
-      confirmSettlement: jasmine.createSpy(),
-    };
+    });
     const component = new SettlementsPageComponent(
       store as any,
       adminApi as any,
@@ -280,13 +354,12 @@ describe('SettlementsPageComponent', () => {
 
   it('a detail GET network failure sets an inline fetchError, and retryFetch re-issues the GET', () => {
     const store = makeStoreStub(makePage());
-    const adminApi = {
+    const adminApi = makeAdminApiStub({
       getSettlementSchedule: jasmine.createSpy().and.returnValues(
         throwError(() => new Error('network')),
         of(ok(makeDetail()))
       ),
-      confirmSettlement: jasmine.createSpy(),
-    };
+    });
     const component = new SettlementsPageComponent(
       store as any,
       adminApi as any,
@@ -315,7 +388,7 @@ describe('SettlementsPageComponent', () => {
     );
     component.ngOnInit();
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.confirm).not.toHaveBeenCalled();
   });
@@ -329,90 +402,63 @@ describe('SettlementsPageComponent', () => {
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(adminApi.confirmSettlement).not.toHaveBeenCalled();
   });
 
-  it('confirm success posts the exact live totalAmount, removes the row optimistically, and swaps to the settled view', async () => {
+  it('confirm success posts the counted-cash payload, removes the row optimistically, and swaps to the settled view', async () => {
     const store = makeStoreStub(makePage([makeItem({ scheduleId: 1 }), makeItem({ scheduleId: 2 })]));
-    const adminApi = makeAdminApiStub();
+    const adminApi = makeAdminApiStub({
+      confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
-    expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, '1000.00');
+    expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, PAYLOAD);
     expect(alert.success).toHaveBeenCalled();
     expect((component as any).items.find((i: SettlementPendingItemDto) => i.scheduleId === 1)).toBeUndefined();
     expect((component as any).modalDetail.status).toBe('SETTLED');
   });
 
-  // Zero-revenue rounds must still be confirmable, and the exact amount
-  // (including "THB 0.00") is what gets posted.
-  it('confirms a zero-revenue round with the exact zero amount', async () => {
-    const zeroDetail = makeDetail({
-      live: {
-        totalAmount: '0.00',
-        onSiteTotal: '0.00',
-        agencyTotal: '0.00',
-        passengerCount: 0,
-        ticketCount: 0,
-        byMethod: [],
-        byChannel: [],
-        notTravelled: {
-          ticketCount: 0,
-          collectedAmount: '0.00',
-          refundedAmount: '0.00',
-          retainedAmount: '0.00',
-          byMethod: [],
-          byStatus: [],
-        },
-      },
-    });
-    const store = makeStoreStub(makePage([makeItem({ scheduleId: 1, liveTotalAmount: '0.00' })]));
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(zeroDetail))),
-      confirmSettlement: jasmine.createSpy().and.returnValue(of(ok({ ...zeroDetail, status: 'SETTLED' }))),
+  // A short-drawer sign-off carries the reason through untouched.
+  it('posts the discrepancy reason when the drawer does not reconcile', async () => {
+    const shortPayload: SettlementConfirmPayload = {
+      countedCashAmount: '580.00',
+      handedOverBy: 7,
+      discrepancyReason: 'ขาด 20',
     };
-    const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub({
+      confirmSettlement: jasmine.createSpy('confirmSettlement').and.returnValue(of(ok(makeSettledDetail()))),
+    });
+    const component = new SettlementsPageComponent(store as any, adminApi as any, makeAlertStub() as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](shortPayload);
 
-    expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, '0.00');
+    expect(adminApi.confirmSettlement).toHaveBeenCalledWith(1, shortPayload);
   });
 
   it('SETTLEMENT_ALREADY_SETTLED: refetches, swaps to the settled view, shows info (not error), and removes the row', async () => {
     const store = makeStoreStub(makePage());
-    const settledDetail = makeDetail({
-      status: 'SETTLED',
-      settled: {
-        totalAmount: '1000.00',
-        byMethod: [{ method: 'cash', amount: '1000.00' }],
-        byChannel: [{ channel: 'walk_in', amount: '1000.00' }],
-        settledBy: 9,
-        settledByName: 'Owner',
-        settledAt: '2026-07-10T09:00:00+07:00',
-        notTravelled: null,
-      },
-    });
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValues(of(ok(makeDetail())), of(ok(settledDetail))),
+    const adminApi = makeAdminApiStub({
+      getSettlementSchedule: jasmine.createSpy().and.returnValues(of(ok(makeDetail())), of(ok(makeSettledDetail()))),
       confirmSettlement: jasmine
         .createSpy()
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_ALREADY_SETTLED' } }))),
-    };
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.info).toHaveBeenCalled();
     expect(alert.error).not.toHaveBeenCalled();
@@ -420,43 +466,61 @@ describe('SettlementsPageComponent', () => {
     expect((component as any).items.find((i: SettlementPendingItemDto) => i.scheduleId === 1)).toBeUndefined();
   });
 
-  it('SETTLEMENT_AMOUNT_MISMATCH: shows an error and re-fetches fresh detail instead of resubmitting', async () => {
+  // OBRS-671: a stale hander (client and server briefly disagreed) — keep the
+  // modal open on the round and reload the shortlist so the owner can re-pick.
+  it('SETTLEMENT_HANDER_NOT_FOUND: shows an error, keeps the modal open, and reloads the candidates', async () => {
     const store = makeStoreStub(makePage());
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(makeDetail({ live: { ...makeDetail().live, totalAmount: '1200.00' } })))),
+    const adminApi = makeAdminApiStub({
       confirmSettlement: jasmine
         .createSpy()
-        .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_AMOUNT_MISMATCH' } }))),
-    };
-    const alert = makeAlertStub();
-    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
-    component.ngOnInit();
-    component['openDetail'](1); // primes the cache with the stale amount
-
-    await component['requestConfirm']();
-
-    expect(alert.error).toHaveBeenCalled();
-    // A fresh GET was issued (cache was cleared) rather than trusting the stale cached amount.
-    expect(adminApi.getSettlementSchedule).toHaveBeenCalledTimes(2);
-    expect((component as any).modalDetail.live.totalAmount).toBe('1200.00');
-    // Modal stays open on this round so the admin can review the refreshed amount.
-    expect((component as any).openScheduleId).toBe(1);
-  });
-
-  it('SETTLEMENT_SCOPE_FORBIDDEN: shows an error, closes the modal, and refreshes the list', async () => {
-    const store = makeStoreStub(makePage());
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(makeDetail()))),
-      confirmSettlement: jasmine
-        .createSpy()
-        .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_SCOPE_FORBIDDEN' } }))),
-    };
+        .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_HANDER_NOT_FOUND' } }))),
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
+
+    expect(alert.error).toHaveBeenCalled();
+    expect((component as any).openScheduleId).toBe(1);
+    // once on init + once on the error.
+    expect(adminApi.getUsers).toHaveBeenCalledTimes(2);
+  });
+
+  // The inline form guards this, but a server VALIDATION_FAILED keeps the modal
+  // open (not a close+refresh) so the owner can correct and resubmit.
+  it('VALIDATION_FAILED: shows an error and keeps the modal open', async () => {
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub({
+      confirmSettlement: jasmine
+        .createSpy()
+        .and.returnValue(throwError(() => ({ error: { errorCode: 'VALIDATION_FAILED' } }))),
+    });
+    const alert = makeAlertStub();
+    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    component.ngOnInit();
+    component['openDetail'](1);
+
+    await component['requestConfirm'](PAYLOAD);
+
+    expect(alert.error).toHaveBeenCalled();
+    expect((component as any).openScheduleId).toBe(1);
+  });
+
+  it('SETTLEMENT_SCOPE_FORBIDDEN: shows an error, closes the modal, and refreshes the list', async () => {
+    const store = makeStoreStub(makePage());
+    const adminApi = makeAdminApiStub({
+      confirmSettlement: jasmine
+        .createSpy()
+        .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_SCOPE_FORBIDDEN' } }))),
+    });
+    const alert = makeAlertStub();
+    const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
+    component.ngOnInit();
+    component['openDetail'](1);
+
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.error).toHaveBeenCalled();
     expect((component as any).openScheduleId).toBeNull();
@@ -465,18 +529,17 @@ describe('SettlementsPageComponent', () => {
 
   it('SETTLEMENT_ROUND_NOT_DEPARTED: shows an error, closes the modal, and refreshes the list', async () => {
     const store = makeStoreStub(makePage());
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(makeDetail()))),
+    const adminApi = makeAdminApiStub({
       confirmSettlement: jasmine
         .createSpy()
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_ROUND_NOT_DEPARTED' } }))),
-    };
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.error).toHaveBeenCalled();
     expect((component as any).openScheduleId).toBeNull();
@@ -484,18 +547,17 @@ describe('SettlementsPageComponent', () => {
 
   it('SETTLEMENT_SCHEDULE_NOT_FOUND: shows an error, closes the modal, removes the row, and refreshes', async () => {
     const store = makeStoreStub(makePage());
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(makeDetail()))),
+    const adminApi = makeAdminApiStub({
       confirmSettlement: jasmine
         .createSpy()
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SETTLEMENT_SCHEDULE_NOT_FOUND' } }))),
-    };
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.error).toHaveBeenCalled();
     expect((component as any).openScheduleId).toBeNull();
@@ -504,18 +566,17 @@ describe('SettlementsPageComponent', () => {
 
   it('an unrecognized errorCode falls back to a generic confirm-failed error, closes the modal, and refreshes', async () => {
     const store = makeStoreStub(makePage());
-    const adminApi = {
-      getSettlementSchedule: jasmine.createSpy().and.returnValue(of(ok(makeDetail()))),
+    const adminApi = makeAdminApiStub({
       confirmSettlement: jasmine
         .createSpy()
         .and.returnValue(throwError(() => ({ error: { errorCode: 'SOMETHING_ELSE' } }))),
-    };
+    });
     const alert = makeAlertStub();
     const component = new SettlementsPageComponent(store as any, adminApi as any, alert as any, createTranslateStub());
     component.ngOnInit();
     component['openDetail'](1);
 
-    await component['requestConfirm']();
+    await component['requestConfirm'](PAYLOAD);
 
     expect(alert.error).toHaveBeenCalled();
     expect((component as any).openScheduleId).toBeNull();

@@ -8,3 +8,11 @@ Admin critical paths are write-heavy (create Vehicle, create ScheduleSet, genera
 
 - **Mock the API (like B2C tests)** — fast, stable, no SIT dependency. Rejected because admin tests validate writes, not just rendering, and a mock cannot catch frontend/backend contract drift.
 - **Dedicated DB-reset endpoint** — cleanest isolation. Rejected because it requires backend work and adds a SIT-only endpoint with elevated blast radius.
+
+## Follow-up — the sweep this ADR promised now exists (OBRS-617)
+
+The "old records are easy to sweep" clause above had no implementation for over a month: `admin-critical-paths.spec.ts` kept a permanent `TEST-e2e-schedules-route` on SIT and accumulated ScheduleSets, and a production guard (`RouteMapService.isTestRoute`) had grown to hide them from real users.
+
+`e2e/support/sit-sweep.ts` (`sweepSitTestLitter`) is that missing sweep. It deletes every `TEST-` ScheduleSet, then every `TEST-` route (child-before-parent, so a route delete never orphans a ScheduleSet and 500s the list endpoint). `admin-critical-paths.spec.ts` calls it in `beforeAll` (self-heal whatever a crashed prior run left) and `afterAll` (leave zero behind after a clean run); `obrs-617-sit-sweep.spec.ts` proves it end-to-end. The production guard stays as defense-in-depth for the during-run window but was narrowed to the exact `^TEST-` prefix.
+
+The fixture slug, the sweep filter, and that guard are all case-sensitive on the exact `TEST-` prefix. **Do not lowercase-normalize route slugs backend-side** — the backend currently stores slugs verbatim, and a normalization would make the uppercase fixtures slip past the `^TEST-` guard and leak onto the public `/home` direction selector.

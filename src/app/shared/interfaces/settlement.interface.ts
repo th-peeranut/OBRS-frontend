@@ -148,6 +148,54 @@ export interface SettlementSettledDto {
   settledByName: string;
   settledAt: string;
   notTravelled: SettlementSettledNotTravelledDto | null;
+  /**
+   * OBRS-671 — the FROZEN cash reconciliation recorded at sign-off:
+   * `countedAmount` = physical cash counted in the drawer;
+   * `expectedCashAmount` = the round's expected cash (the `cash` method
+   * bucket, OBRS-670-corrected); `discrepancyAmount` = signed `counted −
+   * expectedCash` (NEGATIVE = short, un-clamped, same as `retainedAmount`);
+   * `discrepancyReason` = present only for a non-zero discrepancy;
+   * `handedOverBy`/`handedOverByName` = the person who handed the cash over
+   * (distinct from `settledBy`/`settledByName`, the OWNER signing off).
+   *
+   * ALL SIX are **`null` for any round settled before OBRS-671 shipped** —
+   * read that as UNKNOWN (show "no data"), never as `0.00`. This is a CASH
+   * figure, distinct from `SettlementDiscrepancyDto` below (a whole-round
+   * drift between the frozen total and the current live total).
+   */
+  countedAmount: string | null;
+  expectedCashAmount: string | null;
+  discrepancyAmount: string | null;
+  discrepancyReason: string | null;
+  handedOverBy: number | null;
+  handedOverByName: string | null;
+}
+
+/**
+ * OBRS-671 — request body for `POST /settlements/schedules/{id}/confirm`.
+ * The body is now REQUIRED (a breaking change from the old optional
+ * `acknowledgedTotalAmount` stale-screen guard, which is retired):
+ * `countedCashAmount` (the physical cash counted, a decimal string) and
+ * `handedOverBy` (the user id of whoever closed the shift) are both
+ * mandatory; `discrepancyReason` is required by the server ONLY when the
+ * counted cash does not reconcile against the round's expected cash, so it
+ * is omitted otherwise.
+ */
+export interface SettlementConfirmPayload {
+  countedCashAmount: string;
+  handedOverBy: number;
+  discrepancyReason?: string;
+}
+
+/**
+ * OBRS-671 — one selectable "handed over by" candidate for the sign-off
+ * modal's picker (a salesperson at the sales point). Derived from
+ * `AdminUserDto` (id + resolved full name) by the smart page, so the dumb
+ * modal never has to know the user-management DTO shape.
+ */
+export interface SettlementHandoverCandidate {
+  id: number;
+  name: string;
 }
 
 /**

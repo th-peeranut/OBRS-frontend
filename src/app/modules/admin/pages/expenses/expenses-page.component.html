@@ -1,0 +1,101 @@
+<section class="admin-page-intro">
+  <div>
+    <app-admin-refresh-hint
+      [refreshing]="isRefreshing"
+      [failed]="refreshFailed"
+      [loading]="isLoading"
+    ></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <app-admin-dropdown
+    [value]="selectedVehicleFilter"
+    [options]="vehicleFilterOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_VEHICLE' | translate"
+    (valueChange)="onVehicleFilterChange($event)"
+  ></app-admin-dropdown>
+
+  <app-admin-dropdown
+    [value]="selectedCategoryFilter"
+    [options]="categoryOptions"
+    valueKey="code"
+    labelKey="label"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_CATEGORY' | translate"
+    (valueChange)="onCategoryFilterChange($event)"
+  ></app-admin-dropdown>
+
+  <p-calendar
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="dateFrom"
+    (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_FROM' | translate"
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+
+  <p-calendar
+    styleClass="app-date-field"
+    panelStyleClass="app-date-field-panel"
+    dateFormat="dd/mm/yy"
+    [ngModel]="dateTo"
+    (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true"
+    [iconDisplay]="'input'"
+    [showButtonBar]="true"
+    [placeholder]="'ADMIN.EXPENSES.FILTER_DATE_TO' | translate"
+  >
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+
+  <button
+    *ngIf="canWrite"
+    type="button"
+    class="admin-btn admin-btn-primary ms-auto"
+    (click)="openCreateModal()"
+  >
+    <span class="material-symbols-outlined">add</span>
+    <span>{{ 'ADMIN.EXPENSES.ADD' | translate }}</span>
+  </button>
+</section>
+
+<app-expense-list-table
+  [rows]="filteredExpenses"
+  [isLoading]="isLoading"
+  [skeletonRows]="skeletonRows"
+  [hasError]="!!errorMessage"
+  [errorMessage]="errorMessage"
+  [isEmpty]="isEmpty"
+  [canWrite]="canWrite"
+  (edit)="openEditModal($event)"
+  (delete)="openDeleteModal($event)"
+></app-expense-list-table>
+
+<app-expense-form-modal
+  [isOpen]="isFormModalOpen"
+  [mode]="mode"
+  [selectedExpense]="selectedExpense"
+  [vehicleOptions]="vehicleOptions"
+  [categoryOptions]="categoryOptions"
+  [reloadStructure]="reloadStructureBound"
+  (closed)="onFormModalClosed()"
+></app-expense-form-modal>
+
+<app-expense-delete-modal
+  [isOpen]="isDeleteModalOpen"
+  [expense]="selectedExpense"
+  [isDeleting]="isDeleting"
+  (confirm)="confirmDelete()"
+  (cancel)="closeDeleteModal()"
+></app-expense-delete-modal>
