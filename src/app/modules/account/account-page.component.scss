@@ -137,16 +137,32 @@
 
 // Single primary action on this screen (design-system §4) — the shell's
 // brand token, same value as reschedule/change-stop's primary button.
+//
+// OBRS-646 AC-5: every button here is a 44px-min tap target (OBRS-640's mobile floor). With
+// font-size-sm (14px) + 10px vertical padding the content box was ~37px, under the floor; the
+// explicit min-height plus flex-centering guarantees 44px regardless of line-height, and the
+// horizontal padding keeps the width comfortably above 44px too.
 .btn-primary,
 .btn-secondary,
 .btn-danger {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   padding: 10px 22px;
   border: none;
   border-radius: $radius-sm;
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   cursor: pointer;
+}
+
+// OBRS-646 AC-5: the profile-edit inputs are 44px-min tap targets too. The global `.form-control`
+// (styles.scss) sets only colour/border/radius, leaving the framework default height (~38px), so
+// this component pins the floor. View-encapsulation scopes it to this page's inputs; specificity
+// beats the global rule without needing `!important` (which the global rule uses only for colour).
+.form-control {
+  min-height: 44px;
 }
 
 .btn-primary {

@@ -103,7 +103,8 @@ describe('AccountPageComponent', () => {
     expect(myAccountServiceStub.getProfile).toHaveBeenCalled();
     expect(component.isProfileLoading).toBe(false);
     expect(component.profileForm.value.firstName).toBe('สมชาย');
-    expect(component.profileForm.value.phoneNumber).toBe('0811111111');
+    // OBRS-646: the field carries the grouped display form; the stored value is 0811111111.
+    expect(component.profileForm.value.phoneNumber).toBe('081-111-1111');
   });
 
   it('shows a retry state rather than a blank card when the profile GET fails', () => {
@@ -233,5 +234,69 @@ describe('AccountPageComponent', () => {
     expect(component.isCloseAccountDialogOpen).toBe(true);
     component.closeCloseAccountDialog();
     expect(component.isCloseAccountDialogOpen).toBe(false);
+  });
+
+  // ── OBRS-646 AC-7: phone validation must be no weaker than signup ─────────────
+  // Signup accepts only a real Thai mobile (THAI_MOBILE_PATTERN = 0[689]XXXXXXXX). Before this card
+  // the /account form used the backend DTO's looser `\d{10,15}`, which accepted numbers signup
+  // rejects. These pin the tightened rule (must-catch) without over-rejecting a real mobile.
+  describe('phone validation is no weaker than signup (AC-7)', () => {
+    it('rejects a Bangkok landline that the old \\d{10,15} rule accepted', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('0212345678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(false);
+    });
+
+    it('rejects a 15-digit international number that the old rule accepted', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('123456789012345');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(false);
+    });
+
+    it('accepts a valid Thai mobile (0[689]XXXXXXXX), same as signup', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('0812345678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(true);
+    });
+  });
+
+  // ── OBRS-646: readability dashes never weaken validation nor reach the backend ─
+  describe('phone display grouping (080-000-0000)', () => {
+    it('accepts the grouped form — the validator judges the digits, not the dashes', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('081-234-5678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(true);
+    });
+
+    it('still rejects a grouped landline (stricter-than-signup would be a bug too)', () => {
+      const { component } = create('user@example.com');
+      component.profileForm.get('phoneNumber')?.setValue('021-234-5678');
+      expect(component.profileForm.get('phoneNumber')?.valid).toBe(false);
+    });
+
+    it('strips the dashes before PUT so the backend gets canonical digits', () => {
+      const { component, myAccountServiceStub } = create('user@example.com');
+      component.ngOnInit();
+      component.startEditingProfile();
+      component.profileForm.patchValue({ phoneNumber: '089-999-9999' });
+
+      component.saveProfile();
+
+      expect(myAccountServiceStub.updateProfile).toHaveBeenCalledWith(
+        jasmine.objectContaining({ phoneNumber: '0899999999' })
+      );
+    });
+
+    it('regroups on blur and peels the dashes off on focus', () => {
+      const { component } = create('user@example.com');
+      const control = component.profileForm.get('phoneNumber');
+
+      control?.setValue('0812345678');
+      component.onPhoneBlur();
+      expect(control?.value).toBe('081-234-5678');
+
+      component.onPhoneFocus();
+      expect(control?.value).toBe('0812345678');
+    });
   });
 });
