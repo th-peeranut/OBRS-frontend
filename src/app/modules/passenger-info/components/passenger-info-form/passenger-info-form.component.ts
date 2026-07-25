@@ -151,6 +151,12 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
 
   private destroy$ = new Subject<void>();
   private isPatchingFromStore = false;
+  // OBRS-691: index of the passenger row whose phone field is currently focused
+  // (null = none). The live-sync store echo (setPassengerData) must NOT regroup
+  // the row the user is actively typing in — regrouping a focused, complete
+  // 10-digit value mid-edit injects dashes and jumps the caret, defeating the
+  // peel-on-focus / regroup-on-blur idiom. Non-focused rows still display grouped.
+  private focusedPhoneRow: number | null = null;
   @Output() validityChange = new EventEmitter<boolean>();
   @Output() useBookerAsPassenger = new EventEmitter<number>();
 
@@ -390,11 +396,13 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
   // below strips the dashes back out before the value reaches the store
   // (syncPassengerInfoToStore) or the final submit (validateAndGetPassengerInfo).
   onPassengerPhoneFocus(index: number): void {
+    this.focusedPhoneRow = index;
     const control = this.getPassengerControl(index, 'phoneNumber');
     control?.setValue(stripPhoneSeparators(control.value));
   }
 
   onPassengerPhoneBlur(index: number): void {
+    this.focusedPhoneRow = null;
     const control = this.getPassengerControl(index, 'phoneNumber');
     control?.setValue(formatThaiMobile(control.value));
   }
@@ -798,8 +806,13 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
         title: passenger.title,
         // OBRS-691: the store holds bare digits (buildPassengerInfoPayload
         // strips before dispatch) — display grouped, same as every other
-        // phone field at rest.
-        phoneNumber: formatThaiMobile(passenger.phoneNumber),
+        // phone field at rest. EXCEPT the row the user is mid-edit in: the
+        // live-sync echo must leave it bare (peel-on-focus / regroup-on-blur),
+        // or it would inject dashes into the focused field and jump the caret.
+        phoneNumber:
+          index === this.focusedPhoneRow
+            ? stripPhoneSeparators(passenger.phoneNumber)
+            : formatThaiMobile(passenger.phoneNumber),
       });
     });
 
