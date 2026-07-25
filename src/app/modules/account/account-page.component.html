@@ -58,7 +58,7 @@
           </div>
           <div>
             <dt>{{ "ACCOUNT.PROFILE_PHONE_LABEL" | translate }}</dt>
-            <dd data-testid="profile-phone">{{ profile.phoneNumber }}</dd>
+            <dd data-testid="profile-phone">{{ formatPhone(profile.phoneNumber) }}</dd>
           </div>
         </dl>
 
@@ -133,6 +133,8 @@
               type="tel"
               id="account-profile-phone"
               formControlName="phoneNumber"
+              (focus)="onPhoneFocus()"
+              (blur)="onPhoneBlur()"
               [class.form-error]="getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors"
             />
             <div class="text-error" *ngIf="getForm('phoneNumber')?.touched && getForm('phoneNumber')?.errors">

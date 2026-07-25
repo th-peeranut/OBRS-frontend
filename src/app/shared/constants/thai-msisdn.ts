@@ -14,3 +14,27 @@
  * OBRS-455, not this card.
  */
 export const THAI_MOBILE_PATTERN = /^0[689]\d{8}$/;
+
+/**
+ * Drops every non-digit so a number a user typed or read back with grouping dashes
+ * (`080-000-0000`) collapses to the canonical digit string the pattern and the backend want.
+ * The stored/validated/submitted value is ALWAYS bare digits — the dashes are a display skin,
+ * never part of the model.
+ */
+export function stripPhoneSeparators(value: string | null | undefined): string {
+  return (value ?? '').replace(/\D/g, '');
+}
+
+/**
+ * Groups a Thai local mobile number for reading: `0800000000` → `080-000-0000` (the 3-3-4
+ * grouping Thai readers expect). Anything that is not a full 10-digit local number is returned
+ * as its bare digits rather than mis-grouped — a half-typed number must never gain a dash in a
+ * place that shifts as the next keystroke lands.
+ */
+export function formatThaiMobile(value: string | null | undefined): string {
+  const digits = stripPhoneSeparators(value);
+  if (/^0\d{9}$/.test(digits)) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  return digits;
+}

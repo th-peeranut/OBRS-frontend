@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../auth/auth.service';
 import { MyAccountService } from '../../services/user/my-account.service';
@@ -7,7 +7,26 @@ import { AlertService } from '../../shared/services/alert.service';
 import { MyAccountProfile } from '../../shared/interfaces/my-account.interface';
 import { PRIVACY_POLICY_VERSION } from '../privacy-policy/privacy-policy.version';
 import { trimmedRequiredValidator } from '../../shared/validators/trimmed-required.validator';
-import { THAI_MOBILE_PATTERN } from '../../shared/constants/thai-msisdn';
+import {
+  THAI_MOBILE_PATTERN,
+  formatThaiMobile,
+  stripPhoneSeparators,
+} from '../../shared/constants/thai-msisdn';
+
+/**
+ * OBRS-646: phone validity is judged on the DIGITS, not the display string. The field carries
+ * grouping dashes for readability (`080-000-0000`), so the pattern check strips separators first
+ * — otherwise every dashed number would fail and the rule would be *stricter* than signup, not
+ * equal to it. `required` still owns the empty case; a blank value returns null here so the two
+ * errors don't stack.
+ */
+export function thaiMobileValidator(control: AbstractControl): ValidationErrors | null {
+  const raw = control.value;
+  if (raw === null || raw === undefined || raw === '') {
+    return null;
+  }
+  return THAI_MOBILE_PATTERN.test(stripPhoneSeparators(raw)) ? null : { pattern: true };
+}
 
 /**
  * Minimal customer identity-settings page (OBRS-84). Guard/route shape is
@@ -70,7 +89,7 @@ export class AccountPageComponent implements OnInit {
       firstName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
       middleName: ['', [Validators.maxLength(50)]],
       lastName: ['', [trimmedRequiredValidator, Validators.minLength(2), Validators.maxLength(50)]],
-      phoneNumber: ['', [Validators.required, Validators.pattern(THAI_MOBILE_PATTERN)]],
+      phoneNumber: ['', [Validators.required, thaiMobileValidator]],
     });
   }
 
@@ -112,6 +131,24 @@ export class AccountPageComponent implements OnInit {
     this.patchFormFromProfile();
   }
 
+  /** Read-state grouping: `0800000000` → `080-000-0000`. Display only. */
+  formatPhone(value: string | null | undefined): string {
+    return formatThaiMobile(value);
+  }
+
+  // The edit field shows dashes when at rest and bare digits while being edited: grouping a
+  // number as it is typed shifts the caret unpredictably, so we regroup only on blur and peel
+  // the dashes back off on focus. Either way the validator and saveProfile() read the digits.
+  onPhoneFocus(): void {
+    const control = this.profileForm.get('phoneNumber');
+    control?.setValue(stripPhoneSeparators(control.value));
+  }
+
+  onPhoneBlur(): void {
+    const control = this.profileForm.get('phoneNumber');
+    control?.setValue(formatThaiMobile(control.value));
+  }
+
   loadProfile(): void {
     this.isProfileLoading = true;
     this.isProfileLoadFailed = false;
@@ -148,7 +185,9 @@ export class AccountPageComponent implements OnInit {
         // field has to travel as null rather than "".
         middleName: middleName === '' ? null : middleName,
         lastName: (value.lastName as string).trim(),
-        phoneNumber: (value.phoneNumber as string).trim(),
+        // The field may carry display dashes (080-000-0000); the backend stores canonical digits,
+        // so strip them back out before the PUT.
+        phoneNumber: stripPhoneSeparators(value.phoneNumber as string),
         // Not editable on this form: the locale belongs to the language switcher, and sending
         // anything else here would silently override the choice made there.
         preferredLocale: this.profile.preferredLocale,
@@ -204,7 +243,8 @@ export class AccountPageComponent implements OnInit {
       firstName: this.profile.firstName ?? '',
       middleName: this.profile.middleName ?? '',
       lastName: this.profile.lastName ?? '',
-      phoneNumber: this.profile.phoneNumber ?? '',
+      // Enter edit mode showing the grouped form; onPhoneFocus() peels the dashes off for typing.
+      phoneNumber: formatThaiMobile(this.profile.phoneNumber),
     });
   }
 }
