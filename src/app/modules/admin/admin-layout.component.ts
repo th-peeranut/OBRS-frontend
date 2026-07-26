@@ -20,6 +20,14 @@ interface AdminNavItem {
   descriptionKey?: string;
   // OBRS-289: which nav section this item belongs to (see SECTION_ORDER).
   section: NavSectionKey;
+  // OBRS-702: highlight this entry for its whole subtree, not just its exact
+  // URL. Only 'settings' needs it — it is the one entry whose page lives at a
+  // CHILD route (/admin/settings/<tab>), so under the default exact match the
+  // sidebar would un-highlight the moment the tab redirect fired and the user
+  // would be on a page the menu says they are not on. Left off everywhere else
+  // deliberately: exact matching is what keeps sibling paths from lighting up
+  // each other, and this is an opt-in, not a new default.
+  matchSubtree?: boolean;
 }
 
 // OBRS-289: group the (long) admin nav into labelled sections so it scans
@@ -155,9 +163,13 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
     // groups (OBRS-699/703/705) that would each have added another entry.
     //
     // Gated on the union of the tabs' roles, mirroring the shell route's own
-    // `requiredRoles`. The tabs themselves stay individually gated inside the
-    // page, so an owner still sees only the two they always could — this
-    // single entry does NOT widen anyone's access.
+    // `requiredRoles`. The four entries this replaces were gated on ['admin'],
+    // ['admin'], ['admin','owner'] and ['admin','owner'] — which under
+    // ROLE_GRANTS is ONE predicate (owner grants admin and admin grants owner,
+    // auth.service.ts:60-62), so both roles saw all four and both see this one.
+    // Access is unchanged in both directions. The tabs stay individually gated
+    // inside the page so they follow their own guards the day owner-scoping
+    // makes those values differ.
     if (this.authService.hasAnyRole([...SYSTEM_SETTINGS_ROLES])) {
       items.push({
         path: 'settings',
@@ -165,6 +177,7 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
         icon: 'settings',
         descriptionKey: 'ADMIN.SYSTEM_SETTINGS.SUBTITLE',
         section: 'system',
+        matchSubtree: true,
       });
     }
 

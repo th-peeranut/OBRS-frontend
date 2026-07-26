@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { RouterTestingModule } from '@angular/router/testing';
+import { HttpClientTestingModule } from '@angular/common/http/testing';
 import { TranslateModule } from '@ngx-translate/core';
 import { Route } from '@angular/router';
 
@@ -15,13 +16,21 @@ import { SYSTEM_SETTINGS_ROLES, SYSTEM_SETTINGS_TABS } from './system-settings-t
  * `/admin/settings` page. What these specs are for, in order of what would hurt
  * most if it broke:
  *
- * 1. **Access must not widen.** The four pages did NOT share an audience:
- *    reminders and jump-seat were `['admin']`, booking-policy and history were
- *    `['admin','owner']`, and under ROLE_GRANTS (OBRS-446) a plain owner
- *    satisfies the second but not the first. Merging four guards into one is
- *    the obvious way to hand an owner two screens they never had — so the roles
- *    are pinned against a frozen copy of what actually shipped, not against the
- *    current source (which would just agree with itself).
+ * 1. **Access must change in NEITHER direction.** Merging four guards into one
+ *    is the obvious way to hand someone a screen they never had, or take one
+ *    away. The declared roles are pinned against a frozen copy of what actually
+ *    shipped, and admission is asked of the REAL `AuthService` — never a stub
+ *    that re-implements it.
+ *
+ *    That last part is not a style preference, it is the correction this card
+ *    needed. An earlier version of this file stubbed `hasAnyRole` by hand and
+ *    got the grant direction backwards, so it "proved" a plain owner sees two
+ *    tabs. `ROLE_GRANTS` (auth.service.ts:60-62) grants BOTH ways at the top —
+ *    `owner: [..., 'admin', ...]` and `admin: [..., 'owner', ...]` — so
+ *    `['admin']` and `['admin','owner']` are one predicate, an owner sees all
+ *    four, and an owner saw all four sidebar entries before this card too. The
+ *    stub agreed with the spec and both were wrong; a live capture disagreed.
+ *    nav-reachability.spec.ts's header warns about exactly this.
  * 2. **A tab must not be routed-but-unrendered, or rendered-but-unguarded.**
  *    Both lists are generated from SYSTEM_SETTINGS_TABS, and these specs read
  *    the REAL `adminRoutes` to prove the generation happened — the same
@@ -54,7 +63,7 @@ function adminChildren(): Route[] {
  * no matter what those roles were changed to, which is the entire failure this
  * table exists to catch.
  */
-const ROLES_BEFORE_OBRS_702: Record<string, string[]> = {
+const ROLES_BEFORE_OBRS_702: Record<string, readonly string[]> = {
   'booking-policy': ['admin', 'owner'],
   reminders: ['admin'],
   'jump-seat': ['admin'],
@@ -62,28 +71,37 @@ const ROLES_BEFORE_OBRS_702: Record<string, string[]> = {
 };
 
 describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {
+  /**
+   * A REAL AuthService whose only stub is the role list a JWT would have
+   * supplied — ROLE_GRANTS expansion, normalisation and the empty-requiredRoles
+   * behaviour all stay the production implementation. Copied deliberately from
+   * nav-reachability.spec.ts's `realAuthServiceFor`; see this file's header for
+   * what a hand-written substitute cost.
+   *
+   * The spy must be installed BEFORE createComponent — the component reads the
+   * roles in its constructor.
+   */
   async function renderFor(roles: string[]): Promise<ComponentFixture<SystemSettingsPageComponent>> {
     TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       declarations: [SystemSettingsPageComponent],
-      imports: [RouterTestingModule, TranslateModule.forRoot()],
-      providers: [
-        {
-          provide: AuthService,
-          useValue: {
-            // The real ROLE_GRANTS superset, reduced to what this component
-            // asks: a held role satisfies a requirement it appears in, and
-            // 'admin' additionally satisfies 'owner' (OBRS-446).
-            hasAnyRole: (required: string[]) =>
-              required.some((r) => roles.includes(r) || (r === 'owner' && roles.includes('admin'))),
-          },
-        },
-      ],
+      imports: [HttpClientTestingModule, RouterTestingModule, TranslateModule.forRoot()],
     }).compileComponents();
+
+    spyOn(TestBed.inject(AuthService), 'getRoles').and.returnValue(roles);
 
     const fixture = TestBed.createComponent(SystemSettingsPageComponent);
     fixture.detectChanges();
     return fixture;
+  }
+
+  /** The real policy, asked directly — what the route guard would decide. */
+  function admits(roles: string[], requiredRoles: readonly string[]): boolean {
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({ imports: [HttpClientTestingModule, RouterTestingModule] });
+    const auth = TestBed.inject(AuthService);
+    spyOn(auth, 'getRoles').and.returnValue(roles);
+    return auth.hasAnyRole([...requiredRoles]);
   }
 
   function renderedTabPaths(fixture: ComponentFixture<SystemSettingsPageComponent>): string[] {
@@ -98,12 +116,40 @@ describe('OBRS-702 SystemSettingsPageComponent — tab strip', () => {
     );
   });
 
-  it('shows a plain owner ONLY the two tabs they could already open', async () => {
-    // The whole point of the card's "access must not widen" AC, asserted on
-    // what the DOM renders rather than on the model: an owner never had
-    // reminder-config or jump-seat-config, and must not gain them by the four
-    // pages moving under one roof.
-    expect(renderedTabPaths(await renderFor(['owner']))).toEqual(['booking-policy', 'history']);
+  it('shows a plain owner every tab too — ROLE_GRANTS makes them one audience', async () => {
+    // NOT a weaker version of the spec above. It is the fact that corrects this
+    // card's original premise: `['admin']` is not admin-only on this frontend,
+    // so an owner reached all four standalone pages before OBRS-702 and must
+    // still reach all four tabs after it. The DOM says so; the assertion below
+    // says WHY, so this does not read as an accident.
+    expect(renderedTabPaths(await renderFor(['owner']))).toEqual(
+      SYSTEM_SETTINGS_TABS.map((t) => t.path)
+    );
+    expect(admits(['owner'], ['admin']))
+      .withContext('ROLE_GRANTS no longer grants admin to owner — re-derive the tab audiences')
+      .toBeTrue();
+  });
+
+  it('never shows a tab the route guard would bounce, and never hides one it admits', async () => {
+    // Crosses two independently-built lists through the real policy: the strip
+    // filters on the TAB TABLE's roles, this reads the ROUTE's own `data`.
+    for (const roles of [['admin'], ['owner'], ['admin', 'owner']]) {
+      const shown = new Set(renderedTabPaths(await renderFor(roles)));
+      for (const route of tabRoutes()) {
+        const allowed = route.data?.['requiredRoles'] as string[];
+        expect(shown.has(route.path!))
+          .withContext(`[${roles}] tab '${route.path}' guarded by [${allowed}]`)
+          .toBe(admits(roles, allowed));
+      }
+    }
+  });
+
+  it('the access check is real — a customer and a salesperson are shown nothing', async () => {
+    // Guards the specs above against passing because hasAnyRole always says
+    // yes. Neither role holds a portal grant, so the strip must be empty even
+    // though they could never have reached the shell route in the first place.
+    expect(renderedTabPaths(await renderFor(['customer']))).toEqual([]);
+    expect(renderedTabPaths(await renderFor(['salesperson']))).toEqual([]);
   });
 
   it('renders each visible tab as a link to its own child route', async () => {
@@ -140,7 +186,10 @@ describe('OBRS-702 /admin/settings routing', () => {
     }
   });
 
-  it('did not widen access — every tab keeps the roles its standalone route carried', () => {
+  it('keeps every tab on the exact roles its standalone route declared', () => {
+    // A pin on the DECLARED value, which is what a future owner-scoping change
+    // will read. It is not by itself proof about who gets in today — ROLE_GRANTS
+    // decides that, and the tab-strip specs above ask it directly.
     for (const tab of SYSTEM_SETTINGS_TABS) {
       const route = tabRoutes().find((r) => r.path === tab.path)!;
       expect(route.data?.['requiredRoles'])
@@ -163,7 +212,7 @@ describe('OBRS-702 /admin/settings routing', () => {
     // Narrower than the union would lock a plain owner out of the two tabs they
     // always had; wider would admit a role no tab would then show anything to.
     const union = Array.from(
-      new Set(Object.values(ROLES_BEFORE_OBRS_702).flat())
+      new Set(Object.values(ROLES_BEFORE_OBRS_702).flatMap((r) => [...r]))
     ).sort();
     expect([...SYSTEM_SETTINGS_ROLES].sort()).toEqual(union);
     expect([...(settingsRoute().data?.['requiredRoles'] as string[])].sort()).toEqual(union);

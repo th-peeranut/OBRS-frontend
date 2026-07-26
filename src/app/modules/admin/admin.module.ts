@@ -196,9 +196,11 @@ export const adminRoutes: Routes = [
         //
         // Children, tab strip and legacy redirects are all generated from
         // SYSTEM_SETTINGS_TABS, so they cannot drift apart. Each child keeps
-        // the EXACT `requiredRoles` its standalone route carried; this shell
-        // admits their union, which is what lets a plain owner in for the two
-        // tabs they always had without handing them the two admin-only ones.
+        // the EXACT `requiredRoles` its standalone route carried and the shell
+        // admits their union — access is unchanged in both directions. (Those
+        // values differ on paper but not in effect: ROLE_GRANTS makes ['admin']
+        // and ['admin','owner'] one predicate today. See the note on
+        // SystemSettingsTab.requiredRoles before reading them as two gates.)
         path: 'settings',
         component: SystemSettingsPageComponent,
         canActivate: [AuthGuard],

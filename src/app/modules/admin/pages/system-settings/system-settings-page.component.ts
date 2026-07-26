@@ -14,13 +14,20 @@ import { SYSTEM_SETTINGS_TABS, SystemSettingsTab } from './system-settings-tabs'
  * its own form and its own save call, so nothing can leak across tabs — the tab
  * being left is destroyed before the next one is created.
  *
- * <p><b>Access is per tab, not per page.</b> The four pages did NOT share an
- * audience — reminders and jump-seat are `['admin']` while booking-policy and
- * history are `['admin','owner']`, and under ROLE_GRANTS (OBRS-446) a plain
- * owner satisfies the second but not the first. So the shell route admits the
- * UNION ({@link SYSTEM_SETTINGS_ROLES}) and each child route keeps its original
- * guard verbatim; this strip renders only the tabs the visitor's own route
- * guard would admit, so no tab is shown that would bounce on click.
+ * <p><b>Access is asked per tab, not per page.</b> The shell route admits the
+ * UNION of the tabs' roles ({@link SYSTEM_SETTINGS_ROLES}); each child route
+ * keeps its original guard verbatim; and this strip renders only the tabs the
+ * visitor's own route guard would admit, so no tab is shown that would bounce
+ * on click and none is hidden that would have opened.
+ *
+ * <p>Today that filter removes nothing for anyone who gets through the shell
+ * guard: `AuthService.ROLE_GRANTS` makes `['admin']` and `['admin','owner']`
+ * one predicate (owner grants admin and admin grants owner), so admin and
+ * owner both see all four tabs — exactly the four sidebar entries both roles
+ * saw before this card. The per-tab filter is here because the routes record
+ * DIFFERENT intent, and the day owner-scoping makes that intent real the strip
+ * must follow the guards rather than have to be found and taught to.
+ * See the note on {@link SystemSettingsTab.requiredRoles}.
  */
 @Component({
   selector: 'app-system-settings-page',

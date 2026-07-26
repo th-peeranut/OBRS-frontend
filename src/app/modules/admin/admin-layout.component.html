@@ -70,11 +70,15 @@
       <nav class="admin-nav">
         <ng-container *ngFor="let section of filteredNavSections">
           <p class="admin-nav-section-title">{{ section.titleKey | translate }}</p>
+          <!-- OBRS-702: exact matching everywhere except an entry that opts
+               into subtree matching, which today is only 'settings' — its page
+               lives at /admin/settings/(tab), so an exact match would
+               un-highlight the menu on the very page it just opened. -->
           <a
             *ngFor="let item of section.items"
             [routerLink]="item.path"
             routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [routerLinkActiveOptions]="{ exact: !item.matchSubtree }"
             class="admin-nav-link"
             (click)="onNavLinkClick(); clearNavSearch()"
           >

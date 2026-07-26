@@ -19,11 +19,26 @@ export interface SystemSettingsTab {
   /** Page subtitle while this tab is open. Reuses the standalone page's. */
   readonly subtitleKey: string;
   /**
-   * EXACTLY the `requiredRoles` the standalone route carried. Consolidating
-   * pages must not widen access (OBRS-702 AC), and these are genuinely two
-   * different audiences: `['admin']` is admin-only, whereas `['admin','owner']`
-   * also admits a plain owner (AuthService.ROLE_GRANTS grants owner to admin,
-   * not the reverse — OBRS-446).
+   * EXACTLY the `requiredRoles` the standalone route carried — consolidating
+   * pages must change access in NEITHER direction (OBRS-702 AC).
+   *
+   * <p><b>`['admin']` is not admin-only on this frontend, and reading it that
+   * way is a trap this card fell into and had to back out of.</b>
+   * `AuthService.ROLE_GRANTS` is symmetric at the top: `owner` grants `admin`
+   * AND `admin` grants `owner` (auth.service.ts:60-62). So
+   * `hasAnyRole(['admin'])`, `hasAnyRole(['owner'])` and
+   * `hasAnyRole(['admin','owner'])` are ONE predicate today — all four of
+   * these pages were already reachable by both roles before this card, and
+   * their sidebar entries were all shown to both. The difference between the
+   * two values is recorded INTENT, inert until owner-scoping lands; the same
+   * standing the OBRS-446 comment gives settlements' `['owner']`.
+   *
+   * <p>They are copied verbatim rather than flattened, because the day
+   * owner-scoping makes the distinction real these routes must already say
+   * which side they meant. system-settings-page.component.spec.ts pins them
+   * against a frozen copy of what shipped and asks the REAL AuthService —
+   * never a re-implementation — which roles each one admits. A hand-written
+   * `hasAnyRole` stub is exactly what hid the grant direction here.
    */
   readonly requiredRoles: readonly string[];
   readonly component: Type<unknown>;
@@ -81,8 +96,12 @@ export const SYSTEM_SETTINGS_TABS: readonly SystemSettingsTab[] = [
 /**
  * Roles admitted to `/admin/settings` itself — the UNION of the tabs' roles, so
  * nobody who could reach one of the old standalone pages is locked out of the
- * page that replaced it. Each tab keeps its own, narrower guard; the union only
- * opens the shell.
+ * page that replaced it. Each tab keeps its own guard; the union only opens the
+ * shell.
+ *
+ * <p>Derived, never hand-written: the day a tab is added with a role no other
+ * tab carries, the shell has to admit it or that tab is unreachable through the
+ * only door there is.
  */
 export const SYSTEM_SETTINGS_ROLES: readonly string[] = Array.from(
   new Set(SYSTEM_SETTINGS_TABS.flatMap((tab) => [...tab.requiredRoles]))

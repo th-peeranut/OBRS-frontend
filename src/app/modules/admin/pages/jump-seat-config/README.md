@@ -26,9 +26,12 @@ Nothing here is a new design-system pattern:
 - **Route / nav (OBRS-702)**: not a standalone page any more. It is a tab of
   `/admin/settings` (`settings/jump-seat`; the old `/admin/jump-seat-config`
   redirects there), declared in `../system-settings/system-settings-tabs.ts`.
-  It keeps its own `requiredRoles: ['admin']` there — NARROWER than the shell's
-  `['admin', 'owner']`, so a plain owner enters the settings page but is shown
-  neither this tab nor `reminders`. Consolidating the pages did not widen it.
+  It keeps its own `requiredRoles: ['admin']` there, verbatim. Note that this
+  does **not** mean admin-only on the frontend: `AuthService.ROLE_GRANTS` grants
+  `admin` to `owner` as well as the reverse, so an owner reached this page
+  before OBRS-702 and sees this tab after it. The value is recorded intent for
+  the day owner-scoping lands, in the same standing as settlements' `['owner']`
+  (OBRS-446) — not a narrower gate today.
 
 ## Why a config toggle at all
 

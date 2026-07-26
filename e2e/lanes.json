@@ -157,6 +157,12 @@
       "why": "Screenshot script. Expects two servers started by hand on :4575 and :4576 -- one of them serving origin/dev for the BEFORE shot."
     },
     {
+      "spec": "obrs-702-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs702.config.ts",
+      "why": "Screenshot script for the OBRS-702 before/after. Expects two servers started by hand on :4702 and :4703 -- :4702 serving a throwaway worktree at origin/dev 3eff9dc1 for the BEFORE shot. Hermetic otherwise (synthetic session, stubbed config reads), but its purpose is evidence, not a verdict."
+    },
+    {
       "spec": "obrs-575-qa.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs575.config.ts",
