@@ -29,8 +29,12 @@ export default defineConfig({
   retries: 0,
   reporter: [['list']],
   use: {
-    // 1280x720 pinned, not devices'-default: the sidebar's System section has
-    // to be on screen without scrolling for the before/after to be comparable.
+    // Starting size only, and 720 is NOT enough for the sidebar: the nav is
+    // ~1290px tall with the System group last, so the sidebar tests call
+    // fitViewportToNav() to GROW the window until the whole nav is on screen.
+    // Never "fix" a clipped shot by scrolling instead — Playwright returns an
+    // over-tall element's full box with the off-screen part unpainted, which is
+    // how this card's first evidence upload went out 44% blank white.
     viewport: { width: 1280, height: 720 },
     trace: 'retain-on-failure',
   },
