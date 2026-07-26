@@ -123,6 +123,15 @@
   font-weight: $font-weight-extrabold;
 }
 
+// OBRS-725: non-error note under a field (the locked login email in edit mode).
+// Same shape as promotion-form-modal/expense-form-modal's `.admin-hint`, which is
+// likewise scoped per-component rather than living in admin-theme.scss.
+.admin-hint {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
+}
+
 .user-input {
   min-height: 46px;
   border: 0;
@@ -131,6 +140,16 @@
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
   box-shadow: inset 0 0 0 1px rgba(189, 200, 207, 0.48);
+}
+
+// OBRS-725: `.admin-field` has no :disabled rule, so a disabled input renders
+// identically to a live one — the same invisible-disabled defect OBRS-406 fixed for
+// `.admin-btn`, still open on the input primitive. Scoped here rather than lifted into
+// admin-theme.scss because widening it would restyle every disabled admin input in the
+// app in a commit that verified one; the shared gap is flagged on the card instead.
+.user-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .user-role-list {
