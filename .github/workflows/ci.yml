@@ -72,6 +72,21 @@ jobs:
       - name: admin theme dark-mode token gate
         run: npm run test:theme-tokens
 
+      # Companion gate to the one above (OBRS-740), covering the contrast case
+      # that one structurally cannot see. The OBRS-734 runtime probe measured
+      # backgrounds with getComputedStyle().backgroundColor, which returns
+      # rgba(0,0,0,0) for a GRADIENT -- so every gradient-filled button was
+      # skipped while the run still reported "0 elements below AA". The floating
+      # usability-report FAB hid in the same blind spot for two cards: it renders
+      # OUTSIDE .admin-shell, so var(--accent, #4dbeef) never resolved and the
+      # FALLBACK literal shipped at 2.12:1 on every route in both themes.
+      # This gate reads the SCSS, expands every gradient stop, and resolves
+      # tokens per theme world (base/admin/staff x light/dark) so "it passes in
+      # the default theme" stops counting as an answer. Costs no extra runner
+      # minutes.
+      - name: brand fill contrast gate
+        run: npm run test:brand-contrast
+
       # Fifth pure-node gate (OBRS-506). A `.data$` subscribe callback guarded as
       # `if (data) { ... }` with no else silently KEEPS its previous cached rows on
       # a null emission (AdminCollectionStore.clear(), e.g. on logout) instead of
