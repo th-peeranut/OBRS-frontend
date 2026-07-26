@@ -28,6 +28,7 @@ import {
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
+import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 type PromptPayPaymentData = PaymentResponse | PaymentByBookingIdResponse;
@@ -191,6 +192,14 @@ export class PaymentQrcodeComponent implements OnInit, OnDestroy {
       }
     } catch (error) {
       this.hasRequestedQrCode = false;
+      // OBRS-736: same reasoning as payment-creditcard — the backend already said
+      // the amount is above the gateway's per-transaction ceiling and what to do
+      // about it, so the generic toast would only contradict it. PromptPay reaches
+      // the gateway through processSource, which the ceiling guard covers too.
+      if (isHandledByBackendMessage(error)) {
+        console.error('Payment request failed', error);
+        return;
+      }
       this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       console.error('Payment request failed', error);
     } finally {
