@@ -3,6 +3,31 @@
   padding: 32px 16px;
 }
 
+// OBRS-726 — DELIBERATELY still the chip token, against that card's own premise,
+// and the reason is measured rather than argued.
+//
+// This IS a chip half (--admin-accepted-text) used as a standalone colour, the
+// shape OBRS-520/721/726 exist to stamp out, so the fix looks obvious: swap in
+// the themed --admin-accepted-fg. Measured in ChromeHeadless against this page's
+// real markup (see the spec's `contrast of .parcel-intake-result-icon` block),
+// swapping it makes this glyph WORSE, not better:
+//
+//   surface actually painted behind this icon:  #ffffff in BOTH themes
+//   --admin-accepted-text #0a3d1d on #ffffff = 12.37:1   <- ships today, fine
+//   --admin-accepted-fg (dark #9cd6a5) on #ffffff = 1.67:1  <- the "fix"
+//
+// Because parcel-consign-page.component.html wraps this panel in a raw Bootstrap
+// `.card`, and NOTHING repaints that for dark mode — sell-page.component.scss
+// (OBRS-128) is the only staff page that opted in. A themed foreground is only
+// correct over a themed background; over a stuck-light one it is the same bug
+// with the colours swapped.
+//
+// The surface is the real defect and it is far worse than this icon: on the same
+// measured #ffffff, this panel's own `dd` values (tracking number, collection
+// code, amount) render --admin-text #e7edf1 at 1.18:1 and `dt` at 2.23:1. That
+// is OBRS-747, and this line moves to --admin-accepted-fg as part of it. The
+// spec pins the #ffffff finding so it goes red the moment the surface is themed;
+// scripts/check-admin-theme-tokens.mjs carries the matching ALLOW entry.
 .parcel-intake-result-icon {
   font-size: 48px;
   color: var(--admin-accepted-text);
@@ -32,9 +57,14 @@
 // (plain, bold), not a status color: this is informational ("collect cash
 // at the counter"), not an error, and design-system §2.4.0 forbids reusing a
 // CHIP token (--admin-warning-text/--admin-danger-text) as standalone text —
-// only a *-fg surface-role token is safe there, and no warning-fg token
-// exists yet (adding one is a global admin-theme.scss change out of scope
-// for this card). Bold weight carries the "needs attention" signal instead.
+// only a *-fg surface-role token is safe there.
+//
+// OBRS-726: this comment used to end "and no warning-fg token exists yet
+// (adding one is a global admin-theme.scss change out of scope for this card)".
+// That is no longer true — --admin-warning-fg now exists, themed in both modes.
+// The plain --admin-text here is STILL deliberate and is not the missing token
+// showing through: the note is informational, so bold weight (not colour)
+// carries the "needs attention" signal.
 .parcel-intake-result-payment-note {
   margin-top: 12px;
   font-size: 14px;

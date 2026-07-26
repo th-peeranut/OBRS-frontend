@@ -9,6 +9,15 @@ import { TripTrackService } from '../../../../services/trip-track/trip-track.ser
 import { CustomerTripPositionRespDto } from '../../../../shared/lib/trip-track-view';
 import { ResponseAPI } from '../../../../shared/interfaces/response.interface';
 import { environment } from '../../../../../environments/environment';
+import {
+  AA_NORMAL_TEXT,
+  contrast,
+  effectiveBg,
+  fgOf,
+  mountInChain,
+  resolveTokenColour,
+  toHex,
+} from '../../../../testing/contrast';
 
 function resp(
   state: CustomerTripPositionRespDto['state'],
@@ -266,5 +275,116 @@ describe('TripTrackPanelComponent', () => {
     expect(mapEl.properties['lat']).toBe(13.5);
     expect(mapEl.properties['lon']).toBe(100.6);
     expect(mapEl.properties['stale']).toBeTrue();
+  });
+
+  // ── OBRS-726: measured contrast of the refresh-failed strip ────────────────
+  //
+  // `.trip-track-panel__refresh-failed` had two faults in one line. It used
+  // --admin-warning-text, the dark half of a pastel CHIP pair, as a standalone
+  // colour; and this component lives OUTSIDE .admin-shell (customer shell), so
+  // it re-declares the --admin-* tokens on its own :host — where that token had
+  // no dark override at all. The strip therefore rendered #673a00 on the panel's
+  // OWN dark background #1d2226 at 1.67:1.
+  //
+  // Two things make this worth measuring in a browser rather than reasoning
+  // about: the dark rule here is keyed on `body.is-dark` (ThemeService), NOT on
+  // .admin-shell.is-dark, and the panel paints its own surface — so the fix has
+  // to land on the local token declaration, and only the real cascade can
+  // confirm that both halves took effect.
+  describe('contrast of .trip-track-panel__refresh-failed, measured (OBRS-726)', () => {
+    let teardown: (() => void) | null = null;
+
+    afterEach(() => {
+      teardown?.();
+      teardown = null;
+    });
+
+    /** LIVE render plus a transient poll failure — the strip's only state. */
+    function mountWithRefreshFailure(dark: boolean): HTMLElement {
+      changeTicketId(1);
+      fixture.detectChanges();
+      component.refreshFailed = true;
+      // No wrapper chain: this is the CUSTOMER shell, and the component's dark
+      // rules key on body.is-dark, which mountInChain sets.
+      teardown = mountInChain(fixture.nativeElement, [], dark);
+      fixture.detectChanges();
+      const strip = fixture.nativeElement.querySelector(
+        '.trip-track-panel__refresh-failed'
+      ) as HTMLElement | null;
+      expect(strip)
+        .withContext('the refresh-failed strip must actually render, or nothing is being measured')
+        .not.toBeNull();
+      return strip!;
+    }
+
+    // Measured in ChromeHeadless on this tree: light #673a00 on #ffffff = 9.62:1,
+    // dark #ffb877 on #1d2226 = 9.45:1. Before OBRS-726 the dark pair was
+    // #673a00 on #1d2226 = 1.67:1. The chip-paired control below measures
+    // #673a00 on the #ffdcbe chip fill = 7.44:1, matching the value
+    // design-system.md §2.4.0 already records for the warning chip.
+    for (const dark of [false, true]) {
+      const mode = dark ? 'dark' : 'light';
+
+      it(`${mode}: the panel really does paint its own themed surface`, () => {
+        // Precondition, asserted before measuring through it.
+        const strip = mountWithRefreshFailure(dark);
+        expect(toHex(effectiveBg(strip)))
+          .withContext(`${mode}: painted background behind the strip`)
+          .toBe(dark ? '#1d2226' : '#ffffff');
+      });
+
+      it(`${mode}: the strip meets AA on that surface`, () => {
+        const strip = mountWithRefreshFailure(dark);
+        const bg = effectiveBg(strip);
+        const ratio = contrast(fgOf(strip), bg);
+        expect(ratio)
+          .withContext(
+            `${mode}: strip ${toHex(fgOf(strip))} on ${toHex(bg)} = ${ratio.toFixed(2)}:1 ` +
+              `(the chip half --admin-warning-text measured 1.67:1 here before OBRS-726)`
+          )
+          .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      });
+
+      it(`${mode}: --admin-warning-fg is declared LOCALLY and is themed on both sides`, () => {
+        // The whole class of bug this card is in: an --admin-* token referenced
+        // outside .admin-shell resolves to nothing unless the component declares
+        // it. A one-sided declaration (light only) is the original defect.
+        const strip = mountWithRefreshFailure(dark);
+        const host = fixture.nativeElement as HTMLElement;
+        const surfaceRole = resolveTokenColour(host, '--admin-warning-fg');
+        expect(toHex(surfaceRole))
+          .withContext(`${mode}: --admin-warning-fg must resolve on this host, not fall through`)
+          .toBe(dark ? '#ffb877' : '#673a00');
+        expect(toHex(fgOf(strip)))
+          .withContext(`${mode}: the strip must use --admin-warning-fg, not the chip half`)
+          .toBe(toHex(surfaceRole));
+      });
+    }
+
+    it('leaves the chip-PAIRED stale banner on the chip token — the pair is correct', () => {
+      // Control case, and the reason the fix is a swap at one call site rather
+      // than a dark override on --admin-warning-text: .trip-track-panel__banner--stale
+      // declares --admin-warning-bg in the SAME rule, so it reads as a chip in
+      // both themes. Re-tinting the token would have broken this one.
+      service.getVehiclePosition.and.returnValue(
+        of(resp('STALE', { lat: 13.5, lon: 100.6, recordedAt: '2026-07-19T09:00:00+07:00', stale: true }))
+      );
+      changeTicketId(1);
+      teardown = mountInChain(fixture.nativeElement, [], true);
+      fixture.detectChanges();
+
+      const banner = fixture.nativeElement.querySelector(
+        '.trip-track-panel__banner--stale'
+      ) as HTMLElement | null;
+      expect(banner).withContext('the stale banner must render for this control case').not.toBeNull();
+      const bg = effectiveBg(banner!);
+      expect(toHex(bg))
+        .withContext('the banner paints its own chip fill, so it is NOT on the dark card')
+        .toBe('#ffdcbe');
+      const ratio = contrast(fgOf(banner!), bg);
+      expect(ratio)
+        .withContext(`stale banner ${toHex(fgOf(banner!))} on ${toHex(bg)} = ${ratio.toFixed(2)}:1`)
+        .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+    });
   });
 });

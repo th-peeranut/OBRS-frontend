@@ -125,6 +125,44 @@
      Light value identical to --admin-success-text, so light is unchanged. */
   --admin-success-fg: #154c85;
 
+  /* OBRS-726: the SAME split for the remaining two chip pairs, because the role
+     kept being needed and the token kept not existing. OBRS-520 split danger and
+     success only, so a developer reaching for standalone warning/accepted text
+     had nothing to reach for — and the comment in
+     parcel-intake-result-panel.component.scss recorded that dead end in prose
+     ("no warning-fg token exists yet ... out of scope for this card") rather
+     than as a token. Prose does not resolve to a colour: the same file's icon
+     then used --admin-accepted-text bare anyway.
+
+     Measured on the dark surfaces (WCAG relative luminance, computed from the
+     declared values — not eyeballed):
+       --admin-accepted-text #0a3d1d standalone = 1.44 / 1.30 / 1.19:1
+         on --admin-surface #14181b / -card #1d2226 / -soft #23292e
+       --admin-warning-text  #673a00 standalone = 1.86 / 1.67 / 1.53:1
+     i.e. accepted is WORSE than the 1.71:1 that OBRS-520 was filed for. The
+     dark values below measure 9.61 / 9.45:1 on --admin-surface-card, matching
+     the --admin-danger-fg / --admin-success-fg family (both 9.45:1) rather than
+     inventing a new brightness step.
+
+     Hue note: in this codebase --admin-success-* is BLUE and --admin-accepted-*
+     is GREEN (§2.4 of design-system.md says so). So accepted-fg dark is a mint
+     green, deliberately NOT another blue like --admin-success-fg's #a8c8ff, or
+     the two roles would be indistinguishable in dark mode only.
+
+     LIGHT VALUES ARE DELIBERATELY IDENTICAL to the chip *-text they replace, so
+     light mode is byte-for-byte unchanged — same discipline as OBRS-520.
+
+     --admin-accepted-fg has NO call site yet, and that is recorded rather than
+     tidied away. Its one intended caller is .parcel-intake-result-icon, and
+     measuring that site is what stopped the swap: the panel sits in a raw
+     Bootstrap `.card` that stays #ffffff in dark mode, where the chip token
+     reads 12.37:1 and this themed token would read 1.67:1. A themed foreground
+     is only correct over a themed background. Theming that surface is OBRS-747;
+     the token is declared now so the pair is complete and the rule in
+     design-system.md §2.4.0 has something to point at for all four roles. */
+  --admin-warning-fg: #673a00;
+  --admin-accepted-fg: #0a3d1d;
+
   /* OBRS-520: --admin-success-soft was REFERENCED by
      usability-reports-page.component.scss (`.ur-notified-check`) since OBRS-115
      but never declared anywhere — the rule silently fell through to its
@@ -359,6 +397,12 @@
   --admin-danger-surface: #4a1512;
   --admin-danger-border: rgba(255, 180, 171, 0.55);
   --admin-success-fg: #a8c8ff;
+
+  /* OBRS-726 — see the light block for the measurements. Same rule as the two
+     above: the chip pairs --admin-warning-bg/-text and --admin-accepted-bg/-text
+     are intentionally NOT touched here; only the surface role flips. */
+  --admin-warning-fg: #ffb877;
+  --admin-accepted-fg: #9cd6a5;
 }
 
 /* Bootstrap form controls inside the dark shell (OBRS-128): the staff POS panels

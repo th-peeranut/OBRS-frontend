@@ -110,9 +110,18 @@ dark card. That is a separate role and it gets its own token:
 
 | Surface role | Token | Light | Dark |
 |---|---|---|---|
-| danger foreground (`.admin-btn-danger`, `.admin-required`, inline errors) | `--admin-danger-fg` | `#93000a` | `#ffb4ab` |
+| danger foreground (`.admin-btn-danger`, `.admin-required`, inline errors, `.pv-mismatch-hint`) | `--admin-danger-fg` | `#93000a` | `#ffb4ab` |
 | danger recessed fill (danger hover states) | `--admin-danger-surface` | `#ffdad6` | `#4a1512` |
 | success foreground (the usability-reports "notified" pill) | `--admin-success-fg` | `#154c85` | `#a8c8ff` |
+| warning foreground (`.trip-track-panel__refresh-failed`) | `--admin-warning-fg` | `#673a00` | `#ffb877` |
+| accepted foreground — **declared, no call site yet** (OBRS-747, see below) | `--admin-accepted-fg` | `#0a3d1d` | `#9cd6a5` |
+
+All four `*-fg` light values are **identical** to the chip `*-text` they replace,
+so migrating a call site is a no-op in light mode and only changes dark.
+Measured on `--admin-surface-card` in dark: danger 9.45:1, success 9.45:1,
+warning 9.45:1, accepted 9.61:1. The chip halves used standalone there measure
+danger **1.71:1**, warning **1.67:1**, accepted **1.30:1** — accepted, the one
+that had no `*-fg` for longest, is the worst of the three.
 
 **The trap this section exists to close.** The `.admin-btn-danger` row above used
 to say it "composes the existing tokens (**no new hex**)", and that was read as
@@ -123,10 +132,37 @@ rendered `#93000a` on `#1d2226` at **1.71:1** — the "Un-board" and "Reject"
 labels were effectively invisible — and every `.admin-required` asterisk across
 19 admin forms with them.
 
+**And the trap one level down (OBRS-726).** Prose did not hold this rule either:
+it was written here after OBRS-520, and the chip half was still used standalone
+at three more sites afterwards — one of them in a file whose own comment said
+*"design-system §2.4.0 forbids reusing a CHIP token as standalone text … and no
+warning-fg token exists yet"*. A rule with no token behind it gets routed around.
+So as of OBRS-726 the rule is **enforced**: `scripts/check-admin-theme-tokens.mjs`
+invariant 4 walks a real brace tree and fails on a chip-half `color:`/`fill:`
+that has no `background` on its own rule **or any rule containing it**. Deliberate
+exceptions go in `STANDALONE_CHIP_ALLOW` with a card key and a measured reason,
+and a stale entry fails the gate.
+
+**A themed foreground is only correct over a themed background.** The same card
+found the counter-example, measured rather than assumed: `.parcel-intake-result-icon`
+sits inside a raw Bootstrap `.card`, which **nothing repaints for dark mode** — so
+the painted surface is `#ffffff` in both themes, the chip half reads 12.37:1
+there, and the "correct" `--admin-accepted-fg` would read **1.67:1**. Nine staff
+templates use that raw `.card` and only `sell-page` (OBRS-128) opted into dark
+mode; fixing the other eight is **OBRS-747**, and that card carries the icon swap
+and the ALLOW deletion with it. Before migrating any call site to a `*-fg` token,
+**measure what its ancestors actually paint** — `mountInChain` + `effectiveBg`
+from `src/app/testing/contrast.ts` do exactly that in a real browser.
+
 **Rules**
 
 - Using a colour as standalone text/icon/border on the shell? Reach for a
-  `*-fg` token, never a chip's `*-text`.
+  `*-fg` token, never a chip's `*-text`. Enforced by invariant 4 above.
+- Check the surface first. `--admin-*` only exists inside `.admin-shell`, and
+  even inside it a wrapper may be an un-themed Bootstrap `.card`. A component
+  outside the shell (customer module) must re-declare the token **on both sides**
+  — light on `:host`, dark on `:host-context(body.is-dark)`; a one-sided
+  declaration is the original OBRS-86 bug.
 - Adding an `--admin-*` token? It needs an `.admin-shell.is-dark` value, or an
   entry in `DARK_EXEMPT` in `scripts/check-admin-theme-tokens.mjs` stating why
   it does not. `npm run test:theme-tokens` fails otherwise, in CI before

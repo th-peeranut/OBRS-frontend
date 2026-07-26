@@ -11,9 +11,17 @@
 // admin-theme.scss (§2.4), not invented. The two "is-info"/"is-neutral"
 // tokens mirror admin-theme.scss's own .admin-shell.is-dark overrides,
 // gated on THIS app's public dark-mode class (body.is-dark) instead of
-// .admin-shell.is-dark — .is-success/.is-warning intentionally have none
-// (design-system §2.4: neither token has a dark-mode override anywhere in
+// .admin-shell.is-dark — the .is-success/.is-warning CHIP PAIRS intentionally
+// have none (design-system §2.4: a light fill with dark text on it reads as a
+// chip in both themes, so neither pair has a dark-mode override anywhere in
 // this codebase).
+//
+// OBRS-726: --admin-warning-fg is the exception, and it is not a hole in the
+// rule above — it is a different ROLE. The chip pair stays theme-invariant; the
+// SURFACE role (warning text with no fill of its own, i.e.
+// .trip-track-panel__refresh-failed below) must flip, because it sits on the
+// panel, and this panel's own dark rule paints that panel #1d2226. Both values
+// are copied from admin-theme.scss (§2.4.0 surface-role table), not invented.
 //
 // The --trip-track-marker-* names are deliberately NOT --admin-* (BR-24/U28)
 // even though the STALE pair's VALUES are copied from --admin-warning-*.
@@ -22,6 +30,7 @@
   --admin-success-text: #154c85;
   --admin-warning-bg: #ffdcbe;
   --admin-warning-text: #673a00;
+  --admin-warning-fg: #673a00; // OBRS-726 surface role; same light value as -text
   --admin-neutral-bg: #e4e4e7;
   --admin-neutral-text: #3f3f46;
   --admin-inreview-bg: #e2e5ea;
@@ -39,6 +48,7 @@
   --admin-neutral-text: #cdd8df;
   --admin-inreview-bg: #29323d;
   --admin-inreview-text: #c7d3de;
+  --admin-warning-fg: #ffb877; // OBRS-726; measured 9.45:1 on this panel's #1d2226
 }
 
 .trip-track-panel {
@@ -148,8 +158,14 @@
   color: #e7edf1;
 }
 
+// OBRS-726: was --admin-warning-text. Two faults in one line — a CHIP token
+// used with no fill of its own, AND this component re-declares that token
+// locally with no dark override (see the :host note above), so dark mode
+// rendered #673a00 on the panel's own #1d2226 at 1.67:1. The chip-paired
+// .trip-track-panel__banner--stale above keeps --admin-warning-text and is
+// correct: it declares --admin-warning-bg in the same rule.
 .trip-track-panel__refresh-failed {
   margin: 8px 0 0;
   font-size: $font-size-sm;
-  color: var(--admin-warning-text);
+  color: var(--admin-warning-fg);
 }
