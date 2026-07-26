@@ -1355,6 +1355,7 @@
         "OFF": "Off"
       },
       "VALUE_DELETED": "Deleted",
+      "VALUE_UNSET": "Not set",
       "VALUE": {
         "MORE": "+{{count}} more"
       },

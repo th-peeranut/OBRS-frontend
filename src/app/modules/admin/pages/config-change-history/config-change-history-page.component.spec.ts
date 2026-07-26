@@ -91,6 +91,29 @@ describe('ConfigChangeHistoryPageComponent', () => {
     expect((component as any).scopeKind(row({ scope: 'OWNER', ownerName: null }))).toBe('owner-deleted');
   });
 
+  // OBRS-742: the จาก->เป็น cell calls formatValue(row, slot) — the SLOT is what
+  // separates an INSERT row's absent oldValue from a DELETE row's removed
+  // newValue. Pin the component seam, not just the mapper: the bug this fixes
+  // was a mapper that could not see the difference, and a component that hands
+  // over a bare value re-creates it however correct the mapper becomes. The
+  // translate stub echoes the key back, so the assertion is on WHICH key.
+  it('formatValue picks VALUE_UNSET vs VALUE_DELETED per (operation, slot)', () => {
+    const store = makeStoreStub(null);
+    const component = new ConfigChangeHistoryPageComponent(store as any, createTranslateStub());
+    const format = (component as any).formatValue.bind(component) as (
+      r: ConfigHistoryRow,
+      slot: 'old' | 'new'
+    ) => string;
+
+    const inserted = row({ operation: 'INSERT', oldValue: null, newValue: 45 });
+    expect(format(inserted, 'old')).toBe('ADMIN.CONFIG_CHANGE_HISTORY.VALUE_UNSET');
+    expect(format(inserted, 'new')).toBe('45');
+
+    const deleted = row({ operation: 'DELETE', oldValue: 45, newValue: null });
+    expect(format(deleted, 'old')).toBe('45');
+    expect(format(deleted, 'new')).toBe('ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED');
+  });
+
   // Scrutinize regression gate: the store is root-scoped, so a RE-ENTRY renders
   // the previous visit's filtered rows. If the controls are not re-seeded from
   // it, the dropdown/date fields say "no filter" over a filtered table — the
