@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 102 cases, ~2.9 min, no backend. THIS is the merge gate.
+npm run e2e:gate       # 102 cases, ~2.9 min, no backend. THIS is the merge gate (runs in CI).
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -212,18 +212,42 @@ without declaring what it runs, which closes the family rather than the two inst
   So the failure mode is real, it presents as a timeout on an unrelated spec, and the
   first thing to suspect when the gate reds on something you did not change is the load
   on the box — not that spec.
-- **The gate lane is not wired into CI**, and that is an open owner decision, not a
-  budget constraint. OBRS-735: this bullet used to say Actions on this repo is a hard $0
-  monthly minute ceiling shared with the SIT deploy — **both halves were false.**
-  `th-peeranut/OBRS-frontend` is PUBLIC, so its Actions minutes are unmetered (the
-  free-tier ceiling belongs to the PRIVATE `OBRS-backend`), and no SIT deploy runs in
-  `.github/workflows/ci.yml` at all — the SIT frontend deploys from **Netlify**
-  (`netlify.toml`), a separate product on a separate budget. The real cost of wiring the
-  lane in is wall-clock (~2.9 min plus a browser), not quota. Only the free membership
-  check runs in CI today.
-- **`b2c-critical-path` clicks `.btn-confirm` with `force: true`**, which reports success
-  whether or not the click lands. It passes, but the assertion after it is what proves
-  anything.
+- **The gate lane runs in CI** as the `e2e-gate` job in `.github/workflows/ci.yml`
+  (OBRS-750), and it blocks: no `continue-on-error`, no `retries` override. Before that
+  card it ran only on developer machines, which made it a convention rather than a gate.
+  Two earlier versions of this bullet were wrong in sequence and both are worth knowing
+  about, because the same mistake is easy to make again:
+  - It first said Actions on this repo is a hard $0 monthly minute ceiling shared with
+    the SIT deploy — **both halves false** (OBRS-735). `th-peeranut/OBRS-frontend` is
+    PUBLIC, so its Actions minutes are unmetered; the free-tier ceiling belongs to the
+    PRIVATE `OBRS-backend`. And no SIT deploy runs in `ci.yml` at all — the SIT frontend
+    deploys from **Netlify** (`netlify.toml`), a separate product on a separate budget.
+  - It then said not wiring the lane in was "an open owner decision" — true when written,
+    false the moment OBRS-750 landed. A doc that records a *pending* decision has to be
+    revisited when the decision is made; nothing enforces that, so treat any "open
+    decision" sentence here as unverified until you check the file it describes.
+  The cost of the lane was always wall-clock, never quota. It is safe as a blocking gate
+  because it is hermetic by construction — `playwright.gate.config.ts` serves the app with
+  the DEFAULT configuration, so `apiUrl` points at a `localhost:8080` where nothing
+  listens, and an un-intercepted request gets ECONNREFUSED instead of silently reaching
+  live SIT. A cold-starting Koyeb instance therefore cannot turn this job red.
+- **`b2c-critical-path` used to click `.btn-confirm` with `force: true`.** This bullet
+  already said that "reports success whether or not the click lands" — and OBRS-750 found
+  out the hard way that it was worse than that. `force` does not aim the event at the
+  element, it only skips the actionability checks, so the mouse event still went to
+  whatever was topmost at that point. Something else is: Playwright's hit test there
+  resolves to `app-review-schedule-booking-total`, the button's own parent. On this box the
+  click still happened to reach the button; the first time the lane ran on a GitHub runner
+  it did not, the handler never fired, and the `waitForURL` after it burned the full 60s
+  test timeout. **The error named the navigation, not the click** — which is exactly how
+  this got mis-filed as CPU contention for as long as it did.
+  The spec now uses `dispatchEvent('click')`, which reaches the button deterministically and
+  cannot silently deliver the event elsewhere. Measured at 1280x720 before changing it:
+  `document.elementFromPoint` at the button's resting centre returns the button, so a real
+  user can click it — the interception is an artefact of where Playwright's own scrolling
+  puts the element, not a product defect. The underlying cause (a component host with no
+  `:host` display rule, therefore `display: inline` around two block children) is filed
+  separately.
 - **Nothing pins the gate's case count.** `forbidOnly: true` stops the `test.only`
   version of this, but a `describe.skip` still removes a file's worth of coverage from a
   run that exits 0. The count is in the `list` output and no assertion reads it. A
