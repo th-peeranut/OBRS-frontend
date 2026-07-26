@@ -487,6 +487,59 @@ async function capture(browser, phase) {
   console.log(`\nwrote ${out}`);
 }
 
+/**
+ * Print the measured ratio of named selectors on one page, both modes.
+ *
+ * `capture` only records elements that FAIL, which is right for a regression
+ * diff and wrong for reporting the numbers a card asks for — quoting a passing
+ * ratio means measuring it, not computing it from the declared token values.
+ *
+ *   node e2e/scripts/capture-obrs747.js watch parcel-consign-result \
+ *     ".parcel-intake-result-list dd" ".parcel-intake-result-icon"
+ */
+async function watch(browser, pageKey, selectors) {
+  const p = PAGES.find((x) => x.key === pageKey);
+  if (!p) throw new Error(`unknown page key '${pageKey}'. Known: ${PAGES.map((x) => x.key).join(', ')}`);
+  for (const dark of [true, false]) {
+    const page = await newSeededPage(browser, dark, null);
+    await visit(page, p.url);
+    if (p.prepare) await PREPARE[p.prepare](page);
+    const rows = await page.evaluate(
+      ([sels, sweepSrc]) => {
+        const sweep = new Function('return (' + sweepSrc + ')()')();
+        if (sweep.error) return { error: sweep.error };
+        const out = [];
+        for (const sel of sels) {
+          const hits = [...document.querySelectorAll(sel)];
+          if (!hits.length) {
+            out.push({ sel, error: 'NOT FOUND' });
+            continue;
+          }
+          for (const el of hits) {
+            // Re-find this element in the sweep by identity rather than by
+            // re-implementing the maths a second time.
+            const measured = sweep.elements.find((e) => e.text === el.textContent.trim().slice(0, 40));
+            out.push(measured ? { sel, ...measured } : { sel, error: 'not measured (renders no own text?)' });
+          }
+        }
+        return { rows: out, bodyIsDark: document.body.classList.contains('is-dark') };
+      },
+      [selectors, SWEEP.toString()]
+    );
+    if (rows.error) throw new Error(rows.error);
+    if (rows.bodyIsDark !== dark) throw new Error(`theme precondition failed: expected dark=${dark}`);
+    console.log(`\n[${pageKey}] ${dark ? 'DARK' : 'LIGHT'}`);
+    for (const r of rows.rows) {
+      if (r.error) console.log(`  ${r.sel}: ${r.error}`);
+      else
+        console.log(
+          `  ${r.ratio}:1 (floor ${r.floor})  ${r.fg} on ${r.bg}  ${r.size}px/${r.weight}  ${r.sel}  "${r.text}"`
+        );
+    }
+    await page.close();
+  }
+}
+
 function diff() {
   const load = (p) => JSON.parse(fs.readFileSync(path.join(OUT_DIR, `sweep-${p}.json`), 'utf8'));
   const before = load('before');
@@ -530,6 +583,7 @@ async function main() {
   const browser = await chromium.launch();
   try {
     if (MODE === 'probe') await probe(browser);
+    else if (MODE === 'watch') await watch(browser, process.argv[3], process.argv.slice(4));
     else await capture(browser, MODE);
   } finally {
     await browser.close();
