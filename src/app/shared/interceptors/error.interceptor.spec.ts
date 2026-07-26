@@ -55,6 +55,43 @@ describe('errorInterceptor', () => {
     httpMock.verify();
   });
 
+  it('shows the backend message verbatim for the gateway-ceiling refusal — the precondition the payment components rely on (OBRS-736)', () => {
+    // Load-bearing, not decorative. payment-creditcard / payment-qrcode now SKIP
+    // their generic "payment failed" toast for this errorCode, on the strength of
+    // this interceptor having already shown the backend's own message. If that
+    // ever stopped being true, the passenger would see nothing at all — a worse
+    // outcome than the double toast this replaced. So the assumption is pinned
+    // here rather than assumed there.
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    configure([{ provide: TranslateService, useValue: translate }]);
+    const http = TestBed.inject(HttpClient);
+    const httpMock = TestBed.inject(HttpTestingController);
+    const backendMessage =
+      'ยอดนี้ชำระออนไลน์ไม่ได้ เพราะผู้ให้บริการชำระเงินรับได้สูงสุด 10,000 บาทต่อหนึ่งรายการ กดชำระซ้ำก็จะไม่ผ่าน กรุณาแยกเป็นหลายการจอง หรือชำระเป็นเงินสดที่เคาน์เตอร์';
+
+    http
+      .post('/api/private/payments', {})
+      .subscribe({ next: () => {}, error: () => {} });
+    httpMock.expectOne('/api/private/payments').flush(
+      {
+        errorCode: 'PAYMENT_AMOUNT_EXCEEDS_GATEWAY_LIMIT',
+        message: backendMessage,
+      },
+      { status: 400, statusText: 'Bad Request' }
+    );
+
+    // Verbatim, not a translated key: a 400 is not one of the transport statuses
+    // statusAlertMessageKey() maps, so the backend's own wording passes through.
+    expect(alertService.error).toHaveBeenCalledWith(backendMessage);
+    expect(translate.instant).not.toHaveBeenCalledWith(
+      'COMMON.ERROR.REQUEST_FAILED'
+    );
+    httpMock.verify();
+  });
+
   it('translates the dedicated 503 dependency-outage message on an /api/ request (behavior preserved)', () => {
     const translate = jasmine.createSpyObj<TranslateService>(
       'TranslateService',

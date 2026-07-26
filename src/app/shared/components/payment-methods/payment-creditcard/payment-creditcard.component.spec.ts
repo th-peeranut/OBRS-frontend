@@ -1,5 +1,6 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import {
@@ -379,6 +380,51 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
 
     expect(omiseTokenService.requestCardToken).not.toHaveBeenCalled();
     expect(paymentService.createPayment).not.toHaveBeenCalled();
+    expect(alertService.error).toHaveBeenCalled();
+    expect(component.isSubmittingPayment).toBeFalse();
+  });
+
+  it('stays silent when the backend refuses the amount as above the gateway ceiling — errorInterceptor already showed a truer message (OBRS-736)', async () => {
+    omiseTokenService.requestCardToken.and.resolveTo('tokn_test_from_iframe');
+    paymentService.createPayment.and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: {
+              errorCode: 'PAYMENT_AMOUNT_EXCEEDS_GATEWAY_LIMIT',
+              message:
+                'ยอดนี้ชำระออนไลน์ไม่ได้ เพราะผู้ให้บริการชำระเงินรับได้สูงสุด 10,000 บาทต่อหนึ่งรายการ',
+            },
+          })
+      ) as unknown as ReturnType<PaymentService['createPayment']>
+    );
+
+    await component.submitPayment();
+
+    // The generic toast says "check your card details or balance". Both are false
+    // here, and no retry can ever succeed, so it must not land on top of the
+    // backend's message.
+    expect(alertService.error).not.toHaveBeenCalled();
+    expect(component.isSubmittingPayment).toBeFalse();
+  });
+
+  it('still reports every OTHER backend payment failure — the ceiling branch must stay narrow (OBRS-736)', async () => {
+    // The must-NOT half. A silence that swallowed any HTTP failure would leave a
+    // declined card looking exactly like a successful one.
+    omiseTokenService.requestCardToken.and.resolveTo('tokn_test_from_iframe');
+    paymentService.createPayment.and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { errorCode: 'GATEWAY_ERROR', message: 'gateway down' },
+          })
+      ) as unknown as ReturnType<PaymentService['createPayment']>
+    );
+
+    await component.submitPayment();
+
     expect(alertService.error).toHaveBeenCalled();
     expect(component.isSubmittingPayment).toBeFalse();
   });
