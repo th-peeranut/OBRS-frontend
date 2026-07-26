@@ -2,16 +2,24 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   actorDisplayKind,
   configKeyLabel,
+  ConfigValueSlot,
   displayChangedAt,
   extractConfigHistoryErrorCode,
   formatConfigValue,
+  nullValueI18nKey,
   roleLabel,
   scopeDisplayKind,
 } from './config-change-history-page.mappers';
 import {
+  ConfigHistoryOperation,
   ConfigHistoryRow,
   ConfigHistoryScope,
+  ConfigHistoryValue,
 } from '../../../../shared/interfaces/config-history.interface';
+
+// OBRS-742: formatConfigValue takes the whole row, because a null means
+// opposite things in the two slots. Only these three fields matter to it.
+type ValueRow = Pick<ConfigHistoryRow, 'operation' | 'oldValue' | 'newValue'>;
 
 // A minimal translation table so translateFn behaves like ngx-translate's
 // instant(): known key -> its string, unknown key -> the key ITSELF (the
@@ -67,41 +75,119 @@ describe('config-change-history-page.mappers', () => {
   describe('formatConfigValue', () => {
     const t = fakeTranslate({
       'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED': 'ถูกลบ',
+      'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_UNSET': 'ยังไม่ได้ตั้งค่า',
       'ADMIN.CONFIG_CHANGE_HISTORY.BOOL.ON': 'เปิด',
       'ADMIN.CONFIG_CHANGE_HISTORY.BOOL.OFF': 'ปิด',
       'ADMIN.CONFIG_CHANGE_HISTORY.VALUE.MORE': 'และอีก {{count}} รายการ',
     });
 
+    // Shape dispatch is independent of operation/slot — exercise it through an
+    // ordinary UPDATE row's `newValue`, the overwhelmingly common case.
+    function updated(newValue: ConfigHistoryValue): ValueRow {
+      return { operation: 'UPDATE', oldValue: 30, newValue };
+    }
+
     it('renders a number as-is', () => {
-      expect(formatConfigValue(45, t)).toBe('45');
-      expect(formatConfigValue(0, t)).toBe('0');
+      expect(formatConfigValue(updated(45), 'new', t)).toBe('45');
+      expect(formatConfigValue(updated(0), 'new', t)).toBe('0');
     });
 
     it('renders a boolean via the ON/OFF i18n keys, never as "true"/"false"', () => {
-      expect(formatConfigValue(true, t)).toBe('เปิด');
-      expect(formatConfigValue(false, t)).toBe('ปิด');
+      expect(formatConfigValue(updated(true), 'new', t)).toBe('เปิด');
+      expect(formatConfigValue(updated(false), 'new', t)).toBe('ปิด');
     });
 
     it('renders a string quoted', () => {
-      expect(formatConfigValue('hello', t)).toBe('"hello"');
-    });
-
-    it('renders null as VALUE_DELETED (operation === DELETE)', () => {
-      expect(formatConfigValue(null, t)).toBe('ถูกลบ');
+      expect(formatConfigValue(updated('hello'), 'new', t)).toBe('"hello"');
     });
 
     it('renders a short array joined with ", ", no truncation suffix', () => {
-      expect(formatConfigValue(['flammable', 'explosive'], t)).toBe('flammable, explosive');
+      expect(formatConfigValue(updated(['flammable', 'explosive']), 'new', t)).toBe(
+        'flammable, explosive'
+      );
     });
 
     it('truncates an array beyond 3 items and appends the +N more count', () => {
-      expect(formatConfigValue(['a', 'b', 'c', 'd', 'e'], t)).toBe('a, b, c และอีก 2 รายการ');
+      expect(formatConfigValue(updated(['a', 'b', 'c', 'd', 'e']), 'new', t)).toBe(
+        'a, b, c และอีก 2 รายการ'
+      );
     });
 
     // Hard constraint #5: dispatch is by REAL JSON shape, never inferred from
     // the config key's name — pin that a numeric-LOOKING string still quotes.
     it('does not infer numeric type from a numeric-looking STRING value', () => {
-      expect(formatConfigValue('45', t)).toBe('"45"');
+      expect(formatConfigValue(updated('45'), 'new', t)).toBe('"45"');
+    });
+
+    it('reads the slot it is asked for, not whichever end happens to be null', () => {
+      expect(formatConfigValue({ operation: 'UPDATE', oldValue: 30, newValue: 45 }, 'old', t)).toBe(
+        '30'
+      );
+      expect(formatConfigValue({ operation: 'UPDATE', oldValue: 30, newValue: 45 }, 'new', t)).toBe(
+        '45'
+      );
+    });
+
+    // ── OBRS-742: the two nulls, and the whole row each one belongs to ──────
+    //
+    // This block replaces a test that asserted the BUG. Its old name —
+    // "renders null as VALUE_DELETED (operation === DELETE)" — stated a
+    // condition the assertion never checked: it passed a bare null with no
+    // operation at all, so it was green for INSERT rows too, which is exactly
+    // the case it was pretending to exclude. Verified red before the fix:
+    // `Expected 'ถูกลบ' not to be 'ถูกลบ'.`
+    describe('a null value', () => {
+      // AC3 — the DELETE row must keep the wording it has always had.
+      it("DELETE row, 'new' slot -> still 'ถูกลบ' (the value really was removed)", () => {
+        const row: ValueRow = { operation: 'DELETE', oldValue: 45, newValue: null };
+        expect(formatConfigValue(row, 'new', t)).toBe('ถูกลบ');
+      });
+
+      it("DELETE row, 'old' slot -> the value being removed, never the word", () => {
+        const row: ValueRow = { operation: 'DELETE', oldValue: 45, newValue: null };
+        expect(formatConfigValue(row, 'old', t)).toBe('45');
+      });
+
+      // AC2 — an owner's FIRST override. Reachable since OBRS-730's V51.
+      it("INSERT row, 'old' slot -> 'ยังไม่ได้ตั้งค่า', NOT 'ถูกลบ'", () => {
+        const row: ValueRow = { operation: 'INSERT', oldValue: null, newValue: 45 };
+        const rendered = formatConfigValue(row, 'old', t);
+        expect(rendered).toBe('ยังไม่ได้ตั้งค่า');
+        expect(rendered).not.toBe('ถูกลบ');
+      });
+
+      it("INSERT row renders end-to-end as 'ยังไม่ได้ตั้งค่า -> 45'", () => {
+        const row: ValueRow = { operation: 'INSERT', oldValue: null, newValue: 45 };
+        expect(`${formatConfigValue(row, 'old', t)} -> ${formatConfigValue(row, 'new', t)}`).toBe(
+          'ยังไม่ได้ตั้งค่า -> 45'
+        );
+      });
+
+      // The rule stated once, over every (operation, slot) pair that exists:
+      // exactly ONE of the six earns the deletion wording.
+      it('VALUE_DELETED is reachable from exactly one (operation, slot) pair', () => {
+        const operations: ConfigHistoryOperation[] = ['INSERT', 'UPDATE', 'DELETE'];
+        const slots: ConfigValueSlot[] = ['old', 'new'];
+        const deleted = operations.flatMap((operation) =>
+          slots
+            .filter(
+              (slot) =>
+                nullValueI18nKey(operation, slot) === 'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED'
+            )
+            .map((slot) => `${operation}/${slot}`)
+        );
+        expect(deleted).toEqual(['DELETE/new']);
+      });
+
+      // Fail-safe direction. A future operation this build has never heard of
+      // must degrade to the always-true "no value here", never to a deletion
+      // claim — the same class of assumption ('UPDATE' | 'DELETE' is total)
+      // that V51 falsified and this card exists to fix.
+      it('an operation this build does not know falls back to VALUE_UNSET, never VALUE_DELETED', () => {
+        const unknown = 'RESTORE' as ConfigHistoryOperation;
+        expect(nullValueI18nKey(unknown, 'new')).toBe('ADMIN.CONFIG_CHANGE_HISTORY.VALUE_UNSET');
+        expect(nullValueI18nKey(unknown, 'old')).toBe('ADMIN.CONFIG_CHANGE_HISTORY.VALUE_UNSET');
+      });
     });
   });
 

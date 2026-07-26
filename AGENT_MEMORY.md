@@ -3911,16 +3911,24 @@ first) made stale on contact. The counter in a shared append-only file is itself
 `testMatch`, cross-checked against `e2e/lanes.json` by `scripts/check-e2e-lanes.mjs`. The registry
 check answers *"which specs are in the gate?"* and answers it well. It cannot answer *"did they
 run?"* — and Playwright hands you two one-token ways to make the answer "no" while still exiting 0:
-a stray `test.only` collapses the lane from 49 cases to 1, and `test.describe.skip` removes a whole
+a stray `test.only` collapses the lane to a single case, and `test.describe.skip` removes a whole
 file's worth silently. Neither shows up in a green `list` reporter run unless somebody reads the
 count, and nothing in the repo pins the count.
 
+(The figure that used to sit in this sentence was one of three mutually contradicting case counts
+scattered across `ci.yml`, this file and the gate config — see OBRS-750. Get the number from
+`npm run e2e:gate`, never from prose.)
+
 Added `forbidOnly: true` to the gate config — unconditionally, not the customary
-`!!process.env.CI`. This lane is deliberately NOT in CI (an owner decision — the parenthetical here
-used to say "Actions is a hard $0 ceiling here" and **that was false**, see OBRS-735: this repo is
-PUBLIC and its Actions minutes are unmetered), so it
-only ever runs on a developer's machine, which is precisely the machine the CI-gated form exempts.
-The idiom you copy from other repos is wrong for a gate that lives outside CI.
+`!!process.env.CI`. **OBRS-750 put this lane in CI**, so the sentence that used to stand here ("this
+lane is deliberately NOT in CI, an owner decision") is now wrong; do not restore it. Its stated
+reason was already false before that — it claimed Actions is a hard $0 ceiling here, and OBRS-735
+established this repo is PUBLIC with unmetered Actions minutes.
+
+`forbidOnly: true` stays unconditional even now that CI runs the lane, and the reason is unchanged:
+the lane still runs on developer machines too, and that is precisely where a forgotten `.only` is
+written and where the `!!process.env.CI` idiom would switch the guard off. Being in CI removes the
+argument for the idiom, not the argument for the guard.
 
 Two false-reference comments in the same commit, both the DEV-GOTCHAS Confirmed *"a comment stating
 the WRONG MECHANISM"* family:

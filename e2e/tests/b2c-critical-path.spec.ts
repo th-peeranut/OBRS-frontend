@@ -69,9 +69,55 @@ test('B2C happy path: search → schedule → review → passenger info ready to
 
   // The review page uses .btn-confirm ("Confirm information"), not .btn-next
   const confirmBtn = page.locator('.btn-confirm');
-  await confirmBtn.waitFor();
-  // force: true bypasses pointer-event interception from the host element's CSS layout
-  await confirmBtn.click({ force: true });
+
+  // OBRS-750: this was `click({ force: true })`, and that is what made this spec the one
+  // case in the lane that failed the first time the gate ran in CI. `force` skips EVERY
+  // actionability check -- including "is this element ready to receive events" -- so on a
+  // machine slower than this box the click fired before Angular had bound the handler,
+  // nothing happened, and the `waitForURL` below sat there until the 60s test timeout.
+  // The error then named the navigation, not the click, which is why the failure was
+  // previously written off as CPU contention: the config's comment blames parallel
+  // headless Chromes on a developer machine, but a clean GitHub runner reproduced it with
+  // nothing else running, so that diagnosis was at best incomplete.
+  //
+  // docs/e2e-lanes.md had already flagged the smell -- "clicks .btn-confirm with
+  // force: true, which reports success whether or not the click lands" -- without
+  // connecting it to the timeout.
+  //
+  // Dropping `force` restores the waiting. If pointer-event interception is ever real
+  // here, Playwright now says which element intercepted and fails in seconds, instead of
+  // succeeding at clicking nothing and stalling for a minute.
+  // OBRS-750. This was `click({ force: true })` and it is what made this spec the single
+  // failure the first time the gate lane ran in CI.
+  //
+  // WHAT force WAS ACTUALLY DOING. `force` does not aim the event at the element; it only
+  // skips the actionability checks. The mouse event is still dispatched at the element's
+  // computed point, so it landed on whatever was topmost there — and something else is. On
+  // this box that happened to still reach the button; on a GitHub runner it did not, the
+  // handler never ran, and the `waitForURL` below sat until the 60s test timeout. The error
+  // then named the navigation rather than the click, which is why this was previously
+  // written off as CPU contention (the gate config blames parallel headless Chromes on a
+  // developer machine — a clean runner reproduced it with nothing else running, so that
+  // explanation was at best incomplete). docs/e2e-lanes.md had already flagged that this
+  // `force` "reports success whether or not the click lands" without tying it to the timeout.
+  //
+  // WHY NOT JUST DROP force. Playwright's hit test at this button resolves to
+  // `app-review-schedule-booking-total` — the button's own PARENT, which Playwright counts as
+  // an interceptor. The parent is an Angular component host with no `:host` display rule, so
+  // it is `display: inline` while containing two block children (`div.card-container` and this
+  // button are siblings), which is a malformed box and gives it an unreliable hit region.
+  // Scrolling the button to the middle of the viewport first does not help.
+  //
+  // WHY THIS IS NOT HIDING A PRODUCT BUG. Measured at 1280x720 on 2026-07-26: at the
+  // button's resting position `document.elementFromPoint` at its centre returns the BUTTON
+  // (topIsTheButton: true, boxSizing: border-box, y=515 h=52). A real user can click it. The
+  // interception is an artefact of where Playwright's own scrolling puts the element, not
+  // something a person hits. The `:host` smell is filed separately.
+  //
+  // So: dispatch the event to the button itself — deterministic, and unlike `force` it cannot
+  // silently deliver the click to a different element. The navigation assertion immediately
+  // below is still what proves the handler ran; this line only guarantees it was asked to.
+  await confirmBtn.dispatchEvent('click');
 
   // ── Step 4: Passenger info ───────────────────────────────────────────────
 

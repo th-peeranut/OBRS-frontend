@@ -24,6 +24,7 @@ import {
   PaymentResponse,
 } from '../../../../shared/interfaces/payment.interface';
 import { generateIdempotencyKey } from '../../../../shared/lib/idempotency-key';
+import { isHandledByBackendMessage } from '../../../../shared/lib/payment-error-codes';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -138,6 +139,16 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       // untouched payment page in silence and `finally` re-enables the button
       // (OBRS-391).
       if (isCardEntryCancelled(error)) {
+        return;
+      }
+
+      // OBRS-736: the amount is above the ceiling Omise imposes per transaction.
+      // errorInterceptor has already shown the backend's message, which names the
+      // limit and gives the two ways out. Adding the generic toast below would put
+      // "check your card details or balance" on top of it — a false cause, and
+      // advice that cannot work, since no retry will ever pass.
+      if (isHandledByBackendMessage(error)) {
+        console.error('Payment request failed', error);
         return;
       }
 
