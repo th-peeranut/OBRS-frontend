@@ -931,6 +931,7 @@
       "UNITS": "bookings",
       "LOADING": "Loading booking data...",
       "LOAD_FAILED": "Unable to load booking data from backend.",
+      "FORBIDDEN": "You don't have permission to view this booking list. This is a permission limit, not an empty list — ask an administrator if you need access.",
       "VIEW": "View",
       "CANCEL_OVERRIDE": {
         "OPEN": "Override cancel…",

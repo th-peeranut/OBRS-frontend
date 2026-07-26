@@ -33,6 +33,16 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
   protected refreshFailed = false;
   protected readonly skeletonRows = Array.from({ length: 5 });
   protected errorMessage = '';
+  // OBRS-727: a 403 is not a load failure. While the list endpoint was
+  // ADMIN-only, an owner walked in through the /admin shell guard
+  // (ROLE_GRANTS.owner includes 'admin'), the GET 403'd, and this page said
+  // "Unable to load booking data from backend" — indistinguishable from the
+  // backend being down, so the reader concluded the system had no bookings
+  // rather than that the page was not theirs. The endpoint now admits OWNER,
+  // but the distinction has to exist for whoever is denied next: OBRS-728 will
+  // scope this list per fleet, and 403 is exactly what an out-of-scope caller
+  // must then read as "not yours".
+  protected isForbidden = false;
 
   protected searchTerm = '';
   protected selectedStatus = '';
@@ -97,9 +107,15 @@ export class BookingsPageComponent implements OnInit, OnDestroy {
     );
     this.subscriptions.add(
       this.store.error$.subscribe((failed) => {
-        this.refreshFailed = failed && this.store.hasValue;
-        this.errorMessage =
-          failed && !this.store.hasValue
+        // A denial is never a transient refresh hiccup, so it wins over both
+        // the "showing stale data" hint and the generic load-failure text —
+        // even when a cached list is on screen, which after a denial is data
+        // this caller is no longer entitled to see.
+        this.isForbidden = failed && this.store.errorStatus === 403;
+        this.refreshFailed = failed && !this.isForbidden && this.store.hasValue;
+        this.errorMessage = this.isForbidden
+          ? this.translate.instant('ADMIN.BOOKINGS.FORBIDDEN')
+          : failed && !this.store.hasValue
             ? this.translate.instant('ADMIN.BOOKINGS.LOAD_FAILED')
             : '';
       })

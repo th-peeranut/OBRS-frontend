@@ -1,12 +1,23 @@
 <section class="admin-page-intro" *ngIf="isLoading || errorMessage || isRefreshing || refreshFailed">
   <div>
     <p class="admin-muted" *ngIf="isLoading">{{ 'ADMIN.BOOKINGS.LOADING' | translate }}</p>
-    <p class="admin-muted" *ngIf="errorMessage">{{ errorMessage }}</p>
+    <!-- OBRS-727: a 403 gets its own presentation, not the muted grey the
+         generic load-failure shares with "loading". The two say different
+         things and must not look the same. -->
+    <p class="bk-forbidden" *ngIf="isForbidden" role="status">
+      <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+      <span>{{ errorMessage }}</span>
+    </p>
+    <p class="admin-muted" *ngIf="errorMessage && !isForbidden">{{ errorMessage }}</p>
     <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="refreshFailed" [loading]="isLoading"></app-admin-refresh-hint>
   </div>
 </section>
 
-<section class="admin-card mt-3">
+<!-- OBRS-727: once the backend has said "not yours", the table goes away
+     entirely. Leaving it up would render either an empty grid (the original
+     bug — reads as "there are no bookings") or, worse, rows this caller is no
+     longer entitled to see, plus filter/export controls acting on them. -->
+<section class="admin-card mt-3" *ngIf="!isForbidden">
   <div class="admin-card-head">
     <h4>{{ 'ADMIN.BOOKINGS.TABLE_TITLE' | translate }}</h4>
   </div>

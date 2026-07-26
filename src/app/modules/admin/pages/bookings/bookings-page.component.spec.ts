@@ -26,13 +26,26 @@ function makeStoreStub(data: BookingsData | null) {
   const data$ = new BehaviorSubject<BookingsData | null>(data);
   const refreshing$ = new BehaviorSubject<boolean>(false);
   const error$ = new BehaviorSubject<boolean>(false);
+  // OBRS-727: mirrors the real AdminCollectionStore — the status of the last
+  // failure, readable synchronously from inside an error$ handler. Set this
+  // BEFORE pushing error$, exactly as the base class does.
+  const errorStatus$ = new BehaviorSubject<number | null>(null);
   return {
     data$,
     refreshing$,
     error$,
+    errorStatus$,
     refresh: jasmine.createSpy('refresh').and.resolveTo(undefined),
     get hasValue() {
       return data$.value !== null;
+    },
+    get errorStatus() {
+      return errorStatus$.value;
+    },
+    /** Fail with `status`, in the base class's order (status, then flag). */
+    failWith(status: number | null) {
+      errorStatus$.next(status);
+      error$.next(true);
     },
   };
 }
@@ -124,6 +137,89 @@ describe('BookingsPageComponent', () => {
       .withContext('a null emission must not leave the previous session\'s rows on screen')
       .toEqual([]);
     expect((component as any).statusOptions).toEqual([]);
+  });
+
+  // OBRS-727: an owner reaching /admin/bookings got a 403 from the list
+  // endpoint and this page showed the generic "Unable to load booking data"
+  // text over an empty grid — so the reader concluded the system had no
+  // bookings, not that the page was not theirs. The endpoint now admits OWNER
+  // (AdminBookingListSecurityTest pins that), and these pin the FE half: a
+  // denial must never again be reported as a load failure or as no data.
+  // OBRS-728 will scope this list per fleet, which is when 403 becomes
+  // reachable again for an out-of-scope caller.
+  describe('permission denial vs load failure (OBRS-727)', () => {
+    function componentWith(store: ReturnType<typeof makeStoreStub>) {
+      const component = new BookingsPageComponent(
+        createTranslateStub(),
+        store as any,
+        makeAdminApiServiceStub() as any,
+        makeAuthStub() as any
+      );
+      component.ngOnInit();
+      return component as any;
+    }
+
+    it('renders the permission message, not LOAD_FAILED, on a 403', () => {
+      const store = makeStoreStub(null);
+      const component = componentWith(store);
+
+      store.failWith(403);
+
+      expect(component.isForbidden).toBeTrue();
+      expect(component.errorMessage)
+        .withContext('a denial must not be worded as a load failure')
+        .toBe('ADMIN.BOOKINGS.FORBIDDEN');
+    });
+
+    it('still renders LOAD_FAILED for a non-permission failure', () => {
+      const store = makeStoreStub(null);
+      const component = componentWith(store);
+
+      store.failWith(500);
+
+      expect(component.isForbidden).toBeFalse();
+      expect(component.errorMessage).toBe('ADMIN.BOOKINGS.LOAD_FAILED');
+    });
+
+    it('treats a failure with no HTTP status as a load failure, not a denial', () => {
+      const store = makeStoreStub(null);
+      const component = componentWith(store);
+
+      store.failWith(null);
+
+      expect(component.isForbidden).toBeFalse();
+      expect(component.errorMessage).toBe('ADMIN.BOOKINGS.LOAD_FAILED');
+    });
+
+    // A denial is not a transient refresh hiccup: with rows already cached, the
+    // refresh-failed hint ("showing older data") would invite the reader to
+    // trust a list they have just been told is not theirs.
+    it('a 403 wins over the stale-data refresh hint even with rows cached', () => {
+      const store = makeStoreStub(makeData(3));
+      const component = componentWith(store);
+
+      store.failWith(403);
+
+      expect(component.isForbidden).toBeTrue();
+      expect(component.refreshFailed)
+        .withContext('a denial must not be presented as "could not refresh"')
+        .toBeFalse();
+      expect(component.errorMessage).toBe('ADMIN.BOOKINGS.FORBIDDEN');
+    });
+
+    it('clears the denial once a later refresh succeeds', () => {
+      const store = makeStoreStub(null);
+      const component = componentWith(store);
+      store.failWith(403);
+      expect(component.isForbidden).toBeTrue();
+
+      // The base store resets the status then lowers the flag on success.
+      store.errorStatus$.next(null);
+      store.error$.next(false);
+
+      expect(component.isForbidden).toBeFalse();
+      expect(component.errorMessage).toBe('');
+    });
   });
 
   describe('detail modal (OBRS-280)', () => {

@@ -1330,6 +1330,13 @@ export class AdminApiService {
   }
 
   // TODO: implement server-side pagination in the admin UI; size=100 silently caps results
+  //
+  // OBRS-727: backend gate is @PreAuthorize("hasRole('OWNER')") — same role as the
+  // override-cancel POST below, which is the point: this list is what feeds that button.
+  // It was hasRole('ADMIN') until 2026-07-26, so an owner walked into /admin/bookings
+  // (ROLE_GRANTS.owner includes 'admin') and got a 403 the page rendered as an empty
+  // table. A 403 here now surfaces as a permission state, not as "no bookings" —
+  // BookingsPageComponent.isForbidden, via AdminCollectionStore.errorStatus$.
   getBookings(): Observable<ResponseAPI<PageResponse<AdminBookingDto>>> {
     const params = new HttpParams().set('page', '0').set('size', '100');
     return this.getRequest<PageResponse<AdminBookingDto>>(

@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { AuthService } from '../../../auth/auth.service';
 
@@ -24,6 +25,13 @@ export abstract class AdminCollectionStore<T> {
   // without conflating "our poll is failing" with "one row's own data is
   // stale" (design-system.md §12, OBRS-424 new-pattern log).
   private readonly lastFetchedAtSubject = new BehaviorSubject<Date | null>(null);
+  // OBRS-727: WHY the last fetch failed, not just that it did. `error$` alone
+  // cannot tell "the backend is unreachable" from "you are not allowed to see
+  // this", so every admin page rendered a 403 as its generic LOAD_FAILED text —
+  // which reads to the user as "the data is broken" rather than "this is not
+  // yours". Carries the HTTP status of the most recent failure (null when the
+  // last fetch succeeded, or when the failure was not an HttpErrorResponse).
+  private readonly errorStatusSubject = new BehaviorSubject<number | null>(null);
 
   /** Cached value, or null before the first successful load. Replays on subscribe. */
   readonly data$: Observable<T | null> = this.dataSubject.asObservable();
@@ -35,6 +43,10 @@ export abstract class AdminCollectionStore<T> {
    * has happened (or after logout — see clear()). Additive; every existing
    * subclass is unaffected. */
   readonly lastFetchedAt$: Observable<Date | null> = this.lastFetchedAtSubject.asObservable();
+  /** HTTP status of the most recent failed fetch, or null (OBRS-727). Set
+   * BEFORE `error$` emits, so an `error$` subscriber may read the `errorStatus`
+   * getter below and see the status belonging to the failure it is handling. */
+  readonly errorStatus$: Observable<number | null> = this.errorStatusSubject.asObservable();
 
   /** Set when refresh() is called mid-flight, forcing one more fetch afterwards. */
   private rerunRequested = false;
@@ -60,10 +72,17 @@ export abstract class AdminCollectionStore<T> {
     return this.dataSubject.value !== null;
   }
 
+  /** Synchronous companion to `errorStatus$` (OBRS-727) — lets an `error$`
+   * subscriber branch on the reason without coordinating two subscriptions. */
+  get errorStatus(): number | null {
+    return this.errorStatusSubject.value;
+  }
+
   /** Forget the cached value (e.g. on logout). */
   clear(): void {
     this.dataSubject.next(null);
     this.errorSubject.next(false);
+    this.errorStatusSubject.next(null);
     // OBRS-424: the store is root-scoped and outlives the session — without
     // this, a stale lastFetchedAt$ value would survive into the next login
     // and show a re-logged-in user a "last refreshed" time from the
@@ -114,10 +133,17 @@ export abstract class AdminCollectionStore<T> {
           const data = await this.fetch();
           this.dataSubject.next(data);
           this.lastFetchedAtSubject.next(new Date());
+          this.errorStatusSubject.next(null);
           this.errorSubject.next(false);
-        } catch {
+        } catch (error) {
           // Keep the prior cached value; flag the error so the component can
           // surface its own message (only meaningful when there's no cache).
+          // Status FIRST, then the flag — an error$ subscriber reading the
+          // errorStatus getter must not see the PREVIOUS failure's status
+          // (OBRS-727).
+          this.errorStatusSubject.next(
+            error instanceof HttpErrorResponse ? error.status : null
+          );
           this.errorSubject.next(true);
         }
       } while (this.rerunRequested);

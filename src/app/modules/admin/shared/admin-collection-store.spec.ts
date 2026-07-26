@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { BehaviorSubject } from 'rxjs';
 import { AdminCollectionStore } from './admin-collection-store';
 
@@ -286,6 +287,95 @@ describe('AdminCollectionStore', () => {
       let afterLogout: Date | null | undefined;
       store.lastFetchedAt$.subscribe((v) => (afterLogout = v));
       expect(afterLogout).toBeNull();
+    });
+  });
+
+  // OBRS-727: error$ alone cannot tell "the backend is unreachable" from "you
+  // are not allowed to see this", which is why an owner's 403 on
+  // GET /api/private/admin/bookings rendered as the generic LOAD_FAILED text.
+  describe('errorStatus$', () => {
+    function httpError(status: number): HttpErrorResponse {
+      return new HttpErrorResponse({ status, statusText: 'x', url: '/api/x' });
+    }
+
+    it('is null before any fetch', () => {
+      const store = new TestStore();
+      let value: number | null | undefined = undefined;
+      store.errorStatus$.subscribe((v) => (value = v));
+      expect(value).toBeNull();
+      expect(store.errorStatus).toBeNull();
+    });
+
+    it('carries the HTTP status of a failed fetch', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.reject(httpError(403));
+
+      await store.refresh();
+
+      expect(store.errorStatus).toBe(403);
+    });
+
+    it('is null when the failure is not an HttpErrorResponse', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.reject(new Error('boom'));
+
+      await store.refresh();
+
+      let value: number | null | undefined;
+      store.errorStatus$.subscribe((v) => (value = v));
+      expect(value)
+        .withContext('a non-HTTP failure must not be reported as some HTTP status')
+        .toBeNull();
+    });
+
+    // The ordering contract the component depends on: it branches on
+    // `store.errorStatus` from INSIDE its error$ handler, so the status must
+    // already be the one belonging to this failure when error$ fires. Written
+    // the other way round, a 403 following a 500 would be styled as a 500.
+    it('is updated BEFORE error$ emits, so an error$ subscriber reads this failure\'s status', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.reject(httpError(500));
+      await store.refresh();
+
+      const seen: Array<number | null> = [];
+      store.error$.subscribe((failed) => {
+        if (failed) {
+          seen.push(store.errorStatus);
+        }
+      });
+      // The replay above already recorded the 500.
+      expect(seen).toEqual([500]);
+
+      store.fetchImpl = () => Promise.reject(httpError(403));
+      await store.refresh();
+
+      expect(seen)
+        .withContext('the second emission must carry 403, not the previous 500')
+        .toEqual([500, 403]);
+    });
+
+    it('resets to null once a fetch succeeds again', async () => {
+      const store = new TestStore();
+      store.fetchImpl = () => Promise.reject(httpError(403));
+      await store.refresh();
+      expect(store.errorStatus).toBe(403);
+
+      store.fetchImpl = () => Promise.resolve({ items: [1] });
+      await store.refresh();
+
+      expect(store.errorStatus).toBeNull();
+    });
+
+    it('resets to null on clear() / logout', async () => {
+      const authStatus$ = new BehaviorSubject<boolean>(true);
+      const store = new TestStore(authStatus$);
+      store.fetchImpl = () => Promise.reject(httpError(403));
+      await store.refresh();
+      expect(store.errorStatus).toBe(403);
+
+      authStatus$.next(false);
+
+      expect(store.errorStatus).toBeNull();
     });
   });
 });

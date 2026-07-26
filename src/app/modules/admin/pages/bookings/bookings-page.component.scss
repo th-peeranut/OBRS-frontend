@@ -10,6 +10,24 @@
   cursor: pointer;
 }
 
+// OBRS-727: permission-denied notice. Uses the --admin-danger-fg /
+// -surface / -border trio, NOT the --admin-danger-bg/-text CHIP pair: only the
+// former is themed for both light and dark (OBRS-520 repointed the same three
+// properties for exactly this reason — the chip tokens dropped to 1.71:1 in
+// dark mode). Deliberately not `.admin-muted`: a denial that looks like the
+// grey "loading"/"couldn't load" text is the bug this card fixed.
+.bk-forbidden {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--admin-danger-border);
+  border-radius: 8px;
+  background: var(--admin-danger-surface);
+  color: var(--admin-danger-fg);
+}
+
 // ── Detail modal (OBRS-280) ─────────────────────────────────────────────────
 
 .bk-detail-modal {
