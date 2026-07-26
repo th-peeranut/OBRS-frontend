@@ -1355,6 +1355,11 @@ export class AdminApiService {
 
   // OBRS-280: read-only admin booking detail dialog. Same base path as
   // getBookingPayments above (NOT the list endpoint's `/private/admin/bookings`).
+  //
+  // OBRS-727: backend gate is @PreAuthorize("hasRole('OWNER')"), widened from 'ADMIN' along
+  // with getBookings() above — an owner reaching the list has to be able to open its rows.
+  // The dialog does NOT call /bookings/{id}/tickets: that one is still actor-only, and this
+  // response already carries the journeys + tickets the dialog renders.
   getBookingById(bookingId: number): Observable<ResponseAPI<AdminBookingDetailDto>> {
     return this.getRequest<AdminBookingDetailDto>(
       `${this.baseUrl}/private/bookings/${bookingId}`
