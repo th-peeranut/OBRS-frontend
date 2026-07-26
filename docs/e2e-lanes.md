@@ -212,9 +212,15 @@ without declaring what it runs, which closes the family rather than the two inst
   So the failure mode is real, it presents as a timeout on an unrelated spec, and the
   first thing to suspect when the gate reds on something you did not change is the load
   on the box — not that spec.
-- **The gate lane is not wired into CI.** Actions on this repo is a hard $0 ceiling of
-  2000 minutes/month shared with the SIT deploy, so a per-push browser job is a budget
-  decision for the owner. Only the free membership check runs in CI today.
+- **The gate lane is not wired into CI**, and that is an open owner decision, not a
+  budget constraint. OBRS-735: this bullet used to say Actions on this repo is a hard $0
+  monthly minute ceiling shared with the SIT deploy — **both halves were false.**
+  `th-peeranut/OBRS-frontend` is PUBLIC, so its Actions minutes are unmetered (the
+  free-tier ceiling belongs to the PRIVATE `OBRS-backend`), and no SIT deploy runs in
+  `.github/workflows/ci.yml` at all — the SIT frontend deploys from **Netlify**
+  (`netlify.toml`), a separate product on a separate budget. The real cost of wiring the
+  lane in is wall-clock (~2.9 min plus a browser), not quota. Only the free membership
+  check runs in CI today.
 - **`b2c-critical-path` clicks `.btn-confirm` with `force: true`**, which reports success
   whether or not the click lands. It passes, but the assertion after it is what proves
   anything.

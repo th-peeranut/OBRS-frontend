@@ -116,10 +116,23 @@ jobs:
       # or to nothing. Pure file reads -- costs no extra runner minutes.
       #
       # It does NOT run the deterministic E2E lane itself (`npm run e2e:gate`, 49 cases,
-      # ~1.7 min plus a browser). That is deliberate: Actions here is a hard $0 ceiling
-      # of 2000 minutes/month shared with the SIT deploy, so adding a per-push browser
-      # job is a real trade rather than a free win. The lane runs locally before merge;
-      # wiring it into CI is a budget decision for the repo owner, not a default.
+      # ~1.7 min plus a browser). The lane runs locally before merge; wiring it in here
+      # is still an owner decision.
+      #
+      # OBRS-735 -- the reason this comment used to give for that was FALSE, so do not
+      # reinstate it. It claimed Actions here is a hard $0 monthly minute ceiling shared
+      # with the SIT deploy. Neither half is true:
+      #   * `th-peeranut/OBRS-frontend` is a PUBLIC repo, so Actions minutes are
+      #     UNMETERED. GitHub's free-tier minute ceiling applies to the PRIVATE
+      #     OBRS-backend repo and does not reach this workflow. Quote no figure for it
+      #     here -- naming one is how the wrong repo's constraint got copied in.
+      #   * There is no SIT deploy in this workflow. It has two jobs, `unit-tests` and
+      #     `build`. The SIT frontend is deployed by NETLIFY from netlify.toml -- a
+      #     different product on a different budget, which Actions minutes cannot
+      #     exhaust.
+      # Stating a budget that does not exist is not a harmless stale comment: it was
+      # read as a live blocker and held OBRS-717 for six days for nothing. Runner cost
+      # for the lane is a wall-clock trade, not a quota one.
       - name: E2E lane membership gate
         run: npm run test:e2e-lanes
 

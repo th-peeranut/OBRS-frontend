@@ -3916,7 +3916,9 @@ file's worth silently. Neither shows up in a green `list` reporter run unless so
 count, and nothing in the repo pins the count.
 
 Added `forbidOnly: true` to the gate config — unconditionally, not the customary
-`!!process.env.CI`. This lane is deliberately NOT in CI (Actions is a hard $0 ceiling here), so it
+`!!process.env.CI`. This lane is deliberately NOT in CI (an owner decision — the parenthetical here
+used to say "Actions is a hard $0 ceiling here" and **that was false**, see OBRS-735: this repo is
+PUBLIC and its Actions minutes are unmetered), so it
 only ever runs on a developer's machine, which is precisely the machine the CI-gated form exempts.
 The idiom you copy from other repos is wrong for a gate that lives outside CI.
 

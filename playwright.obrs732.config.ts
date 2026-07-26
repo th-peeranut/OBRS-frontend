@@ -21,8 +21,10 @@ import { defineConfig, devices } from '@playwright/test';
  * page would prove nothing about the thing being tested. Test mode throughout — the
  * publishable key in `environment.base.ts` is a `pkey_test_` and the backend's secret comes
  * from the gitignored `application-local.yml` — so no money can move. ⛔ Never add this to
- * `e2e:gate`: Actions is a hard 2,000 min/month ceiling shared with the SIT deploy, and a
- * lane that depends on a third party's uptime does not belong on a merge gate.
+ * `e2e:gate`: a lane that depends on a third party's uptime does not belong on a merge gate.
+ * (OBRS-735: the Actions minute-budget reason this used to give alongside that was false —
+ * this repo is PUBLIC and therefore unmetered, and its CI runs no SIT deploy. Third-party
+ * uptime is the whole reason, and it is reason enough.)
  *
  * WHAT MAKES THE PIECES LINE UP (measured, not assumed)
  *  - `environment.e2e.ts` inherits `environmentBase`, so `useMockPayments` is FALSE and a
