@@ -22,7 +22,13 @@
      the whole look. Making it opaque "fixed" dark mode but quietly flattened light mode, so
      it is a themed TRANSLUCENT pair instead of a themed opaque one. */
   --admin-surface-modal: rgba(255, 255, 255, 0.88);
-  --admin-primary-bright: #4dbeef; /* the bright stop of the brand button gradient */
+  /* OBRS-741: was #4dbeef, which put --admin-on-primary (white) at 2.12:1 on
+     the bright stop. This token has exactly one job -- it appears only ever as
+     the second stop of `linear-gradient(--admin-primary, --admin-primary-bright)`,
+     in three stylesheets -- so lowering it here fixes all three, including the
+     two whose `color` is inherited rather than declared and which the contrast
+     gate therefore cannot see at all. */
+  --admin-primary-bright: #107eaf; /* white on it = 4.54:1 */
   --admin-on-primary: #ffffff; /* text sitting ON that gradient */
   --admin-success-bg: #d4e3ff;
   --admin-success-text: #154c85;
@@ -141,6 +147,27 @@
   --accent-text: #075c7a;
   --accent-contrast: #ffffff;
 
+  /* OBRS-741. `--accent` is the brand hue at full brightness and stays that:
+     it is correct for borders, focus rings, tints and icons, where nothing has
+     to be read ON it. It is NOT safe as the end of a filled ramp -- white on
+     #4dbeef is 2.12:1 -- and the app used it as both, which is how one button
+     managed to pass at one end of its own gradient and fail at the other.
+
+     `--accent-fill` is the separate answer to a separate question: the
+     brightest this hue may get while text still sits on it. Same hue, lowered
+     until white clears 4.5:1. Keeping the two apart is the point -- collapsing
+     them back would either dull every border or re-break every fill. */
+  --accent-fill: #107eaf; /* white on it = 4.54:1 */
+
+  /* The hover fill is a real colour, not `opacity: 0.9` on the rest state.
+     Opacity composites the WHOLE button -- fill and label together -- against
+     the card behind it, so it lightens the background while the white text
+     stays white: measured, it dragged every one of these fills back under AA
+     (4.54 -> 3.84 on a white card). A button that passes at rest and fails the
+     moment you point at it is the same defect this card exists to fix, and the
+     gate cannot see it, because `opacity` is not a colour declaration. */
+  --accent-fill-hover: #0d6b93; /* 5.93:1 */
+
   display: flex;
   min-height: 100vh;
   background: radial-gradient(circle at 90% 5%, rgba(77, 190, 239, 0.12), transparent 48%),
@@ -155,6 +182,8 @@
   --accent-soft: rgba(234, 88, 12, 0.14);
   --accent-text: #b3420a;
   --accent-contrast: #ffffff;
+  --accent-fill: #d93e00; /* white on it = 4.53:1 (was #ff7a45 at 2.59:1) */
+  --accent-fill-hover: #b83400; /* 5.95:1 */
 
   background: radial-gradient(circle at 90% 5%, rgba(255, 122, 69, 0.10), transparent 48%),
     var(--admin-surface);
@@ -163,10 +192,16 @@
 /* ── Accent VARIANT: Staff — cool blue/green (general tasks) ── */
 .admin-shell.theme-staff {
   --accent: #2dd4bf;
-  --accent-strong: #0d9488;
+  /* OBRS-741: this one moved. #0d9488 carries white at only 3.74:1, so in the
+     staff variant the DARK end of the ramp failed too -- not just the bright
+     end like the other two themes. Worth stating plainly because the card was
+     written on the assumption that only bright ends were the problem. */
+  --accent-strong: #0a6a5f; /* white on it = 6.48:1 (was #0d9488 at 3.74:1) */
   --accent-soft: rgba(13, 148, 136, 0.14);
   --accent-text: #0f766e;
   --accent-contrast: #ffffff;
+  --accent-fill: #1b8477; /* white on it = 4.55:1 (was #2dd4bf at 1.86:1) */
+  --accent-fill-hover: #166f64; /* 6.01:1 */
 
   background: radial-gradient(circle at 90% 5%, rgba(45, 212, 191, 0.10), transparent 48%),
     var(--admin-surface);
@@ -240,8 +275,15 @@
   --accent-soft: rgba(234, 88, 12, 0.14);
 }
 
+/* OBRS-741: kept in step with `.admin-shell.theme-staff` above, which moved
+   --accent-strong from #0d9488 to #0a6a5f. Nothing here NEEDED the change --
+   the only thing painted with it is an 8px unread dot, and a non-text
+   indicator only owes 3:1, which #0d9488 already cleared. Mirrored anyway
+   because this block exists to be a mirror of the shell's tokens; a mirror
+   that quietly disagrees with its subject is how the next reader gets a wrong
+   answer from the right-looking place. */
 .notification-inbox-overlay.theme-staff {
-  --accent-strong: #0d9488;
+  --accent-strong: #0a6a5f;
   --accent-soft: rgba(13, 148, 136, 0.14);
 }
 
@@ -793,7 +835,9 @@
   justify-content: center;
   font-weight: 700;
   font-size: 13px;
-  background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+  /* OBRS-741: ramps to --accent-fill, not --accent. The initials sitting in
+     here are text, so the bright end has to carry them. */
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-fill));
   color: var(--accent-contrast);
   border: 0;
   cursor: pointer;
@@ -909,16 +953,29 @@
   cursor: not-allowed;
 }
 
+/* OBRS-741. The app-wide primary button. It kept its gradient and its white
+   label; only the BRIGHT end moved, from --accent to --accent-fill, because
+   that end is where the label was unreadable (2.59:1 in the admin variant that
+   ships, 1.86:1 in staff). Flattening the ramp instead would have passed too,
+   and by a wider margin, but this stylesheet paints gradients on panels,
+   headers and soft surfaces all around this button -- making the primary
+   ACTION the only flat thing on a page full of gradients would have read as
+   less emphatic than the decoration next to it. */
 .admin-btn-primary {
-  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
+  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent-fill) 100%);
   color: var(--accent-contrast);
   border-color: transparent;
   box-shadow: 0 8px 18px rgba(0, 102, 135, 0.24);
 }
 
+/* Hover darkens with real colours. The `opacity: 0.9` this replaces was not a
+   style choice with an accessibility side effect -- it WAS the accessibility
+   bug: compositing the whole button against the card lightens the fill while
+   the white label stays white, and it measured 3.84-4.42:1 across the three
+   variants. Rest passing and hover failing is exactly the split this card is
+   about, and no colour gate can catch it, since `opacity` is not a colour. */
 .admin-btn-primary:not(:disabled):hover {
-  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent) 100%);
-  opacity: 0.9;
+  background: linear-gradient(135deg, var(--accent-strong) 0%, var(--accent-fill-hover) 100%);
 }
 
 .admin-btn-small {

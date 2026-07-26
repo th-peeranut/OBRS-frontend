@@ -122,12 +122,9 @@ const SWEEP_ALLOW = {
 };
 
 const ALLOW = {
-  // --- brand gradient family: white text on the bright end of the ramp ---
-  'styles/admin-theme.scss::.admin-btn-primary': `1.86:1 (theme-staff world) -- app-wide primary button, ${OWNER}`,
-  'styles/admin-theme.scss::.admin-avatar': `1.86:1 -- gradient avatar, ${OWNER}`,
-  'app/shared/components/navbar/navbar.component.scss::.navbar-avatar': `2.12:1 -- gradient avatar, ${OWNER}`,
-  'app/modules/admin/pages/schedules/schedules-page.component.scss::.schedule-tab.is-active .schedule-tab-count': `2.12:1 -- gradient count pill, ${OWNER}`,
-  'app/modules/admin/pages/user-management/user-form-modal/user-form-modal.component.scss::.user-editor-save': `2.12:1 -- gradient save button, ${OWNER}`,
+  // The five brand-gradient entries are gone because they are FIXED: the ramps
+  // now end at --accent-fill / --admin-primary-bright #107eaf instead of the
+  // full-brightness accent. OBRS-741.
 
   // --- hardcoded hex, unrelated to the token system ---
   //
@@ -555,6 +552,33 @@ function resolveColours(value, tokens, world) {
  * name in three stylesheets; matching the typo is not tidy, but a gate that
  * silently misses the sites it is aimed at is worse than an ugly regex.
  */
+/**
+ * `opacity` below 1 composites the WHOLE element -- fill and label together --
+ * against whatever is behind it, and source alone cannot know what that is.
+ *
+ * This is not a hypothetical. `.admin-btn-primary:not(:disabled):hover` set
+ * `opacity: 0.9` over the rest-state gradient, and this gate scored it as the
+ * gradient's own colours: a clean pass. Composited against the white card it
+ * actually rendered 3.84-4.42:1 across the three theme variants -- the button
+ * passed at rest and failed the moment you pointed at it, which is precisely
+ * the split OBRS-741 exists to close, reintroduced by a property that is not a
+ * colour and so was invisible here.
+ *
+ * The honest answer is the same one toHex() already gives translucent rgba:
+ * refuse to score it, and COUNT it, rather than report a number that is wrong
+ * in the reassuring direction. 51 declarations across the tree carry an
+ * opacity, so turning these into findings would be noise; turning them into a
+ * printed count means a false pass becomes a visible "cannot tell".
+ */
+function hasTranslucency(block) {
+  for (let b = block; b; b = b.parent) {
+    const o = b.decls['opacity'];
+    if (o !== undefined && Number(o) < 1) return true;
+    if (!b.selector.startsWith('&')) return false;
+  }
+  return false;
+}
+
 function isInactiveState(sel) {
   // Strip `:not(...)` FIRST. `&:hover:not(:disabled)` is the ENABLED hover
   // state and must still be checked -- the first draft of this function matched
@@ -595,7 +619,7 @@ function walk(dir, out = []) {
 
 function scan(files, tokens, srcRoot) {
   const findings = [];
-  const stats = { blocks: 0, pairs: 0, unresolvedBg: 0, unresolvedFg: 0, inactive: 0 };
+  const stats = { blocks: 0, pairs: 0, unresolvedBg: 0, unresolvedFg: 0, inactive: 0, translucent: 0 };
 
   for (const file of files) {
     const rel = relative(srcRoot, file).replace(/\\/g, '/');
@@ -609,6 +633,10 @@ function scan(files, tokens, srcRoot) {
       const sel = selectorPath(block);
       if (isInactiveState(sel)) {
         stats.inactive++;
+        continue;
+      }
+      if (hasTranslucency(block)) {
+        stats.translucent++;
         continue;
       }
       const threshold = thresholdFor(block);
@@ -693,6 +721,14 @@ const MUST_NOT_CATCH = `
   &:disabled { background: #dddee1; }
 }
 .ok-diabled-typo { background: #dddee1; color: #ffffff; }
+// White on #4dbeef is 2.12:1 and WOULD be caught -- except the opacity means
+// the rendered colours are neither of these two, so the honest verdict is
+// "not scored", counted in the opacity line of the report. This is
+// .admin-btn-primary:hover before OBRS-741, reduced.
+.ok-opacity-composited { background: #4dbeef; color: #ffffff; opacity: 0.9; }
+.ok-opacity-inherited { background: #006687; color: #ffffff; opacity: 0.9;
+  &:hover { background: #4dbeef; }
+}
 `;
 
 function selfTest() {
@@ -711,6 +747,7 @@ function selfTest() {
       const bgRaw = block.decls['background'] ?? block.decls['background-color'];
       if (!fgRaw || !bgRaw) continue;
       if (isInactiveState(sel)) continue;
+      if (hasTranslucency(block)) continue;
       const threshold = thresholdFor(block);
       let worst = Infinity;
       for (const world of worldsForRule(sel)) {
@@ -788,12 +825,13 @@ const unexpected = findings.filter((f) => !ALLOW[f.key]);
 const allowedHit = findings.filter((f) => ALLOW[f.key]);
 
 console.log('brand fill contrast gate (OBRS-740)');
-console.log(`  self-test          : PASS (6 must-catch, 10 must-NOT-catch)`);
+console.log(`  self-test          : PASS (6 must-catch, 12 must-NOT-catch)`);
 console.log(`  stylesheets        : ${files.length}`);
 console.log(`  custom properties  : ${tokens.size} declared, all declared values considered`);
 console.log(`  SCSS $variables    : ${scssVars.size} resolved tree-wide (aliases followed)`);
 console.log(`  rule blocks        : ${stats.blocks}`);
 console.log(`  skipped (inactive) : ${stats.inactive} disabled-state blocks -- WCAG 1.4.3 exempts them`);
+console.log(`  skipped (opacity)  : ${stats.translucent} blocks composited by an opacity < 1 -- NOT scored, NOT a pass`);
 console.log(`  colour pairs tested: ${stats.pairs}`);
 console.log(
   `  unresolved         : ${stats.unresolvedBg} background / ${stats.unresolvedFg} text (translucent or computed -- NOT counted as passing)`

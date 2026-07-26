@@ -86,7 +86,12 @@
   justify-content: center;
   font-weight: $font-weight-bold;
   font-size: 13px;
-  background: linear-gradient(135deg, #006687, #4dbeef);
+  /* OBRS-741: the bright end was #4dbeef, so the initials on it were 2.12:1.
+     Left as a literal rather than switched to var(--accent-fill) on purpose --
+     this avatar renders in the PUBLIC navbar, outside `.admin-shell`, where
+     that token does not resolve and the fallback would ship instead while
+     looking themed. That is the exact trap OBRS-740 spent a whole card on. */
+  background: linear-gradient(135deg, #006687, #107eaf); /* white = 6.46 / 4.54 */
   color: #fff;
   border: 0;
   cursor: pointer;
