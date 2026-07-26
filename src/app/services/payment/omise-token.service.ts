@@ -69,14 +69,23 @@ interface OmiseCardConfigureConfig {
  *    while still looking like "we use OmiseCard". Never set it. The
  *    check-no-card-data-inputs.mjs gate fails the build if it appears.
  *
- *  - `amount` / `currency`. These only paint a label on Omise's submit button; the
- *    real amount is decided server-side from `bookingId`, never from anything the
- *    browser sends. The component that would supply it has the authoritative total
- *    only for parcel bookings (`amountOverride`) and derives the seat-booking total
- *    inside <app-payment-summary>'s template from three NgRx stores. So passing it
- *    would be right on one call site out of four and wrong-or-zero on the rest, and
- *    a payment dialog that displays a WRONG amount is worse than one that displays
- *    none. Our own summary block stays on screen directly behind the modal.
+ *  - `customCardForm` (see above).
+ *
+ * The `amount`/`currency` pair went the other way, and the route there is worth
+ * recording because two plausible-sounding positions were both measured wrong:
+ *
+ *   1. "Omise decides nothing from these, so omit them." Omitting them does not
+ *      produce a neutral button — the dialog renders **"Pay 0.00 THB"**. A payment
+ *      dialog stating a total of zero is not a cosmetic defect.
+ *   2. "Then pass `submitLabel` instead and replace the string." It does not
+ *      replace it, it PREFIXES it: the button then read **"ชำระเงิน 0.00 THB"**.
+ *
+ * Both were caught by this card's evidence capture, not by reasoning. So the
+ * amount is passed, and it comes from the SERVER — `paymentSummary.outstandingAmount`
+ * on the endpoint the payment component already polls — not from re-deriving the
+ * total in the browser. That matters: the seat-booking total is computed inside
+ * <app-payment-summary>'s template from three NgRx stores, and a second copy of
+ * that arithmetic is a second thing that can disagree about money.
  *
  *  - `locale`. Omise's hosted form ships English, Japanese and Thai. Handing it
  *    'zh' -- a language this app supports and Omise does not -- is an unverified
@@ -87,8 +96,32 @@ interface OmiseCardOpenConfig {
   defaultPaymentMethod?: string;
   otherPaymentMethods?: string;
   locale?: string;
+  submitLabel?: string;
+  /** Smallest currency unit — satang for THB, NOT baht. */
+  amount?: number;
+  currency?: string;
   onCreateTokenSuccess?: (nonce: string) => void;
   onFormClosed?: () => void;
+}
+
+/** What the caller must tell the dialog. All of it is presentation. */
+export interface CardTokenRequest {
+  /** App language; mapped through {@link resolveOmiseLocale}. */
+  language?: string | null;
+  /**
+   * Text for Omise's submit button. Omise PREFIXES it to the amount rather than
+   * replacing it, so this is a label, not a way to suppress the total. Pass a
+   * translated string or a Thai passenger gets an English payment dialog.
+   */
+  submitLabel?: string;
+  /**
+   * Amount due in the SMALLEST currency unit (satang). 250 baht is 25000.
+   * Display only — the charge is created server-side from the booking — but a
+   * displayed total that disagrees with what is taken is its own kind of harm.
+   */
+  amountSubunits: number;
+  /** ISO currency of {@link amountSubunits}. */
+  currency: string;
 }
 
 interface OmiseCardGlobal {
@@ -146,8 +179,9 @@ export class OmiseTokenService {
    * Rejects with {@link CARD_ENTRY_CANCELLED} if the passenger closes the dialog --
    * callers must test that with {@link isCardEntryCancelled} before showing a
    * failure message.
+   *
    */
-  async requestCardToken(appLanguage?: string | null): Promise<string> {
+  async requestCardToken(request: CardTokenRequest): Promise<string> {
     const publicKey = this.getPublicKey();
     if (!publicKey) {
       throw new Error('Omise public key is not configured');
@@ -182,7 +216,10 @@ export class OmiseTokenService {
         // `cardToken` field cannot carry.
         defaultPaymentMethod: 'credit_card',
         otherPaymentMethods: '',
-        locale: resolveOmiseLocale(appLanguage),
+        locale: resolveOmiseLocale(request.language),
+        submitLabel: request.submitLabel,
+        amount: request.amountSubunits,
+        currency: request.currency,
         onCreateTokenSuccess: (nonce) => {
           settle(() => {
             // A `src_...` nonce means a non-card method was somehow used; the

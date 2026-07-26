@@ -113,7 +113,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
     this.isSubmittingPayment = true;
     try {
-      const cardToken = await this.resolveCardToken();
+      const cardToken = await this.resolveCardToken(bookingId);
       const payload: PaymentPayload = {
         bookingId,
         paymentMethod: 'card',
@@ -154,7 +154,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async resolveCardToken(): Promise<string> {
+  private async resolveCardToken(bookingId: number): Promise<string> {
     // Unchanged and load-bearing: local, SIT and the whole E2E suite run with
     // useMockPayments and never reach a real Omise dialog. Keeping this branch
     // ABOVE the OmiseCard call is what stops those environments from trying to
@@ -163,10 +163,62 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
       return 'mock_card_token';
     }
 
-    // No arguments carrying card data — there are none to carry. Omise's hosted
+    // Nothing here carries card data — there is none to carry. Omise's hosted
     // iframe collects the number, expiry and CVV on cdn.omise.co and hands back
-    // only the token (OBRS-391).
-    return this.omiseTokenService.requestCardToken(this.translate.currentLang);
+    // only the token (OBRS-391). Everything passed is presentation.
+    const due = await this.resolveAmountDue(bookingId);
+
+    return this.omiseTokenService.requestCardToken({
+      language: this.translate.currentLang,
+      submitLabel: this.translate.instant('PAYMENT.CREDIT_CARD.PAY_NOW'),
+      amountSubunits: due.amountSubunits,
+      currency: due.currency,
+    });
+  }
+
+  /**
+   * What Omise's dialog should say is owed, in satang.
+   *
+   * Read from the SERVER (`paymentSummary.outstandingAmount` on the endpoint this
+   * component already polls) rather than re-derived in the browser. The
+   * seat-booking total is computed inside <app-payment-summary>'s template from
+   * three NgRx stores; a second copy of that arithmetic here would be a second
+   * thing that can disagree about money, and it would also be wrong for the
+   * reschedule and change-stop dialogs, where what is due is a difference rather
+   * than a fare.
+   *
+   * Failing here aborts the payment instead of opening a dialog with a wrong
+   * total on it. That is deliberate and costs nothing real: if this call cannot
+   * reach the backend, the charge that follows it could not have either — so the
+   * passenger sees the same failure, just before typing a card number rather than
+   * after.
+   */
+  private async resolveAmountDue(
+    bookingId: number
+  ): Promise<{ amountSubunits: number; currency: string }> {
+    const response = await firstValueFrom(
+      this.paymentService.getBookingPayments(bookingId).pipe(take(1))
+    );
+    const summary = response?.data?.paymentSummary;
+
+    const outstanding = Number(summary?.outstandingAmount);
+    if (!Number.isFinite(outstanding) || outstanding <= 0) {
+      throw new Error(
+        `No outstanding amount to charge for booking ${bookingId}: ` +
+          `${String(summary?.outstandingAmount)}`
+      );
+    }
+
+    // Omise wants the smallest currency unit, and the x100 below is only correct
+    // for a 2-decimal currency. This system is THB throughout — the fares, the
+    // Omise merchant account and the contract behind it are all Thai — so rather
+    // than silently mis-scaling by 100x if that ever stops being true, refuse.
+    const currency = String(summary?.currency ?? 'THB').toUpperCase();
+    if (currency !== 'THB') {
+      throw new Error(`Unsupported currency for card payment: ${currency}`);
+    }
+
+    return { amountSubunits: Math.round(outstanding * 100), currency };
   }
 
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {

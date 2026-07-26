@@ -55,7 +55,7 @@ describe('OmiseTokenService (OBRS-391)', () => {
   const fireClosed = (): void => (lastConfig()['onFormClosed'] as () => void)();
 
   it('configures OmiseCard once and resolves with the token the iframe posts back', async () => {
-    const pending = service.requestCardToken('th');
+    const pending = service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
 
     expect(configureCalls.length).toBe(1);
@@ -65,19 +65,27 @@ describe('OmiseTokenService (OBRS-391)', () => {
 
     // A second payment must NOT re-configure: configure() also builds the iframe, so
     // calling it per payment leaks one iframe into document.body every time.
-    const second = service.requestCardToken('th');
+    const second = service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
     expect(configureCalls.length).toBe(1);
     fireSuccess('tokn_test_67890');
     await expectAsync(second).toBeResolvedTo('tokn_test_67890');
   });
 
-  it('asks for card only, and never sets customCardForm', async () => {
-    const pending = service.requestCardToken('th');
+  it('asks for card only, forwards the submit label, and never sets customCardForm', async () => {
+    const pending = service.requestCardToken({ language: 'th', submitLabel: 'ชำระเงิน', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
 
     expect(lastConfig()['defaultPaymentMethod']).toBe('credit_card');
     expect(lastConfig()['otherPaymentMethods']).toBe('');
+    // Both measured on the real dialog during this card's evidence capture, not
+    // assumed: with no amount Omise's button reads "Pay 0.00 THB", and a
+    // submitLabel PREFIXES that rather than replacing it ("ชำระเงิน 0.00 THB").
+    // So the label alone is not enough — the amount has to be real, and it has to
+    // arrive in satang.
+    expect(lastConfig()['submitLabel']).toBe('ชำระเงิน');
+    expect(lastConfig()['amount']).toBe(123450);
+    expect(lastConfig()['currency']).toBe('THB');
     // customCardForm is the option that puts a merchant-hosted card form back in front
     // of OmiseCard and silently restores SAQ A-EP scope. It must never appear.
     expect(lastConfig()['customCardForm']).toBeUndefined();
@@ -87,7 +95,7 @@ describe('OmiseTokenService (OBRS-391)', () => {
   });
 
   it('rejects with the cancelled marker when the passenger closes the dialog', async () => {
-    const pending = service.requestCardToken('th');
+    const pending = service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
 
     fireClosed();
@@ -107,7 +115,7 @@ describe('OmiseTokenService (OBRS-391)', () => {
     // those two lines, the latch below is what stops every completed payment from
     // reporting itself as cancelled, and this test is what stops the latch being
     // "simplified" away.
-    const pending = service.requestCardToken('th');
+    const pending = service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
 
     fireSuccess('tokn_test_ordering');
@@ -119,7 +127,7 @@ describe('OmiseTokenService (OBRS-391)', () => {
   it('rejects a non-card nonce instead of sending it as a cardToken', async () => {
     // `src_...` is what a non-card method produces. The backend would take it as a
     // card token and fail server-side with nothing on screen explaining why.
-    const pending = service.requestCardToken('th');
+    const pending = service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' });
     await Promise.resolve();
 
     fireSuccess('src_test_promptpay');
@@ -136,7 +144,7 @@ describe('OmiseTokenService (OBRS-391)', () => {
     // strictly harder to notice than a failure.
     openResult = false;
 
-    await expectAsync(service.requestCardToken('th')).toBeRejected();
+    await expectAsync(service.requestCardToken({ language: 'th', amountSubunits: 123450, currency: 'THB' })).toBeRejected();
   });
 
   it('sends Thai to the dialog and omits the locale for anything Omise does not ship', () => {

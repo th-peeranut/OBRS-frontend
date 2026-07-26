@@ -259,6 +259,23 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
       'createPayment',
       'createMockPayment',
     ]);
+    // The amount Omise's dialog displays is read from here, not re-derived.
+    paymentService.getBookingPayments.and.returnValue(
+      of({
+        code: 200,
+        data: {
+          bookingId: 10,
+          paymentSummary: {
+            totalAmount: '1234.50',
+            paidAmount: '0',
+            outstandingAmount: '1234.50',
+            currency: 'THB',
+            status: 'pending',
+          },
+          transactions: [],
+        },
+      }) as unknown as ReturnType<PaymentService['getBookingPayments']>
+    );
     const paidResponse: PaymentResponse = {
       id: 1,
       bookingId: 10,
@@ -299,7 +316,15 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
 
     await component.submitPayment();
 
-    expect(omiseTokenService.requestCardToken).toHaveBeenCalledWith('th');
+    // 1234.50 THB outstanding -> 123450 satang. The x100 is the whole point of
+    // this assertion: Omise takes the smallest currency unit, and passing baht
+    // would show a dialog asking for 1/100th of the fare.
+    expect(omiseTokenService.requestCardToken).toHaveBeenCalledWith({
+      language: 'th',
+      submitLabel: 'translated',
+      amountSubunits: 123450,
+      currency: 'THB',
+    });
     expect(paymentService.createPayment).toHaveBeenCalled();
     const [payload] = paymentService.createPayment.calls.mostRecent().args;
     expect(payload).toEqual(
@@ -327,6 +352,34 @@ describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', 
     expect(alertService.success).not.toHaveBeenCalled();
     expect(alertService.info).not.toHaveBeenCalled();
     expect(paymentService.createPayment).not.toHaveBeenCalled();
+    expect(component.isSubmittingPayment).toBeFalse();
+  });
+
+  it('never opens the dialog when the server reports nothing outstanding', async () => {
+    // A dialog that says "Pay 0.00 THB" is what this whole path exists to avoid;
+    // if the amount cannot be established, the payment fails visibly instead.
+    paymentService.getBookingPayments.and.returnValue(
+      of({
+        code: 200,
+        data: {
+          bookingId: 10,
+          paymentSummary: {
+            totalAmount: '0',
+            paidAmount: '0',
+            outstandingAmount: '0',
+            currency: 'THB',
+            status: 'fully_paid',
+          },
+          transactions: [],
+        },
+      }) as unknown as ReturnType<PaymentService['getBookingPayments']>
+    );
+
+    await component.submitPayment();
+
+    expect(omiseTokenService.requestCardToken).not.toHaveBeenCalled();
+    expect(paymentService.createPayment).not.toHaveBeenCalled();
+    expect(alertService.error).toHaveBeenCalled();
     expect(component.isSubmittingPayment).toBeFalse();
   });
 

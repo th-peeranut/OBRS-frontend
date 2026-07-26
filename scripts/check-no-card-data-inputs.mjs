@@ -243,6 +243,26 @@ export function scanTemplate(source) {
   return { findings, elementsSeen };
 }
 
+/**
+ * Whether a .ts path is subject to the TS rules above.
+ *
+ * `.spec.ts` is excluded, and the reason is the same one check-prototype-key-lookup.mjs
+ * gives for own-key.spec.ts: a test that PINS a forbidden shape has to name it.
+ * omise-token.service.spec.ts asserts `customCardForm` is undefined — that assertion is
+ * the guard, and a gate that fails on its own probes teaches people to delete the
+ * probes, which costs more than it protects.
+ *
+ * The blind spot this opens is bounded and worth stating: a spec cannot put a card
+ * field in front of a passenger, it is not in the production bundle, and every
+ * TEMPLATE is scanned regardless of which file renders it. What is NOT excluded is
+ * real code that merely looks test-adjacent — mocks, fixtures and helpers under src/
+ * are ordinary .ts files here.
+ */
+export function isCheckedTsFile(path) {
+  const p = path.replace(/\\/g, '/');
+  return p.endsWith('.ts') && !p.endsWith('.spec.ts') && !p.endsWith('.d.ts');
+}
+
 /** Findings for one TypeScript file. */
 export function scanTypeScript(source) {
   const masked = maskComments(source, false);
@@ -297,6 +317,14 @@ const SELF_TEST_CASES = [
   ['ts', false, "readonly cardBrands = [{ name: 'Visa', icon: 'icons/payment-brand-visa.svg' }];"],
   ['ts', false, "// historic note: this service called createToken('card', payload) before OBRS-391"],
   ['ts', false, '/* customCardForm must never be set -- see OBRS-391. */'],
+  // ---- which .ts files the TS rules apply to. `true` here means "scanned".
+  // A spec has to NAME customCardForm to assert it is absent; the exclusion is what
+  // stops the gate failing on the test that enforces it.
+  ['tsfile', true, 'src/app/services/payment/omise-token.service.ts'],
+  ['tsfile', false, 'src/app/services/payment/omise-token.service.spec.ts'],
+  ['tsfile', false, 'src/app/shared/interfaces/payment.d.ts'],
+  // A mock or fixture under src/ is ordinary code, not a test file.
+  ['tsfile', true, 'src/app/shared/testing/payment-mocks.ts'],
   // ---- opt-out honoured, and only with a reason.
   ['html', false, '<!-- no-card-input-ok: loyalty card id, not a payment card -->\n<input id="cardNumber" />'],
   ['html', true, '<!-- no-card-input-ok: -->\n<input id="cardNumber" />'],
@@ -305,8 +333,10 @@ const SELF_TEST_CASES = [
 function runSelfTest() {
   const failures = [];
   for (const [kind, shouldFlag, snippet] of SELF_TEST_CASES) {
-    const found =
-      kind === 'html' ? scanTemplate(snippet).findings.length > 0 : scanTypeScript(snippet).length > 0;
+    let found;
+    if (kind === 'html') found = scanTemplate(snippet).findings.length > 0;
+    else if (kind === 'tsfile') found = isCheckedTsFile(snippet);
+    else found = scanTypeScript(snippet).length > 0;
     if (found !== shouldFlag) {
       failures.push(
         `  - expected ${shouldFlag ? 'a finding' : 'NO finding'} for [${kind}] ${snippet}`
@@ -323,7 +353,7 @@ function walk(dir, out = []) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
       walk(full, out);
-    } else if (full.endsWith('.html') || (full.endsWith('.ts') && !full.endsWith('.d.ts'))) {
+    } else if (full.endsWith('.html') || isCheckedTsFile(full)) {
       out.push(full);
     }
   }
