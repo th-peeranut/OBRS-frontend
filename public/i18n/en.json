@@ -674,6 +674,7 @@
       "MIDDLE_NAME": "Middle Name",
       "LAST_NAME": "Last Name",
       "EMAIL": "Email",
+      "EMAIL_LOCKED_HINT": "This email is the login credential, so it cannot be edited here. The account holder changes it from their own profile, confirming the new address by email.",
       "PHONE": "Phone Number",
       "PASSWORD": "Password",
       "CONFIRM_PASSWORD": "Confirm Password",

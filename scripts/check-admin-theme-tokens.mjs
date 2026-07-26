@@ -74,6 +74,10 @@ const DARK_EXEMPT = {
     'pastel chip, measured 7.24:1 on the dark shell (OBRS-520); the standalone-text and hover-fill roles were split out to --admin-danger-fg / --admin-danger-surface, which ARE themed',
   '--admin-danger-text':
     'pairs with --admin-danger-bg above, and is also the solid fill of .admin-nav-badge -- flipping it for dark mode would turn that badge light-on-light (OBRS-520)',
+  '--admin-primary-bright':
+    'the bright stop of the brand button gradient, always paired with --admin-primary in the SAME gradient -- like --admin-primary it keeps its hue in both themes; the button is a solid brand fill, not a surface that has to recede in dark mode (OBRS-734)',
+  '--admin-on-primary':
+    'text sitting ON that brand gradient, which is identical in both themes -- so the text on it must be too; measured white-on-gradient, not white-on-surface (OBRS-734)',
 };
 
 if (!existsSync(THEME)) {
@@ -170,12 +174,104 @@ for (const [token, files] of referenced) {
   );
 }
 
+// --- invariant 3: no NEW opaque colour literal in an admin stylesheet ---------
+//
+// Why (OBRS-734): invariants 1 and 2 only see identifiers that start with
+// `--admin-`. A component can bypass the whole token system by declaring its own
+// private, light-only variables -- `--text: #191c1e; --muted: #3e484e;` plus a
+// hardcoded `background: rgba(255,255,255,.88)` panel -- and this gate stays
+// green while the component ships broken. That is exactly what happened: the
+// user-form and role-form modals kept a near-white panel in dark mode while the
+// global theme flipped their label text to #e7edf1, so every field label
+// rendered light-on-light at 1.03-1.08:1. A user reported it as "I cannot see
+// the words at all". The gate written to prevent that class of bug did not fire.
+//
+// Two things are allowed and are NOT bookkeeping debt:
+//   * a translucent literal (alpha <= TRANSLUCENT_MAX). It composites over
+//     whatever themed surface is behind it, so it carries no fixed light/dark
+//     assumption. The cap matters: rgba(255,255,255,0.88) is 88% white, i.e.
+//     effectively an opaque light panel, and IS the bug this invariant exists
+//     for -- so anything above the cap is treated as opaque.
+//   * `var(--token, #fallback)`. The token leads; the literal is the fallback.
+//
+// Everything else is a per-file COUNT ratchet. Existing debt is frozen at its
+// exact number so nothing new can slip in, and fixing some of it FAILS the gate
+// until the number is lowered -- a ratchet that only tightens.
+const LITERAL_SCOPE = join(SRC, 'app', 'modules', 'admin');
+const TRANSLUCENT_MAX = 0.8;
+const COLOUR_DECL =
+  /(?:^|[;{}\s])(color|background|background-color|border(?:-(?:top|right|bottom|left))?-color|caret-color|outline-color|fill|stroke)\s*:\s*([^;}]+)/g;
+const COLOUR_LITERAL = /#[0-9a-fA-F]{3,8}\b|rgba?\(\s*\d/;
+const RGBA_ALPHA = /rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)/g;
+
+// path (relative to LITERAL_SCOPE, forward slashes) -> exact number of opaque
+// literals still present. Lower the number when you migrate some; delete the
+// entry when it reaches 0. Adding an entry needs a reason a reviewer can argue with.
+const LITERAL_PENDING = {
+  // Tab bar, focus banner and dropdown accents. These already have a deliberate
+  // `:host-context(.is-dark)` override block from OBRS-209/230 -- a different,
+  // documented mechanism -- so they are not broken today; they are simply not on
+  // tokens yet. Migrating them means deleting those override blocks too, which is
+  // a wider change than the modal-panel defect OBRS-734 was raised for.
+  'pages/schedules/schedules-page.component.scss': 10,
+  'pages/vehicles/vehicles-page.component.scss': 7,
+  // admin-dropdown is deliberately NOT here any more: it started at 6 and went to 0 in this
+  // same card, because the live probe showed its open/selected rows measured 1.91:1 in dark.
+  // The ratchet is what forced this line to be deleted rather than quietly left at 6.
+};
+
+const literalFiles = styleFiles.filter((f) => f.startsWith(LITERAL_SCOPE));
+const opaqueCounts = new Map();
+const opaqueSamples = new Map();
+for (const file of literalFiles) {
+  const src = stripComments(readFileSync(file, 'utf8'));
+  const rel = relative(LITERAL_SCOPE, file).split('\\').join('/');
+  for (const m of src.matchAll(COLOUR_DECL)) {
+    const value = m[2].trim();
+    if (!COLOUR_LITERAL.test(value)) continue;
+    if (value.includes('var(')) continue; // token-first, literal is only a fallback
+    // Translucent-only values are fine; a hex or a high-alpha rgba is not.
+    const alphas = [...value.matchAll(RGBA_ALPHA)].map((a) => Number(a[1]));
+    const hasHexOrOpaqueRgb = /#[0-9a-fA-F]{3,8}\b|rgb\(/.test(value);
+    const allTranslucent =
+      !hasHexOrOpaqueRgb && alphas.length > 0 && alphas.every((a) => a <= TRANSLUCENT_MAX);
+    if (allTranslucent) continue;
+    opaqueCounts.set(rel, (opaqueCounts.get(rel) || 0) + 1);
+    if (!opaqueSamples.has(rel)) opaqueSamples.set(rel, `${m[1]}: ${value}`);
+  }
+}
+for (const [rel, count] of opaqueCounts) {
+  const allowed = LITERAL_PENDING[rel];
+  if (allowed === undefined) {
+    problems.push(
+      `${rel} declares ${count} opaque colour literal(s) (e.g. \`${opaqueSamples.get(rel)}\`) but has ` +
+        `no LITERAL_PENDING entry. Use a --admin-* token so the rule follows the theme; a private ` +
+        `literal is how OBRS-734 shipped light-on-light labels in dark mode.`
+    );
+  } else if (count > allowed) {
+    problems.push(
+      `${rel} now declares ${count} opaque colour literal(s), up from the ${allowed} recorded in ` +
+        `LITERAL_PENDING (e.g. \`${opaqueSamples.get(rel)}\`). The ratchet only tightens -- use a token.`
+    );
+  }
+}
+for (const [rel, allowed] of Object.entries(LITERAL_PENDING)) {
+  const count = opaqueCounts.get(rel) || 0;
+  if (count < allowed) {
+    problems.push(
+      `${rel} is down to ${count} opaque colour literal(s) from the ${allowed} in LITERAL_PENDING -- ` +
+        `good, now lower (or delete) that entry so the ratchet holds the new floor.`
+    );
+  }
+}
+
 // --- no-op guard: a gate that checks nothing is worse than a failing one ------
-if (lightTokens.size === 0 || styleFiles.length === 0) {
+if (lightTokens.size === 0 || styleFiles.length === 0 || literalFiles.length === 0) {
   console.error(
     `::error::admin theme token gate FOUND NOTHING TO CHECK ` +
-      `(lightTokens=${lightTokens.size}, styleFiles=${styleFiles.length}) -- the gate is a ` +
-      `no-op. Verify SRC=${SRC} and the .admin-shell selectors in admin-theme.scss (OBRS-520).`
+      `(lightTokens=${lightTokens.size}, styleFiles=${styleFiles.length}, ` +
+      `adminStylesheets=${literalFiles.length}) -- the gate is a no-op. Verify SRC=${SRC}, the ` +
+      `.admin-shell selectors in admin-theme.scss (OBRS-520), and LITERAL_SCOPE (OBRS-734).`
   );
   process.exit(1);
 }
@@ -190,8 +286,11 @@ if (problems.length > 0) {
   process.exit(1);
 }
 
+const pendingTotal = Object.values(LITERAL_PENDING).reduce((a, b) => a + b, 0);
 console.log(
   `admin theme token gate OK: ${lightTokens.size} light token(s), ${darkTokens.size} with a dark ` +
     `override, ${Object.keys(DARK_EXEMPT).length} deliberately exempt; ` +
-    `${referenced.size} var(--admin-*) reference(s) across ${styleFiles.length} stylesheet(s) all resolve.`
+    `${referenced.size} var(--admin-*) reference(s) across ${styleFiles.length} stylesheet(s) all resolve; ` +
+    `${literalFiles.length} admin stylesheet(s) scanned for opaque colour literals, ` +
+    `${pendingTotal} still pending migration in ${Object.keys(LITERAL_PENDING).length} file(s).`
 );
