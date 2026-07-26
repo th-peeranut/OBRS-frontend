@@ -215,7 +215,9 @@ const LITERAL_PENDING = {
   // a wider change than the modal-panel defect OBRS-734 was raised for.
   'pages/schedules/schedules-page.component.scss': 10,
   'pages/vehicles/vehicles-page.component.scss': 7,
-  'components/admin-dropdown/admin-dropdown.component.scss': 6,
+  // admin-dropdown is deliberately NOT here any more: it started at 6 and went to 0 in this
+  // same card, because the live probe showed its open/selected rows measured 1.91:1 in dark.
+  // The ratchet is what forced this line to be deleted rather than quietly left at 6.
 };
 
 const literalFiles = styleFiles.filter((f) => f.startsWith(LITERAL_SCOPE));
