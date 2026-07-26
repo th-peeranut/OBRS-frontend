@@ -46,7 +46,18 @@ $BackendPort = if ($env:E2E_BACKEND_PORT)   { $env:E2E_BACKEND_PORT }   else { '
 $FrontendUrl = if ($env:E2E_FRONTEND_URL)   { $env:E2E_FRONTEND_URL }   else { 'http://localhost:4210' }
 $JavaHome    = if ($env:JAVA_HOME)          { $env:JAVA_HOME }          else { 'C:\Program Files\Java\jdk-21.0.11' }
 
-$FixtureSql  = Join-Path (Split-Path -Parent $PSScriptRoot) 'fixtures\reschedule-fixture.sql'
+# OBRS-732: which fixture this lane seeds is now overridable, because a second lane
+# (the real 3-D Secure journey) needs a PAYABLE booking and the reschedule fixture
+# deliberately has none — its header explains at length why a zero-net move is what
+# keeps `payments` out of it. Merging the two would have meant editing assertions
+# that file spends four paragraphs justifying. A relative name is resolved against
+# e2e/fixtures/; an absolute path is taken as-is.
+$FixtureSql  = if ($env:E2E_FIXTURE_SQL) {
+    if ([System.IO.Path]::IsPathRooted($env:E2E_FIXTURE_SQL)) { $env:E2E_FIXTURE_SQL }
+    else { Join-Path (Split-Path -Parent $PSScriptRoot) (Join-Path 'fixtures' $env:E2E_FIXTURE_SQL) }
+} else {
+    Join-Path (Split-Path -Parent $PSScriptRoot) 'fixtures\reschedule-fixture.sql'
+}
 $NewLocalDb  = Join-Path $BackendDir 'scripts\new-local-db.ps1'
 
 function Fail([string]$msg) { Write-Host "ERROR: $msg" -ForegroundColor Red; exit 1 }

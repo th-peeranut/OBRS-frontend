@@ -120,6 +120,12 @@
       "why": "Needs five E2E-* bookings including already-rescheduled, cancelled and seat-collision states, and mutates them. On SIT those states can only be produced by running the spec, which spends them."
     },
     {
+      "spec": "obrs-732-3ds.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs732.config.ts",
+      "why": "OBRS-732. Needs a booking that is `pending`, unexpired, unpaid and free of any in-flight payment -- five conditions PaymentService.validateBookingForPayment enforces and which the reschedule fixture deliberately does not satisfy (its design keeps `payments` out of it entirely). Provisions its own database through the OBRS-184 boot script with E2E_FIXTURE_SQL pointed at obrs-732-3ds-fixture.sql. NOT hermetic on purpose: it really charges api.omise.co in TEST mode and really walks Omise's hosted 3DS page, because 3-D Secure leaves our origin and returns through return_uri -- a mocked one would evidence nothing. Never a gate: third-party uptime plus a hard 2,000 min/month Actions ceiling. SCOPE BOUNDARY: it stops at /payment/result with a real chrg_ id, and deliberately does NOT assert fully_paid -- after 3DS the charge stays pending until OmiseWebhookService receives an INBOUND call from Omise, which cannot reach a laptop, and nothing else in the system reconciles it (the result page only polls, the endpoint only reads the database, no @Scheduled job covers it). Asserting settlement here would be permanently red and would read as a product defect."
+    },
+    {
       "spec": "obrs-483-open-seating.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs483.config.ts",
