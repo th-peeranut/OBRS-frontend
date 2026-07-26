@@ -104,15 +104,41 @@ for (const mode of ['light', 'dark']) {
     const raw = await fab.evaluate((el) => {
       const cs = getComputedStyle(el);
       const pageBg = getComputedStyle(document.body).backgroundColor;
-      return { bg: cs.backgroundColor, fg: cs.color, size: cs.fontSize, weight: cs.fontWeight, pageBg };
+      return {
+        bg: cs.backgroundColor,
+        fg: cs.color,
+        size: cs.fontSize,
+        weight: cs.fontWeight,
+        pageBg,
+        borderColor: cs.borderTopColor,
+        borderWidth: cs.borderTopWidth,
+      };
     });
     const bg = parseRgb(raw.bg);
     const fg = parseRgb(raw.fg);
     const pageBg = parseRgb(raw.pageBg);
+    const bd = parseFloat(raw.borderWidth) > 0 ? parseRgb(raw.borderColor) : null;
+
+    // WCAG 1.4.11 asks whether the component's BOUNDARY is identifiable, not
+    // whether its background is. A bordered button has two candidate edges --
+    // border/page on the outside and fill/page seen through a thin ring -- and
+    // either one carrying >=3:1 is enough. Measuring only the fill would have
+    // scored this button as failing while the eye sees a crisp 6.46:1 outline.
+    const fillVsPage = bg && pageBg ? +ratio(bg, pageBg).toFixed(2) : null;
+    const borderVsPage = bd && pageBg ? +ratio(bd, pageBg).toFixed(2) : null;
+    const candidates = [fillVsPage, borderVsPage].filter((v) => v !== null);
+    const boundary = candidates.length ? Math.max(...candidates) : null;
     return {
       ...raw,
       textRatio: bg && fg ? +ratio(bg, fg).toFixed(2) : null,
-      surfaceVsPage: bg && pageBg ? +ratio(bg, pageBg).toFixed(2) : null,
+      fillVsPage,
+      borderVsPage,
+      borderVsFill: bd && bg ? +ratio(bd, bg).toFixed(2) : null,
+      boundary,
+      // Prefer 'fill' on a tie: in dark mode the border is SET to the fill
+      // colour, so both numbers are the same edge and calling it "border" would
+      // read as if a ring were doing work that is not there.
+      boundaryFrom: boundary === null ? null : boundary === fillVsPage ? 'fill' : 'border',
     };
   };
 
@@ -130,19 +156,22 @@ for (const mode of ['light', 'dark']) {
 }
 
 console.log(`\nOBRS-740 FAB measurement (${LABEL}) -- ${BASE}`);
-console.log('mode   state  text on fill        ratio  AA(4.5)  fill vs page  1.4.11(3.0)');
+console.log('mode   state  text on fill        ratio  AA(4.5)  boundary  via     1.4.11(3.0)');
 let failures = 0;
 for (const r of results) {
   for (const state of ['rest', 'hover']) {
     const m = r[state];
     const textOk = m.textRatio !== null && m.textRatio >= 4.5;
-    const surfOk = m.surfaceVsPage === null || m.surfaceVsPage >= 3.0;
+    const surfOk = m.boundary === null || m.boundary >= 3.0;
     if (!textOk || !surfOk) failures++;
     console.log(
       `${r.mode.padEnd(6)} ${state.padEnd(6)} ${String(m.fg).padEnd(20)} ${String(m.textRatio).padStart(5)}  ` +
-        `${(textOk ? 'PASS' : 'FAIL').padEnd(7)}  ${String(m.surfaceVsPage).padStart(6)}       ${surfOk ? 'PASS' : 'FAIL'}`
+        `${(textOk ? 'PASS' : 'FAIL').padEnd(7)}  ${String(m.boundary).padStart(6)}  ${String(m.boundaryFrom).padEnd(6)}  ${surfOk ? 'PASS' : 'FAIL'}`
     );
-    console.log(`       fill=${m.bg}  font=${m.size}/${m.weight}`);
+    console.log(
+      `       fill=${m.bg}  border=${m.borderWidth} ${m.borderColor}  ` +
+        `fill/page=${m.fillVsPage} border/page=${m.borderVsPage} border/fill=${m.borderVsFill}  font=${m.size}/${m.weight}`
+    );
   }
 }
 console.log(`\nfailures: ${failures}`);
