@@ -49,7 +49,7 @@ async function main() {
     await scrollSystemSectionIntoView(page);
     await page.screenshot({ path: path.join(ASSETS_DIR, 'OBRS-576-AFTER-system-menu-with-history-entry.png') });
 
-    await page.goto('http://localhost:4200/admin/config-change-history');
+    await page.goto('http://localhost:4200/admin/settings/history');
     await page.locator('table.admin-table').waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(800);
     await page.screenshot({ path: path.join(ASSETS_DIR, 'OBRS-576-AFTER-history-page-light-mode.png'), fullPage: true });
@@ -96,7 +96,7 @@ async function main() {
       localStorage.setItem('app_admin_theme', 'dark');
     });
     await login(page, 'http://localhost:4200', 'owner@system.local');
-    await page.goto('http://localhost:4200/admin/config-change-history');
+    await page.goto('http://localhost:4200/admin/settings/history');
     await page.locator('table.admin-table').waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(800);
     await page.screenshot({ path: path.join(ASSETS_DIR, 'OBRS-576-AFTER-history-page-dark-mode.png'), fullPage: true });
@@ -162,7 +162,7 @@ async function main() {
   {
     const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
     await login(page, 'http://localhost:4200', 'owner@system.local');
-    await page.goto('http://localhost:4200/admin/config-change-history');
+    await page.goto('http://localhost:4200/admin/settings/history');
     await page.locator('table.admin-table').waitFor({ state: 'visible', timeout: 15000 });
     await page.waitForTimeout(800);
     await page.screenshot({ path: path.join(ASSETS_DIR, 'OBRS-576-AFTER-mobile-390px.png'), fullPage: true });

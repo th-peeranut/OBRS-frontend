@@ -7,6 +7,7 @@ import { UsabilityReportBadgeRefreshService } from '../../shared/services/usabil
 import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
+import { SYSTEM_SETTINGS_ROLES } from './pages/system-settings/system-settings-tabs';
 
 interface AdminNavItem {
   path: string;
@@ -145,58 +146,24 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
-    // OBRS-223: reminder-timing config is ADMIN-only (route `requiredRoles:
-    // ['admin']`), so it's gated the same way Settlements is gated above,
-    // just on the admin role instead of owner.
-    if (this.authService.hasAnyRole(['admin'])) {
+    // OBRS-702: ONE entry for every config page. This used to be four —
+    // reminder timing (OBRS-223), jump seat (OBRS-358), booking policy
+    // (OBRS-564) and config change history (OBRS-576) — all editing rows of
+    // the SAME `system_configs` table, so the owner had to remember which
+    // menu held the number they wanted. They are tabs of /admin/settings now
+    // (system-settings-tabs.ts), and the queue holds at least three more
+    // groups (OBRS-699/703/705) that would each have added another entry.
+    //
+    // Gated on the union of the tabs' roles, mirroring the shell route's own
+    // `requiredRoles`. The tabs themselves stay individually gated inside the
+    // page, so an owner still sees only the two they always could — this
+    // single entry does NOT widen anyone's access.
+    if (this.authService.hasAnyRole([...SYSTEM_SETTINGS_ROLES])) {
       items.push({
-        path: 'reminder-config',
-        labelKey: 'ADMIN.PAGES.REMINDER_CONFIG',
-        icon: 'notifications_active',
-        descriptionKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
-        section: 'system',
-      });
-    }
-
-    // OBRS-358: jump-seat (walk-in-only seat channel) toggle is ADMIN-only
-    // (route `requiredRoles: ['admin']`), gated the same way as
-    // reminder-config directly above.
-    if (this.authService.hasAnyRole(['admin'])) {
-      items.push({
-        path: 'jump-seat-config',
-        labelKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
-        icon: 'event_seat',
-        descriptionKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
-        section: 'system',
-      });
-    }
-
-    // OBRS-564: booking-policy config — route `requiredRoles: ['admin',
-    // 'owner']` (the backend PUT guard is hasRole('OWNER'); ROLE_GRANTS
-    // admits ADMIN automatically), so the nav gate mirrors the route gate
-    // with the same hasAnyRole(['admin', 'owner']) check.
-    if (this.authService.hasAnyRole(['admin', 'owner'])) {
-      items.push({
-        path: 'booking-policy-config',
-        labelKey: 'ADMIN.PAGES.BOOKING_POLICY_CONFIG',
-        icon: 'event_available',
-        descriptionKey: 'ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE',
-        section: 'system',
-      });
-    }
-
-    // OBRS-576: config change history — one general page over EVERY config
-    // key (not a per-page panel), gated the same as booking-policy-config
-    // directly above (route `requiredRoles: ['admin', 'owner']`) since
-    // reading the history is granted to the same roles that can write it.
-    // Placed last in 'system' — it is the "meta" view over everything else
-    // in that section.
-    if (this.authService.hasAnyRole(['admin', 'owner'])) {
-      items.push({
-        path: 'config-change-history',
-        labelKey: 'ADMIN.PAGES.CONFIG_CHANGE_HISTORY',
-        icon: 'history',
-        descriptionKey: 'ADMIN.CONFIG_CHANGE_HISTORY.SUBTITLE',
+        path: 'settings',
+        labelKey: 'ADMIN.PAGES.SYSTEM_SETTINGS',
+        icon: 'settings',
+        descriptionKey: 'ADMIN.SYSTEM_SETTINGS.SUBTITLE',
         section: 'system',
       });
     }

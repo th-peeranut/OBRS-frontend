@@ -6,6 +6,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { AdminApiService, ReminderConfigDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { CanComponentDeactivate } from '../../../../shared/guards/can-deactivate.guard';
+import { confirmDiscardUnsavedSettings } from '../system-settings/unsaved-settings-prompt';
 import { ReminderConfigStore } from './reminder-config.store';
 import { positiveIntegerValidator } from './reminder-config-page.validators';
 
@@ -20,7 +22,9 @@ import { positiveIntegerValidator } from './reminder-config-page.validators';
   templateUrl: './reminder-config-page.component.html',
   styleUrl: './reminder-config-page.component.scss',
 })
-export class ReminderConfigPageComponent implements OnInit, OnDestroy {
+export class ReminderConfigPageComponent
+  implements OnInit, OnDestroy, CanComponentDeactivate
+{
   protected config: ReminderConfigDto | null = null;
   protected isRefreshing = false;
   protected errorMessage = '';
@@ -93,6 +97,20 @@ export class ReminderConfigPageComponent implements OnInit, OnDestroy {
 
   protected get isLoading(): boolean {
     return this.isRefreshing && !this.store.hasValue;
+  }
+
+  /**
+   * OBRS-702: implements `CanComponentDeactivate`. As a tab of /admin/settings
+   * this component is DESTROYED when another tab is opened, so an unsaved edit
+   * is gone — ask first rather than losing it silently. `save()` marks the form
+   * pristine, so a saved edit never prompts.
+   */
+  canDeactivate(): boolean | Promise<boolean> {
+    return confirmDiscardUnsavedSettings(
+      this.reminderConfigForm,
+      this.alertService,
+      this.translate
+    );
   }
 
   protected isFieldInvalid(fieldName: string): boolean {

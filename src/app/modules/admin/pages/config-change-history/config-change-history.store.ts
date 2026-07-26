@@ -8,8 +8,9 @@ import { ConfigHistoryRow } from '../../../../shared/interfaces/config-history.i
 import { extractConfigHistoryErrorCode } from './config-change-history-page.mappers';
 
 /**
- * Stale-while-revalidate cache for `/admin/config-change-history`
- * (OBRS-576), following `UsabilityReportsStore` byte-for-byte (UX §2): a
+ * Stale-while-revalidate cache for `/admin/settings/history` (OBRS-576; moved
+ * there from its own `/admin/config-change-history` page, which now redirects,
+ * by OBRS-702), following `UsabilityReportsStore` byte-for-byte (UX §2): a
  * single-slot cache, `clear()` BEFORE `refresh()` on every filter/page
  * setter (F20 — otherwise the previous filter/page's rows briefly flash as
  * the new one's before the fresh fetch lands), and a fully-populated zero

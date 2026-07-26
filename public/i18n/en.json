@@ -424,6 +424,7 @@
       "JUMP_SEAT_CONFIG": "Jump Seat",
       "BOOKING_POLICY_CONFIG": "Booking Policy",
       "CONFIG_CHANGE_HISTORY": "Config Change History",
+      "SYSTEM_SETTINGS": "System Settings",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
       "EXPENSES": "Expenses"
@@ -1386,6 +1387,13 @@
         "parcel_carry_on_free_size_max_inch": "Free carry-on max size (inches)",
         "parcel_carry_on_free_aisle_max_per_trip": "Max free carry-on items per trip"
       }
+    },
+    "SYSTEM_SETTINGS": {
+      "SUBTITLE": "All system configuration in one place, grouped by topic",
+      "UNSAVED_CHANGES_TITLE": "Discard unsaved changes?",
+      "UNSAVED_CHANGES_TEXT": "You have edits on this tab that were never saved. Leaving it now discards them.",
+      "UNSAVED_CHANGES_CONFIRM": "Discard and leave",
+      "UNSAVED_CHANGES_CANCEL": "Stay on this tab"
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "Refunded, pending-manual-refund, and voided ticket totals for a date range.",

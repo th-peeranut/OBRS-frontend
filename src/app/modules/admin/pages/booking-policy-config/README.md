@@ -42,14 +42,19 @@ Nothing else here is a new design-system pattern:
   look for "integer in a config form" has no justification.
 - **Button**: one primary (`admin-btn admin-btn-primary`) Save, disabled while
   saving, invalid, or pristine — design-system.md §4.
-- **Title**: rendered once, inside the `admin-card-head` — the shell topbar
-  additionally renders the route `data.titleKey`/`subtitleKey`
-  (`ADMIN.PAGES.BOOKING_POLICY_CONFIG` / `ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE`),
-  same as every other admin page (design-system.md §7).
-- **Nav**: gated on `authService.hasAnyRole(['admin', 'owner'])` in
-  `admin-layout.component.ts`, section `'system'`, icon `event_available` —
-  the nav gate matches the route's `requiredRoles: ['admin', 'owner']`
-  exactly, so there is no dead menu entry.
+- **Title**: rendered once, inside the `admin-card-head` — which since OBRS-702
+  doubles as the tab's own heading. The shell topbar renders the route
+  `data.titleKey`/`subtitleKey`, now `ADMIN.PAGES.SYSTEM_SETTINGS` /
+  `ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE` (design-system.md §7).
+- **Route / nav (OBRS-702)**: not a standalone page any more. It is the FIRST
+  tab of `/admin/settings` (`settings/booking-policy`; the old
+  `/admin/booking-policy-config` redirects there), declared in
+  `../system-settings/system-settings-tabs.ts` — which is also where its
+  `requiredRoles: ['admin', 'owner']` lives, single-sourced for the child route
+  AND the rendered tab so the two cannot drift. There is no sidebar entry of its
+  own; one "System settings" entry covers every tab. Being FIRST is
+  load-bearing: `/admin/settings` redirects its empty path here, so this tab's
+  roles must admit everyone the shell admits.
 
 ## Side effects an owner should know about (see i18n helper copy)
 

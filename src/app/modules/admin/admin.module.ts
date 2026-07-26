@@ -48,6 +48,11 @@ import { ReminderConfigPageComponent } from './pages/reminder-config/reminder-co
 import { JumpSeatConfigPageComponent } from './pages/jump-seat-config/jump-seat-config-page.component';
 import { BookingPolicyConfigPageComponent } from './pages/booking-policy-config/booking-policy-config-page.component';
 import { ConfigChangeHistoryPageComponent } from './pages/config-change-history/config-change-history-page.component';
+import { SystemSettingsPageComponent } from './pages/system-settings/system-settings-page.component';
+import {
+  SYSTEM_SETTINGS_ROLES,
+  SYSTEM_SETTINGS_TABS,
+} from './pages/system-settings/system-settings-tabs';
 import { CargoCapacityPageComponent } from './pages/cargo-capacity/cargo-capacity-page.component';
 import { InspectionItemsPageComponent } from './pages/inspection-items/inspection-items-page.component';
 import { ExpensesPageComponent } from './pages/expenses/expenses-page.component';
@@ -55,6 +60,7 @@ import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/e
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
+import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
 // OBRS-543: exported (was module-private) so staff-nav-reachability.spec.ts can
@@ -183,57 +189,45 @@ export const adminRoutes: Routes = [
         },
       },
       {
-        // OBRS-223: reminder-timing config, ADMIN-only (403 for non-admin
-        // per the backend contract shipped by OBRS-139).
-        path: 'reminder-config',
-        component: ReminderConfigPageComponent,
+        // OBRS-702: ONE "System settings" page for what used to be four
+        // sidebar entries over a single table (`system_configs`) — booking
+        // policy (OBRS-564), reminder timing (OBRS-223), jump seat (OBRS-358)
+        // and the change history (OBRS-576), each now a tab.
+        //
+        // Children, tab strip and legacy redirects are all generated from
+        // SYSTEM_SETTINGS_TABS, so they cannot drift apart. Each child keeps
+        // the EXACT `requiredRoles` its standalone route carried; this shell
+        // admits their union, which is what lets a plain owner in for the two
+        // tabs they always had without handing them the two admin-only ones.
+        path: 'settings',
+        component: SystemSettingsPageComponent,
         canActivate: [AuthGuard],
         data: {
-          titleKey: 'ADMIN.PAGES.REMINDER_CONFIG',
-          subtitleKey: 'ADMIN.REMINDER_CONFIG.SUBTITLE',
-          requiredRoles: ['admin'],
+          titleKey: 'ADMIN.PAGES.SYSTEM_SETTINGS',
+          subtitleKey: 'ADMIN.SYSTEM_SETTINGS.SUBTITLE',
+          requiredRoles: SYSTEM_SETTINGS_ROLES,
         },
-      },
-      {
-        // OBRS-358: jump-seat (walk-in-only seat channel) toggle, ADMIN-only
-        // (403 for non-admin) — mirrors reminder-config above.
-        path: 'jump-seat-config',
-        component: JumpSeatConfigPageComponent,
-        canActivate: [AuthGuard],
-        data: {
-          titleKey: 'ADMIN.PAGES.JUMP_SEAT_CONFIG',
-          subtitleKey: 'ADMIN.JUMP_SEAT_CONFIG.SUBTITLE',
-          requiredRoles: ['admin'],
-        },
-      },
-      {
-        // OBRS-564: booking-policy config (advance-booking cap in days,
-        // minutes-before-departure cutoff) — the backend PUT guard is
-        // hasRole('OWNER'); ROLE_GRANTS admits ADMIN automatically (OBRS-446
-        // comment on AuthService), so ['admin','owner'] states that intent
-        // honestly rather than excluding admin.
-        path: 'booking-policy-config',
-        component: BookingPolicyConfigPageComponent,
-        canActivate: [AuthGuard],
-        data: {
-          titleKey: 'ADMIN.PAGES.BOOKING_POLICY_CONFIG',
-          subtitleKey: 'ADMIN.BOOKING_POLICY_CONFIG.SUBTITLE',
-          requiredRoles: ['admin', 'owner'],
-        },
-      },
-      {
-        // OBRS-576: one general config-change-history page under ระบบ,
-        // covering every config key (not a panel inside booking-policy-config)
-        // — access mirrors booking-policy-config's own guard, since reading
-        // the history is granted to the same roles that can write it.
-        path: 'config-change-history',
-        component: ConfigChangeHistoryPageComponent,
-        canActivate: [AuthGuard],
-        data: {
-          titleKey: 'ADMIN.PAGES.CONFIG_CHANGE_HISTORY',
-          subtitleKey: 'ADMIN.CONFIG_CHANGE_HISTORY.SUBTITLE',
-          requiredRoles: ['admin', 'owner'],
-        },
+        children: [
+          // Safe for every visitor the shell admits: the first tab's roles are
+          // the shell's own union (asserted in system-settings-page.component.spec.ts).
+          { path: '', redirectTo: SYSTEM_SETTINGS_TABS[0].path, pathMatch: 'full' },
+          ...SYSTEM_SETTINGS_TABS.map((tab) => ({
+            path: tab.path,
+            component: tab.component,
+            canActivate: [AuthGuard],
+            // Prompts before dropping an edit the user never saved. Inert on a
+            // tab whose component implements no canDeactivate() (the read-only
+            // history), by CanDeactivateGuard's own contract.
+            canDeactivate: [CanDeactivateGuard],
+            data: {
+              // Same page title on every tab — the tab strip already says which
+              // one is open, and getDeepestRoute() reads the CHILD's data.
+              titleKey: 'ADMIN.PAGES.SYSTEM_SETTINGS',
+              subtitleKey: tab.subtitleKey,
+              requiredRoles: tab.requiredRoles,
+            },
+          })),
+        ],
       },
       {
         path: 'refund-void-report',
@@ -274,6 +268,14 @@ export const adminRoutes: Routes = [
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
       { path: 'role-management', redirectTo: 'roles', pathMatch: 'full' },
       { path: 'user-management', redirectTo: 'users', pathMatch: 'full' },
+      // OBRS-702: the four standalone config pages are tabs now. Generated
+      // from the same table as the tabs themselves, so a tab can never be
+      // added without its old URL still landing somewhere.
+      ...SYSTEM_SETTINGS_TABS.map((tab) => ({
+        path: tab.legacyPath,
+        redirectTo: `settings/${tab.path}`,
+        pathMatch: 'full' as const,
+      })),
     ],
   },
 ];
@@ -324,6 +326,7 @@ export const adminRoutes: Routes = [
     JumpSeatConfigPageComponent,
     BookingPolicyConfigPageComponent,
     ConfigChangeHistoryPageComponent,
+    SystemSettingsPageComponent,
     CargoCapacityPageComponent,
     InspectionItemsPageComponent,
     ExpensesPageComponent,

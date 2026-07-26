@@ -9,6 +9,8 @@ import {
 } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { CanComponentDeactivate } from '../../../../shared/guards/can-deactivate.guard';
+import { confirmDiscardUnsavedSettings } from '../system-settings/unsaved-settings-prompt';
 import { BookingPolicyConfigStore } from './booking-policy-config.store';
 import { integerRangeValidator } from './booking-policy-config-page.validators';
 
@@ -39,7 +41,9 @@ const CUTOFF_MINUTES_MAX = 1440;
   templateUrl: './booking-policy-config-page.component.html',
   styleUrl: './booking-policy-config-page.component.scss',
 })
-export class BookingPolicyConfigPageComponent implements OnInit, OnDestroy {
+export class BookingPolicyConfigPageComponent
+  implements OnInit, OnDestroy, CanComponentDeactivate
+{
   @ViewChild('maxAdvanceDaysInput') private readonly maxAdvanceDaysInput?: ElementRef<HTMLInputElement>;
   @ViewChild('cutoffMinutesInput') private readonly cutoffMinutesInput?: ElementRef<HTMLInputElement>;
 
@@ -120,6 +124,20 @@ export class BookingPolicyConfigPageComponent implements OnInit, OnDestroy {
 
   protected get isLoading(): boolean {
     return this.isRefreshing && !this.store.hasValue;
+  }
+
+  /**
+   * OBRS-702: implements `CanComponentDeactivate`. As a tab of /admin/settings
+   * this component is DESTROYED when another tab is opened, so an unsaved edit
+   * is gone — ask first rather than losing it silently. `save()` marks the form
+   * pristine, so a saved edit never prompts.
+   */
+  canDeactivate(): boolean | Promise<boolean> {
+    return confirmDiscardUnsavedSettings(
+      this.bookingPolicyConfigForm,
+      this.alertService,
+      this.translate
+    );
   }
 
   protected isFieldInvalid(fieldName: string): boolean {

@@ -424,6 +424,7 @@
       "JUMP_SEAT_CONFIG": "加座设置",
       "BOOKING_POLICY_CONFIG": "预订政策",
       "CONFIG_CHANGE_HISTORY": "设置变更历史",
+      "SYSTEM_SETTINGS": "系统设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "EXPENSES": "费用"
@@ -1386,6 +1387,13 @@
         "parcel_carry_on_free_size_max_inch": "免费随身携带最大尺寸(英寸)",
         "parcel_carry_on_free_aisle_max_per_trip": "每趟免费随身携带件数上限"
       }
+    },
+    "SYSTEM_SETTINGS": {
+      "SUBTITLE": "所有系统配置集中于一处，按主题分组",
+      "UNSAVED_CHANGES_TITLE": "放弃未保存的更改？",
+      "UNSAVED_CHANGES_TEXT": "此标签页有尚未保存的修改，现在离开将会丢失。",
+      "UNSAVED_CHANGES_CONFIRM": "放弃并离开",
+      "UNSAVED_CHANGES_CANCEL": "留在此标签页"
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "所选日期范围内的退款、待人工退款和作废票务汇总。",

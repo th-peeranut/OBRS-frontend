@@ -24,6 +24,8 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
+    // OBRS-702: the unsaved-changes prompt shown when this tab is left.
+    confirm: jasmine.createSpy('confirm').and.resolveTo(true),
   };
   const component = new JumpSeatConfigPageComponent(
     store as any,
@@ -142,5 +144,44 @@ describe('JumpSeatConfigPageComponent', () => {
     expect(alert.error).toHaveBeenCalled();
     expect(component.jumpSeatConfigForm.pristine).toBeFalse();
     expect(component.jumpSeatConfigForm.get('enabled')?.value).toBe(true);
+  });
+
+  // OBRS-702: this page is a tab of /admin/settings now, and leaving a tab
+  // destroys it. The prompt keys off THIS page's own form — nothing about
+  // another tab's state can make it fire or stay silent.
+  describe('canDeactivate (OBRS-702 tab switch)', () => {
+    it('leaves silently while the toggle is untouched', () => {
+      const { component, store, alert } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next({ ...CONFIG });
+
+      expect(component.canDeactivate()).toBeTrue();
+      expect(alert.confirm).not.toHaveBeenCalled();
+    });
+
+    it('asks once the toggle has been changed but not saved', async () => {
+      const { component, store, alert } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next({ enabled: false });
+      component.jumpSeatConfigForm.get('enabled')?.markAsDirty();
+      component.jumpSeatConfigForm.get('enabled')?.setValue(true);
+
+      await expectAsync(component.canDeactivate()).toBeResolvedTo(true);
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops leaving a saved change silently — save() clears the prompt', async () => {
+      const updateSpy = jasmine.createSpy('updateJumpSeatConfig').and.returnValue(of(undefined));
+      const { component, store, alert } = makeComponent({ updateJumpSeatConfig: updateSpy });
+      component.ngOnInit();
+      store.data$.next({ enabled: false });
+      component.jumpSeatConfigForm.get('enabled')?.markAsDirty();
+      component.jumpSeatConfigForm.get('enabled')?.setValue(true);
+
+      await component.save();
+
+      expect(component.canDeactivate()).toBeTrue();
+      expect(alert.confirm).not.toHaveBeenCalled();
+    });
   });
 });

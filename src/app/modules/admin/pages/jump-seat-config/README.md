@@ -19,13 +19,16 @@ Nothing here is a new design-system pattern:
   hand-rolled toggle.
 - **Button**: one primary (`admin-btn admin-btn-primary`) Save, disabled while
   saving or pristine — design-system.md §4 (one primary action per screen).
-- **Title**: rendered once, inside the `admin-card-head` — the shell topbar
-  additionally renders the route `data.titleKey`/`subtitleKey`
-  (`ADMIN.PAGES.JUMP_SEAT_CONFIG` / `ADMIN.JUMP_SEAT_CONFIG.SUBTITLE`), same
-  as every other admin page (design-system.md §7).
-- **Nav**: gated on `authService.hasAnyRole(['admin'])` in
-  `admin-layout.component.ts`, section `'system'`, icon `event_seat` — same
-  gating shape as the `reminder-config` entry immediately above it.
+- **Title**: rendered once, inside the `admin-card-head` — which since OBRS-702
+  doubles as the tab's own heading. The shell topbar renders the route
+  `data.titleKey`/`subtitleKey`, now `ADMIN.PAGES.SYSTEM_SETTINGS` /
+  `ADMIN.JUMP_SEAT_CONFIG.SUBTITLE` (design-system.md §7).
+- **Route / nav (OBRS-702)**: not a standalone page any more. It is a tab of
+  `/admin/settings` (`settings/jump-seat`; the old `/admin/jump-seat-config`
+  redirects there), declared in `../system-settings/system-settings-tabs.ts`.
+  It keeps its own `requiredRoles: ['admin']` there — NARROWER than the shell's
+  `['admin', 'owner']`, so a plain owner enters the settings page but is shown
+  neither this tab nor `reminders`. Consolidating the pages did not widen it.
 
 ## Why a config toggle at all
 

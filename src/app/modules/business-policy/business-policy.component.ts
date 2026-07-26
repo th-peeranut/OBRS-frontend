@@ -15,7 +15,7 @@ export interface BusinessPolicyParams {
 // see business-policy.component.html) rendered ONLY from this component's
 // `policyParams`, fetched from the PUBLIC `GET /api/booking-policy` endpoint
 // (BookingPolicyService) — the same two numbers an owner edits at
-// admin/booking-policy-config. The rule going forward: these numbers are
+// admin/settings/booking-policy. The rule going forward: these numbers are
 // NEVER hardcoded in i18n again.
 @Component({
   selector: 'app-business-policy',

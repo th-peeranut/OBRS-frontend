@@ -37,43 +37,68 @@ async function dismissSweetAlert(page: Page): Promise<void> {
   await overlay.waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined);
 }
 
+// OBRS-702 moved this form off its own page: it is the first tab of
+// /admin/settings now, the sidebar carries ONE "System settings" entry instead
+// of four config entries, and /admin/booking-policy-config redirects.
+//
+// The redirect is why the disallowed-role assertions had to change shape rather
+// than just change string. `not.toHaveURL(/booking-policy-config/)` would now
+// pass for ANY role — the redirect alone moves the URL off that path — so it
+// would have gone green while proving nothing. They assert against the
+// destination, and against the form never rendering.
+const SETTINGS_MENU = 'a[href*="/admin/settings"]';
+const BOOKING_POLICY_TAB = '/admin/settings/booking-policy';
+
 test.describe('OBRS-564 — role matrix', () => {
-  test('OWNER reaches the admin page via the menu entry', async ({ page }) => {
+  test('OWNER reaches the form via the menu entry', async ({ page }) => {
     await login(page, OWNER_EMAIL);
     await page.goto('/admin');
-    const menuEntry = page.locator('a[href*="booking-policy-config"]');
+    const menuEntry = page.locator(SETTINGS_MENU);
     await expect(menuEntry).toBeVisible({ timeout: 15_000 });
     await menuEntry.click();
-    await page.waitForURL((url) => url.pathname.includes('booking-policy-config'));
+    // The settings shell redirects its empty path to the first tab, so one
+    // click lands on the booking-policy form with no tab click needed.
+    await page.waitForURL((url) => url.pathname.includes(BOOKING_POLICY_TAB));
     await expect(page.locator('input#maxAdvanceDays')).toBeVisible({ timeout: 15_000 });
   });
 
-  test('ADMIN reaches the admin page via the menu entry', async ({ page }) => {
+  test('ADMIN reaches the form via the menu entry', async ({ page }) => {
     await login(page, ADMIN_EMAIL);
     await page.goto('/admin');
-    const menuEntry = page.locator('a[href*="booking-policy-config"]');
+    const menuEntry = page.locator(SETTINGS_MENU);
     await expect(menuEntry).toBeVisible({ timeout: 15_000 });
     await menuEntry.click();
-    await page.waitForURL((url) => url.pathname.includes('booking-policy-config'));
+    await page.waitForURL((url) => url.pathname.includes(BOOKING_POLICY_TAB));
+    await expect(page.locator('input#maxAdvanceDays')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('OBRS-702: the old bookmark still lands on the form', async ({ page }) => {
+    await login(page, OWNER_EMAIL);
+    await page.goto('/admin/booking-policy-config');
+    await page.waitForURL((url) => url.pathname.includes(BOOKING_POLICY_TAB), { timeout: 15_000 });
     await expect(page.locator('input#maxAdvanceDays')).toBeVisible({ timeout: 15_000 });
   });
 
   test('SALESPERSON: no menu entry, and direct navigation never reaches the form', async ({ page }) => {
     await login(page, SALESPERSON_EMAIL);
     await page.goto('/admin');
-    await expect(page.locator('a[href*="booking-policy-config"]')).toHaveCount(0);
+    await expect(page.locator(SETTINGS_MENU)).toHaveCount(0);
 
+    // Deliberately the LEGACY path: it exercises the redirect and the guard
+    // together, which is how a real bookmark arrives.
     await page.goto('/admin/booking-policy-config');
-    // AuthGuard redirects away rather than rendering the form for a disallowed role.
+    // AuthGuard redirects away rather than rendering the form for a disallowed
+    // role. Asserted on the DESTINATION, not on having left the legacy path —
+    // the OBRS-702 redirect leaves that path for everyone.
     await expect(page.locator('input#maxAdvanceDays')).toHaveCount(0);
-    await expect(page).not.toHaveURL(/booking-policy-config/, { timeout: 10_000 });
+    await expect(page).not.toHaveURL(/\/admin\/settings/, { timeout: 10_000 });
   });
 
   test('CUSTOMER: no admin access at all, and direct navigation never reaches the form', async ({ page }) => {
     await login(page, CUSTOMER_EMAIL);
     await page.goto('/admin/booking-policy-config');
     await expect(page.locator('input#maxAdvanceDays')).toHaveCount(0);
-    await expect(page).not.toHaveURL(/booking-policy-config/, { timeout: 10_000 });
+    await expect(page).not.toHaveURL(/\/admin\/settings/, { timeout: 10_000 });
   });
 });
 
@@ -82,7 +107,7 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
 
   test('owner changes the cap to 45 and saves', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/booking-policy-config');
+    await page.goto('/admin/settings/booking-policy');
     const maxAdvanceDaysInput = page.locator('input#maxAdvanceDays');
     await maxAdvanceDaysInput.waitFor({ state: 'visible', timeout: 15_000 });
 
@@ -158,7 +183,7 @@ test.describe('OBRS-564 — round trip: 30 -> 45', () => {
 
   test('reset cap back to 30 (cleanup, does not affect verdict)', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/booking-policy-config');
+    await page.goto('/admin/settings/booking-policy');
     const maxAdvanceDaysInput = page.locator('input#maxAdvanceDays');
     await maxAdvanceDaysInput.waitFor({ state: 'visible', timeout: 15_000 });
     await maxAdvanceDaysInput.fill('');

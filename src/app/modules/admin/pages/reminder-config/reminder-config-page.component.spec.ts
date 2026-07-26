@@ -27,6 +27,8 @@ function makeComponent(adminApi: Record<string, unknown>, store = makeStoreStub(
     success: jasmine.createSpy('success').and.resolveTo(undefined),
     error: jasmine.createSpy('error').and.resolveTo(undefined),
     warning: jasmine.createSpy('warning').and.resolveTo(undefined),
+    // OBRS-702: the unsaved-changes prompt shown when this tab is left.
+    confirm: jasmine.createSpy('confirm').and.resolveTo(true),
   };
   const component = new ReminderConfigPageComponent(
     store as any,
@@ -216,5 +218,44 @@ describe('ReminderConfigPageComponent', () => {
     expect(component.reminderConfigForm.pristine).toBeFalse();
     // The admin's typed value must survive the failed save.
     expect(component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.value).toBe(12);
+  });
+
+  // OBRS-702: this page is a tab of /admin/settings now, and leaving a tab
+  // destroys it. The prompt keys off THIS page's own form — no other tab's
+  // state can make it fire or stay silent.
+  describe('canDeactivate (OBRS-702 tab switch)', () => {
+    it('leaves silently while nothing has been typed', () => {
+      const { component, store, alert } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next({ ...CONFIG });
+
+      expect(component.canDeactivate()).toBeTrue();
+      expect(alert.confirm).not.toHaveBeenCalled();
+    });
+
+    it('asks once a value has been edited but not saved', async () => {
+      const { component, store, alert } = makeComponent({});
+      component.ngOnInit();
+      store.data$.next({ ...CONFIG });
+      component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.markAsDirty();
+      component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.setValue(12);
+
+      await expectAsync(component.canDeactivate()).toBeResolvedTo(true);
+      expect(alert.confirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops asking once the edit is saved — save() clears the prompt', async () => {
+      const updateSpy = jasmine.createSpy('updateReminderConfig').and.returnValue(of(undefined));
+      const { component, store, alert } = makeComponent({ updateReminderConfig: updateSpy });
+      component.ngOnInit();
+      store.data$.next({ ...CONFIG });
+      component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.markAsDirty();
+      component.reminderConfigForm.get('reminderHoursBeforeDeparture')?.setValue(12);
+
+      await component.save();
+
+      expect(component.canDeactivate()).toBeTrue();
+      expect(alert.confirm).not.toHaveBeenCalled();
+    });
   });
 });

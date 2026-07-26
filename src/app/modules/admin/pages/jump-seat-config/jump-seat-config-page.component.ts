@@ -6,6 +6,8 @@ import { TranslateService } from '@ngx-translate/core';
 import { AdminApiService, JumpSeatConfigDto } from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
+import { CanComponentDeactivate } from '../../../../shared/guards/can-deactivate.guard';
+import { confirmDiscardUnsavedSettings } from '../system-settings/unsaved-settings-prompt';
 import { JumpSeatConfigStore } from './jump-seat-config.store';
 
 // OBRS-358: admin toggle for the jump-seat (walk-in-only seat channel) —
@@ -20,7 +22,9 @@ import { JumpSeatConfigStore } from './jump-seat-config.store';
   templateUrl: './jump-seat-config-page.component.html',
   styleUrl: './jump-seat-config-page.component.scss',
 })
-export class JumpSeatConfigPageComponent implements OnInit, OnDestroy {
+export class JumpSeatConfigPageComponent
+  implements OnInit, OnDestroy, CanComponentDeactivate
+{
   protected config: JumpSeatConfigDto | null = null;
   protected isRefreshing = false;
   protected errorMessage = '';
@@ -94,6 +98,20 @@ export class JumpSeatConfigPageComponent implements OnInit, OnDestroy {
 
   protected get isLoading(): boolean {
     return this.isRefreshing && !this.store.hasValue;
+  }
+
+  /**
+   * OBRS-702: implements `CanComponentDeactivate`. As a tab of /admin/settings
+   * this component is DESTROYED when another tab is opened, so an untoggled-but
+   * -unsaved switch is gone — ask first rather than losing it silently.
+   * `save()` marks the form pristine, so a saved change never prompts.
+   */
+  canDeactivate(): boolean | Promise<boolean> {
+    return confirmDiscardUnsavedSettings(
+      this.jumpSeatConfigForm,
+      this.alertService,
+      this.translate
+    );
   }
 
   protected async save(): Promise<void> {

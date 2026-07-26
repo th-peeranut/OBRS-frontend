@@ -85,30 +85,50 @@ async function findTextAcrossPages(page: Page, needle: string, maxPages = 10): P
   return false;
 }
 
+// OBRS-702: this page is the "history" tab of /admin/settings now. The sidebar
+// carries one "System settings" entry instead of a config-change-history one,
+// and /admin/config-change-history redirects to the tab.
+const SETTINGS_MENU = 'a[href*="/admin/settings"]';
+const HISTORY_TAB = '/admin/settings/history';
+const HISTORY_TAB_LINK = '[data-testid="system-settings-tab-history"]';
+
 test.describe('OBRS-576 — access control', () => {
   test('OWNER sees the menu entry and reaches the page', async ({ page }) => {
     await login(page, OWNER_EMAIL);
     await page.goto('/admin');
-    const menuEntry = page.locator('a[href*="config-change-history"]');
+    const menuEntry = page.locator(SETTINGS_MENU);
     await expect(menuEntry).toBeVisible({ timeout: 15_000 });
     await menuEntry.click();
-    await page.waitForURL((url) => url.pathname.includes('config-change-history'));
+    // One entry opens the settings page on its FIRST tab; history is one click
+    // further in. That the tab is visible to a plain owner at all is the
+    // OBRS-702 "access did not narrow" half of the same assertion.
+    await page.locator(HISTORY_TAB_LINK).click();
+    await page.waitForURL((url) => url.pathname.includes(HISTORY_TAB));
+    await expect(page.locator('table.admin-table')).toBeVisible({ timeout: 15_000 });
+  });
+
+  test('OBRS-702: the old bookmark still lands on the history tab', async ({ page }) => {
+    await login(page, OWNER_EMAIL);
+    await page.goto('/admin/config-change-history');
+    await page.waitForURL((url) => url.pathname.includes(HISTORY_TAB), { timeout: 15_000 });
     await expect(page.locator('table.admin-table')).toBeVisible({ timeout: 15_000 });
   });
 
   test('SALESPERSON does not see the menu entry', async ({ page }) => {
     await login(page, SALESPERSON_EMAIL);
     await page.goto('/admin');
-    const menuEntry = page.locator('a[href*="config-change-history"]');
+    const menuEntry = page.locator(SETTINGS_MENU);
     await expect(menuEntry).toHaveCount(0);
   });
 
   test('SALESPERSON is blocked on direct URL entry', async ({ page }) => {
     await login(page, SALESPERSON_EMAIL);
+    // The LEGACY path deliberately — that is how a real bookmark arrives, and
+    // it exercises the redirect and the guard together.
     await page.goto('/admin/config-change-history');
     // Either redirected away, or the page renders no data table for this role.
     await page.waitForTimeout(1500);
-    const onHistoryPage = page.url().includes('config-change-history');
+    const onHistoryPage = page.url().includes(HISTORY_TAB);
     if (onHistoryPage) {
       await expect(page.locator('table.admin-table')).toHaveCount(0);
     } else {
@@ -140,7 +160,7 @@ test.describe('OBRS-576 — actor attribution (priority #1/#2/#3)', () => {
     await page.locator('button[type="submit"]').click();
     await dismissSweetAlert(page);
 
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     // Unfiltered default view already shows most-recent-first — the top TWO
@@ -166,7 +186,7 @@ test.describe('OBRS-576 — actor attribution (priority #1/#2/#3)', () => {
     await page.locator('button[type="submit"]').click();
     await dismissSweetAlert(page);
 
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     // ReminderConfigController calls SystemConfigService.updateConfig(key, value)
@@ -182,8 +202,8 @@ test.describe('OBRS-576 — actor attribution (priority #1/#2/#3)', () => {
 test.describe('OBRS-576 — actor_source renderings (priority #5)', () => {
   test('USER / SYSTEM / UNATTRIBUTED / PRE_FEATURE all render distinctly, never blank', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history?size=50').catch(() => undefined);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history?size=50').catch(() => undefined);
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     const bodyText = await page.locator('table.admin-table tbody').innerText();
@@ -202,7 +222,7 @@ test.describe('OBRS-576 — actor_source renderings (priority #5)', () => {
 test.describe('OBRS-576 — unlabeled dotted config key (priority #6)', () => {
   test('a config key with no i18n label shows its raw key, not blank', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
     const found = await findTextAcrossPages(page, 'qa576.unmapped_test_key');
     expect(found).toBe(true);
@@ -210,7 +230,7 @@ test.describe('OBRS-576 — unlabeled dotted config key (priority #6)', () => {
 
   test('parcel.prohibited_categories (dotted key WITH a label) renders its translated label, not the raw key', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
     const bodyText = await page.locator('table.admin-table tbody').innerText();
     expect(bodyText).not.toContain('parcel.prohibited_categories');
@@ -220,7 +240,7 @@ test.describe('OBRS-576 — unlabeled dotted config key (priority #6)', () => {
 test.describe('OBRS-576 — JSONB value rendering (priority #7)', () => {
   test('number, boolean, string values all render sanely', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
     // Numbers are trivially covered by every row on page 1 (booking cutoff,
     // advance-days, etc. are all plain integers) — assert those directly.
@@ -236,7 +256,7 @@ test.describe('OBRS-576 — JSONB value rendering (priority #7)', () => {
     expect(foundBoolean).toBe(true);
     const boolRowText = await page.locator('table.admin-table tbody').innerText();
     expect(boolRowText).toMatch(/\bOn\b.*arrow_forward.*\bOff\b/s);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
     const foundString = await findTextAcrossPages(page, 'new text value');
     expect(foundString).toBe(true);
@@ -244,7 +264,7 @@ test.describe('OBRS-576 — JSONB value rendering (priority #7)', () => {
 
   test('a long array (12 items) degrades to first 3 + "and N more", not a raw dump', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     // The dropdown's own options are derived only from rows already fetched
@@ -264,7 +284,7 @@ test.describe('OBRS-576 — JSONB value rendering (priority #7)', () => {
 test.describe('OBRS-576 — filter re-entry (priority #4, the Scrutinize self-fix)', () => {
   test('filter by config key + date range, navigate away, come back -> controls AND table still agree', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     await page.getByRole('button', { name: 'All settings expand_more' }).click();
@@ -284,9 +304,11 @@ test.describe('OBRS-576 — filter re-entry (priority #4, the Scrutinize self-fi
     await page.waitForURL((url) => url.pathname.includes('/admin/dashboard'));
     await page.waitForTimeout(300);
 
-    // Come back via a real link click too.
-    await page.locator('a[href*="config-change-history"]').first().click();
-    await page.waitForURL((url) => url.pathname.includes('config-change-history'));
+    // Come back via a real link click too — through the sidebar entry and then
+    // the tab, which is the only route a user has since OBRS-702.
+    await page.locator(SETTINGS_MENU).first().click();
+    await page.locator(HISTORY_TAB_LINK).click();
+    await page.waitForURL((url) => url.pathname.includes(HISTORY_TAB));
     await waitForDataLoaded(page);
     await page.waitForTimeout(500);
 
@@ -304,7 +326,7 @@ test.describe('OBRS-576 — filter re-entry (priority #4, the Scrutinize self-fi
 test.describe('OBRS-576 — empty filter result (priority #11)', () => {
   test('a date range with zero rows reads as a distinct empty message, not an error', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     // A from-only bound far in the future — valid per UX §4.2 (from-only /
@@ -332,7 +354,7 @@ test.describe('OBRS-576 — mobile 390px (priority #10)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test('table scrolls horizontally rather than overflowing the page', async ({ page }) => {
     await login(page, OWNER_EMAIL);
-    await page.goto('/admin/config-change-history');
+    await page.goto('/admin/settings/history');
     await waitForDataLoaded(page);
 
     const bodyScrollWidth = await page.evaluate(() => document.body.scrollWidth);

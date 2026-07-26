@@ -105,7 +105,8 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // OBRS-698: correct the fallback above once the real, owner-editable cap
-    // resolves (owner edits it at /admin/booking-policy-config, OBRS-564).
+    // resolves (owner edits it at /admin/settings/booking-policy, OBRS-564 —
+    // moved under the tabbed settings page by OBRS-702).
     // A failed fetch just keeps the fallback — the server is the real gate on
     // submit either way, so there is nothing to retry here. The explicit
     // no-op error callback is required, not stylistic: an observer without

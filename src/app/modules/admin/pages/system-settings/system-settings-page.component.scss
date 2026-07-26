@@ -1,0 +1,12 @@
+:host {
+  display: block;
+}
+
+// No tab-strip styles of our own: this is Bootstrap's global
+// .nav-tabs/.nav-link, the same strip parcel-schedule-tabs-page uses. Each
+// tab's body is an existing page that keeps its own styles.
+//
+// Deliberately NOT p-tabView — this strip is driven by the URL (child routes,
+// so each tab keeps its own guard and its own deep link), and PrimeNG's
+// index-based selection would have to be kept in sync with the router in both
+// directions.

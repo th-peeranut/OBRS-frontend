@@ -922,7 +922,7 @@ export interface JumpSeatConfigDto {
 // `/api/private/admin/configs/booking-policy`. Backend guard is
 // hasRole('OWNER') (ROLE_GRANTS admits ADMIN automatically, per the
 // OBRS-446 comment on AuthService — see admin.module.ts's
-// booking-policy-config route). Also backs the PUBLIC, unauthenticated
+// settings/booking-policy child route). Also backs the PUBLIC, unauthenticated
 // `GET /api/booking-policy` consumed by BookingPolicyService
 // (business-policy page + home-booking's date-picker maxDate) — same two
 // numbers, two different endpoints (this one read/write + admin-gated, that

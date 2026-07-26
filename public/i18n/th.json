@@ -424,6 +424,7 @@
       "JUMP_SEAT_CONFIG": "เบาะเสริม",
       "BOOKING_POLICY_CONFIG": "นโยบายการจอง",
       "CONFIG_CHANGE_HISTORY": "ประวัติการแก้ไขการตั้งค่า",
+      "SYSTEM_SETTINGS": "ตั้งค่าระบบ",
       "REFUND_VOID_REPORT": "สรุปการคืนเงิน / ยกเลิกตั๋ว",
       "CASH_ONLINE_RECONCILIATION": "กระทบยอดเงินสด / ออนไลน์",
       "EXPENSES": "ค่าใช้จ่าย"
@@ -1386,6 +1387,13 @@
         "parcel_carry_on_free_size_max_inch": "ขนาดสูงสุดที่ถือขึ้นรถได้ฟรี (นิ้ว)",
         "parcel_carry_on_free_aisle_max_per_trip": "จำนวนสูงสุดที่ถือขึ้นรถได้ฟรีต่อเที่ยว"
       }
+    },
+    "SYSTEM_SETTINGS": {
+      "SUBTITLE": "รวมการตั้งค่าทั้งหมดของระบบไว้ที่เดียว แยกตามหัวข้อ",
+      "UNSAVED_CHANGES_TITLE": "ทิ้งการแก้ไขที่ยังไม่ได้บันทึก?",
+      "UNSAVED_CHANGES_TEXT": "แท็บนี้มีการแก้ไขที่ยังไม่ได้บันทึก ถ้าออกตอนนี้การแก้ไขจะหายไป",
+      "UNSAVED_CHANGES_CONFIRM": "ทิ้งแล้วออก",
+      "UNSAVED_CHANGES_CANCEL": "อยู่แท็บนี้ต่อ"
     },
     "REFUND_VOID_REPORT": {
       "SUBTITLE": "ยอดคืนเงิน ยอดรอคืนเงินแบบดำเนินการเอง และยอดตั๋วที่ถูกยกเลิก สำหรับช่วงวันที่ที่เลือก",
