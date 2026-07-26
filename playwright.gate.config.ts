@@ -91,9 +91,15 @@ export default defineConfig({
   // the staff shell repeatedly, and at 3 workers `b2c-critical-path` — untouched by that
   // card, and green at 18.9s on the lane as it stood before it
   // — began timing out at 60s waiting for a navigation, twice in a row. Run alone under
-  // this same config it takes 7.8s, so the cause is contention on this box, not the spec:
-  // several Claude sessions, an `ng serve`, and N headless Chromes compete for the same
-  // cores, which is the measured failure mode that set this number in the first place.
+  // this same config it takes 7.8s. That was read as contention on this box — several Claude
+  // sessions, an `ng serve` and N headless Chromes competing for the same cores.
+  //
+  // OBRS-750 CORRECTION: for `b2c-critical-path` specifically that diagnosis was wrong. The
+  // spec clicked `.btn-confirm` with `force: true`, which does not aim the event at the
+  // element and so delivered it to whichever element was topmost — the button's own parent.
+  // It timed out on a clean GitHub runner with nothing else running. `workers: 2` is kept
+  // because CPU contention on this box is separately real, but do not reach for it to
+  // explain a `waitForURL` that never fires: check first whether the click landed at all.
   // A gate that reds because the machine was busy teaches people to re-run it until it
   // is green, and a gate nobody believes is not a gate. Wall-clock cost is ~30s.
   workers: 2,

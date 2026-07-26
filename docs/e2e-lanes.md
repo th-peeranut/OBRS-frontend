@@ -231,9 +231,23 @@ without declaring what it runs, which closes the family rather than the two inst
   the DEFAULT configuration, so `apiUrl` points at a `localhost:8080` where nothing
   listens, and an un-intercepted request gets ECONNREFUSED instead of silently reaching
   live SIT. A cold-starting Koyeb instance therefore cannot turn this job red.
-- **`b2c-critical-path` clicks `.btn-confirm` with `force: true`**, which reports success
-  whether or not the click lands. It passes, but the assertion after it is what proves
-  anything.
+- **`b2c-critical-path` used to click `.btn-confirm` with `force: true`.** This bullet
+  already said that "reports success whether or not the click lands" — and OBRS-750 found
+  out the hard way that it was worse than that. `force` does not aim the event at the
+  element, it only skips the actionability checks, so the mouse event still went to
+  whatever was topmost at that point. Something else is: Playwright's hit test there
+  resolves to `app-review-schedule-booking-total`, the button's own parent. On this box the
+  click still happened to reach the button; the first time the lane ran on a GitHub runner
+  it did not, the handler never fired, and the `waitForURL` after it burned the full 60s
+  test timeout. **The error named the navigation, not the click** — which is exactly how
+  this got mis-filed as CPU contention for as long as it did.
+  The spec now uses `dispatchEvent('click')`, which reaches the button deterministically and
+  cannot silently deliver the event elsewhere. Measured at 1280x720 before changing it:
+  `document.elementFromPoint` at the button's resting centre returns the button, so a real
+  user can click it — the interception is an artefact of where Playwright's own scrolling
+  puts the element, not a product defect. The underlying cause (a component host with no
+  `:host` display rule, therefore `display: inline` around two block children) is filed
+  separately.
 - **Nothing pins the gate's case count.** `forbidOnly: true` stops the `test.only`
   version of this, but a `describe.skip` still removes a file's worth of coverage from a
   run that exits 0. The count is in the `list` output and no assertion reads it. A
