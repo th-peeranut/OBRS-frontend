@@ -837,6 +837,31 @@ body.is-dark {
 // block notes that global `.p-selectbutton` rules must not leak between these
 // two components, and the same applies in reverse.
 body.is-dark app-report-usability-fab {
+  // --- the FAB itself (OBRS-740) ---
+  // OBRS-520 wrote the scoping fact down in the comment above but only restyled
+  // the DIALOG; the button that opens it was never touched, so `grep report-fab
+  // src/styles` returned 0 hits and the pill stayed white-on-#4dbeef (2.12:1)
+  // in dark mode too.
+  //
+  // Dark mode reuses the light fill/text pair as-is and overrides only what the
+  // page behind it forces. Against the $dk-bg page (#0f1117) the brand cyan is
+  // 8.92:1, so here the FILL already carries the WCAG 1.4.11 boundary and the
+  // light-mode border is redundant -- worse than redundant, since #006687 is
+  // only 2.92:1 against $dk-bg and would put a sub-3:1 band on the pill's outer
+  // edge. Collapse it into the fill and let the fill do the job.
+  // See the ratio table on OBRS-740; both criteria pass in both themes.
+  .report-fab {
+    border-color: #4dbeef; // = the fill; the page boundary is the fill's 8.92:1
+
+    &:hover {
+      border-color: #2aa8d8; // = the hover fill; vs page 6.91:1
+    }
+
+    &:focus-visible {
+      outline-color: #ffffff; // 18.87:1 against the dark page
+    }
+  }
+
   // --- dialog surface ---
   .report-modal {
     background: $dk-bg-card;

@@ -25,7 +25,8 @@
     "e2e:gate": "playwright test --config=playwright.gate.config.ts",
     "e2e:local": "playwright test --config=playwright.local.config.ts",
     "e2e:ui": "playwright test --ui",
-    "e2e:route-coverage": "node e2e/route-coverage.mjs"
+    "e2e:route-coverage": "node e2e/route-coverage.mjs",
+    "test:brand-contrast": "node scripts/check-brand-fill-contrast.mjs"
   },
   "private": true,
   "dependencies": {
