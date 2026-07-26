@@ -58,7 +58,10 @@
 }
 
 .admin-dropdown-arrow {
-  color: #6e797f;
+  // OBRS-734: #6e797f measured 4.46:1 in light and 3.59:1 in dark - the only text run left
+  // below AA in either theme after the modal panels were themed. --admin-muted is the same
+  // role and measures 5.9:1 / 7.4:1, so this is strictly an improvement in BOTH modes.
+  color: var(--admin-muted);
   transition: color 0.2s ease, transform 0.2s ease;
 }
 

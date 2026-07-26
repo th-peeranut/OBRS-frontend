@@ -7,6 +7,23 @@
   --admin-outline: #bdc8cf;
   --admin-muted: #55636c;
   --admin-text: #191c1e;
+
+  /* OBRS-734: roles that the admin modals used to satisfy with private, light-only
+     literals of their own (`--text: #191c1e`, `--muted: #3e484e`, a hardcoded
+     `rgba(255,255,255,.88)` panel). Those literals carry no `--admin-` prefix, so
+     neither invariant above could see them, this gate stayed green, and every field
+     label shipped light-on-light at 1.03-1.08:1 in dark mode. Each value below is
+     the EXACT light literal it replaces, so light mode is unchanged. */
+  --admin-heading: #003f58; /* branded modal/page title - darker than --admin-primary */
+  --admin-primary-fg: #006687; /* the accent used AS TEXT/icon on a surface, not as a fill */
+  --admin-text-secondary: #3e484e; /* sits between --admin-text and --admin-muted */
+  --admin-outline-soft: #eceef0; /* hairline separators - far softer than --admin-outline */
+  /* The frosted modal panel. Translucent ON PURPOSE - the page shows through it, which is
+     the whole look. Making it opaque "fixed" dark mode but quietly flattened light mode, so
+     it is a themed TRANSLUCENT pair instead of a themed opaque one. */
+  --admin-surface-modal: rgba(255, 255, 255, 0.88);
+  --admin-primary-bright: #4dbeef; /* the bright stop of the brand button gradient */
+  --admin-on-primary: #ffffff; /* text sitting ON that gradient */
   --admin-success-bg: #d4e3ff;
   --admin-success-text: #154c85;
   --admin-warning-bg: #ffdcbe;
@@ -163,6 +180,15 @@
   --admin-outline: #3a444b;
   --admin-text: #e7edf1;
   --admin-muted: #9fb0bb;
+
+  /* OBRS-734 dark values for the roles added to the light block above. Measured
+     against --admin-surface-card (#1d2226), which is what an admin modal panel now
+     actually is in dark mode. */
+  --admin-heading: #9bd8f2;
+  --admin-primary-fg: #6ec4e8;
+  --admin-text-secondary: #c3ced5;
+  --admin-outline-soft: #2f383e;
+  --admin-surface-modal: rgba(29, 34, 38, 0.92); /* --admin-surface-card, same translucency */
   /* NOTE: intentionally NO --admin-accepted-text override here. Like every
      other status pill (success/warning/danger), .is-accepted keeps its light
      pastel bg (#b7f3c0) + dark text (#0a3d1d) in both themes — a self-contained
