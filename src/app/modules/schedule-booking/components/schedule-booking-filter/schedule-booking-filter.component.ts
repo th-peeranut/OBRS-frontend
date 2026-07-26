@@ -25,6 +25,10 @@ import { invokeGetScheduleListApi } from '../../../../shared/stores/schedule-lis
 import { StationApi } from '../../../../shared/interfaces/station.interface';
 import { selectProvinceWithStation } from '../../../../shared/stores/station/station.selector';
 import { invokeSetScheduleBookingApi } from '../../../../shared/stores/schedule-booking/schedule-booking.action';
+import {
+  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
+  BookingPolicyService,
+} from '../../../../services/booking-policy/booking-policy.service';
 
 @Component({
   selector: 'app-schedule-booking-filter',
@@ -49,6 +53,16 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   ];
 
   minDate: Date;
+  // OBRS-698: the advance-sale cap, DISPLAYED from the value the server sent —
+  // never a client-side re-implementation of the server's predicate (that is
+  // how a FE and a BE go green over contradictory rules). OBRS-564 bound this
+  // on the home page only, so a customer could pass the capped calendar there
+  // and then edit the date past the cap on this screen, landing on an empty
+  // result list with nothing saying why. Seeded synchronously with the shared
+  // fallback so the calendar has a sane cap before the network resolves, then
+  // corrected in ngOnInit. Bound to BOTH the departure AND return calendars —
+  // binding only departure leaves the same hole one field to the right.
+  maxDate: Date;
   calendarLocale: string;
 
   bookingForm: FormGroup;
@@ -73,9 +87,13 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
     private store: Store,
     private appStore: Store<Appstate>,
     private translate: TranslateService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private bookingPolicyService: BookingPolicyService
   ) {
     this.minDate = new Date();
+    this.maxDate = dayjs(this.minDate)
+      .add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day')
+      .toDate();
 
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -86,6 +104,26 @@ export class ScheduleBookingFilterComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // OBRS-698: correct the fallback above once the real, owner-editable cap
+    // resolves (owner edits it at /admin/booking-policy-config, OBRS-564).
+    // A failed fetch just keeps the fallback — the server is the real gate on
+    // submit either way, so there is nothing to retry here. The explicit
+    // no-op error callback is required, not stylistic: an observer without
+    // one lets the interceptor's rethrow surface as an RxJS unhandled error.
+    this.bookingPolicyService
+      .getBookingPolicy()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (response.data) {
+            this.maxDate = dayjs(this.minDate)
+              .add(response.data.maxAdvanceDays, 'day')
+              .toDate();
+          }
+        },
+        error: () => undefined,
+      });
+
     this.rawProvinceStationList
       .pipe(takeUntil(this.destroy$))
       .subscribe((stationList) => {

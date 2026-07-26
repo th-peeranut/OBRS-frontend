@@ -12,7 +12,10 @@ import { HomeBookingComponent } from './home-booking.component';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { DropdownGroupObrsComponent } from '../../../../shared/components/dropdown-group-obrs/dropdown-group-obrs.component';
 import { DropdownObrsPassengerComponent } from '../dropdown-obrs-passenger/dropdown-obrs-passenger.component';
-import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
+import {
+  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
+  BookingPolicyService,
+} from '../../../../services/booking-policy/booking-policy.service';
 import { AuthService } from '../../../../auth/auth.service';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { RecentRoutesQuickPickComponent } from '../recent-routes-quick-pick/recent-routes-quick-pick.component';
@@ -222,8 +225,13 @@ describe('HomeBookingComponent', () => {
     });
   });
 
-  it('seeds maxDate synchronously with the today+30-day fallback (before the API resolves)', () => {
-    const expected = dayjs().add(30, 'day');
+  // OBRS-698 raised the fallback 30 → 60 and moved it beside the service
+  // call. Asserted against the exported constant, not a repeated literal:
+  // a second copy of the number in the test is the same drift this card is
+  // closing, and the point of the test is "the seed IS the shared fallback",
+  // not "the seed happens to be 60".
+  it('seeds maxDate synchronously with the shared fallback (before the API resolves)', () => {
+    const expected = dayjs().add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day');
     expect(dayjs(component.maxDate).isSame(expected, 'day')).toBeTrue();
   });
 });

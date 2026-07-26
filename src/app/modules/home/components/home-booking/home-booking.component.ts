@@ -21,7 +21,10 @@ import {
   RecentRoutePair,
   saveRecentRoute,
 } from '../../../../shared/lib/recent-routes';
-import { BookingPolicyService } from '../../../../services/booking-policy/booking-policy.service';
+import {
+  BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK,
+  BookingPolicyService,
+} from '../../../../services/booking-policy/booking-policy.service';
 
 // OBRS-564: date-picker cap fallback, used only until the real public
 // booking-policy config resolves (see ngOnInit below). A briefly-wrong value
@@ -29,7 +32,11 @@ import { BookingPolicyService } from '../../../../services/booking-policy/bookin
 // customer (contrast business-policy.component.ts, where the same numbers
 // are a *statement* and MUST NOT render until the real value is known) — the
 // server re-validates the actual cap on submit regardless.
-const HOME_BOOKING_MAX_ADVANCE_DAYS_FALLBACK = 30;
+//
+// OBRS-698 moved the number itself next to the service call and raised it
+// 30 → 60: this screen is no longer its only user, and 30 had silently
+// become STRICTER than the policy it stands in for (backend default is 60
+// since OBRS-647), so a failed fetch hid a month of sellable departures.
 
 @Component({
   selector: 'app-home-booking',
@@ -98,7 +105,7 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   ) {
     this.minDate = new Date();
     this.maxDate = dayjs(this.minDate)
-      .add(HOME_BOOKING_MAX_ADVANCE_DAYS_FALLBACK, 'day')
+      .add(BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK, 'day')
       .toDate();
 
     this.rawProvinceStationList = this.store.pipe(

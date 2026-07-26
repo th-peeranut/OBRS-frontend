@@ -28,6 +28,22 @@ export interface BookingPolicyDto {
   cutoffMinutes: number;
 }
 
+// OBRS-698: the date-picker cap used only until the real config above
+// resolves. It lives HERE, beside the call that supersedes it, because two
+// entry points now need it (home-booking and schedule-booking-filter) and a
+// per-component copy is exactly how they drift apart — the shape this card
+// exists to close, one calendar over.
+//
+// A briefly-wrong value here is a date-picker AFFORDANCE, not a policy
+// statement to a customer (contrast business-policy.component.ts, where the
+// same number IS a statement and must not render before the real value is
+// known), and the server re-validates the true cap on submit regardless.
+// Kept equal to the backend's own SystemConfigConstant
+// .BOOKING_MAX_ADVANCE_DAYS_DEFAULT (60 since OBRS-647) so a failed fetch
+// degrades to the policy rather than to a STRICTER cap that would silently
+// hide a month of sellable departures. Was 30 in home-booking until OBRS-698.
+export const BOOKING_POLICY_MAX_ADVANCE_DAYS_FALLBACK = 60;
+
 @Injectable({
   providedIn: 'root',
 })
