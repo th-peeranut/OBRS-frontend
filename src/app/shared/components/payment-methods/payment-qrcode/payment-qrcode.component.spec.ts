@@ -1,5 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Store } from '@ngrx/store';
+import { throwError } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
@@ -176,4 +178,93 @@ describe('PaymentQrcodeComponent - refunded_partial payment summary (OBRS-298)',
       expect((component as any).qrImageUrl).toBe('https://example.test/qr.png');
     }
   );
+});
+
+/**
+ * OBRS-736: PromptPay reaches Omise through `OmiseChargeProcessor.processSource`,
+ * which the backend's per-transaction ceiling guard covers exactly as it covers
+ * the card path — so this component needs the same "do not talk over the backend's
+ * message" branch, and the same pair of tests proving it is narrow.
+ *
+ * Same direct-instantiation idiom as the block above; `ensurePromptPayQrCode` is
+ * private, so it is reached through a cast rather than made public for a test.
+ */
+describe('PaymentQrcodeComponent - gateway ceiling refusal (OBRS-736)', () => {
+  let component: PaymentQrcodeComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+  let paymentService: jasmine.SpyObj<PaymentService>;
+
+  beforeEach(() => {
+    const store = jasmine.createSpyObj<Store>('Store', ['pipe', 'select']);
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>(
+      'BookingService',
+      ['getActiveBookingId']
+    );
+    bookingService.getActiveBookingId.and.returnValue(10);
+    paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+      'confirm',
+    ]);
+    const translate = jasmine.createSpyObj<TranslateService>(
+      'TranslateService',
+      ['instant']
+    );
+    translate.instant.and.callFake((key: string) => key);
+
+    component = new PaymentQrcodeComponent(
+      store,
+      router,
+      bookingService,
+      paymentService,
+      alertService,
+      translate
+    );
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  const requestQr = (): Promise<void> =>
+    (
+      component as unknown as {
+        ensurePromptPayQrCode: (show?: boolean) => Promise<void>;
+      }
+    ).ensurePromptPayQrCode();
+
+  const rejectWith = (errorCode: string): void => {
+    paymentService.createPayment.and.returnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { errorCode, message: 'backend wording' },
+          })
+      ) as unknown as ReturnType<PaymentService['createPayment']>
+    );
+  };
+
+  it('stays silent when the backend refuses the amount as above the gateway ceiling', async () => {
+    rejectWith('PAYMENT_AMOUNT_EXCEEDS_GATEWAY_LIMIT');
+
+    await requestQr();
+
+    expect(alertService.error).not.toHaveBeenCalled();
+  });
+
+  it('still reports every OTHER backend failure — the must-NOT half', async () => {
+    rejectWith('GATEWAY_ERROR');
+
+    await requestQr();
+
+    expect(alertService.error).toHaveBeenCalledWith('PAYMENT.ALERT.FAILED');
+  });
 });
