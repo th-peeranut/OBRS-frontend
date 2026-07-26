@@ -6,7 +6,13 @@
   margin: 0 0 12px;
   padding: 12px;
   border-radius: 8px;
-  background: var(--admin-muted-bg, rgba(0, 0, 0, 0.03));
+  // OBRS-721: was `var(--admin-muted-bg, rgba(0, 0, 0, 0.03))` — no such token is
+  // declared anywhere, so every render fell through to the fallback: a fixed
+  // LIGHT-mode wash that keeps painting translucent black over the dark card.
+  // `--admin-surface-soft` is the declared role for a recessed panel inside a card
+  // (15 other admin/staff surfaces already use it) and is themed in both modes.
+  // No fallback on purpose — a fallback is what hid this for a whole card cycle.
+  background: var(--admin-surface-soft);
 
   .override-cancel-summary-row {
     display: flex;
@@ -19,7 +25,10 @@
 
     dt {
       margin: 0;
-      color: var(--admin-text-muted);
+      // OBRS-721: was `--admin-text-muted`, undeclared and with NO fallback, so
+      // `var()` resolved to nothing and the label silently inherited body text.
+      // The declared muted-text token is `--admin-muted` (themed both modes).
+      color: var(--admin-muted);
     }
 
     dd {
@@ -35,10 +44,19 @@
 .override-cancel-window {
   margin: 0 0 16px;
   font-size: 0.9rem;
-  color: var(--admin-text-muted);
+  color: var(--admin-muted); // OBRS-721: was the undeclared --admin-text-muted
 
   &.is-violation {
-    color: var(--admin-danger-text);
+    // OBRS-721: was `--admin-danger-text`. That token is deliberately light-only
+    // (DARK_EXEMPT in check-admin-theme-tokens.mjs) because its role is the dark
+    // half of a pastel CHIP pair and the solid .admin-nav-badge fill — it is not a
+    // standalone text colour. This banner has no background of its own, so in dark
+    // mode it rendered #93000a straight onto the #1d2226 card: measured 1.71:1, the
+    // exact number .admin-btn-danger shipped at in OBRS-520. The themed
+    // standalone-danger-text role was split out to --admin-danger-fg for this.
+    // The token gate cannot catch this — --admin-danger-text IS declared; only the
+    // role is wrong. See OBRS-722.
+    color: var(--admin-danger-fg);
     font-weight: 600;
   }
 }

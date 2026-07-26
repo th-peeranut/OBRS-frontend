@@ -165,4 +165,120 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
     expect((component as any).errorMessage).toBe('Booking is not confirmed');
     expect(closed).not.toHaveBeenCalled();
   });
+
+  // ── OBRS-721: dark-mode contrast, measured ─────────────────────────────────
+  //
+  // Why a spec and not the token gate: `check-admin-theme-tokens.mjs` can only ask
+  // "is this token declared?". All three defects it missed here were about the
+  // token being WRONG, not absent:
+  //   * --admin-muted-bg / --admin-text-muted were never declared, so the panel
+  //     fell through to a hard-coded light-mode wash and the dt silently inherited
+  //     body text (measured on SIT: panel #1c2024, DARKER than the #1d2226 card it
+  //     sits on, and dt identical to dd);
+  //   * --admin-danger-text IS declared and passes the gate, but it is DARK_EXEMPT
+  //     on purpose -- it is the dark half of a pastel chip pair, not a standalone
+  //     text colour. Used bare on .is-violation it rendered 1.71:1 on the dark
+  //     card: the exact ratio .admin-btn-danger shipped at in OBRS-520.
+  // A ratio the browser computes cannot be argued with, so measure it here. These
+  // run in ChromeHeadless with src/styles.scss (which @imports admin-theme.scss)
+  // loaded by the karma `styles` array, so the var() chain resolves exactly as
+  // production does. Related: OBRS-722 (same misuse at 3 other call sites).
+  describe('dark-mode contrast of the muted + danger text (OBRS-721)', () => {
+    const AA_NORMAL_TEXT = 4.5;
+    let shell: HTMLElement | null = null;
+
+    /** Move the component host inside a real .admin-shell so --admin-* resolves. */
+    function mountInShell(dark: boolean): void {
+      shell = document.createElement('div');
+      shell.className = dark ? 'admin-shell theme-admin is-dark' : 'admin-shell theme-admin';
+      document.body.appendChild(shell);
+      shell.appendChild(fixture.nativeElement);
+      fixture.detectChanges();
+    }
+
+    afterEach(() => {
+      shell?.remove();
+      shell = null;
+    });
+
+    function rgba(colour: string): [number, number, number, number] {
+      const m = colour.match(/rgba?\(([^)]+)\)/);
+      if (!m) return [0, 0, 0, 0];
+      const p = m[1].split(',').map((v) => parseFloat(v.trim()));
+      return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
+    }
+
+    /**
+     * The painted background: walk up compositing any translucent layer onto its
+     * ancestor. Without this, `rgba(0, 0, 0, 0.03)` (the old fallback) would read
+     * as an opaque near-black and the dark-mode failure would hide behind a
+     * flattering number.
+     */
+    function effectiveBg(element: Element | null): [number, number, number] {
+      const layers: [number, number, number, number][] = [];
+      for (let node: Element | null = element; node; node = node.parentElement) {
+        const c = rgba(getComputedStyle(node).backgroundColor);
+        if (c[3] > 0) layers.push(c);
+        if (c[3] >= 1) break;
+      }
+      if (layers.length === 0) return [255, 255, 255];
+      let [r, g, b] = layers[layers.length - 1];
+      for (let i = layers.length - 2; i >= 0; i--) {
+        const [tr, tg, tb, ta] = layers[i];
+        r = tr * ta + r * (1 - ta);
+        g = tg * ta + g * (1 - ta);
+        b = tb * ta + b * (1 - ta);
+      }
+      return [r, g, b];
+    }
+
+    function contrast(fg: [number, number, number], bg: [number, number, number]): number {
+      const lum = ([r, g, b]: [number, number, number]) => {
+        const f = (c: number) => {
+          const s = c / 255;
+          return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const a = lum(fg);
+      const b = lum(bg);
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
+    const el = (sel: string) => fixture.nativeElement.querySelector(sel) as HTMLElement;
+    const fg = (element: HTMLElement) =>
+      rgba(getComputedStyle(element).color).slice(0, 3) as [number, number, number];
+
+    for (const dark of [false, true]) {
+      const mode = dark ? 'dark' : 'light';
+
+      it(`${mode}: the summary label is muted, not inherited body text`, () => {
+        open(IN_WINDOW);
+        mountInShell(dark);
+        // An undeclared token with no fallback resolves to nothing and the label
+        // inherits -- visually identical to its own value, which is the bug.
+        expect(getComputedStyle(el('.override-cancel-summary dt')).color).not.toBe(
+          getComputedStyle(el('.override-cancel-summary dd')).color
+        );
+      });
+
+      it(`${mode}: summary label meets AA on the summary panel`, () => {
+        open(IN_WINDOW);
+        mountInShell(dark);
+        const ratio = contrast(
+          fg(el('.override-cancel-summary dt')),
+          effectiveBg(el('.override-cancel-summary'))
+        );
+        expect(ratio).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      });
+
+      it(`${mode}: the out-of-window violation banner meets AA on the modal card`, () => {
+        open(OUT_OF_WINDOW);
+        mountInShell(dark);
+        const banner = el('.override-cancel-window');
+        expect(banner.classList).toContain('is-violation'); // guard: the state under test is really on
+        expect(contrast(fg(banner), effectiveBg(banner))).toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      });
+    }
+  });
 });
