@@ -74,7 +74,15 @@ const ALLOW = {
   'app/modules/admin/pages/user-management/user-form-modal/user-form-modal.component.scss::.user-editor-save': `2.12:1 -- gradient save button, ${OWNER}`,
 
   // --- hardcoded hex, unrelated to the token system ---
-  'app/modules/admin/pages/vehicles/vehicle-inspection/vehicle-inspection-panel.component.scss::.admin-btn.is-active': `2.00:1 (theme-admin world), ${OWNER}`,
+  //
+  // `vehicle-inspection-panel.component.scss::.admin-btn.is-active` used to be
+  // listed here at "2.00:1 (theme-admin world)". It was never a defect: the gate
+  // could not read `--accent-soft` (an rgba tint), treated the token as absent,
+  // and read the `var(--accent-soft, var(--accent))` FALLBACK -- so it scored
+  // #c2410c text against a solid #ff7a45 that never renders. The real
+  // background is a 14%-alpha tint of the same hue over a white card. Fixed in
+  // resolveColours (declared-but-unreadable != undeclared), and the entry is
+  // gone rather than "fixed", because there was nothing to fix. OBRS-741.
   'app/modules/home/components/route-map/route-map-panel/route-map-panel.component.scss::.locate-me-btn &:hover:not(:disabled)': `2.29:1 hover state, ${OWNER}`,
   'app/modules/home/components/station-home/station-home.component.scss::.route-chip.active': `2.46:1, ${OWNER}`,
   'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss::.reschedule-estimate__net &.is-topup': `3.43:1, ${OWNER}`,
@@ -276,23 +284,76 @@ function worldsForRule(sel) {
 /**
  * Every custom-property declaration, tagged with the selector that scopes it,
  * so a token can later be resolved the way the cascade would resolve it.
+ *
+ * Declarations whose value is not hex-able (an `rgba(...)` with alpha, a
+ * computed expression) are recorded with `hex: null` instead of being dropped.
+ * That distinction is load-bearing -- see the `var()` branch of resolveColours:
+ * a token that is DECLARED but unreadable is not the same as an absent one, and
+ * conflating them made the gate report the fallback as if it were what renders.
  */
-function collectTokens(files) {
-  const tokens = new Map();
-  for (const f of files) {
-    const blocks = parseBlocks(stripComments(readFileSync(f, 'utf8')));
-    for (const block of blocks) {
-      const sel = selectorPath(block);
-      for (const [prop, value] of Object.entries(block.decls)) {
-        if (!prop.startsWith('--')) continue;
-        const hex = toHex(value);
-        if (!hex) continue;
-        if (!tokens.has(prop)) tokens.set(prop, []);
-        tokens.get(prop).push({ sel, hex });
-      }
+function collectTokensFromBlocks(blocks, tokens) {
+  for (const block of blocks) {
+    const sel = selectorPath(block);
+    for (const [prop, value] of Object.entries(block.decls)) {
+      if (!prop.startsWith('--')) continue;
+      if (!tokens.has(prop)) tokens.set(prop, []);
+      tokens.get(prop).push({ sel, hex: toHex(value) });
     }
   }
   return tokens;
+}
+
+function collectTokens(files) {
+  const tokens = new Map();
+  for (const f of files) {
+    collectTokensFromBlocks(parseBlocks(stripComments(readFileSync(f, 'utf8'))), tokens);
+  }
+  return tokens;
+}
+
+/**
+ * SCSS `$variables`, collected tree-wide into one flat map.
+ *
+ * Why the gate needs this at all: it used to see `background: $primary-blue` as
+ * an unreadable value and skip the block, while catching the
+ * `&:hover { background: #0090d0 }` two lines below because THAT one was a
+ * literal. So the report said "the hover state is the bug" about a button whose
+ * REST state is worse -- `$primary-blue` is #4bc2f7 and white on it is 2.06:1
+ * against the hover's 3.56:1. Every select/pay button in the customer flow sat
+ * in that blind spot, and a blind spot reads exactly like a pass.
+ *
+ * A flat tree-wide map is safe here, and that was checked rather than assumed:
+ * every `$name` under src/ is declared exactly once. If that ever stops being
+ * true this needs real per-file @use scoping; the duplicate guard in main()
+ * turns that day into a loud error instead of a quietly wrong colour.
+ */
+let SCSS_VARS = new Map();
+
+function scssVarsFromSource(src, vars, dupes) {
+  let depth = 0;
+  for (const line of stripComments(src).split('\n')) {
+    const atTopLevel = depth === 0;
+    for (const c of line) {
+      if (c === '{') depth++;
+      else if (c === '}') depth--;
+    }
+    // Only top-level declarations: a `$x:` inside a block is a local shadow,
+    // and modelling shadowing wrong is worse than not modelling it.
+    if (!atTopLevel) continue;
+    const m = /^\s*(\$[a-z0-9-]+)\s*:\s*([^;]+);/i.exec(line);
+    if (!m) continue;
+    const name = m[1].toLowerCase();
+    const value = m[2].trim().replace(/\s*!default\s*$/, '');
+    if (vars.has(name) && vars.get(name) !== value) dupes.push(name);
+    vars.set(name, value);
+  }
+}
+
+function collectScssVars(files) {
+  const vars = new Map();
+  const dupes = [];
+  for (const f of files) scssVarsFromSource(readFileSync(f, 'utf8'), vars, dupes);
+  return { vars, dupes: [...new Set(dupes)] };
 }
 
 /**
@@ -300,14 +361,19 @@ function collectTokens(files) {
  * enough for these stylesheets: a dark override beats a theme variant, which
  * beats the base declaration, and a later declaration beats an earlier one at
  * equal rank.
+ *
+ * Returns `{ declared, hex }`. `declared` says whether ANY declaration reaches
+ * this world; `hex` is null when the winning one is not hex-able.
  */
 function tokenInWorld(tokens, name, world) {
   const decls = tokens.get(name);
-  if (!decls) return null;
+  if (!decls) return { declared: false, hex: null };
   let best = null;
   let bestRank = -1;
+  let declared = false;
   for (const d of decls) {
     if (!appliesIn(d.sel, world)) continue;
+    declared = true;
     const t = selectorTraits(d.sel);
     const rank = (t.dark ? 2 : 0) + (t.variant !== 'base' ? 1 : 0);
     if (rank >= bestRank) {
@@ -315,7 +381,7 @@ function tokenInWorld(tokens, name, world) {
       best = d.hex;
     }
   }
-  return best;
+  return { declared, hex: best };
 }
 
 /** Split on commas that are not inside parentheses. */
@@ -366,12 +432,36 @@ function resolveColours(value, tokens, world) {
 
   const varM = /^var\(\s*(--[a-z0-9-]+)\s*(?:,\s*([\s\S]+))?\)$/i.exec(v);
   if (varM) {
-    const declared = tokenInWorld(tokens, varM[1], world);
-    if (declared) return { colours: [declared], unresolved: 0 };
-    // Undeclared in this world means the FALLBACK literal is what renders --
-    // which is exactly how the FAB shipped #4dbeef on every page while looking
-    // like it was themed.
+    const t = tokenInWorld(tokens, varM[1], world);
+    if (t.hex) return { colours: [t.hex], unresolved: 0 };
+    // A token that IS declared here just cannot be read by this gate (an rgba
+    // tint, say). The browser still paints the declaration, NOT the fallback, so
+    // reading the fallback would be inventing a colour: that is how
+    // `.admin-btn.is-active` got reported at 2.00:1 for #c2410c-on-#ff7a45, a
+    // pairing that never renders -- its real background is a 14%-alpha tint of
+    // the same hue over a white card. Count it unresolved and say so.
+    if (t.declared) return { colours: [], unresolved: 1 };
+    // Genuinely undeclared in this world means the FALLBACK literal is what
+    // renders -- which is exactly how the FAB shipped #4dbeef on every page
+    // while looking like it was themed.
     if (varM[2]) return resolveColours(varM[2], tokens, world);
+    return { colours: [], unresolved: 1 };
+  }
+
+  // SCSS `$variable` -- resolved through the tree-wide map, following aliases
+  // ($brand-customer: $primary-blue) with a depth guard so a cycle cannot hang.
+  const scssM = /^(\$[a-z0-9-]+)$/i.exec(v);
+  if (scssM) {
+    let cur = v.toLowerCase();
+    for (let hops = 0; hops < 8; hops++) {
+      const next = SCSS_VARS.get(cur);
+      if (next === undefined) return { colours: [], unresolved: 1 };
+      if (/^\$[a-z0-9-]+$/i.test(next.trim())) {
+        cur = next.trim().toLowerCase();
+        continue;
+      }
+      return resolveColours(next, tokens, world);
+    }
     return { colours: [], unresolved: 1 };
   }
 
@@ -382,12 +472,33 @@ function resolveColours(value, tokens, world) {
   const lead = v.split(/\s+/)[0];
   const leadHex = toHex(lead);
   if (leadHex) return { colours: [leadHex], unresolved: 0 };
-  if (/^var\(/i.test(lead)) return resolveColours(lead, tokens, world);
+  if (/^var\(/i.test(lead) || /^\$[a-z0-9-]+$/i.test(lead)) return resolveColours(lead, tokens, world);
 
   if (/^(none|transparent|inherit|initial|unset|currentcolor)$/i.test(v)) {
     return { colours: [], unresolved: 0 };
   }
   return { colours: [], unresolved: 1 };
+}
+
+/**
+ * WCAG 1.4.3 exempts "text or images of text that are part of an inactive user
+ * interface component" -- a disabled button's label has NO contrast minimum,
+ * and the whole point of greying it out is that it reads as unavailable.
+ *
+ * Without this the gate demands 4.5:1 on nine disabled states (white on
+ * #dddee1 = 1.35:1) whose only correct fix would be to make them look enabled.
+ * `-diabled` is in the list because the app ships that spelling as a real class
+ * name in three stylesheets; matching the typo is not tidy, but a gate that
+ * silently misses the sites it is aimed at is worse than an ugly regex.
+ */
+function isInactiveState(sel) {
+  // Strip `:not(...)` FIRST. `&:hover:not(:disabled)` is the ENABLED hover
+  // state and must still be checked -- the first draft of this function matched
+  // the `:disabled` inside the negation and exempted exactly the rule this card
+  // exists to fix. The staleAllow guard is what caught it, which is the whole
+  // argument for keeping known-open entries listed instead of narrowing a gate.
+  const positive = sel.replace(/:not\([^)]*\)/gi, '');
+  return /(:disabled|\[disabled\]|\bis-disabled\b|-diabled\b|\bdisabled\b)/i.test(positive);
 }
 
 /** WCAG large text: >=24px, or >=18.66px when bold. */
@@ -420,7 +531,7 @@ function walk(dir, out = []) {
 
 function scan(files, tokens, srcRoot) {
   const findings = [];
-  const stats = { blocks: 0, pairs: 0, unresolvedBg: 0, unresolvedFg: 0 };
+  const stats = { blocks: 0, pairs: 0, unresolvedBg: 0, unresolvedFg: 0, inactive: 0 };
 
   for (const file of files) {
     const rel = relative(srcRoot, file).replace(/\\/g, '/');
@@ -432,6 +543,10 @@ function scan(files, tokens, srcRoot) {
       if (!fgRaw || !bgRaw) continue;
 
       const sel = selectorPath(block);
+      if (isInactiveState(sel)) {
+        stats.inactive++;
+        continue;
+      }
       const threshold = thresholdFor(block);
       let worst = null;
 
@@ -473,6 +588,8 @@ function scan(files, tokens, srcRoot) {
 // ---------------------------------------------------------------------------
 
 const MUST_CATCH = `
+$fixture-brand: #4bc2f7;
+$fixture-alias: $fixture-brand;
 .admin-shell { --accent: #4dbeef; --accent-contrast: #ffffff; }
 .bad-solid { background-color: var(--accent, #4dbeef); color: var(--accent-contrast, #fff); }
 .bad-gradient {
@@ -481,6 +598,12 @@ const MUST_CATCH = `
 }
 .bad-hover { background: #006687; color: #ffffff;
   &:hover { background: #4dbeef; }
+}
+.bad-scss-var { background: $fixture-brand; color: white; }
+.bad-scss-alias { background: $fixture-alias; color: white; }
+// The ENABLED hover state. Reads as disabled to a careless substring match.
+.bad-enabled-hover { background: #006687; color: #ffffff;
+  &:hover:not(:disabled) { background: #4dbeef; }
 }
 `;
 
@@ -495,6 +618,17 @@ const MUST_NOT_CATCH = `
 .ok-large-text { background: #8a8a8a; color: #ffffff; font-size: 30px; }
 .ok-dot { background: var(--accent); }
 .ok-inherit-only { color: #ffffff; }
+// A token DECLARED as a translucent tint, used with a fallback. The browser
+// paints the 12%-alpha tint over the card, which source alone cannot composite;
+// reading the fallback instead invents #4dbeef and reports 3.05:1 for a pairing
+// no browser ever draws. This is .admin-btn.is-active, reduced.
+.tinted-host { --soft-fixture: rgba(0, 102, 135, 0.12); }
+.ok-tinted { background: var(--soft-fixture, var(--accent)); color: #006687; }
+// WCAG 1.4.3 exempts inactive components. 1.35:1, and correctly not a finding.
+.ok-disabled { background: #dddee1; color: #ffffff;
+  &:disabled { background: #dddee1; }
+}
+.ok-diabled-typo { background: #dddee1; color: #ffffff; }
 `;
 
 function selfTest() {
@@ -503,23 +637,16 @@ function selfTest() {
   // Feed the fixtures through the same code path the real scan uses -- a
   // self-test that re-implements the logic tests the copy, not the gate.
   const runFixture = (css) => {
-    const tokens = new Map();
-    for (const block of parseBlocks(stripComments(css))) {
-      const sel = selectorPath(block);
-      for (const [prop, value] of Object.entries(block.decls)) {
-        if (!prop.startsWith('--')) continue;
-        const hex = toHex(value);
-        if (!hex) continue;
-        if (!tokens.has(prop)) tokens.set(prop, []);
-        tokens.get(prop).push({ sel, hex });
-      }
-    }
+    const tokens = collectTokensFromBlocks(parseBlocks(stripComments(css)), new Map());
+    SCSS_VARS = new Map();
+    scssVarsFromSource(css, SCSS_VARS, []);
     const hits = [];
     for (const block of parseBlocks(stripComments(css))) {
       const sel = selectorPath(block);
       const fgRaw = inherited(block, 'color');
       const bgRaw = block.decls['background'] ?? block.decls['background-color'];
       if (!fgRaw || !bgRaw) continue;
+      if (isInactiveState(sel)) continue;
       const threshold = thresholdFor(block);
       let worst = Infinity;
       for (const world of worldsForRule(sel)) {
@@ -544,6 +671,15 @@ function selfTest() {
   }
   if (!caught.some((h) => h.includes('bad-hover'))) {
     failures.push('must-catch: a hover state that drops below AA was not caught');
+  }
+  if (!caught.some((h) => h.includes('bad-scss-var'))) {
+    failures.push('must-catch: a SCSS $variable fill was not resolved -- the blind spot that hid every select/pay button');
+  }
+  if (!caught.some((h) => h.includes('bad-scss-alias'))) {
+    failures.push('must-catch: a SCSS $variable ALIAS ($a: $b) was not followed');
+  }
+  if (!caught.some((h) => h.includes('bad-enabled-hover'))) {
+    failures.push('must-catch: `:hover:not(:disabled)` was read as a disabled state and exempted');
   }
 
   const wrongly = runFixture(MUST_NOT_CATCH);
@@ -572,6 +708,15 @@ if (selfTestFailures.length) {
 }
 
 const files = walk(SRC);
+const { vars: scssVars, dupes } = collectScssVars(files);
+if (dupes.length) {
+  // The flat map above is only sound while names are unique tree-wide. If this
+  // ever fires, the honest answer is real @use scoping -- not picking a winner.
+  console.error('::error::SCSS $variable declared more than once with different values -- the flat map would pick a colour at random:');
+  for (const d of dupes) console.error(`  - ${d}`);
+  process.exit(1);
+}
+SCSS_VARS = scssVars;
 const tokens = collectTokens(files);
 const { findings, stats } = scan(files, tokens, SRC);
 
@@ -579,10 +724,12 @@ const unexpected = findings.filter((f) => !ALLOW[f.key]);
 const allowedHit = findings.filter((f) => ALLOW[f.key]);
 
 console.log('brand fill contrast gate (OBRS-740)');
-console.log(`  self-test          : PASS (3 must-catch, 6 must-NOT-catch)`);
+console.log(`  self-test          : PASS (6 must-catch, 10 must-NOT-catch)`);
 console.log(`  stylesheets        : ${files.length}`);
 console.log(`  custom properties  : ${tokens.size} declared, all declared values considered`);
+console.log(`  SCSS $variables    : ${scssVars.size} resolved tree-wide (aliases followed)`);
 console.log(`  rule blocks        : ${stats.blocks}`);
+console.log(`  skipped (inactive) : ${stats.inactive} disabled-state blocks -- WCAG 1.4.3 exempts them`);
 console.log(`  colour pairs tested: ${stats.pairs}`);
 console.log(
   `  unresolved         : ${stats.unresolvedBg} background / ${stats.unresolvedFg} text (translucent or computed -- NOT counted as passing)`
