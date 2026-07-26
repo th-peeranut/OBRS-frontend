@@ -97,9 +97,11 @@
   overflow: hidden;
   gap: 0;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--admin-outline-soft);
   border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.88);
+  // OBRS-734: was rgba(255,255,255,.88) - a near-white panel that survived into dark mode
+  // while the global theme flipped label text light, giving ~1.07:1 on every field label.
+  background: var(--admin-surface-modal);
   backdrop-filter: blur(20px);
   box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
 }
@@ -109,7 +111,7 @@
   justify-content: space-between;
   gap: $space-md;
   padding: $space-xl 40px;
-  border-bottom: 1px solid #eceef0;
+  border-bottom: 1px solid var(--admin-outline-soft);
 }
 
 .schedule-form-close {
@@ -121,7 +123,7 @@
   border: 0;
   border-radius: $radius-pill;
   background: transparent;
-  color: #6e797f;
+  color: var(--admin-muted);
 }
 
 .schedule-form-shell,
@@ -143,7 +145,7 @@
 }
 
 .schedule-form-modal .admin-form-label {
-  color: #191c1e;
+  color: var(--admin-text);
   font-size: $font-size-xs;
   font-weight: $font-weight-extrabold;
 }
@@ -158,7 +160,7 @@
   min-height: 40px;
   border: 0;
   border-radius: $radius-sm;
-  caret-color: #191c1e;
+  caret-color: var(--admin-text);
   padding: $space-2xs 12px;
   box-shadow: 0 0 0 1px rgba(110, 121, 127, 0.4);
 }
@@ -168,7 +170,7 @@
 }
 
 .schedule-form-modal .admin-field:focus {
-  box-shadow: 0 0 0 2px #006687;
+  box-shadow: 0 0 0 2px var(--admin-primary);
 }
 
 .schedule-form-modal app-admin-dropdown {
@@ -178,8 +180,8 @@
 .schedule-form-actions {
   margin-top: 0;
   padding: $space-lg 40px;
-  border-top: 1px solid #eceef0;
-  background: rgba(242, 244, 246, 0.56);
+  border-top: 1px solid var(--admin-outline-soft);
+  background: var(--admin-surface-soft);
   gap: $space-xs;
 }
 
@@ -192,7 +194,7 @@
 
 .schedule-form-actions .admin-btn-primary {
   border: 0;
-  background: linear-gradient(135deg, #006687, #4dbeef);
+  background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-bright));
   box-shadow: 0 10px 22px rgba(0, 102, 135, 0.18);
 }
 

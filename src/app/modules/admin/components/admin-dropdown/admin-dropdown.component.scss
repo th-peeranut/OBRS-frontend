@@ -30,7 +30,7 @@
 
 .admin-dropdown-trigger:hover,
 .admin-dropdown.is-open .admin-dropdown-trigger {
-  border-color: #006687;
+  border-color: var(--admin-primary-fg);
   box-shadow: 0 0 0 3px rgba(77, 190, 239, 0.16);
 }
 
@@ -53,17 +53,20 @@
 .admin-dropdown-leading,
 .admin-dropdown-arrow {
   flex: 0 0 auto;
-  color: #006687;
+  color: var(--admin-primary-fg);
   font-size: $font-size-lg;
 }
 
 .admin-dropdown-arrow {
-  color: #6e797f;
+  // OBRS-734: #6e797f measured 4.46:1 in light and 3.59:1 in dark - the only text run left
+  // below AA in either theme after the modal panels were themed. --admin-muted is the same
+  // role and measures 5.9:1 / 7.4:1, so this is strictly an improvement in BOTH modes.
+  color: var(--admin-muted);
   transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .admin-dropdown.is-open .admin-dropdown-arrow {
-  color: #006687;
+  color: var(--admin-primary-fg);
   transform: rotate(180deg);
 }
 
@@ -100,19 +103,23 @@
 }
 
 .admin-dropdown-option:hover {
-  background: rgba(193, 232, 255, 0.35);
-  color: #006687;
+  // OBRS-734: the hover/selected wash was a fixed light blue at 35%/55%, so on the dark menu
+  // surface it composited to (119,143,157) - a LIGHT row - and the #006687 label on it measured
+  // 1.91:1. A translucent tint of the brand colour composites over whichever surface is behind,
+  // so the row stays a tint in both themes and the label uses the themed accent.
+  background: rgba(0, 102, 135, 0.12);
+  color: var(--admin-primary-fg);
 }
 
 .admin-dropdown-option.is-selected {
-  background: rgba(193, 232, 255, 0.55);
-  color: #006687;
+  background: rgba(0, 102, 135, 0.2);
+  color: var(--admin-primary-fg);
   font-weight: $font-weight-extrabold;
 }
 
 .admin-dropdown-check {
   flex: 0 0 auto;
-  color: #006687;
+  color: var(--admin-primary-fg);
   font-size: $font-size-md;
 }
 
