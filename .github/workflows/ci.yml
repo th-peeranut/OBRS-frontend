@@ -130,9 +130,16 @@ jobs:
       # on disk and the gate config, so a new spec cannot silently belong to everything
       # or to nothing. Pure file reads -- costs no extra runner minutes.
       #
-      # It does NOT run the deterministic E2E lane itself (`npm run e2e:gate`, 49 cases,
-      # ~1.7 min plus a browser). The lane runs locally before merge; wiring it in here
-      # is still an owner decision.
+      # This step checks the DECLARATION only. The lane itself now runs for real in the
+      # `e2e-gate` job below (OBRS-750) -- until that card it ran nowhere but a
+      # developer's box, which made it a convention rather than a gate.
+      #
+      # Do not state the lane's case count here. This comment claimed 49 long after the
+      # lane had grown to 102, and that stale number was read back and reported as
+      # current in the very session that closed OBRS-735 -- the card about a false claim
+      # in this same comment block. A count belongs where something recomputes it: the
+      # `e2e-gate` job prints it on every run, and docs/e2e-lanes.md is maintained
+      # alongside lanes.json. Prose here has no gate and rots silently.
       #
       # OBRS-735 -- the reason this comment used to give for that was FALSE, so do not
       # reinstate it. It claimed Actions here is a hard $0 monthly minute ceiling shared
@@ -181,3 +188,65 @@ jobs:
       # builds against environment.ts (localhost). Deploys use `sit` / `prod`.
       - name: Build bundle (AOT + budget smoke check)
         run: npm run build -- --configuration ci-smoke
+
+  # OBRS-750. The deterministic E2E lane (playwright.gate.config.ts) is the repo's
+  # designated merge gate per OBRS-602, and until this job it had never run anywhere
+  # except a developer's machine -- an unenforced gate, which is the same thing as no
+  # gate. The reason previously given for keeping it out was a GitHub Actions minute
+  # budget that does not exist for this repo (OBRS-735 established that this repo is
+  # PUBLIC, so Actions minutes are unmetered, and the SIT frontend deploys from Netlify,
+  # not from here). What remains is a wall-clock cost, which is a real trade but a much
+  # smaller one than the false quota it was mistaken for.
+  #
+  # This job can be trusted to mean something because the lane is HERMETIC BY
+  # CONSTRUCTION, not by assertion: playwright.gate.config.ts deliberately serves the
+  # frontend with the DEFAULT configuration, so `apiUrl` points at localhost:8080 where
+  # nothing is listening. A request a spec failed to intercept gets ECONNREFUSED rather
+  # than quietly succeeding against live SIT. That is why this can be a blocking gate at
+  # all -- it cannot be turned red by a cold-starting Koyeb instance, which is the usual
+  # and correct objection to putting E2E on a merge path.
+  e2e-gate:
+    name: E2E Gate Lane (hermetic)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Playwright drives its OWN bundled Chromium, not the Google Chrome that
+      # ubuntu-latest ships (which is what the unit-test job's karma-chrome-launcher
+      # picks up). Without this the run fails at browser launch, not at an assertion.
+      # `--with-deps` pulls the shared libraries that headless Chromium needs on a bare
+      # runner image; chromium only, since `projects` declares no other browser.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # No `continue-on-error` and no `retries` override: a red lane must fail the
+      # workflow, and a flake must be diagnosed rather than retried into a green tick.
+      # The config's `webServer` starts `ng serve` itself (reuseExistingServer is already
+      # false when CI is set), so there is nothing to start here.
+      - name: Run deterministic E2E lane
+        run: npm run e2e:gate
+
+      # Only on failure, and only for the run that failed: the config sets
+      # trace: 'retain-on-failure' and screenshot: 'only-on-failure', so a green run
+      # produces nothing worth keeping. Without this, a CI-only failure has to be
+      # re-guessed locally instead of read.
+      - name: Upload Playwright trace on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-gate-failure
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

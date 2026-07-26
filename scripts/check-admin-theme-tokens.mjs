@@ -63,13 +63,15 @@ const DARK_EXEMPT = {
   '--admin-secondary': 'as --admin-primary',
   '--admin-accepted-bg':
     'saturated green pastel chip, measured 9.77:1 on the dark shell -- reads as a chip, not a white block (OBRS-520)',
-  '--admin-accepted-text': 'pairs with --admin-accepted-bg above',
+  '--admin-accepted-text':
+    'pairs with --admin-accepted-bg above; the standalone-text role was split out to --admin-accepted-fg, which IS themed (OBRS-726)',
   '--admin-success-bg':
     'pastel chip, measured 6.75:1 on the dark shell (OBRS-520); the standalone-text role was split out to --admin-success-fg, which IS themed',
   '--admin-success-text': 'pairs with --admin-success-bg above',
   '--admin-success-soft': 'pairs with --admin-success-bg above; light chip fill in both themes',
   '--admin-warning-bg': 'pastel chip, measured 7.44:1 on the dark shell (OBRS-520)',
-  '--admin-warning-text': 'pairs with --admin-warning-bg above',
+  '--admin-warning-text':
+    'pairs with --admin-warning-bg above; the standalone-text role was split out to --admin-warning-fg, which IS themed (OBRS-726)',
   '--admin-danger-bg':
     'pastel chip, measured 7.24:1 on the dark shell (OBRS-520); the standalone-text and hover-fill roles were split out to --admin-danger-fg / --admin-danger-surface, which ARE themed',
   '--admin-danger-text':
@@ -265,6 +267,307 @@ for (const [rel, allowed] of Object.entries(LITERAL_PENDING)) {
   }
 }
 
+// --- invariant 4: a chip-half token used as a STANDALONE text/icon colour -----
+//
+// Why (OBRS-726, the 4th occurrence in the OBRS-520 family): invariants 1-3 can
+// only ask "is this token declared?", and the chip-half tokens ARE declared and
+// ARE deliberately in DARK_EXEMPT above -- so they pass every time. The defect
+// is a token used in the WRONG ROLE: `--admin-danger-text` is the dark half of a
+// pastel chip PAIR and is only ever legible on its own light `--admin-danger-bg`.
+// Put it on an element with no fill of its own and it lands on the themed card
+// surface, which in dark mode is #1d2226. Measured from the declared values:
+//
+//   --admin-accepted-text #0a3d1d standalone = 1.30:1 on --admin-surface-card
+//   --admin-warning-text  #673a00 standalone = 1.67:1
+//   --admin-danger-text   #93000a standalone = 1.71:1   <- the OBRS-520 ratio
+//
+// This had already happened four times (.admin-btn-danger + .admin-required in
+// OBRS-520, the "notified" pill, .override-cancel-window.is-violation in
+// OBRS-721, and three more sites in OBRS-726) and three cards wrote the rule
+// down as prose. One of those prose notes even recorded the dead end -- "no
+// warning-fg token exists yet" -- in the same file whose icon then used
+// `--admin-accepted-text` bare anyway. Prose does not resolve to a colour.
+//
+// THE MATCHER, and why it is this one. The honest question is "does this text
+// have a background of its own?", which no single-line regex can answer: the
+// fill may be declared on the same rule, on an ancestor rule (SCSS nesting), or
+// nowhere. So this walks a real brace tree and checks the declaration's own rule
+// AND every ancestor rule. That makes the chip pairs -- which declare
+// `background: var(--admin-*-bg)` right next to the `color:` -- invisible to it
+// by construction, which is the point: measured on the tree this was written
+// against (2026-07-26), 18 of the 21 chip-half foreground uses in src/ are
+// correct chip pairs, and a matcher that flagged all 21 would be switched off
+// within a week.
+//
+// Population reconciliation, because the raw grep number disagrees and the
+// difference is not noise. `grep -E 'color:\s*var\(--admin-*-text'` reports 27
+// on that tree; 6 of those are `border-color:`, which the substring `color:`
+// also matches. 27 = 21 `color:`/`fill:` + 6 `border-color:`. Border colour is
+// deliberately NOT in scope here: its WCAG target is 3:1 against the ADJACENT
+// colour, not 4.5:1 against a background, and every one of those 6 sits in a
+// dark-mode block that paints the same token as the fill on the same rule.
+//
+// KNOWN BLIND SPOTS, stated rather than papered over. A fill that arrives from a
+// SIBLING rule (`.chip { background: x }` + `.chip { color: y }` written apart)
+// or from an inline style is not visible here and would be reported. There is no
+// such site today; if one appears, the fix is to pair the declarations or use
+// the `*-fg` token, not to widen this rule until it sees nothing.
+const CHIP_HALF_TOKENS = Object.keys(DARK_EXEMPT).filter((t) => /-text$/.test(t));
+const FOREGROUND_DECL = /(?:^|[;{}\s])(color|fill)\s*:\s*var\(\s*(--admin-[a-z0-9-]+)/g;
+const FILL_DECL = /(?:^|[;{}\s])(background|background-color|background-image)\s*:/;
+
+/**
+ * Parse a stylesheet into a brace tree. Comments must already be stripped.
+ * At-rules (`@media`, `@supports`) become nodes too -- they declare no fill, so
+ * they are transparent to the ancestor walk, which is what we want.
+ */
+function ruleTree(src) {
+  const roots = [];
+  const stack = [];
+  let preludeStart = 0;
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (ch === '{') {
+      const node = {
+        selector: src.slice(preludeStart, i).trim().replace(/\s+/g, ' '),
+        bodyStart: i + 1,
+        bodyEnd: src.length,
+        parent: stack[stack.length - 1] || null,
+        children: [],
+      };
+      if (node.parent) node.parent.children.push(node);
+      else roots.push(node);
+      stack.push(node);
+      preludeStart = i + 1;
+    } else if (ch === '}') {
+      const node = stack.pop();
+      if (node) node.bodyEnd = i;
+      preludeStart = i + 1;
+    } else if (ch === ';') {
+      preludeStart = i + 1;
+    }
+  }
+  return roots;
+}
+
+/** The node's own declarations -- its body with every nested block body removed. */
+function ownText(src, node) {
+  let out = '';
+  let pos = node.bodyStart;
+  for (const child of node.children) {
+    out += src.slice(pos, child.bodyStart);
+    pos = child.bodyEnd;
+  }
+  return out + src.slice(pos, node.bodyEnd);
+}
+
+/** Full selector chain, outermost first -- what a developer greps for. */
+function selectorPath(node) {
+  const parts = [];
+  for (let n = node; n; n = n.parent) parts.unshift(n.selector);
+  return parts.join(' > ');
+}
+
+// Sites that are standalone chip-half uses AND are deliberately staying that
+// way, keyed "<path relative to src, forward slashes>::<selector path>". An
+// entry needs a card key and the MEASURED reason, because "we decided it is
+// fine" is not reviewable. A key that stops matching fails the gate (see
+// staleAllow below), so this list cannot outlive the situation it describes.
+const STANDALONE_CHIP_ALLOW = {
+  'app/modules/staff/components/parcel-intake-result-panel/parcel-intake-result-panel.component.scss::.parcel-intake-result-icon':
+    'OBRS-747 -- measured in ChromeHeadless: the surface painted behind this 48px glyph is ' +
+    '#ffffff in BOTH themes, because parcel-consign-page wraps the panel in a raw Bootstrap ' +
+    '`.card` that nothing repaints for dark mode. The chip token ships at 12.37:1 there; the ' +
+    'themed --admin-accepted-fg would ship at 1.67:1. Fixing the SURFACE is OBRS-747, and this ' +
+    'entry is deleted as part of it. Pinned by the `contrast of .parcel-intake-result-icon` ' +
+    'block in parcel-intake-result-panel.component.spec.ts.',
+};
+
+/**
+ * @param sources [{ rel, text }] with comments already stripped
+ * @param allow   map of "rel::selector" -> reason, exempted from the violation list
+ * @returns { violations, pairedCount, totalCount, allowedKeys }
+ */
+function findStandaloneChipUses(sources, allow = {}) {
+  const violations = [];
+  const allowedKeys = new Set();
+  let pairedCount = 0;
+  let totalCount = 0;
+  for (const { rel, text } of sources) {
+    const visit = (node) => {
+      const own = ownText(text, node);
+      for (const m of own.matchAll(FOREGROUND_DECL)) {
+        const [, property, token] = m;
+        if (!CHIP_HALF_TOKENS.includes(token)) continue;
+        totalCount++;
+        let filled = false;
+        for (let n = node; n; n = n.parent) {
+          if (FILL_DECL.test(ownText(text, n))) {
+            filled = true;
+            break;
+          }
+        }
+        if (filled) {
+          pairedCount++;
+          continue;
+        }
+        const allowKey = `${rel}::${selectorPath(node)}`;
+        if (Object.prototype.hasOwnProperty.call(allow, allowKey)) {
+          allowedKeys.add(allowKey);
+          continue;
+        }
+        violations.push(
+          `${rel} -> \`${selectorPath(node)}\` sets \`${property}: var(${token})\` with NO ` +
+            `background on that rule or any rule containing it. ${token} is the dark half of a ` +
+            `pastel CHIP pair (see DARK_EXEMPT) and is only legible on its own ` +
+            `${token.replace(/-text$/, '-bg')} -- standing alone it lands on the themed card ` +
+            `surface and measures 1.3-1.7:1 in dark mode. Use ${token.replace(/-text$/, '-fg')}, ` +
+            `which is themed in both modes (design-system.md §2.4.0).`
+        );
+      }
+      node.children.forEach(visit);
+    };
+    ruleTree(text).forEach(visit);
+  }
+  return { violations, pairedCount, totalCount, allowedKeys };
+}
+
+// SELF-TEST, run on every invocation before the real scan. A gate nobody proved
+// can fire is prose with a shebang -- and a gate nobody proved STAYS QUIET on
+// the correct 22 sites is a gate that gets deleted. Both directions, in-process.
+const MUST_CATCH = [
+  { rel: 'catch/bare.scss', text: '.x { color: var(--admin-danger-text); }' },
+  {
+    rel: 'catch/fill-is-in-a-child-not-an-ancestor.scss',
+    text: '.x { color: var(--admin-warning-text); &:hover { background: #fff; } }',
+  },
+  { rel: 'catch/icon-fill.scss', text: '.i { fill: var(--admin-accepted-text); }' },
+  {
+    rel: 'catch/nested-under-a-fill-less-ancestor.scss',
+    text: '.card { padding: 8px; .label { color: var(--admin-success-text); } }',
+  },
+];
+const MUST_NOT_CATCH = [
+  {
+    rel: 'nocatch/chip-pair-same-rule.scss',
+    text: '.chip { background: var(--admin-danger-bg); color: var(--admin-danger-text); }',
+  },
+  {
+    rel: 'nocatch/fill-on-the-ancestor.scss',
+    text: '.card { background: #fff; .label { color: var(--admin-warning-text); } }',
+  },
+  {
+    rel: 'nocatch/opaque-literal-fill-same-rule.scss',
+    text: '.badge { color: var(--admin-danger-text); background: #fff; }',
+  },
+  {
+    rel: 'nocatch/themed-surface-token.scss',
+    text: '.x { color: var(--admin-danger-fg); } .y { color: var(--admin-warning-fg); }',
+  },
+  {
+    rel: 'nocatch/chip-token-used-as-a-fill.scss',
+    text: '.dark .btn { background: var(--admin-success-text); border-color: var(--admin-success-text); }',
+  },
+  {
+    rel: 'nocatch/fill-on-an-at-rule-ancestors-parent.scss',
+    text: '.card { background: #fff; @media (min-width: 40em) { .label { color: var(--admin-accepted-text); } } }',
+  },
+];
+// One fixture proves the ALLOW path itself: same bad shape as MUST_CATCH[0],
+// silenced only by an entry. Without this, the ALLOW branch would be the one
+// piece of this invariant nothing ever executes -- and it is the piece that
+// carries a deliberate exception, i.e. the piece most worth getting wrong.
+const ALLOW_FIXTURE = [{ rel: 'allow/exempted.scss', text: '.x { color: var(--admin-danger-text); }' }];
+const ALLOW_FIXTURE_MAP = { 'allow/exempted.scss::.x': 'fixture -- exercises the ALLOW branch' };
+
+{
+  const caught = findStandaloneChipUses(MUST_CATCH);
+  const quiet = findStandaloneChipUses(MUST_NOT_CATCH);
+  const allowed = findStandaloneChipUses(ALLOW_FIXTURE, ALLOW_FIXTURE_MAP);
+  const unallowed = findStandaloneChipUses(ALLOW_FIXTURE);
+  const selfTestErrors = [];
+  if (allowed.violations.length !== 0 || allowed.allowedKeys.size !== 1) {
+    selfTestErrors.push(
+      `ALLOW branch: expected 0 violation(s) and 1 recorded key, got ` +
+        `${allowed.violations.length} and ${allowed.allowedKeys.size} -- an exemption that does ` +
+        `not silence, or does not record itself, breaks the stale-entry check too.`
+    );
+  }
+  if (unallowed.violations.length !== 1) {
+    selfTestErrors.push(
+      `ALLOW branch: the SAME fixture with no entry produced ${unallowed.violations.length} ` +
+        `violation(s), expected 1 -- so the previous check proved nothing about the exemption.`
+    );
+  }
+  if (caught.violations.length !== MUST_CATCH.length) {
+    selfTestErrors.push(
+      `must-CATCH: expected ${MUST_CATCH.length} violation(s), got ${caught.violations.length} ` +
+        `-- the standalone-chip-token matcher has stopped seeing the bug it exists for.`
+    );
+  }
+  if (quiet.violations.length !== 0) {
+    selfTestErrors.push(
+      `must-NOT-catch: expected 0, got ${quiet.violations.length}: ${quiet.violations.join(' | ')} ` +
+        `-- a false positive here is how a gate earns the reputation that gets it deleted.`
+    );
+  }
+  if (quiet.pairedCount < 4) {
+    selfTestErrors.push(
+      `must-NOT-catch fixtures only produced ${quiet.pairedCount} PAIRED use(s) -- the fixtures ` +
+        `themselves stopped exercising the pairing path, so "0 false positives" proves nothing.`
+    );
+  }
+  if (selfTestErrors.length > 0) {
+    console.error('::error::admin theme token gate SELF-TEST FAILED (invariant 4):');
+    for (const e of selfTestErrors) console.error(`  - ${e}`);
+    process.exit(1);
+  }
+}
+
+// Population floor. Measured on 2026-07-26 (OBRS-726): 21 chip-half foreground
+// uses across src/ before the fix (18 chip-paired + 3 standalone), 18 after. If
+// this count collapses, the matcher has stopped matching and "0 violations"
+// becomes a vacuous pass rather than a clean repo -- the exact failure mode
+// OBRS-734's "0 elements below AA" already demonstrated once.
+//
+// The floor is set BELOW today's 18 on purpose. Pinning it at 18 would fail the
+// gate every time somebody legitimately deletes a status chip, which trains
+// people to edit the number without reading it. 14 still catches the failure
+// this guard is for (a rename or a property change that drops the count to ~0)
+// while tolerating ordinary churn.
+const MIN_CHIP_HALF_USES = 14;
+const chipScan = findStandaloneChipUses(
+  styleFiles.map((f) => ({
+    rel: relative(SRC, f).split('\\').join('/'),
+    text: stripComments(readFileSync(f, 'utf8')),
+  })),
+  STANDALONE_CHIP_ALLOW
+);
+problems.push(...chipScan.violations);
+
+// A stale exemption is worse than no exemption: it reads as "reviewed and
+// accepted" for a site that no longer exists, and it is how a debt list quietly
+// outlives the debt.
+for (const key of Object.keys(STANDALONE_CHIP_ALLOW)) {
+  if (!chipScan.allowedKeys.has(key)) {
+    problems.push(
+      `STANDALONE_CHIP_ALLOW has an entry for \`${key}\` but nothing in src/ matches it any more ` +
+        `-- either the rule/selector was renamed (update the key) or the site was fixed (delete ` +
+        `the entry). Reason on file: ${STANDALONE_CHIP_ALLOW[key]}`
+    );
+  }
+}
+if (chipScan.totalCount < MIN_CHIP_HALF_USES) {
+  console.error(
+    `::error::admin theme token gate invariant 4 found only ${chipScan.totalCount} chip-half ` +
+      `foreground use(s), below the floor of ${MIN_CHIP_HALF_USES} (18 present, all chip-paired, ` +
+      `when this was written). Either a refactor renamed the tokens/properties this rule keys ` +
+      `on -- in which case fix the rule -- or the population really shrank, in which case lower ` +
+      `the floor deliberately. Do not leave it silently matching nothing.`
+  );
+  process.exit(1);
+}
+
 // --- no-op guard: a gate that checks nothing is worse than a failing one ------
 if (lightTokens.size === 0 || styleFiles.length === 0 || literalFiles.length === 0) {
   console.error(
@@ -292,5 +595,7 @@ console.log(
     `override, ${Object.keys(DARK_EXEMPT).length} deliberately exempt; ` +
     `${referenced.size} var(--admin-*) reference(s) across ${styleFiles.length} stylesheet(s) all resolve; ` +
     `${literalFiles.length} admin stylesheet(s) scanned for opaque colour literals, ` +
-    `${pendingTotal} still pending migration in ${Object.keys(LITERAL_PENDING).length} file(s).`
+    `${pendingTotal} still pending migration in ${Object.keys(LITERAL_PENDING).length} file(s); ` +
+    `${chipScan.totalCount} chip-half foreground use(s), ${chipScan.pairedCount} chip-paired and ` +
+    `${chipScan.allowedKeys.size} deliberately exempt (floor ${MIN_CHIP_HALF_USES}).`
 );

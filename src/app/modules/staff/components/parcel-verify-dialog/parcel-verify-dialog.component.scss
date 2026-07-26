@@ -27,11 +27,19 @@
 // Mismatch signaled by icon + text, never color alone (WCAG 1.4.1) — direct
 // sunlight on a phone screen can wash out a subtle color shift long before it
 // makes text/a glyph unreadable (design-system §9 physical-context note).
+//
+// OBRS-726: was --admin-danger-text, the CHIP half of the --admin-danger-bg
+// pair, used bare here — this hint has no background of its own, so it sat on
+// the dialog surface at #93000a/#1d2226 = 1.71:1 in dark mode (the exact ratio
+// OBRS-520 was filed for). --admin-danger-fg is the themed surface-role token
+// and its light value is the same #93000a, so light mode is unchanged. This
+// site was NOT in the OBRS-726 card's list of three; it turned up when the
+// population was re-counted from the enclosing rule rather than from grep.
 .pv-mismatch-hint {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--admin-danger-text);
+  color: var(--admin-danger-fg);
 
   .material-symbols-outlined {
     font-size: 16px;

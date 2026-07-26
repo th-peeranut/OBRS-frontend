@@ -10,6 +10,7 @@ import { OverrideCancelModalComponent } from './override-cancel-modal.component'
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { AdminApiService, AdminBookingDetailDto } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
+import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
 
 // Far future → inside the cancellation window; far past → out-of-window. Using
 // fixed sentinel dates keeps the window check deterministic without faking the
@@ -183,8 +184,14 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
   // run in ChromeHeadless with src/styles.scss (which @imports admin-theme.scss)
   // loaded by the karma `styles` array, so the var() chain resolves exactly as
   // production does. Related: OBRS-726 (same misuse at 3 other call sites).
+  //
+  // OBRS-726: the three helpers below (`rgba`, `effectiveBg`, `contrast`) were
+  // written inline here and now live in `src/app/testing/contrast.ts`, because
+  // three more component specs needed exactly this measurement. One
+  // implementation means a fix to the compositing walk cannot be right in one
+  // spec and stale in another — and this block, whose numbers were verified
+  // against a real SIT screen, is the regression test for that shared code.
   describe('dark-mode contrast of the muted + danger text (OBRS-721)', () => {
-    const AA_NORMAL_TEXT = 4.5;
     let shell: HTMLElement | null = null;
 
     /** Move the component host inside a real .admin-shell so --admin-* resolves. */
@@ -201,53 +208,8 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
       shell = null;
     });
 
-    function rgba(colour: string): [number, number, number, number] {
-      const m = colour.match(/rgba?\(([^)]+)\)/);
-      if (!m) return [0, 0, 0, 0];
-      const p = m[1].split(',').map((v) => parseFloat(v.trim()));
-      return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1];
-    }
-
-    /**
-     * The painted background: walk up compositing any translucent layer onto its
-     * ancestor. Without this, `rgba(0, 0, 0, 0.03)` (the old fallback) would read
-     * as an opaque near-black and the dark-mode failure would hide behind a
-     * flattering number.
-     */
-    function effectiveBg(element: Element | null): [number, number, number] {
-      const layers: [number, number, number, number][] = [];
-      for (let node: Element | null = element; node; node = node.parentElement) {
-        const c = rgba(getComputedStyle(node).backgroundColor);
-        if (c[3] > 0) layers.push(c);
-        if (c[3] >= 1) break;
-      }
-      if (layers.length === 0) return [255, 255, 255];
-      let [r, g, b] = layers[layers.length - 1];
-      for (let i = layers.length - 2; i >= 0; i--) {
-        const [tr, tg, tb, ta] = layers[i];
-        r = tr * ta + r * (1 - ta);
-        g = tg * ta + g * (1 - ta);
-        b = tb * ta + b * (1 - ta);
-      }
-      return [r, g, b];
-    }
-
-    function contrast(fg: [number, number, number], bg: [number, number, number]): number {
-      const lum = ([r, g, b]: [number, number, number]) => {
-        const f = (c: number) => {
-          const s = c / 255;
-          return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-        };
-        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
-      };
-      const a = lum(fg);
-      const b = lum(bg);
-      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-    }
-
     const el = (sel: string) => fixture.nativeElement.querySelector(sel) as HTMLElement;
-    const fg = (element: HTMLElement) =>
-      rgba(getComputedStyle(element).color).slice(0, 3) as [number, number, number];
+    const fg = fgOf;
 
     for (const dark of [false, true]) {
       const mode = dark ? 'dark' : 'light';
