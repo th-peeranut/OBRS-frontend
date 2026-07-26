@@ -1,8 +1,11 @@
-import { FormBuilder } from '@angular/forms';
 import { Router } from '@angular/router';
+import { of } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { BookingService } from '../../../../services/booking/booking.service';
-import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
+import {
+  CARD_ENTRY_CANCELLED,
+  OmiseTokenService,
+} from '../../../../services/payment/omise-token.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
@@ -44,12 +47,11 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
       'createMockPayment',
     ]);
     const omiseTokenService = jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', [
-      'createCardToken',
+      'requestCardToken',
     ]);
 
     component = new PaymentCreditcardComponent(
       translate,
-      new FormBuilder(),
       router,
       bookingService,
       paymentService,
@@ -174,6 +176,18 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
     expect(invokeIsPaymentConfirmed(payment)).toBeTrue();
   });
 
+  it('carries no card-data accessors any more (OBRS-391)', () => {
+    // Pins the SHAPE, not just the behaviour: these four members read the PAN, the
+    // CVV and the expiry out of a FormGroup on our own origin, which is what put the
+    // site in PCI SAQ A-EP. If a later change re-introduces any of them the class is
+    // holding card data again even if every payment test still passes.
+    const surface = component as unknown as Record<string, unknown>;
+    expect(surface['creditCardForm']).toBeUndefined();
+    expect(surface['getCardNumber']).toBeUndefined();
+    expect(surface['getExpiryDate']).toBeUndefined();
+    expect(surface['creatForm']).toBeUndefined();
+  });
+
   it('isPaymentConfirmed remains false when no transaction is paid/success and summary is not fully_paid', () => {
     const payment: PaymentByBookingIdResponse = {
       bookingId: 10,
@@ -195,5 +209,137 @@ describe('PaymentCreditcardComponent - payment status "paid" (OBRS-177)', () => 
     };
 
     expect(invokeIsPaymentConfirmed(payment)).toBeFalse();
+  });
+});
+
+/**
+ * OBRS-391 — the hosted-iframe token flow.
+ *
+ * `submitPayment()` no longer validates a card form; it asks OmiseTokenService to
+ * open Omise's dialog and waits for the token that comes back. Two branches out of
+ * that call matter enough to pin:
+ *
+ *   - a token arrives  -> it must reach the backend as `cardToken`, unchanged, with
+ *                         the payload's other two fields untouched. That payload is
+ *                         the whole reason this migration cost the backend zero
+ *                         lines, so a drift here is the drift that would break it.
+ *   - the dialog closes -> NOTHING may be shown. Before this card there was no such
+ *                         branch (a form cannot be "cancelled"), and the default
+ *                         behaviour of the catch it falls into is to tell the
+ *                         passenger their payment failed, which is both untrue and
+ *                         the kind of message that ends a booking.
+ */
+describe('PaymentCreditcardComponent - OmiseCard hosted card entry (OBRS-391)', () => {
+  let component: PaymentCreditcardComponent;
+  let alertService: jasmine.SpyObj<AlertService>;
+  let paymentService: jasmine.SpyObj<PaymentService>;
+  let omiseTokenService: jasmine.SpyObj<OmiseTokenService>;
+  let translate: jasmine.SpyObj<TranslateService>;
+
+  beforeEach(() => {
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+      'success',
+      'error',
+      'info',
+    ]);
+    translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    translate.instant.and.returnValue('translated');
+    // `currentLang` is a plain property, so createSpyObj does not provide it; the
+    // component forwards it to Omise as the dialog language.
+    (translate as unknown as { currentLang: string }).currentLang = 'th';
+
+    const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
+    const bookingService = jasmine.createSpyObj<BookingService>('BookingService', [
+      'getActiveBookingId',
+    ]);
+    bookingService.getActiveBookingId.and.returnValue(10);
+
+    paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
+      'getBookingPayments',
+      'createPayment',
+      'createMockPayment',
+    ]);
+    const paidResponse: PaymentResponse = {
+      id: 1,
+      bookingId: 10,
+      status: 'paid',
+      paymentMethod: 'card',
+      amount: 100,
+      currency: 'THB',
+    };
+    // Only the ResponseAPI envelope is cast; `data` is a real PaymentResponse so a
+    // future change to that interface still breaks this spec rather than sliding past
+    // an `as never`.
+    paymentService.createPayment.and.returnValue(
+      of({ code: 200, data: paidResponse }) as unknown as ReturnType<
+        PaymentService['createPayment']
+      >
+    );
+
+    omiseTokenService = jasmine.createSpyObj<OmiseTokenService>('OmiseTokenService', [
+      'requestCardToken',
+    ]);
+
+    component = new PaymentCreditcardComponent(
+      translate,
+      router,
+      bookingService,
+      paymentService,
+      omiseTokenService,
+      alertService
+    );
+  });
+
+  afterEach(() => {
+    component.ngOnDestroy();
+  });
+
+  it('sends the token Omise returned to the backend as cardToken, and asks Omise for it in the current language', async () => {
+    omiseTokenService.requestCardToken.and.resolveTo('tokn_test_from_iframe');
+
+    await component.submitPayment();
+
+    expect(omiseTokenService.requestCardToken).toHaveBeenCalledWith('th');
+    expect(paymentService.createPayment).toHaveBeenCalled();
+    const [payload] = paymentService.createPayment.calls.mostRecent().args;
+    expect(payload).toEqual(
+      jasmine.objectContaining({
+        bookingId: 10,
+        paymentMethod: 'card',
+        cardToken: 'tokn_test_from_iframe',
+      })
+    );
+    // The wire contract is exactly these three fields — nothing card-shaped may ride
+    // along, which is what keeps the backend at zero lines changed.
+    expect(Object.keys(payload as object).sort()).toEqual([
+      'bookingId',
+      'cardToken',
+      'paymentMethod',
+    ]);
+  });
+
+  it('says nothing at all when the passenger closes the Omise dialog, and re-enables the pay button', async () => {
+    omiseTokenService.requestCardToken.and.rejectWith(new Error(CARD_ENTRY_CANCELLED));
+
+    await component.submitPayment();
+
+    expect(alertService.error).not.toHaveBeenCalled();
+    expect(alertService.success).not.toHaveBeenCalled();
+    expect(alertService.info).not.toHaveBeenCalled();
+    expect(paymentService.createPayment).not.toHaveBeenCalled();
+    expect(component.isSubmittingPayment).toBeFalse();
+  });
+
+  it('still reports a REAL tokenization failure — the cancel branch must not swallow errors too', async () => {
+    // The must-NOT-catch half of the case above. A silent cancel path is only correct
+    // if it is narrow: an Omise error still has to reach the passenger, or a declined
+    // card would look identical to a successful one from the outside.
+    omiseTokenService.requestCardToken.and.rejectWith(new Error('OmiseCard failed to load'));
+
+    await component.submitPayment();
+
+    expect(alertService.error).toHaveBeenCalled();
+    expect(paymentService.createPayment).not.toHaveBeenCalled();
+    expect(component.isSubmittingPayment).toBeFalse();
   });
 });

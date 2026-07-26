@@ -65,6 +65,12 @@
         {{ 'STAFF.SELL.ID_CARD' | translate }}
         <span class="text-muted fw-normal">{{ 'STAFF.SELL.OPTIONAL' | translate }}</span>
       </label>
+      <!-- no-card-input-ok: Thai national ID card, 13 digits (see maxlength) -- not a
+           payment card. This is the ONLY field in the tree the OBRS-391 card-data gate
+           excuses, and the exemption is deliberately narrow: walk-in checkout takes
+           cash only, and clause 5.5(f) of the Omise agreement bars staff from entering
+           a customer's card details on their behalf at all, so a real card field must
+           never appear on this form. -->
       <input class="form-control form-control-sm"
              formControlName="identityCardNumber"
              inputmode="numeric"

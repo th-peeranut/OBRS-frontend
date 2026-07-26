@@ -19,6 +19,7 @@
     "test:theme-tokens": "node scripts/check-admin-theme-tokens.mjs",
     "test:store-null": "node scripts/check-store-null-handling.mjs",
     "test:proto-key": "node scripts/check-prototype-key-lookup.mjs",
+    "test:no-card-inputs": "node scripts/check-no-card-data-inputs.mjs",
     "test:e2e-lanes": "node scripts/check-e2e-lanes.mjs",
     "e2e": "playwright test",
     "e2e:gate": "playwright test --config=playwright.gate.config.ts",

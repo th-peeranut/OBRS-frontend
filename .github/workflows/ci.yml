@@ -93,6 +93,21 @@ jobs:
       - name: prototype-chain map lookup gate
         run: npm run test:proto-key
 
+      # Seventh pure-node gate (OBRS-391). Until that card the payment page rendered
+      # `<input id="creditCardNo">` and `<input id="cvv">` on our own origin and fed
+      # them to `Omise.createToken('card', ...)`, which put the whole site in PCI DSS
+      # SAQ A-EP (~140 requirements plus quarterly ASV scans, permanently) instead of
+      # SAQ A, and left clause 5.5(f) of the Omise merchant agreement open. Omise's
+      # hosted iframe collects those fields now. Deleting the inputs took a day; keeping
+      # them deleted is the requirement, and re-adding one is the most natural edit
+      # anybody could make to a payment form -- the compiler and every unit test stay
+      # green while the cost lands months later as an audit obligation or, under clause
+      # 12.1(a), a merchant account suspended without notice. The gate self-tests its own
+      # must-catch/must-NOT-catch cases before it will report on the tree, so it cannot
+      # degrade into a silent OK. Pure file reads -- costs no extra runner minutes.
+      - name: cardholder-data input gate
+        run: npm run test:no-card-inputs
+
       # OBRS-602. The Playwright suite had grown to 223 cases nobody had ever seen pass
       # together, because playwright.config.ts swept the whole e2e/ directory while nine
       # specs were written for environments it does not provide. Lane membership is now

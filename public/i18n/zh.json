@@ -2087,18 +2087,7 @@
       "CONFIRM": "确认付款"
     },
     "CREDIT_CARD": {
-      "CARD_NUMBER": "卡号",
-      "CARD_NUMBER_PLACEHOLDER": "1234 1234 1234 1234",
-      "CARD_NUMBER_REQUIRED": "请输入您的卡号",
-      "CARD_NUMBER_MIN": "卡号至少需要13位数字",
-      "CARD_NUMBER_MAX": "卡号最多19位数字",
-      "EXPIRY_DATE": "有效期",
-      "EXPIRY_DATE_REQUIRED": "请选择有效期",
-      "CVV": "CVV",
-      "CVV_PLACEHOLDER": "123",
-      "CVV_REQUIRED": "请输入您的CVV",
-      "CVV_MIN": "CVV至少需要3位数字",
-      "CVV_MAX": "CVV最多4位数字",
+      "HOSTED_HINT": "点击付款后，请在 Omise 的安全窗口中输入卡片信息。本网站不会看到或保存您的卡号。",
       "BACK": "返回",
       "PAY_NOW": "立即付款",
       "COUNTDOWN_LABEL": "剩余时间"

@@ -2087,18 +2087,7 @@
       "CONFIRM": "ยืนยันการชำระเงิน"
     },
     "CREDIT_CARD": {
-      "CARD_NUMBER": "หมายเลขบัตร",
-      "CARD_NUMBER_PLACEHOLDER": "1234 1234 1234 1234",
-      "CARD_NUMBER_REQUIRED": "กรุณากรอกหมายเลขบัตร",
-      "CARD_NUMBER_MIN": "หมายเลขบัตรต้องมีอย่างน้อย 13 หลัก",
-      "CARD_NUMBER_MAX": "หมายเลขบัตรต้องมีไม่เกิน 19 หลัก",
-      "EXPIRY_DATE": "วันหมดอายุ",
-      "EXPIRY_DATE_REQUIRED": "กรุณาเลือกวันหมดอายุ",
-      "CVV": "CVV",
-      "CVV_PLACEHOLDER": "123",
-      "CVV_REQUIRED": "กรุณากรอก CVV",
-      "CVV_MIN": "CVV ต้องมีอย่างน้อย 3 หลัก",
-      "CVV_MAX": "CVV ต้องมีไม่เกิน 4 หลัก",
+      "HOSTED_HINT": "กดชำระเงินแล้วกรอกข้อมูลบัตรในหน้าต่างที่ปลอดภัยของ Omise เว็บไซต์ของเราไม่เห็นและไม่เก็บหมายเลขบัตรของคุณ",
       "BACK": "ย้อนกลับ",
       "PAY_NOW": "ชำระเงิน",
       "COUNTDOWN_LABEL": "เวลาที่เหลือ"

@@ -7,14 +7,16 @@ import {
   Output,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
-import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
+import {
+  OmiseTokenService,
+  isCardEntryCancelled,
+} from '../../../../services/payment/omise-token.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
   PaymentByBookingIdResponse,
@@ -60,9 +62,6 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   isWaitingForConfirmation = false;
   private paymentIdempotencyKey = '';
 
-  creditCardForm: FormGroup;
-
-  minDate: Date = new Date();
   private countdownTotalSeconds = 15 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
@@ -71,15 +70,12 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   constructor(
     private translate: TranslateService,
-    private fb: FormBuilder,
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
     private omiseTokenService: OmiseTokenService,
     private alertService: AlertService,
-  ) {
-    this.creatForm();
-  }
+  ) {}
 
   ngOnInit(): void {
     this.startCountdown();
@@ -90,24 +86,6 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.clearPaymentPolling();
   }
 
-  creatForm() {
-    this.creditCardForm = this.fb.group({
-      creditCardNo: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(13),
-          Validators.maxLength(19),
-        ],
-      ],
-      expireDate: ['', Validators.required],
-      cvv: [
-        '',
-        [Validators.required, Validators.minLength(3), Validators.maxLength(4)],
-      ],
-    });
-  }
-
   selectTab(tab: PaymentTab): void {
     if (tab === this.activeTab) {
       return;
@@ -116,36 +94,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.tabChange.emit(tab);
   }
 
-  getForm(controlName: string) {
-    return this.creditCardForm.get(controlName);
-  }
-
-  getFormValue(controlName: string) {
-    return this.creditCardForm.getRawValue()[controlName];
-  }
-
-  getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.creditCardForm.get(controlName)?.errors;
-
-    if (!errors) {
-      return false;
-    }
-
-    if (errorName === 'maxLength' && errors['maxlength']) {
-      const maxLength = errors['maxlength'].requiredLength;
-      const actualLength = errors['maxlength'].actualLength;
-      return actualLength > maxLength;
-    }
-
-    return !!errors[errorName];
-  }
-
   async submitPayment(): Promise<void> {
-    if (this.creditCardForm.invalid) {
-      this.creditCardForm.markAllAsTouched();
-      return;
-    }
-
     if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
       return;
     }
@@ -183,8 +132,17 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
         this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       }
     } catch (error) {
+      // Closing Omise's card dialog is not a failure — nothing was charged and
+      // nothing was even sent. Telling someone their payment failed because they
+      // changed their mind is how a booking gets abandoned, so this returns to the
+      // untouched payment page in silence and `finally` re-enables the button
+      // (OBRS-391).
+      if (isCardEntryCancelled(error)) {
+        return;
+      }
+
       // This catch also swallows the Omise tokenize rejection raised by
-      // OmiseTokenService.createCardToken (its only call site is resolveCardToken
+      // OmiseTokenService.requestCardToken (its only call site is resolveCardToken
       // above). That rejection carries Omise's own English text — replacing it
       // here is what keeps a third-party string off a Thai user's screen, so the
       // service can keep throwing a developer-readable Error for the console
@@ -197,38 +155,18 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   }
 
   private async resolveCardToken(): Promise<string> {
+    // Unchanged and load-bearing: local, SIT and the whole E2E suite run with
+    // useMockPayments and never reach a real Omise dialog. Keeping this branch
+    // ABOVE the OmiseCard call is what stops those environments from trying to
+    // open a modal against a public key they do not have (OBRS-391 AC 6).
     if (environment.useMockPayments) {
       return 'mock_card_token';
     }
 
-    const expiryDate = this.getExpiryDate();
-    if (!expiryDate) {
-      throw new Error('Invalid card expiry date');
-    }
-
-    return this.omiseTokenService.createCardToken({
-      number: this.getCardNumber(),
-      expiration_month: expiryDate.getMonth() + 1,
-      expiration_year: expiryDate.getFullYear(),
-      security_code: String(this.getFormValue('cvv') ?? ''),
-      name: 'OBRS Customer',
-    });
-  }
-
-  private getCardNumber(): string {
-    const raw = String(this.getFormValue('creditCardNo') ?? '');
-    const digits = raw.replace(/\D+/g, '');
-    return digits || 'abc';
-  }
-
-  private getExpiryDate(): Date | null {
-    const rawValue = this.getFormValue('expireDate');
-    if (rawValue instanceof Date && Number.isFinite(rawValue.getTime())) {
-      return rawValue;
-    }
-
-    const parsed = new Date(rawValue);
-    return Number.isFinite(parsed.getTime()) ? parsed : null;
+    // No arguments carrying card data — there are none to carry. Omise's hosted
+    // iframe collects the number, expiry and CVV on cdn.omise.co and hands back
+    // only the token (OBRS-391).
+    return this.omiseTokenService.requestCardToken(this.translate.currentLang);
   }
 
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {
