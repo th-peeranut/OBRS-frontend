@@ -837,6 +837,31 @@ body.is-dark {
 // block notes that global `.p-selectbutton` rules must not leak between these
 // two components, and the same applies in reverse.
 body.is-dark app-report-usability-fab {
+  // --- the FAB itself (OBRS-740) ---
+  // OBRS-520 wrote the scoping fact down in the comment above but only restyled
+  // the DIALOG; the button that opens it was never touched, so `grep report-fab
+  // src/styles` returned 0 hits and the pill stayed white-on-#4dbeef (2.12:1)
+  // in dark mode too.
+  //
+  // Dark mode INVERTS the light pair rather than reusing it. #006687 is only
+  // 2.92:1 against the $dk-bg page (#0f1117), so a dark pill would satisfy the
+  // text rule and then fail WCAG 1.4.11 (>=3:1 for the boundary of a UI
+  // component) -- the button would read as a smudge. The bright brand cyan is
+  // 8.92:1 against that page; it just cannot carry WHITE text, so the text goes
+  // dark instead. Both criteria pass in both themes; see the table on OBRS-740.
+  .report-fab {
+    background-color: #4dbeef; // vs $dk-bg page = 8.92:1
+    color: #003f58; // on #4dbeef = 5.36:1
+
+    &:hover {
+      background-color: #7fd2f4; // text 6.71:1, vs page 11.17:1
+    }
+
+    &:focus-visible {
+      outline-color: #ffffff; // 18.87:1 against the dark page
+    }
+  }
+
   // --- dialog surface ---
   .report-modal {
     background: $dk-bg-card;

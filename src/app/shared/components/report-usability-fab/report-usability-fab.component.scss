@@ -16,16 +16,41 @@
   border-radius: 28px;
   cursor: pointer;
 
-  // Use admin accent token so the FAB themes with the admin shell
-  background-color: var(--accent, #4dbeef);
-  color: var(--accent-contrast, #fff);
+  // Explicit brand hex on purpose -- NOT the admin `--accent*` tokens (OBRS-740).
+  //
+  // This component is mounted in app.component.html as a sibling of
+  // <router-outlet>, so it renders OUTSIDE the `.admin-shell` subtree on every
+  // route. Custom properties inherit down the real DOM tree, not through
+  // view-encapsulation attributes, so `--accent` never resolved here and
+  // `var(--accent, #4dbeef)` shipped its FALLBACK literal on every page:
+  // white on #4dbeef measures 2.12:1, below the 4.5:1 AA floor. The button was
+  // therefore easier to read on hover (6.46:1) than at rest.
+  //
+  // Dragging the token into scope would make it WORSE, not better:
+  // `.admin-shell.theme-staff` sets --accent: #2dd4bf (1.86:1) and
+  // `.theme-admin` sets #ff7a45 (2.59:1). The bright end of the brand ramp
+  // cannot carry white text at all, so the fix is a colour decision, not a
+  // token-plumbing one.
+  //
+  // Light mode = dark fill / white text. Dark mode inverts it in
+  // dark-theme.scss section O so the pill keeps a >=3:1 edge against the
+  // #0f1117 page (WCAG 1.4.11 non-text contrast) instead of sinking into it.
+  background-color: #006687; // white on this = 6.46:1
+  color: #ffffff;
 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   transition: box-shadow 0.2s, background-color 0.2s;
 
   &:hover {
-    background-color: var(--accent-strong, #006687);
+    background-color: #004a63; // white on this = 9.72:1
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  }
+
+  // The FAB floats over arbitrary page content, so it cannot rely on the UA
+  // default focus ring being visible against whatever happens to be behind it.
+  &:focus-visible {
+    outline: 3px solid #004a63;
+    outline-offset: 2px;
   }
 
   .material-symbols-outlined {
