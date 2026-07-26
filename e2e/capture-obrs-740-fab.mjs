@@ -66,7 +66,27 @@ for (const mode of ['light', 'dark']) {
     ['app_admin_theme', mode]
   );
   const page = await ctx.newPage();
-  await page.goto(BASE, { waitUntil: 'networkidle' });
+
+  // Stub every API call BEFORE the first navigation. Without this the page
+  // raises a backend-down SweetAlert whose full-screen `.swal2-container`
+  // both covers the FAB in the screenshot and intercepts the hover, so the
+  // hover measurement times out. The evidence would be contaminated rather
+  // than merely incomplete -- the overlay is what the reviewer would see.
+  await page.route('**/api/**', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
+
+  await page.goto(BASE, { waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(1500);
+
+  // Belt and braces: if anything still managed to raise a dialog, take it out
+  // and say so, rather than photographing it.
+  const swal = await page.evaluate(() => {
+    const n = document.querySelectorAll('.swal2-container').length;
+    document.querySelectorAll('.swal2-container').forEach((el) => el.remove());
+    return n;
+  });
+  if (swal) console.log(`  (removed ${swal} stray swal2 overlay(s) in ${mode} mode before measuring)`);
 
   // --- precondition assertion, before anything is measured or captured ---
   const isDark = await page.evaluate(() => document.body.classList.contains('is-dark'));
