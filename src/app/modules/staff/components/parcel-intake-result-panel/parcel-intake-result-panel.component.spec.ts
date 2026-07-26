@@ -274,27 +274,26 @@ describe('ParcelIntakeResultPanelComponent', () => {
     });
   });
 
-  // ── OBRS-726: measured contrast of the result icon ─────────────────────────
+  // ── OBRS-747: measured contrast of this panel on the now-THEMED surface ────
   //
-  // The 48px check_circle glyph uses --admin-accepted-text, the dark half of a
-  // pastel CHIP pair, as a standalone colour. `check-admin-theme-tokens.mjs`
-  // catches that shape statically as of this card, but it cannot know what this
-  // panel's ANCESTORS paint — and that turned out to be the whole question.
+  // History, because this block used to assert the opposite. OBRS-726 was filed
+  // claiming the 48px check_circle glyph rendered --admin-accepted-text #0a3d1d
+  // on the #1d2226 dark card at 1.30:1. Measured in ChromeHeadless against the
+  // chain below — the page's REAL markup (parcel-consign-page.component.html:
+  // .container-fluid > .card.shadow-sm > <app-parcel-intake-result-panel>) — the
+  // painted surface turned out to be #ffffff in BOTH themes, because that wrapper
+  // is a raw Bootstrap `.card` and nothing repainted it for dark mode. So the
+  // chip token was actually shipping at 12.37:1 and the "correct" themed token
+  // would have shipped at 1.67:1. OBRS-726 therefore PINNED the un-themed
+  // surface, and its pin is what brought us here.
   //
-  // OBRS-726 was filed asserting this glyph rendered #0a3d1d on the #1d2226 dark
-  // card at 1.30:1. It does not. The chain below is the page's REAL markup
-  // (parcel-consign-page.component.html: .container-fluid > .card.shadow-sm >
-  // <app-parcel-intake-result-panel>), and measured in ChromeHeadless the
-  // painted surface is #ffffff in BOTH themes, because that wrapper is a raw
-  // Bootstrap `.card` and nothing repaints it for dark mode. So the glyph ships
-  // at 12.37:1, and swapping in the themed --admin-accepted-fg (dark #9cd6a5)
-  // would have taken it DOWN to 1.67:1.
-  //
-  // These tests therefore pin the un-themed surface rather than assert a fix.
-  // The surface is the real defect and a much worse one — this panel's own `dd`
-  // values measure 1.18:1 on it — which is OBRS-747. When that lands, the first
-  // test here goes red on purpose and hands the next reader the whole to-do list.
-  describe('contrast of .parcel-intake-result-icon, measured (OBRS-726)', () => {
+  // OBRS-747 themed that surface (`.admin-shell.is-dark .card` in
+  // admin-theme.scss), so the pin has done its job and is replaced by the
+  // ordinary assertions it was standing in for: the surface differs by mode, and
+  // every text role in this panel clears AA on the surface actually painted.
+  // Those roles are the point of the card — `dd` carries the tracking number,
+  // collection code and amount a clerk reads aloud, and it measured 1.18:1.
+  describe('contrast on the themed surface, measured (OBRS-747)', () => {
     // The staff shell page wraps its content in a raw BOOTSTRAP .card, not
     // .admin-card. Outermost first.
     const PAGE_CHAIN = ['admin-shell theme-staff', 'container-fluid py-4', 'card shadow-sm border-0 p-4'];
@@ -322,73 +321,88 @@ describe('ParcelIntakeResultPanelComponent', () => {
       return fixture.nativeElement.querySelector('.parcel-intake-result-icon') as HTMLElement;
     }
 
-    // THE PIN. Not a preference — the fact that decided this card's scope, and
-    // the trigger that reopens it. Measured, both modes, real markup.
-    it('the surface under this panel is STILL un-themed — #ffffff in both modes (OBRS-747)', () => {
-      const iconLight = mount(false);
-      const bgLight = toHex(effectiveBg(iconLight));
+    function remount(dark: boolean): HTMLElement {
       teardown?.();
       teardown = null;
+      return mount(dark);
+    }
 
-      const iconDark = mount(true);
+    /** Every text role this panel renders, with the WCAG floor that applies to it. */
+    const ROLES: { selector: string; label: string; floor: number }[] = [
+      // 48px glyph, so 3:1 is the binding floor — but it measures 9.61:1 dark and
+      // 12.37:1 light, so hold it to the stricter text floor to catch a slip early.
+      { selector: '.parcel-intake-result-icon', label: 'result icon (48px glyph)', floor: AA_NORMAL_TEXT },
+      { selector: '.parcel-intake-result-list dt', label: 'dt (field labels)', floor: AA_NORMAL_TEXT },
+      { selector: '.parcel-intake-result-list dd', label: 'dd (tracking no. / code / amount)', floor: AA_NORMAL_TEXT },
+      { selector: 'h5', label: 'h5 heading', floor: AA_LARGE_TEXT },
+    ];
+
+    // What the OBRS-726 pin was standing in for. It asserted #ffffff in BOTH
+    // modes; the surface is themed now, so the honest assertion is that the two
+    // modes DIFFER and that dark really is the shell's card token.
+    it('the surface under this panel is themed — dark differs from light (OBRS-747)', () => {
+      const bgLight = toHex(effectiveBg(remount(false)));
+
+      const iconDark = remount(true);
       const bgDark = toHex(effectiveBg(iconDark));
+      const shell = document.querySelector('.admin-shell') as HTMLElement;
+      const cardToken = toHex(resolveTokenColour(shell, '--admin-surface-card'));
 
-      const todo =
-        `When this test fails, OBRS-747 has themed the wrapper and THREE things are now due: ` +
-        `(1) point .parcel-intake-result-icon at --admin-accepted-fg (already declared, light ` +
-        `#0a3d1d / dark #9cd6a5); (2) delete the STANDALONE_CHIP_ALLOW entry for this file in ` +
-        `scripts/check-admin-theme-tokens.mjs, which fails on a stale entry; (3) replace this ` +
-        `test with the ordinary "dark surface differs from light" assertion.`;
-
-      expect(bgLight).withContext(`light-mode painted background. ${todo}`).toBe('#ffffff');
+      expect(bgLight)
+        .withContext('light mode keeps Bootstrap white — OBRS-747 is a dark-only rule')
+        .toBe('#ffffff');
       expect(bgDark)
         .withContext(
-          `dark-mode painted background is ${bgDark}. The page wraps this panel in a raw ` +
-            `Bootstrap .card and nothing repaints it for dark mode (sell-page.component.scss / ` +
-            `OBRS-128 is the only staff page that opted in). ${todo}`
+          `dark-mode painted background is ${bgDark}. Before OBRS-747 this was #ffffff, because ` +
+            `parcel-consign-page wraps the panel in a raw Bootstrap .card that nothing repainted. ` +
+            `It must now resolve to --admin-surface-card (${cardToken}) via ` +
+            `\`.admin-shell.is-dark .card\` in admin-theme.scss.`
         )
-        .toBe('#ffffff');
+        .toBe(cardToken);
+      expect(bgDark).not.toBe(bgLight);
     });
 
     for (const dark of [false, true]) {
       const mode = dark ? 'dark' : 'light';
 
-      it(`${mode}: the icon meets AA on the surface actually painted`, () => {
-        const icon = mount(dark);
-        const bg = effectiveBg(icon);
-        const ratio = contrast(fgOf(icon), bg);
-        // 48px, so AA_LARGE_TEXT (3:1) is the binding requirement; assert the
-        // stricter normal-text floor anyway because the measured value (12.37:1)
-        // clears it by a wide margin, so a regression should be caught early.
-        expect(ratio)
-          .withContext(
-            `${mode}: icon ${toHex(fgOf(icon))} on painted background ${toHex(bg)} = ` +
-              `${ratio.toFixed(2)}:1 (large-text floor ${AA_LARGE_TEXT}, normal ${AA_NORMAL_TEXT})`
-          )
-          .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
+      it(`${mode}: every text role in the panel meets AA on the surface actually painted`, () => {
+        mount(dark);
+        const failures: string[] = [];
+        for (const role of ROLES) {
+          const el = fixture.nativeElement.querySelector(role.selector) as HTMLElement | null;
+          // A selector that stops matching would make this test vacuously green,
+          // which is the failure mode that let "0 elements below AA" ship once.
+          expect(el).withContext(`${role.label}: ${role.selector} rendered nothing to measure`).not.toBeNull();
+          if (!el) continue;
+          const bg = effectiveBg(el);
+          const ratio = contrast(fgOf(el), bg);
+          if (ratio < role.floor) {
+            failures.push(
+              `${role.label} ${toHex(fgOf(el))} on ${toHex(bg)} = ${ratio.toFixed(2)}:1 (floor ${role.floor})`
+            );
+          }
+        }
+        expect(failures)
+          .withContext(`${mode}: below-AA roles in app-parcel-intake-result-panel`)
+          .toEqual([]);
       });
     }
 
-    it('keeps the chip token DELIBERATELY, and the surface-role token is ready for OBRS-747', () => {
-      const icon = mount(true);
+    it('the icon is on the themed --admin-accepted-fg, not the chip half (OBRS-747)', () => {
+      const icon = remount(true);
       const shell = document.querySelector('.admin-shell') as HTMLElement;
       const chipHalf = resolveTokenColour(shell, '--admin-accepted-text');
       const surfaceRole = resolveTokenColour(shell, '--admin-accepted-fg');
 
-      // The chip token is what ships here, on purpose, while the surface is
-      // un-themed. Pinned so nobody "fixes" it back without reading the note.
+      // The swap OBRS-726 measured and deliberately deferred. Asserting it against
+      // the RESOLVED token, not a hex literal, so a palette change can move the
+      // value without this test lying about which role is in use.
       expect(toHex(fgOf(icon)))
-        .withContext('the icon must stay on --admin-accepted-text until OBRS-747 themes the surface')
-        .toBe(toHex(chipHalf));
-
-      // And the token that WILL replace it is declared and really is themed --
-      // otherwise OBRS-726 shipped a rule with no token behind it.
-      expect(toHex(surfaceRole))
-        .withContext('--admin-accepted-fg must be declared AND differ from the chip half in dark mode')
+        .withContext('the icon must use the surface-role token now that the surface is themed')
+        .toBe(toHex(surfaceRole));
+      expect(toHex(fgOf(icon)))
+        .withContext('and must no longer be the chip half, which measures 1.30:1 on the dark card')
         .not.toBe(toHex(chipHalf));
-      expect(contrast(surfaceRole, [29, 34, 38]))
-        .withContext('--admin-accepted-fg dark on --admin-surface-card #1d2226')
-        .toBeGreaterThanOrEqual(AA_NORMAL_TEXT);
     });
   });
 });
