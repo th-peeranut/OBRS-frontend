@@ -15,6 +15,17 @@ export type ConfigHistoryValue = string | number | boolean | Array<string | numb
 
 export type ConfigHistoryActorSource = 'USER' | 'SYSTEM' | 'UNATTRIBUTED' | 'PRE_FEATURE';
 
+// OBRS-722: WHICH config the row changed, derived server-side from
+// `system_configs_history.owner_id` (NULL -> 'PLATFORM'). Strictly orthogonal
+// to `actorSource`/`actorRole`, which say WHO changed it: a user holding the
+// `owner` role editing the platform default is actorRole:'owner' with
+// scope:'PLATFORM'. Reading either column as the other is exactly the
+// confusion this field exists to remove — "the default every non-overriding
+// owner inherits just moved" and "one owner customised their own copy" are
+// different events with different blast radius, and before this field they
+// rendered identically.
+export type ConfigHistoryScope = 'PLATFORM' | 'OWNER';
+
 export interface ConfigHistoryRow {
   // BIGSERIAL -> JSON number. NEVER string (OBRS-376: the exact interface +
   // fixture pair where that bug lived before — a fixture "built to look
@@ -33,4 +44,14 @@ export interface ConfigHistoryRow {
   actorName: string | null;
   // lowercase role slug; non-null only alongside actorName.
   actorRole: string | null;
+  // OBRS-722: never null — the backend derives it from a nullable column, so
+  // there is no "unknown scope" state to render.
+  scope: ConfigHistoryScope;
+  // OBRS-722: the owner's display name. null when scope === 'PLATFORM', and
+  // ALSO null on a scope === 'OWNER' row whose owner row has since been
+  // deleted (`owner_id` carries no FK by design, V50) — the same
+  // known-but-unresolvable shape as actorName on a 'USER' row. Both nulls must
+  // render as explicit text: a blank cell here reads as "platform", which is
+  // the opposite of the truth.
+  ownerName: string | null;
 }

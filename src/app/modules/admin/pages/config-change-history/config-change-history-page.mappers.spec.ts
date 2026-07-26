@@ -6,8 +6,12 @@ import {
   extractConfigHistoryErrorCode,
   formatConfigValue,
   roleLabel,
+  scopeDisplayKind,
 } from './config-change-history-page.mappers';
-import { ConfigHistoryRow } from '../../../../shared/interfaces/config-history.interface';
+import {
+  ConfigHistoryRow,
+  ConfigHistoryScope,
+} from '../../../../shared/interfaces/config-history.interface';
 
 // A minimal translation table so translateFn behaves like ngx-translate's
 // instant(): known key -> its string, unknown key -> the key ITSELF (the
@@ -154,6 +158,38 @@ describe('config-change-history-page.mappers', () => {
       for (const combo of combos) {
         expect(actorDisplayKind(combo)).toBeTruthy();
       }
+    });
+  });
+
+  // OBRS-722 — the ขอบเขต column's render bucket.
+  describe('scopeDisplayKind', () => {
+    it("scope 'PLATFORM' -> 'platform', whatever the actor's own role is", () => {
+      expect(scopeDisplayKind({ scope: 'PLATFORM', ownerName: null })).toBe('platform');
+    });
+
+    it("scope 'OWNER' with a resolved name -> 'owner'", () => {
+      expect(scopeDisplayKind({ scope: 'OWNER', ownerName: 'มาลี' })).toBe('owner');
+    });
+
+    it("scope 'OWNER' with a null name (deleted owner) -> 'owner-deleted', NOT 'platform' — this is "
+      + 'the whole point of the field: a row that changed ONE owner\'s value must never render as '
+      + 'the platform default that every owner inherits', () => {
+      expect(scopeDisplayKind({ scope: 'OWNER', ownerName: null })).toBe('owner-deleted');
+    });
+
+    it('is total over every scope x ownerName combination - no combination falls through to a '
+      + 'blank cell', () => {
+      const scopes: ConfigHistoryScope[] = ['PLATFORM', 'OWNER'];
+      for (const scope of scopes) {
+        for (const ownerName of ['มาลี', null]) {
+          expect(scopeDisplayKind({ scope, ownerName })).toBeTruthy();
+        }
+      }
+    });
+
+    it("a PLATFORM row that somehow carries an ownerName still reads 'platform' — the nullable "
+      + 'COLUMN is the source of truth, never the presence of a name', () => {
+      expect(scopeDisplayKind({ scope: 'PLATFORM', ownerName: 'มาลี' })).toBe('platform');
     });
   });
 

@@ -72,6 +72,8 @@
         <tr>
           <th>{{ 'ADMIN.CONFIG_CHANGE_HISTORY.COL.CHANGED_AT' | translate }}</th>
           <th>{{ 'ADMIN.CONFIG_CHANGE_HISTORY.COL.CONFIG_KEY' | translate }}</th>
+          <!-- OBRS-722: WHOSE config, not who changed it — see COL.ACTOR below. -->
+          <th>{{ 'ADMIN.CONFIG_CHANGE_HISTORY.COL.SCOPE' | translate }}</th>
           <th>{{ 'ADMIN.CONFIG_CHANGE_HISTORY.COL.CHANGE' | translate }}</th>
           <th>{{ 'ADMIN.CONFIG_CHANGE_HISTORY.COL.ACTOR' | translate }}</th>
         </tr>
@@ -83,12 +85,13 @@
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
           </tr>
         </ng-container>
 
         <ng-container *ngIf="contentState === 'empty'">
           <tr class="admin-empty-row">
-            <td colspan="4">{{ 'ADMIN.CONFIG_CHANGE_HISTORY.EMPTY' | translate }}</td>
+            <td colspan="5">{{ 'ADMIN.CONFIG_CHANGE_HISTORY.EMPTY' | translate }}</td>
           </tr>
         </ng-container>
 
@@ -99,6 +102,27 @@
           >
             <td>{{ displayChangedAt(row.changedAt) }}</td>
             <td>{{ configKeyLabelFor(row.configKey) }}</td>
+            <!-- OBRS-722: every branch emits text. A blank cell here would read
+                 as "platform" — the widest possible blast radius — on a row
+                 that may in fact have changed one owner's copy only. -->
+            <td>
+              <ng-container [ngSwitch]="scopeKind(row)">
+                <span *ngSwitchCase="'platform'">
+                  {{ 'ADMIN.CONFIG_CHANGE_HISTORY.SCOPE.PLATFORM' | translate }}
+                </span>
+                <span *ngSwitchCase="'owner'">
+                  {{ 'ADMIN.CONFIG_CHANGE_HISTORY.SCOPE.OWNER' | translate: { name: row.ownerName } }}
+                </span>
+                <span
+                  *ngSwitchCase="'owner-deleted'"
+                  class="admin-muted"
+                  [title]="'ADMIN.CONFIG_CHANGE_HISTORY.SCOPE.OWNER_DELETED_HINT' | translate"
+                  [attr.aria-label]="'ADMIN.CONFIG_CHANGE_HISTORY.SCOPE.OWNER_DELETED_HINT' | translate"
+                >
+                  {{ 'ADMIN.CONFIG_CHANGE_HISTORY.SCOPE.OWNER_DELETED' | translate }}
+                </span>
+              </ng-container>
+            </td>
             <td class="cch-change-cell">
               <span [class.admin-muted]="row.operation === 'DELETE'">{{ formatValue(row.oldValue) }}</span>
               <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
