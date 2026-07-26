@@ -55,7 +55,7 @@
     // exact number .admin-btn-danger shipped at in OBRS-520. The themed
     // standalone-danger-text role was split out to --admin-danger-fg for this.
     // The token gate cannot catch this — --admin-danger-text IS declared; only the
-    // role is wrong. See OBRS-722.
+    // role is wrong. See OBRS-726.
     color: var(--admin-danger-fg);
     font-weight: 600;
   }

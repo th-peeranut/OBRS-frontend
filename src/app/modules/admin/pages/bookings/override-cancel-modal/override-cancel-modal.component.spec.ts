@@ -182,7 +182,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
   // A ratio the browser computes cannot be argued with, so measure it here. These
   // run in ChromeHeadless with src/styles.scss (which @imports admin-theme.scss)
   // loaded by the karma `styles` array, so the var() chain resolves exactly as
-  // production does. Related: OBRS-722 (same misuse at 3 other call sites).
+  // production does. Related: OBRS-726 (same misuse at 3 other call sites).
   describe('dark-mode contrast of the muted + danger text (OBRS-721)', () => {
     const AA_NORMAL_TEXT = 4.5;
     let shell: HTMLElement | null = null;
