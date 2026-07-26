@@ -1332,6 +1332,7 @@
       "COL": {
         "CHANGED_AT": "Time",
         "CONFIG_KEY": "Setting",
+        "SCOPE": "Scope",
         "CHANGE": "From → To",
         "ACTOR": "Changed by"
       },
@@ -1354,6 +1355,12 @@
       "VALUE_DELETED": "Deleted",
       "VALUE": {
         "MORE": "+{{count}} more"
+      },
+      "SCOPE": {
+        "PLATFORM": "Platform default (all owners)",
+        "OWNER": "Owner: {{name}}",
+        "OWNER_DELETED": "Deleted owner",
+        "OWNER_DELETED_HINT": "This row changed one owner’s own value, not the platform default, but that owner’s account has since been deleted so the name cannot be shown"
       },
       "ACTOR": {
         "SYSTEM": "System",

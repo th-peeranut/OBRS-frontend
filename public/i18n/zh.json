@@ -1332,6 +1332,7 @@
       "COL": {
         "CHANGED_AT": "时间",
         "CONFIG_KEY": "设置项",
+        "SCOPE": "影响范围",
         "CHANGE": "从 → 到",
         "ACTOR": "修改人"
       },
@@ -1354,6 +1355,12 @@
       "VALUE_DELETED": "已删除",
       "VALUE": {
         "MORE": "另外 {{count}} 项"
+      },
+      "SCOPE": {
+        "PLATFORM": "平台默认值(全部车主)",
+        "OWNER": "车主:{{name}}",
+        "OWNER_DELETED": "已删除的车主",
+        "OWNER_DELETED_HINT": "此记录仅修改了某一位车主自己的值,而非平台默认值,但该车主账号已被删除,因此无法显示姓名"
       },
       "ACTOR": {
         "SYSTEM": "系统",

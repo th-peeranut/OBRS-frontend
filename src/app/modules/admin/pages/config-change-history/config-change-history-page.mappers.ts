@@ -3,6 +3,7 @@ import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time'
 import {
   ConfigHistoryActorSource,
   ConfigHistoryRow,
+  ConfigHistoryScope,
   ConfigHistoryValue,
 } from '../../../../shared/interfaces/config-history.interface';
 import { translateRoleSlug } from '../user-management/user-management.mappers';
@@ -122,6 +123,36 @@ export function actorDisplayKind(row: Pick<ConfigHistoryRow, 'actorSource' | 'ac
     case 'UNATTRIBUTED':
     default:
       return 'unattributed';
+  }
+}
+
+/**
+ * OBRS-722 — the three renderable states of the "ขอบเขต" column.
+ *
+ * Same RENDER-level-split shape as {@link ActorDisplayKind} above, and for the
+ * same reason: `ConfigHistoryScope` has EXACTLY two values, and
+ * `'owner-deleted'` is not a third one — it is `scope === 'OWNER'` with
+ * `ownerName === null`, an owner the row legitimately names whose users row no
+ * longer exists (`owner_id` carries no FK, V50).
+ *
+ * The load-bearing rule is that a deleted owner must NOT collapse into
+ * 'platform'. "Nobody could resolve that owner's name" and "this changed the
+ * default for the whole platform" are opposite claims about blast radius, and
+ * the falsy-check a developer reaches for first (`row.ownerName ? … : platform`)
+ * quietly asserts the wrong one. Dispatch on `scope`, then on the name.
+ */
+export type ScopeDisplayKind = 'platform' | 'owner' | 'owner-deleted';
+
+/** Classifies a row's scope into its render bucket. Total over both scope values. */
+export function scopeDisplayKind(
+  row: Pick<ConfigHistoryRow, 'scope' | 'ownerName'>
+): ScopeDisplayKind {
+  switch (row.scope as ConfigHistoryScope) {
+    case 'OWNER':
+      return row.ownerName ? 'owner' : 'owner-deleted';
+    case 'PLATFORM':
+    default:
+      return 'platform';
   }
 }
 
