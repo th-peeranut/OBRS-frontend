@@ -17,6 +17,11 @@ function row(overrides: Partial<ConfigHistoryRow> = {}): ConfigHistoryRow {
     actorSource: 'USER',
     actorName: 'สมชาย ใจดี',
     actorRole: 'owner',
+    // OBRS-722: default to the platform default — the pre-722 meaning of every
+    // row that already existed, so the untouched cases below keep testing what
+    // they were written to test.
+    scope: 'PLATFORM',
+    ownerName: null,
     ...overrides,
   };
 }
@@ -72,6 +77,18 @@ describe('ConfigChangeHistoryPageComponent', () => {
     expect(store.refresh).toHaveBeenCalledTimes(1);
     expect(store.setConfigKey).not.toHaveBeenCalled();
     expect(store.setRange).not.toHaveBeenCalled();
+  });
+
+  // OBRS-722: the template's ขอบเขต column dispatches on this. The mapper's own
+  // exhaustiveness is proven in the mappers spec; what this pins is that the
+  // component actually EXPOSES it (a mapper nothing calls renders nothing).
+  it('scopeKind classifies each row the template can receive', () => {
+    const store = makeStoreStub(null);
+    const component = new ConfigChangeHistoryPageComponent(store as any, createTranslateStub());
+
+    expect((component as any).scopeKind(row())).toBe('platform');
+    expect((component as any).scopeKind(row({ scope: 'OWNER', ownerName: 'มาลี' }))).toBe('owner');
+    expect((component as any).scopeKind(row({ scope: 'OWNER', ownerName: null }))).toBe('owner-deleted');
   });
 
   // Scrutinize regression gate: the store is root-scoped, so a RE-ENTRY renders

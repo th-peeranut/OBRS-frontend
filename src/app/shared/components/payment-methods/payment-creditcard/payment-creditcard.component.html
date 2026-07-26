@@ -19,134 +19,18 @@
     </button>
   </div>
 
-  <form class="login-form mt-3" [formGroup]="creditCardForm">
-    <div class="row form-row">
-      <div class="col-12">
-        <label
-          for="creditCardNo"
-          [class.label-error]="
-            getForm('creditCardNo')?.errors &&
-            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
-          "
-        >
-          {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER" | translate }}
-          <span class="is-required">*</span>
-        </label>
-        <input
-          class="form-control"
-          type="text"
-          id="creditCardNo"
-          formControlName="creditCardNo"
-          [placeholder]="'PAYMENT.CREDIT_CARD.CARD_NUMBER_PLACEHOLDER' | translate"
-          maxlength="19"
-          [class.form-error]="
-            getForm('creditCardNo')?.errors &&
-            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
-          "
-        />
-        <div
-          class="text-error"
-          *ngIf="
-            getForm('creditCardNo')?.errors &&
-            (getForm('creditCardNo')?.touched || getForm('creditCardNo')?.dirty)
-          "
-        >
-          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['required']">
-            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_REQUIRED" | translate }}
-          </ng-container>
-          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['minlength']">
-            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_MIN" | translate }}
-          </ng-container>
-          <ng-container *ngIf="getForm('creditCardNo')?.errors?.['maxlength']">
-            {{ "PAYMENT.CREDIT_CARD.CARD_NUMBER_MAX" | translate }}
-          </ng-container>
-        </div>
-      </div>
-    </div>
-
-    <div class="row form-row">
-      <div class="col-12 col-sm-6">
-        <label
-          [class.label-error]="
-            getForm('expireDate')?.errors &&
-            (getForm('expireDate')?.touched || getForm('expireDate')?.dirty)
-          "
-        >
-          {{ "PAYMENT.CREDIT_CARD.EXPIRY_DATE" | translate }}
-          <span class="is-required">*</span>
-        </label>
-        <p-calendar
-          panelStyleClass="payment-card-calendar-panel"
-          dateFormat="mm/yy"
-          view="month"
-          [minDate]="minDate"
-          [iconDisplay]="'input'"
-          [showIcon]="true"
-          inputId="templatedisplay"
-          formControlName="expireDate"
-        >
-          <ng-template pTemplate="inputicon">
-            <img
-              class="calendar-icon"
-              src="icons/calendar.svg"
-              alt="Calendar Icon"
-            />
-          </ng-template>
-        </p-calendar>
-        <div
-          class="text-error"
-          *ngIf="
-            getForm('expireDate')?.errors &&
-            (getForm('expireDate')?.touched || getForm('expireDate')?.dirty)
-          "
-        >
-          {{ "PAYMENT.CREDIT_CARD.EXPIRY_DATE_REQUIRED" | translate }}
-        </div>
-      </div>
-
-      <div class="col-12 col-sm-6">
-        <label
-          for="cvv"
-          [class.label-error]="
-            getForm('cvv')?.errors &&
-            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
-          "
-        >
-          {{ "PAYMENT.CREDIT_CARD.CVV" | translate }}
-          <span class="is-required">*</span>
-        </label>
-        <input
-          class="form-control"
-          type="text"
-          id="cvv"
-          formControlName="cvv"
-          [placeholder]="'PAYMENT.CREDIT_CARD.CVV_PLACEHOLDER' | translate"
-          maxlength="4"
-          [class.form-error]="
-            getForm('cvv')?.errors &&
-            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
-          "
-        />
-        <div
-          class="text-error"
-          *ngIf="
-            getForm('cvv')?.errors &&
-            (getForm('cvv')?.touched || getForm('cvv')?.dirty)
-          "
-        >
-          <ng-container *ngIf="getForm('cvv')?.errors?.['required']">
-            {{ "PAYMENT.CREDIT_CARD.CVV_REQUIRED" | translate }}
-          </ng-container>
-          <ng-container *ngIf="getForm('cvv')?.errors?.['minlength']">
-            {{ "PAYMENT.CREDIT_CARD.CVV_MIN" | translate }}
-          </ng-container>
-          <ng-container *ngIf="getForm('cvv')?.errors?.['maxlength']">
-            {{ "PAYMENT.CREDIT_CARD.CVV_MAX" | translate }}
-          </ng-container>
-        </div>
-      </div>
-    </div>
-  </form>
+  <!--
+    OBRS-391 — there is deliberately NO card-number / expiry / CVV field on this
+    page, and putting one back is not a small change: an input that touches a PAN
+    on our own origin moves the whole site from PCI DSS SAQ A to SAQ A-EP (~140
+    requirements, quarterly ASV scans, permanently) and re-opens the clause 5.5(f)
+    question in the Omise merchant agreement. Omise renders those fields itself,
+    inside an iframe served from cdn.omise.co, when the passenger presses the pay
+    button below. `npm run test:no-card-inputs` fails the build if one reappears.
+  -->
+  <p class="hosted-card-hint">
+    {{ "PAYMENT.CREDIT_CARD.HOSTED_HINT" | translate }}
+  </p>
 
   <div class="countdown" aria-live="polite">
     {{ "PAYMENT.CREDIT_CARD.COUNTDOWN_LABEL" | translate }}
@@ -170,8 +54,8 @@
       class="payment-btn"
       type="button"
       (click)="submitPayment()"
-      [class.select-btn-diabled]="creditCardForm.invalid || isSubmittingPayment || isWaitingForConfirmation"
-      [disabled]="creditCardForm.invalid || isSubmittingPayment || isWaitingForConfirmation"
+      [class.select-btn-diabled]="isSubmittingPayment || isWaitingForConfirmation"
+      [disabled]="isSubmittingPayment || isWaitingForConfirmation"
     >
       {{ "PAYMENT.CREDIT_CARD.PAY_NOW" | translate }}
     </button>

@@ -171,7 +171,12 @@ test.describe('route smoke coverage', () => {
     await expect(page.locator('.my-bookings__header h1')).toBeVisible();
 
     await page.goto('/payment');
-    await expect(page.locator('#creditCardNo')).toBeVisible();
+    // OBRS-391 moved card entry into Omise's hosted iframe, so `#creditCardNo` — what
+    // this smoke test used to key on — no longer exists. The pay button is asserted
+    // FIRST and positively: it is what proves the payment page actually rendered, and
+    // without it the card-input count below would pass just as happily on a 404.
+    await expect(page.locator('app-payment-creditcard .payment-btn')).toBeVisible();
+    await expect(page.locator('#creditCardNo, #cvv')).toHaveCount(0);
 
     await page.goto('/payment/result');
     await expect(page.locator('.payment-result h1')).toBeVisible();

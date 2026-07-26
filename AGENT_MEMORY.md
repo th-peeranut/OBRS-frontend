@@ -2783,15 +2783,17 @@ boarding it early.
   passengers — index 0 is the booker card, index 1/2 are passenger 0/1's own seat-van maps.
   Scope `.seat-box:not(.disabled)` inside the right card, re-querying live (not cached) right
   before each click, since taking a seat in one map disables it in the other (shared inventory).
-- **The credit-card `p-calendar` (`view="month"`, `inputId="templatedisplay"`) resisted every
-  Playwright UI approach** (`#templatedisplay` click reported "element is not enabled"; the
-  panel's month cells were empty/unmatchable). Fastest reliable workaround: patch the Angular
-  reactive form directly via the dev-build's `window.ng.getComponent(...)` devtools API —
-  `ng.getComponent(document.querySelector('app-payment-creditcard')).creditCardForm.patchValue({expireDate: new Date(2027,11,1)})`
-  — then `markAsDirty()`/`updateValueAndValidity()`. This still exercises the REAL Omise
-  tokenization + real backend payment call + real e-ticket render; only the calendar-click UI
-  mechanic is bypassed. Legitimate for E2E capture, not for asserting the calendar widget itself
-  works (that's out of scope for a payment-flow smoke test).
+- ~~**The credit-card `p-calendar` (`view="month"`, `inputId="templatedisplay"`) resisted every
+  Playwright UI approach**~~ — **OBSOLETE from OBRS-391 (2026-07-26).** That calendar, the card
+  number field and the CVV field no longer exist: card entry moved into Omise's hosted iframe
+  (`cdn.omise.co/pay.html`), and `payment-creditcard.component` has no reactive form left to
+  patch, so the `window.ng.getComponent(...).creditCardForm.patchValue(...)` workaround this
+  bullet documented has nothing to reach. **What replaces it for a real card capture:** the
+  fields are in a cross-origin iframe, so Playwright must address it as a frame
+  (`page.frameLocator(...)`) — `page.fill('#creditCardNo', ...)` cannot work from the parent
+  page by design, and that is the point of the card, not a gap in it. For any capture that does
+  not need a real charge, `environment.useMockPayments` still short-circuits to
+  `'mock_card_token'` before the dialog ever opens, which is the cheaper path and unchanged.
 - **`FRONTEND_URL` env var on the local backend MUST match the FE's actual serve port** — Omise's
   card 3DS flow (`.../authorize` → `.../complete`) redirects the real browser back to
   `${app.frontend-url}/payment/result`; if `FRONTEND_URL` is stale (e.g. left at `:4200` from a

@@ -4,20 +4,17 @@
 }
 
 .user-editor-modal {
-  --p: #006687;
-  --pc: #4dbeef;
-  --line: #eceef0;
-  --text: #191c1e;
-  --muted: #3e484e;
   display: flex;
   flex-direction: column;
   width: min(100%, 768px);
   max-height: 95vh;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid var(--admin-outline-soft);
   border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.88);
-  box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12);
+  // OBRS-734: was a hardcoded rgba(255,255,255,.88). In dark mode that stayed a near-white
+  // panel while the global theme flipped text to #e7edf1 - light-on-light at 1.08:1.
+  background: var(--admin-surface-modal);
+  box-shadow: 0 12px 32px rgba(25, 28, 30, 0.12); // elevation shadow, not a surface colour
 }
 
 .user-editor-header,
@@ -25,25 +22,25 @@
   display: flex;
   align-items: center;
   padding: $space-lg 40px;
-  background: rgba(242, 244, 246, 0.7);
+  background: var(--admin-surface-soft);
 }
 
 .user-editor-header {
   align-items: flex-start;
   justify-content: space-between;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--admin-outline-soft);
 }
 
 .user-editor-title {
   margin: 0;
-  color: #003f58;
+  color: var(--admin-heading);
   font-size: 26px;
   font-weight: $font-weight-extrabold;
 }
 
 .user-editor-subtitle {
   margin: $space-2xs 0 0;
-  color: var(--muted);
+  color: var(--admin-text-secondary);
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
 }
@@ -54,7 +51,7 @@
   border: 0;
   border-radius: $radius-sm;
   background: transparent;
-  color: #6e797f;
+  color: var(--admin-muted);
   cursor: pointer;
 }
 
@@ -74,11 +71,11 @@
   align-items: center;
   gap: $space-xs;
   margin-bottom: 24px;
-  color: var(--muted);
+  color: var(--admin-text-secondary);
 }
 
 .user-editor-section-title .material-symbols-outlined {
-  color: var(--p);
+  color: var(--admin-primary-fg);
 }
 
 .user-editor-section-title h5 {
@@ -118,9 +115,18 @@
 }
 
 .user-field label {
-  color: var(--text);
+  color: var(--admin-text);
   font-size: $font-size-xs;
   font-weight: $font-weight-extrabold;
+}
+
+// OBRS-725: non-error note under a field (the locked login email in edit mode).
+// Same shape as promotion-form-modal/expense-form-modal's `.admin-hint`, which is
+// likewise scoped per-component rather than living in admin-theme.scss.
+.admin-hint {
+  display: block;
+  color: var(--admin-muted);
+  font-size: 11px;
 }
 
 .user-input {
@@ -130,7 +136,18 @@
   padding: $space-xs 16px;
   font-size: $font-size-sm;
   font-weight: $font-weight-semibold;
+  // Translucent hairline: it composites over the themed panel, so it needs no dark override.
   box-shadow: inset 0 0 0 1px rgba(189, 200, 207, 0.48);
+}
+
+// OBRS-725: `.admin-field` has no :disabled rule, so a disabled input renders
+// identically to a live one — the same invisible-disabled defect OBRS-406 fixed for
+// `.admin-btn`, still open on the input primitive. Scoped here rather than lifted into
+// admin-theme.scss because widening it would restyle every disabled admin input in the
+// app in a commit that verified one; the shared gap is flagged on the card instead.
+.user-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .user-role-list {
@@ -146,25 +163,30 @@
   min-height: 44px;
   border: 1px solid transparent;
   border-radius: $radius-sm;
-  background: #f2f4f6;
-  color: var(--muted);
+  background: var(--admin-surface-soft);
+  color: var(--admin-text-secondary);
   cursor: pointer;
   padding: 10px 16px;
 }
 
 .user-role-chip.is-selected {
   border-color: rgba(0, 102, 135, 0.22);
-  color: var(--p);
+  color: var(--admin-primary-fg);
 }
 
 .user-role-chip.is-selected {
+  // OBRS-734: kept as a translucent literal on purpose. `color-mix(in srgb, var(--token) N%,
+  // transparent)` was tried first and MEASURED WRONG in this build - the var() did not
+  // resolve inside color-mix and the mix fell back to black, turning this selected chip
+  // grey (bg 209,209,209 instead of 223,243,252). A translucent tint needs no theme
+  // override anyway: it composites over whatever the (now themed) panel underneath is.
   background: rgba(77, 190, 239, 0.18);
 }
 
 .user-role-chip input {
   width: 18px;
   height: 18px;
-  accent-color: var(--p);
+  accent-color: var(--admin-primary);
 }
 
 .user-role-chip span,
@@ -177,7 +199,7 @@
 .user-editor-footer {
   justify-content: flex-end;
   gap: $space-sm;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--admin-outline-soft);
 }
 
 .user-editor-cancel,
@@ -190,14 +212,14 @@
 
 .user-editor-cancel {
   background: transparent;
-  color: var(--muted);
+  color: var(--admin-text-secondary);
   padding: 0 28px;
 }
 
 .user-editor-save {
   min-width: 140px;
-  background: linear-gradient(135deg, var(--p), var(--pc));
-  color: #fff;
+  background: linear-gradient(135deg, var(--admin-primary), var(--admin-primary-bright));
+  color: var(--admin-on-primary);
   padding: 0 40px;
 }
 

@@ -7,14 +7,16 @@ import {
   Output,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { take } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
-import { OmiseTokenService } from '../../../../services/payment/omise-token.service';
+import {
+  OmiseTokenService,
+  isCardEntryCancelled,
+} from '../../../../services/payment/omise-token.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import {
   PaymentByBookingIdResponse,
@@ -60,9 +62,6 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
   isWaitingForConfirmation = false;
   private paymentIdempotencyKey = '';
 
-  creditCardForm: FormGroup;
-
-  minDate: Date = new Date();
   private countdownTotalSeconds = 15 * 60;
   private countdownIntervalId?: ReturnType<typeof setInterval>;
   private paymentPollingIntervalId?: ReturnType<typeof setInterval>;
@@ -71,15 +70,12 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
   constructor(
     private translate: TranslateService,
-    private fb: FormBuilder,
     private router: Router,
     private bookingService: BookingService,
     private paymentService: PaymentService,
     private omiseTokenService: OmiseTokenService,
     private alertService: AlertService,
-  ) {
-    this.creatForm();
-  }
+  ) {}
 
   ngOnInit(): void {
     this.startCountdown();
@@ -90,24 +86,6 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.clearPaymentPolling();
   }
 
-  creatForm() {
-    this.creditCardForm = this.fb.group({
-      creditCardNo: [
-        '',
-        [
-          Validators.required,
-          Validators.minLength(13),
-          Validators.maxLength(19),
-        ],
-      ],
-      expireDate: ['', Validators.required],
-      cvv: [
-        '',
-        [Validators.required, Validators.minLength(3), Validators.maxLength(4)],
-      ],
-    });
-  }
-
   selectTab(tab: PaymentTab): void {
     if (tab === this.activeTab) {
       return;
@@ -116,36 +94,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     this.tabChange.emit(tab);
   }
 
-  getForm(controlName: string) {
-    return this.creditCardForm.get(controlName);
-  }
-
-  getFormValue(controlName: string) {
-    return this.creditCardForm.getRawValue()[controlName];
-  }
-
-  getFormErrors(controlName: string, errorName: string): boolean {
-    const errors = this.creditCardForm.get(controlName)?.errors;
-
-    if (!errors) {
-      return false;
-    }
-
-    if (errorName === 'maxLength' && errors['maxlength']) {
-      const maxLength = errors['maxlength'].requiredLength;
-      const actualLength = errors['maxlength'].actualLength;
-      return actualLength > maxLength;
-    }
-
-    return !!errors[errorName];
-  }
-
   async submitPayment(): Promise<void> {
-    if (this.creditCardForm.invalid) {
-      this.creditCardForm.markAllAsTouched();
-      return;
-    }
-
     if (this.isSubmittingPayment || this.isWaitingForConfirmation) {
       return;
     }
@@ -164,7 +113,7 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
 
     this.isSubmittingPayment = true;
     try {
-      const cardToken = await this.resolveCardToken();
+      const cardToken = await this.resolveCardToken(bookingId);
       const payload: PaymentPayload = {
         bookingId,
         paymentMethod: 'card',
@@ -183,8 +132,17 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
         this.alertService.error(this.translate.instant('PAYMENT.ALERT.FAILED'));
       }
     } catch (error) {
+      // Closing Omise's card dialog is not a failure — nothing was charged and
+      // nothing was even sent. Telling someone their payment failed because they
+      // changed their mind is how a booking gets abandoned, so this returns to the
+      // untouched payment page in silence and `finally` re-enables the button
+      // (OBRS-391).
+      if (isCardEntryCancelled(error)) {
+        return;
+      }
+
       // This catch also swallows the Omise tokenize rejection raised by
-      // OmiseTokenService.createCardToken (its only call site is resolveCardToken
+      // OmiseTokenService.requestCardToken (its only call site is resolveCardToken
       // above). That rejection carries Omise's own English text — replacing it
       // here is what keeps a third-party string off a Thai user's screen, so the
       // service can keep throwing a developer-readable Error for the console
@@ -196,39 +154,71 @@ export class PaymentCreditcardComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async resolveCardToken(): Promise<string> {
+  private async resolveCardToken(bookingId: number): Promise<string> {
+    // Unchanged and load-bearing: local, SIT and the whole E2E suite run with
+    // useMockPayments and never reach a real Omise dialog. Keeping this branch
+    // ABOVE the OmiseCard call is what stops those environments from trying to
+    // open a modal against a public key they do not have (OBRS-391 AC 6).
     if (environment.useMockPayments) {
       return 'mock_card_token';
     }
 
-    const expiryDate = this.getExpiryDate();
-    if (!expiryDate) {
-      throw new Error('Invalid card expiry date');
-    }
+    // Nothing here carries card data — there is none to carry. Omise's hosted
+    // iframe collects the number, expiry and CVV on cdn.omise.co and hands back
+    // only the token (OBRS-391). Everything passed is presentation.
+    const due = await this.resolveAmountDue(bookingId);
 
-    return this.omiseTokenService.createCardToken({
-      number: this.getCardNumber(),
-      expiration_month: expiryDate.getMonth() + 1,
-      expiration_year: expiryDate.getFullYear(),
-      security_code: String(this.getFormValue('cvv') ?? ''),
-      name: 'OBRS Customer',
+    return this.omiseTokenService.requestCardToken({
+      language: this.translate.currentLang,
+      submitLabel: this.translate.instant('PAYMENT.CREDIT_CARD.PAY_NOW'),
+      amountSubunits: due.amountSubunits,
+      currency: due.currency,
     });
   }
 
-  private getCardNumber(): string {
-    const raw = String(this.getFormValue('creditCardNo') ?? '');
-    const digits = raw.replace(/\D+/g, '');
-    return digits || 'abc';
-  }
+  /**
+   * What Omise's dialog should say is owed, in satang.
+   *
+   * Read from the SERVER (`paymentSummary.outstandingAmount` on the endpoint this
+   * component already polls) rather than re-derived in the browser. The
+   * seat-booking total is computed inside <app-payment-summary>'s template from
+   * three NgRx stores; a second copy of that arithmetic here would be a second
+   * thing that can disagree about money, and it would also be wrong for the
+   * reschedule and change-stop dialogs, where what is due is a difference rather
+   * than a fare.
+   *
+   * Failing here aborts the payment instead of opening a dialog with a wrong
+   * total on it. That is deliberate and costs nothing real: if this call cannot
+   * reach the backend, the charge that follows it could not have either — so the
+   * passenger sees the same failure, just before typing a card number rather than
+   * after.
+   */
+  private async resolveAmountDue(
+    bookingId: number
+  ): Promise<{ amountSubunits: number; currency: string }> {
+    const response = await firstValueFrom(
+      this.paymentService.getBookingPayments(bookingId).pipe(take(1))
+    );
+    const summary = response?.data?.paymentSummary;
 
-  private getExpiryDate(): Date | null {
-    const rawValue = this.getFormValue('expireDate');
-    if (rawValue instanceof Date && Number.isFinite(rawValue.getTime())) {
-      return rawValue;
+    const outstanding = Number(summary?.outstandingAmount);
+    if (!Number.isFinite(outstanding) || outstanding <= 0) {
+      throw new Error(
+        `No outstanding amount to charge for booking ${bookingId}: ` +
+          `${String(summary?.outstandingAmount)}`
+      );
     }
 
-    const parsed = new Date(rawValue);
-    return Number.isFinite(parsed.getTime()) ? parsed : null;
+    // Omise wants the smallest currency unit, and the x100 below is only correct
+    // for a 2-decimal currency. This system is THB throughout — the fares, the
+    // Omise merchant account and the contract behind it are all Thai — so rather
+    // than silently mis-scaling by 100x if that ever stops being true, refuse.
+    const currency = String(summary?.currency ?? 'THB').toUpperCase();
+    if (currency !== 'THB') {
+      throw new Error(`Unsupported currency for card payment: ${currency}`);
+    }
+
+    return { amountSubunits: Math.round(outstanding * 100), currency };
   }
 
   private handlePaymentResponse(payment: PaymentResponse | null | undefined): void {

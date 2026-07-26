@@ -11,6 +11,8 @@ import {
   displayChangedAt,
   formatConfigValue,
   roleLabel as roleLabelPure,
+  ScopeDisplayKind,
+  scopeDisplayKind,
 } from './config-change-history-page.mappers';
 
 type ConfigHistoryContentState = 'loading' | 'invalid' | 'error' | 'empty' | 'data';
@@ -179,6 +181,13 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
 
   protected actorKind(row: ConfigHistoryRow): ActorDisplayKind {
     return actorDisplayKind(row);
+  }
+
+  // OBRS-722 — the "ขอบเขต" column. A separate column from ผู้แก้ไข on
+  // purpose: WHO changed it and WHOSE config changed are independent, and an
+  // admin editing one owner's override is a real combination.
+  protected scopeKind(row: ConfigHistoryRow): ScopeDisplayKind {
+    return scopeDisplayKind(row);
   }
 
   protected roleLabel(role: string | null): string {

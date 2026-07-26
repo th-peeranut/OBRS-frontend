@@ -163,6 +163,18 @@
       "why": "Screenshot script for the OBRS-702 before/after. Expects two servers started by hand on :4702 and :4703 -- :4702 serving a throwaway worktree at origin/dev 3eff9dc1 for the BEFORE shot. Hermetic otherwise (synthetic session, stubbed config reads), but its purpose is evidence, not a verdict."
     },
     {
+      "spec": "obrs-391-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs391.config.ts",
+      "why": "Screenshot script for the OBRS-391 before/after. Expects two servers started by hand on :4391 and :4392 -- :4391 serving the main clone at origin/dev for the BEFORE shot. NOT hermetic on purpose: it stubs every /api/** call but reaches cdn.omise.co for real, because the claim being evidenced is that the card fields now render in a third-party iframe and a stubbed frame would prove nothing. environment.base.ts carries a test-mode publishable key, so no charge is possible."
+    },
+    {
+      "spec": "obrs-722-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs722.config.ts",
+      "why": "Screenshot script for the OBRS-722 before/after. Expects two servers started by hand on :4722 and :4723 -- :4722 serving a throwaway detached worktree at the then-current origin/dev (45c66cbd) for the BEFORE shot. Hermetic otherwise (synthetic session, one stubbed history page), but its purpose is evidence, not a verdict."
+    },
+    {
       "spec": "obrs-575-qa.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs575.config.ts",

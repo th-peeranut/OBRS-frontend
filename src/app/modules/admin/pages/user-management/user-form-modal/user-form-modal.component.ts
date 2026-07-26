@@ -367,6 +367,9 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     passwordControl?.enable();
     confirmPasswordControl?.enable();
+    // OBRS-725: the address IS chosen here — creating an account is the one moment
+    // this form legitimately decides what the login email will be.
+    this.userForm.get('email')?.enable();
 
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();
@@ -381,6 +384,15 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
 
     passwordControl?.disable();
     confirmPasswordControl?.disable();
+    // OBRS-725: the login email joins the password as a credential this form shows but
+    // cannot rewrite. `PUT /api/private/users/{id}` now rejects a changed address
+    // outright (UserDtoService.applyUpdates -> user.error.email.immutable), so leaving the
+    // input editable would only offer staff a change the server refuses. Disabling — not
+    // removing — keeps the address visible, and submitUser reads getRawValue(), which
+    // includes disabled controls, so the stored value still round-trips and satisfies the
+    // DTO's @NotBlank. The account holder moves their own address through the verified
+    // OBRS-84 / ADR-0033 flow.
+    this.userForm.get('email')?.disable();
 
     passwordControl?.updateValueAndValidity();
     confirmPasswordControl?.updateValueAndValidity();

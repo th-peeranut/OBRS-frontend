@@ -259,6 +259,51 @@ describe('UserFormModalComponent', () => {
       expect(form.get('confirmPassword').disabled).toBeTrue();
       expect(form.get('password').validator).toBeNull();
     });
+
+    // OBRS-725: the login email is the JWT subject, and PUT /api/private/users/{id}
+    // now rejects a changed address outright (user.error.email.immutable). The form
+    // must not offer staff an edit the server refuses.
+    it('disables the login email in edit mode', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openEdit(component, { ...JOHN_ROW });
+
+      expect((component as any).userForm.get('email').disabled).toBeTrue();
+    });
+
+    // must NOT catch: creating an account is the one moment this form legitimately
+    // decides what the login email will be.
+    it('leaves the login email editable in create mode', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openCreate(component);
+
+      expect((component as any).userForm.get('email').enabled).toBeTrue();
+    });
+
+    // The disabled control must still reach the wire: UserUpdateReqDto.email is
+    // @NotBlank, and applyUpdates compares the submitted address against the stored
+    // one. submitUser reads getRawValue() for exactly this reason — a switch to
+    // .value would silently drop the field and turn every save into a 400.
+    it('still sends the stored email in the update payload despite the control being disabled', async () => {
+      const { component, adminApi } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openEdit(component, { ...JOHN_ROW });
+      // Everything a staff edit legitimately changes — but NOT email, which is the
+      // value under test and arrives from the loaded row.
+      (component as any).userForm.patchValue({
+        title: 'Mr',
+        firstName: 'Jonathan',
+        lastName: 'Smith',
+        phoneNumber: '0812345678',
+        preferredLocale: 'th',
+        status: 'active',
+        roles: ['admin'],
+        isPhoneNumberVerify: true,
+      });
+
+      await (component as any).submitUser();
+
+      const payload = adminApi.updateUser.calls.mostRecent().args[1];
+      expect(payload.email).toBe('john@example.com');
+    });
   });
 
   describe('checkSamePassword / confirm-password mismatch display', () => {

@@ -674,6 +674,7 @@
       "MIDDLE_NAME": "Middle Name",
       "LAST_NAME": "Last Name",
       "EMAIL": "Email",
+      "EMAIL_LOCKED_HINT": "This email is the login credential, so it cannot be edited here. The account holder changes it from their own profile, confirming the new address by email.",
       "PHONE": "Phone Number",
       "PASSWORD": "Password",
       "CONFIRM_PASSWORD": "Confirm Password",
@@ -1333,6 +1334,7 @@
       "COL": {
         "CHANGED_AT": "Time",
         "CONFIG_KEY": "Setting",
+        "SCOPE": "Scope",
         "CHANGE": "From → To",
         "ACTOR": "Changed by"
       },
@@ -1355,6 +1357,12 @@
       "VALUE_DELETED": "Deleted",
       "VALUE": {
         "MORE": "+{{count}} more"
+      },
+      "SCOPE": {
+        "PLATFORM": "Platform default (all owners)",
+        "OWNER": "Owner: {{name}}",
+        "OWNER_DELETED": "Deleted owner",
+        "OWNER_DELETED_HINT": "This row changed one owner’s own value, not the platform default, but that owner’s account has since been deleted so the name cannot be shown"
       },
       "ACTOR": {
         "SYSTEM": "System",
@@ -2088,18 +2096,7 @@
       "CONFIRM": "Confirm payment"
     },
     "CREDIT_CARD": {
-      "CARD_NUMBER": "Card number",
-      "CARD_NUMBER_PLACEHOLDER": "1234 1234 1234 1234",
-      "CARD_NUMBER_REQUIRED": "Please enter your card number",
-      "CARD_NUMBER_MIN": "Card number must be at least 13 digits",
-      "CARD_NUMBER_MAX": "Card number must be at most 19 digits",
-      "EXPIRY_DATE": "Expiry date",
-      "EXPIRY_DATE_REQUIRED": "Please select an expiry date",
-      "CVV": "CVV",
-      "CVV_PLACEHOLDER": "123",
-      "CVV_REQUIRED": "Please enter your CVV",
-      "CVV_MIN": "CVV must be at least 3 digits",
-      "CVV_MAX": "CVV must be at most 4 digits",
+      "HOSTED_HINT": "Press pay and enter your card details in Omise's secure window. This site never sees or stores your card number.",
       "BACK": "Back",
       "PAY_NOW": "Pay now",
       "COUNTDOWN_LABEL": "Time remaining"
