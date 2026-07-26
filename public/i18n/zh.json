@@ -674,6 +674,7 @@
       "MIDDLE_NAME": "中间名",
       "LAST_NAME": "姓",
       "EMAIL": "电子邮件",
+      "EMAIL_LOCKED_HINT": "此邮箱为登录凭据，无法在此处修改。账户持有人可在个人资料页自行更改，并通过邮件确认新地址。",
       "PHONE": "电话号码",
       "PASSWORD": "密码",
       "CONFIRM_PASSWORD": "确认密码",

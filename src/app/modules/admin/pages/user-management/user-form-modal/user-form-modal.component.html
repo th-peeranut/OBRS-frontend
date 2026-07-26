@@ -104,9 +104,15 @@
           <div class="user-editor-grid is-two-column">
             <div class="user-field">
               <label>
-                {{ 'ADMIN.USERS.EMAIL' | translate }} <span class="admin-required">*</span>
+                {{ 'ADMIN.USERS.EMAIL' | translate }}
+                <span class="admin-required" *ngIf="mode !== 'edit'">*</span>
               </label>
               <input class="admin-field user-input" formControlName="email" type="email" />
+              <!-- OBRS-725: in edit mode the control is disabled and the server rejects a
+                   changed address, so say why rather than leaving a dead-looking input. -->
+              <small class="admin-hint" *ngIf="mode === 'edit'">
+                {{ 'ADMIN.USERS.EMAIL_LOCKED_HINT' | translate }}
+              </small>
               <small class="admin-error" *ngIf="isFieldInvalid('email')">
                 {{ 'ADMIN.VALIDATION.EMAIL' | translate }}
               </small>
