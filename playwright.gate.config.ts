@@ -87,13 +87,19 @@ export default defineConfig({
   ],
 
   timeout: 60_000,
-  // OBRS-618 dropped this from 3 to 2. Growing the lane from 49 to 60 cases added three
-  // admin specs that each boot the staff shell repeatedly, and at 3 workers
-  // `b2c-critical-path` — untouched by that card, green in the 49-case baseline at 18.9s
+  // OBRS-618 dropped this from 3 to 2. That card added three admin specs which each boot
+  // the staff shell repeatedly, and at 3 workers `b2c-critical-path` — untouched by that
+  // card, and green at 18.9s on the lane as it stood before it
   // — began timing out at 60s waiting for a navigation, twice in a row. Run alone under
-  // this same config it takes 7.8s, so the cause is contention on this box, not the spec:
-  // several Claude sessions, an `ng serve`, and N headless Chromes compete for the same
-  // cores, which is the measured failure mode that set this number in the first place.
+  // this same config it takes 7.8s. That was read as contention on this box — several Claude
+  // sessions, an `ng serve` and N headless Chromes competing for the same cores.
+  //
+  // OBRS-750 CORRECTION: for `b2c-critical-path` specifically that diagnosis was wrong. The
+  // spec clicked `.btn-confirm` with `force: true`, which does not aim the event at the
+  // element and so delivered it to whichever element was topmost — the button's own parent.
+  // It timed out on a clean GitHub runner with nothing else running. `workers: 2` is kept
+  // because CPU contention on this box is separately real, but do not reach for it to
+  // explain a `waitForURL` that never fires: check first whether the click landed at all.
   // A gate that reds because the machine was busy teaches people to re-run it until it
   // is green, and a gate nobody believes is not a gate. Wall-clock cost is ~30s.
   workers: 2,
@@ -102,8 +108,14 @@ export default defineConfig({
   // Unconditionally, not `!!process.env.CI`. This lane IS the merge gate and it runs on
   // a developer's box, so the machine where a stray `test.only` would do its damage is
   // exactly the machine CI-gating exempts. Without this, one forgotten `.only` shrinks
-  // the gate from 49 cases to 1 and still exits 0 — a green run asserting almost nothing,
-  // which is the failure mode this whole card exists to end. (Scrutinize OBRS-602.)
+  // the gate from the whole lane to 1 case and still exits 0 — a green run asserting almost
+  // nothing, which is the failure mode this whole card exists to end. (Scrutinize OBRS-602.)
+  //
+  // OBRS-750: no case count is quoted anywhere in this file any more. Both of the ones that
+  // were here had rotted, and one was read back as current and reported as fact in the
+  // session that closed OBRS-735 — the card about exactly that failure. `npm run e2e:gate`
+  // prints the real number on every run and docs/e2e-lanes.md carries it for humans.
+  // Do not reintroduce one here.
   forbidOnly: true,
   reporter: [['list']],
 
