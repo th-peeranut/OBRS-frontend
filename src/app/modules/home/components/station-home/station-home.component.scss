@@ -63,9 +63,13 @@
   text-overflow: ellipsis;
 }
 
+/* OBRS-741: white on #3bb0e7 was 2.46:1. The chip has to stay a FILLED brand
+   pill -- it sits in a row of unfilled chips and the fill is the selected-state
+   signal -- so the fix darkens the fill rather than flipping the text. Same
+   hue, the lightest shade of it that still clears AA. */
 .route-chip.active {
   color: #ffffff;
-  background: #3bb0e7;
+  background: #167eb0; /* white on it = 4.52:1 */
 }
 
 .station-map-card {

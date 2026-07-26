@@ -65,6 +65,62 @@ const AA_LARGE = 3.0;
 //
 // Keyed by "<path relative to src>::<selector>".
 const OWNER = 'OBRS-741';
+const SWEEP = 'OBRS-752';
+
+// Generated from a real run rather than typed by hand, so the ratios cannot
+// drift from what the gate actually measured. Regenerate the same way if this
+// list needs rebuilding: the numbers are evidence, not annotation.
+const SWEEP_ALLOW = {
+  'app/modules/e-ticket/e-ticket.component.scss::.download-btn': `2.03:1, ${SWEEP}`,
+  'app/modules/e-ticket/e-ticket.component.scss::.ticket-nav-btn': `2.03:1, ${SWEEP}`,
+  'app/modules/home/components/home-booking/home-booking.component.scss::.btn-search': `2.03:1, ${SWEEP}`,
+  'app/modules/home/components/route-map/route-map-home/route-map-home.component.scss:::host ::ng-deep .p-selectbutton .p-button.p-highlight': `2.03:1, ${SWEEP}`,
+  'app/modules/home/components/route-map/route-stop-detail-card/route-stop-detail-card.component.scss::.detail-order-badge &--pickup': `2.03:1, ${SWEEP}`,
+  'app/modules/home/components/route-map/route-stop-list/route-stop-list.component.scss::.stop-order-badge &--pickup': `2.03:1, ${SWEEP}`,
+  'app/modules/login/login.component.scss::.login-container .login-card .login-form .login-btn': `2.03:1, ${SWEEP}`,
+  'app/modules/login/login.component.scss::.login-container .login-card .login-form .login-by-phone-no-btn': `1.96:1, ${SWEEP}`,
+  'app/modules/my-bookings/components/change-seat-dialog/change-seat-dialog.component.scss::.change-seat-map-step__confirm-error': `4.24:1, ${SWEEP}`,
+  'app/modules/my-bookings/components/change-stop-dialog/change-stop-dialog.component.scss::.change-stop-step__confirm-error': `4.24:1, ${SWEEP}`,
+  'app/modules/my-bookings/components/my-booking-ticket-modal/my-booking-ticket-modal.component.scss::.ticket-modal__state': `4.30:1, ${SWEEP}`,
+  'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss::.reschedule-estimate__net': `2.92:1, ${SWEEP}`,
+  'app/modules/my-bookings/components/reschedule-dialog/reschedule-options-list/reschedule-options-list.component.scss::.reschedule-options-list__confirm-error': `4.24:1, ${SWEEP}`,
+  'app/modules/my-bookings/my-bookings.component.scss::.booking-card__route .trip-type': `2.92:1, ${SWEEP}`,
+  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-danger': `4.24:1, ${SWEEP}`,
+  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-info': `2.92:1, ${SWEEP}`,
+  'app/modules/parcel-booking/components/parcel-details-form/parcel-details-form.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
+  'app/modules/parcel-booking/components/parcel-details-form/parcel-details-form.component.scss::.parcel-details-form__sender-name': `3.72:1, ${SWEEP}`,
+  'app/modules/parcel-booking/components/parcel-trip-form/parcel-trip-form.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
+  'app/modules/parcel-booking/pages/parcel-booking-page/parcel-booking-page.component.scss::.parcel-booking-page__payment .tab &.is-active': `2.03:1, ${SWEEP}`,
+  'app/modules/parcel-booking/pages/parcel-booking-success-page/parcel-booking-success-page.component.scss::.parcel-booking-success-card__next-steps': `3.72:1, ${SWEEP}`,
+  'app/modules/parcel-booking/pages/parcel-booking-success-page/parcel-booking-success-page.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/booker-info-form/booker-info-form.component.scss::.passenget-badge': `4.07:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.passenget-badge': `4.07:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip': `4.30:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip &.active': `4.07:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip-badge': `3.20:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.btn-next': `2.03:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.open-seating-badge': `4.07:1, ${SWEEP}`,
+  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.seat-passenger-chip': `4.30:1, ${SWEEP}`,
+  'app/modules/review-schedule-booking/components/review-schedule-booking-total/review-schedule-booking-total.component.scss::.btn-confirm': `2.03:1, ${SWEEP}`,
+  'app/modules/schedule-booking/components/schedule-booking-list/schedule-booking-list.component.scss::.booking-container .schedule-item .right .select-btn': `2.03:1, ${SWEEP}`,
+  'app/shared/components/e-ticket-card/e-ticket-card.component.scss::.download-btn': `2.03:1, ${SWEEP}`,
+  'app/shared/components/e-ticket-card/e-ticket-card.component.scss::.ticket-nav-btn': `2.03:1, ${SWEEP}`,
+  'app/shared/components/navbar/navbar.component.scss::.btn-signup': `2.03:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.payment-btn': `2.03:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.tab': `4.30:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.tab &.is-active': `1.76:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-download': `2.03:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-refresh': `2.03:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-refresh &:hover:not(:disabled)': `1.76:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.payment-btn': `2.03:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.tab': `4.30:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.tab &.is-active': `1.76:1, ${SWEEP}`,
+  'app/shared/components/payment-methods/payment-summary/payment-summary.component.scss::.btn-confirm': `2.03:1, ${SWEEP}`,
+  'app/shared/components/promo-code-field/promo-code-field.component.scss::.promo-code-apply-btn': `2.03:1, ${SWEEP}`,
+  'styles/_auth-split-layout.scss::.login-container .right-section .login-btn': `2.03:1, ${SWEEP}`,
+  'styles/_auth-split-layout.scss::.login-container .right-section .login-form .login-by-phone-no-btn': `1.96:1, ${SWEEP}`,
+};
+
 const ALLOW = {
   // --- brand gradient family: white text on the bright end of the ramp ---
   'styles/admin-theme.scss::.admin-btn-primary': `1.86:1 (theme-staff world) -- app-wide primary button, ${OWNER}`,
@@ -83,15 +139,23 @@ const ALLOW = {
   // background is a 14%-alpha tint of the same hue over a white card. Fixed in
   // resolveColours (declared-but-unreadable != undeclared), and the entry is
   // gone rather than "fixed", because there was nothing to fix. OBRS-741.
-  'app/modules/home/components/route-map/route-map-panel/route-map-panel.component.scss::.locate-me-btn &:hover:not(:disabled)': `2.29:1 hover state, ${OWNER}`,
-  'app/modules/home/components/station-home/station-home.component.scss::.route-chip.active': `2.46:1, ${OWNER}`,
-  'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss::.reschedule-estimate__net &.is-topup': `3.43:1, ${OWNER}`,
-  'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss::.reschedule-estimate__net &.is-refund': `3.59:1, ${OWNER}`,
-  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-success': `3.59:1, ${OWNER}`,
-  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-warning': `3.43:1, ${OWNER}`,
-  'app/modules/schedule-booking/components/schedule-booking-list/schedule-booking-list.component.scss::.booking-container .schedule-item .right .select-btn &:hover': `3.56:1 hover state, ${OWNER}`,
-  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.payment-btn &:hover': `3.56:1 hover state, ${OWNER}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.payment-btn &:hover': `3.56:1 hover state, ${OWNER}`,
+  // The nine local-hex entries that used to sit here are FIXED, not moved:
+  // .locate-me-btn hover, .route-chip.active, both reschedule-estimate states,
+  // both my-bookings status badges, and the three select/pay hovers.
+
+  // --- the customer palette, deferred to OBRS-752 ---
+  //
+  // These 48 were invisible until this gate learned to read SCSS $variables,
+  // so they are NEW to the list, not newly broken. They are listed rather than
+  // silently tolerated for the same reason as everything above: 23 of them are
+  // white on $primary-blue (#4bc2f7, 2.03:1), i.e. every primary button in the
+  // customer flow, and a population that big must be visible while it waits.
+  //
+  // They are a SEPARATE card because they are fixed at the $variable, so one
+  // edit repaints 23 screens at once and needs its own before/after sweep of
+  // the whole booking flow to be reviewable. Owner scoped it that way on
+  // 2026-07-26, the same split as OBRS-740 -> OBRS-741.
+  ...SWEEP_ALLOW,
 };
 
 // ---------------------------------------------------------------------------

@@ -61,14 +61,22 @@
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
 
+  /* OBRS-741: the hover glyph was the brand cyan #3bb0e7 on the #f5f7f9 hover
+     plate -- 2.29:1, i.e. the icon got HARDER to read the moment you pointed at
+     it. Same hue, taken down to the lightest shade that still clears AA. */
   &:hover:not(:disabled) {
     background: #f5f7f9;
-    color: #3bb0e7;
+    color: #1579a9; /* on #f5f7f9 = 4.51:1 */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
   }
 
+  /* The focus ring is a non-text UI component: WCAG 1.4.11 wants >=3:1 against
+     what it sits on. #3bb0e7 against the white button was 2.46:1, so the ring
+     that exists to be seen was the one thing here that could not be. Not in the
+     card's site list because the gate only measures TEXT pairs -- it is the same
+     colour, in the same block, failing the sibling criterion. */
   &:focus-visible {
-    outline: 2px solid #3bb0e7;
+    outline: 2px solid #1579a9; /* vs the #ffffff button = 4.84:1 */
     outline-offset: 2px;
   }
 

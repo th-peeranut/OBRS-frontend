@@ -64,14 +64,18 @@
   background-color: $secondary-lightgrey;
   color: $text-blue;
 
+  /* OBRS-741: both tinted states carried their own hue as TEXT at just under
+     AA (3.43 / 3.59). The tint is what makes them scannable, so the tint stays
+     and only the ink goes one shade deeper. This is money the passenger has to
+     pay or get back -- the one line in the dialog that must not be hard to read. */
   &.is-topup {
     background-color: #fff4e0;
-    color: #b9750a;
+    color: #9e6409; /* on #fff4e0 = 4.50:1, was #b9750a at 3.43:1 */
   }
 
   &.is-refund {
     background-color: #e3f9ec;
-    color: #1f9254;
+    color: #1b7f49; /* on #e3f9ec = 4.55:1, was #1f9254 at 3.59:1 */
   }
 }
 
