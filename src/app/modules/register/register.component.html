@@ -142,76 +142,12 @@
           </div>
         </div>
       </div>
-      <div class="row form-row">
-        <div class="col-12">
-          <div class="label-with-icon">
-            <!-- Username -->
-            <label
-              for="username"
-              [class.label-error]="
-                (getForm('username')?.errors || usernameIsExist) &&
-                (getForm('username')?.touched || getForm('username')?.dirty)
-              "
-            >
-              {{ "REGISTER.USERNAME" | translate }}
-
-              <span class="form-required">*</span>
-            </label>
-
-            <div class="d-flex justify-content-end">
-              <div class="tooltip-container">
-                <img class="tooltip-icon" src="icons/info.svg" alt="info" />
-                <div class="tooltip-box">
-                  <strong>
-                    {{ "REGISTER.USERNAME_GUIDELINES_TITLE" | translate }}
-                  </strong>
-                  <br />
-                  {{ "REGISTER.USERNAME_GUIDELINES_DESCRIPTION" | translate }}
-                  <strong>
-                    <u>
-                      {{ "REGISTER.USERNAME_MINIMUM_REQUIREMENT" | translate }}
-                    </u>
-                  </strong>
-                  {{ "REGISTER.USERNAME_RULES" | translate }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <input
-            class="form-control mt-1"
-            type="text"
-            id="username"
-            formControlName="username"
-            [placeholder]="'REGISTER.USERNAME_PLACEHOLDER' | translate"
-            [class.form-error]="
-              (getForm('username')?.errors || usernameIsExist) &&
-              (getForm('username')?.touched || getForm('username')?.dirty)
-            "
-          />
-
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('username')?.errors &&
-              (getForm('username')?.touched || getForm('username')?.dirty)
-            "
-          >
-            {{ "REGISTER.USERNAME_REQUIRED" | translate }}
-          </div>
-
-          <div
-            class="text-error"
-            *ngIf="
-              getForm('username')?.value &&
-              usernameIsExist &&
-              (getForm('username')?.touched || getForm('username')?.dirty)
-            "
-          >
-            {{ "REGISTER.USERNAME_EXIST" | translate }}
-          </div>
-        </div>
-      </div>
+      <!--
+        OBRS-713: the "ชื่อผู้ใช้งาน" row stood here. It was a required field with a
+        tooltip declaring rules nothing validated, feeding a column that does not
+        exist — see register.component.ts's createForm() note. Identity is
+        email + phone; there is no third one to collect.
+      -->
       <div class="row form-row">
         <div class="col-12 col-md-6">
           <!-- Email -->

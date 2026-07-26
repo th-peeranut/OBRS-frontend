@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { HttpClient } from '@angular/common/http';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 
 @Injectable({
   providedIn: 'root',
@@ -12,13 +12,10 @@ export class UserService {
 
   constructor(private http: HttpClient) {}
 
-  // NOTE: The backend no longer exposes a username duplicate-check endpoint
-  // (the user model is now email-based and has no username field). This
-  // resolves to "not taken" without an HTTP call so callers keep working.
-  checkExistUsername(_username: string): Observable<ResponseAPI<boolean>> {
-    return of({ code: 200, message: 'OK', data: false });
-  }
-
+  // OBRS-713: `checkExistUsername` stood here, hard-coded to `of({ data: false })`
+  // — "always available" for a field the user model does not have. Its one caller
+  // (the register form's username control) is gone, so the stub went with it
+  // rather than staying as a lie a future caller could believe.
   checkExistEmail(email: string): Observable<ResponseAPI<boolean>> {
     return this.http.get<ResponseAPI<boolean>>(`${this.url}/email/${email}`);
   }

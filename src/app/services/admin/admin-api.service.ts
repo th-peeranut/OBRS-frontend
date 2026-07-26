@@ -2,7 +2,7 @@ import { HttpClient, HttpContext, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { environment } from '../../../environments/environment';
 import { ResponseAPI } from '../../shared/interfaces/response.interface';
-import { Observable, of } from 'rxjs';
+import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import {
   SKIP_GLOBAL_ERROR_ALERT,
@@ -1041,13 +1041,11 @@ export class AdminApiService {
     return this.getRequest<AdminUserDto>(`${this.baseUrl}/private/users/${id}`);
   }
 
-  // NOTE: The backend no longer exposes a username duplicate-check endpoint
-  // (the user model is email-based and has no username field). Emit "not taken"
-  // without an HTTP call so existing callers keep working.
-  checkUserExistsByUsername(_username: string): Observable<ResponseAPI<boolean>> {
-    return of({ code: 200, message: 'OK', data: false });
-  }
-
+  // OBRS-713: `checkUserExistsByUsername` stood here — the admin-side twin of the
+  // stub removed from UserService, also hard-coded to "not taken". The admin user
+  // form had already dropped its username control (user-form-modal spec asserts it),
+  // so this had zero callers; it was deleted with the customer-side one so a future
+  // caller cannot wire itself to an answer that is never computed.
   checkUserExistsByEmail(email: string): Observable<ResponseAPI<boolean>> {
     return this.getRequest<boolean>(
       `${this.baseUrl}/users/check-duplicate/email/${encodeURIComponent(email)}`

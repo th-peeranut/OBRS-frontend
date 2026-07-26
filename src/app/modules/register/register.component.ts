@@ -36,11 +36,9 @@ export class RegisterComponent implements OnDestroy {
 
   registerForm: FormGroup;
 
-  usernameSubscription$?: Subscription;
   emailSubscription$?: Subscription;
   phoneNumberSubscription$?: Subscription;
 
-  usernameIsExist: boolean = false;
   emailIsExist: boolean = false;
   phoneNumberIsExist: boolean = false;
 
@@ -57,7 +55,6 @@ export class RegisterComponent implements OnDestroy {
   }
 
   ngOnDestroy(): void {
-    if (this.usernameSubscription$) this.usernameSubscription$.unsubscribe();
     if (this.emailSubscription$) this.emailSubscription$.unsubscribe();
     if (this.phoneNumberSubscription$)
       this.phoneNumberSubscription$.unsubscribe();
@@ -76,7 +73,10 @@ export class RegisterComponent implements OnDestroy {
       // validation message and a trap. (OBRS-605 removed the /otp/register hop that used to be
       // where the 400 surfaced; the column it feeds is unchanged.)
       phoneNumber: ['', [Validators.required, separatorTolerantPattern(THAI_MOBILE_PATTERN)]],
-      username: ['', Validators.required],
+      // OBRS-713: no `username` control. The field was `Validators.required` here while
+      // `users` has no such column and `SignUpReqDto` has no such field, so every value
+      // typed was discarded on deserialize — and its duplicate-check was a hard-coded
+      // `of({ data: false })`, i.e. "always available". Three dead layers, one required box.
       password: ['', Validators.required],
       confirmPassword: ['', Validators.required],
       isPhoneNumberVerify: false,
@@ -99,14 +99,6 @@ export class RegisterComponent implements OnDestroy {
         // OBRS-691: the control can carry display dashes (regrouped on blur) —
         // the dup-check must see the same bare digits the backend stores.
         switchMap(value => this.checkDuplicateData(stripPhoneSeparators(value), REGISTER_OPTION.PHONENUMBER))
-      )
-      .subscribe();
-
-    this.usernameSubscription$ = this.registerForm.get('username')?.valueChanges
-      .pipe(
-        debounceTime(500),
-        distinctUntilChanged(),
-        switchMap(value => this.checkDuplicateData(value, REGISTER_OPTION.USERNAME))
       )
       .subscribe();
   }
@@ -176,7 +168,6 @@ export class RegisterComponent implements OnDestroy {
     if (
       this.registerForm.valid &&
       this.checkSamePassword() &&
-      !this.usernameIsExist &&
       !this.emailIsExist &&
       !this.phoneNumberIsExist
     ) {
@@ -247,9 +238,7 @@ export class RegisterComponent implements OnDestroy {
     let res: ResponseAPI<boolean> | null = null;
 
     try {
-      if (option === REGISTER_OPTION.USERNAME) {
-        res = await firstValueFrom(this.usersService.checkExistUsername(value));
-      } else if (option === REGISTER_OPTION.EMAIL) {
+      if (option === REGISTER_OPTION.EMAIL) {
         res = await firstValueFrom(this.usersService.checkExistEmail(value));
       } else if (option === REGISTER_OPTION.PHONENUMBER) {
         res = await firstValueFrom(this.usersService.checkExistPhoneNumber(value));
@@ -259,9 +248,7 @@ export class RegisterComponent implements OnDestroy {
     }
 
     if (res?.code === 200) {
-      if (option === REGISTER_OPTION.USERNAME) {
-        this.usernameIsExist = res.data ?? false;
-      } else if (option === REGISTER_OPTION.EMAIL) {
+      if (option === REGISTER_OPTION.EMAIL) {
         this.emailIsExist = res.data ?? false;
       } else if (option === REGISTER_OPTION.PHONENUMBER) {
         this.phoneNumberIsExist = res.data ?? false;

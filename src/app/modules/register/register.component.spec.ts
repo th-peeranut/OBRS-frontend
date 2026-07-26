@@ -24,7 +24,6 @@ describe('RegisterComponent', () => {
       lastName: 'ใจดี',
       email: 'somchai@example.com',
       phoneNumber: '0812345678',
-      username: 'somchai',
       password: 'Passw0rd!23',
       confirmPassword: 'Passw0rd!23',
       pdpaConsent: true,
@@ -113,6 +112,42 @@ describe('RegisterComponent', () => {
       await component.register();
 
       expect(authStub.register).not.toHaveBeenCalled();
+    });
+  });
+
+  /**
+   * OBRS-713. `username` was a required control on this form while the `users` table has no
+   * such column and `SignUpReqDto` no such field — so the value was discarded on deserialize
+   * — and its duplicate-check was `of({ data: false })`, i.e. hard-coded "available".
+   *
+   * These fail before the removal: `fillValidForm()` above no longer supplies a username, so
+   * with the required control still in place the form is invalid and register() posts nothing.
+   * They also guard the removal's real hazard — `!this.usernameIsExist` was one of the four
+   * conditions gating register(), so deleting the field carelessly breaks signup silently.
+   */
+  describe('no username field (OBRS-713)', () => {
+    it('has no username control on the register form', () => {
+      component.createForm();
+
+      expect(component.registerForm.contains('username')).toBeFalse();
+    });
+
+    it('is valid, and posts, with every remaining field filled and no username', async () => {
+      fillValidForm();
+
+      expect(component.registerForm.valid).toBeTrue();
+
+      await component.register();
+
+      expect(authStub.register).toHaveBeenCalledTimes(1);
+    });
+
+    it('sends no username in the signup payload', async () => {
+      fillValidForm();
+
+      await component.register();
+
+      expect(authStub.register.calls.mostRecent().args[0].username).toBeUndefined();
     });
   });
 
