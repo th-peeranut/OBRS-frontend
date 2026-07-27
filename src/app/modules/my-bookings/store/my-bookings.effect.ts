@@ -7,6 +7,7 @@ import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators'
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
+import { extractApiErrorCode } from '../../../shared/lib/api-error-code';
 import {
   CancelBookingResult,
   CancellationPolicy,
@@ -18,12 +19,22 @@ import {
   cancelBookingDismissed,
   cancelBookingFailure,
   cancelBookingSuccess,
+  confirmCancelWithDestination,
   invokeLoadMyBookingsApi,
   invokeLoadMyBookingsApiFailure,
   invokeLoadMyBookingsApiSuccess,
+  openCancelRefundDestinationModal,
+  refundDestinationInvalid,
   requestCancelBooking,
 } from './my-bookings.action';
 import { selectMyBookings } from './my-bookings.selector';
+
+/** OBRS-286: the two destination error codes the customer-cancel endpoint can
+ * 400 with — SA-SPEC-OBRS-286.md contract #1. */
+const REFUND_DESTINATION_ERROR_CODES = new Set([
+  'cancel.error.refund-destination-required',
+  'cancel.error.refund-destination-invalid',
+]);
 
 @Injectable()
 export class MyBookingsEffect {
@@ -59,6 +70,11 @@ export class MyBookingsEffect {
 
   // Preview the refund, confirm with the traveler, then cancel — all in one
   // exclusive stream so a second click can't race the first.
+  //
+  // OBRS-286 Flow A1: when the policy resolves to MANUAL_REFUND_REQUIRED, the
+  // plain Swal confirm is replaced by `openCancelRefundDestinationModal` — the
+  // traveler must supply a refund destination first. Every other path
+  // (non-manual) is byte-identical to before.
   requestCancel$ = createEffect(() =>
     this.actions$.pipe(
       ofType(requestCancelBooking),
@@ -74,6 +90,10 @@ export class MyBookingsEffect {
                     this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
                 })
               );
+            }
+
+            if (policy.refundMethod === MANUAL_REFUND_METHOD) {
+              return of(openCancelRefundDestinationModal({ booking, policy }));
             }
 
             return from(this.confirmCancellation(booking, policy)).pipe(
@@ -94,6 +114,54 @@ export class MyBookingsEffect {
               })
             )
           )
+        )
+      )
+    )
+  );
+
+  // OBRS-286 Flow A1 step 4-5: submits the cancel-with-destination modal.
+  // On success, byte-identical to the non-manual path (cancelBookingSuccess).
+  // On a destination error code, `refundDestinationInvalid` keeps the modal
+  // open with what was typed intact (the fix for the Scrutinize-caught
+  // contradiction — see the reducer). Every other failure (network/409/500/
+  // window-closed) still routes through the existing `cancelBookingFailure`
+  // (global toast, modal closes) — those are genuinely not "keep editing"
+  // cases.
+  confirmCancelWithDestination$ = createEffect(() =>
+    this.actions$.pipe(
+      ofType(confirmCancelWithDestination),
+      switchMap(({ booking, refundDestination }) =>
+        this.service.cancelBooking(booking.id, { refundDestination }).pipe(
+          map((response) => {
+            const result = response.data;
+            if (!result) {
+              return cancelBookingFailure({
+                error:
+                  response.message ||
+                  this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+              });
+            }
+            return cancelBookingSuccess({ result });
+          }),
+          catchError((error: unknown) => {
+            const code = extractApiErrorCode(error, null);
+            if (code && REFUND_DESTINATION_ERROR_CODES.has(code)) {
+              return of(
+                refundDestinationInvalid({
+                  message:
+                    extractApiErrorMessage(error) ||
+                    this.translate.instant('REFUND_DESTINATION.ERROR.SERVER_INVALID'),
+                })
+              );
+            }
+            return of(
+              cancelBookingFailure({
+                error:
+                  extractApiErrorMessage(error) ||
+                  this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+              })
+            );
+          })
         )
       )
     )

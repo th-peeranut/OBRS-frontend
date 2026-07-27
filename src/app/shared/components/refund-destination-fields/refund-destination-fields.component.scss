@@ -1,0 +1,155 @@
+@import "../../../../styles/variables.scss";
+
+// OBRS-286 — the first cross-shell dumb INPUT component (design-system §12 /
+// docs/adr/0032). Renders inside the customer shell (no `.admin-shell`
+// ancestor, `--admin-*`/`--accent*` resolve to nothing) and the admin shell.
+// `.admin-field` can't be reused directly (depends on `--admin-*`, which is
+// undefined outside `.admin-shell`) and the customer shell's `.form-control`
+// is not a pill (§5) — so this component declares its OWN token names
+// (`--rdf-*`), defaulted to the customer brand, and overrides them by
+// ancestor. Contrast measured in all four combinations
+// (refund-destination-fields.component.spec.ts, via src/app/testing/contrast.ts).
+
+// 1) Customer shell, light (default).
+:host {
+  display: block;
+  --rdf-text: #{$text-black};
+  --rdf-muted: #{$text-lightgrey};
+  --rdf-border: #{$primary-grey};
+  --rdf-surface: #{$primary-white};
+  --rdf-accent: #{$brand-customer-strong};
+  --rdf-accent-contrast: #{$text-white};
+  --rdf-danger: #{$text-red};
+}
+
+// 2) Customer shell, dark (`body.is-dark`, ThemeService's global class —
+// dark-theme.scss's own trigger). SCSS variables aren't shared as a runtime
+// token the way `--admin-*` is (dark-theme.scss's $dk-* are file-private), so
+// these are the SAME values copied verbatim — same idiom as the Leaflet
+// marker tokens (design-system §12, OBRS-426): own names, values copied, kept
+// in sync by hand if dark-theme.scss's palette ever changes.
+// $dk-text / $dk-text-muted / $dk-bg-soft / $dk-bg-input / $dk-accent / $dk-bg
+// / $dk-danger — dark-theme.scss lines 18-28.
+:host-context(body.is-dark) {
+  --rdf-text: #e8eaf0;
+  --rdf-muted: #9aa3b8;
+  --rdf-border: #22263a;
+  --rdf-surface: #161922;
+  --rdf-accent: #4bc2f7;
+  // Dark text on the bright cyan accent fill, NOT white — white on $dk-accent
+  // measures ~2.0:1 (design-system §12, OBRS-575's recent-routes entry hit the
+  // identical trap and fixed it the same way).
+  --rdf-accent-contrast: #0f1117;
+  --rdf-danger: #f87171;
+}
+
+// 3) Admin shell (light + dark together): alias the RUNTIME `--admin-*` /
+// `--accent*` custom properties directly rather than copying values — those
+// are already dark-aware (admin-theme.scss's own `.admin-shell.is-dark`
+// block), so one rule covers both admin themes via normal CSS cascade
+// resolution.
+:host-context(.admin-shell) {
+  --rdf-text: var(--admin-text);
+  --rdf-muted: var(--admin-muted);
+  --rdf-border: var(--admin-outline);
+  --rdf-surface: var(--admin-surface-card);
+  --rdf-accent: var(--accent-strong);
+  --rdf-accent-contrast: var(--accent-contrast);
+  --rdf-danger: var(--admin-danger-fg);
+}
+
+// 4) Admin shell, dark — a required SAFETY NET, not a cosmetic duplicate.
+// `ThemeService` writes `is-dark` on `document.body` REGARDLESS of shell
+// (src/app/testing/contrast.ts's `mountInChain` doc comment; confirmed
+// against theme.service.ts), so rule (2) above — a class + element context
+// selector — can win specificity over the single-class rule (3) and repaint
+// the admin surface with customer-dark values. Repeating the identical admin
+// values under the two-class `.admin-shell.is-dark` selector guarantees admin
+// dark always wins, regardless of source order.
+:host-context(.admin-shell.is-dark) {
+  --rdf-text: var(--admin-text);
+  --rdf-muted: var(--admin-muted);
+  --rdf-border: var(--admin-outline);
+  --rdf-surface: var(--admin-surface-card);
+  --rdf-accent: var(--accent-strong);
+  --rdf-accent-contrast: var(--accent-contrast);
+  --rdf-danger: var(--admin-danger-fg);
+}
+
+.rdf-title {
+  display: block;
+  font-weight: 600;
+  color: var(--rdf-text);
+  margin-bottom: 8px;
+}
+
+.rdf-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.rdf-toggle-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--rdf-border);
+  background: transparent;
+  color: var(--rdf-text);
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &.is-selected {
+    background: var(--rdf-accent);
+    border-color: var(--rdf-accent);
+    color: var(--rdf-accent-contrast);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.rdf-field {
+  margin-bottom: 12px;
+
+  label {
+    display: block;
+    font-size: 13px;
+    color: var(--rdf-muted);
+    margin-bottom: 4px;
+  }
+}
+
+// One input shape: pill (design-system §5) — the component's own markup, its
+// own tokens, never leaning on `.admin-field`/`.form-control`.
+.rdf-input {
+  width: 100%;
+  border-radius: 999px;
+  border: 1px solid var(--rdf-border);
+  background: var(--rdf-surface);
+  color: var(--rdf-text);
+  padding: 9px 14px;
+  outline: 0;
+
+  &:focus {
+    border-color: var(--rdf-accent);
+  }
+
+  &.is-invalid {
+    border-color: var(--rdf-danger);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.rdf-error {
+  display: block;
+  color: var(--rdf-danger);
+  font-size: 12px;
+  margin-top: 4px;
+}

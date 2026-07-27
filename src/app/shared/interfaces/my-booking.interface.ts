@@ -4,6 +4,8 @@
 //   POST /api/private/bookings/{id}/cancel         (CancelBookingRespDto)
 // See ../../../../OBRS-backend/docs/api/booking.md.
 
+import { RefundDestinationReqDto } from './refund-destination.interface';
+
 export type SupportedLocale = 'en' | 'th' | 'zh';
 
 export interface LookupTranslation {
@@ -110,6 +112,17 @@ export interface CancellationPolicy {
   policyWindow: string;
   cancellationDeadline?: string;
   earliestDepartureDateTime?: string;
+}
+
+/**
+ * OBRS-286 — extends the cancel request (today posts an empty body,
+ * `booking.service.ts`). `refundDestination` is required by the backend IFF
+ * the cancel resolves to `MANUAL_REFUND_REQUIRED`; the FE mirrors that via
+ * Flow A1's modal, but the server remains the authority (400
+ * `cancel.error.refund-destination-required` / `-invalid`).
+ */
+export interface CancelBookingReqDto {
+  refundDestination?: RefundDestinationReqDto;
 }
 
 /** `CancelBookingRespDto` — result of a successful cancellation. */

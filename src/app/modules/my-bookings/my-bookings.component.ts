@@ -8,6 +8,7 @@ import { formatDisplayDateTime } from '../../shared/lib/display-date-time';
 import { Observable, combineLatest, map, startWith } from 'rxjs';
 import {
   CANCELLABLE_BOOKING_STATUS,
+  CancellationPolicy,
   MyBookingDto,
   MyBookingView,
   RESCHEDULE_WINDOW_HOURS,
@@ -18,10 +19,13 @@ import {
 } from '../../shared/interfaces/my-booking.interface';
 import { CHANGE_SEAT_WINDOW_HOURS } from '../../shared/interfaces/change-seat.interface';
 import { CHANGE_STOP_WINDOW_HOURS } from '../../shared/interfaces/change-stop.interface';
+import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
 import {
+  closeCancelRefundDestinationModal,
   closeChangeSeatDialog,
   closeChangeStopDialog,
   closeRescheduleDialog,
+  confirmCancelWithDestination,
   invokeLoadMyBookingsApi,
   openChangeSeatDialog,
   openChangeStopDialog,
@@ -29,6 +33,7 @@ import {
   requestCancelBooking,
 } from './store/my-bookings.action';
 import {
+  selectCancelRefundDestinationModal,
   selectChangeSeatDialogBookingId,
   selectChangeStopDialogBookingId,
   selectMyBookings,
@@ -103,6 +108,14 @@ export class MyBookingsComponent implements OnInit {
    * contract as `rescheduleDialogBookingId$` (OBRS-110 wave 2). */
   changeStopDialogBookingId$!: Observable<number | null>;
 
+  /** OBRS-286 Flow A1 — non-null while the cancel-with-destination modal is
+   * open (replaces the plain Swal confirm for a manual-refund cancel). */
+  cancelRefundDestinationModal$!: Observable<{
+    booking: MyBookingView;
+    policy: CancellationPolicy;
+    error: string | null;
+  } | null>;
+
   /** Single shared popup menu, rebuilt per row on open — same pattern as
    * `WalkInTripBrowserComponent.tripActionMenu` (staff module). */
   @ViewChild('actionMenu') actionMenu!: Menu;
@@ -143,6 +156,7 @@ export class MyBookingsComponent implements OnInit {
     this.rescheduleDialogBookingId$ = this.store.select(selectRescheduleDialogBookingId);
     this.changeSeatDialogBookingId$ = this.store.select(selectChangeSeatDialogBookingId);
     this.changeStopDialogBookingId$ = this.store.select(selectChangeStopDialogBookingId);
+    this.cancelRefundDestinationModal$ = this.store.select(selectCancelRefundDestinationModal);
 
     this.store.dispatch(invokeLoadMyBookingsApi({ status: null }));
   }
@@ -161,6 +175,21 @@ export class MyBookingsComponent implements OnInit {
 
   onCancel(booking: MyBookingView): void {
     this.store.dispatch(requestCancelBooking({ booking }));
+  }
+
+  // --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
+
+  onConfirmCancelWithDestination(
+    booking: MyBookingView,
+    event: { refundDestination: RefundDestinationReqDto }
+  ): void {
+    this.store.dispatch(
+      confirmCancelWithDestination({ booking, refundDestination: event.refundDestination })
+    );
+  }
+
+  onCancelRefundDestinationModalClosed(): void {
+    this.store.dispatch(closeCancelRefundDestinationModal());
   }
 
   /**

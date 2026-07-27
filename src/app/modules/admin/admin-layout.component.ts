@@ -126,6 +126,19 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       items.push({ path: 'settlements', labelKey: 'ADMIN.PAGES.SETTLEMENTS', icon: 'point_of_sale', descriptionKey: 'ADMIN.SETTLEMENTS.SUBTITLE', section: 'operations' });
     }
 
+    // OBRS-286: manual refund worklist — OWNER-only (route `requiredRoles:
+    // ['owner']` — the backend GET it reads requires OWNER, K9), same gating
+    // shape as Settlements directly above.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'manual-refunds',
+        labelKey: 'ADMIN.PAGES.MANUAL_REFUNDS',
+        icon: 'account_balance',
+        descriptionKey: 'ADMIN.MANUAL_REFUNDS.SUBTITLE',
+        section: 'operations',
+      });
+    }
+
     // OBRS-508: cargo-capacity settings is OWNER-only (route `requiredRoles:
     // ['owner']` — the backend PUT it saves through requires OWNER), gated
     // the same way Settlements is gated directly above. Lives in 'master'

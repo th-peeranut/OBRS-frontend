@@ -1,3 +1,5 @@
+import { RefundDestinationDto, RefundDestinationType } from './refund-destination.interface';
+
 export type PaymentMethod =
   | 'cash'
   | 'card'
@@ -87,6 +89,29 @@ export interface PendingRefund {
   amount: number | string;
   paymentMethod: string;
   paidAt?: string;
+  /**
+   * OBRS-286 — extended (not forked, design-system §10): the amount actually
+   * owed (`COALESCE(mrr.amount_owed, p.amount)`, already computed server-side
+   * — SA-SPEC-OBRS-286.md contract #3 / rule 2). The worklist MUST render
+   * this, never `amount` above, which overstates a penalty cancel's payout.
+   * Never re-derive the coalesce on the FE (FRONTEND-GOTCHAS: mirror the
+   * backend's own derivation).
+   */
+  amountOwed?: number | string;
+  /** Any `ERefundReason` (`manual`/`override_cancel`/`schedule_cancel`/
+   * `full_cancel`/`reschedule`/`change_stop`/`parcel_cancel`/`parcel_reject`).
+   * Distinguishes a cancel-family refund from a still-live reschedule/
+   * change-stop downgrade refund. */
+  reason?: string;
+  destinationType?: RefundDestinationType | null;
+  destination?: RefundDestinationDto | null;
+  /** `true` unless the caller `hasRole('OWNER')` — the worklist is OWNER-only
+   * (K9) so this is always `false` for every reachable row today; render
+   * `destination` verbatim regardless, never re-mask on the FE. */
+  destinationMasked?: boolean;
+  /** `mrr.created_at`, Bangkok-offset ISO string — the queue date (AC-2).
+   * `null`-safe: some producers (batch/legacy rows) may carry no queue row. */
+  queuedAt?: string | null;
 }
 
 export interface PageResponse<T> {

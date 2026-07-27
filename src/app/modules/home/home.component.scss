@@ -1,0 +1,15 @@
+// OBRS-775. A component that declares no `:host` display renders as
+// `display: inline`, and an inline box may not contain the block-level children
+// below it: the browser splits it and wraps them in anonymous blocks, after
+// which the host's own border box describes nothing.
+//
+// This host was WELL-FORMED before this card and became malformed BECAUSE of
+// it: its only children are other component hosts, and while those were inline
+// too there was no block-level child to be illegal. Fixing them made this one
+// the next inline box holding blocks. The sweep in
+// e2e/tests/host-box-sweep.spec.ts is what noticed, on the run straight after
+// the first batch landed -- which is the argument for a gate rather than a list
+// of components someone checked once.
+:host {
+  display: block;
+}

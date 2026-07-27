@@ -1,0 +1,41 @@
+<div class="crdm-backdrop" (click)="onBackdropClick($event)">
+  <div class="crdm-modal" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      class="crdm-modal__close"
+      (click)="requestClose()"
+      [attr.aria-label]="'MY_BOOKINGS.TICKET_MODAL.CLOSE' | translate"
+    >
+      <i class="bi bi-x-lg"></i>
+    </button>
+
+    <div class="crdm-modal__body">
+      <h2 class="crdm-modal__title">{{ 'MY_BOOKINGS.CANCEL.DESTINATION_DIALOG_TITLE' | translate }}</h2>
+
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.CONFIRM_TEXT' | translate: { bookingNumber: booking.bookingNumber, route: booking.route } }}
+      </p>
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
+      </p>
+      <p class="crdm-line">
+        {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
+      </p>
+      <p class="crdm-note">{{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}</p>
+
+      <app-refund-destination-fields [formGroup]="form" [disabled]="submitting"></app-refund-destination-fields>
+
+      <p class="crdm-error" role="alert" *ngIf="error">{{ error }}</p>
+
+      <div class="crdm-actions">
+        <button type="button" class="btn-secondary" [disabled]="submitting" (click)="requestClose()">
+          {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
+        </button>
+        <button type="button" class="btn-primary" [disabled]="!canSubmit" (click)="submit()">
+          <span *ngIf="submitting" class="spinner" aria-hidden="true"></span>
+          {{ 'MY_BOOKINGS.CANCEL.CONFIRM_BUTTON' | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

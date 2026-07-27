@@ -29,6 +29,7 @@ import {
   SettlementScheduleDetailDto,
 } from '../../shared/interfaces/settlement.interface';
 import { ConfigHistoryRow } from '../../shared/interfaces/config-history.interface';
+import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -547,6 +548,33 @@ export type OverrideRefundRateChoice = 'POLICY' | 'FULL';
 export interface OverrideCancelReqDto {
   rateChoice?: OverrideRefundRateChoice;
   reason?: string;
+  /** OBRS-286 — required by the backend for a non-cash manual refund, optional
+   * for the cash share (ADR-0109). Mirrors `CancelBookingReqDto` (customer
+   * path) exactly — same request field, same SA contract shape. */
+  refundDestination?: RefundDestinationReqDto;
+}
+
+// OBRS-286 SA contract #5 — GET /private/admin/bookings/{id}/refund-method.
+// `destinationRequired` is the SERVER's own answer to the exact predicate
+// `resolveRefundDestination` applies at submit time — the FE reads it
+// directly and never re-derives it from `refundMethod` (that re-derivation is
+// the specific defect this endpoint exists to eliminate; see Flow A3 in the
+// UI spec). `refundMethod` is carried for display/debugging only.
+export interface AdminBookingRefundMethodDto {
+  refundMethod: string;
+  destinationRequired: boolean;
+}
+
+// OBRS-286 SA contract #4 — POST /private/payments/{id}/manual-refund.
+// `amountTransferred` is an OPTIONAL soft confirmation for a normal row (the
+// backend already has the persisted `amount_owed`); it is REQUIRED only on
+// the legacy no-mrr-row path (SA rule 3). The FE never decides which case it
+// is — it always sends whatever the operator typed (pre-filled from
+// `amountOwed`) and lets the backend 400 if that turns out to be the wrong
+// case for this row.
+export interface MarkPaymentManualRefundReqDto {
+  transferReference: string;
+  amountTransferred?: number;
 }
 
 export interface AdminBookingDetailDto {
@@ -1385,6 +1413,20 @@ export class AdminApiService {
     );
   }
 
+  // OBRS-286 SA contract #5. A bare, window-independent read of the same
+  // resolver `resolveRefundDestination` uses at submit time — no window
+  // check, no `CONFIRMED`-only check, and it never throws
+  // `cancel.error.window-closed` (unlike `getCancellationPolicy`, the wrong
+  // oracle for this caller — see the UI spec's Flow A3 for the two rejected
+  // alternatives and why). Called by `OverrideCancelModalComponent` on open.
+  getBookingRefundMethod(
+    bookingId: number
+  ): Observable<ResponseAPI<AdminBookingRefundMethodDto>> {
+    return this.getRequest<AdminBookingRefundMethodDto>(
+      `${this.baseUrl}/private/admin/bookings/${bookingId}/refund-method`
+    );
+  }
+
   getPendingManualRefunds(
     page = 0,
     size = 20
@@ -1399,10 +1441,30 @@ export class AdminApiService {
     );
   }
 
+  // ⚠️ OBRS-286: do NOT call this for a manual-refund-queue payment —
+  // `refundPaymentById` throws `PAYMENT_REFUND_METHOD_UNSUPPORTED` for exactly
+  // the methods that land in `getPendingManualRefunds()` above (SA spec "FE
+  // contract correction"). `ManualRefundWorklistPageComponent` / its mark-
+  // refunded modal MUST call `markPaymentManuallyRefunded()` below instead.
   refundPayment(paymentId: number): Observable<ResponseAPI<PaymentResponse>> {
     return this.postRequest<PaymentResponse>(
       `${this.baseUrl}/private/payments/${paymentId}/refund`,
       {}
+    );
+  }
+
+  // OBRS-286 SA contract #4 — the new, correct endpoint for the manual-refund
+  // worklist's "Mark Refunded" action. `{id}` is the PAYMENT id (per-payment
+  // queue grain, K7), not the booking id. Idempotent: a 200 replay (already
+  // completed) renders exactly like a first-time success — no error branch
+  // may fire on it (UI spec Flow C step 4).
+  markPaymentManuallyRefunded(
+    paymentId: number,
+    payload: MarkPaymentManualRefundReqDto
+  ): Observable<ResponseAPI<unknown>> {
+    return this.postRequest<unknown>(
+      `${this.baseUrl}/private/payments/${paymentId}/manual-refund`,
+      payload
     );
   }
 

@@ -40,6 +40,10 @@
 //      body is that claim being false in a way no assertion will report, because the
 //      request simply fails and the test times out somewhere unrelated.
 //
+//   5. No GATE-lane spec passes `force: true` to a pointer action (OBRS-775 AC5). It
+//      does not aim the event; it deletes the check that the click reached what it
+//      names. OBRS-750 spent a card and a wrong diagnosis on exactly that.
+//
 // Deliberate non-goal: this gate does NOT verify that a GATE spec actually mocks every
 // call it makes. It cannot -- that is a runtime property. `playwright.gate.config.ts`
 // verifies it instead, and does so far better than any static check could, by serving
@@ -78,6 +82,20 @@ const SCREENSHOT_PATH = /\bpath:\s*(['"`])([^'"`\n]*)\1/g;
 const ALLOWED_EVIDENCE = /^(e2e-evidence\/|test-results\/|\$\{ASSETS\})/;
 const ABSOLUTE_PATH = /(['"`])(?:[A-Za-z]:[\\/]|\/(?:Users|home)\/)[^'"`\n]*\1/g;
 const HARDCODED_HOST = /(['"`])https?:\/\/(?!\{)[^'"`\n]*\1/g;
+
+// Rule 6 (OBRS-775 AC5). `force: true` on a pointer action does not aim the event at
+// the element -- it skips the actionability checks and dispatches at the coordinates
+// anyway, so the event lands on whatever is topmost. That is not a workaround for a
+// flaky click; it is the assertion being deleted. OBRS-750 is the whole argument:
+// `b2c-critical-path` clicked `.btn-confirm` with `force: true`, the event went to the
+// button's malformed inline PARENT, the navigation never happened, and the spec timed
+// out for 60s on a clean GitHub runner while the diagnosis went to CPU contention.
+// OBRS-753 found the real cause and OBRS-775 swept the codebase for the same defect --
+// but a gate that forbids the malformed box while still allowing `force` leaves the
+// tool that hides it in everyone's hands. Matched on POINTER actions only: Node's
+// `fs.rmSync(dir, { recursive: true, force: true })` is unrelated and appears in a
+// GATE spec today.
+const FORCED_POINTER = /\b(click|dblclick|hover|tap|check|uncheck|selectOption|dragTo|setChecked)\s*\([^)]*\bforce\s*:\s*true/gs;
 
 // A root config that declares a directory but not what it runs adopts every spec in it.
 // That is the exact defect this card exists to undo, and it existed in TWO configs, so
@@ -180,6 +198,57 @@ if (!matchBlock) {
 // checks the rule fires.
 const lineAt = (src, index) => src.slice(0, index).split('\n').length;
 
+// Blank out comments while preserving every byte position, so `lineAt` still reports the
+// real line. Needed by rule 5 and by nothing else: this repo's specs explain themselves at
+// length, and `b2c-critical-path.spec.ts` QUOTES the forbidden call in its header ("this
+// line was `click({ force: true })`, and it is what made this spec the one red") precisely
+// because that is the defect it documents. The first draft of rule 5 flagged that sentence
+// and the gate failed on a clean tree -- a rule that reds on a correct file gets deleted,
+// not obeyed. A regex cannot do this: it has to track string and template-literal state,
+// or it blanks the `//` inside an `https://` URL and the rule stops seeing real code.
+function blankComments(src) {
+  let out = '';
+  let i = 0;
+  let quote = null; // "'", '"', '`', or null
+  while (i < src.length) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (quote) {
+      if (c === '\\') {
+        out += src.slice(i, i + 2);
+        i += 2;
+        continue;
+      }
+      if (c === quote) quote = null;
+      out += c;
+      i++;
+      continue;
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      quote = c;
+      out += c;
+      i++;
+      continue;
+    }
+    if (c === '/' && next === '/') {
+      while (i < src.length && src[i] !== '\n') {
+        out += ' ';
+        i++;
+      }
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      const end = src.indexOf('*/', i + 2);
+      const stop = end === -1 ? src.length : end + 2;
+      for (; i < stop; i++) out += src[i] === '\n' ? '\n' : ' ';
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
 // Look backwards from the match to the start of its statement, so a call wrapped across
 // lines by the formatter is still seen as a call. Single-line context was the second
 // half of the same blind spot.
@@ -212,6 +281,17 @@ for (const file of specsOnDisk) {
   }
 
   if (entry?.lane === 'GATE') {
+    for (const m of blankComments(src).matchAll(FORCED_POINTER)) {
+      fail(
+        `${file}:${lineAt(src, m.index)} is in the GATE lane and uses \`force: true\` on a ` +
+          `pointer action. \`force\` does not aim the event -- it skips the actionability ` +
+          `checks and dispatches at the coordinates regardless, so the click lands on ` +
+          `whichever element is topmost. That is how OBRS-750 stayed hidden: the event went ` +
+          `to the button's own parent for the whole life of the defect. If a click is ` +
+          `intercepted, find out by what.`
+      );
+    }
+
     for (const m of src.matchAll(HARDCODED_HOST)) {
       // A stub PAYLOAD may legitimately contain a URL (a photo link, a maps link); those
       // are data the app renders, never a request this spec issues. Only flag a literal

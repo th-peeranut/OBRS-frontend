@@ -17,8 +17,26 @@ import {
 } from '../../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
+import { extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
 import { trimmedRequiredValidator } from '../../../../../shared/validators/trimmed-required.validator';
 import { formatDisplayDateTime } from '../../../../../shared/lib/display-date-time';
+import {
+  applyRefundDestinationRequired,
+  buildRefundDestinationForm,
+  toRefundDestinationPayload,
+} from '../../../../../shared/lib/refund-destination-form';
+
+/** OBRS-286: the two destination error codes `adminOverrideCancelBooking` can
+ * 400 with — SA-SPEC-OBRS-286.md contract #2, same set as the customer path. */
+const REFUND_DESTINATION_ERROR_CODES = new Set([
+  'cancel.error.refund-destination-required',
+  'cancel.error.refund-destination-invalid',
+]);
+
+/** OBRS-286 Flow A3 — whether the booking's refund destination requirement
+ * has been resolved. Component-local, NOT NgRx (the UI spec is explicit: a
+ * three-state enum plus one boolean doesn't warrant a store). */
+type RefundMethodState = 'loading' | 'resolved' | 'error';
 
 // OBRS-690 / OBRS-661 AC9 — OWNER override-cancel dialog.
 //
@@ -57,6 +75,14 @@ export class OverrideCancelModalComponent implements OnChanges {
   protected errorMessage = '';
   protected readonly form: FormGroup;
 
+  // OBRS-286 Flow A3 — refund-destination requirement, component-local state.
+  protected refundMethodState: RefundMethodState = 'loading';
+  protected destinationRequired = false;
+  /** Belt-and-braces (Flow A3 step 6): a submit-time destination error code,
+   * shown inline next to the destination fields — never the modal's generic
+   * `errorMessage` banner. */
+  protected destinationErrorMessage = '';
+
   constructor(
     private readonly adminApiService: AdminApiService,
     private readonly formBuilder: FormBuilder,
@@ -65,6 +91,7 @@ export class OverrideCancelModalComponent implements OnChanges {
   ) {
     this.form = this.formBuilder.group({
       reason: ['', [Validators.maxLength(500)]],
+      destination: buildRefundDestinationForm(this.formBuilder),
     });
   }
 
@@ -76,9 +103,54 @@ export class OverrideCancelModalComponent implements OnChanges {
       // Every open starts clean: POLICY selected, no reason, no stale error.
       this.rateChoice = 'POLICY';
       this.errorMessage = '';
+      this.destinationErrorMessage = '';
       this.form.reset({ reason: '' });
       this.applyReasonValidators();
+      this.fetchRefundMethod();
     }
+  }
+
+  // ── Refund-destination requirement (Flow A3) ─────────────────────────────
+
+  protected get destinationForm(): FormGroup {
+    return this.form.get('destination') as FormGroup;
+  }
+
+  private fetchRefundMethod(): void {
+    const booking = this.booking;
+    if (!booking) {
+      return;
+    }
+    this.refundMethodState = 'loading';
+    // Loading: nothing mounted either way, Confirm blocked by canSubmit —
+    // do NOT pre-apply a required/optional validator yet (Flow A3 step 3).
+    this.adminApiService.getBookingRefundMethod(booking.id).subscribe({
+      next: (response) => {
+        this.destinationRequired = response.data?.destinationRequired ?? true;
+        this.refundMethodState = 'resolved';
+        this.applyDestinationValidators();
+      },
+      error: () => {
+        // Deliberately NOT fail-safe-to-required (see the UI spec's Flow A3
+        // step 5 for the full argued reasoning) — renders as optional.
+        this.refundMethodState = 'error';
+        this.applyDestinationValidators();
+      },
+    });
+  }
+
+  protected retryCheck(): void {
+    this.fetchRefundMethod();
+  }
+
+  /** Mirrors `applyReasonValidators()`'s shape — re-run on every
+   * `refundMethodState` change (and again, forced-required, from `submit()`'s
+   * belt-and-braces branch on a destination-error 400). Defaults to the
+   * current resolved-state's own predicate when called with no argument. */
+  private applyDestinationValidators(
+    required: boolean = this.refundMethodState === 'resolved' && this.destinationRequired
+  ): void {
+    applyRefundDestinationRequired(this.destinationForm, required);
   }
 
   // ── Rate toggle (AC1: two buttons, never a numeric input) ────────────────
@@ -145,7 +217,22 @@ export class OverrideCancelModalComponent implements OnChanges {
   }
 
   protected get canSubmit(): boolean {
-    return !this.isSubmitting && this.form.valid;
+    // Flow A3 step 3: while the refund-method check is still in flight we
+    // don't yet know whether a destination applies at all, so Confirm is
+    // blocked for that reason alone — the rest of the modal (rate toggle,
+    // reason) stays interactive throughout.
+    return !this.isSubmitting && this.form.valid && this.refundMethodState !== 'loading';
+  }
+
+  /** Whether `AppRefundDestinationFieldsComponent` should mount at all —
+   * Flow A3 step 4/5: resolved+required, OR the check itself failed (shown
+   * as optional). Never mounted while loading, never mounted merely because
+   * `destinationRequired` resolved false. */
+  protected get showDestinationFields(): boolean {
+    return (
+      (this.refundMethodState === 'resolved' && this.destinationRequired) ||
+      this.refundMethodState === 'error'
+    );
   }
 
   // ── Display helpers ──────────────────────────────────────────────────────
@@ -193,14 +280,17 @@ export class OverrideCancelModalComponent implements OnChanges {
 
     this.isSubmitting = true;
     this.errorMessage = '';
+    this.destinationErrorMessage = '';
     try {
       const reason = String(this.form.get('reason')?.value ?? '').trim();
+      const refundDestination = toRefundDestinationPayload(this.destinationForm);
       const response = await firstValueFrom(
         this.adminApiService.adminOverrideCancelBooking(booking.id, {
           rateChoice: this.rateChoice,
           // Only send a reason when a rule is broken; a blank one for an
           // in-window POLICY cancel would be noise the backend ignores anyway.
           reason: this.reasonRequired ? reason : undefined,
+          refundDestination,
         })
       );
       this.cancelled.emit();
@@ -210,13 +300,28 @@ export class OverrideCancelModalComponent implements OnChanges {
           this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.SUCCESS')
       );
     } catch (error) {
-      // Keep the dialog open so a typed reason is not lost — surface the
-      // backend's already-localized message inline (the reason-required gate
-      // should never reach here since it is mirrored above, but 409/500/network
-      // still can).
-      this.errorMessage =
-        extractApiErrorMessage(error) ||
-        this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.FAILED');
+      const code = extractApiErrorCode(error, null);
+      if (code && REFUND_DESTINATION_ERROR_CODES.has(code)) {
+        // Flow A3 step 6 — belt and braces: force the destination fields to
+        // mount (covers the raced `destinationRequired === false`/optional
+        // case) and required, then show a DEDICATED inline message next to
+        // them — never the generic `errorMessage` banner below. The modal
+        // stays open; reason/rateChoice survive untouched.
+        this.destinationRequired = true;
+        this.refundMethodState = 'resolved';
+        this.applyDestinationValidators(true);
+        this.destinationErrorMessage =
+          extractApiErrorMessage(error) ||
+          this.translate.instant('REFUND_DESTINATION.ERROR.SERVER_INVALID');
+      } else {
+        // Keep the dialog open so a typed reason is not lost — surface the
+        // backend's already-localized message inline (the reason-required gate
+        // should never reach here since it is mirrored above, but 409/500/network
+        // still can).
+        this.errorMessage =
+          extractApiErrorMessage(error) ||
+          this.translate.instant('ADMIN.BOOKINGS.CANCEL_OVERRIDE.FAILED');
+      }
     } finally {
       this.isSubmitting = false;
     }

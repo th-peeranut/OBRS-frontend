@@ -59,6 +59,9 @@ import { ExpensesPageComponent } from './pages/expenses/expenses-page.component'
 import { ExpenseListTableComponent } from './pages/expenses/expense-list-table/expense-list-table.component';
 import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/expense-form-modal.component';
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
+// OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
+import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
+import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
@@ -265,6 +268,19 @@ export const adminRoutes: Routes = [
           requiredRoles: ['admin', 'owner'],
         },
       },
+      {
+        // OBRS-286: manual refund worklist — OWNER-only (the backend GET
+        // /payments/refunds/pending is `hasRole('OWNER')`, K9), same gating
+        // shape as settlements/cargo-capacity above.
+        path: 'manual-refunds',
+        component: ManualRefundWorklistPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.MANUAL_REFUNDS',
+          subtitleKey: 'ADMIN.MANUAL_REFUNDS.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -335,6 +351,8 @@ export const adminRoutes: Routes = [
     ExpenseListTableComponent,
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
+    ManualRefundWorklistPageComponent,
+    MarkRefundedModalComponent,
   ],
   imports: [
     SharedModule,

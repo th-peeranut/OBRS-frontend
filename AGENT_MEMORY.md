@@ -3994,3 +3994,24 @@ jumped the caret. Fix: track `focusedPhoneRow`; keep that one row bare in the ec
 the rest. Lesson for future phone/format work: when a form live-syncs to a store, any
 focus/blur display transform must be suppressed for the focused control on the store echo,
 not just relied on to re-run on blur.
+
+## OBRS-286 UX spec — Scrutinize self-fixes (2026-07-27)
+
+Two self-fixes applied to `UX-SPEC-OBRS-286.md` (spec file, not code):
+
+1. **Paged store precedent was misattributed.** The spec said the worklist store mirrors
+   `RefundVoidReportStore`. That store is NOT paged — it caches a single date-range
+   `RefundVoidReportDto`, has no `page`/`size`/`setPage`, and its page has no `app-admin-paginator`.
+   The real `AdminCollectionStore<PageResponse<T>>` + paginator precedent is `ConfigChangeHistoryStore`
+   / `config-change-history-page.component.html`. Two behaviours it proves that a paged store MUST
+   carry: (a) `goToPage` must `clear()` BEFORE `refresh()` or the previous page's rows flash (its F20
+   note); (b) `fetch()` returns a zero `PageResponse` on failure, never `null` (`data$` emits null on
+   `clear()`; `npm run test:store-null` enforces honoring it). Lesson: verify a "mirrors X" precedent
+   actually has the property you're borrowing (here: paging), not just that it extends the same base.
+
+2. **`maskDestinationTail()` FE helper dropped.** Masking is a backend responsibility (SA rule 8 puts
+   it on the DTO mapper `maskAccountTail`), so a non-OWNER response arrives already masked. A FE
+   re-masker was dead code in this card (queue is OWNER-only → `destinationMasked` always false, no call
+   site) AND a second source of truth for a security transform. The FE renders the destination string
+   verbatim; if `destinationMasked` is ever true the string is already masked. Lesson: don't build a FE
+   mirror of a backend-owned derivation "for defense-in-depth" — it drifts.
