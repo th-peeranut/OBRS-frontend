@@ -419,6 +419,7 @@
       "USABILITY_REPORTS": "Usability Reports",
       "REPORTS": "Reports",
       "REVENUE_ANALYTICS": "Revenue Analytics",
+      "BOOKING_TREND": "Booking Trend",
       "SETTLEMENTS": "Settlements",
       "EOD_SALES_REPORT": "End-of-day Sales",
       "REMINDER_CONFIG": "Reminder Timing",
@@ -1108,6 +1109,20 @@
         "LINK_TEXT": "Duplicate of #{{id}}",
         "LINK_ARIA": "Open canonical report #{{id}}",
         "COUNT_BADGE": "{{count}} duplicate reports"
+      }
+    },
+    "BOOKING_TREND": {
+      "SUBTITLE": "Daily booking volume, day-of-week pattern, and period-over-period change.",
+      "LOAD_FAILED": "Could not load booking trend. Please try again.",
+      "SERIES_TITLE": "Daily bookings",
+      "DOW_TITLE": "Bookings by day of week",
+      "VS_PREV": "vs previous period",
+      "CHANGE_VS_PREV": "{{pct}} versus the previous period",
+      "CHANGE_NA": "No previous-period data",
+      "TILE": {
+        "TOTAL": "Total bookings",
+        "PEAK": "Peak day",
+        "DAYS": "Days in range"
       }
     },
     "REVENUE_ANALYTICS": {

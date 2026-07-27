@@ -20,6 +20,7 @@ import {
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
 import { RevenueAnalyticsDto } from '../../shared/interfaces/revenue-analytics.interface';
+import { BookingTrendDto } from '../../shared/interfaces/booking-trend.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -1434,6 +1435,16 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<RevenueAnalyticsDto>(
       `${this.baseUrl}/private/admin/reports/revenue-analytics`,
+      params
+    );
+  }
+
+  // OBRS-152: booking-volume trend — daily series + 7-day moving average +
+  // day-of-week seasonality + period-over-period + peak.
+  getBookingTrend(from: string, to: string): Observable<ResponseAPI<BookingTrendDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<BookingTrendDto>(
+      `${this.baseUrl}/private/admin/reports/booking-trend`,
       params
     );
   }

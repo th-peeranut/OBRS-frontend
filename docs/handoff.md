@@ -157,8 +157,16 @@ endpoints should be verified against seeded/synthetic data, and the analytics in
 
 <!-- contract-request
 card: OBRS-152
-status: open
+status: partially-resolved
+resolved: 2026-07-24 (daily increment)
 -->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/booking-trend` now exists (backend
+> `ao/obrs-152-booking-trend` `cefc2894`, off the 151 branch — sequential lane) with the **daily** series +
+> 7-day moving average + day-of-week seasonality + period-over-period + peak, on the already-IT-covered
+> `findDailyVolume` query (ReportService +6 unit tests, 55/55 green). Frontend page on
+> `ao/booking-trend-obrs152` (interface/service/store/page/2 charts/i18n/route/nav + specs; ci-smoke green).
+> **Still OPEN:** `week`/`month` **granularity** bucketing — this increment is daily only.
 
 **Affected endpoint**: `GET /api/private/admin/reports/booking-trend?from&to&granularity=day|week|month` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Depends on OBRS-151 lane landing first (sequential).
