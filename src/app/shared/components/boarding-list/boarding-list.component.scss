@@ -114,9 +114,15 @@
   // Active segment — reads as "selected", distinct from admin-btn-primary
   // (design-system §4: one primary per screen; the primary here stays the
   // scan Validate button, not the mode toggle).
+  // OBRS-755: `--accent-strong` has no dark-mode value (it is tuned for white
+  // text ON it), so as a foreground it painted dark-on-dark — measured here at
+  // **2.09:1** (#0a6a5f on the #1b3234 that --accent-soft composites to inside
+  // the dark card), the worst of the five sites making this same role error.
+  // `--accent-text` is the accent-as-text token and carries a per-variant dark
+  // value; see the long note on `.admin-sidebar-pin` in admin-theme.scss.
   .admin-btn.is-active {
     background: var(--accent-soft);
-    color: var(--accent-strong);
+    color: var(--accent-text);
     font-weight: 700;
   }
 }
