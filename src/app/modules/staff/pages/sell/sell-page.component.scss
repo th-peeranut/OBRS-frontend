@@ -8,15 +8,19 @@
 // container's own padding are absorbed by the flex column below, so spacing/heading
 // tweaks don't reopen the bug. The e2e test "fits the viewport" (issue #41) guards
 // this constant against future topbar/padding changes.
-// dark-mode (OBRS-128): the three POS panels use raw Bootstrap `.card`, whose
-// white background + dark body-text don't follow the shell theme — so in dark mode
-// they render as white cards (with the light `--admin-text` labels nearly invisible
-// on them). Re-point the card surface + inherited text at the shell tokens so the
-// panels match the rest of the admin/staff surfaces. Light mode is untouched.
-:host-context(.admin-shell.is-dark) .card {
-  background: var(--admin-surface-card);
-  color: var(--admin-text);
-}
+// dark-mode: this page's `:host-context(.admin-shell.is-dark) .card` rule
+// (OBRS-128 — the three POS panels use raw Bootstrap `.card`, which does not
+// follow the shell theme) was DELETED by OBRS-747 and is not missing.
+//
+// That card found the same defect on the eight other staff pages that wrap
+// content in a raw `.card`, so the surface is now themed once centrally, in
+// admin-theme.scss's `.admin-shell.is-dark` block. The central rule sets exactly
+// the two declarations this one did (`--admin-surface-card` background +
+// `--admin-text` colour) and reaches this page identically, so keeping a
+// per-page copy would mean two places to fix the next time the surface changes —
+// the cost that made eight pages diverge in the first place. Verified by
+// measuring /staff/sell before and after the deletion, both modes
+// (e2e/scripts/capture-obrs747.js).
 
 @media (min-width: 992px) {
   .container-fluid {

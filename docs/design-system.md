@@ -220,6 +220,25 @@ look different.
   element MUST read a CSS var (or a token that maps to one), **never** a fixed hex,
   or it won't theme. (See `CORE.md`: "Never put an element's only styling inside a
   `@media` block" — same failure class.)
+- **Raw Bootstrap surfaces inside the admin/staff shell are themed in ONE place:
+  the `.admin-shell.is-dark` block in `admin-theme.scss`. MUST NOT add a per-page
+  copy** (OBRS-747). That block owns `.card` (+ `.card-header/-footer`), the
+  `.table` family incl. `thead.table-light` and `.table-hover`, `.bg-light` /
+  `.bg-white`, `.form-control` / `.form-select`, `.text-muted`, `.btn-outline-*`
+  and `.nav-tabs`. Two pages had each fixed the same `.card` locally
+  (sell-page/OBRS-128, boarding-list/OBRS-100) while **eight** others shipped
+  broken; those two per-page rules are now deleted. Bootstrap's `.badge.bg-*` and
+  `.alert-*` are deliberately NOT in the block — they carry their own fill and
+  pass AA on either surface, same reasoning as the self-contained chip pairs in
+  §2.4.
+- A themed foreground is only correct over a **themed background**, so a token
+  swap is not reviewable without a measured surface. `src/app/testing/contrast.ts`
+  (`mountInChain` + `effectiveBg`) measures it in a spec; `e2e/scripts/capture-obrs747.js`
+  sweeps every text-bearing element on a real page in both modes and diffs
+  before/after, which is how the four `.btn-outline-primary` regressions that the
+  `.card` fix itself caused were caught. Known blind spot: an element whose fill is
+  a **gradient** reads as `1:1` in both — that family is `check-brand-fill-contrast.mjs`
+  (OBRS-740), not this one.
 
 ---
 
