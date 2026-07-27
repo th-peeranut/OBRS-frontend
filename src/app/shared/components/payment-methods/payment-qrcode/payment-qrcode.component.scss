@@ -265,8 +265,12 @@
   width: 100%;
   height: 52px;
 
+  /* OBRS-741: white on #0090d0 was 3.56:1. Kept identical to the credit-card
+     .payment-btn -- same button, two components. Its rest state is still
+     $primary-blue (2.03:1), deferred to the customer-palette sweep; re-derive
+     this hover when that lands or the two states will nearly coincide. */
   &:hover {
-    background: #0090d0;
+    background: #007eb6; /* white on it = 4.51:1 */
   }
 
   &-diabled {

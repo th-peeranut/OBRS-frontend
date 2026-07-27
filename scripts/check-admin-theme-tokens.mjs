@@ -79,7 +79,7 @@ const DARK_EXEMPT = {
   '--admin-primary-bright':
     'the bright stop of the brand button gradient, always paired with --admin-primary in the SAME gradient -- like --admin-primary it keeps its hue in both themes; the button is a solid brand fill, not a surface that has to recede in dark mode (OBRS-734)',
   '--admin-on-primary':
-    'text sitting ON that brand gradient, which is identical in both themes -- so the text on it must be too; measured white-on-gradient, not white-on-surface (OBRS-734)',
+    'text sitting ON that brand gradient, which is identical in both themes -- so the text on it must be too. It now measures 4.54:1 against the bright stop and 6.46:1 against the dark one (OBRS-741). Until OBRS-741 this line claimed "measured white-on-gradient, not white-on-surface (OBRS-734)" -- nothing had been measured: --admin-primary-bright was #4dbeef and white on it was 2.12:1. An exemption whose stated reason is a measurement nobody took is worse than no exemption, because the next reader stops checking. If either token moves, re-measure and rewrite this line rather than trusting it.',
 };
 
 if (!existsSync(THEME)) {

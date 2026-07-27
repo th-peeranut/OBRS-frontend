@@ -48,8 +48,10 @@
   font-weight: $font-weight-extrabold;
 }
 
+/* OBRS-741: the count digits sat on #4dbeef at 2.12:1. Same literal ramp as
+   the navbar avatar, kept in step with it. */
 .schedule-tab.is-active .schedule-tab-count {
-  background: linear-gradient(135deg, #006687, #4dbeef);
+  background: linear-gradient(135deg, #006687, #107eaf); /* white = 6.46 / 4.54 */
   color: #ffffff;
 }
 

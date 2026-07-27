@@ -98,16 +98,24 @@
   text-transform: capitalize;
   white-space: nowrap;
 
+  /* OBRS-741: same tinted-badge pairs as reschedule-estimate-summary, kept in
+     lockstep with it -- these are the same two semantic states and a passenger
+     sees both in one session. Tint kept, ink one shade deeper. */
   &.is-success {
     background-color: #e3f9ec;
-    color: #1f9254;
+    color: #1b7f49; /* on #e3f9ec = 4.55:1, was #1f9254 at 3.59:1 */
   }
 
   &.is-warning {
     background-color: #fff4e0;
-    color: #b9750a;
+    color: #9e6409; /* on #fff4e0 = 4.50:1, was #b9750a at 3.43:1 */
   }
 
+  /* NOT fixed here on purpose: $text-red on #fde7e7 is 4.24:1, also under AA,
+     but $text-red is a shared SCSS variable used across the app and belongs to
+     the token sweep this card deliberately did not take on. Left visible in the
+     gate rather than patched locally, so the badge row is not half-migrated in
+     two different ways. */
   &.is-danger {
     background-color: #fde7e7;
     color: $text-red;
