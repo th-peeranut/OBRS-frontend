@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import { seedCustomerSession, seedStore } from '../support/customer-pages';
 import {
   ADMIN_SWEEP,
+  CUSTOMER_EXTRA_SWEEP,
   CUSTOMER_SWEEP,
   PUBLIC_SWEEP,
   SweepPage,
@@ -66,6 +67,11 @@ interface Box {
   display: string;
   /** `none` unless a CSS animation is running on it -- see EXCLUSIONS below. */
   anim: string;
+  /** OBRS-782. `position: sticky` -- viewport-relative when stuck, in-flow when not. */
+  sticky: boolean;
+  /** OBRS-782. The screen's scroll offset when it was measured, same on every box. */
+  scrollY: number;
+  /** Document coordinates, except inside a `position: fixed` subtree -- see `measureAll`. */
   x: number;
   y: number;
   w: number;
@@ -92,16 +98,65 @@ const collected: Phase = {};
  */
 async function measureAll(page: import('@playwright/test').Page): Promise<PageBoxes> {
   return page.evaluate(() => {
-    const out: Record<string, Record<string, string | number>> = {};
-    const walk = (el: Element, key: string) => {
+    // OBRS-782. Record DOCUMENT coordinates for in-flow content, and viewport
+    // coordinates for anything inside a `position: fixed` subtree.
+    //
+    // `getBoundingClientRect` is viewport-relative, so a screen reached by
+    // CLICKING is measured from wherever the scrolling left it -- and that is
+    // not layout. The reschedule dialog's first AFTER run reported 411 moved
+    // elements across three viewports with `html`'s own height IDENTICAL to
+    // the hundredth of a pixel in both phases and only its `y` different: one
+    // scroll delta, wearing 411 costumes. It is a fourth false-positive source
+    // alongside animation, <head> growth and the webfont, and the only one a
+    // tolerance could never separate from a real move -- it displaces
+    // EVERYTHING by the same amount, which is exactly what a page that shifted
+    // looks like.
+    //
+    // WHY NOT JUST SCROLL BACK TO THE TOP. Two attempts did, from `settle()`
+    // before and after its two frames, and a third from inside this very
+    // `page.evaluate`. All three still measured a scrolled page -- 402px, then
+    // 192px, then 192px again -- because `p-menu` restores focus to its
+    // trigger when it hides (`MyBookingsComponent.onActionMenuHide`) and
+    // focusing an off-screen element scrolls it back. Fighting the page for
+    // the scroll position is a race; not depending on it is not.
+    //
+    // WHY THE FIXED EXCEPTION. A `position: fixed` box (and everything inside
+    // one) is positioned against the viewport, so its rect is ALREADY
+    // scroll-invariant. Adding the scroll offset to it would trade this false
+    // positive for a new one on every navbar, modal and FAB.
+    //
+    // `position: sticky` is the one case this cannot express -- a stuck sticky
+    // box is viewport-relative and an unstuck one is not. It is recorded per
+    // box and handled in the comparison, which drops a sticky element only on
+    // a screen whose two phases were scrolled DIFFERENTLY, and prints what it
+    // dropped.
+    const sx = window.scrollX;
+    const sy = window.scrollY;
+
+    const out: Record<string, Record<string, string | number | boolean>> = {};
+    const walk = (el: Element, key: string, inFixed: boolean) => {
       const cs = getComputedStyle(el);
       const r = el.getBoundingClientRect();
+      const fixed = inFixed || cs.position === 'fixed';
+      // OBRS-782. An element with NO layout box at all -- `display: none`, or
+      // an empty `<script>` -- returns an all-zero rect, which is not a
+      // position and must not have the scroll offset added to it. Without this
+      // guard the normalisation gives every such node a phantom `y` equal to
+      // the scroll, and the first run of it reported 27 of them on the one
+      // screen whose phases were scrolled differently (192px vs 195px). They
+      // were caught by the zero-area exclusion and changed no verdict, but a
+      // harness that manufactures its own exclusions is one nobody can read.
+      const noBox = r.x === 0 && r.y === 0 && r.width === 0 && r.height === 0;
+      const ox = fixed || noBox ? 0 : sx;
+      const oy = fixed || noBox ? 0 : sy;
       out[key] = {
         tag: el.tagName.toLowerCase(),
         display: cs.display,
         anim: cs.animationName,
-        x: Math.round(r.x * 100) / 100,
-        y: Math.round(r.y * 100) / 100,
+        sticky: cs.position === 'sticky',
+        scrollY: sy,
+        x: Math.round((r.x + ox) * 100) / 100,
+        y: Math.round((r.y + oy) * 100) / 100,
         w: Math.round(r.width * 100) / 100,
         h: Math.round(r.height * 100) / 100,
       };
@@ -111,12 +166,15 @@ async function measureAll(page: import('@playwright/test').Page): Promise<PageBo
           i++;
           continue;
         }
-        walk(child, `${key}/${i++}:${child.tagName.toLowerCase()}`);
+        walk(child, `${key}/${i++}:${child.tagName.toLowerCase()}`, fixed);
       }
     };
-    walk(document.documentElement, 'html');
+    walk(document.documentElement, 'html', false);
     return out;
-  }) as Promise<PageBoxes>;
+    // `as unknown as` since OBRS-782 added a boolean field: the browser-side
+    // literal is a Record of primitives and TypeScript will no longer accept a
+    // direct assertion to `Box`, whose fields it cannot see are all present.
+  }) as unknown as Promise<PageBoxes>;
 }
 
 async function sweepGroup(
@@ -142,7 +200,20 @@ async function sweepGroup(
         await page.evaluate(() => document.fonts.check('16px Sarabun')),
         `${p.key}@${vp.w}: Sarabun did not load, so this phase would be measured in the fallback face`
       ).toBe(true);
-      collected[`${p.key}@${vp.w}`] = await measureAll(page);
+      const boxes = await measureAll(page);
+      // OBRS-782. Proof that the scroll normalisation in `measureAll` actually
+      // arrived, asserted on the data recorded rather than on a second read a
+      // round-trip later. `html`'s raw `y` is exactly `-scrollY` and `html` is
+      // never in a fixed subtree, so a correctly normalised screen puts it at
+      // 0 whatever the scroll was. A screen that lands here non-zero means the
+      // arithmetic is wrong, and every rect on it would carry an offset that
+      // is not layout -- so it fails by name instead of quietly.
+      expect(
+        boxes['html'].y,
+        `${p.key}@${vp.w}: root box is not at 0 after normalisation, so every rect on this screen ` +
+          'carries an offset that depends on where a click landed rather than on layout'
+      ).toBe(0);
+      collected[`${p.key}@${vp.w}`] = boxes;
     }
     await page.context().close();
   }
@@ -152,7 +223,10 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe(`OBRS-775 geometry (${PHASE})`, () => {
   test('customer pages', async ({ browser }) => {
-    await sweepGroup(browser, CUSTOMER_SWEEP, (p) => seedCustomerSession(p, false), seedStore);
+    // OBRS-782: `CUSTOMER_EXTRA_SWEEP` too, or the reschedule dialog would be a
+    // screen the GATE census reaches and this harness never measured -- which
+    // is the exact asymmetry the page lists live in one module to prevent.
+    await sweepGroup(browser, [...CUSTOMER_SWEEP, ...CUSTOMER_EXTRA_SWEEP], (p) => seedCustomerSession(p, false), seedStore);
   });
 
   test('public and auth-entry pages', async ({ browser }) => {
@@ -198,13 +272,42 @@ test.describe(`OBRS-775 geometry (${PHASE})`, () => {
     const structural: string[] = [];
     const animated: string[] = [];
     const zeroArea: string[] = [];
+    const stuck: string[] = [];
+    const scrolled: string[] = [];
 
     for (const screen of Object.keys(collected)) {
       const a = before[screen];
       const b = collected[screen];
+      // OBRS-782. Did the two phases measure this screen at the same scroll
+      // offset? Everything but a `position: sticky` box is recorded in
+      // coordinates that do not care -- see `measureAll`. A sticky box does:
+      // it is viewport-relative while stuck and in-flow while not, so the two
+      // phases are only comparable if they were scrolled alike.
+      const sameScroll = (a['html']?.scrollY ?? 0) === (b['html']?.scrollY ?? 0);
+      if (!sameScroll) {
+        // Not a failure -- it is the EVIDENCE that the normalisation earned
+        // its place. A screen reached by clicking lands wherever the scrolling
+        // left it, the two phases disagree, and every rect below still
+        // compares equal. Printed so that fact is on the record instead of
+        // being something a reader has to take on trust.
+        scrolled.push(
+          `${screen} phases scrolled ${a['html']?.scrollY} vs ${b['html']?.scrollY}; ` +
+            'compared in document coordinates'
+        );
+      }
       for (const key of Object.keys(b)) {
         if (!a[key]) {
           structural.push(`${screen} ${key} appeared`);
+          continue;
+        }
+        // THIRD EXCLUSION (OBRS-782), and the narrowest of the three: only
+        // sticky boxes, and only on a screen the two phases scrolled
+        // differently. On every other screen a sticky box is compared like any
+        // other. Printed, like the rest.
+        if (!sameScroll && (a[key].sticky || b[key].sticky)) {
+          stuck.push(
+            `${screen} ${key} sticky, phases scrolled ${a['html']?.scrollY} vs ${b['html']?.scrollY}`
+          );
           continue;
         }
         // EXCLUSION, stated out loud rather than absorbed into the tolerance.
@@ -286,10 +389,14 @@ test.describe(`OBRS-775 geometry (${PHASE})`, () => {
         `structural=${structural.length}`,
         `excluded-as-animated=${animated.length}`,
         `excluded-as-zero-area=${zeroArea.length}`,
+        `excluded-as-sticky-at-differing-scroll=${stuck.length}`,
+        `screens-whose-phases-scrolled-differently=${scrolled.length}`,
         ...structural,
         ...moved,
         ...animated,
         ...zeroArea,
+        ...stuck,
+        ...scrolled,
       ].join('\n'),
       'utf8'
     );

@@ -128,9 +128,40 @@ export async function settle(page: Page): Promise<void> {
   await page.evaluate(
     () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r())))
   );
+  // OBRS-782 deliberately does NOT reset the scroll here. A screen reached by
+  // clicking ends up wherever the scrolling left it, and that offset is not
+  // layout -- but resetting it from this side loses a race against the page
+  // (`p-menu` restores focus to its trigger on hide, and focusing scrolls).
+  // The reset belongs in the same browser task as the measurement, so it lives
+  // in `measureAll` in `obrs-775-geometry.spec.ts`. The gate spec does not
+  // care: `scanMalformedHosts` reads `display`, not coordinates.
 }
 
 // --- the pages under sweep ---------------------------------------------------
+
+/**
+ * OBRS-782. One canned answer for the pages that need real rows, matched on the
+ * request PATHNAME (query already stripped, so `/schedules/walk-in?date=` is
+ * `/schedules/walk-in`). Consulted by `mockEmptyBackend` BEFORE its generic
+ * answers, and only for the page currently under `visit`.
+ *
+ * Never give `match` the `g` flag: `RegExp.test` is stateful with it, so the
+ * second request for the same path would silently miss.
+ */
+export interface FixtureRule {
+  match: RegExp;
+  body: unknown;
+}
+
+/**
+ * The rules in force right now. Module-level rather than a per-page
+ * `page.route`, deliberately: routes stack, and a handler registered for one
+ * screen would still be answering three screens later -- the sweep visits every
+ * page through one `Page`, so a leaked fixture would put rows on a screen whose
+ * whole point is that it has none. `visit` overwrites this on every navigation,
+ * so what is in force is always exactly what the current entry declares.
+ */
+let activeFixture: FixtureRule[] = [];
 
 export interface SweepPage {
   key: string;
@@ -141,6 +172,22 @@ export interface SweepPage {
   requires: string;
   /** Needs the NgRx booking store seeded before it renders anything measurable. */
   seed?: boolean;
+  /**
+   * OBRS-782. Rows this screen cannot render without, answered ahead of
+   * `mockEmptyBackend`'s nulls.
+   *
+   * The empty backend is not laziness and this is not a climbdown from it: an
+   * empty table has the same host tree as a full one, which is true of every
+   * page the sweep reached before this card and false for exactly the seven it
+   * could not. A `p-tabView` behind `*ngIf="selectedTrip"` does not render a
+   * different box when the list is empty -- it renders no box at all, and a
+   * census that never saw it cannot say a global rule left it alone.
+   *
+   * So the bar for a fixture here is the same as the bar for an `act`: the
+   * SMALLEST thing that makes the PrimeNG host exist. Not a working sales flow;
+   * one row, one status, one selectable trip.
+   */
+  fixture?: FixtureRule[];
   /**
    * OBRS-776. One interaction to perform after the page has rendered and before
    * anything is measured, for the screens whose content only exists behind a
@@ -226,6 +273,124 @@ export const PUBLIC_SWEEP: SweepPage[] = [
  * -- which is the assertion doing its job: without it the sweep would have
  * measured `/payment` twice and filed the second one under `payment-result`.
  */
+// --- OBRS-782 fixtures: the smallest rows that make a host exist -------------
+
+/** The envelope every endpoint in this app answers in. Declared here rather
+ * than beside `mockEmptyBackend` because the fixtures below are evaluated at
+ * module load, which is before that section runs -- a `const` used above its
+ * declaration is a TDZ ReferenceError, not a hoist. */
+const ok = <T>(data: T) => ({ code: 200, message: 'OK', data });
+
+/**
+ * Far enough out that no policy window closes on it. `/staff/sell` groups trips
+ * by date and `my-bookings` refuses to reschedule inside four hours, so a date
+ * near today would make these screens depend on the day the suite runs.
+ */
+const FIXTURE_DEPARTURE = '2030-06-17T08:00:00+07:00';
+const FIXTURE_ARRIVAL = '2030-06-17T13:00:00+07:00';
+
+/**
+ * One selectable walk-in trip. Mirrors `staff-sell-walkin.spec.ts`'s
+ * `BUS_TRIP_FIXTURE` in shape but not in ambition: that spec sells a ticket and
+ * needs seat numbers, prices and counts that add up, while this one needs a
+ * `.trip-row` to exist so `selectedTrip` can become non-null. Kept separate
+ * rather than imported because a spec is not a fixture module, and because the
+ * day the sales flow needs a richer trip this one should NOT follow it.
+ */
+const WALK_IN_TRIPS = ok([
+  {
+    routeSlug: 'chonburi_bangkok',
+    routeLabel: 'Chonburi - Bangkok',
+    trips: [
+      {
+        scheduleId: 42,
+        vehicleType: 'bus',
+        licensePlate: 'TH-8888',
+        driverName: 'Somchai Jaidee',
+        departureDateTime: FIXTURE_DEPARTURE,
+        arrivalDateTime: FIXTURE_ARRIVAL,
+        pricePerSeat: '350.00',
+        capacity: 21,
+        availableCount: 21,
+        reservedUnpaidCount: 0,
+        soldPaidCount: 0,
+        availableSeatNumbers: Array.from({ length: 21 }, (_, i) => String(i + 1)),
+      },
+    ],
+  },
+]);
+
+/** Selecting a trip fetches the route's stop pairs for pickup/drop-off. */
+const WALK_IN_SEGMENTS = ok({
+  route: { slug: 'chonburi_bangkok', name: 'Chonburi - Bangkok' },
+  stopPairs: [
+    {
+      segmentId: 1,
+      fromStop: { slug: 'nong_chak', name: 'Nong Chak' },
+      toStop: { slug: 'bkr_mochit2', name: 'Mo Chit 2 Terminal' },
+      vehicleType: { slug: 'bus', name: 'Bus' },
+      fare: '350.00',
+      estimatedDurationMinutes: 300,
+    },
+  ],
+});
+
+/**
+ * The boarding manifest's supplementary header. `status: 'scheduled'` is the
+ * whole point -- `parseAdminStatus` takes a plain string verbatim, and the
+ * "Mark delayed" pill (and therefore the delay dialog's two calendars) is
+ * `*ngIf="canDelaySchedule && tripHeader.statusCode === 'scheduled'"`.
+ */
+const BOARDING_SCHEDULE = ok({
+  id: 42,
+  status: 'scheduled',
+  departureDateTime: FIXTURE_DEPARTURE,
+  route: { code: 'CBR-BKK', slug: 'chonburi_bangkok' },
+  vehicle: { numberPlate: 'TH-8888', vehicleNumber: 'BUS-01' },
+  driver: { fullName: 'Somchai Jaidee' },
+  assignedToMe: true,
+  delayedDepartureDateTime: null,
+  delayReason: null,
+});
+
+/** One vehicle row, so a "Manage maintenance" button exists to focus it. */
+const ONE_VEHICLE = ok([
+  {
+    id: 1,
+    vehicleNumber: 'BUS-01',
+    numberPlate: 'TH-8888',
+    vehicleType: { id: 1, slug: 'bus', name: 'Bus' },
+    status: 'active',
+  },
+]);
+
+/**
+ * The round-trip promotion singleton. Its whole form -- both calendars included
+ * -- is `*ngIf="!isLoading && promotion"`, and the endpoint is one the generic
+ * mock answers with `null`, which renders the "no promotion configured" line
+ * instead. This is the one of the seven that needs no click at all.
+ */
+const ROUND_TRIP_PROMOTION = ok({
+  id: 1,
+  slug: 'round_trip',
+  code: 'ROUNDTRIP',
+  discountType: { code: 'percentage', name: 'Percentage' },
+  status: { code: 'active', name: 'Active' },
+  discountValue: 10,
+  maxDiscountAmount: 200,
+  minBookingAmount: 500,
+  startDateTime: '2026-01-01T00:00:00+07:00',
+  endDateTime: '2030-12-31T23:59:59+07:00',
+  usageLimit: null,
+  currentUsage: 0,
+  autoApply: true,
+});
+
+/** /admin/promotions, with the singleton row its card needs. */
+const PROMOTIONS_FIXTURE: FixtureRule[] = [
+  { match: /\/admin\/promotions\/round-trip$/, body: ROUND_TRIP_PROMOTION },
+];
+
 export const ADMIN_SWEEP: SweepPage[] = [
   { key: 'admin-lookups', url: '/admin/lookups', landsOn: /\/admin\/lookups$/, requires: '.admin-table' },
   { key: 'admin-roles', url: '/admin/roles', landsOn: /\/admin\/roles$/, requires: '.admin-table' },
@@ -283,7 +448,18 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-cash-online-reconciliation-report-page',
   },
   { key: 'admin-expenses', url: '/admin/expenses', landsOn: /\/admin\/expenses$/, requires: 'app-expenses-page' },
-  { key: 'admin-promotions', url: '/admin/promotions', landsOn: /\/admin\/promotions$/, requires: 'app-promotions-page' },
+  {
+    key: 'admin-promotions',
+    url: '/admin/promotions',
+    landsOn: /\/admin\/promotions$/,
+    requires: 'app-promotions-page',
+    // OBRS-782: the round-trip singleton, so `app-round-trip-promotion-card`
+    // renders its form instead of the "nothing configured" line. Folded into
+    // the existing entry rather than given a page of its own -- it needs no
+    // click, so a second visit to the same URL would buy one more component and
+    // pay a full navigation for it.
+    fixture: PROMOTIONS_FIXTURE,
+  },
   { key: 'admin-vehicles', url: '/admin/vehicles', landsOn: /\/admin\/vehicles$/, requires: 'app-vehicles-page' },
   {
     // A TAB of /admin/settings since OBRS-576, not a route of its own;
@@ -334,8 +510,16 @@ export const ADMIN_SWEEP: SweepPage[] = [
     url: '/admin/promotions',
     landsOn: /\/admin\/promotions$/,
     requires: 'app-promotions-page',
+    fixture: PROMOTIONS_FIXTURE,
+    // OBRS-782 narrowed this selector from `app-promotions-page
+    // button.admin-btn-primary` -- `.first()` was safe only while the
+    // round-trip card above rendered nothing. With its form populated, the
+    // card's own Save button is the first `admin-btn-primary` on the page, and
+    // the click would have submitted a promotion instead of opening the modal.
+    // The page's Add button lives in `.admin-page-intro`, which the card does
+    // not use.
     act: async (page) => {
-      await page.locator('app-promotions-page button.admin-btn-primary').first().click();
+      await page.locator('app-promotions-page .admin-page-intro button.admin-btn-primary').first().click();
       await expect(page.locator('app-promotion-form-modal .admin-modal')).toBeVisible({ timeout: 10_000 });
     },
   },
@@ -352,6 +536,119 @@ export const ADMIN_SWEEP: SweepPage[] = [
     act: async (page) => {
       await page.locator('app-staff-schedules-page button.btn-primary').first().click();
       await expect(page.locator('app-staff-schedules-page .modal.d-block')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+
+  // --- OBRS-782 -------------------------------------------------------------
+  // The screens OBRS-776 could not open. Each one is a page already in this
+  // list, revisited with the smallest fixture that makes its PrimeNG host
+  // exist plus the clicks a staff member would make. They are separate entries
+  // rather than extra clicks on the existing ones because an `act` that fails
+  // has to name one screen: chaining "select a trip, then open the Trip Details
+  // tab, then open the schedule modal on top of it" into one entry would put
+  // three components behind one assertion and one error message.
+  {
+    // `app-walk-in-center-panel`'s p-tabView is `*ngIf="selectedTrip"`, and
+    // `app-trip-details-edit-form` lives in its second tab. One trip row and
+    // two clicks reach both, which is why they share an entry.
+    key: 'staff-sell-trip-details',
+    url: '/staff/sell',
+    landsOn: /\/staff\/sell$/,
+    requires: 'app-sell-page',
+    fixture: [
+      { match: /\/schedules\/walk-in$/, body: WALK_IN_TRIPS },
+      { match: /\/segments\//, body: WALK_IN_SEGMENTS },
+    ],
+    act: async (page) => {
+      await page.locator('.trip-row').first().click();
+      await expect(page.locator('app-walk-in-center-panel p-tabview')).toBeVisible({ timeout: 10_000 });
+      await page.locator('.p-tabview-nav').getByText('Trip Details').click();
+      await expect(page.locator('app-trip-details-edit-form')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    // `app-sell-page`'s own two calendars are in the schedule modal, which the
+    // trip browser's Add button opens. It needs no fixture at all: the modal
+    // body is `*ngIf="scheduleStore.hasValue"`, and that store resolves on six
+    // empty lists exactly as it already does on /staff/schedules.
+    key: 'staff-sell-schedule-modal',
+    url: '/staff/sell',
+    landsOn: /\/staff\/sell$/,
+    requires: 'app-sell-page',
+    act: async (page) => {
+      await page.locator('app-walk-in-trip-browser button.btn-outline-primary').first().click();
+      await expect(page.locator('app-sell-page .modal.d-block .modal-body form')).toBeVisible({ timeout: 15_000 });
+    },
+  },
+  {
+    // `app-boarding-list`'s two calendars are in the delay dialog, and its pill
+    // is `*ngIf="canDelaySchedule && tripHeader.statusCode === 'scheduled'"`.
+    // The role half already holds -- `admin` grants `salesperson` through
+    // AuthService.ROLE_GRANTS -- so the status is the only missing half, and it
+    // comes from a supplementary GET the generic mock answers with null.
+    key: 'staff-boarding-list-delay',
+    url: '/staff/boarding/42',
+    landsOn: /\/staff\/boarding\/42$/,
+    requires: 'app-boarding-list-page table',
+    fixture: [{ match: /\/schedules\/42$/, body: BOARDING_SCHEDULE }],
+    act: async (page) => {
+      await page
+        .locator('app-boarding-list button.admin-btn')
+        .filter({ has: page.locator('span.material-symbols-outlined', { hasText: /^update$/ }) })
+        .first()
+        .click();
+      await expect(page.locator('app-boarding-list .schedule-delay-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    // `app-vehicle-maintenance-panel` renders under `activeTab === maintenance
+    // && focusedVehicle`, and its calendars are one further click inside the
+    // panel's own Add modal. Three states, so three assertions -- a click that
+    // silently did nothing would otherwise be reported as a clean screen.
+    key: 'admin-vehicles-maintenance',
+    url: '/admin/vehicles',
+    landsOn: /\/admin\/vehicles$/,
+    requires: 'app-vehicles-page',
+    fixture: [
+      { match: /\/vehicles$/, body: ONE_VEHICLE },
+      { match: /\/vehicles\/\d+\/maintenance$/, body: ok([]) },
+    ],
+    act: async (page) => {
+      await page
+        .locator('app-vehicle-list-table button.admin-icon-btn')
+        .filter({ has: page.locator('span.material-symbols-outlined', { hasText: /^build$/ }) })
+        .first()
+        .click();
+      await expect(page.locator('app-vehicle-maintenance-panel')).toBeVisible({ timeout: 10_000 });
+      await page.locator('app-vehicle-maintenance-panel button.admin-btn-primary').first().click();
+      await expect(page.locator('app-vehicle-maintenance-panel .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+];
+
+/**
+ * OBRS-782. Customer screens that need a click, swept after `CUSTOMER_SWEEP`
+ * with the same session and the same fixtures.
+ *
+ * Deliberately NOT added to `CUSTOMER_PAGES`: that list is shared with
+ * `customer-contrast-gate.spec.ts` and `dark-override-effective.spec.ts`, which
+ * sweep it for colour rather than for boxes, and an entry that only exists to
+ * open a dialog would cost both of them a page and answer neither's question.
+ */
+export const CUSTOMER_EXTRA_SWEEP: SweepPage[] = [
+  {
+    // `app-reschedule-date-picker-step` is step one of the reschedule dialog,
+    // which the booking card's overflow menu opens. No fixture: booking 501 in
+    // `customer-pages.ts` is already `confirmed`, one-way, never rescheduled
+    // and departs in 2030 -- every clause of `computeRescheduleEligibility`.
+    key: 'my-bookings-reschedule',
+    url: '/my-bookings',
+    landsOn: /\/my-bookings$/,
+    requires: 'app-my-bookings',
+    act: async (page) => {
+      await page.locator('button.actions-menu-btn').first().click();
+      await page.locator('.my-bookings-action-menu').getByText('Reschedule').click();
+      await expect(page.locator('app-reschedule-date-picker-step p-calendar')).toBeVisible({ timeout: 10_000 });
     },
   },
 ];
@@ -558,7 +855,6 @@ export async function scanPrimengCoverage(page: Page): Promise<Record<string, st
 
 // --- reaching them -----------------------------------------------------------
 
-const ok = <T>(data: T) => ({ code: 200, message: 'OK', data });
 const emptyPage = () => ({ content: [], totalElements: 0, totalPages: 0, size: 100, number: 0 });
 
 /**
@@ -575,6 +871,17 @@ const emptyPage = () => ({ content: [], totalElements: 0, totalPages: 0, size: 1
 export async function mockEmptyBackend(page: Page): Promise<void> {
   await page.route('**/api/**', (route) => {
     const pathname = new URL(route.request().url()).pathname;
+    // OBRS-782: the current page's own rows win over the generic answers. First
+    // match, so a fixture can narrow one path without restating the rest.
+    for (const rule of activeFixture) {
+      if (rule.match.test(pathname)) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(rule.body),
+        });
+      }
+    }
     let body: unknown = ok(null);
     if (/\/external\/otp\/request/.test(pathname)) body = ok({ token: 'OTP-HOST-BOX-SWEEP' });
     else if (/(bookings|usability-reports|notifications)$/.test(pathname)) body = ok(emptyPage());
@@ -614,6 +921,10 @@ export async function seedStaffSession(page: Page): Promise<void> {
  * would report differences that are timing, not layout.
  */
 export async function visit(page: Page, p: SweepPage, seedFn?: (pg: Page) => Promise<void>): Promise<void> {
+  // OBRS-782: set BEFORE the navigation, and unconditionally -- an entry with
+  // no fixture has to CLEAR the previous one, or the empty-backend pages after
+  // a fixtured one would quietly measure somebody else's rows.
+  activeFixture = p.fixture ?? [];
   await page.goto(p.url);
   if (p.seed && seedFn) await seedFn(page);
   // The page must be ITSELF before anything is measured. Without this a redirect

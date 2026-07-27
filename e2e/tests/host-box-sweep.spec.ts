@@ -2,6 +2,7 @@ import { expect, test, Page } from '@playwright/test';
 import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
 import {
   ADMIN_SWEEP,
+  CUSTOMER_EXTRA_SWEEP,
   CUSTOMER_HOST,
   CUSTOMER_SWEEP,
   MalformedHost,
@@ -24,9 +25,10 @@ import {
  * and the gate that keeps it from growing.
  *
  * WHAT THIS ASSERTS. Every custom-element host on every page this lane can reach
- * hermetically -- eight customer pages, nine public/auth-entry routes,
- * twenty-five admin/staff/session-bound screens (OBRS-776 added twelve routes
- * and three modals) -- is either well-formed or named on ALLOW
+ * hermetically -- nine customer pages, nine public/auth-entry routes,
+ * twenty-nine admin/staff/session-bound screens, 47 in all (OBRS-776 added
+ * twelve routes and three modals; OBRS-782 added five screens reached by
+ * clicking, with data) -- is either well-formed or named on ALLOW
  * with a reason. A host that is neither fails the run. A component added
  * tomorrow that forgets its `:host { display }` therefore reds the gate on the
  * first run, whether or not anyone remembers this card exists -- which is the
@@ -60,6 +62,23 @@ import {
  * host as coverage would report a `p-calendar` as measured when none had
  * rendered. That is the assertion that makes an empty ALLOW mean something.
  *
+ * OBRS-782 EMPTIED THE EXCUSE LIST, and doing so was the point. OBRS-776 left
+ * seven components covered by a VARIANT argument rather than by measurement --
+ * each behind data this lane answered with `null` on principle, since an empty
+ * table has the same host tree as a full one. That principle is true of every
+ * other page here and false for exactly those seven: a `p-tabView` behind
+ * `*ngIf="selectedTrip"` does not render a different box when the list is
+ * empty, it renders no box at all. `SweepPage.fixture` is the narrow exception
+ * -- the smallest rows that make a host exist, answered ahead of the empty
+ * backend and cleared on the next navigation.
+ *
+ * What it bought is the argument for having done it: the five screens it opened
+ * turned up THREE malformed hosts no run in this repo had ever measured --
+ * `app-reschedule-date-picker-step`, `app-trip-details-edit-form`, and
+ * `app-passenger-seat-bus`, which was not even on the card's list. All three
+ * are fixed and measured here. A variant argument would have shipped a global
+ * rule over every one of them.
+ *
  * ASCII-only source.
  */
 
@@ -73,6 +92,12 @@ import {
  * widened the sweep by 12 pages -- which turned up two more of ours,
  * `app-settlements-list` and `app-config-change-history-page`, on pages nobody
  * had swept -- and then fixed the four with `src/styles/primeng-host-boxes.scss`.
+ * OBRS-782 opened five screens behind data and clicks and found THREE more of
+ * ours, all fixed there: `app-reschedule-date-picker-step`,
+ * `app-trip-details-edit-form` and `app-passenger-seat-bus`. Three cards, three
+ * widenings, and every one of them found something -- which is the strongest
+ * available argument that "we did not measure it" is never the same claim as
+ * "it is fine".
  *
  * `no stale ALLOW entries` means an entry added here has to be seen by a real
  * run, so this cannot quietly become a list of things somebody once believed.
@@ -82,6 +107,11 @@ const ALLOW: Record<string, string> = {};
 /**
  * OBRS-776. Components that render one of `PRIMENG_TARGETS` and that no screen
  * in the sweep can get to render it, with the reason.
+ *
+ * ONE ENTRY since OBRS-782, and it is the only one ever excused by a FACT
+ * rather than by an argument. OBRS-776 left eight; seven were reached with
+ * fixtures and clicks and their entries deleted, which the second assertion in
+ * `primeng host users are all swept` makes compulsory rather than polite.
  *
  * Kept deliberately short: every entry is a hole in the evidence for a rule that
  * lands app-wide, so the bar for adding one is that the component genuinely
@@ -100,29 +130,6 @@ const NOT_SWEPT: Record<string, string> = {
     'Only route is /parcel-booking, behind featureEnabledGuard(onlineParcelBooking), which is false in ' +
     'environment.base.ts -- the page bounces to / in every build. `the parcel-booking exclusion has not ' +
     'expired` re-reads that flag, so this entry cannot outlive its reason.',
-  'app-reschedule-date-picker-step':
-    'Step 2 of a dialog that only opens from a reschedulable booking row, which this lane has no data to ' +
-    'produce. Covered by variant instead -- see `no unswept component renders an unmeasured variant`.',
-  'app-trip-details-edit-form':
-    'Dialog opened from a staff schedule row; same missing-data reason as the reschedule dialog. Covered ' +
-    'by variant.',
-  'app-vehicle-maintenance-panel':
-    'Renders only under `activeTab === maintenance && focusedVehicle` on /admin/vehicles -- two clicks past ' +
-    'a vehicle row this lane does not seed. Covered by variant.',
-  'app-round-trip-promotion-card':
-    'Its form is behind `*ngIf="!isLoading && promotion"` and the sweep answers /api/** with nulls on ' +
-    'principle -- an empty table has the same host tree as a full one, which is true of every OTHER page ' +
-    'here. Covered by variant.',
-  'app-sell-page':
-    'Its own two calendars are in the schedule modal, and that modal needs `scheduleStore.hasValue` on top ' +
-    'of the click. Covered by variant -- staff-schedules-modal renders the identical bare shape.',
-  'app-boarding-list':
-    'Its calendars are in the delay dialog, whose button is behind ' +
-    '`canDelaySchedule && tripHeader.statusCode === scheduled`. Covered by variant.',
-  'app-walk-in-center-panel':
-    'Its p-tabView is `*ngIf="selectedTrip"` -- a walk-in trip selection this lane cannot make. Covered by ' +
-    'variant: `center-tabview` is styled through ::ng-deep for background, padding and flex-wrap and never ' +
-    'for display, so it is the same box as the tabview app-route-map-home renders on /.',
 };
 
 /** Every malformed host the whole sweep saw, keyed by tag. Read by the last two tests. */
@@ -204,6 +211,10 @@ test.describe('OBRS-775 malformed host boxes', () => {
     const page = await newSweepPage(browser);
     await seedCustomerSession(page, false);
     await sweep(page, CUSTOMER_SWEEP, seedStore);
+    // OBRS-782: same session, same fixtures, one extra screen that needs a
+    // click. Kept out of CUSTOMER_PAGES because that list is also the contrast
+    // and dark-override gates' page list -- see CUSTOMER_EXTRA_SWEEP.
+    await sweep(page, CUSTOMER_EXTRA_SWEEP, seedStore);
     await page.context().close();
   });
 
@@ -274,7 +285,12 @@ test.describe('OBRS-775 malformed host boxes', () => {
   /**
    * What makes the NOT_SWEPT entries survivable instead of a hole.
    *
-   * Eight components render a PrimeNG host behind data or a selection this lane
+   * OBRS-782 left this test with almost nothing to do and deliberately did not
+   * delete it: one component still cannot be reached, and the day someone adds
+   * another this is the check that decides whether the exclusion is
+   * survivable. The argument below is unchanged.
+   *
+   * A component renders a PrimeNG host behind data or a selection this lane
    * cannot produce. The global rule still reaches them, so "we did not measure
    * it" would be the exact mistake OBRS-775 refused to make -- unless the thing
    * that decides how the host lays out is the same in them as in one that WAS
