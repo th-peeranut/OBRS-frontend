@@ -373,15 +373,12 @@ function selectorPath(node) {
 // entry needs a card key and the MEASURED reason, because "we decided it is
 // fine" is not reviewable. A key that stops matching fails the gate (see
 // staleAllow below), so this list cannot outlive the situation it describes.
-const STANDALONE_CHIP_ALLOW = {
-  'app/modules/staff/components/parcel-intake-result-panel/parcel-intake-result-panel.component.scss::.parcel-intake-result-icon':
-    'OBRS-747 -- measured in ChromeHeadless: the surface painted behind this 48px glyph is ' +
-    '#ffffff in BOTH themes, because parcel-consign-page wraps the panel in a raw Bootstrap ' +
-    '`.card` that nothing repaints for dark mode. The chip token ships at 12.37:1 there; the ' +
-    'themed --admin-accepted-fg would ship at 1.67:1. Fixing the SURFACE is OBRS-747, and this ' +
-    'entry is deleted as part of it. Pinned by the `contrast of .parcel-intake-result-icon` ' +
-    'block in parcel-intake-result-panel.component.spec.ts.',
-};
+// Empty is the correct state, not an oversight. OBRS-726 added the single entry
+// this map has ever held (.parcel-intake-result-icon, exempted because the
+// surface under it was stuck light); OBRS-747 themed that surface and moved the
+// rule to --admin-accepted-fg, so the exemption was deleted with it -- which is
+// what the staleAllow check below exists to force.
+const STANDALONE_CHIP_ALLOW = {};
 
 /**
  * @param sources [{ rel, text }] with comments already stripped

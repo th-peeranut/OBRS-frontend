@@ -481,6 +481,189 @@
   }
 }
 
+/* ── OBRS-747: the raw Bootstrap `.card` the staff pages wrap their content in ──
+   Same defect family as the OBRS-128 block above, one level out: the shell flips
+   every --admin-* token to its dark value, but the SURFACE those tokens are read
+   against was never repainted, so a correctly-themed foreground shipped
+   light-on-light. `.admin-shell label` (further down this file) forces
+   `color: var(--admin-text)`, which is exactly how a form of perfectly themed
+   labels ended up invisible.
+
+   Population, tokenized from the real class attributes (not a substring grep):
+   TEN templates carry an exact `card` class and every one is under /staff — the
+   admin side uses .admin-card throughout, which is why this went unnoticed. Two
+   had already opted in per-page (sell-page/OBRS-128, boarding-list/OBRS-100),
+   leaving eight broken. Measured in a real browser on all ten, both modes
+   (`e2e/scripts/capture-obrs747.js`, numbers on the card):
+
+     dark .card painted background        #ffffff   <- 9 of 10 pages
+     parcel-consign, 16 form labels       --admin-text #e7edf1 on #ffffff = 1.18:1
+     intake panel dd (tracking/code/amt)  --admin-text #e7edf1 on #ffffff = 1.18:1
+     intake panel dt (labels)             --admin-muted #9fb0bb on #ffffff = 2.23:1
+
+   1.18:1 is worse than the 1.71:1 OBRS-520 was filed for, and the `dd` values
+   are the tracking number, collection code and amount a clerk reads aloud.
+
+   ONE rule for the surface, not eight per-page overrides, and deliberately NOT
+   `.card` unscoped: the customer booking flow uses the same Bootstrap class and
+   has its own light-only design (see dark-theme.scss).
+
+   `box-shadow` is deliberately NOT set. Every one of these templates carries
+   Bootstrap's `.shadow-sm` utility, which is `!important` and would win anyway;
+   matching `.is-dark .admin-card`'s heavier drop-shadow would take an
+   `!important` of its own to buy nothing — on a dark surface the border is what
+   separates the card, and that IS themed here. */
+.admin-shell.is-dark {
+  .card {
+    background-color: var(--admin-surface-card);
+    color: var(--admin-text);
+    border-color: var(--admin-outline);
+  }
+
+  /* Bootstrap surfaces that sit INSIDE those cards carrying a light background
+     of their own — repainting only the card would leave white blocks floating on
+     it. Scoped to `.card` on purpose: a raw `.table` OUTSIDE a card in this shell
+     belongs to the admin pages' own themed table treatment, and widening this
+     would silently restyle ~30 admin screens that nobody measured for it. */
+  .card > .card-header,
+  .card > .card-footer {
+    background-color: var(--admin-surface-soft);
+    border-color: var(--admin-outline);
+  }
+
+  /* Bootstrap 5.3 resolves a cell's background from --bs-table-bg, whose default
+     is --bs-body-bg (white) — not `transparent`. So the dark card must be let
+     through explicitly; without this the table renders as a white slab with
+     near-black text (passes contrast, destroys the theme) and every .text-muted
+     cell inside it flips to a real AA failure. */
+  .card .table {
+    --bs-table-bg: transparent;
+    --bs-table-color: var(--admin-text);
+    --bs-table-border-color: var(--admin-outline);
+    color: var(--admin-text);
+    border-color: var(--admin-outline);
+  }
+
+  .card .table > :not(caption) > * > * {
+    background-color: transparent;
+    color: var(--admin-text);
+    border-bottom-color: var(--admin-outline);
+  }
+
+  /* `thead.table-light` re-declares --bs-table-bg (#f8f9fa) on the thead itself,
+     so the cells have to be addressed directly to beat it. */
+  .card .table thead.table-light th {
+    background-color: var(--admin-surface-soft);
+    color: var(--admin-muted);
+    border-bottom-color: var(--admin-outline);
+  }
+
+  .card .table-hover > tbody > tr:hover > * {
+    background-color: rgba(255, 255, 255, 0.04);
+    color: var(--admin-text);
+  }
+
+  .card .bg-light {
+    background-color: var(--admin-surface-soft) !important;
+  }
+
+  .card .bg-white {
+    background-color: var(--admin-surface-card) !important;
+  }
+
+  /* Bootstrap OUTLINE buttons — the only regression the before/after sweep found
+     from the `.card` rule above, on four pages. An outline button draws its own
+     text in Bootstrap's brand blue over no fill of its own, so it read #0d6efd on
+     #ffffff = 4.51:1 (barely passing) and the darker card took it to 3.56:1.
+     Remapping Bootstrap's own --bs-btn-* variables instead of setting `color`
+     keeps hover/active/disabled coherent rather than fixing the resting state and
+     leaving three others behind.
+
+     Shell-scoped, not card-scoped: all 14 uses across 8 templates are under
+     /staff, none was themed anywhere before this, and an outline button on the
+     bare dark shell (#14181b) is worse off than one on a card — scoping to
+     `.card` would fix the four measured sites and leave the same button broken a
+     div higher up. MEASURED: -primary, 5 rendered instances, 3.56 -> 8.7:1.
+     -secondary and -danger did not render in any of the 12 captured page states,
+     so they are the same mechanical remap applied for consistency rather than a
+     verified number (their resting values on #1d2226 would be 2.6:1 and 3.9:1). */
+  .btn-outline-primary {
+    --bs-btn-color: var(--admin-primary-fg);
+    --bs-btn-border-color: var(--admin-outline);
+    --bs-btn-hover-color: var(--admin-on-primary);
+    --bs-btn-hover-bg: var(--admin-primary);
+    --bs-btn-hover-border-color: var(--admin-primary);
+    --bs-btn-active-color: var(--admin-on-primary);
+    --bs-btn-active-bg: var(--admin-primary);
+    --bs-btn-active-border-color: var(--admin-primary);
+    --bs-btn-disabled-color: var(--admin-muted);
+    --bs-btn-disabled-border-color: var(--admin-outline);
+  }
+
+  .btn-outline-secondary {
+    --bs-btn-color: var(--admin-text);
+    --bs-btn-border-color: var(--admin-outline);
+    --bs-btn-hover-color: var(--admin-text);
+    --bs-btn-hover-bg: var(--admin-surface-soft);
+    --bs-btn-hover-border-color: var(--admin-outline);
+    --bs-btn-active-color: var(--admin-text);
+    --bs-btn-active-bg: var(--admin-surface-soft);
+    --bs-btn-active-border-color: var(--admin-outline);
+    --bs-btn-disabled-color: var(--admin-muted);
+    --bs-btn-disabled-border-color: var(--admin-outline);
+  }
+
+  /* --admin-danger-fg/-surface/-border are the surface-ROLE danger tokens from
+     OBRS-520 (never the --admin-danger-text chip half), and OBRS-520 measured
+     their dark pair: #ffb4ab on the card 9.45:1, on the #4a1512 hover fill 8.79:1. */
+  .btn-outline-danger {
+    --bs-btn-color: var(--admin-danger-fg);
+    --bs-btn-border-color: var(--admin-danger-border);
+    --bs-btn-hover-color: var(--admin-danger-fg);
+    --bs-btn-hover-bg: var(--admin-danger-surface);
+    --bs-btn-hover-border-color: var(--admin-danger-border);
+    --bs-btn-active-color: var(--admin-danger-fg);
+    --bs-btn-active-bg: var(--admin-danger-surface);
+    --bs-btn-active-border-color: var(--admin-danger-border);
+    --bs-btn-disabled-color: var(--admin-muted);
+    --bs-btn-disabled-border-color: var(--admin-outline);
+  }
+
+  /* The Bootstrap tab strip, scoped to the SHELL rather than to `.card`, which is
+     a deliberate difference from every rule above. Three templates use it:
+     parcel-consign's mode toggle sits INSIDE its card (so the change above would
+     otherwise BREAK it — Bootstrap keeps a white pill for `.nav-link.active`),
+     while parcel-schedule-tabs and admin system-settings put the same strip
+     straight on the shell surface, where it measured #0d6efd on #14181b = 3.97:1
+     — already below AA before this card. Fixing the one inside the card and
+     leaving the identical strip two pages over would be indefensible. */
+  .nav-tabs {
+    border-bottom-color: var(--admin-outline);
+  }
+
+  .nav-tabs .nav-link {
+    color: var(--admin-primary-fg);
+    background-color: transparent;
+    border-color: transparent;
+  }
+
+  .nav-tabs .nav-link:hover:not(.active):not(:disabled) {
+    color: var(--admin-text);
+    border-color: var(--admin-outline);
+  }
+
+  .nav-tabs .nav-link.active {
+    color: var(--admin-text);
+    background-color: var(--admin-surface-card);
+    border-color: var(--admin-outline);
+    border-bottom-color: var(--admin-surface-card);
+  }
+
+  .nav-tabs .nav-link:disabled {
+    color: var(--admin-muted);
+  }
+}
+
 .admin-shell,
 .admin-shell * {
   font-family: "Sarabun", sans-serif;
