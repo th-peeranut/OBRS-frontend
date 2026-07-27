@@ -74,9 +74,14 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // navItems, which is built the same way to role-gate its own entries.
   protected navItems: AdminNavItem[] = [];
 
-  // OBRS-290: sidebar menu search. `filteredNavItems` (what the template
-  // renders) is a stable field recomputed only on query/language change — NOT
-  // a getter, for the same *ngFor + change-detection reason as navItems above.
+  // OBRS-290: sidebar menu search. `filteredNavItems` is a stable field
+  // recomputed only on query/language change — NOT a getter, for the same
+  // *ngFor + change-detection reason as navItems above.
+  // OBRS-794: this comment used to claim filteredNavItems was "what the
+  // template renders". It has not been since OBRS-289 moved rendering onto
+  // filteredNavSections below; filteredNavItems is now only the intermediate
+  // that buildSections() groups. Believing the stale comment is how the
+  // empty-query path shipped without rebuilding the sections.
   protected navSearchQuery = '';
   protected filteredNavItems: AdminNavItem[] = [];
   // OBRS-289: the rendered structure — filteredNavItems grouped into ordered
@@ -283,20 +288,26 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
   // OBRS-290: filter nav items by matching the (trimmed, lower-cased) query
   // against each item's translated label AND translated description. An empty
   // query restores the full list. Called from the search input's ngModelChange.
+  //
+  // OBRS-794: single exit, one assignment site per derived field. The empty
+  // query used to take an early `return` that set filteredNavItems and never
+  // touched filteredNavSections — so on every path that empties the query
+  // (backspacing to blank, the × button, Escape, clicking a result) the
+  // sidebar stayed frozen on the last non-empty query's sections, which is the
+  // ONLY thing the template renders. Keeping the branch inside the expression
+  // means a future third derived field cannot be forgotten on one path.
   protected applyNavSearch(query: string): void {
     this.navSearchQuery = query;
     const q = query.trim().toLowerCase();
-    if (!q) {
-      this.filteredNavItems = this.navItems;
-      return;
-    }
-    this.filteredNavItems = this.navItems.filter((item) => {
-      const label = this.translate.instant(item.labelKey).toLowerCase();
-      const description = item.descriptionKey
-        ? this.translate.instant(item.descriptionKey).toLowerCase()
-        : '';
-      return label.includes(q) || description.includes(q);
-    });
+    this.filteredNavItems = q
+      ? this.navItems.filter((item) => {
+          const label = this.translate.instant(item.labelKey).toLowerCase();
+          const description = item.descriptionKey
+            ? this.translate.instant(item.descriptionKey).toLowerCase()
+            : '';
+          return label.includes(q) || description.includes(q);
+        })
+      : this.navItems;
     this.filteredNavSections = this.buildSections(this.filteredNavItems);
   }
 
