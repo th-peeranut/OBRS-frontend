@@ -113,3 +113,13 @@
 .override-cancel-error {
   margin: 12px 0 0;
 }
+
+// OBRS-286 Flow A3 step 5 — the check-failed advisory next to the (optional)
+// destination fields, with an inline Retry affordance.
+.override-cancel-destination-advisory {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 0;
+}
