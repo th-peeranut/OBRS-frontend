@@ -139,7 +139,12 @@
   flex: 0 0 auto;
   border-radius: $radius-circle;
   background: $primary-lightgrey;
-  color: $text-lightblack;
+  // OBRS-752: was $text-lightblack -- 3.20:1 on this grey chip, the worst of the
+  // five $text-lightblack sites. $text-lightblack's own AA move is pinned by
+  // WHITE (its other four sites), so it never gets dark enough for #dddee1;
+  // pointing this one site at the next token down is 5.21:1 and does not drag
+  // an 87-use token darker for a single chip.
+  color: $text-softblack;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
 }

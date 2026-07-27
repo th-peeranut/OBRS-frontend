@@ -34,6 +34,25 @@ interface MarkerEntry {
 }
 
 /**
+ * The brand palette, restated for the map (OBRS-752).
+ *
+ * Google Maps markers are SVG data-URLs, so these cannot be `$primary-blue` /
+ * `$secondary-blue` from styles/variables.scss -- they have to be literals in
+ * TypeScript. That is exactly why they were left behind when the palette moved:
+ * `scripts/check-brand-fill-contrast.mjs` reads .scss and never opens this file,
+ * so the pickup pin sat at white-on-#4BC2F7 = 2.03:1 through the whole of
+ * OBRS-740/741/752, while the numbered badge FOR THE SAME STOP, one component
+ * away in route-stop-list.component.scss, was one of the 48 the gate did report.
+ * A blind spot reads exactly like a pass -- the same shape as OBRS-734, one
+ * layer further out.
+ *
+ * Named and hoisted so the next palette move has one place to look instead of
+ * three call sites. Keep them equal to their SCSS counterparts.
+ */
+const MAP_PICKUP_COLOR = '#0772A2'; // = $primary-blue; white pin number on it = 5.33:1 (was 2.03:1)
+const MAP_DROPOFF_COLOR = '#3B61A9'; // = $secondary-blue; white pin number on it = 6.05:1
+
+/**
  * Load the Google Maps JS API once per page using Google's recommended
  * `loading=async` bootstrap + a `callback`. Loading the API the legacy
  * (synchronous) way keeps the browser's tab-loading indicator spinning and logs
@@ -270,7 +289,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
 
   // Constant — never changes, so safe as a readonly field.
   readonly polylineOptions: google.maps.PolylineOptions = {
-    strokeColor: '#4BC2F7',
+    strokeColor: MAP_PICKUP_COLOR,
     strokeWeight: 4,
     strokeOpacity: 0.85,
   };
@@ -656,7 +675,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     }
     this.pickupMarkers = this.pickupStops.map((stop) => ({
       slug: stop.slug,
-      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, '#4BC2F7'),
+      options: this.buildMarkerOptions(stop, this.selectedPickupSlug, MAP_PICKUP_COLOR),
     }));
   }
 
@@ -667,7 +686,7 @@ export class RouteMapPanelComponent implements OnInit, OnChanges, OnDestroy {
     }
     this.dropoffMarkers = this.dropoffStops.map((stop) => ({
       slug: stop.slug,
-      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, '#4069B8'),
+      options: this.buildMarkerOptions(stop, this.selectedDropoffSlug, MAP_DROPOFF_COLOR),
     }));
   }
 

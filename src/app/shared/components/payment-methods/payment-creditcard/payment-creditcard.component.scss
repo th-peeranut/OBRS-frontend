@@ -106,14 +106,12 @@
   width: 100%;
   height: 52px;
 
-  /* OBRS-741: white on #0090d0 was 3.56:1. NOTE the rest state above is
-     $primary-blue (#4bc2f7, 2.03:1) and is deliberately NOT fixed here -- it is
-     one of the 23 sites in the customer-palette sweep. So this hover is
-     currently much darker than its own rest state; when $primary-blue lands on
-     its AA value the two will sit close together and this hover must be
-     re-derived, not left as is. */
+  /* OBRS-752: re-derived, as OBRS-741 said it would have to be. $primary-blue
+     is now #0772a2, and 741's #007eb6 hover is LIGHTER than that -- the button
+     would have got brighter on hover, i.e. inverted, while still "passing" AA.
+     Neither the ratio nor the gate would have said a word about it. */
   &:hover {
-    background: #007eb6; /* white on it = 4.51:1 */
+    background: #065d85; /* white on it = 7.21:1, and clearly darker than rest */
   }
 
   &-diabled {

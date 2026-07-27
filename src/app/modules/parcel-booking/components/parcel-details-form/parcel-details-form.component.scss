@@ -32,7 +32,10 @@ label {
   padding: 8px 12px;
   border-radius: 8px;
   background: $primary-grey;
-  color: $text-softblack;
+  // OBRS-752: was $text-softblack -- 3.72:1 on $primary-grey. $primary-grey is a
+  // mid grey (#babdc3), so the token that reads fine on white does not survive
+  // on it; $text-black is 5.93:1 here. Two sites do this, both in parcel.
+  color: $text-black;
   font-weight: $font-weight-medium;
 }
 

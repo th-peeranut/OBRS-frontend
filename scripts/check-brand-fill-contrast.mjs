@@ -47,79 +47,31 @@ const SRC = process.argv[2] ? resolve(process.argv[2]) : join(HERE, '..', 'src')
 const AA_NORMAL = 4.5;
 const AA_LARGE = 3.0;
 
-// Known-open failures, ALL of them owned by OBRS-741.
+// Known-open failures. Keyed by "<path relative to src>::<selector>".
 //
-// This list is a debt marker, not an exemption. It is spelled out site by site
-// with the measured ratio because the alternative -- narrowing the gate until
-// it only sees the one thing this card fixed -- would have reported "OK" while
-// 14 other surfaces stayed below AA, which is precisely the failure mode
-// OBRS-734's "0 elements below AA" already demonstrated once.
+// AS OF OBRS-752 THIS LIST IS EMPTY -- every brand fill in the app is at or
+// above its WCAG AA floor, and the gate now has nothing to tolerate.
 //
-// OBRS-740 fixed the FAB only; the owner's scope decision was explicitly
-// "FAB now, separate card for the gradient family". `.admin-btn-primary` is the
-// app-wide primary button, so repainting it is a visual change on every admin
-// page and needs its own before/after sweep to be reviewable at all.
+// It is a debt marker, not an exemption, and it was always spelled out site by
+// site with the measured ratio: the alternative -- narrowing the gate until it
+// only sees the one thing the current card fixed -- would have reported "OK"
+// while the rest stayed below AA, which is precisely the failure mode
+// OBRS-734's "0 elements below AA" already demonstrated once. It ran 740 -> 741
+// -> 752 that way, shrinking each time, and an entry that stops matching
+// anything fails the gate (see staleAllow), so it could never quietly outlive
+// the bugs it described.
 //
-// An entry that stops matching anything fails the gate (see staleAllow), so
-// this list cannot quietly outlive the bugs it describes.
+// OBRS-752 emptied it. The 48 customer-palette entries that lived here
+// are FIXED, not moved: every one of them was driven by a variable in
+// styles/variables.scss -- not a single site had a local hex of its own -- so
+// five palette values moved to their measured AA floor and three sites were
+// repointed at an existing darker token. See that file's header for the
+// derivation.
 //
-// Keyed by "<path relative to src>::<selector>".
-const OWNER = 'OBRS-741';
-const SWEEP = 'OBRS-752';
-
-// Generated from a real run rather than typed by hand, so the ratios cannot
-// drift from what the gate actually measured. Regenerate the same way if this
-// list needs rebuilding: the numbers are evidence, not annotation.
-const SWEEP_ALLOW = {
-  'app/modules/e-ticket/e-ticket.component.scss::.download-btn': `2.03:1, ${SWEEP}`,
-  'app/modules/e-ticket/e-ticket.component.scss::.ticket-nav-btn': `2.03:1, ${SWEEP}`,
-  'app/modules/home/components/home-booking/home-booking.component.scss::.btn-search': `2.03:1, ${SWEEP}`,
-  'app/modules/home/components/route-map/route-map-home/route-map-home.component.scss:::host ::ng-deep .p-selectbutton .p-button.p-highlight': `2.03:1, ${SWEEP}`,
-  'app/modules/home/components/route-map/route-stop-detail-card/route-stop-detail-card.component.scss::.detail-order-badge &--pickup': `2.03:1, ${SWEEP}`,
-  'app/modules/home/components/route-map/route-stop-list/route-stop-list.component.scss::.stop-order-badge &--pickup': `2.03:1, ${SWEEP}`,
-  'app/modules/login/login.component.scss::.login-container .login-card .login-form .login-btn': `2.03:1, ${SWEEP}`,
-  'app/modules/login/login.component.scss::.login-container .login-card .login-form .login-by-phone-no-btn': `1.96:1, ${SWEEP}`,
-  'app/modules/my-bookings/components/change-seat-dialog/change-seat-dialog.component.scss::.change-seat-map-step__confirm-error': `4.24:1, ${SWEEP}`,
-  'app/modules/my-bookings/components/change-stop-dialog/change-stop-dialog.component.scss::.change-stop-step__confirm-error': `4.24:1, ${SWEEP}`,
-  'app/modules/my-bookings/components/my-booking-ticket-modal/my-booking-ticket-modal.component.scss::.ticket-modal__state': `4.30:1, ${SWEEP}`,
-  'app/modules/my-bookings/components/reschedule-dialog/reschedule-estimate-summary/reschedule-estimate-summary.component.scss::.reschedule-estimate__net': `2.92:1, ${SWEEP}`,
-  'app/modules/my-bookings/components/reschedule-dialog/reschedule-options-list/reschedule-options-list.component.scss::.reschedule-options-list__confirm-error': `4.24:1, ${SWEEP}`,
-  'app/modules/my-bookings/my-bookings.component.scss::.booking-card__route .trip-type': `2.92:1, ${SWEEP}`,
-  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-danger': `4.24:1, ${SWEEP}`,
-  'app/modules/my-bookings/my-bookings.component.scss::.status-badge &.is-info': `2.92:1, ${SWEEP}`,
-  'app/modules/parcel-booking/components/parcel-details-form/parcel-details-form.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
-  'app/modules/parcel-booking/components/parcel-details-form/parcel-details-form.component.scss::.parcel-details-form__sender-name': `3.72:1, ${SWEEP}`,
-  'app/modules/parcel-booking/components/parcel-trip-form/parcel-trip-form.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
-  'app/modules/parcel-booking/pages/parcel-booking-page/parcel-booking-page.component.scss::.parcel-booking-page__payment .tab &.is-active': `2.03:1, ${SWEEP}`,
-  'app/modules/parcel-booking/pages/parcel-booking-success-page/parcel-booking-success-page.component.scss::.parcel-booking-success-card__next-steps': `3.72:1, ${SWEEP}`,
-  'app/modules/parcel-booking/pages/parcel-booking-success-page/parcel-booking-success-page.component.scss::.parcel-btn-primary': `2.03:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/booker-info-form/booker-info-form.component.scss::.passenget-badge': `4.07:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.passenget-badge': `4.07:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip': `4.30:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip &.active': `4.07:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-form/passenger-info-form.component.scss::.seat-passenger-chip-badge': `3.20:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.btn-next': `2.03:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.open-seating-badge': `4.07:1, ${SWEEP}`,
-  'app/modules/passenger-info/components/passenger-info-summary/passenger-info-summary.component.scss::.seat-passenger-chip': `4.30:1, ${SWEEP}`,
-  'app/modules/review-schedule-booking/components/review-schedule-booking-total/review-schedule-booking-total.component.scss::.btn-confirm': `2.03:1, ${SWEEP}`,
-  'app/modules/schedule-booking/components/schedule-booking-list/schedule-booking-list.component.scss::.booking-container .schedule-item .right .select-btn': `2.03:1, ${SWEEP}`,
-  'app/shared/components/e-ticket-card/e-ticket-card.component.scss::.download-btn': `2.03:1, ${SWEEP}`,
-  'app/shared/components/e-ticket-card/e-ticket-card.component.scss::.ticket-nav-btn': `2.03:1, ${SWEEP}`,
-  'app/shared/components/navbar/navbar.component.scss::.btn-signup': `2.03:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.payment-btn': `2.03:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.tab': `4.30:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-creditcard/payment-creditcard.component.scss::.tab &.is-active': `1.76:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-download': `2.03:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-refresh': `2.03:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.btn-refresh &:hover:not(:disabled)': `1.76:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.payment-btn': `2.03:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.tab': `4.30:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-qrcode/payment-qrcode.component.scss::.tab &.is-active': `1.76:1, ${SWEEP}`,
-  'app/shared/components/payment-methods/payment-summary/payment-summary.component.scss::.btn-confirm': `2.03:1, ${SWEEP}`,
-  'app/shared/components/promo-code-field/promo-code-field.component.scss::.promo-code-apply-btn': `2.03:1, ${SWEEP}`,
-  'styles/_auth-split-layout.scss::.login-container .right-section .login-btn': `2.03:1, ${SWEEP}`,
-  'styles/_auth-split-layout.scss::.login-container .right-section .login-form .login-by-phone-no-btn': `1.96:1, ${SWEEP}`,
-};
+// The list is kept EMPTY rather than deleted so the next brand fill that falls
+// below AA has nowhere to hide: an ALLOW entry has to be written, by hand, with
+// a card number on it.
+const SWEEP_ALLOW = {};
 
 const ALLOW = {
   // The five brand-gradient entries are gone because they are FIXED: the ramps
@@ -140,18 +92,13 @@ const ALLOW = {
   // .locate-me-btn hover, .route-chip.active, both reschedule-estimate states,
   // both my-bookings status badges, and the three select/pay hovers.
 
-  // --- the customer palette, deferred to OBRS-752 ---
+  // --- the customer palette (OBRS-752) ---
   //
-  // These 48 were invisible until this gate learned to read SCSS $variables,
-  // so they are NEW to the list, not newly broken. They are listed rather than
-  // silently tolerated for the same reason as everything above: 23 of them are
-  // white on $primary-blue (#4bc2f7, 2.03:1), i.e. every primary button in the
-  // customer flow, and a population that big must be visible while it waits.
-  //
-  // They are a SEPARATE card because they are fixed at the $variable, so one
-  // edit repaints 23 screens at once and needs its own before/after sweep of
-  // the whole booking flow to be reviewable. Owner scoped it that way on
-  // 2026-07-26, the same split as OBRS-740 -> OBRS-741.
+  // 48 entries used to sit here. They were invisible until this gate learned to
+  // read SCSS $variables -- NEW to the list, not newly broken -- and 23 of them
+  // were white on $primary-blue (#4bc2f7, 2.03:1), i.e. every primary button in
+  // the customer flow. They are now FIXED at the palette; see
+  // src/styles/variables.scss.
   ...SWEEP_ALLOW,
 };
 

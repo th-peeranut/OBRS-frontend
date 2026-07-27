@@ -389,20 +389,56 @@ describe('RouteMapPanelComponent', () => {
       installGoogleMock(); // Restore so afterEach removeGoogleMock has something to remove
     });
 
-    it('dropoffMarkers uses dark blue (#4069B8) color in SVG url', () => {
+    it('dropoffMarkers uses the brand dark blue (#3B61A9) in the SVG url', () => {
       component.dropoffStops = [makeStop(1, true)];
       component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
 
       const icon = component.dropoffMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%234069B8'); // URL-encoded #4069B8
+      expect(icon.url).toContain('%233B61A9'); // URL-encoded #3B61A9 -- = $secondary-blue
     });
 
-    it('pickupMarkers uses cyan (#4BC2F7) color in SVG url', () => {
+    it('pickupMarkers uses the brand blue (#0772A2) in the SVG url', () => {
       component.pickupStops = [makeStop(1, true)];
       component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
 
       const icon = component.pickupMarkers[0].options.icon as google.maps.Icon;
-      expect(icon.url).toContain('%234BC2F7'); // URL-encoded #4BC2F7
+      expect(icon.url).toContain('%230772A2'); // URL-encoded #0772A2 -- = $primary-blue
+    });
+
+    // OBRS-752. The two assertions above pin a literal, which is what let the
+    // pin drift: they went green for three cards while the pickup pin painted a
+    // white number on #4BC2F7 at 2.03:1. The brand-fill gate could not see it
+    // either -- it reads .scss and this marker is a data-URL built in .ts.
+    //
+    // So pin the PROPERTY, not just the value. This fails the day someone moves
+    // the palette and forgets the map, which is precisely what happened.
+    it('every marker fill clears WCAG AA against the white pin number', () => {
+      const luminance = (hex: string): number => {
+        const ch = [1, 3, 5]
+          .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+          .map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+        return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+      };
+      const contrastWithWhite = (hex: string): number => (1.05) / (luminance(hex) + 0.05);
+
+      component.pickupStops = [makeStop(1, true)];
+      component.dropoffStops = [makeStop(2, true)];
+      component.ngOnChanges(changes('pickupStops', component.pickupStops, []));
+      component.ngOnChanges(changes('dropoffStops', component.dropoffStops, []));
+
+      const markers = [...component.pickupMarkers, ...component.dropoffMarkers];
+      expect(markers.length).toBe(2); // guard: an empty list would pass vacuously
+
+      for (const marker of markers) {
+        const url = decodeURIComponent((marker.options.icon as google.maps.Icon).url);
+        // The circle's fill is the pin colour; the <text> fill is #fff.
+        const fill = /<circle[^>]*fill="(#[0-9a-fA-F]{6})"/.exec(url)?.[1];
+        expect(fill).withContext(`no circle fill found in ${url}`).toBeTruthy();
+        expect(url).toContain('fill="#fff"'); // the pin number is white
+        expect(contrastWithWhite(fill as string))
+          .withContext(`white pin number on ${fill}`)
+          .toBeGreaterThanOrEqual(4.5);
+      }
     });
 
   });

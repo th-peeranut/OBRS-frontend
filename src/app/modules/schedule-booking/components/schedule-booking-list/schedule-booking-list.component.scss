@@ -147,12 +147,10 @@
         width: 136px;
         height: 52px;
 
-        /* OBRS-741: white on #0090d0 was 3.56:1. Same treatment as the two
-           .payment-btn hovers -- same shape of button, same brand hover. Rest
-           state is still $primary-blue (2.03:1), deferred to the
-           customer-palette sweep; re-derive this hover when that lands. */
+        /* OBRS-752: re-derived. Same treatment as the two .payment-btn hovers --
+           same shape of button, same brand hover. */
         &:hover {
-          background: #007eb6; /* white on it = 4.51:1 */
+          background: #065d85; /* white on it = 7.21:1, and clearly darker than rest */
         }
 
         &-diabled {

@@ -1,23 +1,49 @@
-$primary-blue: #4bc2f7;
+// ─────────────────────────────────────────────────────────────────────────────
+// OBRS-752 — the customer palette carries text, so it is bound by WCAG AA.
+//
+// Five of these values were repainted, and every one of them was measured, not
+// picked: `npm run test:brand-contrast` found 48 sites below 4.5:1 and ALL 48
+// were driven by a variable in this file -- not one had a local hex of its own.
+// So this is the only place the fix could live.
+//
+// Each new value is the LIGHTEST colour of the original hue that clears 4.6:1
+// against every background it is asked to carry text on (4.6 rather than 4.5:1
+// so a later background tweak does not silently drop it under the line).
+//
+// $primary-blue is the load-bearing one: it is used BOTH as a fill with white
+// text on it (23 sites -- every primary button in the customer flow) AND as
+// text on the light tints (6 sites). Both directions want it darker, which is
+// why the fix is the variable and not a second "fill" token.
+//
+// NOTE the card proposed #087eb3. That value clears white (4.52:1) but NOT
+// $primary-lightblue (3.93:1) or #f6fcff (4.37:1), both of which $primary-blue
+// is used as text against. The binding constraint is the tint, not white.
+//
+// The bright #4bc2f7 has NOT left the app: it is still $dk-accent in
+// dark-theme.scss, where it sits on #22263a and is correct there.
+// ─────────────────────────────────────────────────────────────────────────────
+$primary-blue: #0772a2;   // was #4bc2f7 (2.03:1). white on it 5.33:1, on $primary-lightblue 4.63:1
 $primary-lightblue: #dbf3fd;
 $primary-grey: #babdc3;
 $primary-lightgrey: #dddee1;
 $primary-white: #fff;
 $primary-black: #0d1525;
 
-$secondary-blue: #4069b8;
+$secondary-blue: #3b61a9;   // was #4069b8 (4.07:1 on $secondary-light-blue). now 4.61:1
 $secondary-light-blue: #d9e1f1;
 $secondary-grey: #f9f9ff;
 $secondary-lightgrey: #edf9fe;
 
 $text-black: #353c44;
-$text-lightblack: #757a86;
-$text-softblack: #535968;
-$text-red: #cb393a;
+$text-lightblack: #717581;   // was #757a86 (4.30:1 on white). now 4.60:1
+$text-softblack: #535968;    // unchanged: 7.62:1 on white. Its two sub-AA sites sat on
+                             // $primary-grey and were repointed to $text-black instead of
+                             // moving a 66-use token for 2 sites (OBRS-752)
+$text-red: #c33334;          // was #cb393a (4.24:1 on the #fde7e7 error wash). now 4.62:1
 $text-white: #ffffff;
-$text-blue: #3c9bc6;
+$text-blue: #2d7799;         // was #3c9bc6 (2.92:1 on $secondary-lightgrey). now 4.65:1
 $text-lightgrey: #989ba4;
-$text-primary: #4069B8;
+$text-primary: #3B61A9;      // same colour as $secondary-blue under a second name; both moved
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-shell brand tokens (design-system §2)
@@ -31,8 +57,8 @@ $text-primary: #4069B8;
 //   • staff: the brand green lives in the staff shell layout topbar (the staff
 //     Sell/Walk-in surfaces); tracked for extraction into $brand-staff (§13)
 // ─────────────────────────────────────────────────────────────────────────────
-$brand-customer: $primary-blue;            // #4bc2f7
-$brand-customer-strong: $secondary-blue;   // #4069b8
+$brand-customer: $primary-blue;            // #0772a2 (OBRS-752)
+$brand-customer-strong: $secondary-blue;   // #3b61a9 (OBRS-752)
 // $brand-staff:  <pending extraction from staff shell layout> (design-system §13)
 // $brand-admin:  use CSS var var(--accent) / var(--accent-strong) on admin surfaces
 
@@ -83,7 +109,10 @@ $radius-pill:   999px;   // the single input shape (design-system §5)
 $radius-circle: 50%;
 
 // Elevation — focus ring + neutral drop shadows (admin focus uses var(--accent-soft))
-$shadow-focus: 0 0 0 3px rgba(75, 194, 247, 0.2);
+// rgb() of $primary-blue at 20%. It followed the brand when the brand moved
+// (OBRS-752) -- a cyan focus ring around a deep-blue input is the same
+// forgot-the-derivative bug as a stale hover, just quieter.
+$shadow-focus: 0 0 0 3px rgba(7, 114, 162, 0.2);
 $shadow-sm:    0 1px 2px rgba(13, 21, 37, 0.06);
 $shadow-md:    0 4px 12px rgba(13, 21, 37, 0.08);
 $shadow-lg:    0 10px 22px rgba(0, 102, 135, 0.18);
