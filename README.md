@@ -844,3 +844,40 @@ same file). `RouteStopTimeDto.stop` gained an optional `id` field (additive) so
 the consign form can resolve numeric `pickupStopId`/`dropoffStopId` from the
 already-called `/private/route-stops/{slug}` endpoint, instead of adding a
 second stop-lookup call.
+
+### Manual Refunds worklist (`/admin/manual-refunds`, OBRS-286)
+
+Owner-only (`requiredRoles: ['owner']`, nav-gated the same way as
+Settlements/Cargo Capacity) queue of payments awaiting a manual bank/PromptPay
+transfer (`GET /private/payments/refunds/pending`). `ManualRefundWorklistStore`
+is the genuine paged `AdminCollectionStore<PageResponse<T>>` +
+`app-admin-paginator` shape — mirrored from `ConfigChangeHistoryStore` byte-for-
+byte, **not** `RefundVoidReportStore` (that one caches a single date-range
+summary and has no paging at all). The table renders `amountOwed`, never the
+legacy `amount` field — a penalty cancel's owed figure is less than the full
+payment, and the backend already computes the correct value
+(`COALESCE(mrr.amount_owed, p.amount)`) into `amountOwed`; the FE never
+re-derives that coalesce itself. A NULL `destinationType` (batch-originated
+rows: reschedule/change-stop/parcel/schedule-cancel — SA rule 6) renders a
+`.is-neutral` "contact customer" chip with `tel:`/`mailto:` links instead of
+bank details; queue age (client-computed from `queuedAt`, never a SQL
+interval) maps onto the existing `.admin-status.is-*` severity vocabulary
+(fresh <24h neutral / aging 1–7d warning / stale >7d danger — a UX default,
+not an owner-signed SLA).
+
+Per-row **Mark Refunded** opens `MarkRefundedModalComponent`, which calls the
+**new** `POST /private/payments/{id}/manual-refund`
+(`AdminApiService.markPaymentManuallyRefunded`) — deliberately **not** the
+older `refundPayment()` (`POST /private/payments/{id}/refund`), which throws
+for exactly these payment methods. `amountTransferred` pre-fills from
+`row.amountOwed`, editable; a 200 (first call or an idempotent replay) always
+renders as an ordinary success — there is no client-side heuristic that could
+make a replay look like an error. On completion the row is dropped from the
+store optimistically (`store.mutate`) before a background `refresh()`
+reconciles.
+
+The bank/PromptPay destination-capture form itself
+(`AppRefundDestinationFieldsComponent`) is shared with the customer-shell
+cancel flow — see `docs/design-system.md` §12's OBRS-286 entry and
+`docs/adr/0032-cross-shell-refund-destination-fields-component.md` for its
+cross-shell token-override pattern.

@@ -47,6 +47,10 @@ import {
   loadStopsLookup,
   loadStopsLookupFailure,
   loadStopsLookupSuccess,
+  openCancelRefundDestinationModal,
+  closeCancelRefundDestinationModal,
+  confirmCancelWithDestination,
+  refundDestinationInvalid,
   openChangeSeatDialog,
   openChangeStopDialog,
   openRescheduleDialog,
@@ -88,6 +92,38 @@ export const myBookingsReducer = createReducer(
       cancellingBookingId: null,
     })
   ),
+
+  // --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
+  on(openCancelRefundDestinationModal, (state, { booking, policy }) => ({
+    ...state,
+    refundDestinationModal: { booking, policy, error: null },
+  })),
+  on(
+    closeCancelRefundDestinationModal,
+    cancelBookingSuccess,
+    cancelBookingFailure,
+    (state) => ({
+      ...state,
+      refundDestinationModal: null,
+    })
+  ),
+  on(confirmCancelWithDestination, (state) => ({
+    ...state,
+    refundDestinationModal: state.refundDestinationModal
+      ? { ...state.refundDestinationModal, error: null }
+      : null,
+  })),
+  // The fix for the contradiction Scrutinize caught: Flow A1 step 5 needs the
+  // modal to stay open with the typed destination intact on a
+  // destination-invalid 400 — this case leaves `booking`/`policy` untouched
+  // and does NOT clear `refundDestinationModal` (unlike cancelBookingFailure
+  // above, which is for genuinely fatal errors).
+  on(refundDestinationInvalid, (state, { message }) => ({
+    ...state,
+    refundDestinationModal: state.refundDestinationModal
+      ? { ...state.refundDestinationModal, error: message }
+      : null,
+  })),
 
   // --- Reschedule dialog (OBRS-83) ---
   on(openRescheduleDialog, (state, { bookingId }) => ({

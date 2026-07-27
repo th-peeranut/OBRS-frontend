@@ -1,0 +1,39 @@
+// OBRS-209 full-section empty state recipe (design-system §12 "New pattern
+// log"): centered icon/title/body, styled only with the `--admin-*` tokens —
+// component-scoped class names, same idiom as
+// `vehicle-maintenance-panel.component.scss`.
+.mrw-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: var(--admin-muted);
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+  }
+}
+
+.mrw-empty-title {
+  margin: 0;
+  color: var(--admin-text);
+}
+
+// Right-aligned money column (design-system §12, OBRS-231 precedent) — this
+// table's whole purpose is a transfer amount the operator reads/copies.
+.mrw-money {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mrw-contact-links {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+
+  a {
+    color: var(--accent-strong);
+  }
+}

@@ -1,4 +1,4 @@
-import { MyBookingDto } from '../../../shared/interfaces/my-booking.interface';
+import { CancellationPolicy, MyBookingDto, MyBookingView } from '../../../shared/interfaces/my-booking.interface';
 import {
   RescheduleEstimate,
   RescheduleOption,
@@ -23,6 +23,17 @@ export interface MyBookingsState {
   cancellingBookingId: number | null;
   /** Active status filter, echoed back so a post-cancel reload preserves it. */
   statusFilter: string | null;
+
+  // --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
+  /** Non-null while the modal is open. `booking`/`policy` are set once, on
+   * open, and never touched again — only `error` changes afterward (a
+   * destination-invalid 400 keeps the modal open with what was typed
+   * intact, UI spec Flow A1 step 5). */
+  refundDestinationModal: {
+    booking: MyBookingView;
+    policy: CancellationPolicy;
+    error: string | null;
+  } | null;
 
   // --- Reschedule dialog (OBRS-83) ---
   /** Booking id whose reschedule dialog is open, or null when closed. Set
@@ -132,6 +143,8 @@ export const initialMyBookingsState: MyBookingsState = {
   error: null,
   cancellingBookingId: null,
   statusFilter: null,
+
+  refundDestinationModal: null,
 
   rescheduleDialogBookingId: null,
 

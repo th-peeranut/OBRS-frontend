@@ -18,6 +18,9 @@ import { ChangeSeatMapComponent } from './components/change-seat-dialog/change-s
 import { ChangeStopDialogComponent } from './components/change-stop-dialog/change-stop-dialog.component';
 import { TripTrackPanelComponent } from './components/trip-track-panel/trip-track-panel.component';
 import { TripTrackMapComponent } from './components/trip-track-map/trip-track-map.component';
+// OBRS-286 Flow A1 — cancel-with-destination modal (replaces the plain Swal
+// confirm when a cancel resolves to MANUAL_REFUND_REQUIRED).
+import { CancelRefundDestinationModalComponent } from './components/cancel-refund-destination-modal/cancel-refund-destination-modal.component';
 import { PassengerSeatModule } from '../passenger-info/passenger-seat.module';
 import { RouteStopListModule } from '../home/components/route-map/route-stop-list/route-stop-list.module';
 import { myBookingsReducer } from './store/my-bookings.reducer';
@@ -43,6 +46,7 @@ const routes: Routes = [{ path: '', component: MyBookingsComponent }];
     // SPEC-OBRS-426 — "where is my bus" per-trip tracker (C1 smart / C2 dumb).
     TripTrackPanelComponent,
     TripTrackMapComponent,
+    CancelRefundDestinationModalComponent,
   ],
   imports: [
     SharedModule,

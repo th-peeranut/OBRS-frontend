@@ -176,6 +176,7 @@
       "REFUND_LINE": "退款：{{refund}}（{{rate}}）",
       "PENALTY_LINE": "取消手续费：{{penalty}}",
       "MANUAL_REFUND_NOTE": "此支付方式不支持自动退款，我们的工作人员将通过银行转账为您办理退款。",
+      "DESTINATION_DIALOG_TITLE": "确认取消及退款账户",
       "CONFIRM_BUTTON": "确认取消",
       "CANCEL_BUTTON": "保留预订",
       "SUCCESS": "您的预订已取消，正在处理 {{refund}} 的退款。",
@@ -402,6 +403,24 @@
       "SUCCESS": "导出成功，请查看下载的文件。"
     }
   },
+  "REFUND_DESTINATION": {
+    "TITLE": "退款账户信息",
+    "MODE_BANK": "银行转账",
+    "MODE_PROMPTPAY": "PromptPay",
+    "ACCOUNT_NAME": "账户名称",
+    "BANK": "银行",
+    "ACCOUNT_NUMBER": "账号",
+    "PROMPTPAY_PHONE": "PromptPay 手机号（10位，以0开头）",
+    "ERROR": {
+      "REQUIRED": "此字段为必填项",
+      "PATTERN": "格式不正确 — 必须是10位手机号",
+      "NATIONAL_ID": "不接受身份证号码 — 请输入PromptPay手机号",
+      "SERVER_INVALID": "退款账户信息无效 — 请检查后重试"
+    },
+    "CHECKING_METHOD": "正在检查退款方式…",
+    "CHECK_FAILED": "无法核实是否需要收款账户 — 如已知需要，可提前填写",
+    "RETRY_CHECK": "重新检查"
+  },
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "管理员仪表板",
@@ -427,7 +446,8 @@
       "SYSTEM_SETTINGS": "系统设置",
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
-      "EXPENSES": "费用"
+      "EXPENSES": "费用",
+      "MANUAL_REFUNDS": "人工退款"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1505,6 +1525,36 @@
       "EMPTY_TITLE": "暂无费用记录",
       "EMPTY_BODY": "点击\"添加费用\"开始记录车辆或中央支出",
       "NO_MATCH": "没有符合当前筛选条件的费用"
+    },
+    "MANUAL_REFUNDS": {
+      "SUBTITLE": "等待人工退款转账的付款",
+      "LOAD_FAILED": "无法加载人工退款队列，请重试。",
+      "COL": {
+        "REFERENCE": "参考编号",
+        "AMOUNT_OWED": "应退金额",
+        "PAYMENT_METHOD": "原支付方式",
+        "DESTINATION": "目标账户",
+        "QUEUED_AT": "加入队列日期",
+        "QUEUE_AGE": "等待时长"
+      },
+      "DESTINATION_MISSING": "需联系客户获取账户信息",
+      "AGE_DAYS": "{{days}} 天",
+      "EMPTY": "没有待处理的退款",
+      "ACTION": {
+        "MARK_REFUNDED": "标记为已退款"
+      },
+      "MODAL": {
+        "TITLE": "确认退款转账",
+        "TRANSFER_REFERENCE": "转账参考号",
+        "AMOUNT_TRANSFERRED": "转账金额",
+        "CONFIRM": "确认",
+        "SUCCESS": "退款已记录",
+        "ERROR": {
+          "INVALID_STATUS": "此项目已通过其他渠道处理",
+          "AMOUNT_MISMATCH": "金额与应退金额不符",
+          "AMOUNT_REQUIRED": "请输入转账金额"
+        }
+      }
     }
   },
   "AUTH": {

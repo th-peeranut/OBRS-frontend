@@ -1,0 +1,49 @@
+<div class="admin-modal-backdrop" adminModalBackdrop (dismiss)="requestClose()">
+  <div class="admin-modal" [formGroup]="form">
+    <h4 class="admin-modal-title">{{ 'ADMIN.MANUAL_REFUNDS.MODAL.TITLE' | translate }}</h4>
+
+    <div class="admin-form-field">
+      <label class="admin-form-label">
+        {{ 'ADMIN.MANUAL_REFUNDS.MODAL.TRANSFER_REFERENCE' | translate }}
+        <span class="admin-required">*</span>
+      </label>
+      <input
+        type="text"
+        class="admin-field"
+        formControlName="transferReference"
+        maxlength="100"
+        [placeholder]="'ADMIN.MANUAL_REFUNDS.MODAL.TRANSFER_REFERENCE' | translate"
+      />
+    </div>
+
+    <div class="admin-form-field">
+      <label class="admin-form-label">
+        {{ 'ADMIN.MANUAL_REFUNDS.MODAL.AMOUNT_TRANSFERRED' | translate }}
+      </label>
+      <input
+        type="number"
+        step="0.01"
+        class="admin-field"
+        formControlName="amountTransferred"
+        [placeholder]="'ADMIN.MANUAL_REFUNDS.MODAL.AMOUNT_TRANSFERRED' | translate"
+      />
+      <small class="admin-error" *ngIf="amountErrorMessage">{{ amountErrorMessage }}</small>
+    </div>
+
+    <p class="admin-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
+        {{ 'COMMON.CLOSE' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn admin-btn-primary"
+        [disabled]="isSubmitting || form.invalid"
+        (click)="submit()"
+      >
+        {{ 'ADMIN.MANUAL_REFUNDS.MODAL.CONFIRM' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

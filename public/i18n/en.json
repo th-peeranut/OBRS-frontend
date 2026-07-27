@@ -176,6 +176,7 @@
       "REFUND_LINE": "Refund: {{refund}} ({{rate}})",
       "PENALTY_LINE": "Cancellation fee: {{penalty}}",
       "MANUAL_REFUND_NOTE": "This payment method does not support automatic refunds — our staff will transfer your refund to your bank account.",
+      "DESTINATION_DIALOG_TITLE": "Confirm cancellation and refund account",
       "CONFIRM_BUTTON": "Confirm cancellation",
       "CANCEL_BUTTON": "Keep booking",
       "SUCCESS": "Your booking has been cancelled. A refund of {{refund}} is being processed.",
@@ -402,6 +403,24 @@
       "SUCCESS": "Export complete — check your downloads."
     }
   },
+  "REFUND_DESTINATION": {
+    "TITLE": "Refund destination",
+    "MODE_BANK": "Bank transfer",
+    "MODE_PROMPTPAY": "PromptPay",
+    "ACCOUNT_NAME": "Account name",
+    "BANK": "Bank",
+    "ACCOUNT_NUMBER": "Account number",
+    "PROMPTPAY_PHONE": "PromptPay mobile number (10 digits, starts with 0)",
+    "ERROR": {
+      "REQUIRED": "This field is required",
+      "PATTERN": "Invalid format — must be a 10-digit mobile number",
+      "NATIONAL_ID": "National ID numbers are not accepted — enter a PromptPay mobile number",
+      "SERVER_INVALID": "The refund destination details are invalid — please check and try again"
+    },
+    "CHECKING_METHOD": "Checking refund method…",
+    "CHECK_FAILED": "Couldn't verify whether a destination is required — fill it in now if you know this refund needs one",
+    "RETRY_CHECK": "Retry check"
+  },
   "ADMIN": {
     "PAGES": {
       "DEFAULT": "Admin Dashboard",
@@ -427,7 +446,8 @@
       "SYSTEM_SETTINGS": "System Settings",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
-      "EXPENSES": "Expenses"
+      "EXPENSES": "Expenses",
+      "MANUAL_REFUNDS": "Manual Refunds"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1505,6 +1525,36 @@
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
       "NO_MATCH": "No expenses match the current filters"
+    },
+    "MANUAL_REFUNDS": {
+      "SUBTITLE": "Payments awaiting manual refund transfer",
+      "LOAD_FAILED": "Unable to load the manual refund worklist. Please try again.",
+      "COL": {
+        "REFERENCE": "Reference",
+        "AMOUNT_OWED": "Amount owed",
+        "PAYMENT_METHOD": "Original payment method",
+        "DESTINATION": "Destination",
+        "QUEUED_AT": "Queued on",
+        "QUEUE_AGE": "Waiting for"
+      },
+      "DESTINATION_MISSING": "Contact customer for account details",
+      "AGE_DAYS": "{{days}} days",
+      "EMPTY": "No refunds pending",
+      "ACTION": {
+        "MARK_REFUNDED": "Mark refunded"
+      },
+      "MODAL": {
+        "TITLE": "Confirm refund transfer",
+        "TRANSFER_REFERENCE": "Transfer reference",
+        "AMOUNT_TRANSFERRED": "Amount transferred",
+        "CONFIRM": "Confirm",
+        "SUCCESS": "Refund recorded",
+        "ERROR": {
+          "INVALID_STATUS": "This item was already processed elsewhere",
+          "AMOUNT_MISMATCH": "Amount does not match the amount owed",
+          "AMOUNT_REQUIRED": "Amount transferred is required"
+        }
+      }
     }
   },
   "AUTH": {

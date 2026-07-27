@@ -5,10 +5,11 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { SimpleChange } from '@angular/core';
 import { TranslateModule } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { OverrideCancelModalComponent } from './override-cancel-modal.component';
 import { AdminModalBackdropDirective } from '../../../../../shared/directives/admin-modal-backdrop.directive';
 import { AdminApiService, AdminBookingDetailDto } from '../../../../../services/admin/admin-api.service';
+import { AppRefundDestinationFieldsComponent } from '../../../../../shared/components/refund-destination-fields/refund-destination-fields.component';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
 
@@ -40,14 +41,28 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
   let alert: jasmine.SpyObj<AlertService>;
 
   beforeEach(async () => {
-    api = jasmine.createSpyObj<AdminApiService>('AdminApiService', ['adminOverrideCancelBooking']);
+    api = jasmine.createSpyObj<AdminApiService>('AdminApiService', [
+      'adminOverrideCancelBooking',
+      'getBookingRefundMethod',
+    ]);
+    // Default every spec to an already-resolved, non-required destination —
+    // the pre-existing tests below assert the AC1/AC2 reason behaviour and
+    // don't care about the destination fields at all; the OBRS-286-specific
+    // `describe` blocks override this per-case.
+    api.getBookingRefundMethod.and.returnValue(
+      of({ code: 200, message: 'ok', data: { refundMethod: 'card', destinationRequired: false } })
+    );
     alert = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error']);
     alert.success.and.resolveTo(undefined as any);
     alert.error.and.resolveTo(undefined as any);
 
     await TestBed.configureTestingModule({
       imports: [CommonModule, ReactiveFormsModule, TranslateModule.forRoot()],
-      declarations: [OverrideCancelModalComponent, AdminModalBackdropDirective],
+      declarations: [
+        OverrideCancelModalComponent,
+        AdminModalBackdropDirective,
+        AppRefundDestinationFieldsComponent,
+      ],
       providers: [
         { provide: AdminApiService, useValue: api },
         { provide: AlertService, useValue: alert },
@@ -126,6 +141,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
     expect(api.adminOverrideCancelBooking).toHaveBeenCalledWith(42, {
       rateChoice: 'POLICY',
       reason: undefined,
+      refundDestination: undefined,
     });
     expect(cancelled).toHaveBeenCalled();
     expect(closed).toHaveBeenCalled();
@@ -144,6 +160,7 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
     expect(api.adminOverrideCancelBooking).toHaveBeenCalledWith(42, {
       rateChoice: 'FULL',
       reason: 'goodwill full refund',
+      refundDestination: undefined,
     });
   });
 
@@ -165,6 +182,98 @@ describe('OverrideCancelModalComponent (OBRS-690)', () => {
 
     expect((component as any).errorMessage).toBe('Booking is not confirmed');
     expect(closed).not.toHaveBeenCalled();
+  });
+
+  // ── OBRS-286 Flow A3: refund-destination requirement ───────────────────────
+  describe('refund-destination requirement (OBRS-286)', () => {
+    it('blocks Confirm while the refund-method check is loading, without mounting a form', () => {
+      const pending = new Subject<any>();
+      api.getBookingRefundMethod.and.returnValue(pending as any);
+
+      open(IN_WINDOW);
+
+      expect((component as any).refundMethodState).toBe('loading');
+      expect((component as any).canSubmit).toBeFalse();
+      expect(fixture.debugElement.query(By.css('app-refund-destination-fields'))).toBeNull();
+    });
+
+    it('mounts the destination fields, required, once resolved destinationRequired=true', () => {
+      api.getBookingRefundMethod.and.returnValue(
+        of({ code: 200, message: 'ok', data: { refundMethod: 'qr_promptpay', destinationRequired: true } })
+      );
+
+      open(IN_WINDOW);
+
+      expect((component as any).refundMethodState).toBe('resolved');
+      expect(fixture.debugElement.query(By.css('app-refund-destination-fields'))).not.toBeNull();
+      expect((component as any).canSubmit).toBeFalse(); // no destination filled in yet
+    });
+
+    it('does not mount the destination fields when resolved destinationRequired=false', () => {
+      api.getBookingRefundMethod.and.returnValue(
+        of({ code: 200, message: 'ok', data: { refundMethod: 'card', destinationRequired: false } })
+      );
+
+      open(IN_WINDOW);
+
+      expect(fixture.debugElement.query(By.css('app-refund-destination-fields'))).toBeNull();
+      expect((component as any).canSubmit).toBeTrue();
+    });
+
+    it('on a failed check, renders the fields as OPTIONAL with a retry affordance, and does not block Confirm', () => {
+      api.getBookingRefundMethod.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+
+      open(IN_WINDOW);
+
+      expect((component as any).refundMethodState).toBe('error');
+      expect(fixture.debugElement.query(By.css('app-refund-destination-fields'))).not.toBeNull();
+      // Optional: a fresh (untouched) form is still valid, so Confirm is not
+      // blocked by this state alone.
+      expect((component as any).canSubmit).toBeTrue();
+      expect(fixture.debugElement.query(By.css('.override-cancel-destination-advisory'))).not.toBeNull();
+    });
+
+    it('retryCheck() re-issues the GET without touching anything already typed', () => {
+      api.getBookingRefundMethod.and.returnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+      open(IN_WINDOW);
+      (component as any).form.get('reason').setValue('kept');
+
+      api.getBookingRefundMethod.and.returnValue(
+        of({ code: 200, message: 'ok', data: { refundMethod: 'card', destinationRequired: false } })
+      );
+      (component as any).retryCheck();
+      fixture.detectChanges();
+
+      expect((component as any).refundMethodState).toBe('resolved');
+      expect((component as any).form.get('reason').value).toBe('kept');
+    });
+
+    it('belt-and-braces: a submit-time destination-error 400 mounts the fields as required and shows a dedicated inline message, modal stays open', async () => {
+      api.getBookingRefundMethod.and.returnValue(
+        of({ code: 200, message: 'ok', data: { refundMethod: 'card', destinationRequired: false } })
+      );
+      api.adminOverrideCancelBooking.and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: { errorCode: 'cancel.error.refund-destination-required', message: 'A destination is required' },
+            })
+        )
+      );
+      const closed = jasmine.createSpy('closed');
+      component.closed.subscribe(closed);
+
+      open(IN_WINDOW);
+      await (component as any).submit();
+      fixture.detectChanges();
+
+      expect((component as any).destinationRequired).toBeTrue();
+      expect((component as any).destinationErrorMessage).toBe('A destination is required');
+      expect((component as any).errorMessage).toBe(''); // never the generic banner
+      expect(fixture.debugElement.query(By.css('app-refund-destination-fields'))).not.toBeNull();
+      expect(closed).not.toHaveBeenCalled();
+    });
   });
 
   // ── OBRS-721: dark-mode contrast, measured ─────────────────────────────────
