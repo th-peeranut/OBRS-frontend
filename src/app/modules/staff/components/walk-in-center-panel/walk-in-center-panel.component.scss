@@ -1,3 +1,25 @@
+// OBRS-775. A component that declares no `:host` display renders as
+// `display: inline`, and an inline box may not contain the block-level children
+// below it: the browser splits it and wraps them in anonymous blocks, after
+// which the host's own border box describes nothing. That is what made a
+// Playwright hit test resolve to the host on OBRS-753.
+//
+// `height: 100%` is NOT decoration, and this is the one component in the sweep
+// that needed it. The template's root is `.center-panel.h-100`, i.e. Bootstrap's
+// `height: 100%`, and a percentage height resolves against the CONTAINING
+// BLOCK. While the host was inline it established none, so `h-100` reached past
+// it to `.card-body` -- which `.card { display: flex; flex-direction: column }`
+// gives a definite height. `display: block` alone makes the host that containing
+// block with `height: auto`, at which point the percentage has nothing to
+// resolve against and computes to auto: the empty-state panel collapsed from
+// 548px to 185px at 1280 and from 628px to 185px at 1024, measured. This is
+// exactly the failure OBRS-775's card predicts for a blanket edit, and it is why
+// the fix is per component with the geometry harness run over all of it.
+:host {
+  display: block;
+  height: 100%;
+}
+
 :host ::ng-deep .center-tabview .p-tabview-panels {
   padding: 0.75rem 0 0;
 }

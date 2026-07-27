@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 102 cases, ~2.9 min, no backend. THIS is the merge gate (runs in CI).
+npm run e2e:gate       # 121 cases, ~5.8 min, no backend. THIS is the merge gate (runs in CI).
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -113,6 +113,26 @@ printed*, never folded into the pass: `:hover`-only rules, selectors that matche
 element, and unreadable `var()`s. Known-dead declarations live in
 `e2e/support/dark-override-allow.ts` against a card, and an entry that stops matching
 fails the build too — so the register cannot rot into a lie.
+**And the sweep that generalised it.** `host-box-sweep.spec.ts` (OBRS-775) runs that same
+check over all 27 pages this lane can reach — 8 customer, 9 public/auth-entry, 10
+admin/staff — and fails on any malformed host not on its `ALLOW` list with a reason. The
+first run found **39**; 37 were ours and are fixed, 4 are PrimeNG's and are OBRS-776. Two
+of those 37 are the argument for having a gate at all: `app-home` and
+`app-schedule-booking` were *well-formed until this card* and became malformed **because
+of it** — their only children are other component hosts, so while those were inline there
+was no block-level child for an inline box to hold illegally. Fixing the children made
+these the next bad box. A checklist of "components someone checked" would have shipped two
+fresh instances of the defect it was written to remove; the sweep caught them on the run
+straight after the batch landed. `ALLOW` cannot rot either: a separate case fails on any
+entry the sweep no longer sees malformed.
+
+**`force: true` is banned in this lane, and the ban is enforced** (OBRS-775 AC5, rule 5 in
+`scripts/check-e2e-lanes.mjs`). `force` does not aim the event — it skips the
+actionability checks and dispatches at the coordinates regardless, so the click lands on
+whichever element is topmost. That is exactly how OBRS-750 stayed hidden for as long as it
+did. The rule blanks comments before matching, because `b2c-critical-path.spec.ts` quotes
+the forbidden call in its own header while explaining why it no longer makes it, and a
+gate that reds on a correct file gets deleted rather than obeyed.
 
 **Debugging a GATE failure.** A timeout on an unrelated element usually means an
 unmocked call: the request fails, the global error interceptor raises a SweetAlert, and
@@ -219,7 +239,7 @@ rest are per-spec.
 
 | Config | Runs | Note |
 |---|---|---|
-| `playwright.gate.config.ts` | 115 in 12 files | the merge gate; hand-written `testMatch` |
+| `playwright.gate.config.ts` | 121 in 13 files | the merge gate; hand-written `testMatch` |
 | `playwright.config.ts` | 68 in 7 files | SIT lane, :4202; list derived from the registry |
 | `playwright.qa.config.ts` | 68 in 7 files | same lane on :4201 for when ports are contended |
 | `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
@@ -312,6 +332,13 @@ without declaring what it runs, which closes the family rather than the two inst
   `playwright.gate.config.ts`) — which is the only reason anyone noticed. Two branches off
   one base each adding a gate member is the normal shape of this repo, not an unlucky day.
   Read every count in this file as *the last measurement*, not as the current truth.
+  **And again, same day, third time.** OBRS-775 branched from `9c8d4366` while OBRS-767
+  was still landing, conflicted on the same two files for the same reason, and took the
+  count to **121 in 13**. That is three rots in one day from the same mechanism. It also
+  cost more than a table edit: OBRS-767's `seedStore` fix (`a991782a`) exists *because*
+  this card added a second CPU-heavy spec to a 2-worker lane and lost a race that had
+  always been there. Adding a gate member changes the timing budget of every other
+  member, which no count in a table can tell you.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is

@@ -81,6 +81,12 @@
       "config": "playwright.gate.config.ts",
       "why": "OBRS-767. Removes every dark-theme.scss declaration from the live CSSOM in turn and fails if nothing on the page changed. A rule that parses, matches its element and still loses to Angular's [_ngcontent] specificity is invisible to any source-reading check, and that shape had hidden the entire dark footer at 2.40:1 for the life of the feature. Reuses customer-pages.ts, so it is hermetic on exactly the same terms as the contrast gate, plus /register and /how-to-book to reach dark-theme.scss sections 5 and 9."
     },
+    {
+      "spec": "host-box-sweep.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-775. Widens OBRS-753's one-module check to every page this lane can reach hermetically -- eight customer pages, nine public/auth-entry routes, ten admin/staff/session-bound routes -- and fails on any display:inline custom-element host holding in-flow block children that is not named on its ALLOW list with a reason. Hermetic on the same terms as the rest of the lane: it reuses e2e/support/customer-pages.ts for the customer group and stubs every /api/** call itself for the other two, aborts Maps, and mints no session anywhere. Needs a DEVELOPMENT build for the same reason customer-contrast-gate does (window.ng, for the NgRx store seed)."
+    },
 
     {
       "spec": "admin-critical-paths.spec.ts",
@@ -191,6 +197,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs391.config.ts",
       "why": "Screenshot script for the OBRS-391 before/after. Expects two servers started by hand on :4391 and :4392 -- :4391 serving the main clone at origin/dev for the BEFORE shot. NOT hermetic on purpose: it stubs every /api/** call but reaches cdn.omise.co for real, because the claim being evidenced is that the card fields now render in a third-party iframe and a stubbed frame would prove nothing. environment.base.ts carries a test-mode publishable key, so no charge is possible."
+    },
+    {
+      "spec": "obrs-775-geometry.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs775.config.ts",
+      "why": "OBRS-775's AC3 evidence: the border box of EVERY element on all 27 pages of the host-box sweep, at the four media-query widths, captured once with the `:host { display }` additions absent (OBRS775_PHASE=before) and once with them applied. The AFTER phase reads the baseline back and fails on any box that moved more than 0.5px, so it is an assertion rather than a screenshot -- but it is still a two-run, run-by-hand comparison, which is why it is not in GATE. Hermetic: it reuses the same e2e/support/host-boxes.ts fixtures the gate spec does, so no backend and no database."
     },
     {
       "spec": "obrs-742-capture.spec.ts",
