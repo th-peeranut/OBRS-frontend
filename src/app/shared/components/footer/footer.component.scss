@@ -1,4 +1,5 @@
 @import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
 
 .footer-container {
   display: flex;
@@ -321,5 +322,57 @@
     .copyright-text {
       font-size: 11px;
     }
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-767)
+// =============================================================================
+//
+// These rules were in `src/styles/dark-theme.scss` section 3 and never applied.
+// A global `body.is-dark .menu-container .menu-text` scores (0,3,1); the light
+// rule twelve lines up, once Angular has rewritten it as
+// `.menu-container[_ngcontent] .menu-text[_ngcontent]`, scores (0,4,0) and wins
+// the class column 4-3. The footer surface went dark, every text run on it
+// stayed $text-softblack, and the result measured 2.40:1 for the lifetime of
+// the feature.
+//
+// `:host-context()` is the fix rather than a specificity bump because it is not
+// arithmetic anyone has to redo. Angular expands it to include this component's
+// host attribute ON TOP OF everything the light rule already carries, so a dark
+// rule written here outranks its own light counterpart by construction — and
+// keeps doing so if someone later wraps `.menu-text` in another div, which a
+// hand-tuned `body.is-dark app-footer .a .b` would not survive.
+//
+// Verified by measurement, not by reading: e2e/tests/dark-override-effective.spec.ts
+// removes each of these declarations from the live CSSOM and fails if the page
+// does not change.
+:host-context(body.is-dark) {
+  .footer-container {
+    background-color: $dk-bg-card;
+  }
+
+  .line-container .divide-line {
+    border-top-color: $dk-border;
+  }
+
+  .copyright-container .copyright-text,
+  .address-container .address-title,
+  .address-container .address-subtitle,
+  .address-container .address-text,
+  .sales-container .sales-title,
+  .sales-container .sales-name,
+  .sales-container .sales-sub,
+  .menu-container .menu-title,
+  .menu-container .menu-text,
+  .contact-container .contact-title,
+  .contact-container .contact-text {
+    color: $dk-text-muted;
+  }
+
+  .sales-container .sales-item:hover .sales-name,
+  .menu-container .menu-text:hover,
+  .contact-container .contact-text:hover {
+    color: $dk-accent;
   }
 }

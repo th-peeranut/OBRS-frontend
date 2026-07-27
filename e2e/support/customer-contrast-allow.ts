@@ -37,12 +37,16 @@
  * The three biggest families are one mechanism each, and the mechanisms are the
  * interesting part:
  *
- *   OBRS-767 -- the dark footer override IS WRITTEN and never paints.
+ *   OBRS-767 -- CLOSED, and its thirteen entries are gone from the register.
+ *     The dark footer override was WRITTEN and never painted:
  *     `body.is-dark .menu-container .menu-text` is (0,3,1); Angular compiles the
  *     component's own rule to `.menu-container[_ngcontent] .menu-text[_ngcontent]`,
  *     which is (0,4,0) and wins. Confirmed by walking `document.styleSheets` on
  *     the live page. A gate reading the stylesheet sees a dark pair and passes;
- *     only the browser knows who won. That single fact justifies this whole card.
+ *     only the browser knows who won. That single fact justified this whole card
+ *     -- and it generalised: the census that closed it found 36 more declarations
+ *     in the same state, so the mechanism now has a gate of its own
+ *     (`dark-override-effective.spec.ts`) rather than a paragraph here.
  *
  *   OBRS-768 -- /my-bookings and /e-ticket never enter dark mode. Every one of
  *     their entries measures the IDENTICAL colour in both themes.
@@ -56,24 +60,17 @@
 
 export const CONTRAST_ALLOW: Record<string, string> = {
   // -------------------------------------------------------------------------
-  // OBRS-767 -- the dark footer's override loses to Angular view encapsulation.
-  // #535968 ($text-softblack, the LIGHT-mode value) on $dk-bg-card #1a1d27.
-  // 13 selectors, ~140 sightings across 7 pages. The dark value ($dk-text-muted
-  // #9aa3b8) is declared for every one of these and has never rendered once.
+  // OBRS-767 -- FIXED. Thirteen entries used to sit here: the whole footer at
+  // #535968 ($text-softblack, the LIGHT value) on $dk-bg-card, 2.40:1, plus
+  // .copyright-text at 2.69:1 on the page background. The dark value was
+  // declared for every one of them in dark-theme.scss and had never rendered.
+  // The rules now live in footer.component.scss under `:host-context`, which
+  // encapsulation cannot outrank. Measured after the move: every footer text
+  // run is #9aa3b8, 6.65:1 on the card and 7.46:1 for .copyright-text on the
+  // page background.
+  // `e2e/tests/dark-override-effective.spec.ts` is the gate that keeps a
+  // declaration in dark-theme.scss from going dead silently again.
   // -------------------------------------------------------------------------
-  'dark|div.address-title.mt-3|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.address-subtitle.mt-3|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.address-text|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.address-text.mt-1|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.sales-title.mt-2|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|span.sales-name|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|span.sales-sub|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.menu-title.mt-2|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|a.menu-text.mt-3|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.contact-title.mt-2|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|a.contact-text.mt-2|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|a.contact-text.mt-3|#535968-on-#1a1d27': '2.40:1 -- OBRS-767 dark footer override outranked',
-  'dark|div.copyright-text|#535968-on-#0f1117': '2.69:1 -- OBRS-767, same override, on the page bg rather than the card',
 
   // -------------------------------------------------------------------------
   // OBRS-768 -- /my-bookings and /e-ticket do not respond to dark mode at all.

@@ -69,6 +69,12 @@
       "config": "playwright.gate.config.ts",
       "why": "OBRS-584. Sweeps eight customer pages in both themes and scores WCAG 1.4.3 (text) and 1.4.11 (control boundary) from getComputedStyle. Hermetic by construction: one page.route fulfils every /api/** call from inline fixtures, Maps is aborted, the session is a synthetic localStorage token and the booking flow is reached by dispatching the app's own NgRx actions rather than by driving the funnel. It needs a DEVELOPMENT build (window.ng, for the store seed), which is exactly what this lane's webServer serves."
     },
+    {
+      "spec": "dark-override-effective.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-767. Removes every dark-theme.scss declaration from the live CSSOM in turn and fails if nothing on the page changed. A rule that parses, matches its element and still loses to Angular's [_ngcontent] specificity is invisible to any source-reading check, and that shape had hidden the entire dark footer at 2.40:1 for the life of the feature. Reuses customer-pages.ts, so it is hermetic on exactly the same terms as the contrast gate, plus /register and /how-to-book to reach dark-theme.scss sections 5 and 9."
+    },
 
     {
       "spec": "admin-critical-paths.spec.ts",

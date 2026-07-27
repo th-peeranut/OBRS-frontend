@@ -1,0 +1,67 @@
+// =============================================================================
+// _dark-tokens.scss — the dark-mode palette, importable from anywhere
+// =============================================================================
+//
+// These lived inside dark-theme.scss as "shorthand for readability in this file
+// only". That was fine while every dark rule was written in that one file, and
+// it stopped being fine the moment OBRS-767 established that some dark rules
+// CANNOT live there.
+//
+// WHY A COMPONENT MAY NEED THEM (read this before adding a rule to
+// dark-theme.scss)
+//
+// dark-theme.scss opens by explaining its own approach: "Component-scoped SCSS
+// files use build-time $variables; we cannot reach those at runtime. So we
+// override with explicit selectors here." The first half is true. The second
+// half assumes a global selector can always outrank a component one, and it
+// cannot. Angular's emulated view encapsulation rewrites
+//
+//     .menu-container .menu-text            (footer.component.scss)
+//
+// as
+//
+//     .menu-container[_ngcontent-x] .menu-text[_ngcontent-x]      -> (0,4,0)
+//
+// while the global override
+//
+//     body.is-dark .menu-container .menu-text                     -> (0,3,1)
+//
+// scores lower in the class column and therefore LOSES, every time, silently.
+// The footer read as fully dark-themed in source and had never painted a single
+// pixel of it (2.40:1, 176 element instances across 8 pages — measured, see
+// e2e/tests/dark-override-effective.spec.ts).
+//
+// THE RULE THAT FALLS OUT OF THAT
+//
+//   * A global `body.is-dark <selector>` rule beats a component rule only when
+//     its class-column count is strictly greater. A component rule that nests
+//     two levels already scores 4 there, which a `body.is-dark .a .b` cannot
+//     reach. Do not do this arithmetic by hand and do not trust a rule of
+//     thumb: the gate measures it.
+//   * So dark styling for anything inside an ENCAPSULATED component belongs in
+//     that component's own .scss, written as
+//
+//         :host-context(body.is-dark) { ... }
+//
+//     which Angular expands to include the host attribute and therefore always
+//     outranks the component's own light rules.
+//   * dark-theme.scss stays the right home for unencapsulated surfaces: global
+//     element/utility selectors from styles.scss, PrimeNG internals rendered
+//     outside the component (`appendTo="body"` popups), and anything whose
+//     light styling is itself global.
+//
+// Import this file to get the palette in either place. It declares variables
+// only — importing it emits no CSS, so it is safe in a component stylesheet.
+// =============================================================================
+
+$dk-bg: #0f1117;
+$dk-bg-card: #1a1d27;
+$dk-bg-soft: #22263a;
+$dk-bg-input: #161922;
+$dk-border: rgba(255, 255, 255, 0.1);
+$dk-border-muted: rgba(255, 255, 255, 0.06);
+$dk-text: #e8eaf0;
+$dk-text-muted: #9aa3b8;
+$dk-accent: #4bc2f7;
+$dk-accent-hover: #3ab0e4;
+$dk-danger: #f87171;

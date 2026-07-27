@@ -242,8 +242,8 @@ look different.
 
 ### 2.5 The contrast gates — what each covers, and what nothing covers (OBRS-584)
 
-Four gates now measure colour, and they are **not** redundant: each sees a class
-of defect the others cannot. Read this before adding a fifth, and before reading
+Five gates now measure colour, and they are **not** redundant: each sees a class
+of defect the others cannot. Read this before adding a sixth, and before reading
 a green CI as "this screen was checked".
 
 | Gate | Reads | Catches | Structurally blind to |
@@ -252,6 +252,7 @@ a green CI as "this screen was checked".
 | `check-brand-fill-contrast.mjs` invariant 1 (`npm run test:brand-contrast`) | SCSS source | text-on-fill below AA, including every **gradient stop**, with `var()` resolved per theme world | a rule where `color` and `background` are not in the same block — so anything that **inherits its background from an ancestor** |
 | `check-brand-fill-contrast.mjs` invariant 2 (OBRS-763) | SCSS source | a hover fill **lighter** than the rest fill it replaces — direction, which no ratio can express | translucent hovers it cannot composite (counted `unresolved`, never passed) |
 | `customer-contrast-gate.spec.ts` (`npm run e2e:gate`) | `getComputedStyle` in a real browser: 8 customer pages × 2 themes, plus `:hover`/`:focus-visible` on each page's named controls | **text vs the surface actually painted behind it** (WCAG 1.4.3) and **a control's boundary vs the surface it sits on** (1.4.11), composited through the real cascade | gradients, `opacity < 1`, disabled controls, third-party markup — each **counted and printed**, never folded into the pass. Admin/staff shells (it sweeps customer routes only). |
+| `dark-override-effective.spec.ts` (`npm run e2e:gate`, OBRS-767) | the live CSSOM on 10 dark pages: removes each `dark-theme.scss` declaration and re-reads the element | a dark rule that **never applies** — parses, matches, and loses the cascade. Not a colour question: it asks whether the declaration does anything at all | `:hover`/`:focus` rules (nothing matches at rest), declarations written with `var()` (the CSSOM reads them back empty), and selectors that match no element on the swept pages — all three **counted and printed** |
 
 **Why the runtime one had to exist.** OBRS-575 shipped `.recent-route-btn` at
 2.79:1 on the dark Home card with the static gates green, and not one of them was
@@ -263,9 +264,22 @@ rather than argued:
 2. **Specificity — the worse one.** `body.is-dark .menu-container .menu-text` is
    `(0,3,1)`; Angular compiles the component's own rule to
    `.menu-container[_ngcontent] .menu-text[_ngcontent]`, which is `(0,4,0)` and
-   **wins**. The whole dark-mode footer override has therefore never painted a
+   **wins**. The whole dark-mode footer override therefore never painted a
    single pixel (OBRS-767) — while reading, in source, like complete and correct
    dark support. A stylesheet cannot tell you which rule won; only the browser can.
+
+   **This generalised, and it is now a gate rather than a war story.** Closing
+   OBRS-767 meant censusing the file: every `body.is-dark` declaration, removed
+   from the live CSSOM one at a time to see whether anything moved. 48 of the
+   173 judgeable declarations were doing nothing. Twelve were the footer; the
+   other 36 are spread over login/register, the payment tab strip, the
+   booking-flow back buttons and the route-map's PrimeNG internals (OBRS-774,
+   plus four OBRS-771 already owned). **Where a dark rule belongs** is therefore
+   a real decision, and `src/styles/_dark-tokens.scss` states it: inside an
+   encapsulated component, use that component's own `:host-context(body.is-dark)`;
+   `dark-theme.scss` is for unencapsulated surfaces — global element/utility
+   selectors, `appendTo="body"` popups, anything whose light styling is itself
+   global. Do not settle it by counting classes on paper. The gate measures it.
 
 **What still has nobody watching it**, stated plainly so it stays a known gap
 rather than an assumed pass:
@@ -285,12 +299,15 @@ rather than an assumed pass:
 - **The focus ring as an indicator (2.4.11 / 2.4.13).** The gate measures a
   focused control's fill and border; it does not check the ring is visible.
 
-**The debt register.** 58 known-open defects live in
-`e2e/support/customer-contrast-allow.ts`, each with a measured ratio and the card
-that owns the fix (OBRS-767 / -768 / -769 / -771 / -772 / -773, plus the
-pre-existing OBRS-563). It is a debt marker, not an exemption: a NEW site below AA
-fails the build, and an entry that stops matching anything **also** fails it, so
-the list cannot rot into a lie. Deleting your entries is part of closing your card.
+**The debt registers — two of them, one per gate.** 45 known-open contrast
+defects live in `e2e/support/customer-contrast-allow.ts`, each with a measured
+ratio and the card that owns the fix (OBRS-768 / -769 / -771 / -772 / -773, plus
+the pre-existing OBRS-563; OBRS-767's thirteen are gone, which is what closing it
+looked like). 35 dead dark declarations live in
+`e2e/support/dark-override-allow.ts` (OBRS-774 / -771). Both are debt markers,
+not exemptions: a NEW defect fails the build, and an entry that stops matching
+anything **also** fails it, so neither list can rot into a lie. Deleting your
+entries is part of closing your card.
 
 ---
 

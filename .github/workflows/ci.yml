@@ -242,7 +242,18 @@ jobs:
       # place the defects it finds exist: OBRS-575 shipped a 2.79:1 pill past this
       # very workflow because every other gate here reads stylesheets, and a
       # stylesheet cannot say which rule won. Its first run found 58 open defects,
-      # including a dark footer override that has never once painted (OBRS-767).
+      # including a dark footer override that had never once painted (OBRS-767).
+      #
+      # OBRS-767 then added `dark-override-effective.spec.ts`, ~2 minutes more. It
+      # is not a second contrast check: it removes each dark-theme.scss declaration
+      # from the live CSSOM in turn and fails if nothing on the page moved. That is
+      # how the footer defect turned out to be one instance of 48, and it is the
+      # only thing here that can see a rule which parses, matches its element, and
+      # still loses -- the failure mode that made the footer read as correct in
+      # source for the life of the feature. It samples each page TWICE and takes
+      # the intersection, which is most of what it costs: one sample turns a
+      # PrimeNG fill that settles after first paint into a red build with no defect
+      # behind it, and a gate people re-run until it is green is not a gate.
       #
       # The cost is wall clock, not quota. Actions minutes are UNMETERED for this
       # repo (it is public -- OBRS-735), and the SIT frontend deploys from Netlify,
