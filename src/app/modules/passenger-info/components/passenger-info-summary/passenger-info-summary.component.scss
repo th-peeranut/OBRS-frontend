@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -322,5 +323,33 @@ hr {
   .btn-back {
     height: 48px;
     font-size: 15px;
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-771)
+// =============================================================================
+//
+// Same mechanism as passenger-info-form.component.scss (read the argument
+// there): section 14 of dark-theme.scss forces $dk-text onto everything inside
+// `.card-container`, and these two pills kept the light fills they were drawn
+// for. This component's chip is the read-only summary twin — white rather than
+// tinted — so it measured 1.20:1 instead of 1.09:1. Same defect, same fix at the
+// surface rather than at the text (AC2).
+:host-context(body.is-dark) {
+  .seat-passenger-chip {
+    background: $dk-bg-soft;
+    border-color: $dk-border;
+  }
+
+  // NOT measured by the OBRS-584 sweep, and not healthy either: the fixture
+  // seeds an ASSIGNED-seating schedule, so the OPEN-seating badge never
+  // rendered for it to be judged. It is the same two declarations as
+  // `.passenget-badge` ($secondary-light-blue fill, $text-primary ink) with the
+  // same blanket landing on it, which makes it the same 1.09:1 — fixing the
+  // three that happened to render and leaving this one would be filing the
+  // sweep's coverage as if it were the population.
+  .open-seating-badge {
+    background: $dk-bg-soft;
   }
 }

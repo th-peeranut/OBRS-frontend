@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -75,5 +76,25 @@
   .form-check-inline {
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-771)
+// =============================================================================
+//
+// The adult/child badge — and this is the ONLY component that renders one.
+// `.passenget-badge` is also declared in passenger-info-form.component.scss,
+// which under view encapsulation can only ever match that component's own
+// template, and that template contains no such element: dead CSS that reads as
+// a second copy of this rule. So the 1.09:1 the card recorded is this element,
+// here, and nowhere else.
+//
+// Full argument in passenger-info-form.component.scss: section 14 of
+// dark-theme.scss lifts the text to $dk-text and the badge kept the light fill
+// it was drawn for, so the theming created the defect rather than missing it.
+:host-context(body.is-dark) {
+  .passenget-badge {
+    background: $dk-bg-soft;
   }
 }

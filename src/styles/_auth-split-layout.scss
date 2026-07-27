@@ -28,6 +28,10 @@
 // =============================================================================
 
 @import "./variables.scss";
+// OBRS-771 -- the dark block at the foot of this file needs the palette. Both
+// imports declare variables only and emit no CSS, so the six components that
+// pull this partial in do not each carry a copy of anything.
+@import "./dark-tokens.scss";
 
 .login-container {
   display: flex;
@@ -215,5 +219,50 @@
   .login-container .logo-section .logo-img {
     width: 160px;
     height: auto;
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-771)
+// =============================================================================
+//
+// `body.is-dark .login-container` themes the PAGE of all six of these routes
+// (dark-theme.scss section 5), and until now nothing themed the text on it. The
+// dark values existed — `.welcome-text` / `.hint-text` / `.register-link` were
+// all declared in that same section — and every one of them lost the cascade,
+// exactly as OBRS-767 found for the footer:
+//
+//     .login-container .right-section .hint-text          (this file)
+//  -> three [_ngcontent]-carrying compounds               -> (0,4,0)
+//     body.is-dark .login-container .hint-text            (dark-theme.scss)
+//  -> two classes plus body                               -> (0,3,1)
+//
+// 4 beats 3 in the class column. Measured on /register before the move: #353c44
+// on #1a1d27, 1.51:1. `:host-context()` carries the host attribute on top of
+// everything the light rule above already has, so it wins by construction --
+// see src/styles/_dark-tokens.scss.
+//
+// WHY HERE AND NOT IN EACH COMPONENT: these light rules are shared, so their
+// dark counterparts have to be. Only /login owns its own copy of this text, and
+// only because it does not use this layout at all — its block lives in
+// login.component.scss. The census that filed OBRS-771 swept /register and
+// /login; the other five importers (/forget-password, /login-mobile,
+// /otp-validate, /reset-password, /verify-email, /change-email-confirm) carry
+// the identical rules and were never measured. Fixing the partial covers them
+// without anyone having to notice them one at a time.
+:host-context(body.is-dark) {
+  .login-container .right-section {
+    .welcome-text,
+    .hint-text {
+      color: $dk-text;
+    }
+
+    .login-form .register-link {
+      color: $dk-text-muted;
+
+      a {
+        color: $dk-accent;
+      }
+    }
   }
 }

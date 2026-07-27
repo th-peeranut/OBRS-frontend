@@ -229,5 +229,37 @@
         color: $dk-accent;
       }
     }
+
+    // OBRS-771. The same move, for the text this card was filed about. Its
+    // description said no override existed; dark-theme.scss section 5 had
+    // declared every one of these and lost, which is why "just add a dark
+    // colour there" would have changed nothing on screen. Measured before the
+    // move: $text-black #353c44 on the $dk-bg-card #1a1d27 auth card, 1.51:1 --
+    // "ยินดีต้อนรับเข้าสู่ระบบ" and the sign-up line were genuinely unreadable.
+    .login-card {
+      .welcome-text {
+        color: $dk-text;
+      }
+
+      // OBRS-84 email-changed banner. Not in the OBRS-771 measurement because
+      // it only renders for `?reason=email-changed`, which no sweep visits --
+      // unmeasured, not healthy. It sat in the same dead block, so it moves
+      // with it rather than being left as the one rule still losing.
+      .email-changed-banner {
+        background-color: $dk-bg-soft;
+        color: $dk-accent;
+      }
+
+      .login-form .register-link {
+        color: $dk-text-muted;
+
+        // 2.78:1 before, as $secondary-blue #3b61a9. `.obrs-link` also carries
+        // a global dark rule, which wins on other pages and loses here for the
+        // same reason -- so the fix has to be the component's, not that one's.
+        a {
+          color: $dk-accent;
+        }
+      }
+    }
   }
 }

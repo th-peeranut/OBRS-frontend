@@ -218,6 +218,14 @@ body.is-dark {
     // so with Angular's `[_ngcontent]` rewrite they score (0,6,0)/(0,8,0)
     // against this file's (0,3,1) and these overrides never painted anything.
     // Do not re-add them here -- see src/styles/_dark-tokens.scss.
+    //
+    // OBRS-771 took the rest of the text on these pages the same way:
+    // `.welcome-text`, `.hint-text`, `.register-link` (and its link) and the
+    // OBRS-84 `.email-changed-banner`. Same mechanism, and the card that filed
+    // it said "nobody overrides them" — the override was right here, and had
+    // been losing since it was written. The login-only ones now live in
+    // login.component.scss; the ones the other six auth pages share live in
+    // src/styles/_auth-split-layout.scss, which is where their light rules are.
 
     // Centered auth card (design-system §12 login pattern) — a dark surface
     // so the card doesn't read as a white block on the dark page. !important
@@ -230,23 +238,6 @@ body.is-dark {
       box-shadow: 0 10px 22px rgba(0, 0, 0, 0.45) !important;
     }
 
-    .welcome-text,
-    .hint-text {
-      color: $dk-text;
-    }
-
-    // OBRS-84 email-changed banner
-    .email-changed-banner {
-      background-color: $dk-bg-soft;
-      color: $dk-accent;
-    }
-
-    .login-form {
-      .register-link {
-        color: $dk-text-muted;
-        a { color: $dk-accent; }
-      }
-    }
   }
 
   // Tooltip box used in register

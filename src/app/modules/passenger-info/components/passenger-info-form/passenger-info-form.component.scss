@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -315,5 +316,79 @@
   .form-check-inline {
     margin-right: 0.5rem;
     margin-bottom: 0.5rem;
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-771)
+// =============================================================================
+//
+// THE DEFECT IS THE OPPOSITE SHAPE TO THE ONE ON /login, AND THE DIFFERENCE IS
+// THE WHOLE POINT. There the dark rule lost and no colour changed. Here the
+// dark rule WON and made things worse: dark-theme.scss section 14 lifts every
+// text node inside `.card-container` to $dk-text with `!important`, and the
+// badge and chip below kept the light fills they were designed for. #e8eaf0 on
+// $secondary-light-blue #d9e1f1 measures 1.09:1 — paler than the 1.51:1 that
+// got the login text filed, and created BY the theming, not missed by it.
+//
+// So the fix is the SURFACE, never the text (OBRS-771 AC2): repainting these
+// back to a dark ink would only break them against the dark card two levels up.
+//
+// `:host-context()` rather than more rules in dark-theme.scss for the OBRS-767
+// reason — a global `body.is-dark .a .b` cannot outrank this file's own two-deep
+// rules once Angular has stamped `[_ngcontent]` on them. See _dark-tokens.scss.
+//
+// NO `.passenget-badge` RULE HERE, deliberately. This file styles that class
+// twelve lines above and `passenger-info-form.component.html` contains ZERO
+// elements carrying it -- under view encapsulation the class can only match this
+// component's own template, so the light rule is dead code and a dark
+// counterpart would be dead code that also reads as coverage. The badge on this
+// page is booker-info-form's; it is fixed there. Found by mutation: breaking the
+// rule here changed nothing the contrast gate could see, which is what a fix for
+// an element that does not exist looks like.
+:host-context(body.is-dark) {
+  // Light mode separates the two chip states by fill AND accent: white/grey for
+  // the rest state, $secondary-light-blue with a brand border for the active
+  // one. Keep that structure rather than flattening both to one surface --
+  // recessed for rest, lifted plus an accent border for active, which is the
+  // dark-page reading of the same idea.
+  //
+  // Only the ACTIVE chip is in the GATE's reach: its fixture seeds one
+  // passenger, so exactly one chip renders and it is always the active one. The
+  // rest state was measured separately, by a probe that seeds two — white fill
+  // with $dk-text forced onto it, 1.20:1 — so it is a reading, not an inference.
+  // The probe is `.claude/agent-office/scripts/captures/obrs-771/` in the office
+  // repo; the gate's own fixture is deliberately NOT widened here, because
+  // `e2e/support/customer-pages.ts` is shared with two other specs.
+  .seat-passenger-chip {
+    background: $dk-bg-input;
+    border-color: $dk-border;
+
+    &.active {
+      background: $dk-bg-soft;
+      border-color: $dk-accent;
+    }
+  }
+
+  // The numbered circle inside the chip. Its light fill is $primary-lightgrey
+  // #dddee1, so section 14's blanket leaves #e8eaf0 on #dddee1 — measured
+  // 1.12:1, the worst reading on the page and the only one below the two the
+  // card was filed for. Invisible to the sweep for the same one-passenger reason
+  // as above: with a single passenger the only badge on screen is the filled
+  // active one, which passes.
+  .seat-passenger-chip-badge {
+    background: $dk-bg-soft;
+  }
+
+  // The active chip's badge is a FILLED control in light mode (brand fill, white
+  // number), so the number has to be re-asserted dark against the accent — the
+  // blanket $dk-text would sit at 1.9:1 on $dk-accent. `!important` because the
+  // declaration it has to beat is `!important`; among those, specificity decides,
+  // and `:host-context` supplies it. Same shape as section 14's own re-assertions
+  // for `.select-btn` / `.btn-confirm`, kept here because the fill is declared
+  // here (OBRS-767).
+  .seat-passenger-chip.active .seat-passenger-chip-badge {
+    background: $dk-accent;
+    color: $dk-bg !important;
   }
 }

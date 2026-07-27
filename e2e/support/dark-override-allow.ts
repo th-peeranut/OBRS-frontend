@@ -45,14 +45,21 @@
  */
 export const DARK_OVERRIDE_ALLOW: Record<string, string> = {
   // ---------------------------------------------------------------------------
-  // OBRS-771 owns these four. Note the card states "nobody overrides them",
-  // which this census disproves: dark-theme.scss section 5 DOES override them
-  // and loses. Same visible defect, different root cause, and it matters --
-  // adding a colour where one already exists fixes nothing.
-  'body.is-dark .login-container .welcome-text :: color': 'painted #353c44, wants #e8eaf0 -- OBRS-771',
-  'body.is-dark .login-container .login-form .register-link :: color': 'painted #353c44, wants #9aa3b8 -- OBRS-771',
-  'body.is-dark .login-container .login-form .register-link a :: color': 'painted #3b61a9, wants #4bc2f7 -- OBRS-771',
-  'body.is-dark .login-container .hint-text :: color': 'painted #353c44, wants #e8eaf0, /register -- OBRS-771',
+  // OBRS-771 -- FIXED, and it was the last four. This register is now EMPTY,
+  // which is a statement about dark-theme.scss and not about this file: every
+  // declaration left in it controls something on at least one swept page.
+  //
+  // The four were `.welcome-text`, `.hint-text`, `.register-link` and its link.
+  // The card that owned them opened saying nobody overrode them; section 5 of
+  // dark-theme.scss overrode all four and lost, which is why the obvious fix
+  // (add a dark colour there) would have painted exactly nothing. They moved to
+  // login.component.scss and src/styles/_auth-split-layout.scss under
+  // `:host-context(body.is-dark)`, the same move OBRS-767 made for the footer
+  // and OBRS-774 for the login controls -- three cards, one mechanism.
+  //
+  // An empty register is not a reason to relax the gate. Its value is the OTHER
+  // direction: a new dead declaration now has nowhere to hide, and the next
+  // person to add one has to either fix it or write down whose it is.
 
   // NOT registered, on purpose: `.p-selectbutton .p-button.p-highlight ::
   // background-color`. The first census flagged it (painted transparent, wants

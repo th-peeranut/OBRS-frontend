@@ -108,19 +108,32 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   'light|header.my-bookings__header > p|#717581-on-#f9f9ff': '4.39:1 -- OBRS-769 $text-lightblack on $secondary-grey',
 
   // -------------------------------------------------------------------------
-  // OBRS-771 -- two different dark-mode failures on /login and /passenger-info.
+  // OBRS-771 -- FIXED. Seven entries used to sit here, and they were TWO
+  // different failures that happened to land on the same card:
   //
-  //   * light-mode text with no override at all ($text-black on the dark card);
-  //   * text LIFTED to $dk-text over a badge whose light fill was left behind --
-  //     1.09:1, pale on pale. Overriding the colour alone created this one.
+  //   * /login and /register: light-mode text on the dark auth card, 1.51:1 and
+  //     2.78:1. The dark values were declared in dark-theme.scss section 5 the
+  //     whole time and lost the cascade -- the OBRS-767 mechanism again, so the
+  //     fix was to MOVE the rules, not to add a colour. See
+  //     `e2e/support/dark-override-allow.ts`, which this emptied.
+  //   * /passenger-info: 1.09:1 and 1.20:1, and these were CREATED by dark mode
+  //     rather than missed by it. Section 14 lifts every text node inside
+  //     `.card-container` to $dk-text `!important`; the badge and the two chips
+  //     kept the light fills they were designed for, so the theming turned dark
+  //     ink on a pale pill into pale ink on a pale pill. Fixed at the SURFACE
+  //     (each component's own `:host-context(body.is-dark)`), because repainting
+  //     the text dark again would only fail against the card behind it.
+  //
+  // Measured after the fix, on the real pages with getComputedStyle:
+  // welcome-text 1.51 -> 13.98, register-link 1.51 -> 6.65, its link 2.78 ->
+  // 8.29, passenget-badge 1.09 -> 12.41, chip name/seat 1.09 -> 12.41, summary
+  // chip 1.20 -> 12.41. Light mode is byte-for-byte the same value at all seven.
+  //
+  // MUTATION-TESTED, because deleting seven rows is also what quietly narrowing
+  // a gate looks like. Renaming the moved selectors back out of force turns this
+  // gate red on exactly those sites, with exactly those numbers -- 1.51:1 for
+  // the login text, 1.09/1.09/1.20 for the chips. The gate is the guard.
   // -------------------------------------------------------------------------
-  'dark|div.welcome-text.mt-2|#353c44-on-#1a1d27': '1.51:1 -- OBRS-771 light-mode text survives into dark',
-  'dark|p.register-link.mt-2|#353c44-on-#1a1d27': '1.51:1 -- OBRS-771 light-mode text survives into dark',
-  'dark|a.obrs-link|#3b61a9-on-#1a1d27': '2.78:1 -- OBRS-771 $secondary-blue link on the dark card',
-  'dark|div.passenget-badge|#e8eaf0-on-#d9e1f1': '1.09:1 -- OBRS-771 dark text lifted onto an unthemed light badge',
-  'dark|span.seat-passenger-chip-name|#e8eaf0-on-#d9e1f1': '1.09:1 -- OBRS-771 dark text lifted onto an unthemed light chip',
-  'dark|span.seat-passenger-chip-seat|#e8eaf0-on-#d9e1f1': '1.09:1 -- OBRS-771 dark text lifted onto an unthemed light chip',
-  'dark|span.seat-passenger-chip|#e8eaf0-on-#ffffff': '1.20:1 -- OBRS-771 dark text lifted onto a white summary chip',
 
   // -------------------------------------------------------------------------
   // OBRS-563 -- DropdownGroupObrsComponent has zero dark-mode coverage. That
