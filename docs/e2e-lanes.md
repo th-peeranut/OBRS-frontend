@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 121 cases, ~5.8 min, no backend. THIS is the merge gate (runs in CI).
+npm run e2e:gate       # 124 cases, ~6.9 min, no backend. THIS is the merge gate (runs in CI).
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -239,7 +239,7 @@ rest are per-spec.
 
 | Config | Runs | Note |
 |---|---|---|
-| `playwright.gate.config.ts` | 121 in 13 files | the merge gate; hand-written `testMatch` |
+| `playwright.gate.config.ts` | 124 in 13 files | the merge gate; hand-written `testMatch` |
 | `playwright.config.ts` | 68 in 7 files | SIT lane, :4202; list derived from the registry |
 | `playwright.qa.config.ts` | 68 in 7 files | same lane on :4201 for when ports are contended |
 | `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
@@ -339,6 +339,12 @@ without declaring what it runs, which closes the family rather than the two inst
   this card added a second CPU-heavy spec to a 2-worker lane and lost a race that had
   always been there. Adding a gate member changes the timing budget of every other
   member, which no count in a table can tell you.
+  **A fourth rot, and this one added no file.** OBRS-776 widened
+  `host-box-sweep.spec.ts` from 27 screens to 42 and added three cases to it, taking the
+  lane to **124 in 13** and **6.9 min** — up from 5.8. So the count went stale without a
+  new spec, a new lane member or a conflict in either of the two files that would have
+  made anyone look. Cost is what moves here, and cost has no registry: a spec that grows
+  its own page list spends the lane's budget exactly as a new spec would.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is

@@ -36,6 +36,8 @@
  */
 
 import { expect, Browser, Page } from '@playwright/test';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { CUSTOMER_PAGES } from './customer-pages';
 
 /** Displays that make a box BLOCK-LEVEL, i.e. illegal inside an inline box. */
@@ -112,6 +114,15 @@ export async function scanMalformedHosts(page: Page, pageKey: string): Promise<M
  */
 export async function settle(page: Page): Promise<void> {
   await expect(page.locator('.swal2-container')).toHaveCount(0, { timeout: 15_000 });
+  // OBRS-776: and the WEBFONT has to have finished arriving, or the run measures
+  // a page mid-swap. `styles.scss` pulls Sarabun from fonts.googleapis.com and
+  // every text box is a different width in the fallback face -- one AFTER run
+  // reported 48 moves, all of them `width` on the collapsed admin sidebar's nav
+  // labels on a single screen, heights identical to the pixel. That is the
+  // signature of a font swap, not of layout, and it is a RACE rather than a
+  // failure: the same tree measured twice disagreed with itself. `fonts.ready`
+  // resolves once loading has settled either way, which is what removes the race.
+  await page.evaluate(() => document.fonts.ready.then(() => undefined));
   // Two frames: the swal container is removed on transitionend, and the layout
   // that follows its removal is what we are about to measure.
   await page.evaluate(
@@ -130,6 +141,14 @@ export interface SweepPage {
   requires: string;
   /** Needs the NgRx booking store seeded before it renders anything measurable. */
   seed?: boolean;
+  /**
+   * OBRS-776. One interaction to perform after the page has rendered and before
+   * anything is measured, for the screens whose content only exists behind a
+   * click. Kept to a single deterministic action with a `requires`-style
+   * assertion of its own inside: a sweep entry that quietly failed to open its
+   * modal would measure the page underneath and file it under the modal's key.
+   */
+  act?: (page: Page) => Promise<void>;
 }
 
 /**
@@ -228,7 +247,314 @@ export const ADMIN_SWEEP: SweepPage[] = [
     requires: 'app-boarding-list-page table',
   },
   { key: 'payment-result', url: '/payment/result', landsOn: /\/payment\/result$/, requires: '.payment-result h1' },
+
+  // --- OBRS-776 -------------------------------------------------------------
+  // Added so the sweep sees every page that renders one of the four PrimeNG
+  // hosts OBRS-775 left on its allow-list. Not a judgement call about which
+  // pages "probably matter": `primengHostUsers()` below reads the source tree
+  // for every component that renders one, and the gate spec fails on any of
+  // them no page here mounts. Each `requires` is the routed component's own
+  // selector, which is what makes a redirect visible instead of quietly
+  // sweeping whichever page it redirected to.
+  { key: 'admin-schedules', url: '/admin/schedules', landsOn: /\/admin\/schedules$/, requires: 'app-schedules-page' },
+  { key: 'admin-reports', url: '/admin/reports', landsOn: /\/admin\/reports$/, requires: 'app-reports-page' },
+  {
+    key: 'admin-settlements',
+    url: '/admin/settlements',
+    landsOn: /\/admin\/settlements$/,
+    requires: 'app-settlements-page',
+  },
+  {
+    key: 'admin-eod-sales-report',
+    url: '/admin/eod-sales-report',
+    landsOn: /\/admin\/eod-sales-report$/,
+    requires: 'app-eod-sales-report-page',
+  },
+  {
+    key: 'admin-refund-void-report',
+    url: '/admin/refund-void-report',
+    landsOn: /\/admin\/refund-void-report$/,
+    requires: 'app-refund-void-report-page',
+  },
+  {
+    key: 'admin-cash-online-reconciliation',
+    url: '/admin/cash-online-reconciliation-report',
+    landsOn: /\/admin\/cash-online-reconciliation-report$/,
+    requires: 'app-cash-online-reconciliation-report-page',
+  },
+  { key: 'admin-expenses', url: '/admin/expenses', landsOn: /\/admin\/expenses$/, requires: 'app-expenses-page' },
+  { key: 'admin-promotions', url: '/admin/promotions', landsOn: /\/admin\/promotions$/, requires: 'app-promotions-page' },
+  { key: 'admin-vehicles', url: '/admin/vehicles', landsOn: /\/admin\/vehicles$/, requires: 'app-vehicles-page' },
+  {
+    // A TAB of /admin/settings since OBRS-576, not a route of its own;
+    // `SYSTEM_SETTINGS_TABS` is where the `history` segment comes from.
+    key: 'admin-settings-history',
+    url: '/admin/settings/history',
+    landsOn: /\/admin\/settings\/history$/,
+    requires: 'app-config-change-history-page',
+  },
+  {
+    key: 'staff-schedules',
+    url: '/staff/schedules',
+    landsOn: /\/staff\/schedules$/,
+    requires: 'app-staff-schedules-page',
+  },
+  {
+    key: 'staff-parcel-consign',
+    url: '/staff/parcels/consign',
+    landsOn: /\/staff\/parcels\/consign$/,
+    requires: 'app-parcel-consign-page',
+  },
+
+  // The two admin form modals. Their host elements are written unconditionally
+  // into their pages, so they are in the DOM from the first paint -- but the
+  // template root of each is `<div *ngIf="isOpen">`, so the `p-calendar` inside
+  // renders only once the modal opens. Both open from the page's own Add button
+  // with no seeded data at all, which is what makes them worth one click each:
+  // `expense-form-modal` is the ONLY place in the app that renders a
+  // `p-calendar` with `styleClass="schedule-calendar-filter"` on a page this
+  // lane can reach, and that is a materially different box from the
+  // `app-date-field` one -- `.p-calendar.app-date-field` is `display: flex` in
+  // styles.scss and blockifies PrimeNG's inner span, while
+  // `schedule-calendar-filter` matches no rule anywhere and leaves it
+  // `inline-flex`. Without these two entries the global rule would be shipped
+  // over a variant nothing had measured.
+  {
+    key: 'admin-expenses-modal',
+    url: '/admin/expenses',
+    landsOn: /\/admin\/expenses$/,
+    requires: 'app-expenses-page',
+    act: async (page) => {
+      await page.locator('app-expenses-page button.admin-btn-primary').first().click();
+      await expect(page.locator('app-expense-form-modal .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    key: 'admin-promotions-modal',
+    url: '/admin/promotions',
+    landsOn: /\/admin\/promotions$/,
+    requires: 'app-promotions-page',
+    act: async (page) => {
+      await page.locator('app-promotions-page button.admin-btn-primary').first().click();
+      await expect(page.locator('app-promotion-form-modal .admin-modal')).toBeVisible({ timeout: 10_000 });
+    },
+  },
+  {
+    // The bare `<p-calendar>` -- no styleClass at all, so none of the
+    // `.p-calendar.app-date-field` rules in styles.scss apply and PrimeNG's own
+    // `inline-flex` container survives. Four components write one and this is
+    // the only one of the four that opens on a click with no seeded data, which
+    // is what makes it the screen that measures the shape for all of them.
+    key: 'staff-schedules-modal',
+    url: '/staff/schedules',
+    landsOn: /\/staff\/schedules$/,
+    requires: 'app-staff-schedules-page',
+    act: async (page) => {
+      await page.locator('app-staff-schedules-page button.btn-primary').first().click();
+      await expect(page.locator('app-staff-schedules-page .modal.d-block')).toBeVisible({ timeout: 10_000 });
+    },
+  },
 ];
+
+/**
+ * Feature flags whose OFF state is the reason a component is on the gate spec's
+ * `NOT_SWEPT` list, read from `environment.base.ts` at run time.
+ *
+ * `/parcel-booking` is `canActivate: [AuthGuard, featureEnabledGuard(...)]` and
+ * the flag is `false` in the base environment every build inherits, so the page
+ * bounces to `/` and `app-parcel-trip-form` mounts nowhere -- the sweep's own
+ * landing assertion is what caught it. Excluding it is honest ONLY while the
+ * flag stays off, so the gate reads the flag rather than taking the exclusion on
+ * trust: turn `onlineParcelBooking` on and the sweep goes red asking to be
+ * widened, which is the moment the question actually needs answering.
+ */
+export function featureFlags(): Record<string, boolean> {
+  const src = fs.readFileSync(path.resolve(__dirname, '..', '..', 'src', 'environments', 'environment.base.ts'), 'utf8');
+  const block = /features:\s*\{([^}]*)\}/.exec(src)?.[1];
+  if (!block) throw new Error('OBRS-776: no `features` block in environment.base.ts');
+  const flags: Record<string, boolean> = {};
+  for (const m of block.matchAll(/(\w+)\s*:\s*(true|false)/g)) flags[m[1]] = m[2] === 'true';
+  return flags;
+}
+
+// --- who renders the PrimeNG hosts (OBRS-776) --------------------------------
+
+/**
+ * The four library hosts OBRS-775 measured as `display: inline` around block
+ * children and could not fix from a component stylesheet.
+ */
+export const PRIMENG_TARGETS = ['p-tabview', 'p-tabpanel', 'p-card', 'p-calendar'] as const;
+
+export interface PrimengHostUser {
+  /** Our component's selector, e.g. `app-expenses-page`. */
+  selector: string;
+  /** Repo-relative path of the template that renders it. */
+  file: string;
+  /** Which of PRIMENG_TARGETS it renders. */
+  uses: string[];
+  /**
+   * One entry per PrimeNG tag written in this template: the tag, plus only the
+   * `styleClass` values that some stylesheet uses in a rule that sets `display`.
+   *
+   * WHY THE FILTER AND NOT THE RAW styleClass. What decides whether one of these
+   * hosts is malformed -- and therefore what blockifying it does -- is whether
+   * PrimeNG's inner container is block-level. `styleClass` lands on that
+   * container, so a class matters here IF AND ONLY IF something sets `display`
+   * through it. `.p-calendar.app-date-field` is `display: flex; width: 100%` in
+   * styles.scss and is exactly what blockifies the span, so `app-date-field` is
+   * a real variant. `schedule-calendar-filter` matches no rule anywhere in the
+   * tree, and `center-tabview` is styled through `::ng-deep` for backgrounds,
+   * padding and flex-wrap but never `display` -- keeping either in the key would
+   * demand a screen for a distinction that does not exist, and a check that
+   * fails on a correct tree is a check that gets deleted.
+   */
+  variants: string[];
+}
+
+/**
+ * Every component of OURS whose template renders one of `PRIMENG_TARGETS`, read
+ * off the source tree at run time.
+ *
+ * WHY THIS IS NOT A HAND-WRITTEN LIST. The fix for these hosts is a global rule,
+ * and a global rule lands on every instance in the app at once -- including the
+ * ones on pages nobody swept. OBRS-775 refused to ship it for exactly that
+ * reason and carded the widening instead. A widening whose completeness is a
+ * sentence in a card is worth nothing a year from now: the twenty-sixth
+ * component to render a `p-calendar` will be added by someone who never read it.
+ * Deriving the population from the tree means the sweep either covers it or the
+ * gate goes red, and the day PrimeNG's own tags change this list empties and
+ * `no stale ALLOW entries` says so.
+ *
+ * Scanning source with a regex is normally the wrong tool for a CSS question --
+ * OBRS-775's header argues that at length. It is the right tool for THIS
+ * question, which is not "is this host malformed" (only a browser knows) but
+ * "which files mention this tag", and a file that mentions it is exactly the
+ * population a global rule can reach.
+ */
+/**
+ * Does any stylesheet in the tree set `display` in a rule that mentions `.name`?
+ *
+ * Deliberately crude, and crude in the safe direction: it takes the text from
+ * each mention of the class to the next `}` and asks whether `display` appears
+ * in it. Nested SCSS means that can over-report -- a child rule inside the same
+ * block counts -- and over-reporting only ever demands an extra screen, while
+ * under-reporting would excuse one that mattered.
+ */
+function setsDisplayThrough(className: string, sheets: string[]): boolean {
+  const needle = '.' + className;
+  for (const sheet of sheets) {
+    let at = sheet.indexOf(needle);
+    while (at !== -1) {
+      const end = sheet.indexOf('}', at);
+      if (/display\s*:/.test(sheet.slice(at, end === -1 ? undefined : end))) return true;
+      at = sheet.indexOf(needle, at + needle.length);
+    }
+  }
+  return false;
+}
+
+export function primengHostUsers(): PrimengHostUser[] {
+  const srcRoot = path.resolve(__dirname, '..', '..', 'src');
+
+  const files: string[] = [];
+  const styleSheets: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(p);
+      else if (p.endsWith('.scss')) styleSheets.push(fs.readFileSync(p, 'utf8'));
+      else if (p.endsWith('.html') || (p.endsWith('.ts') && !p.endsWith('.spec.ts'))) files.push(p);
+    }
+  };
+  walk(srcRoot);
+
+  // Which component owns which template. An inline `template:` lives in the .ts
+  // itself, so both cases resolve through the same map.
+  const selectorOf = new Map<string, string>();
+  for (const ts of files.filter((f) => f.endsWith('.ts'))) {
+    const src = fs.readFileSync(ts, 'utf8');
+    const selector = /selector:\s*['"]([^'"]+)['"]/.exec(src)?.[1];
+    if (!selector) continue;
+    selectorOf.set(ts, selector);
+    const templateUrl = /templateUrl:\s*['"]\.\/([^'"]+)['"]/.exec(src)?.[1];
+    if (templateUrl) selectorOf.set(path.join(path.dirname(ts), templateUrl), selector);
+  }
+
+  // `\b` rather than a bare `includes`, so a hypothetical `<p-cardboard>` is not
+  // counted as a `p-card`. The two passes below must agree about what a tag is,
+  // or a file lands in the census with no variant to compare.
+  const tagsOf = (src: string, target: string) => src.match(new RegExp('<' + target + '\\b[^>]*>', 'g')) ?? [];
+
+  const users: PrimengHostUser[] = [];
+  for (const file of files) {
+    const src = fs.readFileSync(file, 'utf8').toLowerCase();
+    const uses = PRIMENG_TARGETS.filter((t) => tagsOf(src, t).length > 0);
+    if (!uses.length) continue;
+    const selector = selectorOf.get(file);
+    // A template no component claims cannot be reached by any page, and silently
+    // dropping it would be the one hole this whole function exists to close.
+    if (!selector) throw new Error(`OBRS-776: ${file} renders ${uses.join(',')} but no component claims it`);
+
+    const variants = new Set<string>();
+    for (const target of PRIMENG_TARGETS) {
+      for (const tag of tagsOf(src, target)) {
+        // The leading boundary matters: `inputStyleClass` ends in `styleclass`
+        // once the source is lower-cased, and folding it in here would split one
+        // variant into several that differ by something on PrimeNG's INPUT
+        // rather than on the host box this card is about.
+        const styleClass = [...tag.matchAll(/(?:^|\s)styleclass="([^"]*)"/g)]
+          .flatMap((m) => m[1].trim().split(/\s+/))
+          .filter((c) => c && setsDisplayThrough(c, styleSheets))
+          .sort();
+        variants.add(`${target} styleClass=[${styleClass.join(' ') || '-'}]`);
+      }
+    }
+
+    users.push({
+      selector,
+      file: path.relative(srcRoot, file).replace(/\\/g, '/'),
+      uses: [...uses],
+      variants: [...variants].sort(),
+    });
+  }
+  return users.sort((a, b) => a.selector.localeCompare(b.selector));
+}
+
+/**
+ * Which of OUR components were seen actually RENDERING a PrimeNG target, keyed
+ * by our component's tag, with the target tags it rendered.
+ *
+ * WHY NOT "was the component on the page". That was the first version of this
+ * and it was wrong in the direction that matters. `app-expense-form-modal` is
+ * written unconditionally into `expenses-page.component.html`, so its host
+ * element is always in the DOM -- but its template root is
+ * `<div *ngIf="isOpen">`, so the `p-calendar` inside it renders only once
+ * somebody opens the modal. Counting the component as covered because its host
+ * existed would have reported a `p-calendar` variant as measured when no
+ * `p-calendar` had rendered at all, which is the precise failure this whole
+ * card is about, reproduced inside the check meant to prevent it.
+ *
+ * Attribution is to the NEAREST `app-*` ancestor, which is the component whose
+ * template wrote the tag -- the same thing `primengHostUsers()` reads
+ * statically, so the two are comparable. The exception is a PrimeNG element
+ * projected through `<ng-content>`, which would be attributed to the component
+ * it lands in rather than the one that wrote it; nothing in this tree does that
+ * today, and if it starts the coverage check reds rather than passing quietly.
+ */
+export async function scanPrimengCoverage(page: Page): Promise<Record<string, string[]>> {
+  return page.evaluate((targets) => {
+    const out: Record<string, string[]> = {};
+    for (const el of Array.from(document.querySelectorAll(targets.join(',')))) {
+      let owner: Element | null = el.parentElement;
+      while (owner && !owner.tagName.toLowerCase().startsWith('app-')) owner = owner.parentElement;
+      if (!owner) continue;
+      const key = owner.tagName.toLowerCase();
+      const tag = el.tagName.toLowerCase();
+      (out[key] ??= []).includes(tag) || out[key].push(tag);
+    }
+    return out;
+  }, [...PRIMENG_TARGETS]);
+}
 
 // --- reaching them -----------------------------------------------------------
 
@@ -295,6 +621,7 @@ export async function visit(page: Page, p: SweepPage, seedFn?: (pg: Page) => Pro
   // and reports a clean result for a screen it never visited.
   await expect(page).toHaveURL(p.landsOn);
   await page.locator(p.requires).first().waitFor({ timeout: 15_000 });
+  if (p.act) await p.act(page);
   await settle(page);
 }
 

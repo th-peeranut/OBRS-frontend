@@ -1,0 +1,42 @@
+// ============================================================================
+// OBRS-776 — the four PrimeNG hosts OBRS-775 measured as malformed and could
+// not fix.
+//
+// THE DEFECT. A custom element whose stylesheet never writes a `display`
+// renders as `display: inline`, because that is the CSS initial value. An
+// inline box may not contain block-level children: the browser splits it and
+// wraps them in anonymous block boxes, after which the host's own border box
+// describes nothing anyone can reason about — on OBRS-753 it spanned the height
+// of two children and Playwright's hit test at a button inside it resolved to
+// the host. OBRS-775 swept the whole codebase and fixed 37 of these with
+// `:host { display: block }` in the component's own stylesheet.
+//
+// WHY THESE FOUR NEEDED A SEPARATE CARD. `:host` addresses the element a
+// component's stylesheet is attached to, and these elements belong to PrimeNG.
+// Nothing we can write in a component stylesheet reaches them, so the only fix
+// is a global rule — and a global rule lands on EVERY instance in the app at
+// once, including the ones on pages nobody looked at. OBRS-775 refused to ship
+// that over a 27-page sweep and carded the widening instead, which is this file
+// plus 12 more pages in `e2e/support/host-boxes.ts`.
+//
+// BOUND TO THE HOST TAG, DELIBERATELY. Not to `.p-tabview`, `.p-tabview-panel`
+// or `.p-calendar` — those class names are PrimeNG's own internal DOM, and a
+// PrimeNG upgrade that renames them would leave this rule matching nothing,
+// silently, with no diff to review. The tag is the public API of the component
+// and is the one thing an upgrade cannot quietly change.
+//
+// SPECIFICITY: 0-0-1, the weakest a rule can be. That is intentional. Anything
+// a component or theme has to say about these elements outranks it, and all
+// this needs to beat is the initial value.
+//
+// PROOF IT MOVED NOTHING. `e2e/tests/obrs-775-geometry.spec.ts` measures the
+// border box of every element on all 39 swept pages at 1280/1024/768/576,
+// before and after, and fails past 0.5px. See
+// docs/manual-tests/OBRS-776-primeng-host-boxes.md.
+// ============================================================================
+p-tabview,
+p-tabpanel,
+p-card,
+p-calendar {
+  display: block;
+}

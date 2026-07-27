@@ -36,6 +36,13 @@ import {
  * chain, so a key present in one phase and absent in the other is itself a
  * finding -- the DOM changed, which a `:host { display }` must never do.
  *
+ * OBRS-776 REUSES THIS almost unchanged. It reads the page lists from
+ * `host-boxes.ts`, so widening the sweep to 42 screens widened this to 168
+ * screens and 24,426 boxes without an edit here -- which is why the lists live
+ * there and not in two places. Two things were added: the zero-area exclusion,
+ * whose argument the comparison below states, and a per-screen assertion that
+ * the webfont really loaded, whose argument is beside it.
+ *
  * ASCII-only source.
  */
 
@@ -123,6 +130,18 @@ async function sweepGroup(
     await seedSession(page);
     for (const p of pages) {
       await visit(page, p, storeSeed);
+      // OBRS-776. `settle()` waits for `document.fonts.ready`, which resolves
+      // whether the webfont ARRIVED or failed -- so the wait removes the race
+      // but not the possibility that one phase measured Sarabun and the other
+      // measured the fallback. Every text box is a different width in the two,
+      // so a comparison across them is not a comparison of layout. This is the
+      // CAPTURE lane and it is run by hand, so it can afford to insist on the
+      // real typeface and say so; the gate keeps only the wait, and stays
+      // hermetic.
+      expect(
+        await page.evaluate(() => document.fonts.check('16px Sarabun')),
+        `${p.key}@${vp.w}: Sarabun did not load, so this phase would be measured in the fallback face`
+      ).toBe(true);
       collected[`${p.key}@${vp.w}`] = await measureAll(page);
     }
     await page.context().close();
@@ -178,6 +197,7 @@ test.describe(`OBRS-775 geometry (${PHASE})`, () => {
     const moved: string[] = [];
     const structural: string[] = [];
     const animated: string[] = [];
+    const zeroArea: string[] = [];
 
     for (const screen of Object.keys(collected)) {
       const a = before[screen];
@@ -199,6 +219,47 @@ test.describe(`OBRS-775 geometry (${PHASE})`, () => {
         // and is listed below so the exclusion is never silent.
         if (a[key].anim !== 'none' || b[key].anim !== 'none') {
           animated.push(`${screen} ${key} anim=${b[key].anim}`);
+          continue;
+        }
+        // SECOND EXCLUSION, added by OBRS-776 and on the same terms: named,
+        // printed, and narrow enough to state as a rule rather than a list.
+        //
+        // A box with zero AREA in BOTH phases paints nothing -- no background,
+        // no border (a border would give it height), no text -- and cannot take
+        // a pointer event. It is not part of any layout, so a change to its rect
+        // is not a layout change. `<head>` was already skipped on exactly this
+        // reasoning; this is the same argument for the zero-area nodes that live
+        // in `<body>`.
+        //
+        // OBRS-776 produced eleven of them and no other move. Seven are the
+        // INACTIVE `p-tabpanel`s on `/`, which hold no panel div while hidden:
+        // 0x0 as inline boxes, 246-1008px wide and still 0px tall once the
+        // global rule blockifies them. Four are the `<router-outlet>` MARKER
+        // before `app-config-change-history-page`, whose y shifted 16px when
+        // that host stopped being inline. In both cases every element with
+        // actual extent on those screens is identical to the last hundredth of a
+        // pixel, which is what makes this an exclusion and not a finding.
+        //
+        // Note what it does NOT cover: a box that is zero-area in one phase and
+        // real in the other still falls through to the comparison below, because
+        // that is a box appearing or vanishing and it is exactly what this
+        // harness is for.
+        const areaBefore = a[key].w * a[key].h;
+        const areaAfter = b[key].w * b[key].h;
+        if (areaBefore === 0 && areaAfter === 0) {
+          const d0 = Math.max(
+            Math.abs(a[key].x - b[key].x),
+            Math.abs(a[key].y - b[key].y),
+            Math.abs(a[key].w - b[key].w),
+            Math.abs(a[key].h - b[key].h)
+          );
+          if (d0 > TOLERANCE) {
+            zeroArea.push(
+              `${screen} ${key} zero-area, rect changed by ${d0.toFixed(2)}px ` +
+                `before=${JSON.stringify([a[key].x, a[key].y, a[key].w, a[key].h])} ` +
+                `after=${JSON.stringify([b[key].x, b[key].y, b[key].w, b[key].h])}`
+            );
+          }
           continue;
         }
         const d = Math.max(
@@ -224,16 +285,18 @@ test.describe(`OBRS-775 geometry (${PHASE})`, () => {
         `moved=${moved.length}`,
         `structural=${structural.length}`,
         `excluded-as-animated=${animated.length}`,
+        `excluded-as-zero-area=${zeroArea.length}`,
         ...structural,
         ...moved,
         ...animated,
+        ...zeroArea,
       ].join('\n'),
       'utf8'
     );
     // eslint-disable-next-line no-console
     console.log(
       `OBRS775 compared=${total - animated.length} excluded-as-animated=${animated.length} ` +
-        `moved=${moved.length} structural=${structural.length}`
+        `excluded-as-zero-area=${zeroArea.length} moved=${moved.length} structural=${structural.length}`
     );
 
     expect(structural, 'the DOM changed shape -- a :host display must never do that').toEqual([]);

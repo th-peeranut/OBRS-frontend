@@ -7,8 +7,11 @@ import {
   MalformedHost,
   PUBLIC_SWEEP,
   SweepPage,
+  featureFlags,
   newSweepPage,
+  primengHostUsers,
   scanMalformedHosts,
+  scanPrimengCoverage,
   seedAnonymousSession,
   seedStaffSession,
   visit,
@@ -21,8 +24,9 @@ import {
  * and the gate that keeps it from growing.
  *
  * WHAT THIS ASSERTS. Every custom-element host on every page this lane can reach
- * hermetically -- eight customer pages, nine public/auth-entry routes, ten
- * admin/staff/session-bound routes -- is either well-formed or named on ALLOW
+ * hermetically -- eight customer pages, nine public/auth-entry routes,
+ * twenty-five admin/staff/session-bound screens (OBRS-776 added twelve routes
+ * and three modals) -- is either well-formed or named on ALLOW
  * with a reason. A host that is neither fails the run. A component added
  * tomorrow that forgets its `:host { display }` therefore reds the gate on the
  * first run, whether or not anyone remembers this card exists -- which is the
@@ -45,41 +49,108 @@ import {
  * the size of the problem. `no stale ALLOW entries` fails on any entry the sweep
  * did not actually see, so the number below is a measurement and not a memory.
  *
+ * OBRS-776 ADDED THE COVERAGE HALF. A clean census cannot tell a page that is
+ * well-formed from a page nobody opened, and the four PrimeNG entries this file
+ * used to carry were fixed by a rule in `src/styles/` that reaches every
+ * instance in the app. So `primeng host users are all swept` derives the
+ * components that render those tags from the source tree and fails on any whose
+ * PrimeNG tag the sweep never saw RENDER. Rendering is the bar, not mounting:
+ * `app-expense-form-modal` sits in the DOM on every visit to `/admin/expenses`
+ * while its whole template is behind `*ngIf="isOpen"`, so treating a present
+ * host as coverage would report a `p-calendar` as measured when none had
+ * rendered. That is the assertion that makes an empty ALLOW mean something.
+ *
  * ASCII-only source.
  */
 
 /**
  * Hosts known to be malformed and not yet fixed, each with the reason it is
- * still here. Measured, not guessed: every entry was produced by a real run of
- * this sweep on 2026-07-27, and the stale-entry case fails the day one stops
- * being seen.
+ * still here.
  *
- * The first run of this sweep found 39. Thirty-five were ours and are fixed on
- * this branch. The four below are PrimeNG's, and they are a different job rather
- * than a harder one: the host element belongs to a library component, so no
- * `:host` rule of ours can reach it -- the fix is a global rule in `styles/`,
- * which lands on EVERY instance in the app at once, including the ones on pages
- * this sweep does not visit. The geometry harness only covers 27 pages, so
- * shipping that here would mean asserting something over a population I did not
- * measure. Widening the sweep first is OBRS-776.
+ * EMPTY, and that is a measurement rather than a target. OBRS-775's first run
+ * found 39: 35 ours, fixed there; two more its own fixes created one level up;
+ * and four PrimeNG's it could not reach from a component stylesheet. OBRS-776
+ * widened the sweep by 12 pages -- which turned up two more of ours,
+ * `app-settlements-list` and `app-config-change-history-page`, on pages nobody
+ * had swept -- and then fixed the four with `src/styles/primeng-host-boxes.scss`.
+ *
+ * `no stale ALLOW entries` means an entry added here has to be seen by a real
+ * run, so this cannot quietly become a list of things somebody once believed.
  */
-const ALLOW: Record<string, string> = {
-  'p-tabview': 'PrimeNG. Host is the library element, so only a global rule reaches it -- OBRS-776.',
-  'p-tabpanel': 'PrimeNG, and always inside p-tabview; fixing it alone would prove nothing -- OBRS-776.',
-  'p-card': 'PrimeNG. Also renders in admin forms outside this sweep, so a global rule is unmeasured here -- OBRS-776.',
-  'p-calendar': 'PrimeNG. Its block child is a span PrimeNG generates, not markup of ours -- OBRS-776.',
+const ALLOW: Record<string, string> = {};
+
+/**
+ * OBRS-776. Components that render one of `PRIMENG_TARGETS` and that no screen
+ * in the sweep can get to render it, with the reason.
+ *
+ * Kept deliberately short: every entry is a hole in the evidence for a rule that
+ * lands app-wide, so the bar for adding one is that the component genuinely
+ * cannot be reached without data this lane has no way to produce. Two candidates
+ * were REMOVED from this list rather than excused -- `app-expense-form-modal`
+ * and `app-promotion-form-modal` open from their page's own Add button with no
+ * seeded data at all, so `admin-expenses-modal` and `admin-promotions-modal`
+ * measure them instead.
+ *
+ * Checked in BOTH directions by `primeng host users are all swept`: a component
+ * here whose PrimeNG tag the sweep DID render fails as loudly as one that is
+ * missing, so this cannot quietly become a list of things that used to be hard.
+ */
+const NOT_SWEPT: Record<string, string> = {
+  'app-parcel-trip-form':
+    'Only route is /parcel-booking, behind featureEnabledGuard(onlineParcelBooking), which is false in ' +
+    'environment.base.ts -- the page bounces to / in every build. `the parcel-booking exclusion has not ' +
+    'expired` re-reads that flag, so this entry cannot outlive its reason.',
+  'app-reschedule-date-picker-step':
+    'Step 2 of a dialog that only opens from a reschedulable booking row, which this lane has no data to ' +
+    'produce. Covered by variant instead -- see `no unswept component renders an unmeasured variant`.',
+  'app-trip-details-edit-form':
+    'Dialog opened from a staff schedule row; same missing-data reason as the reschedule dialog. Covered ' +
+    'by variant.',
+  'app-vehicle-maintenance-panel':
+    'Renders only under `activeTab === maintenance && focusedVehicle` on /admin/vehicles -- two clicks past ' +
+    'a vehicle row this lane does not seed. Covered by variant.',
+  'app-round-trip-promotion-card':
+    'Its form is behind `*ngIf="!isLoading && promotion"` and the sweep answers /api/** with nulls on ' +
+    'principle -- an empty table has the same host tree as a full one, which is true of every OTHER page ' +
+    'here. Covered by variant.',
+  'app-sell-page':
+    'Its own two calendars are in the schedule modal, and that modal needs `scheduleStore.hasValue` on top ' +
+    'of the click. Covered by variant -- staff-schedules-modal renders the identical bare shape.',
+  'app-boarding-list':
+    'Its calendars are in the delay dialog, whose button is behind ' +
+    '`canDelaySchedule && tripHeader.statusCode === scheduled`. Covered by variant.',
+  'app-walk-in-center-panel':
+    'Its p-tabView is `*ngIf="selectedTrip"` -- a walk-in trip selection this lane cannot make. Covered by ' +
+    'variant: `center-tabview` is styled through ::ng-deep for background, padding and flex-wrap and never ' +
+    'for display, so it is the same box as the tabview app-route-map-home renders on /.',
 };
 
 /** Every malformed host the whole sweep saw, keyed by tag. Read by the last two tests. */
 const census = new Map<string, MalformedHost>();
+
+/**
+ * Our components the sweep saw actually RENDERING a PrimeNG target, against the
+ * first page it happened on. OBRS-776 reads this to prove the sweep reaches the
+ * instances a global rule would land on: a clean malformed-host census cannot
+ * tell a page that is fine from a page nobody opened, and a component's host
+ * being present cannot tell a rendered `p-calendar` from an `*ngIf` that is
+ * false.
+ */
+const rendered = new Map<string, string>();
 
 async function sweep(page: Page, pages: SweepPage[], seedFn?: (p: Page) => Promise<void>): Promise<void> {
   for (const p of pages) {
     await visit(page, p, seedFn);
     const hosts = await scanMalformedHosts(page, p.key);
     for (const h of hosts) if (!census.has(h.tag)) census.set(h.tag, h);
+    const coverage = await scanPrimengCoverage(page);
+    for (const owner of Object.keys(coverage)) if (!rendered.has(owner)) rendered.set(owner, p.key);
     // eslint-disable-next-line no-console
-    console.log(`OBRS775 ${p.key} malformed=${hosts.length} ` + JSON.stringify(hosts.map((h) => h.tag)));
+    console.log(
+      `OBRS775 ${p.key} malformed=${hosts.length} ` +
+        JSON.stringify(hosts.map((h) => h.tag)) +
+        ` primeng=${JSON.stringify(coverage)}`
+    );
   }
 }
 
@@ -163,5 +234,91 @@ test.describe('OBRS-775 malformed host boxes', () => {
   test('no stale ALLOW entries', async () => {
     const stale = Object.keys(ALLOW).filter((tag) => !census.has(tag));
     expect(stale, 'ALLOW names host(s) the sweep never saw malformed -- fixed, renamed, or never real').toEqual([]);
+  });
+
+  /**
+   * OBRS-776's whole reason to exist, as a gate rather than a paragraph.
+   *
+   * The four PrimeNG hosts can only be fixed by a rule in `src/styles/`, and a
+   * global rule reaches every instance in the app at once -- so the question
+   * "did we measure it" is not about pages that looked interesting, it is about
+   * the components that render those tags, all of them. This derives that
+   * population from the source tree and fails if the sweep did not mount one.
+   *
+   * It fails on a component the sweep DOES reach and NOT_SWEPT still names, too.
+   * An exclusion list that only ever grows is how a measured claim decays into a
+   * remembered one.
+   */
+  test('primeng host users are all swept', async () => {
+    const users = primengHostUsers();
+    // eslint-disable-next-line no-console
+    console.log(`OBRS776 primeng host users=${users.length} ` + JSON.stringify(users, null, 1));
+
+    const unswept = users.filter((u) => !rendered.has(u.selector) && !(u.selector in NOT_SWEPT));
+    expect(
+      unswept.map((u) => `${u.selector} (${u.uses.join(',')}) ${u.file}`),
+      'component(s) whose PrimeNG host NO screen in the sweep renders. A global rule would change them ' +
+        'unmeasured -- add a screen that reaches them, or name them in NOT_SWEPT with why'
+    ).toEqual([]);
+
+    const reachedAfterAll = Object.keys(NOT_SWEPT).filter((sel) => rendered.has(sel));
+    expect(
+      reachedAfterAll,
+      'NOT_SWEPT names component(s) the sweep now renders -- delete the entry, the excuse expired'
+    ).toEqual([]);
+
+    const gone = Object.keys(NOT_SWEPT).filter((sel) => !users.some((u) => u.selector === sel));
+    expect(gone, 'NOT_SWEPT names component(s) that no longer render any PrimeNG host at all').toEqual([]);
+  });
+
+  /**
+   * What makes the NOT_SWEPT entries survivable instead of a hole.
+   *
+   * Eight components render a PrimeNG host behind data or a selection this lane
+   * cannot produce. The global rule still reaches them, so "we did not measure
+   * it" would be the exact mistake OBRS-775 refused to make -- unless the thing
+   * that decides how the host lays out is the same in them as in one that WAS
+   * measured. It is: the host is malformed exactly when PrimeNG's inner
+   * container is block-level, and the only thing a call site can do about that
+   * is hand it a `styleClass` that some rule sets `display` through. So the
+   * claim is narrow and checkable -- every variant an unswept component writes
+   * also occurs in a component whose PrimeNG tag the sweep rendered and the
+   * geometry harness measured.
+   *
+   * The day someone gives a dialog's calendar a styleClass that carries a
+   * `display` no swept screen uses, this reds and says so, which is the only
+   * version of this claim worth having.
+   */
+  test('no unswept component renders an unmeasured variant', async () => {
+    const users = primengHostUsers();
+    const measured = new Set(users.filter((u) => rendered.has(u.selector)).flatMap((u) => u.variants));
+
+    const unmeasured = users
+      .filter((u) => !rendered.has(u.selector))
+      .flatMap((u) => u.variants.filter((v) => !measured.has(v)).map((v) => `${u.selector}: ${v}`));
+
+    expect(
+      unmeasured,
+      'unswept component(s) render a PrimeNG host in a shape no swept page does, so the geometry ' +
+        'harness never measured it. Reach the component, or measure the variant somewhere it can be reached'
+    ).toEqual([]);
+  });
+
+  /**
+   * The one NOT_SWEPT entry that is excused by a fact rather than by variant,
+   * re-derived rather than remembered.
+   *
+   * `app-parcel-trip-form` is excused because its only route is behind a feature
+   * flag that is off, which is a fact about the tree and not an opinion -- so it
+   * is read back here. A flag flip is exactly the change that would make the
+   * exclusion false, and it is also exactly the change nobody would think to
+   * re-check this file for.
+   */
+  test('the parcel-booking exclusion has not expired', async () => {
+    expect(
+      featureFlags()['onlineParcelBooking'],
+      'onlineParcelBooking is ON, so /parcel-booking now renders app-parcel-trip-form and its p-calendar. ' +
+        'Add the page to ADMIN_SWEEP and drop the NOT_SWEPT entry'
+    ).toBe(false);
   });
 });

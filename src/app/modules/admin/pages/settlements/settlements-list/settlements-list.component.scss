@@ -1,3 +1,15 @@
+// OBRS-776. Same defect and same fix as the 37 hosts OBRS-775 swept: a
+// component that declares no `:host` display renders as `display: inline`, and
+// an inline box may not hold the block-level children below it -- the browser
+// splits it and wraps them in anonymous blocks, after which the host's border
+// box describes nothing. OBRS-775 could not have found this one: it never
+// visited /admin/settlements. That is the whole argument for widening the sweep
+// before shipping a rule over pages nobody measured. Measured to move no
+// geometry at 1280/1024/768/576 -- e2e/tests/obrs-775-geometry.spec.ts.
+:host {
+  display: block;
+}
+
 .settlements-row {
   cursor: pointer;
 }
