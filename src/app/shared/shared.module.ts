@@ -26,6 +26,11 @@ import { NotificationInboxRowComponent } from './components/notification-inbox-r
 // composer AND the admin inline detail modal both reuse these.
 import { UsabilityReportImagePickerComponent } from './components/usability-report-image-picker/usability-report-image-picker.component';
 import { UsabilityReportFollowUpTimelineComponent } from './components/usability-report-follow-up-timeline/usability-report-follow-up-timeline.component';
+// OBRS-286: the first cross-shell dumb INPUT component — renders in both the
+// customer shell (cancel-with-destination modal) and the admin shell
+// (override-cancel modal), so it lives here for the same reason
+// `AdminModalBackdropDirective` does (ADR-0017 precedent).
+import { AppRefundDestinationFieldsComponent } from './components/refund-destination-fields/refund-destination-fields.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -48,6 +53,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     NotificationInboxRowComponent,
     UsabilityReportImagePickerComponent,
     UsabilityReportFollowUpTimelineComponent,
+    AppRefundDestinationFieldsComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -84,6 +90,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     NotificationBellComponent,
     UsabilityReportImagePickerComponent,
     UsabilityReportFollowUpTimelineComponent,
+    AppRefundDestinationFieldsComponent,
 
     // Directives
     AdminModalBackdropDirective,

@@ -7,6 +7,7 @@ import {
 } from '../../shared/interfaces/booking.interface';
 import { BookingTicketsData } from '../../shared/interfaces/booking-ticket.interface';
 import {
+  CancelBookingReqDto,
   CancelBookingResult,
   CancellationPolicy,
   MyBookingDto,
@@ -201,13 +202,21 @@ export class BookingService {
     );
   }
 
-  /** Cancel a confirmed booking; the backend triggers the policy-based refund. */
+  /**
+   * Cancel a confirmed booking; the backend triggers the policy-based refund.
+   * OBRS-286: `payload` extends the request with `refundDestination`, required
+   * by the backend only when the cancel resolves to `MANUAL_REFUND_REQUIRED`
+   * (Flow A1). Optional and defaulted to `{}` so the one existing caller
+   * (`my-bookings.effect.ts`'s non-manual path) posts the exact same empty
+   * body as before — byte-identical, no new fields sent unless supplied.
+   */
   cancelBooking(
-    bookingId: number
+    bookingId: number,
+    payload: CancelBookingReqDto = {}
   ): Observable<ResponseAPI<CancelBookingResult>> {
     return this.http.post<ResponseAPI<CancelBookingResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel`,
-      {},
+      payload,
       { context: this.silentContext() }
     );
   }

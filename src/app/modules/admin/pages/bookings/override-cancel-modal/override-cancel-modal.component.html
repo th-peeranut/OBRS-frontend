@@ -91,6 +91,27 @@
       </small>
     </form>
 
+    <!-- OBRS-286 Flow A3: refund-destination requirement -->
+    <div class="admin-form-field full" *ngIf="refundMethodState === 'loading'">
+      <small class="admin-hint">{{ 'REFUND_DESTINATION.CHECKING_METHOD' | translate }}</small>
+    </div>
+
+    <div class="admin-form-field full" *ngIf="showDestinationFields">
+      <app-refund-destination-fields
+        [formGroup]="destinationForm"
+        [disabled]="isSubmitting"
+      ></app-refund-destination-fields>
+
+      <p class="admin-hint override-cancel-destination-advisory" *ngIf="refundMethodState === 'error'">
+        {{ 'REFUND_DESTINATION.CHECK_FAILED' | translate }}
+        <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
+          {{ 'REFUND_DESTINATION.RETRY_CHECK' | translate }}
+        </button>
+      </p>
+
+      <small class="admin-error" *ngIf="destinationErrorMessage">{{ destinationErrorMessage }}</small>
+    </div>
+
     <p class="admin-error override-cancel-error" *ngIf="errorMessage">{{ errorMessage }}</p>
 
     <div class="admin-modal-actions">

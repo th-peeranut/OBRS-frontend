@@ -1029,6 +1029,32 @@ enforced rule with a test behind it.
   comments explicit about which contract applies; don't assume one implies
   the other just because the constant is shared.
 
+- **Cross-shell dumb INPUT component with its own token namespace, overridden
+  by ancestor** (OBRS-286, `AppRefundDestinationFieldsComponent`,
+  `src/app/shared/components/refund-destination-fields/`): the first
+  cross-shell component that is a genuine **input control** rather than a
+  read-only status chip (the `ParcelTrackingPageComponent`/`MyReportsComponent`
+  precedents above only re-declare chip token *values*). It renders inside
+  both the customer shell (`CancelRefundDestinationModalComponent`, Flow A1)
+  and the admin shell (`OverrideCancelModalComponent`, Flow A3), so it can't
+  lean on `.admin-field` (depends on `--admin-*`, undefined outside
+  `.admin-shell`) or the customer shell's `.form-control` (not a pill, §5).
+  Declares its own `--rdf-*` custom properties (defaulted to customer-light),
+  overridden via `:host-context(body.is-dark)` (customer dark — values
+  copied, not shared, since `dark-theme.scss`'s `$dk-*` SCSS vars are
+  file-private), `:host-context(.admin-shell)` (both admin themes, aliasing
+  the already dark-aware `--admin-*`/`--accent*` runtime tokens), and
+  `:host-context(.admin-shell.is-dark)` (a required specificity safety net —
+  `ThemeService` sets `body.is-dark` regardless of which shell is active, so
+  without this the customer-dark rule can outrank the single-class admin
+  rule). Contrast measured in all four combinations (customer/admin ×
+  light/dark) via `mountInChain`/`effectiveBg` (`src/app/testing/contrast.ts`).
+  See `docs/adr/0032-cross-shell-refund-destination-fields-component.md`.
+  Reuse this exact four-rule pattern (own namespace → customer light default →
+  customer dark copied values → admin alias → admin-dark specificity net) for
+  the next cross-shell **input** component, instead of re-deriving the
+  ordering or skipping the specificity-net rule as an apparent duplicate.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

@@ -1,9 +1,11 @@
 import { createAction, props } from '@ngrx/store';
 import {
+  CancellationPolicy,
   CancelBookingResult,
   MyBookingDto,
   MyBookingView,
 } from '../../../shared/interfaces/my-booking.interface';
+import { RefundDestinationReqDto } from '../../../shared/interfaces/refund-destination.interface';
 import {
   RescheduleEstimate,
   RescheduleOption,
@@ -58,6 +60,37 @@ export const cancelBookingFailure = createAction(
 /** Traveler dismissed the confirmation dialog — clears the in-flight state. */
 export const cancelBookingDismissed = createAction(
   '[MyBookings API] Cancel booking dismissed'
+);
+
+// --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
+// Replaces the plain Swal confirm for a cancel that resolves to
+// MANUAL_REFUND_REQUIRED — the traveler must supply a refund destination
+// before the cancel is submitted.
+
+/** Opened by `requestCancel$` once the policy resolves to manual — the modal
+ * shows the already-fetched policy, no further fetch on open. */
+export const openCancelRefundDestinationModal = createAction(
+  '[MyBookings API] Open cancel refund destination modal',
+  props<{ booking: MyBookingView; policy: CancellationPolicy }>()
+);
+
+export const closeCancelRefundDestinationModal = createAction(
+  '[MyBookings API] Close cancel refund destination modal'
+);
+
+export const confirmCancelWithDestination = createAction(
+  '[MyBookings API] Confirm cancel with destination',
+  props<{ booking: MyBookingView; refundDestination: RefundDestinationReqDto }>()
+);
+
+/** A server-side `cancel.error.refund-destination-required` /
+ * `-invalid` 400 (a race against client validation). Deliberately does NOT
+ * reuse `cancelBookingFailure` — that one's effect fires a global toast and
+ * its reducer case clears the modal; this case must keep the modal open with
+ * everything typed intact (Flow A1 step 5). */
+export const refundDestinationInvalid = createAction(
+  '[MyBookings API] Refund destination invalid',
+  props<{ message: string }>()
 );
 
 // --- Reschedule dialog (OBRS-83) ---

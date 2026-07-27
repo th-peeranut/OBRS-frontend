@@ -21,6 +21,13 @@ export const selectMyBookingsCancellingId = createSelector(
   (state) => state.cancellingBookingId
 );
 
+// --- Cancel-with-destination modal (OBRS-286 Flow A1) ---
+
+export const selectCancelRefundDestinationModal = createSelector(
+  selectMyBookings,
+  (state) => state.refundDestinationModal
+);
+
 // --- Reschedule dialog (OBRS-83) ---
 
 export const selectRescheduleDialogBookingId = createSelector(
