@@ -1,5 +1,13 @@
 @import "../../../../../styles/variables.scss";
 
+// OBRS-753. Same malformed box as the total component next door: no `:host` display, so
+// an inline host wrapping `h3.title` and `div.card-container`, both block-level. Nothing
+// has hit-tested against this one yet -- which is the reason to fix it now rather than
+// wait for the spec that does.
+:host {
+  display: block;
+}
+
 .card-container {
   background: $primary-white;
   padding: $space-lg;

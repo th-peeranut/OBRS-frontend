@@ -1,5 +1,19 @@
 @import "../../../../../styles/variables.scss";
 
+// OBRS-753. Without this the host is Angular's default `display: inline` while its
+// template puts two BLOCK-LEVEL children side by side (.card-container, and .btn-confirm
+// which the rule below makes `display: flex`). CSS does not allow that: the browser
+// splits the inline box and wraps the children in anonymous block boxes, and the host's
+// own border box stops describing anything usable -- measured at 1280x720 it spanned the
+// full height of both children, so a hit test at the button resolved to this element,
+// the button's own PARENT, and Playwright counted it as an interceptor. That is what
+// made b2c-critical-path the single red the first time the gate lane ran in CI
+// (OBRS-750). `block`, not `flex`: block flow is what the anonymous boxes were already
+// approximating, so the measured geometry is unchanged at all four widths.
+:host {
+  display: block;
+}
+
 .card-container {
   background: $primary-white;
   padding: $space-lg;

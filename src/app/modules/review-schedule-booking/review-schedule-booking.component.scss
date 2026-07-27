@@ -1,3 +1,12 @@
+// OBRS-753. The page host had the same missing declaration as its two children: inline,
+// wrapping `div.content-container` (block) plus the navbar, stepper and footer hosts. It
+// happens to be full-width already, so this changes no measured geometry -- it is here
+// because the acceptance criterion is "no host in this module", and leaving the one that
+// currently looks harmless is how the next component inherits the pattern.
+:host {
+  display: block;
+}
+
 .content-container {
   display: flex;
   justify-content: center;
