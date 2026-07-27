@@ -233,6 +233,22 @@ jobs:
       # workflow, and a flake must be diagnosed rather than retried into a green tick.
       # The config's `webServer` starts `ng serve` itself (reuseExistingServer is already
       # false when CI is set), so there is nothing to start here.
+      #
+      # OBRS-584 added `customer-contrast-gate.spec.ts` to this lane. It costs ~2
+      # minutes of wall clock -- the largest single spec here -- because it opens
+      # eight customer pages in both themes and reads getComputedStyle on every
+      # element that renders text, plus a :hover/:focus pass over each page's named
+      # controls. That is the price of measuring the CASCADE, which is the only
+      # place the defects it finds exist: OBRS-575 shipped a 2.79:1 pill past this
+      # very workflow because every other gate here reads stylesheets, and a
+      # stylesheet cannot say which rule won. Its first run found 58 open defects,
+      # including a dark footer override that has never once painted (OBRS-767).
+      #
+      # The cost is wall clock, not quota. Actions minutes are UNMETERED for this
+      # repo (it is public -- OBRS-735), and the SIT frontend deploys from Netlify,
+      # not from here. Do not "optimise" it by quietly cutting pages: the spec fails
+      # when a page renders too little to measure, precisely so that a shrinking
+      # sweep cannot pass as a clean one.
       - name: Run deterministic E2E lane
         run: npm run e2e:gate
 

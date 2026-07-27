@@ -63,6 +63,12 @@
       "config": "playwright.gate.config.ts",
       "why": "56 fulfilling routes. Its comment blamed a fake token for changing behaviour; OBRS-618 checked the code and nothing in src/app decodes a JWT -- AuthService treats it as an opaque string and reads roles from a separate localStorage key. The real cause was the OBRS-535 one: an unmocked authenticated call 401s and force-logs-out, which cannot happen in a lane with no backend. Promoted only after all 42 cases passed here."
     },
+    {
+      "spec": "customer-contrast-gate.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-584. Sweeps eight customer pages in both themes and scores WCAG 1.4.3 (text) and 1.4.11 (control boundary) from getComputedStyle. Hermetic by construction: one page.route fulfils every /api/** call from inline fixtures, Maps is aborted, the session is a synthetic localStorage token and the booking flow is reached by dispatching the app's own NgRx actions rather than by driving the funnel. It needs a DEVELOPMENT build (window.ng, for the store seed), which is exactly what this lane's webServer serves."
+    },
 
     {
       "spec": "admin-critical-paths.spec.ts",

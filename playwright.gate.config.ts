@@ -84,6 +84,12 @@ export default defineConfig({
     '**/stop-filter-route-pair.spec.ts',
     '**/trip-details-edit.spec.ts',
     '**/staff-sell-walkin.spec.ts',
+    // OBRS-584. Measures WCAG contrast on eight customer pages in both themes by
+    // reading getComputedStyle in the browser -- the only place the CASCADE
+    // exists, which is why no stylesheet parser could see the 2.79:1 that
+    // OBRS-575 shipped past a green CI. Hermetic on the same terms as the rest
+    // of the lane: it stubs every /api/** call and aborts Maps.
+    '**/customer-contrast-gate.spec.ts',
   ],
 
   timeout: 60_000,

@@ -240,6 +240,58 @@ look different.
   a **gradient** reads as `1:1` in both — that family is `check-brand-fill-contrast.mjs`
   (OBRS-740), not this one.
 
+### 2.5 The contrast gates — what each covers, and what nothing covers (OBRS-584)
+
+Four gates now measure colour, and they are **not** redundant: each sees a class
+of defect the others cannot. Read this before adding a fifth, and before reading
+a green CI as "this screen was checked".
+
+| Gate | Reads | Catches | Structurally blind to |
+|---|---|---|---|
+| `check-admin-theme-tokens.mjs` (`npm run test:theme-tokens`) | `--admin-*` declarations | a token with no `.admin-shell.is-dark` value; a `var(--admin-*)` nobody declared; a chip-half used as standalone text | anything not spelled as a CSS custom property — i.e. **the whole customer side**, which uses SCSS `$variables` that are gone by build time |
+| `check-brand-fill-contrast.mjs` invariant 1 (`npm run test:brand-contrast`) | SCSS source | text-on-fill below AA, including every **gradient stop**, with `var()` resolved per theme world | a rule where `color` and `background` are not in the same block — so anything that **inherits its background from an ancestor** |
+| `check-brand-fill-contrast.mjs` invariant 2 (OBRS-763) | SCSS source | a hover fill **lighter** than the rest fill it replaces — direction, which no ratio can express | translucent hovers it cannot composite (counted `unresolved`, never passed) |
+| `customer-contrast-gate.spec.ts` (`npm run e2e:gate`) | `getComputedStyle` in a real browser: 8 customer pages × 2 themes, plus `:hover`/`:focus-visible` on each page's named controls | **text vs the surface actually painted behind it** (WCAG 1.4.3) and **a control's boundary vs the surface it sits on** (1.4.11), composited through the real cascade | gradients, `opacity < 1`, disabled controls, third-party markup — each **counted and printed**, never folded into the pass. Admin/staff shells (it sweeps customer routes only). |
+
+**Why the runtime one had to exist.** OBRS-575 shipped `.recent-route-btn` at
+2.79:1 on the dark Home card with the static gates green, and not one of them was
+broken. Two mechanisms defeat source reading, both confirmed by measurement
+rather than argued:
+
+1. **Omission.** `dark-theme.scss` contained no `.recent-route-btn` selector at
+   all. A parser that reads what *is* declared cannot see what was never written.
+2. **Specificity — the worse one.** `body.is-dark .menu-container .menu-text` is
+   `(0,3,1)`; Angular compiles the component's own rule to
+   `.menu-container[_ngcontent] .menu-text[_ngcontent]`, which is `(0,4,0)` and
+   **wins**. The whole dark-mode footer override has therefore never painted a
+   single pixel (OBRS-767) — while reading, in source, like complete and correct
+   dark support. A stylesheet cannot tell you which rule won; only the browser can.
+
+**What still has nobody watching it**, stated plainly so it stays a known gap
+rather than an assumed pass:
+
+- **Admin and staff shells at runtime.** `check-admin-theme-tokens.mjs` proves a
+  token exists in both themes; nothing proves what those screens *paint*.
+  `e2e/scripts/check-admin-modal-contrast.js` does it for three modals, by hand.
+- **Gradient-filled surfaces at runtime** — `getComputedStyle().backgroundColor`
+  is transparent under one, so the runtime gate counts them (74 elements) and
+  refuses to score them. Their text is covered by `check-brand-fill-contrast.mjs`,
+  which expands the stops: the two gates cover for each other here, deliberately.
+- **`opacity < 1` subtrees.** Neither source nor these runtime helpers composite
+  them honestly. Currently zero on the swept customer pages.
+- **Customer pages outside the sweep** (`/register`, `/parcel*`, `/my-reports`,
+  `/payment/result`) and every **modal, dropdown panel and toast** — the sweep
+  only sees those if something opens them.
+- **The focus ring as an indicator (2.4.11 / 2.4.13).** The gate measures a
+  focused control's fill and border; it does not check the ring is visible.
+
+**The debt register.** 58 known-open defects live in
+`e2e/support/customer-contrast-allow.ts`, each with a measured ratio and the card
+that owns the fix (OBRS-767 / -768 / -769 / -771 / -772 / -773, plus the
+pre-existing OBRS-563). It is a debt marker, not an exemption: a NEW site below AA
+fails the build, and an entry that stops matching anything **also** fails it, so
+the list cannot rot into a lie. Deleting your entries is part of closing your card.
+
 ---
 
 ## 3. Form controls — canonical components
