@@ -95,6 +95,25 @@ and no stylesheet parser can tell an inline host that is fine (all children inli
 one that is malformed. Only the cascade knows, and the cascade only exists in a browser.
 Exactly the argument that put the contrast gate here.
 
+**And a declaration that never applies is a lane member too.**
+`dark-override-effective.spec.ts` (OBRS-767) removes each `dark-theme.scss` declaration
+from the live CSSOM in turn and fails if nothing on the page changed. Same argument again,
+one step further out: the contrast gate asks whether a colour is legible, this one asks
+whether the rule that set it ever ran. A global `body.is-dark .a .b` is (0,3,1) and the
+component's own `.a[_ngcontent] .b[_ngcontent]` is (0,4,0), so the override parses,
+matches its element, and loses — which no stylesheet parser can see and which had hidden
+the entire dark footer at 2.40:1 for the life of the feature. Two things it does that are
+worth copying if you write a gate that *mutates* the page to measure it: it restores each
+rule through `style.cssText` verbatim (removing and re-adding a longhand written with
+`var()` destroys the declaration, and the first version of this spec was silently
+corrupting the page it was measuring), and it samples every page twice and reports only
+what is dead in both (PrimeNG settles some fills after first paint, and a one-sample run
+went red at random with no defect behind it). Everything it cannot judge is *counted and
+printed*, never folded into the pass: `:hover`-only rules, selectors that matched no
+element, and unreadable `var()`s. Known-dead declarations live in
+`e2e/support/dark-override-allow.ts` against a card, and an entry that stops matching
+fails the build too — so the register cannot rot into a lie.
+
 **Debugging a GATE failure.** A timeout on an unrelated element usually means an
 unmocked call: the request fails, the global error interceptor raises a SweetAlert, and
 its backdrop swallows every subsequent click. Read the trace's `.network` file, or add
@@ -200,7 +219,7 @@ rest are per-spec.
 
 | Config | Runs | Note |
 |---|---|---|
-| `playwright.gate.config.ts` | 113 in 11 files | the merge gate; hand-written `testMatch` |
+| `playwright.gate.config.ts` | 115 in 12 files | the merge gate; hand-written `testMatch` |
 | `playwright.config.ts` | 68 in 7 files | SIT lane, :4202; list derived from the registry |
 | `playwright.qa.config.ts` | 68 in 7 files | same lane on :4201 for when ports are contended |
 | `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
@@ -280,12 +299,19 @@ without declaring what it runs, which closes the family rather than the two inst
   **It had already rotted when OBRS-753 arrived.** The table above read "102 in 9 files";
   the tree that card branched from (`f6e053b5`) actually ran **104 in 10** — OBRS-584 put
   `customer-contrast-gate.spec.ts` in the lane the same day and left the table alone. It
-  is now 113 in 11, measured from Playwright's own `Running N tests` line rather than
+  is now **115 in 12**, measured from Playwright's own `Running N tests` line rather than
   counted by hand. Two things follow. A number here goes stale the moment a card adds a
   spec, and it stays wrong silently — which is the argument for the assertion, not for
   another careful edit. And do not try to recover the count by grepping the `list`
-  reporter's output: it prints two lines per case, so that grep gives 123 for a run
-  Playwright itself calls 113.
+  reporter's output: it prints two lines per case, so on OBRS-753's tree that grep gave
+  123 for a run Playwright itself called 113.
+  **Then it rotted again the same day.** OBRS-753 wrote "113 in 11" on 2026-07-27;
+  OBRS-767 merged two more cases in hours later, off the same base commit `f6e053b5`.
+  Neither branch could see the other's spec until the merge, and both conflicted on
+  exactly the two files that name a lane member (`e2e/lanes.json`,
+  `playwright.gate.config.ts`) — which is the only reason anyone noticed. Two branches off
+  one base each adding a gate member is the normal shape of this repo, not an unlucky day.
+  Read every count in this file as *the last measurement*, not as the current truth.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is
