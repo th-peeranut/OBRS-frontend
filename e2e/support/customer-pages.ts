@@ -441,6 +441,36 @@ export async function seedCustomerSession(page: Page, dark: boolean): Promise<vo
  * runtime, and `window.ng` exists because this lane serves a development build.
  */
 export async function seedStore(page: Page): Promise<void> {
+  // OBRS-767: this used to be the `page.evaluate` below and nothing else, so it
+  // threw the instant no component exposed a Store. That is a RACE, not a check --
+  // `review-total-host-box.spec.ts` calls it on the line after `page.goto()`, with
+  // no wait of any kind, and passed only because the lane was light enough that
+  // Angular had always rendered first. Adding a second CPU-heavy spec to the same
+  // 2-worker lane was enough to lose that race on the CI runner, and the lane went
+  // red in a spec that had not changed. Wait for the precondition, then assert it:
+  // a page that genuinely has no Store still fails, just 20s later and saying so.
+  try {
+    await page.waitForFunction(
+      () => {
+        const ng = (window as unknown as { ng?: { getComponent(el: Element): unknown } }).ng;
+        if (!ng || !ng.getComponent) return false;
+        for (const el of Array.from(document.querySelectorAll('*'))) {
+          const cmp = ng.getComponent(el) as { store?: { dispatch?: unknown } } | null;
+          if (cmp && cmp.store && typeof cmp.store.dispatch === 'function') return true;
+        }
+        return false;
+      },
+      undefined,
+      { timeout: 20_000 },
+    );
+  } catch {
+    throw new Error(
+      'seedStore: no component exposed an NgRx Store within 20s. Either the page never ' +
+        'bootstrapped (check for an unmocked /api call raising the global error modal), ' +
+        'or this is not a development build so `window.ng` is absent.',
+    );
+  }
+
   await page.evaluate((seed) => {
     const ng = (window as unknown as { ng?: { getComponent(el: Element): unknown } }).ng;
     if (!ng || !ng.getComponent) throw new Error('window.ng is absent -- not a development build?');
