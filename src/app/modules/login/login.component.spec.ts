@@ -8,6 +8,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { LoginComponent } from './login.component';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { ThemeService } from '../../shared/services/theme.service';
 
 describe('LoginComponent', () => {
   let component: LoginComponent;
@@ -135,6 +136,140 @@ describe('LoginComponent', () => {
       // page a window.opener handle back into this one.
       expect(link()?.getAttribute('target')).toBe('_blank');
       expect(link()?.getAttribute('rel')).toContain('noopener');
+    });
+  });
+
+  // Locks OBRS-778. GIS draws the button inside a cross-origin iframe, so the
+  // ONLY lever we have over its colour is the `theme` option we pass — no CSS
+  // of ours reaches inside, which is why this is asserted on the renderButton
+  // call and proven on screen separately by pixel measurement (card AC6).
+  describe('GIS button theme follows the app theme (OBRS-778)', () => {
+    let renderCalls: Record<string, unknown>[];
+    let originalGoogle: unknown;
+    let themeService: ThemeService;
+
+    function priv<T>(name: string): T {
+      return (component as unknown as Record<string, T>)[name];
+    }
+
+    beforeEach(() => {
+      renderCalls = [];
+      const w = window as unknown as Record<string, unknown>;
+      originalGoogle = w['google'];
+      w['google'] = {
+        accounts: {
+          id: {
+            initialize: () => undefined,
+            renderButton: (
+              _parent: HTMLElement,
+              options: Record<string, unknown>
+            ) => renderCalls.push(options),
+          },
+        },
+      };
+
+      // ngAfterViewInit left a 100 ms poll running that would call initGis()
+      // itself the moment it sees the stub above. These tests drive initGis()
+      // explicitly, so kill the poll rather than race it.
+      priv<() => void>('clearGisReadyInterval').call(component);
+
+      themeService = TestBed.inject(ThemeService);
+    });
+
+    afterEach(() => {
+      (window as unknown as Record<string, unknown>)['google'] = originalGoogle;
+      // ThemeService is providedIn:'root' and writes a body class + localStorage,
+      // so leaving it dark would leak into every later spec in the run.
+      themeService.setMode('light');
+    });
+
+    function initGis(): void {
+      priv<() => void>('initGis').call(component);
+    }
+
+    function lastTheme(): unknown {
+      return renderCalls[renderCalls.length - 1]?.['theme'];
+    }
+
+    it('renders the light card with Google\'s outline (white) button', () => {
+      themeService.setMode('light');
+      initGis();
+
+      expect(renderCalls.length).toBe(1);
+      expect(lastTheme()).toBe('outline');
+    });
+
+    it('renders the dark card with filled_black, not the white outline button', () => {
+      // The regression itself: `theme` used to be the literal 'outline', so the
+      // dark auth card carried a pure-white 1.37:1 block.
+      themeService.setMode('dark');
+      initGis();
+
+      expect(renderCalls.length).toBe(1);
+      expect(lastTheme()).toBe('filled_black');
+    });
+
+    it('redraws the button when the theme is toggled on this page', () => {
+      // `theme` is read once at renderButton() time and is not reactive, so
+      // without a redraw the toggle would leave the old button in place.
+      themeService.setMode('light');
+      initGis();
+      expect(renderCalls.length).toBe(1);
+
+      themeService.setMode('dark');
+
+      expect(renderCalls.length).toBe(2);
+      expect(lastTheme()).toBe('filled_black');
+    });
+
+    it('does not redraw when the mode is re-emitted unchanged', () => {
+      // Every redraw re-runs initialize() and makes GIS log a duplicate-init
+      // notice; a no-op emission must not cost one.
+      themeService.setMode('dark');
+      initGis();
+      expect(renderCalls.length).toBe(1);
+
+      themeService.setMode('dark');
+
+      expect(renderCalls.length).toBe(1);
+    });
+
+    it('keeps the dark theme through the OBRS-90 language re-render', () => {
+      // reloadGisForLanguage() re-injects gsi/client and calls this same method
+      // from the script's onload — which no unit test can fire, so the render
+      // path it ends in is driven directly.
+      themeService.setMode('dark');
+      initGis();
+
+      priv<() => void>('renderGoogleButton').call(component);
+
+      expect(renderCalls.length).toBe(2);
+      expect(lastTheme()).toBe('filled_black');
+    });
+
+    it('survives a theme toggle that lands while GIS is being re-injected', () => {
+      themeService.setMode('light');
+      initGis();
+      expect(renderCalls.length).toBe(1);
+
+      // reloadGisForLanguage() deliberately removes the script AND clears the
+      // global; a toggle inside that window used to hit `google.accounts` on
+      // undefined and throw out of the subscription.
+      (window as unknown as Record<string, unknown>)['google'] = undefined;
+
+      expect(() => themeService.setMode('dark')).not.toThrow();
+      expect(renderCalls.length).toBe(1);
+    });
+
+    it('stops listening for theme changes once destroyed', () => {
+      themeService.setMode('light');
+      initGis();
+      expect(renderCalls.length).toBe(1);
+
+      component.ngOnDestroy();
+      themeService.setMode('dark');
+
+      expect(renderCalls.length).toBe(1);
     });
   });
 });

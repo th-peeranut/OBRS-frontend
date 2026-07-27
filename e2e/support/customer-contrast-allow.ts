@@ -26,10 +26,15 @@
  * exactly, and the lesson there was that believing a first gate's red straight
  * would have "fixed" seventeen things that were already correct. So every family
  * below was traced to a mechanism before it was written down, and one WAS thrown
- * out: the Google Identity Services button (1.37:1) is a real WCAG miss and is
- * not ours -- Google's script draws it, and its class names are build hashes
- * that would rot this key on their next release. It is excluded in the sweep and
- * counted as a skip, not parked here. See `customer-contrast.ts`.
+ * out: the Google Identity Services button (1.37:1) is a real WCAG miss whose
+ * class names are build hashes that would rot this key on their next release. It
+ * is excluded in the sweep and counted as a skip, not parked here. See
+ * `customer-contrast.ts`.
+ *
+ * That exclusion used to be justified as "not ours". OBRS-778 measured otherwise:
+ * the button's colour comes from a `theme` option OUR code passes to
+ * `renderButton()`, and it was hard-coded to the light-mode value. The skip is
+ * still correct; the word "ours" in it was not.
  *
  * The remaining 176 collapsed to 53 once the key stopped carrying five levels of
  * ancestor path (the footer alone had been 91 keys for one bug).

@@ -212,12 +212,19 @@ export const MEASURE = (only?: string): Sweep => {
    *
    * Only one entry, and it earned its place by being measured: Google Identity
    * Services renders its own Sign-in button into `.gis-btn-wrapper`, and it came
-   * out at 1.37:1 (a `#dadce0` border on white). It is a real WCAG miss and it
-   * is Google's -- the button is drawn by their script, to their spec, and the
-   * class names on it (`nsm7Bb-HzV7m-LgbsSe`) are BUILD HASHES. Allowlisting it
-   * would put a key in the debt register that rots the next time Google ships,
-   * failing this build for a reason no OBRS commit caused. Excluding it silently
-   * would be worse, so it is counted and printed like every other skip.
+   * out at 1.37:1 (a `#dadce0` border on white). The class names on it
+   * (`nsm7Bb-HzV7m-LgbsSe`) are BUILD HASHES, so allowlisting it would put a key
+   * in the debt register that rots the next time Google ships, failing this
+   * build for a reason no OBRS commit caused. Excluding it silently would be
+   * worse, so it is counted and printed like every other skip.
+   *
+   * OBRS-778 CORRECTION -- this used to add "and it is Google's", which was the
+   * half of the sentence that was false, and it kept the miss unfiled across
+   * three cards. The MARKUP is Google's; the COLOURS are ours. `renderButton()`
+   * takes a `theme` option and login.component.ts chose `'outline'` (white) in
+   * both modes. Skipping the element is still right -- the hashed key is the
+   * reason -- but a skip here means "this gate cannot key it", never "nobody
+   * owns it". If a skipped element looks wrong, go find the option we pass.
    *
    * Add to this list only for markup a third party injects. "We would rather not
    * fix it" is what CONTRAST_ALLOW is for.

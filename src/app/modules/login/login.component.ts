@@ -5,7 +5,29 @@ import { TranslateService } from '@ngx-translate/core';
 import { Subscription } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import { AlertService } from '../../shared/services/alert.service';
+import { ThemeMode, ThemeService } from '../../shared/services/theme.service';
 import { environment } from '../../../environments/environment';
+
+/**
+ * The two GIS button themes this page uses. `outline` is white with a grey
+ * border — right on the light card, a block of pure white on the dark one
+ * (measured at 1.37:1 by the OBRS-584 contrast gate, which then skipped it as
+ * "third-party": right about the markup, wrong about the ownership, since WE
+ * pass this option). `filled_black` is Google's own dark-surface variant.
+ *
+ * Measured, because the obvious story is wrong: GIS draws the button as REAL
+ * DOM in our own document (`div[role="button"].nsm7Bb-…`, computed background
+ * `rgb(32,33,36)` in this theme) — the iframe it also injects is a 0×0 bridge,
+ * not the button. So our CSS could technically reach it. The reason not to is
+ * that every class on it is a Google BUILD HASH, so a stylesheet targeting it
+ * silently stops applying on their next release and nothing goes red. Passing
+ * `theme` is the supported lever and the only one that cannot rot.
+ */
+type GisButtonTheme = 'outline' | 'filled_black';
+
+function themeFor(mode: ThemeMode): GisButtonTheme {
+  return mode === 'dark' ? 'filled_black' : 'outline';
+}
 
 @Component({
   selector: 'app-login',
@@ -26,6 +48,12 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   private gisReadyInterval: ReturnType<typeof setInterval> | null = null;
   private readonly GIS_POLL_MAX_TRIES = 100; // ~10 s at 100 ms intervals
   private langChangeSubscription?: Subscription;
+  private themeChangeSubscription?: Subscription;
+
+  /** Theme the NEXT render will use; kept in sync with `ThemeService.mode$`. */
+  private gisTheme: GisButtonTheme = 'outline';
+  /** Theme the button on screen was actually drawn with — null until drawn. */
+  private renderedGisTheme: GisButtonTheme | null = null;
 
   constructor(
     private translate: TranslateService,
@@ -33,6 +61,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     private service: AuthService,
     private alertService: AlertService,
     private route: ActivatedRoute,
+    private themeService: ThemeService,
   ) {
     this.createForm();
   }
@@ -54,13 +83,8 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     let tries = 0;
     this.gisReadyInterval = setInterval(() => {
       tries++;
-      const isLoaded = !!(
-        (window as unknown as Record<string, unknown>)['google'] as
-          | { accounts?: { id?: unknown } }
-          | undefined
-      )?.accounts?.id;
 
-      if (isLoaded) {
+      if (this.isGisLoaded()) {
         this.clearGisReadyInterval();
         this.initGis();
       } else if (tries >= this.GIS_POLL_MAX_TRIES) {
@@ -72,6 +96,7 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   ngOnDestroy(): void {
     this.clearGisReadyInterval();
     this.langChangeSubscription?.unsubscribe();
+    this.themeChangeSubscription?.unsubscribe();
   }
 
   private clearGisReadyInterval(): void {
@@ -82,6 +107,24 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private initGis(): void {
+    // OBRS-778: subscribe BEFORE the first render. `mode$` is a BehaviorSubject
+    // stream, so this fires synchronously with the current mode and `gisTheme`
+    // is correct by the time renderGoogleButton() reads it — no first-paint
+    // flash of the wrong button, and no wasted re-render either (the guard
+    // below sees renderedGisTheme === null and skips).
+    this.themeChangeSubscription = this.themeService.mode$.subscribe((mode) => {
+      this.gisTheme = themeFor(mode);
+      // `theme` is read once, at renderButton() time — it is NOT reactive. A
+      // theme toggle while sitting on /login therefore has to redraw the
+      // button, or the dark page keeps the white light-mode one.
+      if (
+        this.renderedGisTheme !== null &&
+        this.renderedGisTheme !== this.gisTheme
+      ) {
+        this.renderGoogleButton();
+      }
+    });
+
     this.renderGoogleButton();
 
     // SPIKE (OBRS-90): GIS bakes button locale from the gsi/client script's `hl`
@@ -92,7 +135,22 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  private isGisLoaded(): boolean {
+    return !!(
+      (window as unknown as Record<string, unknown>)['google'] as
+        | { accounts?: { id?: unknown } }
+        | undefined
+    )?.accounts?.id;
+  }
+
   private renderGoogleButton(): void {
+    // GIS is not always there when a redraw is asked for. reloadGisForLanguage()
+    // deliberately drops the script and the global, and a theme toggle landing
+    // inside that window would otherwise throw on `google.accounts`. Bailing is
+    // safe: `renderedGisTheme` stays untouched, and the script's onload renders
+    // with whatever theme is current by then.
+    if (!this.isGisLoaded()) return;
+
     const container = document.getElementById('google-signin-btn-container');
     if (!container) return;
     container.innerHTML = '';
@@ -110,10 +168,14 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
     google.accounts.id.renderButton(container, {
       type: 'standard',
       shape: 'pill',
-      theme: 'outline',
+      theme: this.gisTheme,
       size: 'large',
       width: String(buttonWidth),
     });
+    // Recorded AFTER the call, so a throw leaves it at the last theme actually
+    // on screen rather than claiming one that was never drawn. Also makes the
+    // language re-render (OBRS-90) inherit the current theme for free.
+    this.renderedGisTheme = this.gisTheme;
   }
 
   private reloadGisForLanguage(lang: string): void {
