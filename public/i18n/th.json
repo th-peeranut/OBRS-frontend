@@ -429,7 +429,8 @@
       "REFUND_VOID_REPORT": "สรุปการคืนเงิน / ยกเลิกตั๋ว",
       "CASH_ONLINE_RECONCILIATION": "กระทบยอดเงินสด / ออนไลน์",
       "EXPENSES": "ค่าใช้จ่าย",
-      "ROUTE_PERFORMANCE": "ประสิทธิภาพเส้นทาง"
+      "ROUTE_PERFORMANCE": "ประสิทธิภาพเส้นทาง",
+      "CUSTOMER_BEHAVIOR": "พฤติกรรมลูกค้า"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "ค้นหาเมนู...",
@@ -1511,6 +1512,25 @@
         "TICKETS": "ตั๋ว",
         "REVENUE": "รายได้สุทธิ",
         "SHARE": "สัดส่วนรายได้"
+      }
+    },
+    "CUSTOMER_BEHAVIOR": {
+      "SUBTITLE": "พฤติกรรมการจองแบบรวม — ลูกค้า อัตรากลับมาซื้อซ้ำ และช่องทาง",
+      "LOAD_FAILED": "ไม่สามารถโหลดข้อมูลพฤติกรรมลูกค้า กรุณาลองใหม่",
+      "CHANNEL_TITLE": "การจองตามช่องทาง",
+      "REPEAT_TITLE": "ความถี่การจองซ้ำ",
+      "REPEAT_BOOKINGS": "{{count}} การจอง",
+      "TILE": {
+        "CUSTOMERS": "ลูกค้า",
+        "RETURNING": "อัตรากลับมาซื้อซ้ำ",
+        "BOOKINGS": "การจองทั้งหมด",
+        "AVG": "เฉลี่ยต่อลูกค้า"
+      },
+      "CHANNEL": {
+        "online": "ออนไลน์",
+        "walk_in": "หน้าเคาน์เตอร์",
+        "agent": "ตัวแทน",
+        "kiosk": "ตู้บริการ"
       }
     }
   },

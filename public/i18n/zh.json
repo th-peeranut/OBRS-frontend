@@ -429,7 +429,8 @@
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "EXPENSES": "费用",
-      "ROUTE_PERFORMANCE": "路线绩效"
+      "ROUTE_PERFORMANCE": "路线绩效",
+      "CUSTOMER_BEHAVIOR": "客户行为"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1511,6 +1512,25 @@
         "TICKETS": "票数",
         "REVENUE": "净收入",
         "SHARE": "收入占比"
+      }
+    },
+    "CUSTOMER_BEHAVIOR": {
+      "SUBTITLE": "汇总预订行为——客户、复购率和渠道构成。",
+      "LOAD_FAILED": "无法加载客户行为，请重试。",
+      "CHANNEL_TITLE": "按渠道的预订",
+      "REPEAT_TITLE": "复购频率",
+      "REPEAT_BOOKINGS": "{{count}} 次预订",
+      "TILE": {
+        "CUSTOMERS": "客户数",
+        "RETURNING": "复购率",
+        "BOOKINGS": "预订总数",
+        "AVG": "人均预订"
+      },
+      "CHANNEL": {
+        "online": "在线",
+        "walk_in": "现场",
+        "agent": "代理",
+        "kiosk": "自助机"
       }
     }
   },

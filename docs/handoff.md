@@ -239,8 +239,17 @@ top-N-routes-by-revenue bar list. **Impact**: OBRS-153 page cannot be built. No-
 
 <!-- contract-request
 card: OBRS-154
-status: open
+status: partially-resolved
+resolved: 2026-07-24 (counts-only increment)
 -->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/customer-behavior` now exists
+> (backend `ao/obrs-154-customer-behavior` `ecacdcd6`, off the 153 branch) — aggregate-only (no PII):
+> total bookings, distinct/returning customers + rate, avg per customer, channel split, repeat
+> histogram. Two new native GROUP-BY queries; validated by a **real Testcontainers IT**
+> (`CustomerBehaviorIT`, 2/2 against postgres:17-alpine) + ReportServiceTest +4. Frontend on
+> `ao/customer-behavior-obrs154` (tiles + channel + repeat bars; 7 specs, ci-smoke green).
+> **Still OPEN:** booking **lead-time percentiles** (p50/p90) — needs a PERCENTILE_CONT aggregate.
 
 **Affected endpoint**: `GET /api/private/admin/reports/customer-behavior?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-153.
