@@ -196,8 +196,18 @@ Server-computed: `movingAvg7`, `barPct` (bucket count / max bucket count × 100)
 
 <!-- contract-request
 card: OBRS-153
-status: open
+status: partially-resolved
+resolved: 2026-07-24 (ticket-grained increment)
 -->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/route-performance` now exists
+> (backend `ao/obrs-153-route-performance` `551e1930`, off the 152 branch) with per-route **departures +
+> tickets sold + net revenue + revenueSharePct**, ticket-grained (each ticket carries route_id +
+> net_price_snapshot → revenue attributes unambiguously). Validated by a **real Testcontainers IT**
+> (`RoutePerformanceIT`, 4/4 against postgres:17-alpine) + ReportServiceTest +3. Frontend page on
+> `ao/route-performance-obrs153` (table + revenue-share bars + tiles; 7 specs, ci-smoke green).
+> **Still OPEN:** seat-level **load-factor / occupancy** — needs the seat-map + jump-seat + OPEN/ASSIGNED
+> semantics the /summary occupancy query carries.
 
 **Affected endpoint**: `GET /api/private/admin/reports/route-performance?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-152.

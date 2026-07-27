@@ -37,6 +37,7 @@ import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
 import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue-analytics-page.component';
 import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
+import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
@@ -175,6 +176,16 @@ export const adminRoutes: Routes = [
         data: {
           titleKey: 'ADMIN.PAGES.BOOKING_TREND',
           subtitleKey: 'ADMIN.BOOKING_TREND.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'route-performance',
+        component: RoutePerformancePageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.ROUTE_PERFORMANCE',
+          subtitleKey: 'ADMIN.ROUTE_PERFORMANCE.SUBTITLE',
           requiredRoles: ['admin'],
         },
       },
@@ -333,6 +344,7 @@ export const adminRoutes: Routes = [
     ReportsPageComponent,
     RevenueAnalyticsPageComponent,
     BookingTrendPageComponent,
+    RoutePerformancePageComponent,
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,

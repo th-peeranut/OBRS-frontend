@@ -428,7 +428,8 @@
       "CONFIG_CHANGE_HISTORY": "Config Change History",
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
-      "EXPENSES": "Expenses"
+      "EXPENSES": "Expenses",
+      "ROUTE_PERFORMANCE": "Route Performance"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1493,6 +1494,24 @@
       "EMPTY_TITLE": "No expenses recorded yet",
       "EMPTY_BODY": "Start logging vehicle or central expenses with the \"Add Expense\" button",
       "NO_MATCH": "No expenses match the current filters"
+    },
+    "ROUTE_PERFORMANCE": {
+      "SUBTITLE": "Per-route departures, tickets sold, and net revenue for a date range.",
+      "LOAD_FAILED": "Could not load route performance. Please try again.",
+      "TABLE_TITLE": "Routes by revenue",
+      "BASIS": "by departure date",
+      "TILE": {
+        "REVENUE": "Net revenue",
+        "TICKETS": "Tickets sold",
+        "ROUTES": "Routes"
+      },
+      "COL": {
+        "ROUTE": "Route",
+        "DEPARTURES": "Departures",
+        "TICKETS": "Tickets",
+        "REVENUE": "Net revenue",
+        "SHARE": "Revenue share"
+      }
     }
   },
   "AUTH": {
