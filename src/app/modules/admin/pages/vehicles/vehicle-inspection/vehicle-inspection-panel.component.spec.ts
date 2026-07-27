@@ -18,10 +18,21 @@ function createStoreStub(initial: VehicleInspectionListItemDto[] | null = []): a
   };
 }
 
+// OBRS-758: `inspectedAt` MUST stay derived from "now", never a literal date.
+// The panel filters through `filterInspectionRowsByWindow(rows, showAll)`, whose
+// `now` parameter defaults to `new Date()` — the real wall clock — so a literal is
+// inside the default window (current + previous Bangkok ISO week) only until the
+// calendar rolls past it. The literal that used to sit here, '2026-07-14', fell out
+// of that window at midnight on Monday 2026-07-27 and took `dev` CI red: with the
+// row filtered away, `filteredRows` was empty, so the detail-modal test below handed
+// `filteredRows[0]` === undefined to `openDetail()`.
+// Bumping a literal forward only re-arms the bomb for the next boundary; a relative
+// date cannot expire. A literal is correct ONLY when the intent is "far outside any
+// window" — that is why the deliberate '2020-01-01' rows below stay literal.
 function buildRow(overrides: Partial<VehicleInspectionListItemDto> = {}): VehicleInspectionListItemDto {
   return {
     id: 1,
-    inspectedAt: '2026-07-14T09:00:00+07:00',
+    inspectedAt: new Date().toISOString(),
     inspectedByName: 'Somchai',
     odometerKm: 1000,
     defectCount: 0,
@@ -102,6 +113,35 @@ describe('AppVehicleInspectionPanelComponent — pending filter (switchable, not
 
     expect((component as any).showAll).toBeTrue();
     expect((component as any).filteredRows.map((r: any) => r.id)).toEqual([2]);
+  });
+
+  // OBRS-758 regression guard. The bug was not "one wrong assertion" but a fixture
+  // that expires: the suite passed for 13 days and then failed for a whole calendar
+  // day. So pin the property that must hold on ANY date — the default fixture row is
+  // visible in the default window — and check it on BOTH sides of the boundary that
+  // detonated. With the old '2026-07-14' literal, the Monday case fails exactly the
+  // way `dev` CI did (empty `filteredRows`) while the Sunday case still passes, which
+  // is what made this invisible until it was already red.
+  //
+  // The clock is mocked per-test rather than in a beforeEach: a top-level clock
+  // install in a karma bundle leaks into every other spec file in the run.
+  const WEEK_BOUNDARY_CASES: ReadonlyArray<readonly [string, string]> = [
+    ['Monday, the day the old literal detonated', '2026-07-27T09:00:00+07:00'],
+    ['Sunday, the last day it still passed', '2026-07-26T23:00:00+07:00'],
+  ];
+
+  WEEK_BOUNDARY_CASES.forEach(([label, isoNow]) => {
+    it(`keeps the default fixture row inside the default window on ${label}`, () => {
+      jasmine.clock().install();
+      try {
+        jasmine.clock().mockDate(new Date(isoNow));
+        const component = createComponent({}, createStoreStub([buildRow({ id: 7 })]));
+
+        expect((component as any).filteredRows.map((r: any) => r.id)).toEqual([7]);
+      } finally {
+        jasmine.clock().uninstall();
+      }
+    });
   });
 });
 

@@ -70,3 +70,9 @@ src/environments/environment.prod.local.ts
 
 # Session task-claim locks (enforce-task-claim.ps1) - machine-local, not shared
 .locks/
+
+# Card capture evidence (screenshots + measurement JSON). These are attached to
+# the Jira card, which is the review surface -- committing megabytes of PNG per
+# card would bloat the history for something nobody reads from the repo. The
+# capture SCRIPTS under e2e/scripts/ are committed; their output is not.
+docs/manual-tests/assets/
