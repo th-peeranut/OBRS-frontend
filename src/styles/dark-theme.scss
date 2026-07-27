@@ -866,17 +866,27 @@ body.is-dark app-report-usability-fab {
   // in dark mode too.
   //
   // Dark mode reuses the light fill/text pair as-is and overrides only what the
-  // page behind it forces. Against the $dk-bg page (#0f1117) the brand cyan is
-  // 8.92:1, so here the FILL already carries the WCAG 1.4.11 boundary and the
-  // light-mode border is redundant -- worse than redundant, since #006687 is
-  // only 2.92:1 against $dk-bg and would put a sub-3:1 band on the pill's outer
-  // edge. Collapse it into the fill and let the fill do the job.
-  // See the ratio table on OBRS-740; both criteria pass in both themes.
+  // page behind it forces.
+  //
+  // OBRS-746 -- this block used to COLLAPSE the border into the fill, because
+  // the fill was the brand cyan and cyan is 8.92:1 against the $dk-bg page. The
+  // fill is now $primary-blue (746 aligned the pill with the customer primary
+  // buttons), and $primary-blue is 3.54:1 against $dk-bg at rest and #065d85 is
+  // 2.62:1 on hover -- collapsing the border today would put the pill's outer
+  // edge BELOW the 3:1 WCAG 1.4.11 floor on hover, and nothing would say so,
+  // because a text-contrast gate never looks at a boundary. Same shape as the
+  // rationale 746 came here to retire: the sentence stayed true-looking while
+  // the value under it moved.
+  //
+  // So dark mode keeps a real ring, in $dk-accent -- #4bc2f7, this theme's own
+  // accent and the one place the old brand cyan still belongs. 9.31:1 against
+  // $dk-bg in BOTH states, above the 8.92 / 6.91 the previous treatment carried,
+  // so the boundary half of OBRS-740's table comes out ahead rather than intact.
   .report-fab {
-    border-color: #4dbeef; // = the fill; the page boundary is the fill's 8.92:1
+    border-color: $dk-accent; // vs $dk-bg = 9.31:1
 
     &:hover {
-      border-color: #2aa8d8; // = the hover fill; vs page 6.91:1
+      border-color: $dk-accent; // the fill darkens on hover; the ring must not follow it down
     }
 
     &:focus-visible {

@@ -1,4 +1,4 @@
-@use 'sass:color';
+@import '../../../../styles/variables.scss';
 
 // ── FAB ─────────────────────────────────────────────────────────────────────
 
@@ -15,7 +15,8 @@
   border-radius: 28px;
   cursor: pointer;
 
-  // Explicit brand hex on purpose -- NOT the admin `--accent*` tokens (OBRS-740).
+  // The customer primary token on purpose -- NOT the admin `--accent*` tokens
+  // (OBRS-740).
   //
   // This component is mounted in app.component.html as a sibling of
   // <router-outlet>, so it renders OUTSIDE the `.admin-shell` subtree on every
@@ -31,30 +32,43 @@
   // cannot carry white text at all, so the fix is a colour decision, not a
   // token-plumbing one.
   //
-  // The fix KEEPS the brand cyan as the fill and sends the TEXT dark instead.
-  // Inverting the pair (dark fill / white text) also passes both criteria and
-  // was tried first, but the app's own primary buttons are cyan, so a navy pill
-  // read as a different visual language on the same screen.
+  // OBRS-746 -- WHY THIS IS NOT THE COLOUR PAIR OBRS-740 SHIPPED.
   //
-  // #4dbeef is only 2.12:1 against a white page, so the fill cannot also carry
-  // the component boundary WCAG 1.4.11 asks for (>=3:1 against what's adjacent).
-  // The border carries it: #006687 is 6.46:1 against the page and 3.05:1
-  // against the fill, so the pill's extent is identifiable from either side.
-  // 1.4.11 wants a visual boundary -- it does not require it to be the fill.
+  // 740 kept the brand cyan as the fill and sent the TEXT dark, and justified
+  // rejecting the inverse with: "the app's own primary buttons are cyan, so a
+  // navy pill read as a different visual language on the same screen". That was
+  // true when it was written and it EXPIRED the day OBRS-752 moved
+  // $primary-blue #4bc2f7 -> #0772a2: the app's primary buttons are not cyan
+  // any more. Nothing went red, because every ratio still passed -- the FAB was
+  // simply left as the only bright-cyan, dark-label, bordered pill on a page of
+  // deep-blue, white-label, borderless ones. The owner read that as "it still
+  // doesn't belong" twice, before and after 741.
   //
-  // Dark mode reuses this exact pair; dark-theme.scss section O only collapses
-  // the border, because there the fill is already 8.92:1 against the page.
-  background-color: #4dbeef;
-  color: #003f58; // on #4dbeef = 5.36:1
-  border: 2px solid #006687; // vs a white page = 6.46:1
+  // So this now IS the same button as .btn-search / .login-btn / .select-btn,
+  // measured on the real home page in both themes (owner picked this over a
+  // ghost/outline variant, OBRS-746 2026-07-27):
+  //   white on $primary-blue = 5.33:1   (rest)
+  //   white on #065d85       = 7.21:1   (hover -- the value OBRS-752 gave the
+  //                                      other three primary hovers)
+  //
+  // The border stays declared at 2px but collapses INTO the fill, so the pill's
+  // geometry does not move while the fill carries the WCAG 1.4.11 boundary on
+  // its own: $primary-blue is 5.33:1 against a white page, where the old cyan
+  // was 2.12:1 and needed a separate border to be seen at all.
+  //
+  // Dark mode does NOT reuse this border: dark-theme.scss section O gives it the
+  // dark theme's own accent, which is the one place #4bc2f7 still belongs.
+  background-color: $primary-blue;
+  color: $text-white; // on $primary-blue = 5.33:1
+  border: 2px solid $primary-blue; // collapsed into the fill; fill vs page = 5.33:1
 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
   transition: box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 
   &:hover {
-    background-color: #2aa8d8;
-    color: #00232f; // on #2aa8d8 = 6.00:1
-    border-color: #00506b; // vs page 8.90:1, vs fill 3.26:1
+    background-color: #065d85;
+    color: $text-white; // on #065d85 = 7.21:1
+    border-color: #065d85; // collapsed into the fill; fill vs page = 7.21:1
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
   }
 
@@ -192,10 +206,15 @@
     border-color: var(--bs-danger, #dc3545);
   }
 
+  // OBRS-746: the same expired cyan as the pill above, one file down. `--accent`
+  // never resolves outside `.admin-shell` (see the FAB comment), so this shipped
+  // its #4dbeef fallback and the rgba() was that literal spelled in decimal --
+  // which is why grepping the hex alone would not have found it. Both are now
+  // the customer primary, via the token the other two report forms already use.
   &:focus {
     outline: none;
-    border-color: var(--accent, #4dbeef);
-    box-shadow: 0 0 0 2px rgba(77, 190, 239, 0.2);
+    border-color: $primary-blue;
+    box-shadow: $shadow-focus;
   }
 }
 
