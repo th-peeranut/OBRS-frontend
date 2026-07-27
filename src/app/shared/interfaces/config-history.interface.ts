@@ -26,18 +26,36 @@ export type ConfigHistoryActorSource = 'USER' | 'SYSTEM' | 'UNATTRIBUTED' | 'PRE
 // rendered identically.
 export type ConfigHistoryScope = 'PLATFORM' | 'OWNER';
 
+// OBRS-742: 'INSERT' arrived with OBRS-730's V51, which widened
+// `trg_system_config_override_audit` from `AFTER UPDATE OR DELETE` to cover
+// INSERT so an owner's FIRST override is audited too. Every reader that
+// enumerated this union before V51 was written against a two-value world and
+// must be re-checked, not assumed still-total — the `oldValue` comment below
+// is exactly such a reader, and it was wrong from the day V51 landed.
+export type ConfigHistoryOperation = 'INSERT' | 'UPDATE' | 'DELETE';
+
 export interface ConfigHistoryRow {
   // BIGSERIAL -> JSON number. NEVER string (OBRS-376: the exact interface +
   // fixture pair where that bug lived before — a fixture "built to look
   // right" tends to encode the same wrong type as the interface).
   id: number;
   configKey: string;
-  operation: 'UPDATE' | 'DELETE';
+  operation: ConfigHistoryOperation;
   // ISO-8601 WITH the +07:00 Bangkok offset already applied server-side — do
   // NOT re-convert timezone at the FE (SA §6.4 / §7.3).
   changedAt: string;
+  // null on an 'INSERT' row — there was no previous value, because this row IS
+  // the config's (or the owner's override's) first. Reachable only since
+  // OBRS-730's V51; before that the trigger fired on UPDATE/DELETE alone and
+  // this was NOT NULL in practice.
   oldValue: ConfigHistoryValue;
-  // null only when operation === 'DELETE'.
+  // null on a 'DELETE' row — the value is gone now.
+  //
+  // OBRS-742: the two nulls above mean OPPOSITE things ("never set yet" vs
+  // "removed") and neither is inferable from the value alone. Render them via
+  // formatConfigValue(row, slot, …), which takes the whole row for that
+  // reason; a helper handed a bare `value` cannot tell them apart and will
+  // report an owner's brand-new override as deleted.
   newValue: ConfigHistoryValue;
   actorSource: ConfigHistoryActorSource;
   // non-null only when actorSource === 'USER' AND the user row still exists.

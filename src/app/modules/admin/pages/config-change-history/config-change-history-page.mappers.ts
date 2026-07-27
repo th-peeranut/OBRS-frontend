@@ -2,6 +2,7 @@ import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { formatDisplayDateTime } from '../../../../shared/lib/display-date-time';
 import {
   ConfigHistoryActorSource,
+  ConfigHistoryOperation,
   ConfigHistoryRow,
   ConfigHistoryScope,
   ConfigHistoryValue,
@@ -39,17 +40,55 @@ export function configKeyLabel(
   return translated === i18nKey ? configKey : translated;
 }
 
+/** Which end of the "จาก -> เป็น" column is being rendered. */
+export type ConfigValueSlot = 'old' | 'new';
+
 /**
- * Render a raw `oldValue`/`newValue` JSON node for the "จาก -> เป็น" column
- * (Hard constraint #5). Dispatch is STRICTLY on the real JSON shape
- * (`typeof`/`Array.isArray()`) — never inferred from the config key's name.
+ * OBRS-742 — which i18n key a NULL renders as.
+ *
+ * "ถูกลบ" is a claim that a value was removed, and the only row that proves it
+ * is a DELETE row's `newValue`. Every other null means the weaker, always-true
+ * thing: there is no value in this slot. So the deletion wording is opt-IN on
+ * the one pair that earns it, and anything else — an INSERT row's `oldValue`
+ * (the owner's first override, reachable since OBRS-730's V51), or a null
+ * under some operation this build has never heard of — falls back to
+ * VALUE_UNSET. Fail-safe direction matters here: an unset cell shown as
+ * "ถูกลบ" invents an event that never happened, while a deleted cell shown as
+ * "ยังไม่ได้ตั้งค่า" merely under-describes one that did.
+ *
+ * Deliberately NOT keyed on `operation` alone: on a DELETE row the OLD slot
+ * holds the value being removed and must print that value, not the word.
+ */
+export function nullValueI18nKey(
+  operation: ConfigHistoryOperation,
+  slot: ConfigValueSlot
+): string {
+  return operation === 'DELETE' && slot === 'new'
+    ? 'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED'
+    : 'ADMIN.CONFIG_CHANGE_HISTORY.VALUE_UNSET';
+}
+
+/**
+ * Render one end of the "จาก -> เป็น" column (Hard constraint #5). Dispatch on
+ * a non-null value is STRICTLY by real JSON shape (`typeof`/`Array.isArray()`)
+ * — never inferred from the config key's name.
+ *
+ * OBRS-742: takes the ROW plus the slot, not a bare value, and reads the value
+ * itself. The previous `(value, translateFn)` signature could not distinguish
+ * an INSERT row's null `oldValue` from a DELETE row's null `newValue` and
+ * rendered both as "ถูกลบ", so an owner's first override displayed as
+ * `ถูกลบ -> 45`. Passing the row makes the slot/value pairing unmisreportable
+ * at the call site as well: a caller cannot hand over `oldValue` labelled
+ * 'new'.
  */
 export function formatConfigValue(
-  value: ConfigHistoryValue,
+  row: Pick<ConfigHistoryRow, 'operation' | 'oldValue' | 'newValue'>,
+  slot: ConfigValueSlot,
   translateFn: (key: string, params?: Record<string, unknown>) => string
 ): string {
+  const value: ConfigHistoryValue = slot === 'old' ? row.oldValue : row.newValue;
   if (value === null) {
-    return translateFn('ADMIN.CONFIG_CHANGE_HISTORY.VALUE_DELETED');
+    return translateFn(nullValueI18nKey(row.operation, slot));
   }
   if (typeof value === 'boolean') {
     return translateFn(

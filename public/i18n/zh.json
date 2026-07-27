@@ -1355,6 +1355,7 @@
         "OFF": "关闭"
       },
       "VALUE_DELETED": "已删除",
+      "VALUE_UNSET": "尚未设置",
       "VALUE": {
         "MORE": "另外 {{count}} 项"
       },

@@ -8,6 +8,7 @@ import {
   ActorDisplayKind,
   actorDisplayKind,
   configKeyLabel,
+  ConfigValueSlot,
   displayChangedAt,
   formatConfigValue,
   roleLabel as roleLabelPure,
@@ -175,8 +176,12 @@ export class ConfigChangeHistoryPageComponent implements OnInit, OnDestroy {
     return this.configKeyLabels.get(configKey) ?? configKey;
   }
 
-  protected formatValue(value: ConfigHistoryRow['oldValue']): string {
-    return formatConfigValue(value, (key, params) => this.translate.instant(key, params));
+  // OBRS-742: the template passes the ROW and names the slot, so the mapper can
+  // tell an INSERT row's absent oldValue ("ยังไม่ได้ตั้งค่า") from a DELETE
+  // row's removed newValue ("ถูกลบ"). A `formatValue(value)` overload is
+  // deliberately not kept: it is the exact call shape that produced the bug.
+  protected formatValue(row: ConfigHistoryRow, slot: ConfigValueSlot): string {
+    return formatConfigValue(row, slot, (key, params) => this.translate.instant(key, params));
   }
 
   protected actorKind(row: ConfigHistoryRow): ActorDisplayKind {

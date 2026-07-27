@@ -175,6 +175,12 @@
       "why": "Screenshot script for the OBRS-391 before/after. Expects two servers started by hand on :4391 and :4392 -- :4391 serving the main clone at origin/dev for the BEFORE shot. NOT hermetic on purpose: it stubs every /api/** call but reaches cdn.omise.co for real, because the claim being evidenced is that the card fields now render in a third-party iframe and a stubbed frame would prove nothing. environment.base.ts carries a test-mode publishable key, so no charge is possible."
     },
     {
+      "spec": "obrs-742-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs742.config.ts",
+      "why": "Screenshot script for the OBRS-742 before/after. The ONLY capture here that needs a live stack: it logs into a real backend on :8080 over a disposable obrs742qa database and photographs six history rows written through OBRS-730's real owner-override endpoint, because the INSERT row (old_value NULL) this card fixes cannot be produced any other way -- OBRS-722's capture had to stub its rows precisely because that endpoint did not exist yet. BEFORE and AFTER are served one at a time on :4200, the dev profile's only allowed CORS origin, BEFORE from a throwaway detached worktree at origin/dev 1b5c852d. Evidence, not a verdict."
+    },
+    {
       "spec": "obrs-722-capture.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs722.config.ts",
