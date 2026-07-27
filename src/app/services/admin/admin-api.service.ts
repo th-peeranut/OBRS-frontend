@@ -23,6 +23,7 @@ import { RevenueAnalyticsDto } from '../../shared/interfaces/revenue-analytics.i
 import { BookingTrendDto } from '../../shared/interfaces/booking-trend.interface';
 import { RoutePerformanceDto } from '../../shared/interfaces/route-performance.interface';
 import { CustomerBehaviorDto } from '../../shared/interfaces/customer-behavior.interface';
+import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -1465,6 +1466,15 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<CustomerBehaviorDto>(
       `${this.baseUrl}/private/admin/reports/customer-behavior`,
+      params
+    );
+  }
+
+  // OBRS-155: operational efficiency (departures + seat fill).
+  getOpsEfficiency(from: string, to: string): Observable<ResponseAPI<OpsEfficiencyDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<OpsEfficiencyDto>(
+      `${this.baseUrl}/private/admin/reports/ops-efficiency`,
       params
     );
   }

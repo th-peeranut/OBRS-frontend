@@ -430,7 +430,8 @@
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "EXPENSES": "费用",
       "ROUTE_PERFORMANCE": "路线绩效",
-      "CUSTOMER_BEHAVIOR": "客户行为"
+      "CUSTOMER_BEHAVIOR": "客户行为",
+      "OPS_EFFICIENCY": "运营效率"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1531,6 +1532,24 @@
         "walk_in": "现场",
         "agent": "代理",
         "kiosk": "自助机"
+      }
+    },
+    "OPS_EFFICIENCY": {
+      "SUBTITLE": "按车型的发车完成率与座位使用率。",
+      "LOAD_FAILED": "无法加载运营效率，请重试。",
+      "TABLE_TITLE": "按车型",
+      "BASIS": "按发车日期",
+      "TILE": {
+        "DEPARTURES": "发车数",
+        "COMPLETION": "完成率",
+        "FILL": "座位使用率",
+        "SEATS": "售座 / 容量"
+      },
+      "COL": {
+        "TYPE": "车型",
+        "DEPARTURES": "发车数",
+        "SEATS": "售座 / 容量",
+        "FILL": "使用率"
       }
     }
   },

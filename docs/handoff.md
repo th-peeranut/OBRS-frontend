@@ -277,8 +277,17 @@ Server-computed: every `*Pct`, the percentiles, and `avgBookingsPerCustomer`. **
 
 <!-- contract-request
 card: OBRS-155
-status: open
+status: partially-resolved
+resolved: 2026-07-24 (departures + seat-fill increment)
 -->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/ops-efficiency` now exists
+> (backend `ao/obrs-155-ops-efficiency` `0488907e`, off the 154 branch) — departure completion
+> (scheduled/completed/cancelled) + seat fill (sold/capacity) + per-vehicle-type breakdown. Two new
+> native queries merged by vehicle type; validated by a **real Testcontainers IT** (`OpsEfficiencyIT`,
+> 2/2 against postgres:17-alpine) + ReportServiceTest +3. Frontend on `ao/ops-efficiency-obrs155`
+> (tiles + per-type fill-rate table; 7 specs, ci-smoke green). **Still OPEN:** fleet-vehicle
+> **utilization** (utilized vs active vehicles) and **refund rate** — separate aggregates.
 
 **Affected endpoint**: `GET /api/private/admin/reports/ops-efficiency?from&to` — **NEW.**
 **Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-154; last in the lane.

@@ -39,6 +39,7 @@ import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue
 import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
 import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
 import { CustomerBehaviorPageComponent } from './pages/customer-behavior/customer-behavior-page.component';
+import { OpsEfficiencyPageComponent } from './pages/ops-efficiency/ops-efficiency-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
@@ -201,6 +202,16 @@ export const adminRoutes: Routes = [
         },
       },
       {
+        path: 'ops-efficiency',
+        component: OpsEfficiencyPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.OPS_EFFICIENCY',
+          subtitleKey: 'ADMIN.OPS_EFFICIENCY.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
         path: 'settlements',
         component: SettlementsPageComponent,
         canActivate: [AuthGuard],
@@ -357,6 +368,7 @@ export const adminRoutes: Routes = [
     BookingTrendPageComponent,
     RoutePerformancePageComponent,
     CustomerBehaviorPageComponent,
+    OpsEfficiencyPageComponent,
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,
