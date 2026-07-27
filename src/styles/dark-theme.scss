@@ -70,14 +70,15 @@ body.is-dark {
     &-active { color: $dk-accent; }
   }
 
-  // Theme toggle button (app-theme-toggle on public surfaces)
-  // The component's :host-context(.is-dark) handles the admin/staff shell;
-  // this rule covers body.is-dark pages outside any .admin-shell wrapper.
-  app-theme-toggle .theme-toggle-btn {
-    border-color: $dk-border;
-    color: $dk-text-muted;
-    &:hover { background: rgba(75, 194, 247, 0.12); color: $dk-accent; }
-  }
+  // OBRS-774: the theme-toggle block that stood here is DELETED, not fixed.
+  // Its comment claimed it "covers body.is-dark pages outside any .admin-shell
+  // wrapper"; measured, that was never true. theme-toggle.component.scss writes
+  // `:host-context(.is-dark)`, and `body.is-dark` satisfies `.is-dark` just as
+  // the admin shell does -- so the component already themed the button on every
+  // public page, and this rule lost to it on all eight swept pages. Making it
+  // win would have been the regression: it asked for a DIFFERENT border (0.1 vs
+  // the component's 0.15) and a different text colour ($dk-text-muted vs
+  // $dk-text), so "fixing" it would have changed a button that was correct.
 
   // Sign-in / Sign-up buttons
   .btn-signin {
@@ -211,11 +212,12 @@ body.is-dark {
   .login-container {
     background: $dk-bg;
 
-    // Ambient brand backdrop — fainter on the dark page so the light-blue
-    // illustration doesn't read as a muddy patch (blur dilutes it further).
-    .login-bg {
-      opacity: 0.08;
-    }
+    // OBRS-774: `.login-bg`, `.login-btn` and `.login-by-phone-no-btn` moved to
+    // login.component.scss under `:host-context(body.is-dark)`. The light rules
+    // they were fighting are nested three and four deep inside the component,
+    // so with Angular's `[_ngcontent]` rewrite they score (0,6,0)/(0,8,0)
+    // against this file's (0,3,1) and these overrides never painted anything.
+    // Do not re-add them here -- see src/styles/_dark-tokens.scss.
 
     // Centered auth card (design-system §12 login pattern) — a dark surface
     // so the card doesn't read as a white block on the dark page. !important
@@ -240,17 +242,6 @@ body.is-dark {
     }
 
     .login-form {
-      .login-btn {
-        background-color: $dk-accent;
-        color: #0f1117;
-      }
-
-      .login-by-phone-no-btn {
-        background-color: $dk-bg-soft;
-        border-color: $dk-accent;
-        color: $dk-accent;
-      }
-
       .register-link {
         color: $dk-text-muted;
         a { color: $dk-accent; }
@@ -417,7 +408,17 @@ body.is-dark {
   // The active tab is light-blue with blue text in light mode; the section-14
   // blanket "lift card text to light" rule would wash its label out on that pale
   // fill. Re-assert a readable dark-mode treatment: muted inactive, accent active.
-  .tab:not(.admin-shell .tab) {
+  //
+  // OBRS-774: `.tab-group` is in the selector because without it this rule TIED
+  // with section 14's `.card-container:not(...) *` -- both (0,4,1), both
+  // `!important` -- and lost the tie to source order, section 14 being later in
+  // this file. The visible result was the INACTIVE tab painting $dk-text
+  // (#e8eaf0) instead of $dk-text-muted, i.e. exactly as bright as the active
+  // one, which is the distinction this block exists to draw. `.tab-group` is the
+  // wrapper in all three templates that render a `.tab`
+  // (payment-creditcard, payment-qrcode, parcel-booking-page), so it costs no
+  // reach; it just puts this rule one class ahead of the blanket it must beat.
+  .tab-group .tab:not(.admin-shell .tab) {
     color: $dk-text-muted !important;
     background: transparent !important;
     border-color: $dk-border !important;
@@ -677,8 +678,15 @@ body.is-dark app-route-map-home {
   }
 
   // PrimeNG direction selector (p-selectButton) — the light pill track
+  //
+  // OBRS-774: `:not(.p-highlight)` says what this rule already meant. The
+  // `.p-highlight` block below overrides it on the picked button anyway, so
+  // this changes nothing on screen — it stops the rule CLAIMING an element it
+  // never paints, which is the difference between "this declaration is dead"
+  // and "no unpicked button was on screen to judge it by". A home page with one
+  // route pair renders exactly one button and it is the highlighted one.
   .p-selectbutton { background: $dk-bg-soft !important; }
-  .p-selectbutton .p-button { color: $dk-text-muted !important; }
+  .p-selectbutton .p-button:not(.p-highlight) { color: $dk-text-muted !important; }
   .p-selectbutton .p-button.p-highlight {
     background: $dk-accent !important;
     color: $dk-bg !important;
@@ -686,7 +694,11 @@ body.is-dark app-route-map-home {
 
   // PrimeNG tab nav (จุดรับ / จุดส่ง) inside the stop-list card
   .p-tabview-nav { border-bottom-color: $dk-border !important; }
-  .p-tabview-nav li .p-tabview-nav-link {
+  // Same as the select-button above (OBRS-774): the `li.p-highlight` block
+  // three rules down already owns the active tab, so scoping the inactive
+  // treatment to `li:not(.p-highlight)` is a no-op on screen and stops this
+  // rule being judged against a tab it does not paint.
+  .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link {
     color: $dk-text-muted !important;
     background: transparent !important;
   }

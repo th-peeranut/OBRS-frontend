@@ -19,46 +19,31 @@
  *
  * MEASURED 2026-07-27 on dev + the OBRS-767 footer fix, over 10 pages: the
  * eight in CUSTOMER_PAGES plus /register and /how-to-book.
+ *
+ * OBRS-774 CLEARED 31 OF THE 35 ROWS THIS FILE OPENED WITH, AND ONLY TEN OF
+ * THEM WERE DEFECTS. Worth knowing before adding a row here, because the
+ * register is only ever as honest as the detector that fills it:
+ *
+ *   * 9 were real -- the login controls, fixed by moving the rules into
+ *     login.component.scss under `:host-context(body.is-dark)`. The loudest was
+ *     `.login-by-phone-no-btn`, painting #f6fcff: a near-white button in the
+ *     middle of the dark auth card, visible to anyone who opened the page.
+ *   * 1 was real -- the payment tab strip's inactive-tab colour, which lost a
+ *     specificity TIE to section 14's `.card-container *` blanket and was
+ *     therefore decided by source order.
+ *   * 5 were dead code, deleted rather than made to win (the theme-toggle
+ *     block: the component already themed the button correctly and the global
+ *     copy asked for DIFFERENT values, so making it win was the regression).
+ *   * 16 WERE NOT DEFECTS AT ALL. Eight were `border-width` declarations that
+ *     paint exactly the 1px they ask for, mis-normalised because the probe
+ *     element had no border-style, so every width in the file read as "wants
+ *     0px". Eight were elements owned by a rule's own more-specific variant
+ *     (`&.is-active`, `.p-highlight`), where the verdict had been keyed off
+ *     whichever element happened to be first in the document. Both causes are
+ *     fixed in `dark-override-effective.ts` and both are now gated by the
+ *     spec's own must-catch / must-NOT-catch fixtures.
  */
 export const DARK_OVERRIDE_ALLOW: Record<string, string> = {
-  // ---------------------------------------------------------------------------
-  // OBRS-774 -- section 2. app-theme-toggle. NOT a visual defect: the component
-  // carries its own `:host-context(.is-dark)` and wins, so the button is themed
-  // correctly. These five are dead code that ASKS FOR DIFFERENT VALUES than the
-  // component uses (border 0.1 vs 0.15, $dk-text-muted vs $dk-text), which is
-  // why making them win would be a regression. They should be deleted.
-  'body.is-dark app-theme-toggle .theme-toggle-btn :: border-top-color':
-    'painted rgba(255,255,255,0.15), wants rgba(255,255,255,0.1) -- OBRS-774, delete',
-  'body.is-dark app-theme-toggle .theme-toggle-btn :: border-right-color':
-    'painted rgba(255,255,255,0.15), wants rgba(255,255,255,0.1) -- OBRS-774, delete',
-  'body.is-dark app-theme-toggle .theme-toggle-btn :: border-bottom-color':
-    'painted rgba(255,255,255,0.15), wants rgba(255,255,255,0.1) -- OBRS-774, delete',
-  'body.is-dark app-theme-toggle .theme-toggle-btn :: border-left-color':
-    'painted rgba(255,255,255,0.15), wants rgba(255,255,255,0.1) -- OBRS-774, delete',
-  'body.is-dark app-theme-toggle .theme-toggle-btn :: color':
-    'painted #e8eaf0, wants #9aa3b8 -- OBRS-774, delete',
-
-  // ---------------------------------------------------------------------------
-  // OBRS-774 -- section 1. Login / register controls.
-  'body.is-dark .login-container .login-form .login-btn :: background-color':
-    'painted #0772a2, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-btn :: color':
-    'painted #ffffff, wants #0f1117 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: background-color':
-    'painted #f6fcff -- a near-white fill on the dark card -- wants #22263a -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: border-top-color':
-    'painted #2d7799, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: border-right-color':
-    'painted #2d7799, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: border-bottom-color':
-    'painted #2d7799, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: border-left-color':
-    'painted #2d7799, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-form .login-by-phone-no-btn :: color':
-    'painted #0772a2, wants #4bc2f7 -- OBRS-774',
-  'body.is-dark .login-container .login-bg :: opacity':
-    'painted 0.22, wants 0.08 -- OBRS-774',
-
   // ---------------------------------------------------------------------------
   // OBRS-771 owns these four. Note the card states "nobody overrides them",
   // which this census disproves: dark-theme.scss section 5 DOES override them
@@ -68,40 +53,6 @@ export const DARK_OVERRIDE_ALLOW: Record<string, string> = {
   'body.is-dark .login-container .login-form .register-link :: color': 'painted #353c44, wants #9aa3b8 -- OBRS-771',
   'body.is-dark .login-container .login-form .register-link a :: color': 'painted #3b61a9, wants #4bc2f7 -- OBRS-771',
   'body.is-dark .login-container .hint-text :: color': 'painted #353c44, wants #e8eaf0, /register -- OBRS-771',
-
-  // ---------------------------------------------------------------------------
-  // OBRS-774 -- section 2. The payment page tab strip, dead as a whole block.
-  'body.is-dark .tab:not(.admin-shell .tab) :: color': 'painted #4bc2f7, wants #9aa3b8 -- OBRS-774',
-  'body.is-dark .tab:not(.admin-shell .tab) :: background-color':
-    'painted rgba(75,194,247,0.16), wants transparent -- OBRS-774',
-  'body.is-dark .tab:not(.admin-shell .tab) :: border-top-color':
-    'painted #4bc2f7, wants rgba(255,255,255,0.1) -- OBRS-774',
-  'body.is-dark .tab:not(.admin-shell .tab) :: border-right-color':
-    'painted #4bc2f7, wants rgba(255,255,255,0.1) -- OBRS-774',
-  'body.is-dark .tab:not(.admin-shell .tab) :: border-bottom-color':
-    'painted #4bc2f7, wants rgba(255,255,255,0.1) -- OBRS-774',
-  'body.is-dark .tab:not(.admin-shell .tab) :: border-left-color':
-    'painted #4bc2f7, wants rgba(255,255,255,0.1) -- OBRS-774',
-
-  // ---------------------------------------------------------------------------
-  // OBRS-774 -- section 3. Booking-flow back buttons keep their light border.
-  'body.is-dark .btn-back :: border-top-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .btn-back :: border-right-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .btn-back :: border-bottom-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .btn-back :: border-left-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .back-btn :: border-top-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .back-btn :: border-right-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .back-btn :: border-bottom-width': 'painted 1px, wants 0px -- OBRS-774',
-  'body.is-dark .back-btn :: border-left-width': 'painted 1px, wants 0px -- OBRS-774',
-
-  // ---------------------------------------------------------------------------
-  // OBRS-774 -- section 4. app-route-map-home over PrimeNG internals.
-  'body.is-dark app-route-map-home .p-tabview-nav li .p-tabview-nav-link :: color':
-    'painted #4bc2f7, wants #9aa3b8 -- OBRS-774',
-  'body.is-dark app-route-map-home .p-tabview-nav li .p-tabview-nav-link :: background-color':
-    'painted #22263a, wants transparent -- OBRS-774',
-  'body.is-dark app-route-map-home .p-selectbutton .p-button :: color':
-    'painted #0f1117, wants #9aa3b8 -- OBRS-774',
 
   // NOT registered, on purpose: `.p-selectbutton .p-button.p-highlight ::
   // background-color`. The first census flagged it (painted transparent, wants

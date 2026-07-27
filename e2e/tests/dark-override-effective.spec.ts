@@ -107,6 +107,32 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
         //    must skip it and leave the page as it found it.
         'body.is-dark [_ngh-t] .oc-var[_ngc-t] { border-color: var(--oc-undefined, rgb(10, 20, 30)); }',
         'body.is-dark .oc-var { border-color: rgb(40, 50, 60); }',
+        // 6. OBRS-774. A BORDER WIDTH that is applied and correct. The declared
+        //    1px is normalised through a probe element, and a probe with no
+        //    border-style computes every width to 0px -- so this read as
+        //    "paints 1px, wants 0px" and put eight rows of `.btn-back` /
+        //    `.back-btn` in the debt register with no defect behind them.
+        //    It has to LOSE to be judged at all, so the component rule is the
+        //    deeper one, and both ask for the same 1px and the same colour --
+        //    leaving the width as the only thing under test.
+        '.oc-w-p[_ngc-t] .oc-width[_ngc-t] { border: 1px solid rgb(9, 9, 9); }',
+        'body.is-dark .oc-w-p .oc-width { border: 1px solid rgb(9, 9, 9); }',
+        // 7. OBRS-774, and the one that cost the most. A TRANSITIONED element
+        //    whose dark rule is fully in control. V1 is read in the same task
+        //    that removed the declaration, and a transitioned property has not
+        //    moved by then -- so V1 == V0 and a live declaration reads as dead.
+        //    `.tab` (transition: all 0.2s), `.back-btn` (0.3s) and PrimeNG's
+        //    nav links are all this shape; it is why eight register rows
+        //    described no defect. The census freezes transitions first.
+        //    The base rule below WINS on `.oc-trans` and is overridden on
+        //    `.oc-trans.is-on` by its own variant, exactly as `.tab` is by
+        //    `.tab.is-active`. Frozen, removing it moves the first element and
+        //    the declaration is alive. Unfrozen, neither element moves, the
+        //    variant's colour is not what the base asks for, and the two
+        //    filters line up into a finding that describes nothing.
+        '.oc-trans[_ngc-t] { color: rgb(83, 89, 104); transition: all 0.4s ease; }',
+        'body.is-dark .oc-trans { color: rgb(154, 163, 184); }',
+        'body.is-dark .oc-trans.is-on { color: rgb(75, 194, 247); }',
       ].join('\n');
       document.head.appendChild(style);
 
@@ -118,23 +144,38 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
         '<div class="oc-live" _ngc-t><span class="oc-live-leaf" _ngc-t>x</span></div>' +
         '<div class="oc-same" _ngc-t><span class="oc-same-leaf" _ngc-t>x</span></div>' +
         '<div class="oc-hover">x</div>' +
-        '<div class="oc-var" _ngc-t>x</div>';
+        '<div class="oc-var" _ngc-t>x</div>' +
+        '<div class="oc-w-p" _ngc-t><div class="oc-width" _ngc-t>x</div></div>' +
+        '<div class="oc-trans" _ngc-t>x</div>' +
+        '<div class="oc-trans is-on" _ngc-t>x</div>';
       document.body.appendChild(host);
 
       return {
         dead: getComputedStyle(document.querySelector('.oc-dead-leaf')!).color,
         live: getComputedStyle(document.querySelector('.oc-live-leaf')!).color,
         varBorder: getComputedStyle(document.querySelector('.oc-var')!).borderTopColor,
+        width: getComputedStyle(document.querySelector('.oc-width')!).borderTopWidth,
+        trans: getComputedStyle(document.querySelector('.oc-trans.is-on')!).color,
       };
     });
 
     const res = await page.evaluate(CENSUS);
+
+    // Longer than `.oc-trans`'s 0.4s transition. The census freezes transitions
+    // while it measures and releases them at the end, so a transitioned element
+    // is briefly mid-flight afterwards -- reading `paintedAfter` immediately
+    // catches it there and reports a restore failure that is really a moving
+    // element. The assertion is "the page settles back to what it was", so give
+    // it the chance to settle (OBRS-774).
+    await page.waitForTimeout(700);
 
     const paintedAfter = await page.evaluate(() => {
       const after = {
         dead: getComputedStyle(document.querySelector('.oc-dead-leaf')!).color,
         live: getComputedStyle(document.querySelector('.oc-live-leaf')!).color,
         varBorder: getComputedStyle(document.querySelector('.oc-var')!).borderTopColor,
+        width: getComputedStyle(document.querySelector('.oc-width')!).borderTopWidth,
+        trans: getComputedStyle(document.querySelector('.oc-trans.is-on')!).color,
       };
       document.getElementById('oc-host')?.remove();
       document.getElementById('oc-fixture')?.remove();
@@ -160,6 +201,19 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
     expect(keys).toContain('body.is-dark .oc-var :: border-top-color');
     expect(paintedBefore.varBorder).toBe('rgb(10, 20, 30)');
 
+    // MUST NOT CATCH (OBRS-774): a border width that is applied and correct.
+    // Before the normaliser gave its probe a border-style, EVERY width read as
+    // "wants 0px" -- eight rows of debt that described nothing.
+    expect(paintedBefore.width).toBe('1px');
+    expect(keys.filter((k) => k.includes('.oc-width'))).toEqual([]);
+
+    // MUST NOT CATCH (OBRS-774): a live declaration on a TRANSITIONED element.
+    // Unfrozen this is reported, because the transition hides the removal and
+    // the variant next to it paints something the base never asked for. It is
+    // the single largest source of the debt register's false rows.
+    expect(paintedBefore.trans).toBe('rgb(75, 194, 247)');
+    expect(keys).not.toContain('body.is-dark .oc-trans :: color');
+
     // COUNTED, NOT JUDGED.
     expect(res.statefulCount).toBeGreaterThan(0);
 
@@ -180,6 +234,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
     let stateful = 0;
     let unmatched = 0;
     let unjudgeable = 0;
+    let animatedProps = 0;
 
     for (const t of TARGETS) {
       await seedCustomerSession(page, true);
@@ -208,6 +263,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
       stateful += s1.statefulCount;
       unmatched += s1.unmatchedCount;
       unjudgeable += s1.unjudgeableCount;
+      animatedProps += s1.animatedPropCount;
       for (const s of s1.observed) observed.add(s);
       for (const s of s2.observed) observed.add(s);
       for (const k of s1.judged) judgedDistinct.add(k);
@@ -231,7 +287,8 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
         `${seen.size} dead, ${Object.keys(DARK_OVERRIDE_ALLOW).length} registered as known debt.\n` +
         `           NOT judged: ${stateful} reachable only in a :hover/:focus state, ` +
         `${unmatched} whose selector matched no element here, ` +
-        `${unjudgeable} written with var() and unreadable from the CSSOM.`
+        `${unjudgeable} written with var() and unreadable from the CSSOM, ` +
+        `${animatedProps} transition/animation declarations the census suppresses to measure at all (OBRS-774).`
     );
 
     expect(
