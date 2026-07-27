@@ -70,6 +70,12 @@
       "why": "OBRS-584. Sweeps eight customer pages in both themes and scores WCAG 1.4.3 (text) and 1.4.11 (control boundary) from getComputedStyle. Hermetic by construction: one page.route fulfils every /api/** call from inline fixtures, Maps is aborted, the session is a synthetic localStorage token and the booking flow is reached by dispatching the app's own NgRx actions rather than by driving the funnel. It needs a DEVELOPMENT build (window.ng, for the store seed), which is exactly what this lane's webServer serves."
     },
     {
+      "spec": "review-total-host-box.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-753. Asserts no component host in the review module is display:inline while wrapping block-level children, that a click at the confirm button's centre still hits the button, and that the fix moved no geometry at any of the four media-query widths. Hermetic on the same terms as customer-contrast-gate, whose fixtures and NgRx store seed it reuses (e2e/support/customer-pages.ts): no backend, no session minted anywhere, Maps aborted."
+    },
+    {
       "spec": "dark-override-effective.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

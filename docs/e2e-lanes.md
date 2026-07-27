@@ -86,11 +86,30 @@ string `"ACTIVE"`, and `RouteMapService.isActiveStatus` accepts both a string an
 object, so it passed while pinning a branch the server never takes. SIT sends the object
 form. Re-capture rather than hand-edit.
 
+**A malformed box is a lane member too.** `review-total-host-box.spec.ts` (OBRS-753)
+asserts that no component host in the review module is `display: inline` while wrapping
+block-level children, and that Playwright can actually hit `.btn-confirm`. It is here
+rather than in a linter because the defect is a *missing* declaration — you get
+`display: inline` by writing nothing, so there is no diff line for a reviewer to catch,
+and no stylesheet parser can tell an inline host that is fine (all children inline) from
+one that is malformed. Only the cascade knows, and the cascade only exists in a browser.
+Exactly the argument that put the contrast gate here.
+
 **Debugging a GATE failure.** A timeout on an unrelated element usually means an
 unmocked call: the request fails, the global error interceptor raises a SweetAlert, and
 its backdrop swallows every subsequent click. Read the trace's `.network` file, or add
 `await page.route('**/api/**', r => { console.log(r.request().url()); r.continue(); })`
 as the first handler, to see which URL escaped.
+
+A SweetAlert in the way is **not** always an escaped call, and assuming it is will send
+you looking for a stub that is not missing. The same interceptor opens a "Loading…" modal
+on *every* `/api/` request and closes it in `finalize`; its container is `position: fixed`,
+covers the viewport, and keeps `pointer-events: auto` all the way through the closing
+transition. A hit test a few frames early therefore reports `div.swal2-container` as the
+topmost element over a perfectly healthy page. Check the container's text and classes
+before hunting a fixture: `swal2-backdrop-hide` plus "Loading…" is a modal on its way out,
+and the cure is `await expect(page.locator('.swal2-container')).toHaveCount(0)`, not
+another `page.route`.
 
 ### GATE-BLOCKED
 
@@ -181,7 +200,7 @@ rest are per-spec.
 
 | Config | Runs | Note |
 |---|---|---|
-| `playwright.gate.config.ts` | 102 in 9 files | the merge gate; hand-written `testMatch` |
+| `playwright.gate.config.ts` | 113 in 11 files | the merge gate; hand-written `testMatch` |
 | `playwright.config.ts` | 68 in 7 files | SIT lane, :4202; list derived from the registry |
 | `playwright.qa.config.ts` | 68 in 7 files | same lane on :4201 for when ports are contended |
 | `playwright.local.config.ts` | `my-bookings-reschedule` | rebuilds its own database |
@@ -235,23 +254,38 @@ without declaring what it runs, which closes the family rather than the two inst
   already said that "reports success whether or not the click lands" — and OBRS-750 found
   out the hard way that it was worse than that. `force` does not aim the event at the
   element, it only skips the actionability checks, so the mouse event still went to
-  whatever was topmost at that point. Something else is: Playwright's hit test there
-  resolves to `app-review-schedule-booking-total`, the button's own parent. On this box the
+  whatever was topmost at that point. Something else was: Playwright's hit test there
+  resolved to `app-review-schedule-booking-total`, the button's own parent. On this box the
   click still happened to reach the button; the first time the lane ran on a GitHub runner
   it did not, the handler never fired, and the `waitForURL` after it burned the full 60s
   test timeout. **The error named the navigation, not the click** — which is exactly how
   this got mis-filed as CPU contention for as long as it did.
-  The spec now uses `dispatchEvent('click')`, which reaches the button deterministically and
-  cannot silently deliver the event elsewhere. Measured at 1280x720 before changing it:
-  `document.elementFromPoint` at the button's resting centre returns the button, so a real
-  user can click it — the interception is an artefact of where Playwright's own scrolling
-  puts the element, not a product defect. The underlying cause (a component host with no
-  `:host` display rule, therefore `display: inline` around two block children) is filed
-  separately.
+  OBRS-750 could not fix a stylesheet from a spec file, so it settled for
+  `dispatchEvent('click')` — deterministic, and unlike `force` it cannot deliver the event
+  elsewhere, but it asserts nothing about whether a user could reach the button.
+  **OBRS-753 closed it properly and the line is a plain `click()` again.** Adding
+  `:host { display: block }` to the three hosts in the review module removed the
+  interception, and `review-total-host-box.spec.ts` pins it with `click({ trial: true })`
+  on the same button in this same lane — that check failed with "intercepts pointer
+  events" before the change and passes after. The two measurements that look
+  contradictory are both true and worth carrying forward: at the same instant
+  `document.elementFromPoint` at the button's centre returned the **button** — a person
+  could always click it — while Playwright's hit test returned its **parent**. "A user can
+  click this" and "Playwright can click this" are different questions, and only the second
+  was ever broken.
 - **Nothing pins the gate's case count.** `forbidOnly: true` stops the `test.only`
   version of this, but a `describe.skip` still removes a file's worth of coverage from a
   run that exits 0. The count is in the `list` output and no assertion reads it. A
   `--list --reporter=json` check would close it.
+  **It had already rotted when OBRS-753 arrived.** The table above read "102 in 9 files";
+  the tree that card branched from (`f6e053b5`) actually ran **104 in 10** — OBRS-584 put
+  `customer-contrast-gate.spec.ts` in the lane the same day and left the table alone. It
+  is now 113 in 11, measured from Playwright's own `Running N tests` line rather than
+  counted by hand. Two things follow. A number here goes stale the moment a card adds a
+  spec, and it stays wrong silently — which is the argument for the assertion, not for
+  another careful edit. And do not try to recover the count by grepping the `list`
+  reporter's output: it prints two lines per case, so that grep gives 123 for a run
+  Playwright itself calls 113.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is
