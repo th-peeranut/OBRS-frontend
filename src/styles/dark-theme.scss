@@ -547,6 +547,28 @@ body.is-dark {
   // rule above would otherwise wash out to $dk-text.
   .schedule-item .seat-status--low { color: $dk-danger !important; }
 
+  // OBRS-752. The blanket rule above calls forcing a button label light
+  // "harmless". It WAS, while every brand fill was #4bc2f7 and 1.9:1 in dark
+  // mode -- a label colour cannot rescue a button that fails by that margin.
+  // Now the fill is #0772a2, a value derived for WHITE (5.33:1), and $dk-text
+  // on it measures 4.43:1: under AA by 0.07, and only in dark mode, on a
+  // button whose light-mode twin passes. Nothing in the SCSS gate can see it
+  // either -- the fill is declared in a component file and the colour that
+  // overrides it is declared here, in a different file and a different world.
+  // Found by the runtime sweep in e2e/scripts/capture-obrs752.js.
+  //
+  // Re-assert white on the brand-filled buttons, the same shape as the two
+  // re-assertions above.
+  .card-container:not(.admin-shell .card-container) .select-btn,
+  .card-container:not(.admin-shell .card-container) .btn-confirm,
+  .card-container:not(.admin-shell .card-container) .btn-next,
+  .card-container:not(.admin-shell .card-container) .payment-btn,
+  .card-container:not(.admin-shell .card-container) .parcel-btn-primary,
+  .card-container:not(.admin-shell .card-container) .promo-code-apply-btn,
+  .schedule-item .select-btn {
+    color: #ffffff !important;
+  }
+
   // Schedule-results outer panel (.booking-container, light #f6fcff). Scope via
   // :has(.schedule-item) so the home page's own .booking-container is untouched.
   .booking-container:has(.schedule-item) {

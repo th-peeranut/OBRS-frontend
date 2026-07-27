@@ -48,7 +48,9 @@
 }
 
 .parcel-booking-success-card__next-steps {
-  color: $text-softblack;
+  // OBRS-752: was $text-softblack -- 3.72:1 on $primary-grey. Same repoint as
+  // .parcel-details-form__sender-name; 5.93:1.
+  color: $text-black;
   text-align: left;
   background: $primary-grey;
   border-radius: 12px;
