@@ -85,7 +85,7 @@
       "spec": "host-box-sweep.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
-      "why": "OBRS-775. Widens OBRS-753's one-module check to every page this lane can reach hermetically -- eight customer pages, nine public/auth-entry routes, ten admin/staff/session-bound routes -- and fails on any display:inline custom-element host holding in-flow block children that is not named on its ALLOW list with a reason. Hermetic on the same terms as the rest of the lane: it reuses e2e/support/customer-pages.ts for the customer group and stubs every /api/** call itself for the other two, aborts Maps, and mints no session anywhere. Needs a DEVELOPMENT build for the same reason customer-contrast-gate does (window.ng, for the NgRx store seed)."
+      "why": "OBRS-775. Widens OBRS-753's one-module check to every page this lane can reach hermetically -- eight customer pages, nine public/auth-entry routes, twenty-two admin/staff/session-bound routes -- and fails on any display:inline custom-element host holding in-flow block children that is not named on its ALLOW list with a reason. OBRS-776 added the twelve admin/staff pages and a second half: it derives from the source tree which components render p-tabview/p-tabpanel/p-card/p-calendar and fails on any the sweep did not MOUNT, because a clean census cannot tell a page that is well-formed from a page nobody opened -- which is what a global rule in src/styles/ needs before it can be trusted. Hermetic on the same terms as the rest of the lane: it reuses e2e/support/customer-pages.ts for the customer group and stubs every /api/** call itself for the other two, aborts Maps, and mints no session anywhere. Needs a DEVELOPMENT build for the same reason customer-contrast-gate does (window.ng, for the NgRx store seed)."
     },
 
     {
@@ -202,7 +202,7 @@
       "spec": "obrs-775-geometry.spec.ts",
       "lane": "CAPTURE",
       "config": "playwright.obrs775.config.ts",
-      "why": "OBRS-775's AC3 evidence: the border box of EVERY element on all 27 pages of the host-box sweep, at the four media-query widths, captured once with the `:host { display }` additions absent (OBRS775_PHASE=before) and once with them applied. The AFTER phase reads the baseline back and fails on any box that moved more than 0.5px, so it is an assertion rather than a screenshot -- but it is still a two-run, run-by-hand comparison, which is why it is not in GATE. Hermetic: it reuses the same e2e/support/host-boxes.ts fixtures the gate spec does, so no backend and no database."
+      "why": "OBRS-775's AC3 evidence, re-used by OBRS-776: the border box of EVERY element on all 39 pages of the host-box sweep (27 when OBRS-775 wrote this), at the four media-query widths, captured once with the `:host { display }` additions absent (OBRS775_PHASE=before) and once with them applied. The AFTER phase reads the baseline back and fails on any box that moved more than 0.5px, so it is an assertion rather than a screenshot -- but it is still a two-run, run-by-hand comparison, which is why it is not in GATE. Hermetic: it reuses the same e2e/support/host-boxes.ts fixtures the gate spec does, so no backend and no database."
     },
     {
       "spec": "obrs-742-capture.spec.ts",

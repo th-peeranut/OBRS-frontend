@@ -4,6 +4,11 @@
 @import "./styles/variables.scss";
 @import "./styles/admin-theme.scss";
 @import "./styles/dark-theme.scss";
+// OBRS-776. Imported FIRST among the app's own rules would be wrong and last is
+// wrong too if it ever grows past `display` -- it is here, after the themes,
+// because at specificity 0-0-1 it loses to every one of them anyway and the only
+// thing it must beat is the CSS initial value.
+@import "./styles/primeng-host-boxes.scss";
 
 // SweetAlert2 defaults its container to z-index 1060, which sits *below* the
 // app's overlay layers (admin modals 1200, dropdowns 1250, loading 1300). When

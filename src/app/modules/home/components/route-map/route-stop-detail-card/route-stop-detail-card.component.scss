@@ -1,5 +1,16 @@
 @import "../../../../../../styles/variables.scss";
 
+// OBRS-776, and it is the cascade OBRS-775 warned about, one level further out.
+// This host was WELL-FORMED before this card: its only child is `<p-card>`,
+// which was itself `display: inline`, so there was no block-level child for an
+// inline box to hold illegally. Blockifying `p-card` in
+// `src/styles/primeng-host-boxes.scss` made this the next bad box, and the sweep
+// caught it on the run straight after the rule landed -- not on the census taken
+// before it, which is the only one a checklist would ever have consulted.
+:host {
+  display: block;
+}
+
 .detail-order-badge {
   display: inline-flex;
   align-items: center;
