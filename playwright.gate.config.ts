@@ -104,6 +104,10 @@ export default defineConfig({
     // loses to Angular's view encapsulation. Hermetic on the same terms: it
     // reuses the contrast gate's fixtures, so every /api/** call is stubbed.
     '**/dark-override-effective.spec.ts',
+    // OBRS-775. `review-total-host-box` above, but swept across every page this lane can
+    // reach hermetically instead of one module, with an ALLOW list carrying a reason per
+    // host not yet fixed. Costs this lane page loads only -- it reuses those fixtures.
+    '**/host-box-sweep.spec.ts',
   ],
 
   timeout: 60_000,
