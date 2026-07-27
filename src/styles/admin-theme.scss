@@ -218,7 +218,14 @@
   --accent: #ff7a45;
   --accent-strong: #c2410c;
   --accent-soft: rgba(234, 88, 12, 0.14);
-  --accent-text: #b3420a;
+  /* OBRS-755: was #b3420a, which measured 4.37:1 as `.admin-nav-link.active` —
+     `--accent-text` on the painted `--accent-soft` tint (#f1ded5) — i.e. the
+     active sidebar item, on every admin page, just under AA. #9e3a08 measures
+     5.27:1 there, 6.22:1 on the sidebar surface and 6.86:1 on white.
+     Darkening this token cannot make anything worse: it is used ONLY as a
+     foreground (`color:` / `border-color:`, 14 call sites, never a background),
+     and every one of those sits on a light surface in light mode. */
+  --accent-text: #9e3a08;
   --accent-contrast: #ffffff;
   --accent-fill: #d93e00; /* white on it = 4.53:1 (was #ff7a45 at 2.59:1) */
   --accent-fill-hover: #b83400; /* 5.95:1 */
@@ -236,7 +243,11 @@
      written on the assumption that only bright ends were the problem. */
   --accent-strong: #0a6a5f; /* white on it = 6.48:1 (was #0d9488 at 3.74:1) */
   --accent-soft: rgba(13, 148, 136, 0.14);
-  --accent-text: #0f766e;
+  /* OBRS-755: was #0f766e = 4.24:1 as `.admin-nav-link.active` on the painted
+     `--accent-soft` tint (#d2e7e7) — the active sidebar item on every staff
+     page. #0d655e measures 5.37:1 there, 6.26:1 on the sidebar surface, 6.91:1
+     on white. Same monotone argument as the theme-admin note above. */
+  --accent-text: #0d655e;
   --accent-contrast: #ffffff;
   --accent-fill: #1b8477; /* white on it = 4.55:1 (was #2dd4bf at 1.86:1) */
   --accent-fill-hover: #166f64; /* 6.01:1 */
@@ -629,14 +640,29 @@
     --bs-btn-disabled-border-color: var(--admin-outline);
   }
 
-  /* The Bootstrap tab strip, scoped to the SHELL rather than to `.card`, which is
-     a deliberate difference from every rule above. Three templates use it:
-     parcel-consign's mode toggle sits INSIDE its card (so the change above would
-     otherwise BREAK it — Bootstrap keeps a white pill for `.nav-link.active`),
-     while parcel-schedule-tabs and admin system-settings put the same strip
-     straight on the shell surface, where it measured #0d6efd on #14181b = 3.97:1
-     — already below AA before this card. Fixing the one inside the card and
-     leaving the identical strip two pages over would be indefensible. */
+}
+
+/* ── Raw-Bootstrap surfaces in the shell that are NOT mode-specific (OBRS-755) ──
+   OBRS-747 put the tab strip inside `.admin-shell.is-dark` because dark was the
+   mode it measured (#0d6efd on #14181b = 3.97:1). That was half the defect: the
+   SAME strip measures #0d6efd on #f7f9fb = **4.26:1** in light mode, on the same
+   three templates (parcel-schedule-tabs, parcel-consign, admin system-settings).
+   A mode-scoped fix for a mode-independent bug is what produced this card.
+
+   So the whole group moved OUT of the `.is-dark` block rather than being copied
+   into a second one. It needed no new declarations to work in both modes: every
+   value here is already a token that carries its own light and dark value, and
+   the light values measure 6.12:1 (`--admin-primary-fg` #006687 on
+   `--admin-surface`), 15.6:1 (`--admin-text` on the white active pill) and 5.6:1
+   (`--admin-muted`, disabled). Two copies under two mode selectors would have
+   been the thing that rots — one of them silently, exactly as this did.
+
+   Scope note kept from OBRS-747: the strip is scoped to the SHELL, not to
+   `.card`, because parcel-consign's mode toggle sits INSIDE its card while the
+   other two put the identical strip straight on the shell surface. Fixing one
+   and leaving the other two indefensible. `.nav-tabs` OUTSIDE `.admin-shell`
+   (the customer booking flow) is untouched. */
+.admin-shell {
   .nav-tabs {
     border-bottom-color: var(--admin-outline);
   }
@@ -661,6 +687,27 @@
 
   .nav-tabs .nav-link:disabled {
     color: var(--admin-muted);
+  }
+
+  /* Bootstrap's `.text-success` (#198754) is the amount a salesperson reads back
+     while taking cash in /staff/sell: the "เงินสด" tile label and the total.
+     Measured BELOW AA in BOTH modes — 3.2:1 on the dark tile #1d2c2b, 3.54:1 on
+     the dark card, and 3.99:1 / 4.3:1 in light — so this is not a dark-mode fix.
+
+     Token choice (AC3, design-system §2.4): `--admin-accepted-fg` — GREEN
+     (#0a3d1d light / #9cd6a5 dark), measured 10.89 / 11.73 light and 8.69 / 9.61
+     dark. NOT `--admin-success-fg`, which is the right *role* name but is BLUE
+     (#154c85 / #a8c8ff) by §2.4: recolouring the cash-payment affordance blue is
+     a semantic change staff would read as a different state, not an a11y fix.
+     Green is what `.text-success` means here, so the token has to be the green one.
+
+     `!important` is required, not sloppiness: Bootstrap's colour utilities carry
+     their own `!important`. The alternative — remapping `--bs-success-rgb` on the
+     shell — was rejected because it would also repaint `.badge.bg-success`
+     BACKGROUNDS (boarding-list uses them) with a foreground colour, breaking
+     chips that pass AA today. */
+  .text-success {
+    color: var(--admin-accepted-fg) !important;
   }
 }
 
@@ -1010,9 +1057,12 @@
   color: var(--admin-muted);
 }
 
+/* OBRS-755: `--accent-strong` has no dark value — see the long note on
+   `.admin-sidebar-pin:hover`. Same role error, hover-only so the sweep cannot
+   see it; same one-token fix. */
 .admin-icon-btn:hover {
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--accent-text);
 }
 
 /* OBRS-520: was a hardcoded rgba(255,218,214,.8) fill (a §13 raw-hex debt item)
@@ -1269,7 +1319,11 @@
   align-items: center;
   justify-content: center;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  /* OBRS-755: same role error as `.admin-sidebar-pin` (see its note) — this is
+     the base, un-statused KPI icon, which renders on dashboards the OBRS-747
+     sweep does not visit, so it is fixed by the token pair, not by a screenshot.
+     The `.is-*` variants below are chip PAIRS (bg + text together) and stay. */
+  color: var(--accent-text);
 }
 
 .admin-kpi-icon.is-success {
@@ -1990,7 +2044,10 @@ textarea.admin-field {
 
 .admin-loading-spinner {
   font-size: 34px;
-  color: var(--accent-strong);
+  /* OBRS-755: same role error as `.admin-sidebar-pin` (see its note). A 34px
+     glyph is large text, so its floor is 3:1 — `--accent-strong` on the dark
+     surface was 2.28:1, below even that. */
+  color: var(--accent-text);
   animation: admin-loading-spin 1s linear infinite;
 }
 
@@ -2238,9 +2295,35 @@ textarea.admin-field {
     align-self: flex-end;
   }
 
+  /* ── OBRS-755: `--accent-strong` is a FILL colour, not a foreground ───────────
+     It has no dark-mode override anywhere (deliberately — see the OBRS-741 notes
+     on the variant blocks, which tuned it for "white text ON it"), so using it as
+     a standalone icon colour paints a dark colour on a dark surface: this pin
+     measured **2.27:1** in theme-staff dark and **2.84:1** in theme-admin dark on
+     the sidebar's painted #23292e, on EVERY admin and staff page.
+
+     ⚠️ OBRS-741 made the staff case WORSE, and the card was written before that
+     landed: it moved theme-staff `--accent-strong` from #0d9488 to #0a6a5f to
+     carry white text, which dropped this icon from the 3.93:1 the OBRS-747 sweep
+     recorded to 2.27:1. Re-measured on the current dev before touching anything
+     ([[formalizing-a-recorded-rule-means-re-measuring-it]]).
+
+     The fix is the ROLE, not a new colour: `--accent-text` is the accent-as-text
+     token and it has a per-variant dark value already (#5eead4 staff / #fb923c
+     admin / #fdba74 default). Measured after: dark 9.94 / 6.50 / 8.72, light
+     6.26 / 6.22 / 6.75 — light was already passing at 5.88/4.70 and improves.
+
+     Population is FIVE sites, not this one: `.admin-icon-btn:hover`,
+     `.admin-kpi-icon`, `.admin-loading-spinner` and boarding-list's
+     `.admin-btn.is-active` make the same role error. Only ONE of those four was
+     visible to the sweep — boarding-list's active segment, measured **2.09:1**
+     on #1b3234 — because the other three are hover/transient states or render on
+     pages the sweep does not visit. Those three are fixed on the token pair the
+     numbers above measure, not on a per-state screenshot, and that distinction is
+     stated rather than glossed ([[measure-the-population-before-widening-a-matcher]]). */
   .admin-sidebar-pin:hover {
     background: var(--accent-soft);
-    color: var(--accent-strong);
+    color: var(--accent-text);
   }
 
   .admin-sidebar-pin:focus-visible {
@@ -2248,8 +2331,10 @@ textarea.admin-field {
     outline-offset: 2px;
   }
 
+  /* The resting state the sweep measured at 2.27:1 / 2.84:1 — the sidebar ships
+     pinned, so this is what a staff user actually looks at. OBRS-755. */
   .admin-sidebar-pin[aria-expanded="true"] {
-    color: var(--accent-strong);
+    color: var(--accent-text);
   }
 
   /* ── REDUCED MOTION — disable all sidebar transitions ── */
