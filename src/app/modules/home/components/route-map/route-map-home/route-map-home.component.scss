@@ -157,6 +157,10 @@
   line-height: 1.25;
 }
 
+/* OBRS-763: pre-752 cyan, DELIBERATE -- and .p-badge-info below is the ONE site
+   where retinting would have been visible AND would have broken contrast
+   ($secondary-blue on the 22%-alpha wash: 4.90:1 today, 4.16:1 retinted, under
+   AA). See the tint-layer block in styles/variables.scss. */
 :host ::ng-deep .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
   color: $text-primary;
   background: rgba(75, 194, 247, 0.08);

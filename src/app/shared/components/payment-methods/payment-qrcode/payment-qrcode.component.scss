@@ -267,8 +267,9 @@
 
   /* OBRS-752: re-derived alongside the credit-card .payment-btn -- same button,
      two components, so they must not drift apart. */
+  /* OBRS-763: hoisted to $primary-blue-hover (see the credit-card twin). */
   &:hover {
-    background: #065d85; /* white on it = 7.21:1, and clearly darker than rest */
+    background: $primary-blue-hover; /* white on it = 7.21:1, and darker than rest */
   }
 
   &-diabled {

@@ -871,7 +871,8 @@ body.is-dark app-report-usability-fab {
   // OBRS-746 -- this block used to COLLAPSE the border into the fill, because
   // the fill was the brand cyan and cyan is 8.92:1 against the $dk-bg page. The
   // fill is now $primary-blue (746 aligned the pill with the customer primary
-  // buttons), and $primary-blue is 3.54:1 against $dk-bg at rest and #065d85 is
+  // buttons), and $primary-blue is 3.54:1 against $dk-bg at rest and
+  // $primary-blue-hover (#065d85, OBRS-763) is
   // 2.62:1 on hover -- collapsing the border today would put the pill's outer
   // edge BELOW the 3:1 WCAG 1.4.11 floor on hover, and nothing would say so,
   // because a text-contrast gate never looks at a boundary. Same shape as the

@@ -23,6 +23,22 @@
 // dark-theme.scss, where it sits on #22263a and is correct there.
 // ─────────────────────────────────────────────────────────────────────────────
 $primary-blue: #0772a2;   // was #4bc2f7 (2.03:1). white on it 5.33:1, on $primary-lightblue 4.63:1
+
+// The hover partner of $primary-blue, and it MUST stay darker than it. OBRS-763
+// hoisted it out of four component files that each spelled the literal #065d85;
+// nothing linked those four to the palette except coincidence.
+//
+// That coincidence has already failed once. OBRS-741 left the hover at #007eb6
+// with the prediction that it would "converge once the rest state darkens" --
+// and #007eb6 turned out LIGHTER than the new $primary-blue, so the buttons got
+// BRIGHTER on hover, inverted, while both states still cleared AA. Nothing was
+// red; OBRS-752 had to come back and fix all three by hand.
+//
+// So the direction is now enforced, not hoped for: invariant 2 of
+// scripts/check-brand-fill-contrast.mjs fails the build if any hover fill is
+// lighter than the rest fill it replaces. $primary-blue can move again -- it has
+// moved twice in two days -- and the gate will say so if this does not move too.
+$primary-blue-hover: #065d85;   // white on it 7.21:1. L 0.0956 vs $primary-blue 0.1469 (darker, as required)
 $primary-lightblue: #dbf3fd;
 $primary-grey: #babdc3;
 $primary-lightgrey: #dddee1;
@@ -30,6 +46,15 @@ $primary-white: #fff;
 $primary-black: #0d1525;
 
 $secondary-blue: #3b61a9;   // was #4069b8 (4.07:1 on $secondary-light-blue). now 4.61:1
+
+// The hover partner of $secondary-blue -- same contract as $primary-blue-hover,
+// and not a new colour: #355a9c already shipped as the hover of
+// `.p-button-danger` in route-stop-list, the one navy button in the tree that
+// had its direction right. OBRS-763 hoisted it and pointed the two that had it
+// WRONG at it as well. Both were hovering to $text-blue (#2d7799, L 0.1605),
+// which is LIGHTER than $secondary-blue -- the OBRS-741 inversion, still live in
+// two more places, found by invariant 2 rather than by eye.
+$secondary-blue-hover: #355a9c;   // white on it 6.79:1; L 0.1047 vs $secondary-blue 0.1234
 $secondary-light-blue: #d9e1f1;
 $secondary-grey: #f9f9ff;
 $secondary-lightgrey: #edf9fe;
@@ -59,6 +84,41 @@ $text-primary: #3B61A9;      // same colour as $secondary-blue under a second na
 // ─────────────────────────────────────────────────────────────────────────────
 $brand-customer: $primary-blue;            // #0772a2 (OBRS-752)
 $brand-customer-strong: $secondary-blue;   // #3b61a9 (OBRS-752)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE TINT LAYER STILL USES THE PRE-OBRS-752 CYAN, AND THAT WAS DECIDED, NOT
+// FORGOTTEN. Do not "fix" it -- OBRS-763 already measured this and the owner
+// ruled to keep it (2026-07-27).
+//
+// Roughly 20 customer/shared sites paint a low-alpha wash built from the OLD
+// brand: `rgba(77, 190, 239, a)` IS #4dbeef and `rgba(75, 194, 247, a)` IS
+// #4bc2f7, spelled in decimal. That spelling is why they survived 752 -- a hex
+// grep cannot see them, and check-brand-fill-contrast.mjs cannot composite an
+// alpha, so they sit in its `unresolved` count rather than in any finding. They
+// live in navbar, lang-switcher, theme-toggle, route-stop-list and
+// route-map-home; `git log -S "rgba(77, 190" -- src` is the fastest way to list
+// them again.
+//
+// Rendered both ways (e2e/scripts/capture-obrs763.js, 7 representative sites x
+// 2 themes, images on the card). Composited over the white page:
+//
+//     site           keep      retinted to $primary-blue
+//     lang-option    #eaf7fd   #e1eef4
+//     theme-toggle   #f1fafe   #ebf4f8
+//     stop-row       #f1fafe   #ebf4f8
+//
+// At 8-16% alpha the hue barely survives compositing, so the two are a few
+// points apart on a white page -- not the visible mismatch OBRS-746 fixed on the
+// FAB, which differed at FULL saturation. Dark mode is identical either way: it
+// already overrides these to $dk-accent, the one place #4bc2f7 still belongs.
+//
+// And retinting is not free. `.p-badge-info` carries $secondary-blue text on a
+// 22%-alpha wash: 4.90:1 today, 4.16:1 retinted -- BELOW AA. The one site where
+// the change would be visible is the one site where it would break contrast.
+//
+// If the brand moves again, this block is the decision, not the evidence:
+// re-render before changing it.
+// ─────────────────────────────────────────────────────────────────────────────
 // $brand-staff:  <pending extraction from staff shell layout> (design-system §13)
 // $brand-admin:  use CSS var var(--accent) / var(--accent-strong) on admin surfaces
 

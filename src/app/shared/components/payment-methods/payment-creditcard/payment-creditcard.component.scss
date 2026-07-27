@@ -110,8 +110,11 @@
      is now #0772a2, and 741's #007eb6 hover is LIGHTER than that -- the button
      would have got brighter on hover, i.e. inverted, while still "passing" AA.
      Neither the ratio nor the gate would have said a word about it. */
+  /* OBRS-763: hoisted to $primary-blue-hover, and the direction this comment
+     describes is now checked by invariant 2 of check-brand-fill-contrast.mjs
+     rather than left to the next reader to re-derive. */
   &:hover {
-    background: #065d85; /* white on it = 7.21:1, and clearly darker than rest */
+    background: $primary-blue-hover; /* white on it = 7.21:1, and darker than rest */
   }
 
   &-diabled {

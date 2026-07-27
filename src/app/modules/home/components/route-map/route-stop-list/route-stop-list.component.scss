@@ -23,6 +23,10 @@
   border-radius: $radius-md;
   transition: background 0.15s, border-color 0.15s;
 
+  /* OBRS-763: the pre-752 cyan in this file's washes and rings is DELIBERATE.
+     Rendered both ways and kept; see the tint-layer block in
+     styles/variables.scss. The rgba(64, 105, 184, ...) below is the pre-752
+     $secondary-blue and is kept for the same reason. */
   &:hover {
     background-color: rgba(75, 194, 247, 0.08);
     cursor: pointer;
@@ -99,9 +103,13 @@
   font-weight: $font-weight-semibold;
 }
 
+// OBRS-763: was $text-blue. OBRS-752 moved BOTH values and they crossed --
+// $primary-blue ended up darker (L 0.1469) than $text-blue (L 0.1605) -- so this
+// button brightened under the cursor while both states still cleared AA.
+// Nothing was red; the hover-direction gate is what found it.
 :host ::ng-deep .p-button.p-button-info:enabled:hover {
-  background: $text-blue;
-  border-color: $text-blue;
+  background: $primary-blue-hover;
+  border-color: $primary-blue-hover;
 }
 
 :host ::ng-deep .p-button.p-button-danger {
@@ -111,9 +119,11 @@
   font-weight: $font-weight-semibold;
 }
 
+// OBRS-763: this one always had the direction right; the literal is now the
+// $secondary-blue-hover token, which was hoisted FROM here.
 :host ::ng-deep .p-button.p-button-danger:enabled:hover {
-  background: #355a9c;
-  border-color: #355a9c;
+  background: $secondary-blue-hover;
+  border-color: $secondary-blue-hover;
 }
 
 // Per-stop distance from origin/dev, aligned with customer theme color tokens

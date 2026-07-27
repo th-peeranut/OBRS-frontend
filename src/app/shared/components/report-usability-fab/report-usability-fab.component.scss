@@ -47,9 +47,10 @@
   // So this now IS the same button as .btn-search / .login-btn / .select-btn,
   // measured on the real home page in both themes (owner picked this over a
   // ghost/outline variant, OBRS-746 2026-07-27):
-  //   white on $primary-blue = 5.33:1   (rest)
-  //   white on #065d85       = 7.21:1   (hover -- the value OBRS-752 gave the
-  //                                      other three primary hovers)
+  //   white on $primary-blue       = 5.33:1   (rest)
+  //   white on $primary-blue-hover = 7.21:1   (hover -- the value OBRS-752 gave
+  //                                            the other three primary hovers,
+  //                                            hoisted to a token by OBRS-763)
   //
   // The border stays declared at 2px but collapses INTO the fill, so the pill's
   // geometry does not move while the fill carries the WCAG 1.4.11 boundary on
@@ -66,9 +67,9 @@
   transition: box-shadow 0.2s, background-color 0.2s, border-color 0.2s;
 
   &:hover {
-    background-color: #065d85;
-    color: $text-white; // on #065d85 = 7.21:1
-    border-color: #065d85; // collapsed into the fill; fill vs page = 7.21:1
+    background-color: $primary-blue-hover;
+    color: $text-white; // on $primary-blue-hover = 7.21:1
+    border-color: $primary-blue-hover; // collapsed into the fill; fill vs page = 7.21:1
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
   }
 

@@ -623,6 +623,191 @@ function scan(files, tokens, srcRoot) {
 }
 
 // ---------------------------------------------------------------------------
+// invariant 2: hover DIRECTION (OBRS-763)
+//
+// Invariant 1 above asks "can you read the label". This one asks a question no
+// ratio can answer: "does the button get darker when you point at it?"
+//
+// It exists because that has now gone wrong twice, silently, in two days:
+//
+//   OBRS-741 left three customer buttons hovering at #007eb6 with the written
+//   prediction that they would converge once the rest state darkened. OBRS-752
+//   then moved $primary-blue to #0772a2 -- whose luminance is 0.1469, BELOW
+//   #007eb6's 0.1830. So the buttons brightened on hover, i.e. inverted, and
+//   every one of them still cleared AA in both states. Not one number went red.
+//   A human noticed, on a screenshot, a card later.
+//
+// Direction is not contrast, so no contrast gate can see it. It is a separate
+// property and it needs a separate check:
+//
+//   THE RULE: a hover fill must be DARKER than the rest fill it replaces.
+//             One rule, both themes.
+//
+// The first draft of this gate said "and LIGHTER under `body.is-dark`, because
+// the page inverts". That was reasoning by analogy, and the codebase disagrees:
+// the only two opaque dark-world pairs in the tree are `$dk-accent` ->
+// `$dk-accent-hover` (#4bc2f7 L 0.4679 -> #3ab0e4 L 0.3755), a token pair whose
+// whole existence is a deliberate statement that dark mode darkens too. An
+// inverted rule would have failed the one place dark mode had already made up
+// its mind. The rule below is what the app measurably does, in 11 of 13 scored
+// pairs across both themes; the other 2 are the bugs this card fixed.
+//
+// WHAT THIS DELIBERATELY DOES NOT COVER, so the exclusion is on the record
+// rather than accidental: dark mode's ghost/nav hovers DO lighten -- they paint
+// a `rgba(75, 194, 247, 0.10)` wash over a dark card. Those are translucent, so
+// source cannot composite them and they land in the `unresolved` count, not in a
+// pass. If one is ever rewritten as an opaque colour it will fail here, and the
+// honest answer that day is a HOVER_ALLOW entry with a card on it -- not a
+// second, softer rule bolted on to keep the report green.
+//
+// Pairing is deliberately conservative, because a wrong-direction claim about a
+// pair the browser never paints together is worse than no claim. A hover rule is
+// paired with its rest fill only when one of these holds:
+//   - it is `&`-nested inside the rule that declares the rest fill (same
+//     element, real ancestor), or
+//   - a SIBLING rule in the SAME FILE has the identical selector minus its
+//     interaction pseudos (`.admin-btn-primary:hover` -> `.admin-btn-primary`).
+// Anything else is counted and printed, never guessed at.
+// ---------------------------------------------------------------------------
+
+// Known-open direction violations, keyed "<path relative to src>::<selector>".
+// Same contract as ALLOW: a debt marker with a card on it, and an entry that
+// stops matching fails the gate rather than rotting quietly.
+const HOVER_ALLOW = {};
+
+function bgRawOf(block) {
+  return block.decls['background'] ?? block.decls['background-color'];
+}
+
+/**
+ * The rest-state background a hover block replaces: the nearest ancestor that
+ * declares one, climbing ONLY through `&` nesting. Same rule as inherited() and
+ * for the same reason -- `.circle` inside `.step` is a different element, and
+ * its parent's fill is not the fill this hover is replacing.
+ */
+function restBgRaw(block) {
+  for (let b = block.parent; b; b = b.parent) {
+    const v = bgRawOf(b);
+    if (v !== undefined) return v;
+    if (!b.selector.startsWith('&')) return undefined;
+  }
+  return undefined;
+}
+
+/**
+ * `&:hover` / `&:hover:not(:disabled)` / `&.is-active:hover` -- one element, one
+ * state. Anything with a descendant combinator or a comma list is out: those are
+ * either a different element or several, and this check compares exactly two
+ * fills.
+ */
+function isOwnHoverState(sel) {
+  const positive = sel.replace(/:not\([^)]*\)/gi, '');
+  return /^&[^\s>+~,]*:hover[^\s>+~,]*$/.test(positive);
+}
+
+/**
+ * The same selector with its interaction pseudos removed -- the rule that paints
+ * the REST state of the element this hover rule targets.
+ *
+ * Needed because `&:hover` nesting is not how half this codebase writes it. The
+ * customer save button is two sibling top-level rules,
+ * `:host ::ng-deep .npref-save-btn.p-button` and `...:enabled:hover`, and so are
+ * every `.admin-*` control in admin-theme.scss. Refusing to pair those left the
+ * gate blind to 28 of 61 hover fills -- including a primary button -- which is
+ * the shape of blind spot this whole file exists to argue against.
+ */
+function restKeyOf(sel) {
+  return sel
+    .replace(/:not\([^)]*\)/gi, '')
+    .replace(/:(hover|enabled|focus-visible|focus|active|link|visited)\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** A gradient resolves to several stops; compare the ramps by their mean. */
+function meanLuminance(colours) {
+  return colours.reduce((s, c) => s + luminance(c), 0) / colours.length;
+}
+
+/**
+ * One stylesheet's worth of the scan. Split out from the file loop ONLY so the
+ * self-test can drive the real code path with a string fixture instead of a
+ * re-implementation -- invariant 1's self-test re-implements its loop, and that
+ * tests the copy, not the gate.
+ */
+function scanHoverInSource(src, rel, tokens, out) {
+  const { findings, stats, census } = out;
+  const blocks = parseBlocks(stripComments(src));
+
+  // Rest-state fills declared as SIBLING rules, keyed by their stateless
+  // selector, so `.admin-btn-primary:hover` can find `.admin-btn-primary`.
+  const siblingRest = new Map();
+  for (const b of blocks) {
+    const v = bgRawOf(b);
+    if (v === undefined) continue;
+    const path = selectorPath(b);
+    if (/:(hover|active|focus)/i.test(path)) continue;
+    if (!siblingRest.has(path)) siblingRest.set(path, v);
+  }
+
+  for (const block of blocks) {
+    const hoverRaw = bgRawOf(block);
+    if (hoverRaw === undefined) continue;
+    if (!/:hover/.test(block.selector)) continue;
+    stats.hoverBlocks++;
+
+    const sel = selectorPath(block);
+    if (isInactiveState(sel)) {
+      stats.inactive++;
+      continue;
+    }
+    const rest = isOwnHoverState(block.selector) ? restBgRaw(block) : siblingRest.get(restKeyOf(sel));
+    if (rest === undefined) {
+      stats.noRest++;
+      census.push({ file: rel, selector: sel, world: 'SKIP-norest', lRest: 0, lHover: 0, wrong: false });
+      continue;
+    }
+
+    let worst = null;
+    let scored = 0;
+    for (const world of worldsForRule(sel)) {
+      const r = resolveColours(rest, tokens, world);
+      const h = resolveColours(hoverRaw, tokens, world);
+      if (!r.colours.length || !h.colours.length) {
+        stats.unresolved++;
+        continue;
+      }
+      scored++;
+      const lRest = meanLuminance(r.colours);
+      const lHover = meanLuminance(h.colours);
+      // Equal luminance is not a direction error -- a hue-only hover is a
+      // legitimate choice, and calling it one would be inventing a rule.
+      const wrong = lHover > lRest;
+      const margin = lRest - lHover;
+      if (wrong && (worst === null || margin < worst.margin)) {
+        worst = { margin, lRest, lHover, world: world.name, rest: r.colours, hover: h.colours };
+      }
+      census.push({ file: rel, selector: sel, world: world.name, lRest, lHover, wrong });
+    }
+    if (scored) stats.paired++;
+    if (worst) findings.push({ file: rel, selector: sel, key: `${rel}::${sel}`, ...worst });
+  }
+}
+
+function scanHoverDirection(files, tokens, srcRoot) {
+  const out = {
+    findings: [],
+    stats: { hoverBlocks: 0, paired: 0, noRest: 0, unresolved: 0, inactive: 0 },
+    census: [],
+  };
+  for (const file of files) {
+    const rel = relative(srcRoot, file).replace(/\\/g, '/');
+    scanHoverInSource(readFileSync(file, 'utf8'), rel, tokens, out);
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // self-test: prove the gate fires, and prove it does not fire on correct code
 // ---------------------------------------------------------------------------
 
@@ -677,6 +862,107 @@ const MUST_NOT_CATCH = `
   &:hover { background: #4dbeef; }
 }
 `;
+
+// --- invariant 2's own fixtures (OBRS-763) ---------------------------------
+
+const HOVER_MUST_CATCH = `
+$fx-rest: #0772a2;
+$fx-hover: #2d7799;
+// The literal OBRS-741 bug: nested hover, lighter than rest, both states AA.
+.mc-nested { background: #0772a2; color: #fff;
+  &:hover { background: #007eb6; }
+}
+// The SIBLING form. The first draft of this gate skipped these outright and was
+// blind to 28 of 61 hover fills, one of them a primary button.
+.mc-sibling { background: #3b61a9; color: #fff; }
+.mc-sibling:enabled:hover { background: #2d7799; }
+// Through SCSS variables -- grepping the hexes would never find this one.
+.mc-var { background: $fx-rest; color: #fff;
+  &:hover { background: $fx-hover; }
+}
+// Dark world. Pins the rule that was RETRACTED: an earlier draft said dark mode
+// must LIGHTEN on hover, which would have passed this fixture silently.
+body.is-dark .mc-dark { background: #22263a; color: #fff;
+  &:hover { background: #3a4160; }
+}
+`;
+
+const HOVER_MUST_NOT_CATCH = `
+.ok-nested { background: #0772a2; color: #fff;
+  &:hover { background: #065d85; }
+}
+.ok-sibling { background: #3b61a9; color: #fff; }
+.ok-sibling:enabled:hover { background: #355a9c; }
+// $dk-accent -> $dk-accent-hover, the real pair from dark-theme.scss. Dark mode
+// darkens here on purpose; this is the evidence the retracted rule contradicted.
+body.is-dark .ok-dark { background: #4bc2f7; color: #181c2a;
+  &:hover { background: #3ab0e4; }
+}
+// WCAG exempts inactive components, and a disabled "hover" is not an
+// interaction. Brightens, and correctly not a finding.
+.ok-disabled { background: #dddee1; color: #fff;
+  &:disabled:hover { background: #ffffff; }
+}
+// The documented exclusion: dark mode's tint washes DO lighten. Translucent, so
+// it cannot be composited from source -- it must land in the unresolved count,
+// never in a finding.
+body.is-dark .ok-tint { background: #22263a; color: #fff;
+  &:hover { background: rgba(75, 194, 247, 0.10); }
+}
+// No rest fill declared anywhere -- nothing to compare, so no claim.
+.ok-norest:hover { background: #ffffff; }
+// A DIFFERENT element. Pairing must not reach from .ok-other to .ok-other .kid
+// just because the prefix matches.
+.ok-other { background: #000000; color: #fff; }
+.ok-other .kid:hover { background: #ffffff; }
+// Hue-only hover: equal luminance is a choice, not an error.
+.ok-same { background: #0772a2; color: #fff;
+  &:hover { background: #0772a2; }
+}
+`;
+
+function hoverSelfTest() {
+  const failures = [];
+
+  const run = (css) => {
+    const tokens = collectTokensFromBlocks(parseBlocks(stripComments(css)), new Map());
+    const saved = SCSS_VARS;
+    SCSS_VARS = new Map();
+    scssVarsFromSource(css, SCSS_VARS, []);
+    const out = {
+      findings: [],
+      stats: { hoverBlocks: 0, paired: 0, noRest: 0, unresolved: 0, inactive: 0 },
+      census: [],
+    };
+    scanHoverInSource(css, 'fixture.scss', tokens, out);
+    SCSS_VARS = saved;
+    return out;
+  };
+
+  const caught = run(HOVER_MUST_CATCH);
+  const hits = caught.findings.map((f) => f.selector).join(' | ');
+  const wanted = [
+    ['mc-nested', 'a nested hover LIGHTER than its rest fill -- the OBRS-741 bug itself'],
+    ['mc-sibling', 'a hover written as a SIBLING rule, not nested -- half this codebase writes them that way'],
+    ['mc-var', 'an inversion expressed through SCSS $variables rather than literals'],
+    ['mc-dark', 'an inversion in a DARK world -- the retracted "dark mode inverts" rule would pass this'],
+  ];
+  for (const [needle, why] of wanted) {
+    if (!hits.includes(needle)) failures.push(`must-catch "${needle}" was NOT caught: ${why}`);
+  }
+
+  const clean = run(HOVER_MUST_NOT_CATCH);
+  if (clean.findings.length) {
+    failures.push(`must-NOT-catch: fired on correct code: ${clean.findings.map((f) => f.selector).join(', ')}`);
+  }
+  // The tint fixture must be UNRESOLVED, not "passed". A pass would mean the
+  // gate had silently composited an alpha it cannot see.
+  if (!clean.stats.unresolved) {
+    failures.push('must-NOT-catch: the translucent dark-mode tint was scored rather than counted unresolved');
+  }
+
+  return failures;
+}
 
 function selfTest() {
   const failures = [];
@@ -747,7 +1033,7 @@ if (!existsSync(SRC)) {
   process.exit(1);
 }
 
-const selfTestFailures = selfTest();
+const selfTestFailures = [...selfTest(), ...hoverSelfTest()];
 if (selfTestFailures.length) {
   console.error('::error::brand fill contrast gate FAILED ITS OWN SELF-TEST:');
   for (const f of selfTestFailures) console.error(`  - ${f}`);
@@ -796,6 +1082,8 @@ if (staleAllow.length) {
   process.exit(1);
 }
 
+let failed = false;
+
 if (unexpected.length) {
   console.error(`::error::${unexpected.length} brand fill(s) below the WCAG AA text threshold:`);
   for (const f of unexpected) {
@@ -805,7 +1093,56 @@ if (unexpected.length) {
   }
   console.error('');
   console.error('  Fix the colours, or add an ALLOW entry naming the card that owns the fix.');
-  process.exit(1);
+  failed = true;
+} else {
+  console.log('  RESULT             : OK -- no unexpected brand fill below AA');
 }
 
-console.log('  RESULT             : OK -- no unexpected brand fill below AA');
+// --- invariant 2: hover direction (OBRS-763) -------------------------------
+
+const hover = scanHoverDirection(files, tokens, SRC);
+
+console.log('');
+console.log('hover direction gate (OBRS-763)');
+console.log(`  self-test          : PASS (4 must-catch, 8 must-NOT-catch)`);
+console.log(`  hover fills seen   : ${hover.stats.hoverBlocks}`);
+console.log(`  skipped (inactive) : ${hover.stats.inactive} disabled-state hovers`);
+console.log(`  skipped (no rest)  : ${hover.stats.noRest} hover fills with no rest fill to compare against -- NOT scored`);
+console.log(`  unresolved         : ${hover.stats.unresolved} world(s) where a fill is translucent or computed -- NOT counted as passing`);
+console.log(`  pairs scored       : ${hover.stats.paired}`);
+console.log(`  known-open         : ${Object.keys(HOVER_ALLOW).length} entries`);
+
+if (process.env.HOVER_CENSUS) {
+  console.log('  --- census (HOVER_CENSUS=1) ---');
+  for (const c of hover.census) {
+    console.log(
+      `    ${c.wrong ? 'WRONG' : 'ok   '} ${c.world.padEnd(11)} L ${c.lRest.toFixed(4)} -> ${c.lHover.toFixed(4)}  ${c.file} ${c.selector}`
+    );
+  }
+}
+
+const hoverUnexpected = hover.findings.filter((f) => !HOVER_ALLOW[f.key]);
+const hoverStale = Object.keys(HOVER_ALLOW).filter((k) => !hover.findings.some((f) => f.key === k));
+if (hoverStale.length) {
+  console.error('::error::HOVER_ALLOW entries that no longer match anything -- delete them:');
+  for (const k of hoverStale) console.error(`  - ${k}`);
+  failed = true;
+}
+
+if (hoverUnexpected.length) {
+  console.error(`::error::${hoverUnexpected.length} hover fill(s) move the WRONG WAY:`);
+  for (const f of hoverUnexpected) {
+    console.error(
+      `  ${f.file}\n    ${f.selector}\n    ${f.world}: rest ${f.rest.join(',')} L=${f.lRest.toFixed(4)} -> hover ${f.hover.join(',')} L=${f.lHover.toFixed(4)}\n    the hover fill is LIGHTER than the rest fill; it must be darker`
+    );
+  }
+  console.error('');
+  console.error('  This is the OBRS-741 failure: both states can pass AA while the button');
+  console.error('  brightens under the cursor. Fix the hover value, or add a HOVER_ALLOW');
+  console.error('  entry naming the card that owns it.');
+  failed = true;
+} else {
+  console.log('  RESULT             : OK -- every scored hover moves the right way');
+}
+
+if (failed) process.exit(1);

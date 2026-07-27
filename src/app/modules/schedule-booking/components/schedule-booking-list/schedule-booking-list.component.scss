@@ -148,9 +148,11 @@
         height: 52px;
 
         /* OBRS-752: re-derived. Same treatment as the two .payment-btn hovers --
-           same shape of button, same brand hover. */
+           same shape of button, same brand hover.
+           OBRS-763: the literal is now $primary-blue-hover, so it moves with the
+           palette instead of alongside it by coincidence. */
         &:hover {
-          background: #065d85; /* white on it = 7.21:1, and clearly darker than rest */
+          background: $primary-blue-hover; /* white on it = 7.21:1, and darker than rest */
         }
 
         &-diabled {

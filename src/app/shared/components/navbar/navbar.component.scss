@@ -126,6 +126,9 @@
   text-decoration: none;
 
   .material-symbols-outlined { @extend %mat-icon; font-size: $font-size-md; }
+  /* OBRS-763: the pre-752 cyan in this file's three hover washes is DELIBERATE.
+     Rendered both ways and the owner kept it; read the tint-layer block in
+     styles/variables.scss before "fixing" it. */
   &:hover { background: rgba(77, 190, 239, 0.12); color: #005f7e; }
 }
 

@@ -84,9 +84,13 @@
   font-weight: $font-weight-semibold;
 }
 
+// OBRS-763: was $text-blue, which is LIGHTER than $brand-customer-strong -- the
+// page's only primary action got BRIGHTER on hover. Same inversion as
+// route-stop-list's .p-button-info, same cause, same fix: the hover partner of
+// the rest token rather than a text colour that happened to look close.
 :host ::ng-deep .npref-save-btn.p-button:enabled:hover {
-  background-color: $text-blue;
-  border-color: $text-blue;
+  background-color: $secondary-blue-hover;
+  border-color: $secondary-blue-hover;
 }
 
 :host ::ng-deep .npref-save-btn.p-button:disabled {
