@@ -60,6 +60,31 @@
  *     (OBRS-734).
  *   * A selector that matches no element on any swept page. Unreachable from
  *     this sweep is not the same as proven dead.
+ *
+ * WHY TRANSITIONS ARE SUPPRESSED FIRST (OBRS-774)
+ *
+ * V1 is read in the same task that removed the declaration. If the element has
+ * a `transition` covering that property, the computed value at that instant is
+ * still V0 -- the transition has not started animating -- so V1 == V0 and the
+ * method calls a declaration dead that is fully in control. It is silent and it
+ * is systematic: every property of every transitioned element reads as LOST.
+ *
+ * Most of those never surfaced, because a declaration that IS in control paints
+ * what it asks for, and "paints what it asks for" is already not a finding. The
+ * ones that surfaced were the elements owned by a deliberate more-specific
+ * variant (`&.is-active`, `.p-highlight`): there the painted value legitimately
+ * differs from the base declaration's, so the two filters lined up and produced
+ * a finding with no defect behind it. That is where eight of OBRS-774's
+ * thirty-one register rows came from -- `.tab` carries
+ * `transition: all 0.2s`, `.back-btn` carries `transition: 0.3s`, and PrimeNG
+ * transitions its nav links and buttons.
+ *
+ * So the census disables transitions and animations document-wide before it
+ * measures anything, and restores the page afterwards. dark-theme.scss declares
+ * no `transition` of its own (checked), and the suppression touches only
+ * `transition-property`/`animation`, so it cannot shadow a declaration this
+ * method judges. Any `transition-*`/`animation-*` declaration is skipped and
+ * counted rather than judged under a rule the census itself installed.
  */
 
 export interface DeadDeclaration {
@@ -108,6 +133,12 @@ export interface CensusResult {
    * this method therefore cannot judge. Counted, never passed over in silence.
    */
   unjudgeableCount: number;
+  /**
+   * `transition-*` / `animation-*` declarations, which the census cannot judge
+   * because it suppresses both to measure anything at all. Counted, never
+   * silently folded into the pass (OBRS-734, OBRS-774).
+   */
+  animatedPropCount: number;
 }
 
 /** The key a debt-register entry is filed under. */
@@ -119,6 +150,15 @@ export const deadKey = (d: { selector: string; prop: string }): string => `${d.s
  */
 export const CENSUS = (): CensusResult => {
   const STATEFUL = /:(hover|focus|focus-visible|focus-within|active|checked|disabled|target)\b/;
+  const ANIMATED_PROP = /^(transition|animation)/;
+
+  // Read the header: without this, a transitioned property never moves inside
+  // the task that removed its declaration, and the whole element reads as dead.
+  const freeze = document.createElement('style');
+  freeze.id = 'oc-freeze';
+  freeze.textContent =
+    '*, *::before, *::after { transition-property: none !important; animation: none !important; }';
+  document.head.appendChild(freeze);
 
   const flat: CSSStyleRule[] = [];
   const walk = (rules: CSSRuleList): void => {
@@ -151,7 +191,17 @@ export const CENSUS = (): CensusResult => {
   probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px';
   document.body.appendChild(probe);
   const norm = (prop: string, val: string): string => {
-    probe.style.cssText = 'position:absolute;visibility:hidden;left:-9999px';
+    let base = 'position:absolute;visibility:hidden;left:-9999px';
+    // A border or outline WIDTH computes to 0px whenever its STYLE is `none`,
+    // which is a bare div's default -- so `norm('border-top-width', '1px')`
+    // answered `0px` and every width declaration in the file read as "paints
+    // 1px, wants 0px". That is how OBRS-774 inherited eight register rows for
+    // `.btn-back`/`.back-btn`, whose rule declares `border: 1px solid ...` and
+    // whose elements paint exactly the 1px it asks for. Give the probe a style
+    // so the width it is asked about can survive to the computed value.
+    if (/^border(-(top|right|bottom|left))?-width$/.test(prop)) base += ';border-style:solid';
+    if (prop === 'outline-width') base += ';outline-style:solid';
+    probe.style.cssText = base;
     try {
       probe.style.setProperty(prop, val);
     } catch {
@@ -168,6 +218,7 @@ export const CENSUS = (): CensusResult => {
   let unmatchedCount = 0;
   let judgedCount = 0;
   let unjudgeableCount = 0;
+  let animatedPropCount = 0;
 
   for (const rule of flat) {
     if (!/\bis-dark\b/.test(rule.selectorText)) continue;
@@ -193,6 +244,12 @@ export const CENSUS = (): CensusResult => {
     }
 
     for (const prop of props) {
+      // Suppressed above to make any measurement possible at all, so this
+      // census has nothing honest to say about them.
+      if (ANIMATED_PROP.test(prop)) {
+        animatedPropCount++;
+        continue;
+      }
       const declared = rule.style.getPropertyValue(prop);
 
       // A longhand of a shorthand written with var() -- `border-color:
@@ -239,17 +296,22 @@ export const CENSUS = (): CensusResult => {
           aliveCount++;
           continue;
         }
-        // Lost. Only a finding if what is painted differs from what it asks
-        // for -- otherwise some other rule already does the same job.
-        if (!v0.some((v) => v !== wanted)) continue;
-        const el = els[0];
+        // Lost. Only a finding on the elements where what is painted differs
+        // from what it asks for -- elsewhere some other rule already does the
+        // same job. Judged per ELEMENT, not off `v0[0]`: a rule with a
+        // deliberate `&.is-active` variant paints that one element differently
+        // BY DESIGN, and keying the verdict on whichever element happened to be
+        // first made the whole declaration look defeated (OBRS-774).
+        const candidates = els.map((_, i) => i).filter((i) => v0[i] !== wanted);
+        if (!candidates.length) continue;
+        const el = els[candidates[0]];
         const cls = typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : '';
         dead.push({
           selector: part,
           prop,
           matched: els.length,
           won,
-          painted: v0[0] ?? '',
+          painted: v0[candidates[0]] ?? '',
           wanted,
           sample: el.tagName.toLowerCase() + cls,
         });
@@ -262,6 +324,7 @@ export const CENSUS = (): CensusResult => {
   }
 
   probe.remove();
+  freeze.remove();
   return {
     dead,
     observed: Array.from(observed),
@@ -271,5 +334,6 @@ export const CENSUS = (): CensusResult => {
     judgedCount,
     judged: Array.from(judged),
     unjudgeableCount,
+    animatedPropCount,
   };
 };

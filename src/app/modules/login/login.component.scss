@@ -1,4 +1,5 @@
 @import "../../../styles/variables.scss";
+@import "../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -185,6 +186,48 @@
     .login-card .logo-section .logo-img {
       width: 150px;
       height: auto;
+    }
+  }
+}
+
+// =============================================================================
+// Dark mode (OBRS-774)
+// =============================================================================
+//
+// These rules were in `src/styles/dark-theme.scss` section 5 and never applied,
+// for the reason OBRS-767 established for the footer. The light rules above are
+// nested three and four deep, so Angular rewrites
+//
+//     .login-container .login-card .login-form .login-by-phone-no-btn
+//
+// as four `[_ngcontent]`-carrying compounds -> (0,8,0), against the global
+// `body.is-dark .login-container .login-form .login-by-phone-no-btn` -> (0,3,1).
+// The global never had a chance. Measured, not read: the "sign in with phone
+// number" button painted #f6fcff -- a near-white block in the middle of the
+// dark auth card -- and the primary button kept its light-mode #0772a2 fill.
+//
+// `:host-context(body.is-dark)` carries this component's host attribute ON TOP
+// of everything the light rules carry, so it wins by construction rather than
+// by arithmetic a later reader has to redo (see src/styles/_dark-tokens.scss).
+:host-context(body.is-dark) {
+  .login-container {
+    // The ambient illustration is much louder against a dark page than a light
+    // one -- 0.22 reads as a muddy patch behind the card.
+    .login-bg {
+      opacity: 0.08;
+    }
+
+    .login-form {
+      .login-btn {
+        background-color: $dk-accent;
+        color: $dk-bg;
+      }
+
+      .login-by-phone-no-btn {
+        background-color: $dk-bg-soft;
+        border-color: $dk-accent;
+        color: $dk-accent;
+      }
     }
   }
 }
