@@ -97,6 +97,13 @@ export interface CensusResult {
   /** Every declaration this page could judge at rest. The population floor. */
   judgedCount: number;
   /**
+   * The same population as `judgedCount`, keyed `<selector-part> :: <prop>` so
+   * the caller can de-duplicate across pages. `judgedCount` summed over a sweep
+   * counts declaration *instances* -- the footer is judged once per page -- and
+   * a reader will take that number for a count of declarations. Report both.
+   */
+  judged: string[];
+  /**
    * Declarations written with `var()`, which the CSSOM reads back as empty and
    * this method therefore cannot judge. Counted, never passed over in silence.
    */
@@ -155,6 +162,7 @@ export const CENSUS = (): CensusResult => {
 
   const dead: DeadDeclaration[] = [];
   const observed = new Set<string>();
+  const judged = new Set<string>();
   let aliveCount = 0;
   let statefulCount = 0;
   let unmatchedCount = 0;
@@ -226,6 +234,7 @@ export const CENSUS = (): CensusResult => {
           if (getComputedStyle(el).getPropertyValue(prop) !== v0[i]) won++;
         });
         judgedCount++;
+        judged.add(part + ' :: ' + prop);
         if (won > 0) {
           aliveCount++;
           continue;
@@ -260,6 +269,7 @@ export const CENSUS = (): CensusResult => {
     statefulCount,
     unmatchedCount,
     judgedCount,
+    judged: Array.from(judged),
     unjudgeableCount,
   };
 };

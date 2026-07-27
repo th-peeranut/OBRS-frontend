@@ -270,11 +270,14 @@ rather than argued:
 
    **This generalised, and it is now a gate rather than a war story.** Closing
    OBRS-767 meant censusing the file: every `body.is-dark` declaration, removed
-   from the live CSSOM one at a time to see whether anything moved. 48 of the
-   173 judgeable declarations were doing nothing. Twelve were the footer; the
-   other 36 are spread over login/register, the payment tab strip, the
-   booking-flow back buttons and the route-map's PrimeNG internals (OBRS-774,
-   plus four OBRS-771 already owned). **Where a dark rule belongs** is therefore
+   from the live CSSOM one at a time to see whether anything moved. Across ten
+   dark pages it judges **363 distinct declarations** at rest (772 counting
+   instances — the footer is judged once per page, and the two numbers answer
+   different questions, so the gate prints both). **35 of the 363 are dead**,
+   every one registered against a card: the payment tab strip, login/register
+   controls, the booking-flow back buttons, the route-map's PrimeNG internals
+   (OBRS-774, plus four OBRS-771 already owned). The footer was **twelve more**
+   on top of that before this card moved it. **Where a dark rule belongs** is therefore
    a real decision, and `src/styles/_dark-tokens.scss` states it: inside an
    encapsulated component, use that component's own `:host-context(body.is-dark)`;
    `dark-theme.scss` is for unencapsulated surfaces — global element/utility

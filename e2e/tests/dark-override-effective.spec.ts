@@ -175,6 +175,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
 
     const seen = new Map<string, { d: DeadDeclaration; pages: Set<string>; instances: number }>();
     const observed = new Set<string>();
+    const judgedDistinct = new Set<string>();
     let judged = 0;
     let stateful = 0;
     let unmatched = 0;
@@ -209,6 +210,7 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
       unjudgeable += s1.unjudgeableCount;
       for (const s of s1.observed) observed.add(s);
       for (const s of s2.observed) observed.add(s);
+      for (const k of s1.judged) judgedDistinct.add(k);
 
       const alsoDead = new Set(s2.dead.map(deadKey));
       const stableDead = s1.dead.filter((d) => alsoDead.has(deadKey(d)));
@@ -223,7 +225,9 @@ test.describe('dark-mode overrides actually apply (OBRS-767)', () => {
     }
 
     console.log(
-      `[OBRS-767] ${TARGETS.length} pages, ${judged} declarations judged at rest, ` +
+      `[OBRS-767] ${TARGETS.length} pages, ${judged} declaration-instances judged at rest ` +
+        `(${judgedDistinct.size} distinct declarations -- the footer is judged once per page, ` +
+        `so the two numbers answer different questions), ` +
         `${seen.size} dead, ${Object.keys(DARK_OVERRIDE_ALLOW).length} registered as known debt.\n` +
         `           NOT judged: ${stateful} reachable only in a :hover/:focus state, ` +
         `${unmatched} whose selector matched no element here, ` +
