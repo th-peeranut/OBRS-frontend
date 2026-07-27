@@ -49,96 +49,137 @@ const json = (route, body, status = 200) =>
 // requests already under `/api/`. Keying these on Playwright URL globs lets a
 // fixture swallow the page's own document request (OBRS-747, four blank pages).
 
-const STOPS = ok([
-  { id: 1, slug: 'nongjak', name: 'หนองจาก', latitude: 13.05, longitude: 101.1, order: 1 },
-  { id: 2, slug: 'banbueng', name: 'บ้านบึง', latitude: 13.31, longitude: 101.11, order: 2 },
-  { id: 3, slug: 'mochit', name: 'บขส. หมอชิต (หมอชิต 2)', latitude: 13.81, longitude: 100.55, order: 3 },
-]);
+// RouteStop (shared/interfaces/route-map.interface.ts). Real coordinates so the
+// map panel's distance maths has something sane to chew on; Maps itself is
+// blocked, so only the stop LIST renders -- which is where the numbered
+// .stop-order-badge lives, one of the 48.
+const stop = (order, slug, name, lat, lng) => ({
+  order,
+  slug,
+  name,
+  address: 'ต.หนองชาก อ.บ้านบึง จ.ชลบุรี',
+  approxTime: `${String(7 + order).padStart(2, '0')}:00`,
+  distanceKmFromOrigin: order * 30,
+  offsetMinutesFromOrigin: order * 40,
+  latitude: lat,
+  longitude: lng,
+  primaryPhotoUrl: null,
+  googleMapsUrl: null,
+});
 
+const PICKUP_STOPS = [
+  stop(1, 'nong_chak', 'หนองชาก', 13.2836, 101.0654),
+  stop(2, 'ban_bueng', 'บ้านบึง', 13.3121, 101.1149),
+];
+const DROPOFF_STOPS = [
+  stop(3, 'bts_mochit', 'BTS หมอชิต', 13.8025, 100.5537),
+  stop(4, 'bkr_mochit2', 'บขส. หมอชิต (หมอชิต 2)', 13.8117, 100.5487),
+];
+
+const ROUTE_META = {
+  slug: 'chonburi_bangkok',
+  titleLocalized: { en: 'Chonburi - Bangkok', th: 'ชลบุรี - กรุงเทพฯ', zh: '春武里 - 曼谷' },
+  totalDistanceKm: 120,
+  durationMinMinutes: 120,
+  durationMaxMinutes: 150,
+  originProvinceLabel: 'ชลบุรี',
+  destinationProvinceLabel: 'กรุงเทพมหานคร',
+};
+
+const PICKUP_DROPOFF = ok({
+  route: ROUTE_META,
+  pickup: PICKUP_STOPS,
+  dropoff: DROPOFF_STOPS,
+});
+
+const STOPS = ok([...PICKUP_STOPS, ...DROPOFF_STOPS]);
+
+// RouteListItem[]
 const ROUTES = ok([
   {
     id: 1,
     slug: 'chonburi_bangkok',
-    name: 'ชลบุรี - กรุงเทพฯ',
-    code: 'NJ-BKK',
-    stops: STOPS.data,
+    status: 'active',
+    translations: {
+      th: { label: 'ชลบุรี - กรุงเทพฯ' },
+      en: { label: 'Chonburi - Bangkok' },
+    },
   },
 ]);
 
-const SCHEDULE_SEARCH = ok([
-  {
-    scheduleId: 101,
-    routeId: 1,
-    routeName: 'ชลบุรี - กรุงเทพฯ',
-    departureDateTime: '2030-06-17T08:00:00+07:00',
-    arrivalDateTime: '2030-06-17T10:30:00+07:00',
-    availableSeats: 12,
-    totalSeats: 21,
-    price: 180,
-    pickupStopName: 'หนองจาก',
-    dropoffStopName: 'บขส. หมอชิต (หมอชิต 2)',
-    seatingMode: 'ASSIGNED',
-    vehicleType: { id: 1, slug: 'minibus', totalSeats: 21 },
-  },
-  {
-    scheduleId: 102,
-    routeId: 1,
-    routeName: 'ชลบุรี - กรุงเทพฯ',
-    departureDateTime: '2030-06-17T13:00:00+07:00',
-    arrivalDateTime: '2030-06-17T15:30:00+07:00',
-    availableSeats: 3,
-    totalSeats: 21,
-    price: 180,
-    pickupStopName: 'หนองจาก',
-    dropoffStopName: 'บขส. หมอชิต (หมอชิต 2)',
-    seatingMode: 'ASSIGNED',
-    vehicleType: { id: 1, slug: 'minibus', totalSeats: 21 },
-  },
-]);
+// Schedule (shared/interfaces/schedule.interface.ts). Two rows: one comfortable
+// and one at 3 seats left, which is under LOW_SEAT_THRESHOLD and renders the
+// scarcity styling.
+const schedule = (id, time, seats) => ({
+  id,
+  vehicleType: 'minibus',
+  departureDateTime: `2030-06-17T${time}:00+07:00`,
+  arrivalDateTime: `2030-06-17T${String(Number(time.slice(0, 2)) + 2).padStart(2, '0')}:30:00+07:00`,
+  pricePerSeat: 180,
+  availableSeats: seats,
+  availableSeatNumbers: Array.from({ length: seats }, (_, i) => `A${i + 1}`),
+  routeSlug: 'chonburi_bangkok',
+  seatingMode: 'ASSIGNED',
+});
 
-// Two bookings with DIFFERENT statuses on purpose: `.status-badge.is-danger`
-// (cancelled) and `.status-badge.is-info` are two of the 48, and one status is
-// not a sample.
-const MY_BOOKINGS = ok([
-  {
-    bookingId: 501,
-    bookingNumber: 'B-000501',
-    status: 'confirmed',
-    bookingStatus: 'confirmed',
-    tripType: 'one_way',
-    totalAmount: 360,
-    createdAt: '2026-07-20T10:00:00+07:00',
-    schedules: [
-      {
-        scheduleId: 101,
-        routeName: 'ชลบุรี - กรุงเทพฯ',
-        departureDateTime: '2030-06-17T08:00:00+07:00',
-        pickupStopName: 'หนองจาก',
-        dropoffStopName: 'บขส. หมอชิต (หมอชิต 2)',
-        seats: ['A1', 'A2'],
-      },
-    ],
-  },
-  {
-    bookingId: 502,
-    bookingNumber: 'B-000502',
-    status: 'cancelled',
-    bookingStatus: 'cancelled',
-    tripType: 'round_trip',
-    totalAmount: 720,
-    createdAt: '2026-07-18T09:00:00+07:00',
-    schedules: [
-      {
-        scheduleId: 102,
-        routeName: 'ชลบุรี - กรุงเทพฯ',
-        departureDateTime: '2030-06-17T13:00:00+07:00',
-        pickupStopName: 'หนองจาก',
-        dropoffStopName: 'บขส. หมอชิต (หมอชิต 2)',
-        seats: ['B3'],
-      },
-    ],
-  },
-]);
+const SCHEDULES = [schedule(101, '08:00', 12), schedule(102, '13:00', 3)];
+const SCHEDULE_SEARCH = ok({ departureSchedules: SCHEDULES, arrivalSchedules: null });
+
+// PageResponse<MyBookingDto> (payment.interface.ts + my-booking.interface.ts).
+//
+// THREE statuses on purpose, because `statusClass()` maps them to three of the
+// classes this card touches: confirmed -> .is-success, refunded -> .is-info
+// (2.92:1, one of the 48), anything else -> .is-danger (4.24:1, the entry
+// OBRS-741 deliberately left behind because it uses the shared $text-red).
+// One booking would have photographed one badge and proved nothing about the
+// other two.
+const lookup = (id, code, th) => ({ id, code, display: { th: { label: th }, en: { label: code } } });
+
+const myBooking = (id, number, status, amount) => ({
+  id,
+  bookingNumber: number,
+  totalAmount: amount,
+  status,
+  bookingType: 'one_way',
+  bookingChannel: 'online',
+  createdAt: '2026-07-20T10:00:00+07:00',
+  rescheduleCount: 0,
+  seatChangeCount: 0,
+  stopChangeCount: 0,
+  contact: { fullName: 'สมชาย ใจดี', phoneNumber: '0812345678' },
+  bookingSchedules: [
+    {
+      id: 100 + id,
+      departureDateTime: '2030-06-17T08:00:00+07:00',
+      arrivalDateTime: '2030-06-17T10:30:00+07:00',
+      legType: 'outbound',
+      fromStop: lookup(1, 'nong_chak', 'หนองชาก'),
+      toStop: lookup(4, 'bkr_mochit2', 'บขส. หมอชิต (หมอชิต 2)'),
+      routeSlug: 'chonburi_bangkok',
+      seatingMode: 'ASSIGNED',
+      tickets: [
+        { id: 700 + id, ticketNumber: `T-${String(700 + id).padStart(6, '0')}`, seatNumber: 'A1', status },
+      ],
+    },
+  ],
+});
+
+const pageOf = (content) => ({
+  content,
+  totalElements: content.length,
+  totalPages: 1,
+  size: 100,
+  number: 0,
+  numberOfElements: content.length,
+});
+
+const MY_BOOKINGS = ok(
+  pageOf([
+    myBooking(501, 'B-000501', 'confirmed', 360),
+    myBooking(502, 'B-000502', 'refunded', 180),
+    myBooking(503, 'B-000503', 'cancelled', 180),
+  ])
+);
 
 const TICKETS = ok([
   {
@@ -169,7 +210,7 @@ const boardingToken = (id) =>
 const FIXTURES = [
   [/\/tickets\/(\d+)\/boarding-token$/, (m) => boardingToken(m[1])],
   [/\/schedules\/search/, () => SCHEDULE_SEARCH],
-  [/\/routes\/[^/]+\/pickup-dropoff$/, () => ok({ pickupStops: STOPS.data, dropoffStops: STOPS.data })],
+  [/\/routes\/[^/]+\/pickup-dropoff$/, () => PICKUP_DROPOFF],
   [/\/routes/, () => ROUTES],
   [/\/stops/, () => STOPS],
   [/\/bookings\/me/, () => MY_BOOKINGS],
@@ -177,18 +218,91 @@ const FIXTURES = [
   [/\/tickets/, () => TICKETS],
 ];
 
+// --- reaching the flow pages ------------------------------------------------
+//
+// /schedule-booking .. /e-ticket read their trip from NgRx, not from the URL, so
+// a bare goto lands on a real page with an empty store -- the shell renders and
+// every element the card is about (.select-btn, .btn-confirm, .btn-next,
+// .payment-btn, .download-btn) is simply absent. Driving the whole funnel by
+// hand (custom dropdowns + a p-calendar panel + two forms) is a lot of selector
+// surface for a screenshot, and every step is a chance to capture the wrong
+// state without noticing.
+//
+// So seed the store instead, with the app's OWN action creators' types. This is
+// the real reducer, the real selectors and the real components -- only the input
+// is injected, the same argument as capture-obrs747.js's window.ng trick, one
+// layer down. `store` is `private` on the component, which is a compile-time
+// idea; the field is there at runtime.
+const STORE_SEED = {
+  filter: {
+    roundTrip: { id: 'one_way', name: 'เที่ยวเดียว' },
+    passengerInfo: [{ type: 'adult', count: 1 }],
+    startStationId: 'nong_chak',
+    stopStationId: 'bkr_mochit2',
+    departureDate: '2030-06-17',
+    returnDate: null,
+    adultCount: 1,
+    kidsCount: 0,
+  },
+  list: { departureSchedules: SCHEDULES, arrivalSchedules: null },
+  booking: { schedule: [SCHEDULES[0]] },
+  passengers: [
+    {
+      isAdult: true,
+      title: 1,
+      firstName: 'สมชาย',
+      middleName: '',
+      lastName: 'ใจดี',
+      phoneNumber: '0812345678',
+      gender: 'male',
+      isSelectSeat: true,
+      passengerSeat: 'A1',
+      useBookerInfo: true,
+      email: 'customer@system.local',
+      seatPreference: null,
+      seatRequirement: null,
+    },
+  ],
+  bookingResult: {
+    id: 501,
+    bookingNumber: 'B-000501',
+    totalAmount: 180,
+    status: 'pending',
+  },
+};
+
+const seedStore = async (page) => {
+  await page.evaluate((seed) => {
+    if (!window.ng || !window.ng.getComponent) throw new Error('window.ng is absent (not a dev build?)');
+    // Any component on the page will do -- they all inject the same root Store.
+    let store = null;
+    for (const el of document.querySelectorAll('*')) {
+      const cmp = window.ng.getComponent(el);
+      if (cmp && cmp.store && typeof cmp.store.dispatch === 'function') {
+        store = cmp.store;
+        break;
+      }
+    }
+    if (!store) throw new Error('no component on the page exposes an NgRx Store');
+    store.dispatch({ type: '[ScheduleFilter API] Set Schedule Filter Success', schedule_filter: seed.filter });
+    store.dispatch({ type: '[ScheduleList API] Set Schedule List Success', schedule_list: seed.list });
+    store.dispatch({ type: '[ScheduleBooking API] Set Schedule Booking Success', schedule_booking: seed.booking });
+    store.dispatch({ type: '[PassengerInfo API] Set Passenger Info Success', passengerInfo: seed.passengers });
+    store.dispatch({ type: '[Booking API] Set Booking Success', booking: seed.bookingResult });
+  }, STORE_SEED);
+  await page.waitForTimeout(1200);
+};
+
 // --- pages under test -------------------------------------------------------
-// `drive` runs after navigation to reach a state a bare goto cannot.
 const PAGES = [
   { key: 'home', url: '/' },
   { key: 'login', url: '/login' },
   { key: 'my-bookings', url: '/my-bookings' },
-  { key: 'e-ticket', url: '/e-ticket' },
-  { key: 'schedule-booking', url: '/schedule-booking' },
-  { key: 'review-schedule-booking', url: '/review-schedule-booking' },
-  { key: 'passenger-info', url: '/passenger-info' },
-  { key: 'payment', url: '/payment' },
-  { key: 'parcel-booking', url: '/parcel-booking' },
+  { key: 'schedule-booking', url: '/schedule-booking', seed: true },
+  { key: 'review-schedule-booking', url: '/review-schedule-booking', seed: true },
+  { key: 'passenger-info', url: '/passenger-info', seed: true },
+  { key: 'payment', url: '/payment', seed: true },
+  { key: 'e-ticket', url: '/e-ticket', seed: true },
 ];
 
 // --- browser-side measurement ----------------------------------------------
@@ -364,6 +478,7 @@ async function probe(browser) {
     page.on('pageerror', (e) => consoleLog.push(`pageerror: ${String(e.message).slice(0, 160)}`));
     try {
       await visit(page, p.url);
+      if (p.seed) await seedStore(page);
       const info = await page.evaluate(() => ({
         href: location.pathname,
         swal: document.querySelectorAll('.swal2-popup').length,
@@ -389,6 +504,7 @@ async function capture(browser, phase) {
       const page = await newSeededPage(browser, dark, null);
       try {
         await visit(page, p.url);
+        if (p.seed) await seedStore(page);
         const sweep = await page.evaluate(SWEEP);
         if (sweep.bodyIsDark !== dark) {
           throw new Error(`theme precondition failed: body.is-dark=${sweep.bodyIsDark}, expected ${dark}`);
