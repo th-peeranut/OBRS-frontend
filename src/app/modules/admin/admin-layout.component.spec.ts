@@ -282,6 +282,13 @@ describe('AdminLayoutComponent', () => {
     translate.use('en');
   }
 
+  // OBRS-794: how many nav entries the sidebar actually RENDERS. The template
+  // iterates filteredNavSections, never filteredNavItems, so this — not
+  // filteredNavItems.length — is the number a user can see.
+  function countSectionItems(comp: SearchComp): number {
+    return comp.filteredNavSections.reduce((sum, section) => sum + section.items.length, 0);
+  }
+
   it('filters nav items by translated menu label', () => {
     seedNavTranslations();
     const comp = fixture.componentInstance as unknown as SearchComp;
@@ -301,14 +308,51 @@ describe('AdminLayoutComponent', () => {
     expect(comp.filteredNavItems.every((i) => i.path === 'lookups')).toBeTrue();
   });
 
-  it('restores the full list when the query is cleared', () => {
+  // OBRS-794: assert the restore on filteredNavSections — the field the
+  // template renders. The original version of this test checked only
+  // filteredNavItems, which the template never reads, so it stayed green for
+  // the whole life of the bug: applyNavSearch('') set filteredNavItems and
+  // returned BEFORE rebuilding the sections, leaving the sidebar frozen on the
+  // last non-empty query's result.
+  it('restores the full RENDERED tree when the query is cleared', () => {
     const comp = fixture.componentInstance as unknown as SearchComp;
-    const full = comp.navItems.length;
+    const fullSectionKeys = comp.filteredNavSections.map((s) => s.key);
+    const fullItemCount = countSectionItems(comp);
+
     comp.applyNavSearch('dashboard');
-    expect(comp.filteredNavItems.length).toBeLessThan(full);
+    expect(countSectionItems(comp))
+      .withContext('the search must actually narrow the rendered tree first')
+      .toBeLessThan(fullItemCount);
+
     comp.clearNavSearch();
-    expect(comp.filteredNavItems.length).toBe(full);
     expect(comp.navSearchQuery).toBe('');
+    expect(comp.filteredNavItems.length).toBe(comp.navItems.length);
+    expect(comp.filteredNavSections.map((s) => s.key))
+      .withContext('every section header must come back, not just the matched one')
+      .toEqual(fullSectionKeys);
+    expect(countSectionItems(comp)).toBe(fullItemCount);
+  });
+
+  // OBRS-794: the reported repro — type, then delete character by character,
+  // never touching the clear button. The last non-empty query is a single
+  // character, and that is the state the sidebar used to freeze on.
+  it('restores the full RENDERED tree when the query is deleted one character at a time', () => {
+    seedNavTranslations();
+    const comp = fixture.componentInstance as unknown as SearchComp;
+    const fullSectionKeys = comp.filteredNavSections.map((s) => s.key);
+    const fullItemCount = countSectionItems(comp);
+
+    for (const q of ['prom', 'pro', 'pr', 'p', '']) {
+      comp.applyNavSearch(q);
+    }
+    fixture.detectChanges();
+
+    expect(comp.filteredNavSections.map((s) => s.key)).toEqual(fullSectionKeys);
+    // and the DOM agrees — assert what is rendered, not just the model
+    expect(fixture.debugElement.queryAll(By.css('.admin-nav-link:not(.admin-nav-btn)')).length)
+      .toBe(fullItemCount);
+    expect(fixture.debugElement.queryAll(By.css('.admin-nav-section-title')).length)
+      .toBe(fullSectionKeys.length);
   });
 
   it('yields an empty filtered list (and no-results hint) when nothing matches', () => {
@@ -330,16 +374,23 @@ describe('AdminLayoutComponent', () => {
     expect(links.length).toBe(1);
   });
 
-  it('clears the search (restores the full list) when a nav result is clicked', () => {
+  // OBRS-794: same rendered-not-modelled rule as the clear case above — before
+  // the fix the sidebar stayed frozen on the search result after navigating to
+  // it, for the rest of the session.
+  it('clears the search (restores the full RENDERED tree) when a nav result is clicked', () => {
     seedNavTranslations();
     const comp = fixture.componentInstance as unknown as SearchComp;
-    const full = comp.navItems.length;
+    const fullSectionKeys = comp.filteredNavSections.map((s) => s.key);
+    const fullItemCount = countSectionItems(comp);
     comp.applyNavSearch('promotion');
     fixture.detectChanges();
     const link = fixture.debugElement.query(By.css('.admin-nav-link:not(.admin-nav-btn)'));
     link.triggerEventHandler('click', null); // fires onNavLinkClick() + clearNavSearch()
+    fixture.detectChanges();
     expect(comp.navSearchQuery).toBe('');
-    expect(comp.filteredNavItems.length).toBe(full);
+    expect(comp.filteredNavSections.map((s) => s.key)).toEqual(fullSectionKeys);
+    expect(fixture.debugElement.queryAll(By.css('.admin-nav-link:not(.admin-nav-btn)')).length)
+      .toBe(fullItemCount);
   });
 
   // ── OBRS-289: nav grouping into sections ────────────────────────────────────
