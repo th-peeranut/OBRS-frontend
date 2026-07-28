@@ -6,7 +6,10 @@ import {
   CUSTOMER_HOST,
   CUSTOMER_SWEEP,
   MalformedHost,
+  PAGE_READY_TIMEOUT_MS,
+  PER_SWEEP_PAGE_MS,
   PUBLIC_SWEEP,
+  SWEEP_SETUP_MS,
   SweepPage,
   featureFlags,
   newSweepPage,
@@ -15,6 +18,7 @@ import {
   scanPrimengCoverage,
   seedAnonymousSession,
   seedStaffSession,
+  sweepBudgetMs,
   visit,
 } from '../support/host-boxes';
 
@@ -204,7 +208,50 @@ test.describe('OBRS-775 malformed host boxes', () => {
     expect(tags).not.toContain('x-probe-float');
   });
 
+  /**
+   * OBRS-798. The budget the three sweeps below run on is a backstop, and this
+   * is the claim that makes it safe to size it by page count: a page that never
+   * comes up is reported BY `visit`, naming the page and the selector, long
+   * before the aggregate clock has anything to say.
+   *
+   * Without this, raising a timeout is indistinguishable from muting the gate.
+   * The short override keeps the proof at ~1.5s instead of PAGE_READY_TIMEOUT_MS;
+   * the arithmetic below is what carries the real magnitude, since a per-page
+   * allowance under the per-page guard means the guard always wins the race.
+   */
+  test('a page that never comes up is reported by name, not as a test timeout', async ({ page }) => {
+    const hung: SweepPage = {
+      key: 'obrs-798-probe-never-ready',
+      url: '/business-policy',
+      landsOn: /\/business-policy$/,
+      requires: '.obrs-798-selector-that-cannot-exist',
+    };
+
+    const err = await visit(page, hung, undefined, 1_500).then(
+      () => null,
+      (e: Error) => e
+    );
+
+    expect(err, 'visit() resolved for a page whose required selector never appears').not.toBeNull();
+    expect(err!.message).toContain('.obrs-798-selector-that-cannot-exist');
+
+    // Per page, the guard must fire before the budget the sweep hands the whole
+    // list -- otherwise a hang surfaces as "Test timeout exceeded" with no page
+    // named, which is exactly the unreadable failure OBRS-798 was opened for.
+    expect(PER_SWEEP_PAGE_MS).toBeLessThan(PAGE_READY_TIMEOUT_MS);
+    for (const [name, budget] of [
+      ['customer', sweepBudgetMs(CUSTOMER_SWEEP, CUSTOMER_EXTRA_SWEEP)],
+      ['public', sweepBudgetMs(PUBLIC_SWEEP)],
+      ['admin', sweepBudgetMs(ADMIN_SWEEP)],
+    ] as [string, number][]) {
+      expect(budget, `${name} sweep cannot afford one page exhausting its guard`).toBeGreaterThan(
+        SWEEP_SETUP_MS + PAGE_READY_TIMEOUT_MS
+      );
+    }
+  });
+
   test('customer pages', async ({ browser }) => {
+    test.setTimeout(sweepBudgetMs(CUSTOMER_SWEEP, CUSTOMER_EXTRA_SWEEP));
     const missing = CUSTOMER_PAGES.filter((c) => !CUSTOMER_HOST[c.key]).map((c) => c.key);
     expect(missing, 'CUSTOMER_PAGES key(s) with no routed host named in CUSTOMER_HOST').toEqual([]);
 
@@ -219,6 +266,7 @@ test.describe('OBRS-775 malformed host boxes', () => {
   });
 
   test('public and auth-entry pages', async ({ browser }) => {
+    test.setTimeout(sweepBudgetMs(PUBLIC_SWEEP));
     const page = await newSweepPage(browser);
     await seedAnonymousSession(page);
     await sweep(page, PUBLIC_SWEEP);
@@ -226,6 +274,7 @@ test.describe('OBRS-775 malformed host boxes', () => {
   });
 
   test('admin, staff and session-bound pages', async ({ browser }) => {
+    test.setTimeout(sweepBudgetMs(ADMIN_SWEEP));
     const page = await newSweepPage(browser);
     await seedStaffSession(page);
     await sweep(page, ADMIN_SWEEP);
