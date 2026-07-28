@@ -176,6 +176,34 @@ body.is-dark {
     border-color: $dk-border !important;
     color: $dk-text !important;
 
+    // OBRS-797. The placeholder is NOT covered by the `color` above: an
+    // element's `!important` colour does not reach its pseudo-element, and
+    // Bootstrap 5.3 paints `.form-control::placeholder` with
+    // `--bs-secondary-color` = rgba(33,37,41,.75) -- a THEME-BLIND dark grey.
+    // On white that is 6.78:1; on $dk-bg-input it measured **1.10:1** across all
+    // 18 customer fields (register, login, forget-password, track-parcel,
+    // booker-info), which is a placeholder nobody can read.
+    //
+    // The card was filed as "no ::placeholder rule exists for these". A rule
+    // does exist -- Bootstrap's -- and the defect is that it is written in one
+    // theme's terms. Same shape as OBRS-767/771: the failure was never a missing
+    // declaration, it was a declaration that could not know about dark mode.
+    //
+    // $dk-text-muted is the right token here and was MEASURED before it was
+    // chosen rather than assumed from its name: it is already what
+    // `.report-textarea::placeholder` uses two hundred lines down, and that site
+    // reads 6.94:1 live on this same $dk-bg-input surface -- comfortably over
+    // the 4.5:1 floor and within 0.16 of the light mode's own 6.78:1, so the two
+    // themes read alike rather than one being merely legal.
+    //
+    // The surface is safe by construction: the `background-color` two lines up
+    // paints every one of these inputs $dk-bg-input, so this foreground cannot
+    // end up over an unthemed white box (the OBRS-752 trap).
+    &::placeholder {
+      color: $dk-text-muted !important;
+      opacity: 1; // Firefox still applies a UA opacity to ::placeholder.
+    }
+
     &:focus {
       border-color: $dk-accent !important;
       box-shadow: 0 0 0 3px rgba(75, 194, 247, 0.15) !important;
