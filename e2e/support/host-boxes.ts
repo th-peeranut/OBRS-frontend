@@ -915,12 +915,68 @@ export async function seedStaffSession(page: Page): Promise<void> {
 }
 
 /**
+ * How long ONE page gets to become ready before the sweep calls it hung.
+ *
+ * This is the detector for a stuck page, and it is per page, so it fails naming
+ * the page and the selector it waited for. The test-level timeout is only a
+ * backstop -- see `sweepBudgetMs`, sized so this fires first and the opaque
+ * "Test timeout exceeded" never gets to speak for it.
+ */
+export const PAGE_READY_TIMEOUT_MS = 15_000;
+
+/** Fixed cost per sweep test: context creation, session seeding, first paint. */
+export const SWEEP_SETUP_MS = 20_000;
+
+/**
+ * What ONE page is allowed to cost on average before the backstop fires.
+ *
+ * Measured 2026-07-27 on the hermetic lane: the admin sweep took 58.7s over 29
+ * pages = 2.0s/page. This is 2.5x that, and deliberately well under
+ * PAGE_READY_TIMEOUT_MS so a single stuck page always exhausts its own named
+ * guard before the aggregate one.
+ */
+export const PER_SWEEP_PAGE_MS = 5_000;
+
+/**
+ * OBRS-798. A sweep's time budget, derived from how many pages it actually
+ * visits.
+ *
+ * The gate config's flat 60s was a fixed ceiling under a list that only grows:
+ * `primeng host users are all swept` FAILS anyone who adds an admin screen and
+ * does not add it to ADMIN_SWEEP, so the list gaining entries is compulsory, not
+ * optional. It went 41.6s -> 58.7s when OBRS-782 opened the seven excused
+ * screens -- 98% of the ceiling -- and the very next commit to land went red on
+ * the clock alone: it swept the same 47 pages and ended on the same one as the
+ * green run before it. A gate that reddens on the size of its own coverage
+ * teaches people to re-run CI until it passes, which is how a gate stops being
+ * read at all.
+ *
+ * Note what this does NOT relax. No assertion moves: the sweep still demands
+ * `malformed == 0`, and every page still gets exactly PAGE_READY_TIMEOUT_MS to
+ * come up. Widening a tolerance would hide defects. This widens a wall clock,
+ * and only in proportion to work that was actually added.
+ */
+export function sweepBudgetMs(...lists: SweepPage[][]): number {
+  const pages = lists.reduce((n, l) => n + l.length, 0);
+  return SWEEP_SETUP_MS + pages * PER_SWEEP_PAGE_MS;
+}
+
+/**
  * Navigates to a page and blocks until it is the page it claims to be and has
  * stopped moving. Shared so the gate and the geometry capture cannot disagree
  * about when a page is ready -- a capture taken one frame earlier than the gate
  * would report differences that are timing, not layout.
+ *
+ * `readyTimeoutMs` exists so the gate can prove that THIS guard is what reports
+ * a stuck page, without paying the full PAGE_READY_TIMEOUT_MS to do it. No
+ * production sweep passes it.
  */
-export async function visit(page: Page, p: SweepPage, seedFn?: (pg: Page) => Promise<void>): Promise<void> {
+export async function visit(
+  page: Page,
+  p: SweepPage,
+  seedFn?: (pg: Page) => Promise<void>,
+  readyTimeoutMs: number = PAGE_READY_TIMEOUT_MS
+): Promise<void> {
   // OBRS-782: set BEFORE the navigation, and unconditionally -- an entry with
   // no fixture has to CLEAR the previous one, or the empty-backend pages after
   // a fixtured one would quietly measure somebody else's rows.
@@ -931,7 +987,7 @@ export async function visit(page: Page, p: SweepPage, seedFn?: (pg: Page) => Pro
   // to /login measures the login page's boxes, files them under this page's key,
   // and reports a clean result for a screen it never visited.
   await expect(page).toHaveURL(p.landsOn);
-  await page.locator(p.requires).first().waitFor({ timeout: 15_000 });
+  await page.locator(p.requires).first().waitFor({ timeout: readyTimeoutMs });
   if (p.act) await p.act(page);
   await settle(page);
 }
