@@ -355,7 +355,10 @@ export interface ParcelOnlineReqDto {
   prohibitedAcknowledged: boolean;
   /**
    * Required, `\d{10,15}` (byte-identical to `ParcelSenderReqDto.phone` —
-   * ADR-0082 Option A, no new regex). FE prefills from the account's
+   * ADR-0082, Accepted by OBRS-455: this rule stays WIDE because nothing
+   * texts the sender, and both sites now reference one constant. The
+   * recipient's phone on the same request is narrower for the opposite
+   * reason — the arrival SMS goes there). FE prefills from the account's
    * `User.phoneNumber` when present; the field stays editable and is NOT
    * blocked when absent (a Google-login customer has no phone on file).
    * Unlike the sender NAME (derived server-side, not on this DTO at all),

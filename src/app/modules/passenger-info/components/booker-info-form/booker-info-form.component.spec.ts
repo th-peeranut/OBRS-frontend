@@ -41,6 +41,25 @@ describe('BookerInfoFormComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  // OBRS-455: the booker's phone becomes contact_phone_snapshot, which six SMS senders read. It
+  // used to accept /^0\d{9}$/ — i.e. a Bangkok landline, for a number we then text. This is the
+  // pinning test for the narrowing; the passenger form keeps the wider rule on purpose.
+  describe('phone rule (SMS destination)', () => {
+    it('rejects a Bangkok landline that the old 10-digit rule accepted', () => {
+      const ctrl = component.bookerForm.get('phoneNumber');
+      ctrl?.setValue('0212345678');
+      expect(ctrl?.valid).toBeFalse();
+    });
+
+    it('accepts each real Thai mobile prefix, grouped or bare', () => {
+      const ctrl = component.bookerForm.get('phoneNumber');
+      for (const value of ['0612345678', '0812345678', '0912345678', '081-234-5678']) {
+        ctrl?.setValue(value);
+        expect(ctrl?.valid).withContext(value).toBeTrue();
+      }
+    });
+  });
+
   describe('initial state', () => {
     it('form is invalid when empty', () => {
       expect(component.bookerForm.valid).toBeFalse();

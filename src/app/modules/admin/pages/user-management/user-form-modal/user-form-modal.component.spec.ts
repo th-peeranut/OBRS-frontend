@@ -122,6 +122,24 @@ function fillValidCreateForm(component: UserFormModalComponent): void {
 }
 
 describe('UserFormModalComponent', () => {
+  // OBRS-455 AC#2: this form writes users.phone_number — the column OTP login matches on. It was
+  // the last surface still on \d{10,15}, so an admin could create an account whose owner could
+  // never sign in by OTP. UserUpdateReqDto now enforces the same rule server-side.
+  describe('phone rule (users.phone_number)', () => {
+    it('rejects the 12-digit number the old \\d{10,15} rule accepted', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminUserDto>>());
+      openCreate(component);
+
+      const ctrl = (component as any).userForm.get('phoneNumber');
+      ctrl.setValue('123456789012');
+      expect(ctrl.valid).toBeFalse();
+      ctrl.setValue('0212345678'); // and a landline, which it also used to take
+      expect(ctrl.valid).toBeFalse();
+      ctrl.setValue('0812345678');
+      expect(ctrl.valid).toBeTrue();
+    });
+  });
+
   describe('create mode', () => {
     it('opens with the default create values, including the pre-seeded first status option', () => {
       // Pre-existing behavior carried over verbatim from

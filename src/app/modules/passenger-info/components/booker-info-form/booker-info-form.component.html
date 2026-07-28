@@ -178,7 +178,10 @@
                   bookerForm.get('phoneNumber')?.dirty)
               "
             >
-              {{ "PASSENGER_INFO.FORM.PHONE_NUMBER_INVALID" | translate }}
+              <!-- OBRS-455: the booker's number is narrower than a passenger's (it is the SMS
+                   destination), so it needs its own message - PHONE_NUMBER_INVALID still says
+                   "10-digit" and is still correct for the passenger form that shares this key. -->
+              {{ "PASSENGER_INFO.FORM.PHONE_NUMBER_MOBILE_INVALID" | translate }}
             </div>
           </div>
 

@@ -10,12 +10,38 @@ import { AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
  * here would buy nothing and hand people a way to type a number that renders back differently
  * from what they entered.
  *
- * Narrower than the `/^0\d{9}$/` used by the booking/passenger forms: `0[689]` are the real Thai
- * mobile prefixes, so `02...` (a Bangkok landline) is correctly rejected for a phone we will send
- * an OTP to. Those other forms still carry their own copy of a looser rule — unifying them is
- * OBRS-455, not this card.
+ * Narrower than `THAI_LOCAL_PHONE_PATTERN` below: `0[689]` are the real Thai mobile prefixes, so
+ * `02...` (a Bangkok landline) is correctly rejected for a phone we will send an OTP to.
+ *
+ * OBRS-455 made this the rule for **every field that is an SMS destination**, not just the auth
+ * ones: the booking contact phone (six senders read `contact_phone_snapshot` — boarding and
+ * pre-departure reminders, payment-confirmed, cancellation, reschedule, schedule-change), the
+ * parcel recipient (the arrival notice), and the admin user form (same `users.phone_number` column
+ * signup writes).
  */
 export const THAI_MOBILE_PATTERN = /^0[689]\d{8}$/;
+
+/**
+ * A Thai number in local form: 10 digits starting `0`. Admits landlines (`02...`) as well as
+ * mobiles.
+ *
+ * For a phone **nothing texts** — a passenger's own number, a walk-in parcel sender's contact —
+ * where rejecting a business landline would be wrong (ADR-0082, Accepted). It is deliberately NOT
+ * the same rule as `THAI_MOBILE_PATTERN`: OBRS-455 classified every phone field by what the number
+ * is *used for*, and only the SMS destinations were narrowed. Same rule these forms already
+ * enforced — this constant is where the copies went, not a change to any of them.
+ */
+export const THAI_LOCAL_PHONE_PATTERN = /^0\d{9}$/;
+
+/**
+ * Any 10–15 digits — the browser-side mirror of the backend's `ContactPhone.ANY_DIGITS_PATTERN`.
+ *
+ * Used only where the wire contract is deliberately that wide: the online parcel `senderPhone`,
+ * whose sender may be reachable on a number that is not a Thai local one at all. Prefer
+ * `THAI_LOCAL_PHONE_PATTERN` for a field a Thai customer types about themselves; this one exists so
+ * a form does not silently promise the API something narrower than the API accepts.
+ */
+export const ANY_DIGITS_PHONE_PATTERN = /^\d{10,15}$/;
 
 /**
  * Drops every non-digit so a number a user typed or read back with grouping dashes
@@ -35,7 +61,7 @@ export function stripPhoneSeparators(value: string | null | undefined): string {
  */
 export function formatThaiMobile(value: string | null | undefined): string {
   const digits = stripPhoneSeparators(value);
-  if (/^0\d{9}$/.test(digits)) {
+  if (THAI_LOCAL_PHONE_PATTERN.test(digits)) {
     return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   }
   return digits;

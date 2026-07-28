@@ -51,6 +51,26 @@ describe('WalkInCheckoutComponent', () => {
     expect(makeComponent()).toBeTruthy();
   });
 
+  // OBRS-455: the counter writes the same contact_phone_snapshot the website does, so it cannot
+  // keep accepting a number the website now refuses — one column, one rule, both channels.
+  describe('contact phone rule (SMS destination)', () => {
+    it('rejects a landline and names the Thai-mobile message', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('phoneNumber');
+      ctrl?.setValue('0212345678');
+      ctrl?.markAsTouched();
+      expect(ctrl?.valid).toBeFalse();
+      expect(comp['fieldError']('phoneNumber')).toBe('STAFF.VALIDATION.THAI_MOBILE_INVALID');
+    });
+
+    it('accepts a real Thai mobile', () => {
+      const comp = makeComponent();
+      const ctrl = comp['contactForm'].get('phoneNumber');
+      ctrl?.setValue('0612345678');
+      expect(ctrl?.valid).toBeTrue();
+    });
+  });
+
   describe('titleLabel localization', () => {
     const mr = { id: 1, nameThai: 'นาย', nameEnglish: 'Mr.', nameChinese: '先生' };
 

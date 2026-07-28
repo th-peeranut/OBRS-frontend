@@ -4,9 +4,11 @@ import { Subject } from 'rxjs';
 import { debounceTime, takeUntil } from 'rxjs/operators';
 import { ParcelOnlineQuoteParams, ParcelQuoteRespDto } from '../../../../shared/interfaces/parcel.interface';
 import {
+  ANY_DIGITS_PHONE_PATTERN,
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 
 export interface ParcelDetailsFormValue {
@@ -37,9 +39,15 @@ export const PROHIBITED_CATEGORIES: ProhibitedCategory[] = [
   { icon: 'sentiment_very_dissatisfied', i18nKey: 'PARCEL_BOOKING.PROHIBITED.CORPSE' },
 ];
 
-/** Same rule as `ParcelSenderReqDto.phone`/`validateRecipient` — reused
- * verbatim, no new regex (ADR-0082 Option A, SPEC-OBRS-415 §0.6). */
-const PHONE_PATTERN = /^\d{10,15}$/;
+/**
+ * OBRS-455 split what used to be one `PHONE_PATTERN` here, because the backend's two rules were
+ * never the same rule. `senderPhone` keeps `ParcelOnlineReqDto`'s wide contract (ADR-0082, now
+ * Accepted — nothing texts the sender), while `validateRecipient` was narrowed to the Thai-mobile
+ * rule: the recipient is who the arrival SMS goes to. Mirroring both keeps the form from
+ * promising something the API will reject, in either direction.
+ */
+const SENDER_PHONE_PATTERN = ANY_DIGITS_PHONE_PATTERN;
+const RECIPIENT_PHONE_PATTERN = THAI_MOBILE_PATTERN;
 
 /** >0 — `Validators.required`/`Validators.min(0)` alone allow 0. */
 function positiveWeightValidator(): ValidatorFn {
@@ -102,9 +110,9 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
 
   constructor(private readonly fb: FormBuilder) {
     this.form = this.fb.group({
-      senderPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
+      senderPhone: ['', [Validators.required, separatorTolerantPattern(SENDER_PHONE_PATTERN)]],
       recipientName: ['', [Validators.required, Validators.maxLength(100)]],
-      recipientPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
+      recipientPhone: ['', [Validators.required, separatorTolerantPattern(RECIPIENT_PHONE_PATTERN)]],
       weightKg: [null, [Validators.required, positiveWeightValidator(), Validators.max(100)]],
       description: ['', [Validators.required, Validators.maxLength(500)]],
       dimensions: this.fb.group(
@@ -217,7 +225,13 @@ export class ParcelDetailsFormComponent implements OnInit, OnChanges, OnDestroy 
     if (!ctrl || !ctrl.invalid || !(ctrl.dirty || ctrl.touched)) return null;
     const errors = ctrl.errors ?? {};
     if (errors['required']) return 'PARCEL_BOOKING.VALIDATION.REQUIRED';
-    if (errors['pattern']) return 'PARCEL_BOOKING.VALIDATION.PHONE_INVALID';
+    // OBRS-455: recipientPhone is now the Thai-mobile rule (the arrival SMS goes to it) while
+    // senderPhone keeps the wide one - so the message has to follow the field, not the form.
+    if (errors['pattern']) {
+      return fieldName === 'recipientPhone'
+        ? 'PARCEL_BOOKING.VALIDATION.THAI_MOBILE_INVALID'
+        : 'PARCEL_BOOKING.VALIDATION.PHONE_INVALID';
+    }
     if (errors['maxlength']) return 'PARCEL_BOOKING.VALIDATION.REQUIRED';
     if (errors['positiveWeight']) return 'PARCEL_BOOKING.VALIDATION.WEIGHT_POSITIVE';
     if (errors['max']) return 'PARCEL_BOOKING.VALIDATION.WEIGHT_MAX';

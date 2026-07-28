@@ -49,6 +49,7 @@ import {
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_LOCAL_PHONE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 
 /** Seat-attribute list, keyed by the backend's plain-numeric seat label
@@ -751,7 +752,10 @@ export class PassengerInfoFormComponent implements OnInit, OnDestroy {
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],
-      phoneNumber: ['', [separatorTolerantPattern(/^0\d{9}$/)]],
+      // OBRS-455: NOT an SMS destination — every booking message goes to the booker's contact
+      // phone, never to a per-passenger number — so this keeps the wider local rule while the
+      // booker's field above was narrowed. Same regex as before, now named.
+      phoneNumber: ['', [separatorTolerantPattern(THAI_LOCAL_PHONE_PATTERN)]],
       // See booker-info-form: `gender` is the local name for the wire's
       // `passengerType`, renamed at the payload boundary and persisted on the
       // ticket. It also drives the seat-map colouring here. Not a dead field.
