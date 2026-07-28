@@ -153,6 +153,18 @@
       "why": "Needs booking OBRS483-OPEN with a null seat from its SQL fixture, and a backend built from the OBRS-483 branch. The frontend alone is not sufficient."
     },
     {
+      "spec": "obrs766-counter-cancel.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs766.config.ts",
+      "why": "OBRS-766. Every case here CONSUMES the booking it acts on -- cancelling is the thing under test -- so each seeds its own walk-in sale through the real API instead of depending on a booking a previous run already spent. Needs states SIT cannot be asked for: a CASH sale (to reach the OBRS-669 second-person step-up), a payment-less booking (to resolve MANUAL_REFUND_REQUIRED), and a booking departing inside the 2h window (produced by rewriting booking_schedules.departure_date_time, since the seeded cluster starts December 2026). Its globalSetup frees seat inventory first: one pass consumes 7+ of the 14 seats per vehicle type, and without the reset the third pass fails at seeding with BOOKING_ERROR_SEATS_INSUFFICIENT -- which reads exactly like a product regression and is not one. Never a gate: it mutates its own database and shells out to psql."
+    },
+    {
+      "spec": "obrs766-primary-flow.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs766.config.ts",
+      "why": "OBRS-766. The card's load-bearing case in one continuous flow: a SALESPERSON logs in, finds a walk-in booking they did NOT sell, sees the refund preview before committing, and cancels it under the second-person cash approval -- the proof that act-on-behalf (OBRS-661) and the cash step-up (OBRS-669) are reachable at all, since neither had a UI before this card. Shares the OWN-DB reasoning and globalSetup above. Also asserts the masked phone never appears raw in the DOM or in any response body, so it doubles as the anti-enumeration guard for GET /api/private/bookings/search."
+    },
+    {
       "spec": "obrs-433-my-reports.spec.ts",
       "lane": "OWN-DB",
       "config": "playwright.obrs433.config.ts",
