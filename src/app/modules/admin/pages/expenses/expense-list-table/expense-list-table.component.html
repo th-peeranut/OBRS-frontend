@@ -22,6 +22,9 @@
       <thead>
         <tr>
           <th>{{ 'ADMIN.EXPENSES.EXPENSE_DATE' | translate }}</th>
+          <!-- OBRS-808: admin only - an owner's rows are all theirs, so the
+               column would repeat one name down the whole table. -->
+          <th *ngIf="showOwnerColumn">{{ 'ADMIN.EXPENSES.OWNER' | translate }}</th>
           <th>{{ 'ADMIN.EXPENSES.VEHICLE' | translate }}</th>
           <th>{{ 'ADMIN.EXPENSES.CATEGORY' | translate }}</th>
           <th class="expense-money">{{ 'ADMIN.EXPENSES.AMOUNT' | translate }}</th>
@@ -36,6 +39,7 @@
         <ng-container *ngIf="isLoading">
           <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td *ngIf="showOwnerColumn"><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
             <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
@@ -50,6 +54,7 @@
         <ng-container *ngIf="!isLoading && !hasError && !isEmpty">
           <tr *ngFor="let row of rows; let i = index; trackBy: trackById" [class.zebra]="i % 2 === 1">
             <td>{{ row.expenseDateDisplay }}</td>
+            <td *ngIf="showOwnerColumn" data-testid="expense-owner-cell">{{ row.ownerLabel || '-' }}</td>
             <td>
               <span *ngIf="row.vehicleId !== null">{{ row.vehicleLabel }}</span>
               <span class="admin-muted" *ngIf="row.vehicleId === null">{{ row.vehicleLabel }}</span>
@@ -85,7 +90,7 @@
           <!-- Filters narrowed a populated list to zero rows — distinct,
                lighter copy from the true empty state above (§8). -->
           <tr *ngIf="rows.length === 0" class="admin-empty-row">
-            <td [attr.colspan]="canWrite ? 9 : 8">{{ 'ADMIN.EXPENSES.NO_MATCH' | translate }}</td>
+            <td [attr.colspan]="columnCount">{{ 'ADMIN.EXPENSES.NO_MATCH' | translate }}</td>
           </tr>
         </ng-container>
       </tbody>

@@ -787,6 +787,15 @@ export interface CreateVehicleMaintenancePayload {
  * flattened here, read-only, never sent back by the form (§9 of the UX spec). */
 export interface AdminExpenseDto {
   id: number;
+  /** OBRS-791/808: the operator that BEARS this cost. NOT NULL on the backend
+   * since V55, and deliberately NOT derived from `vehicleId` — that one is
+   * nullable (a central expense has no vehicle), so an operator's own central
+   * costs would otherwise have no route to them at all. Optional here only
+   * because the FE cannot make the wire older than it is: a cached response
+   * from before V55 has no such key. Only the admin list renders it; an owner
+   * sees exclusively their own rows, so naming the operator on every line would
+   * be noise. */
+  ownerId?: number;
   vehicleId: number | null;
   category: string;
   categoryOtherLabel?: string | null;
@@ -807,6 +816,14 @@ export interface AdminExpenseDto {
  * is an explicit key (`null` when blank), never omitted — same full-replace
  * contract as `CreateVehiclePayload` above, and PUT sends all 9 fields. */
 export interface CreateExpensePayload {
+  /** OBRS-808: which operator bears the cost. Read by the backend on **POST
+   * from an ADMIN only** — for any other caller it is ignored (not rejected:
+   * ignoring makes a cross-tenant write unexpressible rather than merely
+   * refused), and on PUT it is ignored for everyone, because re-attributing an
+   * expense is a delete-and-recreate rather than a field edit. `null` from an
+   * admin's POST is the 400 `EXPENSE_OWNER_REQUIRED` this card exists to stop
+   * the user ever reaching. */
+  ownerId: number | null;
   vehicleId: number | null;
   category: string;
   categoryOtherLabel: string | null;
@@ -821,6 +838,25 @@ export interface CreateExpensePayload {
 /** OBRS-685: `POST /api/private/expenses` 201 response body. */
 export interface CreateExpenseRespDto {
   expenseId: number;
+}
+
+/** OBRS-809: one operator, as returned by `GET /api/private/owners`.
+ *
+ * That endpoint is `@PreAuthorize("hasRole('ADMIN')")` — the reverse of nearly
+ * every other admin call in this service, which guards on `OWNER` and lets
+ * `ADMIN` in through the role hierarchy. An operator that could enumerate the
+ * operator table would learn how many competitors share the platform and what
+ * they are called, so **an `owner` caller gets 403 here, by design**. Never
+ * call it without checking the role first: a 403 is not a recoverable empty
+ * list, it is a caller who should not have asked.
+ *
+ * No `taxId` — the backend deliberately does not return one (see
+ * `docs/api/owners.md`). */
+export interface AdminOwnerDto {
+  id: number;
+  slug: string;
+  displayName: string;
+  legalName: string;
 }
 
 export interface CreateRoutePayload {
@@ -1770,5 +1806,12 @@ export class AdminApiService {
 
   deleteExpense(id: number): Observable<ResponseAPI<unknown>> {
     return this.deleteRequest<unknown>(`${this.baseUrl}/private/expenses/${id}`);
+  }
+
+  /** OBRS-809: the operator roster, for the admin-only operator picker.
+   * ADMIN-only on the backend — see `AdminOwnerDto` for why an `owner` caller
+   * is 403'd rather than served a filtered list. */
+  getOwners(): Observable<ResponseAPI<AdminOwnerDto[]>> {
+    return this.getRequest<AdminOwnerDto[]>(`${this.baseUrl}/private/owners`);
   }
 }

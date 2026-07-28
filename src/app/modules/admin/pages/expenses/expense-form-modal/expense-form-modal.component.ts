@@ -49,6 +49,22 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   @Input() selectedExpense: ExpenseRow | null = null;
   @Input() vehicleOptions: Option[] = [];
   @Input() categoryOptions: Option[] = [];
+  /** OBRS-808: the operator roster. Empty for every non-admin caller — they
+   * never fetch it (`GET /api/private/owners` 403s them) and never see the
+   * picker. */
+  @Input() ownerOptions: Option[] = [];
+  /**
+   * OBRS-808: whether the caller holds the `admin` role.
+   *
+   * Deliberately a separate input rather than being derived from
+   * `ownerOptions.length > 0`. The derived form would hide the picker whenever
+   * the roster FETCH FAILED — exactly the state in which an admin most needs to
+   * see it, because they would then submit with no operator and get the 400
+   * this card exists to prevent, with nothing on screen to explain it. Role and
+   * roster are different facts; conflating them turns one failure into a
+   * silent, worse one.
+   */
+  @Input() isAdmin = false;
   @Input() reloadStructure!: () => Promise<void>;
   @Output() closed = new EventEmitter<void>();
 
@@ -65,6 +81,12 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     private readonly translate: TranslateService
   ) {
     this.expenseForm = this.formBuilder.group({
+      // OBRS-808: registered unconditionally, validated conditionally. The
+      // control has to exist before ngOnChanges runs (inputs are not readable
+      // in a constructor), and a control that exists but is never shown must
+      // never block submit — so the required validator is applied in
+      // initCreateForm, where `isAdmin` and `mode` are both known.
+      ownerSelection: [''],
       // design-system §3.1 + UX-OBRS-685 §4.1.1: placeholder-first, no
       // pre-seeded default, REQUIRED — an untouched placeholder blocks
       // submit, distinguishing "forgot to pick" from "chose central".
@@ -132,6 +154,37 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     return this.expenseForm.get('category')?.value === 'OTHER';
   }
 
+  /**
+   * OBRS-808 AC2: the picker is admin-only, and CREATE-only.
+   *
+   * Not shown on edit for anyone, because the backend ignores `ownerId` on PUT
+   * for every caller — re-attributing an expense is a delete-and-recreate, not
+   * a field edit. A live dropdown there would offer a change the server
+   * silently discards, which is a worse failure than not offering it: the user
+   * would believe the cost had moved. The edit modal shows the operator as
+   * read-only text instead (see the template).
+   */
+  protected get showOwnerPicker(): boolean {
+    return this.isAdmin && this.mode === 'create';
+  }
+
+  /** OBRS-808: the operator on the row being edited, for the read-only line
+   * that replaces the picker in edit mode. Empty when unresolvable, which the
+   * template tests directly rather than rendering a blank labelled field. */
+  protected get editingOwnerLabel(): string {
+    return this.selectedExpense?.ownerLabel ?? '';
+  }
+
+  /**
+   * OBRS-808: an admin whose roster came back empty. Distinct from "not an
+   * admin" — this one gets a visible warning, because the alternative is a
+   * dropdown with nothing in it and a submit that fails at the server with a
+   * message about a field the user could not have filled in.
+   */
+  protected get ownerRosterUnavailable(): boolean {
+    return this.showOwnerPicker && this.ownerOptions.length === 0;
+  }
+
   protected isFieldInvalid(fieldName: string): boolean {
     const field = this.expenseForm.get(fieldName);
     return !!field && field.invalid && (field.dirty || field.touched);
@@ -197,7 +250,9 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
   }
 
   private initCreateForm(): void {
+    this.applyOwnerValidator();
     this.expenseForm.reset({
+      ownerSelection: '',
       vehicleSelection: '',
       category: '',
       categoryOtherLabel: '',
@@ -210,8 +265,36 @@ export class ExpenseFormModalComponent implements OnChanges, OnDestroy {
     });
   }
 
+  /**
+   * OBRS-808 AC3: required exactly when the field is rendered, and unvalidated
+   * the rest of the time.
+   *
+   * The two halves are one method on purpose. A component instance is reused
+   * across opens — the same modal serves create then edit then create — so
+   * setting the validator without ever clearing it leaves an owner-less edit
+   * form permanently invalid with no visible field to fix, and clearing without
+   * setting is the 400 this card is about. `showOwnerPicker` is the single
+   * predicate both the validator and the template read, so they cannot drift.
+   */
+  private applyOwnerValidator(): void {
+    const control = this.expenseForm.get('ownerSelection');
+    if (!control) {
+      return;
+    }
+    if (this.showOwnerPicker) {
+      control.setValidators([Validators.required]);
+    } else {
+      control.clearValidators();
+    }
+    control.updateValueAndValidity({ emitEvent: false });
+  }
+
   private initEditForm(expense: ExpenseRow): void {
+    this.applyOwnerValidator();
     this.expenseForm.reset({
+      // Never sent on PUT (the backend ignores it for everyone) — reset to
+      // blank so a create that follows this edit cannot inherit a stale value.
+      ownerSelection: '',
       // §4.1.1: an already-saved central expense prefills to the EXPLICIT
       // sentinel option (a real prior choice), never back to blank.
       vehicleSelection:

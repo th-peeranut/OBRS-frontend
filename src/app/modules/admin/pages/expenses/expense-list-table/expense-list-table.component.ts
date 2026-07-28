@@ -24,9 +24,28 @@ export class ExpenseListTableComponent {
    * list to nothing isn't told "ยังไม่มีรายการ" (a false claim). */
   @Input() isEmpty = false;
   @Input() canWrite = false;
+  /**
+   * OBRS-808: show the operator column. True only for an `admin`, whose list
+   * spans every operator — for an `owner` every row is theirs by construction
+   * (the backend confines the query to `expenses.owner_id`), so a column
+   * repeating their own name on every line would be pure noise. The caller
+   * passes their role; this component does not infer it from the data, because
+   * a one-operator admin view is indistinguishable from an owner view.
+   */
+  @Input() showOwnerColumn = false;
 
   @Output() edit = new EventEmitter<ExpenseRow>();
   @Output() delete = new EventEmitter<ExpenseRow>();
+
+  /**
+   * Column count for the "no rows match the filters" row. Derived rather than
+   * literal: the previous hard-coded `canWrite ? 9 : 8` was already one edit
+   * away from being wrong, and a colspan that undercounts silently leaves a
+   * ragged cell rather than failing.
+   */
+  protected get columnCount(): number {
+    return 8 + (this.showOwnerColumn ? 1 : 0) + (this.canWrite ? 1 : 0);
+  }
 
   // Arrow-function field: NgForOf invokes trackBy as a free function, so a
   // regular method loses `this` (design-system DEV-GOTCHAS: a bare method

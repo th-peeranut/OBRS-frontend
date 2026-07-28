@@ -10,6 +10,43 @@
     <p class="admin-modal-subtitle">{{ 'ADMIN.EXPENSES.MODAL_HINT' | translate }}</p>
 
     <form [formGroup]="expenseForm" class="admin-form-grid" (ngSubmit)="submitExpense()">
+      <!-- OBRS-808: admin-only, create-only. An `owner` never sees this - the
+           server derives their operator from the principal and IGNORES any
+           ownerId they send, so rendering the control for them would be a
+           control that does nothing. -->
+      <div class="admin-form-field" *ngIf="showOwnerPicker" data-testid="expense-owner-field">
+        <label class="admin-form-label">
+          {{ 'ADMIN.EXPENSES.OWNER' | translate }} <span class="admin-required">*</span>
+        </label>
+        <app-admin-dropdown
+          formControlName="ownerSelection"
+          [options]="ownerOptions"
+          valueKey="code"
+          labelKey="label"
+          [placeholder]="'ADMIN.EXPENSES.OWNER' | translate"
+        ></app-admin-dropdown>
+        <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_HINT' | translate }}</small>
+        <small class="admin-error" *ngIf="ownerRosterUnavailable" data-testid="expense-owner-unavailable">
+          {{ 'ADMIN.EXPENSES.OWNER_UNAVAILABLE' | translate }}
+        </small>
+        <small class="admin-error" *ngIf="isFieldInvalid('ownerSelection')">
+          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+        </small>
+      </div>
+
+      <!-- Edit mode shows the operator as TEXT, never a control: the backend
+           ignores ownerId on PUT for every caller, so a dropdown here would
+           offer a move the server discards. -->
+      <div
+        class="admin-form-field"
+        *ngIf="isAdmin && mode === 'edit' && editingOwnerLabel"
+        data-testid="expense-owner-readonly"
+      >
+        <label class="admin-form-label">{{ 'ADMIN.EXPENSES.OWNER' | translate }}</label>
+        <p class="admin-readonly-value">{{ editingOwnerLabel }}</p>
+        <small class="admin-hint">{{ 'ADMIN.EXPENSES.OWNER_READONLY_HINT' | translate }}</small>
+      </div>
+
       <div class="admin-form-field">
         <label class="admin-form-label">
           {{ 'ADMIN.EXPENSES.VEHICLE' | translate }} <span class="admin-required">*</span>

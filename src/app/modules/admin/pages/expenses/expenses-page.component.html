@@ -78,6 +78,7 @@
   [errorMessage]="errorMessage"
   [isEmpty]="isEmpty"
   [canWrite]="canWrite"
+  [showOwnerColumn]="isAdmin"
   (edit)="openEditModal($event)"
   (delete)="openDeleteModal($event)"
 ></app-expense-list-table>
@@ -88,6 +89,8 @@
   [selectedExpense]="selectedExpense"
   [vehicleOptions]="vehicleOptions"
   [categoryOptions]="categoryOptions"
+  [ownerOptions]="ownerOptions"
+  [isAdmin]="isAdmin"
   [reloadStructure]="reloadStructureBound"
   (closed)="onFormModalClosed()"
 ></app-expense-form-modal>

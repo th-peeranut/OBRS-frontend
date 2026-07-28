@@ -1,4 +1,4 @@
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import { ExpensesPageComponent } from './expenses-page.component';
 import { AdminExpenseDto, AdminVehicleDto } from '../../../../services/admin/admin-api.service';
 import { VEHICLE_CENTRAL_SENTINEL } from './expenses-page.mappers';
@@ -61,10 +61,18 @@ function makeComponent(
   canWrite = true,
   adminApi: Record<string, unknown> = {
     deleteExpense: jasmine.createSpy('deleteExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
-  }
+  },
+  roles: string[] = ['owner']
 ) {
   const alert = { success: () => Promise.resolve(), error: () => Promise.resolve() };
-  const auth = { hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canWrite) };
+  const auth = {
+    hasAnyRole: jasmine.createSpy('hasAnyRole').and.returnValue(canWrite),
+    // OBRS-808: `owner` by default. The picker and the operator column are
+    // admin-only, so the DEFAULT caller in this spec is the one that must not
+    // see them — an admin-by-default stub would make every existing test a
+    // silent admin test.
+    getRoles: jasmine.createSpy('getRoles').and.returnValue(roles),
+  };
   return new ExpensesPageComponent(
     adminApi as any,
     alert as any,
@@ -180,6 +188,83 @@ describe('ExpensesPageComponent', () => {
 
       expect((component as any).filteredExpenses.map((r: any) => r.id)).toEqual([2]);
       expect(store.setVehicleFilter).not.toHaveBeenCalled();
+    });
+  });
+
+  // OBRS-808
+  describe('operator roster (OBRS-808)', () => {
+    const OWNERS = [
+      { id: 7, slug: 'nj-travel', displayName: 'NJ Travel', legalName: 'NJ Travel' },
+      { id: 9, slug: 'second', displayName: 'Second Lines', legalName: 'Second Lines' },
+    ];
+
+    function adminApiWithOwners(owners = OWNERS) {
+      return {
+        deleteExpense: jasmine.createSpy('deleteExpense').and.returnValue(of({ code: 200, message: 'OK', data: null })),
+        getOwners: jasmine
+          .createSpy('getOwners')
+          .and.returnValue(of({ code: 200, message: 'OK', data: owners })),
+      };
+    }
+
+    it('AC2: an owner never REQUESTS the roster — a 403 is not a recoverable empty list', async () => {
+      const api = adminApiWithOwners();
+      const component = makeComponent(makeExpensesStoreStub([expense()]), undefined, true, api, ['owner']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+
+      expect(api.getOwners).not.toHaveBeenCalled();
+      expect((component as any).isAdmin).toBeFalse();
+      expect((component as any).ownerOptions).toEqual([]);
+    });
+
+    it('AC1: an admin fetches the roster and gets options for the picker', async () => {
+      const api = adminApiWithOwners();
+      const component = makeComponent(makeExpensesStoreStub([expense()]), undefined, true, api, ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(api.getOwners).toHaveBeenCalled();
+      expect((component as any).ownerOptions.map((o: any) => o.code)).toEqual(['7', '9']);
+    });
+
+    it('resolves the operator label onto the rows an admin sees', async () => {
+      const api = adminApiWithOwners();
+      const component = makeComponent(
+        makeExpensesStoreStub([expense({ id: 1, ownerId: 9 })]),
+        undefined,
+        true,
+        api,
+        ['admin']
+      );
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect((component as any).expenses[0].ownerLabel).toBe('Second Lines');
+    });
+
+    it('a failed roster fetch leaves the page usable and the options empty — no alert on load', async () => {
+      // The consequence is confined to the create modal, which says so itself.
+      // Alerting here would fire on every page load for a control the user may
+      // never open.
+      const api = {
+        deleteExpense: jasmine.createSpy('deleteExpense'),
+        getOwners: jasmine.createSpy('getOwners').and.returnValue(throwError(() => new Error('403'))),
+      };
+      const component = makeComponent(makeExpensesStoreStub([expense()]), undefined, true, api, ['admin']);
+
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect((component as any).ownerOptions).toEqual([]);
+      expect((component as any).expenses.length).toBe(1);
+      expect((component as any).errorMessage).toBe('');
     });
   });
 

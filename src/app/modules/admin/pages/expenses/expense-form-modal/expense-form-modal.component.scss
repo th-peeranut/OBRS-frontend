@@ -17,3 +17,18 @@
   color: var(--admin-muted);
   font-size: 11px;
 }
+
+// OBRS-808: the operator on an expense being EDITED, shown as text because the
+// backend ignores ownerId on PUT (re-attribution is delete-and-recreate).
+// Deliberately NOT a disabled .admin-field: a greyed-out pill reads as "a
+// control you may not touch YET", which sends the user looking for the
+// permission that unlocks it. Plain text says the value is not editable here at
+// all. No background of its own, so it inherits the modal's themed surface and
+// var(--admin-text) is measured against the right thing in both themes.
+.admin-readonly-value {
+  margin: 0;
+  padding: 9px 0;
+  color: var(--admin-text);
+  font-size: 13px;
+  font-weight: 600;
+}

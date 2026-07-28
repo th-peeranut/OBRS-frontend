@@ -8,6 +8,8 @@ import { ExpenseRow } from '../expenses-page.mappers';
 
 const ROW: ExpenseRow = {
   id: 1,
+  ownerId: 7,
+  ownerLabel: 'NJ Travel',
   vehicleId: 1,
   vehicleLabel: 'V1 / ABC-123',
   category: 'FUEL',

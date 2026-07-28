@@ -1,5 +1,6 @@
 import {
   AdminExpenseDto,
+  AdminOwnerDto,
   AdminVehicleDto,
   CreateExpensePayload,
 } from '../../../../services/admin/admin-api.service';
@@ -102,6 +103,40 @@ export function toExpenseVehicleOptions(vehicles: AdminVehicleDto[], centralLabe
   ];
 }
 
+/**
+ * OBRS-808: the operator options for the admin-only picker.
+ *
+ * No sentinel option and no "all/none" entry, deliberately — unlike
+ * `toExpenseVehicleOptions` above, where "central" is a real answer. Every
+ * expense belongs to exactly one operator (`expenses.owner_id` is NOT NULL
+ * since V55), so there is no such thing as an unowned expense for an option to
+ * represent. An empty roster therefore renders an empty dropdown, which is a
+ * broken state to surface, not a "none" to select.
+ *
+ * The order the backend sent is preserved, not re-sorted here: it orders by
+ * `displayName` in SQL, and a second sort in the client would silently become
+ * the real one the day the two disagree.
+ */
+export function toOwnerOptions(owners: AdminOwnerDto[]): Option[] {
+  return owners.map((owner) => ({
+    code: String(owner.id),
+    label: ownerIdentifier(owner),
+  }));
+}
+
+/** The label for one operator. `displayName` is what a human recognises;
+ * `legalName` is only appended when it differs, so two similarly-named
+ * operators stay distinguishable without every row carrying a redundant
+ * "หจก. X (X)". */
+export function ownerIdentifier(owner: AdminOwnerDto): string {
+  const displayName = String(owner.displayName ?? '').trim();
+  const legalName = String(owner.legalName ?? '').trim();
+  if (!displayName) {
+    return legalName || `#${owner.id}`;
+  }
+  return legalName && legalName !== displayName ? `${displayName} (${legalName})` : displayName;
+}
+
 /** The human-readable vehicle identifier (`[vehicleNumber, numberPlate]`
  * joined, falling back to `#id`). Exported so the page's vehicle FILTER
  * option list (§6.2) reuses this exact formula instead of re-inlining it —
@@ -127,6 +162,14 @@ export function toExpenseCategoryDisplay(
 
 export interface ExpenseRow {
   id: number;
+  /** OBRS-808. `null` only when the response predates V55 or the row's operator
+   * is not in the roster this caller holds — never a real "no operator". */
+  ownerId: number | null;
+  /** The operator's label for the admin-only table column and the edit modal's
+   * read-only line. Empty string when it cannot be resolved (an `owner` caller
+   * never fetches the roster at all — they get 403 — and does not render the
+   * column), so a template can test it directly. */
+  ownerLabel: string;
   vehicleId: number | null;
   /** Table column 2: the vehicle identifier, or the muted "central" label
    * when `vehicleId === null` — never blank. */
@@ -156,15 +199,27 @@ export function toExpenseRow(
   vehicles: AdminVehicleDto[],
   categoryOptions: Option[],
   centralLabel: string,
-  dateLang: string | null | undefined
+  dateLang: string | null | undefined,
+  owners: AdminOwnerDto[] = []
 ): ExpenseRow {
   const vehicle = dto.vehicleId !== null ? vehicles.find((v) => v.id === dto.vehicleId) : undefined;
   const vehicleLabel =
     dto.vehicleId === null ? centralLabel : vehicle ? vehicleIdentifier(vehicle) : `#${dto.vehicleId}`;
   const categoryLabel = categoryOptions.find((option) => option.code === dto.category)?.label ?? dto.category;
 
+  // OBRS-808: an unresolvable owner falls back to `#id` rather than a blank
+  // cell — the same choice `vehicleLabel` makes above, and for the same reason:
+  // a blank cell reads as "central/none", which for an operator column would be
+  // a lie (every expense has exactly one). An `owner` caller passes no roster at
+  // all and gets '' — they never render the column.
+  const ownerId = dto.ownerId ?? null;
+  const owner = ownerId !== null ? owners.find((o) => o.id === ownerId) : undefined;
+  const ownerLabel = owner ? ownerIdentifier(owner) : ownerId !== null && owners.length > 0 ? `#${ownerId}` : '';
+
   return {
     id: dto.id,
+    ownerId,
+    ownerLabel,
     vehicleId: dto.vehicleId,
     vehicleLabel,
     category: dto.category,
@@ -185,6 +240,15 @@ export function toExpenseRow(
  * updatedBy/At) — §9's "no accidental round-trip" is structural, not just a
  * mapper convention. */
 export interface ExpenseFormValue {
+  /** OBRS-808: the admin-only operator choice, as a string because
+   * `app-admin-dropdown` coerces every value through `String(x ?? '')` (see
+   * VEHICLE_CENTRAL_SENTINEL above). `''` means either "this caller is not an
+   * admin, so the control was never shown" or "an admin has not chosen yet" —
+   * the two are indistinguishable HERE on purpose, because the payload treats
+   * them identically (`ownerId: null`) and the difference that matters is
+   * enforced by the required-validator, which only exists when the field is
+   * shown. */
+  ownerSelection: string;
   vehicleSelection: string;
   category: string;
   categoryOtherLabel: string;
@@ -249,7 +313,13 @@ function toNullableTrimmedString(value: string | null | undefined): string | nul
  * 'OTHER'`, even if a future edit to the reveal logic regresses.
  */
 export function toExpensePayload(formValue: ExpenseFormValue): CreateExpensePayload {
+  const ownerSelection = String(formValue.ownerSelection ?? '').trim();
   return {
+    // OBRS-808. `Number('')` is 0, not null — and 0 is a perfectly serializable
+    // id that the backend would reject as EXPENSE_OWNER_INVALID with a message
+    // naming operator #0, which explains nothing to anyone. The explicit empty
+    // check is what keeps "not chosen" a null on the wire.
+    ownerId: ownerSelection === '' ? null : Number(ownerSelection),
     vehicleId:
       formValue.vehicleSelection === VEHICLE_CENTRAL_SENTINEL
         ? null

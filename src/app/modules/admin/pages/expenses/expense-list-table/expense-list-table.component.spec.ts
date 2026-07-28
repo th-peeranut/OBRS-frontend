@@ -8,6 +8,8 @@ import { ExpenseRow } from '../expenses-page.mappers';
 function row(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
   return {
     id: 1,
+    ownerId: 7,
+    ownerLabel: 'NJ Travel',
     vehicleId: 1,
     vehicleLabel: 'V1 / ABC-123',
     category: 'FUEL',
@@ -100,5 +102,71 @@ describe('ExpenseListTableComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('.admin-inline-actions'))).toBeNull();
+  });
+
+  // OBRS-808. Asserts what is RENDERED, not what is mounted: an *ngIf that
+  // never fires still counts as covered, so every case here reads the DOM.
+  describe('operator column (OBRS-808)', () => {
+    it('renders the operator cell for an admin', () => {
+      component.isLoading = false;
+      component.showOwnerColumn = true;
+      component.rows = [row({ ownerLabel: 'Second Lines' })];
+      fixture.detectChanges();
+
+      const cell = fixture.debugElement.query(By.css('[data-testid="expense-owner-cell"]'));
+      expect(cell).toBeTruthy();
+      expect(cell.nativeElement.textContent.trim()).toBe('Second Lines');
+    });
+
+    it('AC2: renders NO operator cell and NO header for an owner', () => {
+      component.isLoading = false;
+      component.showOwnerColumn = false;
+      component.rows = [row({ ownerLabel: 'NJ Travel' })];
+      fixture.detectChanges();
+
+      expect(fixture.debugElement.query(By.css('[data-testid="expense-owner-cell"]'))).toBeNull();
+      const headers = fixture.debugElement
+        .queryAll(By.css('thead th'))
+        .map((th) => th.nativeElement.textContent.trim());
+      expect(headers).not.toContain('ADMIN.EXPENSES.OWNER');
+    });
+
+    it('the no-match colspan tracks the real column count in every combination', () => {
+      // A colspan that undercounts leaves a ragged cell rather than failing, so
+      // it is asserted for each of the four (showOwnerColumn x canWrite) states
+      // against the header count actually rendered - not against a literal.
+      for (const showOwnerColumn of [false, true]) {
+        for (const canWrite of [false, true]) {
+          component.isLoading = false;
+          component.isEmpty = false;
+          component.rows = [];
+          component.showOwnerColumn = showOwnerColumn;
+          component.canWrite = canWrite;
+          fixture.detectChanges();
+
+          const headerCount = fixture.debugElement.queryAll(By.css('thead th')).length;
+          const colspan = fixture.debugElement
+            .query(By.css('.admin-empty-row td'))
+            .nativeElement.getAttribute('colspan');
+          expect(Number(colspan))
+            .withContext(`showOwnerColumn=${showOwnerColumn} canWrite=${canWrite}`)
+            .toBe(headerCount);
+        }
+      }
+    });
+
+    it('the skeleton row has one cell per header while loading', () => {
+      // Same defect class as the colspan: a missing skeleton cell shifts every
+      // column of the loading table one place left, which looks like a layout
+      // glitch rather than a bug and so never gets reported.
+      component.isLoading = true;
+      component.showOwnerColumn = true;
+      component.canWrite = true;
+      fixture.detectChanges();
+
+      const headerCount = fixture.debugElement.queryAll(By.css('thead th')).length;
+      const skeletonCells = fixture.debugElement.queryAll(By.css('.admin-skeleton-row:first-of-type td')).length;
+      expect(skeletonCells).toBe(headerCount);
+    });
   });
 });

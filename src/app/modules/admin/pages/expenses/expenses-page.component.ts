@@ -1,6 +1,11 @@
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { Subscription, firstValueFrom } from 'rxjs';
-import { AdminApiService, AdminExpenseDto, AdminVehicleDto } from '../../../../services/admin/admin-api.service';
+import {
+  AdminApiService,
+  AdminExpenseDto,
+  AdminOwnerDto,
+  AdminVehicleDto,
+} from '../../../../services/admin/admin-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../../shared/lib/api-error';
 import { TranslateService } from '@ngx-translate/core';
@@ -15,6 +20,7 @@ import {
   toExpenseCategoryOptions,
   toExpenseRow,
   toExpenseVehicleOptions,
+  toOwnerOptions,
   vehicleIdentifier,
 } from './expenses-page.mappers';
 
@@ -45,6 +51,9 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   protected vehicleOptions: Option[] = [];
   protected vehicleFilterOptions: Option[] = [];
   protected categoryOptions: Option[] = [];
+  /** OBRS-808: only ever populated for an `admin` — the roster endpoint 403s
+   * everyone else, so it is not even requested for them. */
+  protected ownerOptions: Option[] = [];
 
   protected selectedVehicleFilter = '';
   protected selectedCategoryFilter = '';
@@ -64,6 +73,15 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
   protected selectedExpense: ExpenseRow | null = null;
 
   protected readonly canWrite: boolean;
+  /**
+   * OBRS-808. `getRoles().includes('admin')` — the same test
+   * `UsabilityReportsPageComponent` uses, deliberately NOT `canWrite` above,
+   * which is `['admin', 'owner']`. An owner may write expenses and must still
+   * never see the operator picker: the server derives their operator from the
+   * principal and ignores any `ownerId` they send, so the control would do
+   * nothing. Two different questions, two different flags.
+   */
+  protected readonly isAdmin: boolean;
 
   // Bound reloader passed to the form modal (arrow closes over `this`),
   // mirroring VehiclesPageComponent.reloadStructureBound.
@@ -73,6 +91,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
 
   private rawExpenses: AdminExpenseDto[] = [];
   private rawVehicles: AdminVehicleDto[] = [];
+  private rawOwners: AdminOwnerDto[] = [];
 
   constructor(
     private readonly adminApiService: AdminApiService,
@@ -83,6 +102,7 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
     private readonly authService: AuthService
   ) {
     this.canWrite = this.authService.hasAnyRole(['admin', 'owner']);
+    this.isAdmin = this.authService.getRoles().includes('admin');
 
     this.subscriptions.add(
       this.translate.onLangChange.subscribe(() => {
@@ -122,6 +142,31 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
 
     void this.store.refresh();
     void this.vehiclesStore.refresh();
+    void this.loadOwners();
+  }
+
+  /**
+   * OBRS-808: fetch the operator roster, admin only.
+   *
+   * Guarded on the role rather than attempted-and-caught: for an `owner` the
+   * endpoint answers 403 by design, so calling it would be requesting a refusal
+   * on every page load and teaching anyone reading the network tab that the
+   * refusal is normal. A failure here is NOT alerted — the page still loads and
+   * lists expenses fine; the consequence is confined to the create modal, which
+   * says so itself (`ownerRosterUnavailable`). Alerting on page load for a
+   * control the user may not even open would be noise.
+   */
+  private async loadOwners(): Promise<void> {
+    if (!this.isAdmin) {
+      return;
+    }
+    try {
+      const response = await firstValueFrom(this.adminApiService.getOwners());
+      this.rawOwners = response?.data ?? [];
+    } catch {
+      this.rawOwners = [];
+    }
+    this.applyLocalization();
   }
 
   ngOnDestroy(): void {
@@ -255,8 +300,17 @@ export class ExpensesPageComponent implements OnInit, OnDestroy {
       },
     ];
 
+    this.ownerOptions = toOwnerOptions(this.rawOwners);
+
     this.expenses = this.rawExpenses.map((dto) =>
-      toExpenseRow(dto, this.rawVehicles, this.categoryOptions, centralLabel, this.translate.currentLang)
+      toExpenseRow(
+        dto,
+        this.rawVehicles,
+        this.categoryOptions,
+        centralLabel,
+        this.translate.currentLang,
+        this.rawOwners
+      )
     );
     this.applyFilters();
   }

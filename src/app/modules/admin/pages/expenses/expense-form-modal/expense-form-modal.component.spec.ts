@@ -7,6 +7,8 @@ import { createTranslateStub } from '../../../../../testing/test-stubs';
 
 const VEHICLE_ROW: ExpenseRow = {
   id: 1,
+  ownerId: 7,
+  ownerLabel: 'NJ Travel',
   vehicleId: 1,
   vehicleLabel: 'V1 / ABC-123',
   category: 'FUEL',
@@ -58,6 +60,17 @@ function makeComponent() {
   ];
   component.reloadStructure = jasmine.createSpy('reloadStructure').and.resolveTo(undefined);
   return { component, adminApiServiceSpy, alertServiceSpy };
+}
+
+/** OBRS-808: the same component, but as an admin who has a roster in hand. */
+function makeAdminComponent() {
+  const made = makeComponent();
+  made.component.isAdmin = true;
+  made.component.ownerOptions = [
+    { code: '7', label: 'NJ Travel' },
+    { code: '9', label: 'Second Operator' },
+  ];
+  return made;
 }
 
 function openCreate(component: ExpenseFormModalComponent): void {
@@ -127,6 +140,11 @@ describe('ExpenseFormModalComponent', () => {
       await (component as any).submitExpense();
 
       expect(adminApiServiceSpy.updateExpense).toHaveBeenCalledWith(VEHICLE_ROW.id, {
+        // OBRS-808: null on PUT, always. The backend ignores ownerId there for
+        // every caller (re-attribution is delete-and-recreate), and the edit
+        // form never renders the picker, so anything else here would mean a
+        // stale value survived a modal reuse.
+        ownerId: null,
         vehicleId: 1,
         category: 'FUEL',
         categoryOtherLabel: null,
@@ -195,6 +213,11 @@ describe('ExpenseFormModalComponent', () => {
 
       const payload = adminApiServiceSpy.createExpense.calls.mostRecent().args[0];
       expect(payload).toEqual({
+        // OBRS-808: this caller is not an admin, so the picker never rendered
+        // and the key is an explicit null rather than an omission — the backend
+        // ignores it for non-admins either way, but a missing key would mean
+        // toExpensePayload had branched, and it must not.
+        ownerId: null,
         vehicleId: null,
         category: 'FUEL',
         categoryOtherLabel: null,
@@ -224,6 +247,122 @@ describe('ExpenseFormModalComponent', () => {
 
       const payload = adminApiServiceSpy.createExpense.calls.mostRecent().args[0];
       expect(payload.categoryOtherLabel).toBeNull();
+    });
+  });
+
+  // OBRS-808. The bug this card closes is a 400 that only an `admin` could hit,
+  // so every test here names the role it is speaking for.
+  describe('operator picker (OBRS-808)', () => {
+    const VALID_REST = {
+      vehicleSelection: VEHICLE_CENTRAL_SENTINEL,
+      category: 'FUEL',
+      amount: 500,
+      expenseDate: new Date(2026, 6, 24),
+    };
+
+    it('AC2: an owner never sees the picker, and their form is still submittable without one', async () => {
+      const { component, adminApiServiceSpy } = makeComponent(); // isAdmin defaults false
+      openCreate(component);
+
+      expect(component['showOwnerPicker']).toBeFalse();
+
+      (component as any).expenseForm.patchValue(VALID_REST);
+      await (component as any).submitExpense();
+
+      // The real assertion is that the create HAPPENED. A required validator
+      // left switched on for a field the owner cannot see would block submit
+      // with no visible error to fix — a worse bug than the one being fixed.
+      expect(adminApiServiceSpy.createExpense).toHaveBeenCalled();
+      expect(adminApiServiceSpy.createExpense.calls.mostRecent().args[0].ownerId).toBeNull();
+    });
+
+    it('AC1: an admin sees the picker in create mode', () => {
+      const { component } = makeAdminComponent();
+      openCreate(component);
+
+      expect(component['showOwnerPicker']).toBeTrue();
+    });
+
+    it('AC3: an admin who has not chosen an operator cannot submit — blocked here, not by a 400', async () => {
+      const { component, adminApiServiceSpy, alertServiceSpy } = makeAdminComponent();
+      openCreate(component);
+
+      (component as any).expenseForm.patchValue(VALID_REST); // everything BUT the operator
+
+      await (component as any).submitExpense();
+
+      expect(adminApiServiceSpy.createExpense).not.toHaveBeenCalled();
+      expect(alertServiceSpy.warning).toHaveBeenCalled();
+    });
+
+    it('AC1: an admin who chooses an operator sends it as a NUMBER', async () => {
+      const { component, adminApiServiceSpy } = makeAdminComponent();
+      openCreate(component);
+
+      (component as any).expenseForm.patchValue({ ...VALID_REST, ownerSelection: '9' });
+      await (component as any).submitExpense();
+
+      const payload = adminApiServiceSpy.createExpense.calls.mostRecent().args[0];
+      // Not '9'. The dropdown's value is a string by construction; a string id
+      // reaching a Long field is the kind of thing that works until it does not.
+      expect(payload.ownerId).toBe(9);
+    });
+
+    it('does not show the picker on EDIT, even for an admin — the backend ignores ownerId on PUT', () => {
+      const { component } = makeAdminComponent();
+      openEdit(component, VEHICLE_ROW);
+
+      expect(component['showOwnerPicker']).toBeFalse();
+      // ...and instead names the operator as read-only text.
+      expect(component['editingOwnerLabel']).toBe('NJ Travel');
+    });
+
+    it('a create AFTER an edit is required again — the validator is re-applied, not left cleared', async () => {
+      // The failure this catches: one component instance serves every open, so
+      // clearing the validator for an edit and never restoring it would let the
+      // NEXT create submit with no operator and hit the exact 400 this card is
+      // about. Nothing in a single-open test would notice.
+      const { component, adminApiServiceSpy, alertServiceSpy } = makeAdminComponent();
+
+      openEdit(component, VEHICLE_ROW);
+      openCreate(component);
+
+      (component as any).expenseForm.patchValue(VALID_REST);
+      await (component as any).submitExpense();
+
+      expect(adminApiServiceSpy.createExpense).not.toHaveBeenCalled();
+      expect(alertServiceSpy.warning).toHaveBeenCalled();
+    });
+
+    it('an edit AFTER a create is submittable — the validator is cleared, not left on an invisible field', async () => {
+      // The mirror image, and the reason set/clear live in one method: a
+      // required validator surviving into edit mode makes the form permanently
+      // invalid with no field on screen to fill in.
+      const { component, adminApiServiceSpy } = makeAdminComponent();
+
+      openCreate(component);
+      openEdit(component, VEHICLE_ROW);
+
+      await (component as any).submitExpense();
+
+      expect(adminApiServiceSpy.updateExpense).toHaveBeenCalled();
+    });
+
+    it('warns an admin when the roster came back empty, instead of offering an empty dropdown', () => {
+      const { component } = makeComponent();
+      component.isAdmin = true;
+      component.ownerOptions = []; // the fetch failed
+      openCreate(component);
+
+      expect(component['showOwnerPicker']).toBeTrue(); // still shown - see the input's javadoc
+      expect(component['ownerRosterUnavailable']).toBeTrue();
+    });
+
+    it('does not warn a non-admin about a roster they were never meant to have', () => {
+      const { component } = makeComponent();
+      openCreate(component);
+
+      expect(component['ownerRosterUnavailable']).toBeFalse();
     });
   });
 

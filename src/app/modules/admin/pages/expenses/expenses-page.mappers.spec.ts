@@ -1,21 +1,40 @@
-import { AdminExpenseDto, AdminVehicleDto } from '../../../../services/admin/admin-api.service';
+import {
+  AdminExpenseDto,
+  AdminOwnerDto,
+  AdminVehicleDto,
+} from '../../../../services/admin/admin-api.service';
 import {
   EXPENSE_CATEGORY_CODES,
   ExpenseRow,
   Option,
   VEHICLE_CENTRAL_SENTINEL,
   filterExpensesByCategoryAndRange,
+  ownerIdentifier,
   toDateControlValue,
   toExpenseCategoryDisplay,
   toExpenseCategoryOptions,
   toExpensePayload,
   toExpenseRow,
   toExpenseVehicleOptions,
+  toOwnerOptions,
   toIsoDateString,
 } from './expenses-page.mappers';
 
 const VAN: AdminVehicleDto = { id: 1, vehicleNumber: 'V1', numberPlate: 'ABC-123' };
 const BUS: AdminVehicleDto = { id: 2, vehicleNumber: undefined, numberPlate: undefined };
+
+const NJ: AdminOwnerDto = {
+  id: 7,
+  slug: 'nj-travel',
+  displayName: 'NJ Travel',
+  legalName: 'ห้างหุ้นส่วนจำกัด เอ็นเจ ทราเวล',
+};
+const SECOND: AdminOwnerDto = {
+  id: 9,
+  slug: 'second-lines',
+  displayName: 'Second Lines',
+  legalName: 'Second Lines',
+};
 
 const CATEGORY_LABELS = {
   fuel: 'Fuel',
@@ -37,6 +56,8 @@ function categoryOptions(): Option[] {
 function makeRow(overrides: Partial<ExpenseRow> = {}): ExpenseRow {
   return {
     id: 1,
+    ownerId: 7,
+    ownerLabel: 'NJ Travel',
     vehicleId: 1,
     vehicleLabel: 'V1 / ABC-123',
     category: 'FUEL',
@@ -133,6 +154,36 @@ describe('expenses-page.mappers', () => {
       expect(row.vehicleLabel).toBe('#99');
     });
 
+    // OBRS-808
+    it('resolves the operator label from the roster', () => {
+      const row = toExpenseRow({ ...dto, ownerId: 7 }, [VAN], categoryOptions(), 'Central', 'th', [NJ, SECOND]);
+      expect(row.ownerId).toBe(7);
+      expect(row.ownerLabel).toBe('NJ Travel (ห้างหุ้นส่วนจำกัด เอ็นเจ ทราเวล)');
+    });
+
+    it('falls back to #id when the operator is not in the roster — never a blank cell', () => {
+      // A blank operator cell reads as "central/none", which is a lie: every
+      // expense has exactly one operator (NOT NULL since V55). Same reasoning
+      // as the vehicle #id fallback directly above.
+      const row = toExpenseRow({ ...dto, ownerId: 99 }, [VAN], categoryOptions(), 'Central', 'th', [NJ]);
+      expect(row.ownerLabel).toBe('#99');
+    });
+
+    it('leaves the label empty when NO roster was passed — an owner never fetches one', () => {
+      // Not '#7'. An owner caller is 403'd by the roster endpoint and does not
+      // render the column at all, so an id here would be a value nobody shows
+      // and everybody has to reason about.
+      const row = toExpenseRow({ ...dto, ownerId: 7 }, [VAN], categoryOptions(), 'Central', 'th');
+      expect(row.ownerId).toBe(7);
+      expect(row.ownerLabel).toBe('');
+    });
+
+    it('maps a response with no ownerId at all to null, not undefined', () => {
+      const row = toExpenseRow(dto, [VAN], categoryOptions(), 'Central', 'th', [NJ]);
+      expect(row.ownerId).toBeNull();
+      expect(row.ownerLabel).toBe('');
+    });
+
     it('never sends/reads audit fields — a response DTO with them still maps to a row with none', () => {
       const dtoWithAudit = {
         ...dto,
@@ -147,6 +198,41 @@ describe('expenses-page.mappers', () => {
       >;
       expect(row['createdByName']).toBeUndefined();
       expect(row['updatedByName']).toBeUndefined();
+    });
+  });
+
+  // OBRS-808
+  describe('toOwnerOptions / ownerIdentifier', () => {
+    it('maps id to a STRING code, because the dropdown coerces every value anyway', () => {
+      expect(toOwnerOptions([NJ])).toEqual([
+        { code: '7', label: 'NJ Travel (ห้างหุ้นส่วนจำกัด เอ็นเจ ทราเวล)' },
+      ]);
+    });
+
+    it('preserves the order the backend sent — it orders by displayName in SQL', () => {
+      // Passed deliberately out of alphabetical order: a client-side re-sort
+      // would silently become the real ordering the day the two disagree, and
+      // then only this test would notice which one is authoritative.
+      const codes = toOwnerOptions([SECOND, NJ]).map((option) => option.code);
+      expect(codes).toEqual(['9', '7']);
+    });
+
+    it('never emits an option with code "" — there is no such thing as an unowned expense', () => {
+      // The counterpart of VEHICLE_CENTRAL_SENTINEL above: "central" is a real
+      // vehicle answer, so it needs an option; "no operator" is not a real
+      // answer at all (expenses.owner_id is NOT NULL), so it must not get one.
+      const options = toOwnerOptions([NJ, SECOND]);
+      expect(options.every((option) => option.code !== '')).toBeTrue();
+      expect(options.length).toBe(2);
+    });
+
+    it('omits a legalName identical to the displayName rather than repeating it', () => {
+      expect(ownerIdentifier(SECOND)).toBe('Second Lines');
+    });
+
+    it('falls back to the legal name, then to #id, when displayName is missing', () => {
+      expect(ownerIdentifier({ ...NJ, displayName: '  ' })).toBe('ห้างหุ้นส่วนจำกัด เอ็นเจ ทราเวล');
+      expect(ownerIdentifier({ ...NJ, displayName: '', legalName: '' })).toBe('#7');
     });
   });
 
@@ -182,6 +268,7 @@ describe('expenses-page.mappers', () => {
   describe('toExpensePayload — full-DTO payload assertions (UX-OBRS-685 §4.1.1)', () => {
     it('submits vehicleId: null literally (never "") when Central/Not-linked is chosen', () => {
       const payload = toExpensePayload({
+        ownerSelection: '',
         vehicleSelection: VEHICLE_CENTRAL_SENTINEL,
         category: 'FUEL',
         categoryOtherLabel: '',
@@ -194,6 +281,7 @@ describe('expenses-page.mappers', () => {
       });
 
       expect(payload).toEqual({
+        ownerId: null,
         vehicleId: null,
         category: 'FUEL',
         categoryOtherLabel: null,
@@ -208,6 +296,7 @@ describe('expenses-page.mappers', () => {
 
     it('submits a real numeric vehicleId (never a string) when a specific vehicle is chosen', () => {
       const payload = toExpensePayload({
+        ownerSelection: '',
         vehicleSelection: '1',
         category: 'GPS',
         categoryOtherLabel: '',
@@ -220,6 +309,7 @@ describe('expenses-page.mappers', () => {
       });
 
       expect(payload).toEqual({
+        ownerId: null,
         vehicleId: 1,
         category: 'GPS',
         categoryOtherLabel: null,
@@ -234,6 +324,7 @@ describe('expenses-page.mappers', () => {
 
     it('submits categoryOtherLabel trimmed when category is OTHER', () => {
       const payload = toExpensePayload({
+        ownerSelection: '',
         vehicleSelection: VEHICLE_CENTRAL_SENTINEL,
         category: 'OTHER',
         categoryOtherLabel: '  ล้างรถ  ',
@@ -250,6 +341,7 @@ describe('expenses-page.mappers', () => {
 
     it('submits categoryOtherLabel: null when category is not OTHER, even if the control still holds a stale label', () => {
       const payload = toExpensePayload({
+        ownerSelection: '',
         vehicleSelection: VEHICLE_CENTRAL_SENTINEL,
         category: 'FUEL',
         // A stale value the visible control never actually reset (defends
