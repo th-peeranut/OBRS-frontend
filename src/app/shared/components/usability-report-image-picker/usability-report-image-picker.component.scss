@@ -12,7 +12,8 @@
 // would put two different greys on the same dialog. Checked by grepping every
 // reference to `app-usability-report-image-picker` rather than trusting the
 // "used by ... today" comment above. The wider $text-lightgrey question
-// (~49 sites elsewhere in the repo) is still OBRS-817's to answer.
+// (~49 sites elsewhere in the repo) was answered by OBRS-769: no legible value
+// exists for that token, so it was deleted and every site landed here.
 .ur-image-picker__hint {
   font-size: $font-size-xs;
   color: $text-lightblack;
@@ -116,9 +117,10 @@
 // legible -- which is exactly why measuring alone would never have surfaced it.
 // It is the same defect the card is about: a surface that never goes dark.
 //
-// LIGHT is untouched. `$text-lightgrey` on `.ur-image-picker__hint` /
-// `.report-preview-remove` is 2.78:1 on white and stays that way here: it is
-// part of the ~49-site token question the owner routed to OBRS-817.
+// LIGHT was untouched by that card. `$text-lightgrey` on `.ur-image-picker__hint`
+// / `.report-preview-remove` was 2.78:1 on white and stayed that way here,
+// pending the ~49-site token question the owner routed onward. OBRS-769 closed
+// it: the token is deleted, and both sites read $text-lightblack in light.
 // ─────────────────────────────────────────────────────────────────────────────
 :host-context(body.is-dark) {
   .ur-image-picker__hint {

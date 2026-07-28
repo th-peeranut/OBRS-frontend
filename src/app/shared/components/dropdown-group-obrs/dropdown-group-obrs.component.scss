@@ -46,7 +46,7 @@
 
 .dropdown-header {
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .dropdown-option {
@@ -94,12 +94,13 @@
   border-bottom: 1px solid $primary-grey;
 }
 
-// $text-lightgrey (#989ba4) is 2.78:1 on the white panel — sub-AA in LIGHT mode,
+// Was $text-lightgrey (#989ba4), 2.78:1 on the white panel — sub-AA in LIGHT mode,
 // not only dark, and this icon is the search affordance rather than decoration.
-// Repointed to $text-lightblack (#717581, 4.60:1), the token OBRS-752 already
-// moved to clear the floor. Only the sites this card renders are repointed; the
-// other ~49 $text-lightgrey foregrounds in the repo are a token-wide decision
-// with its own card (OBRS-817).
+// Repointed to $text-lightblack (#717581, 4.60:1) by OBRS-811, which repointed only
+// the sites it rendered and left the other ~49 to a token-wide decision.
+// OBRS-769 made that decision: $text-lightgrey is gone from variables.scss entirely
+// (no legible value exists for it — see the note there), so this is now the token
+// every muted foreground in the light theme uses.
 .dropdown-search-icon {
   flex: 0 0 auto;
   font-size: $font-size-md;

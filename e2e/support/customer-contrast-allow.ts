@@ -83,29 +83,54 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // the evidence, not an inference. `body.is-dark` is asserted by the sweep, so
   // the theme did apply -- the page's own surfaces just ignore it.
   // -------------------------------------------------------------------------
-  'dark|span.label|#989ba4-on-#ffffff': '2.78:1 -- OBRS-768, the booking card is still white in dark mode',
-  'dark|div > dt|#989ba4-on-#ffffff': '2.78:1 -- OBRS-768, the booking card is still white in dark mode',
-  'dark|header.my-bookings__header > p|#717581-on-#f9f9ff': '4.39:1 -- OBRS-768, the page section is still light in dark mode',
+  // Three of this family's TEXT rows are gone as of OBRS-769, and NOT because
+  // OBRS-768 was fixed -- these pages still ignore dark mode, which is why the
+  // two boundary rows below are still here. What changed is that the colour they
+  // were measuring stopped being sub-AA: repainting a white surface's text for
+  // LIGHT mode necessarily repaints it in dark too, on a page whose surface is
+  // white in both. The three that left:
+  //
+  //   dark|span.label|#989ba4-on-#ffffff                  2.78 -> 4.60
+  //   dark|div > dt|#989ba4-on-#ffffff                    2.78 -> 4.60
+  //   dark|header.my-bookings__header > p|#717581-on-#f9f9ff  4.39 -> 6.68
+  //
+  // Worth stating plainly, because "an OBRS-769 fix closed OBRS-768 rows" reads
+  // like scope creep and is the opposite: 768 owns the SURFACE, and the surface
+  // has not moved.
   'dark|button.filter-pill|boundary-on-#f9f9ff': '1.28:1 -- OBRS-768, unthemed surface (boundary debt itself is OBRS-772)',
   'dark|button.actions-menu-btn|boundary-on-#ffffff': '1.35:1 -- OBRS-768, unthemed surface (boundary debt itself is OBRS-772)',
 
   // -------------------------------------------------------------------------
-  // OBRS-769 -- the muted text tokens are below AA on the surfaces they are
-  // actually used on. $text-lightgrey #989ba4 is 2.78:1 on white; $text-lightblack
-  // #717581 clears 4.5 on white (4.60) and misses it on the two tints.
-  // Invisible to check-brand-fill-contrast.mjs by construction: these elements
-  // inherit their background from an ancestor, so `color` and `background` are
-  // never in the same rule block.
+  // OBRS-769 -- FIXED (2026-07-28), and OBRS-817 was the same defect filed twice
+  // (opened from OBRS-811 without checking this register, which already named
+  // four of its sites). Six entries used to sit here:
+  //
+  //   light|span.label|#989ba4-on-#ffffff                     2.78 -> 4.60
+  //   light|div > dt|#989ba4-on-#ffffff                       2.78 -> 4.60
+  //   light|span.small|#989ba4-on-#ffffff                     2.78 -> 4.60
+  //   light|span.recent-routes-title|#989ba4-on-#ffffff       2.78 -> 4.60
+  //   light|span.placeholder-text...|#717581-on-#edf9fe       4.29 -> 6.53
+  //   light|header.my-bookings__header > p|#717581-on-#f9f9ff 4.39 -> 6.68
+  //
+  // TWO tokens, TWO opposite verdicts, and the census is what separated them --
+  // `obrs-769-census.spec.ts`, which reuses MEASURE to report every
+  // sighting of a hex rather than only the failing ones:
+  //
+  //   * $text-lightgrey #989ba4 was DELETED. All 44 of its declarations were
+  //     foregrounds, and it rendered on exactly two backgrounds in the whole
+  //     shell: #ffffff (39 sightings, 2.78:1) and $dk-bg-soft #22263a (one,
+  //     5.38:1). No value fixes both -- 4.5:1 on white caps luminance at 0.183
+  //     and 4.5:1 on #22263a floors it at 0.266 -- and no value can be a tier
+  //     ABOVE $text-lightblack either, since that token clears AA by 0.10. A
+  //     fourth muted grey was never legible and could not be made legible.
+  //   * $text-lightblack #717581 was KEPT, and its two sub-AA sites repointed to
+  //     $text-softblack. 25 other measured sites sit on white at 4.60:1; moving
+  //     the token for two would be the trade OBRS-752 refused, in reverse.
+  //
+  // The one #989ba4 site that was legible (`.recent-routes-title` on the dark
+  // booking card) got a `:host-context` dark rule rather than the repoint, which
+  // is why the entry for it is gone from BOTH themes rather than swapped.
   // -------------------------------------------------------------------------
-  'light|span.label|#989ba4-on-#ffffff': '2.78:1 -- OBRS-769 $text-lightgrey on white',
-  'light|div > dt|#989ba4-on-#ffffff': '2.78:1 -- OBRS-769 $text-lightgrey on white',
-  'light|span.small|#989ba4-on-#ffffff': '2.78:1 -- OBRS-769 $text-lightgrey on white',
-  // The caption above the recent-route strip -- OBRS-575's own component, and
-  // the same token. Its DARK twin passes (#989ba4 on $dk-bg-soft is 4.9:1), so
-  // this is a light-mode palette defect, not a theming one.
-  'light|span.recent-routes-title|#989ba4-on-#ffffff': '2.78:1 -- OBRS-769 $text-lightgrey on white',
-  'light|span.placeholder-text.small.text-center|#717581-on-#edf9fe': '4.29:1 -- OBRS-769 $text-lightblack on $secondary-lightgrey',
-  'light|header.my-bookings__header > p|#717581-on-#f9f9ff': '4.39:1 -- OBRS-769 $text-lightblack on $secondary-grey',
 
   // -------------------------------------------------------------------------
   // OBRS-771 -- FIXED. Seven entries used to sit here, and they were TWO

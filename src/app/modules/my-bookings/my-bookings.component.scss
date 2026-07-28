@@ -31,10 +31,17 @@
     color: $text-black;
   }
 
+  // OBRS-769: was $text-lightblack, 4.39:1 on this page's $secondary-grey
+  // (#f9f9ff) — measured in BOTH themes, since /my-bookings does not respond to
+  // dark mode at all (OBRS-768), so the same 4.39 was on the register twice.
+  // $text-softblack is 6.68:1 on the same tint. The identical header block on
+  // /account, /account/notifications, /my-parcels and /my-reports was repointed
+  // with it: same shell pattern, same tint, same number, and only this one was
+  // in the gate's eight pages to say so.
   p {
     margin: 0;
     font-size: 15px;
-    color: $text-lightblack;
+    color: $text-softblack;
   }
 }
 
@@ -90,7 +97,7 @@
 
     .label {
       font-size: $font-size-xs;
-      color: $text-lightgrey;
+      color: $text-lightblack;
     }
 
     strong {
@@ -180,7 +187,7 @@
 
   dt {
     font-size: $font-size-xs;
-    color: $text-lightgrey;
+    color: $text-lightblack;
     margin-bottom: 4px;
     font-weight: $font-weight-regular;
   }

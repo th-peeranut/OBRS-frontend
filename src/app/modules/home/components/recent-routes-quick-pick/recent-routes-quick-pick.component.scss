@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // AC#5: :host carries NO box styling (no margin/padding/min-height/display) of
 // its own — an empty `<app-recent-routes-quick-pick>` (zero routes) must
@@ -19,7 +20,18 @@
 
 .recent-routes-title {
   font-size: $font-size-sm;
-  color: $text-lightgrey;
+  color: $text-lightblack;
+}
+
+// OBRS-769. This caption was the ONE place in the whole customer sweep where the
+// deleted $text-lightgrey (#989ba4) sat on a themed DARK surface rather than on
+// white: 5.38:1 on the booking card's $dk-bg-soft, measured, against 2.78:1 for
+// the other 38 sightings. So the light-mode repoint that fixed those would have
+// broken this one instead — $text-lightblack is 3.25:1 on #22263a.
+// `:host-context` rather than dark-theme.scss for the usual reason (OBRS-767):
+// the component's own rule outranks any `body.is-dark .a .b`.
+:host-context(body.is-dark) .recent-routes-title {
+  color: $dk-text-muted;
 }
 
 .recent-routes-list {

@@ -125,8 +125,9 @@ li {
 //   app-dropdown-obrs .dropdown-menu  #ffffff panel
 //
 // which is the "fixed the measured one, left its neighbour" failure. Same
-// tokens, same `:host-context` mechanism (OBRS-767); LIGHT mode is untouched
-// here — the $text-lightgrey sites in this family are OBRS-817's call.
+// tokens, same `:host-context` mechanism (OBRS-767); LIGHT mode was untouched
+// here — the $text-lightgrey sites in this family were left to a token-wide
+// decision, which OBRS-769 has since made (the token is gone — variables.scss).
 // ─────────────────────────────────────────────────────────────────────────────
 :host-context(body.is-dark) {
   .btn.dropdown-toggle {

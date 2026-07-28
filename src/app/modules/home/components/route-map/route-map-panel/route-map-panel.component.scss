@@ -22,8 +22,15 @@
   color: $primary-blue;
 }
 
+// OBRS-769: $text-lightblack is 4.60:1 on white and 4.29:1 on the tint this
+// placeholder actually sits on ($secondary-lightgrey #edf9fe, declared eleven
+// lines up) — measured on the live page, which is the whole point of the card:
+// the binding surface is the tint, never white. Repointed rather than moving the
+// token, because $text-lightblack clears the floor at 25 other measured sites and
+// this is one of two that do not. That is the trade OBRS-752 made for
+// $text-softblack and refused to make in reverse. $text-softblack is 6.53:1 here.
 .placeholder-text {
-  color: $text-lightblack;
+  color: $text-softblack;
 }
 
 .route-map-wrap {

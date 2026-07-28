@@ -188,7 +188,7 @@
 
   &:disabled {
     cursor: not-allowed;
-    color: $text-lightgrey;
+    color: $text-lightblack;
     border-color: $primary-lightgrey;
     background: $secondary-grey;
   }
@@ -196,7 +196,7 @@
 
 .refresh-hint {
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .qr-footer {

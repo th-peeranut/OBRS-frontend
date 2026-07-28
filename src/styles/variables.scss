@@ -60,15 +60,50 @@ $secondary-grey: #f9f9ff;
 $secondary-lightgrey: #edf9fe;
 
 $text-black: #353c44;
-$text-lightblack: #717581;   // was #757a86 (4.30:1 on white). now 4.60:1
-$text-softblack: #535968;    // unchanged: 7.62:1 on white. Its two sub-AA sites sat on
+$text-lightblack: #717581;   // was #757a86 (4.30:1 on white). now 4.60:1. NOT moved again by
+                             // OBRS-769: its only two sub-AA sites were on the tints
+                             // ($secondary-lightgrey 4.29:1, $secondary-grey 4.39:1) and were
+                             // repointed to $text-softblack, the same trade OBRS-752 made for
+                             // $text-softblack itself. Measured on 8 pages x 2 themes: 25 other
+                             // sites sit on white at 4.60:1 and did not need to move.
+$text-softblack: #535968;    // unchanged: 7.01:1 on white (this comment said 7.62 from
+                             // OBRS-752 until OBRS-769 re-derived it with the same WCAG
+                             // formula the contrast gate uses — which reproduces every
+                             // other number in this block exactly, so the 7.62 was the
+                             // outlier). Still far clear of AA either way; recorded
+                             // because a palette comment is read as measured.
+                             // Its two sub-AA sites sat on
                              // $primary-grey and were repointed to $text-black instead of
                              // moving a 66-use token for 2 sites (OBRS-752)
 $text-red: #c33334;          // was #cb393a (4.24:1 on the #fde7e7 error wash). now 4.62:1
 $text-white: #ffffff;
 $text-blue: #2d7799;         // was #3c9bc6 (2.92:1 on $secondary-lightgrey). now 4.65:1
-$text-lightgrey: #989ba4;
 $text-primary: #3B61A9;      // same colour as $secondary-blue under a second name; both moved
+
+// $text-lightgrey (#989ba4) WAS HERE, and is gone rather than moved — OBRS-769 (which
+// OBRS-817 duplicated). It was the last token in this group with no note on it, and the
+// worst in it: 2.78:1 on white, at 44 declarations across 23 files, every one of them a
+// FOREGROUND (`grep -c 'color: $text-lightgrey'` — there was not a single border, fill or
+// decorative use to argue the 3:1 floor with).
+//
+// It is deleted rather than repainted because no value can do the job the name implies.
+// A "lighter muted" tier has to be lighter than $text-lightblack and still clear 4.5:1 on
+// white — and $text-lightblack clears it by 0.10. The whole window is 4.50–4.60:1, which
+// is not a tier, it is a rounding error. So the fourth muted grey was never legible and
+// could not be made legible; the honest fix is three muted tiers, not four.
+//
+// WHAT REPLACED IT, and why it is two things rather than one:
+//   * light  -> $text-lightblack. Measured, not assumed: the sweep found #989ba4 on exactly
+//     two backgrounds in the whole customer shell — #ffffff (39 sightings, 2.78:1) and
+//     $dk-bg-soft #22263a (ONE, 5.38:1).
+//   * dark, and only where the surface actually goes dark -> $dk-text-muted, in the
+//     component's own `:host-context(body.is-dark)` (OBRS-767's rule). #989ba4 was legible
+//     on those surfaces and $text-lightblack is not (3.25:1 on #22263a, 3.49:1 on #1d2226),
+//     so a blanket repoint would have traded a light-mode defect for a dark-mode one.
+//     Eight sites needed that override; every other site was proven to keep a WHITE surface
+//     in dark mode, where the repoint is an improvement in BOTH themes.
+// Do not reintroduce this token. A new muted foreground is $text-lightblack on light and
+// $dk-text-muted on dark, and which one you need depends on the surface, not the name.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-shell brand tokens (design-system §2)

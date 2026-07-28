@@ -60,7 +60,7 @@
   .text-section {
     .option-hint-text {
       font-size: $font-size-xs;
-      color: $text-lightgrey;
+      color: $text-lightblack;
     }
   }
 
@@ -85,7 +85,7 @@
 .passenger-max-hint {
   padding: $space-3xs 10px 2px;
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 li {
@@ -131,9 +131,10 @@ li {
 // dropdown inside the same `.booking-card` on `/`. Measured at
 // `#353c44 on #22263a = 1.34:1` before this block — the passenger count you have
 // already chosen, painted in the light theme's near-black on the dark card.
-// LIGHT is untouched here: `.option-hint-text` and `.passenger-max-hint` still
-// use $text-lightgrey (2.78:1 on white), which belongs to the token-wide
-// decision in OBRS-817 rather than to this card.
+// LIGHT was untouched here: `.option-hint-text` and `.passenger-max-hint` were
+// left at $text-lightgrey (2.78:1 on white) for a token-wide decision this card
+// would not make. OBRS-769 made it and deleted the token, so both now read
+// $text-lightblack in light (4.60:1) and keep the $dk-text-muted below.
 // ─────────────────────────────────────────────────────────────────────────────
 :host-context(body.is-dark) {
   .btn.dropdown-toggle {

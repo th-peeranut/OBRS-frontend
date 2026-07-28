@@ -79,7 +79,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 
   p {
     margin: 0;
@@ -123,7 +123,7 @@
   justify-content: center;
   gap: 8px;
   height: clamp(220px, 50vh, 320px);
-  color: $text-lightgrey;
+  color: $text-lightblack;
   text-align: center;
 
   .material-symbols-outlined {
@@ -138,7 +138,27 @@
 .trip-track-panel__last-update {
   margin: 8px 0 0;
   font-size: $font-size-sm;
-  color: $text-lightgrey;
+  color: $text-lightblack;
+}
+
+// OBRS-769. The three muted runs above used to be $text-lightgrey (#989ba4),
+// which was 5.77:1 on this panel's dark #1d2226 and 2.78:1 on its white light
+// surface — legible in exactly the theme nobody filed a bug about. Deleting that
+// token repointed them to $text-lightblack (4.60:1 on white, the fix), and
+// $text-lightblack is 3.49:1 on #1d2226, so the dark side has to be re-asserted
+// here or the repoint just moves the defect.
+// #9fb0bb is --admin-muted's dark value, the same copy-from-admin-theme idiom the
+// rest of this file uses (see the header): 7.18:1 on #1d2226.
+// This panel is NOT in the contrast gate's eight pages, so these numbers are
+// computed from the surfaces the rules above actually declare, not measured on a
+// live page — the sweep that would measure them is OBRS-812.
+:host-context(body.is-dark) {
+  .trip-track-panel__loading,
+  .trip-track-panel__error,
+  .trip-track-panel__map-unavailable,
+  .trip-track-panel__last-update {
+    color: #9fb0bb;
+  }
 }
 
 .trip-track-panel__state-body {

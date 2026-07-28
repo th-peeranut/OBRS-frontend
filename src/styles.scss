@@ -210,7 +210,7 @@ label {
 }
 
 .p-calendar.app-date-field .p-inputtext::placeholder {
-  color: var(--admin-muted, #{$text-lightgrey});
+  color: var(--admin-muted, #{$text-lightblack});
 }
 
 .p-calendar.app-date-field .p-inputtext:focus {

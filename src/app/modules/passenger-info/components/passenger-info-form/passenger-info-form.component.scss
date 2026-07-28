@@ -61,7 +61,7 @@
 
 .fare-category-hint {
   display: block;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .form-row {
@@ -199,7 +199,7 @@
 
 .seat-map-legend-title {
   font-weight: $font-weight-medium;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .seat-map-legend-item {
@@ -268,7 +268,7 @@
   .text-section {
     .option-hint-text {
       font-size: $font-size-xs;
-      color: $text-lightgrey;
+      color: $text-lightblack;
     }
   }
 
@@ -292,7 +292,7 @@
 .passenger-max-hint {
   padding-top: $space-3xs;
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 @media (max-width: 992px) {

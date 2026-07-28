@@ -38,7 +38,6 @@
       "config": "playwright.gate.config.ts",
       "why": "Anonymous booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues."
     },
-
     {
       "spec": "focus-retention.spec.ts",
       "lane": "GATE",
@@ -87,7 +86,6 @@
       "config": "playwright.gate.config.ts",
       "why": "OBRS-775. Widens OBRS-753's one-module check to every page this lane can reach hermetically -- nine customer pages, nine public/auth-entry routes, twenty-nine admin/staff/session-bound routes, 47 screens in all -- and fails on any display:inline custom-element host holding in-flow block children that is not named on its ALLOW list with a reason. OBRS-776 added the twelve admin/staff pages and a second half: it derives from the source tree which components render p-tabview/p-tabpanel/p-card/p-calendar and fails on any the sweep did not MOUNT, because a clean census cannot tell a page that is well-formed from a page nobody opened -- which is what a global rule in src/styles/ needs before it can be trusted. Hermetic on the same terms as the rest of the lane: it reuses e2e/support/customer-pages.ts for the customer group and stubs every /api/** call itself for the other two, aborts Maps, and mints no session anywhere. Needs a DEVELOPMENT build for the same reason customer-contrast-gate does (window.ng, for the NgRx store seed). OBRS-782 reached the last seven components OBRS-776 had excused by variant, by giving SweepPage a `fixture` (per-screen JSON answered ahead of the empty backend) alongside its `act`: NOT_SWEPT is down to app-parcel-trip-form, which expires by itself when its feature flag flips. Still hermetic -- a fixture is one more canned answer from the same page.route, not a backend. The five added screens turned up three malformed hosts nothing had ever measured."
     },
-
     {
       "spec": "admin-critical-paths.spec.ts",
       "lane": "SIT-LIVE",
@@ -136,7 +134,6 @@
       "config": "playwright.obrs561.config.ts",
       "why": "MUST use its own config: the defect is a CSS rule below 576px and the assertions are meaningless at the default 1280px, where it would pass while measuring nothing."
     },
-
     {
       "spec": "my-bookings-reschedule.spec.ts",
       "lane": "OWN-DB",
@@ -173,7 +170,6 @@
       "config": "none -- run by hand against obrs576qa on :8080",
       "why": "Asserts hand-seeded synthetic history rows that no script in this repo creates, and appends new rows on every run. Provisions nothing itself."
     },
-
     {
       "spec": "obrs-296-child-fare-qa.spec.ts",
       "lane": "CAPTURE",
@@ -221,6 +217,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs575.config.ts",
       "why": "Hardcodes http://localhost:4575 for every navigation, bypassing baseURL, and depends on recent-route history existing for the seeded customer."
+    },
+    {
+      "spec": "obrs-769-census.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs769.config.ts",
+      "why": "OBRS-769's evidence: every sighting of the two muted text tokens with the background it MEASURED under, on the contrast gate's own eight pages in both themes. The gate prints only what fails, and this card turned on what still PASSED -- #989ba4 was 2.78:1 on white at 39 sightings and 5.38:1 on the dark booking card at one, so a single repoint could not serve both. Hermetic (it reuses customer-pages.ts fixtures and MEASURE, so no backend), and it does assert its own population is non-empty, but its output is a census for a human to read rather than a verdict. Re-run it before changing $text-lightblack: npx playwright test --config=playwright.obrs769.config.ts"
     }
   ]
 }

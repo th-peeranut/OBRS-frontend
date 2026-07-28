@@ -52,7 +52,7 @@
   p {
     margin: 0;
     font-size: 15px;
-    color: $text-lightblack;
+    color: $text-softblack;
   }
 }
 
@@ -88,7 +88,7 @@
 .icon-btn {
   border: none;
   background: transparent;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -107,7 +107,7 @@
 .parcel-card__departure {
   font-size: $font-size-sm;
   font-weight: $font-weight-regular;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .parcel-card__meta {
@@ -121,7 +121,7 @@
 
   dt {
     font-size: $font-size-xs;
-    color: $text-lightgrey;
+    color: $text-lightblack;
     margin-bottom: 4px;
   }
 
