@@ -37,6 +37,7 @@ import {
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_MOBILE_PATTERN,
 } from '../../../../../shared/constants/thai-msisdn';
 
 // Smart create/edit form modal, extracted from UserManagementPageComponent
@@ -103,7 +104,11 @@ export class UserFormModalComponent implements OnInit, OnChanges, OnDestroy {
       middleName: ['', [Validators.minLength(2), Validators.maxLength(50)]],
       lastName: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(50)]],
       email: ['', [Validators.required, Validators.email]],
-      phoneNumber: ['', [Validators.required, separatorTolerantPattern(/^\d{10,15}$/)]],
+      // OBRS-455 AC#2: this writes users.phone_number, the same column signup and /account write —
+      // and the one OTP login matches on and the driver reminder texts. It was the last surface
+      // still accepting the old \d{10,15}, so an admin could create an account the owner of it
+      // could never log into by OTP.
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(THAI_MOBILE_PATTERN)]],
       password: ['', this.passwordValidators],
       confirmPassword: ['', [Validators.required]],
       preferredLocale: [

@@ -55,6 +55,30 @@ describe('ParcelDetailsFormComponent', () => {
     expect(ctrl?.valid).toBeTrue();
   });
 
+  // OBRS-455: the two phones on one waybill do NOT share a rule, and this is the pinning test for
+  // that asymmetry — the exact case a "unify the phone rules" refactor is most likely to flatten.
+  it('accepts a landline as senderPhone but rejects the same number as recipientPhone', () => {
+    const sender = component['form'].get('senderPhone');
+    const recipient = component['form'].get('recipientPhone');
+    const bangkokLandline = '0212345678';
+
+    sender?.setValue(bangkokLandline);
+    // nothing texts the sender — a business shipping cargo from a landline must still book
+    expect(sender?.valid).toBeTrue();
+
+    recipient?.setValue(bangkokLandline);
+    // the arrival SMS goes here, and ThaiBulkSMS cannot deliver to 02...
+    expect(recipient?.valid).toBeFalse();
+    expect(component['fieldError']('recipientPhone')).toBeNull(); // untouched: no message yet
+    recipient?.markAsTouched();
+    expect(component['fieldError']('recipientPhone')).toBe(
+      'PARCEL_BOOKING.VALIDATION.THAI_MOBILE_INVALID'
+    );
+
+    recipient?.setValue('0812345678');
+    expect(recipient?.valid).toBeTrue();
+  });
+
   it('requires the prohibited-acknowledgement checkbox to be checked', () => {
     const ctrl = component['form'].get('prohibitedAcknowledged');
     expect(ctrl?.valid).toBeFalse();

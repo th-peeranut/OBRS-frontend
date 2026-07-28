@@ -20,6 +20,7 @@ import {
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 
 @Component({
@@ -57,7 +58,10 @@ export class BookerInfoFormComponent implements OnInit, OnDestroy {
       firstName: ['', Validators.required],
       middleName: [''],
       lastName: ['', Validators.required],
-      phoneNumber: ['', [Validators.required, separatorTolerantPattern(/^0\d{9}$/)]],
+      // OBRS-455: the booking's SMS destination (it becomes contact_phone_snapshot), so it must be
+      // a real Thai mobile — a landline here is a reminder/confirmation we pay for and the
+      // customer never gets. Was /^0\d{9}$/, which accepted 02...; ContactReqDto now agrees.
+      phoneNumber: ['', [Validators.required, separatorTolerantPattern(THAI_MOBILE_PATTERN)]],
       // NOT a display-only field, despite the name. `gender` is this form's local
       // name for the wire's `passengerType`: PassengerInfoComponent renames it at
       // the payload boundary (normalizePassengerType) and the backend persists it

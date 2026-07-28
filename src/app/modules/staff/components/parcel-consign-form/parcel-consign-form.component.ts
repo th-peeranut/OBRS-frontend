@@ -20,6 +20,8 @@ import {
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_LOCAL_PHONE_PATTERN,
+  THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 
 export interface ParcelDropdownOption {
@@ -73,7 +75,15 @@ export interface ParcelQuoteParams {
   weightKg: number;
 }
 
-const PHONE_PATTERN = /^0\d{9}$/;
+/**
+ * OBRS-455: the two parties on a waybill do NOT share a rule, because only one of them gets
+ * texted. `SENDER_PHONE_PATTERN` stays the wide local rule (a business consigning cargo may only
+ * have a landline — ADR-0082, Accepted); the recipient's number is where
+ * `ParcelArrivedNotificationService` sends the arrival notice, so it must be a real Thai mobile or
+ * we pay for a message that cannot land. Both were a single local `/^0\d{9}$/` before.
+ */
+const SENDER_PHONE_PATTERN = THAI_LOCAL_PHONE_PATTERN;
+const RECIPIENT_PHONE_PATTERN = THAI_MOBILE_PATTERN;
 
 /**
  * >0 — `Validators.min(0)`/`required` alone allow 0; this rejects it
@@ -179,9 +189,9 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
   constructor(private readonly fb: FormBuilder) {
     this.form = this.fb.group({
       senderName: ['', [Validators.required, Validators.maxLength(100)]],
-      senderPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
+      senderPhone: ['', [Validators.required, separatorTolerantPattern(SENDER_PHONE_PATTERN)]],
       recipientName: ['', [Validators.required, Validators.maxLength(100)]],
-      recipientPhone: ['', [Validators.required, separatorTolerantPattern(PHONE_PATTERN)]],
+      recipientPhone: ['', [Validators.required, separatorTolerantPattern(RECIPIENT_PHONE_PATTERN)]],
       scheduleId: ['', [Validators.required]],
       pickupStopId: ['', [Validators.required]],
       dropoffStopId: ['', [Validators.required]],
@@ -310,7 +320,7 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
       heightCtrl?.setValidators([Validators.required, dimensionPositiveValidator()]);
     } else {
       recipientNameCtrl?.setValidators([Validators.required, Validators.maxLength(100)]);
-      recipientPhoneCtrl?.setValidators([Validators.required, separatorTolerantPattern(PHONE_PATTERN)]);
+      recipientPhoneCtrl?.setValidators([Validators.required, separatorTolerantPattern(RECIPIENT_PHONE_PATTERN)]);
       this.dimensionsGroup.setValidators(dimensionsAllOrNoneValidator());
       lengthCtrl?.setValidators(null);
       widthCtrl?.setValidators(null);
@@ -527,7 +537,13 @@ export class ParcelConsignFormComponent implements OnInit, OnChanges, OnDestroy 
     const errors = ctrl.errors ?? {};
     if (errors['required']) return 'STAFF.VALIDATION.REQUIRED';
     if (errors['pattern']) {
-      if (fieldName === 'senderPhone' || fieldName === 'recipientPhone') {
+      // OBRS-455: two fields, two rules, two messages. The recipient must be a Thai mobile (the
+      // arrival SMS goes there); the sender keeps the wider local rule, and telling a staff member
+      // "10-digit phone number" for a field that now rejects 02... would be a dead end.
+      if (fieldName === 'recipientPhone') {
+        return 'STAFF.VALIDATION.THAI_MOBILE_INVALID';
+      }
+      if (fieldName === 'senderPhone') {
         return 'STAFF.VALIDATION.PHONE_INVALID';
       }
     }

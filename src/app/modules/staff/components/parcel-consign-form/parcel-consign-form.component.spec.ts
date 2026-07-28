@@ -54,6 +54,24 @@ describe('ParcelConsignFormComponent', () => {
     expect(ctrl?.valid).toBeTrue();
   });
 
+  // OBRS-455: same asymmetry as the online form, at the counter. Staff may consign for a business
+  // that only has a landline, but the recipient's number is where the arrival SMS goes.
+  it('takes a landline as senderPhone and refuses it as recipientPhone, with its own message', () => {
+    const sender = component['form'].get('senderPhone');
+    const recipient = component['form'].get('recipientPhone');
+
+    sender?.setValue('0212345678');
+    expect(sender?.valid).toBeTrue();
+
+    recipient?.setValue('0212345678');
+    recipient?.markAsTouched();
+    expect(recipient?.valid).toBeFalse();
+    expect(component['fieldError']('recipientPhone')).toBe('STAFF.VALIDATION.THAI_MOBILE_INVALID');
+
+    recipient?.setValue('0912345678');
+    expect(recipient?.valid).toBeTrue();
+  });
+
   it('rejects weightKg <= 0', () => {
     const ctrl = component['form'].get('weightKg');
     ctrl?.setValue(0);

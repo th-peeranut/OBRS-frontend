@@ -13,6 +13,7 @@ import {
   formatThaiMobile,
   separatorTolerantPattern,
   stripPhoneSeparators,
+  THAI_MOBILE_PATTERN,
 } from '../../../../shared/constants/thai-msisdn';
 
 export interface WalkInCheckoutPayload {
@@ -58,7 +59,10 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
   protected selectedPaymentMethod: 'cash' = 'cash';
   protected cashReceived = 0;
 
-  private readonly phonePattern = /^0\d{9}$/;
+  // OBRS-455: a walk-in sale writes the same contact_phone_snapshot an online booking does, and
+  // the same six notification senders read it, so the counter cannot accept a number the website
+  // rejects. Was a local /^0\d{9}$/ copy; the rule now lives in one place for both channels.
+  private readonly phonePattern = THAI_MOBILE_PATTERN;
   private readonly idCardPattern = /^\d{13}$/;
   private readonly destroy$ = new Subject<void>();
 
@@ -195,7 +199,9 @@ export class WalkInCheckoutComponent implements OnInit, OnChanges, OnDestroy {
     if (errors['required']) return 'STAFF.VALIDATION.REQUIRED';
     if (errors['email']) return 'STAFF.VALIDATION.EMAIL_INVALID';
     if (errors['pattern'] || errors['maxlength'] || errors['minlength']) {
-      if (fieldName === 'phoneNumber') return 'STAFF.VALIDATION.PHONE_INVALID';
+      // OBRS-455: the rule is now Thai-mobile-only, so the message has to say so - PHONE_INVALID
+      // still reads "10-digit phone number", which would send staff round in circles on a 02...
+      if (fieldName === 'phoneNumber') return 'STAFF.VALIDATION.THAI_MOBILE_INVALID';
       if (fieldName === 'identityCardNumber') return 'STAFF.VALIDATION.ID_CARD_INVALID';
     }
     return 'STAFF.VALIDATION.FIELD_INVALID';

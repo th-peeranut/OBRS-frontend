@@ -4,6 +4,8 @@ import {
   separatorTolerantPattern,
   stripPhoneSeparators,
   THAI_MOBILE_PATTERN,
+  THAI_LOCAL_PHONE_PATTERN,
+  ANY_DIGITS_PHONE_PATTERN,
 } from './thai-msisdn';
 
 describe('thai-msisdn helpers (OBRS-646)', () => {
@@ -74,6 +76,37 @@ describe('thai-msisdn helpers (OBRS-646)', () => {
       const dashedControl = new FormControl('081-234-5678');
       expect(validator(bareControl)).toEqual(validator(dashedControl));
       expect(validator(bareControl)).toBeNull();
+    });
+  });
+
+  // OBRS-455: three rules live here now, and the only thing stopping a future edit from
+  // "simplifying" them into one is a test that states they must differ, and where.
+  describe('the three phone rules are deliberately different', () => {
+    const bangkokLandline = '0212345678';
+    const thaiMobile = '0812345678';
+    const twelveDigits = '123456789012';
+
+    it('THAI_MOBILE_PATTERN is the strictest — mobiles only', () => {
+      expect(THAI_MOBILE_PATTERN.test(thaiMobile)).toBe(true);
+      expect(THAI_MOBILE_PATTERN.test(bangkokLandline)).toBe(false);
+      expect(THAI_MOBILE_PATTERN.test(twelveDigits)).toBe(false);
+    });
+
+    it('THAI_LOCAL_PHONE_PATTERN admits the landline the mobile rule rejects', () => {
+      expect(THAI_LOCAL_PHONE_PATTERN.test(bangkokLandline)).toBe(true);
+      expect(THAI_LOCAL_PHONE_PATTERN.test(twelveDigits)).toBe(false);
+    });
+
+    it('ANY_DIGITS_PHONE_PATTERN admits what neither of the others does', () => {
+      expect(ANY_DIGITS_PHONE_PATTERN.test(twelveDigits)).toBe(true);
+      expect(ANY_DIGITS_PHONE_PATTERN.test('12345')).toBe(false);
+    });
+
+    it('every mobile is also a local number — the narrowing is a subset, not a different shape', () => {
+      for (const value of ['0612345678', '0812345678', '0912345678']) {
+        expect(THAI_MOBILE_PATTERN.test(value)).withContext(value).toBe(true);
+        expect(THAI_LOCAL_PHONE_PATTERN.test(value)).withContext(value).toBe(true);
+      }
     });
   });
 });
