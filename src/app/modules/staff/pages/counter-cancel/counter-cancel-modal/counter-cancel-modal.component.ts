@@ -20,7 +20,7 @@ import {
 import { CounterBookingSearchResultDto, StaffApiService } from '../../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
 import { AuthService } from '../../../../../auth/auth.service';
-import { extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import {
   buildRefundDestinationForm,
@@ -28,18 +28,38 @@ import {
   toRefundDestinationPayload,
 } from '../../../../../shared/lib/refund-destination-form';
 
+/**
+ * OBRS-766 (QA-caught, see `api-error-code.ts`'s `errorCodeFromMessageKey`
+ * doc comment for the full incident): the wire `error.error.errorCode`
+ * NEVER carries the dotted `messageKey` form — every code this component
+ * compares against is DERIVED from its messageKey, never hand-typed as a
+ * second SCREAMING_SNAKE literal, so the two representations cannot drift
+ * apart again. The messageKey strings below are the actual backend i18n
+ * bundle keys (`cancel.error.*`, `RefundApprovalService`'s three
+ * `ForbiddenException`s derive the same way with no explicit errorCode).
+ */
+const CANCEL_ERROR = {
+  WINDOW_CLOSED: errorCodeFromMessageKey('cancel.error.window-closed'),
+  APPROVAL_REQUIRED: errorCodeFromMessageKey('cancel.error.approval-required'),
+  APPROVER_INVALID: errorCodeFromMessageKey('cancel.error.approver-invalid'),
+  APPROVER_NOT_OWNER: errorCodeFromMessageKey('cancel.error.approver-not-owner'),
+  APPROVER_SELF: errorCodeFromMessageKey('cancel.error.approver-self'),
+  REFUND_DESTINATION_REQUIRED: errorCodeFromMessageKey('cancel.error.refund-destination-required'),
+  REFUND_DESTINATION_INVALID: errorCodeFromMessageKey('cancel.error.refund-destination-invalid'),
+} as const;
+
 /** Errors this endpoint can 400/409 with that this modal must place BY the
  * relevant field group, rather than the generic banner — mirrors
  * `OverrideCancelModalComponent`'s `REFUND_DESTINATION_ERROR_CODES` set. */
-const REFUND_DESTINATION_ERROR_CODES = new Set([
-  'cancel.error.refund-destination-required',
-  'cancel.error.refund-destination-invalid',
+const REFUND_DESTINATION_ERROR_CODES = new Set<string>([
+  CANCEL_ERROR.REFUND_DESTINATION_REQUIRED,
+  CANCEL_ERROR.REFUND_DESTINATION_INVALID,
 ]);
-const APPROVER_ERROR_CODES = new Set([
-  'cancel.error.approval-required',
-  'cancel.error.approver-invalid',
-  'cancel.error.approver-not-owner',
-  'cancel.error.approver-self',
+const APPROVER_ERROR_CODES = new Set<string>([
+  CANCEL_ERROR.APPROVAL_REQUIRED,
+  CANCEL_ERROR.APPROVER_INVALID,
+  CANCEL_ERROR.APPROVER_NOT_OWNER,
+  CANCEL_ERROR.APPROVER_SELF,
 ]);
 
 const CASH_REFUND_METHOD = 'CASH';
@@ -48,7 +68,8 @@ const CASH_REFUND_METHOD = 'CASH';
  * OBRS-766 preview state machine — independent of the booking summary, which
  * renders immediately (optimistic open) from the row already in hand.
  *   - 'loading'  → fetching the policy.
- *   - 'blocked'  → `cancel.error.window-closed`. TERMINAL (ADR-0103): no
+ *   - 'blocked'  → `CANCEL_ERROR_WINDOW_CLOSED` (wire code derived from
+ *     messageKey `cancel.error.window-closed`). TERMINAL (ADR-0103): no
  *     retry, no override affordance — that is the OWNER-only override modal,
  *     a different surface.
  *   - 'error'    → any other fetch failure. Confirm disabled, Retry re-fires.
@@ -154,7 +175,7 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
           // refund-method check: THIS fetch is the modal's primary content,
           // so a failure blocks Confirm outright rather than degrading to
           // "optional").
-          this.previewState = code === 'cancel.error.window-closed' ? 'blocked' : 'error';
+          this.previewState = code === CANCEL_ERROR.WINDOW_CLOSED ? 'blocked' : 'error';
         },
       });
   }
@@ -176,8 +197,9 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   /** Soft client-side check (UX spec §CASH step 4): disables Confirm and
    * shows the inline hint the instant the typed email matches the LOGGED-IN
    * salesperson's own username. This is a nudge only, not the control — the
-   * backend's `cancel.error.approver-self` is the real gate (it also catches
-   * a salesperson holding two accounts, which this cannot). */
+   * backend's `CANCEL_ERROR_APPROVER_SELF` (messageKey `cancel.error.approver-self`)
+   * is the real gate (it also catches a salesperson holding two accounts,
+   * which this cannot). */
   private readonly approverNotSelfValidator = (control: AbstractControl): ValidationErrors | null => {
     const email = String(control.value ?? '').trim().toLowerCase();
     if (!email) {
@@ -321,7 +343,7 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   private handleSubmitError(error: unknown): void {
     const code = extractApiErrorCode(error, null);
 
-    if (code === 'cancel.error.window-closed') {
+    if (code === CANCEL_ERROR.WINDOW_CLOSED) {
       // The window closed between open and submit — return to the same
       // terminal preview state the initial fetch would have landed on.
       this.previewState = 'blocked';
@@ -335,12 +357,12 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     }
 
     if (code && APPROVER_ERROR_CODES.has(code)) {
-      if (code === 'cancel.error.approver-invalid' || code === 'cancel.error.approver-self') {
+      if (code === CANCEL_ERROR.APPROVER_INVALID || code === CANCEL_ERROR.APPROVER_SELF) {
         // Never leave a rejected password in the DOM.
         this.form.get('approverPassword')?.setValue('');
       }
       this.approverErrorMessage =
-        code === 'cancel.error.approver-self'
+        code === CANCEL_ERROR.APPROVER_SELF
           ? // Same copy as the client-side hint (UX spec) — the rejection
             // reads as confirmation of a stated rule, not a new surprise.
             this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.APPROVER_SELF')
@@ -353,11 +375,11 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
 
   private approverErrorKey(code: string): string {
     switch (code) {
-      case 'cancel.error.approval-required':
+      case CANCEL_ERROR.APPROVAL_REQUIRED:
         return 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUIRED';
-      case 'cancel.error.approver-invalid':
+      case CANCEL_ERROR.APPROVER_INVALID:
         return 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_INVALID';
-      case 'cancel.error.approver-not-owner':
+      case CANCEL_ERROR.APPROVER_NOT_OWNER:
         return 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_NOT_OWNER';
       default:
         return 'STAFF.CANCEL_BOOKING.MODAL.FAILED';

@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { extractApiErrorCode, mapApiErrorCode } from './api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode, mapApiErrorCode } from './api-error-code';
 
 describe('extractApiErrorCode', () => {
   it('reads error.error.errorCode off an HttpErrorResponse', () => {
@@ -83,5 +83,44 @@ describe('mapApiErrorCode', () => {
       expect(key).withContext(member).toBe(FALLBACK);
       expect(typeof key).withContext(member).toBe('string');
     });
+  });
+});
+
+// OBRS-766 (QA-caught): the counter-cancel screen compared `extractApiErrorCode()`
+// (real wire field) against the dotted `messageKey` form directly — a comparison
+// that can never match, since `DomainException.getErrorCode()` never puts dots on
+// the wire. Unit tests didn't catch it because the mocked error responses used the
+// same wrong dotted form the component compared against. This transform is the
+// fix: derive the wire form from the messageKey instead of hand-typing it, so a
+// caller's constant and the backend's real output cannot independently drift.
+describe('errorCodeFromMessageKey', () => {
+  it('mirrors DomainException.getErrorCode() — upper-cases, then replaces every dot and hyphen with underscore', () => {
+    expect(errorCodeFromMessageKey('cancel.error.window-closed')).toBe('CANCEL_ERROR_WINDOW_CLOSED');
+    expect(errorCodeFromMessageKey('cancel.error.approval-required')).toBe('CANCEL_ERROR_APPROVAL_REQUIRED');
+    expect(errorCodeFromMessageKey('cancel.error.approver-invalid')).toBe('CANCEL_ERROR_APPROVER_INVALID');
+    expect(errorCodeFromMessageKey('cancel.error.approver-not-owner')).toBe('CANCEL_ERROR_APPROVER_NOT_OWNER');
+    expect(errorCodeFromMessageKey('cancel.error.approver-self')).toBe('CANCEL_ERROR_APPROVER_SELF');
+    expect(errorCodeFromMessageKey('cancel.error.refund-destination-required')).toBe(
+      'CANCEL_ERROR_REFUND_DESTINATION_REQUIRED'
+    );
+    expect(errorCodeFromMessageKey('cancel.error.refund-destination-invalid')).toBe(
+      'CANCEL_ERROR_REFUND_DESTINATION_INVALID'
+    );
+    expect(errorCodeFromMessageKey('cancel.error.booking-not-found')).toBe('CANCEL_ERROR_BOOKING_NOT_FOUND');
+    expect(errorCodeFromMessageKey('booking.search.error.criteria-required')).toBe(
+      'BOOKING_SEARCH_ERROR_CRITERIA_REQUIRED'
+    );
+  });
+
+  // Real body captured against the running local backend
+  // (`{"status":403,...,"errorCode":"CANCEL_ERROR_UNAUTHORIZED"}`) — the
+  // sample that actually caught this bug, pinned here so it can't regress
+  // silently again.
+  it('matches a real backend-captured wire code', () => {
+    expect(errorCodeFromMessageKey('cancel.error.unauthorized')).toBe('CANCEL_ERROR_UNAUTHORIZED');
+  });
+
+  it('replaces every dot/hyphen, not just the first (multi-segment keys)', () => {
+    expect(errorCodeFromMessageKey('a.b-c.d-e')).toBe('A_B_C_D_E');
   });
 });

@@ -67,3 +67,37 @@ export function mapApiErrorCode(
   const code = String(errorCode ?? '');
   return hasOwnKey(knownCodes, code) ? knownCodes[code] : fallbackKey;
 }
+
+/**
+ * OBRS-766 (QA-caught): derives the wire `errorCode` a `DomainException`
+ * will actually carry from its dotted `messageKey` (the i18n bundle key,
+ * e.g. `cancel.error.window-closed`), mirroring the backend's
+ * `DomainException.getErrorCode()` EXACTLY:
+ *
+ * ```java
+ * return messageKey.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+ * ```
+ *
+ * `cancel.error.window-closed` → `CANCEL_ERROR_WINDOW_CLOSED`. The
+ * counter-cancel screen originally compared `extractApiErrorCode(error, …)`
+ * (which reads the real wire field) against the dotted `messageKey` form
+ * directly — a comparison that can never match, since the wire never
+ * carries dots. Every branch fell through to the generic fallback, and
+ * `window-closed` in particular landed in the RETRYABLE 'error' state
+ * instead of the TERMINAL 'blocked' one (a Retry button that could never
+ * succeed) — invisible to unit tests because the mocked responses used the
+ * same wrong dotted form the component compared against, so test and code
+ * agreed with each other and both disagreed with the backend. Only a real
+ * backend response caught it.
+ *
+ * Call this at the comparison site instead of hand-typing the SCREAMING_SNAKE
+ * form: the two representations (readable dotted messageKey, wire code)
+ * cannot drift again, because the wire form is COMPUTED from the messageKey
+ * every time rather than duplicated as a second, independently-typeable
+ * literal. See `api-error-code.spec.ts` for the same transform re-derived
+ * and checked against every messageKey this repo currently compares by wire
+ * code, plus a real backend-confirmed sample.
+ */
+export function errorCodeFromMessageKey(messageKey: string): string {
+  return messageKey.toUpperCase().replace(/\./g, '_').replace(/-/g, '_');
+}

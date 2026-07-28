@@ -7,10 +7,15 @@ import {
   CounterBookingSearchResultDto,
   StaffApiService,
 } from '../../../../services/staff/staff-api.service';
-import { extractApiErrorCode } from '../../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../../shared/lib/api-error-code';
 import { CounterCancelSearchEvent, CounterCancelSearchMode } from './counter-cancel-search-form/counter-cancel-search-form.component';
 
 const PAGE_SIZE = 20;
+
+/** OBRS-766 (QA-caught): wire codes are DERIVED from their messageKey, never
+ * hand-typed — see `api-error-code.ts`'s `errorCodeFromMessageKey` doc
+ * comment for the incident this fixes. */
+const SEARCH_ERROR_CRITERIA_REQUIRED = errorCodeFromMessageKey('booking.search.error.criteria-required');
 
 /**
  * OBRS-766 — smart page for `/staff/cancel-booking`. Owns the active search
@@ -114,7 +119,7 @@ export class CounterCancelPageComponent implements OnDestroy {
           this.totalPages = 0;
           const code = extractApiErrorCode(error, null);
           this.searchErrorMessage =
-            code === 'booking.search.error.criteria-required'
+            code === SEARCH_ERROR_CRITERIA_REQUIRED
               ? this.translate.instant('STAFF.CANCEL_BOOKING.SEARCH.CRITERIA_REQUIRED')
               : this.translate.instant('STAFF.CANCEL_BOOKING.SEARCH.LOAD_FAILED');
         },

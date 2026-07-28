@@ -904,7 +904,9 @@ resolved`) for the `GET .../cancel-policy` fetch — see
 state machines, not one, and why a fetch failure here blocks Confirm outright
 (unlike `OverrideCancelModalComponent`'s refund-method check, which degrades
 to "optional" on failure). `previewState === 'blocked'`
-(`cancel.error.window-closed`) is **terminal** per ADR-0103 — no retry, no
+(`CANCEL_ERROR_WINDOW_CLOSED` — the wire `errorCode`, derived from its
+messageKey via `errorCodeFromMessageKey()`, never hand-typed; see ADR-0033
+Decision 5) is **terminal** per ADR-0103 — no retry, no
 override affordance; that is the OWNER-only override-cancel modal, a
 different surface.
 
@@ -917,7 +919,7 @@ Once resolved, the modal branches on `policy.refundMethod`:
   `autocomplete="new-password"` — the latter specifically defeats a browser
   auto-filling the *salesperson's own* saved password). A soft client-side
   check disables Confirm the instant the typed email matches the logged-in
-  user; the real gate is the backend's `cancel.error.approver-self`, which
+  user; the real gate is the backend's `CANCEL_ERROR_APPROVER_SELF`, which
   the modal surfaces with the **identical copy** as the client-side hint.
 - **`MANUAL_REFUND_REQUIRED`** — mounts `AppRefundDestinationFieldsComponent`
   byte-identical to `OverrideCancelModalComponent`'s usage (ADR-0032).

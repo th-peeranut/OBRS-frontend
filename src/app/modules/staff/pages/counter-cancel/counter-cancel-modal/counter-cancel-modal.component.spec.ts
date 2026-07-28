@@ -15,6 +15,18 @@ import { AlertService } from '../../../../../shared/services/alert.service';
 import { AuthService } from '../../../../../auth/auth.service';
 import { CancellationPolicy } from '../../../../../shared/interfaces/my-booking.interface';
 import { AA_NORMAL_TEXT, contrast, effectiveBg, fgOf } from '../../../../../testing/contrast';
+import { errorCodeFromMessageKey } from '../../../../../shared/lib/api-error-code';
+
+// OBRS-766 (QA-caught): the wire `errorCode` field is derived from its
+// dotted messageKey (see `api-error-code.ts`'s `errorCodeFromMessageKey`
+// doc comment for the full incident). Every mocked `HttpErrorResponse`
+// below must carry the DERIVED wire form, not the messageKey — mocking the
+// dotted form tests only the component's own (formerly wrong) comparison,
+// which is exactly how the original bug shipped with a green suite.
+const WINDOW_CLOSED_CODE = errorCodeFromMessageKey('cancel.error.window-closed');
+const APPROVER_INVALID_CODE = errorCodeFromMessageKey('cancel.error.approver-invalid');
+const APPROVER_SELF_CODE = errorCodeFromMessageKey('cancel.error.approver-self');
+const REFUND_DESTINATION_INVALID_CODE = errorCodeFromMessageKey('cancel.error.refund-destination-invalid');
 
 const BOOKING: CounterBookingSearchResultDto = {
   bookingId: 42,
@@ -96,11 +108,11 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     expect((component as any).canSubmit).toBeFalse();
   });
 
-  it('blocked: cancel.error.window-closed is terminal — no retry, Confirm stays disabled', () => {
+  it('blocked: CANCEL_ERROR_WINDOW_CLOSED is terminal — no retry, Confirm stays disabled', () => {
     api.getCancelPolicy.and.returnValue(
       throwError(
         () =>
-          new HttpErrorResponse({ status: 400, error: { errorCode: 'cancel.error.window-closed' } })
+          new HttpErrorResponse({ status: 400, error: { errorCode: WINDOW_CLOSED_CODE } })
       )
     );
     open();
@@ -178,14 +190,14 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
 
   // ── Server-side error-code branching ──────────────────────────────────────
   describe('submit error handling', () => {
-    it('cancel.error.approver-invalid clears the password and shows the message by the approver fields', () => {
+    it('CANCEL_ERROR_APPROVER_INVALID clears the password and shows the message by the approver fields', () => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       api.cancelCounterBooking.and.returnValue(
         throwError(
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.approver-invalid', message: 'Wrong password' },
+              error: { errorCode: APPROVER_INVALID_CODE, message: 'Wrong password' },
             })
         )
       );
@@ -201,14 +213,14 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       expect((component as any).errorMessage).toBe('');
     });
 
-    it('cancel.error.approver-self uses the SAME copy as the client-side hint, never the backend message, and clears the password', () => {
+    it('CANCEL_ERROR_APPROVER_SELF uses the SAME copy as the client-side hint, never the backend message, and clears the password', () => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       api.cancelCounterBooking.and.returnValue(
         throwError(
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.approver-self', message: 'a different backend wording' },
+              error: { errorCode: APPROVER_SELF_CODE, message: 'a different backend wording' },
             })
         )
       );
@@ -235,7 +247,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.refund-destination-invalid', message: 'Bad account' },
+              error: { errorCode: REFUND_DESTINATION_INVALID_CODE, message: 'Bad account' },
             })
         )
       );

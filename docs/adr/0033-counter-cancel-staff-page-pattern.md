@@ -39,8 +39,9 @@ renders immediately from the search-result row already in hand (design-system
 would force the summary to wait on the network for no reason — the row is
 already correct data, just not yet policy-priced.
 
-`previewState === 'blocked'` (`cancel.error.window-closed`) is **terminal**
-per ADR-0103: no retry, no override affordance. That escape hatch is the
+`previewState === 'blocked'` (`CANCEL_ERROR_WINDOW_CLOSED` — the wire
+`errorCode`, derived from messageKey `cancel.error.window-closed`; see
+Decision 5) is **terminal** per ADR-0103: no retry, no override affordance. That escape hatch is the
 OWNER-only override-cancel modal (`OverrideCancelModalComponent`), a
 different, more privileged surface — this screen must not grow a rate picker
 or a full-refund button of its own.
@@ -83,8 +84,8 @@ This is implemented as a form validator (not a separate getter gating a
 button) so `canSubmit`'s stated contract — `!isSubmitting && form.valid &&
 previewState === 'resolved'` — stays literally true instead of growing a
 fourth ad-hoc condition. It is explicitly a **nudge, not the control**: it
-only catches the single-account case. The backend's `cancel.error.approver-self`
-is the real gate, and when it fires, the modal shows the **same copy** as the
+only catches the single-account case. The backend's `CANCEL_ERROR_APPROVER_SELF`
+(wire code for messageKey `cancel.error.approver-self`) is the real gate, and when it fires, the modal shows the **same copy** as the
 client-side hint (`STAFF.CANCEL_BOOKING.MODAL.APPROVER_SELF` ===
 `.APPROVER_IS_SELF_HINT`, byte-identical in all three locale files) so the
 rejection reads as confirmation of a stated rule, not a new surprise.
@@ -107,6 +108,44 @@ wrapper methods around those two endpoints rather than the page injecting
 (`getMe()`, `getDrivers()`, `getScheduleById()`, etc. all have staff-scoped
 equivalents rather than reaching into the admin/customer services), keeping
 one feature module's HTTP surface self-contained in its own service file.
+
+## Decision 5 — error codes are DERIVED from their messageKey, never hand-typed (post-ship correction)
+
+**This is a correction, not part of the original design.** The first version
+of this screen compared `extractApiErrorCode(error, ...)` against the
+dotted `messageKey` form directly (`'cancel.error.window-closed'`), because
+that is the form the card's own brief supplied. It never matches: the
+backend's `DomainException.getErrorCode()` transforms the messageKey before
+it reaches the wire —
+
+```java
+return messageKey.toUpperCase(Locale.ROOT).replace('.', '_').replace('-', '_');
+```
+
+— so `cancel.error.window-closed` arrives as `CANCEL_ERROR_WINDOW_CLOSED`.
+Every comparison in this screen silently failed: every backend error fell
+through to the generic `FAILED` banner, and — the concrete AC violation —
+`window-closed` landed in the retryable `'error'` state instead of the
+terminal `'blocked'` one, rendering a Retry button that could never succeed.
+QA caught this against a real backend; no unit test did, because the
+specs mocked `HttpErrorResponse` bodies using the same wrong dotted form the
+component compared against — test and code agreed with each other and both
+disagreed with the backend.
+
+The fix is `errorCodeFromMessageKey()` (`shared/lib/api-error-code.ts`),
+which re-implements the backend's own transform in one place, tested against
+nine confirmed messageKey→wire-code pairs plus a real backend-captured
+sample (`api-error-code.spec.ts`). Every comparison site in
+`CounterCancelModalComponent`/`CounterCancelPageComponent` — and every
+spec that mocks one of these errors — calls this function on the readable
+dotted messageKey rather than hand-typing the SCREAMING_SNAKE form as a
+second, independently-typeable literal. This was a deliberate choice over
+hand-writing the nine wire constants directly: a shape assertion (e.g. "is
+this SCREAMING_SNAKE") still passes a plausible-but-wrong hand-written
+constant, whereas a derivation from the same source string the messageKey
+actually is cannot drift from it — the only way the comparison can be wrong
+now is if the transform itself is wrong, and that is pinned by its own
+spec against real backend output.
 
 ## FE-1's byte-identical body requirement, and why the test is structured the way it is
 

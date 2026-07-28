@@ -15,6 +15,13 @@ import { AppRefundDestinationFieldsComponent } from '../../../../shared/componen
 import { StaffApiService, CounterBookingSearchResultDto } from '../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { AuthService } from '../../../../auth/auth.service';
+import { errorCodeFromMessageKey } from '../../../../shared/lib/api-error-code';
+
+// OBRS-766 (QA-caught): the wire `errorCode` is derived from its dotted
+// messageKey — see `api-error-code.ts`'s `errorCodeFromMessageKey` doc
+// comment. The mocked HttpErrorResponse below must carry the DERIVED wire
+// form, not the messageKey.
+const CRITERIA_REQUIRED_CODE = errorCodeFromMessageKey('booking.search.error.criteria-required');
 
 function resultRow(overrides: Partial<CounterBookingSearchResultDto> = {}): CounterBookingSearchResultDto {
   return {
@@ -140,13 +147,13 @@ describe('CounterCancelPageComponent (OBRS-766)', () => {
     expect(fixture.debugElement.query(By.css('.ccrl-empty'))).not.toBeNull();
   });
 
-  it('booking.search.error.criteria-required shows the search banner', () => {
+  it('BOOKING_SEARCH_ERROR_CRITERIA_REQUIRED shows the search banner', () => {
     api.searchBookings.and.returnValue(
       throwError(
         () =>
           new HttpErrorResponse({
             status: 400,
-            error: { errorCode: 'booking.search.error.criteria-required' },
+            error: { errorCode: CRITERIA_REQUIRED_CODE },
           })
       )
     );
