@@ -47,11 +47,22 @@ describe('LoginComponent', () => {
 
     fixture = TestBed.createComponent(LoginComponent);
     component = fixture.componentInstance;
+
+    // OBRS-719 moved the gsi/client load out of index.html and into ngAfterViewInit, so
+    // every detectChanges() below would otherwise fetch accounts.google.com for real —
+    // ~15 cross-origin requests, and a suite that fails differently offline. Stubbed at
+    // the injection point rather than at the DOM so the component's own logic still runs;
+    // the OBRS-90 describe restores the real one, because that test's whole value is the
+    // actual <script> element it asserts on.
+    spyOn(
+      component as unknown as { loadGisScript(l: string, cb: () => void): void },
+      'loadGisScript'
+    );
+
     fixture.detectChanges();
   });
 
   afterEach(() => {
-    // Tears down the GIS-ready polling interval started in ngAfterViewInit.
     fixture.destroy();
   });
 
@@ -86,6 +97,15 @@ describe('LoginComponent', () => {
   // window.location.reload(). Regressing to a reload would drop entered form
   // state on every language toggle.
   describe('GSI language switch (OBRS-90)', () => {
+    beforeEach(() => {
+      // Real injection for this describe only — see the spy in the outer beforeEach.
+      (
+        component as unknown as {
+          loadGisScript: jasmine.Spy;
+        }
+      ).loadGisScript.and.callThrough();
+    });
+
     afterEach(() => {
       document
         .querySelectorAll('script[src*="gsi/client"]')
@@ -100,6 +120,37 @@ describe('LoginComponent', () => {
 
       const script = document.querySelector('script[src*="gsi/client"]');
       expect(script?.getAttribute('src')).toContain('hl=en');
+    });
+  });
+
+  // OBRS-719 (PCI DSS 6.4.3). Two claims the payment-page script inventory makes about
+  // this component, asserted here because nothing else can see them: the script is
+  // fetched by THIS page rather than by index.html, and the page cleans up after itself
+  // so a later route is not one that fetched Google's script.
+  describe('GIS is loaded by this page and only this page (OBRS-719)', () => {
+    it('requests gsi/client on view init, with the current hl', () => {
+      const spy = (
+        component as unknown as { loadGisScript: jasmine.Spy }
+      ).loadGisScript;
+
+      expect(spy).toHaveBeenCalled();
+      expect(typeof spy.calls.mostRecent().args[0]).toBe('string');
+    });
+
+    it('removes the gsi/client script and the google global on destroy', () => {
+      const stray = document.createElement('script');
+      stray.src = 'https://accounts.google.com/gsi/client?hl=th';
+      document.head.appendChild(stray);
+      (window as unknown as Record<string, unknown>)['google'] = { accounts: {} };
+
+      fixture.destroy();
+
+      expect(
+        document.querySelector('script[src*="gsi/client"]')
+      ).toBeNull();
+      expect(
+        (window as unknown as Record<string, unknown>)['google']
+      ).toBeUndefined();
     });
   });
 
@@ -168,11 +219,9 @@ describe('LoginComponent', () => {
         },
       };
 
-      // ngAfterViewInit left a 100 ms poll running that would call initGis()
-      // itself the moment it sees the stub above. These tests drive initGis()
-      // explicitly, so kill the poll rather than race it.
-      priv<() => void>('clearGisReadyInterval').call(component);
-
+      // Nothing to stop racing these tests any more: OBRS-719 replaced ngAfterViewInit's
+      // 100 ms "has GIS arrived yet" poll with the script's own onload, and the outer
+      // beforeEach stubs that injection out — so initGis() runs exactly when driven here.
       themeService = TestBed.inject(ThemeService);
     });
 

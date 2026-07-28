@@ -1,0 +1,49 @@
+{
+  "_card": "OBRS-719",
+  "_purpose": "PCI DSS 6.4.3(c) requires a written inventory of every script on the payment page, each with a justification. The prose inventory lives beside the prod CSP it describes, at OBRS-backend/deploy/prod/PAYMENT-PAGE-SCRIPT-INVENTORY.md. THIS file is the machine-readable half of it for the surfaces only this repo can change, and scripts/check-payment-page-scripts.mjs enforces it. Edit both together.",
+  "_note": "The two repos each gate what they can break: this file vs the frontend's scripts and netlify.toml, and CspAllowlistMatchesInventoryTest vs the prod Caddyfile. Neither can read the other's tree, so the prose document is the seam - keep the origin lists in the two files in step by hand when the policy changes.",
+
+  "scriptLoaders": [
+    {
+      "file": "src/app/services/payment/omise-token.service.ts",
+      "origin": "https://cdn.omise.co",
+      "routes": ["/payment"],
+      "why": "Required to take card payments at all. omise.js defines both window.Omise and window.OmiseCard; OmiseCard renders the card fields inside an iframe on cdn.omise.co and posts a token back, which is what keeps the PAN off this origin (OBRS-391). Removing it would mean collecting the PAN ourselves."
+    },
+    {
+      "file": "src/app/modules/login/login.component.ts",
+      "origin": "https://accounts.google.com",
+      "routes": ["/login"],
+      "why": "Google Identity Services - the 'Sign in with Google' button. Loaded from TypeScript rather than index.html specifically so it stays OFF the payment page (OBRS-719 AC 3). The hl locale must be a query param on the script URL; GIS exposes no initialize() option for it (OBRS-90)."
+    },
+    {
+      "file": "src/app/modules/home/components/route-map/route-map-panel/route-map-panel.component.ts",
+      "origin": "https://maps.googleapis.com",
+      "routes": ["/"],
+      "why": "Google Maps JS for the home-page route map. NOT a payment-page script - listed because maps.googleapis.com is in the site-wide script-src and a single CSP header cannot be route-scoped."
+    }
+  ],
+
+  "bundledScripts": [
+    "node_modules/jquery/dist/jquery.min.js",
+    "node_modules/@popperjs/core/dist/umd/popper.min.js",
+    "node_modules/bootstrap/dist/js/bootstrap.min.js"
+  ],
+
+  "sitCspOrigins": [
+    "https://accounts.google.com",
+    "https://maps.googleapis.com",
+    "https://cdn.omise.co",
+    "https://*.gstatic.com",
+    "https://fonts.googleapis.com",
+    "https://fonts.gstatic.com",
+    "https://*.googleapis.com",
+    "https://*.google.com",
+    "https://*.ggpht.com",
+    "https://sit-obrs-backend.koyeb.app",
+    "https://api.omise.co",
+    "https://vault.omise.co",
+    "wss://sit-obrs-backend.koyeb.app",
+    "https://*.omise.co"
+  ]
+}

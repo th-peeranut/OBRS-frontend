@@ -45,8 +45,14 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   // (`?reason=email-changed`, optionally `&email=` to prefill the field).
   showEmailChangedBanner = false;
 
-  private gisReadyInterval: ReturnType<typeof setInterval> | null = null;
-  private readonly GIS_POLL_MAX_TRIES = 100; // ~10 s at 100 ms intervals
+  /**
+   * OBRS-719: every gsi/client tag this component has put in the document. One
+   * selector, used by the load, the language re-load and the teardown alike —
+   * three places that must agree on what "the GIS script" means, or teardown
+   * silently leaves Google's script in a document that later routes reuse.
+   */
+  private static readonly GIS_SCRIPT_SELECTOR = 'script[src*="gsi/client"]';
+
   private langChangeSubscription?: Subscription;
   private themeChangeSubscription?: Subscription;
 
@@ -80,30 +86,59 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    let tries = 0;
-    this.gisReadyInterval = setInterval(() => {
-      tries++;
-
-      if (this.isGisLoaded()) {
-        this.clearGisReadyInterval();
-        this.initGis();
-      } else if (tries >= this.GIS_POLL_MAX_TRIES) {
-        this.clearGisReadyInterval();
-      }
-    }, 100);
+    // OBRS-719 (PCI DSS 6.4.3): this page fetches Google Identity itself. It used to
+    // arrive from an inline <script> in index.html, which put it on EVERY route — the
+    // payment page included, where every script has to be justified in writing — and
+    // forced `script-src 'unsafe-inline'` into the CSP to allow the block at all.
+    //
+    // Nothing new had to be invented for this: reloadGisForLanguage() below has injected
+    // the same script since OBRS-90, so `onload` is a proven readiness signal here. That
+    // is also why the ~10 s polling loop this replaced is gone — it existed only because
+    // the load was started somewhere this component could not observe.
+    this.loadGisScript(this.currentLang(), () => this.initGis());
   }
 
   ngOnDestroy(): void {
-    this.clearGisReadyInterval();
     this.langChangeSubscription?.unsubscribe();
     this.themeChangeSubscription?.unsubscribe();
+
+    // Leave the document as this page found it. Honest about what this does and does
+    // not buy: removing the tag and the global stops any LATER route from being a page
+    // that fetched Google's script, which is the claim the payment-page inventory
+    // makes. It cannot unload code that has already executed — a customer who visits
+    // /login and then navigates within the same SPA session still carries the GIS
+    // runtime. A cold entry to /payment, which is the normal path, does not.
+    this.removeGisScript();
   }
 
-  private clearGisReadyInterval(): void {
-    if (this.gisReadyInterval !== null) {
-      clearInterval(this.gisReadyInterval);
-      this.gisReadyInterval = null;
-    }
+  /** The `hl` GIS is loaded with. Same value LanguageService persists, read through the
+   * service that owns it rather than out of localStorage behind its back. */
+  private currentLang(): string {
+    return this.translate.currentLang || this.translate.getDefaultLang() || 'th';
+  }
+
+  /**
+   * Drops any existing gsi/client tag and the `google` global, then injects a fresh one
+   * for `lang`. Dropping first is not tidiness: GIS bakes the button's locale in at load
+   * time from this URL's `hl`, so re-localizing means genuinely re-loading it.
+   */
+  private loadGisScript(lang: string, onReady: () => void): void {
+    this.removeGisScript();
+
+    const s = document.createElement('script');
+    s.src =
+      'https://accounts.google.com/gsi/client?hl=' + encodeURIComponent(lang);
+    s.async = true;
+    s.defer = true;
+    s.onload = onReady;
+    document.head.appendChild(s);
+  }
+
+  private removeGisScript(): void {
+    document
+      .querySelectorAll(LoginComponent.GIS_SCRIPT_SELECTOR)
+      .forEach((s) => s.remove());
+    (window as unknown as Record<string, unknown>)['google'] = undefined;
   }
 
   private initGis(): void {
@@ -179,23 +214,11 @@ export class LoginComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private reloadGisForLanguage(lang: string): void {
-    // Drop the current gsi/client script + global so a fresh `hl` load
-    // re-localizes the button, then re-render once it's ready. GIS logs a
-    // benign "initialize() is called multiple times" notice on the re-render
-    // (it keeps the last instance, which is what we want) — an acceptable
-    // trade for not doing a jarring full-page reload that drops form state.
-    document
-      .querySelectorAll('script[src*="gsi/client"]')
-      .forEach((s) => s.remove());
-    (window as unknown as Record<string, unknown>)['google'] = undefined;
-
-    const s = document.createElement('script');
-    s.src =
-      'https://accounts.google.com/gsi/client?hl=' + encodeURIComponent(lang);
-    s.async = true;
-    s.defer = true;
-    s.onload = () => this.renderGoogleButton();
-    document.head.appendChild(s);
+    // Re-load with the new `hl`, then re-render once it's ready. GIS logs a benign
+    // "initialize() is called multiple times" notice on the re-render (it keeps the
+    // last instance, which is what we want) — an acceptable trade for not doing a
+    // jarring full-page reload that drops form state.
+    this.loadGisScript(lang, () => this.renderGoogleButton());
   }
 
   handleGoogleCredential(response: { credential: string }): void {
