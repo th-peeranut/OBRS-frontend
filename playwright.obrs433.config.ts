@@ -20,7 +20,8 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npx ng serve --configuration sit --port 4200',
+    // Via npm so `prestart:sit` runs the local-env shape gate first (OBRS-536).
+    command: 'npm run start:sit -- --port 4200',
     url: 'http://localhost:4200',
     reuseExistingServer: true,
     timeout: 120_000,

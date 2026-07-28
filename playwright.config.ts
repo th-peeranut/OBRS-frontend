@@ -69,7 +69,15 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'ng serve --configuration sit --port 4202',
+    // Through `npm run start:sit`, not `ng serve` directly, so npm's `prestart:sit` hook runs
+    // scripts/check-local-env.mjs first (OBRS-536). A `--configuration sit` build reads the
+    // GITIGNORED src/environments/environment.local.ts, so a fresh worktree — or any checkout
+    // that predates the last field added to that contract — cannot compile here. Playwright
+    // prefixes the compiler's output with `[WebServer]` and then reports `Timed out waiting
+    // 120000ms from config.webServer`, which reads as a slow machine rather than a type error;
+    // OBRS-617 had to route its own config around this lane for exactly that reason. The hook
+    // fails in under a second naming the field and the line to add.
+    command: 'npm run start:sit -- --port 4202',
     url: 'http://localhost:4202',
     reuseExistingServer: true,
     timeout: 120 * 1000,

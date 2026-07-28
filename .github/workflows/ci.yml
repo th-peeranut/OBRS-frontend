@@ -123,6 +123,22 @@ jobs:
       - name: cardholder-data input gate
         run: npm run test:no-card-inputs
 
+      # Eighth pure-node gate (OBRS-719). Sibling to the one above and aimed at the other
+      # half of the same PCI surface: that one keeps cardholder data OFF this origin, this
+      # one keeps the list of scripts RUNNING on the payment page honest. PCI DSS 6.4.3(c)
+      # requires a written inventory of every script on that page with a justification for
+      # each, and 11.6.1 requires unauthorised changes to them to be detected -- and the
+      # natural edit that breaks both is the most ordinary one there is: adding a widget,
+      # an analytics snippet or a chat bubble to index.html. Nothing else goes red for it.
+      # Checks that index.html and every template stay script-tag-free, that each file
+      # loading a script at runtime is inventoried WITH the origin it actually names (and
+      # vice versa -- a stale entry fails too), that angular.json's bundled scripts match,
+      # and that netlify.toml's CSP still has no 'unsafe-inline' in script-src and still
+      # names a report-uri. Self-tests its own must-catch/must-NOT-catch cases first, so it
+      # cannot degrade into a silent OK. Pure file reads -- costs no extra runner minutes.
+      - name: payment-page script inventory gate
+        run: npm run test:payment-scripts
+
       # OBRS-602. The Playwright suite had grown to 223 cases nobody had ever seen pass
       # together, because playwright.config.ts swept the whole e2e/ directory while nine
       # specs were written for environments it does not provide. Lane membership is now
@@ -157,6 +173,27 @@ jobs:
       # for the lane is a wall-clock trade, not a quota one.
       - name: E2E lane membership gate
         run: npm run test:e2e-lanes
+
+      # Ninth pure-node gate (OBRS-536). `environment.sit.ts` and `environment.prod.ts` read
+      # their keys from two GITIGNORED files, so the committed side of that contract moves with
+      # every commit while the other side cannot. OBRS-424 added `maptilerKey` and updated both
+      # things a commit CAN update -- the example template and scripts/inject-sit-env.js -- and
+      # every checkout that already had an environment.local.ts still broke, with a TS2339 that
+      # Playwright reports as `Timed out waiting 120000ms from config.webServer`. Two worktrees
+      # on the reporting machine were in that state at once, and OBRS-617 had already routed its
+      # own config around that lane rather than fix it.
+      #
+      # What runs HERE is the half CI can see: the example template and BOTH inject-*.js
+      # generators must declare exactly the fields the committed environment files read. The
+      # generator half is the one with teeth -- a field added to environment.prod.ts but not to
+      # inject-prod-env.js breaks the PROD build on the host while every local checkout stays
+      # green, and nothing else in this workflow builds the prod configuration. The developer's
+      # own copy is checked by the same script through npm `pre` hooks; neither gitignored file
+      # exists on a runner, and the script treats their absence as normal rather than as a
+      # finding. It self-tests its own parser first, so it cannot degrade into a silent OK.
+      # Costs no extra runner minutes.
+      - name: gitignored environment file shape gate
+        run: npm run test:local-env
 
       - name: Install dependencies
         run: npm ci

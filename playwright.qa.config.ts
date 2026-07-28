@@ -55,7 +55,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx ng serve --configuration sit --port 4201 --no-live-reload`,
+    // Via npm so `prestart:sit` runs the local-env shape gate first (OBRS-536).
+    command: `npm run start:sit -- --port 4201 --no-live-reload`,
     url: BASE_URL,
     reuseExistingServer: true,
     timeout: 120 * 1000,

@@ -36,7 +36,20 @@ cd OBRS-frontend
 npm install
 ```
 
-3. Run local development server:
+3. Create your local environment file:
+
+```bash
+cp src/environments/environment.local.example.ts src/environments/environment.local.ts
+```
+
+**Do this on every fresh clone and every new git worktree.** That file is gitignored (this repo
+is public and it holds real API keys), so nothing in git can create it for you and nothing in git
+can update it once you have one. Blank values build and run fine — a missing key costs you the
+map or the Google sign-in button, nothing else — so there is no reason to delay this step while
+you hunt for a key. `npm start` fails with a one-line explanation if the file is missing or has
+fallen behind the fields the code reads. See [docs/local-environment-files.md](docs/local-environment-files.md).
+
+4. Run the development server:
 
 ```bash
 npm start
@@ -49,22 +62,23 @@ App URL:
 
 The environment is selected **at startup** — it is baked into the running app and cannot be changed while the app is running.
 
-| Environment | API backend | Command |
-|---|---|---|
-| Local (default) | `http://localhost:8000` | `npm start` |
-| SIT | `https://sit-obrs-backend.koyeb.app` | `npm run start:sit` |
+| Environment | API backend | Command | Needs `environment.local.ts` |
+|---|---|---|---|
+| SIT (default for `npm start`) | `https://sit-obrs-backend.koyeb.app` | `npm start` / `npm run start:sit` | **yes** |
+| Local backend | `http://localhost:8080` | `npm run start:local` | no |
 
-Environment config files live in `src/environments/`.
+Environment config files live in `src/environments/`. Two of them are gitignored; see
+[docs/local-environment-files.md](docs/local-environment-files.md) for which lane reads which.
 
 **To work against two backends at the same time**, open two terminals and start each on a different port:
 
 ```bash
 # Terminal 1 — local backend
-npm start
+npm run start:local
 # → http://localhost:4200
 
 # Terminal 2 — SIT backend (pick any free port)
-npx ng serve --configuration sit --port 4201
+npm run start:sit -- --port 4201
 # → http://localhost:4201
 ```
 
@@ -88,6 +102,13 @@ Build SIT:
 
 ```bash
 npm run build:sit
+```
+
+Check the gitignored environment files against what the code reads (runs automatically before
+every lane above, and in CI):
+
+```bash
+npm run test:local-env
 ```
 
 Run unit tests:

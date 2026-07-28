@@ -6,3 +6,52 @@
   from = "/*"
   to = "/index.html"
   status = 200
+
+# OBRS-719 (PCI DSS 6.4.3 / 11.6.1) — SIT is where this policy finally gets MEASURED.
+#
+# Until this block SIT sent no security headers at all, so the CSP that
+# OBRS-backend/deploy/prod/Caddyfile serves had never been read by a browser anywhere:
+# prod carries the header today, but the Angular app is not published to that VM yet
+# (`/` answered 404 on 2026-07-28), and Netlify sent nothing. Every origin in the
+# allowlist is therefore still derived from reading source — exactly the kind of policy
+# that discovers it is wrong on the page that takes card payments.
+#
+# So this is deliberately the SAME policy as prod's, and Report-Only for the same
+# reason: it blocks nothing while we find out what it would have blocked.
+#
+# What is and is NOT gated, stated exactly: scripts/check-payment-page-scripts.mjs checks
+# THIS header against scripts/payment-page-script-inventory.json, and the backend's
+# CspAllowlistMatchesInventoryTest checks the Caddyfile against the prose inventory beside
+# it. Neither repo can read the other's tree, so nothing mechanically compares SIT's policy
+# to prod's — keeping the two in step is a human step, and the prose inventory is the seam.
+#
+# Two differences from the prod header, both forced by where SIT lives:
+#   - `report-uri` is absolute and cross-origin. On prod, Caddy fronts both the app and
+#     the API, so /api/csp-report is same-origin; on SIT the app is on Netlify and the
+#     API on Koyeb. Violation reports are not CORS-preflighted, so this reaches the
+#     collector — and the collector caps body size and rate-limits per IP precisely
+#     because it takes POSTs from hosts it does not control.
+#   - `connect-src` / `wss:` name the Koyeb backend instead of nj-phuyaipu.com, same
+#     split-origin reason. Nothing else differs.
+#
+# `img-src https://api.maptiler.com` is here for the same reason it is in the prod
+# Caddyfile (OBRS-833): both map surfaces use Leaflet RASTER tiles, so a tile is an
+# `<img>` and is governed by img-src, not connect-src. It matters more on SIT than it
+# looks — this is the surface where violations are actually collected, so leaving it out
+# would fill the collector with false positives from every tile and bury the real ones.
+#
+# ⚠️ Do NOT rename this to the enforcing `Content-Security-Policy` here as a shortcut to
+# "we tested it". SIT and prod serve different origins, so enforceable on SIT is not
+# proof for prod. The enforce flip is OBRS-719 AC 5 and belongs on the VM, after a real
+# booking→payment journey there.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
+
+# Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
+# subdomain and an HSTS header from us binds that host for a year; prod sets it in the
+# Caddyfile, where the domain actually is ours.

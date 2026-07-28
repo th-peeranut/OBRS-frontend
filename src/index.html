@@ -6,19 +6,37 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" type="image/svg+xml" href="images/logo.svg?v=2" sizes="any">
-  <script>
-    // GIS only localizes its rendered button text via the `hl` query param on this
-    // script URL (not via any renderButton()/initialize() option) - see LanguageService's
-    // APP_LANGUAGE_KEY, which is the same localStorage key this must stay in sync with.
-    (function () {
-      var lang = localStorage.getItem('app_language') || 'th';
-      var s = document.createElement('script');
-      s.src = 'https://accounts.google.com/gsi/client?hl=' + encodeURIComponent(lang);
-      s.async = true;
-      s.defer = true;
-      document.head.appendChild(s);
-    })();
-  </script>
+  <!--
+    OBRS-719: this file deliberately declares no script of its own, and that is
+    load-bearing. (Written without the literal tag spelling on purpose - the Angular
+    build copies this comment verbatim into dist/index.html, where a scanner reading
+    the shipped page would otherwise count the example as the thing it warns about.)
+
+    It used to bootstrap Google Identity from an inline block. Two costs, both paid on
+    every route: the CSP had to allow `script-src 'unsafe-inline'` - which is most of
+    what a CSP is for - and Google's script was fetched on the PAYMENT page, where PCI
+    DSS 6.4.3 makes every script something we have to justify in writing.
+
+    Both are gone because login.component.ts loads gsi/client itself, which it already
+    did for the language switch (OBRS-90). The `hl` locale still has to be a query param
+    on the script URL - GIS offers no initialize() option for it - it is just built from
+    TranslateService now instead of read straight out of localStorage.
+
+    ⚠️ The build injects tags of its own here, and one of them mattered. Angular's
+    `inlineCritical` optimization rewrites the stylesheet link so it loads as print media
+    and is switched to all media by an INLINE EVENT HANDLER (spelled out in the inventory
+    doc named below - not here, for the same reason as above). `script-src` blocks such a
+    handler just as surely as an inline block once 'unsafe-inline' is gone.
+    Report-Only hid it; enforcing would have shipped an unstyled app. angular.json now
+    sets `optimization.styles.inlineCritical: false`, measured against the emitted
+    dist/index.html rather than reasoned about. Do not turn it back on without either
+    re-measuring or restoring 'unsafe-inline' - and the second is not an option.
+
+    scripts/check-payment-page-scripts.mjs fails the build if a script declaration
+    reappears in this file, inline or sourced, or if that optimization comes back;
+    deploy/prod/PAYMENT-PAGE-SCRIPT-INVENTORY.md in OBRS-backend is the written
+    inventory that says why each remaining script exists.
+  -->
 </head>
 <body>
   <app-root></app-root>
