@@ -355,6 +355,21 @@ without declaring what it runs, which closes the family rather than the two inst
   that lane cost here has run-to-run noise wider than a five-screen change, so a single
   total is evidence of nothing on its own -- which is one more reason the count in a table
   was never the thing to watch.
+  **A sixth, and this one turned `dev` red.** The five screens OBRS-782 added took the
+  `admin, staff and session-bound pages` case from **41.6s to 58.7s** against the config's
+  flat `timeout: 60_000` -- 98% of its ceiling, still green, and therefore invisible. The
+  next commit to land (OBRS-794, which touched one admin component and no page list) went
+  **red on the clock alone**: it swept the same 47 pages and ended on the same one as the
+  green run before it. Nothing about that commit was wrong.
+  This is the lesson above with a bill attached. Cost has no registry, and a fixed
+  per-test ceiling is a registry entry nobody updates -- while the sweep is *required* to
+  grow, because `primeng host users are all swept` fails anyone who adds an admin screen
+  without adding it to `ADMIN_SWEEP`. OBRS-798 replaced the flat ceiling with
+  `sweepBudgetMs()`, which derives the budget from the list's own length, so growth pays
+  for itself. Note which knob moved: no assertion was relaxed, every page still gets
+  `PAGE_READY_TIMEOUT_MS` to come up, and a new case proves a stuck page is still reported
+  by name -- because "the gate went red so we raised the limit" is otherwise
+  indistinguishable from muting it.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is
