@@ -1,4 +1,5 @@
 @import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
 
 // OBRS-775. A component that declares no `:host` display renders as
 // `display: inline`, and an inline box may not contain the block-level children
@@ -108,5 +109,64 @@ li {
     max-width: calc(100vw - #{$space-md * 2});
     max-height: 60vh;
     overflow-y: auto;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode (OBRS-811)
+//
+// Not named by OBRS-811 or OBRS-563 — found by measurement. This component
+// shares the `.value-text` / `.dropdown-menu` recipe with
+// `dropdown-group-obrs`, and on `/` the two sit SIDE BY SIDE inside the same
+// `.booking-card`. Theming only the station picker would have left, on the
+// same card:
+//
+//   app-dropdown-obrs .value-text   #353c44 on #22263a = 1.34:1
+//   app-dropdown-obrs .dropdown-menu  #ffffff panel
+//
+// which is the "fixed the measured one, left its neighbour" failure. Same
+// tokens, same `:host-context` mechanism (OBRS-767); LIGHT mode is untouched
+// here — the $text-lightgrey sites in this family are OBRS-817's call.
+// ─────────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .btn.dropdown-toggle {
+    // $dk-text-muted, not $dk-border — see the same note in
+    // dropdown-group-obrs.component.scss. rgba(255,255,255,.10) composites to
+    // #31343d here (1.35:1), under the 3:1 floor WCAG 1.4.11 sets for a control
+    // boundary; the contrast gate caught it on /passenger-info.
+    &-border {
+      border-color: $dk-text-muted !important;
+    }
+
+    .value-text {
+      color: $dk-text;
+    }
+  }
+
+  .dropdown-btn:hover {
+    color: $dk-accent;
+    border-color: $dk-accent;
+  }
+
+  .dropdown-menu,
+  .dropdown-menu-border {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text;
+  }
+
+  .dropdown-option {
+    color: $dk-text;
+
+    // Bootstrap's `.dropdown-item:hover` background (#e9ecef) would otherwise
+    // flash a light band across the dark panel.
+    &:hover {
+      color: $dk-accent;
+      background-color: $dk-border-muted;
+    }
+  }
+
+  li {
+    color: $dk-text;
   }
 }

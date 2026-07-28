@@ -1,4 +1,5 @@
 @import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
 
 :host {
   display: block;
@@ -101,5 +102,67 @@
 
   .material-symbols-outlined {
     font-size: $font-size-md;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode (OBRS-811)
+//
+// This file had no dark rule at all. The field sits on `/passenger-info` beside
+// `.form-control` siblings that DO go dark (#161922 since OBRS-797), so in dark
+// mode it was a white box in a row of dark ones. Measured before this block,
+// with both forms filled so the control is genuinely enabled:
+//
+//   .promo-code-input   typed text #e8eaf0 on #ffffff = 1.20:1
+//
+// The card recorded this site as "could not be measured" because the probe found
+// it `[disabled]="isNextDisabled"` and skipped it per WCAG. A disabled control
+// also paints $primary-lightgrey instead of its real surface, so the first
+// reading taken that way (#dddee1) was of a different element — the fixture had
+// to fill the booker AND passenger forms before the number meant anything.
+// ─────────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .promo-code-input {
+    background-color: $dk-bg-input;
+    border-color: $dk-border;
+    color: $dk-text;
+
+    &::placeholder {
+      color: $dk-text-muted;
+    }
+
+    // The light recipe's $primary-lightgrey reads as a lit panel on a dark page;
+    // $dk-bg-soft is the established "inert surface" step above $dk-bg-input.
+    &:disabled {
+      background: $dk-bg-soft;
+      color: $dk-text-muted;
+    }
+
+    &:focus {
+      border-color: $dk-accent;
+    }
+  }
+
+  .promo-code-apply-btn:disabled {
+    background: $dk-bg-soft;
+    color: $dk-text-muted;
+  }
+
+  .promo-code-chip {
+    border-color: $dk-accent;
+    background: rgba($dk-accent, 0.12);
+    color: $dk-text;
+  }
+
+  .promo-code-chip-icon {
+    color: $dk-accent;
+  }
+
+  .promo-code-chip-remove {
+    color: $dk-text-muted;
+  }
+
+  .promo-code-error {
+    color: $dk-danger;
   }
 }

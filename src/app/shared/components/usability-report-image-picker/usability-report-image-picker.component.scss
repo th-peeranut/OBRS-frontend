@@ -1,12 +1,21 @@
 @import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
 
 // This is a cross-shell shared component (used by the customer "My Reports"
 // modal today) — styled with static SCSS tokens only, never `--admin-*`/
 // `--accent*` runtime vars (those only resolve inside `.admin-shell`).
 
+// $text-lightblack (4.60:1 on white), not $text-lightgrey (2.78:1). This
+// component renders in exactly two templates -- `my-report-edit-form` and
+// `my-report-follow-up-composer`, both inside the report-detail modal whose
+// other hint/label sites this card repointed -- so leaving this one at 2.78:1
+// would put two different greys on the same dialog. Checked by grepping every
+// reference to `app-usability-report-image-picker` rather than trusting the
+// "used by ... today" comment above. The wider $text-lightgrey question
+// (~49 sites elsewhere in the repo) is still OBRS-817's to answer.
 .ur-image-picker__hint {
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   margin: 0 0 $space-2xs;
 }
 
@@ -85,7 +94,7 @@
   border: none;
   cursor: pointer;
   padding: 0;
-  color: $text-lightgrey;
+  color: $text-lightblack; // same repoint as __hint above: 2.78 -> 4.60 on white
   flex-shrink: 0;
   line-height: 1;
 
@@ -95,5 +104,48 @@
 
   &:hover {
     color: $text-red;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode (OBRS-811)
+//
+// Found in the AFTER screenshot, not in a number: with the report-detail modal
+// themed, the one thing still painting #ffffff inside it was this component's
+// "Add Images" pill. It is not a contrast failure -- dark-on-white is perfectly
+// legible -- which is exactly why measuring alone would never have surfaced it.
+// It is the same defect the card is about: a surface that never goes dark.
+//
+// LIGHT is untouched. `$text-lightgrey` on `.ur-image-picker__hint` /
+// `.report-preview-remove` is 2.78:1 on white and stays that way here: it is
+// part of the ~49-site token question the owner routed to OBRS-817.
+// ─────────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .ur-image-picker__hint {
+    color: $dk-text-muted;
+  }
+
+  .ur-image-picker__add-btn {
+    background-color: transparent;
+    border-color: $dk-accent;
+    color: $dk-accent;
+  }
+
+  .report-preview-item {
+    background: $dk-bg-input;
+    border-color: $dk-border;
+    color: $dk-text;
+  }
+
+  .report-preview-remove {
+    color: $dk-text-muted;
+
+    &:hover {
+      color: $dk-danger;
+    }
+  }
+
+  .ur-image-picker__error {
+    color: $dk-danger;
   }
 }

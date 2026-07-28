@@ -1,4 +1,5 @@
 @import "../../../../styles/variables.scss";
+@import "../../../../styles/dark-tokens.scss";
 
 .btn.dropdown-toggle {
   display: flex;
@@ -93,10 +94,16 @@
   border-bottom: 1px solid $primary-grey;
 }
 
+// $text-lightgrey (#989ba4) is 2.78:1 on the white panel — sub-AA in LIGHT mode,
+// not only dark, and this icon is the search affordance rather than decoration.
+// Repointed to $text-lightblack (#717581, 4.60:1), the token OBRS-752 already
+// moved to clear the floor. Only the sites this card renders are repointed; the
+// other ~49 $text-lightgrey foregrounds in the repo are a token-wide decision
+// with its own card (OBRS-817).
 .dropdown-search-icon {
   flex: 0 0 auto;
   font-size: $font-size-md;
-  color: $text-lightgrey;
+  color: $text-lightblack;
 }
 
 .dropdown-search-input {
@@ -107,8 +114,11 @@
   font-size: $font-size-base;
   color: inherit; // inherits whatever text color the panel resolves to
 
+  // Same repoint as .dropdown-search-icon above: 2.78:1 -> 4.60:1 on white.
+  // This one is AC3 — it was failing in LIGHT mode too, so it is a pre-existing
+  // regression rather than anything dark mode introduced.
   &::placeholder {
-    color: $text-lightgrey;
+    color: $text-lightblack;
   }
 }
 
@@ -175,5 +185,109 @@ button.disabled,
   .dropdown-option {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode (OBRS-811, closing OBRS-563)
+//
+// This component had ZERO dark coverage: dark-theme.scss contains no selector
+// touching `app-dropdown-group-obrs`, so the whole panel stayed white with
+// `body.is-dark` active. Measured before this block, on `/`:
+//
+//   .dropdown-menu           #ffffff  (the panel itself, x4 on the page)
+//   .dropdown-search-input   typed text #e8eaf0 on #ffffff  =  1.20:1
+//   .dropdown-search-icon    #989ba4  on #ffffff            =  2.78:1
+//   .value-text              #353c44  on #22263a            =  1.34:1
+//
+// `.value-text` is the worst of them: the station you have ALREADY chosen,
+// painted in the light theme's near-black on the dark booking card behind it —
+// the OBRS-752 shape inverted, a themed background under an unthemed
+// foreground. It was NOT undetected: `customer-contrast-allow.ts` carried it
+// (and two siblings) as registered debt naming OBRS-563. The gate's
+// stale-entry check is what forced those three rows to be deleted here.
+//
+// It lives HERE and not in dark-theme.scss because these are encapsulated
+// component rules: `.btn.dropdown-toggle .value-text` scores (0,4,0) after
+// Angular rewrites it, which no `body.is-dark .a .b` can reach. That is
+// OBRS-767, and _dark-tokens.scss exists so this file can have the palette.
+// ─────────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .btn.dropdown-toggle {
+    // $dk-text-muted, NOT $dk-border. The first draft used $dk-border
+    // (rgba(255,255,255,.10)), which composites to #383c4e on the booking card
+    // and #31343d on the passenger-info card — 1.36:1 and 1.35:1, under the 3:1
+    // WCAG 1.4.11 asks of a component boundary. The contrast gate caught both as
+    // NEW findings, and they were a REGRESSION I introduced: the light
+    // $primary-lightgrey border this replaced was high-contrast on a dark card —
+    // wrong-looking, but passing. Allow-listing a number this card created would
+    // have been narrowing the gate to fit the fix. $dk-text-muted is an existing
+    // token (no new hex, OBRS-563's AC) and measures well clear of the floor.
+    &-border {
+      border-color: $dk-text-muted !important;
+    }
+
+    .value-text {
+      color: $dk-text;
+    }
+  }
+
+  .dropdown-btn:hover {
+    color: $dk-accent;
+    border-color: $dk-accent;
+  }
+
+  // `color` here is what the empty state (`li.px-3`, which carries no class of
+  // its own) inherits — without it that row renders $dk-text on white.
+  .dropdown-menu,
+  .dropdown-menu-border {
+    background-color: $dk-bg-card;
+    border-color: $dk-border;
+    color: $dk-text;
+  }
+
+  // Only reachable through isGroupedOptions(), which is always false against
+  // the current StationApi shape — so this rule is written for correctness and
+  // is NOT covered by the measurement below. Named rather than omitted.
+  .dropdown-header {
+    color: $dk-text-muted;
+  }
+
+  .dropdown-option {
+    color: $dk-text;
+
+    // Bootstrap paints `.dropdown-item:hover` with --bs-dropdown-link-hover-bg
+    // (#e9ecef). The light rule below only ever set `color`, so without this the
+    // hovered row flashes a light-grey band across the dark panel.
+    &:hover {
+      color: $dk-accent;
+      background-color: $dk-border-muted;
+    }
+  }
+
+  li.option-items {
+    color: $dk-text;
+
+    &:not(:last-child) {
+      border-bottom-color: $dk-border-muted;
+    }
+  }
+
+  // `background-color: inherit` on the light rule already carries the panel's
+  // new dark surface up into the sticky row; only the divider needs restating.
+  .dropdown-search-row {
+    border-bottom-color: $dk-border;
+  }
+
+  .dropdown-search-icon {
+    color: $dk-text-muted;
+  }
+
+  .dropdown-search-input {
+    color: $dk-text;
+
+    &::placeholder {
+      color: $dk-text-muted;
+    }
   }
 }

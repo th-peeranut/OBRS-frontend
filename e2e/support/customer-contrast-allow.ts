@@ -136,14 +136,30 @@ export const CONTRAST_ALLOW: Record<string, string> = {
   // -------------------------------------------------------------------------
 
   // -------------------------------------------------------------------------
-  // OBRS-563 -- DropdownGroupObrsComponent has zero dark-mode coverage. That
-  // card predates this gate (opened 2026-07-20 from an OBRS-562 scrutinize) and
-  // already names the whole panel; these are its sites, now with numbers.
+  // OBRS-563 -- CLOSED by OBRS-811 (2026-07-28). The three dark rows that lived
+  // here are gone, not narrowed:
+  //
+  //   dark|div.value-text|#353c44-on-#22263a                 1.34 -> 12.41
+  //   dark|span.current|#353c44-on-#22263a                   1.34 -> 12.41
+  //   dark|div.current-passenger > span|#353c44-on-#22263a   1.34 -> 12.41
+  //
+  // The fix is a `:host-context(body.is-dark)` block in each of the three
+  // components that share this recipe (dropdown-group-obrs, dropdown-obrs,
+  // dropdown-obrs-passenger) -- it could not go in dark-theme.scss, which is
+  // OBRS-767's rule. Light mode is byte-identical at all three: measured
+  // before/after in both themes, `.claude/agent-office/scripts/captures/obrs-811`.
+  // The stale-entry check in this gate is what forced this edit; it fired the
+  // moment the fix landed.
+  //
+  // The LIGHT boundary row below is NOT that defect and is NOT fixed. It is
+  // $primary-lightgrey (#dddee1) on white, the app's default control border --
+  // the same framework-default question OBRS-772 owns for twenty other
+  // controls. Re-attributed to OBRS-772 rather than left pointing at a closed
+  // card, because an allow entry naming a card nobody will reopen is exactly
+  // the rot the check above exists to catch.
   // -------------------------------------------------------------------------
-  'dark|div.value-text|#353c44-on-#22263a': '1.34:1 -- OBRS-563 public dropdown has no dark coverage',
-  'dark|span.current|#353c44-on-#22263a': '1.34:1 -- OBRS-563 public dropdown has no dark coverage',
-  'dark|div.current-passenger > span|#353c44-on-#22263a': '1.34:1 -- OBRS-563 public dropdown has no dark coverage',
-  'light|button.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff': '1.35:1 -- OBRS-563 dropdown trigger boundary',
+  'light|button.btn.dropdown-btn.dropdown-toggle|boundary-on-#ffffff':
+    '1.35:1 -- OBRS-772 control boundary (was filed under OBRS-563, closed by OBRS-811)',
 
   // -------------------------------------------------------------------------
   // OBRS-772 -- WCAG 1.4.11 control boundaries below 3:1.
