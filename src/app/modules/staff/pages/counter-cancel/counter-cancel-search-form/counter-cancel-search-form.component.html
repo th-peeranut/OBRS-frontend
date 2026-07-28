@@ -1,0 +1,61 @@
+<form [formGroup]="form" class="ccsf-form" (ngSubmit)="submit()">
+  <div class="ccsf-fields">
+    <div
+      class="ccsf-mode-toggle"
+      role="group"
+      [attr.aria-label]="'STAFF.CANCEL_BOOKING.SEARCH.BUTTON' | translate"
+    >
+      <button
+        type="button"
+        class="admin-btn ccsf-mode-btn"
+        [class.is-selected]="mode === 'phone'"
+        [attr.aria-pressed]="mode === 'phone'"
+        [disabled]="submitting"
+        (click)="selectMode('phone')"
+      >
+        {{ 'STAFF.CANCEL_BOOKING.SEARCH.MODE_PHONE' | translate }}
+      </button>
+      <button
+        type="button"
+        class="admin-btn ccsf-mode-btn"
+        [class.is-selected]="mode === 'bookingNumber'"
+        [attr.aria-pressed]="mode === 'bookingNumber'"
+        [disabled]="submitting"
+        (click)="selectMode('bookingNumber')"
+      >
+        {{ 'STAFF.CANCEL_BOOKING.SEARCH.MODE_BOOKING_NUMBER' | translate }}
+      </button>
+    </div>
+
+    <div class="ccsf-field" *ngIf="mode === 'phone'">
+      <input
+        type="tel"
+        inputmode="numeric"
+        maxlength="10"
+        class="admin-field"
+        formControlName="phone"
+        [placeholder]="'STAFF.CANCEL_BOOKING.SEARCH.MODE_PHONE' | translate"
+      />
+      <small class="admin-error" *ngIf="activeFieldInvalid">
+        {{ phoneErrorKey | translate }}
+      </small>
+    </div>
+
+    <div class="ccsf-field" *ngIf="mode === 'bookingNumber'">
+      <input
+        type="text"
+        class="admin-field"
+        formControlName="bookingNumber"
+        [placeholder]="'STAFF.CANCEL_BOOKING.SEARCH.MODE_BOOKING_NUMBER' | translate"
+        (input)="onBookingNumberInput($event)"
+      />
+      <small class="admin-error" *ngIf="activeFieldInvalid">
+        {{ 'STAFF.VALIDATION.REQUIRED' | translate }}
+      </small>
+    </div>
+
+    <button type="submit" class="admin-btn admin-btn-primary" [disabled]="submitting">
+      {{ 'STAFF.CANCEL_BOOKING.SEARCH.BUTTON' | translate }}
+    </button>
+  </div>
+</form>

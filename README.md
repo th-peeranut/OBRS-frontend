@@ -881,3 +881,54 @@ The bank/PromptPay destination-capture form itself
 cancel flow — see `docs/design-system.md` §12's OBRS-286 entry and
 `docs/adr/0032-cross-shell-refund-destination-fields-component.md` for its
 cross-shell token-override pattern.
+
+## Counter (staff act-on-behalf) cancel (`/staff/cancel-booking`, OBRS-766)
+
+Salesperson-only page (`requiredRoles: ['salesperson']`, never `driver`) that
+gives counter staff their first in-system way to cancel a walk-in customer's
+booking — the frontend caller OBRS-661's ordinary act-on-behalf cancel and
+OBRS-669's cash second-person approval never had before this card.
+`CounterCancelPageComponent` composes three dumb children:
+`CounterCancelSearchFormComponent` (exact-match search by phone OR booking
+number — a two-segment `.admin-btn` toggle, the same primitive
+`OverrideCancelModalComponent`'s `.override-rate-toggle` uses, never
+`p-selectButton`), `CounterCancelResultListComponent` (`GET
+/private/bookings/search`'s `Page<CounterBookingSearchResultDto>`, rendering
+`contactPhoneMasked` **verbatim** — it is already masked server-side), and
+`CounterCancelModalComponent`.
+
+The modal opens **optimistically** from the row already selected and runs an
+**independent** `previewState` state machine (`loading → blocked | error |
+resolved`) for the `GET .../cancel-policy` fetch — see
+`docs/adr/0033-counter-cancel-staff-page-pattern.md` for why these are two
+state machines, not one, and why a fetch failure here blocks Confirm outright
+(unlike `OverrideCancelModalComponent`'s refund-method check, which degrades
+to "optional" on failure). `previewState === 'blocked'`
+(`cancel.error.window-closed`) is **terminal** per ADR-0103 — no retry, no
+override affordance; that is the OWNER-only override-cancel modal, a
+different surface.
+
+Once resolved, the modal branches on `policy.refundMethod`:
+
+- **`CASH`** — a bordered, tinted section (`--admin-warning-fg` border/heading,
+  never `--admin-warning-text`, which is chip text only and fails standalone
+  in dark mode) asks for a **second person's** (the owner's) sign-in email and
+  password, never pre-filled (`autocomplete="off"` /
+  `autocomplete="new-password"` — the latter specifically defeats a browser
+  auto-filling the *salesperson's own* saved password). A soft client-side
+  check disables Confirm the instant the typed email matches the logged-in
+  user; the real gate is the backend's `cancel.error.approver-self`, which
+  the modal surfaces with the **identical copy** as the client-side hint.
+- **`MANUAL_REFUND_REQUIRED`** — mounts `AppRefundDestinationFieldsComponent`
+  byte-identical to `OverrideCancelModalComponent`'s usage (ADR-0032).
+- **Neither** — the request body stays `{}`, byte-identical to the customer
+  cancel flow's existing request — see ADR-0033 for how that is asserted at
+  the `HttpTestingController` wire layer, not a spy matcher.
+
+No NgRx: this is an isolated new staff page with nothing to plug a store
+into, the same precedent `OverrideCancelModalComponent` set. `StaffApiService`
+gains `searchBookings()`/`getCancelPolicy()`/`cancelCounterBooking()`, and
+`CancelBookingReqDto` (`shared/interfaces/my-booking.interface.ts`) gains
+optional `approverEmail?`/`approverPassword?` fields additively — the same
+extend-don't-fork pattern OBRS-286 used for `refundDestination?` on the same
+interface.

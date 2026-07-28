@@ -67,6 +67,14 @@ import { FleetMapPanelComponent } from './components/fleet-map-panel/fleet-map-p
 import { FleetVehicleStatusListComponent } from './components/fleet-vehicle-status-list/fleet-vehicle-status-list.component';
 import { PhoneFormatPipe } from '../../shared/pipes/phone-format.pipe';
 
+// OBRS-766 — counter (staff act-on-behalf) cancel: the first frontend caller
+// of OBRS-661's ordinary act-on-behalf cancel and OBRS-669's cash
+// second-person approval.
+import { CounterCancelPageComponent } from './pages/counter-cancel/counter-cancel-page.component';
+import { CounterCancelSearchFormComponent } from './pages/counter-cancel/counter-cancel-search-form/counter-cancel-search-form.component';
+import { CounterCancelResultListComponent } from './pages/counter-cancel/counter-cancel-result-list/counter-cancel-result-list.component';
+import { CounterCancelModalComponent } from './pages/counter-cancel/counter-cancel-modal/counter-cancel-modal.component';
+
 export const staffRoutes: Routes = [
   {
     path: '',
@@ -201,6 +209,18 @@ export const staffRoutes: Routes = [
         canActivate: [AuthGuard, featureEnabledGuard('fleetMap')],
         data: { requiredRoles: ['salesperson'], titleKey: 'STAFF.PAGES.FLEET_MAP', subtitleKey: 'STAFF.FLEET_MAP.SUBTITLE' },
       },
+      {
+        // OBRS-766: counter act-on-behalf cancel — salesperson only (never
+        // driver), same requiredRoles shape as 'sell'/'schedules'.
+        path: 'cancel-booking',
+        component: CounterCancelPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          requiredRoles: ['salesperson'],
+          titleKey: 'STAFF.PAGES.CANCEL_BOOKING',
+          subtitleKey: 'STAFF.CANCEL_BOOKING.SUBTITLE',
+        },
+      },
     ],
   },
 ];
@@ -233,6 +253,10 @@ export const staffRoutes: Routes = [
     FleetMapPageComponent,
     FleetMapPanelComponent,
     FleetVehicleStatusListComponent,
+    CounterCancelPageComponent,
+    CounterCancelSearchFormComponent,
+    CounterCancelResultListComponent,
+    CounterCancelModalComponent,
   ],
   imports: [
     SharedModule,

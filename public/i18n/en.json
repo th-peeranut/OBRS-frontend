@@ -2274,7 +2274,8 @@
       "PARCEL_WAYBILL": "Waybill",
       "PARCEL_SCHEDULE": "Parcel Handling",
       "INSPECTION": "Vehicle Inspection",
-      "FLEET_MAP": "Fleet Live Map"
+      "FLEET_MAP": "Fleet Live Map",
+      "CANCEL_BOOKING": "Cancel Booking"
     },
     "LAYOUT": {
       "BRAND": "OBRS STAFF",
@@ -2303,6 +2304,7 @@
       "PARCEL_SCHEDULE": "Verify & Handover",
       "INSPECTION": "Inspection",
       "FLEET_MAP": "Fleet Map",
+      "CANCEL_BOOKING": "Cancel Booking",
       "SECTION": {
         "SALES": "Sales",
         "OPERATIONS": "Operations",
@@ -2325,6 +2327,40 @@
       "THAI_MOBILE_INVALID": "Enter a valid Thai mobile number (starting 06, 08 or 09 — e.g. 0812345678). We text this number.",
       "ID_CARD_INVALID": "Enter a valid 13-digit ID card number.",
       "EMAIL_INVALID": "Enter a valid email address."
+    },
+    "CANCEL_BOOKING": {
+      "SUBTITLE": "Search for a customer's booking and cancel it on their behalf.",
+      "SEARCH": {
+        "MODE_PHONE": "Phone number",
+        "MODE_BOOKING_NUMBER": "Booking number",
+        "BUTTON": "Search",
+        "EMPTY_TITLE": "No matching booking",
+        "EMPTY_BODY": "No booking matches that phone number or booking number. Double-check it with the customer — it may also belong to a different fleet.",
+        "LOAD_FAILED": "Unable to search bookings. Please try again.",
+        "CRITERIA_REQUIRED": "Enter a phone number or a booking number to search."
+      },
+      "RESULTS": {
+        "CUSTOMER": "Customer",
+        "PHONE": "Phone"
+      },
+      "MODAL": {
+        "TITLE": "Cancel booking",
+        "CHECKING_POLICY": "Checking the refund amount…",
+        "WINDOW_CLOSED": "This booking is outside the cancellation window and can no longer be cancelled from here.",
+        "RETRY_CHECK": "Retry",
+        "CASH_APPROVAL_TITLE": "Cash refund — needs a second person's approval.",
+        "CASH_APPROVAL_BODY": "Hand the device to an owner or manager. They enter their own sign-in email and password below — not yours.",
+        "APPROVER_EMAIL": "Approver email",
+        "APPROVER_PASSWORD": "Approver password",
+        "APPROVER_IS_SELF_HINT": "This looks like your own account. A second person (the owner or a manager) must approve a cash refund.",
+        "APPROVAL_REQUIRED": "A second person's approval is required for a cash refund.",
+        "APPROVER_INVALID": "That email or password is incorrect. Please try again.",
+        "APPROVER_NOT_OWNER": "That account is not authorized to approve a cash refund.",
+        "APPROVER_SELF": "This looks like your own account. A second person (the owner or a manager) must approve a cash refund.",
+        "SUCCESS": "The booking has been cancelled.",
+        "FAILED": "Unable to cancel the booking. Please try again.",
+        "SUBMITTING": "Cancelling…"
+      }
     },
     "BOARDING": {
       "TITLE": "Boarding List",

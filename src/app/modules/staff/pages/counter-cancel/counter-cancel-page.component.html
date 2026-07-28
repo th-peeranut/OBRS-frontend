@@ -1,0 +1,32 @@
+<!-- No in-body title (design-system §7): the shell topbar already renders
+     the route's titleKey/subtitleKey (STAFF.PAGES.CANCEL_BOOKING /
+     STAFF.CANCEL_BOOKING.SUBTITLE) as the single title surface. -->
+<section class="admin-card">
+  <app-counter-cancel-search-form
+    [submitting]="isSearching"
+    (search)="onSearch($event)"
+  ></app-counter-cancel-search-form>
+
+  <p class="admin-error ccp-search-error" *ngIf="searchErrorMessage" role="alert">
+    {{ searchErrorMessage }}
+  </p>
+</section>
+
+<section class="admin-card mt-3" *ngIf="hasSearched">
+  <app-counter-cancel-result-list
+    [results]="results"
+    [loading]="isSearching"
+    [hasSearched]="hasSearched"
+    [page]="currentPage"
+    [totalPages]="totalPages"
+    (selectBooking)="onSelectBooking($event)"
+    (pageChange)="onPageChange($event)"
+  ></app-counter-cancel-result-list>
+</section>
+
+<app-counter-cancel-modal
+  [isOpen]="isModalOpen"
+  [booking]="selectedBooking"
+  (cancelled)="onModalCancelled()"
+  (closed)="onModalClosed()"
+></app-counter-cancel-modal>

@@ -1,0 +1,130 @@
+<div class="admin-modal-backdrop" *ngIf="isOpen" adminModalBackdrop (dismiss)="requestClose()">
+  <div class="admin-modal ccm-modal">
+    <h4 class="admin-modal-title">{{ 'STAFF.CANCEL_BOOKING.MODAL.TITLE' | translate }}</h4>
+
+    <!-- Optimistic booking summary — renders immediately from the row already
+         in hand, independent of the policy-preview fetch below. Because the
+         phone shown on the search result was masked, the operator confirms
+         the right booking by this combination: name + booking number +
+         route/departure + amount. -->
+    <dl class="ccm-summary">
+      <div class="ccm-summary-row">
+        <dt>{{ 'MY_BOOKINGS.BOOKING_NUMBER' | translate }}</dt>
+        <dd>{{ bookingNumber }}</dd>
+      </div>
+      <div class="ccm-summary-row">
+        <dt>{{ 'STAFF.CANCEL_BOOKING.RESULTS.CUSTOMER' | translate }}</dt>
+        <dd>{{ contactName }}</dd>
+      </div>
+      <div class="ccm-summary-row">
+        <dt>{{ 'MY_BOOKINGS.TOTAL' | translate }}</dt>
+        <dd>{{ booking ? formatCurrency(booking.netAmount) : '-' }}</dd>
+      </div>
+    </dl>
+
+    <!-- Policy preview — independent state machine (previewState) -->
+    <div class="ccm-preview" *ngIf="previewState === 'loading'">
+      <p class="admin-hint">{{ 'STAFF.CANCEL_BOOKING.MODAL.CHECKING_POLICY' | translate }}</p>
+    </div>
+
+    <div class="ccm-preview is-blocked" *ngIf="previewState === 'blocked'">
+      <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.WINDOW_CLOSED' | translate }}</p>
+    </div>
+
+    <div class="ccm-preview is-error" *ngIf="previewState === 'error'">
+      <p class="admin-error">{{ 'STAFF.CANCEL_BOOKING.MODAL.FAILED' | translate }}</p>
+      <button type="button" class="admin-btn admin-btn-small" [disabled]="isSubmitting" (click)="retryCheck()">
+        {{ 'STAFF.CANCEL_BOOKING.MODAL.RETRY_CHECK' | translate }}
+      </button>
+    </div>
+
+    <div class="ccm-policy" *ngIf="previewState === 'resolved' && policy">
+      <p class="ccm-policy-line">
+        {{ 'MY_BOOKINGS.CANCEL.REFUND_LINE' | translate: { refund: refundLabel, rate: policy.refundRatePercent } }}
+      </p>
+      <p class="ccm-policy-line">
+        {{ 'MY_BOOKINGS.CANCEL.PENALTY_LINE' | translate: { penalty: penaltyLabel } }}
+      </p>
+      <p class="admin-hint" *ngIf="isManualRefund">
+        {{ 'MY_BOOKINGS.CANCEL.MANUAL_REFUND_NOTE' | translate }}
+      </p>
+    </div>
+
+    <form [formGroup]="form">
+      <!-- CASH — three-layer control: a visually distinct section, copy that
+           names the physical hand-off, and fields that are NEVER pre-filled. -->
+      <div class="ccm-cash-approval" *ngIf="previewState === 'resolved' && isCashRefund">
+        <h5 class="ccm-cash-approval-title">
+          {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_TITLE' | translate }}
+        </h5>
+        <p class="ccm-cash-approval-body">
+          {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_BODY' | translate }}
+        </p>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_EMAIL' | translate }}
+            <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            type="email"
+            formControlName="approverEmail"
+            autocomplete="off"
+            [disabled]="isSubmitting"
+          />
+          <small class="admin-error" *ngIf="isApproverEmailInvalid">
+            {{ 'STAFF.VALIDATION.REQUIRED' | translate }}
+          </small>
+          <small class="admin-error ccm-self-hint" *ngIf="isApproverSelf">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_IS_SELF_HINT' | translate }}
+          </small>
+        </div>
+
+        <div class="admin-form-field">
+          <label class="admin-form-label">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_PASSWORD' | translate }}
+            <span class="admin-required">*</span>
+          </label>
+          <input
+            class="admin-field"
+            type="password"
+            formControlName="approverPassword"
+            autocomplete="new-password"
+            [disabled]="isSubmitting"
+          />
+          <small class="admin-error" *ngIf="isApproverPasswordInvalid">
+            {{ 'STAFF.VALIDATION.REQUIRED' | translate }}
+          </small>
+        </div>
+
+        <small class="admin-error" *ngIf="approverErrorMessage">{{ approverErrorMessage }}</small>
+      </div>
+
+      <!-- MANUAL_REFUND_REQUIRED — byte-identical usage to
+           OverrideCancelModalComponent / CancelRefundDestinationModalComponent. -->
+      <div class="admin-form-field full" *ngIf="previewState === 'resolved' && isManualRefund">
+        <app-refund-destination-fields
+          [formGroup]="destinationForm"
+          [disabled]="isSubmitting"
+        ></app-refund-destination-fields>
+        <small class="admin-error" *ngIf="destinationErrorMessage">{{ destinationErrorMessage }}</small>
+      </div>
+    </form>
+
+    <p class="admin-error ccm-error" *ngIf="errorMessage">{{ errorMessage }}</p>
+
+    <div class="admin-modal-actions">
+      <button type="button" class="admin-btn" [disabled]="isSubmitting" (click)="requestClose()">
+        {{ 'MY_BOOKINGS.CANCEL.CANCEL_BUTTON' | translate }}
+      </button>
+      <button type="button" class="admin-btn admin-btn-danger" [disabled]="!canSubmit" (click)="submit()">
+        {{
+          isSubmitting
+            ? ('STAFF.CANCEL_BOOKING.MODAL.SUBMITTING' | translate)
+            : ('MY_BOOKINGS.CANCEL.ACTION' | translate)
+        }}
+      </button>
+    </div>
+  </div>
+</div>

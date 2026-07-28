@@ -2274,7 +2274,8 @@
       "PARCEL_WAYBILL": "运单",
       "PARCEL_SCHEDULE": "班次包裹作业",
       "INSPECTION": "车辆检查",
-      "FLEET_MAP": "车队实时地图"
+      "FLEET_MAP": "车队实时地图",
+      "CANCEL_BOOKING": "取消订票"
     },
     "LAYOUT": {
       "BRAND": "OBRS 员工",
@@ -2303,6 +2304,7 @@
       "PARCEL_SCHEDULE": "验收 / 交接",
       "INSPECTION": "车辆检查",
       "FLEET_MAP": "车队地图",
+      "CANCEL_BOOKING": "取消订票",
       "SECTION": {
         "SALES": "售票",
         "OPERATIONS": "运营",
@@ -2325,6 +2327,40 @@
       "THAI_MOBILE_INVALID": "请输入有效的泰国手机号码（以 06、08 或 09 开头，例如 0812345678），系统会向该号码发送短信。",
       "ID_CARD_INVALID": "请输入有效的 13 位身份证号码。",
       "EMAIL_INVALID": "请输入有效的电子邮箱地址。"
+    },
+    "CANCEL_BOOKING": {
+      "SUBTITLE": "搜索客户的订票并代客户取消。",
+      "SEARCH": {
+        "MODE_PHONE": "电话号码",
+        "MODE_BOOKING_NUMBER": "订票号",
+        "BUTTON": "搜索",
+        "EMPTY_TITLE": "未找到匹配的订票",
+        "EMPTY_BODY": "没有与该电话号码或订票号匹配的订票。请与客户核对，该订票也可能属于其他车队。",
+        "LOAD_FAILED": "无法搜索订票，请重试。",
+        "CRITERIA_REQUIRED": "请输入电话号码或订票号以进行搜索。"
+      },
+      "RESULTS": {
+        "CUSTOMER": "客户",
+        "PHONE": "电话"
+      },
+      "MODAL": {
+        "TITLE": "取消订票",
+        "CHECKING_POLICY": "正在核对退款金额…",
+        "WINDOW_CLOSED": "此订票已超过可取消的时间窗口，无法在此处取消。",
+        "RETRY_CHECK": "重试",
+        "CASH_APPROVAL_TITLE": "现金退款——需要第二人批准。",
+        "CASH_APPROVAL_BODY": "请将设备交给店主或经理。由他们输入自己的登录邮箱和密码——不是您的。",
+        "APPROVER_EMAIL": "批准人邮箱",
+        "APPROVER_PASSWORD": "批准人密码",
+        "APPROVER_IS_SELF_HINT": "此邮箱似乎是您自己的账户。现金退款必须由第二人（店主或经理）批准。",
+        "APPROVAL_REQUIRED": "现金退款需要第二人批准。",
+        "APPROVER_INVALID": "邮箱或密码不正确，请重试。",
+        "APPROVER_NOT_OWNER": "该账户无权批准现金退款。",
+        "APPROVER_SELF": "此邮箱似乎是您自己的账户。现金退款必须由第二人（店主或经理）批准。",
+        "SUCCESS": "订票已取消。",
+        "FAILED": "无法取消订票，请重试。",
+        "SUBMITTING": "正在取消…"
+      }
     },
     "BOARDING": {
       "TITLE": "登车名单",

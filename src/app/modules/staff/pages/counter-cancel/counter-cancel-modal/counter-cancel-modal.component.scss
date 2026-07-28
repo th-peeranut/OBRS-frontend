@@ -1,0 +1,90 @@
+// OBRS-766 — reuses the shared .admin-modal/.admin-form-field/.admin-btn
+// primitives (same base as override-cancel-modal.component.scss); only the
+// booking summary, the preview states, and the cash-approval callout need
+// local rules.
+
+.ccm-summary {
+  margin: 0 0 12px;
+  padding: 12px;
+  border-radius: 8px;
+  // --admin-surface-soft is the declared role for a recessed panel inside a
+  // card, themed in both modes — same token override-cancel-modal's own
+  // summary panel uses (OBRS-721), never a hard-coded rgba wash.
+  background: var(--admin-surface-soft);
+
+  .ccm-summary-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+
+    & + .ccm-summary-row {
+      margin-top: 6px;
+    }
+
+    dt {
+      margin: 0;
+      color: var(--admin-muted);
+    }
+
+    dd {
+      margin: 0;
+      font-weight: 600;
+      text-align: right;
+    }
+  }
+}
+
+.ccm-preview {
+  margin: 0 0 16px;
+
+  &.is-blocked,
+  &.is-error {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+}
+
+.ccm-policy {
+  margin: 0 0 16px;
+}
+
+.ccm-policy-line {
+  margin: 0 0 4px;
+}
+
+// CASH — deliberately the heaviest visual weight in the modal: a bordered,
+// tinted section (not two more fields blended into the form), so self-entry
+// reads as the wrong motion rather than a technicality (UX spec, "the
+// subtlest part of this card"). --admin-warning-fg is the surface-role
+// standalone-text token (design-system §2.4/§11) — NOT --admin-warning-text,
+// which is chip text only and measures 1.53-1.86:1 standalone in dark mode
+// (see the token's own comment in admin-theme.scss, OBRS-726).
+.ccm-cash-approval {
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px solid var(--admin-warning-fg);
+  border-radius: 8px;
+  background: var(--admin-surface-soft);
+}
+
+.ccm-cash-approval-title {
+  margin: 0 0 6px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--admin-warning-fg);
+}
+
+.ccm-cash-approval-body {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+}
+
+.ccm-self-hint {
+  display: block;
+}
+
+.ccm-error {
+  margin: 12px 0 0;
+}

@@ -120,9 +120,21 @@ export interface CancellationPolicy {
  * the cancel resolves to `MANUAL_REFUND_REQUIRED`; the FE mirrors that via
  * Flow A1's modal, but the server remains the authority (400
  * `cancel.error.refund-destination-required` / `-invalid`).
+ *
+ * OBRS-766 — additive extension for the counter (staff act-on-behalf) cancel
+ * surface: `approverEmail`/`approverPassword` carry a SECOND PERSON's (the
+ * owner's) credentials, required by the backend IFF the cancel resolves to
+ * `refundMethod === 'CASH'` (OBRS-669's cash second-person approval). Both
+ * fields are optional on the wire and MUST be omitted (not sent as empty
+ * strings) for every other refund method, so the one existing caller
+ * (`my-bookings.effect.ts`'s customer path, via `booking.service.ts`) keeps
+ * posting the exact same body it always has — this widening is invisible to
+ * it (design-system §10: extend, don't fork).
  */
 export interface CancelBookingReqDto {
   refundDestination?: RefundDestinationReqDto;
+  approverEmail?: string;
+  approverPassword?: string;
 }
 
 /** `CancelBookingRespDto` — result of a successful cancellation. */

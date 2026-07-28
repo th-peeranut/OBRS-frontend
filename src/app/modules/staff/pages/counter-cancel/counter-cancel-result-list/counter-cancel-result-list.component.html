@@ -1,0 +1,79 @@
+<div class="admin-table-wrap">
+  <table class="admin-table">
+    <thead>
+      <tr>
+        <th>{{ 'MY_BOOKINGS.BOOKING_NUMBER' | translate }}</th>
+        <th>{{ 'STAFF.CANCEL_BOOKING.RESULTS.CUSTOMER' | translate }}</th>
+        <th>{{ 'STAFF.CANCEL_BOOKING.RESULTS.PHONE' | translate }}</th>
+        <th>{{ 'ADMIN.BOOKINGS.ROUTE' | translate }}</th>
+        <th>{{ 'MY_BOOKINGS.DEPARTURE' | translate }}</th>
+        <th>{{ 'MY_BOOKINGS.TOTAL' | translate }}</th>
+        <th>{{ 'ADMIN.BOOKINGS.BOOKING_STATUS' | translate }}</th>
+        <th class="text-right">{{ 'ADMIN.COMMON.ACTIONS' | translate }}</th>
+      </tr>
+    </thead>
+    <tbody>
+      <ng-container *ngIf="loading">
+        <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--pill"></span></td>
+          <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+        </tr>
+      </ng-container>
+
+      <ng-container *ngIf="!loading">
+        <tr *ngFor="let row of results; trackBy: trackByBookingId" class="ccrl-row">
+          <td class="admin-emphasis">{{ row.bookingNumber }}</td>
+          <td>{{ row.contactName }}</td>
+          <td class="ccrl-phone">{{ row.contactPhoneMasked }}</td>
+          <td>
+            <div *ngFor="let journey of row.journeys">{{ routeLabel(journey) }}</div>
+          </td>
+          <td>
+            <div *ngFor="let journey of row.journeys">{{ departureLabel(journey) }}</div>
+          </td>
+          <td class="admin-emphasis">{{ amountLabel(row.netAmount) }}</td>
+          <td>
+            <span class="admin-status" [ngClass]="statusClass(row.status)">
+              {{ statusLabelKey(row.status) | translate }}
+            </span>
+          </td>
+          <td class="text-right">
+            <button
+              *ngIf="isCancellable(row)"
+              type="button"
+              class="admin-btn admin-btn-small"
+              (click)="selectBooking.emit(row)"
+            >
+              {{ 'MY_BOOKINGS.CANCEL.ACTION' | translate }}
+            </button>
+            <span *ngIf="!isCancellable(row)" class="admin-status is-neutral">
+              {{ 'MY_BOOKINGS.NOT_CANCELLABLE' | translate }}
+            </span>
+          </td>
+        </tr>
+
+        <tr *ngIf="hasSearched && results.length === 0" class="admin-empty-row">
+          <td colspan="8">
+            <div class="ccrl-empty">
+              <p class="ccrl-empty-title">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_TITLE' | translate }}</p>
+              <p class="ccrl-empty-body admin-muted">{{ 'STAFF.CANCEL_BOOKING.SEARCH.EMPTY_BODY' | translate }}</p>
+            </div>
+          </td>
+        </tr>
+      </ng-container>
+    </tbody>
+  </table>
+</div>
+
+<app-admin-paginator
+  [currentPage]="page"
+  [totalPages]="totalPages"
+  [disabled]="loading"
+  (pageChange)="pageChange.emit($event)"
+></app-admin-paginator>
