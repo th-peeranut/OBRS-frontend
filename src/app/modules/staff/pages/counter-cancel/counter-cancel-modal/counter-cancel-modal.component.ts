@@ -3,10 +3,13 @@ import {
   EventEmitter,
   Input,
   OnChanges,
+  OnDestroy,
   Output,
   SimpleChanges,
 } from '@angular/core';
 import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
 import {
   CancellationPolicy,
@@ -71,11 +74,13 @@ export type CounterCancelPreviewState = 'loading' | 'blocked' | 'error' | 'resol
   templateUrl: './counter-cancel-modal.component.html',
   styleUrl: './counter-cancel-modal.component.scss',
 })
-export class CounterCancelModalComponent implements OnChanges {
+export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   @Input() isOpen = false;
   @Input() booking: CounterBookingSearchResultDto | null = null;
   @Output() readonly cancelled = new EventEmitter<void>();
   @Output() readonly closed = new EventEmitter<void>();
+
+  private readonly destroy$ = new Subject<void>();
 
   protected previewState: CounterCancelPreviewState = 'loading';
   protected policy: CancellationPolicy | null = null;
@@ -97,6 +102,11 @@ export class CounterCancelModalComponent implements OnChanges {
       approverPassword: [''],
       destination: buildRefundDestinationForm(this.formBuilder),
     });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -126,24 +136,27 @@ export class CounterCancelModalComponent implements OnChanges {
       return;
     }
     this.previewState = 'loading';
-    this.staffApiService.getCancelPolicy(booking.bookingId).subscribe({
-      next: (response) => {
-        this.policy = response.data ?? null;
-        this.previewState = 'resolved';
-        this.applyApproverValidators(this.isCashRefund);
-        this.applyDestinationValidators(this.isManualRefund);
-      },
-      error: (error) => {
-        const code = extractApiErrorCode(error, null);
-        // ADR-0103: window-closed is TERMINAL — no retry, no override
-        // affordance. Everything else gets the Retry button (this modal's
-        // deliberate divergence from OverrideCancelModalComponent's
-        // refund-method check: THIS fetch is the modal's primary content, so
-        // a failure blocks Confirm outright rather than degrading to
-        // "optional").
-        this.previewState = code === 'cancel.error.window-closed' ? 'blocked' : 'error';
-      },
-    });
+    this.staffApiService
+      .getCancelPolicy(booking.bookingId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.policy = response.data ?? null;
+          this.previewState = 'resolved';
+          this.applyApproverValidators(this.isCashRefund);
+          this.applyDestinationValidators(this.isManualRefund);
+        },
+        error: (error) => {
+          const code = extractApiErrorCode(error, null);
+          // ADR-0103: window-closed is TERMINAL — no retry, no override
+          // affordance. Everything else gets the Retry button (this modal's
+          // deliberate divergence from OverrideCancelModalComponent's
+          // refund-method check: THIS fetch is the modal's primary content,
+          // so a failure blocks Confirm outright rather than degrading to
+          // "optional").
+          this.previewState = code === 'cancel.error.window-closed' ? 'blocked' : 'error';
+        },
+      });
   }
 
   protected retryCheck(): void {
@@ -286,20 +299,23 @@ export class CounterCancelModalComponent implements OnChanges {
       payload.refundDestination = toRefundDestinationPayload(this.destinationForm);
     }
 
-    this.staffApiService.cancelCounterBooking(booking.bookingId, payload).subscribe({
-      next: (response) => {
-        this.isSubmitting = false;
-        this.cancelled.emit();
-        this.closed.emit();
-        void this.alertService.success(
-          response?.message || this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS')
-        );
-      },
-      error: (error) => {
-        this.isSubmitting = false;
-        this.handleSubmitError(error);
-      },
-    });
+    this.staffApiService
+      .cancelCounterBooking(booking.bookingId, payload)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          this.isSubmitting = false;
+          this.cancelled.emit();
+          this.closed.emit();
+          void this.alertService.success(
+            response?.message || this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS')
+          );
+        },
+        error: (error) => {
+          this.isSubmitting = false;
+          this.handleSubmitError(error);
+        },
+      });
   }
 
   private handleSubmitError(error: unknown): void {
