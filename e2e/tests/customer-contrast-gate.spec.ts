@@ -34,7 +34,7 @@
  */
 
 import { expect, test } from '@playwright/test';
-import { AA_BOUNDARY, MEASURE, boundaryKey, textKey } from '../support/customer-contrast';
+import { AA_BOUNDARY, MEASURE, boundaryKey, placeholderKey, textKey } from '../support/customer-contrast';
 import { CUSTOMER_PAGES, seedCustomerSession, seedStore } from '../support/customer-pages';
 import { CONTRAST_ALLOW } from '../support/customer-contrast-allow';
 
@@ -96,7 +96,30 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
           </button>
           <!-- Legible label, and 21:1 against the card. Neither invariant may fire. -->
           <p class="fine-copy" style="color:#ffffff">Readable copy on the dark card</p>
+
+          <!-- OBRS-797, invariant C. The two hex pairs are the ones the card was
+               filed on, measured live on /register in dark mode: Bootstrap's
+               theme-blind rgba(33,37,41,.75) over $dk-bg-input reads 1.10:1, and
+               $dk-text-muted over the same surface reads 6.94:1. The alpha is
+               written out rather than pre-composited on purpose -- it is the
+               step this gate did not do before, so a version that drops it fails
+               HERE instead of turning eighteen real findings green. -->
+          <input class="broken-ph" placeholder="Please enter your email"
+                 style="background-color:#161922;color:#e8eaf0;border:0" />
+          <input class="fixed-ph" placeholder="Please enter your email"
+                 style="background-color:#161922;color:#e8eaf0;border:0" />
+          <!-- An input with no placeholder attribute paints no placeholder text.
+               Scoring it would key a finding on an empty string. -->
+          <input class="no-ph" style="background-color:#161922;color:#e8eaf0;border:0" />
+          <!-- Disabled: WCAG exempts it, exactly as for A and B. -->
+          <input class="off-ph" disabled placeholder="Disabled field"
+                 style="background-color:#161922;color:#e8eaf0;border:0" />
         </div>
+        <style>
+          .broken-ph::placeholder { color: rgba(33,37,41,0.75); opacity: 1 }
+          .fixed-ph::placeholder,
+          .off-ph::placeholder { color: #9aa3b8; opacity: 1 }
+        </style>
       </body>
     `);
 
@@ -133,6 +156,41 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     expect(controlOf('grad-pill'), 'a gradient fill was scored from a transparent backgroundColor').toBeFalsy();
     expect(sweep.skipped.disabled).toBeGreaterThan(0);
     expect(sweep.skipped.gradient).toBeGreaterThan(0);
+
+    // --- invariant C (OBRS-797) -------------------------------------------
+    const phOf = (cls: string) => sweep.placeholders.find((p) => p.path.includes(cls));
+
+    // must-catch: the defect the card was filed on. Asserting the RATIO rather
+    // than "is below the floor" is what pins BOTH halves of the measurement, and
+    // both were mutation-tested against this line:
+    //   * drop the `'::placeholder'` argument -> 14.59:1 (the element's own
+    //     $dk-text on $dk-bg-input). GREEN, over a glyph nobody paints -- this is
+    //     the regression that re-blinds the gate the way OBRS-797 found it.
+    //   * keep the argument but skip the alpha composite -> 1.14:1. Still red,
+    //     so it would not hide the defect; it would just report a number that is
+    //     not the painted colour, and every AFTER value on the card would be
+    //     wrong by a different amount depending on the surface.
+    // A `toBeLessThan(floor)` assertion catches only the first of those.
+    const brokenPh = phOf('broken-ph');
+    expect(brokenPh, 'the ::placeholder was not measured at all -- invariant C is blind').toBeTruthy();
+    expect(brokenPh!.ratio).toBeCloseTo(1.1, 2);
+    expect(brokenPh!.ratio).toBeLessThan(brokenPh!.floor);
+
+    // must-NOT-catch: the shipped fix, and the two populations C must skip.
+    expect(phOf('fixed-ph')!.ratio).toBeCloseTo(6.94, 2);
+    expect(phOf('fixed-ph')!.ratio).toBeGreaterThanOrEqual(phOf('fixed-ph')!.floor);
+    expect(phOf('no-ph'), 'an input with no placeholder attribute was scored').toBeFalsy();
+    expect(phOf('off-ph'), 'a disabled input was scored -- WCAG exempts it').toBeFalsy();
+
+    // The element's own `color` must NOT be what invariant C reports: #e8eaf0 on
+    // #161922 is 12.63:1, and every one of the eighteen real findings would have
+    // read as that number if the pseudo argument were dropped.
+    expect(brokenPh!.fg).not.toBe('#e8eaf0');
+
+    // And invariant A must not double-file it: an <input> owns no text node, so
+    // a placeholder that appeared in BOTH lists would mean the two invariants
+    // have started describing the same row under different keys.
+    expect(textOf('broken-ph'), 'invariant A also scored an input -- the two now overlap').toBeFalsy();
   });
 
   // Eight pages in two themes, sequentially, in one browser context. Splitting
@@ -190,6 +248,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     const totals = {
       text: 0,
       controls: 0,
+      placeholders: 0,
       gradient: 0,
       opacity: 0,
       disabled: 0,
@@ -251,6 +310,16 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                 `least ${target.minControls}.`
             );
           }
+          // Same floor logic as the two above, and it earns its place for the
+          // same reason: /login and /passenger-info are the pages that carry the
+          // OBRS-797 fields, and a fixture change that stopped rendering them
+          // would leave invariant C reporting "0 below AA" over nothing.
+          if (sweep.measuredPlaceholders < (target.minPlaceholders ?? 0)) {
+            shortfalls.push(
+              `${target.key}/${theme}: only ${sweep.measuredPlaceholders} scoreable placeholder(s), ` +
+                `expected at least ${target.minPlaceholders}.`
+            );
+          }
 
           for (const selector of target.mustRender) {
             if ((await sheet.locator(selector).count()) === 0) {
@@ -264,6 +333,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
 
           totals.text += sweep.measuredText;
           totals.controls += sweep.measuredControls;
+          totals.placeholders += sweep.measuredPlaceholders;
           totals.gradient += sweep.skipped.gradient;
           totals.opacity += sweep.skipped.opacity;
           totals.disabled += sweep.skipped.disabled;
@@ -277,6 +347,17 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
               key: textKey(theme, f),
               page: target.key,
               detail: `text ${f.fg} on ${f.bg} -- "${f.text}"  [${f.path}]`,
+              ratio: f.ratio,
+              floor: f.floor,
+            });
+          }
+
+          for (const f of sweep.placeholders) {
+            if (f.ratio >= f.floor) continue;
+            record({
+              key: placeholderKey(theme, f),
+              page: target.key,
+              detail: `placeholder ${f.fg} on ${f.bg} -- "${f.text}"  [${f.path}]`,
               ratio: f.ratio,
               floor: f.floor,
             });
@@ -324,6 +405,17 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
                   floor: f.floor,
                 });
               }
+              for (const f of one.placeholders) {
+                if (f.ratio >= f.floor) continue;
+                if (coveredAtRest(placeholderKey(theme, f), f.ratio)) continue;
+                record({
+                  key: placeholderKey(stateTheme, f),
+                  page: target.key,
+                  detail: `placeholder ${f.fg} on ${f.bg} -- "${f.text}"  [${f.path}]`,
+                  ratio: f.ratio,
+                  floor: f.floor,
+                });
+              }
               for (const c of one.controls) {
                 if (c.boundary >= AA_BOUNDARY) continue;
                 if (coveredAtRest(boundaryKey(theme, c), c.boundary)) continue;
@@ -361,6 +453,7 @@ test.describe('customer shell contrast gate (OBRS-584)', () => {
     console.log(`  pages swept        : ${CUSTOMER_PAGES.length} x 2 themes`);
     console.log(`  text runs scored   : ${totals.text}`);
     console.log(`  controls scored    : ${totals.controls}`);
+    console.log(`  placeholders scored: ${totals.placeholders} -- ::placeholder, composited (OBRS-797)`);
     console.log(`  skipped (gradient) : ${totals.gradient} -- backgroundColor is transparent under one, NOT a pass`);
     console.log(`  skipped (opacity)  : ${totals.opacity} -- composited by an opacity < 1, NOT a pass`);
     console.log(`  skipped (disabled) : ${totals.disabled} -- WCAG 1.4.3 / 1.4.11 exempt inactive components`);

@@ -283,6 +283,15 @@ export interface CustomerPage {
   /** Same guard for invariant B. 0 where the page genuinely has no surfaced control. */
   minControls: number;
   /**
+   * Same guard for invariant C (OBRS-797). Optional and omitted rather than 0 on
+   * the pages that render no placeholder at all: a declared 0 reads as "checked,
+   * none expected", and here that would be indistinguishable from a page whose
+   * fields stopped rendering. Only set it where a placeholder is part of what
+   * the page IS -- /login and /passenger-info -- so the number is a claim
+   * somebody made rather than a default nobody chose.
+   */
+  minPlaceholders?: number;
+  /**
    * Elements this page MUST render for the sweep to mean what it claims.
    *
    * A population floor catches a page that failed to render. It does not catch
@@ -326,6 +335,8 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     landsOn: '/login',
     minText: 15,
     minControls: 2,
+    // Email + password. Both measured 1.10:1 in dark before OBRS-797.
+    minPlaceholders: 2,
     mustRender: ['.login-btn'],
     hoverTargets: ['.login-btn', '.login-by-phone-no-btn'],
   },
@@ -365,6 +376,11 @@ export const CUSTOMER_PAGES: CustomerPage[] = [
     seed: true,
     minText: 25,
     minControls: 3,
+    // booker-info-form's Phone + Email, which is where the user reported it.
+    // Two, not three: this fixture seeds `useBookerInfo: true`, so the
+    // passenger-info-form's own phone field is not rendered -- the same
+    // one-passenger fixture narrowness OBRS-795 tracks, restated for invariant C.
+    minPlaceholders: 2,
     mustRender: ['.btn-next'],
     hoverTargets: ['.btn-next', '.btn-back'],
   },

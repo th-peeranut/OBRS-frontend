@@ -1972,6 +1972,23 @@
 .is-dark .admin-field {
   border-color: var(--admin-outline);
   color: var(--admin-text);
+
+  /* OBRS-797. `.form-control::placeholder` was themed for the dark shell back in
+     OBRS-128 (see the .admin-shell.is-dark block above) but `.admin-field` --
+     the design-system §5 pill that most staff screens actually use -- was not,
+     so its placeholder fell through to Chrome's UA default #6b7280. Measured on
+     the boarding scan box (/staff/boarding/:id, "Paste or scan the boarding
+     token"): #6b7280 on #1d2226 = 3.32:1, under the 4.5:1 floor. The same gap
+     covers the /staff/inspection note textareas, which render on the same
+     surface.
+     --admin-muted was measured, not assumed: #9fb0bb on #1d2226 = 7.18:1, and it
+     is the token the sibling `.form-control::placeholder` rule already uses
+     (6.58:1 on the slightly lighter --admin-surface-soft), so the two input
+     shapes now read the same rather than one being darker for no reason. */
+  &::placeholder {
+    color: var(--admin-muted);
+    opacity: 1; /* Firefox still applies a UA opacity to ::placeholder. */
+  }
 }
 
 /* Multi-line exception to the pill shape (§5): a literal 999px pill reads wrong on

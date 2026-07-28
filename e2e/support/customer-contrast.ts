@@ -25,7 +25,7 @@
  * So: open the real pages in a real browser, in both themes, and read
  * `getComputedStyle`.
  *
- * WHAT IS MEASURED -- TWO INVARIANTS, NOT ONE
+ * WHAT IS MEASURED -- THREE INVARIANTS, NOT ONE
  *
  *   A. TEXT (WCAG 1.4.3). Every element that renders its own text run, against
  *      the background actually painted behind it (composited up the ancestor
@@ -39,6 +39,23 @@
  *      Before OBRS-752 that same button was the opposite -- boundary fine, label
  *      2.03:1. Checking only one of the two turns a fix for it into a silent
  *      regression of the other.
+ *
+ *   C. PLACEHOLDER (WCAG 1.4.3 again, but unreachable by invariant A).
+ *      `getComputedStyle(el, '::placeholder')` -- OBRS-797. Until that card this
+ *      file called `getComputedStyle(n)` in six places and passed a second
+ *      argument in NONE of them, so every pseudo-element was invisible to the
+ *      gate BY CONSTRUCTION rather than by omission from CONTRAST_ALLOW. It was
+ *      not reachable by widening invariant A either: `ownsText()` looks for a
+ *      child text node and an `<input>` has no children, so the sweep would have
+ *      to be blind to placeholders even if the pseudo were read for free.
+ *
+ *      What it hid: eighteen customer fields at **1.10:1**. Bootstrap 5.3 paints
+ *      `.form-control::placeholder` with `--bs-secondary-color` =
+ *      rgba(33,37,41,.75), a theme-blind dark grey -- 6.78:1 on white, 1.10:1 on
+ *      the dark input surface -- while the dark-mode sweep ran green over all of
+ *      them for months. The alpha is load-bearing: read the pseudo's colour
+ *      without compositing it and you get the ELEMENT's text colour, which
+ *      scores those same eighteen fields as passing.
  *
  * THE THREE FALSE POSITIVES THIS REFUSES TO SCORE
  *
@@ -85,6 +102,22 @@ export interface TextFinding {
   count: number;
 }
 
+/**
+ * A placeholder is text a user has to read to know what the field wants, so it
+ * carries the same 1.4.3 floor as any other copy. `fg` is the pseudo-element's
+ * colour ALREADY COMPOSITED over `bg` -- see the alpha note in the header.
+ */
+export interface PlaceholderFinding {
+  key: string;
+  path: string;
+  text: string;
+  fg: string;
+  bg: string;
+  ratio: number;
+  floor: number;
+  count: number;
+}
+
 export interface BoundaryFinding {
   key: string;
   path: string;
@@ -103,9 +136,11 @@ export interface Sweep {
   bodyIsDark: boolean;
   text: TextFinding[];
   controls: BoundaryFinding[];
+  placeholders: PlaceholderFinding[];
   /** Everything measured, not just what failed -- the denominator for the 0-match guard. */
   measuredText: number;
   measuredControls: number;
+  measuredPlaceholders: number;
   skipped: {
     gradient: number;
     opacity: number;
@@ -426,13 +461,86 @@ export const MEASURE = (only?: string): Sweep => {
     });
   }
 
+  // --- invariant C: the ::placeholder pseudo-element ----------------------
+  //
+  // Same floor and the same five exclusions as invariant A, over a population A
+  // structurally cannot reach. `only` narrows it the same way, so the hover /
+  // focus pass measures a focused field's placeholder too -- which matters: a
+  // `:focus` rule that repaints the input's surface moves what the placeholder
+  // sits on, and the rest-state row says nothing about that.
+  const placeholderRows: PlaceholderFinding[] = [];
+  let measuredPlaceholders = 0;
+  const phScope = only
+    ? Array.from(document.querySelectorAll(only)).flatMap((el) => [
+        el,
+        ...Array.from(el.querySelectorAll('input, textarea')),
+      ])
+    : Array.from(document.querySelectorAll('input:not([type="hidden"]), textarea'));
+  for (const el of phScope) {
+    if (!(el instanceof HTMLInputElement) && !(el instanceof HTMLTextAreaElement)) continue;
+    if (el.type === 'hidden') continue;
+    // An empty placeholder paints nothing. Scoring it would report the colour of
+    // a glyph that does not exist, and every input without one would arrive as a
+    // finding keyed on a blank string.
+    if (!(el.getAttribute('placeholder') || '').trim()) continue;
+    if (!visible(el)) {
+      skipped.invisible++;
+      continue;
+    }
+    if (thirdParty(el)) {
+      skipped.thirdParty++;
+      continue;
+    }
+    if (inactive(el)) {
+      skipped.disabled++;
+      continue;
+    }
+    if (faded(el)) {
+      skipped.opacity++;
+      continue;
+    }
+    if (overImage(el)) {
+      skipped.gradient++;
+      continue;
+    }
+
+    const ps = getComputedStyle(el, '::placeholder');
+    const raw = rgba(ps.color);
+    const bg = paintedBg(el);
+    // The compositing step IS the measurement. Bootstrap's placeholder colour is
+    // 75% opaque and Chrome's UA default is a flat #6b7280; taking `raw` as the
+    // foreground reports a colour that is never painted, and in the dark-mode
+    // case it reports one that is 6x too flattering.
+    const fg = [
+      raw[0] * raw[3] + bg[0] * (1 - raw[3]),
+      raw[1] * raw[3] + bg[1] * (1 - raw[3]),
+      raw[2] * raw[3] + bg[2] * (1 - raw[3]),
+    ];
+    const size = parseFloat(ps.fontSize) || parseFloat(getComputedStyle(el).fontSize);
+    const weight = Number(ps.fontWeight) || 400;
+    const floor = size >= 24 || (size >= 18.66 && weight >= 700) ? 3.0 : 4.5;
+    measuredPlaceholders++;
+    placeholderRows.push({
+      key: '',
+      path: pathOf(el),
+      text: (el.getAttribute('placeholder') || '').trim().replace(/\s+/g, ' ').slice(0, 40),
+      fg: hex(fg),
+      bg: hex(bg),
+      ratio: ratio(fg, bg),
+      floor,
+      count: 1,
+    });
+  }
+
   return {
     href: location.pathname,
     bodyIsDark: document.body.classList.contains('is-dark'),
     text: textRows,
     controls: controlRows,
+    placeholders: placeholderRows,
     measuredText,
     measuredControls,
+    measuredPlaceholders,
     skipped,
   };
 };
@@ -479,3 +587,13 @@ export const textKey = (theme: string, f: { path: string; fg: string; bg: string
 
 export const boundaryKey = (theme: string, f: { path: string; page: string }): string =>
   `${theme}|${leafOf(f.path)}|boundary-on-${f.page}`;
+
+/**
+ * `placeholder` is in the key on purpose. Without it a placeholder finding and a
+ * text finding on the same element with the same colour pair collapse into ONE
+ * row -- and they are different defects with different fixes (the element's
+ * `color` versus its `::placeholder` colour), so an allowlist entry written for
+ * one would silently excuse the other.
+ */
+export const placeholderKey = (theme: string, f: { path: string; fg: string; bg: string }): string =>
+  `${theme}|${leafOf(f.path)}|placeholder|${f.fg}-on-${f.bg}`;
