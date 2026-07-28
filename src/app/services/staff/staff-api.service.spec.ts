@@ -331,6 +331,72 @@ describe('StaffApiService', () => {
     req.flush({ code: 200, message: 'OK', data: { deliveryStatus: 'collected', collectedAt: '2026-07-14T09:00:00Z', collectedBy: 5 } });
   });
 
+  // ── OBRS-766: counter (staff act-on-behalf) cancel ─────────────────────────
+  describe('counter cancel (OBRS-766)', () => {
+    it('searchBookings() sends exactly the phone param, plus page/size, and sets SKIP_AUTH_LOGOUT', () => {
+      service.searchBookings({ phone: '0812345678', page: 0, size: 20 }).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${environment.apiUrl}/api/private/bookings/search`
+      );
+      expect(req.request.method).toBe('GET');
+      expect(req.request.params.get('phone')).toBe('0812345678');
+      expect(req.request.params.has('bookingNumber')).toBeFalse();
+      expect(req.request.params.get('page')).toBe('0');
+      expect(req.request.params.get('size')).toBe('20');
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { content: [], totalElements: 0, totalPages: 0, size: 20, number: 0, numberOfElements: 0 },
+      });
+    });
+
+    it('searchBookings() sends exactly the bookingNumber param when searching by booking number', () => {
+      service.searchBookings({ bookingNumber: 'B-000123', page: 0, size: 20 }).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        (r) => r.url === `${environment.apiUrl}/api/private/bookings/search`
+      );
+      expect(req.request.params.get('bookingNumber')).toBe('B-000123');
+      expect(req.request.params.has('phone')).toBeFalse();
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { content: [], totalElements: 0, totalPages: 0, size: 20, number: 0, numberOfElements: 0 },
+      });
+    });
+
+    it('getCancelPolicy() gets the cancel-policy endpoint for a bookingId', () => {
+      service.getCancelPolicy(42).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/42/cancel-policy`);
+      expect(req.request.method).toBe('GET');
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({ code: 200, message: 'OK', data: { refundMethod: 'card' } });
+    });
+
+    it('cancelCounterBooking() defaults to a byte-identical empty body', () => {
+      service.cancelCounterBooking(42).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/42/cancel`);
+      expect(req.request.method).toBe('POST');
+      expect(JSON.stringify(req.request.body)).toBe('{}');
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      req.flush({ code: 200, message: 'OK', data: { bookingId: 42, status: 'cancelled' } });
+    });
+
+    it('cancelCounterBooking() posts exactly the payload it is given', () => {
+      service
+        .cancelCounterBooking(42, { approverEmail: 'owner@obrs.test', approverPassword: 'secret' })
+        .subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/42/cancel`);
+      expect(req.request.body).toEqual({ approverEmail: 'owner@obrs.test', approverPassword: 'secret' });
+      req.flush({ code: 200, message: 'OK', data: { bookingId: 42, status: 'cancelled' } });
+    });
+  });
+
   // OBRS-324 (Epic OBRS-318 open seating, 318-d)
   describe('isOpenSeatingTrip', () => {
     it('returns true when seatingMode is OPEN', () => {
