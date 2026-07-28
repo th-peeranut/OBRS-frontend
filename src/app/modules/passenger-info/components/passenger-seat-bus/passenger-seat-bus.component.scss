@@ -1,5 +1,29 @@
 @import "../../../../../styles/variables.scss";
 
+// OBRS-782. Same defect and same fix as the 37 hosts OBRS-775 swept: a
+// component that declares no `:host` display renders as `display: inline`, and
+// an inline box may not hold the block-level children below it -- the browser
+// splits it and wraps them in anonymous blocks, after which the host's border
+// box describes nothing.
+//
+// This one was NOT on the card's list of seven, and finding it is the argument
+// for the whole exercise. It renders on four call sites, and the two the sweep
+// already reached (`/passenger-info`, the change-seat dialog) never had it on
+// screen: on the customer page it is behind a van/bus branch this lane's
+// fixture resolves to the van. The walk-in centre panel's Ticket Sales tab
+// renders it the moment a trip is selected -- a selection OBRS-776 could not
+// make -- so the component came into view as a side effect of reaching
+// `app-walk-in-center-panel`, which is what a census widened for one reason
+// finding a defect for another looks like.
+//
+// `display: block` rather than `inline-block`: `.card-container` is already
+// `width: fit-content`, so the shrink-wrap the inline box used to provide is
+// declared by the child and does not depend on the host. Measured to move no
+// geometry at 1280/1024/768/576 -- e2e/tests/obrs-775-geometry.spec.ts.
+:host {
+  display: block;
+}
+
 .card-container {
   background: #f6f7f7;
   padding: $space-lg;

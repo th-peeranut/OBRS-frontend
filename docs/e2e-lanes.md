@@ -5,7 +5,7 @@
 ## The short version
 
 ```bash
-npm run e2e:gate       # 124 cases, ~6.9 min, no backend. THIS is the merge gate (runs in CI).
+npm run e2e:gate       # 124 cases, ~6.3 min, no backend. THIS is the merge gate (runs in CI).
 npm run test:e2e-lanes # asserts every spec declares a lane (runs in CI, costs nothing)
 
 npm run e2e            # SIT health check. Not a gate. Expect some red.
@@ -114,8 +114,9 @@ element, and unreadable `var()`s. Known-dead declarations live in
 `e2e/support/dark-override-allow.ts` against a card, and an entry that stops matching
 fails the build too — so the register cannot rot into a lie.
 **And the sweep that generalised it.** `host-box-sweep.spec.ts` (OBRS-775) runs that same
-check over all 27 pages this lane can reach — 8 customer, 9 public/auth-entry, 10
-admin/staff — and fails on any malformed host not on its `ALLOW` list with a reason. The
+check over all 47 pages this lane can reach — 9 customer, 9 public/auth-entry, 29
+admin/staff; 27 when the spec was written, 42 after OBRS-776 and 47 after OBRS-782 — and
+fails on any malformed host not on its `ALLOW` list with a reason. The
 first run found **39**; 37 were ours and are fixed, 4 are PrimeNG's and are OBRS-776. Two
 of those 37 are the argument for having a gate at all: `app-home` and
 `app-schedule-booking` were *well-formed until this card* and became malformed **because
@@ -345,6 +346,15 @@ without declaring what it runs, which closes the family rather than the two inst
   new spec, a new lane member or a conflict in either of the two files that would have
   made anyone look. Cost is what moves here, and cost has no registry: a spec that grows
   its own page list spends the lane's budget exactly as a new spec would.
+  **A fifth, and it moved the count not at all.** OBRS-782 widened the same spec again,
+  from 42 screens to 47, and the lane is still **124 in 13** because the five new screens
+  were added to cases that already existed rather than as cases of their own. Measured at
+  **6.3 min** against OBRS-776's 6.9, which is a DROP and must not be read as one: the
+  five screens cost `host-box-sweep.spec.ts` real time (1.9 min for the spec alone), and
+  the lane total moves by more than that between runs on this box. The honest reading is
+  that lane cost here has run-to-run noise wider than a five-screen change, so a single
+  total is evidence of nothing on its own -- which is one more reason the count in a table
+  was never the thing to watch.
 - **Three specs are run by no committed config** — `obrs-564-booking-policy`,
   `obrs-576-config-change-history` and `obrs-296-child-fare-qa`. The first two expect a
   hand-built database and say so in their headers. The third is genuinely hermetic and is
