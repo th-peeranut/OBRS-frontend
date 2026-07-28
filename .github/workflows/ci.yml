@@ -158,6 +158,27 @@ jobs:
       - name: E2E lane membership gate
         run: npm run test:e2e-lanes
 
+      # Ninth pure-node gate (OBRS-536). `environment.sit.ts` and `environment.prod.ts` read
+      # their keys from two GITIGNORED files, so the committed side of that contract moves with
+      # every commit while the other side cannot. OBRS-424 added `maptilerKey` and updated both
+      # things a commit CAN update -- the example template and scripts/inject-sit-env.js -- and
+      # every checkout that already had an environment.local.ts still broke, with a TS2339 that
+      # Playwright reports as `Timed out waiting 120000ms from config.webServer`. Two worktrees
+      # on the reporting machine were in that state at once, and OBRS-617 had already routed its
+      # own config around that lane rather than fix it.
+      #
+      # What runs HERE is the half CI can see: the example template and BOTH inject-*.js
+      # generators must declare exactly the fields the committed environment files read. The
+      # generator half is the one with teeth -- a field added to environment.prod.ts but not to
+      # inject-prod-env.js breaks the PROD build on the host while every local checkout stays
+      # green, and nothing else in this workflow builds the prod configuration. The developer's
+      # own copy is checked by the same script through npm `pre` hooks; neither gitignored file
+      # exists on a runner, and the script treats their absence as normal rather than as a
+      # finding. It self-tests its own parser first, so it cannot degrade into a silent OK.
+      # Costs no extra runner minutes.
+      - name: gitignored environment file shape gate
+        run: npm run test:local-env
+
       - name: Install dependencies
         run: npm ci
 
