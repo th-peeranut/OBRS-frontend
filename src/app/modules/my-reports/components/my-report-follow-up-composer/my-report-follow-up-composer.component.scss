@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // Angular's emulated view encapsulation scopes styles per-component — same
 // token values as my-report-detail-modal.component.scss /
@@ -13,7 +14,7 @@
   min-width: 120px;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   margin: 0 0 $space-2xs;
   display: block;
 }
@@ -70,5 +71,32 @@
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+}
+
+// Dark mode (OBRS-811) — the composer renders unconditionally inside the report
+// detail modal, so its textarea was the `.mr-textarea` the probe reached first.
+// Encapsulated rules, so they live here rather than in dark-theme.scss
+// (OBRS-767). Same values as my-report-edit-form.component.scss, per the
+// per-component copy note at the top of this file.
+:host-context(body.is-dark) {
+  .mr-detail-label {
+    color: $dk-text-muted;
+  }
+
+  .mr-textarea {
+    background-color: $dk-bg-input;
+    border-color: $dk-border;
+    color: $dk-text;
+
+    &::placeholder {
+      color: $dk-text-muted;
+    }
+  }
+
+  .mr-btn-secondary {
+    background-color: transparent;
+    color: $dk-accent;
+    border-color: $dk-accent;
   }
 }

@@ -1,4 +1,5 @@
 @import "../../../../../styles/variables.scss";
+@import "../../../../../styles/dark-tokens.scss";
 
 // `.admin-modal-backdrop` (admin-theme.scss) is reused as-is for the fixed
 // overlay positioning — it's fully static (fixed inset + rgba black + a
@@ -39,7 +40,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   padding: 0;
   line-height: 1;
 
@@ -59,7 +60,7 @@
   min-width: 120px;
   font-size: $font-size-xs;
   font-weight: $font-weight-semibold;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   margin: 0;
 }
 
@@ -80,13 +81,13 @@
 .mr-detail-muted {
   margin: 0;
   font-size: $font-size-sm;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   font-style: italic;
 }
 
 .mr-inline-updating {
   font-size: $font-size-xs;
-  color: $text-lightgrey;
+  color: $text-lightblack;
   font-weight: $font-weight-regular;
   margin-left: $space-2xs;
 }
@@ -121,5 +122,51 @@
   &:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dark mode (OBRS-811)
+//
+// The dialog is a customer-shell modal styled with static tokens (see the note
+// at the top of this file), and nothing themed it: with `body.is-dark` active it
+// rendered a #ffffff sheet over the dark page. Measured before this block:
+//
+//   .mr-detail-modal   #ffffff surface; anything inheriting body's $dk-text
+//                      lands at 1.20:1 on it
+//   .mr-detail-label   #989ba4 on #ffffff = 2.78:1  (x7, and 2.78:1 in LIGHT too)
+//   .mr-detail-muted   #989ba4 on #ffffff = 2.78:1
+//
+// `.admin-modal-backdrop` is NOT restated: it measured #14161a from body.is-dark
+// already, and it is unencapsulated (admin-theme.scss), so it is the one part of
+// this dialog that a global rule owns.
+// ─────────────────────────────────────────────────────────────────────────────
+:host-context(body.is-dark) {
+  .mr-detail-modal {
+    background: $dk-bg-card;
+    color: $dk-text;
+  }
+
+  .mr-detail-title,
+  .mr-description-text {
+    color: $dk-text;
+  }
+
+  .mr-detail-label,
+  .mr-detail-muted,
+  .mr-inline-updating {
+    color: $dk-text-muted;
+  }
+
+  .mr-detail-modal__close {
+    color: $dk-text-muted;
+
+    &:hover {
+      color: $dk-text;
+    }
+  }
+
+  .mr-image-thumb {
+    border-color: $dk-border;
   }
 }
