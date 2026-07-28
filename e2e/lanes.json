@@ -223,6 +223,12 @@
       "lane": "CAPTURE",
       "config": "playwright.obrs769.config.ts",
       "why": "OBRS-769's evidence: every sighting of the two muted text tokens with the background it MEASURED under, on the contrast gate's own eight pages in both themes. The gate prints only what fails, and this card turned on what still PASSED -- #989ba4 was 2.78:1 on white at 39 sightings and 5.38:1 on the dark booking card at one, so a single repoint could not serve both. Hermetic (it reuses customer-pages.ts fixtures and MEASURE, so no backend), and it does assert its own population is non-empty, but its output is a census for a human to read rather than a verdict. Re-run it before changing $text-lightblack: npx playwright test --config=playwright.obrs769.config.ts"
+    },
+    {
+      "spec": "obrs-769-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs769capture.config.ts",
+      "why": "OBRS-769 before/after evidence. Two servers started by hand -- :4761 a throwaway detached worktree at origin/dev c1388c27 for the BEFORE shot, :4762 this one -- and run once per phase with OBRS769_PHASE. TWO separate clipped frames per phase rather than one composed sheet, because OBRS-811 composed four dropdown panels into a single image and a reviewer read it as a layout bug. Hermetic otherwise (customer-pages.ts fixtures), but its purpose is a picture, not a verdict."
     }
   ]
 }
