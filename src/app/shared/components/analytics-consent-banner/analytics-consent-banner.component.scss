@@ -1,0 +1,158 @@
+@import '../../../../styles/variables.scss';
+@import '../../../../styles/dark-tokens.scss';
+
+// OBRS-867 — the PDPA consent bar.
+//
+// Dark mode is written here with `:host-context(body.is-dark)` rather than in
+// dark-theme.scss, for the reason _dark-tokens.scss spells out: this component
+// is encapsulated, so its own two-level selectors outscore any global
+// `body.is-dark .a .b` override and the global rule would lose silently.
+
+.consent-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  // Above the usability FAB (z-index 900) — the two share the bottom-right
+  // corner, and while the question is unanswered this one is the more urgent.
+  z-index: 1000;
+
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 16px 24px;
+
+  background: #ffffff;
+  border-top: 1px solid rgba(53, 60, 68, 0.15);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.consent-banner__text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.consent-banner__title {
+  margin: 0 0 4px;
+  font-weight: 600;
+  // 12.6:1 on white.
+  color: $text-black;
+}
+
+.consent-banner__body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  // 7.01:1 on white — the muted tier that still clears AA comfortably, per the
+  // note on $text-lightgrey's removal in variables.scss.
+  color: $text-softblack;
+}
+
+.consent-banner__link {
+  color: $primary-blue; // 5.33:1 on white
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.consent-banner__actions {
+  display: flex;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+// Accept and Decline share every geometric property. Only the fill differs, and
+// that difference is "which one is the site's own colour", not "which one is
+// easy to press" — see the component's doc comment.
+.consent-banner__btn {
+  min-width: 120px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+
+  background: transparent;
+  border: 2px solid $primary-blue;
+  color: $primary-blue; // 5.33:1 on white
+
+  &:hover {
+    border-color: $primary-blue-hover;
+    color: $primary-blue-hover; // 7.21:1 on white
+  }
+}
+
+.consent-banner__btn--accept {
+  background: $primary-blue;
+  border-color: $primary-blue;
+  color: $text-white; // white on $primary-blue = 5.33:1
+
+  &:hover {
+    background: $primary-blue-hover;
+    border-color: $primary-blue-hover;
+    color: $text-white; // white on $primary-blue-hover = 7.21:1
+  }
+}
+
+@media (max-width: 575.98px) {
+  .consent-banner {
+    // On a phone the two buttons go full width side by side rather than
+    // stacking, so neither one ends up above the other — a vertical stack is
+    // the classic way an "accept" quietly becomes the primary action.
+    padding: 14px 16px;
+  }
+
+  .consent-banner__actions {
+    width: 100%;
+  }
+
+  .consent-banner__btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+:host-context(body.is-dark) {
+  .consent-banner {
+    background: $dk-bg-card;
+    border-top-color: $dk-border;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+  }
+
+  .consent-banner__title {
+    color: $dk-text; // #e8eaf0 on #1a1d27
+  }
+
+  .consent-banner__body {
+    color: $dk-text-muted; // #9aa3b8 on #1a1d27
+  }
+
+  .consent-banner__link {
+    color: $dk-accent;
+  }
+
+  .consent-banner__btn {
+    border-color: $dk-accent;
+    color: $dk-accent;
+
+    &:hover {
+      border-color: $dk-accent-hover;
+      color: $dk-accent-hover;
+    }
+  }
+
+  .consent-banner__btn--accept {
+    background: $dk-accent;
+    border-color: $dk-accent;
+    // Dark text on the bright accent, NOT white: white on #4bc2f7 measures
+    // 2.03:1 (variables.scss records this for the same colour under its old
+    // light-mode name) and would fail AA outright.
+    color: $dk-bg;
+
+    &:hover {
+      background: $dk-accent-hover;
+      border-color: $dk-accent-hover;
+      color: $dk-bg;
+    }
+  }
+}

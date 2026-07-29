@@ -23,6 +23,10 @@ import { StoreModule } from '@ngrx/store';
 import { EffectsModule } from '@ngrx/effects';
 import { StoreDevtoolsModule } from '@ngrx/store-devtools';
 import { appReducer } from './shared/stores/app.reducer';
+// OBRS-867: registered at the ROOT, not in a feature module. A search is
+// dispatched from the home page and from the results page, and `forFeature`
+// would only see the one whose module happened to be loaded.
+import { AnalyticsEffect } from './shared/stores/analytics/analytics.effect';
 
 import { AppComponent } from './app.component';
 import { SharedModule } from './shared/shared.module';
@@ -50,7 +54,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     }),
     
     // STORE IMPORT
-    EffectsModule.forRoot([]),
+    EffectsModule.forRoot([AnalyticsEffect]),
     StoreModule.forRoot({ appState: appReducer }),
     StoreDevtoolsModule.instrument({ maxAge: 25, logOnly: environment.production }),
 

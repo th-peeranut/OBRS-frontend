@@ -30,6 +30,20 @@ export const environmentBase = {
   // (FleetMapPanelComponent.canShowMap degrades to the MAP_UNAVAILABLE
   // placeholder; the side list keeps working fully), same shape as mapsApiKey.
   maptilerKey: '',
+  // OBRS-867: measurement tag IDs. Same shape and same reasoning as
+  // `maptilerKey` above — blank is the committed default, and blank means the
+  // tag is never injected at all (`AnalyticsTagsService.load()` returns without
+  // touching the DOM). That is what keeps CI, every fresh clone and every local
+  // `npm start` out of the production property, with no flag for anyone to
+  // remember to switch off.
+  //
+  // An ID being present is necessary but never sufficient: loading is
+  // additionally gated on the visitor's PDPA answer (AnalyticsConsentService).
+  // See docs/adr/0034-analytics-provider-and-pdpa-consent-gate.md.
+  analytics: {
+    ga4MeasurementId: '',
+    clarityProjectId: '',
+  },
   // OBRS-622 go-live scope cut — reversible per-feature entry gates.
   // Flip a value to `true` to re-enable the feature everywhere post-go-live
   // (single-point-per-feature; no code revert needed).

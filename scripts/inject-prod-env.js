@@ -79,6 +79,14 @@ if (failures.length > 0) {
 // provisioned the variable.
 const maptilerKey = process.env.PROD_MAPTILER_API_KEY || '';
 
+// OBRS-867: measurement tag IDs, optional for the same reason as maptilerKey -
+// their absence costs a chart, not a payment, so they must not be able to fail
+// a prod build. Blank means AnalyticsTagsService injects no tag at all, which
+// is also the correct state for the window between this code shipping and the
+// owner provisioning the properties.
+const ga4MeasurementId = process.env.PROD_GA4_MEASUREMENT_ID || '';
+const clarityProjectId = process.env.PROD_CLARITY_PROJECT_ID || '';
+
 // JSON.stringify, not string interpolation: a value containing a quote or a newline
 // would otherwise emit a file that is either broken or, worse, silently valid TS
 // holding the wrong value.
@@ -90,6 +98,8 @@ export const prodEnv = {
   mapsApiKey: ${JSON.stringify(values.mapsApiKey)},
   googleClientId: ${JSON.stringify(values.googleClientId)},
   maptilerKey: ${JSON.stringify(maptilerKey)},
+  ga4MeasurementId: ${JSON.stringify(ga4MeasurementId)},
+  clarityProjectId: ${JSON.stringify(clarityProjectId)},
 };
 `;
 

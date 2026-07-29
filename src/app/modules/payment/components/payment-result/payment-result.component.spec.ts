@@ -5,6 +5,7 @@ import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/payment.interface';
 import { PaymentResultComponent } from './payment-result.component';
+import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 
 /**
  * Regression coverage for OBRS-177: the backend renamed the settled payment
@@ -17,6 +18,8 @@ import { PaymentResultComponent } from './payment-result.component';
  */
 describe('PaymentResultComponent - payment status "paid" (OBRS-177)', () => {
   let component: PaymentResultComponent;
+  let analytics: jasmine.SpyObj<AnalyticsService>;
+  let alertService: jasmine.SpyObj<AlertService>;
 
   beforeEach(() => {
     const router = jasmine.createSpyObj<Router>('Router', ['navigate']);
@@ -26,19 +29,21 @@ describe('PaymentResultComponent - payment status "paid" (OBRS-177)', () => {
     const paymentService = jasmine.createSpyObj<PaymentService>('PaymentService', [
       'getBookingPayments',
     ]);
-    const alertService = jasmine.createSpyObj<AlertService>('AlertService', [
+    alertService = jasmine.createSpyObj<AlertService>('AlertService', [
       'success',
       'error',
       'info',
     ]);
     const translate = jasmine.createSpyObj<TranslateService>('TranslateService', ['instant']);
+    analytics = jasmine.createSpyObj<AnalyticsService>('AnalyticsService', ['track']);
 
     component = new PaymentResultComponent(
       router,
       bookingService,
       paymentService,
       alertService,
-      translate
+      translate,
+      analytics
     );
   });
 
@@ -155,5 +160,41 @@ describe('PaymentResultComponent - payment status "paid" (OBRS-177)', () => {
     };
 
     expect(invokeIsPaymentConfirmed(payment)).toBeFalse();
+  });
+
+  /**
+   * OBRS-867 funnel step 6, PromptPay branch.
+   *
+   * This is the branch a card-only test would have missed entirely: PromptPay
+   * leaves the site for the bank and comes back here, so `PaymentComponent`'s
+   * in-page `(paymentCompleted)` handler never runs for it. PromptPay is also
+   * the method most Thai customers use, so instrumenting only the card path
+   * would have reported the dominant payment method as a funnel that never
+   * converts.
+   */
+  describe('booking_completed (OBRS-867)', () => {
+    const invokeCompletePayment = (): void =>
+      (component as unknown as { completePayment: () => void }).completePayment();
+
+    it('fires exactly once, naming PromptPay as the method', () => {
+      invokeCompletePayment();
+
+      expect(analytics.track).toHaveBeenCalledOnceWith('booking_completed', {
+        payment_method: 'qr_promptpay',
+      });
+    });
+
+    it('carries nothing that identifies the customer or the ticket', () => {
+      invokeCompletePayment();
+
+      const [, params] = analytics.track.calls.mostRecent().args;
+      expect(Object.keys(params ?? {})).toEqual(['payment_method']);
+    });
+
+    it('does not fire on a poll that has not confirmed anything', () => {
+      // `checkPaymentStatus` runs every 3s; only `completePayment` may emit.
+      expect(analytics.track).not.toHaveBeenCalled();
+      expect(alertService.success).not.toHaveBeenCalled();
+    });
   });
 });

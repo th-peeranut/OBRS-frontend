@@ -14,6 +14,7 @@ import { SharedModule } from '../../../../shared/shared.module';
 import { DropdownObrsComponent } from '../../../../shared/components/dropdown-obrs/dropdown-obrs.component';
 import { PassengerSeatModule } from '../../passenger-seat.module';
 import {
+  createAnalyticsServiceStub,
   createRouterStub,
   createScheduleServiceStub,
   createStoreStub,
@@ -574,7 +575,8 @@ describe('PassengerInfoFormComponent (OPEN-seating rendering, OBRS-323)', () => 
       createRouterStub(),
       {} as any,
       createTranslateStub(),
-      {} as any
+      {} as any,
+      createAnalyticsServiceStub()
     );
     const payload = (bookingComponent as any).buildPassengersPayload(submitted, 'outbound', false);
     expect(payload[0].seatPreference).toBe('window');

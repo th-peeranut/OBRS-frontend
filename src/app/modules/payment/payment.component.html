@@ -13,12 +13,14 @@
       [activeTab]="activePaymentTab"
       (tabChange)="onPaymentTabChange($event)"
       (back)="onBack()"
+      (paymentCompleted)="onPaymentCompleted()"
     ></app-payment-creditcard>
     <app-payment-qrcode
       *ngIf="activePaymentTab === 'qrcode'"
       [activeTab]="activePaymentTab"
       (tabChange)="onPaymentTabChange($event)"
       (back)="onBack()"
+      (paymentCompleted)="onPaymentCompleted()"
     ></app-payment-qrcode>
   </div>
 </div>

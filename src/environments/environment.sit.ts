@@ -13,4 +13,11 @@ export const environment = {
   mapsApiKey: localEnv.mapsApiKey,
   googleClientId: localEnv.googleClientId,
   maptilerKey: localEnv.maptilerKey,
+  // OBRS-867 AC-6: SIT is where the events are proven to arrive before prod
+  // ever gets a tag. Blank until the owner provisions the IDs — blank is a
+  // no-op, not a failure.
+  analytics: {
+    ga4MeasurementId: localEnv.ga4MeasurementId,
+    clarityProjectId: localEnv.clarityProjectId,
+  },
 };

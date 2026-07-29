@@ -7,6 +7,7 @@ import { BookingService } from '../../../../services/booking/booking.service';
 import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/payment.interface';
+import { AnalyticsService } from '../../../../services/analytics/analytics.service';
 
 @Component({
   selector: 'app-payment-result',
@@ -33,7 +34,8 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     private readonly bookingService: BookingService,
     private readonly paymentService: PaymentService,
     private readonly alertService: AlertService,
-    private readonly translate: TranslateService
+    private readonly translate: TranslateService,
+    private readonly analytics: AnalyticsService
   ) {}
 
   ngOnInit(): void {
@@ -131,6 +133,17 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     this.isChecking = false;
     this.clearPolling();
     this.clearCountdown();
+    // OBRS-867 funnel step 6 — the redirect-back branch. This page only ever
+    // runs after a PromptPay hand-off to the bank, so the method is known
+    // without reading it from anywhere. See `PaymentComponent.onPaymentCompleted`
+    // for why the funnel needs both branches instrumented.
+    //
+    // Placed in `completePayment` and NOT in the poller: `checkPaymentStatus`
+    // runs every 3s, and this is the one path that can only be taken once
+    // (`clearPolling` above stops the next tick).
+    this.analytics.track('booking_completed', {
+      payment_method: 'qr_promptpay',
+    });
     this.alertService.success(this.translate.instant('PAYMENT.ALERT.SUCCESS'));
     this.router.navigate(['/e-ticket']);
   }

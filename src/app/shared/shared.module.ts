@@ -31,6 +31,9 @@ import { UsabilityReportFollowUpTimelineComponent } from './components/usability
 // (override-cancel modal), so it lives here for the same reason
 // `AdminModalBackdropDirective` does (ADR-0017 precedent).
 import { AppRefundDestinationFieldsComponent } from './components/refund-destination-fields/refund-destination-fields.component';
+// OBRS-867: the PDPA consent bar. Mounted once in app.component.html as a
+// sibling of <router-outlet>, so it survives every navigation.
+import { AnalyticsConsentBannerComponent } from './components/analytics-consent-banner/analytics-consent-banner.component';
 
 // Directives
 // OBRS-272: relocated here from `modules/admin/components/` — see the
@@ -54,6 +57,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     UsabilityReportImagePickerComponent,
     UsabilityReportFollowUpTimelineComponent,
     AppRefundDestinationFieldsComponent,
+    AnalyticsConsentBannerComponent,
     AdminModalBackdropDirective,
   ],
   imports: [
@@ -91,6 +95,7 @@ import { AdminModalBackdropDirective } from './directives/admin-modal-backdrop.d
     UsabilityReportImagePickerComponent,
     UsabilityReportFollowUpTimelineComponent,
     AppRefundDestinationFieldsComponent,
+    AnalyticsConsentBannerComponent,
 
     // Directives
     AdminModalBackdropDirective,

@@ -24,10 +24,19 @@ for (const [name, value] of Object.entries(values)) {
 // provisioned the variable.
 const maptilerKey = process.env.MAPTILER_API_KEY || '';
 
+// OBRS-867: measurement tag IDs, optional for the same reason as maptilerKey.
+// SIT is where AC-6 is satisfied — the events must be seen arriving in a real
+// dashboard here before prod is ever given a tag — so these two variables are
+// set on the Netlify SIT site FIRST, and only then on prod.
+const ga4MeasurementId = process.env.GA4_MEASUREMENT_ID || '';
+const clarityProjectId = process.env.CLARITY_PROJECT_ID || '';
+
 const content = `export const localEnv = {
   mapsApiKey: '${values.mapsApiKey}',
   googleClientId: '${values.googleClientId}',
   maptilerKey: '${maptilerKey}',
+  ga4MeasurementId: '${ga4MeasurementId}',
+  clarityProjectId: '${clarityProjectId}',
 };
 `;
 

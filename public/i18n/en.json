@@ -1,4 +1,12 @@
 {
+  "ANALYTICS_CONSENT": {
+    "ARIA_LABEL": "Usage-statistics consent",
+    "TITLE": "May we measure how this site is used?",
+    "BODY": "It shows us which steps are hard to use, so we fix the right ones. We collect anonymous usage data only — your name, phone number, email address and seat number are never sent. You can decline and still book normally.",
+    "LEARN_MORE": "Read our privacy policy",
+    "ACCEPT": "Accept",
+    "DECLINE": "Decline"
+  },
   "USABILITY_REPORT": {
     "FAB": {
       "LABEL": "Report Issue",

@@ -37,6 +37,7 @@ import { Observable } from 'rxjs';
 import { TranslateService } from '@ngx-translate/core';
 import { AlertService } from '../../shared/services/alert.service';
 import { HttpErrorResponse } from '@angular/common/http';
+import { AnalyticsService } from '../../services/analytics/analytics.service';
 
 @Component({
   selector: 'app-passenger-info',
@@ -74,7 +75,8 @@ export class PassengerInfoComponent {
     private router: Router,
     private bookingService: BookingService,
     private translateService: TranslateService,
-    private alertService: AlertService
+    private alertService: AlertService,
+    private analytics: AnalyticsService
   ) {
     this.rawProvinceStationList = this.store.pipe(
       select(selectProvinceWithStation)
@@ -82,6 +84,14 @@ export class PassengerInfoComponent {
   }
 
   ngOnInit(): void {
+    // OBRS-867 funnel step 4. This is the step the card names as decisive for
+    // OBRS-872: it is the first screen behind AuthGuard's `requireAuth` path
+    // that a customer meets after choosing a trip, so the gap between
+    // `schedule_selected` and this event is the cost of having no guest
+    // checkout. Deliberately carries no field from either form — this fires
+    // before anything is typed, and must keep doing so.
+    this.analytics.track('passenger_info_reached');
+
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());

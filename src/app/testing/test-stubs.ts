@@ -94,3 +94,21 @@ export function createBookingServiceStub(): any {
     getMyBookings: () => of({ data: { content: [] } }),
   };
 }
+
+/**
+ * AnalyticsService (OBRS-867): `track` records nothing and sends nothing.
+ *
+ * A stub is the right call for these smoke tests specifically: the real service
+ * would be inert here anyway (no consent is granted in a bare instantiation),
+ * so a stub swaps one no-op for another while keeping the tests free of a
+ * localStorage dependency. The behaviour it stands in for is asserted
+ * first-hand in analytics.service.spec.ts and analytics.effect.spec.ts — do
+ * NOT let this stub become the only place the funnel is "tested".
+ */
+export function createAnalyticsServiceStub(): any {
+  return {
+    init: () => {},
+    destroy: () => {},
+    track: () => {},
+  };
+}
