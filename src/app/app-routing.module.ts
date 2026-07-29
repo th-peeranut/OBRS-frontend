@@ -60,6 +60,17 @@ export const appRoutes: Routes = [
         (m) => m.ResetPasswordModule
       ),
   },
+  // OBRS-856: the booking flow splits in two. Searching a trip and picking a seat
+  // stay OPEN to guests — that is the shop window, and closing it costs both SEO
+  // and every visitor who only wants to check times and fares. From /passenger-info
+  // on, `requireAuth` matches what the backend actually enforces
+  // (BookingService.createBooking → userService.getCurrentUser()), so a guest is
+  // asked to sign in BEFORE typing passenger details rather than after — the
+  // asymmetry that produced a false "session expired" at the payment button.
+  // Both spellings are pinned by app-routing.module.spec.ts, in both directions.
+  //
+  // When real guest checkout lands (OBRS-858) `requireAuth` comes back OUT of the
+  // two routes below; it is a short-term alignment, not the destination.
   {
     path: 'schedule-booking',
     canActivate: [AuthGuard],
@@ -81,7 +92,7 @@ export const appRoutes: Routes = [
   {
     path: 'passenger-info',
     canActivate: [AuthGuard],
-    data: { customerArea: true },
+    data: { customerArea: true, requireAuth: true },
     loadChildren: () =>
       import('./modules/passenger-info/passenger-info.module').then(
         (m) => m.PassengerInfoModule
@@ -90,7 +101,7 @@ export const appRoutes: Routes = [
   {
     path: 'payment',
     canActivate: [AuthGuard],
-    data: { customerArea: true },
+    data: { customerArea: true, requireAuth: true },
     loadChildren: () =>
       import('./modules/payment/payment.module').then(
         (m) => m.PaymentModule

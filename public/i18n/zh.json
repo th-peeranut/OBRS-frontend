@@ -1594,7 +1594,8 @@
     }
   },
   "AUTH": {
-    "SESSION_EXPIRED": "您的登录已过期，请重新登录。"
+    "SESSION_EXPIRED": "您的登录已过期，请重新登录。",
+    "LOGIN_REQUIRED": "请先登录后再继续。"
   },
   "LOGIN": {
     "WELCOME": "欢迎登录",

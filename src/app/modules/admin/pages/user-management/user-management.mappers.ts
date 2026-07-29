@@ -349,6 +349,57 @@ export function toRoleOptions(rawRoles: AdminRoleDto[], locale: string): RoleOpt
   }));
 }
 
+// OBRS-847 / ADR-0114: role slugs that can never label a row in a
+// non-platform caller's user list, so offering them as list filters is a
+// dead control — it reads as "the system lost my data", not "you have no
+// permission".
+//
+// `GET /api/private/users` has been an operator-scoped STAFF directory since
+// OBRS-824: the predicate is `users.owner_id`, which means EMPLOYER
+// (ADR-0109) and is NULL for every passenger and for every platform ADMIN.
+//
+// `customer` is excluded on the strength of the DECISION, not of today's
+// query result. ADR-0114 ("the operator works with bookings, the platform
+// works with accounts") settles that an OWNER does not manage customer
+// accounts, and `schema.sql` says why it could not be scoped even if we
+// wanted to: passengers "belong to no operator". So this is not an
+// owner-scoped customer view waiting to be built — reading it as "returns
+// zero rows for now" is exactly what makes the next person put the option
+// back.
+//
+// `admin` follows from the same column: platform staff have no employer.
+export const ROLES_ABSENT_FROM_OPERATOR_USER_LIST = ['customer', 'admin'];
+
+/**
+ * Narrows the role options down to the ones that can actually label a row in
+ * the caller's list. Deliberately a SEPARATE list from `toRoleOptions` rather
+ * than a narrowing of it: the form modal asks a different question — "which
+ * roles may I assign?", answered by the backend's
+ * `UserService#validateAssignableRoles` (strictly below the caller's own
+ * role, so an OWNER may still create a CUSTOMER) — and collapsing the two
+ * would silently change what an OWNER can create.
+ *
+ * `isPlatformAdmin` must come from the caller's RAW held roles. An OWNER
+ * satisfies `AuthService.hasAnyRole(['admin'])` too (ROLE_GRANTS lists
+ * 'admin' among owner's grants), which would make this a no-op for the only
+ * role it exists for.
+ */
+export function toRoleFilterOptions(
+  roleOptions: RoleOption[],
+  isPlatformAdmin: boolean
+): RoleOption[] {
+  if (isPlatformAdmin) {
+    return roleOptions;
+  }
+
+  return roleOptions.filter(
+    (option) =>
+      !ROLES_ABSENT_FROM_OPERATOR_USER_LIST.includes(
+        String(option.slug ?? '').trim().toLowerCase()
+      )
+  );
+}
+
 export function toStatusOptions(rawLookups: AdminLookupDto[], locale: string): StatusOption[] {
   return rawLookups
     .filter((lookup) => lookup.category === 'user_status')

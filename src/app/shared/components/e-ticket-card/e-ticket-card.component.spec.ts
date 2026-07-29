@@ -1,7 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
-import { TicketLeg } from '../../interfaces/e-ticket.interface';
+import { of, throwError } from 'rxjs';
+import QRCode from 'qrcode';
+import { TicketLeg, TicketPassenger } from '../../interfaces/e-ticket.interface';
+import { BoardingQrService } from '../../services/boarding-qr.service';
+import { TicketService } from '../../../services/ticket/ticket.service';
 import { ETicketCardComponent } from './e-ticket-card.component';
 import { PhoneFormatPipe } from '../../pipes/phone-format.pipe';
 
@@ -23,25 +27,57 @@ function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
   };
 }
 
+function buildPassenger(overrides: Partial<TicketPassenger> = {}): TicketPassenger {
+  return {
+    name: 'Mr A',
+    phone: '-',
+    seat: '1',
+    ticketId: 1,
+    ticketNumber: 'T-1',
+    ...overrides,
+  };
+}
+
+function boardingTokenResponse(ticketId: number) {
+  return of({
+    code: 200,
+    message: 'OK',
+    data: {
+      ticketId,
+      ticketNumber: `T-${ticketId}`,
+      boardingToken: `tok-${ticketId}`,
+      expiresAt: '',
+    },
+  });
+}
+
+function createTicketServiceStub(): { getBoardingToken: jasmine.Spy } {
+  return {
+    getBoardingToken: jasmine
+      .createSpy('getBoardingToken')
+      .and.callFake((ticketId: number) => boardingTokenResponse(ticketId)),
+  };
+}
+
+/** Let the `forkJoin` subscription + the real `QRCode.toDataURL` promise settle
+ *  — the same wait the e-ticket page's own QR specs use. */
+function settleQr(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 50));
+}
+
 describe('ETicketCardComponent', () => {
   let component: ETicketCardComponent;
 
   beforeEach(() => {
-    component = new ETicketCardComponent();
+    component = new ETicketCardComponent(
+      new BoardingQrService(
+        createTicketServiceStub() as unknown as TicketService
+      )
+    );
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
-  });
-
-  it('clears the QR for a placeholder ticket number', async () => {
-    component.qrCodeDataUrl = 'data:image/png;base64,old';
-
-    await (component as unknown as {
-      updateQrCode: (value: string) => Promise<void>;
-    }).updateQrCode('-');
-
-    expect(component.qrCodeDataUrl).toBe('');
   });
 
   it('builds a filesystem-safe download name from the ticket number', () => {
@@ -75,6 +111,164 @@ describe('ETicketCardComponent', () => {
   });
 });
 
+/**
+ * OBRS-866 — the card used to render ONE QR encoding the human-readable
+ * `ticketNumber` string. `POST /tickets/boarding-scan` rejects that with 400
+ * `INVALID_TICKET_TOKEN` (the payload must be the signed boarding JWT), and a
+ * single card-level QR could not have boarded more than one of a
+ * multi-passenger booking's tickets even had the payload been right. These
+ * specs pin both halves: the payload is the per-ticket boarding token, and
+ * there is one QR per ticket.
+ *
+ * Wired to the REAL `BoardingQrService` over a `TicketService` stub, never a
+ * mock of the QR service itself — a mocked QR service passes happily while the
+ * card asks it for the wrong thing, which is exactly this defect's shape.
+ */
+describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
+  let fixture: ComponentFixture<ETicketCardComponent>;
+  let component: ETicketCardComponent;
+  let ticketServiceStub: { getBoardingToken: jasmine.Spy };
+
+  beforeEach(async () => {
+    ticketServiceStub = createTicketServiceStub();
+
+    await TestBed.configureTestingModule({
+      declarations: [ETicketCardComponent],
+      imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      // The component's own `providers: [BoardingQrService]` resolves
+      // TicketService from here, so the real QR pipeline runs over the stub.
+      providers: [{ provide: TicketService, useValue: ticketServiceStub }],
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(ETicketCardComponent);
+    component = fixture.componentInstance;
+  });
+
+  function qrImages(): HTMLImageElement[] {
+    return fixture.debugElement
+      .queryAll(By.css('.passenger-qr img.qr-code'))
+      .map((el) => el.nativeElement as HTMLImageElement);
+  }
+
+  function setPassengers(passengers: TicketPassenger[]): void {
+    component.passengers = passengers;
+    component.ngOnChanges({
+      passengers: {
+        currentValue: passengers,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+  }
+
+  it('encodes the ticket\'s BOARDING TOKEN, never its ticketNumber', async () => {
+    const qrSpy = spyOn(QRCode, 'toDataURL').and.callThrough() as unknown as jasmine.Spy;
+
+    setPassengers([buildPassenger({ ticketId: 7, ticketNumber: 'T-7' })]);
+    await settleQr();
+
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(7, true);
+    expect(qrSpy).toHaveBeenCalledTimes(1);
+    expect(qrSpy.calls.mostRecent().args[0]).toBe('tok-7');
+    // The regression itself: the human-readable number must never be the payload.
+    expect(qrSpy.calls.mostRecent().args[0]).not.toBe('T-7');
+  });
+
+  it('renders one QR per passenger, each from its own ticket (a 2-passenger booking gets 2 distinct QRs)', async () => {
+    setPassengers([
+      buildPassenger({ name: 'Mr A', ticketId: 1, ticketNumber: 'T-1' }),
+      buildPassenger({ name: 'Mrs B', ticketId: 2, ticketNumber: 'T-2' }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+
+    const images = qrImages();
+    expect(images.length).toBe(2);
+    expect(images[0].src).toContain('data:image');
+    expect(images[1].src).toContain('data:image');
+    // Different tokens must produce different QR images — one shared QR for the
+    // whole booking is the bug, not a rendering detail.
+    expect(images[0].src).not.toBe(images[1].src);
+  });
+
+  it('no card-level QR survives: the only QRs on the paper are the per-passenger ones', async () => {
+    setPassengers([buildPassenger()]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(fixture.debugElement.query(By.css('.ticket-qr'))).toBeNull();
+    expect(fixture.debugElement.queryAll(By.css('.qr-code')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(1);
+  });
+
+  it('a row with no ticket of its own (ticketId null, e.g. the booker) renders no QR and issues no GET', async () => {
+    setPassengers([buildPassenger({ ticketId: null, ticketNumber: '-' })]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(ticketServiceStub.getBoardingToken).not.toHaveBeenCalled();
+    expect(fixture.debugElement.query(By.css('.passenger-qr'))).toBeNull();
+  });
+
+  it('isolates one ticket\'s failure — that row shows the unavailable placeholder, the other still renders its QR', async () => {
+    ticketServiceStub.getBoardingToken.and.callFake((ticketId: number) =>
+      ticketId === 1
+        ? boardingTokenResponse(1)
+        : throwError(() => ({ error: { errorCode: 'TICKET_NOT_CONFIRMED' } }))
+    );
+
+    setPassengers([
+      buildPassenger({ ticketId: 1, ticketNumber: 'T-1' }),
+      buildPassenger({ ticketId: 2, ticketNumber: 'T-2' }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(component.passengerRows[0].qrUnavailable).toBeFalse();
+    expect(component.passengerRows[0].qrDataUrl).toContain('data:image');
+    expect(component.passengerRows[1].qrUnavailable).toBeTrue();
+    expect(component.passengerRows[1].qrDataUrl).toBe('');
+
+    expect(qrImages().length).toBe(1);
+    expect(
+      fixture.debugElement.queryAll(By.css('.qr-code-placeholder.is-unavailable')).length
+    ).toBe(1);
+  });
+
+  it('shows each QR next to its own ticket number', async () => {
+    setPassengers([
+      buildPassenger({ ticketId: 1, ticketNumber: 'T-1' }),
+      buildPassenger({ ticketId: 2, ticketNumber: 'T-2' }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    const numbers = fixture.debugElement
+      .queryAll(By.css('.passenger-ticket-number'))
+      .map((el) => (el.nativeElement.textContent || '').trim());
+    expect(numbers).toEqual(['T-1', 'T-2']);
+  });
+
+  it('does not re-issue the GET when passengers are rebuilt (e.g. a locale switch re-running the mapper)', async () => {
+    setPassengers([buildPassenger({ ticketId: 1 })]);
+    await settleQr();
+    setPassengers([buildPassenger({ ticketId: 1 })]);
+    await settleQr();
+
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(1);
+    // …and the already-resolved QR is re-seeded synchronously rather than
+    // flashing blank on the rebuilt array.
+    expect(component.passengerRows[0].qrDataUrl).toContain('data:image');
+  });
+});
+
 describe('ETicketCardComponent — leg rendering', () => {
   let fixture: ComponentFixture<ETicketCardComponent>;
   let component: ETicketCardComponent;
@@ -83,6 +277,7 @@ describe('ETicketCardComponent — leg rendering', () => {
     await TestBed.configureTestingModule({
       declarations: [ETicketCardComponent],
       imports: [TranslateModule.forRoot(), PhoneFormatPipe],
+      providers: [{ provide: TicketService, useValue: createTicketServiceStub() }],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ETicketCardComponent);
@@ -154,15 +349,25 @@ describe('ETicketCardComponent — leg rendering', () => {
     expect(distanceChips().length).toBe(1);
   });
 
-  it('renders the shared passengers/total/QR block exactly once regardless of leg count', () => {
+  it('renders the shared passengers/total block exactly once regardless of leg count', () => {
     component.legs = [buildLeg(), buildLeg()];
-    component.passengers = [{ name: 'Mr A', phone: '-', seat: '1' }];
+    component.passengers = [buildPassenger()];
+    component.ngOnChanges({
+      passengers: {
+        currentValue: component.passengers,
+        previousValue: [],
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
     component.totalAmount = '500.00';
     fixture.detectChanges();
 
     expect(fixture.debugElement.queryAll(By.css('.ticket-total')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.ticket-qr')).length).toBe(1);
     expect(fixture.debugElement.queryAll(By.css('.passenger-row')).length).toBe(1);
+    // OBRS-866: the QR count now tracks passengers, not legs — one per ticket.
+    expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(1);
+    expect(fixture.debugElement.queryAll(By.css('.qr-hint')).length).toBe(1);
   });
 
   it('OBRS-269: hides the Navigate button for a leg with no pickup coords', () => {

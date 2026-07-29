@@ -36,7 +36,7 @@
       "spec": "b2c-critical-path.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
-      "why": "Anonymous booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues."
+      "why": "Booking path on fixture stations and schedules. OBRS-602 added the GET /api/routes stub that /home's route-map issues. OBRS-856 split it in two: the walk is anonymous only as far as the review page (still open to guests on purpose), after which one test seeds a customer session in localStorage and the other asserts the guest is sent to /login. Still hermetic -- the seeded token is never validated by anything, since every API call is intercepted."
     },
     {
       "spec": "focus-retention.spec.ts",

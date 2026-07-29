@@ -137,8 +137,46 @@
       <div class="passenger-list">
         <div
           class="passenger-row"
-          *ngFor="let passenger of passengers; let i = index; trackBy: trackByIndex"
+          *ngFor="let passenger of passengerRows; let i = index; trackBy: trackByIndex"
         >
+          <!-- OBRS-866: this passenger's OWN boarding QR, encoding the signed
+               boarding token for `passenger.ticketId` — what
+               POST /tickets/boarding-scan actually accepts. (It used to be one
+               card-level QR of the `ticketNumber` string, which the scanner
+               rejects with 400 INVALID_TICKET_TOKEN and which could never have
+               boarded more than one passenger anyway.) A per-ticket fetch
+               failure — e.g. 409 TICKET_NOT_CONFIRMED on a cancelled leg —
+               marks THIS row unavailable; every other row still renders.
+               Spans the whole `auto 1fr` row grid, like .child-fare-note. -->
+          <div class="passenger-qr" *ngIf="passenger.ticketId !== null">
+            <ng-container *ngIf="passenger.qrDataUrl; else qrRowPlaceholder">
+              <img
+                class="qr-code"
+                [src]="passenger.qrDataUrl"
+                [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
+              />
+            </ng-container>
+            <ng-template #qrRowPlaceholder>
+              <div
+                class="qr-code qr-code-placeholder"
+                [class.is-unavailable]="passenger.qrUnavailable"
+                role="img"
+                [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
+              >
+                <span
+                  *ngIf="passenger.qrUnavailable"
+                  class="material-symbols-outlined qr-unavailable-icon"
+                  aria-hidden="true"
+                  >block</span
+                >
+              </div>
+            </ng-template>
+            <div class="passenger-ticket-number">{{ passenger.ticketNumber }}</div>
+            <div class="qr-unavailable-text" *ngIf="passenger.qrUnavailable">
+              {{ "E_TICKET.QR_UNAVAILABLE" | translate }}
+            </div>
+          </div>
+
           <div class="passenger-index">{{ i + 1 }}.</div>
           <div class="passenger-detail">
             <div class="passenger-field">
@@ -170,6 +208,14 @@
           </small>
         </div>
       </div>
+
+      <!-- OBRS-866: the hint moved here from the (now removed) card-level QR
+           footer, so the sentence "scan this before boarding" sits with the
+           QRs it describes rather than under a QR that no longer exists. -->
+      <div class="qr-hint" *ngIf="passengerRows.length">
+        {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
+        {{ "E_TICKET.QR_HINT" | translate }}
+      </div>
     </div>
 
     <div class="ticket-footer">
@@ -182,27 +228,6 @@
         <span class="value">
           {{ totalAmount }} {{ "E_TICKET.LABEL.TOTAL_UNIT" | translate }}
         </span>
-      </div>
-    </div>
-
-    <div class="ticket-qr">
-      <ng-container *ngIf="qrCodeDataUrl; else qrPlaceholder">
-        <img
-          class="qr-code"
-          [src]="qrCodeDataUrl"
-          [attr.alt]="'E_TICKET.QR_ARIA_LABEL' | translate"
-        />
-      </ng-container>
-      <ng-template #qrPlaceholder>
-        <div
-          class="qr-code qr-code-placeholder"
-          role="img"
-          [attr.aria-label]="'E_TICKET.QR_ARIA_LABEL' | translate"
-        ></div>
-      </ng-template>
-      <div class="qr-hint">
-        {{ "E_TICKET.NOTE_LABEL" | translate }}<br />
-        {{ "E_TICKET.QR_HINT" | translate }}
       </div>
     </div>
 

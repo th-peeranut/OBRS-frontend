@@ -1594,7 +1594,8 @@
     }
   },
   "AUTH": {
-    "SESSION_EXPIRED": "Your session has expired. Please sign in again."
+    "SESSION_EXPIRED": "Your session has expired. Please sign in again.",
+    "LOGIN_REQUIRED": "Please sign in to continue."
   },
   "LOGIN": {
     "WELCOME": "Welcome to sign in",

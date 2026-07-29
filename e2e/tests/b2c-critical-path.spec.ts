@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 import { mockPublicPageApis } from '../fixtures/public-page-mocks';
 
 test.beforeEach(async ({ page }) => {
@@ -8,9 +8,39 @@ test.beforeEach(async ({ page }) => {
   await mockPublicPageApis(page);
 });
 
-test('B2C happy path: search → schedule → review → passenger info ready to pay', async ({
-  page,
-}) => {
+/**
+ * OBRS-856: this file used to be one anonymous walk that ran straight from the
+ * review page into the passenger form. That walk encoded the bug. The frontend
+ * admitted a guest all the way to the payment button while
+ * BookingService.createBooking resolves the caller server-side and 401s them, so
+ * the anonymous path this spec called "the critical path" was one the product
+ * could never actually complete — it just stopped one screen short of where the
+ * customer found out.
+ *
+ * So it is now two walks that share the same opening. The signed-in one keeps
+ * every assertion the old spec had; the guest one pins the new boundary from the
+ * other side. Splitting matters because a single spec can only assert ONE of
+ * "the guest gets in" and "the guest is stopped", and both are requirements: the
+ * search and seat pages are the shop window and must stay open, while the pages
+ * that commit a booking must not take a visitor's effort before telling them.
+ */
+async function seedSignedInCustomer(page: Page): Promise<void> {
+  // Same shape as e2e/support/customer-pages.ts seedCustomerSession: role 'user'
+  // is NOT in AuthService.PORTAL_ONLY_ROLES, so the guard admits it to the
+  // customer area. Seeding 'admin' here would compile and then bounce to /admin.
+  await page.addInitScript(() => {
+    localStorage.setItem('auth_token', 'obrs-856-b2c-gate-token');
+    localStorage.setItem('auth_username', 'customer@system.local');
+    localStorage.setItem('auth_roles', JSON.stringify(['user']));
+  });
+}
+
+/**
+ * Home → search → pick a schedule → confirm on the review page. Everything here
+ * is open to guests by design and stays that way; the two tests below differ
+ * only in whether a session exists when the confirm click lands.
+ */
+async function searchAndConfirmASchedule(page: Page): Promise<void> {
   // ── Step 1: Home page ────────────────────────────────────────────────────
 
   await page.goto('/');
@@ -100,6 +130,13 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // Do not reintroduce `force` here. It would make this line pass whether or not any of
   // that is true, which is the whole of OBRS-750.
   await confirmBtn.click();
+}
+
+test('B2C happy path: search → schedule → review → passenger info ready to pay', async ({
+  page,
+}) => {
+  await seedSignedInCustomer(page);
+  await searchAndConfirmASchedule(page);
 
   // ── Step 4: Passenger info ───────────────────────────────────────────────
 
@@ -129,4 +166,37 @@ test('B2C happy path: search → schedule → review → passenger info ready to
   // ── Assertion: Next (proceed to payment) button is enabled ───────────────
 
   await expect(page.locator('.btn-next')).not.toBeDisabled();
+});
+
+test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign in at the passenger form — not at the payment button', async ({
+  page,
+}) => {
+  // No seedSignedInCustomer() — this is the visitor who never registered, and
+  // the absence of that call IS the test condition.
+  await searchAndConfirmASchedule(page);
+
+  // The shop window stayed open: reaching the confirm click at all means the
+  // guest cleared /schedule-booking and /review-schedule-booking. If a later
+  // change gates those too, searchAndConfirmASchedule() cannot complete and
+  // this test fails there rather than here — which is the point.
+  await page.waitForURL('**/login');
+  expect(new URL(page.url()).pathname).toBe('/login');
+
+  // Assert the login page RENDERED, not merely that the URL changed. A guard
+  // redirect that landed on a blank shell would satisfy the pathname alone.
+  await expect(page.locator('#email')).toBeVisible();
+  await expect(page.locator('#password')).toBeVisible();
+
+  // The passenger form must not have been reachable at all. Asserting its
+  // absence separately from the URL is what distinguishes "redirected before
+  // the module loaded" from "loaded and then navigated away".
+  await expect(page.locator('#booker-firstName')).toHaveCount(0);
+
+  // And the whole reason the redirect is acceptable: signing in has to bring
+  // them back to where they were, not dump them on the home page. This is the
+  // key AuthService writes in setPostLoginRedirectUrl().
+  const returnUrl = await page.evaluate(() =>
+    sessionStorage.getItem('auth_return_url')
+  );
+  expect(returnUrl).toBe('/passenger-info');
 });
