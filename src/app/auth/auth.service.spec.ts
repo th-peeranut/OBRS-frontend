@@ -408,4 +408,103 @@ describe('AuthService', () => {
       );
     });
   });
+
+  // OBRS-855
+  describe('refresh token storage, refreshSession and logout', () => {
+    const loginBody = (refreshToken?: string, accessToken = 'access-1') => ({
+      code: 200,
+      data: {
+        accessToken,
+        tokenType: 'Bearer',
+        expiresIn: 3600,
+        ...(refreshToken ? { refreshToken } : {}),
+        user: {
+          id: 1,
+          fullName: 'R',
+          email: 'rider@example.com',
+          preferredLocale: 'th',
+          status: 'ACTIVE',
+          roles: ['user'],
+        },
+      },
+    });
+
+    it('login stores the refresh token alongside the access token', async () => {
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+
+      httpTesting
+        .expectOne(`${environment.apiUrl}/api/auth/login`)
+        .flush(loginBody('refresh-1'));
+      await promise;
+
+      expect(localStorage.getItem('auth_refresh_token')).toBe('refresh-1');
+    });
+
+    it('a login response with NO refreshToken REMOVES any stored one rather than leaving it', async () => {
+      // The trap this closes: a leftover token belongs to a session the backend has already
+      // replaced, so presenting it later reads as replay — and the backend answers a replay by
+      // revoking every live token the user has. Signing in would be what signs them out.
+      localStorage.setItem('auth_refresh_token', 'token-from-a-previous-session');
+
+      const promise = service.login({ email: 'rider@example.com', password: 'pw' });
+      httpTesting.expectOne(`${environment.apiUrl}/api/auth/login`).flush(loginBody());
+      await promise;
+
+      expect(localStorage.getItem('auth_refresh_token')).toBeNull();
+    });
+
+    it('refreshSession POSTs the stored token and stores the ROTATED one it gets back', (done) => {
+      localStorage.setItem('auth_refresh_token', 'refresh-1');
+
+      service.refreshSession().subscribe((accessToken) => {
+        expect(accessToken).toBe('access-2');
+        expect(localStorage.getItem('auth_token')).toBe('access-2');
+        expect(localStorage.getItem('auth_refresh_token')).toBe('refresh-2');
+        done();
+      });
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/refresh`);
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
+      // Both are set: the interceptor is already mid-401-handling when this runs, and a second
+      // force-logout or toast fired from inside the recovery would step on its verdict.
+      expect(req.request.context.get(SKIP_AUTH_LOGOUT)).toBeTrue();
+      expect(req.request.context.get(SKIP_GLOBAL_ERROR_ALERT)).toBeTrue();
+      req.flush(loginBody('refresh-2', 'access-2'));
+    });
+
+    it('refreshSession with no stored token fails WITHOUT issuing a request', (done) => {
+      service.refreshSession().subscribe({
+        next: () => fail('should not emit'),
+        error: () => {
+          httpTesting.expectNone(`${environment.apiUrl}/api/auth/refresh`);
+          done();
+        },
+      });
+    });
+
+    it('logout revokes server-side, and clears local state BEFORE the call so a failed network cannot strand the user', () => {
+      localStorage.setItem('auth_token', 'access-1');
+      localStorage.setItem('auth_refresh_token', 'refresh-1');
+
+      service.logout();
+
+      // Already gone by the time the request is inspected — the ordering is the assertion.
+      expect(localStorage.getItem('auth_token')).toBeNull();
+      expect(localStorage.getItem('auth_refresh_token')).toBeNull();
+
+      const req = httpTesting.expectOne(`${environment.apiUrl}/api/auth/logout`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual({ refreshToken: 'refresh-1' });
+      req.flush({ code: 200 });
+    });
+
+    it('logout issues no request when there is no refresh token to revoke', () => {
+      localStorage.setItem('auth_token', 'access-1');
+
+      service.logout();
+
+      httpTesting.expectNone(`${environment.apiUrl}/api/auth/logout`);
+      expect(localStorage.getItem('auth_token')).toBeNull();
+    });
+  });
 });

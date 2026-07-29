@@ -16,6 +16,13 @@ export interface LoginResponseData {
   accessToken: string;
   tokenType: string;
   expiresIn: number;
+  // OBRS-855: optional because the field is only as old as the backend deploy that added it, and
+  // a frontend that lands first would otherwise be lying in its own types. Every consumer must
+  // cope with it being absent — AuthService.storeAuthData() clears the stored token in that case
+  // rather than leaving a stale one behind. Once /api/auth/refresh is live everywhere this can
+  // become required.
+  refreshToken?: string;
+  refreshExpiresIn?: number;
   user: LoginUser;
 }
 

@@ -3,13 +3,14 @@ import {
   HttpEvent,
   HttpErrorResponse,
   HttpHandlerFn,
+  HttpHeaders,
   HttpInterceptorFn,
   HttpRequest,
   HttpResponse,
 } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, of, throwError } from 'rxjs';
-import { catchError, mergeMap } from 'rxjs/operators';
+import { catchError, finalize, mergeMap, shareReplay, switchMap } from 'rxjs/operators';
 import { AuthService } from './auth.service';
 import { APP_LANGUAGE_KEY, DEFAULT_LANGUAGE } from '../shared/services/language.service';
 import { SKIP_AUTH_LOGOUT } from '../shared/interceptors/http-context-tokens';
@@ -17,6 +18,17 @@ import { AlertService } from '../shared/services/alert.service';
 import { hasOwnKey } from '../shared/lib/own-key';
 
 let isHandlingAuthError = false;
+
+// OBRS-855: the in-flight refresh, shared by every request that hit a 401 while it was running.
+// Module-level because an HttpInterceptorFn is re-invoked per request with a fresh injection
+// context — there is no instance to hang this on, the same reason isHandlingAuthError lives here.
+//
+// It has to be shared. A booking page fires several authenticated calls at once, so an expired
+// token produces N simultaneous 401s; N independent refreshes would each ROTATE, and the backend
+// treats the second presentation of an already-rotated token as replay and revokes every live
+// token the user has (RefreshTokenService#rotate). Unguarded, the recovery would reliably destroy
+// the session it exists to save — and only under concurrency, which is to say only in production.
+let refreshInFlight$: Observable<string> | null = null;
 
 // Inline (non-ngx-translate) copy for the session-expired toast — see the
 // injection-context note below for why. Mirrors AUTH.SESSION_EXPIRED in
@@ -91,21 +103,31 @@ export const authInterceptor: HttpInterceptorFn = (
 
   const requestWithAuth = req.clone({ headers });
 
+  // OBRS-855: whether a 401 on this request is worth trying to recover from rather than
+  // surrendering to. Read here, once, alongside sentCredential and for the same reason — by the
+  // time a response arrives, storage may have been cleared by whatever else the page was doing.
+  const canAttemptRefresh = sentCredential && !!authService.getRefreshToken();
+
   return next(requestWithAuth).pipe(
     mergeMap((event: HttpEvent<unknown>) => {
       if (!isAuthEndpoint && event instanceof HttpResponse) {
         if (isUnauthorizedPayload(event.body)) {
-          if (!suppressAuthLogout) {
-            handleUnauthorized(authService, router, alertService, appLanguage, sentCredential);
+          // A 200 whose BODY says 401 (OBRS-181's shape). Synthesised into the same
+          // HttpErrorResponse the transport-level path produces, so both reach one recovery.
+          const asError = new HttpErrorResponse({
+            status: 401,
+            statusText: 'Unauthorized',
+            url: req.url,
+            error: event.body,
+          });
+
+          if (suppressAuthLogout) {
+            return throwError(() => asError);
           }
-          return throwError(
-            () =>
-              new HttpErrorResponse({
-                status: 401,
-                statusText: 'Unauthorized',
-                url: req.url,
-                error: event.body,
-              })
+
+          return recoverOrSurrender(
+            asError, req, headers, next, authService, router, alertService,
+            appLanguage, sentCredential, canAttemptRefresh
           );
         }
       }
@@ -114,13 +136,95 @@ export const authInterceptor: HttpInterceptorFn = (
     }),
     catchError((error: HttpErrorResponse) => {
       if (!isAuthEndpoint && error?.status === 401 && !suppressAuthLogout) {
-        handleUnauthorized(authService, router, alertService, appLanguage, sentCredential);
+        return recoverOrSurrender(
+          error, req, headers, next, authService, router, alertService,
+          appLanguage, sentCredential, canAttemptRefresh
+        );
       }
 
       return throwError(() => error);
     })
   );
 };
+
+/**
+ * OBRS-855: the 401 fork. Before this card there was only one answer to a 401 — sign the user out
+ * — and for the customer this feature exists for that answer was wrong: their token had merely
+ * aged past the one hour the backend issues it for, at the payment button, after they had spent
+ * longer than that filling in passenger details.
+ *
+ * When a refresh token is held, the expired access token is exchanged for a fresh one and the
+ * ORIGINAL request is replayed with it, so the 401 never reaches the page that made the call.
+ * When there is no refresh token, or the exchange is refused, behaviour is exactly what it was:
+ * the OBRS-187 force-logout, with OBRS-856's distinction between an expired session and a caller
+ * who never had one.
+ */
+function recoverOrSurrender(
+  error: HttpErrorResponse,
+  req: HttpRequest<any>,
+  headers: HttpHeaders,
+  next: HttpHandlerFn,
+  authService: AuthService,
+  router: Router,
+  alertService: AlertService,
+  appLanguage: string,
+  sentCredential: boolean,
+  canAttemptRefresh: boolean
+): Observable<HttpEvent<any>> {
+  if (!canAttemptRefresh) {
+    handleUnauthorized(authService, router, alertService, appLanguage, sentCredential);
+    return throwError(() => error);
+  }
+
+  return sharedRefresh(authService).pipe(
+    switchMap((freshToken) =>
+      next(req.clone({ headers: headers.set('Authorization', `Bearer ${freshToken}`) }))
+    ),
+    catchError((retryError: unknown) => {
+      // Two different failures land here and they are NOT interchangeable:
+      //   - the exchange itself was refused (refreshSession threw, or /api/auth/refresh 401'd)
+      //   - the replayed request came back 401 anyway, i.e. a brand-new token is not enough
+      // Both mean the session is genuinely over, so both force-logout.
+      //
+      // Anything else — a 500 on the replay, a dropped connection — is NOT an auth verdict, and
+      // logging the user out over it would turn a transient backend blip into a lost booking,
+      // which is the same mistake OBRS-181 fixed for promo-code previews. Those propagate
+      // untouched, and the caller handles them as it always did.
+      const isAuthVerdict =
+        !(retryError instanceof HttpErrorResponse) ||
+        retryError.status === 401;
+
+      if (isAuthVerdict) {
+        handleUnauthorized(authService, router, alertService, appLanguage, sentCredential);
+        return throwError(() => error);
+      }
+
+      return throwError(() => retryError);
+    })
+  );
+}
+
+/**
+ * OBRS-855: one refresh at a time, whatever the burst looks like.
+ *
+ * `finalize` sits BEFORE `shareReplay` on purpose: it fires when the SOURCE settles, which
+ * releases the slot as soon as the exchange is done rather than waiting for the last replayed
+ * subscriber to unsubscribe. Subscribers already attached still receive the buffered value; the
+ * next 401 after that starts a genuinely new exchange, which is correct — it is a new failure of
+ * a token that was fresh when it was sent.
+ */
+function sharedRefresh(authService: AuthService): Observable<string> {
+  if (!refreshInFlight$) {
+    refreshInFlight$ = authService.refreshSession().pipe(
+      finalize(() => {
+        refreshInFlight$ = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false })
+    );
+  }
+
+  return refreshInFlight$;
+}
 
 function handleUnauthorized(
   authService: AuthService,
