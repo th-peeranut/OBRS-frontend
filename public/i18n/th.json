@@ -719,6 +719,7 @@
       "EFFICIENCY": "ประสิทธิภาพกองรถ",
       "TABLE_TITLE": "รายการยานพาหนะ",
       "VEHICLE_NUMBER": "รหัสยานพาหนะ",
+      "VEHICLE_NUMBER_REQUIRED_UNLESS_RETIRED": "ต้องระบุรหัสยานพาหนะสำหรับรถทุกสถานะ ยกเว้นรถที่ปลดระวางแล้ว",
       "NUMBER_PLATE": "ทะเบียนรถ",
       "VEHICLE_TYPE": "ประเภทรถ",
       "CURRENT_ROUTE": "เส้นทางปัจจุบัน",

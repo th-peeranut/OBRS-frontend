@@ -67,6 +67,22 @@ describe('vehicles-page.mappers', () => {
       expect(row.vehicleType).toBe('-');
     });
 
+    // OBRS-842: the '-' above is a DISPLAY placeholder. The raw fields must keep
+    // "the server sent nothing" distinguishable from "the server sent a dash",
+    // because everything that edits a vehicle reads them instead.
+    it('keeps the raw server values null when absent, alongside the "-" display values', () => {
+      const sparse: AdminVehicleDto = { id: 5, status: 'active' };
+      const row = toVehicleRow(sparse, 'en');
+      expect(row.rawVehicleNumber).toBeNull();
+      expect(row.rawPlate).toBeNull();
+    });
+
+    it('passes real server values through to the raw fields unchanged', () => {
+      const row = toVehicleRow(base, 'en');
+      expect(row.rawVehicleNumber).toBe('V1');
+      expect(row.rawPlate).toBe('ABC-123');
+    });
+
     it('resolves vehicleTypeSlug from vehicleType.slug', () => {
       expect(toVehicleRow(base, 'en').vehicleTypeSlug).toBe('van');
     });
@@ -92,6 +108,21 @@ describe('vehicles-page.mappers', () => {
     });
   });
 
+  // OBRS-842: a retired vehicle with no หมายเลขพาหนะ, exactly as the table hands it
+  // to the edit modal — display fields already placeholdered, raw fields truthful.
+  const RETIRED_ROW: VehicleRow = {
+    id: 14,
+    vehicleTypeSlug: 'minibus',
+    statusCode: 'retired',
+    vehicleNumber: '-',
+    plate: '16-8829',
+    rawVehicleNumber: null,
+    rawPlate: '16-8829',
+    vehicleType: 'Minibus',
+    route: '-',
+    status: 'RETIRED',
+  };
+
   describe('toVehicleDtoFallback', () => {
     it('maps a VehicleRow back into an AdminVehicleDto shape', () => {
       const row: VehicleRow = {
@@ -100,6 +131,8 @@ describe('vehicles-page.mappers', () => {
         statusCode: 'active',
         vehicleNumber: 'V1',
         plate: 'ABC-123',
+        rawVehicleNumber: 'V1',
+        rawPlate: 'ABC-123',
         vehicleType: 'Van',
         route: '-',
         status: 'ACTIVE',
@@ -113,6 +146,16 @@ describe('vehicles-page.mappers', () => {
         vehicleType: { id: 0, slug: 'van' },
       });
     });
+
+    // OBRS-842 regression: this fallback seeds the edit form on the synchronous
+    // open. Reading the display field here put a literal '-' into the DTO, which
+    // then short-circuited buildVehicleFormValues' `??` chain and reached the
+    // form control — the first link in the corruption path.
+    it('carries the ABSENT vehicle number through as undefined, never the "-" placeholder', () => {
+      const dto = toVehicleDtoFallback(RETIRED_ROW);
+      expect(dto.vehicleNumber).toBeUndefined();
+      expect(dto.numberPlate).toBe('16-8829');
+    });
   });
 
   describe('buildVehicleFormValues', () => {
@@ -122,6 +165,8 @@ describe('vehicles-page.mappers', () => {
       statusCode: 'active',
       vehicleNumber: 'V1',
       plate: 'ABC-123',
+      rawVehicleNumber: 'V1',
+      rawPlate: 'ABC-123',
       vehicleType: 'Van',
       route: '-',
       status: 'ACTIVE',
@@ -197,6 +242,47 @@ describe('vehicles-page.mappers', () => {
       expect(values['chassisNumber']).toBe('');
       expect(values['note']).toBe('');
     });
+
+    // ── OBRS-842: the bug itself ──────────────────────────────────────────────
+    // Both call sites in initEditForm are covered: the synchronous open (row
+    // fallback DTO) and the late GET-detail patch (server DTO with a null
+    // vehicleNumber). Either one leaking '-' is enough to write it to the DB,
+    // because PUT is a full replace and '-' satisfies Validators.required.
+    it('seeds an ABSENT vehicle number as blank, not as the "-" the table displays', () => {
+      const fromRowFallback = buildVehicleFormValues(
+        toVehicleDtoFallback(RETIRED_ROW),
+        RETIRED_ROW,
+        'en'
+      );
+      expect(fromRowFallback['vehicleNumber']).toBe('');
+
+      const fromServerDetail = buildVehicleFormValues(
+        { id: 14, numberPlate: '16-8829', status: 'retired' },
+        RETIRED_ROW,
+        'en'
+      );
+      expect(fromServerDetail['vehicleNumber']).toBe('');
+    });
+
+    // The plate travels the identical `?? row` path one line up. It is currently
+    // unreachable (vehicles.number_plate is NOT NULL, so the server always sends
+    // one) — pinned anyway so the two lines cannot drift apart again.
+    it('seeds an absent plate as blank too, not as "-"', () => {
+      const plateless: VehicleRow = { ...RETIRED_ROW, plate: '-', rawPlate: null };
+      const values = buildVehicleFormValues(
+        toVehicleDtoFallback(plateless),
+        plateless,
+        'en'
+      );
+      expect(values['numberPlate']).toBe('');
+    });
+
+    // Must-NOT-fire side: a vehicle that really does hold a number still gets it.
+    // Without this, "always blank" would pass the two assertions above.
+    it('still seeds a vehicle number the server DID send', () => {
+      const values = buildVehicleFormValues({ id: 1, vehicleNumber: '51-24' }, row, 'en');
+      expect(values['vehicleNumber']).toBe('51-24');
+    });
   });
 
   describe('toVehiclePayload', () => {
@@ -218,8 +304,17 @@ describe('vehicles-page.mappers', () => {
       const payload = toVehiclePayload({});
       expect(payload.vehicleType).toBe('');
       expect(payload.numberPlate).toBe('');
-      expect(payload.vehicleNumber).toBe('');
       expect(payload.status).toBe('');
+    });
+
+    // OBRS-842: vehicleNumber is the one field of the four that must NOT default
+    // to ''. VehicleDtoService#applyTo assigns it unconditionally, so '' would be
+    // stored as a real empty string in a UNIQUE column — the second retired
+    // vehicle saved that way would 409 with nothing on screen to explain it.
+    it('sends a blank vehicle number as null, never as an empty string', () => {
+      expect(toVehiclePayload({}).vehicleNumber).toBeNull();
+      expect(toVehiclePayload({ vehicleNumber: '' }).vehicleNumber).toBeNull();
+      expect(toVehiclePayload({ vehicleNumber: '   ' }).vehicleNumber).toBeNull();
     });
 
     // OBRS-316 Gap 1: PUT is a full-replace, so ALL 7 attribute keys must always
@@ -384,8 +479,8 @@ describe('vehicles-page.mappers', () => {
 
   describe('filterVehiclesByStatus', () => {
     const vehicles: VehicleRow[] = [
-      { id: 1, vehicleTypeSlug: 'van', statusCode: 'active', vehicleNumber: 'V1', plate: 'A', vehicleType: 'Van', route: '-', status: 'ACTIVE' },
-      { id: 2, vehicleTypeSlug: 'bus', statusCode: 'pending', vehicleNumber: 'V2', plate: 'B', vehicleType: 'Bus', route: '-', status: 'PENDING' },
+      { id: 1, vehicleTypeSlug: 'van', statusCode: 'active', vehicleNumber: 'V1', plate: 'A', rawVehicleNumber: 'V1', rawPlate: 'A', vehicleType: 'Van', route: '-', status: 'ACTIVE' },
+      { id: 2, vehicleTypeSlug: 'bus', statusCode: 'pending', vehicleNumber: 'V2', plate: 'B', rawVehicleNumber: 'V2', rawPlate: 'B', vehicleType: 'Bus', route: '-', status: 'PENDING' },
     ];
 
     it('returns all vehicles when the filter is empty', () => {

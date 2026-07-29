@@ -753,7 +753,10 @@ export interface UpdateUserPayload {
 export interface CreateVehiclePayload {
   vehicleType: string;
   numberPlate: string;
-  vehicleNumber: string;
+  // OBRS-842: nullable — a `retired` vehicle has handed its หมายเลขพาหนะ to whichever
+  // vehicle replaced it and genuinely holds none (V58 made the column nullable, and
+  // VehicleReqDto#isVehicleNumberValid requires it for every OTHER status).
+  vehicleNumber: string | null;
   status: string;
   brand: string | null;
   model: string | null;

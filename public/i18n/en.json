@@ -719,6 +719,7 @@
       "EFFICIENCY": "Fleet Efficiency",
       "TABLE_TITLE": "Vehicle List",
       "VEHICLE_NUMBER": "Vehicle Number",
+      "VEHICLE_NUMBER_REQUIRED_UNLESS_RETIRED": "Vehicle number is required for every vehicle except a retired one.",
       "NUMBER_PLATE": "Number Plate",
       "VEHICLE_TYPE": "Vehicle Type",
       "CURRENT_ROUTE": "Current Route",

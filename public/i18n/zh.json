@@ -719,6 +719,7 @@
       "EFFICIENCY": "车队效率",
       "TABLE_TITLE": "车辆列表",
       "VEHICLE_NUMBER": "车辆编号",
+      "VEHICLE_NUMBER_REQUIRED_UNLESS_RETIRED": "除已退役车辆外，所有车辆均须填写车辆编号。",
       "NUMBER_PLATE": "车牌号",
       "VEHICLE_TYPE": "车辆类型",
       "CURRENT_ROUTE": "当前路线",

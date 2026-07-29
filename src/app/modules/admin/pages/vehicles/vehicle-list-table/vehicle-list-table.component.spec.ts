@@ -12,6 +12,8 @@ function makeRow(overrides: Partial<VehicleRow> = {}): VehicleRow {
     statusCode: 'active',
     vehicleNumber: 'V1',
     plate: 'ABC-123',
+    rawVehicleNumber: 'V1',
+    rawPlate: 'ABC-123',
     vehicleType: 'Van',
     route: '-',
     status: 'Active',

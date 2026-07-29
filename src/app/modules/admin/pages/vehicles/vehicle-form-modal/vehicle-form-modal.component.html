@@ -46,7 +46,7 @@
         <label class="admin-form-label">
           {{ 'ADMIN.VEHICLES.NUMBER_PLATE' | translate }} <span class="admin-required">*</span>
         </label>
-        <input class="admin-field" formControlName="numberPlate" />
+        <input class="admin-field" formControlName="numberPlate" maxlength="50" />
         <small class="admin-error" *ngIf="isFieldInvalid('numberPlate')">
           {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
         </small>
@@ -54,11 +54,14 @@
 
       <div class="admin-form-field">
         <label class="admin-form-label">
-          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }} <span class="admin-required">*</span>
+          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER' | translate }}
+          <!-- OBRS-842: no asterisk for a retired vehicle — it has handed its
+               หมายเลขพาหนะ to its replacement and holds none. -->
+          <span class="admin-required" *ngIf="!isVehicleNumberOptional">*</span>
         </label>
-        <input class="admin-field" formControlName="vehicleNumber" />
+        <input class="admin-field" formControlName="vehicleNumber" maxlength="50" />
         <small class="admin-error" *ngIf="isFieldInvalid('vehicleNumber')">
-          {{ 'ADMIN.VALIDATION.REQUIRED' | translate }}
+          {{ 'ADMIN.VEHICLES.VEHICLE_NUMBER_REQUIRED_UNLESS_RETIRED' | translate }}
         </small>
       </div>
 

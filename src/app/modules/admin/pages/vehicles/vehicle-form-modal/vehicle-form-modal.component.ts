@@ -23,8 +23,10 @@ import {
   toVehiclePayload,
 } from '../vehicles-page.mappers';
 import {
+  RETIRED_VEHICLE_STATUS,
   optionalPositiveIntegerValidator,
   optionalYearRangeValidator,
+  vehicleNumberRequiredUnlessRetiredValidator,
 } from './vehicle-form-modal.validators';
 
 // Smart create/edit form modal, extracted from VehiclesPageComponent
@@ -87,7 +89,15 @@ export class VehicleFormModalComponent implements OnChanges {
     this.vehicleForm = this.formBuilder.group({
       vehicleType: ['', [Validators.required]],
       numberPlate: ['', [Validators.required, Validators.maxLength(50)]],
-      vehicleNumber: ['', [Validators.required, Validators.maxLength(50)]],
+      // OBRS-842: conditionally required, mirroring the backend's
+      // VehicleReqDto#isVehicleNumberValid — required for every status EXCEPT
+      // `retired`. An unconditional Validators.required here is what made a
+      // retired vehicle uneditable in the first place, and the '-' placeholder
+      // that used to satisfy it is what made the corruption silent.
+      vehicleNumber: [
+        '',
+        [vehicleNumberRequiredUnlessRetiredValidator(), Validators.maxLength(50)],
+      ],
       status: ['', [Validators.required]],
       // OBRS-316 Gap 1: all 7 optional (no Validators.required, no asterisk) —
       // design-system §3.1 only requires the no-pre-seeded-default rule for
@@ -101,6 +111,14 @@ export class VehicleFormModalComponent implements OnChanges {
       chassisNumber: ['', [Validators.maxLength(100)]],
       note: [''],
     });
+
+    // OBRS-842: vehicleNumber's validity depends on a SIBLING control, and Angular
+    // re-runs a control's validators only when that control's own value changes —
+    // so switching the status dropdown to/from `retired` must re-validate it here,
+    // or the field keeps the verdict it got under the previous status.
+    this.vehicleForm
+      .get('status')
+      ?.valueChanges.subscribe(() => this.revalidateVehicleNumber());
   }
 
   // Only `isOpen` transitions drive the form: the parent always sets
@@ -124,6 +142,20 @@ export class VehicleFormModalComponent implements OnChanges {
       this.isEditDetailError = false;
       this.vehicleForm.reset();
     }
+  }
+
+  // OBRS-842: drives the `*` next to the หมายเลขพาหนะ label. A retired vehicle has
+  // no number to give, so marking the field required there would be a lie the admin
+  // cannot satisfy.
+  protected get isVehicleNumberOptional(): boolean {
+    return (
+      String(this.vehicleForm.get('status')?.value ?? '').trim().toLowerCase() ===
+      RETIRED_VEHICLE_STATUS
+    );
+  }
+
+  private revalidateVehicleNumber(): void {
+    this.vehicleForm.get('vehicleNumber')?.updateValueAndValidity({ emitEvent: false });
   }
 
   protected isFieldInvalid(fieldName: string): boolean {
@@ -272,6 +304,12 @@ export class VehicleFormModalComponent implements OnChanges {
 
     if (!onlyPristine) {
       this.vehicleForm.reset(values);
+      // OBRS-842: `reset` validates each control as it walks the group, and
+      // `vehicleNumber` is declared BEFORE `status`, so it would otherwise be
+      // judged against the status the form is being reset AWAY from. Re-run it
+      // once the whole group holds its new values rather than depending on
+      // declaration order.
+      this.revalidateVehicleNumber();
       return;
     }
 
@@ -281,6 +319,8 @@ export class VehicleFormModalComponent implements OnChanges {
         control.setValue(value);
       }
     }
+
+    this.revalidateVehicleNumber();
   }
 
   // NOTE: `||` short-circuit is deliberate — translate.getDefaultLang() must
