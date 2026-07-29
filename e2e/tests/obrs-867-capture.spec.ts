@@ -66,9 +66,34 @@ async function colourPair(page: Page, selector: string): Promise<{ fg: number[];
   return { fg: parseRgb(raw.fg), bg: parseRgb(raw.bg) };
 }
 
+/**
+ * Saves one shot — but refuses to if the frame is contaminated.
+ *
+ * The first run of this spec produced a visibly GREY banner in the English shot
+ * while the Thai one was white, and every assertion still passed: the app's
+ * global HTTP-error interceptor had thrown a SweetAlert whose backdrop
+ * (`rgba(0,0,0,.4)`) sits over the whole page, so the element screenshot
+ * captured the banner through a dimming layer. Reading `getComputedStyle` can
+ * never see that — the computed background is `#ffffff` either way — so the
+ * check has to be "is there an overlay", not "is the colour right".
+ *
+ * A capture script cannot inspect its own output, so the guard belongs here,
+ * before the file exists (OBRS-622/702 both cost an upload to this exact
+ * class of bug).
+ */
 async function capture(page: Page, file: string): Promise<void> {
   const banner = page.locator('.consent-banner');
   await expect(banner).toBeVisible();
+
+  await expect(
+    page.locator('.swal2-container, .swal2-popup'),
+    'a SweetAlert backdrop is dimming the frame — fix the page state, do not save'
+  ).toHaveCount(0);
+  await expect(
+    page.locator('.route-error'),
+    'an error toast is on screen — the shot would read as a broken feature'
+  ).toHaveCount(0);
+
   await banner.screenshot({ path: `${ASSETS}/${file}` });
 }
 
