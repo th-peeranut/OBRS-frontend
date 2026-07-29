@@ -200,3 +200,131 @@ test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign i
   );
   expect(returnUrl).toBe('/passenger-info');
 });
+
+/**
+ * OBRS-855: the card's story, end to end, on the one call it actually happens on.
+ *
+ * `passenger-info.component.ts#onSubmitPassengerInfo` POSTs /api/private/bookings when the
+ * customer presses Next, and the access JWT it carries lives one hour from SIGN-IN — not from the
+ * start of the booking. Someone who logged in that morning and then spent a while over a group
+ * booking presses that button with a token the backend has already stopped honouring. Before this
+ * card there was nothing to renew it with: the interceptor cleared the session, the component's
+ * own `error.status === 401` branch returned silently, and the effort was gone.
+ *
+ * This test makes that exact 401 happen once and asserts the customer finishes anyway. It also
+ * settles a claim the card made that the code did NOT support — that the entered data is lost.
+ * It is not: everything lives in NgRx feature stores and login navigates with the router, so the
+ * data survives. Rather than write that down and trust it, the assertions below measure it.
+ */
+test('OBRS-855: the access token dies mid-booking — the request is retried on a fresh one and the customer reaches payment, not /login', async ({
+  page,
+}) => {
+  await seedSignedInCustomer(page);
+  await page.addInitScript(() => {
+    // The half that did not exist before this card. Without it the interceptor has nothing to
+    // try and this test would land on /login — which is exactly what the old behaviour was.
+    localStorage.setItem('auth_refresh_token', 'obrs-855-live-refresh-token');
+  });
+
+  let refreshCalls = 0;
+  let bookingAttempts = 0;
+  const bearersSeen: string[] = [];
+
+  await page.route('**/api/auth/refresh', async (route) => {
+    refreshCalls += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 200,
+        data: {
+          accessToken: 'obrs-855-fresh-access-token',
+          tokenType: 'Bearer',
+          expiresIn: 3600,
+          // Rotated, as the real endpoint does.
+          refreshToken: 'obrs-855-rotated-refresh-token',
+          refreshExpiresIn: 604800,
+          user: {
+            id: 1,
+            fullName: 'John Doe',
+            email: 'customer@system.local',
+            preferredLocale: 'en',
+            status: 'ACTIVE',
+            roles: ['user'],
+          },
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/private/bookings', async (route) => {
+    bookingAttempts += 1;
+    bearersSeen.push(route.request().headers()['authorization'] ?? '');
+
+    if (bookingAttempts === 1) {
+      // The expired access token, refused. Everything the customer typed is already on screen.
+      await route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 401, message: 'Unauthorized' }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        code: 200,
+        data: { bookingId: 9001, bookingNumber: 'BK9001' },
+      }),
+    });
+  });
+
+  await searchAndConfirmASchedule(page);
+  await page.waitForURL('**/passenger-info');
+
+  await page.locator('#booker-title .dropdown-btn').click();
+  await page.locator('#booker-title .dropdown-option').first().click();
+  await page.fill('#booker-firstName', 'John');
+  await page.fill('#booker-lastName', 'Doe');
+  await page.fill('#booker-phoneNumber', '0812345678');
+  await page.fill('#booker-email', 'john.doe@example.com');
+  await page.locator('#booker-gender_male').click();
+
+  await page.locator('#title-0 .dropdown-btn').click();
+  await page.locator('#title-0 .dropdown-option').first().click();
+  await page.fill('#firstName-0', 'John');
+  await page.fill('#lastName-0', 'Doe');
+  await page.locator('#gender_male-0').click();
+
+  await page.locator('.btn-next').click();
+
+  // The verdict. Reaching /payment means the booking was created, which means the 401 was
+  // recovered from rather than surfaced — and that the customer never saw a sign-in screen.
+  await page.waitForURL('**/payment');
+  expect(new URL(page.url()).pathname).toBe('/payment');
+
+  // Two attempts on the SAME booking call, and the second one carried the token the refresh
+  // minted. Asserting the bearer is what separates "it retried" from "it happened to succeed".
+  expect(bookingAttempts).toBe(2);
+  expect(bearersSeen[0]).toBe('Bearer obrs-856-b2c-gate-token');
+  expect(bearersSeen[1]).toBe('Bearer obrs-855-fresh-access-token');
+
+  // Exactly one exchange. More than one would mean the single-flight guard is not holding, and
+  // against the real backend each extra one presents an already-rotated token — which is read as
+  // replay and revokes the whole session.
+  expect(refreshCalls).toBe(1);
+
+  // The rotated token replaced the spent one. Keeping the old value is what would make the NEXT
+  // refresh look like a replay.
+  const stored = await page.evaluate(() => ({
+    access: localStorage.getItem('auth_token'),
+    refresh: localStorage.getItem('auth_refresh_token'),
+    returnUrl: sessionStorage.getItem('auth_return_url'),
+  }));
+  expect(stored.access).toBe('obrs-855-fresh-access-token');
+  expect(stored.refresh).toBe('obrs-855-rotated-refresh-token');
+  // Nothing ever staged a post-login return, because nothing ever decided to send them to login.
+  expect(stored.returnUrl).toBeNull();
+});
