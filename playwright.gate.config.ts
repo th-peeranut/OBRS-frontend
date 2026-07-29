@@ -108,6 +108,12 @@ export default defineConfig({
     // reach hermetically instead of one module, with an ALLOW list carrying a reason per
     // host not yet fixed. Costs this lane page loads only -- it reuses those fixtures.
     '**/host-box-sweep.spec.ts',
+    // OBRS-854. The only spec in this lane that starts with NO session at all, because the
+    // scenario is a customer scanning a counter QR on their own phone: the bounce through
+    // AuthGuard and the trip back to /account are the thing under test, not scenery around it.
+    // It performs its own login against a stubbed POST /api/auth/login and aborts the GIS script
+    // that /login pulls from accounts.google.com, so it still needs nothing but a browser.
+    '**/obrs-854-account-deeplink.spec.ts',
   ],
 
   timeout: 60_000,
