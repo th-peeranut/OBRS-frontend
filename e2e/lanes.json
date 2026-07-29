@@ -42,7 +42,7 @@
       "spec": "obrs-854-account-deeplink.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
-      "why": "OBRS-854. Walks the counter-QR path end to end at a 390px phone viewport: logged out at /account, bounced through AuthGuard to /login, back to /account, dialog opened, translated confirm phrase typed, and DELETE /api/private/users/me asserted off the wire rather than by a success toast. Hermetic by construction -- it mints no session at all (arriving logged OUT is the scenario under test), one page.route fulfils every /api/** call including the login it performs, and accounts.google.com is aborted so /login's GIS script never leaves the box."
+      "why": "OBRS-854. Walks the counter-QR path end to end at a 390px phone viewport: logged out at /account, bounced through AuthGuard to /login, back to /account, dialog opened, translated confirm phrase typed, and DELETE /api/private/users/me asserted off the wire rather than by a success toast. Hermetic by construction -- it mints no session at all (arriving logged OUT is the scenario under test), one page.route fulfils every /api/** call including the login it performs, and accounts.google.com is aborted so /login's GIS script never leaves the box. It also seeds OBRS-867's obrs_analytics_consent_v1 to an ANSWERED value for most cases, because that bar is fixed to the bottom of the viewport and this page puts the close-account card last on purpose; the unanswered overlap is not hidden but pinned by its own test, which asks document.elementFromPoint what is really on top of the button rather than reasoning about z-index."
     },
     {
       "spec": "focus-retention.spec.ts",

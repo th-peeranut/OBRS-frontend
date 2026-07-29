@@ -74,16 +74,35 @@ const LOGIN_RESPONSE = ok({
 /** Every DELETE that reached `/api/private/users/me`, recorded off the wire. */
 type Wire = { deletes: string[] };
 
-async function prepare(page: Page, lang: 'th' | 'en'): Promise<Wire> {
+/** Mirrors `ANALYTICS_CONSENT_STORAGE_KEY` (OBRS-867) — the banner is absent once this is set. */
+const ANALYTICS_CONSENT_KEY = 'obrs_analytics_consent_v1';
+type Consent = 'granted' | 'denied' | 'unset';
+
+async function prepare(page: Page, lang: 'th' | 'en', consent: Consent = 'denied'): Promise<Wire> {
   const wire: Wire = { deletes: [] };
 
-  await page.addInitScript((language) => {
-    localStorage.setItem('app_language', language);
-    // Deliberately NO auth_token: the whole point is arriving logged out, off a QR code.
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_username');
-    localStorage.removeItem('auth_roles');
-  }, lang);
+  await page.addInitScript(
+    ({ language, consentDecision, consentKey }) => {
+      localStorage.setItem('app_language', language);
+      // Deliberately NO auth_token: the whole point is arriving logged out, off a QR code.
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_username');
+      localStorage.removeItem('auth_roles');
+
+      // OBRS-867's consent bar is `position: fixed; bottom: 0; z-index: 1000`, and this page
+      // puts the close-account card LAST on purpose (it is the one irreversible action here).
+      // On a 390px phone the two occupy the same pixels, so an unanswered banner really does
+      // swallow the click — measured, not assumed. Most tests below seed an ANSWERED decision,
+      // which is the state a customer is in from their second page view onward; the first-visit
+      // overlap gets its own test rather than being papered over everywhere.
+      if (consentDecision === 'unset') {
+        localStorage.removeItem(consentKey);
+      } else {
+        localStorage.setItem(consentKey, consentDecision);
+      }
+    },
+    { language: lang, consentDecision: consent, consentKey: ANALYTICS_CONSENT_KEY }
+  );
 
   // Google Identity Services is a real remote script on /login. Aborting it keeps this spec in the
   // hermetic GATE lane; the password form under test does not need it.
@@ -183,6 +202,47 @@ test.describe('OBRS-854: the counter QR lands a logged-out phone on a working cl
     expect(box!.x).toBeGreaterThanOrEqual(0);
     expect(box!.x + box!.width).toBeLessThanOrEqual(390);
     expect(box!.height).toBeGreaterThanOrEqual(30);
+  });
+
+  test('first visit off the QR: the consent bar covers the close-account button until answered', async ({
+    page,
+  }) => {
+    // The QR scenario is a phone that has never been here: no session AND no consent answer.
+    await prepare(page, 'th', 'unset');
+    await page.goto('/account');
+    await logIn(page);
+    await expect(page).toHaveURL(/\/account$/);
+
+    const banner = page.locator('app-analytics-consent-banner .consent-banner');
+    const openButton = page.locator('[data-testid="close-account-open"]');
+    await expect(banner).toBeVisible();
+    await openButton.scrollIntoViewIfNeeded();
+
+    // Not an assumption about z-index: ask the browser what is actually on top of the button's
+    // own centre point. OBRS-867's bar is fixed to the bottom and this card is deliberately the
+    // last thing on the page, so on a 390px viewport they land on the same pixels.
+    const coveredBefore = await openButton.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return !!top && !el.contains(top);
+    });
+    expect(coveredBefore).toBe(true);
+
+    // A real visitor answers it. Decline, not accept — the path must not require agreeing to be
+    // measured in order to exercise a privacy right.
+    await page.locator('.consent-banner__btn').first().click();
+    await expect(banner).toHaveCount(0);
+
+    await openButton.scrollIntoViewIfNeeded();
+    const coveredAfter = await openButton.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      return !!top && !el.contains(top);
+    });
+    expect(coveredAfter).toBe(false);
+
+    await openButton.click();
+    await expect(page.locator('[data-testid="close-account-submit"]')).toBeVisible();
   });
 
   test('the customer can press it through to the end - DELETE /users/me really leaves the page', async ({
