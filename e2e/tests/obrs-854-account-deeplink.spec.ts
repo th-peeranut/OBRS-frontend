@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { expect, Page, Route, test } from '@playwright/test';
+import { ANALYTICS_CONSENT_KEY } from '../support/analytics-consent';
 
 /**
  * OBRS-854 AC-2 / AC-3 — the counter QR and the email footer both point one place: `/account`.
@@ -74,8 +75,11 @@ const LOGIN_RESPONSE = ok({
 /** Every DELETE that reached `/api/private/users/me`, recorded off the wire. */
 type Wire = { deletes: string[] };
 
-/** Mirrors `ANALYTICS_CONSENT_STORAGE_KEY` (OBRS-867) — the banner is absent once this is set. */
-const ANALYTICS_CONSENT_KEY = 'obrs_analytics_consent_v1';
+// OBRS-882 replaced a local copy of this key with the shared one. This spec found the
+// consent-bar overlap FIRST and handled it here, which was right for this page and is why
+// it stayed green — but the copy meant the knowledge lived in one spec. Hours later
+// OBRS-867's merge took out 23 cases in three OTHER specs against the same bar, and a
+// second copy of the key string would then have had to move with it. One home, one string.
 type Consent = 'granted' | 'denied' | 'unset';
 
 async function prepare(page: Page, lang: 'th' | 'en', consent: Consent = 'denied'): Promise<Wire> {

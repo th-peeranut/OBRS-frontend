@@ -16,8 +16,14 @@
  *   3. Every file that calls document.createElement('script') is a declared loader, and
  *      every declared loader still calls it. This is the rule that catches "a new
  *      third-party widget was added to a page".
- *   4. A declared loader still names the origin the inventory claims for it. Catches
- *      changing the vendor URL underneath a justification that no longer describes it.
+ *   4. A declared loader and its inventory entry name THE SAME SET of https origins,
+ *      in both directions. Declared-but-absent catches changing the vendor URL underneath
+ *      a justification that no longer describes it. Present-but-undeclared catches the
+ *      other half, which OBRS-882 found this rule could not see: `origin` was a single
+ *      string, so a loader that pulled a SECOND vendor from the same file satisfied the
+ *      rule completely while the second vendor appeared in no inventory and no CSP.
+ *      That is the exact shape OBRS-867's analytics loader shipped in (googletagmanager
+ *      AND clarity.ms from one file), and it went undetected here.
  *   5. netlify.toml's CSP matches the declared SIT origin set, has no 'unsafe-inline' in
  *      script-src, and still names a report-uri — without which 11.6.1 detection is zero
  *      while the header looks unchanged from the outside.
@@ -66,6 +72,20 @@ function loadsScriptDynamically(source) {
 /** Line and block comments, so a note about a script loader is not one. */
 function stripComments(source) {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/[^\n]*/g, '$1');
+}
+
+/**
+ * Every distinct `https://host` a file names in live code. Comments are stripped first,
+ * for the same reason rule 3 strips them: a file is allowed to DISCUSS a vendor it does
+ * not load, and several here do.
+ *
+ * `https` only, deliberately. The one `http://` literal in this repo's loader files is
+ * `http://www.w3.org` — an SVG xmlns, which is an identifier and not a fetchable origin.
+ * Widening this to `https?` would turn that into a finding with nothing behind it, and a
+ * gate people learn to wave through is worse than no gate (OBRS-750).
+ */
+function httpsOriginsIn(source) {
+  return new Set((stripComments(source).match(/https:\/\/[A-Za-z0-9.*-]+/g) ?? []));
 }
 
 /**
@@ -129,6 +149,18 @@ const SELF_TEST_CASES = [
   // exactly this, so it is pinned here rather than only fixed.
   ['origins', 0, "default-src 'self'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"],
   ['origins', 1, "connect-src https://a.example; report-uri https://b.example/api/csp-report"],
+  // ---- rule 4b: the origins a LOADER FILE names. OBRS-882 — the case that shipped is
+  // two vendors from one file, so it is pinned first and by exact set, not by count.
+  ['srcOrigins', 'https://www.clarity.ms,https://www.googletagmanager.com',
+    'a(`https://www.googletagmanager.com/gtag/js?id=${id}`);\nb(`https://www.clarity.ms/tag/${p}`);'],
+  ['srcOrigins', 'https://cdn.omise.co', "s.src = 'https://cdn.omise.co/omise.js';"],
+  // A vendor named only in a COMMENT is discussed, not loaded. Three files here do this.
+  ['srcOrigins', '', "// see https://accounts.google.com/gsi/client, loaded in login.component.ts"],
+  ['srcOrigins', '', '/* frame-src covers https://*.omise.co for the 3DS hop */'],
+  // An SVG xmlns is an identifier, not an origin — and it is why this is https-only.
+  ['srcOrigins', '', 'const NS = "http://www.w3.org/2000/svg";'],
+  // A wildcard host is a legitimate thing to name and must round-trip verbatim.
+  ['srcOrigins', 'https://*.clarity.ms', "const upload = 'https://*.clarity.ms';"],
 ];
 
 function runSelfTest() {
@@ -137,6 +169,7 @@ function runSelfTest() {
     let actual;
     if (kind === 'html') actual = hasScriptTag(input);
     else if (kind === 'ts') actual = loadsScriptDynamically(input);
+    else if (kind === 'srcOrigins') actual = [...httpsOriginsIn(input)].sort().join(',');
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -208,13 +241,27 @@ for (const file of tsFiles) {
     continue;
   }
   const source = readFileSync(file, 'utf8');
-  const host = entry.origin.replace(/^[a-z]+:\/\//, '');
-  if (!source.includes(host)) {
-    problems.push(
-      `${rel} is inventoried as loading ${entry.origin}, but that host does not appear in the file. ` +
-        'Either the vendor URL changed under a justification that no longer describes it, or the ' +
-        'inventory entry is stale.'
-    );
+  const inSource = httpsOriginsIn(source);
+  const inEntry = new Set(entry.origins);
+
+  for (const origin of [...inEntry].sort()) {
+    if (!inSource.has(origin)) {
+      problems.push(
+        `${rel} is inventoried as loading ${origin}, but that origin does not appear in the file. ` +
+          'Either the vendor URL changed under a justification that no longer describes it, or the ' +
+          'inventory entry is stale.'
+      );
+    }
+  }
+  for (const origin of [...inSource].sort()) {
+    if (!inEntry.has(origin)) {
+      problems.push(
+        `${rel} names ${origin} but the inventory does not list it among that file's origins. ` +
+          'A loader may pull from more than one vendor, and each one needs its own written ' +
+          'justification (PCI DSS 6.4.3(c)) and its own CSP entry — the second vendor is the one ' +
+          'that gets forgotten (OBRS-882).'
+      );
+    }
   }
 }
 for (const [rel] of declared) {

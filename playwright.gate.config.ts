@@ -114,6 +114,12 @@ export default defineConfig({
     // It performs its own login against a stubbed POST /api/auth/login and aborts the GIS script
     // that /login pulls from accounts.google.com, so it still needs nothing but a browser.
     '**/obrs-854-account-deeplink.spec.ts',
+    // OBRS-882. Admitted as the counterpart to the fix that took the PDPA consent banner
+    // out of every other spec's way: with `seedAnalyticsConsent` seeded lane-wide, this is
+    // the only spec left that loads a page with the banner UP. Without it the fix would be
+    // a mute rather than a repair. Hermetic on the same terms as the rest — two stubbed
+    // home-page calls and nothing else.
+    '**/analytics-consent-banner.spec.ts',
   ],
 
   timeout: 60_000,

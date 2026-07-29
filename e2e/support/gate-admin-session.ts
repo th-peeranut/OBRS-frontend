@@ -44,6 +44,7 @@
  */
 
 import { expect, Page } from '@playwright/test';
+import { seedAnalyticsConsent } from './analytics-consent';
 
 const EMPTY_PAGE_RESPONSE = { code: 200, message: 'OK', data: { content: [], totalElements: 0 } };
 
@@ -89,6 +90,13 @@ export async function seedGateAdminSession(
     },
     { user: username, roleList: roles, lang: language }
   );
+
+  // OBRS-882. A staff session is by definition a returning user, so a settled PDPA
+  // answer belongs in the same seed as the session itself. Without it the consent
+  // banner covers the bottom of every admin screen and took out `staff-sell-walkin`
+  // (the Sell button) and `trip-details-edit` (the form's save button) — as click
+  // timeouts naming those buttons, with the banner mentioned only inside the trace.
+  await seedAnalyticsConsent(page);
 
   await stubGateAdminShell(page);
 }
