@@ -27,8 +27,19 @@ export interface VehicleRow {
   id: number;
   vehicleTypeSlug: string;
   statusCode: string;
+  /** DISPLAY value — `'-'` when the server sent nothing. Table/label use only. */
   vehicleNumber: string;
+  /** DISPLAY value — `'-'` when the server sent nothing. Table/label use only. */
   plate: string;
+  // OBRS-842: the two fields above have already been through the `'-'` display
+  // placeholder, and `'-'` is a perfectly valid string as far as a form control,
+  // `Validators.required` and the backend are concerned. Seeding the edit form
+  // from them therefore WROTE the placeholder into `vehicles.vehicle_number` as
+  // a real value (and, being UNIQUE, it would then 409 the next vehicle that hit
+  // the same path) — silently, with the admin never having typed anything. The
+  // two raw fields below are what the edit form must read; keep the split.
+  rawVehicleNumber: string | null;
+  rawPlate: string | null;
   vehicleType: string;
   route: string;
   status: string;
@@ -66,6 +77,8 @@ export function toVehicleRow(vehicle: AdminVehicleDto, locale: string): VehicleR
     statusCode: status.code,
     vehicleNumber: vehicle.vehicleNumber ?? '-',
     plate: vehicle.numberPlate ?? '-',
+    rawVehicleNumber: vehicle.vehicleNumber ?? null,
+    rawPlate: vehicle.numberPlate ?? null,
     vehicleType:
       getAdminLookupLabel(vehicle.vehicleType, locale) ??
       getAdminTranslationLabel(vehicle.vehicleType?.translations, locale) ??
@@ -77,11 +90,16 @@ export function toVehicleRow(vehicle: AdminVehicleDto, locale: string): VehicleR
   };
 }
 
+// OBRS-842: reads the RAW row fields, never the `'-'`-placeholdered display ones.
+// This DTO exists purely to seed the edit form on the synchronous open, so a
+// placeholder leaking in here lands in a form control and then in the database —
+// `?? undefined` (not `?? '-'`) keeps a genuinely absent value absent, which is
+// what buildVehicleFormValues' `??` chain below is written to expect.
 export function toVehicleDtoFallback(vehicle: VehicleRow): AdminVehicleDto {
   return {
     id: vehicle.id,
-    numberPlate: vehicle.plate,
-    vehicleNumber: vehicle.vehicleNumber,
+    numberPlate: vehicle.rawPlate ?? undefined,
+    vehicleNumber: vehicle.rawVehicleNumber ?? undefined,
     status: vehicle.statusCode,
     vehicleType: { id: 0, slug: vehicle.vehicleTypeSlug },
   };
@@ -98,8 +116,12 @@ export function buildVehicleFormValues(
 ): Record<string, unknown> {
   return {
     vehicleType: String(vehicleDetail.vehicleType?.slug ?? vehicle.vehicleTypeSlug).trim(),
-    numberPlate: String(vehicleDetail.numberPlate ?? vehicle.plate).trim(),
-    vehicleNumber: String(vehicleDetail.vehicleNumber ?? vehicle.vehicleNumber).trim(),
+    // OBRS-842: fall back to the RAW row values, not the display ones — see the
+    // VehicleRow comment. A vehicle with no หมายเลขพาหนะ (a retired one, V58) must
+    // reach the form as '' so the admin sees an empty field, not a literal '-'
+    // that Validators.required happily accepts and PUT then makes permanent.
+    numberPlate: String(vehicleDetail.numberPlate ?? vehicle.rawPlate ?? '').trim(),
+    vehicleNumber: String(vehicleDetail.vehicleNumber ?? vehicle.rawVehicleNumber ?? '').trim(),
     status: parseAdminStatus(vehicleDetail.status ?? vehicle.statusCode, locale).code,
     // OBRS-316 Gap 1: the row fallback (toVehicleDtoFallback) has none of these 7
     // fields, so on the immediate open they read as blank until the real GET
@@ -118,7 +140,11 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
   return {
     vehicleType: String(rawFormValue['vehicleType'] ?? '').trim().toLowerCase(),
     numberPlate: String(rawFormValue['numberPlate'] ?? '').trim(),
-    vehicleNumber: String(rawFormValue['vehicleNumber'] ?? '').trim(),
+    // OBRS-842: null, NOT ''. The backend sets vehicle_number unconditionally from
+    // this field (VehicleDtoService#applyTo), so '' would be stored as a real empty
+    // string — and `vehicles.vehicle_number` is UNIQUE, so the SECOND retired
+    // vehicle saved that way would 409 with nothing on screen to explain why.
+    vehicleNumber: nullableTrimmedString(rawFormValue['vehicleNumber']),
     status: String(rawFormValue['status'] ?? '').trim().toLowerCase(),
     // OBRS-316 Gap 1: PUT is full-replace, so all 7 are always sent (create AND
     // edit) — blank strings/empty numbers normalize to `null`, never dropped.

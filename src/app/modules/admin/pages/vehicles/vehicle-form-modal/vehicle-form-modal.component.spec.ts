@@ -13,9 +13,27 @@ const VAN_ROW: VehicleRow = {
   statusCode: 'active',
   vehicleNumber: 'V1',
   plate: 'ABC-123',
+  rawVehicleNumber: 'V1',
+  rawPlate: 'ABC-123',
   vehicleType: 'Van',
   route: '-',
   status: 'Active',
+};
+
+// OBRS-842: the shape the table hands the modal for a RETIRED vehicle with no
+// หมายเลขพาหนะ (16-8829 on SIT after V58) — display fields already carry the '-'
+// placeholder, raw fields carry the truth. This row is the whole bug.
+const RETIRED_ROW: VehicleRow = {
+  id: 14,
+  vehicleTypeSlug: 'minibus',
+  statusCode: 'retired',
+  vehicleNumber: '-',
+  plate: '16-8829',
+  rawVehicleNumber: null,
+  rawPlate: '16-8829',
+  vehicleType: 'Minibus',
+  route: '-',
+  status: 'RETIRED',
 };
 
 function detailResponse(overrides: Partial<AdminVehicleDto> = {}): ResponseAPI<AdminVehicleDto> {
@@ -446,6 +464,119 @@ describe('VehicleFormModalComponent', () => {
       expect(alert.error).toHaveBeenCalledWith('boom');
       expect(closedSpy).toHaveBeenCalled();
       expect(component.reloadStructure).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── OBRS-842 ────────────────────────────────────────────────────────────────
+  // The reachable defect: after OBRS-837 a real vehicle_number = NULL row exists
+  // (16-8829). The table renders it as '-', the modal used to seed the form from
+  // that display string, Validators.required accepted it, and the full-replace PUT
+  // made '-' the vehicle's permanent หมายเลขพาหนะ — with the admin having typed
+  // nothing and seen no error. These specs walk the whole path end to end.
+  describe('a vehicle with no หมายเลขพาหนะ (OBRS-842)', () => {
+    // The server's own answer for such a row: numberPlate present, vehicleNumber
+    // absent, status retired.
+    function retiredDetail(): ResponseAPI<AdminVehicleDto> {
+      return detailResponse({
+        id: 14,
+        numberPlate: '16-8829',
+        vehicleNumber: undefined,
+        status: 'retired',
+        vehicleType: { id: 3, slug: 'minibus' },
+      });
+    }
+
+    async function openRetired() {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const made = makeComponent(getVehicleById$);
+      const promise = openEditAwait(made.component, { ...RETIRED_ROW });
+      getVehicleById$.next(retiredDetail());
+      getVehicleById$.complete();
+      await promise;
+      return made;
+    }
+
+    it('opens with the vehicle-number field EMPTY, not the "-" the table shows', async () => {
+      const { component } = await openRetired();
+      expect((component as any).vehicleForm.get('vehicleNumber').value).toBe('');
+    });
+
+    // The synchronous open, BEFORE the detail fetch resolves — the row fallback is
+    // the only data in hand there, and it is the one carrying the placeholder.
+    it('is already empty on the synchronous open, before the detail fetch resolves', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+      openEdit(component, { ...RETIRED_ROW });
+      expect((component as any).vehicleForm.get('vehicleNumber').value).toBe('');
+    });
+
+    it('saves without the admin touching anything, and PUTs null — never "-"', async () => {
+      const { component, adminApi } = await openRetired();
+
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).toHaveBeenCalledWith(
+        14,
+        jasmine.objectContaining({ vehicleNumber: null, numberPlate: '16-8829' })
+      );
+    });
+
+    it('keeps Save reachable so brand/model/note of a retired vehicle stay editable', async () => {
+      const { component, adminApi } = await openRetired();
+      (component as any).vehicleForm.patchValue({ brand: 'Hino', model: 'Minibus' });
+
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).toHaveBeenCalledWith(
+        14,
+        jasmine.objectContaining({ brand: 'Hino', model: 'Minibus', vehicleNumber: null })
+      );
+    });
+
+    it('drops the required asterisk only while the status is retired', async () => {
+      const { component } = await openRetired();
+      expect((component as any).isVehicleNumberOptional).toBeTrue();
+
+      (component as any).vehicleForm.patchValue({ status: 'active' });
+      expect((component as any).isVehicleNumberOptional).toBeFalse();
+    });
+
+    // The near-miss the backend pins in VehicleReqDtoValidationTest: `inactive`
+    // is still IN the fleet, so it still holds its number. If the form let this
+    // through, the admin would get a 400 with no field marked.
+    it('blocks the save when the status moves off retired while the number is blank', async () => {
+      const { component, adminApi } = await openRetired();
+
+      (component as any).vehicleForm.patchValue({ status: 'inactive' });
+      await (component as any).submitVehicle();
+
+      expect((component as any).vehicleForm.get('vehicleNumber').valid).toBeFalse();
+      expect(adminApi.updateVehicle).not.toHaveBeenCalled();
+    });
+
+    // Must-NOT-fire: relaxing the rule for retired must not relax it for anyone
+    // else. Without this, "vehicleNumber is simply optional now" would pass every
+    // spec above.
+    it('still refuses to save an ORDINARY vehicle with the number cleared', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ vehicleNumber: '   ' });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).not.toHaveBeenCalled();
+    });
+
+    // And create mode, where nothing has been loaded at all, keeps the field
+    // required by default — status starts blank, which is not 'retired'.
+    it('keeps the field required in create mode', () => {
+      const { component } = makeComponent(new Subject<ResponseAPI<AdminVehicleDto>>());
+      openCreate(component);
+      expect((component as any).vehicleForm.get('vehicleNumber').valid).toBeFalse();
+      expect((component as any).isVehicleNumberOptional).toBeFalse();
     });
   });
 });
