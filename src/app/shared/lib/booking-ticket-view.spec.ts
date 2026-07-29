@@ -219,6 +219,50 @@ describe('mapBookingTicketsToCard — legs', () => {
     expect(card.passengers[0].name).toBe('Mr A');
   });
 
+  it('OBRS-866: threads each passenger\'s own ticketId/ticketNumber through, so the card can fetch that ticket\'s boarding token', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 11, ticketNumber: 'T-11', seatNumber: '1', passengerName: 'Mr A' },
+            { id: 12, ticketNumber: 'T-12', seatNumber: '2', passengerName: 'Mrs B' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.passengers.map((p) => p.ticketId)).toEqual([11, 12]);
+    expect(card.passengers.map((p) => p.ticketNumber)).toEqual(['T-11', 'T-12']);
+  });
+
+  it('OBRS-866: a ticket with no usable id yields ticketId null rather than a GET on /tickets/0/boarding-token', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 0, ticketNumber: 'T-0', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.passengers[0].ticketId).toBeNull();
+  });
+
   it('OBRS-269: maps each leg\'s pickupLatitude/pickupLongitude from its own fromStop coords', () => {
     const data = buildRoundTripData({
       journeys: [
@@ -609,7 +653,15 @@ describe('mapBookingTicketsToTrackTargets', () => {
         jasmine.objectContaining({ route: 'Station B - Station C', seats: '2', distanceKm: 40 }),
       ],
       passengers: [jasmine.objectContaining({ name: 'Mr A' })],
-      booker: { name: '-', phone: '0812345678', seat: '-' },
+      // OBRS-866: the booker is a contact row, not a traveller — no ticket of
+      // its own, so it never gets a boarding QR.
+      booker: {
+        name: '-',
+        phone: '0812345678',
+        seat: '-',
+        ticketId: null,
+        ticketNumber: '-',
+      },
       paymentDate: '-',
       totalAmount: '500.00',
     });

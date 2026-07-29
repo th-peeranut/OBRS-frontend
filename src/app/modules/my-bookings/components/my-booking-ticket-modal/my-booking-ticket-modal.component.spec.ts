@@ -7,6 +7,7 @@ import { BookingService } from '../../../../services/booking/booking.service';
 import { BookingTicketsData } from '../../../../shared/interfaces/booking-ticket.interface';
 import { ETicketCardComponent } from '../../../../shared/components/e-ticket-card/e-ticket-card.component';
 import { ETicketCardModule } from '../../../../shared/components/e-ticket-card/e-ticket-card.module';
+import { TicketService } from '../../../../services/ticket/ticket.service';
 import { MyBookingTicketModalComponent } from './my-booking-ticket-modal.component';
 
 function buildTicketsData(): BookingTicketsData {
@@ -126,11 +127,24 @@ describe('MyBookingTicketModalComponent', () => {
 describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
   let fixture: ComponentFixture<MyBookingTicketModalComponent>;
   let component: MyBookingTicketModalComponent;
+  let ticketServiceStub: { getBoardingToken: jasmine.Spy };
 
   beforeEach(async () => {
     const bookingServiceStub = {
       getBookingTickets: () => of({ code: 200, message: 'OK', data: buildTicketsData() }),
     } as unknown as BookingService;
+    // OBRS-866: the real ETicketCardComponent now fetches a boarding token per
+    // ticket (its own component-scoped BoardingQrService resolves TicketService
+    // from here), so this suite must supply one or the card can't be built.
+    ticketServiceStub = {
+      getBoardingToken: jasmine.createSpy('getBoardingToken').and.returnValue(
+        of({
+          code: 200,
+          message: 'OK',
+          data: { ticketId: 1, ticketNumber: 'T-1', boardingToken: 'tok-1', expiresAt: '' },
+        })
+      ),
+    };
 
     await TestBed.configureTestingModule({
       declarations: [MyBookingTicketModalComponent],
@@ -141,7 +155,10 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
       // tracker's own behavior (covered by trip-track-panel.component.spec.ts).
       schemas: [NO_ERRORS_SCHEMA],
       imports: [ETicketCardModule, TranslateModule.forRoot()],
-      providers: [{ provide: BookingService, useValue: bookingServiceStub }],
+      providers: [
+        { provide: BookingService, useValue: bookingServiceStub },
+        { provide: TicketService, useValue: ticketServiceStub },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(MyBookingTicketModalComponent);
@@ -165,6 +182,29 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
 
     expect(cardInstance.legs.length).toBe(1);
     expect(cardInstance.legs[0].distanceKm).toBe(45);
+  });
+
+  // OBRS-866: the integration point the bug actually lived at — My Bookings is
+  // the only post-payment surface a customer can reach, and the QR it showed
+  // encoded the `ticketNumber` string, which the staff scanner rejects. Pin
+  // that the card reached here asks for THIS booking's ticket's boarding token.
+  it('OBRS-866: the card fetches a real boarding token for the booking\'s ticket', () => {
+    component.bookingId = 5;
+    component.ngOnChanges({
+      bookingId: {
+        currentValue: 5,
+        previousValue: null,
+        firstChange: true,
+        isFirstChange: () => true,
+      },
+    });
+    fixture.detectChanges();
+
+    expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledOnceWith(1, true);
+
+    const cardInstance = fixture.debugElement.query(By.directive(ETicketCardComponent))
+      .componentInstance as ETicketCardComponent;
+    expect(cardInstance.passengerRows.map((row) => row.ticketId)).toEqual([1]);
   });
 
   // SPEC-OBRS-426 BR-2: the tracker renders as a SIBLING of app-e-ticket-card,

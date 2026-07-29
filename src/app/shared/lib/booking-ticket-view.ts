@@ -194,6 +194,11 @@ function buildPassengers(journey: BookingTicketJourney | null): TicketPassenger[
     name: ticket.passengerName?.trim() || '-',
     phone: '-',
     seat: ticket.seatNumber?.trim() || '-',
+    // OBRS-866: the row's own ticket id — what the card turns into a
+    // boarding-token QR. Same guard the e-ticket page uses: a missing/0 id
+    // becomes `null` (no QR) rather than a GET on `/tickets/0/boarding-token`.
+    ticketId: Number.isFinite(ticket.id) && ticket.id > 0 ? ticket.id : null,
+    ticketNumber: ticket.ticketNumber?.trim() || '-',
     // OBRS-296: server-authoritative — carried straight through, never
     // re-derived client-side.
     fareCategory: ticket.fareCategory ?? null,
@@ -226,7 +231,11 @@ function buildSeatList(passengers: TicketPassenger[]): string {
 
 function buildBooker(data: BookingTicketsData): TicketPassenger | null {
   const phone = data.contactPhoneNumber?.trim();
-  return phone ? { name: '-', phone, seat: '-' } : null;
+  // The booker is a contact row, not a traveller — it has no ticket of its
+  // own, so `ticketId: null` (OBRS-866) keeps it out of the QR fetch entirely.
+  return phone
+    ? { name: '-', phone, seat: '-', ticketId: null, ticketNumber: '-' }
+    : null;
 }
 
 function buildSingleLegRoute(

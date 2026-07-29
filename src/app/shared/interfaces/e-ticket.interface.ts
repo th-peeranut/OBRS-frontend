@@ -3,6 +3,16 @@ export interface TicketPassenger {
   name: string;
   phone: string;
   seat: string;
+  /** OBRS-866: the ticket this row actually boards with. The card fetches
+   *  `GET /tickets/{id}/boarding-token` per row and renders THAT as the QR —
+   *  a boarding QR is per-TICKET, never per-booking, and never the
+   *  human-readable `ticketNumber` (which the boarding endpoint rejects with
+   *  `INVALID_TICKET_TOKEN`). `null` for a row with no ticket of its own
+   *  (the booker row), which renders no QR at all. */
+  ticketId: number | null;
+  /** This ticket's own human-readable number, shown under its QR so a
+   *  multi-passenger booking's QRs can be told apart. */
+  ticketNumber: string;
   /** OBRS-296: `undefined`/`null` for the booker row (which has no fare
    *  category of its own) and for a pre-API render where the ticket API
    *  response hasn't landed yet. */
