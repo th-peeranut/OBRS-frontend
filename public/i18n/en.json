@@ -447,7 +447,8 @@
       "REFUND_VOID_REPORT": "Refund / Void Summary",
       "CASH_ONLINE_RECONCILIATION": "Cash / Online Reconciliation",
       "EXPENSES": "Expenses",
-      "MANUAL_REFUNDS": "Manual Refunds"
+      "MANUAL_REFUNDS": "Manual Refunds",
+      "CASH_REFUND_APPROVALS": "Cash refund approvals"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "Search menu...",
@@ -1566,6 +1567,22 @@
           "AMOUNT_REQUIRED": "Amount transferred is required"
         }
       }
+    },
+    "CASH_REFUND_APPROVALS": {
+      "SUBTITLE": "Cash refunds waiting for your authorization at the counter.",
+      "EMPTY": "Nothing is waiting for your approval.",
+      "REFRESH": "Refresh",
+      "APPROVE": "Authorize",
+      "APPROVING": "Issuing…",
+      "APPROVE_FAILED": "Could not authorize this request. It may have expired or already been answered.",
+      "LOAD_FAILED": "Could not load the pending approvals.",
+      "CODE_HINT": "Read this code to the counter. It is valid for {{minutes}} minutes, for this booking only, and is shown once.",
+      "COL": {
+        "BOOKING": "Booking",
+        "AMOUNT": "Cash to refund",
+        "REQUESTED_BY": "Requested by",
+        "REQUESTED_AT": "Requested at"
+      }
     }
   },
   "AUTH": {
@@ -2356,20 +2373,24 @@
         "WINDOW_CLOSED": "This booking is outside the cancellation window and can no longer be cancelled from here.",
         "RETRY_CHECK": "Retry",
         "CASH_APPROVAL_TITLE": "Cash refund — needs a second person's approval.",
-        "CASH_APPROVAL_BODY": "Hand the device to an owner or manager. They enter their own sign-in email and password below — not yours.",
-        "APPROVER_EMAIL": "Approver email",
-        "APPROVER_PASSWORD": "Approver password",
-        "APPROVER_IS_SELF_HINT": "This looks like your own account. A second person (the owner or a manager) must approve a cash refund.",
+        "CASH_APPROVAL_BODY": "Ask an owner to authorize this from their own device, then enter the code they give you. Never type someone else's password here.",
         "APPROVAL_REQUIRED": "A second person's approval is required for a cash refund.",
-        "APPROVER_INVALID": "That email or password is incorrect. Please try again.",
+        "APPROVER_INVALID": "That code is not valid. It may have expired, been used already, or belong to another booking — ask the owner for a new one.",
         "APPROVER_NOT_OWNER": "That account is not authorized to approve a cash refund.",
-        "APPROVER_SELF": "This looks like your own account. A second person (the owner or a manager) must approve a cash refund.",
+        "APPROVER_SELF": "You cannot approve your own cancellation. A second person (the owner) must authorize a cash refund.",
         "SUCCESS": "The booking has been cancelled.",
         "SUCCESS_CASH": "Booking cancelled — hand {{refund}} back to the customer in cash.",
         "SUCCESS_MANUAL": "Booking cancelled. The {{refund}} refund will be transferred by the owner later — do not pay cash at the counter.",
         "SUCCESS_AUTO": "Booking cancelled. {{refund}} is being refunded to the method the customer paid with — do not pay cash at the counter.",
         "FAILED": "Unable to cancel the booking. Please try again.",
-        "SUBMITTING": "Cancelling…"
+        "SUBMITTING": "Cancelling…",
+        "APPROVAL_REQUEST": "Ask the owner to authorize",
+        "APPROVAL_REQUESTING": "Sending…",
+        "APPROVAL_REQUEST_AGAIN": "Ask again",
+        "APPROVAL_REQUESTED_HINT": "The owner has been notified. They will read you a 6-digit code — it is valid for about 2 minutes and only for this booking.",
+        "APPROVAL_REQUEST_FAILED": "Could not send the request. Please try again.",
+        "APPROVAL_CODE": "Approval code",
+        "APPROVAL_CODE_FORMAT": "Enter the {{length}} digits the owner gave you."
       }
     },
     "BOARDING": {

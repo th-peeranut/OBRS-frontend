@@ -51,8 +51,10 @@
     </div>
 
     <form [formGroup]="form">
-      <!-- CASH — three-layer control: a visually distinct section, copy that
-           names the physical hand-off, and fields that are NEVER pre-filled. -->
+      <!-- CASH (OBRS-844) — two steps, in the order they happen at the
+           counter: ask the owner, then type the code they issue. The password
+           fields that used to live here are gone; nothing on this screen asks
+           anyone to type a password belonging to someone else. -->
       <div class="ccm-cash-approval" *ngIf="previewState === 'resolved' && isCashRefund">
         <h5 class="ccm-cash-approval-title">
           {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_TITLE' | translate }}
@@ -61,40 +63,45 @@
           {{ 'STAFF.CANCEL_BOOKING.MODAL.CASH_APPROVAL_BODY' | translate }}
         </p>
 
-        <div class="admin-form-field">
-          <label class="admin-form-label">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_EMAIL' | translate }}
-            <span class="admin-required">*</span>
-          </label>
-          <input
-            class="admin-field"
-            type="email"
-            formControlName="approverEmail"
-            autocomplete="off"
-            [disabled]="isSubmitting"
-          />
-          <small class="admin-error" *ngIf="isApproverEmailInvalid">
-            {{ 'STAFF.VALIDATION.REQUIRED' | translate }}
-          </small>
-          <small class="admin-error ccm-self-hint" *ngIf="isApproverSelf">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_IS_SELF_HINT' | translate }}
-          </small>
+        <!-- Step 1 — ask. Stays visible after a successful ask so the
+             salesperson can re-send if the owner never saw the first one. -->
+        <div class="ccm-approval-request">
+          <button
+            type="button"
+            class="admin-btn admin-btn-small"
+            [disabled]="isSubmitting || approvalState === 'requesting'"
+            (click)="requestApproval()"
+          >
+            {{
+              approvalState === 'requesting'
+                ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTING' | translate)
+                : approvalState === 'requested'
+                  ? ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_AGAIN' | translate)
+                  : ('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST' | translate)
+            }}
+          </button>
+          <p class="admin-hint" *ngIf="approvalState === 'requested'">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUESTED_HINT' | translate }}
+          </p>
         </div>
 
+        <!-- Step 2 — type the six digits the owner reads back. -->
         <div class="admin-form-field">
           <label class="admin-form-label">
-            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVER_PASSWORD' | translate }}
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE' | translate }}
             <span class="admin-required">*</span>
           </label>
           <input
-            class="admin-field"
-            type="password"
-            formControlName="approverPassword"
-            autocomplete="new-password"
+            class="admin-field ccm-approval-code"
+            type="text"
+            inputmode="numeric"
+            formControlName="approvalCode"
+            autocomplete="one-time-code"
+            [attr.maxlength]="approvalCodeLength"
             [disabled]="isSubmitting"
           />
-          <small class="admin-error" *ngIf="isApproverPasswordInvalid">
-            {{ 'STAFF.VALIDATION.REQUIRED' | translate }}
+          <small class="admin-error" *ngIf="isApprovalCodeInvalid">
+            {{ 'STAFF.CANCEL_BOOKING.MODAL.APPROVAL_CODE_FORMAT' | translate: { length: approvalCodeLength } }}
           </small>
         </div>
 

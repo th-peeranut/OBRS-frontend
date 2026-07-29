@@ -30,7 +30,11 @@ import {
 } from '../../shared/interfaces/settlement.interface';
 import { ConfigHistoryRow } from '../../shared/interfaces/config-history.interface';
 import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
-import { CancelBookingResult } from '../../shared/interfaces/my-booking.interface';
+import {
+  CancelBookingResult,
+  CashRefundApprovalCode,
+  CashRefundApprovalRequest,
+} from '../../shared/interfaces/my-booking.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -1837,5 +1841,29 @@ export class AdminApiService {
    * is 403'd rather than served a filtered list. */
   getOwners(): Observable<ResponseAPI<AdminOwnerDto[]>> {
     return this.getRequest<AdminOwnerDto[]>(`${this.baseUrl}/private/owners`);
+  }
+
+  /**
+   * OBRS-844 — the cash refunds waiting on this owner's authorization. Scoped
+   * server-side to the caller's own fleet; an ADMIN, who owns no fleet, gets an
+   * empty list rather than every operator's counter traffic.
+   */
+  getPendingCashRefundApprovals(): Observable<ResponseAPI<CashRefundApprovalRequest[]>> {
+    return this.getRequest<CashRefundApprovalRequest[]>(
+      `${this.baseUrl}/private/cash-refund-approvals/pending`
+    );
+  }
+
+  /**
+   * OBRS-844 — issues the six digits for one request. The response is the ONLY
+   * place the plaintext ever exists outside the server's hash of it; there is
+   * deliberately no GET that can read it back, because an endpoint that could
+   * would let the counter obtain a code without the owner ever acting.
+   */
+  approveCashRefund(requestId: number): Observable<ResponseAPI<CashRefundApprovalCode>> {
+    return this.postRequest<CashRefundApprovalCode>(
+      `${this.baseUrl}/private/cash-refund-approvals/${requestId}/approve`,
+      {}
+    );
   }
 }

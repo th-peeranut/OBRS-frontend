@@ -17,7 +17,9 @@
 import { execFileSync } from 'child_process';
 
 const API = 'http://localhost:8080';
-const DB = 'obrs766qa';
+// OBRS-844: overridable so a later card can run this lane against ITS OWN isolated
+// database (the per-card rule) instead of borrowing 766's. Default unchanged.
+const DB = process.env['OBRS_QA_DB'] ?? 'obrs766qa';
 const DB_PASSWORD = 'P@ssw0rd';
 
 // Route 1 (chonburi_bangkok) and route 2 (bangkok_chonburi) both run on

@@ -25,7 +25,8 @@
  */
 import { execFileSync } from 'child_process';
 
-const DB = 'obrs766qa';
+// OBRS-844: see obrs766-seed.ts — same override, same default.
+const DB = process.env['OBRS_QA_DB'] ?? 'obrs766qa';
 const PRESERVED_BOOKING_IDS = 2;
 
 export default function globalSetup(): void {

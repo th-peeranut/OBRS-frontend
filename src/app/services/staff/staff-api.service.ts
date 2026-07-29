@@ -18,6 +18,7 @@ import {
   CancelBookingReqDto,
   CancelBookingResult,
   CancellationPolicy,
+  CashRefundApprovalRequest,
 } from '../../shared/interfaces/my-booking.interface';
 import {
   CargoAvailabilityRespDto,
@@ -959,9 +960,8 @@ export class StaffApiService {
    * `BookingService.cancelBooking()` posts to for the customer path.
    * `payload` defaults to `{}` so a non-cash, non-manual-refund counter
    * cancel posts the byte-identical empty body every existing caller of that
-   * endpoint already sends (FE-1) — `approverEmail`/`approverPassword`/
-   * `refundDestination` are only ever set by the caller, never defaulted to
-   * `''`/`null` here. */
+   * endpoint already sends (FE-1) — `approvalCode`/`refundDestination` are
+   * only ever set by the caller, never defaulted to `''`/`null` here. */
   cancelCounterBooking(
     bookingId: number,
     payload: CancelBookingReqDto = {}
@@ -969,6 +969,25 @@ export class StaffApiService {
     return this.http.post<ResponseAPI<CancelBookingResult>>(
       `${environment.apiUrl}/api/private/bookings/${bookingId}/cancel`,
       payload,
+      { context: this.cancelActionContext }
+    );
+  }
+
+  /**
+   * OBRS-844 — POST /api/private/bookings/{id}/cash-refund-approval-request.
+   * Asks the fleet's owners to authorize this cash refund; they see it in the
+   * in-app inbox and issue a code from their own device.
+   *
+   * Idempotent server-side: tapping again while a request is already open
+   * returns the same request instead of notifying the owner twice, so the
+   * button does not need to guard against a double tap to avoid spamming.
+   */
+  requestCashRefundApproval(
+    bookingId: number
+  ): Observable<ResponseAPI<CashRefundApprovalRequest>> {
+    return this.http.post<ResponseAPI<CashRefundApprovalRequest>>(
+      `${environment.apiUrl}/api/private/bookings/${bookingId}/cash-refund-approval-request`,
+      {},
       { context: this.cancelActionContext }
     );
   }

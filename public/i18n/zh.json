@@ -447,7 +447,8 @@
       "REFUND_VOID_REPORT": "退款/作废汇总",
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "EXPENSES": "费用",
-      "MANUAL_REFUNDS": "人工退款"
+      "MANUAL_REFUNDS": "人工退款",
+      "CASH_REFUND_APPROVALS": "现金退款审批"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1566,6 +1567,22 @@
           "AMOUNT_REQUIRED": "请输入转账金额"
         }
       }
+    },
+    "CASH_REFUND_APPROVALS": {
+      "SUBTITLE": "柜台正在等待您授权的现金退款。",
+      "EMPTY": "没有待您批准的请求。",
+      "REFRESH": "刷新",
+      "APPROVE": "授权",
+      "APPROVING": "签发中…",
+      "APPROVE_FAILED": "无法授权此请求，可能已过期或已被处理。",
+      "LOAD_FAILED": "无法加载待批准列表。",
+      "CODE_HINT": "请将此码告知柜台。有效期 {{minutes}} 分钟，仅适用于本笔预订，且只显示一次。",
+      "COL": {
+        "BOOKING": "预订",
+        "AMOUNT": "应退现金",
+        "REQUESTED_BY": "申请人",
+        "REQUESTED_AT": "申请时间"
+      }
     }
   },
   "AUTH": {
@@ -2356,20 +2373,24 @@
         "WINDOW_CLOSED": "此订票已超过可取消的时间窗口，无法在此处取消。",
         "RETRY_CHECK": "重试",
         "CASH_APPROVAL_TITLE": "现金退款——需要第二人批准。",
-        "CASH_APPROVAL_BODY": "请将设备交给店主或经理。由他们输入自己的登录邮箱和密码——不是您的。",
-        "APPROVER_EMAIL": "批准人邮箱",
-        "APPROVER_PASSWORD": "批准人密码",
-        "APPROVER_IS_SELF_HINT": "此邮箱似乎是您自己的账户。现金退款必须由第二人（店主或经理）批准。",
+        "CASH_APPROVAL_BODY": "请店主在自己的设备上授权，然后把他们给您的审批码输入此处。切勿在此输入他人的密码。",
         "APPROVAL_REQUIRED": "现金退款需要第二人批准。",
-        "APPROVER_INVALID": "邮箱或密码不正确，请重试。",
+        "APPROVER_INVALID": "审批码无效。可能已过期、已被使用，或属于另一笔预订，请向店主索取新的审批码。",
         "APPROVER_NOT_OWNER": "该账户无权批准现金退款。",
-        "APPROVER_SELF": "此邮箱似乎是您自己的账户。现金退款必须由第二人（店主或经理）批准。",
+        "APPROVER_SELF": "您不能批准自己办理的取消。现金退款必须由第二人（店主）授权。",
         "SUCCESS": "订票已取消。",
         "SUCCESS_CASH": "订票已取消 — 请退还现金 {{refund}} 给客户。",
         "SUCCESS_MANUAL": "订票已取消。退款 {{refund}} 稍后由店主转账，柜台无需支付现金。",
         "SUCCESS_AUTO": "订票已取消。{{refund}} 正在退回客户付款时使用的渠道，柜台无需支付现金。",
         "FAILED": "无法取消订票，请重试。",
-        "SUBMITTING": "正在取消…"
+        "SUBMITTING": "正在取消…",
+        "APPROVAL_REQUEST": "请求店主授权",
+        "APPROVAL_REQUESTING": "发送中…",
+        "APPROVAL_REQUEST_AGAIN": "再次请求",
+        "APPROVAL_REQUESTED_HINT": "已通知店主。他们会告知您一组 6 位数字的审批码，有效期约 2 分钟，且仅适用于本笔预订。",
+        "APPROVAL_REQUEST_FAILED": "请求发送失败，请重试。",
+        "APPROVAL_CODE": "审批码",
+        "APPROVAL_CODE_FORMAT": "请输入店主给您的 {{length}} 位数字。"
       }
     },
     "BOARDING": {

@@ -1,0 +1,79 @@
+<section class="admin-card mt-3">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE' | translate }}</h4>
+    <button type="button" class="admin-btn admin-btn-small" [disabled]="isLoading" (click)="load()">
+      {{ 'ADMIN.CASH_REFUND_APPROVALS.REFRESH' | translate }}
+    </button>
+  </div>
+
+  <p class="admin-error" *ngIf="contentState === 'error'">{{ errorMessage }}</p>
+
+  <!-- An empty queue is good news: nobody is standing at a counter waiting. -->
+  <div class="cra-empty" *ngIf="contentState === 'empty'">
+    <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+    <p class="cra-empty-title">{{ 'ADMIN.CASH_REFUND_APPROVALS.EMPTY' | translate }}</p>
+  </div>
+
+  <div class="admin-table-wrap" *ngIf="contentState === 'loading' || contentState === 'data'">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.BOOKING' | translate }}</th>
+          <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.AMOUNT' | translate }}</th>
+          <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.REQUESTED_BY' | translate }}</th>
+          <th>{{ 'ADMIN.CASH_REFUND_APPROVALS.COL.REQUESTED_AT' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="contentState === 'loading'">
+          <tr *ngFor="let row of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+
+        <ng-container *ngIf="contentState === 'data'">
+          <tr *ngFor="let row of rows">
+            <td class="cra-booking">{{ row.bookingNumber }}</td>
+            <td class="cra-amount">{{ formatCurrency(row.refundAmount) }}</td>
+            <td>{{ row.requestedBy }}</td>
+            <td>{{ row.requestedAt | date: 'dd MMM yyyy HH:mm' }}</td>
+            <td class="cra-action">
+              <!-- Before: the ask. After: the six digits, shown here and
+                   nowhere else, ever — the server kept only a hash. -->
+              <button
+                type="button"
+                class="admin-btn admin-btn-primary admin-btn-small"
+                *ngIf="!issuedCodeFor(row)"
+                [disabled]="approvingId !== null"
+                (click)="approve(row)"
+              >
+                {{
+                  approvingId === row.id
+                    ? ('ADMIN.CASH_REFUND_APPROVALS.APPROVING' | translate)
+                    : ('ADMIN.CASH_REFUND_APPROVALS.APPROVE' | translate)
+                }}
+              </button>
+
+              <div class="cra-code" *ngIf="issuedCodeFor(row) as issued">
+                <span class="cra-code-value">{{ issued.code }}</span>
+                <small class="admin-hint">
+                  {{
+                    'ADMIN.CASH_REFUND_APPROVALS.CODE_HINT'
+                      | translate: { minutes: issued.ttlMinutes }
+                  }}
+                </small>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="admin-error" *ngIf="approveErrorMessage">{{ approveErrorMessage }}</p>
+</section>
