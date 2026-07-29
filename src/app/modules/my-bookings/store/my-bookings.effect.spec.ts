@@ -20,6 +20,17 @@ import {
 } from './my-bookings.action';
 import { initialMyBookingsState } from './my-bookings.model';
 import { selectMyBookings } from './my-bookings.selector';
+import { errorCodeFromMessageKey } from '../../../shared/lib/api-error-code';
+
+// OBRS-839: mock the WIRE form the backend actually sends, derived from the
+// messageKey exactly as `DomainException.getErrorCode()` derives it. These
+// mocks previously carried the dotted messageKey — the same wrong shape the
+// effect compared against — so the suite agreed with the code and both
+// disagreed with the server, and the destination-error branch never once ran
+// against a real response.
+const DESTINATION_INVALID_CODE = errorCodeFromMessageKey('cancel.error.refund-destination-invalid');
+const DESTINATION_REQUIRED_CODE = errorCodeFromMessageKey('cancel.error.refund-destination-required');
+const WINDOW_CLOSED_CODE = errorCodeFromMessageKey('cancel.error.window-closed');
 
 function buildBookingView(overrides: Partial<MyBookingView> = {}): MyBookingView {
   return {
@@ -182,7 +193,7 @@ describe('MyBookingsEffect (OBRS-286)', () => {
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.refund-destination-invalid', message: 'Invalid PromptPay number' },
+              error: { errorCode: DESTINATION_INVALID_CODE, message: 'Invalid PromptPay number' },
             })
         )
       );
@@ -201,7 +212,7 @@ describe('MyBookingsEffect (OBRS-286)', () => {
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.refund-destination-required', message: 'A destination is required' },
+              error: { errorCode: DESTINATION_REQUIRED_CODE, message: 'A destination is required' },
             })
         )
       );
@@ -220,7 +231,7 @@ describe('MyBookingsEffect (OBRS-286)', () => {
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: 'cancel.error.window-closed', message: 'Too late to cancel' },
+              error: { errorCode: WINDOW_CLOSED_CODE, message: 'Too late to cancel' },
             })
         )
       );
@@ -231,6 +242,66 @@ describe('MyBookingsEffect (OBRS-286)', () => {
       actionsSubject.next(confirmCancelWithDestination({ booking, refundDestination }));
 
       expect(emitted).toEqual([cancelBookingFailure({ error: 'Too late to cancel' })]);
+    });
+
+    it('OBRS-839 (must-NOT-match): a DOTTED destination code falls through to the generic failure', () => {
+      // The form the wire never carries. This is the assertion that turns red if
+      // the Set is reverted to dotted messageKeys — the two tests above would
+      // simply start matching again and stay green, which is exactly how the
+      // defect shipped.
+      bookingService.cancelBooking.and.returnValue(
+        throwError(
+          () =>
+            new HttpErrorResponse({
+              status: 400,
+              error: {
+                errorCode: 'cancel.error.refund-destination-invalid',
+                message: 'Invalid PromptPay number',
+              },
+            })
+        )
+      );
+
+      const emitted: Action[] = [];
+      effect.confirmCancelWithDestination$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(confirmCancelWithDestination({ booking, refundDestination }));
+
+      expect(emitted).toEqual([cancelBookingFailure({ error: 'Invalid PromptPay number' })]);
+    });
+  });
+
+  // ── OBRS-843: an HTTP 200 whose `data` is null is a FAILURE, and its
+  // `message` is the reason phrase "OK" ─────────────────────────────────────
+  //
+  // Three code paths built their error text as `response.message || <translated>`.
+  // On a 2xx that left side is `ApiSuccessRespDto`'s `HttpStatus.OK
+  // .getReasonPhrase()`, so the traveler's error toast read "OK" — a word that
+  // says nothing went wrong, on the path where something did.
+  describe('a 200 with null data never surfaces the envelope message (OBRS-843)', () => {
+    const booking = buildBookingView();
+    const refundDestination = { type: 'promptpay' as const, promptpayPhone: '0812345678' };
+
+    it('cancel-policy fetch: null data → translated failure, not "OK"', () => {
+      bookingService.getCancellationPolicy.and.returnValue(of({ code: 200, message: 'OK', data: null } as any));
+
+      const emitted: Action[] = [];
+      effect.requestCancel$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(requestCancelBooking({ booking }));
+
+      expect(emitted).toEqual([cancelBookingFailure({ error: 'MY_BOOKINGS.CANCEL.FAILED' })]);
+    });
+
+    it('cancel-with-destination: null data → translated failure, not "OK"', () => {
+      bookingService.cancelBooking.and.returnValue(of({ code: 200, message: 'OK', data: null } as any));
+
+      const emitted: Action[] = [];
+      effect.confirmCancelWithDestination$.subscribe((a) => emitted.push(a));
+
+      actionsSubject.next(confirmCancelWithDestination({ booking, refundDestination }));
+
+      expect(emitted).toEqual([cancelBookingFailure({ error: 'MY_BOOKINGS.CANCEL.FAILED' })]);
     });
   });
 });

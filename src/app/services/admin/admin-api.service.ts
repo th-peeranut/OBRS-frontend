@@ -30,6 +30,7 @@ import {
 } from '../../shared/interfaces/settlement.interface';
 import { ConfigHistoryRow } from '../../shared/interfaces/config-history.interface';
 import { RefundDestinationReqDto } from '../../shared/interfaces/refund-destination.interface';
+import { CancelBookingResult } from '../../shared/interfaces/my-booking.interface';
 
 export interface AdminTranslationDto {
   locale?: string;
@@ -1458,11 +1459,15 @@ export class AdminApiService {
   // rule is actually broken (out-of-window OR rateChoice=FULL) — it returns
   // 400 `cancel.error.override-reason-required` otherwise; the modal mirrors that
   // gate client-side so the field appears only when it is genuinely needed.
+  // OBRS-843: typed as `CancelBookingResult` (it was `unknown`) — the backend
+  // returns the same `CancelBookingRespDto` as the counter/customer doors, and
+  // the override dialog now reads `refundAmount`/`refundMethod` out of it to
+  // confirm what was actually authorised.
   adminOverrideCancelBooking(
     bookingId: number,
     payload: OverrideCancelReqDto
-  ): Observable<ResponseAPI<unknown>> {
-    return this.postRequest<unknown>(
+  ): Observable<ResponseAPI<CancelBookingResult>> {
+    return this.postRequest<CancelBookingResult>(
       `${this.baseUrl}/private/admin/bookings/${bookingId}/cancel`,
       payload
     );

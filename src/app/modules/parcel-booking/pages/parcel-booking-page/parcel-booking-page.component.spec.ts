@@ -256,6 +256,63 @@ describe('ParcelBookingPageComponent', () => {
     expect((component as any).serverErrorKey).not.toBe('PARCEL_BOOKING.ERROR.GENERIC');
   });
 
+  // OBRS-839 (found by that card's census — this file was not on its list).
+  // Both error maps keyed the schedule/stop not-found cases by the DOTTED
+  // messageKey. `ResourceNotFoundException` is thrown with a messageKey and no
+  // explicit errorCode, so `DomainException.getErrorCode()` derives
+  // `SCHEDULE_ERROR_ID_NOT_FOUND` — the dotted key could never be hit, and a
+  // customer whose chosen trip disappeared between search and pay got GENERIC
+  // instead of being told the trip is gone.
+  it('maps the WIRE code for a vanished schedule to NOT_FOUND, not GENERIC', () => {
+    (component as any).tripValue = {
+      fromStationId: 1,
+      toStationId: 2,
+      date: new Date('2026-08-01'),
+      scheduleId: 42,
+    };
+    (component as any).phase = 'details';
+    parcelBookingService.createOnlineParcelBooking.and.returnValue(
+      throwError(() => ({ error: { errorCode: 'SCHEDULE_ERROR_ID_NOT_FOUND' } }))
+    );
+
+    (component as any).onDetailsSubmit({
+      senderPhone: '0812345678',
+      recipient: { name: 'Somchai', phone: '0898765432' },
+      weightKg: 5,
+      description: 'a box',
+      prohibitedAcknowledged: true,
+    });
+
+    expect((component as any).serverErrorKey).toBe('PARCEL_BOOKING.ERROR.NOT_FOUND');
+  });
+
+  it('OBRS-839 (must-NOT-match): the dotted messageKey falls through to GENERIC', () => {
+    // Proof the assertion above can fail: the form the wire never carries must
+    // NOT be mapped. If the map is reverted to dotted keys, the test above
+    // starts failing and this one starts passing for the wrong reason — so both
+    // are needed to pin the direction.
+    (component as any).tripValue = {
+      fromStationId: 1,
+      toStationId: 2,
+      date: new Date('2026-08-01'),
+      scheduleId: 42,
+    };
+    (component as any).phase = 'details';
+    parcelBookingService.createOnlineParcelBooking.and.returnValue(
+      throwError(() => ({ error: { errorCode: 'schedule.error.id-not-found' } }))
+    );
+
+    (component as any).onDetailsSubmit({
+      senderPhone: '0812345678',
+      recipient: { name: 'Somchai', phone: '0898765432' },
+      weightKg: 5,
+      description: 'a box',
+      prohibitedAcknowledged: true,
+    });
+
+    expect((component as any).serverErrorKey).toBe('PARCEL_BOOKING.ERROR.GENERIC');
+  });
+
   it('onPaymentCompleted clears the active booking id as a safety net', () => {
     (component as any).onPaymentCompleted();
     expect(bookingService.clearActiveBookingId).toHaveBeenCalled();

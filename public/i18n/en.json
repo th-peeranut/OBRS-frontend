@@ -980,6 +980,9 @@
         "CONFIRM": "Confirm override",
         "SUBMITTING": "Cancelling…",
         "SUCCESS": "Booking cancelled.",
+        "SUCCESS_CASH": "Booking cancelled. {{refund}} must be handed back to the customer in cash.",
+        "SUCCESS_MANUAL": "Booking cancelled. The {{refund}} refund has not been paid yet — you need to transfer it to the customer.",
+        "SUCCESS_AUTO": "Booking cancelled. {{refund}} is being refunded to the method the customer paid with.",
         "FAILED": "Could not cancel this booking. Please try again."
       },
       "PAYMENT_STATUS_CODES": {
@@ -2362,6 +2365,9 @@
         "APPROVER_NOT_OWNER": "That account is not authorized to approve a cash refund.",
         "APPROVER_SELF": "This looks like your own account. A second person (the owner or a manager) must approve a cash refund.",
         "SUCCESS": "The booking has been cancelled.",
+        "SUCCESS_CASH": "Booking cancelled — hand {{refund}} back to the customer in cash.",
+        "SUCCESS_MANUAL": "Booking cancelled. The {{refund}} refund will be transferred by the owner later — do not pay cash at the counter.",
+        "SUCCESS_AUTO": "Booking cancelled. {{refund}} is being refunded to the method the customer paid with — do not pay cash at the counter.",
         "FAILED": "Unable to cancel the booking. Please try again.",
         "SUBMITTING": "Cancelling…"
       }

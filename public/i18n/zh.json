@@ -980,6 +980,9 @@
         "CONFIRM": "确认越权",
         "SUBMITTING": "正在取消…",
         "SUCCESS": "预订已取消。",
+        "SUCCESS_CASH": "预订已取消。需退还现金 {{refund}} 给客户。",
+        "SUCCESS_MANUAL": "预订已取消。退款 {{refund}} 尚未支付，需由您转账给客户。",
+        "SUCCESS_AUTO": "预订已取消。{{refund}} 正在退回客户付款时使用的渠道。",
         "FAILED": "无法取消此预订，请重试。"
       },
       "PAYMENT_STATUS_CODES": {
@@ -2362,6 +2365,9 @@
         "APPROVER_NOT_OWNER": "该账户无权批准现金退款。",
         "APPROVER_SELF": "此邮箱似乎是您自己的账户。现金退款必须由第二人（店主或经理）批准。",
         "SUCCESS": "订票已取消。",
+        "SUCCESS_CASH": "订票已取消 — 请退还现金 {{refund}} 给客户。",
+        "SUCCESS_MANUAL": "订票已取消。退款 {{refund}} 稍后由店主转账，柜台无需支付现金。",
+        "SUCCESS_AUTO": "订票已取消。{{refund}} 正在退回客户付款时使用的渠道，柜台无需支付现金。",
         "FAILED": "无法取消订票，请重试。",
         "SUBMITTING": "正在取消…"
       }

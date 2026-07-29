@@ -7,13 +7,13 @@ import { catchError, map, switchMap, tap, withLatestFrom } from 'rxjs/operators'
 import { BookingService } from '../../../services/booking/booking.service';
 import { AlertService } from '../../../shared/services/alert.service';
 import { extractApiErrorMessage } from '../../../shared/lib/api-error';
-import { extractApiErrorCode } from '../../../shared/lib/api-error-code';
+import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../shared/lib/api-error-code';
 import {
   CancelBookingResult,
   CancellationPolicy,
   MANUAL_REFUND_METHOD,
   MyBookingView,
-  toAmountNumber,
+  formatRefundAmount,
 } from '../../../shared/interfaces/my-booking.interface';
 import {
   cancelBookingDismissed,
@@ -30,10 +30,17 @@ import {
 import { selectMyBookings } from './my-bookings.selector';
 
 /** OBRS-286: the two destination error codes the customer-cancel endpoint can
- * 400 with — SA-SPEC-OBRS-286.md contract #1. */
-const REFUND_DESTINATION_ERROR_CODES = new Set([
-  'cancel.error.refund-destination-required',
-  'cancel.error.refund-destination-invalid',
+ * 400 with — SA-SPEC-OBRS-286.md contract #1.
+ *
+ * OBRS-839: written as the dotted `messageKey` form, compared against the wire
+ * `errorCode`, which is the DERIVED `CANCEL_ERROR_REFUND_DESTINATION_*`. The
+ * comparison could never be true, so `refundDestinationInvalid` never fired and
+ * a rejected bank account / PromptPay number closed the traveler's modal with a
+ * generic toast instead of keeping what they typed and saying which field was
+ * wrong. Derived here rather than hand-typed — see `errorCodeFromMessageKey`. */
+const REFUND_DESTINATION_ERROR_CODES = new Set<string>([
+  errorCodeFromMessageKey('cancel.error.refund-destination-required'),
+  errorCodeFromMessageKey('cancel.error.refund-destination-invalid'),
 ]);
 
 @Injectable()
@@ -83,11 +90,14 @@ export class MyBookingsEffect {
           switchMap((response) => {
             const policy = response.data;
             if (!policy) {
+              // OBRS-843: this is a FAILURE path reached on an HTTP 200 whose
+              // `data` came back null, and `response.message` on a 2xx is
+              // `ApiSuccessRespDto`'s reason phrase — the literal "OK". The
+              // traveler was shown an error toast reading "OK". The envelope
+              // message is never user-facing copy; the translated string is.
               return of(
                 cancelBookingFailure({
-                  error:
-                    response.message ||
-                    this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+                  error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
                 })
               );
             }
@@ -135,10 +145,9 @@ export class MyBookingsEffect {
           map((response) => {
             const result = response.data;
             if (!result) {
+              // OBRS-843 — same "OK"-as-an-error-message defect as above.
               return cancelBookingFailure({
-                error:
-                  response.message ||
-                  this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+                error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
               });
             }
             return cancelBookingSuccess({ result });
@@ -193,10 +202,9 @@ export class MyBookingsEffect {
       map((response) => {
         const result = response.data;
         if (!result) {
+          // OBRS-843 — same "OK"-as-an-error-message defect as above.
           return cancelBookingFailure({
-            error:
-              response.message ||
-              this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
+            error: this.translate.instant('MY_BOOKINGS.CANCEL.FAILED'),
           });
         }
         return cancelBookingSuccess({ result });
@@ -257,11 +265,9 @@ export class MyBookingsEffect {
     void this.alertService.success(message);
   }
 
+  // OBRS-843: delegates to the shared formatter the counter and override cancel
+  // dialogs now use, so one refund reads the same on all three surfaces.
   private formatCurrency(value: number | string): string {
-    return new Intl.NumberFormat('th-TH', {
-      style: 'currency',
-      currency: 'THB',
-      maximumFractionDigits: 2,
-    }).format(toAmountNumber(value));
+    return formatRefundAmount(value);
   }
 }

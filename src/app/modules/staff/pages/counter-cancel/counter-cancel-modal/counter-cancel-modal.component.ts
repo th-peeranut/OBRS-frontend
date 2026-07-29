@@ -14,7 +14,11 @@ import { TranslateService } from '@ngx-translate/core';
 import {
   CancellationPolicy,
   CancelBookingReqDto,
+  CancelBookingResult,
+  CASH_REFUND_METHOD,
   MANUAL_REFUND_METHOD,
+  formatRefundAmount,
+  refundLane,
   toAmountNumber,
 } from '../../../../../shared/interfaces/my-booking.interface';
 import { CounterBookingSearchResultDto, StaffApiService } from '../../../../../services/staff/staff-api.service';
@@ -61,8 +65,6 @@ const APPROVER_ERROR_CODES = new Set<string>([
   CANCEL_ERROR.APPROVER_NOT_OWNER,
   CANCEL_ERROR.APPROVER_SELF,
 ]);
-
-const CASH_REFUND_METHOD = 'CASH';
 
 /**
  * OBRS-766 preview state machine — independent of the booking summary, which
@@ -329,15 +331,49 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
           this.isSubmitting = false;
           this.cancelled.emit();
           this.closed.emit();
-          void this.alertService.success(
-            response?.message || this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS')
-          );
+          void this.alertService.success(this.successMessage(response?.data));
         },
         error: (error) => {
           this.isSubmitting = false;
           this.handleSubmitError(error);
         },
       });
+  }
+
+  /**
+   * OBRS-843: the confirmation the salesperson reads, built from the CANCEL
+   * RESPONSE — never from `response.message`.
+   *
+   * That envelope field is `ApiSuccessRespDto`'s, assembled from
+   * `HttpStatus.OK.getReasonPhrase()`, so it is the literal string "OK" on every
+   * 2xx this API returns. `response?.message || translate.instant(...)` therefore
+   * never reached its right-hand side: the left was never empty. The Thai
+   * translation below existed, was correct, and was dead code — the owner
+   * photographed a confirmation dialog titled "OK".
+   *
+   * The cash lane is the one that matters most: this screen is where a
+   * salesperson decides how many baht to take out of the drawer and hand back,
+   * and `CancelBookingRespDto.refundAmount` is the only place that number is
+   * stated. Showing "OK" there did not just lose a translation, it withheld the
+   * figure the transaction depends on.
+   *
+   * Falls back to the bare confirmation only if `data` is missing entirely — a
+   * shape the endpoint does not return today, but the cancel HAS happened by
+   * then, so the dialog must still confirm it rather than read as a failure.
+   */
+  private successMessage(result: CancelBookingResult | null | undefined): string {
+    if (!result) {
+      return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS');
+    }
+    const refund = formatRefundAmount(result.refundAmount);
+    switch (refundLane(result.refundMethod)) {
+      case 'CASH':
+        return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS_CASH', { refund });
+      case 'MANUAL':
+        return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS_MANUAL', { refund });
+      default:
+        return this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.SUCCESS_AUTO', { refund });
+    }
   }
 
   private handleSubmitError(error: unknown): void {

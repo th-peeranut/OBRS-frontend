@@ -4,7 +4,7 @@ import { ReactiveFormsModule } from '@angular/forms';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HttpErrorResponse } from '@angular/common/http';
 import { SimpleChange } from '@angular/core';
-import { TranslateModule } from '@ngx-translate/core';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { By } from '@angular/platform-browser';
 import { Subject, of, throwError } from 'rxjs';
 import { CounterCancelModalComponent } from './counter-cancel-modal.component';
@@ -37,6 +37,31 @@ const BOOKING: CounterBookingSearchResultDto = {
   netAmount: 500,
   journeys: [],
 };
+
+/**
+ * A REAL success envelope (OBRS-843). Two details matter and both were absent
+ * from the fixture this suite used before:
+ *
+ *  - `message` is `"OK"`. `ApiSuccessRespDto` builds it from
+ *    `HttpStatus.OK.getReasonPhrase()`, so it is that literal on every 2xx.
+ *    The old fixture said `'Cancelled'`, a plausible sentence no endpoint has
+ *    ever returned, which made `response.message ||` look harmless.
+ *  - `data` carries `refundAmount`/`refundMethod` — the numbers the counter
+ *    actually needs. The old fixture omitted `data` entirely.
+ */
+function cancelResponse(refundMethod: string, refundAmount: number | string = '450.00') {
+  return of({
+    code: 200,
+    message: 'OK',
+    data: {
+      bookingId: 42,
+      bookingNumber: 'B-000042',
+      status: 'cancelled',
+      refundAmount,
+      refundMethod,
+    },
+  });
+}
 
 function policyWith(refundMethod: string): CancellationPolicy {
   return {
@@ -278,7 +303,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
 
   it('success: emits cancelled + closed and shows the success alert, then re-runs the search (parent responsibility)', () => {
     api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('card') }));
-    api.cancelCounterBooking.and.returnValue(of({ code: 200, message: 'Cancelled' }));
+    api.cancelCounterBooking.and.returnValue(cancelResponse('card'));
     const cancelled = jasmine.createSpy('cancelled');
     const closed = jasmine.createSpy('closed');
     component.cancelled.subscribe(cancelled);
@@ -290,6 +315,129 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     expect(cancelled).toHaveBeenCalled();
     expect(closed).toHaveBeenCalled();
     expect(alert.success).toHaveBeenCalled();
+  });
+
+  // ── The success message itself (OBRS-843) ─────────────────────────────────
+  //
+  // The test above is the one that was here before, and it passed for the whole
+  // life of the defect: `toHaveBeenCalled()` does not look at the argument, so
+  // the dialog could have said anything -- and it said "OK", because
+  // `response.message` is `HttpStatus.OK.getReasonPhrase()` and won the `||`.
+  // Every test below asserts the VALUE.
+  //
+  // Translations are loaded from real fixtures rather than left as bare keys
+  // (the default in this suite) for two reasons: the message is only correct if
+  // the refund amount is interpolated INTO it, and a key the component names but
+  // the bundle does not have would return the raw key and fail these
+  // assertions -- which is what makes them a check on the shipped copy and not
+  // just on the component's branching. Values mirror public/i18n/en.json; the
+  // i18n parity gate keeps en/th/zh carrying the same keys.
+  describe('success message (OBRS-843)', () => {
+    beforeEach(() => {
+      const translate = TestBed.inject(TranslateService);
+      translate.setTranslation(
+        'en',
+        {
+          STAFF: {
+            CANCEL_BOOKING: {
+              MODAL: {
+                SUCCESS: 'The booking has been cancelled.',
+                SUCCESS_CASH: 'Booking cancelled — hand {{refund}} back to the customer in cash.',
+                SUCCESS_MANUAL:
+                  'Booking cancelled. The {{refund}} refund will be transferred by the owner later — do not pay cash at the counter.',
+                SUCCESS_AUTO:
+                  'Booking cancelled. {{refund}} is being refunded to the method the customer paid with — do not pay cash at the counter.',
+              },
+            },
+          },
+        },
+        true
+      );
+      translate.use('en');
+    });
+
+    function submitCash(): void {
+      api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
+      api.cancelCounterBooking.and.returnValue(cancelResponse('CASH'));
+      open();
+      (component as any).form.get('approverEmail').setValue('owner@obrs.test');
+      (component as any).form.get('approverPassword').setValue('correct-horse');
+      fixture.detectChanges();
+      (component as any).submit();
+    }
+
+    it('CASH: tells the salesperson exactly how much cash to hand back', () => {
+      submitCash();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('450.00');
+      expect(message).toContain('in cash');
+    });
+
+    it('CASH: does NOT say "OK" — the defect the owner photographed', () => {
+      submitCash();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).not.toBe('OK');
+      expect(message).not.toContain('OK');
+      // and it is not the untranslated key either
+      expect(message).not.toContain('STAFF.CANCEL_BOOKING.MODAL');
+    });
+
+    it('MANUAL: names the amount and tells the counter NOT to pay cash', () => {
+      api.getCancelPolicy.and.returnValue(
+        of({ code: 200, message: 'ok', data: policyWith('MANUAL_REFUND_REQUIRED') })
+      );
+      api.cancelCounterBooking.and.returnValue(cancelResponse('MANUAL_REFUND_REQUIRED'));
+      open();
+      (component as any).destinationForm.get('mode').setValue('promptpay');
+      (component as any).destinationForm.get('promptpayPhone').setValue('0812345678');
+      fixture.detectChanges();
+
+      (component as any).submit();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('450.00');
+      expect(message).toContain('transferred by the owner');
+      expect(message).toContain('do not pay cash');
+    });
+
+    it('AUTO (card): says the gateway is refunding, and still names the amount', () => {
+      api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('card') }));
+      api.cancelCounterBooking.and.returnValue(cancelResponse('CREDIT_CARD'));
+      open();
+
+      (component as any).submit();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('450.00');
+      expect(message).toContain('refunded to the method the customer paid with');
+    });
+
+    it('reads the lane from the RESPONSE, not from the policy preview', () => {
+      // Preview said card; by the time the cancel ran, the backend resolved the
+      // booking to cash. The confirmation must follow the response, because that
+      // is the one that describes money that actually moved.
+      api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('card') }));
+      api.cancelCounterBooking.and.returnValue(cancelResponse('CASH', '125.50'));
+      open();
+
+      (component as any).submit();
+
+      const message = alert.success.calls.mostRecent().args[0] as string;
+      expect(message).toContain('in cash');
+      expect(message).toContain('125.50');
+    });
+
+    it('falls back to the bare confirmation when the body carries no data', () => {
+      api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('card') }));
+      api.cancelCounterBooking.and.returnValue(of({ code: 200, message: 'OK' } as any));
+      open();
+
+      (component as any).submit();
+
+      expect(alert.success.calls.mostRecent().args[0]).toBe('The booking has been cancelled.');
+    });
   });
 
   // ── Dark-mode contrast of the new cash-approval section (FE-6) ────────────

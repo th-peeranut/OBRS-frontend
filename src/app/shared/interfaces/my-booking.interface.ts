@@ -187,6 +187,44 @@ export const RESCHEDULE_WINDOW_HOURS = 4;
 /** Refund methods that the gateway cannot auto-refund (handled manually). */
 export const MANUAL_REFUND_METHOD = 'MANUAL_REFUND_REQUIRED';
 
+/** The one tender a salesperson hands back out of the counter drawer themselves
+ * (OBRS-669's second-person path). Mirrors `CancellationService.resolveRefundMethod`,
+ * which upper-cases the payment method slug for every non-manual lane. */
+export const CASH_REFUND_METHOD = 'CASH';
+
+/**
+ * OBRS-843: which of the three refund lanes a completed cancellation landed in.
+ * Named after the SUCCESS_* i18n key suffix each screen owns, because what the
+ * lane changes is WHO moves the money next and therefore what the confirmation
+ * has to tell the person reading it:
+ *
+ * - `CASH`   — the salesperson must hand this many baht back from the drawer NOW
+ * - `MANUAL` — nobody moves money at the counter; the owner transfers it later
+ * - `AUTO`   — the gateway is already refunding to the original card/wallet
+ *
+ * Read from the CANCEL RESPONSE (`CancelBookingResult.refundMethod`), never from
+ * the pre-cancel policy preview: the two can disagree (a payment can flip method
+ * between preview and submit) and the response is what actually happened.
+ */
+export type RefundLane = 'CASH' | 'MANUAL' | 'AUTO';
+
+export function refundLane(refundMethod: string | null | undefined): RefundLane {
+  const method = String(refundMethod ?? '').trim().toUpperCase();
+  if (method === CASH_REFUND_METHOD) {
+    return 'CASH';
+  }
+  return method === MANUAL_REFUND_METHOD ? 'MANUAL' : 'AUTO';
+}
+
+/** THB, grouped, 2dp — the one refund-amount format every cancel surface shows. */
+export function formatRefundAmount(value: number | string | null | undefined): string {
+  return new Intl.NumberFormat('th-TH', {
+    style: 'currency',
+    currency: 'THB',
+    maximumFractionDigits: 2,
+  }).format(toAmountNumber(value));
+}
+
 export function normalizeStatusCode(status: string | null | undefined): string {
   return String(status ?? '').trim().toLowerCase();
 }
