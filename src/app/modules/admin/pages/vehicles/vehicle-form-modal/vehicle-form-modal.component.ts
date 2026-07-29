@@ -24,6 +24,7 @@ import {
 } from '../vehicles-page.mappers';
 import {
   RETIRED_VEHICLE_STATUS,
+  optionalGpsImeiValidator,
   optionalPositiveIntegerValidator,
   optionalYearRangeValidator,
   vehicleNumberRequiredUnlessRetiredValidator,
@@ -110,6 +111,11 @@ export class VehicleFormModalComponent implements OnChanges {
       engineCc: [null, [optionalPositiveIntegerValidator]],
       chassisNumber: ['', [Validators.maxLength(100)]],
       note: [''],
+      // OBRS-835: the Thaistar GPS tracker fitted to this vehicle. Optional (many
+      // vehicles have no box) but format-bound to 15 digits, mirroring the backend's
+      // @Pattern - a typo'd IMEI is not rejected by anything downstream, it just
+      // silently matches no GPS batch and the van never appears on the map.
+      gpsImei: ['', [optionalGpsImeiValidator]],
     });
 
     // OBRS-842: vehicleNumber's validity depends on a SIBLING control, and Angular
@@ -173,6 +179,12 @@ export class VehicleFormModalComponent implements OnChanges {
     }
     if (field?.hasError('notInteger')) {
       return 'ADMIN.VALIDATION.WHOLE_NUMBER';
+    }
+    // OBRS-835: gpsImei's only failure reason. Kept as its own branch rather than
+    // folded into the POSITIVE_NUMBER fallback - "must be a positive number" would be
+    // wrong advice for a field that wants exactly 15 digits.
+    if (field?.hasError('gpsImeiFormat')) {
+      return 'ADMIN.VEHICLES.DETAILS.GPS_IMEI_FORMAT';
     }
     return 'ADMIN.VALIDATION.POSITIVE_NUMBER';
   }
@@ -249,6 +261,7 @@ export class VehicleFormModalComponent implements OnChanges {
       engineCc: null,
       chassisNumber: '',
       note: '',
+      gpsImei: '',
     });
   }
 

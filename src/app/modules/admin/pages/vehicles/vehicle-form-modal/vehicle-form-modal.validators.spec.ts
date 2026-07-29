@@ -1,5 +1,6 @@
 import { FormBuilder, FormControl, FormGroup } from '@angular/forms';
 import {
+  optionalGpsImeiValidator,
   optionalPositiveIntegerValidator,
   optionalYearRangeValidator,
   vehicleNumberRequiredUnlessRetiredValidator,
@@ -115,6 +116,42 @@ describe('vehicle-form-modal.validators', () => {
     it('treats an unresolvable status as NOT retired', () => {
       expect(validator(new FormControl(''))).toEqual({ requiredUnlessRetired: true });
       expect(errorsFor('', '')).toEqual({ requiredUnlessRetired: true });
+    });
+  });
+
+  // OBRS-835: a GSM IMEI is exactly 15 decimal digits. The column is VARCHAR(20), so
+  // nothing downstream rejects a 14-digit typo - it just matches no incoming GPS batch
+  // and the van is silently never on the map. Both directions asserted: a rule that only
+  // proves its happy path survives being replaced with "accept anything".
+  describe('optionalGpsImeiValidator (OBRS-835)', () => {
+    it('treats null/undefined/blank as valid - most vehicles have no box fitted', () => {
+      expect(optionalGpsImeiValidator(new FormControl(null))).toBeNull();
+      expect(optionalGpsImeiValidator(new FormControl(undefined))).toBeNull();
+      expect(optionalGpsImeiValidator(new FormControl(''))).toBeNull();
+      expect(optionalGpsImeiValidator(new FormControl('   '))).toBeNull();
+    });
+
+    it('accepts exactly 15 digits, including one padded with spaces', () => {
+      expect(optionalGpsImeiValidator(new FormControl('860470062518406'))).toBeNull();
+      expect(optionalGpsImeiValidator(new FormControl(' 862608080309567 '))).toBeNull();
+    });
+
+    it('rejects 14 and 16 digits - the near misses a length-blind field would take', () => {
+      expect(optionalGpsImeiValidator(new FormControl('86047006251840'))).toEqual({
+        gpsImeiFormat: true,
+      });
+      expect(optionalGpsImeiValidator(new FormControl('8604700625184067'))).toEqual({
+        gpsImeiFormat: true,
+      });
+    });
+
+    it('rejects 15 characters that are not 15 DIGITS', () => {
+      expect(optionalGpsImeiValidator(new FormControl('86047006251840X'))).toEqual({
+        gpsImeiFormat: true,
+      });
+      expect(optionalGpsImeiValidator(new FormControl('860-470-0625184'))).toEqual({
+        gpsImeiFormat: true,
+      });
     });
   });
 });

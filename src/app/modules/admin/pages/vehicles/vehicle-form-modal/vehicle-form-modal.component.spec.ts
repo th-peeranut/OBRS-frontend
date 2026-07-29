@@ -378,6 +378,10 @@ describe('VehicleFormModalComponent', () => {
         engineCc: null,
         chassisNumber: null,
         note: null,
+        // OBRS-835: present-and-null, not absent. Being a whole-object assertion, this
+        // is also what stops a future field being added to the payload without someone
+        // deciding what create should send for it.
+        gpsImei: null,
       });
     });
 
@@ -577,6 +581,95 @@ describe('VehicleFormModalComponent', () => {
       openCreate(component);
       expect((component as any).vehicleForm.get('vehicleNumber').valid).toBeFalse();
       expect((component as any).isVehicleNumberOptional).toBeFalse();
+    });
+  });
+
+  // ── OBRS-835: the GPS IMEI, the first write path this column has ever had ──────
+  describe('GPS IMEI (OBRS-835)', () => {
+    it('loads the current IMEI from the vehicle detail into the form', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ gpsImei: '860470062518406' }));
+      getVehicleById$.complete();
+      await promise;
+
+      expect((component as any).vehicleForm.get('gpsImei').value).toBe('860470062518406');
+    });
+
+    /**
+     * AC1: the whole point of the card. Editing a vehicle must actually send the IMEI,
+     * or gps_imei stays NULL and every GPS batch keeps reporting skipped_unknown_imei.
+     */
+    it('sends the edited IMEI on save', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ gpsImei: '862608080309567' });
+      await (component as any).submitVehicle();
+
+      const payload = adminApi.updateVehicle.calls.mostRecent().args[1];
+      expect(payload.gpsImei).toBe('862608080309567');
+    });
+
+    /**
+     * Detaching a box has to be expressible from the UI, or the column becomes
+     * write-once and the next swap goes back to a developer with a SQL client. The
+     * assertion is `null`, not `''` - gps_imei is UNIQUE, so an empty string is a real
+     * value that the SECOND vehicle cleared this way would collide with.
+     */
+    it('sends null - not an empty string - when the admin clears the field', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse({ gpsImei: '860470062518406' }));
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ gpsImei: '   ' });
+      await (component as any).submitVehicle();
+
+      const payload = adminApi.updateVehicle.calls.mostRecent().args[1];
+      expect(payload.gpsImei).toBeNull();
+    });
+
+    /** A malformed IMEI must not leave the browser - it would be a 400 with no field marked. */
+    it('blocks the save on a 14-digit IMEI instead of letting the backend reject it', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ gpsImei: '86047006251840' });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).not.toHaveBeenCalled();
+    });
+
+    /** ...and the must-NOT-fire half: a blank field is a legitimate "no box fitted". */
+    it('still saves when the IMEI field is left empty', async () => {
+      const getVehicleById$ = new Subject<ResponseAPI<AdminVehicleDto>>();
+      const { component, adminApi } = makeComponent(getVehicleById$);
+
+      const promise = openEditAwait(component, { ...VAN_ROW });
+      getVehicleById$.next(detailResponse());
+      getVehicleById$.complete();
+      await promise;
+
+      (component as any).vehicleForm.patchValue({ gpsImei: '' });
+      await (component as any).submitVehicle();
+
+      expect(adminApi.updateVehicle).toHaveBeenCalled();
     });
   });
 });
