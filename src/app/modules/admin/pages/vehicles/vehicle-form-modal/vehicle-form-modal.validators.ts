@@ -70,6 +70,27 @@ export function vehicleNumberRequiredUnlessRetiredValidator(
   };
 }
 
+/**
+ * OBRS-835: a GSM IMEI is exactly 15 decimal digits. The column is VARCHAR(20), so
+ * length alone would wave through a typo'd 14-digit number — which then matches no
+ * incoming GPS batch and simply shows up as a van that is never on the map, with no
+ * error anywhere. Mirrors the backend's `@Pattern("\\d{15}")` on `VehicleReqDto#gpsImei`.
+ *
+ * Optional by design: blank means "no box fitted", which is the state every vehicle in
+ * the fleet is in until its IMEI is entered. Blank must therefore be VALID here, and the
+ * mapper turns it into `null` (never `''`) before it reaches a UNIQUE column.
+ */
+export const optionalGpsImeiValidator: ValidatorFn = (
+  control: AbstractControl
+): ValidationErrors | null => {
+  const value = String(control.value ?? '').trim();
+  if (value.length === 0) {
+    return null;
+  }
+
+  return /^\d{15}$/.test(value) ? null : { gpsImeiFormat: true };
+};
+
 export function optionalYearRangeValidator(min: number, max: number): ValidatorFn {
   return (control: AbstractControl): ValidationErrors | null => {
     const raw = control.value;

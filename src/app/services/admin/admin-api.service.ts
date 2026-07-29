@@ -159,6 +159,14 @@ export interface AdminVehicleDto {
   engineCc?: number | null;
   chassisNumber?: string | null;
   note?: string | null;
+  /**
+   * OBRS-835: the vehicle's Thaistar GPS tracker. Present ONLY on the single-vehicle
+   * detail read (`GET /vehicles/{id}`) — the backend's `toDetailDto` deliberately leaves
+   * it off the fleet list and off the copy nested in a schedule, which drivers can read.
+   * So a `VehicleRow` built from the list never carries it, and a form seeded from that
+   * row has nothing to echo back.
+   */
+  gpsImei?: string | null;
 }
 
 /** OBRS-209: a single vehicle-maintenance record (backend OBRS-102).
@@ -765,6 +773,14 @@ export interface CreateVehiclePayload {
   engineCc: number | null;
   chassisNumber: string | null;
   note: string | null;
+  /**
+   * OBRS-835: the GPS tracker to fit to this vehicle. `null` DETACHES the box; the key
+   * being ABSENT would mean "leave whatever is there" on the backend
+   * (`VehicleDtoService#applyTo` is conditional on this one field). This form always
+   * sends it, because Save is blocked whenever the detail fetch that supplies its
+   * current value failed — see the modal's `isEditDetailError` guard.
+   */
+  gpsImei: string | null;
 }
 
 /** OBRS-209: create/update payload for a vehicle-maintenance record.

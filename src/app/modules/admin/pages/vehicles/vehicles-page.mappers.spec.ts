@@ -283,6 +283,32 @@ describe('vehicles-page.mappers', () => {
       const values = buildVehicleFormValues({ id: 1, vehicleNumber: '51-24' }, row, 'en');
       expect(values['vehicleNumber']).toBe('51-24');
     });
+
+    // ── OBRS-835: the GPS IMEI ────────────────────────────────────────────────
+    it('seeds the GPS IMEI from the server detail', () => {
+      const values = buildVehicleFormValues(
+        { id: 1, gpsImei: '860470062518406' },
+        row,
+        'en'
+      );
+      expect(values['gpsImei']).toBe('860470062518406');
+    });
+
+    /**
+     * The row fallback has no IMEI to give — the fleet-list projection does not carry
+     * gps_imei at all. It must read blank rather than inventing one, and the modal's
+     * isEditDetailError guard is what stops that blank from ever being submitted as
+     * "detach the box".
+     */
+    it('seeds a blank GPS IMEI from the row fallback, which never carries one', () => {
+      const values = buildVehicleFormValues(toVehicleDtoFallback(row), row, 'en');
+      expect(values['gpsImei']).toBe('');
+    });
+
+    it('seeds a blank GPS IMEI when the vehicle genuinely has no tracker fitted', () => {
+      const values = buildVehicleFormValues({ id: 1, gpsImei: null }, row, 'en');
+      expect(values['gpsImei']).toBe('');
+    });
   });
 
   describe('toVehiclePayload', () => {
@@ -315,6 +341,34 @@ describe('vehicles-page.mappers', () => {
       expect(toVehiclePayload({}).vehicleNumber).toBeNull();
       expect(toVehiclePayload({ vehicleNumber: '' }).vehicleNumber).toBeNull();
       expect(toVehiclePayload({ vehicleNumber: '   ' }).vehicleNumber).toBeNull();
+    });
+
+    // OBRS-835: the GPS IMEI is the second field with the vehicleNumber problem, and a
+    // worse version of it — `vehicles.gps_imei` is UNIQUE too, but a wrong value there
+    // is INVISIBLE: the van simply never appears on the tracking map.
+    describe('gpsImei (OBRS-835)', () => {
+      it('sends a blank IMEI as null, never as an empty string', () => {
+        expect(toVehiclePayload({}).gpsImei).toBeNull();
+        expect(toVehiclePayload({ gpsImei: '' }).gpsImei).toBeNull();
+        expect(toVehiclePayload({ gpsImei: '   ' }).gpsImei).toBeNull();
+      });
+
+      it('trims the IMEI — a stray space is a different key in a unique index', () => {
+        expect(toVehiclePayload({ gpsImei: ' 860470062518406 ' }).gpsImei).toBe(
+          '860470062518406'
+        );
+      });
+
+      /**
+       * The key must always be PRESENT, even when null. The backend reads absence as
+       * "leave the box alone" (VehicleDtoService#applyTo is conditional on this one
+       * field), so a dropped key would make "clear the IMEI" impossible from the form —
+       * the admin would press Save on an emptied field and nothing would change.
+       */
+      it('always serializes the key, so an emptied field really detaches the box', () => {
+        expect('gpsImei' in toVehiclePayload({})).toBe(true);
+        expect('gpsImei' in toVehiclePayload({ gpsImei: '' })).toBe(true);
+      });
     });
 
     // OBRS-316 Gap 1: PUT is a full-replace, so ALL 7 attribute keys must always

@@ -133,6 +133,13 @@ export function buildVehicleFormValues(
     engineCc: vehicleDetail.engineCc ?? null,
     chassisNumber: vehicleDetail.chassisNumber ?? '',
     note: vehicleDetail.note ?? '',
+    // OBRS-835: detail-only, and deliberately WITHOUT a row fallback — the fleet list
+    // does not carry gps_imei at all (the backend's toDetailDto is the only projection
+    // that does), so there is no row value that could stand in. On the synchronous open
+    // this reads blank; the modal blocks Save until the real detail arrives
+    // (isEditDetailError), which is what stops a blank here from going back to the
+    // server as "detach the box".
+    gpsImei: vehicleDetail.gpsImei ?? '',
   };
 }
 
@@ -158,6 +165,12 @@ export function toVehiclePayload(rawFormValue: Record<string, unknown>): CreateV
     engineCc: nullableNumber(rawFormValue['engineCc']),
     chassisNumber: nullableTrimmedString(rawFormValue['chassisNumber']),
     note: nullableTrimmedString(rawFormValue['note']),
+    // OBRS-835: `null`, never `''` — `vehicles.gps_imei` is UNIQUE, so a literal empty
+    // string would be a real value that the SECOND vehicle cleared this way collides
+    // with (the OBRS-842 shape, one column over). Always PRESENT in the payload: on the
+    // backend an absent key means "leave the box alone", which is the right default for
+    // a curl or a fixture but the wrong one for a form the admin just emptied on purpose.
+    gpsImei: nullableTrimmedString(rawFormValue['gpsImei']),
   };
 }
 

@@ -117,6 +117,22 @@
         <input class="admin-field" formControlName="chassisNumber" maxlength="100" />
       </div>
 
+      <!-- OBRS-835: before this card gps_imei had no write path at all — swapping a GPS
+           box meant a developer running SQL against prod by hand. -->
+      <div class="admin-form-field">
+        <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.GPS_IMEI' | translate }}</label>
+        <input
+          class="admin-field"
+          formControlName="gpsImei"
+          inputmode="numeric"
+          maxlength="20"
+          [placeholder]="'ADMIN.VEHICLES.DETAILS.GPS_IMEI_PLACEHOLDER' | translate"
+        />
+        <small class="admin-error" *ngIf="isFieldInvalid('gpsImei')">
+          {{ errorKey('gpsImei') | translate }}
+        </small>
+      </div>
+
       <div class="admin-form-field full">
         <label class="admin-form-label">{{ 'ADMIN.VEHICLES.DETAILS.NOTE' | translate }}</label>
         <textarea

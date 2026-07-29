@@ -738,6 +738,9 @@
         "COLOUR": "Colour",
         "ENGINE_CC": "Engine (cc)",
         "CHASSIS_NUMBER": "Chassis Number",
+        "GPS_IMEI": "GPS Tracker IMEI",
+        "GPS_IMEI_PLACEHOLDER": "15 digits, leave blank if no tracker is fitted",
+        "GPS_IMEI_FORMAT": "GPS IMEI must be exactly 15 digits.",
         "NOTE": "Note",
         "NOTE_PLACEHOLDER": "Add any additional notes about this vehicle (optional)"
       },
