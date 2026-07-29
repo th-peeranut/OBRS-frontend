@@ -156,10 +156,25 @@
             </span>
           </div>
 
+          <!-- OBRS-873: grouped by leg. A round trip issues its own ticket per
+               leg, so the return leg needs its own QRs — and they have to be
+               tellable apart from the outbound ones, hence the same
+               LEG_OUTBOUND / LEG_RETURN labels the shared card uses. A one-way
+               booking (and the pre-API store render) has a single group, so the
+               heading is suppressed and this renders the one flat list it
+               always did. -->
+          <ng-container
+            *ngFor="let group of passengerGroups; trackBy: trackByIndex"
+          >
+          <ng-container *ngIf="group.passengers.length">
+          <div class="ticket-leg-heading" *ngIf="passengerGroups.length > 1">
+            {{ (group.isReturn ? "E_TICKET.LABEL.LEG_RETURN" : "E_TICKET.LABEL.LEG_OUTBOUND") | translate }}
+          </div>
+
           <div class="ticket-card-list">
             <div
               class="ticket-card"
-              *ngFor="let passenger of passengers; let i = index; trackBy: trackByIndex"
+              *ngFor="let passenger of group.passengers; let i = index; trackBy: trackByIndex"
             >
               <div class="ticket-card-qr">
                 <ng-container *ngIf="passenger.qrDataUrl; else qrCardPlaceholder">
@@ -232,6 +247,8 @@
               </small>
             </div>
           </div>
+          </ng-container>
+          </ng-container>
 
           <div class="qr-hint">
             {{ "E_TICKET.NOTE_LABEL" | translate }}<br />

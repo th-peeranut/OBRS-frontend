@@ -86,7 +86,7 @@ describe('MyBookingTicketModalComponent', () => {
     expect(component.card?.bookingNumber).toBe('B-1');
     expect(component.card?.legs.length).toBe(1);
     expect(component.card?.legs[0].route).toBe('Station A - Station B');
-    expect(component.card?.passengers.length).toBe(1);
+    expect(component.card?.legs[0].passengers.length).toBe(1);
     expect(component.card?.booker?.phone).toBe('0812345678');
     // SPEC-OBRS-426 M1: the tracker target is computed alongside the card.
     expect(component.trackTargets.length).toBe(2);
@@ -204,7 +204,9 @@ describe('MyBookingTicketModalComponent — legs passthrough (render)', () => {
 
     const cardInstance = fixture.debugElement.query(By.directive(ETicketCardComponent))
       .componentInstance as ETicketCardComponent;
-    expect(cardInstance.passengerRows.map((row) => row.ticketId)).toEqual([1]);
+    expect(
+      cardInstance.legPassengerRows.map((rows) => rows.map((row) => row.ticketId))
+    ).toEqual([[1]]);
   });
 
   // SPEC-OBRS-426 BR-2: the tracker renders as a SIBLING of app-e-ticket-card,

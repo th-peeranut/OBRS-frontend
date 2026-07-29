@@ -30,25 +30,33 @@ export function mapBookingTicketsToCard(
   const journeys = data.journeys ?? [];
   const { outbound, inbound } = resolveLegPair(journeys);
 
-  const journeyToLeg = (journey: BookingTicketJourney): TicketLeg => ({
-    travelDate: formatDate(journey.departureDateTime, locale) || '-',
-    travelTime:
-      formatTimeRange(journey.departureDateTime, journey.arrivalDateTime) || '-',
-    route: buildSingleLegRoute(journey.fromStop, journey.toStop),
-    origin: journey.fromStop?.label?.trim() || '-',
-    destination: journey.toStop?.label?.trim() || '-',
-    vehicleType: formatVehicleType(journey.vehicle?.vehicleType?.label) || '-',
-    vehiclePlate:
-      buildVehiclePlate(
-        journey.vehicle?.vehicleNumber,
-        journey.vehicle?.numberPlate
-      ) || '-',
-    seats: buildSeatList(buildPassengers(journey)) || '-',
-    isOpenSeating: isJourneyOpenSeating(journey),
-    distanceKm: tripEstimateFromStops(journey.fromStop, journey.toStop).distanceKm,
-    pickupLatitude: journey.fromStop?.latitude ?? null,
-    pickupLongitude: journey.fromStop?.longitude ?? null,
-  });
+  const journeyToLeg = (journey: BookingTicketJourney): TicketLeg => {
+    // OBRS-873: built once and KEPT on the leg. It used to be built here, boiled
+    // down to the seat string, and discarded — so the only passenger rows that
+    // survived into the card came from a second, booking-level call below that
+    // could see one leg at a time.
+    const passengers = buildPassengers(journey);
+    return {
+      travelDate: formatDate(journey.departureDateTime, locale) || '-',
+      travelTime:
+        formatTimeRange(journey.departureDateTime, journey.arrivalDateTime) || '-',
+      route: buildSingleLegRoute(journey.fromStop, journey.toStop),
+      origin: journey.fromStop?.label?.trim() || '-',
+      destination: journey.toStop?.label?.trim() || '-',
+      vehicleType: formatVehicleType(journey.vehicle?.vehicleType?.label) || '-',
+      vehiclePlate:
+        buildVehiclePlate(
+          journey.vehicle?.vehicleNumber,
+          journey.vehicle?.numberPlate
+        ) || '-',
+      seats: buildSeatList(passengers) || '-',
+      isOpenSeating: isJourneyOpenSeating(journey),
+      distanceKm: tripEstimateFromStops(journey.fromStop, journey.toStop).distanceKm,
+      pickupLatitude: journey.fromStop?.latitude ?? null,
+      pickupLongitude: journey.fromStop?.longitude ?? null,
+      passengers,
+    };
+  };
 
   const legs: TicketLeg[] = [outbound, inbound]
     .filter((journey): journey is BookingTicketJourney => !!journey)
@@ -60,33 +68,20 @@ export function mapBookingTicketsToCard(
     legs.push(journeyToLeg({}));
   }
 
-  // Travellers are assumed identical across legs (the FE model can't guarantee it —
-  // a round-trip pairs the same passengers on both legs); seats are shown per-leg
-  // (`TicketLeg.seats` above), but names are shown once, taken from whichever leg has
-  // the most tickets (falling back to outbound) so a leg with more passengers than the
-  // outbound leg doesn't drop names.
-  const passengers = buildPassengers(fullestJourney(journeys) ?? outbound);
-
+  // OBRS-873: no booking-level `passengers` any more. It used to pick ONE
+  // journey ("the fullest", tie-breaking to outbound) and render its tickets as
+  // the whole booking's passenger list — which on a round trip silently dropped
+  // the other leg's tickets, and with them the only QR that leg's passengers
+  // could have boarded with. Names repeating across the two legs is the correct
+  // reading of a round trip: each leg really does issue its own ticket.
   return {
     bookingNumber: data.bookingNumber?.trim() || '-',
     ticketNumber: collectTicketNumbers(journeys) || '-',
     legs,
-    passengers,
     booker: buildBooker(data),
     paymentDate: '-',
     totalAmount: formatAmount(data.totalAmount),
   };
-}
-
-function fullestJourney(
-  journeys: BookingTicketJourney[]
-): BookingTicketJourney | null {
-  if (journeys.length === 0) {
-    return null;
-  }
-  return journeys.reduce((fullest, journey) =>
-    (journey.tickets?.length ?? 0) > (fullest.tickets?.length ?? 0) ? journey : fullest
-  );
 }
 
 function findJourney(

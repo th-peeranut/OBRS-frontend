@@ -23,6 +23,7 @@ function buildLeg(overrides: Partial<TicketLeg> = {}): TicketLeg {
     distanceKm: 45,
     pickupLatitude: null,
     pickupLongitude: null,
+    passengers: [],
     ...overrides,
   };
 }
@@ -150,11 +151,16 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
       .map((el) => el.nativeElement as HTMLImageElement);
   }
 
+  /** One-way shorthand: a single leg carrying these passengers. */
   function setPassengers(passengers: TicketPassenger[]): void {
-    component.passengers = passengers;
+    setLegs([buildLeg({ passengers })]);
+  }
+
+  function setLegs(legs: TicketLeg[]): void {
+    component.legs = legs;
     component.ngOnChanges({
-      passengers: {
-        currentValue: passengers,
+      legs: {
+        currentValue: legs,
         previousValue: [],
         firstChange: true,
         isFirstChange: () => true,
@@ -231,10 +237,10 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     await settleQr();
     fixture.detectChanges();
 
-    expect(component.passengerRows[0].qrUnavailable).toBeFalse();
-    expect(component.passengerRows[0].qrDataUrl).toContain('data:image');
-    expect(component.passengerRows[1].qrUnavailable).toBeTrue();
-    expect(component.passengerRows[1].qrDataUrl).toBe('');
+    expect(component.legPassengerRows[0][0].qrUnavailable).toBeFalse();
+    expect(component.legPassengerRows[0][0].qrDataUrl).toContain('data:image');
+    expect(component.legPassengerRows[0][1].qrUnavailable).toBeTrue();
+    expect(component.legPassengerRows[0][1].qrDataUrl).toBe('');
 
     expect(qrImages().length).toBe(1);
     expect(
@@ -265,7 +271,79 @@ describe('ETicketCardComponent — boarding QR (OBRS-866)', () => {
     expect(ticketServiceStub.getBoardingToken).toHaveBeenCalledTimes(1);
     // …and the already-resolved QR is re-seeded synchronously rather than
     // flashing blank on the rebuilt array.
-    expect(component.passengerRows[0].qrDataUrl).toContain('data:image');
+    expect(component.legPassengerRows[0][0].qrDataUrl).toContain('data:image');
+  });
+
+  /**
+   * OBRS-873 — the round-trip half. A round trip issues a SEPARATE ticket per
+   * leg, and the card used to receive one booking-level passenger list built
+   * from a single journey: the other leg's passengers reached the gate with no
+   * QR at all. These pin that both legs' tickets are fetched and rendered, and
+   * that they stay tellable apart.
+   */
+  it('round trip: fetches a boarding token for BOTH legs\' tickets, not just the outbound leg\'s', async () => {
+    setLegs([
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [buildPassenger({ ticketId: 2, ticketNumber: 'T-2' })] }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(ticketServiceStub.getBoardingToken.calls.allArgs()).toEqual([
+      [1, true],
+      [2, true],
+    ]);
+    expect(qrImages().length).toBe(2);
+    // The return leg's QR must not be a copy of the outbound one — that is the
+    // whole failure this card fixes.
+    expect(qrImages()[0].src).not.toBe(qrImages()[1].src);
+  });
+
+  it('round trip: labels the two passenger lists outbound / return so a QR can be traced to its leg', async () => {
+    setLegs([
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [buildPassenger({ ticketId: 2, ticketNumber: 'T-2' })] }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    const passengerHeadings = fixture.debugElement
+      .queryAll(By.css('.ticket-passengers .ticket-leg-heading'))
+      .map((el) => (el.nativeElement.textContent || '').trim());
+    expect(passengerHeadings).toEqual([
+      'E_TICKET.LABEL.LEG_OUTBOUND',
+      'E_TICKET.LABEL.LEG_RETURN',
+    ]);
+
+    const numbers = fixture.debugElement
+      .queryAll(By.css('.passenger-ticket-number'))
+      .map((el) => (el.nativeElement.textContent || '').trim());
+    expect(numbers).toEqual(['T-1', 'T-2']);
+  });
+
+  it('one-way: renders a single unlabelled passenger list (no leg heading in the passengers block)', async () => {
+    setPassengers([buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.queryAll(By.css('.ticket-passengers .ticket-leg-heading')).length
+    ).toBe(0);
+    expect(qrImages().length).toBe(1);
+  });
+
+  it('a return leg with no tickets of its own gets no heading and no empty list', async () => {
+    setLegs([
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [] }),
+    ]);
+    await settleQr();
+    fixture.detectChanges();
+
+    expect(
+      fixture.debugElement.queryAll(By.css('.ticket-passengers .ticket-leg-heading')).length
+    ).toBe(0);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-list')).length).toBe(1);
   });
 });
 
@@ -349,12 +427,14 @@ describe('ETicketCardComponent — leg rendering', () => {
     expect(distanceChips().length).toBe(1);
   });
 
-  it('renders the shared passengers/total block exactly once regardless of leg count', () => {
-    component.legs = [buildLeg(), buildLeg()];
-    component.passengers = [buildPassenger()];
+  it('renders the passengers/total block frame exactly once regardless of leg count', () => {
+    component.legs = [
+      buildLeg({ passengers: [buildPassenger({ ticketId: 1, ticketNumber: 'T-1' })] }),
+      buildLeg({ passengers: [buildPassenger({ ticketId: 2, ticketNumber: 'T-2' })] }),
+    ];
     component.ngOnChanges({
-      passengers: {
-        currentValue: component.passengers,
+      legs: {
+        currentValue: component.legs,
         previousValue: [],
         firstChange: true,
         isFirstChange: () => true,
@@ -363,11 +443,14 @@ describe('ETicketCardComponent — leg rendering', () => {
     component.totalAmount = '500.00';
     fixture.detectChanges();
 
+    // The frame — total and the "scan before boarding" hint — stays singular…
     expect(fixture.debugElement.queryAll(By.css('.ticket-total')).length).toBe(1);
-    expect(fixture.debugElement.queryAll(By.css('.passenger-row')).length).toBe(1);
-    // OBRS-866: the QR count now tracks passengers, not legs — one per ticket.
-    expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(1);
     expect(fixture.debugElement.queryAll(By.css('.qr-hint')).length).toBe(1);
+    // …while the rows themselves are per-ticket and therefore per-leg
+    // (OBRS-866: one QR per ticket; OBRS-873: every leg's tickets, not one
+    // leg's).
+    expect(fixture.debugElement.queryAll(By.css('.passenger-row')).length).toBe(2);
+    expect(fixture.debugElement.queryAll(By.css('.passenger-qr')).length).toBe(2);
   });
 
   it('OBRS-269: hides the Navigate button for a leg with no pickup coords', () => {

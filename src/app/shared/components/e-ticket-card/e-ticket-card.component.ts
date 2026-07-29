@@ -33,6 +33,12 @@ export type TicketPassengerRow = TicketPassenger & BoardingQrState;
  * payload must be the JWT), and which could not have boarded more than one of
  * a multi-passenger booking's tickets even if the payload had been right.
  * Do not reintroduce a card-level QR: a boarding pass is per-ticket.
+ *
+ * OBRS-873 — and per-LEG, not per-booking: the rows come from
+ * `TicketLeg.passengers`, so a round trip renders both legs' tickets. The
+ * booking-level `passengers` input this replaced could only ever hold one
+ * leg's tickets, which left the return leg with no QR at all. Do not
+ * reintroduce a flat passenger input either.
  */
 @Component({
   selector: 'app-e-ticket-card',
@@ -50,24 +56,28 @@ export class ETicketCardComponent implements OnChanges {
   @Input() legs: TicketLeg[] = [];
   @Input() paymentDate = '-';
   @Input() totalAmount = '0.00';
-  @Input() passengers: TicketPassenger[] = [];
   @Input() booker: TicketPassenger | null = null;
 
-  /** What the template renders — `passengers` with each row's resolved QR
-   *  merged in. Never mutates the `@Input()` array. */
-  passengerRows: TicketPassengerRow[] = [];
+  /** OBRS-873: what the template renders — one array of rows PER LEG, index-
+   *  aligned with `legs`, each row being that leg's `TicketPassenger` with its
+   *  resolved QR merged in. Never mutates the `@Input()` arrays. A one-way
+   *  booking has exactly one entry, so it renders the same single list it
+   *  always did. */
+  legPassengerRows: TicketPassengerRow[][] = [];
   isDownloadingTicket = false;
 
   constructor(private readonly boardingQrService: BoardingQrService) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['passengers']) {
-      // Seed synchronously from whatever the service already resolved, so a
-      // rebuilt `passengers` array (e.g. the modal re-mapping on a locale
-      // switch) doesn't flash blank while the dedupe guard skips re-fetching.
+    if (changes['legs']) {
+      // Seed synchronously from whatever the service already resolved, so
+      // rebuilt legs (e.g. the modal re-mapping on a locale switch) don't flash
+      // blank while the dedupe guard skips re-fetching.
       this.applyBoardingQrStates();
       this.boardingQrService.fetchBoardingTokens(
-        this.passengerRows.map((row) => row.ticketId),
+        // Flattened across legs: one fetch pass covers the return leg's tickets
+        // too, and the service dedupes by ticket id anyway.
+        this.legPassengerRows.flatMap((rows) => rows.map((row) => row.ticketId)),
         () => this.applyBoardingQrStates(),
         // The modal renders its own state; a global "Loading…" dialog per
         // ticket on top of an already-rendered ticket is noise. The per-row
@@ -77,20 +87,38 @@ export class ETicketCardComponent implements OnChanges {
     }
   }
 
+  /** True while any leg has at least one row — drives the QR hint, which must
+   *  not render under an empty passengers block on a booking whose legs carry
+   *  no tickets. */
+  get hasPassengerRows(): boolean {
+    return this.legPassengerRows.some((rows) => rows.length > 0);
+  }
+
+  /** True only when TWO legs actually have ticket rows — the condition for
+   *  labelling the lists outbound/return. Counts non-empty legs, not legs: a
+   *  round trip whose return leg carries no tickets renders one unlabelled
+   *  list, same as a one-way, instead of a stray "Return" heading over
+   *  nothing. */
+  get hasMultiplePassengerLegs(): boolean {
+    return this.legPassengerRows.filter((rows) => rows.length > 0).length > 1;
+  }
+
   /** Re-derive every row from the service's current state rather than mutating
    *  rows in place, so a stray re-render always reflects the latest result. */
   private applyBoardingQrStates(): void {
-    this.passengerRows = (this.passengers ?? []).map((passenger) => {
-      const qrState =
-        passenger.ticketId !== null
-          ? this.boardingQrService.getState(passenger.ticketId)
-          : undefined;
-      return {
-        ...passenger,
-        qrDataUrl: qrState?.qrDataUrl ?? '',
-        qrUnavailable: qrState?.qrUnavailable ?? false,
-      };
-    });
+    this.legPassengerRows = (this.legs ?? []).map((leg) =>
+      (leg.passengers ?? []).map((passenger) => {
+        const qrState =
+          passenger.ticketId !== null
+            ? this.boardingQrService.getState(passenger.ticketId)
+            : undefined;
+        return {
+          ...passenger,
+          qrDataUrl: qrState?.qrDataUrl ?? '',
+          qrUnavailable: qrState?.qrUnavailable ?? false,
+        };
+      })
+    );
   }
 
   trackByIndex(index: number): number {

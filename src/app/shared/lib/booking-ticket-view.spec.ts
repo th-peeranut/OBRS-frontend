@@ -179,7 +179,7 @@ describe('mapBookingTicketsToCard — legs', () => {
     expect(card.legs[0].distanceKm).toBeNull();
   });
 
-  it('picks passenger names from the leg with the most tickets, falling back to outbound on a tie', () => {
+  it('OBRS-873: each leg carries its OWN tickets — the return leg\'s are never collapsed into the outbound\'s', () => {
     const data = buildRoundTripData({
       journeys: [
         {
@@ -208,15 +208,48 @@ describe('mapBookingTicketsToCard — legs', () => {
 
     const card = mapBookingTicketsToCard(data, 'en');
 
-    expect(card.passengers.length).toBe(2);
-    expect(card.passengers.map((p) => p.name)).toEqual(['Mr A', 'Mrs B']);
+    // The defect this replaces: a booking-level list built from "the fullest
+    // journey" showed these two INBOUND names and silently dropped the
+    // outbound ticket — whichever leg lost had no boarding QR at all.
+    expect(card.legs[0].passengers.map((p) => p.ticketId)).toEqual([1]);
+    expect(card.legs[0].passengers.map((p) => p.name)).toEqual(['Mr A']);
+    expect(card.legs[1].passengers.map((p) => p.ticketId)).toEqual([2, 3]);
+    expect(card.legs[1].passengers.map((p) => p.name)).toEqual(['Mr A', 'Mrs B']);
   });
 
-  it('falls back to the outbound leg for passenger names when ticket counts tie', () => {
+  it('OBRS-873: a round trip whose legs tie on ticket count still exposes BOTH legs\' ticket ids', () => {
     const card = mapBookingTicketsToCard(buildRoundTripData(), 'en');
 
-    expect(card.passengers.length).toBe(1);
-    expect(card.passengers[0].name).toBe('Mr A');
+    expect(card.legs.length).toBe(2);
+    // Same traveller on both legs, but two DIFFERENT tickets — which is exactly
+    // why one shared passenger list could never board the return leg.
+    expect(card.legs[0].passengers.map((p) => p.name)).toEqual(['Mr A']);
+    expect(card.legs[1].passengers.map((p) => p.name)).toEqual(['Mr A']);
+    expect(card.legs[0].passengers[0].ticketId).not.toBe(
+      card.legs[1].passengers[0].ticketId
+    );
+  });
+
+  it('OBRS-873: a one-way booking still yields exactly one leg with its own passengers', () => {
+    const data = buildRoundTripData({
+      journeys: [
+        {
+          legType: { code: 'outbound', label: 'Outbound' },
+          fromStop: { code: 'a', label: 'Station A' },
+          toStop: { code: 'b', label: 'Station B' },
+          departureDateTime: '2026-12-20T08:00:00',
+          arrivalDateTime: '2026-12-20T09:00:00',
+          tickets: [
+            { id: 1, ticketNumber: 'T-1', seatNumber: '1', passengerName: 'Mr A' },
+          ],
+        },
+      ],
+    });
+
+    const card = mapBookingTicketsToCard(data, 'en');
+
+    expect(card.legs.length).toBe(1);
+    expect(card.legs[0].passengers.map((p) => p.ticketNumber)).toEqual(['T-1']);
   });
 
   it('OBRS-866: threads each passenger\'s own ticketId/ticketNumber through, so the card can fetch that ticket\'s boarding token', () => {
@@ -238,8 +271,8 @@ describe('mapBookingTicketsToCard — legs', () => {
 
     const card = mapBookingTicketsToCard(data, 'en');
 
-    expect(card.passengers.map((p) => p.ticketId)).toEqual([11, 12]);
-    expect(card.passengers.map((p) => p.ticketNumber)).toEqual(['T-11', 'T-12']);
+    expect(card.legs[0].passengers.map((p) => p.ticketId)).toEqual([11, 12]);
+    expect(card.legs[0].passengers.map((p) => p.ticketNumber)).toEqual(['T-11', 'T-12']);
   });
 
   it('OBRS-866: a ticket with no usable id yields ticketId null rather than a GET on /tickets/0/boarding-token', () => {
@@ -260,7 +293,7 @@ describe('mapBookingTicketsToCard — legs', () => {
 
     const card = mapBookingTicketsToCard(data, 'en');
 
-    expect(card.passengers[0].ticketId).toBeNull();
+    expect(card.legs[0].passengers[0].ticketId).toBeNull();
   });
 
   it('OBRS-269: maps each leg\'s pickupLatitude/pickupLongitude from its own fromStop coords', () => {
@@ -649,10 +682,21 @@ describe('mapBookingTicketsToTrackTargets', () => {
       bookingNumber: 'B-1',
       ticketNumber: 'T-1, T-2',
       legs: [
-        jasmine.objectContaining({ route: 'Station A - Station B', seats: '1', distanceKm: 45 }),
-        jasmine.objectContaining({ route: 'Station B - Station C', seats: '2', distanceKm: 40 }),
+        jasmine.objectContaining({
+          route: 'Station A - Station B',
+          seats: '1',
+          distanceKm: 45,
+          // OBRS-873: each leg owns its ticket rows; there is no booking-level
+          // `passengers` key on the card any more.
+          passengers: [jasmine.objectContaining({ name: 'Mr A', ticketNumber: 'T-1' })],
+        }),
+        jasmine.objectContaining({
+          route: 'Station B - Station C',
+          seats: '2',
+          distanceKm: 40,
+          passengers: [jasmine.objectContaining({ name: 'Mr A', ticketNumber: 'T-2' })],
+        }),
       ],
-      passengers: [jasmine.objectContaining({ name: 'Mr A' })],
       // OBRS-866: the booker is a contact row, not a traveller — no ticket of
       // its own, so it never gets a boarding QR.
       booker: {

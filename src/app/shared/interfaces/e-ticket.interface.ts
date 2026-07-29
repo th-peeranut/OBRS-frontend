@@ -28,8 +28,19 @@ export interface TicketLeg {
   destination: string;
   vehicleType: string;
   vehiclePlate: string;
-  /** This leg's own seat list (per-leg, unlike the shared `passengers` names). */
+  /** This leg's own seat list. */
   seats: string;
+  /** OBRS-873: this leg's OWN ticket rows — one per ticket issued for this
+   *  journey, each carrying the `ticketId` the card turns into a boarding QR.
+   *  A round trip issues a separate ticket per leg, so a booking-level
+   *  passenger list can only ever expose ONE leg's tickets and the other
+   *  leg's passengers reach the gate with nothing to scan (this was the
+   *  defect). Lives on the leg rather than beside it so it cannot drift from
+   *  the leg it describes — the same index-alignment property BR-4a buys
+   *  `mapBookingTicketsToTrackTargets`, but structural instead of positional.
+   *  Names may repeat across legs (a round trip carries the same travellers);
+   *  the ticket ids never do. */
+  passengers: TicketPassenger[];
   /** OBRS-325: true when every ticket on this leg has a null `seatNumber` (an
    *  open-seating schedule, `schedules.seating_mode = OPEN`, OBRS-321). The
    *  card renders the open-seating label instead of `seats` — `seats` itself
@@ -52,9 +63,11 @@ export interface TicketLeg {
 export interface ETicketCardData {
   bookingNumber: string;
   ticketNumber: string;
-  /** Length 1 for a one-way booking, length 2 ([outbound, return]) for a round trip. */
+  /** Length 1 for a one-way booking, length 2 ([outbound, return]) for a round
+   *  trip. OBRS-873: passenger rows hang off each leg (`TicketLeg.passengers`)
+   *  — there is deliberately no booking-level `passengers` here, because a
+   *  single flat list is what silently dropped the return leg's tickets. */
   legs: TicketLeg[];
-  passengers: TicketPassenger[];
   booker: TicketPassenger | null;
   paymentDate: string;
   totalAmount: string;
