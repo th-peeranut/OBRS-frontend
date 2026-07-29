@@ -40,6 +40,30 @@
 # looks — this is the surface where violations are actually collected, so leaving it out
 # would fill the collector with false positives from every tile and bury the real ones.
 #
+# The analytics origins (OBRS-882, for the tags OBRS-867 added) are here for that exact
+# reason, restated because it is the one that got missed: OBRS-867 shipped two script
+# loaders and touched no CSP, on the strength of a comment in
+# analytics-tags.service.ts asserting this repo served no CSP header. It had served one
+# since the day before. Report-Only makes that kind of miss cost nothing visible — the
+# tags still load — while every page view POSTs violations to the collector whose
+# documented steady state is ZERO lines, which is where the maptiler entry above came
+# from too. Split by directive, and each one chosen from what the vendor does, not
+# guessed from the script URL:
+#   - `script-src` www.googletagmanager.com + www.clarity.ms — the two tags themselves,
+#     and the only two origins THIS repo's source names. Explicit hosts, not wildcards:
+#     script-src is the directive where a wildcard actually widens trust.
+#   - `connect-src` *.google-analytics.com + *.analytics.google.com — gtag's hit
+#     endpoints, which are region-sharded (`region1.` and friends), so a bare host would
+#     be wrong for most visitors rather than for none. *.clarity.ms — Clarity uploads
+#     recordings to a subdomain it picks per session.
+#   - `img-src` *.google-analytics.com — gtag falls back to an image beacon when
+#     sendBeacon and fetch are both unavailable. Cheap to allow, silent to omit.
+# ⚠️ This set is derived from vendor documentation, NOT from a drained violation log —
+# nothing was measured here, because no property ID was configured on SIT when it was
+# written. Draining it against a real consented booking is OBRS-867 AC-6, and it is a
+# hard prerequisite for OBRS-719 AC 5: a missing origin is invisible in Report-Only and
+# fatal the moment this becomes `Content-Security-Policy`.
+#
 # ⚠️ Do NOT rename this to the enforcing `Content-Security-Policy` here as a shortcut to
 # "we tested it". SIT and prod serve different origins, so enforceable on SIT is not
 # proof for prod. The enforce flip is OBRS-719 AC 5 and belongs on the VM, after a real
@@ -50,7 +74,7 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com https://www.googletagmanager.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com https://*.google-analytics.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
 
 # Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
 # subdomain and an HSTS header from us binds that host for a year; prod sets it in the

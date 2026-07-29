@@ -19,6 +19,7 @@ import fs from 'fs';
 import os from 'os';
 import stationsFixture from '../fixtures/stations.json';
 import schedulesFixture from '../fixtures/schedules.json';
+import { seedAnalyticsConsent } from '../support/analytics-consent';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -200,6 +201,19 @@ async function stubAdminList(page: Page, response: unknown): Promise<void> {
     }
   });
 }
+
+// OBRS-882. File-scope, so it reaches every describe below rather than the four that
+// happened to go red. The FAB lives at `z-index: 900` in the bottom-right corner and
+// OBRS-867's consent banner sits at `z-index: 1000` across the bottom edge — its SCSS
+// says outranking the FAB was the intent, "while the question is unanswered this one is
+// the more urgent". So on a fresh context the FAB is genuinely unclickable, and eleven
+// cases here failed as `locator.click` timeouts naming `.report-fab`. Seeding a settled
+// answer puts these tests back on the layout a returning visitor sees, which is the one
+// they were written against. The banner-up state is covered by
+// analytics-consent-banner.spec.ts instead of being every spec's problem.
+test.beforeEach(async ({ page }) => {
+  await seedAnalyticsConsent(page);
+});
 
 // ── Section 1: FAB visibility ─────────────────────────────────────────────────
 

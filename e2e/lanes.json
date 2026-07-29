@@ -45,6 +45,24 @@
       "why": "OBRS-854. Walks the counter-QR path end to end at a 390px phone viewport: logged out at /account, bounced through AuthGuard to /login, back to /account, dialog opened, translated confirm phrase typed, and DELETE /api/private/users/me asserted off the wire rather than by a success toast. Hermetic by construction -- it mints no session at all (arriving logged OUT is the scenario under test), one page.route fulfils every /api/** call including the login it performs, and accounts.google.com is aborted so /login's GIS script never leaves the box. It also seeds OBRS-867's obrs_analytics_consent_v1 to an ANSWERED value for most cases, because that bar is fixed to the bottom of the viewport and this page puts the close-account card last on purpose; the unanswered overlap is not hidden but pinned by its own test, which asks document.elementFromPoint what is really on top of the button rather than reasoning about z-index."
     },
     {
+      "spec": "obrs-867-analytics-consent-gate.spec.ts",
+      "lane": "OWN-DB",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-867 AC-1, declared by OBRS-882 -- the card shipped this spec without a lanes.json entry, so it belonged to no lane and ran nowhere but by hand. OWN-DB rather than GATE for the same reason that lane exists: it asserts a state that can only exist by construction. It needs the `analytics-e2e` build configuration, the ONLY one carrying a real measurement ID, because it measures consent on the WIRE -- no request to googletagmanager/clarity/google-analytics before accept, and a MUST-CATCH case proving both really do fire after. Against any other build the IDs are blank, the loader no-ops, and every 'nothing was requested' assertion passes vacuously. It touches no database, but the lane's rule -- provisions the environment its premise needs, never runnable against SIT -- is the one that fits."
+    },
+    {
+      "spec": "obrs-867-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs867.config.ts",
+      "why": "OBRS-867 AFTER evidence, declared by OBRS-882 (shipped undeclared alongside the spec above). Screenshots of the consent bar from the same build whose network behaviour the AC-1 suite asserts, plus a MEASURED contrast pair read off the painted pixels rather than out of variables.scss. Its purpose is a picture, so CAPTURE -- but note it is a harder-working capture than most in this lane: the contrast assertion can fail for a real reason."
+    },
+    {
+      "spec": "analytics-consent-banner.spec.ts",
+      "lane": "GATE",
+      "config": "playwright.gate.config.ts",
+      "why": "OBRS-882. Two stubbed home-page calls (stops, schedules search) and nothing else, so it needs no backend by construction. It exists as the counterpart to e2e/support/analytics-consent.ts: with a settled PDPA answer now seeded lane-wide, this is the ONLY spec that still loads a page with OBRS-867's consent bar UP, and without it the seeding would be a mute rather than a repair. Asks document.elementFromPoint what is really on top of the usability FAB rather than reasoning about z-index -- the overlap is deliberate per the component's own SCSS, so it is pinned, not overturned. obrs-854-account-deeplink.spec.ts asks the same question of a different button at a phone viewport."
+    },
+    {
       "spec": "focus-retention.spec.ts",
       "lane": "GATE",
       "config": "playwright.gate.config.ts",

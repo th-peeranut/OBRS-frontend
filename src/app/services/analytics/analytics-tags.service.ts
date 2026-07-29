@@ -120,9 +120,19 @@ export class AnalyticsTagsService {
 
     target.gtag('js', new Date());
     target.gtag('config', measurementId, {
-      // We emit our own `page_view` on router navigation — GA4's automatic one
-      // fires on the initial document load only and would double-count the
-      // landing page while missing every SPA route change after it.
+      // We emit our own `page_view` on router navigation, because GA4's
+      // automatic one cannot see an Angular route change and would miss every
+      // step of the funnel after the landing page.
+      //
+      // This flag is only HALF the control, and the comment here used to claim
+      // otherwise ("fires on the initial document load only" — OBRS-882).
+      // GA4 has a SECOND automatic page_view, driven by browser history events,
+      // which `send_page_view: false` does not reach: it is an Enhanced
+      // Measurement toggle and can only be turned off in the GA4 UI, under
+      // Data streams → Enhanced measurement → advanced settings. It is off on
+      // the SIT property (OBRS-867). Any NEW property starts with it ON, and
+      // the symptom is silent double-counted page_view — nothing here can
+      // detect it, so it belongs on the property setup checklist, not in code.
       send_page_view: false,
       // None of these are defaults. Leaving them out is a decision to allow
       // advertising identifiers and cross-site signals we have no consent
@@ -173,10 +183,22 @@ export class AnalyticsTagsService {
 
   /**
    * Appends one `async` external script. External `src` only — no inline
-   * script body anywhere in this file, so adding a Content-Security-Policy
-   * later needs a `script-src` host entry and nothing else. (AC-7: this repo
-   * ships no CSP header today — `netlify.toml` has only the SPA redirect — so
-   * there is nothing to break yet, and this keeps it that way.)
+   * script body anywhere in this file, which is what keeps `script-src` free
+   * of `'unsafe-inline'` (OBRS-719 removed the last inline block in this repo).
+   *
+   * ⚠️ OBRS-882 corrected this comment. It used to read "this repo ships no CSP
+   * header today — `netlify.toml` has only the SPA redirect — so there is
+   * nothing to break yet". That was **false when it was written**, not stale:
+   * `git merge-base --is-ancestor f835814f 0a4c7170` passes, so OBRS-719's CSP
+   * commit of 2026-07-28 was already an ancestor of this file. It was an
+   * assumption nobody measured, and it is why OBRS-867 shipped two new
+   * third-party origins without touching a CSP or the PCI script inventory.
+   *
+   * What is actually true: this file is inventoried in
+   * `scripts/payment-page-script-inventory.json`, both origins are in
+   * `netlify.toml` (SIT) and `OBRS-backend/deploy/prod/Caddyfile` (prod), and
+   * `npm run test:payment-scripts` fails if a THIRD origin appears here without
+   * the same three edits. Adding a vendor is a four-file change, by design.
    */
   private appendScript(id: string, src: string): void {
     if (this.document.getElementById(id)) {
