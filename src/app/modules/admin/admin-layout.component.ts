@@ -144,6 +144,21 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
       });
     }
 
+    // OBRS-844: cash-refund approvals — OWNER-only, same gating shape as the
+    // manual-refund worklist directly above (both backend doors are
+    // hasRole('OWNER')). Sits beside it in 'operations' on purpose: both are
+    // money the owner personally signs off, and this is the one an owner opens
+    // when a salesperson calls to say a customer is waiting at the counter.
+    if (this.authService.hasAnyRole(['owner'])) {
+      items.push({
+        path: 'cash-refund-approvals',
+        labelKey: 'ADMIN.PAGES.CASH_REFUND_APPROVALS',
+        icon: 'how_to_reg',
+        descriptionKey: 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE',
+        section: 'operations',
+      });
+    }
+
     // OBRS-508: cargo-capacity settings is OWNER-only (route `requiredRoles:
     // ['owner']` — the backend PUT it saves through requires OWNER), gated
     // the same way Settlements is gated directly above. Lives in 'master'

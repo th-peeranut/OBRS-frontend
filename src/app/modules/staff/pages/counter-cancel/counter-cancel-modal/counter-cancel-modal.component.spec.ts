@@ -85,6 +85,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     api = jasmine.createSpyObj<StaffApiService>('StaffApiService', [
       'getCancelPolicy',
       'cancelCounterBooking',
+      'requestCashRefundApproval',
     ]);
     alert = jasmine.createSpyObj<AlertService>('AlertService', ['success', 'error']);
     alert.success.and.resolveTo(undefined as any);
@@ -177,8 +178,8 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
     expect((component as any).canSubmit).toBeTrue();
   });
 
-  // ── FE-5: approver-is-self soft check ─────────────────────────────────────
-  describe('cash approver-is-self soft check (FE-5)', () => {
+  // ── OBRS-844: the cash step-up is a code, not a password ──────────────────
+  describe('cash approval code', () => {
     beforeEach(() => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       open();
@@ -188,57 +189,115 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       expect(fixture.debugElement.query(By.css('.ccm-cash-approval'))).not.toBeNull();
     });
 
-    it('does NOT pre-fill the approver fields', () => {
-      expect((component as any).form.get('approverEmail').value).toBe('');
-      expect((component as any).form.get('approverPassword').value).toBe('');
+    // The load-bearing assertion of this whole card: there is no longer ANY
+    // control on this screen into which a password could be typed. A test that
+    // only checked the new field would still pass if the old ones came back.
+    it('has no password control at all — the owner authorizes from their own device', () => {
+      expect((component as any).form.get('approverEmail')).toBeNull();
+      expect((component as any).form.get('approverPassword')).toBeNull();
+      expect(fixture.debugElement.query(By.css('input[type=password]'))).toBeNull();
     });
 
-    it('disables Confirm and shows the inline hint when the email matches the logged-in user (case-insensitive)', () => {
-      (component as any).form.get('approverEmail').setValue('SalesPerson@OBRS.test');
-      (component as any).form.get('approverPassword').setValue('whatever');
-      fixture.detectChanges();
+    it('does NOT pre-fill the code field', () => {
+      expect((component as any).form.get('approvalCode').value).toBe('');
+    });
 
-      expect((component as any).isApproverSelf).toBeTrue();
+    it('blocks Confirm until six digits are entered', () => {
       expect((component as any).canSubmit).toBeFalse();
-      expect(fixture.debugElement.query(By.css('.ccm-self-hint'))).not.toBeNull();
+
+      (component as any).form.get('approvalCode').setValue('1234');
+      fixture.detectChanges();
+      expect((component as any).canSubmit).toBeFalse();
+
+      // Letters are refused too — the server generates digits only, so anything
+      // else is a mistyping worth catching before it burns an attempt.
+      (component as any).form.get('approvalCode').setValue('12345a');
+      fixture.detectChanges();
+      expect((component as any).canSubmit).toBeFalse();
+
+      (component as any).form.get('approvalCode').setValue('246813');
+      fixture.detectChanges();
+      expect((component as any).canSubmit).toBeTrue();
     });
 
-    it('a different approver email passes the soft check', () => {
-      (component as any).form.get('approverEmail').setValue('owner@obrs.test');
-      (component as any).form.get('approverPassword').setValue('whatever');
+    it('asks the owner and reports that the request went out', () => {
+      api.requestCashRefundApproval.and.returnValue(
+        of({
+          code: 200,
+          message: 'ok',
+          data: {
+            id: 7,
+            bookingId: 42,
+            bookingNumber: 'BK-000042',
+            refundAmount: 400,
+            requestedBy: 'salesperson@obrs.test',
+            status: 'PENDING' as const,
+            requestedAt: '2026-07-29T10:00:00+07:00',
+            codeExpiresAt: null,
+          },
+        })
+      );
+
+      (component as any).requestApproval();
       fixture.detectChanges();
 
-      expect((component as any).isApproverSelf).toBeFalse();
-      expect((component as any).canSubmit).toBeTrue();
+      expect(api.requestCashRefundApproval).toHaveBeenCalledWith(42);
+      expect((component as any).approvalState).toBe('requested');
+    });
+
+    it('a failed ask re-arms the button rather than leaving it stuck on "sending"', () => {
+      api.requestCashRefundApproval.and.returnValue(
+        throwError(() => new HttpErrorResponse({ status: 500 }))
+      );
+
+      (component as any).requestApproval();
+      fixture.detectChanges();
+
+      expect((component as any).approvalState).toBe('failed');
+      expect((component as any).approverErrorMessage).toBeTruthy();
+    });
+
+    it('sends the typed code as approvalCode, and nothing else', () => {
+      api.cancelCounterBooking.and.returnValue(cancelResponse('CASH'));
+      (component as any).form.get('approvalCode').setValue('246813');
+      fixture.detectChanges();
+
+      (component as any).submit();
+
+      expect(api.cancelCounterBooking).toHaveBeenCalledWith(42, { approvalCode: '246813' });
     });
   });
 
   // ── Server-side error-code branching ──────────────────────────────────────
   describe('submit error handling', () => {
-    it('CANCEL_ERROR_APPROVER_INVALID clears the password and shows the message by the approver fields', () => {
+    it('CANCEL_ERROR_APPROVER_INVALID clears the dead code and sends the counter back to asking', () => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       api.cancelCounterBooking.and.returnValue(
         throwError(
           () =>
             new HttpErrorResponse({
               status: 400,
-              error: { errorCode: APPROVER_INVALID_CODE, message: 'Wrong password' },
+              error: { errorCode: APPROVER_INVALID_CODE, message: 'That code is not valid' },
             })
         )
       );
       open();
-      (component as any).form.get('approverEmail').setValue('owner@obrs.test');
-      (component as any).form.get('approverPassword').setValue('wrong');
+      (component as any).approvalState = 'requested';
+      (component as any).form.get('approvalCode').setValue('000000');
       fixture.detectChanges();
 
       (component as any).submit();
 
-      expect((component as any).approverErrorMessage).toBe('Wrong password');
-      expect((component as any).form.get('approverPassword').value).toBe('');
+      expect((component as any).approverErrorMessage).toBe('That code is not valid');
+      // Every case behind this error leaves the code dead — expired, used, wrong
+      // booking, burned. Leaving it in the field would invite a retry that can
+      // only fail, and each retry counts against the request's attempt limit.
+      expect((component as any).form.get('approvalCode').value).toBe('');
+      expect((component as any).approvalState).toBe('idle');
       expect((component as any).errorMessage).toBe('');
     });
 
-    it('CANCEL_ERROR_APPROVER_SELF uses the SAME copy as the client-side hint, never the backend message, and clears the password', () => {
+    it('CANCEL_ERROR_APPROVER_SELF uses the modal\'s own copy, never the backend wording', () => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       api.cancelCounterBooking.and.returnValue(
         throwError(
@@ -250,17 +309,12 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
         )
       );
       open();
-      // Two-accounts scenario: passes the client-side soft check (different
-      // email from getUsername()) but the backend still rejects it.
-      (component as any).form.get('approverEmail').setValue('second-account@obrs.test');
-      (component as any).form.get('approverPassword').setValue('whatever');
+      (component as any).form.get('approvalCode').setValue('246813');
       fixture.detectChanges();
-      expect((component as any).isApproverSelf).toBeFalse();
 
       (component as any).submit();
 
       expect((component as any).approverErrorMessage).toBe('STAFF.CANCEL_BOOKING.MODAL.APPROVER_SELF');
-      expect((component as any).form.get('approverPassword').value).toBe('');
     });
 
     it('refund-destination error codes surface by the destination fields, never the generic banner', () => {
@@ -360,8 +414,7 @@ describe('CounterCancelModalComponent (OBRS-766)', () => {
       api.getCancelPolicy.and.returnValue(of({ code: 200, message: 'ok', data: policyWith('CASH') }));
       api.cancelCounterBooking.and.returnValue(cancelResponse('CASH'));
       open();
-      (component as any).form.get('approverEmail').setValue('owner@obrs.test');
-      (component as any).form.get('approverPassword').setValue('correct-horse');
+      (component as any).form.get('approvalCode').setValue('246813');
       fixture.detectChanges();
       (component as any).submit();
     }
@@ -560,19 +613,18 @@ describe('CounterCancelModalComponent — cancel body byte-identity (OBRS-766 FE
     req.flush({ code: 200, message: 'ok' });
   });
 
-  it('FE-2: cash posts approverEmail/approverPassword and nothing else', () => {
+  it('FE-2/OBRS-844: cash posts approvalCode and nothing else — no credential key survives', () => {
     openAndResolvePolicy('CASH');
-    (component as any).form.get('approverEmail').setValue('owner@obrs.test');
-    (component as any).form.get('approverPassword').setValue('secret123');
+    (component as any).form.get('approvalCode').setValue('246813');
     fixture.detectChanges();
 
     (component as any).submit();
 
     const req = httpMock.expectOne((r) => r.url.endsWith('/cancel'));
-    expect(req.request.body).toEqual({
-      approverEmail: 'owner@obrs.test',
-      approverPassword: 'secret123',
-    });
+    // Asserted on the wire bytes, not a matcher's opinion: the point of this
+    // block is that no `approverEmail`/`approverPassword` key can survive as an
+    // undefined-valued property, and toEqual would not see one.
+    expect(JSON.stringify(req.request.body)).toBe('{"approvalCode":"246813"}');
     req.flush({ code: 200, message: 'ok' });
   });
 

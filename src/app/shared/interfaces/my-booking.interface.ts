@@ -122,19 +122,54 @@ export interface CancellationPolicy {
  * `cancel.error.refund-destination-required` / `-invalid`).
  *
  * OBRS-766 — additive extension for the counter (staff act-on-behalf) cancel
- * surface: `approverEmail`/`approverPassword` carry a SECOND PERSON's (the
- * owner's) credentials, required by the backend IFF the cancel resolves to
- * `refundMethod === 'CASH'` (OBRS-669's cash second-person approval). Both
- * fields are optional on the wire and MUST be omitted (not sent as empty
- * strings) for every other refund method, so the one existing caller
- * (`my-bookings.effect.ts`'s customer path, via `booking.service.ts`) keeps
- * posting the exact same body it always has — this widening is invisible to
- * it (design-system §10: extend, don't fork).
+ * surface: a SECOND PERSON (the owner) must authorize the cancel IFF it
+ * resolves to `refundMethod === 'CASH'` (OBRS-669's cash second-person
+ * approval). The field is optional on the wire and MUST be omitted (not sent
+ * as an empty string) for every other refund method, so the one existing
+ * caller (`my-bookings.effect.ts`'s customer path, via `booking.service.ts`)
+ * keeps posting the exact same body it always has — this widening is
+ * invisible to it (design-system §10: extend, don't fork).
+ *
+ * OBRS-844 — `approverEmail`/`approverPassword` are GONE, replaced by
+ * `approvalCode`. They carried the owner's reusable account password through
+ * the salesperson's browser in order to authorize one refund; the six digits
+ * that replace them open one booking, once, for two minutes. They were
+ * removed rather than deprecated on purpose: a field that still exists is a
+ * field a client can still send, and the whole value of the change is that
+ * there is no longer anywhere for a password to be typed on this screen.
  */
 export interface CancelBookingReqDto {
   refundDestination?: RefundDestinationReqDto;
-  approverEmail?: string;
-  approverPassword?: string;
+  approvalCode?: string;
+}
+
+/**
+ * OBRS-844 — `CashRefundApprovalRequestRespDto`: one pending cash-refund
+ * authorization. Returned both to the salesperson who asked (so the counter
+ * can say what it is waiting for) and to the owner deciding on it.
+ *
+ * Carries NO code. The six digits exist only in the response to the owner's
+ * approve call (`CashRefundApprovalCode`), once — anything that could re-read
+ * them would let the counter obtain a code without the owner ever acting.
+ */
+export interface CashRefundApprovalRequest {
+  id: number;
+  bookingId: number;
+  bookingNumber: string;
+  refundAmount: number | string;
+  /** Who is asking — shown to the owner so they can refuse a request that should not be coming. */
+  requestedBy: string;
+  status: 'PENDING' | 'APPROVED' | 'CONSUMED' | 'EXPIRED' | 'ABANDONED';
+  requestedAt: string;
+  codeExpiresAt?: string | null;
+}
+
+/** OBRS-844 — the six digits, shown to the approving owner exactly once. */
+export interface CashRefundApprovalCode {
+  requestId: number;
+  code: string;
+  expiresAt: string;
+  ttlMinutes: number;
 }
 
 /** `CancelBookingRespDto` — result of a successful cancellation. */

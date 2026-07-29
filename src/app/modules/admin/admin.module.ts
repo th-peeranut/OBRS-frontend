@@ -61,6 +61,7 @@ import { ExpenseFormModalComponent } from './pages/expenses/expense-form-modal/e
 import { ExpenseDeleteModalComponent } from './pages/expenses/expense-delete-modal/expense-delete-modal.component';
 // OBRS-286 — manual refund worklist (AC-2/AC-3), owner-only.
 import { ManualRefundWorklistPageComponent } from './pages/manual-refund-worklist/manual-refund-worklist-page.component';
+import { CashRefundApprovalsPageComponent } from './pages/cash-refund-approvals/cash-refund-approvals-page.component';
 import { MarkRefundedModalComponent } from './pages/manual-refund-worklist/mark-refunded-modal/mark-refunded-modal.component';
 import { AuthGuard } from '../../auth/auth.guard';
 import { CanDeactivateGuard } from '../../shared/guards/can-deactivate.guard';
@@ -281,6 +282,21 @@ export const adminRoutes: Routes = [
           requiredRoles: ['owner'],
         },
       },
+      {
+        // OBRS-844: the cash-refund step-up worklist — OWNER-only, matching
+        // both backend doors it reads (`hasRole('OWNER')` on
+        // CashRefundApprovalController). Deliberately NOT ['admin','owner']:
+        // an admin owns no fleet, so the list is empty for them by
+        // construction, and offering the page would suggest otherwise.
+        path: 'cash-refund-approvals',
+        component: CashRefundApprovalsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CASH_REFUND_APPROVALS',
+          subtitleKey: 'ADMIN.CASH_REFUND_APPROVALS.SUBTITLE',
+          requiredRoles: ['owner'],
+        },
+      },
       // Back-compat redirects for the pre-standardization paths, so existing
       // bookmarks/deep links to the old admin URLs keep working.
       { path: 'lookup-settings', redirectTo: 'lookups', pathMatch: 'full' },
@@ -352,6 +368,7 @@ export const adminRoutes: Routes = [
     ExpenseFormModalComponent,
     ExpenseDeleteModalComponent,
     ManualRefundWorklistPageComponent,
+    CashRefundApprovalsPageComponent,
     MarkRefundedModalComponent,
   ],
   imports: [

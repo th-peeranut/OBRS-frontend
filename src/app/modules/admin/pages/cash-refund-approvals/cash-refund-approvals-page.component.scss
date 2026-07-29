@@ -1,0 +1,63 @@
+// OBRS-844 — the owner's cash-refund approval queue. Styled only with the
+// `--admin-*` tokens, same idiom as `manual-refund-worklist-page.component.scss`.
+
+// OBRS-209 full-section empty state recipe (design-system §12): an empty queue
+// is good news here, so it reads as reassurance rather than as an error.
+.cra-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 48px 16px;
+  color: var(--admin-muted);
+  text-align: center;
+
+  .material-symbols-outlined {
+    font-size: 40px;
+  }
+}
+
+.cra-empty-title {
+  margin: 0;
+  color: var(--admin-text);
+}
+
+.cra-booking {
+  font-variant-numeric: tabular-nums;
+}
+
+// Right-aligned money column (design-system §12, OBRS-231 precedent). This is
+// the figure the owner is agreeing to hand out of a drawer, so it is the one
+// number on the row that must be unmistakable.
+.cra-amount {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.cra-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.cra-code {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+// Read aloud down a phone line, one digit at a time. Wide tracking and tabular
+// figures are what stop 6 and 8, or 1 and 7, from being misheard once and then
+// blamed on the system.
+.cra-code-value {
+  // A literal stack, not a `var(--admin-font-mono, …)`: there is no such token,
+  // and a var() that only ever resolves to its fallback reads like a themed
+  // value while being nothing of the kind (the theme-token gate says so).
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  font-variant-numeric: tabular-nums;
+  color: var(--admin-text);
+}

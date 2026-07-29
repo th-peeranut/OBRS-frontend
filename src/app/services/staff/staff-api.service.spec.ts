@@ -388,12 +388,30 @@ describe('StaffApiService', () => {
 
     it('cancelCounterBooking() posts exactly the payload it is given', () => {
       service
-        .cancelCounterBooking(42, { approverEmail: 'owner@obrs.test', approverPassword: 'secret' })
+        .cancelCounterBooking(42, { approvalCode: '246813' })
         .subscribe((res) => expect(res).toBeTruthy());
 
       const req = httpMock.expectOne(`${environment.apiUrl}/api/private/bookings/42/cancel`);
-      expect(req.request.body).toEqual({ approverEmail: 'owner@obrs.test', approverPassword: 'secret' });
+      expect(req.request.body).toEqual({ approvalCode: '246813' });
       req.flush({ code: 200, message: 'OK', data: { bookingId: 42, status: 'cancelled' } });
+    });
+
+    // OBRS-844
+    it('requestCashRefundApproval() POSTs an empty body to the booking-scoped approval endpoint', () => {
+      service.requestCashRefundApproval(42).subscribe((res) => expect(res).toBeTruthy());
+
+      const req = httpMock.expectOne(
+        `${environment.apiUrl}/api/private/bookings/42/cash-refund-approval-request`
+      );
+      expect(req.request.method).toBe('POST');
+      // The booking id is in the PATH, never the body: the server decides which
+      // booking this authorizes, and there is nothing for a client to influence.
+      expect(JSON.stringify(req.request.body)).toBe('{}');
+      req.flush({
+        code: 200,
+        message: 'OK',
+        data: { id: 7, bookingId: 42, bookingNumber: 'BK-42', status: 'PENDING' },
+      });
     });
   });
 

@@ -122,23 +122,13 @@ test('salesperson logs in, sees nav, searches, cancels a booking they did not se
   await expect(page.locator('.ccm-cash-approval-body')).toBeVisible();
   await page.screenshot({ path: path.join(ASSETS, 'OBRS-766-AFTER-cash-approval-light.png') });
 
-  // AC6: own email as approver -> inline hint + Confirm stays disabled
+  // OBRS-844 AC4: there is NO password field on this screen any more. Asserted
+  // FIRST, because every later step in this section would still pass if one had
+  // crept back in alongside the code field.
   const confirmBtn = page.locator('.admin-modal-actions .admin-btn-danger');
-  await page.locator('input[formcontrolname=approverEmail]').fill(SALES);
-  await page.locator('input[formcontrolname=approverPassword]').fill(PASSWORD);
-  await expect(page.locator('.ccm-self-hint')).toBeVisible();
+  await expect(page.locator('.ccm-modal input[type=password]')).toHaveCount(0);
+  await expect(page.locator('input[formcontrolname=approvalCode]')).toBeVisible();
   await expect(confirmBtn).toBeDisabled();
-
-  // AC8 setup + AC7: wrong password for a DIFFERENT (valid) approver ->
-  // rejected, password field cleared; then the correct password succeeds
-  // in exactly ONE more request (no second round trip / approval queue).
-  // (Previously failed here — CounterCancelModalComponent compared the
-  // backend's derived UPPER_SNAKE errorCode against dotted messageKey
-  // literals and never matched. Fixed in commit 7438d81a via
-  // errorCodeFromMessageKey(); these are now plain hard assertions.)
-  await page.locator('input[formcontrolname=approverEmail]').fill(OWNER);
-  await page.locator('input[formcontrolname=approverPassword]').fill('WrongPassword123!');
-  await expect(confirmBtn).toBeEnabled();
 
   const cancelPosts: { status: number; url: string }[] = [];
   page.on('response', (res) => {
@@ -147,24 +137,59 @@ test('salesperson logs in, sees nav, searches, cancels a booking they did not se
     }
   });
 
-  await confirmBtn.click();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: path.join(ASSETS, 'OBRS-766-AFTER-wrong-approver-rejected.png') });
+  // Step 1 — the salesperson ASKS. This is the whole of what the counter can do
+  // on its own: it can request a code, never obtain one.
+  await page.locator('.ccm-approval-request button').click();
+  await expect(page.locator('.ccm-approval-request .admin-hint')).toBeVisible({ timeout: 10000 });
+  await page.screenshot({ path: path.join(ASSETS, 'OBRS-844-AFTER-approval-requested.png') });
 
+  // OBRS-844 AC2: a wrong code is refused and cleared, and it costs exactly one
+  // POST — the step-up is still synchronous, never a queue.
+  await page.locator('input[formcontrolname=approvalCode]').fill('000000');
+  await expect(confirmBtn).toBeEnabled();
+  await confirmBtn.click();
   await expect(page.locator('.ccm-cash-approval .admin-error').last()).toBeVisible({ timeout: 10000 });
-  await expect(page.locator('input[formcontrolname=approverPassword]')).toHaveValue('');
+  await expect(page.locator('input[formcontrolname=approvalCode]')).toHaveValue('');
   expect(cancelPosts.length).toBe(1);
   expect(cancelPosts[0].status).toBeGreaterThanOrEqual(400);
+  await page.screenshot({ path: path.join(ASSETS, 'OBRS-844-AFTER-wrong-code-rejected.png') });
 
-  // AC7: correct approver credentials -> succeeds in one MORE request
-  // (total 2 POSTs to /cancel across this whole flow: one rejected, one
-  // accepted — never a separate "approve" endpoint).
-  await page.locator('input[formcontrolname=approverPassword]').fill(PASSWORD);
+  // Step 2 — the OWNER authorizes, in their OWN browser context. A second
+  // context rather than a second tab on purpose: it holds its own storage and
+  // its own JWT, so the salesperson's session genuinely never carries the
+  // owner's credentials at any point. That separation IS the acceptance
+  // criterion, and a shared context would quietly fail to test it.
+  const ownerContext = await page.context().browser()!.newContext();
+  const ownerPage = await ownerContext.newPage();
+  let issuedCode = '';
+  try {
+    await login(ownerPage, OWNER);
+    await ownerPage.goto('/admin/cash-refund-approvals', { waitUntil: 'networkidle' });
+    const requestRow = ownerPage.locator('tbody tr', { hasText: booking.bookingNumber });
+    // AC3: the owner sees WHAT they are authorizing before they act.
+    await expect(requestRow).toBeVisible({ timeout: 10000 });
+    await ownerPage.screenshot({ path: path.join(ASSETS, 'OBRS-844-AFTER-owner-pending-list.png') });
+
+    await requestRow.locator('button').click();
+    const codeEl = requestRow.locator('.cra-code-value');
+    await expect(codeEl).toBeVisible({ timeout: 10000 });
+    issuedCode = (await codeEl.innerText()).trim();
+    expect(issuedCode).toMatch(/^\d{6}$/);
+    await ownerPage.screenshot({ path: path.join(ASSETS, 'OBRS-844-AFTER-owner-issued-code.png') });
+  } finally {
+    await ownerContext.close();
+  }
+
+  // Step 3 — the counter types the six digits the owner read out. Still ONE
+  // request to /cancel, exactly as OBRS-669 required: the customer is standing
+  // at the counter, so the cancellation completes now, not on a queue.
+  await page.locator('input[formcontrolname=approvalCode]').fill(issuedCode);
   await confirmBtn.click();
   await expect(page.locator('.ccm-modal')).toBeHidden({ timeout: 10000 });
   expect(cancelPosts.length).toBe(2);
   expect(cancelPosts[1].status).toBe(200);
   await page.screenshot({ path: path.join(ASSETS, 'OBRS-766-AFTER-cancel-success.png') });
+
 
   // alertService.success() on the cancellation result is ALSO a
   // no-timer SweetAlert2 modal (same shape as the login toast) — dismiss it

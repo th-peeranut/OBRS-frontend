@@ -7,7 +7,7 @@ import {
   Output,
   SimpleChanges,
 } from '@angular/core';
-import { AbstractControl, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 import { TranslateService } from '@ngx-translate/core';
@@ -23,7 +23,6 @@ import {
 } from '../../../../../shared/interfaces/my-booking.interface';
 import { CounterBookingSearchResultDto, StaffApiService } from '../../../../../services/staff/staff-api.service';
 import { AlertService } from '../../../../../shared/services/alert.service';
-import { AuthService } from '../../../../../auth/auth.service';
 import { errorCodeFromMessageKey, extractApiErrorCode } from '../../../../../shared/lib/api-error-code';
 import { extractApiErrorMessage } from '../../../../../shared/lib/api-error';
 import {
@@ -51,6 +50,9 @@ const CANCEL_ERROR = {
   REFUND_DESTINATION_REQUIRED: errorCodeFromMessageKey('cancel.error.refund-destination-required'),
   REFUND_DESTINATION_INVALID: errorCodeFromMessageKey('cancel.error.refund-destination-invalid'),
 } as const;
+
+/** OBRS-844: the approval code is always exactly six digits (server-generated, zero-padded). */
+const APPROVAL_CODE_LENGTH = 6;
 
 /** Errors this endpoint can 400/409 with that this modal must place BY the
  * relevant field group, rather than the generic banner — mirrors
@@ -91,6 +93,21 @@ export type CounterCancelPreviewState = 'loading' | 'blocked' | 'error' | 'resol
  * isolated staff/admin modal with nothing to plug a store into, as opposed
  * to the customer `my-bookings` flow, which is NgRx only because it plugs
  * into a pre-existing store.
+ *
+ * OBRS-844 — the cash step-up no longer asks the owner to type their password
+ * into this browser. The salesperson asks, the owner authorizes from their own
+ * device, and six digits come back to this screen.
+ *
+ * **Why this screen does not wait for the approval by itself.** The obvious
+ * design is to poll (or subscribe) until the owner approves and then unlock
+ * Confirm without anyone typing anything. Measured against the code on `dev`,
+ * that is the expensive option: the app's STOMP setup has exactly one
+ * destination and `StompAuthChannelInterceptor` restricts it to role ADMIN, so
+ * a salesperson can subscribe to nothing today; and ADR-0043's in-memory broker
+ * would start dropping approvals silently the day the backend runs on more than
+ * one instance. Polling would trade that for an unbounded open request against
+ * a screen the operator may leave sitting all afternoon. Six typed digits fail
+ * loudly and cost nothing to run.
  */
 @Component({
   selector: 'app-counter-cancel-modal',
@@ -113,16 +130,28 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
   protected destinationErrorMessage = '';
   protected readonly form: FormGroup;
 
+  /**
+   * OBRS-844 — where the cash step-up has got to. Independent of
+   * `previewState` for the same reason that one is independent of the booking
+   * summary: they resolve on different clocks, and folding them together
+   * would make a slow policy fetch look like a failed approval request.
+   *   - 'idle'      → the salesperson has not asked yet.
+   *   - 'requesting'→ the ask is in flight.
+   *   - 'requested' → the owners have been notified; waiting for them to read
+   *     out a code. There is no polling here on purpose (see the component
+   *     javadoc) — the counter learns the code from the owner, not the server.
+   *   - 'failed'    → the ask itself failed; the button re-arms.
+   */
+  protected approvalState: 'idle' | 'requesting' | 'requested' | 'failed' = 'idle';
+
   constructor(
     private readonly staffApiService: StaffApiService,
     private readonly formBuilder: FormBuilder,
     private readonly alertService: AlertService,
-    private readonly authService: AuthService,
     private readonly translate: TranslateService
   ) {
     this.form = this.formBuilder.group({
-      approverEmail: [''],
-      approverPassword: [''],
+      approvalCode: [''],
       destination: buildRefundDestinationForm(this.formBuilder),
     });
   }
@@ -144,7 +173,8 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
       this.errorMessage = '';
       this.approverErrorMessage = '';
       this.destinationErrorMessage = '';
-      this.form.reset({ approverEmail: '', approverPassword: '' });
+      this.approvalState = 'idle';
+      this.form.reset({ approvalCode: '' });
       this.applyApproverValidators(false);
       this.applyDestinationValidators(false);
       this.fetchPolicy();
@@ -194,57 +224,58 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     return this.policy?.refundMethod === MANUAL_REFUND_METHOD;
   }
 
-  // ── Cash step-up approver fields ──────────────────────────────────────────
-
-  /** Soft client-side check (UX spec §CASH step 4): disables Confirm and
-   * shows the inline hint the instant the typed email matches the LOGGED-IN
-   * salesperson's own username. This is a nudge only, not the control — the
-   * backend's `CANCEL_ERROR_APPROVER_SELF` (messageKey `cancel.error.approver-self`)
-   * is the real gate (it also catches a salesperson holding two accounts,
-   * which this cannot). */
-  private readonly approverNotSelfValidator = (control: AbstractControl): ValidationErrors | null => {
-    const email = String(control.value ?? '').trim().toLowerCase();
-    if (!email) {
-      return null;
-    }
-    const username = (this.authService.getUsername() ?? '').trim().toLowerCase();
-    return username && email === username ? { self: true } : null;
-  };
+  // ── Cash step-up: ask the owner, then type the code they issue ────────────
 
   private applyApproverValidators(required: boolean): void {
-    const email = this.form.get('approverEmail');
-    const password = this.form.get('approverPassword');
+    const code = this.form.get('approvalCode');
     if (required) {
-      email?.setValidators([Validators.required, Validators.email, this.approverNotSelfValidator]);
-      password?.setValidators([Validators.required]);
+      code?.setValidators([
+        Validators.required,
+        Validators.pattern(`^\\d{${APPROVAL_CODE_LENGTH}}$`),
+      ]);
     } else {
-      email?.clearValidators();
-      password?.clearValidators();
+      code?.clearValidators();
     }
-    email?.updateValueAndValidity({ emitEvent: false });
-    password?.updateValueAndValidity({ emitEvent: false });
+    code?.updateValueAndValidity({ emitEvent: false });
   }
 
-  protected get approverEmailControl(): AbstractControl | null {
-    return this.form.get('approverEmail');
+  protected get approvalCodeControl(): AbstractControl | null {
+    return this.form.get('approvalCode');
   }
 
-  protected get approverPasswordControl(): AbstractControl | null {
-    return this.form.get('approverPassword');
-  }
-
-  protected get isApproverSelf(): boolean {
-    return !!this.approverEmailControl?.hasError('self');
-  }
-
-  protected get isApproverEmailInvalid(): boolean {
-    const control = this.approverEmailControl;
-    return !!control && control.invalid && !control.hasError('self') && (control.dirty || control.touched);
-  }
-
-  protected get isApproverPasswordInvalid(): boolean {
-    const control = this.approverPasswordControl;
+  protected get isApprovalCodeInvalid(): boolean {
+    const control = this.approvalCodeControl;
     return !!control && control.invalid && (control.dirty || control.touched);
+  }
+
+  protected readonly approvalCodeLength = APPROVAL_CODE_LENGTH;
+
+  /**
+   * Asks the fleet's owners to authorize this refund. The owner reads the code
+   * back to the counter; there is deliberately no live channel that would push
+   * it here (see the component javadoc), so nothing is polled after this.
+   */
+  protected requestApproval(): void {
+    const booking = this.booking;
+    if (!booking || this.approvalState === 'requesting') {
+      return;
+    }
+    this.approvalState = 'requesting';
+    this.approverErrorMessage = '';
+    this.staffApiService
+      .requestCashRefundApproval(booking.bookingId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.approvalState = 'requested';
+        },
+        error: (error) => {
+          this.approvalState = 'failed';
+          this.approverErrorMessage =
+            extractApiErrorMessage(error) ||
+            this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.APPROVAL_REQUEST_FAILED');
+        },
+      });
   }
 
   // ── Manual-refund destination fields ─────────────────────────────────────
@@ -317,8 +348,7 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     // for the branch that doesn't apply.
     const payload: CancelBookingReqDto = {};
     if (this.isCashRefund) {
-      payload.approverEmail = String(this.form.get('approverEmail')?.value ?? '').trim();
-      payload.approverPassword = String(this.form.get('approverPassword')?.value ?? '');
+      payload.approvalCode = String(this.form.get('approvalCode')?.value ?? '').trim();
     } else if (this.isManualRefund) {
       payload.refundDestination = toRefundDestinationPayload(this.destinationForm);
     }
@@ -393,15 +423,19 @@ export class CounterCancelModalComponent implements OnChanges, OnDestroy {
     }
 
     if (code && APPROVER_ERROR_CODES.has(code)) {
-      if (code === CANCEL_ERROR.APPROVER_INVALID || code === CANCEL_ERROR.APPROVER_SELF) {
-        // Never leave a rejected password in the DOM.
-        this.form.get('approverPassword')?.setValue('');
+      if (code === CANCEL_ERROR.APPROVER_INVALID) {
+        // OBRS-844: clear the rejected code. A code the server has refused is
+        // dead in every case that produces this error — expired, already used,
+        // wrong booking — so leaving it in the field would only invite the
+        // salesperson to press Confirm again and burn an attempt against a
+        // request that can no longer succeed.
+        this.form.get('approvalCode')?.setValue('');
+        // The old request is spent either way, so the counter has to ask again.
+        this.approvalState = 'idle';
       }
       this.approverErrorMessage =
         code === CANCEL_ERROR.APPROVER_SELF
-          ? // Same copy as the client-side hint (UX spec) — the rejection
-            // reads as confirmation of a stated rule, not a new surprise.
-            this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.APPROVER_SELF')
+          ? this.translate.instant('STAFF.CANCEL_BOOKING.MODAL.APPROVER_SELF')
           : extractApiErrorMessage(error) || this.translate.instant(this.approverErrorKey(code));
       return;
     }
