@@ -12,6 +12,7 @@ import {
   roleRequiredValidator,
   statusClass,
   toCreateUserPayload,
+  toRoleFilterOptions,
   toRoleOptions,
   toStatusOptions,
   translateRoleSlug,
@@ -532,6 +533,64 @@ describe('user-management.mappers', () => {
         { slug: 'staff', label: 'พนักงาน' },
         { slug: 'bare', label: 'bare' },
       ]);
+    });
+  });
+
+  // OBRS-847: pinned in BOTH directions. A filter that drops too much is the
+  // same defect as one that drops too little — it would stop an OWNER
+  // filtering their own staff, which is the only thing this dropdown is for.
+  describe('toRoleFilterOptions', () => {
+    const ALL_ROLES: RoleOption[] = [
+      { slug: 'admin', label: 'Admin' },
+      { slug: 'owner', label: 'Owner' },
+      { slug: 'salesperson', label: 'Salesperson' },
+      { slug: 'driver', label: 'Driver' },
+      { slug: 'customer', label: 'Customer' },
+    ];
+
+    it('drops customer and admin for a non-platform caller (ADR-0114)', () => {
+      const options = toRoleFilterOptions(ALL_ROLES, false);
+
+      expect(options.map((option) => option.slug)).not.toContain('customer');
+      expect(options.map((option) => option.slug)).not.toContain('admin');
+    });
+
+    it('keeps every staff role a non-platform caller CAN have in their list', () => {
+      const options = toRoleFilterOptions(ALL_ROLES, false);
+
+      expect(options).toEqual([
+        { slug: 'owner', label: 'Owner' },
+        { slug: 'salesperson', label: 'Salesperson' },
+        { slug: 'driver', label: 'Driver' },
+      ]);
+    });
+
+    it('returns the untouched list for a platform admin, who does see both', () => {
+      const options = toRoleFilterOptions(ALL_ROLES, true);
+
+      expect(options).toBe(ALL_ROLES);
+    });
+
+    // The backend sends slugs verbatim; nothing guarantees the casing or the
+    // padding the exclusion list is written in.
+    it('matches the excluded slugs case- and whitespace-insensitively', () => {
+      const options = toRoleFilterOptions(
+        [
+          { slug: ' Customer ', label: 'Customer' },
+          { slug: 'ADMIN', label: 'Admin' },
+          { slug: 'driver', label: 'Driver' },
+        ],
+        false
+      );
+
+      expect(options).toEqual([{ slug: 'driver', label: 'Driver' }]);
+    });
+
+    // A future custom role is not the platform's business to hide.
+    it('keeps an unknown custom role', () => {
+      const options = toRoleFilterOptions([{ slug: 'dispatcher', label: 'Dispatcher' }], false);
+
+      expect(options).toEqual([{ slug: 'dispatcher', label: 'Dispatcher' }]);
     });
   });
 
