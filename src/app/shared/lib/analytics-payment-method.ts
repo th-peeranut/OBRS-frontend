@@ -31,6 +31,8 @@
  * money.
  */
 
+import { hasOwnKey } from './own-key';
+
 /**
  * Emitted when the method genuinely is not known — an absent or empty value.
  *
@@ -105,9 +107,12 @@ export function normalizeAnalyticsPaymentMethod(
   }
 
   const token = trimmed.replace(/[\s-]+/g, '_');
-  const alias = ALIASES[token];
-  if (alias) {
-    return alias;
+  // `hasOwnKey` and not `ALIASES[token] ?? ...`: an object literal inherits
+  // `Object.prototype`, so `ALIASES['constructor']` is the Object *function* —
+  // non-nullish and truthy, so a `??`/`||` fallback never fires and the caller
+  // would ship a function where GA4 expects a string (ADR-0028, OBRS-427/601).
+  if (hasOwnKey(ALIASES, token)) {
+    return ALIASES[token];
   }
 
   return GA4_SAFE.test(token) && HAS_A_LETTER.test(token)

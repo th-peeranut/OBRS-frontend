@@ -86,6 +86,18 @@ describe('normalizeAnalyticsPaymentMethod (OBRS-902)', () => {
       );
     });
 
+    it('does not hand back a function for an inherited key', () => {
+      // `ALIASES['constructor']` is `Object.prototype.constructor` — truthy and
+      // non-nullish, so `?? fallback` never fires and GA4 would be handed a
+      // function (ADR-0028, OBRS-427/601). Lower-casing leaves exactly these two
+      // reachable.
+      for (const key of ['constructor', '__proto__', 'toString', 'valueOf']) {
+        const result = normalizeAnalyticsPaymentMethod(key);
+        expect(typeof result).toBe('string');
+        expect(result).toBe(key.toLowerCase());
+      }
+    });
+
     it('keeps `other` and `unknown` distinguishable', () => {
       // "we were told nothing" and "we were told something unusable" are
       // different problems and want different investigations.
