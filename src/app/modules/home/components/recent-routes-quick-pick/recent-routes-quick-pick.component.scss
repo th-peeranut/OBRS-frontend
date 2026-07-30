@@ -15,7 +15,15 @@
   gap: $space-xs;
   // Only applied when this block actually renders (guarded by the same *ngIf
   // as the whole template root) — never contributes margin when empty.
-  margin-bottom: $space-sm;
+  //
+  // OBRS-928 moved the strip from the top of `.booking-card` to directly above
+  // the origin/destination fields, so the spacing is now asymmetric ON PURPOSE:
+  // $space-lg of separation from the trip-type row above, and the much tighter
+  // gap below owned by `home-booking.component.scss`'s
+  // `app-recent-routes-quick-pick.has-routes + .station-section` rule. Proximity
+  // is what says "these pills and those two fields are the same job".
+  margin-top: $space-lg;
+  margin-bottom: 0;
 }
 
 .recent-routes-title {
@@ -67,9 +75,29 @@
   transition: background-color $duration-fast $easing-standard,
     color $duration-fast $easing-standard;
 
+  // OBRS-928: the leading icon. `gap` rather than a margin so the pill stays
+  // symmetric whatever the label length.
+  gap: $space-3xs;
+
   &:hover,
   &:focus-visible {
     background-color: $brand-customer-strong;
     color: $text-white;
   }
+
+  // OBRS-928: the route the search form is currently holding. Slot 1 is
+  // prefilled on load, so this is the difference between "you can pick one of
+  // these" and "this one is already applied — tap another to switch".
+  // Same fill as :hover deliberately (one filled look, not two).
+  &.is-active {
+    background-color: $brand-customer-strong;
+    color: $text-white;
+  }
+}
+
+.recent-route-icon {
+  // Match the label's optical size rather than the 24px Material default, which
+  // would out-weigh the text it sits next to.
+  font-size: 18px;
+  line-height: 1;
 }

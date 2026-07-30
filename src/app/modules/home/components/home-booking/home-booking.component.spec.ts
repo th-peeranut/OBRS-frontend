@@ -5,7 +5,7 @@ import { TranslateModule } from '@ngx-translate/core';
 import { CalendarModule } from 'primeng/calendar';
 import { Store } from '@ngrx/store';
 import { Router } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { BehaviorSubject, of, throwError } from 'rxjs';
 import dayjs from 'dayjs';
 
 import { HomeBookingComponent } from './home-booking.component';
@@ -83,6 +83,18 @@ function createStoreStubWithValue(value: unknown): any {
   return {
     pipe: () => of(value),
     select: () => of(value),
+    dispatch: () => {},
+  };
+}
+
+/** Same shape as `createStoreStubWithValue`, but the caller keeps the subject —
+ *  the only way to make the station-list selector emit a SECOND time, which is
+ *  what re-runs `recomputeRecentRouteCandidates()` (OBRS-928's one-shot guard
+ *  is untestable without it). */
+function createStoreStubWithSubject(subject: BehaviorSubject<unknown>): any {
+  return {
+    pipe: () => subject,
+    select: () => subject,
     dispatch: () => {},
   };
 }
@@ -222,6 +234,92 @@ describe('HomeBookingComponent', () => {
       component.onSearch();
 
       expect(localStorage.getItem(RECENT_ROUTES_CACHE_KEY)).toBeNull();
+    });
+  });
+
+  describe('top-route prefill (OBRS-928)', () => {
+    it('AC#4: prefills both station fields with the top-ranked route on load', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(1);
+      expect(component.getFormValue('stopStationId')).toBe(2);
+    });
+
+    it('prefills the route the ranking put FIRST, not the one stored first', () => {
+      // 3->2 is the most recent, so OBRS-923 reserves slot 1 for it even though
+      // 1->2 was searched more often.
+      saveRecentRoute(1, 2);
+      saveRecentRoute(1, 2);
+      saveRecentRoute(3, 2);
+
+      component = makeHomeBooking({
+        store: createStoreStubWithValue([STATION_1, STATION_2, STATION_3]),
+      });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+    });
+
+    // must-NOT #1 (AC#6): no history, nothing to prefill — the fields stay
+    // exactly as createForm() seeded them.
+    it('does NOT prefill when there is no route history', () => {
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe('');
+      expect(component.getFormValue('stopStationId')).toBe('');
+      expect(component.recentRouteCandidates).toEqual([]);
+    });
+
+    // must-NOT #2 (AC#5): a station the user picked before the candidates
+    // resolved outranks the prefill. Without this, a slow station list would let
+    // the prefill stomp a deliberate choice.
+    it('does NOT overwrite a station the user has already chosen', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({
+        store: createStoreStubWithValue([STATION_1, STATION_2, STATION_3]),
+      });
+      component.bookingForm.patchValue({ startStationId: 3 });
+      component.ngOnInit();
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+      expect(component.getFormValue('stopStationId')).toBe('');
+    });
+
+    // must-NOT #3 (AC#7): both the station-list and auth-status subscriptions
+    // call recompute, and the station list emits again on any store change. A
+    // second prefill would silently revert the user's switch.
+    it('prefills at most once per page load — a later recompute does not revert the user', () => {
+      saveRecentRoute(1, 2);
+      const stations$ = new BehaviorSubject<unknown>([STATION_1, STATION_2, STATION_3]);
+
+      component = makeHomeBooking({ store: createStoreStubWithSubject(stations$) });
+      component.ngOnInit();
+      expect(component.getFormValue('startStationId')).toBe(1);
+
+      component.onRecentRouteSelected({
+        originStation: STATION_3,
+        destinationStation: STATION_2,
+      });
+      stations$.next([STATION_1, STATION_2, STATION_3]);
+
+      expect(component.getFormValue('startStationId')).toBe(3);
+      expect(component.getFormValue('stopStationId')).toBe(2);
+    });
+
+    it('the prefilled route is the one the strip renders as active', () => {
+      saveRecentRoute(1, 2);
+
+      component = makeHomeBooking({ store: createStoreStubWithValue([STATION_1, STATION_2]) });
+      component.ngOnInit();
+
+      const top = component.recentRouteCandidates[0];
+      expect(component.getFormValue('startStationId')).toBe(top.originStation.id);
+      expect(component.getFormValue('stopStationId')).toBe(top.destinationStation.id);
     });
   });
 

@@ -1929,7 +1929,7 @@
       "SEARCH": "搜索",
       "SEARCH_VALIDATION": "请先选择出发地、目的地，以及至少一名乘客后再搜索。",
       "PASSENGER_MAX_HINT": "每次预订最多 {{max}} 名乘客。",
-      "RECENT_ROUTES_TITLE": "最近路线",
+      "RECENT_ROUTES_TITLE": "您常走的路线 — 点击即可自动填入",
       "RECENT_ROUTE_ARIA_LABEL": "从{{from}}到{{to}}"
     },
     "STATION": {
