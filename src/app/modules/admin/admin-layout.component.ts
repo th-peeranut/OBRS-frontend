@@ -8,6 +8,7 @@ import { BadgeSocketService } from '../../services/admin/badge-socket.service';
 import { NotificationInboxService } from '../../shared/services/notification-inbox.service';
 import { UsabilityReportStatus } from '../../shared/interfaces/usability-report.interface';
 import { SYSTEM_SETTINGS_ROLES } from './pages/system-settings/system-settings-tabs';
+import { NavSearchHighlightSegment, buildHighlightSegments } from '../../shared/lib/nav-search-highlight';
 
 interface AdminNavItem {
   path: string;
@@ -18,6 +19,17 @@ interface AdminNavItem {
   // subtitleKey) so the sidebar search can match on what a menu *does*, not
   // just its name — the user often recalls the function but not the label.
   descriptionKey?: string;
+  // OBRS-900: precomputed highlight segments for the CURRENT query, built once
+  // per applyNavSearch() call (query or language change) — never recomputed in
+  // the template, per the same stable-field/no-getter change-detection rule
+  // this file already documents for navItems/filteredNavItems/
+  // filteredNavSections. `undefined` whenever no query is active (or, for
+  // descriptionSegments, whenever the item has no descriptionKey) — the
+  // template treats presence/absence as the single switch between the
+  // plain "today" rendering and the highlighted one, rather than re-checking
+  // navSearchQuery a second time.
+  labelSegments?: NavSearchHighlightSegment[];
+  descriptionSegments?: NavSearchHighlightSegment[];
   // OBRS-289: which nav section this item belongs to (see SECTION_ORDER).
   section: NavSectionKey;
   // OBRS-702: highlight this entry for its whole subtree, not just its exact
@@ -323,6 +335,29 @@ export class AdminLayoutComponent extends SidebarLayoutBaseComponent implements 
           return label.includes(q) || description.includes(q);
         })
       : this.navItems;
+
+    // OBRS-900: precompute highlight segments for EVERY item here (query or
+    // language change), never in the template — same CD-safety rule as the
+    // fields above. Segments live on the item objects themselves, which
+    // navItems and filteredNavItems already share by reference, so this is
+    // one assignment site regardless of which list a given item currently
+    // sits in. Cleared to `undefined` when the (trimmed) query is blank —
+    // deliberately the SAME trim this method already applies to `q` above, so
+    // a whitespace-only query behaves identically for highlighting as it
+    // already does for filtering (matches nothing extra, shows everything).
+    const rawQuery = query.trim();
+    this.navItems.forEach((item) => {
+      if (!rawQuery) {
+        item.labelSegments = undefined;
+        item.descriptionSegments = undefined;
+        return;
+      }
+      item.labelSegments = buildHighlightSegments(this.translate.instant(item.labelKey), rawQuery);
+      item.descriptionSegments = item.descriptionKey
+        ? buildHighlightSegments(this.translate.instant(item.descriptionKey), rawQuery)
+        : undefined;
+    });
+
     this.filteredNavSections = this.buildSections(this.filteredNavItems);
   }
 

@@ -83,7 +83,31 @@
             (click)="onNavLinkClick(); clearNavSearch()"
           >
             <span class="material-symbols-outlined">{{ item.icon }}</span>
-            <span>{{ item.labelKey | translate }}</span>
+            <!-- OBRS-900: label + (query-active only) matched description,
+                 with the query substring highlighted in both. Segments are
+                 precomputed in applyNavSearch() (see AdminNavItem comment) —
+                 undefined whenever no query is active, so this falls back to
+                 the plain label-only markup identical to before. -->
+            <span class="admin-nav-link-text">
+              <span class="admin-nav-link-label">
+                <ng-container *ngIf="item.labelSegments as labelSegs; else plainLabel">
+                  <span
+                    *ngFor="let seg of labelSegs"
+                    [class.admin-nav-search-highlight]="seg.match"
+                  >{{ seg.text }}</span>
+                </ng-container>
+                <ng-template #plainLabel>{{ item.labelKey | translate }}</ng-template>
+              </span>
+              <span
+                *ngIf="item.descriptionSegments as descriptionSegs"
+                class="admin-nav-link-description"
+              >
+                <span
+                  *ngFor="let seg of descriptionSegs"
+                  [class.admin-nav-search-highlight]="seg.match"
+                >{{ seg.text }}</span>
+              </span>
+            </span>
             <span
               *ngIf="item.showBadge && badgeCount > 0"
               class="admin-nav-badge"

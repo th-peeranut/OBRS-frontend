@@ -133,6 +133,26 @@ The User Management page (`/admin/users`) renders a **Locked badge** (`.admin-st
 
 An **Unlock action** button (`.admin-icon-btn` with a `lock_open` icon) appears in the Actions column only when `user.locked && hasAdminRole()`. Clicking it opens a confirmation modal; confirming fires `PUT /api/private/users/{id}/unlock` (ADMIN-only), applies an optimistic `store.mutate` to clear the flag immediately, then triggers a background `store.refresh()`. Success and error outcomes are shown via `AlertService`.
 
+### Admin sidebar menu search — matched description + highlight (OBRS-900)
+
+`AdminLayoutComponent`'s sidebar search (OBRS-290) matches a query against
+both a menu's label and its (translated) `descriptionKey`, but used to render
+only the label — a description-only match (e.g. searching "ค่าโดยสาร" only
+finding it inside the เส้นทาง/Routes page's subtitle) showed no evidence of
+*why* it matched, which reads as "search found nothing" to a real user. While
+a query is active, each result now also renders its translated description as
+a muted second line, with the matching substring highlighted in **both**
+lines. Segments are computed by the pure `buildHighlightSegments()`
+(`src/app/shared/lib/nav-search-highlight.ts`, case-insensitive
+`String#indexOf`-based, never regex/`[innerHTML]` — a regex- or
+HTML-injection-shaped query just degrades to "no match") and stored on the
+stable nav-item objects inside `applyNavSearch()`, never recomputed in the
+template. The highlight reuses the same `--accent-soft`/`--accent-text` token
+pair `.admin-nav-link.active` already uses (already proven AA in both themes
+by `admin-shell-chrome-contrast.spec.ts`) — see `docs/design-system.md` §12
+for the full writeup. Query empty → unchanged from before this card: label
+only, no second line.
+
 ### Shared sidebar shell (staff + admin)
 
 Both the `/admin/*` and `/staff/*` shells share one sidebar implemented by the abstract `SidebarLayoutBaseComponent` (`src/app/shared/sidebar-layout/`) that `AdminLayoutComponent` and `StaffLayoutComponent` extend — put any sidebar behaviour change there, not in one layout. On desktop (≥ 1101px) the sidebar rests as a 76px icon rail and **expands on hover or keyboard focus** as an overlay (it floats over content, no reflow), collapsing ~120ms after the pointer leaves. A **pin** button (`push_pin`) locks it open; while pinned the sidebar becomes a reserved 280px column (content reflows). The pin preference persists in `localStorage` under `obrs-sidebar-collapsed` (`'0'` = pinned open, `'1'`/absent = hover rail) — note this key's meaning was repurposed from the old click-to-collapse toggle. Mobile (≤ 1100px) is unchanged: a hamburger off-canvas drawer, no hover/rail behaviour, pin hidden. See `docs/adr/0005-shared-sidebar-base-hover-expand.md`.
