@@ -28,4 +28,23 @@ export class RouteListTableComponent {
   protected statusClass(status: string): string {
     return statusClassValue(status);
   }
+
+  // Whole-row click loads the route into the stop-sequence and fare panels
+  // (OBRS-891) — the Actions column is text-right, so on a wide monitor the
+  // View button is a mouse trip to the far edge of the screen. Same guard
+  // idiom as BookingsPageComponent / UsabilityReportsPageComponent
+  // .onRowActivate: the row carries no role/keyboard handler (the View button
+  // is the accessible affordance), so ignore clicks on an interactive control
+  // in the row and clicks that end a text selection. Reuses the existing
+  // `view` output, so the parent needs no new wiring.
+  protected onRowActivate(route: RouteRow, event: MouseEvent): void {
+    const target = event.target as HTMLElement | null;
+    if (target?.closest('button, a, input, select, textarea')) {
+      return;
+    }
+    if (window.getSelection()?.toString()) {
+      return;
+    }
+    this.view.emit(route);
+  }
 }

@@ -33,8 +33,10 @@
         <ng-container *ngIf="!isLoading">
           <tr
             *ngFor="let route of routes; let i = index"
+            class="route-row"
             [class.zebra]="i % 2 === 1"
             [class.is-selected]="route.slug === selectedRouteSlug"
+            (click)="onRowActivate(route, $event)"
           >
             <td><code>{{ route.slug }}</code></td>
             <td>
