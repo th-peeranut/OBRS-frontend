@@ -2124,7 +2124,8 @@
     "CHANGE": "change data",
     "NO_RESULTS": "No schedules found for your search. Try a different date, route, or fewer passengers.",
     "NO_RETURN_RESULTS": "No return schedules found for your search. Try a different return date or fewer passengers.",
-    "ESTIMATE_KM_UNIT": "km"
+    "ESTIMATE_KM_UNIT": "km",
+    "RESTORED_UNAVAILABLE": "The trip you picked earlier is no longer available. Please choose another one."
   },
   "REVIEW_SCHEDULE_BOOKING": {
     "SUMMARY": {
