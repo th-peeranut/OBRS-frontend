@@ -861,47 +861,71 @@
 
 /* ── OBRS-290: sidebar menu search — filters nav by name + description ──
    All colors map to existing --admin-* / --accent-* tokens (theme-aware,
-   dark overrides inherited); no new hex. */
+   dark overrides inherited); no new hex.
+
+   OBRS-900: the border/background/focus-ring used to live on
+   `.admin-nav-search-input`, with the icon and clear (×) button absolutely
+   positioned against the WRAPPER (`.admin-nav-search`). The input's own
+   width was not guaranteed to equal the wrapper's — measured on the
+   reported screenshot, the input's right border sat ~16px inside the
+   wrapper's, so "6px from the wrapper's right edge" landed the × button
+   OUTSIDE the input's painted border.
+
+   Fixed structurally rather than nudging the offset: the box (border,
+   background, focus ring) now belongs to the WRAPPER, and the icon /
+   input / clear button are plain in-flow flex children of it. The input
+   itself paints no border/background of its own (`border: 0; background:
+   transparent`), so there is no second box for the button to escape from —
+   this holds regardless of the input's actual rendered width, the sidebar's
+   scrollbar, or any future padding change. */
 .admin-nav-search {
-  position: relative;
   display: flex;
   align-items: center;
+  gap: 6px;
   margin-bottom: 10px;
+  padding: 0 8px;
+  border-radius: 12px;
+  border: 1px solid var(--admin-outline);
+  background: var(--admin-surface);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Focus ring moves from the input's own :focus to the wrapper's
+   :focus-within, so it still appears the instant the (now borderless) input
+   is focused — same visual trigger as before, just anchored on the box that
+   actually owns the border now. */
+.admin-nav-search:focus-within {
+  border-color: var(--accent-text);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .admin-nav-search-icon {
-  position: absolute;
-  left: 10px;
+  flex: 0 0 auto;
+  display: inline-flex;
   font-size: 18px;
   color: var(--admin-muted);
   pointer-events: none;
 }
 
 .admin-nav-search-input {
-  width: 100%;
-  padding: 9px 32px 9px 34px;
-  border-radius: 12px;
-  border: 1px solid var(--admin-outline);
-  background: var(--admin-surface);
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+  padding: 9px 0;
+  border: 0;
+  background: transparent;
   color: var(--admin-text);
   font-size: 13px;
   font-weight: 500;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .admin-nav-search-input::placeholder {
   color: var(--admin-muted);
 }
 
-.admin-nav-search-input:focus {
-  border-color: var(--accent-text);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
 .admin-nav-search-clear {
-  position: absolute;
-  right: 6px;
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -919,6 +943,37 @@
 
 .admin-nav-search-clear:hover {
   color: var(--admin-text);
+}
+
+/* ── OBRS-900: matched-description line + highlighted substring ──
+   `.admin-nav-link-text` is the direct-child wrapper the collapsed-rail
+   media query below already hides via
+   `.admin-nav-link > span:not(.material-symbols-outlined):not(.admin-nav-badge)`
+   — no separate collapsed-rail rule needed, it is caught by the existing
+   selector exactly like the plain label span used to be. */
+.admin-nav-link-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.admin-nav-link-description {
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--admin-muted);
+}
+
+/* Same token pair as `.admin-nav-link.active`/`:hover` above (--accent-soft
+   fill + --accent-text foreground) — already proven AA in both themes by
+   admin-shell-chrome-contrast.spec.ts (OBRS-755), so reusing it here needs no
+   new measurement. */
+.admin-nav-search-highlight {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 3px;
+  padding: 0 1px;
+  font-weight: 700;
 }
 
 .admin-nav-empty {
