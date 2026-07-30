@@ -85,8 +85,14 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
   /** The current raw (origin,destination) id source — either the logged-in
    *  user's booking history (newest-first) or the anonymous localStorage cache.
    *  Kept so a later station-list emission can re-derive candidates without
-   *  re-fetching. */
-  private rawRecentRoutePairs: RecentRoutePair[] = [];
+   *  re-fetching.
+   *
+   *  `count` is optional because the two sources carry frequency differently:
+   *  the API source expresses it as REPEATED pairs (no count field), the
+   *  localStorage source as one entry with an explicit count. Both are valid
+   *  input to `deriveRecentRouteCandidates`, which tallies either shape
+   *  (OBRS-923). */
+  private rawRecentRoutePairs: (RecentRoutePair & { count?: number })[] = [];
 
   private destroy$ = new Subject<void>();
 
@@ -136,6 +142,10 @@ export class HomeBookingComponent implements OnInit, OnDestroy {
         this.rawRecentRoutePairs = loadRecentRoutesFromLocalStorage().map((entry) => ({
           originId: entry.originId,
           destinationId: entry.destinationId,
+          // Dropping `count` here would silently flatten the anonymous source to
+          // pure recency again — the entries are already deduped, so the count
+          // is the ONLY frequency signal that survives the write path.
+          count: entry.count,
         }));
         this.recomputeRecentRouteCandidates();
       }
