@@ -19,7 +19,10 @@ not neutral, it was a slow spend nobody was measuring.
 | credits per production deploy | **~15** | `105 credits ÷ 7 deploys`, Usage & billing → Credit usage breakdown |
 | share of all credits spent on builds | **105 of 108.9** | same screen — bandwidth 2.2 + web requests 1.7 are noise |
 | remaining | **191.1 / 300**, expires Aug 20 2026 | same screen |
-| pushes to `sit` this period | **6** in 10 days — 07-26, 07-28, 07-29, 07-30 ×3 | `gh api "repos/th-peeranut/OBRS-frontend/activity?ref=refs/heads/sit"` |
+| pushes to `sit` this period | **7** in 10 days — 07-26, 07-28, 07-29, 07-30 ×4 | `gh api "repos/th-peeranut/OBRS-frontend/activity?ref=refs/heads/sit"` |
+| production branch | **`sit`** | Site configuration → Build & deploy → Branches and deploy contexts |
+| branch deploys | **production branch only** — a push to `dev` never builds | same screen |
+| deploy previews | **any PR against the production branch** — a PR into `dev` costs nothing, a PR into `sit` builds | same screen |
 
 The two rates are the same number. 191.1 ÷ 15 ≈ **12 builds** across the 20 days left =
 0.6/day of allowance, against 0.6/day actually spent. There is no headroom, and
@@ -39,6 +42,11 @@ Re-run the census with
 The point is not those three cards; it is that the default was "promote because I
 finished something", and that default has a price list.
 
+Those ten commits did then reach SIT together, in one build — `sit` was fast-forwarded to
+`c2ef8efd` at 12:53Z and that deploy is the published one. Three cards, one build, which
+is the shape this ADR is asking for; the reason it is worth writing down is that it
+happened by luck of timing rather than by rule.
+
 **A build is not a publish, and the lock only stops the second one.** `Auto Publishing`
 has been locked on the `sit-obrs-frontend` site since 2026-07-19. Every one of the six
 pushes above still built — Netlify billed 7 production deploys — and none of them was
@@ -48,6 +56,20 @@ is to push less, not to unlock.
 
 The good half of the same fact: **publishing an already-built deploy costs no build
 credit.** A blocked verification whose build already exists is a click, not a promote.
+
+**Two other ways to pay for a build without pushing anything new.** Both are measured on
+this site, and neither is obvious from the deploys list alone:
+
+- **A re-deploy is a full-price build.** Commit `87bf208` has two production deploy rows —
+  Jul 29 11:44 and Jul 30 12:26, the second labelled `No deploy message` — and the push
+  activity above shows **no push at that second time**. Re-running a deploy of a commit
+  that has already been built produces the same artifact at the same price.
+- **A pull request into `sit` builds; a pull request into `dev` does not.** Deploy
+  previews are on for "any pull request against your production branch", and the
+  production branch is `sit`. This is why PR #87 ran exactly four checks, all of them
+  GitHub Actions — it targeted `dev`. Promote by fast-forwarding `sit`, which is the
+  existing practice; opening a PR into `sit` would pay for a preview *and* the production
+  deploy that follows the merge.
 
 ## Decision
 
@@ -98,17 +120,25 @@ bill. The SIT backend is on Koyeb and is likewise unaffected.
 Recorded explicitly because an ADR that blurs the two teaches the next reader to trust
 the wrong sentence.
 
-**Measured:** every number in the Context table; the six push timestamps; that
-`netlify.toml` contains no `ignore` command (read whole, at `ref=dev`); that PR #87 ran
-exactly four checks and all four are GitHub Actions, so **deploy previews are not
-running and PRs cost nothing**.
+**Measured:** every row of the Context table, including the three branch settings, which
+were read off Site configuration → Build & deploy on 2026-07-30; the push timestamps;
+that `netlify.toml` contains no `ignore` command (read whole, at `ref=dev`).
 
-**Inferred:** that the Netlify site builds from branch `sit`. The evidence is a count —
-7 deploys in 10 days while `dev` received dozens of pushes; had it built `dev` the
-number would be in the forties — plus a build command that ends
-`--configuration sit`. The site's Build & deploy → Branches setting has not been opened.
-If that setting ever says otherwise, this ADR's cost model is wrong and the whole thing
-needs re-deriving, not patching.
+**Nothing load-bearing is left inferred** — but the route here is worth keeping, because
+the first draft of this ADR reached the same conclusion the wrong way and one of its two
+claims was false.
+
+That draft inferred the production branch from a count (7 deploys in 10 days while `dev`
+took dozens of pushes) plus a build command ending `--configuration sit`, and it was
+right — `sit` it is. In the same breath it claimed **"deploy previews are not running"**,
+on the evidence that PR #87 ran four checks and all four were GitHub Actions. That claim
+was wrong. Previews are on; PR #87 simply targeted `dev`, and previews only fire against
+the production branch. A sample of one PR into `dev` licenses a statement about PRs into
+`dev` and nothing wider — and the difference is a build nobody budgeted for, on exactly
+the kind of PR a promote would use.
+
+Two inferences from the same screenshot, one right and one wrong, and no way to tell them
+apart without opening the screen. **If a number here drives a decision, read the setting.**
 
 ## What must not be done to reduce this cost
 
@@ -118,6 +148,11 @@ needs re-deriving, not patching.
 - **Do not turn off auto-build and have a person press `Deploy site`.** It is the
   strongest guarantee available and it moves the work onto a human queue, which this
   project has repeatedly decided against.
+- **Do not promote by opening a pull request into `sit`.** It looks like the safer,
+  more reviewable route and it doubles the bill — the preview build, then the production
+  deploy on merge. The review already happened on the PR into `dev`.
+- **Do not re-trigger a deploy to "make sure".** The artifact is already built and
+  published; the re-run costs a full build and changes nothing.
 - **Do not hardcode "15 credits" into a gate or an acceptance criterion.** It is a
   measurement with a date on it; a number frozen into a check decays into a false pass.
   Cite the screen and the command, as the Context table does.
