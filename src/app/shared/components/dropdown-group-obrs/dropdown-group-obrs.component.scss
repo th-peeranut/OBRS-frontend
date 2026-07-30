@@ -24,6 +24,15 @@
 
     font-size: $font-size-md;
     color: $text-black;
+
+    // The un-selected prompt must read as "nothing chosen yet", so it cannot be
+    // $text-black — but it is real content the user has to read, not decoration,
+    // so it cannot be a sub-AA grey either. $text-lightblack (#717581) is 4.60:1
+    // on white, the same token OBRS-811/OBRS-769 landed on for every muted
+    // foreground in the light theme after $text-lightgrey (2.78:1) was deleted.
+    &.is-placeholder {
+      color: $text-lightblack;
+    }
   }
 
   .arrow-icon {
@@ -230,6 +239,13 @@ button.disabled,
 
     .value-text {
       color: $dk-text;
+
+      // Same intent as the light rule: muted but readable. $dk-text-muted is the
+      // token already used for the panel's own search placeholder a few rules
+      // down, so the prompt reads identically in both places.
+      &.is-placeholder {
+        color: $dk-text-muted;
+      }
     }
   }
 
