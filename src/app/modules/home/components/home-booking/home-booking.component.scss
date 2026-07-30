@@ -53,6 +53,11 @@
   column-gap: $space-md;
   row-gap: $space-xs;
 
+  // Was Bootstrap's `mt-4` (1.5rem) in the template. Identical value, moved
+  // here by OBRS-928 only because that utility is `!important` and the rule
+  // below has to be able to win.
+  margin-top: $space-lg;
+
   .station-group {
     display: flex;
     align-items: center;
@@ -67,6 +72,21 @@
       margin-top: 30px;
     }
   }
+}
+
+// OBRS-928: when the quick-pick strip actually renders, pull the origin/
+// destination fields up tight against it — proximity is what tells the user the
+// pills and those two fields are the same job, and it is half the reason the
+// feature was undiscoverable from its old position at the top of the card.
+//
+// Keyed on `.has-routes` (a @HostBinding mirroring the strip's own *ngIf), NOT
+// on the host tag alone: with zero routes the host element still exists but
+// carries no class, so `.station-section` keeps its normal $space-lg rhythm and
+// an empty strip costs exactly zero layout — OBRS-575 AC#5 stays true.
+// A parent stylesheet cannot see inside the child's encapsulated DOM, which is
+// why the flag has to be on the host rather than read off the inner div.
+app-recent-routes-quick-pick.has-routes + .station-section {
+  margin-top: $space-xs;
 }
 
 // OBRS-185: the calendar icon + panel look now live in the shared

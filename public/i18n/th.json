@@ -2018,7 +2018,7 @@
       "SEARCH": "ค้นหา",
       "SEARCH_VALIDATION": "กรุณาเลือกต้นทาง ปลายทาง และผู้โดยสารอย่างน้อย 1 คน ก่อนค้นหา",
       "PASSENGER_MAX_HINT": "สูงสุด {{max}} คนต่อการจอง",
-      "RECENT_ROUTES_TITLE": "เส้นทางล่าสุด",
+      "RECENT_ROUTES_TITLE": "เส้นทางที่คุณเดินทางบ่อย — แตะเพื่อกรอกให้อัตโนมัติ",
       "RECENT_ROUTE_ARIA_LABEL": "จาก {{from}} ไป {{to}}"
     },
     "STATION": {
