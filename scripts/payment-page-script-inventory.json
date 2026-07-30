@@ -56,8 +56,13 @@
     "https://*.omise.co",
     "https://www.googletagmanager.com",
     "https://www.clarity.ms",
+    "https://scripts.clarity.ms",
+    "https://c.clarity.ms",
+    "https://c.bing.com",
     "https://*.google-analytics.com",
     "https://*.analytics.google.com",
     "https://*.clarity.ms"
-  ]
+  ],
+
+  "_obrs888_note": "scripts.clarity.ms, c.clarity.ms and c.bing.com are NOT named by any file in this repo, and that is the point: `origins` above lists what a loader's SOURCE names, which is why rule 4 could never have found these. www.clarity.ms/tag/<id> is a bootstrap that fetches scripts.clarity.ms/<ver>/clarity.js; c.clarity.ms/c.gif 302s to c.bing.com/c.gif. Measured on published SIT, OBRS-888. c.bing.com is load-bearing even though no violation report ever names it — CSP re-checks each redirect hop but reports the PRE-redirect URL, so allowing only c.clarity.ms fails under a real enforcing header while producing a report that points at c.clarity.ms. Verified with an enforcing header and a three-arm control, not read off the spec."
 }

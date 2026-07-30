@@ -120,6 +120,45 @@ function directiveOf(policy, name) {
   return '';
 }
 
+/**
+ * Origins reachable only as the TARGET of a redirect from another allowlisted origin.
+ *
+ * OBRS-888: `c.clarity.ms/c.gif` 302s to `c.bing.com/c.gif`. CSP re-checks every hop of a
+ * redirect, so allowing only the first host still blocks the fetch — measured under a real
+ * enforcing header, not read off the spec. The reason this needs a GATE rather than a
+ * comment is what the violation report says: CSP names the PRE-redirect URL, so a denial
+ * at hop 2 arrives as `img-src <- c.clarity.ms`, naming the host that IS allowed, and is
+ * byte-identical to a denial at hop 1. Anyone tidying this allowlist against the collector
+ * will conclude c.bing.com is unused. It is not unused; it is unreportable.
+ *
+ * Directional on purpose: source implies target, never the reverse, so dropping the vendor
+ * entirely stays a legal edit. Whole-token comparison, so `https://*.clarity.ms` in
+ * connect-src is not mistaken for the named beacon host.
+ */
+const REDIRECT_HOPS = [
+  { directive: 'img-src', from: 'https://c.clarity.ms', to: 'https://c.bing.com' },
+];
+
+function allowsOrigin(directive, origin) {
+  return directive.trim().split(/\s+/).includes(origin);
+}
+
+function orphanedRedirectSources(policy) {
+  const orphans = [];
+  for (const hop of REDIRECT_HOPS) {
+    const directive = directiveOf(policy, hop.directive);
+    if (allowsOrigin(directive, hop.from) && !allowsOrigin(directive, hop.to)) {
+      orphans.push(
+        `netlify.toml's ${hop.directive} allows ${hop.from} but not ${hop.to}, which it 302s to. ` +
+          'CSP re-checks every redirect hop, so the fetch fails anyway — and the violation report ' +
+          `names the PRE-redirect URL (${hop.from}), so draining the collector will never name ` +
+          `${hop.to}. Measured under an enforcing header in OBRS-888; do not delete it as unused.`
+      );
+    }
+  }
+  return orphans;
+}
+
 // -----------------------------------------------------------------------------------
 // Self-test — the gate's own must-catch / must-NOT-catch proof, run on every call.
 // -----------------------------------------------------------------------------------
@@ -161,6 +200,17 @@ const SELF_TEST_CASES = [
   ['srcOrigins', '', 'const NS = "http://www.w3.org/2000/svg";'],
   // A wildcard host is a legitimate thing to name and must round-trip verbatim.
   ['srcOrigins', 'https://*.clarity.ms', "const upload = 'https://*.clarity.ms';"],
+  // ---- OBRS-888 redirect pairs. must-catch: the exact edit the gate exists to stop —
+  // someone drains the violation log, sees c.bing.com nowhere in it, removes it as unused.
+  ['redirect', 1, "img-src 'self' https://c.clarity.ms"],
+  // must NOT catch: dropping the vendor outright takes both hosts and is a legal edit;
+  // the target alone is odd but is not this rule's business (source implies target, not
+  // the reverse); and a wildcard sibling must not be read as the named host, or the gate
+  // would demand an image origin inside connect-src, which fetches no images at all.
+  ['redirect', 0, "img-src 'self' https://c.clarity.ms https://c.bing.com"],
+  ['redirect', 0, "img-src 'self' data: blob:"],
+  ['redirect', 0, "img-src 'self' https://c.bing.com"],
+  ['redirect', 0, "connect-src 'self' https://*.clarity.ms"],
 ];
 
 function runSelfTest() {
@@ -170,6 +220,7 @@ function runSelfTest() {
     if (kind === 'html') actual = hasScriptTag(input);
     else if (kind === 'ts') actual = loadsScriptDynamically(input);
     else if (kind === 'srcOrigins') actual = [...httpsOriginsIn(input)].sort().join(',');
+    else if (kind === 'redirect') actual = orphanedRedirectSources(input).length;
     else actual = originsOf(input).size;
 
     if (actual !== expected) {
@@ -336,6 +387,9 @@ if (!cspMatch) {
         'needed again, add a BUILD-TIME hash step — a hand-copied hash silently breaks login the next ' +
         'time the block is edited.'
     );
+  }
+  for (const orphan of orphanedRedirectSources(policy)) {
+    problems.push(orphan);
   }
   if (!directiveOf(policy, 'report-uri').includes('/api/csp-report')) {
     problems.push(
