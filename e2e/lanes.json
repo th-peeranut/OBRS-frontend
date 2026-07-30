@@ -271,6 +271,12 @@
       "lane": "GATE",
       "config": "playwright.gate.config.ts",
       "why": "OBRS-907. Seeds a synthetic admin session (seedGateAdminSession, no live SIT/storageState) and hangs the one call it depends on -- GET .../private/notifications never resolves, via a route handler registered after the shell's own stub so it wins by Playwright's reverse-registration-order matching -- so NotificationInboxService.loading$ stays true and the notification-bell's first-load spinner never races to the empty state. Asserts prefers-reduced-motion via page.emulateMedia against the real compiled admin-theme.scss + loading-state.component.scss cascade, with a positive control (asserts the un-reduced case actually rotates first) before trusting the frozen-but-visible assertion."
+    },
+    {
+      "spec": "obrs-907-qa-parity-capture.spec.ts",
+      "lane": "CAPTURE",
+      "config": "playwright.obrs907qa.config.ts",
+      "why": "OBRS-907 parity evidence for all three migrated surfaces (ticket modal, notification panel, four admin-skeleton list pages) in both themes. Dumps the COMPUTED styles next to each screenshot -- the numbers are the evidence and the picture only corroborates them, because this card's one real regression (a 28px icon silently becoming 34px once it moved inside a child component) was invisible to 4334 green unit tests and would have been invisible to a screenshot glance too. Run once against a server built from the branch and once from a detached ee6f026d for the BEFORE side, same pattern as obrs-769-capture. Kept rather than deleted: OBRS-909/910 migrate ~28 further call sites and need the same before/after discipline."
     }
   ]
 }
