@@ -49,20 +49,37 @@
 # documented steady state is ZERO lines, which is where the maptiler entry above came
 # from too. Split by directive, and each one chosen from what the vendor does, not
 # guessed from the script URL:
-#   - `script-src` www.googletagmanager.com + www.clarity.ms — the two tags themselves,
-#     and the only two origins THIS repo's source names. Explicit hosts, not wildcards:
-#     script-src is the directive where a wildcard actually widens trust.
+#   - `script-src` www.googletagmanager.com + www.clarity.ms + scripts.clarity.ms — the
+#     two tags, and the host the second one REDIRECTS ITS WORK TO. Explicit hosts, not
+#     wildcards: script-src is the directive where a wildcard actually widens trust, and
+#     that stays true now that three names are needed instead of two.
 #   - `connect-src` *.google-analytics.com + *.analytics.google.com — gtag's hit
 #     endpoints, which are region-sharded (`region1.` and friends), so a bare host would
 #     be wrong for most visitors rather than for none. *.clarity.ms — Clarity uploads
-#     recordings to a subdomain it picks per session.
+#     recordings to a subdomain it picks per session; measured, that upload is
+#     `y.clarity.ms/collect` over XHR, so this wildcard is the entry carrying it.
 #   - `img-src` *.google-analytics.com — gtag falls back to an image beacon when
 #     sendBeacon and fetch are both unavailable. Cheap to allow, silent to omit.
-# ⚠️ This set is derived from vendor documentation, NOT from a drained violation log —
-# nothing was measured here, because no property ID was configured on SIT when it was
-# written. Draining it against a real consented booking is OBRS-867 AC-6, and it is a
-# hard prerequisite for OBRS-719 AC 5: a missing origin is invisible in Report-Only and
-# fatal the moment this becomes `Content-Security-Policy`.
+#     c.clarity.ms + c.bing.com — Clarity's cookie-sync beacon and the host it 302s to.
+#
+# OBRS-882 wrote the set above from vendor documentation and said so; OBRS-888 is what
+# happened when SIT finally published with the IDs configured and it could be MEASURED.
+# Two entries were wrong, each in a way reading the source could not catch:
+#   - `www.clarity.ms/tag/<id>` is a BOOTSTRAP LOADER. The code it runs comes from
+#     `scripts.clarity.ms/<ver>/clarity.js`, a host this repo's source never names — so
+#     no grep of the loader, and no rule comparing a loader to its inventory entry, could
+#     ever have produced it. Only a browser could.
+#   - `c.clarity.ms/c.gif` 302s to `c.bing.com/c.gif`, and CSP re-checks EVERY hop of a
+#     redirect. Allowing only the first host was measured under a real ENFORCING header
+#     and the image still failed. The trap is the report: CSP names the PRE-redirect URL,
+#     so a denial at hop 2 arrives as `img-src <- c.clarity.ms` — the host that IS
+#     allowed — byte-identical to a denial at hop 1. Do NOT delete `c.bing.com` because
+#     the collector never mentions it; the collector is structurally unable to mention
+#     it. scripts/check-payment-page-scripts.mjs now fails the build on that edit.
+# ⚠️ Still not a fully drained log: this covers `/` and `/login`. Draining the consented
+# booking→payment journey is OBRS-867 AC-6 and remains a hard prerequisite for
+# OBRS-719 AC 5 — a missing origin is invisible in Report-Only and fatal the moment this
+# becomes `Content-Security-Policy`.
 #
 # ⚠️ Do NOT rename this to the enforcing `Content-Security-Policy` here as a shortcut to
 # "we tested it". SIT and prod serve different origins, so enforceable on SIT is not
@@ -74,7 +91,7 @@
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com https://www.googletagmanager.com https://www.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com https://*.google-analytics.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' https://accounts.google.com https://maps.googleapis.com https://cdn.omise.co https://*.gstatic.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.ggpht.com https://api.maptiler.com https://*.google-analytics.com https://c.clarity.ms https://c.bing.com; connect-src 'self' https://sit-obrs-backend.koyeb.app https://api.omise.co https://vault.omise.co https://maps.googleapis.com https://accounts.google.com wss://sit-obrs-backend.koyeb.app https://*.google-analytics.com https://*.analytics.google.com https://*.clarity.ms; frame-src https://accounts.google.com https://*.omise.co; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; report-uri https://sit-obrs-backend.koyeb.app/api/csp-report"
 
 # Strict-Transport-Security is deliberately NOT set here. SIT is a *.netlify.app
 # subdomain and an HSTS header from us binds that host for a year; prod sets it in the
