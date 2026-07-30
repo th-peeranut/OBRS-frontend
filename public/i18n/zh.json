@@ -509,6 +509,7 @@
       "PREVIOUS": "上一页",
       "NEXT": "下一页",
       "PAGINATION_NAV_ARIA": "分页",
+      "PAGINATION_STATUS_ARIA": "第 {{current}} 页，共 {{total}} 页",
       "ENTRIES": "条",
       "SHOWING": "显示",
       "OF": "/",
@@ -1094,6 +1095,7 @@
       "TABLE_TITLE": "所有报告",
       "FILTER_STATUS": "按状态筛选",
       "SEARCH_PLACEHOLDER": "搜索报告...",
+      "NEW_REPORTS_PILL": "{{count}} 条新报告 — 刷新",
       "COL": {
         "ID": "编号",
         "CATEGORY": "类别",

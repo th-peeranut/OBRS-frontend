@@ -298,7 +298,7 @@ describe('usability-reports-page.mappers', () => {
 
   describe('toUsabilityReportDetailFallback', () => {
     const summary: UsabilityReportSummary = {
-      id: 'rep-1',
+      id: 1,
       category: 'bug',
       status: 'new',
       userId: 42,
@@ -311,7 +311,7 @@ describe('usability-reports-page.mappers', () => {
 
     it('carries id/category/status/userId/imageCount/createdAt straight through', () => {
       const detail = toUsabilityReportDetailFallback(summary);
-      expect(detail.id).toBe('rep-1');
+      expect(detail.id).toBe(1);
       expect(detail.category).toBe('bug');
       expect(detail.status).toBe('new');
       expect(detail.userId).toBe(42);
@@ -359,7 +359,7 @@ describe('usability-reports-page.mappers', () => {
   describe('updateRowStatus', () => {
     const content: UsabilityReportSummary[] = [
       {
-        id: 'rep-1',
+        id: 1,
         category: 'bug',
         status: 'new',
         userId: 1,
@@ -370,7 +370,7 @@ describe('usability-reports-page.mappers', () => {
         duplicateCount: 0,
       },
       {
-        id: 'rep-2',
+        id: 2,
         category: 'suggestion',
         status: 'new',
         userId: 2,
@@ -383,19 +383,19 @@ describe('usability-reports-page.mappers', () => {
     ];
 
     it('replaces only the matching row status, leaving other rows untouched', () => {
-      const result = updateRowStatus(content, 'rep-1', 'in_review');
-      expect(result.find((r) => r.id === 'rep-1')?.status).toBe('in_review');
-      expect(result.find((r) => r.id === 'rep-2')?.status).toBe('new');
+      const result = updateRowStatus(content, 1, 'in_review');
+      expect(result.find((r) => r.id === 1)?.status).toBe('in_review');
+      expect(result.find((r) => r.id === 2)?.status).toBe('new');
     });
 
     it('does not mutate the input array or its elements', () => {
       const original = content.map((r) => ({ ...r }));
-      updateRowStatus(content, 'rep-1', 'resolved');
+      updateRowStatus(content, 1, 'resolved');
       expect(content).toEqual(original);
     });
 
     it('is a no-op (new array, same statuses) when the id does not match any row', () => {
-      const result = updateRowStatus(content, 'does-not-exist', 'resolved');
+      const result = updateRowStatus(content, 999, 'resolved');
       expect(result).not.toBe(content);
       expect(result.map((r) => r.status)).toEqual(['new', 'new']);
     });
@@ -405,7 +405,7 @@ describe('usability-reports-page.mappers', () => {
   describe('removeRow', () => {
     const content: UsabilityReportSummary[] = [
       {
-        id: 'rep-1',
+        id: 1,
         category: 'bug',
         status: 'new',
         userId: 1,
@@ -416,7 +416,7 @@ describe('usability-reports-page.mappers', () => {
         duplicateCount: 0,
       },
       {
-        id: 'rep-2',
+        id: 2,
         category: 'suggestion',
         status: 'new',
         userId: 2,
@@ -429,20 +429,20 @@ describe('usability-reports-page.mappers', () => {
     ];
 
     it('removes only the matching row, leaving other rows untouched', () => {
-      const result = removeRow(content, 'rep-1');
-      expect(result.map((r) => r.id)).toEqual(['rep-2']);
+      const result = removeRow(content, 1);
+      expect(result.map((r) => r.id)).toEqual([2]);
     });
 
     it('does not mutate the input array', () => {
       const original = content.map((r) => ({ ...r }));
-      removeRow(content, 'rep-1');
+      removeRow(content, 1);
       expect(content).toEqual(original);
     });
 
     it('is a no-op (new array, same rows) when the id does not match any row', () => {
-      const result = removeRow(content, 'does-not-exist');
+      const result = removeRow(content, 999);
       expect(result).not.toBe(content);
-      expect(result.map((r) => r.id)).toEqual(['rep-1', 'rep-2']);
+      expect(result.map((r) => r.id)).toEqual([1, 2]);
     });
   });
 
