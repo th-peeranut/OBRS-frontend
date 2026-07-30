@@ -458,7 +458,12 @@
       "CASH_ONLINE_RECONCILIATION": "现金/线上对账",
       "EXPENSES": "费用",
       "MANUAL_REFUNDS": "人工退款",
-      "CASH_REFUND_APPROVALS": "现金退款审批"
+      "CASH_REFUND_APPROVALS": "现金退款审批",
+      "REVENUE_ANALYTICS": "收入分析",
+      "BOOKING_TREND": "预订趋势",
+      "ROUTE_PERFORMANCE": "路线绩效",
+      "CUSTOMER_BEHAVIOR": "客户行为",
+      "OPS_EFFICIENCY": "运营效率"
     },
     "NAV": {
       "SEARCH_PLACEHOLDER": "搜索菜单...",
@@ -1594,6 +1599,88 @@
         "AMOUNT": "应退现金",
         "REQUESTED_BY": "申请人",
         "REQUESTED_AT": "申请时间"
+      }
+    },
+    "REVENUE_ANALYTICS": {
+      "SUBTITLE": "指定日期范围内的净收入总额、趋势及与上一周期的对比。",
+      "LOAD_FAILED": "无法加载收入分析，请重试。",
+      "TREND_TITLE": "每日净收入",
+      "VS_PREV": "对比上一周期",
+      "CHANGE_VS_PREV": "{{pct}} 对比上一周期",
+      "CHANGE_NA": "无上一周期数据",
+      "TILE": {
+        "NET": "净收入",
+        "PAID": "已收款",
+        "REFUNDED": "已退款"
+      }
+    },
+    "BOOKING_TREND": {
+      "SUBTITLE": "每日预订量、按星期分布以及与上一周期的对比。",
+      "LOAD_FAILED": "无法加载预订趋势，请重试。",
+      "SERIES_TITLE": "每日预订",
+      "DOW_TITLE": "按星期的预订量",
+      "VS_PREV": "对比上一周期",
+      "CHANGE_VS_PREV": "{{pct}} 对比上一周期",
+      "CHANGE_NA": "无上一周期数据",
+      "TILE": {
+        "TOTAL": "预订总数",
+        "PEAK": "高峰日",
+        "DAYS": "范围内天数"
+      }
+    },
+    "ROUTE_PERFORMANCE": {
+      "SUBTITLE": "指定日期范围内各路线的发车数、售票数和净收入。",
+      "LOAD_FAILED": "无法加载路线绩效，请重试。",
+      "TABLE_TITLE": "按收入排序的路线",
+      "BASIS": "按发车日期",
+      "TILE": {
+        "REVENUE": "净收入",
+        "TICKETS": "售票数",
+        "ROUTES": "路线数"
+      },
+      "COL": {
+        "ROUTE": "路线",
+        "DEPARTURES": "发车数",
+        "TICKETS": "票数",
+        "REVENUE": "净收入",
+        "SHARE": "收入占比"
+      }
+    },
+    "CUSTOMER_BEHAVIOR": {
+      "SUBTITLE": "汇总预订行为——客户、复购率和渠道构成。",
+      "LOAD_FAILED": "无法加载客户行为，请重试。",
+      "CHANNEL_TITLE": "按渠道的预订",
+      "REPEAT_TITLE": "复购频率",
+      "REPEAT_BOOKINGS": "{{count}} 次预订",
+      "TILE": {
+        "CUSTOMERS": "客户数",
+        "RETURNING": "复购率",
+        "BOOKINGS": "预订总数",
+        "AVG": "人均预订"
+      },
+      "CHANNEL": {
+        "online": "在线",
+        "walk_in": "现场",
+        "agent": "代理",
+        "kiosk": "自助机"
+      }
+    },
+    "OPS_EFFICIENCY": {
+      "SUBTITLE": "按车型的发车完成率与座位使用率。",
+      "LOAD_FAILED": "无法加载运营效率，请重试。",
+      "TABLE_TITLE": "按车型",
+      "BASIS": "按发车日期",
+      "TILE": {
+        "DEPARTURES": "发车数",
+        "COMPLETION": "完成率",
+        "FILL": "座位使用率",
+        "SEATS": "售座 / 容量"
+      },
+      "COL": {
+        "TYPE": "车型",
+        "DEPARTURES": "发车数",
+        "SEATS": "售座 / 容量",
+        "FILL": "使用率"
       }
     }
   },

@@ -19,6 +19,11 @@ import {
   UsabilityReportStatus,
 } from '../../shared/interfaces/usability-report.interface';
 import { ReportsSummaryDto } from '../../shared/interfaces/reports-summary.interface';
+import { RevenueAnalyticsDto } from '../../shared/interfaces/revenue-analytics.interface';
+import { BookingTrendDto } from '../../shared/interfaces/booking-trend.interface';
+import { RoutePerformanceDto } from '../../shared/interfaces/route-performance.interface';
+import { CustomerBehaviorDto } from '../../shared/interfaces/customer-behavior.interface';
+import { OpsEfficiencyDto } from '../../shared/interfaces/ops-efficiency.interface';
 import { EodSalesReportDto } from '../../shared/interfaces/eod-sales-report.interface';
 import { RefundVoidReportDto } from '../../shared/interfaces/refund-void-report.interface';
 import { CashOnlineReconciliationReportDto } from '../../shared/interfaces/cash-online-reconciliation-report.interface';
@@ -1591,6 +1596,53 @@ export class AdminApiService {
     const params = new HttpParams().set('from', from).set('to', to);
     return this.getRequest<ReportsSummaryDto>(
       `${this.baseUrl}/private/admin/reports/summary`,
+      params
+    );
+  }
+
+  // OBRS-151: deep revenue analytics — totals + daily net-revenue trend +
+  // period-over-period. Same [from, to] contract as getReportsSummary.
+  getRevenueAnalytics(from: string, to: string): Observable<ResponseAPI<RevenueAnalyticsDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RevenueAnalyticsDto>(
+      `${this.baseUrl}/private/admin/reports/revenue-analytics`,
+      params
+    );
+  }
+
+  // OBRS-152: booking-volume trend — daily series + 7-day moving average +
+  // day-of-week seasonality + period-over-period + peak.
+  getBookingTrend(from: string, to: string): Observable<ResponseAPI<BookingTrendDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<BookingTrendDto>(
+      `${this.baseUrl}/private/admin/reports/booking-trend`,
+      params
+    );
+  }
+
+  // OBRS-153: route performance — per-route departures + tickets + net revenue.
+  getRoutePerformance(from: string, to: string): Observable<ResponseAPI<RoutePerformanceDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<RoutePerformanceDto>(
+      `${this.baseUrl}/private/admin/reports/route-performance`,
+      params
+    );
+  }
+
+  // OBRS-154: customer behavior (aggregate-only).
+  getCustomerBehavior(from: string, to: string): Observable<ResponseAPI<CustomerBehaviorDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<CustomerBehaviorDto>(
+      `${this.baseUrl}/private/admin/reports/customer-behavior`,
+      params
+    );
+  }
+
+  // OBRS-155: operational efficiency (departures + seat fill).
+  getOpsEfficiency(from: string, to: string): Observable<ResponseAPI<OpsEfficiencyDto>> {
+    const params = new HttpParams().set('from', from).set('to', to);
+    return this.getRequest<OpsEfficiencyDto>(
+      `${this.baseUrl}/private/admin/reports/ops-efficiency`,
       params
     );
   }

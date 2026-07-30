@@ -36,6 +36,11 @@ import { PromotionListTableComponent } from './pages/promotions/promotion-list-t
 import { PromotionFormModalComponent } from './pages/promotions/promotion-form-modal/promotion-form-modal.component';
 import { PromotionDeactivateModalComponent } from './pages/promotions/promotion-deactivate-modal/promotion-deactivate-modal.component';
 import { ReportsPageComponent } from './pages/reports/reports-page.component';
+import { RevenueAnalyticsPageComponent } from './pages/revenue-analytics/revenue-analytics-page.component';
+import { BookingTrendPageComponent } from './pages/booking-trend/booking-trend-page.component';
+import { RoutePerformancePageComponent } from './pages/route-performance/route-performance-page.component';
+import { CustomerBehaviorPageComponent } from './pages/customer-behavior/customer-behavior-page.component';
+import { OpsEfficiencyPageComponent } from './pages/ops-efficiency/ops-efficiency-page.component';
 import { EodSalesReportPageComponent } from './pages/eod-sales-report/eod-sales-report-page.component';
 import { RefundVoidReportPageComponent } from './pages/refund-void-report/refund-void-report-page.component';
 import { CashOnlineReconciliationReportPageComponent } from './pages/cash-online-reconciliation-report/cash-online-reconciliation-report-page.component';
@@ -165,6 +170,56 @@ export const adminRoutes: Routes = [
         data: {
           titleKey: 'ADMIN.PAGES.REPORTS',
           subtitleKey: 'ADMIN.REPORTS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'revenue-analytics',
+        component: RevenueAnalyticsPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.REVENUE_ANALYTICS',
+          subtitleKey: 'ADMIN.REVENUE_ANALYTICS.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'booking-trend',
+        component: BookingTrendPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.BOOKING_TREND',
+          subtitleKey: 'ADMIN.BOOKING_TREND.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'route-performance',
+        component: RoutePerformancePageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.ROUTE_PERFORMANCE',
+          subtitleKey: 'ADMIN.ROUTE_PERFORMANCE.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'customer-behavior',
+        component: CustomerBehaviorPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.CUSTOMER_BEHAVIOR',
+          subtitleKey: 'ADMIN.CUSTOMER_BEHAVIOR.SUBTITLE',
+          requiredRoles: ['admin'],
+        },
+      },
+      {
+        path: 'ops-efficiency',
+        component: OpsEfficiencyPageComponent,
+        canActivate: [AuthGuard],
+        data: {
+          titleKey: 'ADMIN.PAGES.OPS_EFFICIENCY',
+          subtitleKey: 'ADMIN.OPS_EFFICIENCY.SUBTITLE',
           requiredRoles: ['admin'],
         },
       },
@@ -348,6 +403,11 @@ export const adminRoutes: Routes = [
     PromotionFormModalComponent,
     PromotionDeactivateModalComponent,
     ReportsPageComponent,
+    RevenueAnalyticsPageComponent,
+    BookingTrendPageComponent,
+    RoutePerformancePageComponent,
+    CustomerBehaviorPageComponent,
+    OpsEfficiencyPageComponent,
     EodSalesReportPageComponent,
     RefundVoidReportPageComponent,
     CashOnlineReconciliationReportPageComponent,

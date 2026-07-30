@@ -1,0 +1,8 @@
+// OBRS-154 — channel split + repeat-frequency bars.
+.cb-list { display: flex; flex-direction: column; gap: 0.75rem; }
+.cb-row { display: flex; align-items: center; gap: 0.75rem; }
+.cb-label { flex: 0 0 130px; color: var(--admin-text); font-size: 0.85rem; }
+.cb-track { flex: 1; height: 10px; border-radius: 5px; background: var(--admin-surface-soft); overflow: hidden; }
+.cb-bar { height: 100%; border-radius: 5px; background: var(--admin-inreview-text); transition: width 0.2s ease; }
+.cb-bar--repeat { background: var(--admin-success-text); }
+.cb-value { flex: 0 0 130px; text-align: right; color: var(--admin-muted); font-size: 0.8rem; }
