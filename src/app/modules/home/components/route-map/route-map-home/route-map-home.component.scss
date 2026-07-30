@@ -85,9 +85,12 @@
 }
 
 // ---- Spinner -> brand cyan (overrides PrimeNG color-cycle keyframe) ----
-:host ::ng-deep .p-progress-spinner-circle {
+:host ::ng-deep .p-progressspinner-circle {
   stroke: $primary-blue !important;
-  animation: p-progress-spinner-dash 1.5s ease-in-out infinite !important;
+  // OBRS-915: the keyframe name lost its hyphens too (v19 spells the whole
+  // component `progressspinner`). Naming a keyframe that no longer exists is
+  // not an error anywhere - the spinner would just stop animating.
+  animation: p-progressspinner-dash 1.5s ease-in-out infinite !important;
 }
 
 // ---- Direction selector (p-selectButton) → brand pill toggle ----
@@ -99,7 +102,12 @@
   border-radius: $radius-pill;
 }
 
-:host ::ng-deep .p-selectbutton .p-button {
+// OBRS-915: v19 renders SelectButton's children as <p-togglebutton>, not
+// <p-button>, and marks the picked one `.p-togglebutton-checked` rather than
+// `.p-highlight`. Both halves of the old selector changed, so keeping either
+// one would have left these rules matching nothing - silently, with a green
+// build and green tests.
+:host ::ng-deep .p-selectbutton .p-togglebutton {
   border: 0 !important;
   background: transparent !important;
   color: $text-softblack !important;
@@ -108,19 +116,19 @@
   padding: 0.5rem 1.1rem;
 }
 
-:host ::ng-deep .p-selectbutton .p-button.p-highlight {
+:host ::ng-deep .p-selectbutton .p-togglebutton.p-togglebutton-checked {
   background: $primary-blue !important;
   color: $text-white !important;
 }
 
 // ---- TabView -> brand styling with clearer active state and comfortable spacing ----
-:host ::ng-deep .p-tabview-nav-container,
-:host ::ng-deep .p-tabview-nav-content {
+:host ::ng-deep .p-tablist,
+:host ::ng-deep .p-tablist-content {
   width: 100%;
   padding: 0;
 }
 
-:host ::ng-deep .p-tabview-nav {
+:host ::ng-deep .p-tablist-tab-list {
   display: flex;
   width: 100%;
   margin: 0;
@@ -131,13 +139,16 @@
 }
 
 // Pickup/dropoff tabs each take exactly 50% width; mobile with 3 tabs gets equal thirds.
-// The ink-bar is excluded because PrimeNG positions it.
-:host ::ng-deep .p-tabview-nav li:not(.p-tabview-ink-bar) {
+// OBRS-915: v19 has no <li> wrapper - <p-tab> IS the list item and carries
+// `.p-tab` itself, so the old `li` / `li .p-tab` pair collapses into one
+// selector. The ink-bar exclusion goes with it: `.p-tablist-active-bar` is not
+// a sibling of the tabs any more.
+:host ::ng-deep .p-tablist-tab-list .p-tab {
   flex: 1 1 0;
   margin: 0;
 }
 
-:host ::ng-deep .p-tabview-nav li .p-tabview-nav-link {
+:host ::ng-deep .p-tablist-tab-list .p-tab {
   width: 100%;
   justify-content: center;
   color: $text-lightblack;
@@ -171,23 +182,23 @@
    where retinting would have been visible AND would have broken contrast
    ($secondary-blue on the 22%-alpha wash: 4.90:1 today, 4.16:1 retinted, under
    AA). See the tint-layer block in styles/variables.scss. */
-:host ::ng-deep .p-tabview-nav li:not(.p-highlight) .p-tabview-nav-link:hover {
+:host ::ng-deep .p-tablist-tab-list .p-tab:not(.p-tab-active):hover {
   color: $text-primary;
   background: rgba(75, 194, 247, 0.08);
 }
 
-:host ::ng-deep .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+:host ::ng-deep .p-tablist-tab-list .p-tab.p-tab-active {
   color: $text-primary;
   background: $secondary-lightgrey;
 }
 
-:host ::ng-deep .p-tabview-ink-bar {
+:host ::ng-deep .p-tablist-active-bar {
   background-color: $primary-blue;
   height: 3px;
   border-radius: 3px 3px 0 0;
 }
 
-:host ::ng-deep .p-tabview-panels {
+:host ::ng-deep .p-tabpanels {
   padding: 1rem 0 0;
   background: transparent;
 }

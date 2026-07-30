@@ -346,27 +346,27 @@
 /* QA follow-up fix (2026-07-14): the block above only re-declares the custom
    PROPERTIES — it never set an actual background/color/border on the PrimeNG
    panel ROOT itself, so the chrome kept PrimeNG's own hardcoded theme rule
-   (`.p-overlaypanel { background: #ffffff; color: #4b5563; border: 0 none; }`,
+   (`.p-popover { background: #ffffff; color: #4b5563; border: 0 none; }`,
    `lara-light-blue/theme.css`) regardless of our tokens: white card chrome in
    dark mode behind now-correctly-themed light-gray header text — low
-   contrast, reads as broken. `.p-overlaypanel.notification-inbox-overlay`
-   (two classes, specificity 0-2-0) beats the plain `.p-overlaypanel` theme
+   contrast, reads as broken. `.p-popover.notification-inbox-overlay`
+   (two classes, specificity 0-2-0) beats the plain `.p-popover` theme
    rule (0-1-0) without `!important`. Also re-themes the little pointer arrow
-   (`.p-overlaypanel:after`/`:before`, hardcoded `#ffffff`/`#f2f2f2` in the
+   (`.p-popover:after`/`:before`, hardcoded `#ffffff`/`#f2f2f2` in the
    same theme file) so it matches the card in both modes. */
-.p-overlaypanel.notification-inbox-overlay {
+.p-popover.notification-inbox-overlay {
   background: var(--admin-surface-card);
   color: var(--admin-text);
   border: 1px solid var(--admin-outline);
 }
 
-.p-overlaypanel.notification-inbox-overlay:after,
-.p-overlaypanel.notification-inbox-overlay:before {
+.p-popover.notification-inbox-overlay:after,
+.p-popover.notification-inbox-overlay:before {
   border-bottom-color: var(--admin-surface-card);
 }
 
-.p-overlaypanel.notification-inbox-overlay.p-overlaypanel-flipped:after,
-.p-overlaypanel.notification-inbox-overlay.p-overlaypanel-flipped:before {
+.p-popover.notification-inbox-overlay.p-popover-flipped:after,
+.p-popover.notification-inbox-overlay.p-popover-flipped:before {
   border-top-color: var(--admin-surface-card);
 }
 
