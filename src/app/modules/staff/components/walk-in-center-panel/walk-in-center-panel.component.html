@@ -6,11 +6,27 @@
     <p class="mb-0 mt-2 small">{{ 'STAFF.SELL.CENTER_EMPTY' | translate }}</p>
   </div>
 
-  <!-- Trip selected: show tabs -->
-  <p-tabView *ngIf="selectedTrip" styleClass="center-tabview" (onChange)="onTabChange($event.index)">
+  <!-- Trip selected: show tabs.
+       OBRS-915: TabView -> Tabs. Three changes that are not cosmetic:
+       - `(onChange)="onTabChange($event.index)"` becomes `(valueChange)`, which
+         emits the tab's `value` directly rather than an event object. The values
+         here are the same 0/1/2 the parent already keys off
+         (TRIP_DETAILS_TAB_INDEX), so onTabChange's contract is unchanged.
+       - `p-tabs` has no `styleClass` input, so `.center-tabview` moves to a
+         plain `class` on the host - same element, same selector.
+       - headers move out of `[header]` on the panel into `<p-tab>` elements. -->
+  <p-tabs *ngIf="selectedTrip" class="center-tabview" [value]="0" (valueChange)="onTabChange(+$event)">
+
+    <p-tablist>
+      <p-tab [value]="0">{{ 'STAFF.SELL.TAB_TICKET_SALES' | translate }}</p-tab>
+      <p-tab [value]="1">{{ 'STAFF.SELL.TAB_TRIP_DETAILS' | translate }}</p-tab>
+      <p-tab [value]="2">{{ 'STAFF.SELL.TAB_BOARDING' | translate }}</p-tab>
+    </p-tablist>
+
+    <p-tabpanels>
 
     <!-- Tab 1: Ticket Sales (seat map) -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_TICKET_SALES' | translate">
+    <p-tabpanel [value]="0">
       <!-- From/to stop selection lists, above passenger type tiles -->
       <div class="row g-2 mb-3" *ngIf="pickupOptions.length > 0 || isLoadingSegments">
         <!-- From / pickup -->
@@ -206,10 +222,10 @@
           </app-passenger-seat-bus>
         </ng-container>
       </ng-container>
-    </p-tabPanel>
+    </p-tabpanel>
 
     <!-- Tab 2: Trip Details — fields are directly editable (no read-only gate). -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_TRIP_DETAILS' | translate">
+    <p-tabpanel [value]="1">
 
       <!-- Loading bar while fetching form data -->
       <div *ngIf="isEditLoading" class="mb-2">
@@ -232,16 +248,17 @@
         (cancel)="revertChanges()">
       </app-trip-details-edit-form>
 
-    </p-tabPanel>
+    </p-tabpanel>
 
     <!-- Tab 3: Boarding (OBRS-130) — the shared boarding-list component is
          self-sufficient (owns its own store + API calls); this tab only
-         needs to pass the selected trip's scheduleId. The p-tabView is
+         needs to pass the selected trip's scheduleId. The p-tabs is
          already *ngIf="selectedTrip"-gated by the parent, so no extra
          empty-state is needed here. -->
-    <p-tabPanel [header]="'STAFF.SELL.TAB_BOARDING' | translate">
+    <p-tabpanel [value]="2">
       <app-boarding-list [scheduleId]="selectedTrip!.scheduleId"></app-boarding-list>
-    </p-tabPanel>
+    </p-tabpanel>
 
-  </p-tabView>
+    </p-tabpanels>
+  </p-tabs>
 </div>

@@ -2,7 +2,7 @@ import { inject, NgModule } from '@angular/core';
 import { Router, RouterModule, Routes, UrlTree } from '@angular/router';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SelectModule } from 'primeng/select';
-import { TabViewModule } from 'primeng/tabview';
+import { TabsModule } from 'primeng/tabs';
 import { BadgeModule } from 'primeng/badge';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
 import { InputNumberModule } from 'primeng/inputnumber';
@@ -263,7 +263,7 @@ export const staffRoutes: Routes = [
     RouterModule.forChild(staffRoutes),
     DatePickerModule,
     SelectModule,
-    TabViewModule,
+    TabsModule,
     BadgeModule,
     ProgressSpinnerModule,
     InputNumberModule,
