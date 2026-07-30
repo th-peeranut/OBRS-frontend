@@ -139,6 +139,25 @@ jobs:
       - name: payment-page script inventory gate
         run: npm run test:payment-scripts
 
+      # Another pure-node gate (OBRS-907; no ordinal claimed here on purpose -- the
+      # existing "Ninth" label below, OBRS-536/test:local-env, predates this step and
+      # sits later in the file, so numbering this one "Ninth" too or "Tenth" out of
+      # physical order would just be a stale number waiting to happen).
+      #
+      # 14+ stylesheets each hand-rolled their own rotate/shimmer @keyframes for a
+      # loading spinner/skeleton before this card introduced ONE shared primitive
+      # (<app-loading-state> + src/styles/_loading.scss). Nothing stopped a 15th the
+      # same way the first 14 happened -- one component at a time, each addition
+      # looking small and local. This gate flags any NEW rotate- or shimmer-shaped
+      # @keyframes outside a checked-in debt register of the pre-existing duplicates
+      # (owned by OBRS-909/910), and fails just as hard on a register row that's gone
+      # stale (migrated but not deleted from the list) -- same both-directions
+      # discipline as e2e/support/dark-override-allow.ts. Self-tests its own
+      # must-catch/must-NOT-catch fixtures first. Pure file reads -- costs no extra
+      # runner minutes.
+      - name: loading-primitive duplication gate
+        run: npm run test:loading-primitives
+
       # OBRS-602. The Playwright suite had grown to 223 cases nobody had ever seen pass
       # together, because playwright.config.ts swept the whole e2e/ directory while nine
       # specs were written for environments it does not provide. Lane membership is now

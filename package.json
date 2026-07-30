@@ -31,6 +31,7 @@
     "test:proto-key": "node scripts/check-prototype-key-lookup.mjs",
     "test:no-card-inputs": "node scripts/check-no-card-data-inputs.mjs",
     "test:payment-scripts": "node scripts/check-payment-page-scripts.mjs",
+    "test:loading-primitives": "node scripts/check-loading-primitives.mjs",
     "test:e2e-lanes": "node scripts/check-e2e-lanes.mjs",
     "pree2e": "node scripts/check-local-env.mjs --require-local",
     "e2e": "playwright test",
