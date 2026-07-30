@@ -24,19 +24,23 @@
  * modal uses) is entirely self-contained in the same file, behind the exact
  * same `@media` block, so this is the higher-value site to prove live.
  *
- * Hermetic: seeds a synthetic admin session (no live SIT / storageState) and
- * intercepts the one call that matters — `GET .../private/notifications` —
+ * Hermetic: seeds a synthetic staff/admin session (no live SIT / storageState)
+ * and intercepts the one call that matters — `GET .../private/notifications` —
  * with a handler that never resolves, so `NotificationInboxService.loading$`
  * stays `true` and the panel's first-load spinner never races to the empty
  * state. Lane = GATE (see e2e/lanes.json + playwright.gate.config.ts).
+ *
+ * The bell is mounted from `/staff/sell`, not `/admin` — see the comment at
+ * the `page.goto` below for why, and for how that was measured.
  */
 
 import { test, expect } from '@playwright/test';
-import { seedGateAdminSession } from '../support/gate-admin-session';
+import { seedGateAdminSession, stubWalkInSellShell } from '../support/gate-admin-session';
 
 test.describe('OBRS-907: <app-loading-state> respects prefers-reduced-motion', () => {
   test.beforeEach(async ({ page }) => {
     await seedGateAdminSession(page);
+    await stubWalkInSellShell(page);
 
     // Overrides stubGateAdminShell's own (fast, empty) notifications stub —
     // Playwright matches routes in reverse registration order, so this,
@@ -48,14 +52,25 @@ test.describe('OBRS-907: <app-loading-state> respects prefers-reduced-motion', (
     );
   });
 
-  test('the admin notification-bell spinner rotates by default, freezes under reduced motion, and stays visible', async ({
+  test('the notification-bell spinner rotates by default, freezes under reduced motion, and stays visible', async ({
     page,
   }) => {
-    // Not asserting expectNoEscapedGateCalls here: /admin redirects to
-    // /admin/dashboard, whose own KPI widgets are out of scope for this
-    // spec (they fail closed — dashboard renders regardless) and stubbing
-    // them would only obscure what this test is actually about.
-    await page.goto('/admin', { waitUntil: 'domcontentloaded' });
+    // WHY /staff/sell AND NOT /admin — this spec used to load `/admin`, which
+    // redirects to `/admin/dashboard`. That went red on CI *and* locally the
+    // moment `origin/dev` `364ae803` merged in (OBRS-151..155 analytics):
+    // under this lane's abort-everything-unstubbed catch-all, the dashboard
+    // wedges the RENDERER — not merely "the bell is late". Proof it is a hang
+    // and not a slow render: `page.evaluate` returning a plain object never
+    // resolved inside a 180 s test timeout, while Playwright-side waits kept
+    // running. Reported separately; it is not OBRS-907's to fix.
+    //
+    // `/staff/sell` is the same `<app-notification-bell>` in the staff shell,
+    // rendering the same shared `notification-inbox-panel` and therefore the
+    // same global `.admin-loading-spinner` rule this test exists to pin — and
+    // it is the route the other passing GATE specs already prove is stable
+    // (focus-retention, stop-filter-route-pair, trip-details-edit), with
+    // `stubWalkInSellShell` covering its boot traffic.
+    await page.goto('/staff/sell', { waitUntil: 'domcontentloaded' });
 
     const bellTrigger = page.locator('.notification-bell-trigger');
     await bellTrigger.waitFor({ state: 'visible', timeout: 20_000 });
