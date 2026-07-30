@@ -1,0 +1,11 @@
+{
+  "height": "12px",
+  "width": "143.562px",
+  "borderRadius": "6px",
+  "backgroundImage": "linear-gradient(90deg, rgba(110, 121, 127, 0.12) 25%, rgba(110, 121, 127, 0.22) 37%, rgba(110, 121, 127, 0.12) 63%)",
+  "backgroundSize": "400% 100%",
+  "animationName": "loading-state-shimmer",
+  "animationDuration": "1.4s",
+  "animationTimingFunction": "ease",
+  "animationIterationCount": "infinite"
+}

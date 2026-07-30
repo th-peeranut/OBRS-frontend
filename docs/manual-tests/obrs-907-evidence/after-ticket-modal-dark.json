@@ -1,0 +1,14 @@
+{
+  "width": "36px",
+  "height": "36px",
+  "borderTopWidth": "4px",
+  "borderTopColor": "rgb(7, 114, 162)",
+  "borderColor": "rgb(7, 114, 162) rgb(221, 222, 225) rgb(221, 222, 225)",
+  "borderRadius": "50%",
+  "animationName": "loading-state-spin",
+  "animationDuration": "0.8s",
+  "animationTimingFunction": "linear",
+  "animationIterationCount": "infinite",
+  "display": "block",
+  "opacity": "1"
+}

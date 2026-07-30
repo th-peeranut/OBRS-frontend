@@ -1,0 +1,14 @@
+{
+  "width": "28px",
+  "height": "28px",
+  "borderTopWidth": "0px",
+  "borderTopColor": "rgb(159, 176, 187)",
+  "borderColor": "rgb(159, 176, 187)",
+  "borderRadius": "0px",
+  "animationName": "admin-loading-spin",
+  "animationDuration": "1s",
+  "animationTimingFunction": "linear",
+  "animationIterationCount": "infinite",
+  "display": "block",
+  "opacity": "1"
+}
