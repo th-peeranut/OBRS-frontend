@@ -1583,32 +1583,11 @@
 
 // Loading placeholders shown in admin tables while the (occasionally
 // cold-starting) backend responds, plus the empty-state row when a fetch
-// returns nothing. Shared by every admin list page.
-.admin-skeleton {
-  display: block;
-  width: 100%;
-  height: 12px;
-  border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(110, 121, 127, 0.12) 25%,
-    rgba(110, 121, 127, 0.22) 37%,
-    rgba(110, 121, 127, 0.12) 63%
-  );
-  background-size: 400% 100%;
-  animation: admin-skeleton-shimmer 1.4s ease infinite;
-}
-
-.admin-skeleton--sm {
-  width: 60%;
-}
-
-.admin-skeleton--pill {
-  width: 72px;
-  height: 22px;
-  border-radius: 999px;
-}
-
+// returns nothing. `.admin-skeleton` / `--sm` / `--pill` (the shimmer bar
+// itself, its keyframe, and its reduced-motion override) moved to
+// `src/styles/_loading.scss` (OBRS-907) — same class names, same
+// declarations, so the 30 templates using it directly are unaffected. Row/
+// empty-state chrome that's genuinely admin-table-specific stays here.
 .admin-table tbody tr.admin-skeleton-row:hover {
   background: transparent;
 }
@@ -1617,21 +1596,6 @@
   padding: 32px 14px;
   text-align: center;
   color: var(--admin-muted);
-}
-
-@keyframes admin-skeleton-shimmer {
-  0% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0 50%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .admin-skeleton {
-    animation: none;
-  }
 }
 
 .admin-chip {
@@ -2035,30 +1999,11 @@ textarea.admin-field {
   width: min(460px, 100%);
 }
 
-.admin-loading-backdrop {
-  z-index: 1300;
-  backdrop-filter: blur(4px);
-}
-
-.admin-loading-panel {
-  width: min(340px, 100%);
-  padding: 28px 24px;
-  border-radius: 18px;
-  border: 1px solid rgba(189, 200, 207, 0.75);
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 18px 40px rgba(25, 28, 30, 0.2);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  text-align: center;
-}
-
-.is-dark .admin-loading-panel {
-  background: rgba(29, 34, 38, 0.97);
-  border-color: var(--admin-outline);
-}
-
+// `.admin-loading-backdrop` / `.admin-loading-panel` (a full-screen loading
+// dialog) were removed here (OBRS-907) — zero template call sites (verified
+// by grep before deleting). `.admin-loading-spinner` below is still used
+// directly (export-button, notification-inbox-panel) and by
+// `shared/components/loading-state`'s `graphic="icon"` mode — do not delete it.
 .admin-loading-spinner {
   font-size: 34px;
   /* OBRS-755: same role error as `.admin-sidebar-pin` (see its note). A 34px
@@ -2066,10 +2011,6 @@ textarea.admin-field {
      surface was 2.28:1, below even that. */
   color: var(--accent-text);
   animation: admin-loading-spin 1s linear infinite;
-}
-
-.admin-loading-panel .admin-modal-title {
-  font-size: 18px;
 }
 
 @keyframes admin-loading-spin {

@@ -120,6 +120,11 @@ export default defineConfig({
     // a mute rather than a repair. Hermetic on the same terms as the rest — two stubbed
     // home-page calls and nothing else.
     '**/analytics-consent-banner.spec.ts',
+    // OBRS-907. Seeds a synthetic admin session and hangs the notifications
+    // call so the notification-bell's spinner stays up; asserts
+    // page.emulateMedia({ reducedMotion: 'reduce' }) actually freezes the
+    // real compiled CSS cascade. Hermetic on the same terms as the rest.
+    '**/obrs-907-loading-state-reduced-motion.spec.ts',
   ],
 
   timeout: 60_000,

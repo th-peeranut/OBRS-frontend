@@ -2,6 +2,11 @@
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@200..700,0..1&display=swap");
 @import "sweetalert2/dist/sweetalert2.min.css";
 @import "./styles/variables.scss";
+// OBRS-907: shared loading-indicator keyframes/tokens (`.admin-skeleton` +
+// the loading-state ring/shimmer keyframes) — imported directly here, NOT
+// via admin-theme.scss, so the customer shell gets it without importing
+// anything that reads as "the admin theme". See the file's own header.
+@import "./styles/loading.scss";
 @import "./styles/admin-theme.scss";
 @import "./styles/dark-theme.scss";
 // OBRS-776. Imported FIRST among the app's own rules would be wrong and last is

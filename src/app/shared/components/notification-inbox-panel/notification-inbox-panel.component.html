@@ -13,7 +13,16 @@
 
   <div class="notification-inbox-body">
     <div class="notification-inbox-state" *ngIf="showInitialLoading">
-      <span class="material-symbols-outlined admin-loading-spinner" aria-hidden="true">sync</span>
+      <!-- OBRS-907: same primitive as before (.admin-loading-spinner "sync"
+           glyph, --accent-text), now rendered through the shared component
+           instead of inline markup. No sizePx override needed — this
+           component's own descendant rule (below,
+           `.notification-inbox-state .material-symbols-outlined`, 28px)
+           still reaches the icon span through the extra wrapper: a
+           descendant combinator matches regardless of nesting depth, and it
+           already outranked `.admin-loading-spinner`'s own 34px by
+           specificity before this migration too. -->
+      <app-loading-state graphic="icon" icon="sync"></app-loading-state>
     </div>
 
     <div class="notification-inbox-state" *ngIf="showError">

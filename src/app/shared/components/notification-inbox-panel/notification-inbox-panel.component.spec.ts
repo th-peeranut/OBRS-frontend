@@ -4,6 +4,11 @@ import { By } from '@angular/platform-browser';
 import { TranslateModule } from '@ngx-translate/core';
 import { NotificationInboxPanelComponent } from './notification-inbox-panel.component';
 import { NotificationItem } from '../../interfaces/notification.interface';
+// OBRS-907: the panel's first-load spinner now renders through the shared
+// component — declared here so it actually renders (not stripped down to an
+// opaque, childless custom element by CUSTOM_ELEMENTS_SCHEMA below), which is
+// what the existing `.admin-loading-spinner` assertions require.
+import { LoadingStateComponent } from '../loading-state/loading-state.component';
 
 function makeItem(id: number): NotificationItem {
   return {
@@ -26,7 +31,7 @@ describe('NotificationInboxPanelComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      declarations: [NotificationInboxPanelComponent],
+      declarations: [NotificationInboxPanelComponent, LoadingStateComponent],
       imports: [TranslateModule.forRoot()],
       schemas: [CUSTOM_ELEMENTS_SCHEMA],
     }).compileComponents();
