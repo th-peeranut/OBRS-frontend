@@ -18,11 +18,14 @@ export const environment = {
   //     placeholder. Nothing in the repo sets it and
   //     docs/prod/RUNBOOK-OBRS-390-prod-frontend-config.md never mentions it,
   //     which is why it was never provisioned by anyone following the runbook.
-  //   - prod is not serving this SPA at all. Measured 2026-07-30: every FE route
-  //     on https://nj-phuyaipu.com (`/`, `/index.html`, `/login`) answers 404
-  //     with no CSP header, while `/api/public/schedules` answers WITH one — so
-  //     Caddy is up and the site block is live, but the built bundle is not
-  //     where its file server looks (OBRS-203/205 territory, not this card's).
+  //   - prod is not serving this SPA at all, deliberately. Measured 2026-07-30:
+  //     every FE route on https://nj-phuyaipu.com (`/`, `/index.html`,
+  //     `/login`) answers 404 while `/api/public/schedules` answers with the
+  //     security headers, so Caddy and the backend are live and the FE has
+  //     simply never been published. OBRS-205 recorded that state on 07-23 and
+  //     owns it: the publish is held because `npm run build:prod` requires a
+  //     live `pkey_live_` (OBRS-206) and because the moment `index.html` lands
+  //     on the VM is the moment the app is public — an owner call, not a bug.
   // A base flip would therefore have aimed a go-live-CUT feature at an
   // environment that cannot render it and is not serving the app anyway.
   // Turning it on here is what makes the tile/marker ACs measurable now; the
