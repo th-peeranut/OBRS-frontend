@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import {
   invokeGetScheduleBookingApi,
+  revalidateRestoredScheduleBooking,
 } from '../../shared/stores/schedule-booking/schedule-booking.action';
 import {
   invokeSetScheduleFilterApi,
@@ -95,6 +96,11 @@ export class PassengerInfoComponent {
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
     this.store.dispatch(invokeGetScheduleBookingApi());
     this.store.dispatch(invokeGetScheduleFilterApi());
+    // OBRS-903: this is where a customer who was forced through registration
+    // lands, and where the seat map is drawn from `Schedule.availableSeatNumbers`
+    // — so a selection restored from the pre-login tab is re-checked here before
+    // any seat is offered (AC3). No-op for a selection made in this tab.
+    this.store.dispatch(revalidateRestoredScheduleBooking());
   }
 
   onPassengerFormValidityChange(isValid: boolean): void {
