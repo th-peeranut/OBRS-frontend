@@ -8,6 +8,7 @@ import { PaymentService } from '../../../../services/payment/payment.service';
 import { AlertService } from '../../../../shared/services/alert.service';
 import { PaymentByBookingIdResponse } from '../../../../shared/interfaces/payment.interface';
 import { AnalyticsService } from '../../../../services/analytics/analytics.service';
+import { normalizeAnalyticsPaymentMethod } from '../../../../shared/lib/analytics-payment-method';
 
 @Component({
   selector: 'app-payment-result',
@@ -81,7 +82,7 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
       );
 
       if (this.isPaymentConfirmed(response.data)) {
-        this.completePayment();
+        this.completePayment(response.data);
         return;
       }
 
@@ -129,23 +130,56 @@ export class PaymentResultComponent implements OnInit, OnDestroy {
     return latestStatus === 'failed' || latestStatus === 'cancelled' || latestStatus === 'expired';
   }
 
-  private completePayment(): void {
+  private completePayment(
+    payment: PaymentByBookingIdResponse | null | undefined
+  ): void {
     this.isChecking = false;
     this.clearPolling();
     this.clearCountdown();
-    // OBRS-867 funnel step 6 — the redirect-back branch. This page only ever
-    // runs after a PromptPay hand-off to the bank, so the method is known
-    // without reading it from anywhere. See `PaymentComponent.onPaymentCompleted`
-    // for why the funnel needs both branches instrumented.
+    // OBRS-867 funnel step 6 — the redirect-back branch.
+    //
+    // This used to send a hardcoded `qr_promptpay`, justified by a comment
+    // saying the page "only ever runs after a PromptPay hand-off to the bank".
+    // That was never measured, and OBRS-902 measured it false: a card payment
+    // that needs 3DS also leaves the site for Omise and also lands here, so
+    // every 3DS card booking was reported to GA4 as PromptPay. Thai issuers
+    // largely mandate 3DS, which makes that the main card path rather than an
+    // edge case — and it failed silently, producing a plausible chart nobody
+    // had reason to doubt. The method is read from the settled transaction now
+    // (see `settledPaymentMethod`); no page may assert how the customer got to
+    // it.
     //
     // Placed in `completePayment` and NOT in the poller: `checkPaymentStatus`
     // runs every 3s, and this is the one path that can only be taken once
     // (`clearPolling` above stops the next tick).
     this.analytics.track('booking_completed', {
-      payment_method: 'qr_promptpay',
+      payment_method: this.settledPaymentMethod(payment),
     });
     this.alertService.success(this.translate.instant('PAYMENT.ALERT.SUCCESS'));
     this.router.navigate(['/e-ticket']);
+  }
+
+  /**
+   * The method the *settled* transaction was paid with, in the API's own
+   * vocabulary (OBRS-902).
+   *
+   * `find(isPaidStatus)` and not `transactions[0]`: a booking can carry a
+   * failed attempt alongside the one that went through — a declined card
+   * followed by a successful PromptPay is an ordinary customer recovery — and
+   * the array's order is the server's business, not a contract. The paid row is
+   * the only one that describes how the money actually arrived.
+   *
+   * Falls back to `unknown` rather than to a plausible default: `isPaymentConfirmed`
+   * also accepts a `fully_paid` summary with no paid transaction in the list,
+   * and a guess is exactly the failure this card exists to remove.
+   */
+  private settledPaymentMethod(
+    payment: PaymentByBookingIdResponse | null | undefined
+  ): string {
+    const settled = payment?.transactions?.find((transaction) =>
+      this.isPaidStatus(transaction.status)
+    );
+    return normalizeAnalyticsPaymentMethod(settled?.paymentMethod);
   }
 
   private async failPayment(): Promise<void> {
