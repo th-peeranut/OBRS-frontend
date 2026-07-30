@@ -195,10 +195,19 @@ test('OBRS-856: a guest browses and picks a seat freely, then is asked to sign i
   // And the whole reason the redirect is acceptable: signing in has to bring
   // them back to where they were, not dump them on the home page. This is the
   // key AuthService writes in setPostLoginRedirectUrl().
-  const returnUrl = await page.evaluate(() =>
-    sessionStorage.getItem('auth_return_url')
-  );
-  expect(returnUrl).toBe('/passenger-info');
+  //
+  // OBRS-903 moved it from sessionStorage to a TTL'd localStorage envelope: the
+  // email-verification link a first-time booker must click opens a NEW TAB, and
+  // sessionStorage is per-tab, so the old location was empty exactly where it
+  // mattered. Both halves are asserted — the value in its new home, and the old
+  // home staying empty, so a revert cannot pass this test quietly.
+  const stored = await page.evaluate(() => ({
+    envelope: localStorage.getItem('auth_return_url'),
+    perTab: sessionStorage.getItem('auth_return_url'),
+  }));
+  expect(stored.perTab).toBeNull();
+  expect(stored.envelope).not.toBeNull();
+  expect(JSON.parse(stored.envelope as string).value).toBe('/passenger-info');
 });
 
 /**
@@ -321,7 +330,10 @@ test('OBRS-855: the access token dies mid-booking — the request is retried on 
   const stored = await page.evaluate(() => ({
     access: localStorage.getItem('auth_token'),
     refresh: localStorage.getItem('auth_refresh_token'),
-    returnUrl: sessionStorage.getItem('auth_return_url'),
+    // OBRS-903 moved this key to localStorage. Reading sessionStorage here would
+    // still pass and would mean nothing — the key can no longer appear there at
+    // all, so the assertion below would stop being able to fail.
+    returnUrl: localStorage.getItem('auth_return_url'),
   }));
   expect(stored.access).toBe('obrs-855-fresh-access-token');
   expect(stored.refresh).toBe('obrs-855-rotated-refresh-token');
