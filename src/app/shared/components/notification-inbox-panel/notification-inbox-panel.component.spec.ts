@@ -47,6 +47,32 @@ describe('NotificationInboxPanelComponent', () => {
     expect(fixture.debugElement.query(By.css('.notification-inbox-state .admin-loading-spinner'))).toBeTruthy();
   });
 
+  // OBRS-907 scrutinize follow-up: the migration from inline markup to
+  // <app-loading-state> silently grew this icon 28px -> 34px, because
+  // `.notification-inbox-state .material-symbols-outlined { font-size: 28px }`
+  // stopped reaching it once it moved into a CHILD component's template --
+  // Angular emulated encapsulation puts the panel's own content attribute on
+  // the rule's LAST compound too, so the rule no longer matches an element that
+  // now belongs to a different component. The global `.admin-loading-spinner
+  // { font-size: 34px }` (unencapsulated) won instead. 4334 unit tests stayed
+  // green through that because none of them read getComputedStyle -- only a
+  // pixel measurement, not a class-presence check, can catch this class of
+  // regression. Karma's `styles` array already loads src/styles.scss (OBRS-721
+  // lesson), so this sees the REAL cascade.
+  it('OBRS-907: pins the spinner icon at its computed 28px size (not the global 34px .admin-loading-spinner default)', () => {
+    component.loading = true;
+    component.items = [];
+    fixture.detectChanges();
+    document.body.appendChild(fixture.nativeElement);
+    try {
+      const icon = fixture.debugElement.query(By.css('.notification-inbox-state .admin-loading-spinner'));
+      expect(icon).not.toBeNull();
+      expect(getComputedStyle(icon.nativeElement).fontSize).toBe('28px');
+    } finally {
+      fixture.nativeElement.remove();
+    }
+  });
+
   it('does NOT show the spinner on a background refresh when items are already cached (stale-while-revalidate)', () => {
     component.loading = true;
     component.items = [makeItem(1)];

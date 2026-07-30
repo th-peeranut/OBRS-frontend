@@ -10,8 +10,9 @@
 // addition. Prose in design-system.md cannot catch that; this gate does.
 //
 // What it flags: any `@keyframes` block anywhere under src/ whose body animates a
-// rotation (`transform: rotate(...)`) or a shimmer sweep (`background-position: ...`),
-// UNLESS it is either
+// rotation -- `transform: rotate()`/`rotate3d()`/`rotateX/Y/Z()`, or the standalone
+// CSS "individual transform property" `rotate: <angle>;` -- or a shimmer sweep
+// (`background-position: ...`), UNLESS it is either
 //   (a) in an ALLOWED_FILE (the two files OBRS-907 designated as where these keyframes
 //       are meant to live), or
 //   (b) an EXACT (file, keyframe-name) pair already present in DEBT_REGISTER below.
@@ -82,14 +83,29 @@ function findKeyframes(src) {
   return out;
 }
 
-const ROTATE_RE = /transform\s*:\s*rotate\s*\(/;
+// A rotate-family TRANSFORM FUNCTION inside a `transform:` declaration -- covers
+// rotate(), rotate3d(), rotateX()/rotateY()/rotateZ(). `[^;]*` lets it appear after
+// another function in the same value (`transform: scale(1) rotate(45deg)`), which a
+// bare `transform:\s*rotate\(` (the original, narrower version of this regex) missed.
+const ROTATE_FUNCTION_RE = /transform\s*:\s*[^;]*\brotate(?:3d|[xyz])?\s*\(/i;
+// The standalone CSS "individual transform property" `rotate:` (CSS Transforms
+// Level 2, e.g. `rotate: 360deg;`) -- the exact same spin, spelled without a
+// `transform:` wrapper at all. `(?:^|[;{}])` anchors on "rotate" being the property
+// NAME (immediately after a declaration/block boundary), not a substring inside some
+// other property's name or value -- see the self-test fixtures below for both the
+// must-catch and the must-NOT-catch this is built to tell apart.
+const ROTATE_PROPERTY_RE = /(?:^|[;{}])\s*rotate\s*:\s*\S/i;
 const SHIMMER_RE = /background-position\s*:/;
 
-/** True if a keyframe body is the shape this gate cares about -- a spin (rotate) or a
- * shimmer sweep (background-position) -- and false for an unrelated animation (a fade,
- * a scale, a slide) that happens to share the file with one of those. */
+/** True if a keyframe body is the shape this gate cares about -- a spin (any
+ * rotate-family transform, function or standalone property) or a shimmer sweep
+ * (background-position) -- and false for an unrelated animation (a fade, a scale,
+ * an opacity pulse, an SVG stroke-dashoffset sweep) that happens to share the file
+ * with one of those. Deliberately does NOT widen to those other families: they are
+ * a different technique, not more instances of this one (per OBRS-907 scrutinize
+ * follow-up scope). */
 function isQualifying(body) {
-  return ROTATE_RE.test(body) || SHIMMER_RE.test(body);
+  return ROTATE_FUNCTION_RE.test(body) || ROTATE_PROPERTY_RE.test(body) || SHIMMER_RE.test(body);
 }
 
 /**
@@ -217,6 +233,65 @@ const DEBT_REGISTER = {
   const scaleOnly = qualifyingKeyframeNames('@keyframes pop { from { transform: scale(0.9); } to { transform: scale(1); } }');
   if (scaleOnly.length !== 0) {
     selfTestErrors.push('must-NOT-catch: a scale-only keyframe (no rotate/shimmer) was incorrectly flagged as qualifying.');
+  }
+
+  // must-CATCH (OBRS-907 scrutinize follow-up): the same spinner FAMILY written with
+  // rotate3d()/rotateZ() instead of the plain rotate() the original regex required --
+  // a narrower matcher here would have silently let a 17th hand-rolled spinner through
+  // just for spelling its transform differently.
+  const rotate3d = qualifyingKeyframeNames(
+    '@keyframes fake-3d-spin { to { transform: rotate3d(0, 0, 1, 360deg); } }'
+  );
+  if (!rotate3d.includes('fake-3d-spin')) {
+    selfTestErrors.push('must-CATCH: a `transform: rotate3d(...)` keyframe was not detected as qualifying.');
+  }
+  const rotateZ = qualifyingKeyframeNames('@keyframes fake-z-spin { to { transform: rotateZ(360deg); } }');
+  if (!rotateZ.includes('fake-z-spin')) {
+    selfTestErrors.push('must-CATCH: a `transform: rotateZ(...)` keyframe was not detected as qualifying.');
+  }
+  const rotateAfterScale = qualifyingKeyframeNames(
+    '@keyframes fake-combo-spin { to { transform: scale(1) rotateX(360deg); } }'
+  );
+  if (!rotateAfterScale.includes('fake-combo-spin')) {
+    selfTestErrors.push(
+      'must-CATCH: a `transform:` value where rotate is not the FIRST function (e.g. `scale(1) rotateX(...)`) was missed.'
+    );
+  }
+
+  // must-CATCH: the standalone CSS "individual transform property" spelling
+  // (`rotate: 360deg;`, no `transform:` wrapper) -- the same spin, written the OTHER
+  // legal way per CSS Transforms Level 2.
+  const standaloneRotate = qualifyingKeyframeNames('@keyframes fake-standalone-spin { to { rotate: 360deg; } }');
+  if (!standaloneRotate.includes('fake-standalone-spin')) {
+    selfTestErrors.push('must-CATCH: a standalone `rotate: <angle>;` property (no `transform:`) was not detected as qualifying.');
+  }
+
+  // must-NOT-catch: the standalone-property matcher keys on "rotate" being the
+  // declaration's own NAME, not a substring inside a different property's name or
+  // value -- `border-radius` contains neither "rotate" nor a false match for it, and
+  // an `animation`/`transform-origin` value merely MENTIONING a rotate-ish identifier
+  // must not trip the standalone-property branch either.
+  const notARotateProperty = qualifyingKeyframeNames(
+    '@keyframes fake-not-rotate { from { border-radius: 4px; } to { transform-origin: center; animation-name: my-rotate-thing; } }'
+  );
+  if (notARotateProperty.length !== 0) {
+    selfTestErrors.push(
+      'must-NOT-catch: `border-radius`/`transform-origin`/an animation-name merely containing "rotate" as a substring was flagged as a standalone rotate property.'
+    );
+  }
+
+  // must-NOT-catch (explicit scope boundary, OBRS-907 scrutinize follow-up): an
+  // opacity pulse and an SVG stroke-dashoffset sweep are a DIFFERENT animation
+  // technique from this gate's spin/shimmer family, not more instances of it -- do
+  // not widen to catch them.
+  const differentFamily = qualifyingKeyframeNames(
+    '@keyframes fake-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } } ' +
+      '@keyframes fake-dash { to { stroke-dashoffset: 0; } }'
+  );
+  if (differentFamily.length !== 0) {
+    selfTestErrors.push(
+      'must-NOT-catch: an opacity-pulse or stroke-dashoffset keyframe (a different animation family) was incorrectly flagged.'
+    );
   }
 
   if (selfTestErrors.length > 0) {
