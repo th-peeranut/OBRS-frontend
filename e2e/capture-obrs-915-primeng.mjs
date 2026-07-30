@@ -32,7 +32,20 @@ mkdirSync(OUT, { recursive: true });
 // Visual role -> the selectors that express it in v17 and in v19.
 // `props` are the computed properties our SCSS actually sets for that role.
 const ROLES = [
-  { role: 'button', v17: '.p-button', v19: '.p-button', props: ['backgroundColor', 'color', 'borderColor'] },
+  // Scoped out of SelectButton on BOTH sides. `.p-button` alone is not a stable
+  // role across this upgrade: in v17 the SelectButton options were themselves
+  // `.p-button`, so `querySelector('.p-button')` on the home page returned an
+  // option, while in v19 they are `.p-togglebutton` and the same query returns
+  // the real search button. Measured: 0 `.p-selectbutton .p-button` and exactly
+  // 1 `.p-button` (the info button) after the upgrade. Comparing those two
+  // elements produced a 3-property "regression" that was only ever two
+  // different buttons.
+  {
+    role: 'button',
+    v17: '.p-button:not(.p-selectbutton *)',
+    v19: '.p-button:not(.p-selectbutton *)',
+    props: ['backgroundColor', 'color', 'borderColor'],
+  },
   {
     role: 'selectbutton-selected',
     v17: '.p-selectbutton .p-button.p-highlight',

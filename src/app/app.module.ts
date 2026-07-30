@@ -14,7 +14,41 @@ import { errorInterceptor } from './shared/interceptors/error.interceptor';
 // two `styles[]` entries that loaded it are gone from angular.json. The theme is
 // configured here instead.
 import { providePrimeNG } from 'primeng/config';
+import { definePreset } from '@primeng/themes';
 import Lara from '@primeng/themes/lara';
+
+/**
+ * Lara with its primary palette put back to BLUE.
+ *
+ * The stylesheet this replaces was `lara-light-blue`. `@primeng/themes/lara`
+ * is only the Lara *structure*: its semantic primary is `{emerald.*}`
+ * (node_modules/@primeng/themes/lara/base/index.mjs), so `preset: Lara` alone
+ * ships a green app.
+ *
+ * That is not a theory. OBRS-915 measured the checked ToggleSwitch in light
+ * mode at `rgb(59, 130, 246)` before the upgrade and `rgb(16, 185, 129)` after
+ * — blue.500 to emerald.500. Nothing failed: the build was green, all 4428
+ * specs were green, and the control had simply changed colour. Mapping primary
+ * back onto `{blue.*}` restores 59/130/246 exactly, which is why the palette is
+ * referenced by token rather than hard-coded — the token IS the previous value.
+ */
+const LaraBlue = definePreset(Lara, {
+  semantic: {
+    primary: {
+      50: '{blue.50}',
+      100: '{blue.100}',
+      200: '{blue.200}',
+      300: '{blue.300}',
+      400: '{blue.400}',
+      500: '{blue.500}',
+      600: '{blue.600}',
+      700: '{blue.700}',
+      800: '{blue.800}',
+      900: '{blue.900}',
+      950: '{blue.950}',
+    },
+  },
+});
 
 // auth
 import { AuthGuard } from './auth/auth.guard';
@@ -76,7 +110,9 @@ export function HttpLoaderFactory(http: HttpClient) {
         // Lara, because that is what the deleted stylesheet was
         // (`lara-light-blue`). Aura is PrimeNG's own default and would be a
         // second, undeclared visual change riding along with the upgrade.
-        preset: Lara,
+        // The `-blue` half of that name has to be asked for separately — see
+        // LaraBlue above.
+        preset: LaraBlue,
         options: {
           // NOT the default. PrimeNG 19 defaults `darkModeSelector` to
           // 'system', i.e. prefers-color-scheme - which would put PrimeNG
