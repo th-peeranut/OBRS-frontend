@@ -10,6 +10,21 @@ export const environment = {
     id: '0850951898',
   },
   useDevApiEndpoints: false,
+  // OBRS-831: re-enable the staff fleet live map on SIT ONLY, and deliberately
+  // NOT by flipping `environmentBase.features.fleetMap` — that value is shared
+  // with the prod build, and two of the prod preconditions are still open:
+  // `PROD_MAPTILER_API_KEY` has never been provisioned (OBRS-831 AC6, so a prod
+  // build would inherit `maptilerKey: ''` and render the MAP_UNAVAILABLE
+  // placeholder), and the CSP `img-src` fix that lets tiles load at all on the
+  // VM is committed but not yet applied to prod's Caddyfile (OBRS-833). Turning
+  // it on here is what makes the tile/marker ACs measurable now; the base flip
+  // is the separate post-go-live step OBRS-622 AC6 describes, and it stays a
+  // one-liner. ADR-0031 anticipated exactly this ("or a per-environment
+  // override, if a future need ever requires divergence").
+  features: {
+    ...environmentBase.features,
+    fleetMap: true,
+  },
   mapsApiKey: localEnv.mapsApiKey,
   googleClientId: localEnv.googleClientId,
   maptilerKey: localEnv.maptilerKey,
