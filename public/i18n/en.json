@@ -382,6 +382,8 @@
   "SHARED": {
     "NO_CONTENT": "No data found",
     "SEARCH_PLACEHOLDER": "Search",
+    "SELECT_PLACEHOLDER": "Select {{item}}",
+    "SELECT_PLACEHOLDER_GENERIC": "Select",
     "ERROR_GENERAL": "An error occurred. Please try again."
   },
   "COMMON": {

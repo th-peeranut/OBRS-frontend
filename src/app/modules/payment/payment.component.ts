@@ -13,6 +13,7 @@ import {
 import { invokeGetAllProvinceWithStationApi } from '../../shared/stores/station/station.action';
 import { Router } from '@angular/router';
 import { AnalyticsService } from '../../services/analytics/analytics.service';
+import { normalizeAnalyticsPaymentMethod } from '../../shared/lib/analytics-payment-method';
 
 type PaymentTab = 'creditcard' | 'qrcode';
 
@@ -33,7 +34,7 @@ export class PaymentComponent {
   ngOnInit(): void {
     // OBRS-867 funnel step 5.
     this.analytics.track('payment_started', {
-      payment_method: this.activePaymentTab,
+      payment_method: this.reportedMethod(),
     });
 
     this.store.dispatch(invokeGetAllProvinceWithStationApi());
@@ -51,7 +52,25 @@ export class PaymentComponent {
     // actually pick?" Fired on the switch rather than only at completion, so a
     // customer who tries QR, gives up and abandons still shows up as having
     // wanted QR.
-    this.analytics.track('payment_method_selected', { payment_method: tab });
+    this.analytics.track('payment_method_selected', {
+      payment_method: this.reportedMethod(),
+    });
+  }
+
+  /**
+   * The active tab, translated into the vocabulary the API and the completion
+   * event use (OBRS-902).
+   *
+   * `activePaymentTab` is a UI identifier — `creditcard`/`qrcode` are the names
+   * of two `*ngIf` branches in the template. Sending them raw meant the funnel's
+   * top steps were labelled in a vocabulary its bottom step did not share, so
+   * `payment_started=creditcard` could never be joined to
+   * `booking_completed=card` and a method-split funnel dropped every session.
+   * Fixing only the false value in `PaymentResultComponent` would have left that
+   * intact — a correct value nobody can count is worth as much as a wrong one.
+   */
+  private reportedMethod(): string {
+    return normalizeAnalyticsPaymentMethod(this.activePaymentTab);
   }
 
   /**
@@ -67,10 +86,16 @@ export class PaymentComponent {
    *
    * The two branches cannot double-count: a payment that left the page never
    * returns to this component instance.
+   *
+   * OBRS-902 corrected the split above: it is not card-here / PromptPay-there.
+   * A card payment that needs 3DS also leaves the page, so this branch is
+   * "settled without a redirect" and the other is "settled after one" —
+   * a distinction about the *flow*, which is why neither may name the method
+   * from its own position in the code.
    */
   onPaymentCompleted(): void {
     this.analytics.track('booking_completed', {
-      payment_method: this.activePaymentTab,
+      payment_method: this.reportedMethod(),
     });
   }
 }

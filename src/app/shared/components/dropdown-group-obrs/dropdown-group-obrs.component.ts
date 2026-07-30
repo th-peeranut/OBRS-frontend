@@ -47,6 +47,12 @@ export class DropdownGroupObrsComponent
    *  existing template byte-identical; only the station pickers set this to true
    *  (design-system §10: extend with an optional, false-default @Input()). */
   @Input() searchable: boolean = false;
+  /** Optional i18n KEY (not literal text) shown in the trigger while nothing is
+   *  selected. Left empty on purpose: with no override the template derives
+   *  "SHARED.SELECT_PLACEHOLDER" from `label` — so every call site that already
+   *  passes a label gets "เลือกต้นทาง"/"Select Source" without being touched, and
+   *  only a site wanting different wording has to pass anything (OBRS-901). */
+  @Input() placeholder: string = '';
 
   @Output() currentValue = new EventEmitter<any>();
 

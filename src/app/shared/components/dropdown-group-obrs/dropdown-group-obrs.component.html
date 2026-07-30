@@ -14,8 +14,23 @@
       [class.disabled]="isDisabled"
       [disabled]="isDisabled"
     >
-      <div class="value-text">
-        {{ getValue(selectedValue) }}
+      <!-- Before anything is selected `getValue(null)` returns '', which rendered a
+           completely blank box that reads as an empty text input — the OBRS-901
+           defect. The placeholder branch fills it; `.is-placeholder` is what makes
+           it read as a prompt rather than as an already-chosen value. -->
+      <div class="value-text" [class.is-placeholder]="!selectedValue">
+        <ng-container *ngIf="selectedValue; else placeholderTpl">
+          {{ getValue(selectedValue) }}
+        </ng-container>
+        <ng-template #placeholderTpl>
+          <ng-container *ngIf="placeholder">{{ placeholder | translate }}</ng-container>
+          <ng-container *ngIf="!placeholder && label">{{
+            "SHARED.SELECT_PLACEHOLDER" | translate: { item: label | translate }
+          }}</ng-container>
+          <ng-container *ngIf="!placeholder && !label">{{
+            "SHARED.SELECT_PLACEHOLDER_GENERIC" | translate
+          }}</ng-container>
+        </ng-template>
       </div>
       <img
         class="arrow-icon"
