@@ -111,7 +111,7 @@ describe('ReportUsabilityFabComponent', () => {
     expect(emailInput).withContext('optional email input should be in the DOM').toBeTruthy();
 
     const receipt: UsabilityReportReceipt = {
-      id: '1',
+      id: 1,
       category: 'bug',
       status: 'new',
       imageCount: 0,
@@ -136,7 +136,7 @@ describe('ReportUsabilityFabComponent', () => {
     fixture.detectChanges();
 
     const receipt: UsabilityReportReceipt = {
-      id: '1',
+      id: 1,
       category: 'bug',
       status: 'new',
       imageCount: 0,
@@ -188,7 +188,7 @@ describe('ReportUsabilityFabComponent', () => {
     fixture.detectChanges();
 
     const receipt: UsabilityReportReceipt = {
-      id: '1',
+      id: 1,
       category: 'bug',
       status: 'new',
       imageCount: 0,

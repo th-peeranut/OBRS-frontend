@@ -1059,6 +1059,35 @@ enforced rule with a test behind it.
   the next cross-shell **input** component, instead of re-deriving the
   ordering or skipping the specificity-net rule as an apparent duplicate.
 
+- **Search-result highlight: precomputed segments, not `[innerHTML]`, reusing
+  the active-nav token pair** (OBRS-900, `AdminLayoutComponent`'s sidebar menu
+  search): OBRS-290 already matched a query against a menu's translated
+  `descriptionKey` as well as its label, but the template only ever rendered
+  the label — a correct description-only match showed no evidence of *why*
+  it matched, which read as "search is broken" to a real user. Fixed two
+  ways, both worth reusing verbatim for the next highlighted-search-result
+  list: (1) **segments, never a regex/`[innerHTML]` string** — `buildHighlightSegments()`
+  (`shared/lib/nav-search-highlight.ts`) splits label/description into
+  `{ text, match }[]` using plain case-insensitive `String#indexOf`, so a
+  regex-metacharacter-shaped query (`a)|(b`) or an HTML-injection-shaped one
+  (`<img src=x onerror=alert(1)>`) is just literal text that either matches or
+  doesn't — never compiled as a pattern, never bound as markup. The template
+  renders each segment via `{{ }}` interpolation (auto-escaped), `[class.admin-nav-search-highlight]`
+  toggling the highlight class — no `[innerHTML]` anywhere. (2) **No new
+  colour** — `.admin-nav-search-highlight` reuses the exact `--accent-soft`
+  fill / `--accent-text` foreground pair `.admin-nav-link.active`/`:hover`
+  already use, which `admin-shell-chrome-contrast.spec.ts` (OBRS-755) already
+  proves AA in both themes and both accent variants — a new "highlight
+  yellow" would have needed its own dark-mode measurement for no reason, since
+  this shell already has a proven "this is the accented thing" pair. Segments
+  are precomputed once per query/language change inside `applyNavSearch()`
+  and stored on the (stable-field) nav item objects themselves — never a
+  template getter/pipe — per this file's own change-detection-safety rule for
+  `navItems`/`filteredNavItems`/`filteredNavSections`. Reuse `buildHighlightSegments()`
+  and the segment-rendering template shape for the next search box that needs
+  to show *why* a result matched, instead of reaching for `[innerHTML]` +
+  `<mark>` or a hand-rolled regex.
+
 ## 13. Consolidation debt (tracked, not yet enforced retroactively)
 
 These are the known fragmentations. Each should be closed by a future change that

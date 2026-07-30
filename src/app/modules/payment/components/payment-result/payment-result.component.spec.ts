@@ -163,29 +163,136 @@ describe('PaymentResultComponent - payment status "paid" (OBRS-177)', () => {
   });
 
   /**
-   * OBRS-867 funnel step 6, PromptPay branch.
+   * OBRS-867 funnel step 6, the redirect-back branch — corrected by OBRS-902.
    *
-   * This is the branch a card-only test would have missed entirely: PromptPay
-   * leaves the site for the bank and comes back here, so `PaymentComponent`'s
-   * in-page `(paymentCompleted)` handler never runs for it. PromptPay is also
-   * the method most Thai customers use, so instrumenting only the card path
-   * would have reported the dominant payment method as a funnel that never
-   * converts.
+   * This is the branch a card-only test would have missed entirely: a payment
+   * that leaves the site and comes back here never runs `PaymentComponent`'s
+   * in-page `(paymentCompleted)` handler.
+   *
+   * The tests that stood here asserted the constant `qr_promptpay`, so they
+   * were green *against* the defect, and green in exactly the case that
+   * mattered: a card payment through 3DS also lands on this page, and was
+   * reported to GA4 as PromptPay. They encoded the assumption instead of
+   * measuring it. What changes below is therefore the claim being made, not
+   * the strictness of the guard.
+   *
+   * Each fixture differs from its neighbour in ONE field —
+   * `transactions[].paymentMethod` — so a second hardcoded constant that
+   * happened to satisfy one case cannot satisfy the next.
    */
-  describe('booking_completed (OBRS-867)', () => {
-    const invokeCompletePayment = (): void =>
-      (component as unknown as { completePayment: () => void }).completePayment();
+  describe('booking_completed (OBRS-867 / OBRS-902)', () => {
+    const paymentWith = (
+      transactions: PaymentByBookingIdResponse['transactions']
+    ): PaymentByBookingIdResponse => ({
+      bookingId: 10,
+      paymentSummary: {
+        totalAmount: '100',
+        paidAmount: '100',
+        outstandingAmount: '0',
+        currency: 'THB',
+        status: 'fully_paid',
+      },
+      transactions,
+    });
 
-    it('fires exactly once, naming PromptPay as the method', () => {
-      invokeCompletePayment();
+    const invokeCompletePayment = (
+      payment: PaymentByBookingIdResponse | null | undefined
+    ): void =>
+      (
+        component as unknown as {
+          completePayment: (
+            p: PaymentByBookingIdResponse | null | undefined
+          ) => void;
+        }
+      ).completePayment(payment);
+
+    const methodSent = (): unknown => {
+      const [, params] = analytics.track.calls.mostRecent().args;
+      return (params as Record<string, unknown> | undefined)?.['payment_method'];
+    };
+
+    it('reports the card that was actually charged, not the page it came back to', () => {
+      // The OBRS-902 regression: this exact input used to produce `qr_promptpay`.
+      invokeCompletePayment(
+        paymentWith([
+          { paymentMethod: 'card', amount: 100, currency: 'THB', status: 'paid' },
+        ])
+      );
 
       expect(analytics.track).toHaveBeenCalledOnceWith('booking_completed', {
-        payment_method: 'qr_promptpay',
+        payment_method: 'card',
       });
     });
 
+    it('reports PromptPay when PromptPay is what settled', () => {
+      invokeCompletePayment(
+        paymentWith([
+          {
+            paymentMethod: 'qr_promptpay',
+            amount: 100,
+            currency: 'THB',
+            status: 'paid',
+          },
+        ])
+      );
+
+      expect(methodSent()).toBe('qr_promptpay');
+    });
+
+    it('speaks one vocabulary even when the API spells the method differently', () => {
+      // `PaymentMethod` carries both `card` and `credit_card`; two spellings of
+      // one method would split the dashboard's own totals in half.
+      invokeCompletePayment(
+        paymentWith([
+          {
+            paymentMethod: 'CREDIT_CARD',
+            amount: 100,
+            currency: 'THB',
+            status: 'paid',
+          },
+        ])
+      );
+
+      expect(methodSent()).toBe('card');
+    });
+
+    it('reads the transaction that PAID, not the first one in the list', () => {
+      // A declined card followed by a successful PromptPay is an ordinary
+      // customer recovery, and `transactions[0]` would name the failure.
+      invokeCompletePayment(
+        paymentWith([
+          {
+            paymentMethod: 'card',
+            amount: 100,
+            currency: 'THB',
+            status: 'failed',
+          },
+          {
+            paymentMethod: 'qr_promptpay',
+            amount: 100,
+            currency: 'THB',
+            status: 'paid',
+          },
+        ])
+      );
+
+      expect(methodSent()).toBe('qr_promptpay');
+    });
+
+    it('says "unknown" rather than guessing when nothing settled', () => {
+      // `isPaymentConfirmed` also accepts a `fully_paid` summary with an empty
+      // transaction list. Inventing a plausible method there is the defect.
+      invokeCompletePayment(paymentWith([]));
+
+      expect(methodSent()).toBe('unknown');
+    });
+
     it('carries nothing that identifies the customer or the ticket', () => {
-      invokeCompletePayment();
+      invokeCompletePayment(
+        paymentWith([
+          { paymentMethod: 'card', amount: 100, currency: 'THB', status: 'paid' },
+        ])
+      );
 
       const [, params] = analytics.track.calls.mostRecent().args;
       expect(Object.keys(params ?? {})).toEqual(['payment_method']);

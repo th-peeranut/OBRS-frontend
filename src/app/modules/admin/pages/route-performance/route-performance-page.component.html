@@ -1,0 +1,103 @@
+<section class="admin-page-intro" *ngIf="isRefreshing && !isLoading">
+  <div>
+    <app-admin-refresh-hint [refreshing]="isRefreshing" [failed]="false" [loading]="isLoading"></app-admin-refresh-hint>
+  </div>
+</section>
+
+<section class="admin-page-filters mt-3">
+  <p-calendar styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="fromDate" (ngModelChange)="onFromDateChange($event)"
+    [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_FROM' | translate">
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+  <p-calendar styleClass="app-date-field" panelStyleClass="app-date-field-panel" dateFormat="dd/mm/yy"
+    [ngModel]="toDate" (ngModelChange)="onToDateChange($event)"
+    [showIcon]="true" [iconDisplay]="'input'" [showButtonBar]="true"
+    [placeholder]="'ADMIN.REPORTS.FILTER_TO' | translate">
+    <ng-template pTemplate="inputicon">
+      <img class="app-date-field-icon" src="icons/calendar.svg" [attr.alt]="'COMMON.CALENDAR_ICON_ALT' | translate" />
+    </ng-template>
+  </p-calendar>
+</section>
+
+<section class="admin-card mt-3 reports-state-card" *ngIf="contentState === 'invalid' || contentState === 'error'">
+  <p class="admin-error" *ngIf="contentState === 'invalid'">{{ rangeError }}</p>
+  <p class="admin-muted" *ngIf="contentState === 'error'">{{ loadError }}</p>
+</section>
+
+<section class="admin-grid admin-grid--3 mt-3" *ngIf="contentState === 'loading' || contentState === 'data'">
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-success"><span class="material-symbols-outlined">payments</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.REVENUE' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading; else tileSkeleton">{{ formatMoney(totals?.netRevenue ?? '0', totals?.currency ?? 'THB') }}</p>
+    </div>
+  </article>
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon"><span class="material-symbols-outlined">confirmation_number</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.TICKETS' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading; else tileSkeleton">{{ formatCount(totals?.ticketsSold ?? 0) }}</p>
+    </div>
+  </article>
+  <article class="admin-card admin-kpi">
+    <span class="admin-kpi-icon is-warning"><span class="material-symbols-outlined">alt_route</span></span>
+    <div>
+      <p class="admin-muted">{{ 'ADMIN.ROUTE_PERFORMANCE.TILE.ROUTES' | translate }}</p>
+      <p class="admin-big-number" *ngIf="!isLoading; else tileSkeleton">{{ formatCount(routes.length) }}</p>
+    </div>
+  </article>
+</section>
+
+<ng-template #tileSkeleton><span class="admin-skeleton admin-skeleton--sm"></span></ng-template>
+
+<section class="admin-card mt-3" *ngIf="contentState === 'loading' || contentState === 'data'">
+  <div class="admin-card-head">
+    <h4>{{ 'ADMIN.ROUTE_PERFORMANCE.TABLE_TITLE' | translate }}</h4>
+    <span class="admin-muted reports-basis-caption">{{ 'ADMIN.ROUTE_PERFORMANCE.BASIS' | translate }}</span>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>{{ 'ADMIN.ROUTE_PERFORMANCE.COL.ROUTE' | translate }}</th>
+          <th>{{ 'ADMIN.ROUTE_PERFORMANCE.COL.DEPARTURES' | translate }}</th>
+          <th>{{ 'ADMIN.ROUTE_PERFORMANCE.COL.TICKETS' | translate }}</th>
+          <th>{{ 'ADMIN.ROUTE_PERFORMANCE.COL.REVENUE' | translate }}</th>
+          <th>{{ 'ADMIN.ROUTE_PERFORMANCE.COL.SHARE' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngIf="isLoading">
+          <tr *ngFor="let r of skeletonRows" class="admin-skeleton-row" aria-hidden="true">
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+            <td><span class="admin-skeleton admin-skeleton--sm"></span></td>
+          </tr>
+        </ng-container>
+        <ng-container *ngIf="!isLoading">
+          <tr *ngFor="let row of routes; let i = index; trackBy: trackByRouteId" [class.zebra]="i % 2 === 1">
+            <td class="admin-emphasis">{{ row.routeSlug }}</td>
+            <td>{{ formatCount(row.departures) }}</td>
+            <td>{{ formatCount(row.ticketsSold) }}</td>
+            <td>{{ formatMoney(row.netRevenue, row.currency) }}</td>
+            <td>
+              <div class="rp-share">
+                <div class="rp-share-track"><div class="rp-share-bar" [style.width.%]="shareBarPct(row)"></div></div>
+                <span class="rp-share-pct">{{ sharePctDisplay(row.revenueSharePct) }}</span>
+              </div>
+            </td>
+          </tr>
+          <tr *ngIf="routes.length === 0 && !loadError" class="admin-empty-row">
+            <td colspan="5">{{ 'ADMIN.COMMON.NO_DATA' | translate }}</td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</section>

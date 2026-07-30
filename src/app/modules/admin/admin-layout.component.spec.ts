@@ -113,6 +113,19 @@ describe('AdminLayoutComponent', () => {
     expect(badgeSocketServiceStub.disconnect).toHaveBeenCalled();
   });
 
+  // ── OBRS-586: sidebar active-state ──────────────────────────────────────────
+  it('matches the active nav link by PATH (honouring matchSubtree) while ignoring query params / matrix params / fragment', () => {
+    // The old `{ exact: !item.matchSubtree }` boolean expanded to
+    // `queryParams: 'exact'`, so the highlight vanished the moment the URL carried
+    // a query string. This keeps the per-item subtree/exact PATH choice but ignores
+    // query/matrix/fragment.
+    const leaf = fixture.componentInstance['navLinkActiveMatch']({ matchSubtree: false } as never);
+    expect(leaf).toEqual({ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
+
+    const parent = fixture.componentInstance['navLinkActiveMatch']({ matchSubtree: true } as never);
+    expect(parent).toEqual({ paths: 'subset', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
+  });
+
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });
@@ -256,8 +269,16 @@ describe('AdminLayoutComponent', () => {
   });
 
   // ── OBRS-290: sidebar menu search ───────────────────────────────────────────
+  type HighlightSegment = { text: string; match: boolean };
   type SearchComp = {
-    navItems: Array<{ path: string; section: string }>;
+    navItems: Array<{
+      path: string;
+      section: string;
+      labelKey: string;
+      descriptionKey?: string;
+      labelSegments?: HighlightSegment[];
+      descriptionSegments?: HighlightSegment[];
+    }>;
     filteredNavItems: Array<{ path: string }>;
     filteredNavSections: Array<{ key: string; titleKey: string; items: Array<{ path: string }> }>;
     navSearchQuery: string;
@@ -274,8 +295,14 @@ describe('AdminLayoutComponent', () => {
           PROMOTIONS: 'Promotions',
           LOOKUP_SETTINGS: 'Lookups',
         },
-        // description (subtitle) source the search also matches on
+        // description (subtitle) sources the search also matches on
         LOOKUP: { SUBTITLE: 'Manage reference data such as provinces and statuses' },
+        // OBRS-900: seeded explicitly (rather than left to ngx-translate's
+        // missing-key fallback of returning the raw key string) — the raw key
+        // 'ADMIN.PROMOTIONS.SUBTITLE' itself starts with "Promo" (from
+        // "PROMOTIONS"), which would spuriously "match" a query of "Promo"
+        // against the DESCRIPTION and defeat the label-only-match test below.
+        PROMOTIONS: { SUBTITLE: 'Manage discount codes and marketing campaigns' },
         DASHBOARD_SUB: {},
       },
     });
@@ -416,6 +443,257 @@ describe('AdminLayoutComponent', () => {
     comp.applyNavSearch('promotion'); // only 'promotions' (operations section) matches
     expect(comp.filteredNavSections.map((s) => s.key)).toEqual(['operations']);
     expect(comp.filteredNavSections[0].items.length).toBe(1);
+  });
+
+  // ── OBRS-900: matched-description line + highlighted query substring ───────
+  describe('OBRS-900: search-result description + highlight', () => {
+    function itemFor(comp: SearchComp, path: string) {
+      const item = comp.navItems.find((i) => i.path === path);
+      if (!item) throw new Error(`fixture bug: no nav item with path "${path}"`);
+      return item;
+    }
+
+    it('highlights the matching substring in the LABEL when the query matches only the label', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('Promo');
+      const promotions = itemFor(comp, 'promotions');
+
+      expect(promotions.labelSegments).toEqual([
+        { text: 'Promo', match: true },
+        { text: 'tions', match: false },
+      ]);
+      // Its description never contains "Promo" — no highlighted segment there.
+      expect(promotions.descriptionSegments?.some((s) => s.match)).toBeFalsy();
+    });
+
+    it('shows the matched DESCRIPTION (with its own highlight) when the query matches only the description (OBRS-900 core case)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      // "provinces" appears only inside Lookups' description (seedNavTranslations above).
+      comp.applyNavSearch('provinces');
+      fixture.detectChanges();
+
+      const lookups = itemFor(comp, 'lookups');
+      expect(lookups.descriptionSegments)
+        .withContext('the description must be split so the match can be highlighted')
+        .toEqual([
+          { text: 'Manage reference data such as ', match: false },
+          { text: 'provinces', match: true },
+          { text: ' and statuses', match: false },
+        ]);
+      // Its own label ("Lookups") never contains "provinces" — no highlight there.
+      expect(lookups.labelSegments?.some((s) => s.match)).toBeFalsy();
+
+      // And it actually rendered — this is the exact regression from the card:
+      // a correct match with the evidence of why nowhere visible.
+      const descriptionEl = fixture.debugElement.query(By.css('.admin-nav-link-description'));
+      expect(descriptionEl).withContext('the matched item must render its description line').toBeTruthy();
+      expect(descriptionEl.nativeElement.textContent).toContain('provinces');
+      const highlighted = descriptionEl.query(By.css('.admin-nav-search-highlight'));
+      expect(highlighted.nativeElement.textContent.trim()).toBe('provinces');
+    });
+
+    // ── OBRS-900 follow-up: a live-app check found the description rendering
+    // as one unbroken `nowrap` line that ran off the sidebar, taking the
+    // highlighted match with it — off-screen, not just off-colour. The specs
+    // above asserted `textContent`/existence, which the DOM satisfied even
+    // while the match was physically invisible; that is exactly the "coverage
+    // ≠ rendered" trap CORE.md warns about. These two pin the GEOMETRY.
+    it('the description does not inherit `.admin-nav-link`\'s nowrap — must WRAP, not run off (OBRS-900 follow-up)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('provinces');
+      fixture.detectChanges();
+
+      const descriptionEl = fixture.debugElement.query(By.css('.admin-nav-link-description'))
+        .nativeElement as HTMLElement;
+      const cs = getComputedStyle(descriptionEl);
+      // `.admin-nav-link` sets `white-space: nowrap` on ITSELF (min-width:1101px
+      // block, so the label can animate to width:0 on the collapsed rail) —
+      // that value INHERITS to every descendant, including this new
+      // description line, unless the descendant sets its own. This is a
+      // property assertion (not layout-dependent), so it holds regardless of
+      // Karma's own browser viewport width.
+      expect(cs.whiteSpace)
+        .withContext(
+          '.admin-nav-link-description must set its OWN white-space (normal), overriding what it ' +
+            'would otherwise inherit from .admin-nav-link\'s nowrap — that inheritance is the exact ' +
+            'mechanism that ran the description (and the highlighted match inside it) off the sidebar'
+        )
+        .not.toBe('nowrap');
+      expect(cs.overflowWrap === 'anywhere' || cs.overflowWrap === 'break-word' || cs.wordBreak === 'break-word')
+        .withContext(
+          'a long unbroken run (Thai/CJK text often carries no space to break on) must still be ' +
+            'forced to wrap onto a new line rather than widening the box'
+        )
+        .toBeTrue();
+    });
+
+    it('the highlighted match renders INSIDE the nav link — measures containment, not just presence (OBRS-900 follow-up)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('provinces');
+      fixture.detectChanges();
+
+      const linkEl = fixture.debugElement.query(By.css('.admin-nav-link:not(.admin-nav-btn)'))
+        .nativeElement as HTMLElement;
+      // getBoundingClientRect()/scrollWidth are meaningless on a detached
+      // fixture — attach the REAL rendered tree to the document (same
+      // requirement as the mountInChain helper in testing/contrast.ts) so the
+      // browser actually lays it out, then constrain to the real pinned
+      // sidebar link's width (admin-theme.scss) so this assertion doesn't
+      // depend on Karma's own window happening to clear the
+      // min-width:1101px breakpoint that normally sets it.
+      document.body.appendChild(fixture.nativeElement);
+      const originalWidth = linkEl.style.width;
+      linkEl.style.width = '247px';
+      // Karma has no network access to the Material Symbols webfont, so the
+      // icon glyph falls back to rendering its ligature TEXT ("route") in a
+      // system font — much wider than the real ~20px icon — which starves
+      // .admin-nav-link-text of its production-realistic share of the row
+      // and makes this a font-loading artifact, not a layout assertion. Pin
+      // the icon to its real rendered size so the flex distribution matches
+      // production regardless of whether the icon font loaded.
+      const iconEl = linkEl.querySelector('.material-symbols-outlined') as HTMLElement | null;
+      const originalIconWidth = iconEl?.style.width ?? '';
+      const originalIconFlex = iconEl?.style.flex ?? '';
+      if (iconEl) {
+        iconEl.style.flex = '0 0 auto';
+        iconEl.style.width = '20px';
+      }
+      try {
+        fixture.detectChanges();
+        const descriptionEl = linkEl.querySelector('.admin-nav-link-description') as HTMLElement;
+        expect(descriptionEl).withContext('the matched item must render a description line').toBeTruthy();
+        expect(descriptionEl.scrollWidth)
+          .withContext(
+            `description must WRAP inside its own box, not overflow it ` +
+              `(scrollWidth=${descriptionEl.scrollWidth} clientWidth=${descriptionEl.clientWidth})`
+          )
+          .toBeLessThanOrEqual(descriptionEl.clientWidth + 1);
+
+        const highlightEl = descriptionEl.querySelector('.admin-nav-search-highlight') as HTMLElement;
+        expect(highlightEl).withContext('the match must be highlighted').toBeTruthy();
+        const linkRect = linkEl.getBoundingClientRect();
+        const highlightRect = highlightEl.getBoundingClientRect();
+        expect(highlightRect.left >= linkRect.left - 1)
+          .withContext(`highlight must not start before the nav link (link.left=${linkRect.left}, highlight.left=${highlightRect.left})`)
+          .toBeTrue();
+        expect(highlightRect.right <= linkRect.right + 1)
+          .withContext(`highlight must not run past the nav link's right edge (link.right=${linkRect.right}, highlight.right=${highlightRect.right})`)
+          .toBeTrue();
+      } finally {
+        linkEl.style.width = originalWidth;
+        if (iconEl) {
+          iconEl.style.width = originalIconWidth;
+          iconEl.style.flex = originalIconFlex;
+        }
+        fixture.nativeElement.remove();
+      }
+    });
+
+    it('is case-insensitive: a differently-cased query still highlights the substring in its ORIGINAL casing', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('PROMO');
+      const promotions = itemFor(comp, 'promotions');
+
+      expect(comp.filteredNavItems.some((i) => i.path === 'promotions'))
+        .withContext('the filter itself must stay case-insensitive')
+        .toBeTrue();
+      expect(promotions.labelSegments).toEqual([
+        { text: 'Promo', match: true }, // original casing preserved, not "PROMO"
+        { text: 'tions', match: false },
+      ]);
+    });
+
+    it('produces no highlighted segment for an item the query does not match at all', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('zzz-no-such-menu-zzz');
+      const dashboard = itemFor(comp, 'dashboard');
+
+      // Segments are still computed (every item, not just matches — see
+      // applyNavSearch), but none of them are highlighted.
+      expect(dashboard.labelSegments).toEqual([{ text: 'Dashboard', match: false }]);
+    });
+
+    it('an empty query produces NO description line and NO segments — label-only, unchanged from today (AC1)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('provinces'); // narrow first, so clearing is a real transition
+      fixture.detectChanges();
+      expect(fixture.debugElement.query(By.css('.admin-nav-link-description')))
+        .withContext('sanity: the description line must exist while narrowed')
+        .toBeTruthy();
+
+      comp.applyNavSearch('');
+      fixture.detectChanges();
+
+      const lookups = itemFor(comp, 'lookups');
+      expect(lookups.labelSegments).toBeUndefined();
+      expect(lookups.descriptionSegments).toBeUndefined();
+      expect(fixture.debugElement.query(By.css('.admin-nav-link-description')))
+        .withContext('no description line renders anywhere once the query is empty')
+        .toBeNull();
+      expect(fixture.debugElement.query(By.css('.admin-nav-search-highlight')))
+        .withContext('no highlight spans render anywhere once the query is empty')
+        .toBeNull();
+      // The plain label text is still there, byte-identical to the no-search
+      // state — located by its route path (the full list is rendered again,
+      // so ".admin-nav-link-label" alone would just find the FIRST item).
+      const lookupsLink = fixture.debugElement
+        .queryAll(By.css('.admin-nav-link'))
+        .find((a) => (a.nativeElement.getAttribute('href') ?? '').includes('lookups'));
+      expect(lookupsLink).withContext('the Lookups link must be back in the full list').toBeTruthy();
+      const label = lookupsLink!.query(By.css('.admin-nav-link-label'));
+      expect(label.nativeElement.textContent.trim()).toBe('Lookups');
+    });
+
+    it('clearing the query also clears every item\'s highlight segments (extends the OBRS-794 restore path)', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      comp.applyNavSearch('promotion');
+      expect(itemFor(comp, 'promotions').labelSegments)
+        .withContext('sanity: segments exist while a query is active')
+        .toBeDefined();
+
+      comp.clearNavSearch();
+
+      expect(comp.navItems.every((i) => i.labelSegments === undefined && i.descriptionSegments === undefined))
+        .withContext('OBRS-794 pattern: a field derived by applyNavSearch must be reset on every path that empties the query')
+        .toBeTrue();
+    });
+
+    // AC 3 pin: a regex-metacharacter-shaped query and an HTML-injection-shaped
+    // query must not throw, must not be compiled into a regex, and must never
+    // reach the DOM as markup (segments are rendered via text interpolation,
+    // never [innerHTML] — see nav-search-highlight.ts).
+    it('handles a regex-alternation-shaped query ("a)|(b") without throwing and without spurious matches', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      expect(() => comp.applyNavSearch('a)|(b')).not.toThrow();
+      fixture.detectChanges();
+
+      expect(comp.filteredNavItems.length)
+        .withContext('none of the seeded labels/descriptions literally contain "a)|(b"')
+        .toBe(0);
+      expect(fixture.debugElement.query(By.css('.admin-nav-empty'))).toBeTruthy();
+    });
+
+    it('handles an HTML-injection-shaped query ("<img src=x onerror=alert(1)>") without throwing and without inserting markup', () => {
+      seedNavTranslations();
+      const comp = fixture.componentInstance as unknown as SearchComp;
+      const xssQuery = '<img src=x onerror=alert(1)>';
+      expect(() => comp.applyNavSearch(xssQuery)).not.toThrow();
+      fixture.detectChanges();
+
+      expect(comp.filteredNavItems.length).toBe(0);
+      // The proof that matters: no <img> element was ever created from it.
+      expect(fixture.nativeElement.querySelector('img[src="x"]')).toBeNull();
+      expect(fixture.debugElement.query(By.css('.admin-nav-empty'))).toBeTruthy();
+    });
   });
 });
 

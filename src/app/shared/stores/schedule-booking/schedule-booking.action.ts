@@ -23,3 +23,16 @@ export const invokeSetScheduleBookingApiSuccess = createAction(
   props<{ schedule_booking: ScheduleBooking | null }>()
 );
 // END SET
+
+/**
+ * OBRS-903: re-ask the backend whether a selection that was RESTORED from
+ * storage (a different tab chose it, possibly half an hour ago) is still
+ * bookable, before the customer is allowed to build on it.
+ *
+ * Dispatched by the two pages that come before payment —
+ * `/review-schedule-booking` and `/passenger-info`. A no-op when the selection
+ * in play was made in this tab, which is the healthy path and needs no request.
+ */
+export const revalidateRestoredScheduleBooking = createAction(
+  '[ScheduleBooking] Revalidate restored selection'
+);

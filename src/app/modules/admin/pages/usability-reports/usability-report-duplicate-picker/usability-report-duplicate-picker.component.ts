@@ -30,11 +30,14 @@ import { statusClass as statusClassPure } from '../usability-reports-page.mapper
 export class UsabilityReportDuplicatePickerComponent implements OnChanges {
   @Input() candidates: UsabilityReportSummary[] = [];
   @Input() isSaving = false;
-  @Output() confirm = new EventEmitter<string>();
+  // OBRS-436: emits the candidate's real `number` id (was `string` — see the
+  // interface fix). The parent's onPickerConfirm consumes it directly, no
+  // coercion.
+  @Output() confirm = new EventEmitter<number>();
   @Output() cancel = new EventEmitter<void>();
 
   protected searchTerm = '';
-  protected selectedId: string | null = null;
+  protected selectedId: number | null = null;
 
   ngOnChanges(changes: SimpleChanges): void {
     // The parent gates this component behind `*ngIf="isPickerOpen"`, which
@@ -55,18 +58,14 @@ export class UsabilityReportDuplicatePickerComponent implements OnChanges {
     if (!term) {
       return this.candidates;
     }
-    // QA (OBRS-376): `UsabilityReportSummary.id` is TYPED string but the API
-    // actually returns it as a JSON number (confirmed live) — calling
-    // `.toLowerCase()` on it directly threw a TypeError on every keystroke,
-    // going stale/empty and leaving Confirm stuck disabled. `String(c.id)`
-    // coerces either the (mistyped) real number or a genuine string id
-    // safely. Deliberately NOT fixing the interface itself here — that's a
-    // separate, wider follow-up card (ripples into openDetail/the service
-    // signature/etc.); this is a local, defensive coercion at the point of
-    // use.
+    // OBRS-436: `UsabilityReportSummary.id` is now correctly typed `number`
+    // (was the OBRS-376 `string` type lie), so `String(c.id)` here is a plain,
+    // honest number→text conversion for the id substring match — not the
+    // defensive coercion it used to be to keep a mistyped runtime number from
+    // throwing on `.toLowerCase()`.
     return this.candidates.filter(
       (c) =>
-        String(c.id).toLowerCase().includes(term) ||
+        String(c.id).includes(term) ||
         c.descriptionPreview.toLowerCase().includes(term)
     );
   }
@@ -75,12 +74,16 @@ export class UsabilityReportDuplicatePickerComponent implements OnChanges {
     this.searchTerm = value;
   }
 
-  protected selectCandidate(id: string): void {
+  protected selectCandidate(id: number): void {
     this.selectedId = id;
   }
 
   protected onConfirm(): void {
-    if (!this.selectedId || this.isSaving) {
+    // OBRS-436: `=== null` guard, not `!this.selectedId` — a numeric id is
+    // falsy at 0, so the old truthiness check would silently block Confirm on
+    // an id of 0. (BIGSERIAL never issues 0 today, but the number type makes
+    // the falsy trap real, so the guard is explicit.)
+    if (this.selectedId === null || this.isSaving) {
       return;
     }
     this.confirm.emit(this.selectedId);
@@ -93,7 +96,7 @@ export class UsabilityReportDuplicatePickerComponent implements OnChanges {
     this.cancel.emit();
   }
 
-  protected trackById(_index: number, item: UsabilityReportSummary): string {
+  protected trackById(_index: number, item: UsabilityReportSummary): number {
     return item.id;
   }
 
