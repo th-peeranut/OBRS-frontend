@@ -130,7 +130,7 @@ describe('UsabilityReportsStore', () => {
       const page: UsabilityReportPage = {
         content: [
           {
-            id: 'rep-1',
+            id: 1,
             category: 'bug',
             status: 'new',
             userId: null,
@@ -203,7 +203,7 @@ describe('UsabilityReportsStore', () => {
     const page: UsabilityReportPage = {
       content: [
         {
-          id: 'rep-1',
+          id: 1,
           category: 'bug',
           status: 'new',
           userId: null,

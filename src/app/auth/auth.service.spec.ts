@@ -14,6 +14,11 @@ import {
   SKIP_AUTH_LOGOUT,
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
+import {
+  readBookingContext,
+  rememberBookingSelection,
+} from '../shared/lib/booking-context-storage';
+import { Schedule } from '../shared/interfaces/schedule.interface';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -505,6 +510,106 @@ describe('AuthService', () => {
 
       httpTesting.expectNone(`${environment.apiUrl}/api/auth/logout`);
       expect(localStorage.getItem('auth_token')).toBeNull();
+    });
+  });
+
+  // OBRS-903. The destination is written by AuthGuard in the tab the customer
+  // was bounced from, and read in the tab the e-mail verification link opened —
+  // a different tab. Every case below is about that boundary, plus the TTL that
+  // stops a cross-tab store from also being a cross-day one.
+  describe('post-login return URL — survives a NEW TAB, expires on its own (OBRS-903)', () => {
+    const RETURN_URL_KEY = 'auth_return_url';
+    const PASSENGER_INFO = '/passenger-info';
+
+    /** Rewrites the stored `savedAt` instead of mocking the clock, so the
+     *  assertion runs against the same envelope production reads. */
+    function ageStoredReturnUrlBy(ms: number): void {
+      const envelope = JSON.parse(
+        localStorage.getItem(RETURN_URL_KEY) as string
+      ) as { savedAt: number };
+      envelope.savedAt -= ms;
+      localStorage.setItem(RETURN_URL_KEY, JSON.stringify(envelope));
+    }
+
+    it('fails-on-old / passes-on-new: the destination is still there in a tab that shares no sessionStorage', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+
+      // The mail link opens a new tab — fresh sessionStorage, same localStorage.
+      // While the value lived in sessionStorage this single line was the whole
+      // bug: the destination was simply absent and login went to the home route.
+      sessionStorage.clear();
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+    });
+
+    it('is consumed exactly once — the next login is not redirected again', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('AC4 in-window: an entry younger than the 30-minute TTL is used', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+      ageStoredReturnUrlBy(29 * 60 * 1000);
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe(PASSENGER_INFO);
+    });
+
+    it('AC4 out-of-window: an entry past the TTL is ignored AND removed', () => {
+      service.setPostLoginRedirectUrl(PASSENGER_INFO);
+      ageStoredReturnUrlBy(31 * 60 * 1000);
+
+      expect(service.consumePostLoginRedirectUrl('/somewhere')).toBe('/somewhere');
+      expect(localStorage.getItem(RETURN_URL_KEY)).toBeNull();
+    });
+
+    it('must-NOT: an auth page is refused on WRITE — login may not redirect to itself', () => {
+      service.setPostLoginRedirectUrl('/login');
+
+      expect(localStorage.getItem(RETURN_URL_KEY)).toBeNull();
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('must-NOT: an auth page planted in storage is refused on READ too', () => {
+      // localStorage is user-editable and outlives a deploy, so the read-side
+      // check is what actually stops a spent /reset-password token (OBRS-613)
+      // from being handed back as a destination.
+      localStorage.setItem(
+        RETURN_URL_KEY,
+        JSON.stringify({
+          version: 1,
+          savedAt: Date.now(),
+          value: '/reset-password?token=already-spent',
+        })
+      );
+
+      expect(service.consumePostLoginRedirectUrl('/')).toBe('/');
+    });
+
+    it('AC2 — every sign-in route goes through navigateAfterLogin, so all three come back', async () => {
+      // Password, Google (login.component.ts:242) and phone+OTP
+      // (otp-validate.component.ts:141) all call this one method; none of them
+      // reads storage itself. Pinning it here is what makes "and Google, and
+      // OTP" a fact about the code rather than a hope — neither of those can be
+      // driven headless (a real consent screen, a real SMS).
+      service.setPostLoginRedirectUrl('/passenger-info');
+      const router = TestBed.inject(Router);
+
+      await service.navigateAfterLogin('/');
+
+      expect(router.navigateByUrl).toHaveBeenCalledWith('/passenger-info');
+    });
+
+    it('signing out drops the cross-tab booking context — a shared machine keeps nothing', () => {
+      rememberBookingSelection([
+        { id: 7 } as unknown as Schedule,
+      ]);
+      expect(readBookingContext()?.selection?.length).toBe(1);
+
+      service.logout(); // no refresh token stored, so no HTTP call to verify
+
+      expect(readBookingContext()).toBeNull();
     });
   });
 });

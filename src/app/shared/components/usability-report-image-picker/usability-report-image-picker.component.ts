@@ -134,12 +134,11 @@ export class UsabilityReportImagePickerComponent implements OnChanges, OnDestroy
 
   private emitChange(): void {
     this.imagesChange.emit({
-      // UsabilityReportImage.id is typed `string` (OBRS-376's documented
-      // latent BIGSERIAL-serializes-as-number gap — see DEV-GOTCHAS), so this
-      // coerces at the output boundary exactly like the admin duplicate
-      // picker's `Number(candidateId)` — the wire contract for keepImageIds
-      // is `number[]`.
-      keepImageIds: this.keptImages.map((img) => Number(img.id)),
+      // OBRS-436: UsabilityReportImage.id is now correctly typed `number`
+      // (was OBRS-376's `string` type lie), and the keepImageIds wire contract
+      // is `number[]`, so the id passes straight through — the previous
+      // `Number(img.id)` boundary coercion is gone.
+      keepImageIds: this.keptImages.map((img) => img.id),
       newFiles: [...this.newFiles],
     });
   }

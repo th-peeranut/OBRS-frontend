@@ -78,7 +78,7 @@
             *ngFor="let item of section.items"
             [routerLink]="item.path"
             routerLinkActive="active"
-            [routerLinkActiveOptions]="{ exact: !item.matchSubtree }"
+            [routerLinkActiveOptions]="navLinkActiveMatch(item)"
             class="admin-nav-link"
             (click)="onNavLinkClick(); clearNavSearch()"
           >

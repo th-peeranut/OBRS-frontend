@@ -23,7 +23,11 @@ export type UsabilityReportStatus =
   | 'duplicate';
 
 export interface UsabilityReportSummary {
-  id: string;
+  // OBRS-436: the backend PK is a BIGSERIAL that serializes to a JSON number
+  // (`{"id":1}`, docs/api/usability-reports.md) — this field was typed `string`
+  // for months (the OBRS-376 "type lie") until the first code to call a string
+  // method on it threw. Now typed to match the real API shape.
+  id: number;
   category: UsabilityReportCategory;
   status: UsabilityReportStatus;
   userId: number | null;
@@ -47,7 +51,8 @@ export interface UsabilityReportSummary {
 export type UsabilityReportPage = PageResponse<UsabilityReportSummary>;
 
 export interface UsabilityReportImage {
-  id: string;
+  // OBRS-436: BIGSERIAL → JSON number, same fix as UsabilityReportSummary.id.
+  id: number;
   publicUrl: string;
   contentType: string;
   sizeBytes: number;
@@ -55,7 +60,8 @@ export interface UsabilityReportImage {
 }
 
 export interface UsabilityReportDetail {
-  id: string;
+  // OBRS-436: BIGSERIAL → JSON number, same fix as UsabilityReportSummary.id.
+  id: number;
   category: UsabilityReportCategory;
   status: UsabilityReportStatus;
   userId: number | null;
@@ -88,7 +94,8 @@ export interface UsabilityReportDetail {
 }
 
 export interface UsabilityReportReceipt {
-  id: string;
+  // OBRS-436: BIGSERIAL → JSON number, same fix as UsabilityReportSummary.id.
+  id: number;
   category: string;
   status: string;
   imageCount: number;
@@ -96,13 +103,12 @@ export interface UsabilityReportReceipt {
 }
 
 // ── OBRS-433: reporter-facing "My Reports" (customer area) ───────────────────
-// A DELIBERATELY separate interface family from UsabilityReportSummary/Detail
-// above rather than reusing them: those two carry `id: string`, which is the
-// OBRS-376-documented latent bug (BIGSERIAL id serializes as a JSON number —
-// see DEV-GOTCHAS "An FE field typed wrong survives until the first
-// type-specific method call"). This family is new code with no legacy call
-// sites depending on the wrong type, so it types `id: number` everywhere from
-// the start instead of inheriting the bug.
+// A separate interface family from UsabilityReportSummary/Detail above (its
+// fields are a genuinely different, reporter-facing projection). It has always
+// typed `id: number`, which OBRS-436 has now made the Summary/Detail family do
+// too — the old `id: string` "type lie" on that family (BIGSERIAL id serializes
+// as a JSON number; see DEV-GOTCHAS "An FE field typed wrong survives until the
+// first type-specific method call") is fixed, so both families now agree.
 
 export interface MyUsabilityReportSummary {
   id: number;

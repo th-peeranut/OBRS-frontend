@@ -1,0 +1,5 @@
+// OBRS-155 — per-vehicle-type fill-rate bar.
+.oe-fill { display: flex; align-items: center; gap: 0.5rem; min-width: 120px; }
+.oe-track { flex: 1; height: 8px; border-radius: 4px; background: var(--admin-surface-soft); overflow: hidden; }
+.oe-bar { height: 100%; border-radius: 4px; background: var(--admin-success-text); transition: width 0.2s ease; }
+.oe-pct { font-size: 0.75rem; color: var(--admin-muted); min-width: 42px; text-align: right; }

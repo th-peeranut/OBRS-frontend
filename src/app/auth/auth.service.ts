@@ -9,6 +9,8 @@ import {
   SKIP_GLOBAL_ERROR_ALERT,
 } from '../shared/interceptors/http-context-tokens';
 import { hasOwnKey } from '../shared/lib/own-key';
+import { clearTtl, readWithTtl, writeWithTtl } from '../shared/lib/ttl-storage';
+import { clearBookingContext } from '../shared/lib/booking-context-storage';
 import {
   EmailChangeConfirmResponse,
   EmailChangeRequestResponse,
@@ -35,7 +37,22 @@ export class AuthService {
   private readonly REFRESH_TOKEN_KEY = 'auth_refresh_token';
   private readonly USERNAME_KEY = 'auth_username';
   private readonly ROLES_KEY = 'auth_roles';
+  /**
+   * OBRS-187 created this; OBRS-903 moved it out of `sessionStorage`.
+   *
+   * A first-time booker is bounced here from the booking flow, registers, and
+   * then has to open the verification mail — which opens a NEW TAB.
+   * `sessionStorage` is per-tab, so the tab that reads this was never the tab
+   * that wrote it: the value read as absent and `navigateAfterLogin` sent every
+   * one of them to the home route with nothing logged anywhere. localStorage
+   * crosses the tab boundary; the TTL below is what keeps it from also crossing
+   * the day boundary and redirecting someone who never asked.
+   */
   private readonly RETURN_URL_KEY = 'auth_return_url';
+  private static readonly RETURN_URL_VERSION = 1;
+  /** 30 minutes — long enough for the mail-app detour, short enough that a
+   *  forgotten entry does not hijack an unrelated login the next morning. */
+  private static readonly RETURN_URL_TTL_MS = 30 * 60 * 1000;
 
   // Area-based access model (frontend routing only — the backend keeps its own
   // WebSecurityConfig#roleHierarchy, where admin > owner > salesperson >
@@ -168,13 +185,20 @@ export class AuthService {
       return;
     }
 
-    sessionStorage.setItem(this.RETURN_URL_KEY, url);
+    writeWithTtl(this.RETURN_URL_KEY, url, AuthService.RETURN_URL_VERSION);
   }
 
   consumePostLoginRedirectUrl(defaultUrl: string = '/'): string {
-    const url = sessionStorage.getItem(this.RETURN_URL_KEY);
-    sessionStorage.removeItem(this.RETURN_URL_KEY);
+    const url = readWithTtl<string>(
+      this.RETURN_URL_KEY,
+      AuthService.RETURN_URL_TTL_MS,
+      AuthService.RETURN_URL_VERSION
+    );
+    clearTtl(this.RETURN_URL_KEY);
 
+    // The auth-page check stays on BOTH sides of storage. A value can be written
+    // by one build and read by the next, and this is the guard that stops a
+    // /login → /login redirect loop (and OBRS-613's spent reset-password token).
     if (!url || this.isAuthPage(url)) {
       return defaultUrl;
     }
@@ -359,6 +383,12 @@ export class AuthService {
   logout(): void {
     const refreshToken = this.getRefreshToken();
     this.clearAuthData();
+    // OBRS-903: the cross-tab booking context outlives a tab by design, so
+    // pressing "sign out" on a shared machine has to end it too. Deliberately
+    // here and NOT in `clearAuthData()` — that also runs on the JWT-expired
+    // login retry (`callLogin`) and inside the interceptor's 401 handling, where
+    // wiping the customer's trip selection would recreate this very bug.
+    clearBookingContext();
 
     if (refreshToken) {
       this.http

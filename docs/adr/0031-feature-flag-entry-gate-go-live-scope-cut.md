@@ -111,7 +111,7 @@ means:
     stays `false`. Reason: this flag's ACs are *visual* (tiles render, real
     markers appear) so they can only be measured on a served build, but the
     prod build shares `environmentBase` and prod cannot render the feature —
-    `PROD_MAPTILER_API_KEY` has never been provisioned (a prod build inherits
+    `PROD_MAPTILER_API_KEY` had never been provisioned (a prod build inherits
     `maptilerKey: ''` and shows the MAP_UNAVAILABLE placeholder), and,
     confirmed the same day, **prod is deliberately not serving this SPA yet**:
     every FE route on `https://nj-phuyaipu.com` returns 404 while
@@ -144,6 +144,25 @@ means:
       finding against it costs one fetch; not reading it produced a false
       defect claim about someone else's deliberate decision, in the same
       changeset whose purpose was to retract a false claim.
+    - ✅ **The key half is now closed (OBRS-926, later the same day).** The owner
+      provisioned `obrs-frontend-prod` in MapTiler Cloud, restricted to the single
+      origin `nj-phuyaipu.com` with no `localhost`, which is OBRS-831 AC6 met in
+      full. **This changes nothing about the flag**: `features.fleetMap` is still
+      `false` in `environment.base.ts` and prod still serves no SPA, so both of the
+      *other* reasons for the SIT-only override stand unchanged. The third reason —
+      a key that did not exist — is simply gone.
+      - ⚠️ **Third correction, and the cheapest one yet to have avoided.** The
+        session that wrote the sentence above first told the owner the key could
+        **not** be provisioned, on the grounds that an origin-restricted key needs a
+        prod origin and "the prod domain is recorded nowhere in the repo". The
+        domain was recorded in five files — `Caddyfile`, `README.md`,
+        `.env.prod.example`, `publish-frontend.ps1`, `deploy-backend.sh` — all of
+        them under `OBRS-backend/deploy/prod/`. The grep behind the claim covered
+        `OBRS-frontend` only, where the sole hit was this repo's own
+        `<prod-domain>` placeholder (fixed by OBRS-926). An absence is a claim about
+        a population; naming the population you actually searched is what makes it
+        checkable, and "nowhere in the repo" was a statement about a repo that was
+        never going to be the one holding a hosting value.
 - `nav-reachability.spec.ts`'s orphan sweep needed one documented exemption:
   while `environment.features.fleetMap` is `false`, the `fleet-map` route is
   *intentionally* unreachable from the nav (that's the gate working), so it's

@@ -70,6 +70,247 @@ The DB `Lookup` slug and all i18n translations (EN: `Paid`, TH: `ชำระแ
 
 ## Contract Requests (Frontend → Backend)
 
+### [Frontend] 2026-07-24 — Deep revenue analytics endpoint (OBRS-151): new `GET /reports/revenue-analytics`
+
+<!-- contract-request
+card: OBRS-151
+status: partially-resolved
+resolved: 2026-07-24 (foundation increment)
+-->
+
+> **PARTIALLY RESOLVED 2026-07-24.** The **foundation** of this endpoint now exists and is documented:
+> backend `ao/obrs-151-revenue-analytics` `57a7cea6` ships `GET /api/private/admin/reports/revenue-analytics`
+> with **totals + daily net-revenue trend + period-over-period** (server-computed `netBarPct`/`netChangePct`),
+> built on the already-IT-covered `findDailyRevenue` query (ReportService +5 unit tests, 49/49 green). The
+> frontend page consuming it shipped on `ao/revenue-analytics-obrs151` (interface/service/store/page/chart/
+> i18n/route/nav + specs; ci-smoke green). **Still OPEN:** the **by-route** and **by-payment-method**
+> breakdowns below — they need their own native aggregation queries and are the next increment.
+
+**Affected endpoint**: `GET /api/private/admin/reports/revenue-analytics?from&to` — **NEW, does not exist yet.**
+
+**Request type**: new read-only aggregation endpoint (R1 additive; no change to any existing endpoint).
+
+**Why this is a contract request and not FE code**: OBRS-151 ("Revenue analytics and reporting", the *deep*
+version of the Lane-A reporting layer) needs server-side revenue breakdowns the existing
+`GET /reports/summary` does not provide (per-route, per-payment-method across a range, and
+period-over-period). Two house rules forbid faking it on the FE: (1) *"Do not call an endpoint not yet
+documented in `../OBRS-backend/docs/api/`"* and (2) money fields are **decimal strings** and *"never do
+arithmetic on them client-side"* — so the chart scaling / shares / deltas must be **computed server-side**,
+not derived in the browser. Hence this spec instead of a guessed FE implementation.
+
+### What the frontend needs
+| Field / Change | Location | Reason |
+|---|---|---|
+| New endpoint `GET /reports/revenue-analytics?from&to` | `AdminReportController` | Backs a new "Revenue Analytics" admin page (deep revenue view) |
+| `@PreAuthorize("hasAnyRole('ADMIN','OWNER')")`, revenue fields `@JsonInclude(NON_NULL)` | same | Mirror `/summary`'s role model exactly (OBRS-129 revenue-withholding pattern) |
+| **Server-computed** `sharePct` / `netChangePct` / `netBarPct` (numbers, 0–100 or signed %) | response DTO | So the FE renders bars, shares and the period delta **without** any money arithmetic — it only formats the decimal-string money for display |
+
+### Proposed response shape (all money = decimal strings, same as `/summary`)
+```json
+{
+  "range":   { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "totals":  { "net": "125400.00", "paid": "131400.00", "refunded": "6000.00", "currency": "THB" },
+  "previousPeriod": {
+    "range":  { "from": "2026-06-01", "to": "2026-06-30" },
+    "totals": { "net": "110000.00", "paid": "114000.00", "refunded": "4000.00", "currency": "THB" },
+    "netChangePct": 14.0
+  },
+  "byRoute": [
+    { "routeId": 3, "routeName": "Bangkok → Chiang Mai", "ticketsSold": 210,
+      "revenue": { "net": "84000.00", "paid": "88000.00", "refunded": "4000.00", "currency": "THB" }, "sharePct": 67.0 }
+  ],
+  "byPaymentMethod": [
+    { "method": "credit_card", "count": 180, "revenue": { "net": "90000.00", "paid": "94000.00", "refunded": "4000.00", "currency": "THB" }, "sharePct": 71.8 },
+    { "method": "cash",        "count": 60,  "revenue": { "net": "35400.00", "paid": "37400.00", "refunded": "2000.00", "currency": "THB" }, "sharePct": 28.2 }
+  ],
+  "dailyTrend": [
+    { "date": "2026-07-01", "net": "4200.00", "paid": "4200.00", "refunded": "0.00", "currency": "THB", "netBarPct": 34.0 }
+  ]
+}
+```
+Semantics to match `/summary` exactly (docs/api/reports.md): `net = paid − refunded`; revenue = Payments
+against CONFIRMED bookings bucketed by booking-created-date; `paid` counts `paid` + `manual_refund_required`
+(`EPaymentStatus.countsAsPaid`); `refunded` counts `refunded`. `byRoute` ordered by `revenue.net` desc,
+`byPaymentMethod` mirrors `/eod-salesperson`'s method vocabulary. `netBarPct` = each day's net as a % of the
+max daily net in-range (0–100), `sharePct` = row net / totals net × 100, `netChangePct` = (net − prevNet) /
+prevNet × 100 — **all computed on the server** in `BigDecimal`.
+
+### Frontend plan (built once the endpoint is documented — NOT before, per §13)
+New `/admin/revenue-analytics` page (or a tab on `reports`), owner/revenue-gated off field presence like
+`reports-page`: totals KPI tiles + a period-over-period delta chip (`netChangePct`), an inline-SVG daily
+net-revenue trend chart (heights from `netBarPct`), a by-route bar list (`sharePct`), and a by-payment-method
+breakdown. Reuses `ReportsMoneyDto`/`formatMoney`, the `p-calendar` range filter, and an export twin
+(`revenue-analytics` dataset) matching the on-screen table (ADR-0084).
+
+### Impact if not addressed
+OBRS-151's page cannot be built — there is no endpoint to consume, and the deep breakdowns/shares/deltas
+cannot be computed client-side without violating the decimal-string-money rule. The follow-on sequence
+(OBRS-152 booking-trend, OBRS-153 route-performance, OBRS-154 customer-behavior, OBRS-155 ops-efficiency)
+each needs its own analogous aggregation endpoint and will file the same way. **Note:** the SIT/local
+environment currently has ~no booking traffic (`dont-extrapolate-metrics-from-a-no-traffic-env`), so these
+endpoints should be verified against seeded/synthetic data, and the analytics interpreted with that caveat.
+
+---
+
+
+### [Frontend] 2026-07-24 — Booking trend analysis endpoint (OBRS-152): new `GET /reports/booking-trend`
+
+<!-- contract-request
+card: OBRS-152
+status: partially-resolved
+resolved: 2026-07-24 (daily increment)
+-->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/booking-trend` now exists (backend
+> `ao/obrs-152-booking-trend` `cefc2894`, off the 151 branch — sequential lane) with the **daily** series +
+> 7-day moving average + day-of-week seasonality + period-over-period + peak, on the already-IT-covered
+> `findDailyVolume` query (ReportService +6 unit tests, 55/55 green). Frontend page on
+> `ao/booking-trend-obrs152` (interface/service/store/page/2 charts/i18n/route/nav + specs; ci-smoke green).
+> **Still OPEN:** `week`/`month` **granularity** bucketing — this increment is daily only.
+
+**Affected endpoint**: `GET /api/private/admin/reports/booking-trend?from&to&granularity=day|week|month` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Depends on OBRS-151 lane landing first (sequential).
+**Auth**: `hasAnyRole('ADMIN','OWNER')` (no revenue in this endpoint → no role-withholding needed).
+
+Deep version of `/summary`'s daily `bookingCount`. Adds trend decomposition the FE must not compute itself
+(counts are cheap ints, but the moving average / growth % / day-of-week seasonality are analytics the
+server should own for consistency with the query layer):
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "granularity": "day",
+  "series": [ { "bucket": "2026-07-01", "bookingCount": 42, "ticketsSold": 61, "movingAvg7": 39.5, "barPct": 88.0 } ],
+  "previousPeriod": { "totalBookings": 980, "changePct": 12.4 },
+  "byDayOfWeek": [ { "dow": 1, "bookingCount": 210, "sharePct": 18.0 } ],
+  "peak": { "bucket": "2026-07-14", "bookingCount": 73 }
+}
+```
+Server-computed: `movingAvg7`, `barPct` (bucket count / max bucket count × 100), `sharePct`, `changePct`.
+**FE plan** (built once documented): `/admin/booking-trend` page — granularity toggle, inline-SVG trend line
+(heights from `barPct`), a day-of-week bar strip (`sharePct`), and a period-over-period delta chip.
+**Impact if not addressed**: OBRS-152 page cannot be built (no endpoint). No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Route performance metrics endpoint (OBRS-153): new `GET /reports/route-performance`
+
+<!-- contract-request
+card: OBRS-153
+status: partially-resolved
+resolved: 2026-07-24 (ticket-grained increment)
+-->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/route-performance` now exists
+> (backend `ao/obrs-153-route-performance` `551e1930`, off the 152 branch) with per-route **departures +
+> tickets sold + net revenue + revenueSharePct**, ticket-grained (each ticket carries route_id +
+> net_price_snapshot → revenue attributes unambiguously). Validated by a **real Testcontainers IT**
+> (`RoutePerformanceIT`, 4/4 against postgres:17-alpine) + ReportServiceTest +3. Frontend page on
+> `ao/route-performance-obrs153` (table + revenue-share bars + tiles; 7 specs, ci-smoke green).
+> **Still OPEN:** seat-level **load-factor / occupancy** — needs the seat-map + jump-seat + OPEN/ASSIGNED
+> semantics the /summary occupancy query carries.
+
+**Affected endpoint**: `GET /api/private/admin/reports/route-performance?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-152.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`; revenue fields `@JsonInclude(NON_NULL)` (OBRS-129 withholding pattern).
+
+Per-route performance the existing reports don't break out. Load factor / share are server-computed:
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "routes": [
+    { "routeId": 3, "routeName": "Bangkok → Chiang Mai", "departures": 62,
+      "seatsSold": 1240, "seatCapacity": 1860, "loadFactorPct": 66.7,
+      "cancelledDepartures": 1, "cancellationRatePct": 1.6,
+      "revenue": { "net": "84000.00", "paid": "88000.00", "refunded": "4000.00", "currency": "THB" },
+      "revenueSharePct": 41.0 }
+  ],
+  "totals": { "seatsSold": 3020, "seatCapacity": 4800, "loadFactorPct": 62.9,
+              "revenue": { "net": "205000.00", "paid": "215000.00", "refunded": "10000.00", "currency": "THB" } }
+}
+```
+Occupancy/`loadFactorPct` follows `/summary`'s occupancy semantics (bucketed by departure date). Ordering:
+`revenue.net` desc, then `loadFactorPct` desc. Server-computed: `loadFactorPct`, `cancellationRatePct`,
+`revenueSharePct`. **FE plan**: `/admin/route-performance` sortable table + a load-factor bar column +
+top-N-routes-by-revenue bar list. **Impact**: OBRS-153 page cannot be built. No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Customer behavior analysis endpoint (OBRS-154): new `GET /reports/customer-behavior`
+
+<!-- contract-request
+card: OBRS-154
+status: partially-resolved
+resolved: 2026-07-24 (counts-only increment)
+-->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/customer-behavior` now exists
+> (backend `ao/obrs-154-customer-behavior` `ecacdcd6`, off the 153 branch) — aggregate-only (no PII):
+> total bookings, distinct/returning customers + rate, avg per customer, channel split, repeat
+> histogram. Two new native GROUP-BY queries; validated by a **real Testcontainers IT**
+> (`CustomerBehaviorIT`, 2/2 against postgres:17-alpine) + ReportServiceTest +4. Frontend on
+> `ao/customer-behavior-obrs154` (tiles + channel + repeat bars; 7 specs, ci-smoke green).
+> **Still OPEN:** booking **lead-time percentiles** (p50/p90) — needs a PERCENTILE_CONT aggregate.
+
+**Affected endpoint**: `GET /api/private/admin/reports/customer-behavior?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-153.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`. PII: return **aggregates only** — no per-customer rows, no names/emails.
+
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "totalCustomers": 640, "newCustomers": 210, "returningCustomers": 430, "returningRatePct": 67.2,
+  "avgBookingsPerCustomer": 1.8,
+  "leadTimeDays": { "p50": 3, "p90": 12, "avg": 5.4 },
+  "cancellationRatePct": 4.1,
+  "bookingsByChannel": [ { "channel": "web", "bookingCount": 820, "sharePct": 71.0 }, { "channel": "walk_in", "bookingCount": 335, "sharePct": 29.0 } ],
+  "repeatDistribution": [ { "bookings": 1, "customers": 430, "sharePct": 67.2 }, { "bookings": 2, "customers": 150, "sharePct": 23.4 } ]
+}
+```
+Server-computed: every `*Pct`, the percentiles, and `avgBookingsPerCustomer`. **FE plan**:
+`/admin/customer-behavior` page — new-vs-returning donut/bar, lead-time distribution, channel split
+(`sharePct`), repeat-frequency histogram. **PII note**: strictly aggregate; no drill-down to individuals.
+**Impact**: OBRS-154 page cannot be built. No-traffic caveat applies.
+
+---
+
+### [Frontend] 2026-07-24 — Operational efficiency reports endpoint (OBRS-155): new `GET /reports/ops-efficiency`
+
+<!-- contract-request
+card: OBRS-155
+status: partially-resolved
+resolved: 2026-07-24 (departures + seat-fill increment)
+-->
+
+> **PARTIALLY RESOLVED 2026-07-24.** `GET /api/private/admin/reports/ops-efficiency` now exists
+> (backend `ao/obrs-155-ops-efficiency` `0488907e`, off the 154 branch) — departure completion
+> (scheduled/completed/cancelled) + seat fill (sold/capacity) + per-vehicle-type breakdown. Two new
+> native queries merged by vehicle type; validated by a **real Testcontainers IT** (`OpsEfficiencyIT`,
+> 2/2 against postgres:17-alpine) + ReportServiceTest +3. Frontend on `ao/ops-efficiency-obrs155`
+> (tiles + per-type fill-rate table; 7 specs, ci-smoke green). **Still OPEN:** fleet-vehicle
+> **utilization** (utilized vs active vehicles) and **refund rate** — separate aggregates.
+
+**Affected endpoint**: `GET /api/private/admin/reports/ops-efficiency?from&to` — **NEW.**
+**Request type**: new read-only aggregation (R1 additive). Sequential after OBRS-154; last in the lane.
+**Auth**: `hasAnyRole('ADMIN','OWNER')`.
+
+Fleet/utilization efficiency across the range, aggregating schedules/departures/vehicles:
+```json
+{
+  "range": { "from": "2026-07-01", "to": "2026-07-31", "timezone": "Asia/Bangkok" },
+  "fleet": { "activeVehicles": 12, "utilizedVehicles": 11, "utilizationPct": 91.7 },
+  "departures": { "scheduled": 340, "completed": 332, "cancelled": 8, "completionRatePct": 97.6 },
+  "seatUtilization": { "seatsSold": 3020, "seatCapacity": 4800, "fillRatePct": 62.9 },
+  "refunds": { "count": 41, "grossRefunded": "10000.00", "currency": "THB", "refundRatePct": 3.4 },
+  "byVehicleType": [ { "vehicleType": "van_13", "departures": 210, "fillRatePct": 58.0, "sharePct": 63.0 } ]
+}
+```
+Server-computed: all `*Pct` / `*Rate`. Money (`grossRefunded`) stays a decimal string. Reuse `/refund-void`'s
+refund semantics where they overlap. **FE plan**: `/admin/ops-efficiency` KPI tiles (utilization, completion,
+fill rate, refund rate) + a per-vehicle-type fill-rate bar list. **Impact**: OBRS-155 page cannot be built.
+No-traffic caveat applies.
+
+---
+
 ### [Frontend] 2026-07-19 — `code` optional/server-generated on inspection-item create (OBRS-529): built ahead of the paired backend worktree
 
 <!-- contract-request

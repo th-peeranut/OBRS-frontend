@@ -18,9 +18,11 @@ describe('UsabilityReportImagePickerComponent', () => {
   let fixture: ComponentFixture<UsabilityReportImagePickerComponent>;
   let component: UsabilityReportImagePickerComponent;
 
+  // OBRS-436: UsabilityReportImage.id is `number` (the real API shape), so
+  // these fixtures use real number ids.
   const existing: UsabilityReportImage[] = [
-    { id: '1', publicUrl: 'https://x/1.png', contentType: 'image/png', sizeBytes: 100, position: 1 },
-    { id: '2', publicUrl: 'https://x/2.png', contentType: 'image/png', sizeBytes: 100, position: 2 },
+    { id: 1, publicUrl: 'https://x/1.png', contentType: 'image/png', sizeBytes: 100, position: 1 },
+    { id: 2, publicUrl: 'https://x/2.png', contentType: 'image/png', sizeBytes: 100, position: 2 },
   ];
 
   beforeEach(async () => {
@@ -58,7 +60,7 @@ describe('UsabilityReportImagePickerComponent', () => {
     expect(component['totalCount']).toBe(2);
   });
 
-  it('emits keepImageIds coerced to number and newFiles on removeExisting', () => {
+  it('emits keepImageIds (number[]) and newFiles on removeExisting', () => {
     setExisting(existing);
     const emitted: unknown[] = [];
     component.imagesChange.subscribe((v) => emitted.push(v));

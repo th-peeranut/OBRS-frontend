@@ -113,6 +113,19 @@ describe('AdminLayoutComponent', () => {
     expect(badgeSocketServiceStub.disconnect).toHaveBeenCalled();
   });
 
+  // ── OBRS-586: sidebar active-state ──────────────────────────────────────────
+  it('matches the active nav link by PATH (honouring matchSubtree) while ignoring query params / matrix params / fragment', () => {
+    // The old `{ exact: !item.matchSubtree }` boolean expanded to
+    // `queryParams: 'exact'`, so the highlight vanished the moment the URL carried
+    // a query string. This keeps the per-item subtree/exact PATH choice but ignores
+    // query/matrix/fragment.
+    const leaf = fixture.componentInstance['navLinkActiveMatch']({ matchSubtree: false } as never);
+    expect(leaf).toEqual({ paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
+
+    const parent = fixture.componentInstance['navLinkActiveMatch']({ matchSubtree: true } as never);
+    expect(parent).toEqual({ paths: 'subset', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' });
+  });
+
   it('should create', () => {
     expect(fixture.componentInstance).toBeTruthy();
   });

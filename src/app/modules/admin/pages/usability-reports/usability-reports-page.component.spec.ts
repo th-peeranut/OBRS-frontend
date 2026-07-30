@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, discardPeriodicTasks, fakeAsync, tick } from '@angular/core/testing';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -89,7 +89,14 @@ describe('UsabilityReportsPageComponent', () => {
       'getUsabilityReportById',
       'updateUsabilityReportStatus',
       'markUsabilityReportAsDuplicate',
+      'getUsabilityReports',
     ]);
+    // OBRS-373: the live-refresh poll calls getUsabilityReports for the active
+    // filter's total. Default it to the current baseline (no new rows) so the
+    // background poll is a no-op unless a test deliberately grows the total.
+    adminApiServiceSpy.getUsabilityReports.and.returnValue(
+      of({ code: 200, message: 'OK', data: buildPage([], 1) })
+    );
     // Default success response so the silent auto-promote-on-open path (fired
     // whenever a 'new'-status report is opened, most fixtures below use one)
     // has something sane to subscribe to; individual tests override this when
@@ -182,7 +189,7 @@ describe('UsabilityReportsPageComponent', () => {
     const mockPage: UsabilityReportPage = buildPage(
       [
         {
-          id: 'abc-123',
+          id: 123,
           category: 'bug',
           status: 'new',
           userId: null,
@@ -205,12 +212,12 @@ describe('UsabilityReportsPageComponent', () => {
     // match the saved status so the row stays in place (updateRowStatus)
     // rather than being removed (leaves-tab) — that removal path is covered
     // by its own dedicated specs further down (OBRS-378).
-    component['selectedReportId'] = 'abc-123';
+    component['selectedReportId'] = 123;
     component['selectedStatusFilter'] = 'resolved';
     component['selectedDetailStatus'] = 'resolved';
 
     const mockDetail: UsabilityReportDetail = {
-      id: 'abc-123',
+      id: 123,
       category: 'bug',
       status: 'new',
       userId: null,
@@ -251,7 +258,7 @@ describe('UsabilityReportsPageComponent', () => {
 
       // Verify the function applies the status change correctly
       const result = transformFn(mockPage);
-      const updatedReport = result.content.find((r) => r.id === 'abc-123');
+      const updatedReport = result.content.find((r) => r.id === 123);
       expect(updatedReport?.status)
         .withContext('Transform should update status to resolved')
         .toBe('resolved');
@@ -269,7 +276,7 @@ describe('UsabilityReportsPageComponent', () => {
   const mockSummaryPage: UsabilityReportPage = buildPage(
     [
       {
-        id: 'rep-1',
+        id: 1,
         category: 'bug',
         status: 'new',
         userId: 42,
@@ -284,7 +291,7 @@ describe('UsabilityReportsPageComponent', () => {
   );
 
   const mockFullDetail: UsabilityReportDetail = {
-    id: 'rep-1',
+    id: 1,
     category: 'bug',
     status: 'new',
     userId: 42,
@@ -296,7 +303,7 @@ describe('UsabilityReportsPageComponent', () => {
     imageCount: 1,
     images: [
       {
-        id: 'img-1',
+        id: 1,
         publicUrl: 'https://example.com/img-1.png',
         contentType: 'image/png',
         sizeBytes: 2048,
@@ -327,7 +334,7 @@ describe('UsabilityReportsPageComponent', () => {
     // Never resolves during this test — proves the modal doesn't wait on it.
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     const backdrop: HTMLElement = fixture.nativeElement.querySelector('.admin-modal-backdrop');
@@ -353,7 +360,7 @@ describe('UsabilityReportsPageComponent', () => {
       transformFn(mockSummaryPage);
     });
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(adminApiServiceSpy.getUsabilityReportById).toHaveBeenCalledTimes(1);
 
@@ -361,7 +368,7 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
 
     // Second open of the same id: cache hit, no new GET.
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(adminApiServiceSpy.getUsabilityReportById)
       .withContext('cached detail must not trigger a second GET')
@@ -376,7 +383,7 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
 
     // Third open: cache was invalidated by saveStatus(), so this must refetch.
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(adminApiServiceSpy.getUsabilityReportById)
       .withContext('cache must be invalidated after saveStatus() so the next open refetches')
@@ -391,7 +398,7 @@ describe('UsabilityReportsPageComponent', () => {
       data: mockFullDetail,
     }));
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     const thumb: HTMLImageElement = fixture.nativeElement.querySelector('.ur-image-thumb');
@@ -413,7 +420,7 @@ describe('UsabilityReportsPageComponent', () => {
     expect(component['lightboxImageUrl']).toBeNull();
     expect(component['selectedReportId'])
       .withContext('detail modal must remain open after lightbox ESC-dismiss')
-      .toBe('rep-1');
+      .toBe(1);
 
     // Reopen, then dismiss via backdrop click.
     component['lightboxImageUrl'] = 'https://example.com/img-1.png';
@@ -425,7 +432,7 @@ describe('UsabilityReportsPageComponent', () => {
     expect(component['lightboxImageUrl']).toBeNull();
     expect(component['selectedReportId'])
       .withContext('detail modal must remain open after lightbox backdrop-dismiss')
-      .toBe('rep-1');
+      .toBe(1);
   });
 
   it('does not clobber an in-progress status selection when the detail GET resolves (pristine-only patch, §6)', () => {
@@ -435,7 +442,7 @@ describe('UsabilityReportsPageComponent', () => {
     const detail$ = new Subject<{ code: number; message: string; data: UsabilityReportDetail }>();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(detail$.asObservable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     // Admin changes status during the optimistic-open window (before detail arrives).
@@ -456,7 +463,7 @@ describe('UsabilityReportsPageComponent', () => {
     primeReportList();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     const closeButtons = fixture.nativeElement.querySelectorAll('.admin-modal-header button');
@@ -485,15 +492,15 @@ describe('UsabilityReportsPageComponent', () => {
     // Deliberately NOT a button-role row — table semantics stay intact.
     expect(row.getAttribute('role')).withContext('row keeps its implicit row semantics').toBeNull();
 
-    const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail').and.callThrough();
+    const openSpy = spyOn(component as unknown as { openDetail: (id: number) => void }, 'openDetail').and.callThrough();
 
     // The Category cell is non-interactive text.
     const categoryCell: HTMLElement = row.querySelectorAll('td')[1] as HTMLElement;
     categoryCell.click();
     fixture.detectChanges();
 
-    expect(openSpy).withContext('clicking a row cell opens the detail').toHaveBeenCalledOnceWith('rep-1');
-    expect(component['selectedReportId']).toBe('rep-1');
+    expect(openSpy).withContext('clicking a row cell opens the detail').toHaveBeenCalledOnceWith(1);
+    expect(component['selectedReportId']).toBe(1);
   });
 
   it('opens the detail exactly once when the View button is clicked (no double-open from row bubbling)', () => {
@@ -501,7 +508,7 @@ describe('UsabilityReportsPageComponent', () => {
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
     const row: HTMLElement = fixture.nativeElement.querySelector('tr.ur-report-row');
-    const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail').and.callThrough();
+    const openSpy = spyOn(component as unknown as { openDetail: (id: number) => void }, 'openDetail').and.callThrough();
 
     const viewBtn: HTMLButtonElement = row.querySelector('button.admin-btn-small') as HTMLButtonElement;
     viewBtn.click();
@@ -509,7 +516,7 @@ describe('UsabilityReportsPageComponent', () => {
 
     expect(openSpy)
       .withContext('View button opens once; the row handler must bail on button-origin clicks')
-      .toHaveBeenCalledOnceWith('rep-1');
+      .toHaveBeenCalledOnceWith(1);
   });
 
   // ── OBRS-86 regression specs: triage workflow ───────────────────────────
@@ -528,7 +535,7 @@ describe('UsabilityReportsPageComponent', () => {
       transformFn(mockSummaryPage);
     });
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     component['onTriageNoteChange']('Investigated — reproduced on iOS Safari.');
@@ -540,7 +547,7 @@ describe('UsabilityReportsPageComponent', () => {
     // (the explicit saveStatus() PUT) rather than a single-call count.
     expect(adminApiServiceSpy.updateUsabilityReportStatus.calls.mostRecent().args)
       .withContext('the triage note must be sent alongside the status in the PUT payload')
-      .toEqual(['rep-1', 'accepted', 'Investigated — reproduced on iOS Safari.']);
+      .toEqual([1, 'accepted', 'Investigated — reproduced on iOS Safari.']);
   });
 
   it('renders the accepted status as .admin-status.is-accepted in the table', () => {
@@ -568,7 +575,7 @@ describe('UsabilityReportsPageComponent', () => {
       data: detailWithJira,
     }));
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     const jiraLink: HTMLAnchorElement = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
@@ -580,13 +587,13 @@ describe('UsabilityReportsPageComponent', () => {
 
     // A different report id with no jiraIssueKey — avoids resurfacing the
     // first report's cached (with-Jira) detail.
-    const detailNoJira: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', jiraIssueKey: null };
+    const detailNoJira: UsabilityReportDetail = { ...mockFullDetail, id: 2, jiraIssueKey: null };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
       code: 200,
       message: 'OK',
       data: detailNoJira,
     }));
-    component['openDetail']('rep-2');
+    component['openDetail'](2);
     fixture.detectChanges();
 
     const noJiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
@@ -605,7 +612,7 @@ describe('UsabilityReportsPageComponent', () => {
       message: 'OK',
       data: withEmail,
     }));
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(emailRow())
       .withContext('reporter email row must render when reporterEmail is present')
@@ -616,13 +623,13 @@ describe('UsabilityReportsPageComponent', () => {
 
     // A different report id with no reporterEmail — avoids resurfacing the
     // first report's cached (with-email) detail.
-    const noEmail: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', reporterEmail: null };
+    const noEmail: UsabilityReportDetail = { ...mockFullDetail, id: 2, reporterEmail: null };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
       code: 200,
       message: 'OK',
       data: noEmail,
     }));
-    component['openDetail']('rep-2');
+    component['openDetail'](2);
     fixture.detectChanges();
     expect(emailRow())
       .withContext('reporter email row must not render when reporterEmail is absent')
@@ -640,7 +647,7 @@ describe('UsabilityReportsPageComponent', () => {
       reporterNotifiedAt: '2026-07-08T10:15:00Z',
     };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: notified }));
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(notifiedPill())
       .withContext('notified pill must render when reporterNotifiedAt is present')
@@ -658,9 +665,9 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
 
     // A different report id, never notified — pill must be absent.
-    const notNotified: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-3', reporterNotifiedAt: null };
+    const notNotified: UsabilityReportDetail = { ...mockFullDetail, id: 3, reporterNotifiedAt: null };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: notNotified }));
-    component['openDetail']('rep-3');
+    component['openDetail'](3);
     fixture.detectChanges();
     expect(notifiedPill())
       .withContext('notified pill must not render when reporterNotifiedAt is absent')
@@ -675,16 +682,16 @@ describe('UsabilityReportsPageComponent', () => {
 
     const withName: UsabilityReportDetail = { ...mockFullDetail, triagedBy: 7, triagedByName: 'admin@system.local' };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: withName }));
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     expect(triagedRow()?.textContent).withContext('shows the resolved name').toContain('admin@system.local');
 
     component['closeDetail']();
     fixture.detectChanges();
 
-    const noName: UsabilityReportDetail = { ...mockFullDetail, id: 'rep-2', triagedBy: 777, triagedByName: null };
+    const noName: UsabilityReportDetail = { ...mockFullDetail, id: 2, triagedBy: 777, triagedByName: null };
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: noName }));
-    component['openDetail']('rep-2');
+    component['openDetail'](2);
     fixture.detectChanges();
     expect(triagedRow()?.textContent).withContext('falls back to the numeric id').toContain('777');
   });
@@ -695,7 +702,7 @@ describe('UsabilityReportsPageComponent', () => {
     const detail$ = new Subject<{ code: number; message: string; data: UsabilityReportDetail }>();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(detail$.asObservable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     // Admin types a note during the optimistic-open window (before detail arrives).
@@ -717,7 +724,7 @@ describe('UsabilityReportsPageComponent', () => {
     component['closeDetail']();
     fixture.detectChanges();
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     expect(component['selectedTriageNote'])
@@ -764,12 +771,12 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     expect(adminApiServiceSpy.updateUsabilityReportStatus)
       .withContext('opening a new report must silently promote it to in_review exactly once')
-      .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
+      .toHaveBeenCalledOnceWith(1, 'in_review', null);
   });
 
   it('optimistically decrements the "new" badge by 1 on a successful auto-promote (instant, no GET round-trip)', () => {
@@ -781,7 +788,7 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1'); // default updateUsabilityReportStatus mock resolves success
+    component['openDetail'](1); // default updateUsabilityReportStatus mock resolves success
 
     expect(adjustSpy)
       .withContext('a successful promote nudges the badge by -1 immediately')
@@ -802,7 +809,7 @@ describe('UsabilityReportsPageComponent', () => {
       throwError(() => ({ status: 400, error: { errorCode: 'report.invalid-transition' } }))
     );
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
 
     expect(adjustSpy.calls.allArgs())
       .withContext('optimistic -1 on open, then +1 reverted when the server rejects the promote')
@@ -822,7 +829,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       expect(adminApiServiceSpy.updateUsabilityReportStatus)
@@ -844,7 +851,7 @@ describe('UsabilityReportsPageComponent', () => {
     );
 
     expect(() => {
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
     })
       .withContext('the promote error must not propagate out of openDetail()')
@@ -855,7 +862,7 @@ describe('UsabilityReportsPageComponent', () => {
       .not.toHaveBeenCalled();
     expect(component['selectedReportId'])
       .withContext('the modal must stay open even when the background promote fails')
-      .toBe('rep-1');
+      .toBe(1);
   });
 
   it('leaves the detail status selection empty (Save disabled) when opening a "new" report', () => {
@@ -864,7 +871,7 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     expect(component['selectedDetailStatus'])
@@ -883,7 +890,7 @@ describe('UsabilityReportsPageComponent', () => {
     fixture.detectChanges();
     adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
 
     expect(component['selectedDetailStatus'])
@@ -904,7 +911,7 @@ describe('UsabilityReportsPageComponent', () => {
       of({ code: 200, message: 'OK', data: null })
     );
 
-    component['openDetail']('rep-1');
+    component['openDetail'](1);
     fixture.detectChanges();
     component['selectedDetailStatus'] = 'rejected';
 
@@ -942,7 +949,7 @@ describe('UsabilityReportsPageComponent', () => {
         message: 'OK',
         data: detailWithJira,
       }));
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const jiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
@@ -979,7 +986,7 @@ describe('UsabilityReportsPageComponent', () => {
         message: 'OK',
         data: detailWithJira,
       }));
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const jiraLink = fixture.nativeElement.querySelector('.ur-detail-modal a[target="_blank"]');
@@ -993,7 +1000,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       expect(component['selectedDetailStatus'])
@@ -1069,17 +1076,16 @@ describe('UsabilityReportsPageComponent', () => {
       expect(link).withContext('duplicate-of link must render').not.toBeNull();
       expect(link.textContent?.trim()).toBe('Duplicate of #99');
 
-      const openSpy = spyOn(component as unknown as { openDetail: (id: string) => void }, 'openDetail');
+      const openSpy = spyOn(component as unknown as { openDetail: (id: number) => void }, 'openDetail');
       link.click();
       fixture.detectChanges();
 
-      // QA fix (OBRS-376 type-safety sweep): openCanonicalReport() forwards
-      // the real number through (not String()-coerced) so it matches the
-      // runtime shape of every other report.id passed into openDetail() —
-      // see the doc comment on openCanonicalReport() for why.
+      // OBRS-436: openCanonicalReport() forwards duplicateOfId (a number)
+      // straight into openDetail(id: number) — no cast, since the id type lie
+      // is fixed and both sides are now `number`.
       expect(openSpy)
-        .withContext('the link opens the canonical report by the real numeric id, not a stringified one')
-        .toHaveBeenCalledOnceWith(99 as unknown as string);
+        .withContext('the link opens the canonical report by its numeric id')
+        .toHaveBeenCalledOnceWith(99);
     });
 
     it('does not render the duplicate-of link when duplicateOfId is null', () => {
@@ -1144,37 +1150,37 @@ describe('UsabilityReportsPageComponent', () => {
 
     it('openDuplicatePicker excludes the report itself and any report already status==="duplicate" from the candidate list', () => {
       const reports: UsabilityReportPage['content'] = [
-        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'new' },
-        { ...mockSummaryPage.content[0], id: 'rep-2', status: 'in_review' },
-        { ...mockSummaryPage.content[0], id: 'rep-3', status: 'duplicate' },
+        { ...mockSummaryPage.content[0], id: 1, status: 'new' },
+        { ...mockSummaryPage.content[0], id: 2, status: 'in_review' },
+        { ...mockSummaryPage.content[0], id: 3, status: 'duplicate' },
       ];
       storeSpy.data$.next(pageWithReports(reports));
       storeSpy.hasValue = true;
       fixture.detectChanges();
 
-      component['openDuplicatePicker']('rep-1');
+      component['openDuplicatePicker'](1);
 
-      const candidateIds = component['pickerCandidates'].map((c: { id: string }) => c.id);
+      const candidateIds = component['pickerCandidates'].map((c: { id: number }) => c.id);
       expect(candidateIds)
         .withContext('candidates exclude the source report itself and any already-duplicate report')
-        .toEqual(['rep-2']);
+        .toEqual([2]);
       expect(component['isPickerOpen']).toBeTrue();
     });
 
     it('onPickerConfirm calls markUsabilityReportAsDuplicate with the numeric canonical id, then refreshes and shows success', () => {
-      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1' }]));
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 1 }]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
       adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
         of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
       );
 
-      component['openDuplicatePicker']('rep-1');
-      component['onPickerConfirm']('42');
+      component['openDuplicatePicker'](1);
+      component['onPickerConfirm'](42);
 
       expect(adminApiServiceSpy.markUsabilityReportAsDuplicate)
         .withContext('canonical id is sent as a number')
-        .toHaveBeenCalledOnceWith('rep-1', 42);
+        .toHaveBeenCalledOnceWith(1, 42);
       expect(alertServiceSpy.success).toHaveBeenCalled();
       expect(storeSpy.refresh).toHaveBeenCalled();
       expect(component['isPickerOpen']).withContext('picker closes on success').toBeFalse();
@@ -1188,7 +1194,7 @@ describe('UsabilityReportsPageComponent', () => {
       const adjustSpy = spyOn(badge, 'adjustBy');
       const triggerSpy = spyOn(badge, 'trigger');
       storeSpy.data$.next(pageWithReports([
-        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'owner_accepted' },
+        { ...mockSummaryPage.content[0], id: 1, status: 'owner_accepted' },
       ]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
@@ -1196,8 +1202,8 @@ describe('UsabilityReportsPageComponent', () => {
         of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
       );
 
-      component['openDuplicatePicker']('rep-1');
-      component['onPickerConfirm']('42');
+      component['openDuplicatePicker'](1);
+      component['onPickerConfirm'](42);
 
       expect(adjustSpy)
         .withContext('marking an owner_accepted source out of the admin queue nudges the badge by -1')
@@ -1212,7 +1218,7 @@ describe('UsabilityReportsPageComponent', () => {
       const adjustSpy = spyOn(badge, 'adjustBy');
       const triggerSpy = spyOn(badge, 'trigger');
       storeSpy.data$.next(pageWithReports([
-        { ...mockSummaryPage.content[0], id: 'rep-1', status: 'new' },
+        { ...mockSummaryPage.content[0], id: 1, status: 'new' },
       ]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
@@ -1220,8 +1226,8 @@ describe('UsabilityReportsPageComponent', () => {
         of({ code: 200, message: 'OK', data: { ...mockFullDetail, status: 'duplicate', duplicateOfId: 42 } })
       );
 
-      component['openDuplicatePicker']('rep-1');
-      component['onPickerConfirm']('42');
+      component['openDuplicatePicker'](1);
+      component['onPickerConfirm'](42);
 
       expect(adjustSpy).not.toHaveBeenCalled();
       expect(triggerSpy).not.toHaveBeenCalled();
@@ -1236,7 +1242,7 @@ describe('UsabilityReportsPageComponent', () => {
     // 'server-side pagination (OBRS-403)' describe block below.
     it('steps back one page when marking the last row of the active tab\'s last page as duplicate', async () => {
       const page = buildPage(
-        [{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'accepted' }],
+        [{ ...mockSummaryPage.content[0], id: 1, status: 'accepted' }],
         21,
         { number: 1, totalPages: 2 }
       );
@@ -1251,8 +1257,8 @@ describe('UsabilityReportsPageComponent', () => {
         return Promise.resolve();
       });
 
-      component['openDuplicatePicker']('rep-1');
-      component['onPickerConfirm']('99');
+      component['openDuplicatePicker'](1);
+      component['onPickerConfirm'](99);
       await Promise.resolve();
       await Promise.resolve();
 
@@ -1264,7 +1270,7 @@ describe('UsabilityReportsPageComponent', () => {
     });
 
     it('onPickerConfirm maps REPORT_CANONICAL_SELF_REFERENCE to the self-reference error toast and keeps the picker open', () => {
-      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1' }]));
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 1 }]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
       adminApiServiceSpy.markUsabilityReportAsDuplicate.and.returnValue(
@@ -1274,25 +1280,25 @@ describe('UsabilityReportsPageComponent', () => {
         }))
       );
 
-      component['openDuplicatePicker']('rep-1');
-      component['onPickerConfirm']('1');
+      component['openDuplicatePicker'](1);
+      component['onPickerConfirm'](1);
 
       expect(alertServiceSpy.error).toHaveBeenCalled();
       expect(component['isPickerOpen']).withContext('picker stays open on error').toBeTrue();
     });
 
     it('unmarkDuplicate confirms, then PUTs status in_review (reusing updateUsabilityReportStatus, not a dedicated endpoint) and shows success', async () => {
-      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 1, status: 'duplicate' }]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      await component['unmarkDuplicate']('rep-1');
+      await component['unmarkDuplicate'](1);
 
       expect(alertServiceSpy.confirm).toHaveBeenCalled();
       expect(adminApiServiceSpy.updateUsabilityReportStatus)
         .withContext('un-mark reuses the existing status endpoint, not a new one')
-        .toHaveBeenCalledOnceWith('rep-1', 'in_review', null);
+        .toHaveBeenCalledOnceWith(1, 'in_review', null);
       expect(alertServiceSpy.success).toHaveBeenCalled();
       expect(storeSpy.refresh).toHaveBeenCalled();
     });
@@ -1303,19 +1309,19 @@ describe('UsabilityReportsPageComponent', () => {
     it('unmarkDuplicate fires badgeRefreshService.trigger() (it does not today)', async () => {
       const badge = TestBed.inject(UsabilityReportBadgeRefreshService);
       const triggerSpy = spyOn(badge, 'trigger');
-      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 1, status: 'duplicate' }]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      await component['unmarkDuplicate']('rep-1');
+      await component['unmarkDuplicate'](1);
 
       expect(triggerSpy).toHaveBeenCalled();
     });
 
     it('steps back one page when un-marking the last row of the active tab\'s last page', async () => {
       const page = buildPage(
-        [{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }],
+        [{ ...mockSummaryPage.content[0], id: 1, status: 'duplicate' }],
         21,
         { number: 1, totalPages: 2 }
       );
@@ -1330,7 +1336,7 @@ describe('UsabilityReportsPageComponent', () => {
         return Promise.resolve();
       });
 
-      await component['unmarkDuplicate']('rep-1');
+      await component['unmarkDuplicate'](1);
       await Promise.resolve();
       await Promise.resolve();
 
@@ -1343,11 +1349,11 @@ describe('UsabilityReportsPageComponent', () => {
 
     it('unmarkDuplicate does nothing when the confirm dialog is dismissed', async () => {
       alertServiceSpy.confirm.and.resolveTo(false);
-      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 'rep-1', status: 'duplicate' }]));
+      storeSpy.data$.next(pageWithReports([{ ...mockSummaryPage.content[0], id: 1, status: 'duplicate' }]));
       storeSpy.hasValue = true;
       fixture.detectChanges();
 
-      await component['unmarkDuplicate']('rep-1');
+      await component['unmarkDuplicate'](1);
 
       expect(adminApiServiceSpy.updateUsabilityReportStatus).not.toHaveBeenCalled();
     });
@@ -1365,7 +1371,7 @@ describe('UsabilityReportsPageComponent', () => {
         [
           { ...mockSummaryPage.content[0], status: 'new' },
           {
-            id: 'rep-2',
+            id: 2,
             category: 'suggestion',
             status: 'new',
             userId: 7,
@@ -1395,12 +1401,12 @@ describe('UsabilityReportsPageComponent', () => {
         mutated = transformFn(page);
       });
 
-      component['openDetail']('rep-1'); // auto-promotes 'new' -> 'in_review'
+      component['openDetail'](1); // auto-promotes 'new' -> 'in_review'
 
-      expect(mutated?.content.some((r) => r.id === 'rep-1'))
+      expect(mutated?.content.some((r) => r.id === 1))
         .withContext('a report promoted out of the active "new" tab must be removed, not relabeled')
         .toBeFalse();
-      expect(mutated?.content.some((r) => r.id === 'rep-2'))
+      expect(mutated?.content.some((r) => r.id === 2))
         .withContext('the sibling row on the same tab must be untouched')
         .toBeTrue();
       expect(mutated?.totalElements).toBe(1);
@@ -1411,7 +1417,7 @@ describe('UsabilityReportsPageComponent', () => {
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
         code: 200,
         message: 'OK',
-        data: { ...mockFullDetail, id: 'rep-1', status: 'new' },
+        data: { ...mockFullDetail, id: 1, status: 'new' },
       }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(
         of({ code: 200, message: 'OK', data: null })
@@ -1422,12 +1428,12 @@ describe('UsabilityReportsPageComponent', () => {
         mutated = transformFn(page);
       });
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
       component['selectedDetailStatus'] = 'dismissed';
       component.saveStatus();
 
-      expect(mutated?.content.some((r) => r.id === 'rep-1'))
+      expect(mutated?.content.some((r) => r.id === 1))
         .withContext('dismissing a report while its tab is "new" must remove the row, not relabel it in place')
         .toBeFalse();
       expect(mutated?.totalElements).toBe(1);
@@ -1445,9 +1451,9 @@ describe('UsabilityReportsPageComponent', () => {
       // Force selectedStatusFilter to 'in_review' so the auto-promote target
       // status matches the active tab (no removal expected).
       component['selectedStatusFilter'] = 'in_review';
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
 
-      const row = mutated?.content.find((r) => r.id === 'rep-1');
+      const row = mutated?.content.find((r) => r.id === 1);
       expect(row).withContext('a row that stays within the active tab must be relabeled, not removed').toBeTruthy();
       expect(row?.status).toBe('in_review');
       expect(mutated?.totalElements).toBe(2);
@@ -1466,9 +1472,9 @@ describe('UsabilityReportsPageComponent', () => {
       });
 
       component['selectedStatusFilter'] = 'all';
-      component['openDetail']('rep-1'); // auto-promotes 'new' -> 'in_review'
+      component['openDetail'](1); // auto-promotes 'new' -> 'in_review'
 
-      const row = mutated?.content.find((r) => r.id === 'rep-1');
+      const row = mutated?.content.find((r) => r.id === 1);
       expect(row)
         .withContext('under "all", a status change must relabel the row, never remove it')
         .toBeTruthy();
@@ -1488,7 +1494,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: dismissedDetail }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
@@ -1509,7 +1515,7 @@ describe('UsabilityReportsPageComponent', () => {
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: dismissedDetail }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
@@ -1518,7 +1524,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
 
       expect(adminApiServiceSpy.updateUsabilityReportStatus.calls.mostRecent().args)
-        .toEqual(['rep-1', 'in_review', null]);
+        .toEqual([1, 'in_review', null]);
     });
 
     it('owner sees only a muted note, no dropdown and no button', () => {
@@ -1528,7 +1534,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({ code: 200, message: 'OK', data: dismissedDetail }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
@@ -1645,15 +1651,43 @@ describe('UsabilityReportsPageComponent', () => {
         .not.toBeNull();
     });
 
-    it('hides the whole footer (Showing text + paginator) while isLoading — a page change clears the cache and re-triggers it', () => {
+    it('hides the footer under the skeleton when there is only a single page (nothing to page through)', () => {
       fixture.detectChanges(); // ngOnInit subscribes to refreshing$/hasValue
       storeSpy.hasValue = false;
       storeSpy.refreshing$.next(true);
       fixture.detectChanges();
 
       expect(component['isLoading']).toBeTrue();
+      // totalPages defaults to 1 here, so there is no paginator to keep mounted
+      // — the footer (Showing text + paginator) is absent under the skeleton.
       expect(fixture.nativeElement.querySelector('.admin-table-footer'))
-        .withContext('the footer must not render under the skeleton-loading state')
+        .withContext('single-page footer must not render under the skeleton-loading state')
+        .toBeNull();
+    });
+
+    it('OBRS-466: keeps the paginator MOUNTED (count text hidden) while a multi-page list reloads, so focus/announcement survive', () => {
+      // Land on page 2 of 3 (multi-page), then trigger the loading window a
+      // page change causes: cache cleared (data$ -> null) + refreshing.
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 45, { number: 1, totalPages: 3 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      storeSpy.hasValue = false;
+      storeSpy.data$.next(null); // OBRS-467 clear() — rows/count reset...
+      storeSpy.refreshing$.next(true);
+      fixture.detectChanges();
+
+      expect(component['isLoading']).withContext('the reload window is active').toBeTrue();
+      // ...but the page POSITION is retained (OBRS-466) so the paginator stays.
+      expect(component['totalPages']).withContext('page position retained across the transient clear').toBe(3);
+      expect(fixture.nativeElement.querySelector('.admin-paginator'))
+        .withContext('paginator stays mounted so it can restore focus + announce')
+        .not.toBeNull();
+      // The stale "Showing X-Y of N" count (a DIRECT child of the footer) is
+      // still suppressed under loading — the `>` avoids matching the
+      // paginator's own nested live region.
+      expect(fixture.nativeElement.querySelector('.admin-table-footer > span[aria-live]'))
+        .withContext('the count text must not show a stale/again value under the skeleton')
         .toBeNull();
     });
 
@@ -1727,7 +1761,7 @@ describe('UsabilityReportsPageComponent', () => {
         storeSpy.value = transformFn(page);
       });
 
-      component['openDetail']('rep-1'); // auto-promotes 'new' -> 'in_review', leaving this tab
+      component['openDetail'](1); // auto-promotes 'new' -> 'in_review', leaving this tab
 
       expect(storeSpy.setPage)
         .withContext('emptying page 2 (1-based) must step back to page 1 (0-based page 0)')
@@ -1739,7 +1773,7 @@ describe('UsabilityReportsPageComponent', () => {
       const page = buildPage(
         [
           { ...mockSummaryPage.content[0], status: 'new' },
-          { id: 'rep-2', category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z', duplicateOfId: null, duplicateCount: 0 },
+          { id: 2, category: 'suggestion', status: 'new', userId: 7, descriptionPreview: 'other', imageCount: 0, createdAt: '2026-01-02T00:00:00Z', duplicateOfId: null, duplicateCount: 0 },
         ],
         22,
         { number: 1, totalPages: 2 }
@@ -1753,7 +1787,7 @@ describe('UsabilityReportsPageComponent', () => {
         storeSpy.value = transformFn(page);
       });
 
-      component['openDetail']('rep-1'); // leaves the sibling row ('rep-2') on this page
+      component['openDetail'](1); // leaves the sibling row (2) on this page
 
       expect(storeSpy.setPage)
         .withContext('a non-empty remaining page must not trigger a step-back')
@@ -1775,7 +1809,7 @@ describe('UsabilityReportsPageComponent', () => {
         storeSpy.value = transformFn(page);
       });
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
 
       expect(storeSpy.setPage)
         .withContext('page 1 emptying is the natural empty-tab state, not a step-back case')
@@ -1809,8 +1843,8 @@ describe('UsabilityReportsPageComponent', () => {
       authServiceSpy.getRoles.and.returnValue(['owner']);
       const page = buildPage(
         [
-          { ...mockSummaryPage.content[0], id: 'rep-a', status: 'in_review' },
-          { ...mockSummaryPage.content[0], id: 'rep-b', status: 'owner_accepted' },
+          { ...mockSummaryPage.content[0], id: 101, status: 'in_review' },
+          { ...mockSummaryPage.content[0], id: 102, status: 'owner_accepted' },
         ],
         2
       );
@@ -1820,12 +1854,12 @@ describe('UsabilityReportsPageComponent', () => {
       // Never resolves — isolates the optimistic-open (cache-miss) seed site.
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-      component['openDetail']('rep-a'); // rebuild(in_review) -> options = [owner_accepted, dismissed]
+      component['openDetail'](101); // rebuild(in_review) -> options = [owner_accepted, dismissed]
       fixture.detectChanges();
       component['closeDetail']();
       fixture.detectChanges();
 
-      component['openDetail']('rep-b'); // must rebuild(owner_accepted) BEFORE seeding
+      component['openDetail'](102); // must rebuild(owner_accepted) BEFORE seeding
       fixture.detectChanges();
 
       expect(component['selectedDetailStatus'])
@@ -1840,8 +1874,8 @@ describe('UsabilityReportsPageComponent', () => {
       authServiceSpy.getRoles.and.returnValue(['owner']);
       const page = buildPage(
         [
-          { ...mockSummaryPage.content[0], id: 'rep-a', status: 'in_review' },
-          { ...mockSummaryPage.content[0], id: 'rep-b', status: 'owner_accepted' },
+          { ...mockSummaryPage.content[0], id: 101, status: 'in_review' },
+          { ...mockSummaryPage.content[0], id: 102, status: 'owner_accepted' },
         ],
         2
       );
@@ -1853,22 +1887,22 @@ describe('UsabilityReportsPageComponent', () => {
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(of({
         code: 200,
         message: 'OK',
-        data: { ...mockFullDetail, id: 'rep-b', status: 'owner_accepted' },
+        data: { ...mockFullDetail, id: 102, status: 'owner_accepted' },
       }));
-      component['openDetail']('rep-b');
+      component['openDetail'](102);
       fixture.detectChanges();
       component['closeDetail']();
       fixture.detectChanges();
 
       // Open A — leaves stale options (owner_accepted/dismissed) behind.
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
-      component['openDetail']('rep-a');
+      component['openDetail'](101);
       fixture.detectChanges();
       component['closeDetail']();
       fixture.detectChanges();
 
       // Reopen B — now a CACHE HIT.
-      component['openDetail']('rep-b');
+      component['openDetail'](102);
       fixture.detectChanges();
 
       expect(component['selectedDetailStatus'])
@@ -1878,7 +1912,7 @@ describe('UsabilityReportsPageComponent', () => {
 
     it('AMENDMENT A1 (detail-fetch handler site): the async detail response is rebuilt before it is seeded', () => {
       authServiceSpy.getRoles.and.returnValue(['owner']);
-      const page = buildPage([{ ...mockSummaryPage.content[0], id: 'rep-c', status: 'in_review' }], 1);
+      const page = buildPage([{ ...mockSummaryPage.content[0], id: 103, status: 'in_review' }], 1);
       storeSpy.data$.next(page);
       storeSpy.hasValue = true;
       fixture.detectChanges();
@@ -1891,7 +1925,7 @@ describe('UsabilityReportsPageComponent', () => {
       // ordering — but the optimistic rebuild still correctly sets options to
       // in_review's set (owner_accepted/dismissed) by the time the fetch
       // handler below runs.
-      component['openDetail']('rep-c');
+      component['openDetail'](103);
       fixture.detectChanges();
       expect(component['selectedDetailStatus']).toBe('');
 
@@ -1902,7 +1936,7 @@ describe('UsabilityReportsPageComponent', () => {
       detail$.next({
         code: 200,
         message: 'OK',
-        data: { ...mockFullDetail, id: 'rep-c', status: 'owner_accepted' },
+        data: { ...mockFullDetail, id: 103, status: 'owner_accepted' },
       });
       detail$.complete();
       fixture.detectChanges();
@@ -1924,7 +1958,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
@@ -1944,7 +1978,7 @@ describe('UsabilityReportsPageComponent', () => {
       fixture.detectChanges();
       adminApiServiceSpy.getUsabilityReportById.and.returnValue(new Observable());
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       const modal: HTMLElement = fixture.nativeElement.querySelector('.ur-detail-modal');
@@ -1966,7 +2000,7 @@ describe('UsabilityReportsPageComponent', () => {
       }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
       component['selectedDetailStatus'] = 'accepted';
       component.saveStatus();
@@ -1989,7 +2023,7 @@ describe('UsabilityReportsPageComponent', () => {
         throwError(() => ({ status: 500, error: {} }))
       );
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
       component['selectedDetailStatus'] = 'accepted';
       component.saveStatus();
@@ -2012,7 +2046,7 @@ describe('UsabilityReportsPageComponent', () => {
       }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
       component['selectedDetailStatus'] = 'owner_accepted';
       component.saveStatus();
@@ -2033,7 +2067,7 @@ describe('UsabilityReportsPageComponent', () => {
       }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
       component['selectedDetailStatus'] = 'dismissed';
       component.saveStatus();
@@ -2059,7 +2093,7 @@ describe('UsabilityReportsPageComponent', () => {
       }));
       adminApiServiceSpy.updateUsabilityReportStatus.and.returnValue(of({ code: 200, message: 'OK', data: null }));
 
-      component['openDetail']('rep-1');
+      component['openDetail'](1);
       fixture.detectChanges();
 
       component['pullBackToReview']();
@@ -2071,5 +2105,100 @@ describe('UsabilityReportsPageComponent', () => {
         )
         .toHaveBeenCalledOnceWith('owner_accepted', -1);
     });
+  });
+
+  // ── OBRS-373: live-refresh "N new" pill ───────────────────────────────────
+  describe('live-refresh pill (OBRS-373)', () => {
+    function pollReturns(total: number): void {
+      adminApiServiceSpy.getUsabilityReports.and.returnValue(
+        of({ code: 200, message: 'OK', data: buildPage([], total) })
+      );
+    }
+
+    it('raises the "N new" pill when the poll finds more rows than the loaded baseline', fakeAsync(() => {
+      fixture.detectChanges(); // ngOnInit — subscribes + starts the poll timer
+      // The current view loaded with 5 rows: that is the baseline.
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+      expect(component['newReportCount']).toBe(0);
+
+      // Two new reports arrive server-side; the next poll tick sees total 7.
+      pollReturns(7);
+      tick(30_000);
+
+      expect(component['newReportCount'])
+        .withContext('7 on the server − 5 loaded = 2 new')
+        .toBe(2);
+      fixture.detectChanges();
+      const pill: HTMLButtonElement = fixture.nativeElement.querySelector('.ur-new-reports-pill');
+      expect(pill).withContext('pill renders when there are new reports').not.toBeNull();
+
+      discardPeriodicTasks();
+    }));
+
+    it('clicking the pill refreshes and clears the count', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      pollReturns(9);
+      tick(30_000);
+      expect(component['newReportCount']).toBe(4);
+
+      component['showNewReports']();
+      expect(component['newReportCount']).withContext('cleared optimistically on click').toBe(0);
+      // On page 1 already → refresh in place (not a page jump).
+      expect(storeSpy.refresh).toHaveBeenCalled();
+
+      discardPeriodicTasks();
+    }));
+
+    it('a confirmed reload re-baselines and clears any pending pill', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      pollReturns(8);
+      tick(30_000);
+      expect(component['newReportCount']).toBe(3);
+
+      // The list reloads with the new rows now included (total 8 confirmed).
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 8, { number: 0, totalPages: 1 }));
+      expect(component['newReportCount']).withContext('a confirmed load reconciles the view').toBe(0);
+      expect(component['baselineTotal']).toBe(8);
+
+      discardPeriodicTasks();
+    }));
+
+    it('swallows a poll failure — no throw, pill unchanged', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      adminApiServiceSpy.getUsabilityReports.and.returnValue(
+        throwError(() => new Error('network'))
+      );
+      expect(() => tick(30_000)).not.toThrow();
+      expect(component['newReportCount']).toBe(0);
+
+      discardPeriodicTasks();
+    }));
+
+    it('a poll total equal to (or below) the baseline shows no pill', fakeAsync(() => {
+      fixture.detectChanges();
+      storeSpy.data$.next(buildPage([mockSummaryPage.content[0]], 5, { number: 0, totalPages: 1 }));
+      storeSpy.hasValue = true;
+      fixture.detectChanges();
+
+      pollReturns(5);
+      tick(30_000);
+      expect(component['newReportCount']).toBe(0);
+
+      discardPeriodicTasks();
+    }));
   });
 });

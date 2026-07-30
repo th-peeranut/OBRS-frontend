@@ -1,0 +1,103 @@
+// OBRS-152 — booking-trend charts + period-over-period delta chip.
+// Bar heights come from the server (barPct / normalised sharePct); colours use shared admin tokens.
+
+.bt-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--admin-neutral-text);
+
+  .material-symbols-outlined {
+    font-size: 1.1rem;
+  }
+
+  &.is-up {
+    color: var(--admin-success-text);
+  }
+
+  &.is-down {
+    color: var(--admin-danger-text);
+  }
+
+  &--na {
+    color: var(--admin-muted);
+    font-weight: 500;
+  }
+}
+
+.bt-delta-caption {
+  color: var(--admin-muted);
+  font-weight: 500;
+}
+
+.bt-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 200px;
+  padding-top: 0.5rem;
+  overflow-x: auto;
+
+  &--dow {
+    height: 150px;
+  }
+}
+
+.bt-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1 0 24px;
+  min-width: 24px;
+  height: 100%;
+}
+
+.bt-bar-track {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  flex: 1;
+}
+
+.bt-bar {
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--admin-inreview-text);
+  transition: height 0.2s ease;
+
+  &--dow {
+    background: var(--admin-success-text);
+  }
+}
+
+.bt-bar-label {
+  font-size: 0.65rem;
+  color: var(--admin-muted);
+  white-space: nowrap;
+}
+
+.bt-chart-skeleton {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 200px;
+
+  span {
+    flex: 1;
+    border-radius: 4px;
+    height: 55%;
+  }
+
+  span:nth-child(2) {
+    height: 85%;
+  }
+
+  span:nth-child(3) {
+    height: 40%;
+  }
+}
